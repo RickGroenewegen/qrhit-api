@@ -1,0 +1,24 @@
+#!/bin/bash
+
+cd ~/sites/shoutout-api/admin
+npm install
+ng build --base-href /admin/ --project admin
+
+# Navigate to the Git repository directory
+# Replace '/path/to/your/repo' with the actual path to your Git repository
+cd ~/sites/shoutout-api
+
+# Reset the repository to HEAD
+git reset --hard HEAD
+# 43d01d2e980787e984931296caf0c127e79fef60
+# pm2 start npm --name "shoutout" -- run start
+
+# Pull the latest changes from the remote repository
+git pull origin HEAD
+sudo chmod +x deploy
+sudo npm install
+sudo prisma db push
+echo "Repository has been reset and updated."
+
+pm2 restart shoutout
+pm2 logs shoutout --lines 1000

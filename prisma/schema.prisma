@@ -1,0 +1,91 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Payment {
+  id         Int       @id @default(autoincrement())
+  userId     Int? // Removed the @unique constraint, and made optional
+  paymentId  String    @unique
+  amount     Float
+  status     String
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  playlistId Int?
+  playlist   Playlist? @relation(fields: [playlistId], references: [id])
+  user       User?     @relation(fields: [userId], references: [id])
+
+  @@index([userId]) // Index for performance on queries
+  @@index([paymentId])
+  @@map("payments")
+}
+
+model User {
+  id              Int               @id @default(autoincrement())
+  userId          String            @unique
+  email           String            @unique
+  displayName     String
+  payments        Payment[] // One-to-many relation to payments
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+  UserHasPlaylist UserHasPlaylist[]
+
+  @@map("users")
+}
+
+model Playlist {
+  id         Int                @id @default(autoincrement())
+  playlistId String             @unique
+  name       String
+  createdAt  DateTime           @default(now())
+  updatedAt  DateTime           @updatedAt
+  users      UserHasPlaylist[]
+  tracks     PlaylistHasTrack[]
+  Payment    Payment[]
+
+  @@index([playlistId])
+  @@map("playlists")
+}
+
+// This is the join table for the many-to-many relationship
+model UserHasPlaylist {
+  playlist   Playlist @relation(fields: [playlistId], references: [id])
+  playlistId Int
+  user       User     @relation(fields: [userId], references: [id])
+  userId     Int
+
+  @@id([playlistId, userId]) // Composite primary key
+  @@map("user_has_playlists")
+}
+
+model Track {
+  id        Int                @id @default(autoincrement())
+  trackId   String             @unique
+  name      String
+  artist    String
+  isrc      String
+  createdAt DateTime           @default(now())
+  updatedAt DateTime           @updatedAt
+  playlists PlaylistHasTrack[]
+
+  @@index([trackId])
+  @@map("tracks")
+}
+
+// Join table for Playlist and Track
+model PlaylistHasTrack {
+  playlist   Playlist @relation(fields: [playlistId], references: [id])
+  playlistId Int
+  track      Track    @relation(fields: [trackId], references: [id])
+  trackId    Int
+
+  @@id([playlistId, trackId]) // Composite primary key
+  @@map("playlist_has_tracks")
+}
