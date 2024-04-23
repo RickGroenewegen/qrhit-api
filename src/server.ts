@@ -116,6 +116,14 @@ class Server {
       credentials: true,
     });
 
+    this.fastify.register((instance, opts, done) => {
+      instance.register(require('@fastify/static'), {
+        root: process.env['PUBLIC_DIR'] as string,
+        prefix: '/public/',
+      });
+      done();
+    });
+
     this.fastify.setErrorHandler((error, request, reply) => {
       if (process.env['ENVIRONMENT'] == 'development') {
         console.error(error);
