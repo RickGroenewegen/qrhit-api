@@ -7,6 +7,7 @@ import os from 'os';
 import Utils from './utils';
 import Spotify from './spotify';
 import Mollie from './mollie';
+import Qr from './qr';
 
 declare module 'fastify' {
   export interface FastifyInstance {
@@ -24,6 +25,7 @@ class Server {
   private utils = new Utils();
   private spotify = new Spotify();
   private mollie = new Mollie();
+  private qr = new Qr();
 
   private constructor() {
     this.fastify = Fastify({
@@ -151,12 +153,22 @@ class Server {
       return await this.spotify.getTokens(request.body.code);
     });
 
+    this.fastify.post('/mollie/check', async (request: any, _reply) => {
+      console.log(111, request.body);
+
+      return await this.mollie.checkPaymentStatus(request.body.paymentId);
+    });
+
     this.fastify.post('/mollie/payment', async (request: any, _reply) => {
       return await this.mollie.getPaymentUri(request.body);
     });
 
     this.fastify.post('/mollie/webhook', async (request: any, _reply) => {
       return await this.mollie.processWebhook(request.body);
+    });
+
+    this.fastify.post('/qr/generate', async (request: any, _reply) => {
+      return await this.qr.generate(request.body);
     });
 
     this.fastify.get('/test', async (request: any, _reply) => {

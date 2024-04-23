@@ -26,8 +26,6 @@ class Spotify {
 
       const profile = await this.getUserProfile(response.data.access_token);
 
-      console.log(11111, profile);
-
       return {
         success: true,
         data: {
@@ -115,8 +113,6 @@ class Spotify {
           },
         }
       );
-
-      console.log(11111, response.data);
 
       const playlist: Playlist = {
         id: response.data.id,

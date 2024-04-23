@@ -19,8 +19,8 @@ model Payment {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   playlistId Int?
-  playlist   Playlist? @relation(fields: [playlistId], references: [id])
-  user       User?     @relation(fields: [userId], references: [id])
+  playlist   Playlist? @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId]) // Index for performance on queries
   @@index([paymentId])
@@ -56,9 +56,9 @@ model Playlist {
 
 // This is the join table for the many-to-many relationship
 model UserHasPlaylist {
-  playlist   Playlist @relation(fields: [playlistId], references: [id])
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
   playlistId Int
-  user       User     @relation(fields: [userId], references: [id])
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     Int
 
   @@id([playlistId, userId]) // Composite primary key
@@ -66,14 +66,16 @@ model UserHasPlaylist {
 }
 
 model Track {
-  id        Int                @id @default(autoincrement())
-  trackId   String             @unique
-  name      String
-  artist    String
-  isrc      String
-  createdAt DateTime           @default(now())
-  updatedAt DateTime           @updatedAt
-  playlists PlaylistHasTrack[]
+  id          Int                @id @default(autoincrement())
+  trackId     String             @unique
+  name        String
+  artist      String
+  isrc        String
+  year        Int?
+  yearSpotify Int?
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+  playlists   PlaylistHasTrack[]
 
   @@index([trackId])
   @@map("tracks")
@@ -81,9 +83,9 @@ model Track {
 
 // Join table for Playlist and Track
 model PlaylistHasTrack {
-  playlist   Playlist @relation(fields: [playlistId], references: [id])
+  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
   playlistId Int
-  track      Track    @relation(fields: [trackId], references: [id])
+  track      Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
   trackId    Int
 
   @@id([playlistId, trackId]) // Composite primary key

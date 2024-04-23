@@ -1,12 +1,14 @@
 import { ApiResult } from './interfaces/ApiResult';
 import { createMollieClient } from '@mollie/api-client';
-import { PrismaClient } from '@prisma/client';
+import { Payment, PrismaClient } from '@prisma/client';
 import { color } from 'console-log-colors';
 import Logger from './logger';
+import Data from './data';
 
 class Mollie {
   private prisma = new PrismaClient();
   private logger = new Logger();
+  private data = new Data();
 
   private mollieClient = createMollieClient({
     apiKey: process.env['MOLLIE_API_KEY']!,
@@ -24,111 +26,11 @@ class Mollie {
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
       });
 
-      let userDatabaseId = 0;
-      let playlistDatabaseId = 0;
-
-      // Check if the user exists. If not, create it
-      const user = await this.prisma.user.findUnique({
-        where: {
-          userId: params.user.userId,
-        },
-      });
-
-      if (!user) {
-        // create the user
-        const userCreate = await this.prisma.user.create({
-          data: {
-            userId: params.user.userId,
-            email: params.user.email,
-            displayName: params.user.displayName,
-          },
-        });
-        userDatabaseId = userCreate.id;
-      } else {
-        userDatabaseId = user.id;
-      }
-
-      // Check if the playlist exists. If not, create it
-      const playlist = await this.prisma.playlist.findUnique({
-        where: {
-          playlistId: params.playlist.id,
-        },
-      });
-
-      if (!playlist) {
-        // create the playlist
-        const playlistCreate = await this.prisma.playlist.create({
-          data: {
-            playlistId: params.playlist.id,
-            name: params.playlist.name,
-          },
-        });
-        playlistDatabaseId = playlistCreate.id;
-      } else {
-        playlistDatabaseId = playlist.id;
-      }
-
-      // Check if there is a user_has_playlist entry. If not, create it
-      const userHasPlaylist = await this.prisma.userHasPlaylist.findFirst({
-        where: {
-          userId: userDatabaseId, // ID of the user
-          playlistId: playlistDatabaseId, // ID of the playlist
-        },
-      });
-
-      if (!userHasPlaylist) {
-        // create the user_has_playlist entry
-        await this.prisma.userHasPlaylist.create({
-          data: {
-            userId: userDatabaseId, // ID of the user
-            playlistId: playlistDatabaseId, // ID of the playlist
-          },
-        });
-      }
-
-      // Check if the tracks exist. If not, create them
-      for (const track of params.tracks) {
-        const trackDatabase = await this.prisma.track.findUnique({
-          where: {
-            trackId: track.id,
-          },
-        });
-
-        let trackDatabaseId = 0;
-
-        if (!trackDatabase) {
-          // create the track
-          const trackCreate = await this.prisma.track.create({
-            data: {
-              trackId: track.id,
-              name: track.name,
-              artist: track.artist,
-              isrc: track.isrc,
-            },
-          });
-          trackDatabaseId = trackCreate.id;
-        } else {
-          trackDatabaseId = trackDatabase.id;
-        }
-
-        // Check if there is a playlist_has_track entry. If not, create it
-        const playlistHasTrack = await this.prisma.playlistHasTrack.findFirst({
-          where: {
-            playlistId: playlistDatabaseId, // ID of the playlist
-            trackId: trackDatabaseId, // ID of the track
-          },
-        });
-
-        if (!playlistHasTrack) {
-          // create the playlist_has_track entry
-          await this.prisma.playlistHasTrack.create({
-            data: {
-              playlistId: playlistDatabaseId, // ID of the playlist
-              trackId: trackDatabaseId, // ID of the track
-            },
-          });
-        }
-      }
+      const userDatabaseId = await this.data.storeUser(params.user);
+      const playlistDatabaseId = await this.data.storePlaylist(
+        userDatabaseId,
+        params.playlist
+      );
 
       // Create the payment in the database
       await this.prisma.payment.create({
@@ -149,6 +51,7 @@ class Mollie {
         },
       };
     } catch (e) {
+      console.log(e);
       return {
         success: false,
         error: 'Failed to create payment',
@@ -199,14 +102,20 @@ class Mollie {
       where: {
         paymentId: paymentId,
       },
+      select: {
+        status: true,
+        user: {
+          select: {
+            userId: true, // Selectively retrieve only the userId from the user record
+          },
+        },
+      },
     });
 
     if (payment && payment.status == 'paid') {
       return {
         success: true,
-        data: {
-          status: payment.status,
-        },
+        data: payment,
       };
     } else {
       return {
@@ -214,6 +123,29 @@ class Mollie {
         error: 'Not paid yet',
       };
     }
+  }
+
+  public async getPayment(paymentId: string): Promise<any> {
+    return (await this.prisma.payment.findUnique({
+      where: {
+        paymentId: paymentId,
+      },
+      select: {
+        id: true,
+        userId: true,
+        paymentId: true,
+        amount: true,
+        status: true,
+        createdAt: true,
+        updatedAt: true,
+        playlist: {
+          select: {
+            playlistId: true, // Only selecting the playlistId from the related Playlist
+            id: true,
+          },
+        },
+      },
+    })) as Payment | null; // Add 'as Payment | null' to explicitly cast the returned object.
   }
 }
 
