@@ -12,6 +12,12 @@ import path from 'path';
 import view from '@fastify/view';
 import ejs from 'ejs';
 import Data from './data';
+import FastifyWebSocket, { SocketStream } from '@fastify/websocket';
+import { FastifyRequest } from 'fastify/types/request';
+
+interface QueryParameters {
+  [key: string]: string | string[];
+}
 
 declare module 'fastify' {
   export interface FastifyInstance {
@@ -149,9 +155,30 @@ class Server {
       root: path.join(__dirname, 'views'), // Ensure this is the correct path to your EJS templates
       includeViewExtension: true,
     });
+    // Register WebSocket plugin
+    await this.fastify.register(FastifyWebSocket, {
+      options: {
+        // WebSocket options here
+      },
+    });
   }
 
   public async addRoutes() {
+    this.fastify.get(
+      '/ws',
+      { websocket: true },
+      (connection: SocketStream, req: FastifyRequest) => {
+        console.log('CONNECTION!');
+
+        connection.socket.on('message', (message) => {
+          // Handle incoming WebSocket messages
+          console.log('Received WebSocket message:', message.toString());
+        });
+        // Send a message to the WebSocket client
+        connection.socket.send('Connected to WebSocket');
+      }
+    );
+
     this.fastify.get(
       '/spotify/playlists/:playlistId/tracks',
       async (request: any, _reply) => {
