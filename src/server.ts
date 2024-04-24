@@ -13,6 +13,7 @@ import view from '@fastify/view';
 import ejs from 'ejs';
 import Data from './data';
 import Progress from './progress';
+import fs from 'fs';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -211,6 +212,38 @@ class Server {
 
     this.fastify.get('/progress/:paymentId', async (request: any, _reply) => {
       return await this.progress.getProgress(request.params.paymentId);
+    });
+
+    // Setup a route to download a PDF
+    this.fastify.get('/download/:filename', async (request: any, reply) => {
+      const filename = path.basename(request.params.filename); // Use basename to avoid path traversal
+      const filePath = path.join(process.env['PUBLIC_DIR']!, 'pdf', filename);
+
+      // Ensure the file is a PDF for security reasons
+      if (path.extname(filename) !== '.pdf') {
+        reply.code(400).send('Only PDF files can be downloaded.');
+        return;
+      }
+
+      // Check if the file exists and is readable
+      try {
+        await fs.promises.access(filePath, fs.constants.R_OK);
+      } catch (error) {
+        reply.code(404).send('File not found.');
+        return;
+      }
+
+      // Serve the PDF file using the filePath
+      reply.header('Content-Disposition', 'attachment; filename=' + filename);
+      reply.type('application/pdf');
+
+      // Read the file into memory and send it as a buffer
+      try {
+        const fileContent = await fs.promises.readFile(filePath);
+        reply.send(fileContent);
+      } catch (error) {
+        reply.code(500).send('Error reading file.');
+      }
     });
 
     this.fastify.get(
