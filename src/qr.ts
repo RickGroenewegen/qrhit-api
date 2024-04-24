@@ -12,6 +12,7 @@ import sanitizeFilename from 'sanitize-filename';
 import Utils from './utils';
 import Progress from './progress';
 import { SocketStream } from '@fastify/websocket';
+import Mail from './mail';
 
 class Qr {
   private spotify = new Spotify();
@@ -21,6 +22,7 @@ class Qr {
   private utils = new Utils();
   private progress = Progress.getInstance();
   private prisma = new PrismaClient();
+  private mail = new Mail();
 
   public async startProgress(paymentId: string, connection: SocketStream) {
     this.progress.startProgress(paymentId);
@@ -108,6 +110,8 @@ class Qr {
     });
 
     this.progress.setProgress(params.paymentId, 100, `Done!`);
+
+    await this.mail.sendEmail();
 
     this.logger.log(
       color.green.bold(
