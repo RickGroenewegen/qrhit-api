@@ -41,6 +41,7 @@
         transform: rotate(0deg); /* Adjusts the direction of text */
         font-size: 14px;
         margin-left:5px;
+        
     }
     .qr {
         width: 35mm; /* Slightly reduced to make space for title */
@@ -87,9 +88,9 @@
                 <div class="title"><%= playlist.name %></div>
             </div>
             <div class="card back">
-                <div class="text" style="margin-top: 0mm;font-size:18px;"><%= track.artist %></div>
-                <div class="text" style="margin-top: 5mm;font-size:36px;font-weight:bold;"><%= track.year %></div>
-                <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;"><%= track.name %></div>
+                <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= track.artist %></div>
+                <div class="text" style="margin-top: 5mm;font-size:36px;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= track.year %></div>
+                <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;padding-left:2mm;padding-right:2mm;"><%= track.name %></div>
             </div>
         </div>
     <% }); %>

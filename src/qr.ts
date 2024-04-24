@@ -9,6 +9,7 @@ import * as fs from 'fs/promises';
 import * as puppeteer from 'puppeteer';
 import { uuidv4 as uuid } from 'uuidv7';
 import sanitizeFilename from 'sanitize-filename';
+import Utils from './utils';
 
 class Qr {
   private prisma = new PrismaClient();
@@ -16,6 +17,7 @@ class Qr {
   private mollie = new Mollie();
   private data = new Data();
   private logger = new Logger();
+  private utils = new Utils();
 
   public async generate(params: any): Promise<void> {
     const userProfile = await this.spotify.getUserProfile(params.accessToken);
@@ -51,18 +53,17 @@ class Qr {
       const hash = `${userId}-${track.id}`;
       const outputDir = `${process.env['PUBLIC_DIR']}/qr/${userId}`;
       const outputPath = `${outputDir}/${track.id}.png`;
-
-      // Create the output directory if it doesn't exist using fs
-      try {
-        await fs.mkdir(outputDir, { recursive: true });
-      } catch (error) {
-        console.log(111, error);
-      }
-
-      const qrCode = await this.generateQR(hash, outputPath);
+      await this.utils.createDir(outputDir);
+      await this.generateQR(hash, outputPath);
     }
 
-    this.generatePDF(playlist, payment);
+    const filename = await this.generatePDF(playlist, payment);
+
+    this.logger.log(
+      color.green.bold(
+        `PDF Generated successfully: ${color.white.bold(filename)}`
+      )
+    );
   }
 
   private async generateQR(hash: string, outputPath: string) {
@@ -89,18 +90,20 @@ class Qr {
     }
   }
 
-  private async generatePDF(playlist: Playlist, payment: any) {
+  private async generatePDF(playlist: Playlist, payment: any): Promise<string> {
     this.logger.log(color.blue.bold('Generating PDF...'));
-
-    console.log(111, playlist);
 
     const uniqueId = uuid();
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
     const url = `http://localhost:3003/qr/pdf/${playlist.playlistId}/${payment.paymentId}`;
-    const filename = sanitizeFilename(`${playlist.name}_${uniqueId}.pdf`);
+    const filename = sanitizeFilename(
+      `${playlist.name}_${uniqueId}.pdf`
+    ).toLowerCase();
 
-    console.log(222, url);
+    this.logger.log(
+      color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)
+    );
 
     // Navigate to the URL
     await page.goto(url, {
@@ -117,6 +120,8 @@ class Qr {
     // Generate the PDF
     await page.pdf(pdfOptions);
     await browser.close();
+
+    return filename;
   }
 }
 

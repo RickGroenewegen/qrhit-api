@@ -7,6 +7,8 @@ class MusicBrainz {
   private logger = new Logger();
   private lastRequestTime: number = 0;
   private axiosInstance: AxiosInstance;
+  private readonly maxRetries: number = 5;
+  private readonly maxRateLimit: number = 1200;
 
   constructor() {
     this.axiosInstance = axios.create({
@@ -19,50 +21,60 @@ class MusicBrainz {
 
   private async rateLimitDelay(): Promise<void> {
     const timeSinceLastRequest = Date.now() - this.lastRequestTime;
-    if (timeSinceLastRequest < 1000) {
-      // Less than one second since the last request
-      await new Promise((resolve) =>
-        setTimeout(resolve, 1000 - timeSinceLastRequest)
-      );
+    const delay =
+      timeSinceLastRequest < this.maxRateLimit
+        ? this.maxRateLimit - timeSinceLastRequest
+        : 0;
+    if (delay > 0) {
+      await new Promise((resolve) => setTimeout(resolve, delay));
     }
   }
 
   public async getReleaseDate(isrc: string): Promise<number> {
-    await this.rateLimitDelay(); // Ensure that we respect the rate limit
-    try {
-      const response = await this.axiosInstance.get(
-        `recording/?query=isrc:${isrc}&fmt=xml`
-      );
-      this.lastRequestTime = Date.now(); // Update the time of the last request
-
-      const parsedResult = await xml2js.parseStringPromise(response.data);
-      const recordings = parsedResult.metadata['recording-list'][0].recording;
-
-      let earliestDate: string | null = null;
-
-      if (recordings) {
-        earliestDate = recordings.reduce(
-          (earliest: string | null, recording: any) => {
-            const releaseDate = recording['first-release-date']
-              ? recording['first-release-date'][0]
-              : null;
-            return releaseDate && (!earliest || releaseDate < earliest)
-              ? releaseDate
-              : earliest;
-          },
-          null
+    let retryCount = 0;
+    while (retryCount < this.maxRetries) {
+      await this.rateLimitDelay(); // Ensure that we respect the rate limit
+      try {
+        const response = await this.axiosInstance.get(
+          `recording/?query=isrc:${isrc}&fmt=xml`
         );
-      }
+        this.lastRequestTime = Date.now(); // Update the time of the last request
 
-      if (!earliestDate) {
-        return 0;
+        const parsedResult = await xml2js.parseStringPromise(response.data);
+        const recordings = parsedResult.metadata['recording-list'][0].recording;
+
+        let earliestDate: string | null = null;
+
+        if (recordings) {
+          earliestDate = recordings.reduce(
+            (earliest: string | null, recording: any) => {
+              const releaseDate = recording['first-release-date']
+                ? recording['first-release-date'][0]
+                : null;
+              return releaseDate && (!earliest || releaseDate < earliest)
+                ? releaseDate
+                : earliest;
+            },
+            null
+          );
+        }
+
+        if (!earliestDate) {
+          return 0;
+        }
+        return parseInt(earliestDate.split('-')[0]); // Assuming the date format is YYYY-MM-DD
+      } catch (error: any) {
+        this.logger.log(
+          color.red(
+            'Failed to fetch data from MusicBrainz API! Try: ' +
+              (retryCount + 1)
+          )
+        );
+        this.logger.log(color.red(`Error: ${error.message}`));
+        retryCount++;
       }
-      return parseInt(earliestDate.split('-')[0]); // Assuming the date format is YYYY-MM-DD
-    } catch (error: any) {
-      this.logger.log(color.red('Failed to fetch data from MusicBrainz API!'));
-      this.logger.log(color.red(`Error: ${error.message}`));
-      return 0;
     }
+    return 0;
   }
 }
 
