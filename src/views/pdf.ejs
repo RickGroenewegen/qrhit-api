@@ -19,7 +19,7 @@
         align-content: start;
     }
     .card-container {
-        width: 104mm; /* Total width of two cards plus folding line */
+        width: 104mm;
         height: 52mm;
         display: flex;
         margin-bottom: 0mm;
@@ -32,186 +32,67 @@
     }
     .front {
         display: flex;
-        flex-direction: column;
         align-items: center;
         justify-content: center;
         border-right: 2px dashed #ccc;
     }
-    .back {
-        position: relative;
-        background-color: #fff;
-        text-align: center;
-        height: 52mm;
-    }
-    .back .text {
-        position: absolute;
-        top: 50%;
-        
-        transform: translate(-50%, -50%) rotate(90deg);
-        white-space: nowrap;
-        font-size: 12px;
+    .title {
+        writing-mode: vertical-lr; /* Rotates the title */
+        transform: rotate(0deg); /* Adjusts the direction of text */
+        font-size: 14px;
+        margin-left:5px;
     }
     .qr {
-        width: 40mm;
-        height: 40mm; /* Adjusted for better fit within rotated card */
+        width: 35mm; /* Slightly reduced to make space for title */
+        height: 35mm;
         background-size: cover;
     }
-    .card-container:nth-of-type(10n) {
-        page-break-after: always; /* Adds a break after every 5 card containers */
+    .back {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        height: 52mm;
+        transform: rotate(90deg);
     }
-
+    .text {
+        font-size: 12px;
+    }
+    .text.artist {
+        font-size: 18px;
+    }
+    .text.year {
+        font-size: 36px;
+        font-weight: bold;
+    }
+    .text.name {
+        font-size: 16px;
+        font-style: italic;
+    }
+    .card-container:nth-of-type(10n) {
+        page-break-after: always;
+    }
     .card-container:first-of-type {
-        page-break-before: avoid; /* Avoids a break before the first item */
+        page-break-before: avoid;
     }
 </style>
 </head>
 <body>
 <div class="page">
-    <!-- Repeat this block for each pair of cards -->
-    <div class="card-container">
-        <div class="card front">
-            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
+    <% tracks.forEach(function(track) { %>
+        <div class="card-container">
+            <div class="card front">
+                <div class="qr" style="background-image: url('http://localhost:3003/public/qr/<%= user.userId %>/<%= track.trackId %>.png');"></div>
+                <div class="title"><%= playlist.name %></div>
+            </div>
+            <div class="card back">
+                <div class="text" style="margin-top: 0mm;font-size:18px;"><%= track.artist %></div>
+                <div class="text" style="margin-top: 5mm;font-size:36px;font-weight:bold;"><%= track.year %></div>
+                <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;"><%= track.name %></div>
+            </div>
         </div>
-        <div class="card back">
-            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
-            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
-            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
-        </div>
-    </div>
-
-    <div class="card-container">
-        <div class="card front">
-            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
-        </div>
-        <div class="card back">
-            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
-            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
-            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
-        </div>
-    </div>
-
-    <div class="card-container">
-        <div class="card front">
-            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
-        </div>
-        <div class="card back">
-            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
-            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
-            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
-        </div>
-    </div>
-
-    <div class="card-container">
-        <div class="card front">
-            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
-        </div>
-        <div class="card back">
-            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
-            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
-            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
-        </div>
-    </div>
-
-    <div class="card-container">
-        <div class="card front">
-            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
-        </div>
-        <div class="card back">
-            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
-            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
-            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
-        </div>
-    </div>
-
-    <div class="card-container">
-        <div class="card front">
-            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
-        </div>
-        <div class="card back">
-            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
-            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
-            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
-        </div>
-    </div>
-
-    <div class="card-container">
-        <div class="card front">
-            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
-        </div>
-        <div class="card back">
-            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
-            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
-            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
-        </div>
-    </div>
-
-    <div class="card-container">
-        <div class="card front">
-            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
-        </div>
-        <div class="card back">
-            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
-            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
-            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
-        </div>
-    </div>
-
-    <div class="card-container">
-        <div class="card front">
-            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
-        </div>
-        <div class="card back">
-            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
-            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
-            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
-        </div>
-    </div>
-
-    <div class="card-container">
-        <div class="card front">
-            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
-        </div>
-        <div class="card back">
-            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
-            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
-            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
-        </div>
-    </div>
-
-    <div class="card-container">
-        <div class="card front">
-            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
-        </div>
-        <div class="card back">
-            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
-            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
-            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
-        </div>
-    </div>
-
-    <div class="card-container">
-        <div class="card front">
-            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
-        </div>
-        <div class="card back">
-            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
-            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
-            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
-        </div>
-    </div>
-
-    <div class="card-container">
-        <div class="card front">
-            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
-        </div>
-        <div class="card back">
-            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
-            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
-            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
-        </div>
-    </div>
-    
-    <!-- End Repeat -->
+    <% }); %>
 </div>
 </body>
 </html>

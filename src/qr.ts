@@ -1,12 +1,14 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
-import { PrismaClient } from '@prisma/client';
+import { Playlist, PrismaClient } from '@prisma/client';
 import Spotify from './spotify';
 import Mollie from './mollie';
 import Data from './data';
 import * as QRCode from 'qrcode';
 import * as fs from 'fs/promises';
 import * as puppeteer from 'puppeteer';
+import { uuidv4 as uuid } from 'uuidv7';
+import sanitizeFilename from 'sanitize-filename';
 
 class Qr {
   private prisma = new PrismaClient();
@@ -23,9 +25,12 @@ class Qr {
     const userId = paymentStatus.data.user.userId;
     const payment = await this.mollie.getPayment(params.paymentId);
 
+    // Get the playlist from the database
+    const playlist = await this.data.getPlaylist(payment.playlist.playlistId);
+
     // Check if the user is the same as the one who made the payment
     if (userProfile.data.userId !== userId) {
-      console.log(
+      this.logger.log(
         color.red.bold('User is not the same as the one who made the payment')
       );
       return;
@@ -57,7 +62,7 @@ class Qr {
       const qrCode = await this.generateQR(hash, outputPath);
     }
 
-    this.generatePDF();
+    this.generatePDF(playlist, payment);
   }
 
   private async generateQR(hash: string, outputPath: string) {
@@ -80,24 +85,31 @@ class Qr {
         );
       }
     } catch (error) {
-      console.error('Error generating QR code:', error);
+      this.logger.log(color.red.bold('Error generating QR code!'));
     }
   }
 
-  private async generatePDF() {
+  private async generatePDF(playlist: Playlist, payment: any) {
     this.logger.log(color.blue.bold('Generating PDF...'));
 
+    console.log(111, playlist);
+
+    const uniqueId = uuid();
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
+    const url = `http://localhost:3003/qr/pdf/${playlist.playlistId}/${payment.paymentId}`;
+    const filename = sanitizeFilename(`${playlist.name}_${uniqueId}.pdf`);
+
+    console.log(222, url);
 
     // Navigate to the URL
-    await page.goto('http://localhost:3003/qr/pdf', {
-      waitUntil: 'networkidle0', // Ensures the page has loaded completely
+    await page.goto(url, {
+      waitUntil: 'networkidle0',
     });
 
     // Define PDF options
     const pdfOptions: puppeteer.PDFOptions = {
-      path: 'trivia-card.pdf', // Path to save PDF
+      path: `${process.env['PUBLIC_DIR']}/pdf/${filename}`,
       format: 'A4',
       printBackground: true,
     };
@@ -105,8 +117,6 @@ class Qr {
     // Generate the PDF
     await page.pdf(pdfOptions);
     await browser.close();
-
-    console.log('PDF Generated from URL!');
   }
 }
 

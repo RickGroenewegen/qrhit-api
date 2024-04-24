@@ -59,6 +59,30 @@ class Mollie {
     }
   }
 
+  public async canDownloadPDF(
+    playlistId: string,
+    paymentId: string
+  ): Promise<boolean> {
+    const payment = await this.prisma.payment.findUnique({
+      where: {
+        paymentId: paymentId,
+      },
+      select: {
+        playlist: {
+          select: {
+            playlistId: true,
+          },
+        },
+      },
+    });
+
+    if (payment && payment.playlist!.playlistId == playlistId) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   public async processWebhook(params: any): Promise<ApiResult> {
     if (params.id) {
       const payment = await this.mollieClient.payments.get(params.id);

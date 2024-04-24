@@ -11,6 +11,7 @@ import Qr from './qr';
 import path from 'path';
 import view from '@fastify/view';
 import ejs from 'ejs';
+import Data from './data';
 
 declare module 'fastify' {
   export interface FastifyInstance {
@@ -29,6 +30,7 @@ class Server {
   private spotify = new Spotify();
   private mollie = new Mollie();
   private qr = new Qr();
+  private data = new Data();
 
   private constructor() {
     this.fastify = Fastify({
@@ -47,9 +49,16 @@ class Server {
 
   public async init() {
     this.isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
+    await this.createDirs();
     await this.registerPlugins();
     await this.addRoutes();
     await this.startCluster();
+  }
+
+  private async createDirs() {
+    const publicDir = process.env['PUBLIC_DIR']!;
+    await this.utils.createDir(`${publicDir}/qr`);
+    await this.utils.createDir(`${publicDir}/pdf`);
   }
 
   public getWorkerId() {
@@ -134,8 +143,6 @@ class Server {
       reply.status(500).send({ error: 'Internal Server Error' });
     });
 
-    console.log(111, path.join(__dirname, 'views'));
-
     // Register the view plugin with EJS
     await this.fastify.register(view, {
       engine: { ejs: ejs },
@@ -174,8 +181,6 @@ class Server {
     });
 
     this.fastify.post('/mollie/check', async (request: any, _reply) => {
-      console.log(111, request.body);
-
       return await this.mollie.checkPaymentStatus(request.body.paymentId);
     });
 
@@ -191,14 +196,31 @@ class Server {
       return await this.qr.generate(request.body);
     });
 
-    this.fastify.get('/qr/pdf', async (request, reply) => {
-      const qrCode = 'Sample QR Code Data';
-      await reply.view('pdf.ejs', { qrCode: qrCode });
-    });
+    this.fastify.get(
+      '/qr/pdf/:playlistId/:paymentId',
+      async (request: any, reply) => {
+        const valid = await this.mollie.canDownloadPDF(
+          request.params.playlistId,
+          request.params.paymentId
+        );
 
-    this.fastify.get('/test', async (request: any, _reply) => {
-      return { success: true };
-    });
+        if (!valid) {
+          reply.status(403).send({ error: 'Forbidden' });
+          return;
+        }
+
+        const playlist = await this.data.getPlaylist(request.params.playlistId);
+        const tracks = await this.data.getTracks(playlist.id);
+        const payment = await this.mollie.getPayment(request.params.paymentId);
+        const user = await this.data.getUser(payment.userId);
+
+        await reply.view('pdf.ejs', {
+          playlist,
+          tracks,
+          user,
+        });
+      }
+    );
   }
 }
 
