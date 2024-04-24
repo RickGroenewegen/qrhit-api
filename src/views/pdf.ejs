@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Trivia Cards</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+        page-break-after: always;
+    }
+    .page {
+        width: 210mm;
+        height: 297mm;
+        padding: 20mm;
+        box-sizing: border-box;
+        display: flex;
+        flex-wrap: wrap;
+        align-content: start;
+    }
+    .card-container {
+        width: 100mm; /* Total width of two cards plus folding line */
+        height: 50mm;
+        display: flex;
+        margin-bottom: 0mm;
+        border: 1px solid #ccc;
+    }
+    .card {
+        width: 50mm;
+        height: 50mm;
+        box-sizing: border-box;
+    }
+    .front {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        border-right: 2px dashed #ccc;
+    }
+    .back {
+        position: relative;
+        background-color: #fff;
+        text-align: center;
+        height: 50mm;
+    }
+    .back .text {
+        position: absolute;
+        top: 50%;
+        
+        transform: translate(-50%, -50%) rotate(90deg);
+        white-space: nowrap;
+        font-size: 12px;
+    }
+    .qr {
+        width: 40mm;
+        height: 40mm; /* Adjusted for better fit within rotated card */
+        background-size: cover;
+    }
+</style>
+</head>
+<body>
+<div class="page">
+    <!-- Repeat this block for each pair of cards -->
+    <div class="card-container">
+        <div class="card front">
+            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
+        </div>
+        <div class="card back">
+            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
+            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
+            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
+        </div>
+    </div>
+
+    <div class="card-container">
+        <div class="card front">
+            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
+        </div>
+        <div class="card back">
+            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
+            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
+            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
+        </div>
+    </div>
+
+    <div class="card-container">
+        <div class="card front">
+            <div class="qr" style="background-image: url('http://localhost:3003/public/qr/rickman9/test.png');"></div>
+        </div>
+        <div class="card back">
+            <div class="text" style="right:-18mm;font-size:18px;">Elvis Presley</div>
+            <div class="text" style="right:3mm;font-size:36px;font-weight:bold;">1968</div>
+            <div class="text" style="right:14mm;font-size:16px;font-style: italic;">Now or Never</div>
+        </div>
+    </div>
+    
+    <!-- End Repeat -->
+</div>
+</body>
+</html>

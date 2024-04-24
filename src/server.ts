@@ -8,6 +8,9 @@ import Utils from './utils';
 import Spotify from './spotify';
 import Mollie from './mollie';
 import Qr from './qr';
+import path from 'path';
+import view from '@fastify/view';
+import ejs from 'ejs';
 
 declare module 'fastify' {
   export interface FastifyInstance {
@@ -116,7 +119,7 @@ class Server {
       credentials: true,
     });
 
-    this.fastify.register((instance, opts, done) => {
+    await this.fastify.register((instance, opts, done) => {
       instance.register(require('@fastify/static'), {
         root: process.env['PUBLIC_DIR'] as string,
         prefix: '/public/',
@@ -124,11 +127,20 @@ class Server {
       done();
     });
 
-    this.fastify.setErrorHandler((error, request, reply) => {
+    await this.fastify.setErrorHandler((error, request, reply) => {
       if (process.env['ENVIRONMENT'] == 'development') {
         console.error(error);
       }
       reply.status(500).send({ error: 'Internal Server Error' });
+    });
+
+    console.log(111, path.join(__dirname, 'views'));
+
+    // Register the view plugin with EJS
+    await this.fastify.register(view, {
+      engine: { ejs: ejs },
+      root: path.join(__dirname, 'views'), // Ensure this is the correct path to your EJS templates
+      includeViewExtension: true,
     });
   }
 
@@ -177,6 +189,11 @@ class Server {
 
     this.fastify.post('/qr/generate', async (request: any, _reply) => {
       return await this.qr.generate(request.body);
+    });
+
+    this.fastify.get('/qr/pdf', async (request, reply) => {
+      const qrCode = 'Sample QR Code Data';
+      await reply.view('pdf.ejs', { qrCode: qrCode });
     });
 
     this.fastify.get('/test', async (request: any, _reply) => {
