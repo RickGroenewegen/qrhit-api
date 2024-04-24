@@ -6,6 +6,7 @@ import Mollie from './mollie';
 import Data from './data';
 import * as QRCode from 'qrcode';
 import * as fs from 'fs/promises';
+import * as puppeteer from 'puppeteer';
 
 class Qr {
   private prisma = new PrismaClient();
@@ -54,8 +55,9 @@ class Qr {
       }
 
       const qrCode = await this.generateQR(hash, outputPath);
-      //this.data.storeQrCode(track.id, qrCode);
     }
+
+    this.generatePDF();
   }
 
   private async generateQR(hash: string, outputPath: string) {
@@ -80,6 +82,31 @@ class Qr {
     } catch (error) {
       console.error('Error generating QR code:', error);
     }
+  }
+
+  private async generatePDF() {
+    this.logger.log(color.blue.bold('Generating PDF...'));
+
+    const browser = await puppeteer.launch();
+    const page = await browser.newPage();
+
+    // Navigate to the URL
+    await page.goto('http://localhost:3003/qr/pdf', {
+      waitUntil: 'networkidle0', // Ensures the page has loaded completely
+    });
+
+    // Define PDF options
+    const pdfOptions: puppeteer.PDFOptions = {
+      path: 'trivia-card.pdf', // Path to save PDF
+      format: 'A4',
+      printBackground: true,
+    };
+
+    // Generate the PDF
+    await page.pdf(pdfOptions);
+    await browser.close();
+
+    console.log('PDF Generated from URL!');
   }
 }
 

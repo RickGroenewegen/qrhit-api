@@ -47,6 +47,7 @@
     "node-cron": "^3.0.3",
     "npm": "^10.5.2",
     "openai": "^4.26.1",
+    "puppeteer": "^22.7.0",
     "qrcode": "^1.5.3",
     "sanitize-html": "^2.11.0",
     "sharp": "^0.33.2",
