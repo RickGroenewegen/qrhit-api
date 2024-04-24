@@ -147,6 +147,8 @@ class Spotify {
           id: track.track.id,
           name: track.track.name,
           artist: track.track.artists[0].name,
+          image:
+            track.track.album.images[track.track.album.images.length - 1].url,
           releaseDate: format(
             new Date(track.track.album.release_date),
             'yyyy-MM-dd'
