@@ -14,6 +14,7 @@ import ejs from 'ejs';
 import Data from './data';
 import FastifyWebSocket, { SocketStream } from '@fastify/websocket';
 import { FastifyRequest } from 'fastify/types/request';
+import Progress from './progress';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -37,6 +38,7 @@ class Server {
   private mollie = new Mollie();
   private qr = new Qr();
   private data = new Data();
+  private progress = Progress.getInstance();
 
   private constructor() {
     this.fastify = Fastify({
@@ -232,6 +234,10 @@ class Server {
 
     this.fastify.post('/qr/generate', async (request: any, _reply) => {
       return await this.qr.generate(request.body);
+    });
+
+    this.fastify.post('/progress/:paymentId', async (request: any, _reply) => {
+      return await this.progress.getProgress(request.params.paymentId);
     });
 
     this.fastify.get(

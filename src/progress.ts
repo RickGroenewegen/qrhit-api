@@ -9,6 +9,7 @@ class Progress {
   private progress: { [key: string]: IProgress } = {};
   private logger = new Log();
   private cache = Cache.getInstance();
+  private cacheKey = 'paymentProgress_';
 
   private constructor() {}
 
@@ -26,6 +27,12 @@ class Progress {
         progress: 0,
         message: 'Started progress...',
       };
+
+      await this.cache.set(
+        this.cacheKey + paymentId,
+        JSON.stringify(this.progress[paymentId])
+      );
+
       this.logger.log(
         color.blue.bold(
           `Starting progress for payment: ${color.white.bold(paymentId)}`
@@ -34,15 +41,38 @@ class Progress {
     }
   }
 
+  public async getProgress(paymentId: string): Promise<IProgress | null> {
+    if (!this.progress[paymentId]) {
+      const val = await this.cache.get(this.cacheKey + paymentId);
+      if (val) {
+        this.progress[paymentId] = JSON.parse(val);
+      }
+    }
+
+    return this.progress[paymentId] || null;
+  }
+
   public async setProgress(
     paymentId: string,
     progress: number,
     message: string
   ) {
+    if (!this.progress[paymentId]) {
+      const val = await this.cache.get(this.cacheKey + paymentId);
+      if (val) {
+        this.progress[paymentId] = JSON.parse(val);
+      }
+    }
+
     if (this.progress[paymentId]) {
       this.progress[paymentId].paymentId = paymentId;
       this.progress[paymentId].progress = progress;
       this.progress[paymentId].message = message;
+
+      this.cache.set(
+        this.cacheKey + paymentId,
+        JSON.stringify(this.progress[paymentId])
+      );
 
       this.logger.log(
         color.blue.bold(
