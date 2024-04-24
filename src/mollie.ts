@@ -160,6 +160,7 @@ class Mollie {
         paymentId: true,
         amount: true,
         status: true,
+        filename: true,
         createdAt: true,
         updatedAt: true,
         playlist: {

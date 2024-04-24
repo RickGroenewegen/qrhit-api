@@ -12,8 +12,6 @@ import path from 'path';
 import view from '@fastify/view';
 import ejs from 'ejs';
 import Data from './data';
-import FastifyWebSocket, { SocketStream } from '@fastify/websocket';
-import { FastifyRequest } from 'fastify/types/request';
 import Progress from './progress';
 
 interface QueryParameters {
@@ -157,41 +155,9 @@ class Server {
       root: path.join(__dirname, 'views'), // Ensure this is the correct path to your EJS templates
       includeViewExtension: true,
     });
-    // Register WebSocket plugin
-    await this.fastify.register(FastifyWebSocket, {
-      options: {
-        // WebSocket options here
-      },
-    });
-  }
-
-  private handleWebSocketMessage(connection: SocketStream, message: string) {
-    // Handle WebSocket message here
-
-    try {
-      const data = JSON.parse(message);
-      if (data.type == 'startProgress') {
-        this.qr.startProgress(data.paymentId, connection);
-      }
-    } catch (error) {
-      // Nothing
-    }
   }
 
   public async addRoutes() {
-    this.fastify.get(
-      '/ws',
-      { websocket: true },
-      (connection: SocketStream, req: FastifyRequest) => {
-        connection.socket.on('message', (message) => {
-          // Handle incoming WebSocket messages
-          this.handleWebSocketMessage(connection, message.toString());
-        });
-        // Send a message to the WebSocket client
-        connection.socket.send('Connected to WebSocket');
-      }
-    );
-
     this.fastify.get(
       '/spotify/playlists/:playlistId/tracks',
       async (request: any, _reply) => {
@@ -236,9 +202,30 @@ class Server {
       return await this.qr.generate(request.body);
     });
 
-    this.fastify.post('/progress/:paymentId', async (request: any, _reply) => {
+    this.fastify.get(
+      '/progress/:paymentId/start',
+      async (request: any, _reply) => {
+        return await this.progress.startProgress(request.params.paymentId);
+      }
+    );
+
+    this.fastify.get('/progress/:paymentId', async (request: any, _reply) => {
       return await this.progress.getProgress(request.params.paymentId);
     });
+
+    this.fastify.get(
+      '/progress/:playlistId/:paymentId',
+      async (request: any, _reply) => {
+        const data = await this.data.getPayment(
+          request.params.paymentId,
+          request.params.playlistId
+        );
+        return {
+          success: true,
+          filename: data.filename,
+        };
+      }
+    );
 
     this.fastify.get(
       '/qr/pdf/:playlistId/:paymentId',

@@ -19,6 +19,7 @@ model Payment {
   createdAt  DateTime  @default(now())
   updatedAt  DateTime  @updatedAt
   playlistId Int?
+  filename   String?
   playlist   Playlist? @relation(fields: [playlistId], references: [id], onDelete: Cascade)
   user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 

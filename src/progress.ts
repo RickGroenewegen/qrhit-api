@@ -22,6 +22,13 @@ class Progress {
 
   public async startProgress(paymentId: string) {
     if (!this.progress[paymentId]) {
+      const val = await this.cache.get(this.cacheKey + paymentId);
+      if (val) {
+        this.progress[paymentId] = JSON.parse(val);
+      }
+    }
+
+    if (!this.progress[paymentId]) {
       this.progress[paymentId] = {
         paymentId: paymentId,
         progress: 0,
@@ -44,6 +51,9 @@ class Progress {
   public async getProgress(paymentId: string): Promise<IProgress | null> {
     if (!this.progress[paymentId]) {
       const val = await this.cache.get(this.cacheKey + paymentId);
+
+      console.log(val);
+
       if (val) {
         this.progress[paymentId] = JSON.parse(val);
       }
@@ -69,7 +79,7 @@ class Progress {
       this.progress[paymentId].progress = progress;
       this.progress[paymentId].message = message;
 
-      this.cache.set(
+      await this.cache.set(
         this.cacheKey + paymentId,
         JSON.stringify(this.progress[paymentId])
       );

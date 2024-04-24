@@ -1,6 +1,6 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
-import { Playlist } from '@prisma/client';
+import { Playlist, PrismaClient } from '@prisma/client';
 import Spotify from './spotify';
 import Mollie from './mollie';
 import Data from './data';
@@ -20,6 +20,7 @@ class Qr {
   private logger = new Logger();
   private utils = new Utils();
   private progress = Progress.getInstance();
+  private prisma = new PrismaClient();
 
   public async startProgress(paymentId: string, connection: SocketStream) {
     this.progress.startProgress(paymentId);
@@ -95,6 +96,16 @@ class Qr {
     );
 
     const filename = await this.generatePDF(playlist, payment);
+
+    // Update the payment with the filename using prisma
+    await this.prisma.payment.update({
+      where: {
+        paymentId: payment.paymentId,
+      },
+      data: {
+        filename,
+      },
+    });
 
     this.progress.setProgress(params.paymentId, 100, `Done!`);
 
