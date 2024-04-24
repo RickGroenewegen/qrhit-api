@@ -1,6 +1,6 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
-import { Playlist, PrismaClient } from '@prisma/client';
+import { Playlist } from '@prisma/client';
 import Spotify from './spotify';
 import Mollie from './mollie';
 import Data from './data';
@@ -10,16 +10,24 @@ import * as puppeteer from 'puppeteer';
 import { uuidv4 as uuid } from 'uuidv7';
 import sanitizeFilename from 'sanitize-filename';
 import Utils from './utils';
+import Progress from './progress';
+import { SocketStream } from '@fastify/websocket';
 
 class Qr {
-  private prisma = new PrismaClient();
   private spotify = new Spotify();
   private mollie = new Mollie();
   private data = new Data();
   private logger = new Logger();
   private utils = new Utils();
+  private progress = Progress.getInstance();
+
+  public async startProgress(paymentId: string, connection: SocketStream) {
+    this.progress.startProgress(paymentId);
+  }
 
   public async generate(params: any): Promise<void> {
+    this.progress.setProgress(params.paymentId, 0, 'Started ...');
+
     const userProfile = await this.spotify.getUserProfile(params.accessToken);
     const paymentStatus = await this.mollie.checkPaymentStatus(
       params.paymentId
@@ -38,6 +46,12 @@ class Qr {
       return;
     }
 
+    this.progress.setProgress(
+      params.paymentId,
+      0,
+      'Getting tracks from Spotify '
+    );
+
     // Retrieve the tracks from Spotify
     const response = await this.spotify.getTracks(
       { authorization: params.accessToken },
@@ -46,7 +60,13 @@ class Qr {
 
     const tracks = response.data;
 
-    await this.data.storeTracks(payment.playlist.id, tracks);
+    this.progress.setProgress(
+      params.paymentId,
+      0,
+      'Storing tracks in database'
+    );
+
+    await this.data.storeTracks(payment.paymentId, payment.playlist.id, tracks);
 
     // Loop through the tracks and create a QR code for each track
     for (const track of tracks) {
@@ -55,9 +75,28 @@ class Qr {
       const outputPath = `${outputDir}/${track.id}.png`;
       await this.utils.createDir(outputDir);
       await this.generateQR(hash, outputPath);
+
+      // Create a progress based on 70-90% of the total tracks
+      const progress = Math.floor(
+        (tracks.indexOf(track) / tracks.length) * 20 + 70
+      );
+
+      this.progress.setProgress(
+        params.paymentId,
+        progress,
+        `Generated QR code for: ${track.name}`
+      );
     }
 
+    this.progress.setProgress(
+      params.paymentId,
+      90,
+      `Generating PDF for: ${playlist.name}`
+    );
+
     const filename = await this.generatePDF(playlist, payment);
+
+    this.progress.setProgress(params.paymentId, 100, `Done!`);
 
     this.logger.log(
       color.green.bold(
@@ -81,9 +120,6 @@ class Qr {
           },
           errorCorrectionLevel: 'H', // High error correction level
         });
-        this.logger.log(
-          color.blue.bold(`QR code generated: ${color.white.bold(outputPath)}`)
-        );
       }
     } catch (error) {
       this.logger.log(color.red.bold('Error generating QR code!'));

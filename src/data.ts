@@ -2,11 +2,13 @@ import { color } from 'console-log-colors';
 import Logger from './logger';
 import { PrismaClient } from '@prisma/client';
 import MusicBrainz from './musicbrainz';
+import Progress from './progress';
 
 class Data {
   private prisma = new PrismaClient();
   private logger = new Logger();
   private musicBrainz = new MusicBrainz();
+  private progress = Progress.getInstance();
 
   public async storeUser(userParams: any): Promise<number> {
     let userDatabaseId: number = 0;
@@ -106,6 +108,7 @@ class Data {
   }
 
   public async storeTracks(
+    paymentId: string,
     playlistDatabaseId: number,
     tracks: any
   ): Promise<any> {
@@ -182,11 +185,14 @@ class Data {
         });
       }
 
-      this.logger.log(
-        color.blue.bold('Created track: ') +
-          color.white.bold(track.name) +
-          color.blue.bold(' by ') +
-          color.white.bold(track.artist)
+      // Calculate the progress from 0-70% based on the number of tracks
+      const progress = Math.round((tracks.indexOf(track) / tracks.length) * 70);
+
+      // Update the progress
+      await this.progress.setProgress(
+        paymentId,
+        progress,
+        `Processing track: ${track.name}`
       );
     }
   }

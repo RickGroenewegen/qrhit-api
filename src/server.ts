@@ -163,16 +163,27 @@ class Server {
     });
   }
 
+  private handleWebSocketMessage(connection: SocketStream, message: string) {
+    // Handle WebSocket message here
+
+    try {
+      const data = JSON.parse(message);
+      if (data.type == 'startProgress') {
+        this.qr.startProgress(data.paymentId, connection);
+      }
+    } catch (error) {
+      // Nothing
+    }
+  }
+
   public async addRoutes() {
     this.fastify.get(
       '/ws',
       { websocket: true },
       (connection: SocketStream, req: FastifyRequest) => {
-        console.log('CONNECTION!');
-
         connection.socket.on('message', (message) => {
           // Handle incoming WebSocket messages
-          console.log('Received WebSocket message:', message.toString());
+          this.handleWebSocketMessage(connection, message.toString());
         });
         // Send a message to the WebSocket client
         connection.socket.send('Connected to WebSocket');
