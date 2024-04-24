@@ -51,9 +51,6 @@ class Progress {
   public async getProgress(paymentId: string): Promise<IProgress | null> {
     if (!this.progress[paymentId]) {
       const val = await this.cache.get(this.cacheKey + paymentId);
-
-      console.log(val);
-
       if (val) {
         this.progress[paymentId] = JSON.parse(val);
       }
