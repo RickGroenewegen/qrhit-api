@@ -133,36 +133,53 @@ class Spotify {
 
   public async getTracks(headers: any, playlistId: string): Promise<ApiResult> {
     try {
-      const response = await axios.get(
-        `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-        {
-          headers: {
-            Authorization: `Bearer ${headers.authorization}`,
-          },
-        }
-      );
+      let allTracks: Track[] = [];
+      let offset = 0;
+      const limit = 100;
 
-      const tracks: Track[] = response.data.items.map((track: any) => {
-        return {
-          id: track.track.id,
-          name: track.track.name,
-          artist: track.track.artists[0].name,
-          image:
-            track.track.album.images[track.track.album.images.length - 1].url,
+      while (true) {
+        const response = await axios.get(
+          `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+          {
+            headers: {
+              Authorization: `Bearer ${headers.authorization}`,
+            },
+            params: {
+              limit,
+              offset,
+            },
+          }
+        );
+
+        const tracks: Track[] = response.data.items.map((item: any) => ({
+          id: item.track.id,
+          name: item.track.name,
+          artist: item.track.artists[0].name,
+          link: item.track.external_urls.spotify,
+          image: item.track.album.images[0].url,
           releaseDate: format(
-            new Date(track.track.album.release_date),
+            new Date(item.track.album.release_date),
             'yyyy-MM-dd'
           ),
-          isrc: track.track.external_ids.isrc,
-        };
-      });
+          isrc: item.track.external_ids.isrc,
+        }));
+
+        allTracks = allTracks.concat(tracks);
+
+        // Check if there are more tracks to fetch
+        if (response.data.items.length < limit) {
+          break;
+        }
+
+        offset += limit;
+      }
 
       return {
         success: true,
-        data: tracks,
+        data: allTracks,
       };
     } catch (e) {
-      console.log(e);
+      console.error(e);
 
       return { success: false, error: 'Error getting tracks' };
     }

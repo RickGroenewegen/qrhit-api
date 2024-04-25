@@ -33,11 +33,13 @@ model User {
   userId          String            @unique
   email           String            @unique
   displayName     String
+  hash            String
   payments        Payment[] // One-to-many relation to payments
   createdAt       DateTime          @default(now())
   updatedAt       DateTime          @updatedAt
   UserHasPlaylist UserHasPlaylist[]
 
+  @@index([hash])
   @@map("users")
 }
 
@@ -61,6 +63,7 @@ model UserHasPlaylist {
   playlistId Int
   user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   userId     Int
+  hash       String
 
   @@id([playlistId, userId]) // Composite primary key
   @@map("user_has_playlists")
@@ -74,6 +77,7 @@ model Track {
   isrc        String
   year        Int?
   yearSpotify Int?
+  spotifyLink String?
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   playlists   PlaylistHasTrack[]

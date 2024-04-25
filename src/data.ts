@@ -3,6 +3,9 @@ import Logger from './logger';
 import { PrismaClient } from '@prisma/client';
 import MusicBrainz from './musicbrainz';
 import Progress from './progress';
+import { nanoid } from 'nanoid';
+import crypto from 'crypto';
+import { ApiResult } from './interfaces/ApiResult';
 
 class Data {
   private prisma = new PrismaClient();
@@ -22,11 +25,14 @@ class Data {
 
     if (!user) {
       // create the user
+      const hash = crypto.randomBytes(8).toString('hex').slice(0, 16);
+
       const userCreate = await this.prisma.user.create({
         data: {
           userId: userParams.userId,
           email: userParams.email,
           displayName: userParams.displayName,
+          hash: hash,
         },
       });
       userDatabaseId = userCreate.id;
@@ -62,23 +68,11 @@ class Data {
       playlistDatabaseId = playlist.id;
     }
 
-    // Check if there is a user_has_playlist entry. If not, create it
-    const userHasPlaylist = await this.prisma.userHasPlaylist.findFirst({
-      where: {
-        userId: userDatabaseId, // ID of the user
-        playlistId: playlistDatabaseId, // ID of the playlist
-      },
-    });
+    await this.prisma.$executeRaw`
+    INSERT INTO   user_has_playlists (userId, playlistId)
+    VALUES        (${userDatabaseId}, ${playlistDatabaseId})
+    ON DUPLICATE KEY UPDATE userId = userId;`;
 
-    if (!userHasPlaylist) {
-      // create the user_has_playlist entry
-      await this.prisma.userHasPlaylist.create({
-        data: {
-          userId: userDatabaseId, // ID of the user
-          playlistId: playlistDatabaseId, // ID of the playlist
-        },
-      });
-    }
     return playlistDatabaseId;
   }
 
@@ -104,7 +98,7 @@ class Data {
 
   public async getTracks(playlistId: number): Promise<any> {
     const tracks = await this.prisma.$queryRaw`
-        SELECT      tracks.trackId, tracks.artist, tracks.year, tracks.name FROM tracks
+        SELECT      tracks.id, tracks.trackId, tracks.artist, tracks.year, tracks.name FROM tracks
         INNER JOIN  playlist_has_tracks ON tracks.id = playlist_has_tracks.trackId
         WHERE       playlist_has_tracks.playlistId = ${playlistId}`;
     return tracks;
@@ -119,12 +113,39 @@ class Data {
     return user;
   }
 
+  public async getLink(userHash: string, trackId: number): Promise<ApiResult> {
+    let link = '';
+
+    const linkQuery: any[] = await this.prisma.$queryRaw`
+        SELECT      tracks.spotifyLink 
+        FROM        tracks
+        INNER JOIN  playlist_has_tracks ON tracks.id = playlist_has_tracks.trackId
+        INNER JOIN  user_has_playlists ON playlist_has_tracks.playlistId = user_has_playlists.playlistId
+        INNER JOIN  users ON user_has_playlists.userId = users.id
+        WHERE       users.hash = ${userHash}
+        AND         tracks.id = ${trackId}`;
+
+    console.log(111, linkQuery);
+
+    if (linkQuery.length > 0) {
+      return {
+        success: true,
+        data: { link: linkQuery[0].spotifyLink },
+      };
+    }
+
+    return {
+      success: false,
+    };
+  }
+
   public async storeTracks(
     paymentId: string,
     playlistDatabaseId: number,
     tracks: any
   ): Promise<any> {
     let trackDatabaseId: number = 0;
+    let counter = 1;
 
     // Check if the tracks exist. If not, create them
     for (const track of tracks) {
@@ -145,6 +166,7 @@ class Data {
             name: track.name,
             artist: track.artist,
             isrc: track.isrc,
+            spotifyLink: track.link,
           },
         });
 
@@ -204,8 +226,9 @@ class Data {
       await this.progress.setProgress(
         paymentId,
         progress,
-        `Processing track: ${track.name}`
+        `Processing track (${counter} of ${tracks.length}): ${track.name} (${track.artist})`
       );
+      counter++;
     }
   }
 }

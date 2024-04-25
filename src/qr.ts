@@ -71,13 +71,15 @@ class Qr {
 
     await this.data.storeTracks(payment.paymentId, payment.playlist.id, tracks);
 
+    const dbTracks = await this.data.getTracks(payment.playlist.id);
+
     // Loop through the tracks and create a QR code for each track
-    for (const track of tracks) {
-      const hash = `${userId}-${track.id}`;
+    for (const track of dbTracks) {
+      const link = `${process.env['FRONTEND_SHORT_URI']}/qr/${paymentStatus.data.user.hash}/${track.id}`;
       const outputDir = `${process.env['PUBLIC_DIR']}/qr/${userId}`;
-      const outputPath = `${outputDir}/${track.id}.png`;
+      const outputPath = `${outputDir}/${track.trackId}.png`;
       await this.utils.createDir(outputDir);
-      await this.generateQR(hash, outputPath);
+      await this.generateQR(link, outputPath);
 
       // Create a progress based on 70-90% of the total tracks
       const progress = Math.floor(
@@ -120,14 +122,14 @@ class Qr {
     );
   }
 
-  private async generateQR(hash: string, outputPath: string) {
+  private async generateQR(link: string, outputPath: string) {
     try {
       // Check if the QR code already exists
       try {
         await fs.access(outputPath);
         return;
       } catch (error) {
-        await QRCode.toFile(outputPath, hash, {
+        await QRCode.toFile(outputPath, link, {
           type: 'png',
           color: {
             dark: '#000000', // Color of the dark squares

@@ -19,10 +19,10 @@ class Mollie {
       const payment = await this.mollieClient.payments.create({
         amount: {
           currency: 'EUR',
-          value: '10.00',
+          value: '9.99',
         },
         description: 'Spotify QR Codes for playlist',
-        redirectUrl: `${process.env['FRONTEND_URI']}/?newState=CHECK_PAYMENT`,
+        redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
       });
 
@@ -131,6 +131,7 @@ class Mollie {
         user: {
           select: {
             userId: true, // Selectively retrieve only the userId from the user record
+            hash: true,
           },
         },
       },

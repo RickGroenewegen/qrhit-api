@@ -261,6 +261,16 @@ class Server {
     );
 
     this.fastify.get(
+      '/link/:userHash/:trackId',
+      async (request: any, _reply) => {
+        return await this.data.getLink(
+          request.params.userHash,
+          request.params.trackId
+        );
+      }
+    );
+
+    this.fastify.get(
       '/qr/pdf/:playlistId/:paymentId',
       async (request: any, reply) => {
         const valid = await this.mollie.canDownloadPDF(

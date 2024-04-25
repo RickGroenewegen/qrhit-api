@@ -4,4 +4,5 @@ export interface Track {
   artist: string;
   releaseDate: string;
   isrc: string;
+  spotifyLink: string;
 }
