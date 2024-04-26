@@ -149,7 +149,7 @@ class Qr {
     const uniqueId = uuid();
     const browser = await puppeteer.launch();
     const page = await browser.newPage();
-    const url = `http://localhost:3003/qr/pdf/${playlist.playlistId}/${payment.paymentId}`;
+    const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}`;
     const filename = sanitizeFilename(
       `${playlist.name}_${uniqueId}.pdf`
     ).toLowerCase();

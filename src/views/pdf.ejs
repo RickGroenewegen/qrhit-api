@@ -84,7 +84,7 @@
     <% tracks.forEach(function(track) { %>
         <div class="card-container">
             <div class="card front">
-                <div class="qr" style="background-image: url('http://localhost:3003/public/qr/<%= user.userId %>/<%= track.trackId %>.png');"></div>
+                <div class="qr" style="background-image: url('${process.env['API_URI']}/public/qr/<%= user.userId %>/<%= track.trackId %>.png');"></div>
                 <div class="title"><%= playlist.name %></div>
             </div>
             <div class="card back">
