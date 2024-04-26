@@ -296,7 +296,7 @@ class Server {
       }
     );
 
-    this.fastify.post('/test', async (request: any, _reply) => {
+    this.fastify.get('/test', async (request: any, _reply) => {
       return { success: true };
     });
   }
