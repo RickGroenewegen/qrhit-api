@@ -149,85 +149,90 @@ class Data {
 
     // Check if the tracks exist. If not, create them
     for (const track of tracks) {
-      const trackDatabase = await this.prisma.track.findUnique({
-        where: {
-          trackId: track.id,
-        },
-      });
-
-      trackDatabaseId = 0;
-      let year = null;
-
-      if (!trackDatabase) {
-        // create the track
-        const trackCreate = await this.prisma.track.create({
-          data: {
+      if (track.id) {
+        const trackDatabase = await this.prisma.track.findUnique({
+          where: {
             trackId: track.id,
-            name: track.name,
-            artist: track.artist,
-            isrc: track.isrc,
-            spotifyLink: track.link,
           },
         });
 
-        trackDatabaseId = trackCreate.id;
-      } else {
-        trackDatabaseId = trackDatabase.id;
-        year = trackDatabase.year;
-      }
+        trackDatabaseId = 0;
+        let year = null;
 
-      if (!year) {
-        // We need to retrieve the year of the track from MusicBrainz
-        let releaseDate = await this.musicBrainz.getReleaseDate(track.isrc);
-
-        if (!releaseDate && track.releaseDate) {
-          releaseDate = parseInt(track.releaseDate.split('-')[0]);
-        }
-
-        if (releaseDate > 0) {
-          // Update the track with the release date
-          await this.prisma.track.update({
-            where: {
-              id: trackDatabaseId,
-            },
+        if (!trackDatabase) {
+          // create the track
+          const trackCreate = await this.prisma.track.create({
             data: {
-              year: releaseDate,
+              trackId: track.id,
+              name: track.name,
+              artist: track.artist,
+              isrc: track.isrc,
+              spotifyLink: track.link,
             },
           });
+
+          trackDatabaseId = trackCreate.id;
         } else {
-          this.logger.log(
-            color.red(`No release dates found for: ${track.name}`)
-          );
+          trackDatabaseId = trackDatabase.id;
+          year = trackDatabase.year;
         }
-      }
 
-      // Check if there is a playlist_has_track entry. If not, create it
-      const playlistHasTrack = await this.prisma.playlistHasTrack.findFirst({
-        where: {
-          playlistId: playlistDatabaseId, // ID of the playlist
-          trackId: trackDatabaseId, // ID of the track
-        },
-      });
+        if (!year) {
+          // We need to retrieve the year of the track from MusicBrainz
+          let releaseDate = await this.musicBrainz.getReleaseDate(track.isrc);
 
-      if (!playlistHasTrack) {
-        // create the playlist_has_track entry
-        await this.prisma.playlistHasTrack.create({
-          data: {
+          if (!releaseDate && track.releaseDate) {
+            releaseDate = parseInt(track.releaseDate.split('-')[0]);
+          }
+
+          if (releaseDate > 0) {
+            // Update the track with the release date
+            await this.prisma.track.update({
+              where: {
+                id: trackDatabaseId,
+              },
+              data: {
+                year: releaseDate,
+              },
+            });
+          } else {
+            this.logger.log(
+              color.red(`No release dates found for: ${track.name}`)
+            );
+          }
+        }
+
+        // Check if there is a playlist_has_track entry. If not, create it
+        const playlistHasTrack = await this.prisma.playlistHasTrack.findFirst({
+          where: {
             playlistId: playlistDatabaseId, // ID of the playlist
             trackId: trackDatabaseId, // ID of the track
           },
         });
+
+        if (!playlistHasTrack) {
+          // create the playlist_has_track entry
+          await this.prisma.playlistHasTrack.create({
+            data: {
+              playlistId: playlistDatabaseId, // ID of the playlist
+              trackId: trackDatabaseId, // ID of the track
+            },
+          });
+        }
+
+        // Calculate the progress from 0-70% based on the number of tracks
+        const progress = Math.round(
+          (tracks.indexOf(track) / tracks.length) * 70
+        );
+
+        // Update the progress
+        await this.progress.setProgress(
+          paymentId,
+          progress,
+          `Processing track (${counter} of ${tracks.length}): ${track.name} (${track.artist})`,
+          track.image
+        );
       }
-
-      // Calculate the progress from 0-70% based on the number of tracks
-      const progress = Math.round((tracks.indexOf(track) / tracks.length) * 70);
-
-      // Update the progress
-      await this.progress.setProgress(
-        paymentId,
-        progress,
-        `Processing track (${counter} of ${tracks.length}): ${track.name} (${track.artist})`
-      );
       counter++;
     }
   }

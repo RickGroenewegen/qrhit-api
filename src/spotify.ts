@@ -156,7 +156,10 @@ class Spotify {
           name: item.track.name,
           artist: item.track.artists[0].name,
           link: item.track.external_urls.spotify,
-          image: item.track.album.images[0].url,
+          image:
+            item.track.album.images.length > 0
+              ? item.track.album.images[0].url
+              : null,
           releaseDate: format(
             new Date(item.track.album.release_date),
             'yyyy-MM-dd'

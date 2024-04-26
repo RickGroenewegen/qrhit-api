@@ -59,7 +59,8 @@ class Progress {
   public async setProgress(
     paymentId: string,
     progress: number,
-    message: string
+    message: string,
+    image: string = ''
   ) {
     if (!this.progress[paymentId]) {
       const val = await this.cache.get(this.cacheKey + paymentId);
@@ -72,6 +73,7 @@ class Progress {
       this.progress[paymentId].paymentId = paymentId;
       this.progress[paymentId].progress = progress;
       this.progress[paymentId].message = message;
+      this.progress[paymentId].image = image;
 
       await this.cache.set(
         this.cacheKey + paymentId,
