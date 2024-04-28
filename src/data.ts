@@ -125,8 +125,6 @@ class Data {
         WHERE       users.hash = ${userHash}
         AND         tracks.id = ${trackId}`;
 
-    console.log(111, linkQuery);
-
     if (linkQuery.length > 0) {
       return {
         success: true,

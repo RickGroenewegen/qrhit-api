@@ -4,6 +4,7 @@ import { SESClient, SendRawEmailCommand } from '@aws-sdk/client-ses';
 import fs from 'fs/promises';
 import path from 'path';
 import Templates from './templates';
+import { Playlist, User } from '@prisma/client';
 
 interface MailParams {
   to: string | null;
@@ -35,14 +36,18 @@ class Mail {
     });
   }
 
-  async sendEmail(filename: string): Promise<void> {
+  async sendEmail(
+    user: User,
+    playlist: Playlist,
+    filename: string
+  ): Promise<void> {
     if (!this.ses) return;
 
     const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
 
-    const testData = {
-      foo: 'bar',
-      test: 123,
+    const mailParams = {
+      user,
+      playlist,
     };
 
     try {
@@ -53,13 +58,13 @@ class Mail {
       // Get the filename from the path
       const filename = path.basename(filePath as string);
 
-      const html = await this.templates.render('mails/ses_html', testData);
-      const text = await this.templates.render('mails/ses_text', testData);
+      const html = await this.templates.render('mails/ses_html', mailParams);
+      const text = await this.templates.render('mails/ses_text', mailParams);
 
       const rawEmail = await this.renderRaw({
         from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
-        to: 'west14@gmail.com',
-        subject: `Test mail PDF QRSong`,
+        to: user.email,
+        subject: `Your QR cards for '${playlist.name}' are ready!`,
         html,
         text,
         attachments: [

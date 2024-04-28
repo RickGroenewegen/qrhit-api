@@ -37,6 +37,7 @@ class Qr {
     );
     const userId = paymentStatus.data.user.userId;
     const payment = await this.mollie.getPayment(params.paymentId);
+    const user = await this.data.getUser(userId);
 
     // Get the playlist from the database
     const playlist = await this.data.getPlaylist(payment.playlist.playlistId);
@@ -113,7 +114,7 @@ class Qr {
 
     this.progress.setProgress(params.paymentId, 100, `Done!`);
 
-    await this.mail.sendEmail(filename);
+    await this.mail.sendEmail(user, playlist, filename);
 
     this.logger.log(
       color.green.bold(
@@ -147,9 +148,15 @@ class Qr {
     this.logger.log(color.blue.bold('Generating PDF...'));
 
     const uniqueId = uuid();
-    const browser = await puppeteer.launch({
-      executablePath: '/usr/bin/chromium',
-    });
+    let puppeteerOptions = {};
+
+    if (process.env['CHROMIUM_PATH']) {
+      puppeteerOptions = {
+        executablePath: process.env['CHROMIUM_PATH'],
+      };
+    }
+
+    const browser = await puppeteer.launch(puppeteerOptions);
     const page = await browser.newPage();
     const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}`;
     const filename = sanitizeFilename(

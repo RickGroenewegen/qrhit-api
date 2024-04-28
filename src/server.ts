@@ -150,8 +150,6 @@ class Server {
       reply.status(500).send({ error: 'Internal Server Error' });
     });
 
-    console.log(111, `${process.env['APP_ROOT']}/views`);
-
     // Register the view plugin with EJS
     await this.fastify.register(view, {
       engine: { ejs: ejs },

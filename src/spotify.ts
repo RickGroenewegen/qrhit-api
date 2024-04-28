@@ -4,8 +4,46 @@ import axios from 'axios';
 import { ApiResult } from './interfaces/ApiResult';
 import { Playlist } from './interfaces/Playlist';
 import { Track } from './interfaces/Track';
+import Cache from './cache';
 
 class Spotify {
+  private cache = Cache.getInstance();
+
+  // create a refresh token method
+  public async refreshAccessToken(refreshToken: string): Promise<ApiResult> {
+    try {
+      const response = await axios({
+        method: 'post',
+        url: 'https://accounts.spotify.com/api/token',
+        data: new URLSearchParams({
+          grant_type: 'refresh_token',
+          refresh_token: refreshToken,
+        }).toString(),
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          Authorization: `Basic ${Buffer.from(
+            `${process.env['SPOTIFY_CLIENT_ID']}:${process.env['SPOTIFY_CLIENT_SECRET']}`
+          ).toString('base64')}`,
+        },
+      });
+
+      return {
+        success: true,
+        data: {
+          accessToken: response.data.access_token,
+          expiresIn: response.data.expires_in,
+        },
+      };
+    } catch (e) {
+      console.log(111, e);
+    }
+
+    return {
+      success: false,
+      error: 'Error refreshing access token',
+    };
+  }
+
   public async getTokens(code: string): Promise<ApiResult> {
     try {
       const response = await axios({
@@ -26,6 +64,11 @@ class Spotify {
 
       const profile = await this.getUserProfile(response.data.access_token);
 
+      this.cache.set(
+        `refreshtoken_${response.data.access_token}`,
+        response.data.refresh_token
+      );
+
       return {
         success: true,
         data: {
@@ -33,7 +76,7 @@ class Spotify {
           email: profile.data.email,
           displayName: profile.data.displayName,
           accessToken: response.data.access_token,
-          refreshToken: response.data.refresh_token,
+          //refreshToken: response.data.refresh_token,
           expiresIn: response.data.expires_in,
         },
       };
@@ -95,8 +138,22 @@ class Spotify {
         success: true,
         data: playlists,
       };
-    } catch (e) {
+    } catch (e: any) {
+      // check for 401 error
+      const result = this.checkRefreshToken(e, headers);
+
       return { success: false, error: 'Error getting playlists' };
+    }
+  }
+
+  private async checkRefreshToken(e: any, headers: any) {
+    if (e.response.status === 401) {
+      const refreshToken = await this.cache.get(
+        `refreshtoken_${headers.authorization}`
+      );
+      const tokens = await this.refreshAccessToken(refreshToken!);
+      console.log(123, e.response.data.error);
+      console.log(444, tokens);
     }
   }
 
@@ -125,8 +182,6 @@ class Spotify {
         data: playlist,
       };
     } catch (e) {
-      console.log(e);
-
       return { success: false, error: 'Error getting playlist' };
     }
   }
