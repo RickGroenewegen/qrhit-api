@@ -150,12 +150,12 @@ class Server {
       reply.status(500).send({ error: 'Internal Server Error' });
     });
 
-    console.log(111, path.join(__dirname, 'views'));
+    console.log(111, `${process.env['APP_ROOT']}/views`);
 
     // Register the view plugin with EJS
     await this.fastify.register(view, {
       engine: { ejs: ejs },
-      root: path.join(__dirname, 'views'), // Ensure this is the correct path to your EJS templates
+      root: `${process.env['APP_ROOT']}/views`, // Ensure this is the correct path to your EJS templates
       includeViewExtension: true,
     });
   }
