@@ -84,11 +84,10 @@
     <% tracks.forEach(function(track) { %>
         <div class="card-container">
             <div class="card front">
-                <div class="qr" style="background-image: url('${process.env['API_URI']}/public/qr/<%= user.userId %>/<%= track.trackId %>.png');"></div>
+                <div class="qr" style="background-image: url('<%= process.env['API_URI'] %>/public/qr/<%= user.userId %>/<%= track.trackId %>.png');"></div>
                 <div class="title"><%= playlist.name %></div>
             </div>
             <div class="card back">
-                <div style="font-size:10px;">${process.env['API_URI']}/public/qr/<%= user.userId %>/<%= track.trackId %>.png</div>
                 <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= track.artist %></div>
                 <div class="text" style="margin-top: 5mm;font-size:36px;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= track.year %></div>
                 <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;padding-left:2mm;padding-right:2mm;"><%= track.name %></div>
