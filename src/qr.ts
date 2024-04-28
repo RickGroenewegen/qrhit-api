@@ -35,9 +35,11 @@ class Qr {
     const paymentStatus = await this.mollie.checkPaymentStatus(
       params.paymentId
     );
+
     const userId = paymentStatus.data.user.userId;
     const payment = await this.mollie.getPayment(params.paymentId);
-    const user = await this.data.getUser(userId);
+
+    const user = await this.data.getUserByUserId(userId);
 
     // Get the playlist from the database
     const playlist = await this.data.getPlaylist(payment.playlist.playlistId);

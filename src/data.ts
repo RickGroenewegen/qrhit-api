@@ -104,10 +104,19 @@ class Data {
     return tracks;
   }
 
-  public async getUser(userId: number): Promise<any> {
+  public async getUser(id: number): Promise<any> {
     const user = await this.prisma.user.findUnique({
       where: {
-        id: userId,
+        id,
+      },
+    });
+    return user;
+  }
+
+  public async getUserByUserId(userId: string): Promise<any> {
+    const user = await this.prisma.user.findUnique({
+      where: {
+        userId,
       },
     });
     return user;
