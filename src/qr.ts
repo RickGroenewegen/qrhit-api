@@ -156,6 +156,8 @@ class Qr {
       `${playlist.name}_${uniqueId}.pdf`.replace(/ /g, '_')
     ).toLowerCase();
 
+    console.log(1111, filename);
+
     this.logger.log(
       color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)
     );
