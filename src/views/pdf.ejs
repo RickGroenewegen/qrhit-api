@@ -85,7 +85,7 @@
         <div class="card-container">
             <div class="card front">
                 <div class="qr" style="background-image: url('<%= process.env['API_URI'] %>/public/qr/<%= user.userId %>/<%= track.trackId %>.png');"></div>
-                <div class="title"><%= playlist.name %></div>
+                <div class="title" style="padding-left:2mm;padding-right:2mm;"><%= playlist.name %></div>
             </div>
             <div class="card back">
                 <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= track.artist %></div>
