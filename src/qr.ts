@@ -147,12 +147,11 @@ class Qr {
     this.logger.log(color.blue.bold('Generating PDF...'));
 
     const uniqueId = uuid();
-    const browser = await puppeteer.launch();
+    const browser = await puppeteer.launch({
+      executablePath: '/usr/bin/chromium',
+    });
     const page = await browser.newPage();
     const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}`;
-
-    console.log(111, url);
-
     const filename = sanitizeFilename(
       `${playlist.name}_${uniqueId}.pdf`
     ).toLowerCase();
