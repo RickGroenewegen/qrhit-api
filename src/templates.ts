@@ -27,11 +27,7 @@ Handlebars.registerHelper(
 
 class Templates {
   public async render(templatePath: string, data: any): Promise<string> {
-    // get absolute path
-    const fullPath = path.resolve(
-      __dirname,
-      'templates/' + templatePath + '.hbs'
-    );
+    const fullPath = `${process.env['APP_ROOT']}/templates/${templatePath}.hbs`;
 
     // Read the template file using fs/promises
     const templateSource = await fs.readFile(fullPath, 'utf-8');
