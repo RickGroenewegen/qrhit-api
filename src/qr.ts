@@ -153,7 +153,7 @@ class Qr {
     const page = await browser.newPage();
     const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}`;
     const filename = sanitizeFilename(
-      `${playlist.name}_${uniqueId}.pdf`
+      `${playlist.name}_${uniqueId}.pdf`.replace(/ /g, '_')
     ).toLowerCase();
 
     this.logger.log(
