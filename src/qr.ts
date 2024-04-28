@@ -113,7 +113,7 @@ class Qr {
 
     this.progress.setProgress(params.paymentId, 100, `Done!`);
 
-    await this.mail.sendEmail();
+    await this.mail.sendEmail(filename);
 
     this.logger.log(
       color.green.bold(
@@ -155,8 +155,6 @@ class Qr {
     const filename = sanitizeFilename(
       `${playlist.name}_${uniqueId}.pdf`.replace(/ /g, '_')
     ).toLowerCase();
-
-    console.log(1111, filename);
 
     this.logger.log(
       color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)

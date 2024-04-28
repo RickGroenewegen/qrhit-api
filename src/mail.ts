@@ -35,10 +35,10 @@ class Mail {
     });
   }
 
-  async sendEmail(): Promise<void> {
+  async sendEmail(filename: string): Promise<void> {
     if (!this.ses) return;
 
-    const filePath = `${process.env['PUBLIC_DIR']}/pdf/de foute lijst_a09f11a3-2148-4c0f-88de-8c79d396d0a4.pdf`;
+    const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
 
     const testData = {
       foo: 'bar',
