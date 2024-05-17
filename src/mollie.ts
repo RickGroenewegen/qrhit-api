@@ -50,6 +50,7 @@ class Mollie {
       );
 
       delete params.extraOrderData.orderType;
+      params.extraOrderData.amount = parseInt(params.extraOrderData.amount);
 
       // Create the payment in the database
       await this.prisma.payment.create({
@@ -60,7 +61,6 @@ class Mollie {
           playlistId: playlistDatabaseId,
           status: payment.status,
           orderTypeId: orderType!.id,
-          amount,
           ...params.extraOrderData,
         },
       });
