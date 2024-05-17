@@ -39,8 +39,16 @@ class Cache {
     }
   }
 
-  async set(key: string, value: string): Promise<void> {
-    await this.executeCommand('set', key, value);
+  async set(
+    key: string,
+    value: string,
+    expireInSeconds?: number
+  ): Promise<void> {
+    if (expireInSeconds) {
+      await this.executeCommand('set', key, value, 'EX', expireInSeconds);
+    } else {
+      await this.executeCommand('set', key, value);
+    }
   }
 
   async get(key: string): Promise<string | null> {

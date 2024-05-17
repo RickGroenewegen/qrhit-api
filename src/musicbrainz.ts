@@ -2,6 +2,7 @@ import { color } from 'console-log-colors';
 import Logger from './logger';
 import axios, { AxiosInstance } from 'axios';
 import * as xml2js from 'xml2js';
+import { PrismaClient } from '@prisma/client';
 
 class MusicBrainz {
   private logger = new Logger();
@@ -9,6 +10,7 @@ class MusicBrainz {
   private axiosInstance: AxiosInstance;
   private readonly maxRetries: number = 5;
   private readonly maxRateLimit: number = 1200;
+  private prisma = new PrismaClient();
 
   constructor() {
     this.axiosInstance = axios.create({
@@ -31,6 +33,25 @@ class MusicBrainz {
   }
 
   public async getReleaseDate(isrc: string): Promise<number> {
+    let year = 2024;
+    const result = await this.prisma.isrc.findUnique({
+      where: {
+        isrc: isrc,
+      },
+    });
+
+    if (result) {
+      year = result.year;
+      console.log(111, isrc, year);
+    } else {
+      year = await this.getReleaseDateFromAPI(isrc);
+      console.log(222, isrc, year);
+    }
+
+    return year;
+  }
+
+  public async getReleaseDateFromAPI(isrc: string): Promise<number> {
     let retryCount = 0;
     while (retryCount < this.maxRetries) {
       await this.rateLimitDelay(); // Ensure that we respect the rate limit

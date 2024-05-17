@@ -10,18 +10,47 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+model Isrc {
+  id   Int    @id @default(autoincrement())
+  isrc String @unique
+  year Int
+
+  @@index([isrc])
+  @@map("isrc")
+}
+
+model OrderType {
+  id                Int       @id @default(autoincrement())
+  name              String    @unique
+  description       String
+  amount            Float
+  printApiProductId String?
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+  Payment           Payment[]
+
+  @@map("order_types")
+}
+
 model Payment {
-  id         Int       @id @default(autoincrement())
-  userId     Int? // Removed the @unique constraint, and made optional
-  paymentId  String    @unique
-  amount     Float
-  status     String
-  createdAt  DateTime  @default(now())
-  updatedAt  DateTime  @updatedAt
-  playlistId Int?
-  filename   String?
-  playlist   Playlist? @relation(fields: [playlistId], references: [id], onDelete: Cascade)
-  user       User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id          Int       @id @default(autoincrement())
+  userId      Int? // Removed the @unique constraint, and made optional
+  paymentId   String    @unique
+  amount      Float
+  status      String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  playlistId  Int?
+  filename    String?
+  orderTypeId Int
+  fullname    String?
+  address     String?
+  city        String?
+  zipcode     String?
+  countrycode String?
+  orderType   OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
+  playlist    Playlist? @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId]) // Index for performance on queries
   @@index([paymentId])

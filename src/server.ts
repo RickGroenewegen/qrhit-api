@@ -14,6 +14,7 @@ import ejs from 'ejs';
 import Data from './data';
 import Progress from './progress';
 import fs from 'fs';
+import Order from './order';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -38,6 +39,7 @@ class Server {
   private qr = new Qr();
   private data = new Data();
   private progress = Progress.getInstance();
+  private order = Order.getInstance();
 
   private constructor() {
     this.fastify = Fastify({
@@ -298,6 +300,16 @@ class Server {
 
     this.fastify.get('/test', async (request: any, _reply) => {
       return { success: true };
+    });
+
+    if (process.env['ENVIRONMENT'] == 'development') {
+      this.fastify.post('/order', async (request: any, _reply) => {
+        return await this.order.createOrder(request.body);
+      });
+    }
+
+    this.fastify.post('/order/calculate', async (request: any, _reply) => {
+      return await this.order.calculateOrder(request.body);
     });
   }
 }

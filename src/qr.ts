@@ -13,6 +13,7 @@ import Utils from './utils';
 import Progress from './progress';
 import { SocketStream } from '@fastify/websocket';
 import Mail from './mail';
+import Order from './order';
 
 class Qr {
   private spotify = new Spotify();
@@ -23,6 +24,7 @@ class Qr {
   private progress = Progress.getInstance();
   private prisma = new PrismaClient();
   private mail = new Mail();
+  private order = Order.getInstance();
 
   public async startProgress(paymentId: string, connection: SocketStream) {
     this.progress.startProgress(paymentId);
@@ -115,8 +117,10 @@ class Qr {
     });
 
     this.progress.setProgress(params.paymentId, 100, `Done!`);
-
     await this.mail.sendEmail(user, playlist, filename);
+    if (payment.orderType.name != 'digital') {
+      await this.order.createOrder(payment);
+    }
 
     this.logger.log(
       color.green.bold(
@@ -136,7 +140,7 @@ class Qr {
           type: 'png',
           color: {
             dark: '#000000', // Color of the dark squares
-            light: '#FFFFFF', // Color of the light squares (usually background)
+            light: '0000', // Color of the light squares (usually background)
           },
           errorCorrectionLevel: 'H', // High error correction level
         });

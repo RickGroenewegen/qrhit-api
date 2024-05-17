@@ -6,8 +6,8 @@
 <style>
     body {
         font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
+        margin: 8mm;
+        padding: 0mm;
         page-break-after: always;
     }
     .page {
@@ -19,42 +19,51 @@
         align-content: start;
     }
     .card-container {
-        width: 104mm;
-        height: 52mm;
+        width: 100mm;
+        height: 50mm;
         display: flex;
         margin-bottom: 0mm;
         border: 1px solid #ccc;
     }
     .card {
-        width: 52mm;
-        height: 52mm;
+        width: 50mm;
+        height: 50mm;
         box-sizing: border-box;
     }
     .front {
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border-right: 2px dashed #ccc;
-    }
-    .title {
-        writing-mode: vertical-lr; /* Rotates the title */
-        transform: rotate(0deg); /* Adjusts the direction of text */
-        font-size: 14px;
-        margin-left:5px;
-        
-    }
-    .qr {
-        width: 35mm; /* Slightly reduced to make space for title */
-        height: 35mm;
-        background-size: cover;
-    }
+    background-image: url('<%= process.env['API_URI'] %>/public/images/card_background.png');
+    background-size: cover; /* Ensures the background covers the entire front */
+    display: flex;
+    align-items: center; /* Vertical centering */
+    justify-content: space-between; /* Changes here to distribute space */
+    border-right: 2px dashed #ccc;
+    position: relative; /* Ensure positioning is relative for fine control */
+}
+
+  .title {
+    writing-mode: vertical-lr;
+    transform: rotate(0deg);
+    font-size: 14px;
+    background: transparent;
+    position: absolute; /* Position absolutely within .front */
+    left: 10mm; /* Adjust this value as needed */
+    top: 50%;
+    transform: translateY(-50%); /* Center vertically */
+}
+   .qr {
+    flex: 0 0 80%; /* Flex shorthand to prevent growth, no shrink, and base width */
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: auto; /* Auto margins for automatic centering */
+}
     .back {
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
         text-align: center;
-        height: 52mm;
+        height: 50mm;
         transform: rotate(90deg);
     }
     .text {
@@ -84,8 +93,10 @@
     <% tracks.forEach(function(track) { %>
         <div class="card-container">
             <div class="card front">
-                <div class="qr" style="background-image: url('<%= process.env['API_URI'] %>/public/qr/<%= user.userId %>/<%= track.trackId %>.png');"></div>
-                <div class="title" style="padding-left:2mm;padding-right:2mm;"><%= playlist.name %></div>
+                <div class="qr">
+                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= user.userId %>/<%= track.trackId %>.png" alt="QR Code" style="width: 76%; height: auto;">
+                </div>
+                <!-- <div class="title" style="padding-left:2mm;padding-right:2mm;"><%= playlist.name %></div> -->
             </div>
             <div class="card back">
                 <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= track.artist %></div>

@@ -62,6 +62,7 @@ class Spotify {
         },
       });
 
+      // outout status
       const profile = await this.getUserProfile(response.data.access_token);
 
       this.cache.set(
@@ -81,7 +82,7 @@ class Spotify {
         },
       };
     } catch (e) {
-      console.log(111, e);
+      console.log(111, 'Error in spotify callback');
     }
 
     return {

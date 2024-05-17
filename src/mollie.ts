@@ -15,13 +15,24 @@ class Mollie {
   });
 
   public async getPaymentUri(params: any): Promise<ApiResult> {
+
     try {
+      // Get the order type
+      const orderType = await this.prisma.orderType.findUnique({
+        where: {
+          name: params.orderType,
+        },
+      });
+
+      if (!orderType) {
+        throw new Error('Order type not found');
+      }
       const payment = await this.mollieClient.payments.create({
         amount: {
           currency: 'EUR',
-          value: '9.99',
+          value: orderType.amount.toString(),
         },
-        description: 'Spotify QR Codes for playlist',
+        description: orderType.description,
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
       });
@@ -32,6 +43,9 @@ class Mollie {
         params.playlist
       );
 
+      delete params.extraOrderData.orderType;
+      delete params.extraOrderData.amount; // TODO: This is temporary, remove this line when the frontend is updated
+
       // Create the payment in the database
       await this.prisma.payment.create({
         data: {
@@ -40,6 +54,8 @@ class Mollie {
           playlistId: playlistDatabaseId,
           amount: parseFloat(payment.amount.value),
           status: payment.status,
+          orderTypeId: orderType.id,
+          ...params.extraOrderData,
         },
       });
 
@@ -164,6 +180,17 @@ class Mollie {
         filename: true,
         createdAt: true,
         updatedAt: true,
+        orderType: true,
+        fullname: true,
+        address: true,
+        city: true,
+        zipcode: true,
+        countrycode: true,
+        user: {
+          select: {
+            email: true,
+          },
+        },
         playlist: {
           select: {
             playlistId: true, // Only selecting the playlistId from the related Playlist
