@@ -37,22 +37,29 @@ class Order {
 
       total += price;
 
-      const response = await axios({
-        method: 'post',
-        url: `${process.env['PRINT_API_URL']}/v2/shipping/quote `,
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        data: {
-          country: 'NL',
-          items: [
-            { productId: orderType.printApiProductId, quantity: params.amount },
-          ],
-        },
-      });
+      let response: any = {};
 
-      total += response.data.payment;
+      if (params.orderType !== 'digital') {
+        response = await axios({
+          method: 'post',
+          url: `${process.env['PRINT_API_URL']}/v2/shipping/quote `,
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          data: {
+            country: 'NL',
+            items: [
+              {
+                productId: orderType.printApiProductId,
+                quantity: params.amount,
+              },
+            ],
+          },
+        });
+
+        total += response.data.payment;
+      }
 
       total = parseFloat(total.toFixed(2));
 

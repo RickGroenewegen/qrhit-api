@@ -1,10 +1,8 @@
-import { color } from 'console-log-colors';
-import Logger from './logger';
 import { SESClient, SendRawEmailCommand } from '@aws-sdk/client-ses';
 import fs from 'fs/promises';
 import path from 'path';
 import Templates from './templates';
-import { Playlist, User } from '@prisma/client';
+import { Payment, Playlist } from '@prisma/client';
 
 interface MailParams {
   to: string | null;
@@ -37,7 +35,7 @@ class Mail {
   }
 
   async sendEmail(
-    user: User,
+    payment: Payment,
     playlist: Playlist,
     filename: string
   ): Promise<void> {
@@ -46,9 +44,11 @@ class Mail {
     const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
 
     const mailParams = {
-      user,
+      payment,
       playlist,
     };
+
+    console.log(111, payment);
 
     try {
       // Read the PDF file and convert it to Base64
@@ -63,7 +63,7 @@ class Mail {
 
       const rawEmail = await this.renderRaw({
         from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
-        to: user.email,
+        to: payment.email,
         subject: `Your QR cards for '${playlist.name}' are ready!`,
         html,
         text,

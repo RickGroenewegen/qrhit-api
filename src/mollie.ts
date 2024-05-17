@@ -4,11 +4,13 @@ import { Payment, PrismaClient } from '@prisma/client';
 import { color } from 'console-log-colors';
 import Logger from './logger';
 import Data from './data';
+import Order from './order';
 
 class Mollie {
   private prisma = new PrismaClient();
   private logger = new Logger();
   private data = new Data();
+  private order = Order.getInstance();
 
   private mollieClient = createMollieClient({
     apiKey: process.env['MOLLIE_API_KEY']!,
@@ -16,22 +18,27 @@ class Mollie {
 
   public async getPaymentUri(params: any): Promise<ApiResult> {
     try {
-      // Get the order type
+      let price = 0;
+      let amount = params.extraOrderData.amount || 1;
+
       const orderType = await this.prisma.orderType.findUnique({
         where: {
           name: params.orderType,
         },
       });
 
-      if (!orderType) {
-        throw new Error('Order type not found');
-      }
+      // Get the order type
+      const calculateResult = await this.order.calculateOrder({
+        orderType: params.orderType,
+        amount,
+      });
+
       const payment = await this.mollieClient.payments.create({
         amount: {
           currency: 'EUR',
-          value: orderType.amount.toString(),
+          value: calculateResult.data.total.toString(),
         },
-        description: orderType.description,
+        description: orderType!.description,
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
       });
@@ -52,7 +59,8 @@ class Mollie {
           totalPrice: parseFloat(payment.amount.value),
           playlistId: playlistDatabaseId,
           status: payment.status,
-          orderTypeId: orderType.id,
+          orderTypeId: orderType!.id,
+          amount,
           ...params.extraOrderData,
         },
       });
@@ -180,6 +188,7 @@ class Mollie {
         updatedAt: true,
         orderType: true,
         fullname: true,
+        email: true,
         address: true,
         city: true,
         zipcode: true,

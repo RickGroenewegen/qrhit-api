@@ -118,7 +118,7 @@ class Qr {
     });
 
     this.progress.setProgress(params.paymentId, 100, `Done!`);
-    await this.mail.sendEmail(user, playlist, filename);
+    await this.mail.sendEmail(payment, playlist, filename);
     if (payment.orderType.name != 'digital') {
       // Generate the PDF for the printer
       const filename = await this.generatePDF(playlist, payment, 'printer');
