@@ -36,7 +36,8 @@ model Payment {
   id          Int       @id @default(autoincrement())
   userId      Int? // Removed the @unique constraint, and made optional
   paymentId   String    @unique
-  amount      Float
+  amount      Int
+  totalPrice  Float
   status      String
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -44,10 +45,15 @@ model Payment {
   filename    String?
   orderTypeId Int
   fullname    String?
+  email       String?
   address     String?
   city        String?
   zipcode     String?
   countrycode String?
+  shipping    Float?
+  price       Float?
+  taxRate     Float?
+  total       Float?
   orderType   OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   playlist    Playlist? @relation(fields: [playlistId], references: [id], onDelete: Cascade)
   user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)

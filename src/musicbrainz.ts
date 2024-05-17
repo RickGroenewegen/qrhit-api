@@ -33,7 +33,7 @@ class MusicBrainz {
   }
 
   public async getReleaseDate(isrc: string): Promise<number> {
-    let year = 2024;
+    let year = 0;
     const result = await this.prisma.isrc.findUnique({
       where: {
         isrc: isrc,

@@ -104,7 +104,8 @@ class Qr {
       `Generating PDF for: ${playlist.name}`
     );
 
-    const filename = await this.generatePDF(playlist, payment);
+    // Generate the digital version
+    const filename = await this.generatePDF(playlist, payment, 'digital');
 
     // Update the payment with the filename using prisma
     await this.prisma.payment.update({
@@ -119,7 +120,9 @@ class Qr {
     this.progress.setProgress(params.paymentId, 100, `Done!`);
     await this.mail.sendEmail(user, playlist, filename);
     if (payment.orderType.name != 'digital') {
-      await this.order.createOrder(payment);
+      // Generate the PDF for the printer
+      const filename = await this.generatePDF(playlist, payment, 'printer');
+      await this.order.createOrder(payment, filename);
     }
 
     this.logger.log(
@@ -150,7 +153,11 @@ class Qr {
     }
   }
 
-  private async generatePDF(playlist: Playlist, payment: any): Promise<string> {
+  private async generatePDF(
+    playlist: Playlist,
+    payment: any,
+    template: string
+  ): Promise<string> {
     this.logger.log(color.blue.bold('Generating PDF...'));
 
     const uniqueId = uuid();
@@ -164,9 +171,9 @@ class Qr {
 
     const browser = await puppeteer.launch(puppeteerOptions);
     const page = await browser.newPage();
-    const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}`;
+    const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}`;
     const filename = sanitizeFilename(
-      `${playlist.name}_${uniqueId}.pdf`.replace(/ /g, '_')
+      `${playlist.name}_${uniqueId}_${template}.pdf`.replace(/ /g, '_')
     ).toLowerCase();
 
     this.logger.log(

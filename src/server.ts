@@ -273,7 +273,7 @@ class Server {
     );
 
     this.fastify.get(
-      '/qr/pdf/:playlistId/:paymentId',
+      '/qr/pdf/:playlistId/:paymentId/:template',
       async (request: any, reply) => {
         const valid = await this.mollie.canDownloadPDF(
           request.params.playlistId,
@@ -290,7 +290,7 @@ class Server {
         const payment = await this.mollie.getPayment(request.params.paymentId);
         const user = await this.data.getUser(payment.userId);
 
-        await reply.view('pdf.ejs', {
+        await reply.view(`pdf_${request.params.template}.ejs`, {
           playlist,
           tracks,
           user,
@@ -301,12 +301,6 @@ class Server {
     this.fastify.get('/test', async (request: any, _reply) => {
       return { success: true };
     });
-
-    if (process.env['ENVIRONMENT'] == 'development') {
-      this.fastify.post('/order', async (request: any, _reply) => {
-        return await this.order.createOrder(request.body);
-      });
-    }
 
     this.fastify.post('/order/calculate', async (request: any, _reply) => {
       return await this.order.calculateOrder(request.body);

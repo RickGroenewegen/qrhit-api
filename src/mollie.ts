@@ -15,7 +15,6 @@ class Mollie {
   });
 
   public async getPaymentUri(params: any): Promise<ApiResult> {
-
     try {
       // Get the order type
       const orderType = await this.prisma.orderType.findUnique({
@@ -44,15 +43,14 @@ class Mollie {
       );
 
       delete params.extraOrderData.orderType;
-      delete params.extraOrderData.amount; // TODO: This is temporary, remove this line when the frontend is updated
 
       // Create the payment in the database
       await this.prisma.payment.create({
         data: {
           paymentId: payment.id,
           userId: userDatabaseId,
+          totalPrice: parseFloat(payment.amount.value),
           playlistId: playlistDatabaseId,
-          amount: parseFloat(payment.amount.value),
           status: payment.status,
           orderTypeId: orderType.id,
           ...params.extraOrderData,

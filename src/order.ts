@@ -94,8 +94,9 @@ class Order {
     return authToken;
   }
 
-  public async createOrder(payment: any): Promise<void> {
+  public async createOrder(payment: any, filename: string): Promise<void> {
     const authToken = await this.getAuthToken();
+
     const responseOrder = await axios({
       method: 'post',
       url: `${process.env['PRINT_API_URL']}/v2/orders`,
@@ -111,8 +112,8 @@ class Order {
             pageCount: 32,
             quantity: 1,
             files: {
-              content: 'https://www.printapi.nl/sample-book-a5-content.pdf',
-              cover: 'https://www.printapi.nl/sample-book-a5-cover.pdf',
+              content: `${process.env.API_URI}/public/pdf/${filename}`,
+              cover: `${process.env.API_URI}/public/pdf/${filename}`,
             },
           },
         ],
