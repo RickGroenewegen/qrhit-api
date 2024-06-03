@@ -53,7 +53,6 @@ model Payment {
   shipping    Float?
   price       Float?
   taxRate     Float?
-  total       Float?
   orderType   OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   playlist    Playlist? @relation(fields: [playlistId], references: [id], onDelete: Cascade)
   user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)

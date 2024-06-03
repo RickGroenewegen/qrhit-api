@@ -14,6 +14,9 @@ import Progress from './progress';
 import { SocketStream } from '@fastify/websocket';
 import Mail from './mail';
 import Order from './order';
+import { promisify } from 'util';
+import path from 'path';
+import { exec } from 'child_process';
 
 class Qr {
   private spotify = new Spotify();
@@ -25,6 +28,7 @@ class Qr {
   private prisma = new PrismaClient();
   private mail = new Mail();
   private order = Order.getInstance();
+  private execPromise = promisify(exec);
 
   public async startProgress(paymentId: string, connection: SocketStream) {
     this.progress.startProgress(paymentId);
@@ -196,7 +200,34 @@ class Qr {
     await page.pdf(pdfOptions);
     await browser.close();
 
+    await this.compressPDF(
+      `${process.env['PUBLIC_DIR']}/pdf/${filename}`,
+      `${process.env['PUBLIC_DIR']}/pdf/compressed_${filename}`
+    );
+
+    // Remove the original PDF, rename the compressed PDF to the original filename
+    await fs.unlink(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
+    await fs.rename(
+      `${process.env['PUBLIC_DIR']}/pdf/compressed_${filename}`,
+      `${process.env['PUBLIC_DIR']}/pdf/${filename}`
+    );
+
     return filename;
+  }
+
+  async compressPDF(inputPath: string, outputPath: string): Promise<void> {
+    try {
+      await this.execPromise(
+        `gs -dAutoRotatePages=/None -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/ebook -dNOPAUSE -dQUIET -dBATCH -sOutputFile="${outputPath}" "${inputPath}"`
+      );
+      this.logger.log(
+        color.blue.bold(
+          `PDF compression successful: ${color.white.bold(outputPath)}`
+        )
+      );
+    } catch (error) {
+      this.logger.log(color.red.bold('Error compressing PDF!'));
+    }
   }
 }
 

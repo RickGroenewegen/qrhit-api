@@ -135,8 +135,6 @@ class Order {
         },
       },
     });
-
-    console.log(1111, responseOrder.data);
   }
 }
 

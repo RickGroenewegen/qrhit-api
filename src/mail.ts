@@ -46,9 +46,8 @@ class Mail {
     const mailParams = {
       payment,
       playlist,
+      downloadLink: `${process.env['API_URI']}/public/pdf/${filename}`,
     };
-
-    console.log(111, payment);
 
     try {
       // Read the PDF file and convert it to Base64

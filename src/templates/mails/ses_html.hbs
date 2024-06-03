@@ -41,9 +41,11 @@
     <h2>Hi {{payment.fullname}},</h2>
     <div>
         
-        <p>Great news: Your QR cards for your playlist {{playlist.name}} are all set and ready to go! You’ll find them attached in a PDF. Just print them out
+        <p>Great news: Your QR cards for your playlist {{playlist.name}} are all set and ready to go! Just print them 
         and get ready for some musical fun!</p>
         
+        <p>Your PDF can be downloaded at: <a href="{{ downloadLink }}">{{ downloadLink }}</a></p>
+
         <p>If there’s anything you need to tweak, give me a shout. Enjoy the tunes!</p>
         
         <p>Cheers,</p>

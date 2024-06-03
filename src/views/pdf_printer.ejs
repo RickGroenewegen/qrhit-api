@@ -17,8 +17,13 @@
         box-sizing: border-box;
         display: flex;
         flex-wrap: wrap;
-        justify-content: space-around;
+        justify-content: space-between; /* Ensures even distribution across the page */
         align-content: space-around;
+    }
+    .row {
+        display: flex;
+        justify-content: space-between;
+        width: 100%;
     }
     .card-container {
         width: 60mm;
@@ -76,35 +81,42 @@
 <body>
 <% for (let i = 0; i < tracks.length; i += 12) { %>
     <div class="page">
-        <% for (let j = i; j < i + 12; j++) { %>
-            <div class="card-container">
-                <% if (j < tracks.length) { %>
-                    <div class="front">
-                        <div class="test"><%= tracks[j].name %></div>
-                        <img src="<%= process.env['API_URI'] %>/public/qr/<%= user.userId %>/<%= tracks[j].trackId %>.png" alt="QR Code" class="qr">
+        <% for (let row = 0; row < 4; row++) { %>
+            <div class="row">
+                <% for (let col = 0; col < 3; col++) { %>
+                    <div class="card-container">
+                        <% let index = i + row * 3 + col; %>
+                        <% if (index < tracks.length) { %>
+                            <div class="front">
+                                <div class="test"><%= tracks[index].name %></div>
+                                <img src="<%= process.env['API_URI'] %>/public/qr/<%= user.userId %>/<%= tracks[index].trackId %>.png" alt="QR Code" class="qr">
+                            </div>
+                        <% } else { %>
+                            <div class="front invisible"></div> <!-- Invisible placeholder -->
+                        <% } %>
                     </div>
-                <% } else { %>
-                    <div class="front invisible"></div> <!-- Invisible placeholder -->
                 <% } %>
             </div>
         <% } %>
     </div>
     <div class="page">
         <% for (let row = 0; row < 4; row++) { %>
-            <% for (let col = 2; col >= 0; col--) { %>
-                <% let index = i + row * 3 + col; %>
-                <div class="card-container">
-                    <% if (index < tracks.length) { %>
-                        <div class="back">
-                            <div class="text artist"><%= tracks[index].artist %></div>
-                            <div class="text year"><%= tracks[index].year %></div>
-                            <div class="text name"><%= tracks[index].name %></div>
-                        </div>
-                    <% } else { %>
-                        <div class="back invisible"></div> <!-- Invisible placeholder -->
-                    <% } %>
-                </div>
-            <% } %>
+            <div class="row">
+                <% for (let col = 2; col >= 0; col--) { %>
+                    <div class="card-container">
+                        <% let index = i + row * 3 + col; %>
+                        <% if (index < tracks.length) { %>
+                            <div class="back">
+                                <div class="text artist"><%= tracks[index].artist %></div>
+                                <div class="text year"><%= tracks[index].year %></div>
+                                <div class="text name"><%= tracks[index].name %></div>
+                            </div>
+                        <% } else { %>
+                            <div class="back invisible"></div> <!-- Invisible placeholder -->
+                        <% } %>
+                    </div>
+                <% } %>
+            </div>
         <% } %>
     </div>
 <% } %>
