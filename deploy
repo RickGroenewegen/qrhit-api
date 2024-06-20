@@ -2,7 +2,7 @@
 
 # Navigate to the Git repository directory
 # Replace '/path/to/your/repo' with the actual path to your Git repository
-cd ~/sites/qrsong
+cd /home/ec2-user/sites/qrsong
 
 # Reset the repository to HEAD
 git reset --hard HEAD
@@ -17,7 +17,7 @@ sudo npm install
 sudo prisma db push
 echo "Repository has been reset and updated."
 
-cd ~/sites/qrsong-frontend
+cd /home/ec2-user/sites/qrsong-frontend
 git reset --hard HEAD
 git pull origin HEAD
 sudo npm install
