@@ -181,6 +181,7 @@ class Qr {
       path: `${process.env['PUBLIC_DIR']}/pdf/${filename}`,
       format: 'A4',
       printBackground: true,
+      timeout: 0,
     };
 
     this.logger.log(
