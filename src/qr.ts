@@ -85,7 +85,7 @@ class Qr {
 
     // Loop through the tracks and create a QR code for each track
     for (const track of dbTracks) {
-      const link = `${process.env['FRONTEND_SHORT_URI']}/qr/${paymentStatus.data.user.hash}/${track.id}`;
+      const link = `${process.env['API_URI']}/qr/${track.id}`;
       const outputDir = `${process.env['PUBLIC_DIR']}/qr/${userId}`;
       const outputPath = `${outputDir}/${track.trackId}.png`;
       await this.utils.createDir(outputDir);

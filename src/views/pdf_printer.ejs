@@ -88,7 +88,6 @@
                         <% let index = i + row * 3 + col; %>
                         <% if (index < tracks.length) { %>
                             <div class="front">
-                                <div class="test"><%= tracks[index].name %></div>
                                 <img src="<%= process.env['API_URI'] %>/public/qr/<%= user.userId %>/<%= tracks[index].trackId %>.png" alt="QR Code" class="qr">
                             </div>
                         <% } else { %>

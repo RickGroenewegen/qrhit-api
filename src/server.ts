@@ -262,15 +262,13 @@ class Server {
       }
     );
 
-    this.fastify.get(
-      '/link/:userHash/:trackId',
-      async (request: any, _reply) => {
-        return await this.data.getLink(
-          request.params.userHash,
-          request.params.trackId
-        );
+    this.fastify.get('/qr/:trackId', async (request: any, _reply) => {
+      const result = await this.data.getLink(request.params.trackId);
+      if (result.success) {
+        // Redirect to the Spotify link
+        _reply.redirect(result.data.link);
       }
-    );
+    });
 
     this.fastify.get(
       '/qr/pdf/:playlistId/:paymentId/:template',
@@ -279,12 +277,10 @@ class Server {
           request.params.playlistId,
           request.params.paymentId
         );
-
         if (!valid) {
           reply.status(403).send({ error: 'Forbidden' });
           return;
         }
-
         const playlist = await this.data.getPlaylist(request.params.playlistId);
         const tracks = await this.data.getTracks(playlist.id);
         const payment = await this.mollie.getPayment(request.params.paymentId);

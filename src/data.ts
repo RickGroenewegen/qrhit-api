@@ -123,17 +123,13 @@ class Data {
     return user;
   }
 
-  public async getLink(userHash: string, trackId: number): Promise<ApiResult> {
+  public async getLink(trackId: number): Promise<ApiResult> {
     let link = '';
 
     const linkQuery: any[] = await this.prisma.$queryRaw`
         SELECT      tracks.spotifyLink 
         FROM        tracks
-        INNER JOIN  playlist_has_tracks ON tracks.id = playlist_has_tracks.trackId
-        INNER JOIN  user_has_playlists ON playlist_has_tracks.playlistId = user_has_playlists.playlistId
-        INNER JOIN  users ON user_has_playlists.userId = users.id
-        WHERE       users.hash = ${userHash}
-        AND         tracks.id = ${trackId}`;
+        WHERE       tracks.id = ${trackId}`;
 
     if (linkQuery.length > 0) {
       return {
