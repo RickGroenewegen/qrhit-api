@@ -182,9 +182,16 @@ class Qr {
       printBackground: true,
     };
 
+    this.logger.log(color.blue.bold(`Converting to PDF: ${filename}`));
+
     // Generate the PDF
     await page.pdf(pdfOptions);
+
+    this.logger.log(color.blue.bold(`Closing browser`));
+
     await browser.close();
+
+    this.logger.log(color.blue.bold(`Compress PDF: ${filename}`));
 
     await this.compressPDF(
       `${process.env['PUBLIC_DIR']}/pdf/${filename}`,
@@ -197,6 +204,8 @@ class Qr {
       `${process.env['PUBLIC_DIR']}/pdf/compressed_${filename}`,
       `${process.env['PUBLIC_DIR']}/pdf/${filename}`
     );
+
+    this.logger.log(color.blue.bold(`Compression done: ${filename}`));
 
     return filename;
   }
