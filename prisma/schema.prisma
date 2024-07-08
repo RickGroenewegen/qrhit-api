@@ -108,7 +108,7 @@ model Track {
   trackId     String             @unique
   name        String
   artist      String
-  isrc        String
+  isrc        String?
   year        Int?
   yearSpotify Int?
   spotifyLink String?

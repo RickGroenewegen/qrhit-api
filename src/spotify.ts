@@ -163,17 +163,22 @@ class Spotify {
     playlistId: string
   ): Promise<ApiResult> {
     try {
-      const response = await axios.get(
-        `https://api.spotify.com/v1/playlists/${playlistId}`,
-        {
-          headers: {
-            Authorization: `Bearer ${headers.authorization}`,
-          },
-        }
-      );
+      const options = {
+        method: 'GET',
+        url: 'https://spotify23.p.rapidapi.com/playlist',
+        params: {
+          id: playlistId,
+        },
+        headers: {
+          'x-rapidapi-key': process.env['RAPID_API_KEY'],
+          'x-rapidapi-host': 'spotify23.p.rapidapi.com',
+        },
+      };
+
+      const response = await axios.request(options);
 
       const playlist: Playlist = {
-        id: response.data.id,
+        id: playlistId,
         name: response.data.name,
         numberOfTracks: response.data.tracks.total,
       };
@@ -194,36 +199,45 @@ class Spotify {
       const limit = 100;
 
       while (true) {
-        const response = await axios.get(
-          `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-          {
-            headers: {
-              Authorization: `Bearer ${headers.authorization}`,
-            },
-            params: {
-              limit,
-              offset,
-            },
-          }
-        );
+        const options = {
+          method: 'GET',
+          url: 'https://spotify23.p.rapidapi.com/playlist_tracks',
+          params: {
+            id: playlistId,
+            limit,
+            offset,
+          },
+          headers: {
+            'x-rapidapi-key': process.env['RAPID_API_KEY'],
+            'x-rapidapi-host': 'spotify23.p.rapidapi.com',
+          },
+        };
+
+        const response = await axios.request(options);
 
         const tracks: Track[] = response.data.items.map((item: any) => ({
           id: item.track.id,
           name: item.track.name,
           artist: item.track.artists[0].name,
           link: item.track.external_urls.spotify,
+          isrc: item.track.external_ids.isrc,
           image:
             item.track.album.images.length > 0
               ? item.track.album.images[0].url
               : null,
+
           releaseDate: format(
             new Date(item.track.album.release_date),
             'yyyy-MM-dd'
           ),
-          isrc: item.track.external_ids.isrc,
         }));
 
-        allTracks = allTracks.concat(tracks);
+        // remove all items that do not have an artist or image
+        const filteredTracks = tracks.filter(
+          (track) => track.artist && track.image
+        );
+
+        allTracks = allTracks.concat(filteredTracks);
 
         // Check if there are more tracks to fetch
         if (response.data.items.length < limit) {

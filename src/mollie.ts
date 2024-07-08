@@ -17,6 +17,8 @@ class Mollie {
   });
 
   public async getPaymentUri(params: any): Promise<ApiResult> {
+    console.log(111, params);
+
     try {
       let price = 0;
       let amount = params.extraOrderData.amount || 1;
@@ -43,7 +45,11 @@ class Mollie {
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
       });
 
-      const userDatabaseId = await this.data.storeUser(params.user);
+      const userDatabaseId = await this.data.storeUser({
+        userId: '',
+        email: params.extraOrderData.email,
+        displayName: params.extraOrderData.fullname,
+      });
       const playlistDatabaseId = await this.data.storePlaylist(
         userDatabaseId,
         params.playlist

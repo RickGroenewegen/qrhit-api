@@ -6,12 +6,17 @@ import Progress from './progress';
 import { nanoid } from 'nanoid';
 import crypto from 'crypto';
 import { ApiResult } from './interfaces/ApiResult';
+import { Track } from './interfaces/Track';
+import OpenAI from 'openai';
 
 class Data {
   private prisma = new PrismaClient();
   private logger = new Logger();
   private musicBrainz = new MusicBrainz();
   private progress = Progress.getInstance();
+  private openai = new OpenAI({
+    apiKey: process.env['OPENAI_TOKEN'],
+  });
 
   public async storeUser(userParams: any): Promise<number> {
     let userDatabaseId: number = 0;
@@ -19,7 +24,7 @@ class Data {
     // Check if the user exists. If not, create it
     const user = await this.prisma.user.findUnique({
       where: {
-        userId: userParams.userId,
+        email: userParams.email,
       },
     });
 
@@ -146,6 +151,89 @@ class Data {
     };
   }
 
+  public async getReleaseDates(tracks: Track[]) {
+    console.log(111, tracks);
+
+    // convert tracks to an array with only the 'i' , 'a' and 'n' properties
+    const tracksArray = tracks.map((track) => {
+      return {
+        i: track.id,
+        a: track.artist,
+        n: track.name,
+      };
+    });
+
+    const prompt = `  Analyse the following list of tracks: 
+    
+                      ${JSON.stringify(tracksArray)}
+                      
+                     i = id, a = artist, n = name. 
+                     Return an array of objects with the id (i) and the release year (y) of the track.`;
+
+    console.log(111, prompt);
+
+    const result = await this.openai.chat.completions.create({
+      model: 'gpt-4o',
+      temperature: 0,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a music expert that helps me determine the first release year of a song based on title and artist`,
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      functions: [
+        {
+          name: 'getReleaseDates',
+          description:
+            'Get release year of tracks based on title and artist. Only return i (id) and year (release year). year MUST NOT 0. This is very important!',
+          parameters: {
+            type: 'object',
+            properties: {
+              tracks: {
+                type: 'array',
+                description: 'An array of tracks',
+                items: {
+                  type: 'object',
+                  description: 'A track',
+                  properties: {
+                    i: {
+                      type: 'number',
+                      description: 'The DB id of the track',
+                    },
+                    y: {
+                      description:
+                        'Release year of the track. You MUST include this',
+                      type: 'number',
+                    },
+                  },
+                  required: ['i', 'y'],
+                },
+              },
+            },
+            required: ['tracks'],
+          },
+        },
+      ],
+    });
+
+    if (result) {
+      if (result.choices[0].message.function_call) {
+        const funcCall = result.choices[0].message.function_call;
+
+        console.log(444, result.choices[0].message);
+
+        const functionCallName = funcCall.name;
+        const completionArguments = JSON.parse(funcCall.arguments as string);
+
+        console.log(555, completionArguments);
+      }
+    }
+  }
+
   public async storeTracks(
     paymentId: string,
     playlistDatabaseId: number,
@@ -172,8 +260,8 @@ class Data {
             data: {
               trackId: track.id,
               name: track.name,
-              artist: track.artist,
               isrc: track.isrc,
+              artist: track.artist,
               spotifyLink: track.link,
             },
           });

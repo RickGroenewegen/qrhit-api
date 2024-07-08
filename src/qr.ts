@@ -15,7 +15,6 @@ import { SocketStream } from '@fastify/websocket';
 import Mail from './mail';
 import Order from './order';
 import { promisify } from 'util';
-import path from 'path';
 import { exec } from 'child_process';
 
 class Qr {
@@ -37,7 +36,6 @@ class Qr {
   public async generate(params: any): Promise<void> {
     this.progress.setProgress(params.paymentId, 0, 'Started ...');
 
-    const userProfile = await this.spotify.getUserProfile(params.accessToken);
     const paymentStatus = await this.mollie.checkPaymentStatus(
       params.paymentId
     );
@@ -51,7 +49,7 @@ class Qr {
     const playlist = await this.data.getPlaylist(payment.playlist.playlistId);
 
     // Check if the user is the same as the one who made the payment
-    if (userProfile.data.userId !== userId) {
+    if (user.userId !== userId) {
       this.logger.log(
         color.red.bold('User is not the same as the one who made the payment')
       );
@@ -81,6 +79,9 @@ class Qr {
     await this.data.storeTracks(payment.paymentId, payment.playlist.id, tracks);
 
     const dbTracks = await this.data.getTracks(payment.playlist.id);
+
+    // get the release dates from ChatGPT
+    //await this.data.getReleaseDates(dbTracks);
 
     // Loop through the tracks and create a QR code for each track
     for (const track of dbTracks) {
