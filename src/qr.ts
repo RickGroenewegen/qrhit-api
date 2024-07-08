@@ -173,6 +173,7 @@ class Qr {
     // Navigate to the URL
     await page.goto(url, {
       waitUntil: 'networkidle0',
+      timeout: 300000,
     });
 
     // Define PDF options
@@ -182,7 +183,9 @@ class Qr {
       printBackground: true,
     };
 
-    this.logger.log(color.blue.bold(`Converting to PDF: ${filename}`));
+    this.logger.log(
+      color.blue.bold(`Converting to PDF: ${color.white.bold(filename)}`)
+    );
 
     // Generate the PDF
     await page.pdf(pdfOptions);
@@ -191,7 +194,9 @@ class Qr {
 
     await browser.close();
 
-    this.logger.log(color.blue.bold(`Compress PDF: ${filename}`));
+    this.logger.log(
+      color.blue.bold(`Compress PDF: ${color.white.bold(filename)}`)
+    );
 
     await this.compressPDF(
       `${process.env['PUBLIC_DIR']}/pdf/${filename}`,
@@ -205,7 +210,9 @@ class Qr {
       `${process.env['PUBLIC_DIR']}/pdf/${filename}`
     );
 
-    this.logger.log(color.blue.bold(`Compression done: ${filename}`));
+    this.logger.log(
+      color.blue.bold(`Compression done: ${color.white.bold(filename)}`)
+    );
 
     return filename;
   }
