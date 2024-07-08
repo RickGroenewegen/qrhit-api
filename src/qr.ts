@@ -176,29 +176,14 @@ class Qr {
         MarginRight: 0,
         MarginBottom: 0,
         MarginLeft: 0,
+        CompressPDF: 'true',
       },
       'htm'
     );
     await result.saveFiles(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
 
     this.logger.log(
-      color.blue.bold(`Compress PDF: ${color.white.bold(filename)}`)
-    );
-
-    await this.compressPDF(
-      `${process.env['PUBLIC_DIR']}/pdf/${filename}`,
-      `${process.env['PUBLIC_DIR']}/pdf/compressed_${filename}`
-    );
-
-    // Remove the original PDF, rename the compressed PDF to the original filename
-    await fs.unlink(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
-    await fs.rename(
-      `${process.env['PUBLIC_DIR']}/pdf/compressed_${filename}`,
-      `${process.env['PUBLIC_DIR']}/pdf/${filename}`
-    );
-
-    this.logger.log(
-      color.blue.bold(`Compression done: ${color.white.bold(filename)}`)
+      color.blue.bold(`Saving done: ${color.white.bold(filename)}`)
     );
 
     return filename;
