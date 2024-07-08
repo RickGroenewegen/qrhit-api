@@ -6,7 +6,6 @@ import Mollie from './mollie';
 import Data from './data';
 import * as QRCode from 'qrcode';
 import * as fs from 'fs/promises';
-import * as puppeteer from 'puppeteer';
 import { uuidv4 as uuid } from 'uuidv7';
 import sanitizeFilename from 'sanitize-filename';
 import Utils from './utils';
@@ -16,6 +15,7 @@ import Mail from './mail';
 import Order from './order';
 import { promisify } from 'util';
 import { exec } from 'child_process';
+import ConvertApi from 'convertapi';
 
 class Qr {
   private spotify = new Spotify();
@@ -28,6 +28,7 @@ class Qr {
   private mail = new Mail();
   private order = Order.getInstance();
   private execPromise = promisify(exec);
+  private convertapi = new ConvertApi(process.env['CONVERT_API_KEY']!);
 
   public async startProgress(paymentId: string, connection: SocketStream) {
     this.progress.startProgress(paymentId);
@@ -151,16 +152,7 @@ class Qr {
     this.logger.log(color.blue.bold('Generating PDF...'));
 
     const uniqueId = uuid();
-    let puppeteerOptions = {};
 
-    if (process.env['CHROMIUM_PATH']) {
-      puppeteerOptions = {
-        executablePath: process.env['CHROMIUM_PATH'],
-      };
-    }
-
-    const browser = await puppeteer.launch(puppeteerOptions);
-    const page = await browser.newPage();
     const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}`;
     const filename = sanitizeFilename(
       `${playlist.name}_${uniqueId}_${template}.pdf`.replace(/ /g, '_')
@@ -170,30 +162,24 @@ class Qr {
       color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)
     );
 
-    // Navigate to the URL
-    await page.goto(url, {
-      waitUntil: 'networkidle0',
-      timeout: 300000,
-    });
-
-    // Define PDF options
-    const pdfOptions: puppeteer.PDFOptions = {
-      path: `${process.env['PUBLIC_DIR']}/pdf/${filename}`,
-      format: 'A4',
-      printBackground: true,
-      timeout: 0,
-    };
-
     this.logger.log(
       color.blue.bold(`Converting to PDF: ${color.white.bold(filename)}`)
     );
 
-    // Generate the PDF
-    await page.pdf(pdfOptions);
-
-    this.logger.log(color.blue.bold(`Closing browser`));
-
-    await browser.close();
+    const result = await this.convertapi.convert(
+      'pdf',
+      {
+        File: url,
+        RespectViewport: 'false',
+        PageSize: 'a4',
+        MarginTop: 0,
+        MarginRight: 0,
+        MarginBottom: 0,
+        MarginLeft: 0,
+      },
+      'htm'
+    );
+    await result.saveFiles(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
 
     this.logger.log(
       color.blue.bold(`Compress PDF: ${color.white.bold(filename)}`)
@@ -220,9 +206,16 @@ class Qr {
 
   async compressPDF(inputPath: string, outputPath: string): Promise<void> {
     try {
-      await this.execPromise(
-        `gs -dAutoRotatePages=/None -sDEVICE=pdfwrite -dCompatibilityLevel=1.4 -dPDFSETTINGS=/ebook -dNOPAUSE -dQUIET -dBATCH -sOutputFile="${outputPath}" "${inputPath}"`
+      const result = await this.convertapi.convert(
+        'compress',
+        {
+          File: inputPath,
+        },
+        'pdf'
       );
+
+      await result.saveFiles(outputPath);
+
       this.logger.log(
         color.blue.bold(
           `PDF compression successful: ${color.white.bold(outputPath)}`

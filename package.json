@@ -30,6 +30,7 @@
     "axios-auth-refresh": "^3.3.6",
     "console-log-color": "^0.0.5",
     "console-log-colors": "^0.4.0",
+    "convertapi": "^1.14.0",
     "date-fns": "^3.3.1",
     "ejs": "^3.1.10",
     "fastify": "^4.26.0",
