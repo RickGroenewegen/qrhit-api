@@ -233,7 +233,7 @@ class Data {
         await this.progress.setProgress(
           paymentId,
           progress,
-          `Processing track (${counter} of ${tracks.length}): ${track.name} (${track.artist})`,
+          `${track.artist} - ${track.name} (${counter} of ${tracks.length})`,
           track.image
         );
       }

@@ -32,7 +32,7 @@ class Progress {
       this.progress[paymentId] = {
         paymentId: paymentId,
         progress: 0,
-        message: 'Started progress...',
+        message: 'progress.startedProgress',
       };
 
       await this.cache.set(

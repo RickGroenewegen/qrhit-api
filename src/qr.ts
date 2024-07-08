@@ -56,11 +56,7 @@ class Qr {
       return;
     }
 
-    this.progress.setProgress(
-      params.paymentId,
-      0,
-      'Getting tracks from Spotify '
-    );
+    this.progress.setProgress(params.paymentId, 0, 'progress.gettingTracks');
 
     // Retrieve the tracks from Spotify
     const response = await this.spotify.getTracks(
@@ -70,18 +66,11 @@ class Qr {
 
     const tracks = response.data;
 
-    this.progress.setProgress(
-      params.paymentId,
-      0,
-      'Storing tracks in database'
-    );
+    this.progress.setProgress(params.paymentId, 0, 'progress.storingTracks');
 
     await this.data.storeTracks(payment.paymentId, payment.playlist.id, tracks);
 
     const dbTracks = await this.data.getTracks(payment.playlist.id);
-
-    // get the release dates from ChatGPT
-    //await this.data.getReleaseDates(dbTracks);
 
     // Loop through the tracks and create a QR code for each track
     for (const track of dbTracks) {
@@ -103,11 +92,7 @@ class Qr {
       );
     }
 
-    this.progress.setProgress(
-      params.paymentId,
-      90,
-      `Generating PDF for: ${playlist.name}`
-    );
+    this.progress.setProgress(params.paymentId, 90, `progress.generatingPDF`);
 
     // Generate the digital version
     const filename = await this.generatePDF(playlist, payment, 'digital');
