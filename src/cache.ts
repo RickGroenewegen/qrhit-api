@@ -8,7 +8,14 @@ class Cache {
   private client: Redis;
 
   private constructor() {
-    this.client = new Redis(process.env['REDIS_URL']!);
+    const redisUrl = process.env['REDIS_URL'];
+
+    if (!redisUrl) {
+      throw new Error('REDIS_URL environment variable is not defined');
+    }
+
+    this.client = new Redis(redisUrl);
+
     // Handle connection errors
     this.client.on('error', (error) => {
       this.logManager.log(
