@@ -10,7 +10,6 @@ import { uuidv4 as uuid } from 'uuidv7';
 import sanitizeFilename from 'sanitize-filename';
 import Utils from './utils';
 import Progress from './progress';
-import { SocketStream } from '@fastify/websocket';
 import Mail from './mail';
 import Order from './order';
 import { promisify } from 'util';
@@ -30,7 +29,7 @@ class Qr {
   private execPromise = promisify(exec);
   private convertapi = new ConvertApi(process.env['CONVERT_API_KEY']!);
 
-  public async startProgress(paymentId: string, connection: SocketStream) {
+  public async startProgress(paymentId: string) {
     this.progress.startProgress(paymentId);
   }
 

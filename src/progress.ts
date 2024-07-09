@@ -1,7 +1,6 @@
 import Log from './logger';
 import { Progress as IProgress } from './interfaces/Progress';
 import { color } from 'console-log-colors';
-import { SocketStream } from '@fastify/websocket';
 import Cache from './cache';
 
 class Progress {
