@@ -299,6 +299,7 @@ class Server {
     });
 
     this.fastify.post('/order/calculate', async (request: any, _reply) => {
+      console.log('1');
       return await this.order.calculateOrder(request.body);
     });
   }

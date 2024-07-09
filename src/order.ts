@@ -23,12 +23,15 @@ class Order {
     let price = 0;
     let total = 0;
 
-    const authToken = await this.getAuthToken();
+    console.log(111, params);
+
     const orderType = await this.prisma.orderType.findUnique({
       where: {
         name: params.orderType,
       },
     });
+
+    console.log(222, orderType);
 
     if (orderType) {
       price = parseFloat(
@@ -39,7 +42,10 @@ class Order {
 
       let response: any = {};
 
+      console.log(333, params.orderType);
+
       if (params.orderType !== 'digital') {
+        const authToken = await this.getAuthToken();
         response = await axios({
           method: 'post',
           url: `${process.env['PRINT_API_URL']}/v2/shipping/quote `,
@@ -62,6 +68,8 @@ class Order {
       }
 
       total = parseFloat(total.toFixed(2));
+
+      console.log(444);
 
       return {
         success: true,
