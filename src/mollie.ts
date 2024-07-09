@@ -44,7 +44,7 @@ class Mollie {
       });
 
       const userDatabaseId = await this.data.storeUser({
-        userId: '',
+        userId: params.extraOrderData.email,
         email: params.extraOrderData.email,
         displayName: params.extraOrderData.fullname,
       });
