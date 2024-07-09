@@ -34,9 +34,7 @@ class Spotify {
           expiresIn: response.data.expires_in,
         },
       };
-    } catch (e) {
-      console.log(111, e);
-    }
+    } catch (e) {}
 
     return {
       success: false,
@@ -81,9 +79,7 @@ class Spotify {
           expiresIn: response.data.expires_in,
         },
       };
-    } catch (e) {
-      console.log(111, 'Error in spotify callback');
-    }
+    } catch (e) {}
 
     return {
       success: false,

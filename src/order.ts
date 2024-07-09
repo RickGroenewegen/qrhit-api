@@ -104,7 +104,7 @@ class Order {
   public async createOrder(payment: any, filename: string): Promise<void> {
     const authToken = await this.getAuthToken();
 
-    console.log(111, `${process.env.API_URI}/public/pdf/${filename}`);
+    console.log(1234, `${process.env.API_URI}/public/pdf/${filename}`);
 
     const responseOrder = await axios({
       method: 'post',

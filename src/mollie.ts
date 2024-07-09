@@ -17,8 +17,6 @@ class Mollie {
   });
 
   public async getPaymentUri(params: any): Promise<ApiResult> {
-    console.log(111, params);
-
     try {
       let price = 0;
       let amount = params.extraOrderData.amount || 1;
