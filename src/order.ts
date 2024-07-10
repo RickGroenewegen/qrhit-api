@@ -135,6 +135,16 @@ class Order {
         },
       },
     });
+
+    // Update the payment with the order id
+    await this.prisma.payment.update({
+      where: {
+        id: payment.id,
+      },
+      data: {
+        orderId: responseOrder.data.id,
+      },
+    });
   }
 }
 

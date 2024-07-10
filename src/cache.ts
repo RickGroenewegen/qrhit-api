@@ -62,6 +62,10 @@ class Cache {
     return await this.executeCommand('get', key);
   }
 
+  async del(key: string): Promise<void> {
+    await this.executeCommand('del', key);
+  }
+
   async setArray(key: string, values: string[]): Promise<void> {
     await this.executeCommand('del', key); // Ensure the key is empty before setting new values
     await this.executeCommand('sadd', key, ...values);

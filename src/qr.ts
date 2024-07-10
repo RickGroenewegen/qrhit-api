@@ -92,10 +92,16 @@ class Qr {
       );
     }
 
-    this.progress.setProgress(params.paymentId, 90, `progress.generatingPDF`);
+    this.progress.setProgress(params.paymentId, 80, `progress.generatingPDF`);
 
     // Generate the digital version
-    const filename = await this.generatePDF(playlist, payment, 'digital');
+    const digitalFilename = await this.generatePDF(
+      playlist,
+      payment,
+      'digital',
+      80,
+      90
+    );
 
     // Update the payment with the filename using prisma
     await this.prisma.payment.update({
@@ -103,21 +109,28 @@ class Qr {
         paymentId: payment.paymentId,
       },
       data: {
-        filename,
+        filename: digitalFilename,
       },
     });
 
-    this.progress.setProgress(params.paymentId, 100, `Done!`);
-    await this.mail.sendEmail(payment, playlist, filename);
+    await this.mail.sendEmail(payment, playlist, digitalFilename);
     if (payment.orderType.name != 'digital') {
       // Generate the PDF for the printer
-      const filename = await this.generatePDF(playlist, payment, 'printer');
-      await this.order.createOrder(payment, filename);
+      const printerFilename = await this.generatePDF(
+        playlist,
+        payment,
+        'printer',
+        90,
+        99
+      );
+      await this.order.createOrder(payment, printerFilename);
     }
+
+    this.progress.setProgress(params.paymentId, 100, `Done!`);
 
     this.logger.log(
       color.green.bold(
-        `PDF Generated successfully: ${color.white.bold(filename)}`
+        `PDF Generated successfully: ${color.white.bold(digitalFilename)}`
       )
     );
   }
@@ -146,7 +159,9 @@ class Qr {
   private async generatePDF(
     playlist: Playlist,
     payment: any,
-    template: string
+    template: string,
+    startProgress: number,
+    endProgress: number
   ): Promise<string> {
     this.logger.log(color.blue.bold('Generating PDF...'));
 
@@ -165,21 +180,39 @@ class Qr {
       color.blue.bold(`Converting to PDF: ${color.white.bold(filename)}`)
     );
 
-    const result = await this.convertapi.convert(
-      'pdf',
-      {
-        File: url,
-        RespectViewport: 'false',
-        PageSize: 'a4',
-        MarginTop: 0,
-        MarginRight: 0,
-        MarginBottom: 0,
-        MarginLeft: 0,
-        CompressPDF: 'true',
-      },
-      'htm'
-    );
-    await result.saveFiles(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
+    // Start a timer to increment progress
+    const incrementInterval = (13 * 1000) / (endProgress - startProgress); // 13 seconds divided into the progress range
+    let currentProgress = startProgress;
+    const intervalId = setInterval(() => {
+      if (currentProgress < endProgress) {
+        currentProgress++;
+        this.progress.setProgress(
+          payment.paymentId,
+          currentProgress,
+          `Generating PDF...`
+        );
+      }
+    }, incrementInterval);
+
+    try {
+      const result = await this.convertapi.convert(
+        'pdf',
+        {
+          File: url,
+          RespectViewport: 'false',
+          PageSize: 'a4',
+          MarginTop: 0,
+          MarginRight: 0,
+          MarginBottom: 0,
+          MarginLeft: 0,
+          CompressPDF: 'true',
+        },
+        'htm'
+      );
+      await result.saveFiles(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
+    } finally {
+      clearInterval(intervalId); // Clear the interval once the PDF generation is complete
+    }
 
     this.logger.log(
       color.blue.bold(`Saving done: ${color.white.bold(filename)}`)

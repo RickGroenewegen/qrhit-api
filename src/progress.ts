@@ -47,6 +47,16 @@ class Progress {
     }
   }
 
+  public async clearProgress(paymentId: string) {
+    const val = await this.cache.del(this.cacheKey + paymentId);
+    delete this.progress[paymentId];
+    this.logger.log(
+      color.blue.bold(
+        `Clearing progress for payment: ${color.white.bold(paymentId)}`
+      )
+    );
+  }
+
   public async getProgress(paymentId: string): Promise<IProgress | null> {
     const val = await this.cache.get(this.cacheKey + paymentId);
     if (val) {

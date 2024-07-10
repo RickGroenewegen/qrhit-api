@@ -212,6 +212,13 @@ class Server {
       }
     );
 
+    this.fastify.get(
+      '/progress/:paymentId/clear',
+      async (request: any, _reply) => {
+        return await this.progress.clearProgress(request.params.paymentId);
+      }
+    );
+
     this.fastify.get('/progress/:paymentId', async (request: any, _reply) => {
       return await this.progress.getProgress(request.params.paymentId);
     });
@@ -255,9 +262,10 @@ class Server {
           request.params.paymentId,
           request.params.playlistId
         );
+
         return {
           success: true,
-          filename: data.filename,
+          data,
         };
       }
     );
