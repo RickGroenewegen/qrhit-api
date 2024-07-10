@@ -29,9 +29,9 @@ const translate = async (text, currentPath) => {
   const prompt =
     'I want you to translate a text into ' +
     languagesFull.join(', ') +
-    'You should return a JSON object with the keys (' +
+    '. You should return a JSON object with the keys (' +
     languages.join(',') +
-    ') which contain the translations for those languages. Try to keep the translation length the same as the orginial and not much longer. The output MUST be JSON valid and ONLY JSON. No other text. It is all in the context of a mobile app used for measuring pH. The text you should translate is:\n\n "' +
+    ') which contain the translations for those languages. Try to keep the translation length the same as the original and not much longer. The output MUST be JSON valid and ONLY JSON. No other text. It is all in the context of a mobile app used for measuring pH. The text you should translate is:\n\n "' +
     text +
     '"';
 
@@ -96,19 +96,6 @@ const translate = async (text, currentPath) => {
   // Rate limit the translation function
   const translatedTexts = await limiter.schedule(requestFunc);
   return translatedTexts;
-};
-
-const mergeTranslations = (target, translated) => {
-  for (let key in translated) {
-    if (
-      typeof translated[key] === 'object' &&
-      typeof target[key] === 'object'
-    ) {
-      mergeTranslations(target[key], translated[key]);
-    } else {
-      target[key] = translated[key];
-    }
-  }
 };
 
 const checkExistingFiles = async () => {
@@ -177,7 +164,7 @@ const translateJson = async (
             if (!translated[lang]) {
               translated[lang] = {};
             }
-            translated[lang][key] = translatedTexts[lang];
+            translated[lang][currentPath] = translatedTexts[lang];
             if (!translatedCache[currentPath]) {
               translatedCache[currentPath] = [];
             }
@@ -186,16 +173,7 @@ const translateJson = async (
             if (!languageFiles[lang]) {
               languageFiles[lang] = {};
             }
-            let tempObj = languageFiles[lang];
-            const pathParts = currentPath.split('.');
-            for (let i = 0; i < pathParts.length - 1; i++) {
-              if (!tempObj[pathParts[i]]) {
-                tempObj[pathParts[i]] = {};
-              }
-              tempObj = tempObj[pathParts[i]];
-            }
-            tempObj[pathParts[pathParts.length - 1]] = translatedTexts[lang];
-            //console.log('Updated key path '.blue.bold + currentPath.white.bold + ' for '.blue.bold + lang.white.bold)
+            languageFiles[lang][currentPath] = translatedTexts[lang];
             await fs.writeFile(
               path.join(baseDirPath, `${lang}.json`),
               JSON.stringify(languageFiles[lang], null, 2),
@@ -214,7 +192,7 @@ const translateJson = async (
           if (!translated[lang]) {
             translated[lang] = {};
           }
-          translated[lang][key] = json[key];
+          translated[lang][currentPath] = json[key];
         }
       }
     }

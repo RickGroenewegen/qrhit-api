@@ -5,6 +5,7 @@ import Templates from './templates';
 import { Payment } from '@prisma/client';
 import { Playlist } from './interfaces/Playlist';
 import Translation from './translation';
+import { count } from 'console';
 
 interface MailParams {
   to: string | null;
@@ -55,7 +56,13 @@ class Mail {
       address: payment.address,
       city: payment.city,
       zipcode: payment.zipcode,
+      country: payment.countrycode,
       numberOfTracks: playlist.numberOfTracks,
+      productName: process.env['PRODUCT_NAME'],
+      translations: this.translation.getTranslationsByPrefix(
+        payment.locale,
+        'mail'
+      ),
     };
 
     try {
@@ -68,32 +75,10 @@ class Mail {
 
       let locale = payment.locale;
 
-      locale = 'de';
+      const html = await this.templates.render(`mails/ses_html`, mailParams);
+      const text = await this.templates.render(`mails/ses_text`, mailParams);
 
-      // Check if the template exists for the locale using fs
-      try {
-        await fs.access(
-          `${process.env['APP_ROOT']}/templates/mails/ses_html_${locale}.hbs`,
-          fs.constants.R_OK
-        );
-        await fs.access(
-          `${process.env['APP_ROOT']}/templates/mails/ses_text_${locale}.hbs`,
-          fs.constants.R_OK
-        );
-      } catch (error) {
-        locale = 'en';
-      }
-
-      const html = await this.templates.render(
-        `mails/ses_html_${locale}`,
-        mailParams
-      );
-      const text = await this.templates.render(
-        `mails/ses_text_${locale}`,
-        mailParams
-      );
-
-      const subject = this.translation.translate('mailSubject', locale, {
+      const subject = this.translation.translate('mail.mailSubject', locale, {
         orderId: payment.orderId,
         playlist: playlist.name,
       });

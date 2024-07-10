@@ -1,5 +1,75 @@
 {
-  "mailSubject": [
+  "mail.mailSubject": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.greatNews": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.belowAreDetails": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.weHopeYouHaveFun": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.greetings": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.orderInformation": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.orderNumber": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.playlist": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.items": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.fullname": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.address": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.zipcode": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.city": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.country": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.email": [
     "nl",
     "de",
     "fr"

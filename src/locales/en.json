@@ -1,3 +1,17 @@
 {
-	"mailSubject" : "We have received order {{ orderId }}!"
+	"mail.mailSubject" : "We have received order {{ orderId }}!",
+	"mail.greatNews": "Great news! Your QR cards for your playlist have been processed and will be posted to you once they are ready. You will receive a tracking link once they are shipped.",
+	"mail.belowAreDetails": "Below are your order details. The cards will be sent to the following address",
+	"mail.weHopeYouHaveFun" : "We hope you have lots of musical fun! If you have any further questions do not hesitate to mail us: info@qrsong.io",
+	"mail.greetings" : "Best regards",
+	"mail.orderInformation" : "Order information",
+	"mail.orderNumber" : "Order number",
+	"mail.playlist" : "Playlist",
+	"mail.items" : "Items",
+	"mail.fullname" : "Full name",
+	"mail.address" : "Address",
+	"mail.zipcode" : "Zipcode",
+	"mail.city" : "City",
+	"mail.country" : "Country",
+	"mail.email" : "Email"
 }
