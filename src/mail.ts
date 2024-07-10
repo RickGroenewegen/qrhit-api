@@ -4,6 +4,7 @@ import path from 'path';
 import Templates from './templates';
 import { Payment } from '@prisma/client';
 import { Playlist } from './interfaces/Playlist';
+import Translation from './translation';
 
 interface MailParams {
   to: string | null;
@@ -24,6 +25,7 @@ interface Attachment {
 class Mail {
   private ses: SESClient | null = null;
   private templates: Templates = new Templates();
+  private translation: Translation = new Translation();
 
   constructor() {
     this.ses = new SESClient({
@@ -43,7 +45,6 @@ class Mail {
     if (!this.ses) return;
 
     const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-
     const mailParams = {
       payment,
       playlist,
@@ -67,7 +68,7 @@ class Mail {
 
       let locale = payment.locale;
 
-      locale = 'nl';
+      locale = 'de';
 
       // Check if the template exists for the locale using fs
       try {
@@ -80,7 +81,6 @@ class Mail {
           fs.constants.R_OK
         );
       } catch (error) {
-        console.log(error);
         locale = 'en';
       }
 
@@ -93,10 +93,14 @@ class Mail {
         mailParams
       );
 
+      const subject = this.translation.translate('mailSubject', locale, {
+        playlist: playlist.name,
+      });
+
       const rawEmail = await this.renderRaw({
         from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
         to: payment.email,
-        subject: `Your QR cards for '${playlist.name}' are ready!`,
+        subject,
         html,
         text,
         attachments: [
