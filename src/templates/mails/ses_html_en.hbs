@@ -109,8 +109,8 @@
                     <!-- START CENTERED WHITE CONTAINER -->
                     <span class="preheader"
                         style="color: transparent; display: none; height: 0; max-height: 0; max-width: 0; opacity: 0; overflow: hidden; mso-hide: all; visibility: hidden; width: 0;">
-                        Great news: Your QR cards for your playlist <strong>{{playlist.name}}</strong> have
-                        been sent to the printer and will be mailed to you once they are ready.</span>
+                        Great news! Your QR cards for your playlist "<strong>{{playlist.name}}</strong>" have been sent to the printer and will be mailed to you once they
+                        are ready. You will receive a tracking link once they are shipped.
                     <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="main"
                         style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; background: #ffffff; border: 1px solid #eaebed; border-radius: 16px; width: 100%;"
                         width="100%">
@@ -125,9 +125,9 @@
                                     Hi {{payment.fullname}},</p>
                                 <p
                                     style="font-family: Helvetica, sans-serif; font-size: 16px; font-weight: normal; margin: 0; margin-bottom: 16px;">
-                                    Great news: Your QR cards for your playlist <strong>{{playlist.name}}</strong> have
-                                    been sent to the printer and will be mailed
-                                    to you once they are ready. You will receive a tracking link once they are sent.
+                                    Great news! Your QR cards for your playlist "<strong>{{playlist.name}}</strong>" have been sent to the printer and will
+                                    be mailed to you once they
+                                    are ready. You will receive a tracking link once they are shipped.
                                 </p>
                                 {{!-- <table role="presentation" border="0" cellpadding="0" cellspacing="0"
                                     class="btn btn-primary"
@@ -156,10 +156,13 @@
                                 </table> --}}
                                 <p
                                     style="font-family: Helvetica, sans-serif; font-size: 16px; font-weight: normal; margin: 0; margin-bottom: 16px;">
-                                    Below are your order details. The cards will be sent to this address</p>
+                                    Below are your order details. The cards will be sent to the following address:</p>
                                 <p
                                     style="font-family: Helvetica, sans-serif; font-size: 16px; font-weight: normal; margin: 0; margin-bottom: 16px;">
                                     We hope you have lots of musical fun! If you have any further questions do not hesitate to mail us: info@qrsong.io</p>
+
+                                <p style="font-family: Helvetica, sans-serif; font-size: 16px; font-weight: normal; margin: 0; margin-bottom: 16px;">
+                                    Best regards,</p>
 
                                 <!-- Order Information Table -->
                                 <h2
@@ -171,6 +174,11 @@
                                             style="padding: 10px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">
                                             Order Number</th>
                                         <td style="padding: 10px; border: 1px solid #ddd;">{{ orderId }}</td>
+                                    </tr>
+                                    <tr>
+                                        <th style="padding: 10px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">
+                                            Playlist</th>
+                                        <td style="padding: 10px; border: 1px solid #ddd;">{{ playlist.name }}</td>
                                     </tr>
                                     <tr>
                                         <th

@@ -94,6 +94,7 @@ class Mail {
       );
 
       const subject = this.translation.translate('mailSubject', locale, {
+        orderId: payment.orderId,
         playlist: playlist.name,
       });
 

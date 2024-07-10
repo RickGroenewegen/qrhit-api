@@ -1,3 +1,3 @@
 {
-	"mailSubject" : "Your QR cards for '{{playlist}}' are ready!"
+	"mailSubject" : "We have received order {{ orderId }}!"
 }

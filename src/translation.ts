@@ -16,8 +16,6 @@ class Translation {
     locale?: string,
     options?: Record<string, any>
   ): string {
-    console.log(444, options);
-
     return this.i18n.__(
       { phrase: key, locale: locale || this.i18n.getLocale() },
       options || {}

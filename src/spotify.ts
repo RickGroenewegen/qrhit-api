@@ -149,8 +149,6 @@ class Spotify {
         `refreshtoken_${headers.authorization}`
       );
       const tokens = await this.refreshAccessToken(refreshToken!);
-      console.log(123, e.response.data.error);
-      console.log(444, tokens);
     }
   }
 
