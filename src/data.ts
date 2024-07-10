@@ -91,7 +91,7 @@ class Data {
 
   public async getPlaylist(playlistId: string): Promise<any> {
     const playlist: any[] = await this.prisma.$queryRaw`
-        SELECT      * 
+        SELECT      *, (SELECT COUNT(1) FROM playlist_has_tracks WHERE playlist_has_tracks.playlistId = playlists.id) as numberOfTracks
         FROM        playlists
         WHERE       playlists.playlistId = ${playlistId}`;
     return playlist[0];

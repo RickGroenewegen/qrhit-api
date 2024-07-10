@@ -2,7 +2,8 @@ import { SESClient, SendRawEmailCommand } from '@aws-sdk/client-ses';
 import fs from 'fs/promises';
 import path from 'path';
 import Templates from './templates';
-import { Payment, Playlist } from '@prisma/client';
+import { Payment } from '@prisma/client';
+import { Playlist } from './interfaces/Playlist';
 
 interface MailParams {
   to: string | null;
@@ -47,6 +48,13 @@ class Mail {
       payment,
       playlist,
       downloadLink: `${process.env['API_URI']}/public/pdf/${filename}`,
+      orderId: payment.orderId,
+      fullname: payment.fullname,
+      email: payment.email,
+      address: payment.address,
+      city: payment.city,
+      zipcode: payment.zipcode,
+      numberOfTracks: playlist.numberOfTracks,
     };
 
     try {
@@ -57,8 +65,33 @@ class Mail {
       // Get the filename from the path
       const filename = path.basename(filePath as string);
 
-      const html = await this.templates.render('mails/ses_html', mailParams);
-      const text = await this.templates.render('mails/ses_text', mailParams);
+      let locale = payment.locale;
+
+      locale = 'nl';
+
+      // Check if the template exists for the locale using fs
+      try {
+        await fs.access(
+          `${process.env['APP_ROOT']}/templates/mails/ses_html_${locale}.hbs`,
+          fs.constants.R_OK
+        );
+        await fs.access(
+          `${process.env['APP_ROOT']}/templates/mails/ses_text_${locale}.hbs`,
+          fs.constants.R_OK
+        );
+      } catch (error) {
+        console.log(error);
+        locale = 'en';
+      }
+
+      const html = await this.templates.render(
+        `mails/ses_html_${locale}`,
+        mailParams
+      );
+      const text = await this.templates.render(
+        `mails/ses_text_${locale}`,
+        mailParams
+      );
 
       const rawEmail = await this.renderRaw({
         from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,

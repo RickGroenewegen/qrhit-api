@@ -15,6 +15,7 @@ import Data from './data';
 import Progress from './progress';
 import fs from 'fs';
 import Order from './order';
+import Mail from './mail';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -40,6 +41,7 @@ class Server {
   private data = new Data();
   private progress = Progress.getInstance();
   private order = Order.getInstance();
+  private mail = new Mail();
 
   private constructor() {
     this.fastify = Fastify({
@@ -309,6 +311,19 @@ class Server {
     this.fastify.post('/order/calculate', async (request: any, _reply) => {
       return await this.order.calculateOrder(request.body);
     });
+
+    if (process.env['ENVIRONMENT'] == 'development') {
+      this.fastify.get('/mail/:paymentId', async (request: any, _reply) => {
+        const payment = await this.mollie.getPayment(request.params.paymentId);
+
+        const playlist = await this.data.getPlaylist(
+          payment.playlist.playlistId
+        );
+
+        await this.mail.sendEmail(payment, playlist, payment.filename);
+        return { success: true };
+      });
+    }
   }
 }
 

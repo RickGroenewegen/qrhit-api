@@ -66,6 +66,7 @@ class Mollie {
           playlistId: playlistDatabaseId,
           status: payment.status,
           orderTypeId: orderType!.id,
+          numberOfTracks: params.tracks.length,
           ...params.extraOrderData,
         },
       });
@@ -192,6 +193,8 @@ class Mollie {
         createdAt: true,
         updatedAt: true,
         orderType: true,
+        orderId: true,
+        locale: true,
         fullname: true,
         email: true,
         address: true,

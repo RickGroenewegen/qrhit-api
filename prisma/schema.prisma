@@ -33,31 +33,32 @@ model OrderType {
 }
 
 model Payment {
-  id          Int       @id @default(autoincrement())
-  userId      Int? // Removed the @unique constraint, and made optional
-  paymentId   String    @unique
-  orderId     String    @default("")
-  amount      Int
-  totalPrice  Float
-  status      String
-  createdAt   DateTime  @default(now())
-  updatedAt   DateTime  @updatedAt
-  playlistId  Int?
-  filename    String?
-  orderTypeId Int
-  fullname    String?
-  email       String?
-  address     String?
-  city        String?
-  zipcode     String?
-  countrycode String?
-  shipping    Float?
-  price       Float?
-  taxRate     Float?
-  locale      String    @default("en")
-  orderType   OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
-  playlist    Playlist? @relation(fields: [playlistId], references: [id], onDelete: Cascade)
-  user        User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  id             Int       @id @default(autoincrement())
+  userId         Int? // Removed the @unique constraint, and made optional
+  paymentId      String    @unique
+  orderId        String    @default("")
+  amount         Int
+  totalPrice     Float
+  status         String
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  playlistId     Int?
+  filename       String?
+  orderTypeId    Int
+  fullname       String?
+  email          String?
+  address        String?
+  city           String?
+  zipcode        String?
+  countrycode    String?
+  shipping       Float?
+  price          Float?
+  taxRate        Float?
+  locale         String    @default("en")
+  numberOfTracks Int       @default(0)
+  orderType      OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
+  playlist       Playlist? @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  user           User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId]) // Index for performance on queries
   @@index([paymentId])
