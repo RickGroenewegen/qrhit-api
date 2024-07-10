@@ -48,7 +48,7 @@ class Order {
             'Content-Type': 'application/json',
           },
           data: {
-            country: params.countrycode,
+            country: params.countrycode || 'NL',
             items: [
               {
                 productId: orderType.printApiProductId,

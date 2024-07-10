@@ -18,7 +18,6 @@ class Mollie {
 
   public async getPaymentUri(params: any): Promise<ApiResult> {
     try {
-      let price = 0;
       let amount = params.extraOrderData.amount || 1;
 
       const orderType = await this.prisma.orderType.findUnique({
@@ -30,6 +29,7 @@ class Mollie {
       // Get the order type
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
+        countrycode: params.extraOrderData.countrycode,
         amount,
       });
 
