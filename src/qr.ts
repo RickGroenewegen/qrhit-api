@@ -12,8 +12,6 @@ import Utils from './utils';
 import Progress from './progress';
 import Mail from './mail';
 import Order from './order';
-import { promisify } from 'util';
-import { exec } from 'child_process';
 import ConvertApi from 'convertapi';
 
 class Qr {
@@ -26,7 +24,6 @@ class Qr {
   private prisma = new PrismaClient();
   private mail = new Mail();
   private order = Order.getInstance();
-  private execPromise = promisify(exec);
   private convertapi = new ConvertApi(process.env['CONVERT_API_KEY']!);
 
   public async startProgress(paymentId: string) {
@@ -41,7 +38,7 @@ class Qr {
     );
 
     const userId = paymentStatus.data.user.userId;
-    const payment = await this.mollie.getPayment(params.paymentId);
+    let payment = await this.mollie.getPayment(params.paymentId);
 
     const user = await this.data.getUserByUserId(userId);
 
@@ -113,7 +110,6 @@ class Qr {
       },
     });
 
-    await this.mail.sendEmail(payment, playlist, digitalFilename);
     if (payment.orderType.name != 'digital') {
       // Generate the PDF for the printer
       const printerFilename = await this.generatePDF(
@@ -125,6 +121,10 @@ class Qr {
       );
       await this.order.createOrder(payment, printerFilename);
     }
+
+    payment = await this.mollie.getPayment(params.paymentId);
+
+    await this.mail.sendEmail(payment, playlist, digitalFilename);
 
     this.progress.setProgress(params.paymentId, 100, `Done!`);
 
