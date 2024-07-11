@@ -144,7 +144,7 @@ class Order {
         id: payment.id,
       },
       data: {
-        orderId: responseOrder.data.id,
+        printApiOrderId: responseOrder.data.id,
       },
     });
   }

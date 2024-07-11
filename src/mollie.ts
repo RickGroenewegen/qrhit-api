@@ -194,7 +194,7 @@ class Mollie {
         createdAt: true,
         updatedAt: true,
         orderType: true,
-        orderId: true,
+        printApiOrderId: true,
         locale: true,
         fullname: true,
         email: true,
