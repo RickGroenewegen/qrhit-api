@@ -44,22 +44,29 @@ class Data {
   }
 
   public async getFeaturedPlaylists() {
-    let returnList = null;
-    const cachedPlaylists = await this.cache.get('featuredPlaylists2');
+    let returnList: any[] = [];
+    const cachedPlaylists = await this.cache.get('featuredPlaylists3');
 
     if (!cachedPlaylists) {
       // Query the database for the featured playlists
-      returnList = await this.prisma.playlist.findMany({
-        select: {
-          id: true,
-          playlistId: true,
-          name: true,
-          image: true,
-        },
-        where: {
-          featured: true,
-        },
-      });
+      returnList = await this.prisma.$queryRaw`
+        SELECT 
+          playlists.id,
+          playlists.playlistId,
+          playlists.name,
+          playlists.image,
+          (
+              SELECT COUNT(1) 
+              FROM playlist_has_tracks 
+              WHERE playlist_has_tracks.playlistId = playlists.id
+          ) AS numberOfTracks
+      FROM 
+          playlists;
+      `;
+      returnList = returnList.map((playlist) => ({
+        ...playlist,
+        numberOfTracks: Number(playlist.numberOfTracks),
+      }));
       this.cache.set('featuredPlaylists', JSON.stringify(returnList));
     } else {
       returnList = JSON.parse(cachedPlaylists);
