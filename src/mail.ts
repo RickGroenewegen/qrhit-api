@@ -45,7 +45,6 @@ class Mail {
   ): Promise<void> {
     if (!this.ses) return;
 
-    console.log(111, payment);
     const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
     const mailParams = {
       payment,

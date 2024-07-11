@@ -4,11 +4,6 @@
     "de",
     "fr"
   ],
-  "mail.greatNews": [
-    "nl",
-    "de",
-    "fr"
-  ],
   "mail.belowAreDetails": [
     "nl",
     "de",
@@ -70,6 +65,11 @@
     "fr"
   ],
   "mail.email": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.greatNews": [
     "nl",
     "de",
     "fr"

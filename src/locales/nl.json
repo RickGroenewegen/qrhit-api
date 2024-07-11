@@ -1,6 +1,6 @@
 {
   "mail.mailSubject": "We hebben bestelling {{ orderId }} ontvangen!",
-  "mail.greatNews": "Geweldig nieuws! Je QR-kaarten voor je afspeellijst \"<strong>{{playlist}}</strong>\" zijn naar de printer gestuurd en worden naar je verzonden zodra ze klaar zijn. Je ontvangt een trackinglink zodra ze zijn verzonden.",
+  "mail.greatNews": "Goed nieuws! Je QR-kaarten voor je afspeellijst zijn verwerkt en worden naar je verzonden zodra ze klaar zijn. Je ontvangt een trackinglink zodra ze zijn verzonden.",
   "mail.belowAreDetails": "Hieronder staan je bestelgegevens. De kaarten worden naar het volgende adres gestuurd",
   "mail.weHopeYouHaveFun": "We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, mail ons dan: info@qrsong.io",
   "mail.greetings": "Met vriendelijke groet",

@@ -66,6 +66,7 @@ class Mollie {
           playlistId: playlistDatabaseId,
           status: payment.status,
           orderTypeId: orderType!.id,
+          locale: params.locale,
           numberOfTracks: params.tracks.length,
           ...params.extraOrderData,
         },

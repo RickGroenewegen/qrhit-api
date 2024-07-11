@@ -42,10 +42,8 @@ class MusicBrainz {
 
     if (result) {
       year = result.year;
-      console.log(111, year);
     } else {
       year = await this.getReleaseDateFromAPI(isrc);
-      console.log(222, year);
     }
 
     return year;

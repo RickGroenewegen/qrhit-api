@@ -40,9 +40,10 @@ class Order {
 
       if (params.orderType !== 'digital') {
         const authToken = await this.getAuthToken();
+
         response = await axios({
           method: 'post',
-          url: `${process.env['PRINT_API_URL']}/v2/shipping/quote `,
+          url: `${process.env['PRINT_API_URL']}/v2/shipping/quote`,
           headers: {
             Authorization: `Bearer ${authToken}`,
             'Content-Type': 'application/json',
@@ -53,6 +54,7 @@ class Order {
               {
                 productId: orderType.printApiProductId,
                 quantity: params.amount,
+                pageCount: 25, // TODO: Get this from somewhere
               },
             ],
           },
@@ -115,7 +117,7 @@ class Order {
         email: payment.user.email,
         items: [
           {
-            productId: 'boek_hc_a5_sta',
+            productId: payment.orderType.printApiProductId,
             pageCount: 32,
             quantity: 1,
             files: {
