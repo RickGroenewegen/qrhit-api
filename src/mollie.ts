@@ -58,7 +58,7 @@ class Mollie {
       params.extraOrderData.amount = parseInt(params.extraOrderData.amount);
 
       // Create the payment in the database
-      await this.prisma.payment.create({
+      const insertResult = await this.prisma.payment.create({
         data: {
           paymentId: payment.id,
           userId: userDatabaseId,
@@ -69,6 +69,20 @@ class Mollie {
           locale: params.locale,
           numberOfTracks: params.tracks.length,
           ...params.extraOrderData,
+        },
+      });
+
+      const paymentId = insertResult.id;
+
+      const newOrderId = 100000000 + paymentId;
+
+      // update the payment in the database
+      await this.prisma.payment.update({
+        where: {
+          id: paymentId,
+        },
+        data: {
+          orderId: newOrderId.toString(),
         },
       });
 
@@ -194,6 +208,7 @@ class Mollie {
         createdAt: true,
         updatedAt: true,
         orderType: true,
+        orderId: true,
         printApiOrderId: true,
         locale: true,
         fullname: true,

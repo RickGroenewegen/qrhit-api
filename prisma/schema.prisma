@@ -36,6 +36,7 @@ model Payment {
   id              Int       @id @default(autoincrement())
   userId          Int? // Removed the @unique constraint, and made optional
   paymentId       String    @unique
+  orderId         String    @default("")
   printApiOrderId String    @default("")
   amount          Int
   totalPrice      Float

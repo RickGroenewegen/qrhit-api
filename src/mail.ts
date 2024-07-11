@@ -50,7 +50,7 @@ class Mail {
       payment,
       playlist,
       downloadLink: `${process.env['API_URI']}/public/pdf/${filename}`,
-      orderId: payment.printApiOrderId,
+      orderId: payment.orderId,
       fullname: payment.fullname,
       email: payment.email,
       address: payment.address,
@@ -79,7 +79,7 @@ class Mail {
       const text = await this.templates.render(`mails/ses_text`, mailParams);
 
       const subject = this.translation.translate('mail.mailSubject', locale, {
-        orderId: payment.printApiOrderId,
+        orderId: payment.orderId,
         playlist: playlist.name,
       });
 
