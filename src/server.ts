@@ -308,6 +308,11 @@ class Server {
       return { success: true };
     });
 
+    this.fastify.get('/featured', async (request: any, _reply) => {
+      const playlists = await this.data.getFeaturedPlaylists();
+      return { success: true, data: playlists };
+    });
+
     this.fastify.post('/order/calculate', async (request: any, _reply) => {
       return await this.order.calculateOrder(request.body);
     });

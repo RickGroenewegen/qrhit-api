@@ -171,10 +171,16 @@ class Spotify {
 
       const response = await axios.request(options);
 
+      let image = '';
+      if (response.data.images.length > 0) {
+        image = response.data.images[0].url;
+      }
+
       const playlist: Playlist = {
         id: playlistId,
         name: response.data.name,
         numberOfTracks: response.data.tracks.total,
+        image,
       };
 
       return {

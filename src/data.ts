@@ -3,16 +3,16 @@ import Logger from './logger';
 import { PrismaClient } from '@prisma/client';
 import MusicBrainz from './musicbrainz';
 import Progress from './progress';
-import { nanoid } from 'nanoid';
 import crypto from 'crypto';
 import { ApiResult } from './interfaces/ApiResult';
-import { Track } from './interfaces/Track';
+import Cache from './cache';
 
 class Data {
   private prisma = new PrismaClient();
   private logger = new Logger();
   private musicBrainz = new MusicBrainz();
   private progress = Progress.getInstance();
+  private cache = Cache.getInstance();
 
   public async storeUser(userParams: any): Promise<number> {
     let userDatabaseId: number = 0;
@@ -43,6 +43,30 @@ class Data {
     return userDatabaseId;
   }
 
+  public async getFeaturedPlaylists() {
+    let returnList = null;
+    const cachedPlaylists = await this.cache.get('featuredPlaylists2');
+
+    if (!cachedPlaylists) {
+      // Query the database for the featured playlists
+      returnList = await this.prisma.playlist.findMany({
+        select: {
+          id: true,
+          playlistId: true,
+          name: true,
+          image: true,
+        },
+        where: {
+          featured: true,
+        },
+      });
+      this.cache.set('featuredPlaylists', JSON.stringify(returnList));
+    } else {
+      returnList = JSON.parse(cachedPlaylists);
+    }
+    return returnList;
+  }
+
   public async storePlaylist(
     userDatabaseId: number,
     playlistParams: any
@@ -62,6 +86,7 @@ class Data {
         data: {
           playlistId: playlistParams.id,
           name: playlistParams.name,
+          image: playlistParams.image,
         },
       });
       playlistDatabaseId = playlistCreate.id;

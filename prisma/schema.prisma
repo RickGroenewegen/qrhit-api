@@ -86,6 +86,8 @@ model Playlist {
   name       String
   createdAt  DateTime           @default(now())
   updatedAt  DateTime           @updatedAt
+  featured   Boolean            @default(false)
+  image      String
   users      UserHasPlaylist[]
   tracks     PlaylistHasTrack[]
   Payment    Payment[]
