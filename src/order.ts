@@ -5,7 +5,7 @@ import Cache from './cache';
 import { ApiResult } from './interfaces/ApiResult';
 import cluster from 'cluster';
 import Utils from './utils';
-import cron from 'cron';
+import { CronJob } from 'cron';
 
 class Order {
   private static instance: Order;
@@ -32,9 +32,10 @@ class Order {
   }
 
   public startCron(): void {
-    const job = new cron.CronJob('*/5 * * * * *', async () => {
+    const job = new CronJob('*/5 * * * * *', async () => {
       console.log('Hoihoi!');
     });
+    job.start();
   }
 
   public async calculateOrder(params: any): Promise<ApiResult> {
