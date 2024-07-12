@@ -6,6 +6,7 @@ import { ApiResult } from './interfaces/ApiResult';
 import cluster from 'cluster';
 import Utils from './utils';
 import { CronJob } from 'cron';
+import { color } from 'console-log-colors';
 
 class Order {
   private static instance: Order;
@@ -13,6 +14,7 @@ class Order {
   private cacheToken: string = 'printapi_auth_token';
   private cache = Cache.getInstance();
   private utils = new Utils();
+  private logger = new Log();
 
   private constructor() {
     if (cluster.isPrimary) {
@@ -32,8 +34,9 @@ class Order {
   }
 
   public startCron(): void {
-    const job = new CronJob('*/5 * * * * *', async () => {
-      console.log('Hoihoi!');
+    const job = new CronJob('*/10 * * * *', async () => {
+      await this.getAuthToken(true);
+      this.logger.log(color.blue.bold(`Refreshed Print API token`));
     });
     job.start();
   }
@@ -100,10 +103,10 @@ class Order {
     }
   }
 
-  private async getAuthToken(): Promise<string | null> {
+  private async getAuthToken(force: boolean = false): Promise<string | null> {
     let authToken: string | null = '';
     authToken = await this.cache.get(this.cacheToken);
-    if (!authToken) {
+    if (!authToken || force) {
       const response = await axios({
         method: 'post',
         url: `${process.env['PRINT_API_URL']}/v2/oauth`,
