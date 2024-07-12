@@ -43,9 +43,23 @@ class Utils {
     }
   }
 
+  public async getRegion(): Promise<string> {
+    try {
+      const response = await axios.get(
+        'http://169.254.169.254/latest/meta-data/placement/availability-zone'
+      );
+      const availabilityZone = response.data;
+      // The region is the availability zone without the last character
+      return availabilityZone.slice(0, -1);
+    } catch (error) {
+      console.error('Unable to retrieve region from instance metadata:', error);
+      throw error;
+    }
+  }
+
   public async getInstanceName(): Promise<string | undefined> {
     const instanceId = await this.getInstanceId();
-    const client = new EC2Client({});
+    const client = new EC2Client({ region: await this.getRegion() });
     const command = new DescribeInstancesCommand({
       InstanceIds: [instanceId],
     });
