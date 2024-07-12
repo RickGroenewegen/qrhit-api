@@ -163,11 +163,17 @@ class Server {
 
     // Add the redirection middleware
     this.fastify.addHook('onRequest', async (request, reply) => {
-      if (process.env['ENV'] === 'production') {
+      console.log(111, process.env['ENVIRONMENT']);
+
+      if (process.env['ENVIRONMENT'] === 'production') {
         const host = request.headers.host;
+
+        console.log(222, host);
+
         if (host && !host.startsWith('www.')) {
           const newHost = `www.${host}`;
           const newUrl = `https://${newHost}${request.url}`;
+          console.log(333, newUrl);
           reply.redirect(301, newUrl);
         }
       }
