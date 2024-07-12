@@ -6,7 +6,7 @@ class Utils {
   public async getInstanceId(): Promise<string> {
     try {
       const response = await axios.get(
-        'http://169.254.169.254/latest/meta-data/instance-id'
+        'http://instance-data/latest/meta-data/instance-id'
       );
       return response.data;
     } catch (error: any) {
