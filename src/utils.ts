@@ -1,17 +1,23 @@
 import sanitizeHtml from 'sanitize-html';
 import { promises as fs } from 'fs';
 import { fromInstanceMetadata } from '@aws-sdk/credential-provider-imds';
-
+import axios from 'axios';
 class Utils {
   public async getInstanceId(): Promise<string> {
     try {
-      const credentials = await fromInstanceMetadata()();
-      console.log(222, credentials);
-      //const instanceId = credentials.metadata.instanceId;
-      return 'abc';
-    } catch (error) {
-      console.log(error);
-      return '';
+      const response = await axios.get(
+        'http://169.254.169.254/latest/meta-data/instance-id'
+      );
+      return response.data;
+    } catch (error: any) {
+      if (error.response && error.response.status === 404) {
+        console.error(
+          'Not running on AWS or unable to retrieve instance metadata:',
+          error
+        );
+        return '';
+      }
+      throw error; // rethrow if it's a different error
     }
   }
 
