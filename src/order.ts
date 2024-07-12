@@ -3,14 +3,23 @@ import { PrismaClient } from '@prisma/client';
 import axios from 'axios';
 import Cache from './cache';
 import { ApiResult } from './interfaces/ApiResult';
+import cluster from 'cluster';
+import Utils from './utils';
 
 class Order {
   private static instance: Order;
   private prisma = new PrismaClient();
   private cacheToken: string = 'printapi_auth_token';
   private cache = Cache.getInstance();
+  private utils = new Utils();
 
-  private constructor() {}
+  private constructor() {
+    if (cluster.isPrimary) {
+      this.utils.getInstanceId().then((res) => {
+        console.log(333, res);
+      });
+    }
+  }
 
   public static getInstance(): Order {
     if (!Order.instance) {

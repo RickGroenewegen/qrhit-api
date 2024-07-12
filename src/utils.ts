@@ -1,7 +1,19 @@
 import sanitizeHtml from 'sanitize-html';
 import { promises as fs } from 'fs';
+import { fromInstanceMetadata } from '@aws-sdk/credential-provider-imds';
 
 class Utils {
+  public async getInstanceId(): Promise<string> {
+    try {
+      const credentials = await fromInstanceMetadata()();
+      console.log(222, credentials);
+      //const instanceId = credentials.metadata.instanceId;
+      return 'abc';
+    } catch (error) {
+      return '';
+    }
+  }
+
   public stripLocale(obj: any, locale: string): any {
     const result: any = {};
     const localeSuffix = `_${locale}`;
