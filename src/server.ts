@@ -16,6 +16,7 @@ import Progress from './progress';
 import fs from 'fs';
 import Order from './order';
 import Mail from './mail';
+import MusicBrainz from './musicbrainz';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -42,6 +43,7 @@ class Server {
   private progress = Progress.getInstance();
   private order = Order.getInstance();
   private mail = new Mail();
+  private musicBrainz = new MusicBrainz();
 
   private constructor() {
     this.fastify = Fastify({
@@ -327,6 +329,12 @@ class Server {
 
         await this.mail.sendEmail(payment, playlist, payment.filename);
         return { success: true };
+      });
+      this.fastify.get('/mb/:isrc', async (request: any, _reply) => {
+        const result = await this.musicBrainz.getReleaseDateFromAPI(
+          request.params.isrc
+        );
+        return { success: true, data: result };
       });
     }
   }
