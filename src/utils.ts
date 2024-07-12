@@ -1,12 +1,11 @@
 import sanitizeHtml from 'sanitize-html';
 import { promises as fs } from 'fs';
 import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2';
-
 import axios from 'axios';
+
 class Utils {
-  public async getInstanceId(): Promise<string> {
+  private async getIMDSToken(): Promise<string> {
     try {
-      // Get the session token
       const tokenResponse = await axios.put(
         'http://169.254.169.254/latest/api/token',
         null,
@@ -16,9 +15,16 @@ class Utils {
           },
         }
       );
-      const token = tokenResponse.data;
+      return tokenResponse.data;
+    } catch (error) {
+      console.error('Unable to retrieve IMDSv2 token:', error);
+      throw error;
+    }
+  }
 
-      // Use the token to get the instance ID
+  public async getInstanceId(): Promise<string> {
+    try {
+      const token = await this.getIMDSToken();
       const response = await axios.get(
         'http://169.254.169.254/latest/meta-data/instance-id',
         {
@@ -45,8 +51,14 @@ class Utils {
 
   public async getRegion(): Promise<string> {
     try {
+      const token = await this.getIMDSToken();
       const response = await axios.get(
-        'http://169.254.169.254/latest/meta-data/placement/availability-zone'
+        'http://169.254.169.254/latest/meta-data/placement/availability-zone',
+        {
+          headers: {
+            'X-aws-ec2-metadata-token': token,
+          },
+        }
       );
       const availabilityZone = response.data;
       // The region is the availability zone without the last character
@@ -59,7 +71,11 @@ class Utils {
 
   public async getInstanceName(): Promise<string | undefined> {
     const instanceId = await this.getInstanceId();
-    const client = new EC2Client({ region: await this.getRegion() });
+    if (!instanceId) {
+      return undefined;
+    }
+    const region = await this.getRegion();
+    const client = new EC2Client({ region });
     const command = new DescribeInstancesCommand({
       InstanceIds: [instanceId],
     });
