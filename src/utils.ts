@@ -1,6 +1,7 @@
 import sanitizeHtml from 'sanitize-html';
 import { promises as fs } from 'fs';
-import { fromInstanceMetadata } from '@aws-sdk/credential-provider-imds';
+import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2';
+
 import axios from 'axios';
 class Utils {
   public async getInstanceId(): Promise<string> {
@@ -41,6 +42,28 @@ class Utils {
       throw error; // rethrow if it's a different error
     }
   }
+
+  public async getInstanceName(): Promise<string | undefined> {
+    const instanceId = await this.getInstanceId();
+    const client = new EC2Client({});
+    const command = new DescribeInstancesCommand({
+      InstanceIds: [instanceId],
+    });
+    const response = await client.send(command);
+    const reservations = response.Reservations;
+    if (reservations && reservations.length > 0) {
+      const instances = reservations[0].Instances;
+      if (instances && instances.length > 0) {
+        const tags = instances[0].Tags;
+        if (tags) {
+          const nameTag = tags.find((tag) => tag.Key === 'Name');
+          return nameTag?.Value;
+        }
+      }
+    }
+    return undefined;
+  }
+
   public stripLocale(obj: any, locale: string): any {
     const result: any = {};
     const localeSuffix = `_${locale}`;
