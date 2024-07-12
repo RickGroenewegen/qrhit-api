@@ -3,31 +3,44 @@ import { promises as fs } from 'fs';
 import { fromInstanceMetadata } from '@aws-sdk/credential-provider-imds';
 import axios from 'axios';
 class Utils {
-  async function getInstanceId(): Promise<string> {
+  public async getInstanceId(): Promise<string> {
     try {
-        // Get the session token
-        const tokenResponse = await axios.put('http://169.254.169.254/latest/api/token', null, {
-            headers: {
-                'X-aws-ec2-metadata-token-ttl-seconds': '21600' // Token valid for 6 hours
-            }
-        });
-        const token = tokenResponse.data;
-
-        // Use the token to get the instance ID
-        const response = await axios.get('http://169.254.169.254/latest/meta-data/instance-id', {
-            headers: {
-                'X-aws-ec2-metadata-token': token
-            }
-        });
-        return response.data;
-    } catch (error:any) {
-        if (error.response && (error.response.status === 404 || error.response.status === 401)) {
-            console.error("Not running on AWS or unable to retrieve instance metadata:", error);
-            return '';
+      // Get the session token
+      const tokenResponse = await axios.put(
+        'http://169.254.169.254/latest/api/token',
+        null,
+        {
+          headers: {
+            'X-aws-ec2-metadata-token-ttl-seconds': '21600', // Token valid for 6 hours
+          },
         }
-        throw error; // rethrow if it's a different error
+      );
+      const token = tokenResponse.data;
+
+      // Use the token to get the instance ID
+      const response = await axios.get(
+        'http://169.254.169.254/latest/meta-data/instance-id',
+        {
+          headers: {
+            'X-aws-ec2-metadata-token': token,
+          },
+        }
+      );
+      return response.data;
+    } catch (error: any) {
+      if (
+        error.response &&
+        (error.response.status === 404 || error.response.status === 401)
+      ) {
+        console.error(
+          'Not running on AWS or unable to retrieve instance metadata:',
+          error
+        );
+        return '';
+      }
+      throw error; // rethrow if it's a different error
     }
-}
+  }
   public stripLocale(obj: any, locale: string): any {
     const result: any = {};
     const localeSuffix = `_${locale}`;
