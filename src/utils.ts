@@ -10,6 +10,7 @@ class Utils {
       //const instanceId = credentials.metadata.instanceId;
       return 'abc';
     } catch (error) {
+      console.log(error);
       return '';
     }
   }
