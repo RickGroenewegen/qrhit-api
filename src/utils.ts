@@ -73,29 +73,48 @@ class Utils {
 
   public async getInstanceName(): Promise<string | undefined> {
     const instanceId = await this.getInstanceId();
-
+    if (!instanceId) {
+      return undefined;
+    }
     const region = await this.getRegion();
-    const client = new EC2Client({ region });
+
+    // Read custom environment variables
+    const accessKeyId = process.env.AWS_EC2_DESCRIBE_KEY_ID;
+    const secretAccessKey = process.env.AWS_EC2_DESCRIBE_SECRET_ID;
+
+    if (!accessKeyId || !secretAccessKey) {
+      throw new Error(
+        'AWS credentials are not set in the environment variables'
+      );
+    }
+    const client = new EC2Client({
+      region,
+      credentials: {
+        accessKeyId,
+        secretAccessKey,
+      },
+    });
+
     const command = new DescribeInstancesCommand({
       InstanceIds: [instanceId],
     });
 
-    console.log(1111, instanceId, region);
-
-    const response = await client.send(command);
-
-    console.log(2222, response);
-
-    const reservations = response.Reservations;
-    if (reservations && reservations.length > 0) {
-      const instances = reservations[0].Instances;
-      if (instances && instances.length > 0) {
-        const tags = instances[0].Tags;
-        if (tags) {
-          const nameTag = tags.find((tag) => tag.Key === 'Name');
-          return nameTag?.Value;
+    try {
+      const response = await client.send(command);
+      const reservations = response.Reservations;
+      if (reservations && reservations.length > 0) {
+        const instances = reservations[0].Instances;
+        if (instances && instances.length > 0) {
+          const tags = instances[0].Tags;
+          if (tags) {
+            const nameTag = tags.find((tag) => tag.Key === 'Name');
+            return nameTag?.Value;
+          }
         }
       }
+    } catch (error) {
+      console.error('Error retrieving instance name:', error);
+      throw error;
     }
     return undefined;
   }
