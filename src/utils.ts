@@ -4,6 +4,16 @@ import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2';
 import axios from 'axios';
 
 class Utils {
+  public async isMainServer(): Promise<boolean> {
+    const isAWS =
+      process.env['AWS_EC2_DESCRIBE_KEY_ID'] &&
+      process.env['AWS_EC2_DESCRIBE_SECRET_ID'];
+    if (isAWS) {
+      return (await this.getInstanceName()) == 'WS1';
+    }
+    return false;
+  }
+
   private async getIMDSToken(): Promise<string> {
     try {
       const tokenResponse = await axios.put(

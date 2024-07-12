@@ -15,7 +15,7 @@ class Order {
 
   private constructor() {
     if (cluster.isPrimary) {
-      this.utils.getInstanceName().then((res) => {
+      this.utils.isMainServer().then((res) => {
         console.log(333, res);
       });
     }
