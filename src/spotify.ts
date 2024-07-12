@@ -156,33 +156,41 @@ class Spotify {
     headers: any,
     playlistId: string
   ): Promise<ApiResult> {
+    let playlist: Playlist | null = null;
+
     try {
-      const options = {
-        method: 'GET',
-        url: 'https://spotify23.p.rapidapi.com/playlist',
-        params: {
+      const cacheKey = `playlist_${playlistId}`;
+      const cacheResult = await this.cache.get(cacheKey);
+
+      if (!cacheResult) {
+        const options = {
+          method: 'GET',
+          url: 'https://spotify23.p.rapidapi.com/playlist',
+          params: {
+            id: playlistId,
+          },
+          headers: {
+            'x-rapidapi-key': process.env['RAPID_API_KEY'],
+            'x-rapidapi-host': 'spotify23.p.rapidapi.com',
+          },
+        };
+
+        const response = await axios.request(options);
+
+        let image = '';
+        if (response.data.images.length > 0) {
+          image = response.data.images[0].url;
+        }
+        playlist = {
           id: playlistId,
-        },
-        headers: {
-          'x-rapidapi-key': process.env['RAPID_API_KEY'],
-          'x-rapidapi-host': 'spotify23.p.rapidapi.com',
-        },
-      };
-
-      const response = await axios.request(options);
-
-      let image = '';
-      if (response.data.images.length > 0) {
-        image = response.data.images[0].url;
+          name: response.data.name,
+          numberOfTracks: response.data.tracks.total,
+          image,
+        };
+        this.cache.set(cacheKey, JSON.stringify(playlist), 3600);
+      } else {
+        playlist = JSON.parse(cacheResult);
       }
-
-      const playlist: Playlist = {
-        id: playlistId,
-        name: response.data.name,
-        numberOfTracks: response.data.tracks.total,
-        image,
-      };
-
       return {
         success: true,
         data: playlist,
@@ -194,57 +202,64 @@ class Spotify {
 
   public async getTracks(headers: any, playlistId: string): Promise<ApiResult> {
     try {
+      const cacheKey = `tracks_${playlistId}`;
+      const cacheResult = await this.cache.get(cacheKey);
       let allTracks: Track[] = [];
       let offset = 0;
       const limit = 100;
 
-      while (true) {
-        const options = {
-          method: 'GET',
-          url: 'https://spotify23.p.rapidapi.com/playlist_tracks',
-          params: {
-            id: playlistId,
-            limit,
-            offset,
-          },
-          headers: {
-            'x-rapidapi-key': process.env['RAPID_API_KEY'],
-            'x-rapidapi-host': 'spotify23.p.rapidapi.com',
-          },
-        };
+      if (!cacheResult) {
+        while (true) {
+          const options = {
+            method: 'GET',
+            url: 'https://spotify23.p.rapidapi.com/playlist_tracks',
+            params: {
+              id: playlistId,
+              limit,
+              offset,
+            },
+            headers: {
+              'x-rapidapi-key': process.env['RAPID_API_KEY'],
+              'x-rapidapi-host': 'spotify23.p.rapidapi.com',
+            },
+          };
 
-        const response = await axios.request(options);
+          const response = await axios.request(options);
 
-        const tracks: Track[] = response.data.items.map((item: any) => ({
-          id: item.track.id,
-          name: item.track.name,
-          artist: item.track.artists[0].name,
-          link: item.track.external_urls.spotify,
-          isrc: item.track.external_ids.isrc,
-          image:
-            item.track.album.images.length > 0
-              ? item.track.album.images[0].url
-              : null,
+          const tracks: Track[] = response.data.items.map((item: any) => ({
+            id: item.track.id,
+            name: item.track.name,
+            artist: item.track.artists[0].name,
+            link: item.track.external_urls.spotify,
+            isrc: item.track.external_ids.isrc,
+            image:
+              item.track.album.images.length > 0
+                ? item.track.album.images[0].url
+                : null,
 
-          releaseDate: format(
-            new Date(item.track.album.release_date),
-            'yyyy-MM-dd'
-          ),
-        }));
+            releaseDate: format(
+              new Date(item.track.album.release_date),
+              'yyyy-MM-dd'
+            ),
+          }));
 
-        // remove all items that do not have an artist or image
-        const filteredTracks = tracks.filter(
-          (track) => track.artist && track.image
-        );
+          // remove all items that do not have an artist or image
+          const filteredTracks = tracks.filter(
+            (track) => track.artist && track.image
+          );
 
-        allTracks = allTracks.concat(filteredTracks);
+          allTracks = allTracks.concat(filteredTracks);
 
-        // Check if there are more tracks to fetch
-        if (response.data.items.length < limit) {
-          break;
+          // Check if there are more tracks to fetch
+          if (response.data.items.length < limit) {
+            break;
+          }
+
+          offset += limit;
+          this.cache.set(cacheKey, JSON.stringify(allTracks), 3600);
         }
-
-        offset += limit;
+      } else {
+        allTracks = JSON.parse(cacheResult);
       }
 
       return {
