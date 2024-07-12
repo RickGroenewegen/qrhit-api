@@ -5,6 +5,7 @@ import Cache from './cache';
 import { ApiResult } from './interfaces/ApiResult';
 import cluster from 'cluster';
 import Utils from './utils';
+import cron from 'cron';
 
 class Order {
   private static instance: Order;
@@ -15,8 +16,10 @@ class Order {
 
   private constructor() {
     if (cluster.isPrimary) {
-      this.utils.isMainServer().then((res) => {
-        console.log(333, res);
+      this.utils.isMainServer().then((isMainServer) => {
+        if (isMainServer) {
+          this.startCron();
+        }
       });
     }
   }
@@ -26,6 +29,12 @@ class Order {
       Order.instance = new Order();
     }
     return Order.instance;
+  }
+
+  public startCron(): void {
+    const job = new cron.CronJob('*/5 * * * * *', async () => {
+      console.log('Hoihoi!');
+    });
   }
 
   public async calculateOrder(params: any): Promise<ApiResult> {
