@@ -15,6 +15,9 @@ class Utils {
           },
         }
       );
+
+      console.log(444, tokenResponse.data);
+
       return tokenResponse.data;
     } catch (error) {
       console.error('Unable to retrieve IMDSv2 token:', error);
@@ -33,6 +36,9 @@ class Utils {
           },
         }
       );
+
+      console.log(111, response.data);
+
       return response.data;
     } catch (error: any) {
       if (
@@ -61,6 +67,9 @@ class Utils {
         }
       );
       const availabilityZone = response.data;
+
+      console.log(222, availabilityZone.slice(0, -1));
+
       // The region is the availability zone without the last character
       return availabilityZone.slice(0, -1);
     } catch (error) {
@@ -71,9 +80,7 @@ class Utils {
 
   public async getInstanceName(): Promise<string | undefined> {
     const instanceId = await this.getInstanceId();
-    if (!instanceId) {
-      return undefined;
-    }
+    console.log(1111, instanceId);
     const region = await this.getRegion();
     const client = new EC2Client({ region });
     const command = new DescribeInstancesCommand({
