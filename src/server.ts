@@ -160,6 +160,18 @@ class Server {
       root: `${process.env['APP_ROOT']}/views`, // Ensure this is the correct path to your EJS templates
       includeViewExtension: true,
     });
+
+    // Add the redirection middleware
+    this.fastify.addHook('onRequest', async (request, reply) => {
+      if (process.env['ENV'] === 'production') {
+        const host = request.headers.host;
+        if (host && !host.startsWith('www.')) {
+          const newHost = `www.${host}`;
+          const newUrl = `https://${newHost}${request.url}`;
+          reply.redirect(301, newUrl);
+        }
+      }
+    });
   }
 
   public async addRoutes() {
