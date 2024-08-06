@@ -102,7 +102,7 @@
                         <% if (index < tracks.length) { %>
                             <div class="front">
                                 <img src="<%= process.env['API_URI'] %>/public/qr/<%= user.userId %>/<%= tracks[index].trackId %>.png" alt="QR Code" class="qr">
-                                <div class="url">www.qrsong.io</div>
+                                <div class="url"><%= process.env['APP_DOMAIN'] %></div>
                             </div>
                         <% } else { %>
                             <div class="front invisible"></div> <!-- Invisible placeholder -->
@@ -123,7 +123,7 @@
                                 <div class="text artist"><%= tracks[index].artist %></div>
                                 <div class="text year"><%= tracks[index].year %></div>
                                 <div class="text name"><%= tracks[index].name %></div>
-                                <div class="url-bottom">www.qrsong.io</div>
+                                <div class="url-bottom"><%= process.env['APP_DOMAIN'] %></div>
                             </div>
                         <% } else { %>
                             <div class="back invisible"></div> <!-- Invisible placeholder -->
