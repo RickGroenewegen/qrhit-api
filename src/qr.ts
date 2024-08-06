@@ -13,6 +13,7 @@ import Progress from './progress';
 import Mail from './mail';
 import Order from './order';
 import ConvertApi from 'convertapi';
+import PushoverClient from './pushover';
 
 class Qr {
   private spotify = new Spotify();
@@ -23,6 +24,7 @@ class Qr {
   private progress = Progress.getInstance();
   private prisma = new PrismaClient();
   private mail = new Mail();
+  private pushover = new PushoverClient();
   private order = Order.getInstance();
   private convertapi = new ConvertApi(process.env['CONVERT_API_KEY']!);
 
@@ -52,6 +54,24 @@ class Qr {
       );
       return;
     }
+
+    if (!paymentStatus.success) {
+      this.logger.log(color.red.bold('Payment failed!'));
+      return;
+    }
+
+    // Pushover
+    this.pushover.sendMessage({
+      title: `KA-CHING! € ${payment.orderType.amount
+        .toString()
+        .replace('.', ',')} verdiend!`,
+      message: `${payment.fullname} uit ${payment.countrycode} heeft ${
+        payment.numberOfTracks
+      } QRSong! kaarten besteld voor € ${payment.orderType.amount
+        .toString()
+        .replace('.', ',')}`,
+      sound: 'incoming',
+    });
 
     this.progress.setProgress(params.paymentId, 0, 'progress.gettingTracks');
 
