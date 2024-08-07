@@ -274,11 +274,15 @@ class Server {
       }
     );
 
-    this.fastify.get('/qr/:trackId', async (request: any, _reply) => {
+    this.fastify.get('/qr/:trackId', async (request: any, reply) => {
       const result = await this.data.getLink(request.params.trackId);
       if (result.success) {
+        await reply.view(`countdown.ejs`, {
+          link: result.data.link,
+        });
+
         // Redirect to the Spotify link
-        _reply.redirect(result.data.link);
+        // reply.redirect(result.data.link);
       }
     });
 

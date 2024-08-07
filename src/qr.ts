@@ -69,7 +69,7 @@ class Qr {
         payment.numberOfTracks
       } QRSong! kaarten besteld voor € ${payment.orderType.amount
         .toString()
-        .replace('.', ',')}`,
+        .replace('.', ',')}. Playlist: ${playlist.name}`,
       sound: 'incoming',
     });
 
