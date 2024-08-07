@@ -65,7 +65,7 @@ class Qr {
       title: `KA-CHING! € ${payment.orderType.amount
         .toString()
         .replace('.', ',')} verdiend!`,
-      message: `${payment.fullname} uit ${payment.countrycode} heeft ${
+      message: `${payment.fullname} (${payment.countrycode}) heeft ${
         payment.numberOfTracks
       } QRSong! kaarten besteld voor € ${payment.orderType.amount
         .toString()

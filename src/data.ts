@@ -157,17 +157,26 @@ class Data {
 
   public async getLink(trackId: number): Promise<ApiResult> {
     let link = '';
-
-    const linkQuery: any[] = await this.prisma.$queryRaw`
+    const cachedLink = await this.cache.get('link' + trackId);
+    if (cachedLink) {
+      link = cachedLink;
+    } else {
+      const linkQuery: any[] = await this.prisma.$queryRaw`
         SELECT      tracks.spotifyLink 
         FROM        tracks
         WHERE       tracks.id = ${trackId}`;
 
-    if (linkQuery.length > 0) {
-      return {
-        success: true,
-        data: { link: linkQuery[0].spotifyLink },
-      };
+      if (linkQuery.length > 0) {
+        link = linkQuery[0].spotifyLink;
+        this.cache.set('link' + trackId, link);
+      }
+
+      if (link.length > 0) {
+        return {
+          success: true,
+          data: { link: linkQuery[0].spotifyLink },
+        };
+      }
     }
 
     return {
