@@ -83,19 +83,23 @@ class Mail {
         playlist: playlist.name,
       });
 
+      let attachments = [];
+
+      if (process.env['ENVIRONMENT'] === 'development') {
+        attachments.push({
+          contentType: 'application/pdf',
+          filename,
+          data: fileBase64,
+        });
+      }
+
       const rawEmail = await this.renderRaw({
         from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
         to: payment.email,
         subject,
         html,
         text,
-        attachments: [
-          {
-            contentType: 'application/pdf',
-            filename,
-            data: fileBase64,
-          },
-        ],
+        attachments,
         unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
       });
 

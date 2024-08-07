@@ -33,6 +33,8 @@ class Qr {
   }
 
   public async generate(params: any): Promise<void> {
+    let filename = '';
+
     this.progress.setProgress(params.paymentId, 0, 'Started ...');
 
     const paymentStatus = await this.mollie.checkPaymentStatus(
@@ -41,6 +43,22 @@ class Qr {
 
     const userId = paymentStatus.data.user.userId;
     let payment = await this.mollie.getPayment(params.paymentId);
+
+    filename = sanitizeFilename(
+      `${payment.playlist.playlistId}_printer.pdf`.replace(/ /g, '_')
+    ).toLowerCase();
+
+    // Check if the file exists using fs
+    let exists = false;
+    try {
+      await fs.access(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
+      exists = true;
+      this.logger.log(
+        color.yellow.bold(`PDF already exists: ${color.white.bold(filename)}`)
+      );
+    } catch (error) {
+      // Continue
+    }
 
     const user = await this.data.getUserByUserId(userId);
 
@@ -75,82 +93,68 @@ class Qr {
 
     this.progress.setProgress(params.paymentId, 0, 'progress.gettingTracks');
 
-    // Retrieve the tracks from Spotify
-    const response = await this.spotify.getTracks(
-      { authorization: params.accessToken },
-      payment.playlist.playlistId
-    );
-
-    const tracks = response.data;
-
-    this.progress.setProgress(params.paymentId, 0, 'progress.storingTracks');
-
-    await this.data.storeTracks(payment.paymentId, payment.playlist.id, tracks);
-
-    const dbTracks = await this.data.getTracks(payment.playlist.id);
-
-    // Loop through the tracks and create a QR code for each track
-    for (const track of dbTracks) {
-      const link = `${process.env['API_URI']}/qr/${track.id}`;
-      const outputDir = `${process.env['PUBLIC_DIR']}/qr/${userId}`;
-      const outputPath = `${outputDir}/${track.trackId}.png`;
-      await this.utils.createDir(outputDir);
-      await this.generateQR(link, outputPath);
-
-      // Create a progress based on 70-90% of the total tracks
-      const progress = Math.floor(
-        (tracks.indexOf(track) / tracks.length) * 20 + 70
+    if (!exists) {
+      // Retrieve the tracks from Spotify
+      const response = await this.spotify.getTracks(
+        { authorization: params.accessToken },
+        payment.playlist.playlistId
       );
 
-      this.progress.setProgress(
-        params.paymentId,
-        progress,
-        `Generated QR code for: ${track.name}`
+      const tracks = response.data;
+
+      this.progress.setProgress(params.paymentId, 0, 'progress.storingTracks');
+
+      await this.data.storeTracks(
+        payment.paymentId,
+        payment.playlist.id,
+        tracks
       );
-    }
 
-    this.progress.setProgress(params.paymentId, 80, `progress.generatingPDF`);
+      const dbTracks = await this.data.getTracks(payment.playlist.id);
 
-    // Generate the digital version
-    const digitalFilename = await this.generatePDF(
-      playlist,
-      payment,
-      'digital',
-      80,
-      90
-    );
+      // Loop through the tracks and create a QR code for each track
+      for (const track of dbTracks) {
+        const link = `${process.env['API_URI']}/qr/${track.id}`;
+        const outputDir = `${process.env['PUBLIC_DIR']}/qr/${userId}`;
+        const outputPath = `${outputDir}/${track.trackId}.png`;
+        await this.utils.createDir(outputDir);
+        await this.generateQR(link, outputPath);
 
-    // Update the payment with the filename using prisma
-    await this.prisma.payment.update({
-      where: {
-        paymentId: payment.paymentId,
-      },
-      data: {
-        filename: digitalFilename,
-      },
-    });
+        // Create a progress based on 70-90% of the total tracks
+        const progress = Math.floor(
+          (tracks.indexOf(track) / tracks.length) * 20 + 70
+        );
 
-    if (payment.orderType.name != 'digital') {
-      // Generate the PDF for the printer
-      const printerFilename = await this.generatePDF(
+        this.progress.setProgress(
+          params.paymentId,
+          progress,
+          `Generated QR code for: ${track.name}`
+        );
+      }
+
+      this.progress.setProgress(params.paymentId, 80, `progress.generatingPDF`);
+
+      filename = await this.generatePDF(
+        filename,
         playlist,
         payment,
         'printer',
-        90,
+        80,
         99
       );
-      await this.order.createOrder(payment, printerFilename);
     }
+
+    await this.order.createOrder(payment, filename);
 
     payment = await this.mollie.getPayment(params.paymentId);
 
-    await this.mail.sendEmail(payment, playlist, digitalFilename);
+    await this.mail.sendEmail(payment, playlist, filename);
 
     this.progress.setProgress(params.paymentId, 100, `Done!`);
 
     this.logger.log(
       color.green.bold(
-        `PDF Generated successfully: ${color.white.bold(digitalFilename)}`
+        `PDF Generated successfully: ${color.white.bold(filename)}`
       )
     );
   }
@@ -177,6 +181,7 @@ class Qr {
   }
 
   private async generatePDF(
+    filename: string,
     playlist: Playlist,
     payment: any,
     template: string,
@@ -185,12 +190,7 @@ class Qr {
   ): Promise<string> {
     this.logger.log(color.blue.bold('Generating PDF...'));
 
-    const uniqueId = uuid();
-
     const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}`;
-    const filename = sanitizeFilename(
-      `${playlist.name}_${uniqueId}_${template}.pdf`.replace(/ /g, '_')
-    ).toLowerCase();
 
     this.logger.log(
       color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)
