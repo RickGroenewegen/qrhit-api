@@ -252,11 +252,11 @@ class Spotify {
 
           // Check if there are more tracks to fetch
           if (response.data.items.length < limit) {
+            this.cache.set(cacheKey, JSON.stringify(allTracks), 3600);
             break;
           }
 
           offset += limit;
-          this.cache.set(cacheKey, JSON.stringify(allTracks), 3600);
         }
       } else {
         allTracks = JSON.parse(cacheResult);

@@ -6,7 +6,6 @@ import Mollie from './mollie';
 import Data from './data';
 import * as QRCode from 'qrcode';
 import * as fs from 'fs/promises';
-import { uuidv4 as uuid } from 'uuidv7';
 import sanitizeFilename from 'sanitize-filename';
 import Utils from './utils';
 import Progress from './progress';
@@ -14,6 +13,7 @@ import Mail from './mail';
 import Order from './order';
 import ConvertApi from 'convertapi';
 import PushoverClient from './pushover';
+import crypto from 'crypto';
 
 class Qr {
   private spotify = new Spotify();
@@ -44,8 +44,13 @@ class Qr {
     const userId = paymentStatus.data.user.userId;
     let payment = await this.mollie.getPayment(params.paymentId);
 
+    const hash = crypto
+      .createHmac('sha256', process.env['PLAYLIST_SECRET']!)
+      .update(payment.playlist.playlistId)
+      .digest('hex');
+
     filename = sanitizeFilename(
-      `${payment.playlist.playlistId}_printer.pdf`.replace(/ /g, '_')
+      `${hash}_printer.pdf`.replace(/ /g, '_')
     ).toLowerCase();
 
     // Check if the file exists using fs
