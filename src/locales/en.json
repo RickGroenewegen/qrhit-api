@@ -13,5 +13,10 @@
 	"mail.zipcode" : "Zipcode",
 	"mail.city" : "City",
 	"mail.country" : "Country",
-	"mail.email" : "Email"
+	"mail.email" : "Email",
+	"mail.trackingMailSubject": "Your QRSong! order {{ orderId }} has been shipped!",
+    "mail.orderShipped": "Great news! Your QRSong order has been shipped.",
+    "mail.trackOrder": "Track Your Order",
+    "mail.thankYou": "We hope you have lots of musical fun! If you have any further questions do not hesitate to mail us: info@qrsong.io"
 }
+

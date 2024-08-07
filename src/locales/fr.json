@@ -13,5 +13,9 @@
   "mail.zipcode": "Code postal",
   "mail.city": "Ville",
   "mail.country": "Pays",
-  "mail.email": "E-mail"
+  "mail.email": "E-mail",
+  "mail.trackingMailSubject": "Votre commande QRSong! {{ orderId }} a été expédiée !",
+  "mail.orderShipped": "Bonne nouvelle ! Votre commande QRSong a été expédiée.",
+  "mail.trackOrder": "Suivez votre commande",
+  "mail.thankYou": "Nous espérons que vous vous amuserez beaucoup avec la musique ! Si vous avez d'autres questions, n'hésitez pas à nous envoyer un mail : info@qrsong.io"
 }

@@ -118,6 +118,69 @@ class Mail {
     }
   }
 
+  async sendTrackingEmail(
+    payment: Payment,
+    trackingLink: string
+  ): Promise<void> {
+    if (!this.ses) return;
+
+    const mailParams = {
+      payment,
+      trackingLink,
+      productName: process.env['PRODUCT_NAME'],
+      translations: this.translation.getTranslationsByPrefix(
+        payment.locale,
+        'mail'
+      ),
+    };
+
+    try {
+      let locale = payment.locale;
+
+      const html = await this.templates.render(
+        `mails/tracking_html`,
+        mailParams
+      );
+      const text = await this.templates.render(
+        `mails/tracking_text`,
+        mailParams
+      );
+
+      const subject = this.translation.translate(
+        'mail.trackingMailSubject',
+        locale,
+        {
+          orderId: payment.orderId,
+        }
+      );
+
+      let attachments: Attachment[] = [];
+
+      const rawEmail = await this.renderRaw({
+        from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+        to: payment.email,
+        subject,
+        html,
+        text,
+        attachments,
+        unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+      });
+
+      const emailBuffer = Buffer.from(rawEmail);
+
+      // Prepare and send the raw email
+      const command = new SendRawEmailCommand({
+        RawMessage: {
+          Data: emailBuffer,
+        },
+      });
+
+      const data = await this.ses.send(command);
+    } catch (error) {
+      console.error('Error while sending email with attachment', error);
+    }
+  }
+
   public async renderRaw(params: MailParams): Promise<string> {
     let attachmentString = '';
 

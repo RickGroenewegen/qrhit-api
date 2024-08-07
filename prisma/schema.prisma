@@ -38,6 +38,8 @@ model Payment {
   paymentId       String    @unique
   orderId         String    @default("")
   printApiOrderId String    @default("")
+  printApiStatus  String    @default("Created")
+  printApiShipped Boolean   @default(false)
   amount          Int
   totalPrice      Float
   status          String

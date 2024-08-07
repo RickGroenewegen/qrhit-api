@@ -73,5 +73,25 @@
     "nl",
     "de",
     "fr"
+  ],
+  "mail.trackingMailSubject": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.orderShipped": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.trackOrder": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.thankYou": [
+    "nl",
+    "de",
+    "fr"
   ]
 }

@@ -7,6 +7,7 @@ import cluster from 'cluster';
 import Utils from './utils';
 import { CronJob } from 'cron';
 import { color } from 'console-log-colors';
+import Mail from './mail';
 
 class Order {
   private static instance: Order;
@@ -15,11 +16,12 @@ class Order {
   private cache = Cache.getInstance();
   private utils = new Utils();
   private logger = new Log();
+  private mail = new Mail();
 
   private constructor() {
     if (cluster.isPrimary) {
       this.utils.isMainServer().then((isMainServer) => {
-        if (isMainServer) {
+        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
           this.startCron();
         }
       });
@@ -34,11 +36,13 @@ class Order {
   }
 
   public startCron(): void {
-    const job = new CronJob('*/10 * * * *', async () => {
+    new CronJob('*/10 * * * *', async () => {
       await this.getAuthToken(true);
       this.logger.log(color.blue.bold(`Refreshed Print API token`));
-    });
-    job.start();
+    }).start();
+    new CronJob(process.env['CRON_PATTERN_TRACKING']!, async () => {
+      await this.checkForShipment();
+    }).start();
   }
 
   public async calculateOrder(params: any): Promise<ApiResult> {
@@ -169,6 +173,65 @@ class Order {
         printApiOrderId: responseOrder.data.id,
       },
     });
+  }
+
+  public async checkForShipment(): Promise<void> {
+    const authToken = await this.getAuthToken();
+
+    // Get all payments that have a printApiOrderId and the printApiStatus is not 'Shipped' or 'Cancelled'
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        printApiOrderId: {
+          not: undefined,
+        },
+        printApiShipped: false,
+        printApiStatus: {
+          notIn: ['Shipped', 'Cancelled'],
+        },
+      },
+    });
+
+    // Loop through the payments and check the status
+    for (const payment of payments) {
+      try {
+        let trackingLink = '';
+        const response = await axios({
+          method: 'get',
+          url: `${process.env['PRINT_API_URL']}/v2/orders/${payment.printApiOrderId}`,
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (response.data.status === 'Shipped') {
+          if (response.data.trackingUrl?.length > 0) {
+            trackingLink = response.data.trackingUrl;
+          }
+
+          this.mail.sendTrackingEmail(payment, trackingLink);
+
+          // Update the payment with the printApiShipped flag
+          await this.prisma.payment.update({
+            where: {
+              id: payment.id,
+            },
+            data: {
+              printApiShipped: true,
+              printApiStatus: response.data.status,
+            },
+          });
+        }
+      } catch (e) {
+        this.logger.log(
+          color.red.bold(
+            `Error retrieving Print API order status for order: ${color.white.bold(
+              payment.printApiOrderId
+            )}`
+          )
+        );
+      }
+    }
   }
 }
 
