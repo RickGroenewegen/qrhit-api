@@ -165,6 +165,10 @@ class Mollie {
   }
 
   public async checkPaymentStatus(paymentId: string): Promise<ApiResult> {
+    const openPaymentStatus = ['open', 'pending', 'authorized'];
+    const paidPaymentStatus = ['paid'];
+    const failedPaymentStatus = ['failed', 'canceled', 'expired'];
+
     // Get the payment from the database
     const payment = await this.prisma.payment.findUnique({
       where: {
@@ -181,15 +185,33 @@ class Mollie {
       },
     });
 
-    if (payment && payment.status == 'paid') {
+
+    if (payment && paidPaymentStatus.includes(payment.status)) {
       return {
         success: true,
-        data: payment,
+        data: {
+          status: 'paid',
+          payment,
+        },
+      };
+    } else if (payment && openPaymentStatus.includes(payment.status)) {
+      return {
+        success: false,
+        data: {
+          status: 'open',
+        },
+      };
+    } else if (payment && failedPaymentStatus.includes(payment.status)) {
+      return {
+        success: false,
+        data: {
+          status: 'failed',
+        },
       };
     } else {
       return {
         success: false,
-        error: 'Not paid yet',
+        error: 'Error checking payment status',
       };
     }
   }
