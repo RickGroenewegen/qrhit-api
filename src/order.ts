@@ -12,7 +12,8 @@ import Mail from './mail';
 class Order {
   private static instance: Order;
   private prisma = new PrismaClient();
-  private cacheToken: string = 'printapi_auth_token';
+  private APIcacheToken: string = 'printapi_auth_token';
+  private pricingCacheToken: string = 'printapi_pricing_token';
   private cache = Cache.getInstance();
   private utils = new Utils();
   private logger = new Log();
@@ -48,6 +49,21 @@ class Order {
   public async calculateOrder(params: any): Promise<ApiResult> {
     let price = 0;
     let total = 0;
+
+    let cacheToken = `${this.pricingCacheToken}_${params.orderType}_${params.amount}_${params.countrycode}`;
+
+    const cachedPrice = await this.cache.get(cacheToken);
+
+    if (cachedPrice) {
+      try {
+        const cachedData = JSON.parse(cachedPrice);
+        if (cachedData.success) {
+          return cachedData;
+        }
+      } catch (e) {
+        this.cache.del(cacheToken);
+      }
+    }
 
     const orderType = await this.prisma.orderType.findUnique({
       where: {
@@ -91,7 +107,7 @@ class Order {
 
       total = parseFloat(total.toFixed(2));
 
-      return {
+      const returnData = {
         success: true,
         data: {
           price,
@@ -99,6 +115,10 @@ class Order {
           ...response.data,
         },
       };
+
+      this.cache.set(cacheToken, JSON.stringify(returnData));
+
+      return returnData;
     } else {
       return {
         success: false,
@@ -109,7 +129,7 @@ class Order {
 
   private async getAuthToken(force: boolean = false): Promise<string | null> {
     let authToken: string | null = '';
-    authToken = await this.cache.get(this.cacheToken);
+    authToken = await this.cache.get(this.APIcacheToken);
     if (!authToken || force) {
       const response = await axios({
         method: 'post',
@@ -124,7 +144,7 @@ class Order {
         },
       });
       authToken = response.data.access_token;
-      this.cache.set(this.cacheToken, response.data.access_token, 7200);
+      this.cache.set(this.APIcacheToken, response.data.access_token, 7200);
     }
     return authToken;
   }
