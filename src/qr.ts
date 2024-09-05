@@ -41,7 +41,7 @@ class Qr {
       params.paymentId
     );
 
-    const userId = paymentStatus.data.user.userId;
+    const userId = paymentStatus.data.payment.user.userId;
     let payment = await this.mollie.getPayment(params.paymentId);
 
     const hash = crypto

@@ -185,7 +185,6 @@ class Mollie {
       },
     });
 
-
     if (payment && paidPaymentStatus.includes(payment.status)) {
       return {
         success: true,

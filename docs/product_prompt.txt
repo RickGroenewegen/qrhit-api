@@ -2,3 +2,4 @@ I've developed an app: QRSong
 
 It enables users to send a Spotify playlist to us. We will turn it into Physical QR playing cards which can be used in games like Hitster.
 
+Users can share their own playlist, or they can select a pre-selected (by us) playlist
