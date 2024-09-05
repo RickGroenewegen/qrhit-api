@@ -1,5 +1,13 @@
 I've developed an app: QRSong
 
-It enables users to send a Spotify playlist to us. We will turn it into Physical QR playing cards which can be used in games like Hitster.
+It enables users to send a Spotify playlist to us. 
+We will analyse the playlist, determine the release year of the songs.
+We will turn it into Physical QR playing cards which can be used in games like Hitster.
+Never mention the name Hitster anywhere, I don't want trouble with Jumbo. Hint it can be used as a game, but don't state which game
 
-Users can share their own playlist, or they can select a pre-selected (by us) playlist
+Users can share their own playlist, or they can select a pre-selected (by us) playlist.
+We can handle playlists up to 500 cards
+We ship worldwide
+We accept iDeal, Apple Pay and all Major creditcards
+Pricing is around 1.44 euro per 12 cards
+

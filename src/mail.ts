@@ -5,7 +5,7 @@ import Templates from './templates';
 import { Payment } from '@prisma/client';
 import { Playlist } from './interfaces/Playlist';
 import Translation from './translation';
-import { count } from 'console';
+import PushoverClient from './pushover';
 
 interface MailParams {
   to: string | null;
@@ -15,6 +15,7 @@ interface MailParams {
   text: string;
   attachments: Attachment[];
   unsubscribe: string;
+  replyTo?: string; // Add the replyTo field
 }
 
 interface Attachment {
@@ -27,6 +28,7 @@ class Mail {
   private ses: SESClient | null = null;
   private templates: Templates = new Templates();
   private translation: Translation = new Translation();
+  private pushover = new PushoverClient();
 
   constructor() {
     this.ses = new SESClient({
@@ -36,6 +38,44 @@ class Mail {
       },
       region: process.env['AWS_SES_REGION'],
     });
+  }
+
+  async sendContactForm(data: any) {
+    const subject = data.subject;
+
+    const message = `
+    <p><strong>E-mail:</strong> ${data.email}</p>
+    <p><strong>Subject:</strong> ${data.subject}</p>
+    <p><strong>Message:</strong> ${data.message}</p>`;
+
+    const rawEmail = await this.renderRaw({
+      from: `${data.email} <${process.env['FROM_EMAIL']}>`,
+      to: process.env['INFO_EMAIL']!,
+      subject: `${process.env['PRODUCT_NAME']} Contact form - ${data.subject}`,
+      html: message,
+      text: message,
+      attachments: [] as Attachment[],
+      unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+      replyTo: data.email,
+    });
+
+    const emailBuffer = Buffer.from(rawEmail);
+
+    // Prepare and send the raw email
+    const command = new SendRawEmailCommand({
+      RawMessage: {
+        Data: emailBuffer,
+      },
+    });
+
+    if (this.ses) {
+      const result = await this.ses.send(command);
+      this.pushover.sendMessage({
+        title: `QRSong! Contactformulier`,
+        message: `Nieuw bericht: ${data.subject} van ${data.email}`,
+        sound: 'incoming',
+      });
+    }
   }
 
   async sendEmail(
@@ -164,6 +204,7 @@ class Mail {
         text,
         attachments,
         unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+        replyTo: process.env['REPLY_TO_EMAIL'], // Add the replyTo field here if needed
       });
 
       const emailBuffer = Buffer.from(rawEmail);
@@ -195,12 +236,14 @@ ${attachment.data}
 `;
     }
 
+    const replyToHeader = params.replyTo ? `Reply-To: ${params.replyTo}\n` : '';
+
     const rawEmail = `From: ${params.from}
 To: ${params.to}
 Subject: ${params.subject}
-MIME-Version: 1.0
+${replyToHeader}MIME-Version: 1.0
 Content-Type: multipart/mixed; boundary="MixedBoundaryString"
-List-Unsubscribe: <mailto:${params.unsubscribe}>
+List-Unsubscribe: <https://www.qrsong.io/contact>
 
 --MixedBoundaryString
 Content-Type: multipart/alternative; boundary="AltBoundaryString"

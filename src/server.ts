@@ -227,6 +227,10 @@ class Server {
       return await this.progress.getProgress(request.params.paymentId);
     });
 
+    this.fastify.post('/contact', async (request: any, _reply) => {
+      return await this.mail.sendContactForm(request.body);
+    });
+
     // Setup a route to download a PDF
     this.fastify.get('/download/:filename', async (request: any, reply) => {
       const filename = path.basename(request.params.filename); // Use basename to avoid path traversal

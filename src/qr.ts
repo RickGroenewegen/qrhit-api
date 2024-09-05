@@ -149,6 +149,8 @@ class Qr {
       );
     }
 
+    console.log(111, payment);
+
     await this.order.createOrder(payment, filename);
 
     payment = await this.mollie.getPayment(params.paymentId);
