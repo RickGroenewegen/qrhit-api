@@ -90,7 +90,7 @@ class Qr {
         .replace('.', ',')} verdiend!`,
       message: `${payment.fullname} (${payment.countrycode}) heeft ${
         payment.numberOfTracks
-      } kaarten besteld voor € ${payment.orderType.amount
+      } kaarten besteld voor € ${payment.totalPrice
         .toString()
         .replace('.', ',')}. Playlist: ${playlist.name}`,
       sound: 'incoming',

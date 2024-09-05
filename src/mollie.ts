@@ -231,6 +231,7 @@ class Mollie {
         updatedAt: true,
         orderType: true,
         orderId: true,
+        totalPrice: true,
         printApiOrderId: true,
         locale: true,
         fullname: true,
