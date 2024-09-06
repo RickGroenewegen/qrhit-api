@@ -200,7 +200,7 @@ class Server {
     });
 
     this.fastify.post('/mollie/payment', async (request: any, _reply) => {
-      return await this.mollie.getPaymentUri(request.body);
+      return await this.mollie.getPaymentUri(request.body, request.clientIp);
     });
 
     this.fastify.post('/mollie/webhook', async (request: any, _reply) => {

@@ -16,7 +16,26 @@ class Mollie {
     apiKey: process.env['MOLLIE_API_KEY']!,
   });
 
-  public async getPaymentUri(params: any): Promise<ApiResult> {
+  private mollieClientTest = createMollieClient({
+    apiKey: process.env['MOLLIE_API_KEY_TEST']!,
+  });
+
+  private async getClient(ip: string) {
+    if (
+      process.env['ENVIRONMENT'] == 'DEVELOPMENT' ||
+      (process.env['TRUSTED_IPS'] &&
+        process.env['TRUSTED_IPS'].split(',').includes(ip))
+    ) {
+      return this.mollieClient;
+    } else {
+      return this.mollieClientTest;
+    }
+  }
+
+  public async getPaymentUri(
+    params: any,
+    clientIp: string
+  ): Promise<ApiResult> {
     try {
       let amount = params.extraOrderData.amount || 1;
 
@@ -33,10 +52,15 @@ class Mollie {
         amount,
       });
 
-      const payment = await this.mollieClient.payments.create({
+      const paymentClient = await this.getClient(clientIp);
+
+      const payment = await paymentClient.payments.create({
         amount: {
           currency: 'EUR',
           value: calculateResult.data.total.toString(),
+        },
+        metadata: {
+          clientIp,
         },
         description: orderType!.description,
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
@@ -129,6 +153,8 @@ class Mollie {
 
   public async processWebhook(params: any): Promise<ApiResult> {
     if (params.id) {
+      //const paymentClient = await this.getClient(params.clientIp);
+
       const payment = await this.mollieClient.payments.get(params.id);
 
       this.logger.log(
