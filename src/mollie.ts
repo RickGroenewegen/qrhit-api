@@ -155,15 +155,17 @@ class Mollie {
     if (params.id) {
       //const paymentClient = await this.getClient(params.clientIp);
 
-      console.log(111, params);
+      let payment;
 
-      const payment2 = await this.mollieClientTest.payments.get(params.id);
+      console.log(111);
 
-      console.log(333, payment2);
-
-      const payment = await this.mollieClient.payments.get(params.id);
-
-      console.log(222, payment);
+      try {
+        payment = await this.mollieClientTest.payments.get(params.id);
+        console.log(222, payment);
+      } catch (e) {
+        payment = await this.mollieClient.payments.get(params.id);
+        console.log(333, payment);
+      }
 
       this.logger.log(
         color.blue.bold('Processed webhook for payment: ') +
