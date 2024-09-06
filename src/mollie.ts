@@ -155,6 +155,8 @@ class Mollie {
     if (params.id) {
       //const paymentClient = await this.getClient(params.clientIp);
 
+      console.log(111, params);
+
       const payment = await this.mollieClient.payments.get(params.id);
 
       this.logger.log(
