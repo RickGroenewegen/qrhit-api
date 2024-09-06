@@ -159,6 +159,8 @@ class Mollie {
 
       const payment = await this.mollieClient.payments.get(params.id);
 
+      console.log(222, payment);
+
       this.logger.log(
         color.blue.bold('Processed webhook for payment: ') +
           color.bold.white(payment.id) +
@@ -177,6 +179,8 @@ class Mollie {
           },
         });
       } catch (e) {
+        console.log(333, e);
+
         this.logger.log(
           color.red.bold('Failed to update payment in database: ') +
             color.white.bold(payment.id)
