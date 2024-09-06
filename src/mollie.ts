@@ -160,10 +160,10 @@ class Mollie {
       console.log(111);
 
       try {
-        payment = await this.mollieClientTest.payments.get(params.id);
+        payment = await this.mollieClient.payments.get(params.id);
         console.log(222, payment);
       } catch (e) {
-        payment = await this.mollieClient.payments.get(params.id);
+        payment = await this.mollieClientTest.payments.get(params.id);
         console.log(333, payment);
       }
 
