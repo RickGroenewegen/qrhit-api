@@ -157,6 +157,10 @@ class Mollie {
 
       console.log(111, params);
 
+      const payment2 = await this.mollieClientTest.payments.get(params.id);
+
+      console.log(333, payment2);
+
       const payment = await this.mollieClient.payments.get(params.id);
 
       console.log(222, payment);
