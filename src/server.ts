@@ -17,6 +17,7 @@ import fs from 'fs';
 import Order from './order';
 import Mail from './mail';
 import MusicBrainz from './musicbrainz';
+import ipPlugin from './plugins/ipPlugin';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -133,6 +134,7 @@ class Server {
   public async registerPlugins() {
     await this.fastify.register(require('@fastify/multipart'));
     await this.fastify.register(require('@fastify/formbody'));
+    await this.fastify.register(ipPlugin);
     await this.fastify.register(require('@fastify/cors'), {
       origin: '*',
       methods: 'GET, POST, OPTIONS, PUT, PATCH, DELETE',
@@ -229,6 +231,10 @@ class Server {
 
     this.fastify.post('/contact', async (request: any, _reply) => {
       return await this.mail.sendContactForm(request.body);
+    });
+
+    this.fastify.get('/ip', async (request, reply) => {
+      return { ip: request.ip, clientIp: request.clientIp };
     });
 
     // Setup a route to download a PDF
