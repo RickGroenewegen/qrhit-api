@@ -159,7 +159,10 @@ class Data {
     let link = '';
     const cachedLink = await this.cache.get('link' + trackId);
     if (cachedLink) {
-      link = cachedLink;
+      return {
+        success: true,
+        data: { link: cachedLink },
+      };
     } else {
       const linkQuery: any[] = await this.prisma.$queryRaw`
         SELECT      tracks.spotifyLink 

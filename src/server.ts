@@ -290,9 +290,6 @@ class Server {
         await reply.view(`countdown.ejs`, {
           link: result.data.link,
         });
-
-        // Redirect to the Spotify link
-        // reply.redirect(result.data.link);
       }
     });
 
