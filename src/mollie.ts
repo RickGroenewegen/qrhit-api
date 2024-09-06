@@ -153,18 +153,13 @@ class Mollie {
 
   public async processWebhook(params: any): Promise<ApiResult> {
     if (params.id) {
-      //const paymentClient = await this.getClient(params.clientIp);
-
       let payment;
 
-      console.log(111);
-
+      // Try the live client first, with a fallback to test
       try {
         payment = await this.mollieClient.payments.get(params.id);
-        console.log(222, payment);
       } catch (e) {
         payment = await this.mollieClientTest.payments.get(params.id);
-        console.log(333, payment);
       }
 
       this.logger.log(
