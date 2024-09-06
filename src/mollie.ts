@@ -21,17 +21,14 @@ class Mollie {
   });
 
   private async getClient(ip: string) {
-    console.log(111, ip);
     if (
       process.env['ENVIRONMENT'] == 'DEVELOPMENT' ||
       (process.env['TRUSTED_IPS'] &&
         process.env['TRUSTED_IPS'].split(',').includes(ip))
     ) {
-      console.log(222);
-      return this.mollieClient;
-    } else {
-      console.log(333);
       return this.mollieClientTest;
+    } else {
+      return this.mollieClient;
     }
   }
 
