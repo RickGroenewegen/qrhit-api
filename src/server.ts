@@ -151,6 +151,14 @@ class Server {
       done();
     });
 
+    await this.fastify.register((instance, opts, done) => {
+      instance.register(require('@fastify/static'), {
+        root: process.env['ASSETS_DIR'] as string,
+        prefix: '/assets/',
+      });
+      done();
+    });
+
     await this.fastify.setErrorHandler((error, request, reply) => {
       if (process.env['ENVIRONMENT'] == 'development') {
         console.error(error);
