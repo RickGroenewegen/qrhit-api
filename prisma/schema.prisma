@@ -24,6 +24,8 @@ model OrderType {
   name              String    @unique
   description       String
   amount            Float
+  amountWithMargin  Float     @default(10)
+  maxCards          Int       @default(0)
   printApiProductId String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt

@@ -39,17 +39,14 @@ class Mollie {
     try {
       let amount = params.extraOrderData.amount || 1;
 
-      const orderType = await this.prisma.orderType.findUnique({
-        where: {
-          name: params.orderType,
-        },
-      });
+      const orderType = await this.order.getOrderType(params.tracks.length);
 
       // Get the order type
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
         countrycode: params.extraOrderData.countrycode,
         amount,
+        numberOfTracks: params.tracks.length,
       });
 
       const paymentClient = await this.getClient(clientIp);
@@ -119,7 +116,6 @@ class Mollie {
         },
       };
     } catch (e) {
-      console.log(e);
       return {
         success: false,
         error: 'Failed to create payment',
@@ -180,8 +176,6 @@ class Mollie {
           },
         });
       } catch (e) {
-        console.log(333, e);
-
         this.logger.log(
           color.red.bold('Failed to update payment in database: ') +
             color.white.bold(payment.id)

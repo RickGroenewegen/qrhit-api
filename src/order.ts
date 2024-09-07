@@ -46,11 +46,29 @@ class Order {
     }).start();
   }
 
+  public async getOrderType(numberOfTracks: number) {
+    return await this.prisma.orderType.findFirst({
+      where: {
+        maxCards: {
+          gte: numberOfTracks,
+        },
+      },
+      orderBy: {
+        maxCards: 'asc',
+      },
+    });
+  }
+
   public async calculateOrder(params: any): Promise<ApiResult> {
     let price = 0;
     let total = 0;
+    let minimumAmount = 25;
 
     let cacheToken = `${this.pricingCacheToken}_${params.orderType}_${params.amount}_${params.countrycode}`;
+
+    if (process.env['ENVIRONMENT'] === 'development') {
+      cacheToken = `${cacheToken}_dev_${new Date().getTime()}`;
+    }
 
     const cachedPrice = await this.cache.get(cacheToken);
 
@@ -65,15 +83,24 @@ class Order {
       }
     }
 
-    const orderType = await this.prisma.orderType.findUnique({
-      where: {
-        name: params.orderType,
-      },
-    });
+    let numberOfTracks = parseInt(params.numberOfTracks);
+
+    if (numberOfTracks < minimumAmount) {
+      numberOfTracks = minimumAmount;
+    }
+
+    if (isNaN(numberOfTracks)) {
+      return {
+        success: false,
+        error: 'Invalid number of cards',
+      };
+    }
+
+    const orderType = await this.getOrderType(numberOfTracks);
 
     if (orderType) {
       price = parseFloat(
-        (orderType.amount * parseInt(params.amount)).toFixed(2)
+        (orderType.amountWithMargin * parseInt(params.amount)).toFixed(2)
       );
 
       total += price;
