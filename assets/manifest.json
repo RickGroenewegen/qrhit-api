@@ -1,6 +1,6 @@
 {
-  "name": "QRSong Countdown",
-  "short_name": "QRSong",
+  "name": "QRSong!",
+  "short_name": "QRSong!",
   "start_url": "/qr/0",
   "display": "standalone",
   "background_color": "#0077be",

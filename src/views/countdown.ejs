@@ -232,6 +232,7 @@
                 setTimeout(updateCountdown, 1000);
             } else {
                 if (spotifyURI) {
+                    console.log('Redirecting to Spotify URI:', spotifyURI);
                     window.location.href = spotifyURI;
                     countdownValue = <%= process.env['COUNTDOWN'] %>;
                     stopScanning();
