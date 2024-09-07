@@ -69,9 +69,11 @@ class Mollie {
         email: params.extraOrderData.email,
         displayName: params.extraOrderData.fullname,
       });
+
       const playlistDatabaseId = await this.data.storePlaylist(
         userDatabaseId,
-        params.playlist
+        params.playlist,
+        calculateResult.data.price
       );
 
       delete params.extraOrderData.orderType;

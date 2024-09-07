@@ -93,6 +93,7 @@ model Playlist {
   updatedAt  DateTime           @updatedAt
   featured   Boolean            @default(false)
   image      String
+  price      Float              @default(0)
   users      UserHasPlaylist[]
   tracks     PlaylistHasTrack[]
   Payment    Payment[]

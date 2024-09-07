@@ -55,6 +55,7 @@ class Data {
           playlists.playlistId,
           playlists.name,
           playlists.image,
+          playlists.price,
           (
               SELECT COUNT(1) 
               FROM playlist_has_tracks 
@@ -76,7 +77,8 @@ class Data {
 
   public async storePlaylist(
     userDatabaseId: number,
-    playlistParams: any
+    playlistParams: any,
+    price: number
   ): Promise<number> {
     let playlistDatabaseId: number = 0;
 
@@ -94,11 +96,22 @@ class Data {
           playlistId: playlistParams.id,
           name: playlistParams.name,
           image: playlistParams.image,
+          price: price,
         },
       });
       playlistDatabaseId = playlistCreate.id;
     } else {
       playlistDatabaseId = playlist.id;
+      if (playlist.price == 0) {
+        await this.prisma.playlist.update({
+          where: {
+            id: playlistDatabaseId,
+          },
+          data: {
+            price: price,
+          },
+        });
+      }
     }
 
     await this.prisma.$executeRaw`
