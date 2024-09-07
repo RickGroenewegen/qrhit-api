@@ -137,11 +137,11 @@
         </div>
     </div>
 
-    <script>
+   <script>
         function isPWAInstalled() {
             return window.matchMedia('(display-mode: standalone)').matches ||
-                   window.navigator.standalone ||
-                   document.referrer.includes('android-app://');
+                window.navigator.standalone ||
+                document.referrer.includes('android-app://');
         }
 
         function hasSeenOnboarding() {
@@ -150,6 +150,36 @@
 
         function setOnboardingSeen() {
             localStorage.setItem('hasSeenOnboarding', 'true');
+        }
+
+        function isCameraSupported() {
+            return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+        }
+
+        function hasRequestedCameraPermission() {
+            return localStorage.getItem('hasRequestedCameraPermission') === 'true';
+        }
+
+        function setRequestedCameraPermission() {
+            localStorage.setItem('hasRequestedCameraPermission', 'true');
+        }
+
+        function requestCameraPermission() {
+            if (hasRequestedCameraPermission()) {
+                console.log('Camera permission already requested');
+                return;
+            }
+
+            navigator.mediaDevices.getUserMedia({ video: true })
+                .then(function(stream) {
+                    console.log('Camera permission granted');
+                    stream.getTracks().forEach(track => track.stop());
+                    setRequestedCameraPermission();
+                })
+                .catch(function(error) {
+                    console.log('Camera permission denied: ', error);
+                    setRequestedCameraPermission();
+                });
         }
 
         let countdownValue = <%= process.env['COUNTDOWN'] %>;
@@ -178,11 +208,14 @@
         }
 
         document.addEventListener('DOMContentLoaded', function() {
-            if (!isPWAInstalled()) {
+            if (isPWAInstalled()) {
+                if (isCameraSupported() && !hasRequestedCameraPermission()) {
+                    requestCameraPermission();
+                }
+                updateCountdown();
+            } else {
                 document.getElementById('onboarding-overlay').style.display = 'flex';
                 document.getElementById('main-container').style.display = 'none';
-            } else {
-                updateCountdown();
             }
 
             document.getElementById('close-onboarding').addEventListener('click', function() {
@@ -218,5 +251,6 @@
             });
         }
     </script>
+
 </body>
 </html>
