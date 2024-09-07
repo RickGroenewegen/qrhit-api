@@ -293,14 +293,16 @@ class Server {
     );
 
     this.fastify.get('/qr/:trackId', async (request: any, reply) => {
+      await reply.view(`countdown.ejs`, {});
+    });
+
+    this.fastify.get('/qrlink/:trackId', async (request: any, reply) => {
       const result = await this.data.getLink(request.params.trackId);
       let link = '';
       if (result.success) {
         link = result.data.link;
       }
-      await reply.view(`countdown.ejs`, {
-        link,
-      });
+      return { link };
     });
 
     this.fastify.get(

@@ -7,6 +7,7 @@
     <link rel="manifest" href="/assets/manifest.json">
     <link rel="apple-touch-icon" href="/assets/images/icon-192x192.png">
     <title>QRSong Countdown</title>
+    <script src="https://cdn.jsdelivr.net/npm/jsqr@1.3.1/dist/jsQR.min.js"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 
@@ -103,6 +104,33 @@
             font-size: 1.2rem;
             font-weight: bold;
         }
+
+        .qr-icon {
+            margin-top: 2rem;
+            cursor: pointer;
+            display: none;
+        }
+
+        .qr-icon svg {
+            width: 64px;
+            height: 64px;
+            stroke: white;
+        }
+
+        #qr-video {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 1001;
+        }
+
+        #qr-canvas {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -113,6 +141,15 @@
         <div class="message-top">Your song will start playing in ...</div>
         <div id="countdown" class="countdown"><%= process.env['COUNTDOWN'] %></div>
         <div class="message-bottom">Get ready!</div>
+        <div id="qr-icon" class="qr-icon" onclick="toggleQRScanner()">
+            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                <line x1="7" y1="7" x2="7" y2="7"></line>
+                <line x1="17" y1="7" x2="17" y2="7"></line>
+                <line x1="7" y1="17" x2="7" y2="17"></line>
+                <line x1="17" y1="17" x2="17" y2="17"></line>
+            </svg>
+        </div>
     </div>
     <div class="footer">&copy; QRSong! <%= new Date().getFullYear() %>. All rights reserved.</div>
 
@@ -136,6 +173,9 @@
             <button id="close-onboarding">Got it!</button>
         </div>
     </div>
+
+    <video id="qr-video"></video>
+    <canvas id="qr-canvas"></canvas>
 
    <script>
         function isPWAInstalled() {
@@ -185,6 +225,7 @@
         let countdownValue = <%= process.env['COUNTDOWN'] %>;
         const countdownElement = document.getElementById('countdown');
         const environment = '<%= process.env['ENVIRONMENT'] %>';
+        
         let deferredPrompt;
 
         function updateCountdown() {
@@ -200,19 +241,110 @@
                 setTimeout(updateCountdown, 1000);
             } else {
                 if (environment !== 'development') {
-                    location.href = '<%= link %>';
+                  // redirect to the song page
                 } else {
                     console.log('Countdown finished. Redirect skipped in development environment.');
                 }
             }
         }
 
+        let scanning = false;
+        let videoStream;
+
+        function toggleQRScanner() {
+            if (scanning) {
+                stopScanning();
+            } else {
+                startScanning();
+            }
+        }
+
+        function convertToSpotifyURI(url) {
+            const spotifyWebUrlPattern = /^https?:\/\/open\.spotify\.com\/(track|album|playlist|artist)\/([a-zA-Z0-9]+)(.*)$/;
+            const match = url.match(spotifyWebUrlPattern);
+            
+            if (match) {
+                const [, type, id] = match;
+                return `spotify:${type}:${id}`;
+            }
+            
+            return url; // Return original URL if it doesn't match the pattern
+        }
+
+
+        function startScanning() {
+            navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+                .then(function(stream) {
+                    scanning = true;
+                    videoStream = stream;
+                    const video = document.getElementById("qr-video");
+                    const canvasElement = document.getElementById("qr-canvas");
+                    const canvas = canvasElement.getContext("2d");
+                    
+                    video.srcObject = stream;
+                    video.setAttribute("playsinline", true);
+                    video.play();
+                    video.style.display = "block";
+                    requestAnimationFrame(tick);
+
+                    function tick() {
+
+                        if (video.readyState === video.HAVE_ENOUGH_DATA) {
+                            canvasElement.height = video.videoHeight;
+                            canvasElement.width = video.videoWidth;
+                            canvas.drawImage(video, 0, 0, canvasElement.width, canvasElement.height);
+                            var imageData = canvas.getImageData(0, 0, canvasElement.width, canvasElement.height);
+                            var code = jsQR(imageData.data, imageData.width, imageData.height, {
+                                inversionAttempts: "dontInvert",
+                            });
+                            if (code) {
+                                console.log("Found QR code", code.data);
+
+                                if(code.data.includes('/qr/')) {
+                                    
+                                    const qrCodeData = code.data.split('/');
+                                    const qrCodeLink = qrCodeData[qrCodeData.length - 1];
+
+                                    fetch('<%= process.env['API_URI'] %>/qrlink/' + qrCodeLink)
+                                        .then(response => response.json())
+                                        .then(data => {
+                                            const spotifyURI = convertToSpotifyURI(data.link);
+                                            window.location.href = spotifyURI;
+                                        })
+                                        .catch(error => {
+                                            // Handle any errors here
+                                            console.error('Error:', error);
+                                        });
+                                }
+                                stopScanning();
+                            }
+                        }
+                        if (scanning) {
+                            requestAnimationFrame(tick);
+                        }
+                    }
+                })
+                .catch(function(error) {
+                    console.error("Error accessing the camera", error);
+                    alert("Error accessing the camera. Please make sure you've granted camera permissions.");
+                });
+        }
+
+        function stopScanning() {
+            scanning = false;
+            if (videoStream) {
+                videoStream.getTracks().forEach(track => track.stop());
+            }
+            document.getElementById("qr-video").style.display = "none";
+        }
+
         document.addEventListener('DOMContentLoaded', function() {
             if (isPWAInstalled()) {
                 if (isCameraSupported() && !hasRequestedCameraPermission()) {
-                    requestCameraPermission();
+                   // requestCameraPermission();
                 }
                 updateCountdown();
+                document.getElementById('qr-icon').style.display = 'block';
             } else {
                 document.getElementById('onboarding-overlay').style.display = 'flex';
                 document.getElementById('main-container').style.display = 'none';
@@ -221,6 +353,7 @@
             document.getElementById('close-onboarding').addEventListener('click', function() {
                 document.getElementById('onboarding-overlay').style.display = 'none';
                 document.getElementById('main-container').style.display = 'flex';
+                document.getElementById('qr-icon').style.display = 'block';
                 setOnboardingSeen();
                 updateCountdown();
             });
