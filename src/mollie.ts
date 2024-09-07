@@ -118,6 +118,7 @@ class Mollie {
         },
       };
     } catch (e) {
+      console.log(e);
       return {
         success: false,
         error: 'Failed to create payment',

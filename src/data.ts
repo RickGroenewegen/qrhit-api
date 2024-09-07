@@ -104,7 +104,7 @@ class Data {
         },
         data: {
           price: price,
-          numberOfTracks: playlistParams.tracks.total,
+          numberOfTracks: playlistParams.numberOfTracks,
         },
       });
     }
