@@ -8,6 +8,7 @@
     <link rel="apple-touch-icon" href="/assets/images/icon-192x192.png">
     <title>QRSong Countdown</title>
     <script src="https://cdn.jsdelivr.net/npm/jsqr@1.3.1/dist/jsQR.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
 
@@ -30,6 +31,7 @@
             align-items: center;
             width: 100%;
             height: 100%;
+            text-align: center;
         }
 
         .title {
@@ -42,7 +44,7 @@
         .message-top {
             font-size: 1.2rem;
             text-align: center;
-            max-width: 80%;
+            max-width: 100%;
             margin-bottom: 1rem;
         }
 
@@ -59,7 +61,7 @@
         .message-bottom {
             font-size: 1.2rem;
             text-align: center;
-            max-width: 80%;
+            max-width: 100%;
             margin-top: 2rem;
         }
 
@@ -106,15 +108,16 @@
         }
 
         .qr-icon {
-            margin-top: 2rem;
             cursor: pointer;
-            display: none;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 1.2rem;
         }
 
-        .qr-icon svg {
-            width: 64px;
-            height: 64px;
-            stroke: white;
+        .qr-icon i {
+            font-size: 3rem;
+            margin-bottom: 1rem;
         }
 
         #qr-video {
@@ -131,6 +134,11 @@
         #qr-canvas {
             display: none;
         }
+
+        #countdown-container {
+            display: none;
+            text-align: center;
+        }
     </style>
 </head>
 <body>
@@ -138,17 +146,14 @@
         <div class="title">
             <img src="/assets/images/logo_white.png" style="max-width:300px;"/>
         </div>
-        <div class="message-top">Your song will start playing in ...</div>
-        <div id="countdown" class="countdown"><%= process.env['COUNTDOWN'] %></div>
-        <div class="message-bottom">Get ready!</div>
+        <div id="countdown-container">
+            <div class="message-top">Your song will start playing in ...</div>
+            <div id="countdown" class="countdown"><%= process.env['COUNTDOWN'] %></div>
+            <div class="message-bottom">Get ready!</div>
+        </div>
         <div id="qr-icon" class="qr-icon" onclick="toggleQRScanner()">
-            <svg xmlns="http://www.w3.org/2000/svg" width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
-                <line x1="7" y1="7" x2="7" y2="7"></line>
-                <line x1="17" y1="7" x2="17" y2="7"></line>
-                <line x1="7" y1="17" x2="7" y2="17"></line>
-                <line x1="17" y1="17" x2="17" y2="17"></line>
-            </svg>
+            <i class="fas fa-camera" style="font-size: 100px;margin-bottom:25px;"></i>
+            <div>Tap the button to scan</div>
         </div>
     </div>
     <div class="footer">&copy; QRSong! <%= new Date().getFullYear() %>. All rights reserved.</div>
@@ -206,29 +211,13 @@
             localStorage.setItem('hasRequestedCameraPermission', 'true');
         }
 
-        function requestCameraPermission() {
-            if (hasRequestedCameraPermission()) {
-                console.log('Camera permission already requested');
-                return;
-            }
-
-            navigator.mediaDevices.getUserMedia({ video: true })
-                .then(function(stream) {
-                    console.log('Camera permission granted');
-                    stream.getTracks().forEach(track => track.stop());
-                    setRequestedCameraPermission();
-                })
-                .catch(function(error) {
-                    console.log('Camera permission denied: ', error);
-                    setRequestedCameraPermission();
-                });
-        }
-
         let countdownValue = <%= process.env['COUNTDOWN'] %>;
         const countdownElement = document.getElementById('countdown');
+        const countdownContainer = document.getElementById('countdown-container');
         const environment = '<%= process.env['ENVIRONMENT'] %>';
         
         let deferredPrompt;
+        let spotifyURI;
 
         function updateCountdown() {
             countdownElement.textContent = countdownValue;
@@ -242,8 +231,10 @@
                 countdownValue--;
                 setTimeout(updateCountdown, 1000);
             } else {
-                if (environment !== 'development') {
-                  // redirect to the song page
+                if (spotifyURI) {
+                    window.location.href = spotifyURI;
+                    countdownValue = <%= process.env['COUNTDOWN'] %>;
+                    stopScanning();
                 } else {
                     console.log('Countdown finished. Redirect skipped in development environment.');
                 }
@@ -273,7 +264,6 @@
             return url; // Return original URL if it doesn't match the pattern
         }
 
-
         function startScanning() {
             navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
                 .then(function(stream) {
@@ -290,7 +280,6 @@
                     requestAnimationFrame(tick);
 
                     function tick() {
-
                         if (video.readyState === video.HAVE_ENOUGH_DATA) {
                             canvasElement.height = video.videoHeight;
                             canvasElement.width = video.videoWidth;
@@ -303,18 +292,19 @@
                                 console.log("Found QR code", code.data);
 
                                 if(code.data.includes('/qr/')) {
-                                    
                                     const qrCodeData = code.data.split('/');
                                     const qrCodeLink = qrCodeData[qrCodeData.length - 1];
 
                                     fetch('<%= process.env['API_URI'] %>/qrlink/' + qrCodeLink)
                                         .then(response => response.json())
                                         .then(data => {
-                                            const spotifyURI = convertToSpotifyURI(data.link);
-                                            window.location.href = spotifyURI;
+                                            spotifyURI = convertToSpotifyURI(data.link);
+                                            stopScanning();
+                                            document.getElementById('qr-icon').style.display = 'none';
+                                            countdownContainer.style.display = 'block';
+                                            updateCountdown();
                                         })
                                         .catch(error => {
-                                            // Handle any errors here
                                             console.error('Error:', error);
                                         });
                                 }
@@ -338,6 +328,10 @@
                 videoStream.getTracks().forEach(track => track.stop());
             }
             document.getElementById("qr-video").style.display = "none";
+            document.getElementById('qr-icon').style.display = 'block';
+            const countdownContainer = document.getElementById('countdown-container');
+            countdownContainer.style.display = 'none';
+            
         }
 
         document.addEventListener('DOMContentLoaded', function() {
@@ -345,7 +339,6 @@
                 if (isCameraSupported() && !hasRequestedCameraPermission()) {
                    // requestCameraPermission();
                 }
-                updateCountdown();
                 document.getElementById('qr-icon').style.display = 'block';
             } else {
                 document.getElementById('onboarding-overlay').style.display = 'flex';
@@ -357,19 +350,16 @@
                 document.getElementById('main-container').style.display = 'flex';
                 document.getElementById('qr-icon').style.display = 'block';
                 setOnboardingSeen();
-                updateCountdown();
             });
 
             window.addEventListener('beforeinstallprompt', (e) => {
                 e.preventDefault();
                 deferredPrompt = e;
-                // You can add code here to show your own install button if desired
             });
 
             window.addEventListener('appinstalled', (evt) => {
                 console.log('PWA was installed');
                 setOnboardingSeen();
-                // You can update UI or set additional flags in localStorage here if needed
             });
         });
     </script>
