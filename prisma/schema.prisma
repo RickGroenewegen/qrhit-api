@@ -86,17 +86,18 @@ model User {
 }
 
 model Playlist {
-  id         Int                @id @default(autoincrement())
-  playlistId String             @unique
-  name       String
-  createdAt  DateTime           @default(now())
-  updatedAt  DateTime           @updatedAt
-  featured   Boolean            @default(false)
-  image      String
-  price      Float              @default(0)
-  users      UserHasPlaylist[]
-  tracks     PlaylistHasTrack[]
-  Payment    Payment[]
+  id             Int                @id @default(autoincrement())
+  playlistId     String             @unique
+  name           String
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  featured       Boolean            @default(false)
+  image          String
+  price          Float              @default(0)
+  numberOfTracks Int                @default(0)
+  users          UserHasPlaylist[]
+  tracks         PlaylistHasTrack[]
+  Payment        Payment[]
 
   @@index([playlistId])
   @@map("playlists")
