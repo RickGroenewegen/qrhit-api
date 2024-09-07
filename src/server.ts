@@ -294,11 +294,13 @@ class Server {
 
     this.fastify.get('/qr/:trackId', async (request: any, reply) => {
       const result = await this.data.getLink(request.params.trackId);
+      let link = '';
       if (result.success) {
-        await reply.view(`countdown.ejs`, {
-          link: result.data.link,
-        });
+        link = result.data.link;
       }
+      await reply.view(`countdown.ejs`, {
+        link,
+      });
     });
 
     this.fastify.get(

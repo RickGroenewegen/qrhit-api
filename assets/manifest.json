@@ -1,0 +1,20 @@
+{
+  "name": "QRSong Countdown",
+  "short_name": "QRSong",
+  "start_url": "/qr/0",
+  "display": "standalone",
+  "background_color": "#0077be",
+  "theme_color": "#0077be",
+  "icons": [
+    {
+      "src": "/assets/images/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/assets/images/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

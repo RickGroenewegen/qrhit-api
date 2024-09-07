@@ -3,6 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#0077be">
+    <link rel="manifest" href="/assets/manifest.json">
+    <link rel="apple-touch-icon" href="/assets/images/icon-192x192.png">
     <title>QRSong Countdown</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
@@ -65,10 +68,45 @@
             font-size: 0.9rem;
             opacity: 0.7;
         }
+
+        #onboarding-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #0077be, #00264d);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+
+        .onboarding-content {
+            text-align: center;
+            max-width: 80%;
+        }
+
+        .install-instructions {
+            text-align: left;
+            margin-top: 20px;
+        }
+
+        #close-onboarding {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #ffffff;
+            color: #0077be;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
+    <div class="container" id="main-container">
         <div class="title">
             <img src="/assets/images/logo_white.png" style="max-width:300px;"/>
         </div>
@@ -77,10 +115,47 @@
         <div class="message-bottom">Get ready!</div>
     </div>
     <div class="footer">&copy; QRSong! <%= new Date().getFullYear() %>. All rights reserved.</div>
+
+    <div id="onboarding-overlay">
+        <div class="onboarding-content">
+            <h2>Welcome to QRSong Countdown!</h2>
+            <p>You can install this app on your mobile device for easy access!</p>
+            <div class="install-instructions">
+                <h3>How to install:</h3>
+                <p>On iOS Safari:</p>
+                <ol>
+                    <li>Tap the share button 📤</li>
+                    <li>Scroll down and tap "Add to Home Screen" 🏠</li>
+                </ol>
+                <p>On Android Chrome:</p>
+                <ol>
+                    <li>Tap the menu button ⋮</li>
+                    <li>Tap "Add to Home Screen" 🏠</li>
+                </ol>
+            </div>
+            <button id="close-onboarding">Got it!</button>
+        </div>
+    </div>
+
     <script>
+        function isPWAInstalled() {
+            return window.matchMedia('(display-mode: standalone)').matches ||
+                   window.navigator.standalone ||
+                   document.referrer.includes('android-app://');
+        }
+
+        function hasSeenOnboarding() {
+            return localStorage.getItem('hasSeenOnboarding') === 'true';
+        }
+
+        function setOnboardingSeen() {
+            localStorage.setItem('hasSeenOnboarding', 'true');
+        }
+
         let countdownValue = <%= process.env['COUNTDOWN'] %>;
         const countdownElement = document.getElementById('countdown');
         const environment = '<%= process.env['ENVIRONMENT'] %>';
+        let deferredPrompt;
 
         function updateCountdown() {
             countdownElement.textContent = countdownValue;
@@ -102,7 +177,46 @@
             }
         }
 
-        updateCountdown();
+        document.addEventListener('DOMContentLoaded', function() {
+            if (!isPWAInstalled()) {
+                document.getElementById('onboarding-overlay').style.display = 'flex';
+                document.getElementById('main-container').style.display = 'none';
+            } else {
+                updateCountdown();
+            }
+
+            document.getElementById('close-onboarding').addEventListener('click', function() {
+                document.getElementById('onboarding-overlay').style.display = 'none';
+                document.getElementById('main-container').style.display = 'flex';
+                setOnboardingSeen();
+                updateCountdown();
+            });
+
+            window.addEventListener('beforeinstallprompt', (e) => {
+                e.preventDefault();
+                deferredPrompt = e;
+                // You can add code here to show your own install button if desired
+            });
+
+            window.addEventListener('appinstalled', (evt) => {
+                console.log('PWA was installed');
+                setOnboardingSeen();
+                // You can update UI or set additional flags in localStorage here if needed
+            });
+        });
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('/assets/js/sw.js')
+                    .then(registration => {
+                        console.log('Service Worker registered successfully:', registration.scope);
+                    })
+                    .catch(error => {
+                        console.log('Service Worker registration failed:', error);
+                    });
+            });
+        }
     </script>
 </body>
 </html>
