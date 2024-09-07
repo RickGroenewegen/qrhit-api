@@ -69,12 +69,14 @@
 </head>
 <body>
     <div class="container">
-        <div class="title">QRSong!</div>
+        <div class="title">
+            <img src="/public/images/logo_white.png" style="max-width:300px;"/>
+        </div>
         <div class="message-top">Your song will start playing in ...</div>
         <div id="countdown" class="countdown"><%= process.env['COUNTDOWN'] %></div>
         <div class="message-bottom">Get ready!</div>
     </div>
-    <div class="footer">&copy; 2023 QRSong. All rights reserved.</div>
+    <div class="footer">&copy; QRSong! <%= new Date().getFullYear() %>. All rights reserved.</div>
     <script>
         let countdownValue = <%= process.env['COUNTDOWN'] %>;
         const countdownElement = document.getElementById('countdown');

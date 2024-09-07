@@ -326,6 +326,16 @@ class Server {
       return { success: true, data: playlists };
     });
 
+    this.fastify.get(
+      '/ordertype/:numberOfTracks',
+      async (request: any, _reply) => {
+        const orderType = await this.order.getOrderType(
+          parseInt(request.params.numberOfTracks)
+        );
+        return { success: true, data: orderType };
+      }
+    );
+
     this.fastify.post('/order/calculate', async (request: any, _reply) => {
       return await this.order.calculateOrder(request.body);
     });
