@@ -160,9 +160,7 @@ class Server {
     });
 
     await this.fastify.setErrorHandler((error, request, reply) => {
-      if (process.env['ENVIRONMENT'] == 'development') {
-        console.error(error);
-      }
+      console.error(error);
       reply.status(500).send({ error: 'Internal Server Error' });
     });
 
