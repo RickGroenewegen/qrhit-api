@@ -1,11 +1,13 @@
-import { color } from 'console-log-colors';
+import { color, white } from 'console-log-colors';
 import Redis from 'ioredis';
 import Log from './logger';
+import fs from 'fs/promises';
 
 class Cache {
   private logManager = new Log();
   private static instance: Cache;
   private client: Redis;
+  private version: string = '1.0.0';
 
   private constructor() {
     const redisUrl = process.env['REDIS_URL'];
@@ -28,12 +30,15 @@ class Cache {
   public static getInstance(): Cache {
     if (!Cache.instance) {
       Cache.instance = new Cache();
+      Cache.instance.init();
     }
     return Cache.instance;
   }
 
   async init(): Promise<void> {
-    this.logManager.log(color.green.bold('Redis connection established'));
+    this.version = JSON.parse(
+      (await fs.readFile('package.json')).toString()
+    ).version;
   }
 
   private async executeCommand(command: string, ...args: any[]): Promise<any> {
@@ -59,7 +64,13 @@ class Cache {
   }
 
   async get(key: string): Promise<string | null> {
-    return await this.executeCommand('get', key);
+    let cacheKey = `${this.version}:${key}`;
+
+    if (process.env['ENVIRONMENT'] === 'DEVELOPMENT') {
+      cacheKey = `dev:${key}`;
+    }
+
+    return await this.executeCommand('get', cacheKey);
   }
 
   async del(key: string): Promise<void> {

@@ -22,7 +22,7 @@ class Mollie {
 
   private async getClient(ip: string) {
     if (
-      process.env['ENVIRONMENT'] == 'DEVELOPMENT' ||
+      process.env['ENVIRONMENT'] == 'development' ||
       (process.env['TRUSTED_IPS'] &&
         process.env['TRUSTED_IPS'].split(',').includes(ip))
     ) {

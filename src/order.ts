@@ -66,10 +66,6 @@ class Order {
 
     let cacheToken = `${this.pricingCacheToken}_${params.orderType}_${params.amount}_${params.countrycode}`;
 
-    if (process.env['ENVIRONMENT'] === 'development') {
-      cacheToken = `${cacheToken}_dev_${new Date().getTime()}`;
-    }
-
     const cachedPrice = await this.cache.get(cacheToken);
 
     if (cachedPrice) {
