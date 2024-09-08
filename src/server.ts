@@ -353,11 +353,9 @@ class Server {
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.get('/mail/:paymentId', async (request: any, _reply) => {
         const payment = await this.mollie.getPayment(request.params.paymentId);
-
         const playlist = await this.data.getPlaylist(
           payment.playlist.playlistId
         );
-
         await this.mail.sendEmail(payment, playlist, payment.filename);
         return { success: true };
       });

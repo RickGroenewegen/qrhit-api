@@ -214,6 +214,7 @@ class Order {
       },
       data: {
         printApiOrderId: responseOrder.data.id,
+        filename: filename,
       },
     });
   }

@@ -15,13 +15,15 @@ interface MailParams {
   text: string;
   attachments: Attachment[];
   unsubscribe: string;
-  replyTo?: string; // Add the replyTo field
+  replyTo?: string;
 }
 
 interface Attachment {
   contentType: string;
   filename: string;
-  data: string; // This will hold the base64 encoded data of the attachment
+  data: string;
+  isInline?: boolean;
+  cid?: string;
 }
 
 class Mail {
@@ -86,6 +88,8 @@ class Mail {
     if (!this.ses) return;
 
     const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+
     const mailParams = {
       payment,
       playlist,
@@ -110,6 +114,10 @@ class Mail {
       const fileBuffer = await fs.readFile(filePath as string);
       const fileBase64 = fileBuffer.toString('base64');
 
+      // Read the logo file and convert it to Base64
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = logoBuffer.toString('base64');
+
       // Get the filename from the path
       const filename = path.basename(filePath as string);
 
@@ -123,7 +131,15 @@ class Mail {
         playlist: playlist.name,
       });
 
-      let attachments = [];
+      let attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
 
       if (process.env['ENVIRONMENT'] === 'development') {
         attachments.push({
@@ -137,7 +153,7 @@ class Mail {
         from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
         to: payment.email,
         subject,
-        html,
+        html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
         text,
         attachments,
         unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
@@ -164,6 +180,8 @@ class Mail {
   ): Promise<void> {
     if (!this.ses) return;
 
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+
     const mailParams = {
       payment,
       trackingLink,
@@ -175,6 +193,10 @@ class Mail {
     };
 
     try {
+      // Read the logo file and convert it to Base64
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = logoBuffer.toString('base64');
+
       let locale = payment.locale;
 
       const html = await this.templates.render(
@@ -194,17 +216,25 @@ class Mail {
         }
       );
 
-      let attachments: Attachment[] = [];
+      let attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
 
       const rawEmail = await this.renderRaw({
         from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
         to: payment.email,
         subject,
-        html,
+        html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
         text,
         attachments,
         unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
-        replyTo: process.env['REPLY_TO_EMAIL'], // Add the replyTo field here if needed
+        replyTo: process.env['REPLY_TO_EMAIL'],
       });
 
       const emailBuffer = Buffer.from(rawEmail);
@@ -226,11 +256,15 @@ class Mail {
     let attachmentString = '';
 
     for (const attachment of params.attachments) {
+      const contentDisposition = attachment.isInline
+        ? `Content-Disposition: inline; filename="${attachment.filename}"\nContent-ID: <${attachment.cid}>`
+        : `Content-Disposition: attachment; filename="${attachment.filename}"`;
+
       attachmentString += `
 --MixedBoundaryString
 Content-Type: ${attachment.contentType}
 Content-Transfer-Encoding: base64
-Content-Disposition: attachment; filename="${attachment.filename}"
+${contentDisposition}
 
 ${attachment.data}
 `;
