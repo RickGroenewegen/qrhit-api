@@ -18,6 +18,8 @@ import Order from './order';
 import Mail from './mail';
 import MusicBrainz from './musicbrainz';
 import ipPlugin from './plugins/ipPlugin';
+import Formatters from './formatters';
+import Translation from './translation';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -45,6 +47,8 @@ class Server {
   private order = Order.getInstance();
   private mail = new Mail();
   private musicBrainz = new MusicBrainz();
+  private formatters = new Formatters().getFormatters();
+  private translation: Translation = new Translation();
 
   private constructor() {
     this.fastify = Fastify({
@@ -331,6 +335,28 @@ class Server {
         });
       }
     );
+
+    this.fastify.get('/invoice/:paymentId', async (request: any, reply) => {
+      const payment = await this.mollie.getPayment(request.params.paymentId);
+      if (!payment) {
+        reply.status(404).send({ error: 'Payment not found' });
+        return;
+      }
+
+      const translations = this.translation.getTranslationsByPrefix(
+        payment.locale,
+        'invoice'
+      );
+
+      await reply.view(`invoice.ejs`, {
+        payment,
+        ...this.formatters,
+        translations: this.translation.getTranslationsByPrefix(
+          payment.locale,
+          'invoice'
+        ),
+      });
+    });
 
     this.fastify.get('/test', async (request: any, _reply) => {
       return { success: true };

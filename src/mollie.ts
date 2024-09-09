@@ -86,6 +86,20 @@ class Mollie {
       delete params.extraOrderData.agreeTerms;
       params.extraOrderData.amount = parseInt(params.extraOrderData.amount);
 
+      const taxRate = await this.data.getTaxRate(
+        new Date(),
+        params.extraOrderData.countrycode
+      );
+
+      // totalPriceWithoutTax
+      let totalPriceWithoutTax = calculateResult.data.total;
+
+      if (taxRate) {
+        totalPriceWithoutTax = parseFloat(
+          (parseFloat(payment.amount.value) / (1 + taxRate / 100)).toFixed(2)
+        );
+      }
+
       // Create the payment in the database
       const insertResult = await this.prisma.payment.create({
         data: {
@@ -96,6 +110,8 @@ class Mollie {
           status: payment.status,
           orderTypeId: orderType!.id,
           locale: params.locale,
+          taxRate,
+          totalPriceWithoutTax,
           numberOfTracks: params.tracks.length,
           ...params.extraOrderData,
         },
@@ -181,6 +197,7 @@ class Mollie {
           },
           data: {
             status: payment.status,
+            paymentMethod: payment.method,
           },
         });
       } catch (e) {
@@ -263,12 +280,17 @@ class Mollie {
         status: true,
         filename: true,
         createdAt: true,
+        taxRate: true,
         updatedAt: true,
         orderType: true,
         orderId: true,
         totalPrice: true,
+        paymentMethod: true,
         printApiOrderId: true,
         locale: true,
+        totalPriceWithoutTax: true,
+        price: true,
+        shipping: true,
         fullname: true,
         email: true,
         address: true,

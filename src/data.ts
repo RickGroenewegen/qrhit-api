@@ -13,6 +13,35 @@ class Data {
   private musicBrainz = new MusicBrainz();
   private progress = Progress.getInstance();
   private cache = Cache.getInstance();
+  private euCountryCodes: string[] = [
+    'AT', // Austria
+    'BE', // Belgium
+    'BG', // Bulgaria
+    'HR', // Croatia
+    'CY', // Cyprus
+    'CZ', // Czech Republic
+    'DK', // Denmark
+    'EE', // Estonia
+    'FI', // Finland
+    'FR', // France
+    'DE', // Germany
+    'GR', // Greece
+    'HU', // Hungary
+    'IE', // Ireland
+    'IT', // Italy
+    'LV', // Latvia
+    'LT', // Lithuania
+    'LU', // Luxembourg
+    'MT', // Malta
+    'NL', // Netherlands
+    'PL', // Poland
+    'PT', // Portugal
+    'RO', // Romania
+    'SK', // Slovakia
+    'SI', // Slovenia
+    'ES', // Spain
+    'SE', // Sweden
+  ];
 
   public async storeUser(userParams: any): Promise<number> {
     let userDatabaseId: number = 0;
@@ -41,6 +70,55 @@ class Data {
       userDatabaseId = user.id;
     }
     return userDatabaseId;
+  }
+
+  public async getTaxRate(
+    date: Date,
+    countryCode: string
+  ): Promise<number | null> {
+    if (!this.euCountryCodes.includes(countryCode)) {
+      return 0;
+    }
+
+    const taxRates = await this.prisma.taxRate.findMany({
+      where: {
+        OR: [
+          {
+            startDate: {
+              lte: date,
+            },
+            endDate: {
+              gte: date,
+            },
+          },
+          {
+            startDate: {
+              lte: date,
+            },
+            endDate: null,
+          },
+          {
+            startDate: null,
+            endDate: {
+              gte: date,
+            },
+          },
+          {
+            startDate: null,
+            endDate: null,
+          },
+        ],
+      },
+      orderBy: {
+        startDate: 'desc',
+      },
+    });
+
+    if (taxRates.length === 0) {
+      return null;
+    }
+
+    return taxRates[0].rate;
   }
 
   public async getFeaturedPlaylists() {

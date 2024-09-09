@@ -17,5 +17,20 @@
   "mail.trackingMailSubject": "Ihre QRSong! Bestellung {{ orderId }} wurde versandt!",
   "mail.orderShipped": "Großartige Neuigkeiten! Ihre QRSong Bestellung wurde versandt.",
   "mail.trackOrder": "Verfolge deine Bestellung",
-  "mail.thankYou": "Wir hoffen, dass du viel musikalischen Spaß hast! Wenn du weitere Fragen hast, zögere nicht, uns zu mailen: info@qrsong.io"
+  "mail.thankYou": "Wir hoffen, dass du viel musikalischen Spaß hast! Wenn du weitere Fragen hast, zögere nicht, uns zu mailen: info@qrsong.io",
+  "invoice.invoiceNumber": "Rechnungsnummer",
+  "invoice.invoiceDate": "Rechnungsdatum",
+  "invoice.paidInFull": "Vollständig bezahlt",
+  "invoice.method": "Zahlungsmethode",
+  "invoice.product": "Produkt",
+  "invoice.shippingAndHandling": "Versand und Handhabung",
+  "invoice.total": "Gesamt",
+  "invoice.ideal": "iDEAL",
+  "invoice.creditcard": "Kreditkarte",
+  "invoice.paypal": "Paypal",
+  "invoice.bankTransfer": "Überweisung",
+  "invoice.invoice": "Rechnung",
+  "invoice.taxRate1": "Inkl.",
+  "invoice.taxRate2": "MwSt",
+  "invoice.applePay": "Apple Pay"
 }

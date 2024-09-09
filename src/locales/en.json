@@ -17,6 +17,22 @@
 	"mail.trackingMailSubject": "Your QRSong! order {{ orderId }} has been shipped!",
     "mail.orderShipped": "Great news! Your QRSong order has been shipped.",
     "mail.trackOrder": "Track Your Order",
-    "mail.thankYou": "We hope you have lots of musical fun! If you have any further questions do not hesitate to mail us: info@qrsong.io"
+    "mail.thankYou": "We hope you have lots of musical fun! If you have any further questions do not hesitate to mail us: info@qrsong.io",
+
+	"invoice.invoiceNumber": "Invoice number",
+	"invoice.invoiceDate": "Invoice date",
+	"invoice.paidInFull": "Paid in full",
+	"invoice.method": "Payment method",
+	"invoice.product": "Product",
+	"invoice.shippingAndHandling": "Shipping and handling",
+	"invoice.total": "Total",
+	"invoice.ideal": "iDEAL",
+	"invoice.creditcard": "Creditcard",
+	"invoice.paypal": "Paypal",
+	"invoice.applePay": "Apple Pay",
+	"invoice.bankTransfer": "Bank transfer",
+	"invoice.invoice": "Invoice",
+	"invoice.taxRate1": "Incl.",
+	"invoice.taxRate2": "VAT"
 }
 

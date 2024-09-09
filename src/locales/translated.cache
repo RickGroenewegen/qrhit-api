@@ -93,5 +93,80 @@
     "nl",
     "de",
     "fr"
+  ],
+  "invoice.invoiceNumber": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.invoiceDate": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.paidInFull": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.method": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.product": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.shippingAndHandling": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.total": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.ideal": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.creditcard": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.paypal": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.bankTransfer": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.invoice": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.taxRate1": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.taxRate2": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "invoice.applePay": [
+    "nl",
+    "de",
+    "fr"
   ]
 }

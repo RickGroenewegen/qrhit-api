@@ -58,13 +58,16 @@ model Payment {
   countrycode             String?
   shipping                Float?
   price                   Float?
-  taxRate                 Float?
+  taxRatePrinter          Float?
   marketingEmails         Boolean   @default(false)
   differentInvoiceAddress Boolean   @default(false)
   invoiceAddress          String?
   invoiceCity             String?
   invoiceZipcode          String?
   invoiceCountrycode      String?
+  paymentMethod           String?
+  taxRate                 Float?
+  totalPriceWithoutTax    Float?
   locale                  String    @default("en")
   numberOfTracks          Int       @default(0)
   orderType               OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
@@ -89,6 +92,17 @@ model User {
 
   @@index([hash])
   @@map("users")
+}
+
+model taxRate {
+  id        Int       @id @default(autoincrement())
+  rate      Float
+  startDate DateTime?
+  endDate   DateTime?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@map("taxrates")
 }
 
 model Playlist {
