@@ -63,6 +63,7 @@ class Order {
     let price = 0;
     let total = 0;
     let minimumAmount = 25;
+    let maximumAmount = 500;
 
     let cacheToken = `${this.pricingCacheToken}_${params.orderType}_${params.amount}_${params.countrycode}`;
 
@@ -83,6 +84,10 @@ class Order {
 
     if (numberOfTracks < minimumAmount) {
       numberOfTracks = minimumAmount;
+    }
+
+    if (numberOfTracks > maximumAmount) {
+      numberOfTracks = maximumAmount;
     }
 
     if (isNaN(numberOfTracks)) {
@@ -174,6 +179,8 @@ class Order {
 
   public async createOrder(payment: any, filename: string): Promise<void> {
     const authToken = await this.getAuthToken();
+
+    console.log(111, payment.orderType.printApiProductId);
 
     const responseOrder = await axios({
       method: 'post',

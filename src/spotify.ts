@@ -200,9 +200,16 @@ class Spotify {
     }
   }
 
-  public async getTracks(headers: any, playlistId: string): Promise<ApiResult> {
+  public async getTracks(
+    headers: any,
+    playlistId: string,
+    cache: boolean = true
+  ): Promise<ApiResult> {
     try {
-      const cacheKey = `tracks_${playlistId}`;
+      let cacheKey = `tracks_${playlistId}`;
+      if (!cache) {
+        this.cache.del(cacheKey);
+      }
       const cacheResult = await this.cache.get(cacheKey);
       let allTracks: Track[] = [];
       let offset = 0;
@@ -234,7 +241,7 @@ class Spotify {
             isrc: item.track.external_ids.isrc,
             image:
               item.track.album.images.length > 0
-                ? item.track.album.images[0].url
+                ? item.track.album.images[1].url
                 : null,
 
             releaseDate: format(
@@ -252,7 +259,7 @@ class Spotify {
 
           // Check if there are more tracks to fetch
           if (response.data.items.length < limit) {
-            this.cache.set(cacheKey, JSON.stringify(allTracks), 3600);
+            this.cache.set(cacheKey, JSON.stringify(allTracks));
             break;
           }
 

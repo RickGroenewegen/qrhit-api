@@ -22,7 +22,6 @@ class Qr {
   private logger = new Logger();
   private utils = new Utils();
   private progress = Progress.getInstance();
-  private prisma = new PrismaClient();
   private mail = new Mail();
   private pushover = new PushoverClient();
   private order = Order.getInstance();
@@ -106,6 +105,11 @@ class Qr {
       );
 
       const tracks = response.data;
+
+      // If there are more than 500 remove the last tracks
+      if (tracks.length > 500) {
+        tracks.splice(500);
+      }
 
       this.progress.setProgress(params.paymentId, 0, 'progress.storingTracks');
 

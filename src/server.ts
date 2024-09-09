@@ -174,11 +174,16 @@ class Server {
 
   public async addRoutes() {
     this.fastify.get(
-      '/spotify/playlists/:playlistId/tracks',
+      '/spotify/playlists/:playlistId/tracks/:cache',
       async (request: any, _reply) => {
+        let cache = true;
+        if (request.params.cache == '0') {
+          cache = false;
+        }
         return await this.spotify.getTracks(
           request.headers,
-          request.params.playlistId
+          request.params.playlistId,
+          cache
         );
       }
     );
@@ -339,10 +344,27 @@ class Server {
     this.fastify.get(
       '/ordertype/:numberOfTracks',
       async (request: any, _reply) => {
-        const orderType = await this.order.getOrderType(
-          parseInt(request.params.numberOfTracks)
-        );
-        return { success: true, data: orderType };
+        let orderType = null;
+        if (request.params.numberOfTracks > 500) {
+          orderType = await this.order.getOrderType(500);
+        } else {
+          orderType = await this.order.getOrderType(
+            parseInt(request.params.numberOfTracks)
+          );
+        }
+        if (orderType) {
+          return {
+            success: true,
+            data: {
+              id: orderType.id,
+              amount: orderType.amountWithMargin,
+              description: orderType.description,
+              maxCards: orderType.maxCards,
+            },
+          };
+        } else {
+          return { success: false, error: 'Order type not found' };
+        }
       }
     );
 

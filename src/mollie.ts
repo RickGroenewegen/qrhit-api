@@ -39,6 +39,11 @@ class Mollie {
     try {
       let amount = params.extraOrderData.amount || 1;
 
+      if (params.tracks.length > 500) {
+        // Limit the amount of tracks to 500
+        params.tracks = params.tracks.slice(0, 500);
+      }
+
       const orderType = await this.order.getOrderType(params.tracks.length);
 
       // Get the order type

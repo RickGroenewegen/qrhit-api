@@ -56,47 +56,52 @@ class Cache {
     value: string,
     expireInSeconds?: number
   ): Promise<void> {
+    let cacheKey = `${this.version}:${key}`;
     if (expireInSeconds) {
-      await this.executeCommand('set', key, value, 'EX', expireInSeconds);
+      await this.executeCommand('set', cacheKey, value, 'EX', expireInSeconds);
     } else {
-      await this.executeCommand('set', key, value);
+      await this.executeCommand('set', cacheKey, value);
     }
   }
 
   async get(key: string): Promise<string | null> {
     let cacheKey = `${this.version}:${key}`;
-
     if (process.env['ENVIRONMENT'] === 'DEVELOPMENT') {
-      cacheKey = `dev:${key}`;
+      //cacheKey = `dev_${new Date().getTime()}:${cacheKey}`;
     }
-
     return await this.executeCommand('get', cacheKey);
   }
 
   async del(key: string): Promise<void> {
-    await this.executeCommand('del', key);
+    let cacheKey = `${this.version}:${key}`;
+    await this.executeCommand('del', cacheKey);
   }
 
   async setArray(key: string, values: string[]): Promise<void> {
-    await this.executeCommand('del', key); // Ensure the key is empty before setting new values
-    await this.executeCommand('sadd', key, ...values);
+    let cacheKey = `${this.version}:${key}`;
+    await this.executeCommand('del', cacheKey); // Ensure the key is empty before setting new values
+    await this.executeCommand('sadd', cacheKey, ...values);
   }
 
   async getArray(key: string): Promise<string[]> {
-    return await this.executeCommand('smembers', key);
+    let cacheKey = `${this.version}:${key}`;
+    return await this.executeCommand('smembers', cacheKey);
   }
 
   async valueExistsInArray(key: string, value: string): Promise<boolean> {
-    const exists = await this.executeCommand('sismember', key, value);
+    let cacheKey = `${this.version}:${key}`;
+    const exists = await this.executeCommand('sismember', cacheKey, value);
     return exists === 1;
   }
 
   async addValueToArray(key: string, value: string): Promise<void> {
-    await this.executeCommand('sadd', key, value);
+    let cacheKey = `${this.version}:${key}`;
+    await this.executeCommand('sadd', cacheKey, value);
   }
 
   async addValuesToArray(key: string, values: string[]): Promise<void> {
-    await this.executeCommand('sadd', key, ...values);
+    let cacheKey = `${this.version}:${key}`;
+    await this.executeCommand('sadd', cacheKey, ...values);
   }
 
   async close(): Promise<void> {
