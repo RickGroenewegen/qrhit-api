@@ -67,7 +67,7 @@ class Cache {
   async get(key: string): Promise<string | null> {
     let cacheKey = `${this.version}:${key}`;
     if (process.env['ENVIRONMENT'] === 'DEVELOPMENT') {
-      //cacheKey = `dev_${new Date().getTime()}:${cacheKey}`;
+      cacheKey = `dev_${new Date().getTime()}:${cacheKey}`;
     }
     return await this.executeCommand('get', cacheKey);
   }

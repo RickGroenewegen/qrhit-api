@@ -47,16 +47,28 @@ class Order {
   }
 
   public async getOrderType(numberOfTracks: number) {
-    return await this.prisma.orderType.findFirst({
-      where: {
-        maxCards: {
-          gte: numberOfTracks,
+    let orderType = null;
+    if (numberOfTracks > 500) {
+      numberOfTracks = 500;
+    }
+    let cacheKey = `orderType_${numberOfTracks}`;
+    const cachedOrderType = await this.cache.get(cacheKey);
+    if (cachedOrderType) {
+      orderType = JSON.parse(cachedOrderType);
+    } else {
+      orderType = await this.prisma.orderType.findFirst({
+        where: {
+          maxCards: {
+            gte: numberOfTracks,
+          },
         },
-      },
-      orderBy: {
-        maxCards: 'asc',
-      },
-    });
+        orderBy: {
+          maxCards: 'asc',
+        },
+      });
+      this.cache.set(cacheKey, JSON.stringify(orderType));
+    }
+    return orderType;
   }
 
   public async calculateOrder(params: any): Promise<ApiResult> {

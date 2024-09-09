@@ -344,14 +344,9 @@ class Server {
     this.fastify.get(
       '/ordertype/:numberOfTracks',
       async (request: any, _reply) => {
-        let orderType = null;
-        if (request.params.numberOfTracks > 500) {
-          orderType = await this.order.getOrderType(500);
-        } else {
-          orderType = await this.order.getOrderType(
-            parseInt(request.params.numberOfTracks)
-          );
-        }
+        const orderType = await this.order.getOrderType(
+          parseInt(request.params.numberOfTracks)
+        );
         if (orderType) {
           return {
             success: true,
