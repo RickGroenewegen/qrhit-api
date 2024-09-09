@@ -291,7 +291,7 @@ class Order {
           },
         });
 
-        if (response.data.status === 'Shipped' || true) {
+        if (response.data.status === 'Shipped') {
           if (response.data.trackingUrl?.length > 0) {
             trackingLink = response.data.trackingUrl;
           }
