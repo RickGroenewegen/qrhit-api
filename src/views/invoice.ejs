@@ -152,8 +152,9 @@
 
 								<td>
 									<%= payment.fullname %><br />
-									<%= payment.address %><br/>
-                                    <%= payment.zipcode %> <%= payment.city %><br/>
+									<%= payment.invoiceAddress || payment.address %><br/>
+                                    <%= payment.invoiceZipcode || payment.zipcode %> <%= payment.invoiceCity || payment.city %> <%= payment.invoiceCountrycode || payment.countrycode %><br/>
+									
 								</td>
 							</tr>
 						</table>
