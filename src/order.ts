@@ -6,8 +6,11 @@ import { ApiResult } from './interfaces/ApiResult';
 import cluster from 'cluster';
 import Utils from './utils';
 import { CronJob } from 'cron';
-import { color } from 'console-log-colors';
+import { color, blue, white } from 'console-log-colors';
 import Mail from './mail';
+import puppeteer from 'puppeteer';
+import path from 'path';
+import fs from 'fs';
 
 class Order {
   private static instance: Order;
@@ -267,12 +270,14 @@ class Order {
           },
         });
 
-        if (response.data.status === 'Shipped') {
+        if (response.data.status === 'Shipped' || true) {
           if (response.data.trackingUrl?.length > 0) {
             trackingLink = response.data.trackingUrl;
           }
 
-          this.mail.sendTrackingEmail(payment, trackingLink);
+          const pdfPath = await this.createInvoice(response.data, payment);
+
+          this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
 
           // Update the payment with the printApiShipped flag
           await this.prisma.payment.update({
@@ -295,6 +300,25 @@ class Order {
         );
       }
     }
+  }
+
+  private async createInvoice(order: any, payment: any): Promise<string> {
+    const browser = await puppeteer.launch({ headless: true });
+    const page = await browser.newPage();
+    const invoiceUrl = `${process.env['API_URI']}/invoice/${payment.paymentId}`;
+    await page.goto(invoiceUrl, { waitUntil: 'networkidle0' });
+
+    const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${payment.paymentId}.pdf`;
+
+    // Only write if pdf does not exist
+    if (!fs.existsSync(pdfPath)) {
+      await page.pdf({ path: pdfPath, format: 'A4' });
+    }
+    await browser.close();
+
+    this.logger.log(blue.bold(`Invoice created at: ${white.bold(pdfPath)}`));
+
+    return pdfPath;
   }
 }
 

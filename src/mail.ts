@@ -176,7 +176,8 @@ class Mail {
 
   async sendTrackingEmail(
     payment: Payment,
-    trackingLink: string
+    trackingLink: string,
+    invoicePath: string
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -226,6 +227,19 @@ class Mail {
         },
       ];
 
+      if (invoicePath.length > 0) {
+        console.log(111, invoicePath);
+
+        // Read the PDF file and convert it to Base64
+        const fileBuffer = await fs.readFile(invoicePath);
+        const fileBase64 = fileBuffer.toString('base64');
+
+        attachments.push({
+          contentType: 'application/pdf',
+          filename: 'invoice.pdf',
+          data: fileBase64,
+        });
+      }
       const rawEmail = await this.renderRaw({
         from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
         to: payment.email,

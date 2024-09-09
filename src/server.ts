@@ -75,8 +75,10 @@ class Server {
 
   private async createDirs() {
     const publicDir = process.env['PUBLIC_DIR']!;
+    const privateDir = process.env['PRIVATE_DIR']!;
     await this.utils.createDir(`${publicDir}/qr`);
     await this.utils.createDir(`${publicDir}/pdf`);
+    await this.utils.createDir(`${privateDir}/invoice`);
   }
 
   public getWorkerId() {
