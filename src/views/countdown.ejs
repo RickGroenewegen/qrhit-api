@@ -139,6 +139,22 @@
             display: none;
             text-align: center;
         }
+
+        #close-scanner {
+            display: none;
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 10px 20px;
+            background-color: #ffffff;
+            color: #0077be;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1.2rem;
+            font-weight: bold;
+            z-index: 1002;
+        }
     </style>
 </head>
 <body>
@@ -153,7 +169,7 @@
         </div>
         <div id="qr-icon" class="qr-icon" onclick="toggleQRScanner()">
             <i class="fas fa-camera" style="font-size: 100px;margin-bottom:25px;"></i>
-            <div>Tap the button to scan</div>
+            <div>Tap the camera icon to scan</div>
         </div>
     </div>
     <div class="footer">&copy; QRSong! <%= new Date().getFullYear() %>. All rights reserved.</div>
@@ -183,8 +199,9 @@
 
     <video id="qr-video"></video>
     <canvas id="qr-canvas"></canvas>
+    <button id="close-scanner" onclick="stopScanning()">Close Scanner</button>
 
-   <script>
+    <script>
         function isPWAInstalled() {
             return window.matchMedia('(display-mode: standalone)').matches ||
                 window.navigator.standalone ||
@@ -278,6 +295,7 @@
                     video.setAttribute("playsinline", true);
                     video.play();
                     video.style.display = "block";
+                    document.getElementById("close-scanner").style.display = "block";
                     requestAnimationFrame(tick);
 
                     function tick() {
@@ -329,10 +347,10 @@
                 videoStream.getTracks().forEach(track => track.stop());
             }
             document.getElementById("qr-video").style.display = "none";
+            document.getElementById("close-scanner").style.display = "none";
             document.getElementById('qr-icon').style.display = 'block';
             const countdownContainer = document.getElementById('countdown-container');
             countdownContainer.style.display = 'none';
-            
         }
 
         document.addEventListener('DOMContentLoaded', function() {
