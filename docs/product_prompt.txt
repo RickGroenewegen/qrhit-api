@@ -9,5 +9,16 @@ Users can share their own playlist, or they can select a pre-selected (by us) pl
 We can handle playlists up to 500 cards
 We ship worldwide
 We accept iDeal, Apple Pay and all Major creditcards
-Pricing is around 1.44 euro per 12 cards
 
+
+Product name	Price
+1 - 25 Music QR cards	€9.99
+26 - 50 Music QR cards	€12.99
+51 - 75 Music QR cards	€14.99
+76 - 100 Music QR cards	€19.99
+101 - 200 Music QR cards	€29.99
+201 - 300 Music QR cards	€34.99
+301 - 400 Music QR cards	€42.99
+401 - 500 Music QR cards	€49.99
+
+ Selecting 300, 325 or 350 tracks does not change the price. The price will remain the same for the entire 301-400 range. So make sure to add as many tracks as you can for that range!

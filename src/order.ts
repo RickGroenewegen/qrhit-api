@@ -49,6 +49,29 @@ class Order {
     }).start();
   }
 
+  public async getOrderTypes() {
+    let orderTypes = null;
+    let cacheKey = `orderTypes`;
+    const cachedOrderType = await this.cache.get(cacheKey);
+    if (cachedOrderType) {
+      orderTypes = JSON.parse(cachedOrderType);
+    } else {
+      orderTypes = await this.prisma.orderType.findMany({
+        select: {
+          id: true,
+          name: true,
+          maxCards: true,
+          amountWithMargin: true,
+        },
+        orderBy: {
+          maxCards: 'asc',
+        },
+      });
+      this.cache.set(cacheKey, JSON.stringify(orderTypes));
+    }
+    return orderTypes;
+  }
+
   public async getOrderType(numberOfTracks: number) {
     let orderType = null;
     if (numberOfTracks > 500) {

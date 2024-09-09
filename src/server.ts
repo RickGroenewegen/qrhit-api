@@ -391,6 +391,15 @@ class Server {
       }
     );
 
+    this.fastify.get('/ordertypes', async (request: any, _reply) => {
+      const orderTypes = await this.order.getOrderTypes();
+      if (orderTypes && orderTypes.length > 0) {
+        return orderTypes;
+      } else {
+        return { success: false, error: 'Order type not found' };
+      }
+    });
+
     this.fastify.post('/order/calculate', async (request: any, _reply) => {
       return await this.order.calculateOrder(request.body);
     });
