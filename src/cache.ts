@@ -39,7 +39,6 @@ class Cache {
     this.version = JSON.parse(
       (await fs.readFile('package.json')).toString()
     ).version;
-    console.log(111, this.version);
   }
 
   private async executeCommand(command: string, ...args: any[]): Promise<any> {
@@ -70,8 +69,6 @@ class Cache {
     if (process.env['ENVIRONMENT'] === 'development') {
       cacheKey = `dev_${new Date().getTime()}:${cacheKey}`;
     }
-
-    console.log(222, cacheKey);
     return await this.executeCommand('get', cacheKey);
   }
 
