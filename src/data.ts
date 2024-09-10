@@ -164,6 +164,12 @@ class Data {
 
     if (!playlist) {
       // create the playlist
+
+      let name = playlistParams.name;
+
+      // Remove [QRSong] from the name
+      name = name.replace('[QRSong]', '').trim();
+
       const playlistCreate = await this.prisma.playlist.create({
         data: {
           playlistId: playlistParams.id,

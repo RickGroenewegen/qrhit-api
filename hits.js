@@ -245,6 +245,7 @@ async function getTracksFromPlaylist(accessToken, playlistId) {
 
       tracks = tracks.concat(
         response.data.items.map((item) => ({
+          id: item.track.id,
           artist: item.track.artists[0].name,
           title: item.track.name,
         }))
@@ -282,25 +283,23 @@ async function getSongs() {
 
     log(blue.bold('Existing tracks: ') + white.bold(existingTracks.length));
 
-    const existingTrackTitles = existingTracks.map(
-      (track) => `${track.artist} - ${track.title}`
-    );
+    const existingTrackIds = existingTracks.map((track) => track.id);
 
     let prompt =
-      `Come up with ${amount} songs for a QR Music card game. Make it diverse and span across as many years as possible. The theme for the songs is: ` +
+      `Come up with ${amount} songs for a QR Music card game. Do not send duplicate titles. Make it diverse and span across as many decades as possible with as many different artist as possible. The theme for the songs is: ` +
       playlistDescription;
 
-    if (existingTrackTitles.length > 0) {
-      prompt += `. Do not include the following songs: ${existingTrackTitles.join(
-        ', '
-      )}`;
+    if (existingTracks.length > 0) {
+      prompt += `. Do not include the following songs: ${existingTracks
+        .map((track) => `${track.artist} - ${track.title}`)
+        .join(', ')}`;
     }
 
     log(blue.bold('Prompt: ' + white.bold(prompt)));
 
     const result = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
-      temperature: 0,
+      temperature: 0.8,
       messages: [
         {
           role: 'system',
@@ -367,6 +366,7 @@ async function getSongs() {
           }
 
           const trackUris = [];
+
           for (const track of tracks) {
             const trackUri = await searchSpotifyTrack(
               accessToken,
@@ -376,7 +376,7 @@ async function getSongs() {
 
             if (
               trackUri &&
-              !existingTrackTitles.includes(track.artist + ' - ' + track.title)
+              !existingTrackIds.includes(trackUri.split(':').pop())
             ) {
               trackUris.push(trackUri);
               log(
