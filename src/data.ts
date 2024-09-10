@@ -6,6 +6,7 @@ import Progress from './progress';
 import crypto from 'crypto';
 import { ApiResult } from './interfaces/ApiResult';
 import Cache from './cache';
+import Translation from './translation';
 
 class Data {
   private prisma = new PrismaClient();
@@ -13,6 +14,8 @@ class Data {
   private musicBrainz = new MusicBrainz();
   private progress = Progress.getInstance();
   private cache = Cache.getInstance();
+  private translate = new Translation();
+
   private euCountryCodes: string[] = [
     'AT', // Austria
     'BE', // Belgium
@@ -126,6 +129,10 @@ class Data {
     const cacheKey = 'featuredPlaylists_' + locale;
     const cachedPlaylists = await this.cache.get(cacheKey);
 
+    if (!this.translate.isValidLocale(locale)) {
+      return [];
+    }
+
     if (!cachedPlaylists) {
       // Base query
       let query = `
@@ -144,7 +151,7 @@ class Data {
 
       // Add locale condition
       if (locale) {
-        query += ` AND (playlists.featuredLocale = ${locale} OR playlists.featuredLocale IS NULL)`;
+        query += ` AND (playlists.featuredLocale = '${locale}' OR playlists.featuredLocale IS NULL)`;
       } else {
         query += ` AND playlists.featuredLocale IS NULL`;
       }
@@ -154,7 +161,7 @@ class Data {
         query += `
         ORDER BY 
           CASE 
-            WHEN playlists.featuredLocale = ${locale} THEN 0 
+            WHEN playlists.featuredLocale = '${locale}' THEN 0 
             ELSE 1 
           END
       `;

@@ -4,10 +4,10 @@ import path from 'path';
 
 class Translation {
   private i18n: I18n;
-
+  private allLocales: string[] = ['en', 'nl', 'de', 'fr'];
   constructor() {
     this.i18n = new I18n({
-      locales: ['en', 'nl'],
+      locales: this.allLocales,
       directory: `${process.env['APP_ROOT']}/locales`,
     });
   }
@@ -22,6 +22,10 @@ class Translation {
       { phrase: key, locale: locale || this.i18n.getLocale() },
       options || {}
     );
+  }
+
+  public isValidLocale(locale: string): boolean {
+    return this.allLocales.includes(locale);
   }
 
   // Method to get all translations for a specific locale that start with a given prefix
