@@ -2,3 +2,4 @@ build
 public/pdf
 public/qr
 private
+spotify_tokens.json
