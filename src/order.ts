@@ -103,7 +103,11 @@ class Order {
     let minimumAmount = 25;
     let maximumAmount = 500;
 
-    let cacheToken = `${this.pricingCacheToken}_${params.orderType}_${params.amount}_${params.countrycode}`;
+    if (!params.countrycode) {
+      params.countrycode = 'NL';
+    }
+
+    let cacheToken = `${this.pricingCacheToken}_${params.amount}_${params.countrycode}`;
 
     const cachedPrice = await this.cache.get(cacheToken);
 
