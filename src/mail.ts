@@ -42,7 +42,7 @@ class Mail {
     });
   }
 
-  async sendContactForm(data: any) {
+  async sendContactForm(data: any, ip: string): Promise<void> {
     const subject = data.subject;
 
     const message = `
@@ -72,11 +72,14 @@ class Mail {
 
     if (this.ses) {
       const result = await this.ses.send(command);
-      this.pushover.sendMessage({
-        title: `QRSong! Contactformulier`,
-        message: `Nieuw bericht: ${data.subject} van ${data.email}`,
-        sound: 'incoming',
-      });
+      this.pushover.sendMessage(
+        {
+          title: `QRSong! Contactformulier`,
+          message: `Nieuw bericht: ${data.subject} van ${data.email}`,
+          sound: 'incoming',
+        },
+        ip
+      );
     }
   }
 

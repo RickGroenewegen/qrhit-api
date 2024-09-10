@@ -31,7 +31,7 @@ class Qr {
     this.progress.startProgress(paymentId);
   }
 
-  public async generate(params: any): Promise<void> {
+  public async generate(params: any, ip: string): Promise<void> {
     let filename = '';
 
     this.progress.setProgress(params.paymentId, 0, 'Started ...');
@@ -83,17 +83,20 @@ class Qr {
     }
 
     // Pushover
-    this.pushover.sendMessage({
-      title: `KA-CHING! € ${payment.orderType.amount
-        .toString()
-        .replace('.', ',')} verdiend!`,
-      message: `${payment.fullname} (${payment.countrycode}) heeft ${
-        payment.numberOfTracks
-      } kaarten besteld voor € ${payment.totalPrice
-        .toString()
-        .replace('.', ',')}. Playlist: ${playlist.name}`,
-      sound: 'incoming',
-    });
+    this.pushover.sendMessage(
+      {
+        title: `KA-CHING! € ${payment.orderType.amount
+          .toString()
+          .replace('.', ',')} verdiend!`,
+        message: `${payment.fullname} (${payment.countrycode}) heeft ${
+          payment.numberOfTracks
+        } kaarten besteld voor € ${payment.totalPrice
+          .toString()
+          .replace('.', ',')}. Playlist: ${playlist.name}`,
+        sound: 'incoming',
+      },
+      ip
+    );
 
     this.progress.setProgress(params.paymentId, 0, 'progress.gettingTracks');
 

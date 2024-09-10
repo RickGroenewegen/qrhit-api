@@ -227,7 +227,7 @@ class Server {
     });
 
     this.fastify.post('/qr/generate', async (request: any, _reply) => {
-      return await this.qr.generate(request.body);
+      return await this.qr.generate(request.body, request.clientIp);
     });
 
     this.fastify.get(
@@ -249,7 +249,7 @@ class Server {
     });
 
     this.fastify.post('/contact', async (request: any, _reply) => {
-      return await this.mail.sendContactForm(request.body);
+      return await this.mail.sendContactForm(request.body, request.clientIp);
     });
 
     this.fastify.get('/ip', async (request, reply) => {
