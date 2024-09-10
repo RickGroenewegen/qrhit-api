@@ -200,6 +200,17 @@ class Spotify {
     }
   }
 
+  private cleanTrackName(name: string): string {
+    let str = name;
+
+    // Some titles are like "Track Name - Remastered". We want to remove the "- Remastered" part. If there is a " - " in the title, we remove everything after it.
+    if (str.includes(' - ')) {
+      str = str.split(' - ')[0];
+    }
+
+    return str;
+  }
+
   public async getTracks(
     headers: any,
     playlistId: string,
@@ -235,7 +246,7 @@ class Spotify {
 
           const tracks: Track[] = response.data.items.map((item: any) => ({
             id: item.track.id,
-            name: item.track.name,
+            name: this.cleanTrackName(item.track.name),
             artist: item.track.artists[0].name,
             link: item.track.external_urls.spotify,
             isrc: item.track.external_ids.isrc,
