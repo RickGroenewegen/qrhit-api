@@ -123,7 +123,7 @@ class Data {
 
   public async getFeaturedPlaylists() {
     let returnList: any[] = [];
-    const cachedPlaylists = await this.cache.get('featuredPlaylists_5');
+    const cachedPlaylists = await this.cache.get('featuredPlaylists');
 
     if (!cachedPlaylists) {
       // Query the database for the featured playlists
