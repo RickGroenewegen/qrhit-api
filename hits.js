@@ -18,7 +18,7 @@ if (!playlistName || !playlistDescription || !amount) {
   process.exit(1);
 }
 
-playlistName = '[QRSong] ' + playlistName;
+playlistName = playlistName;
 
 const fastify = Fastify({ logger: false });
 
