@@ -9,11 +9,11 @@ const { blue, white, green, magenta } = require('console-log-colors');
 const { format } = require('date-fns');
 
 // Command line arguments
-let [, , playlistName, playlistDescription] = process.argv;
+let [, , amount, playlistName, playlistDescription] = process.argv;
 
-if (!playlistName || !playlistDescription) {
+if (!playlistName || !playlistDescription || !amount) {
   console.error(
-    'Please provide the playlist name and description as command line arguments.'
+    'Please provide the amount, playlist name and description as command line arguments.'
   );
   process.exit(1);
 }
@@ -265,7 +265,7 @@ async function getSongs() {
     const existingTrackTitles = existingTracks.map((track) => `${track.title}`);
 
     let prompt =
-      `Come up with 5 songs for a QR Music card game. Make it diverse and span across as many years as possible. The theme for the songs is: ` +
+      `Come up with ${amount} songs for a QR Music card game. Make it diverse and span across as many years as possible. The theme for the songs is: ` +
       playlistDescription;
 
     if (existingTrackTitles.length > 0) {
@@ -273,6 +273,8 @@ async function getSongs() {
         ', '
       )}`;
     }
+
+    log(blue.bold('Prompt: ' + white.bold(prompt)));
 
     const result = await openai.chat.completions.create({
       model: 'gpt-4o-mini',
