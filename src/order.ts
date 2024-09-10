@@ -107,10 +107,11 @@ class Order {
 
     const cachedPrice = await this.cache.get(cacheToken);
 
-    console.log(111, cacheToken);
+    console.log(111, params);
+    console.log(222, cacheToken);
 
     if (cachedPrice) {
-      console.log(222, JSON.parse(cachedPrice));
+      console.log(333, JSON.parse(cachedPrice));
 
       try {
         const cachedData = JSON.parse(cachedPrice);
