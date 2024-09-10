@@ -77,8 +77,9 @@ class Mollie {
           params.playlist.name +
           ' (' +
           params.tracks.length +
-          ') ' +
-          translations!.cards,
+          ' ' +
+          translations!.cards +
+          ')',
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
       });
