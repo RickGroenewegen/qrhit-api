@@ -168,5 +168,15 @@
     "nl",
     "de",
     "fr"
+  ],
+  "payment.playlist": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "payment.cards": [
+    "nl",
+    "de",
+    "fr"
   ]
 }

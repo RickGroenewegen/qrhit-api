@@ -5,12 +5,14 @@ import { color } from 'console-log-colors';
 import Logger from './logger';
 import Data from './data';
 import Order from './order';
+import Translation from './translation';
 
 class Mollie {
   private prisma = new PrismaClient();
   private logger = new Logger();
   private data = new Data();
   private order = Order.getInstance();
+  private translation: Translation = new Translation();
 
   private mollieClient = createMollieClient({
     apiKey: process.env['MOLLIE_API_KEY']!,
@@ -56,6 +58,11 @@ class Mollie {
 
       const paymentClient = await this.getClient(clientIp);
 
+      const translations = this.translation.getTranslationsByPrefix(
+        params.locale,
+        'payment'
+      );
+
       const payment = await paymentClient.payments.create({
         amount: {
           currency: 'EUR',
@@ -64,7 +71,14 @@ class Mollie {
         metadata: {
           clientIp,
         },
-        description: orderType!.description,
+        description:
+          translations!.playlist +
+          ': ' +
+          params.playlist.name +
+          ' (' +
+          params.tracks.length +
+          ') ' +
+          translations!.cards,
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
       });

@@ -33,6 +33,9 @@
 	"invoice.bankTransfer": "Bank transfer",
 	"invoice.invoice": "Invoice",
 	"invoice.taxRate1": "Incl.",
-	"invoice.taxRate2": "VAT"
+	"invoice.taxRate2": "VAT",
+
+	"payment.playlist" : "Playlist",
+	"payment.cards" : "QR Cards"
 }
 

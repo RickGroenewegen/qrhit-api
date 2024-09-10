@@ -32,5 +32,7 @@
   "invoice.invoice": "Rechnung",
   "invoice.taxRate1": "Inkl.",
   "invoice.taxRate2": "MwSt",
-  "invoice.applePay": "Apple Pay"
+  "invoice.applePay": "Apple Pay",
+  "payment.playlist": "Wiedergabeliste",
+  "payment.cards": "QR-Karten"
 }

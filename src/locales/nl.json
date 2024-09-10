@@ -32,5 +32,7 @@
   "invoice.invoice": "Factuur",
   "invoice.taxRate1": "Incl.",
   "invoice.taxRate2": "BTW",
-  "invoice.applePay": "Apple Pay"
+  "invoice.applePay": "Apple Pay",
+  "payment.playlist": "Afspeellijst",
+  "payment.cards": "QR-kaarten"
 }
