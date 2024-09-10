@@ -136,12 +136,15 @@ class Data {
           playlists.price,
           playlists.numberOfTracks
       FROM 
-          playlists;
+          playlists
+      WHERE 
+          playlists.featured = 1;
       `;
       returnList = returnList.map((playlist) => ({
         ...playlist,
       }));
-      this.cache.set('featuredPlaylists_5', JSON.stringify(returnList));
+
+      this.cache.set('featuredPlaylists', JSON.stringify(returnList));
     } else {
       returnList = JSON.parse(cachedPlaylists);
     }
