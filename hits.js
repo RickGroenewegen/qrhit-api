@@ -5,7 +5,7 @@ const querystring = require('querystring');
 const fs = require('fs');
 const path = require('path');
 const { OpenAI } = require('openai');
-const { blue, white, green, magenta } = require('console-log-colors');
+const { blue, white, green, magenta, red } = require('console-log-colors');
 const { format } = require('date-fns');
 
 // Command line arguments
@@ -172,6 +172,7 @@ async function searchSpotifyTrack(accessToken, artist, title) {
       limit: 1,
     },
   });
+
   return response.data.tracks.items[0]?.uri;
 }
 
@@ -281,7 +282,9 @@ async function getSongs() {
 
     log(blue.bold('Existing tracks: ') + white.bold(existingTracks.length));
 
-    const existingTrackTitles = existingTracks.map((track) => `${track.title}`);
+    const existingTrackTitles = existingTracks.map(
+      (track) => `${track.artist} - ${track.title}`
+    );
 
     let prompt =
       `Come up with ${amount} songs for a QR Music card game. Make it diverse and span across as many years as possible. The theme for the songs is: ` +
@@ -354,17 +357,6 @@ async function getSongs() {
         if (functionCallName == 'parseList') {
           const tracks = await parseList(completionArguments);
 
-          // Loop and log
-          for (const track of tracks) {
-            log(
-              blue.bold(
-                `Added track: ${white.bold(track.artist)} - ${white.bold(
-                  track.title
-                )} - ${white.bold(track.releaseYear)}`
-              )
-            );
-          }
-
           if (!playlistId) {
             playlistId = await createSpotifyPlaylist(
               accessToken,
@@ -381,22 +373,51 @@ async function getSongs() {
               track.artist,
               track.title
             );
-            if (trackUri) {
+
+            if (
+              trackUri &&
+              !existingTrackTitles.includes(track.artist + ' - ' + track.title)
+            ) {
               trackUris.push(trackUri);
+              log(
+                blue.bold(
+                  `Added track: ${white.bold(track.artist)} - ${white.bold(
+                    track.title
+                  )} - ${white.bold(track.releaseYear)}`
+                )
+              );
+            } else {
+              log(
+                red.bold(
+                  `Track not found or already exists: ${white.bold(
+                    track.artist
+                  )} - ${white.bold(track.title)}`
+                )
+              );
             }
           }
 
-          await addTracksToSpotifyPlaylist(accessToken, playlistId, trackUris);
-          log(green.bold('Tracks added successfully!'));
+          if (trackUris.length > 0) {
+            await addTracksToSpotifyPlaylist(
+              accessToken,
+              playlistId,
+              trackUris
+            );
+            log(green.bold('Tracks added successfully!'));
+          } else {
+            log(green.bold('No new tracks to add.'));
+          }
         }
       }
     }
   } catch (error) {
-    console.log(error);
-    console.error(
-      'Error fetching songs:',
-      error.response ? error.response.data : error.message
-    );
+    const errorMessage = error.response
+      ? error.response.data.error.message
+      : error.message;
+    log(red.bold('Error fetching songs: ') + white.bold(errorMessage));
+    if (errorMessage == 'The access token expired') {
+      require('openurl').open('http://localhost:8888/login');
+    }
   }
 }
 
