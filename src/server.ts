@@ -417,7 +417,7 @@ class Server {
         (process.env['TRUSTED_IPS'] &&
           process.env['TRUSTED_IPS'].split(',').includes(request.clientIp))
       ) {
-        this.cache.del('*');
+        this.cache.flush();
         return { success: true };
       } else {
         return { success: false };

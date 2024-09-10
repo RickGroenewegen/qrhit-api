@@ -72,6 +72,10 @@ class Cache {
     return await this.executeCommand('get', cacheKey);
   }
 
+  async flush(): Promise<void> {
+    await this.executeCommand('flushall');
+  }
+
   async del(key: string): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
     await this.executeCommand('del', cacheKey);
