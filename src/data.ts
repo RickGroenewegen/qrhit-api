@@ -179,6 +179,7 @@ class Data {
           name: playlistParams.name,
           image: playlistParams.image,
           price: price,
+          numberOfTracks: playlistParams.numberOfTracks,
         },
       });
       playlistDatabaseId = playlistCreate.id;
