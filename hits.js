@@ -228,21 +228,38 @@ async function getPlaylistByName(accessToken, userId, name) {
   const playlist = playlists.find((playlist) => playlist.name === name);
   return playlist ? playlist.id : null;
 }
-// Function to get tracks from a playlist
-async function getTracksFromPlaylist(accessToken, playlistId) {
-  const response = await axios.get(
-    `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-    {
-      headers: {
-        Authorization: `Bearer ${accessToken}`,
-      },
-    }
-  );
 
-  return response.data.items.map((item) => ({
-    artist: item.track.artists[0].name,
-    title: item.track.name,
-  }));
+// Function to get tracks from a playlist with pagination support
+async function getTracksFromPlaylist(accessToken, playlistId) {
+  let tracks = [];
+  let nextUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks`;
+
+  while (nextUrl) {
+    try {
+      const response = await axios.get(nextUrl, {
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      });
+
+      tracks = tracks.concat(
+        response.data.items.map((item) => ({
+          artist: item.track.artists[0].name,
+          title: item.track.name,
+        }))
+      );
+
+      nextUrl = response.data.next; // URL for the next page of results, or null if there are no more results
+    } catch (error) {
+      console.error(
+        'Error fetching tracks:',
+        error.response ? error.response.data : error.message
+      );
+      break;
+    }
+  }
+
+  return tracks;
 }
 
 // Your existing getSongs function
@@ -261,6 +278,8 @@ async function getSongs() {
     if (playlistId) {
       existingTracks = await getTracksFromPlaylist(accessToken, playlistId);
     }
+
+    log(blue.bold('Existing tracks: ') + white.bold(existingTracks.length));
 
     const existingTrackTitles = existingTracks.map((track) => `${track.title}`);
 
