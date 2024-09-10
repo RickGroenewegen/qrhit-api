@@ -112,6 +112,7 @@ model Playlist {
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
   featured       Boolean            @default(false)
+  featuredLocale String?
   image          String
   price          Float              @default(0)
   numberOfTracks Int                @default(0)

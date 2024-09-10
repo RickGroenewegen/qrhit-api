@@ -366,8 +366,10 @@ class Server {
       return { success: true };
     });
 
-    this.fastify.get('/featured', async (request: any, _reply) => {
-      const playlists = await this.data.getFeaturedPlaylists();
+    this.fastify.get('/featured/:locale', async (request: any, _reply) => {
+      const playlists = await this.data.getFeaturedPlaylists(
+        request.params.locale
+      );
       return { success: true, data: playlists };
     });
 

@@ -121,30 +121,52 @@ class Data {
     return taxRates[0].rate;
   }
 
-  public async getFeaturedPlaylists() {
+  public async getFeaturedPlaylists(locale: string): Promise<any> {
     let returnList: any[] = [];
-    const cachedPlaylists = await this.cache.get('featuredPlaylists');
+    const cacheKey = 'featuredPlaylists_' + locale;
+    const cachedPlaylists = await this.cache.get(cacheKey);
 
     if (!cachedPlaylists) {
-      // Query the database for the featured playlists
-      returnList = await this.prisma.$queryRaw`
-        SELECT 
-          playlists.id,
-          playlists.playlistId,
-          playlists.name,
-          playlists.image,
-          playlists.price,
-          playlists.numberOfTracks
+      // Base query
+      let query = `
+      SELECT 
+        playlists.id,
+        playlists.playlistId,
+        playlists.name,
+        playlists.image,
+        playlists.price,
+        playlists.numberOfTracks
       FROM 
-          playlists
+        playlists
       WHERE 
-          playlists.featured = 1;
+        playlists.featured = 1
+    `;
+
+      // Add locale condition
+      if (locale) {
+        query += ` AND (playlists.featuredLocale = ${locale} OR playlists.featuredLocale IS NULL)`;
+      } else {
+        query += ` AND playlists.featuredLocale IS NULL`;
+      }
+
+      // Add ordering if locale is provided
+      if (locale) {
+        query += `
+        ORDER BY 
+          CASE 
+            WHEN playlists.featuredLocale = ${locale} THEN 0 
+            ELSE 1 
+          END
       `;
+      }
+
+      returnList = await this.prisma.$queryRawUnsafe(query);
+
       returnList = returnList.map((playlist) => ({
         ...playlist,
       }));
 
-      this.cache.set('featuredPlaylists', JSON.stringify(returnList));
+      this.cache.set(cacheKey, JSON.stringify(returnList));
     } else {
       returnList = JSON.parse(cachedPlaylists);
     }
