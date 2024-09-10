@@ -164,43 +164,43 @@
             <img src="/assets/images/logo_white.png" style="max-width:300px;"/>
         </div>
         <div id="countdown-container">
-            <div class="message-top">Your song will start playing in ...</div>
+            <div class="message-top"><%= translations.yourSongWillStart %> ...</div>
             <div id="countdown" class="countdown"><%= process.env['COUNTDOWN'] %></div>
-            <div class="message-bottom">Get ready!</div>
+            <div class="message-bottom"><%= translations.getReady %></div>
         </div>
         <div id="qr-icon" class="qr-icon" onclick="toggleQRScanner()">
             <i class="fas fa-camera" style="font-size: 100px;margin-bottom:25px;"></i>
-            <div>Tap the camera icon to scan</div>
+            <div><%= translations.tapTheCamera %></div>
         </div>
     </div>
-    <div class="footer">&copy; QRSong! <%= new Date().getFullYear() %>. All rights reserved.</div>
+    <div class="footer">&copy; QRSong! <%= new Date().getFullYear() %>. <%= translations.allRightsReserved %>.</div>
 
     <div id="onboarding-overlay">
         <div class="onboarding-content">
             <div class="title">
                 <img src="/assets/images/logo_white.png" style="max-width:300px;"/>
             </div>
-            <p>You need to install this app on your mobile device</p>
+            <p><%= translations.youNeedToInstall %></p>
             <div class="install-instructions">
-                <h3>How to install:</h3>
-                <p>On iOS Safari:</p>
+                <h3><%= translations.howToInstall %>:</h3>
+                <p><%= translations.onIOS %>:</p>
                 <ol>
-                    <li>Tap the share button</li>
-                    <li>Scroll down and tap "Add to Home Screen"</li>
+                    <li><%= translations.tapShare %></li>
+                    <li><%= translations.scrollDown %></li>
                 </ol>
-                <p>On Android Chrome:</p>
+                <p><%= translations.onAndroid %>:</p>
                 <ol>
-                    <li>Tap the menu button ⋮</li>
-                    <li>Tap "Add to Home Screen"</li>
+                    <li><%= translations.tapMenu %> ⋮</li>
+                    <li><%= translations.tapAddToHomeScreen %></li>
                 </ol>
             </div>
-            <button id="close-onboarding">Got it!</button>
+            <button id="close-onboarding"><%= translations.gotIt %></button>
         </div>
     </div>
 
     <video id="qr-video"></video>
     <canvas id="qr-canvas"></canvas>
-    <button id="close-scanner" onclick="stopScanning()">Close Scanner</button>
+    <button id="close-scanner" onclick="stopScanning()"><%= translations.closeScanner %></button>
 
     <script>
         function isPWAInstalled() {
@@ -255,7 +255,7 @@
                     countdownValue = <%= process.env['COUNTDOWN'] %>;
                     stopScanning();
                 } else {
-                    console.log('Countdown finished. Redirect skipped in development environment.');
+                    console.log('<%= translations.cameraError %>');
                 }
             }
         }

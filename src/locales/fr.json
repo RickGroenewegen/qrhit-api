@@ -34,5 +34,20 @@
   "invoice.taxRate2": "TVA",
   "invoice.applePay": "Apple Pay",
   "payment.playlist": "Liste de lecture",
-  "payment.cards": "Cartes QR"
+  "payment.cards": "Cartes QR",
+  "countdown.youNeedToInstall": "Vous devez installer cette application sur votre appareil mobile",
+  "countdown.howToInstall": "Comment installer",
+  "countdown.onIOS": "Sur iOS Safari",
+  "countdown.onAndroid": "Sur Android Chrome",
+  "countdown.tapShare": "Appuyez sur le bouton de partage",
+  "countdown.scrollDown": "Faites défiler vers le bas et appuyez sur 'Ajouter à l'écran d'accueil'",
+  "countdown.tapMenu": "Appuyez sur le bouton menu",
+  "countdown.tapAddToHomeScreen": "Appuyez sur 'Ajouter à l'écran d'accueil'",
+  "countdown.gotIt": "Compris!",
+  "countdown.closeScanner": "Fermer",
+  "countdown.cameraError": "Erreur d'accès à la caméra. Veuillez vous assurer que vous avez accordé les autorisations de la caméra.",
+  "countdown.yourSongWillStart": "Votre chanson commencera à jouer dans",
+  "countdown.getReady": "Prépare-toi!",
+  "countdown.tapTheCamera": "Appuyez sur l'icône de la caméra pour scanner",
+  "countdown.allRightsReserved": "Tous droits réservés"
 }

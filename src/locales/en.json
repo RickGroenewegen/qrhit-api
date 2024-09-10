@@ -36,6 +36,25 @@
 	"invoice.taxRate2": "VAT",
 
 	"payment.playlist" : "Playlist",
-	"payment.cards" : "QR Cards"
+	"payment.cards" : "QR Cards",
+
+	"countdown.youNeedToInstall" : "You need to install this app on your mobile device",
+	"countdown.howToInstall" : "How to install",
+	"countdown.onIOS" : "On iOS Safari",
+	"countdown.onAndroid" : "On Android Chrome",
+	"countdown.tapShare": "Tap the share button",
+	"countdown.scrollDown": "Scroll down and tap \"Add to Home Screen\"",
+	"countdown.tapMenu" : "Tap the menu button",
+	"countdown.tapAddToHomeScreen" : "Tap \"Add to Home Screen\"",
+	"countdown.gotIt" : "Got it!",
+	"countdown.closeScanner" : "Close",
+	"countdown.cameraError" : "Error accessing the camera. Please make sure you've granted camera permissions.",
+	"countdown.yourSongWillStart" : "Your song will start playing in",
+	"countdown.getReady" : "Get ready!",
+	"countdown.tapTheCamera" : "Tap the camera icon to scan",
+	"countdown.allRightsReserved" : "All rights reserved"
+
+
+
 }
 

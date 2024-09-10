@@ -178,5 +178,80 @@
     "nl",
     "de",
     "fr"
+  ],
+  "countdown.youNeedToInstall": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.howToInstall": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.onIOS": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.onAndroid": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.tapShare": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.scrollDown": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.tapMenu": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.tapAddToHomeScreen": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.gotIt": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.closeScanner": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.cameraError": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.yourSongWillStart": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.getReady": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.tapTheCamera": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "countdown.allRightsReserved": [
+    "nl",
+    "de",
+    "fr"
   ]
 }

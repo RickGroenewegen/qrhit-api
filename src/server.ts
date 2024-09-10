@@ -304,7 +304,15 @@ class Server {
     );
 
     this.fastify.get('/qr/:trackId', async (request: any, reply) => {
-      await reply.view(`countdown.ejs`, {});
+      // Get the 'Accept-Language' header from the request
+      const locale = this.utils.parseAcceptLanguage(
+        request.headers['accept-language']
+      );
+      const translations = this.translation.getTranslationsByPrefix(
+        locale,
+        'countdown'
+      );
+      await reply.view(`countdown.ejs`, { translations });
     });
 
     this.fastify.get('/qrlink/:trackId', async (request: any, reply) => {
@@ -346,11 +354,6 @@ class Server {
         reply.status(404).send({ error: 'Payment not found' });
         return;
       }
-
-      const translations = this.translation.getTranslationsByPrefix(
-        payment.locale,
-        'invoice'
-      );
 
       await reply.view(`invoice.ejs`, {
         payment,

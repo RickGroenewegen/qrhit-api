@@ -34,5 +34,20 @@
   "invoice.taxRate2": "MwSt",
   "invoice.applePay": "Apple Pay",
   "payment.playlist": "Wiedergabeliste",
-  "payment.cards": "QR-Karten"
+  "payment.cards": "QR-Karten",
+  "countdown.youNeedToInstall": "Sie müssen diese App auf Ihrem mobilen Gerät installieren",
+  "countdown.howToInstall": "Wie zu installieren",
+  "countdown.onIOS": "Auf iOS Safari",
+  "countdown.onAndroid": "Auf Android Chrome",
+  "countdown.tapShare": "Tippen Sie auf die Teilen-Taste",
+  "countdown.scrollDown": "Scrollen Sie nach unten und tippen Sie auf 'Zum Startbildschirm hinzufügen'",
+  "countdown.tapMenu": "Tippen Sie auf die Menütaste",
+  "countdown.tapAddToHomeScreen": "Tippen Sie auf 'Zum Startbildschirm hinzufügen'",
+  "countdown.gotIt": "Verstanden!",
+  "countdown.closeScanner": "Schließen",
+  "countdown.cameraError": "Fehler beim Zugriff auf die Kamera. Bitte stellen Sie sicher, dass Sie Kameraberechtigungen erteilt haben.",
+  "countdown.yourSongWillStart": "Dein Lied wird in Kürze abgespielt",
+  "countdown.getReady": "Mach dich bereit!",
+  "countdown.tapTheCamera": "Tippen Sie auf das Kamera-Symbol zum Scannen",
+  "countdown.allRightsReserved": "Alle Rechte vorbehalten"
 }

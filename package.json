@@ -24,6 +24,7 @@
     "@fastify/view": "^9.1.0",
     "@mollie/api-client": "^3.7.0",
     "@prisma/client": "^5.19.1",
+    "accept-language-parser": "^1.5.0",
     "axios": "^1.7.7",
     "bottleneck": "^2.19.5",
     "console-log-colors": "^0.5.0",
@@ -54,6 +55,7 @@
     "xml2js": "^0.6.2"
   },
   "devDependencies": {
+    "@types/accept-language-parser": "^1.5.6",
     "@types/ejs": "^3.1.5",
     "@types/i18n": "^0.13.12",
     "@types/knex": "^0.16.1",

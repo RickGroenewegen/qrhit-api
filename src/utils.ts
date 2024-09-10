@@ -2,8 +2,12 @@ import sanitizeHtml from 'sanitize-html';
 import { promises as fs } from 'fs';
 import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2';
 import axios from 'axios';
+import parser from 'accept-language-parser';
+import Translation from './translation';
 
 class Utils {
+  private translation: Translation = new Translation();
+
   public async isMainServer(): Promise<boolean> {
     const isAWS =
       process.env['AWS_EC2_DESCRIBE_KEY_ID'] &&
@@ -12,6 +16,21 @@ class Utils {
       return (await this.getInstanceName()) == 'WS1';
     }
     return false;
+  }
+
+  public parseAcceptLanguage(header: string) {
+    const languages = parser.parse(header);
+    let lang = 'en';
+    // if no languages are found, return 'en'. Otherwise, return the first language
+    if (languages?.length > 0) {
+      lang = languages[0].code;
+    }
+    // Check if the language is supported
+    if (this.translation.isValidLocale(lang)) {
+      return lang;
+    } else {
+      return 'en';
+    }
   }
 
   private async getIMDSToken(): Promise<string> {

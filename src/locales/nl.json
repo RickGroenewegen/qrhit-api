@@ -34,5 +34,20 @@
   "invoice.taxRate2": "BTW",
   "invoice.applePay": "Apple Pay",
   "payment.playlist": "Afspeellijst",
-  "payment.cards": "QR-kaarten"
+  "payment.cards": "QR-kaarten",
+  "countdown.youNeedToInstall": "Je moet deze app op je mobiele apparaat installeren",
+  "countdown.howToInstall": "Hoe te installeren",
+  "countdown.onIOS": "Op iOS Safari",
+  "countdown.onAndroid": "Op Android Chrome",
+  "countdown.tapShare": "Tik op de deelknop",
+  "countdown.scrollDown": "Scroll naar beneden en tik op 'Toevoegen aan beginscherm'",
+  "countdown.tapMenu": "Tik op de menuknop",
+  "countdown.tapAddToHomeScreen": "Tik op 'Toevoegen aan startscherm'",
+  "countdown.gotIt": "Begrepen!",
+  "countdown.closeScanner": "Sluiten",
+  "countdown.cameraError": "Fout bij toegang tot de camera. Zorg ervoor dat je cameratoestemmingen hebt verleend.",
+  "countdown.yourSongWillStart": "Je nummer begint te spelen over",
+  "countdown.getReady": "Maak je klaar!",
+  "countdown.tapTheCamera": "Tik op het camera-icoon om te scannen",
+  "countdown.allRightsReserved": "Alle rechten voorbehouden"
 }
