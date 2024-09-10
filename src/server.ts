@@ -20,6 +20,7 @@ import MusicBrainz from './musicbrainz';
 import ipPlugin from './plugins/ipPlugin';
 import Formatters from './formatters';
 import Translation from './translation';
+import Cache from './cache';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -49,6 +50,7 @@ class Server {
   private musicBrainz = new MusicBrainz();
   private formatters = new Formatters().getFormatters();
   private translation: Translation = new Translation();
+  private cache = Cache.getInstance();
 
   private constructor() {
     this.fastify = Fastify({
@@ -402,6 +404,19 @@ class Server {
 
     this.fastify.post('/order/calculate', async (request: any, _reply) => {
       return await this.order.calculateOrder(request.body);
+    });
+
+    this.fastify.get('/cache', async (request: any, _reply) => {
+      if (
+        process.env['ENVIRONMENT'] == 'development' ||
+        (process.env['TRUSTED_IPS'] &&
+          process.env['TRUSTED_IPS'].split(',').includes(request.clientIp))
+      ) {
+        this.cache.del('*');
+        return { success: true };
+      } else {
+        return { success: false };
+      }
     });
 
     if (process.env['ENVIRONMENT'] == 'development') {
