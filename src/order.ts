@@ -107,7 +107,7 @@ class Order {
       params.countrycode = 'NL';
     }
 
-    let cacheToken = `${this.pricingCacheToken}_${params.amount}_${params.countrycode}`;
+    let cacheToken = `${this.pricingCacheToken}_${params.orderType}_${params.numberOfTracks}_${params.countrycode}`;
 
     const cachedPrice = await this.cache.get(cacheToken);
 
