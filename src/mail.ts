@@ -6,6 +6,7 @@ import { Payment } from '@prisma/client';
 import { Playlist } from './interfaces/Playlist';
 import Translation from './translation';
 import PushoverClient from './pushover';
+import Utils from './utils';
 
 interface MailParams {
   to: string | null;
@@ -31,6 +32,7 @@ class Mail {
   private templates: Templates = new Templates();
   private translation: Translation = new Translation();
   private pushover = new PushoverClient();
+  private utils = new Utils();
 
   constructor() {
     this.ses = new SESClient({
@@ -144,7 +146,7 @@ class Mail {
         },
       ];
 
-      if (process.env['ENVIRONMENT'] === 'development') {
+      if (this.utils.isTrustedEmail(payment.email!)) {
         attachments.push({
           contentType: 'application/pdf',
           filename,

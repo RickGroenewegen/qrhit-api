@@ -29,6 +29,17 @@ class Utils {
     }
   }
 
+  public isTrustedEmail(email: string): boolean {
+    if (
+      process.env['TRUSTED_EMAILS'] &&
+      process.env['TRUSTED_EMAILS'].split(',').includes(email)
+    ) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   public cleanTrackName(name: string): string {
     let str = name;
 
