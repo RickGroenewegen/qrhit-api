@@ -275,8 +275,6 @@ class Spotify {
         data: allTracks,
       };
     } catch (e) {
-      console.error(e);
-
       return { success: false, error: 'Error getting tracks' };
     }
   }
