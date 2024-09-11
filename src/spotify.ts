@@ -181,8 +181,6 @@ class Spotify {
 
         const response = await axios.request(options);
 
-        console.log(199, response.data);
-
         let image = '';
         if (response.data.images.length > 0) {
           image = response.data.images[0].url;
