@@ -52,10 +52,12 @@ class Qr {
       `${hash}_printer.pdf`.replace(/ /g, '_')
     ).toLowerCase();
 
+    const fullPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+
     // Check if the file exists using fs
     let exists = false;
     try {
-      await fs.access(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
+      await fs.access(fullPath);
       exists = true;
       this.logger.log(
         color.yellow.bold(`PDF already exists: ${color.white.bold(filename)}`)
@@ -99,6 +101,10 @@ class Qr {
     );
 
     this.progress.setProgress(params.paymentId, 0, 'progress.gettingTracks');
+
+    if (playlist.resetCache) {
+      exists = false;
+    }
 
     if (!exists) {
       // Retrieve the tracks from Spotify

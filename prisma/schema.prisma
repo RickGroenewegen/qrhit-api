@@ -116,6 +116,7 @@ model Playlist {
   image          String
   price          Float              @default(0)
   numberOfTracks Int                @default(0)
+  resetCache     Boolean            @default(false)
   users          UserHasPlaylist[]
   tracks         PlaylistHasTrack[]
   Payment        Payment[]

@@ -183,7 +183,8 @@ class Data {
   public async storePlaylist(
     userDatabaseId: number,
     playlistParams: any,
-    price: number
+    price: number,
+    resetCache: boolean = false
   ): Promise<number> {
     let playlistDatabaseId: number = 0;
 
@@ -199,9 +200,6 @@ class Data {
 
       let name = playlistParams.name;
 
-      // Remove [QRSong] from the name
-      name = name.replace('[QRSong]', '').trim();
-
       const playlistCreate = await this.prisma.playlist.create({
         data: {
           playlistId: playlistParams.id,
@@ -215,6 +213,11 @@ class Data {
     } else {
       playlistDatabaseId = playlist.id;
 
+      let doResetCache = false;
+      if (!playlist.featured && resetCache) {
+        doResetCache = true;
+      }
+
       await this.prisma.playlist.update({
         where: {
           id: playlistDatabaseId,
@@ -222,6 +225,9 @@ class Data {
         data: {
           price: price,
           numberOfTracks: playlistParams.numberOfTracks,
+          name: playlistParams.name,
+          image: playlistParams.image,
+          resetCache: doResetCache,
         },
       });
     }

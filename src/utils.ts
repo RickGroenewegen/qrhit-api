@@ -18,6 +18,17 @@ class Utils {
     return false;
   }
 
+  public isTrustedIp(ip: string): boolean {
+    if (
+      process.env['TRUSTED_IPS'] &&
+      process.env['TRUSTED_IPS'].split(',').includes(ip)
+    ) {
+      return true;
+    } else {
+      return false;
+    }
+  }
+
   public parseAcceptLanguage(header: string) {
     const languages = parser.parse(header);
     let lang = 'en';

@@ -6,6 +6,7 @@ import Logger from './logger';
 import Data from './data';
 import Order from './order';
 import Translation from './translation';
+import Utils from './utils';
 
 class Mollie {
   private prisma = new PrismaClient();
@@ -13,6 +14,7 @@ class Mollie {
   private data = new Data();
   private order = Order.getInstance();
   private translation: Translation = new Translation();
+  private utils = new Utils();
 
   private mollieClient = createMollieClient({
     apiKey: process.env['MOLLIE_API_KEY']!,
@@ -25,8 +27,7 @@ class Mollie {
   private async getClient(ip: string) {
     if (
       process.env['ENVIRONMENT'] == 'development' ||
-      (process.env['TRUSTED_IPS'] &&
-        process.env['TRUSTED_IPS'].split(',').includes(ip))
+      this.utils.isTrustedIp(ip)
     ) {
       return this.mollieClientTest;
     } else {
@@ -39,6 +40,8 @@ class Mollie {
     clientIp: string
   ): Promise<ApiResult> {
     try {
+      console.log(111, params.playlist);
+
       let amount = params.extraOrderData.amount || 1;
 
       if (params.tracks.length > 500) {
@@ -93,7 +96,8 @@ class Mollie {
       const playlistDatabaseId = await this.data.storePlaylist(
         userDatabaseId,
         params.playlist,
-        calculateResult.data.price
+        calculateResult.data.price,
+        !params.playlist.cached
       );
 
       delete params.extraOrderData.orderType;

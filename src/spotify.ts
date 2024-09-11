@@ -154,14 +154,19 @@ class Spotify {
     }
   }
 
-  public async getPlaylist(playlistId: string): Promise<ApiResult> {
+  public async getPlaylist(
+    playlistId: string,
+    cache: boolean = true
+  ): Promise<ApiResult> {
     let playlist: Playlist | null = null;
+
+    console.log(111, playlistId, cache);
 
     try {
       const cacheKey = `playlist_${playlistId}`;
       const cacheResult = await this.cache.get(cacheKey);
 
-      if (!cacheResult) {
+      if (!cacheResult || !cache) {
         const options = {
           method: 'GET',
           url: 'https://spotify23.p.rapidapi.com/playlist',
@@ -176,6 +181,8 @@ class Spotify {
 
         const response = await axios.request(options);
 
+        console.log(199, response.data);
+
         let image = '';
         if (response.data.images.length > 0) {
           image = response.data.images[0].url;
@@ -186,6 +193,9 @@ class Spotify {
           numberOfTracks: response.data.tracks.total,
           image,
         };
+
+        console.log(222, playlist);
+
         this.cache.set(cacheKey, JSON.stringify(playlist), 3600);
       } else {
         playlist = JSON.parse(cacheResult);

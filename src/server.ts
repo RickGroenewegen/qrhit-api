@@ -184,18 +184,21 @@ class Server {
     this.fastify.get(
       '/spotify/playlists/:playlistId/tracks/:cache',
       async (request: any, _reply) => {
-        let cache = true;
-        if (request.params.cache == '0') {
-          cache = false;
-        }
-        return await this.spotify.getTracks(request.params.playlistId, cache);
+        return await this.spotify.getTracks(
+          request.params.playlistId,
+          this.utils.parseBoolean(request.params.cache)
+        );
       }
     );
 
     this.fastify.get(
-      '/spotify/playlists/:playlistId',
+      '/spotify/playlists/:playlistId/:cache',
+
       async (request: any, _reply) => {
-        return await this.spotify.getPlaylist(request.params.playlistId);
+        return await this.spotify.getPlaylist(
+          request.params.playlistId,
+          this.utils.parseBoolean(request.params.cache)
+        );
       }
     );
 
@@ -407,8 +410,7 @@ class Server {
     this.fastify.get('/cache', async (request: any, _reply) => {
       if (
         process.env['ENVIRONMENT'] == 'development' ||
-        (process.env['TRUSTED_IPS'] &&
-          process.env['TRUSTED_IPS'].split(',').includes(request.clientIp))
+        this.utils.isTrustedIp(request.clientIp)
       ) {
         this.cache.flush();
         return { success: true };
