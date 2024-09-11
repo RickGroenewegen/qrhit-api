@@ -13,8 +13,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-ec2": "^3.645.0",
-    "@aws-sdk/client-ses": "^3.645.0",
+    "@aws-sdk/client-ec2": "^3.649.0",
+    "@aws-sdk/client-ses": "^3.649.0",
     "@aws-sdk/credential-provider-imds": "^3.374.0",
     "@fastify/cors": "^9.0.1",
     "@fastify/formbody": "^7.4.0",
@@ -39,11 +39,11 @@
     "i18n": "^0.15.1",
     "ioredis": "^5.4.1",
     "knex": "^3.1.0",
-    "mysql2": "^3.11.0",
+    "mysql2": "^3.11.2",
     "ncp": "^2.0.0",
     "npm": "^10.8.3",
     "open": "^10.1.0",
-    "openai": "^4.58.1",
+    "openai": "^4.58.2",
     "openurl": "^1.1.1",
     "pg": "^8.12.0",
     "puppeteer": "^23.3.0",
@@ -64,6 +64,6 @@
     "@types/sanitize-html": "^2.13.0",
     "@types/xml2js": "^0.4.14",
     "prisma": "^5.19.1",
-    "typescript": "^5.5.4"
+    "typescript": "^5.6.2"
   }
 }
