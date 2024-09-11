@@ -1,4 +1,4 @@
-import { color } from 'console-log-colors';
+import { yellow, white, color } from 'console-log-colors';
 import Logger from './logger';
 import { PrismaClient } from '@prisma/client';
 import MusicBrainz from './musicbrainz';
@@ -328,6 +328,46 @@ class Data {
   ): Promise<any> {
     let trackDatabaseId: number = 0;
     let counter = 1;
+
+    // Retrieve current tracks associated with the playlist
+    const currentTracks = await this.prisma.playlistHasTrack.findMany({
+      where: {
+        playlistId: playlistDatabaseId,
+      },
+      include: {
+        track: true,
+      },
+    });
+
+    // Create a set of current track IDs for easy lookup
+    const currentTrackIds = new Set(
+      currentTracks.map((pt) => pt.track.trackId)
+    );
+
+    // Create a set of provided track IDs for easy lookup
+    const providedTrackIds = new Set(tracks.map((track: any) => track.id));
+
+    // Remove playlistHasTrack records for tracks that are no longer in the provided tracks list
+    for (const currentTrack of currentTracks) {
+      if (!providedTrackIds.has(currentTrack.track.trackId)) {
+        this.logger.log(
+          yellow.bold(
+            `Removing track ${white.bold(
+              currentTrack.track.name
+            )} from playlist ${white.bold(playlistDatabaseId)}`
+          )
+        );
+
+        await this.prisma.playlistHasTrack.delete({
+          where: {
+            playlistId_trackId: {
+              playlistId: playlistDatabaseId,
+              trackId: currentTrack.trackId,
+            },
+          },
+        });
+      }
+    }
 
     // Check if the tracks exist. If not, create them
     for (const track of tracks) {
