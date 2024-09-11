@@ -146,12 +146,6 @@ class Mail {
         },
       ];
 
-      console.log(
-        111,
-        payment.email,
-        this.utils.isTrustedEmail(payment.email!)
-      );
-
       if (this.utils.isTrustedEmail(payment.email!)) {
         attachments.push({
           contentType: 'application/pdf',
