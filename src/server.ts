@@ -188,21 +188,14 @@ class Server {
         if (request.params.cache == '0') {
           cache = false;
         }
-        return await this.spotify.getTracks(
-          request.headers,
-          request.params.playlistId,
-          cache
-        );
+        return await this.spotify.getTracks(request.params.playlistId, cache);
       }
     );
 
     this.fastify.get(
       '/spotify/playlists/:playlistId',
       async (request: any, _reply) => {
-        return await this.spotify.getPlaylist(
-          request.headers,
-          request.params.playlistId
-        );
+        return await this.spotify.getPlaylist(request.params.playlistId);
       }
     );
 

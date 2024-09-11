@@ -103,7 +103,6 @@ class Qr {
     if (!exists) {
       // Retrieve the tracks from Spotify
       const response = await this.spotify.getTracks(
-        { authorization: params.accessToken },
         payment.playlist.playlistId
       );
 

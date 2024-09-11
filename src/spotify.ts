@@ -5,9 +5,11 @@ import { ApiResult } from './interfaces/ApiResult';
 import { Playlist } from './interfaces/Playlist';
 import { Track } from './interfaces/Track';
 import Cache from './cache';
+import Data from './data';
 
 class Spotify {
   private cache = Cache.getInstance();
+  private data = new Data();
 
   // create a refresh token method
   public async refreshAccessToken(refreshToken: string): Promise<ApiResult> {
@@ -152,10 +154,7 @@ class Spotify {
     }
   }
 
-  public async getPlaylist(
-    headers: any,
-    playlistId: string
-  ): Promise<ApiResult> {
+  public async getPlaylist(playlistId: string): Promise<ApiResult> {
     let playlist: Playlist | null = null;
 
     try {
@@ -212,21 +211,17 @@ class Spotify {
   }
 
   public async getTracks(
-    headers: any,
     playlistId: string,
     cache: boolean = true
   ): Promise<ApiResult> {
     try {
       let cacheKey = `tracks_${playlistId}`;
-      if (!cache) {
-        this.cache.del(cacheKey);
-      }
       const cacheResult = await this.cache.get(cacheKey);
       let allTracks: Track[] = [];
       let offset = 0;
       const limit = 100;
 
-      if (!cacheResult) {
+      if (!cacheResult || !cache) {
         while (true) {
           const options = {
             method: 'GET',
