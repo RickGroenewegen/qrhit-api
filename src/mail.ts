@@ -231,8 +231,6 @@ class Mail {
       ];
 
       if (invoicePath.length > 0) {
-        console.log(111, invoicePath);
-
         // Read the PDF file and convert it to Base64
         const fileBuffer = await fs.readFile(invoicePath);
         const fileBase64 = fileBuffer.toString('base64');

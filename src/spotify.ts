@@ -160,8 +160,6 @@ class Spotify {
   ): Promise<ApiResult> {
     let playlist: Playlist | null = null;
 
-    console.log(111, playlistId, cache);
-
     try {
       const cacheKey = `playlist_${playlistId}`;
       const cacheResult = await this.cache.get(cacheKey);
@@ -193,8 +191,6 @@ class Spotify {
           numberOfTracks: response.data.tracks.total,
           image,
         };
-
-        console.log(222, playlist);
 
         this.cache.set(cacheKey, JSON.stringify(playlist), 3600);
       } else {

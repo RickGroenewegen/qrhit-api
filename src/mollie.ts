@@ -40,8 +40,6 @@ class Mollie {
     clientIp: string
   ): Promise<ApiResult> {
     try {
-      console.log(111, params.playlist);
-
       let amount = params.extraOrderData.amount || 1;
 
       if (params.tracks.length > 500) {
