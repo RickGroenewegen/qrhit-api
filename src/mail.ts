@@ -117,11 +117,11 @@ class Mail {
     try {
       // Read the PDF file and convert it to Base64
       const fileBuffer = await fs.readFile(filePath as string);
-      const fileBase64 = fileBuffer.toString('base64');
+      const fileBase64 = this.wrapBase64(fileBuffer.toString('base64'));
 
       // Read the logo file and convert it to Base64
       const logoBuffer = await fs.readFile(logoPath);
-      const logoBase64 = logoBuffer.toString('base64');
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
 
       // Get the filename from the path
       const filename = path.basename(filePath as string);
@@ -201,7 +201,7 @@ class Mail {
     try {
       // Read the logo file and convert it to Base64
       const logoBuffer = await fs.readFile(logoPath);
-      const logoBase64 = logoBuffer.toString('base64');
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
 
       let locale = payment.locale;
 
@@ -235,7 +235,7 @@ class Mail {
       if (invoicePath.length > 0) {
         // Read the PDF file and convert it to Base64
         const fileBuffer = await fs.readFile(invoicePath);
-        const fileBase64 = fileBuffer.toString('base64');
+        const fileBase64 = this.wrapBase64(fileBuffer.toString('base64'));
 
         attachments.push({
           contentType: 'application/pdf',
@@ -315,6 +315,10 @@ ${params.html}
 --MixedBoundaryString--`;
 
     return rawEmail;
+  }
+
+  private wrapBase64(base64: string): string {
+    return base64.replace(/(.{76})/g, '$1\n');
   }
 }
 
