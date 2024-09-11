@@ -21,7 +21,7 @@ class Progress {
 
   public async startProgress(paymentId: string) {
     if (!this.progress[paymentId]) {
-      const val = await this.cache.get(this.cacheKey + paymentId);
+      const val = await this.cache.get(this.cacheKey + paymentId, false);
       if (val) {
         this.progress[paymentId] = JSON.parse(val);
       }
@@ -58,7 +58,7 @@ class Progress {
   }
 
   public async getProgress(paymentId: string): Promise<IProgress | null> {
-    const val = await this.cache.get(this.cacheKey + paymentId);
+    const val = await this.cache.get(this.cacheKey + paymentId, false);
     if (val) {
       this.progress[paymentId] = JSON.parse(val);
     }
@@ -72,7 +72,7 @@ class Progress {
     image: string = ''
   ) {
     if (!this.progress[paymentId]) {
-      const val = await this.cache.get(this.cacheKey + paymentId);
+      const val = await this.cache.get(this.cacheKey + paymentId, false);
       if (val) {
         this.progress[paymentId] = JSON.parse(val);
       }
