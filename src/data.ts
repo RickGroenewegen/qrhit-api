@@ -7,6 +7,7 @@ import crypto from 'crypto';
 import { ApiResult } from './interfaces/ApiResult';
 import Cache from './cache';
 import Translation from './translation';
+import Utils from './utils';
 
 class Data {
   private prisma = new PrismaClient();
@@ -15,6 +16,7 @@ class Data {
   private progress = Progress.getInstance();
   private cache = Cache.getInstance();
   private translate = new Translation();
+  private utils = new Utils();
 
   private euCountryCodes: string[] = [
     'AT', // Austria
@@ -265,6 +267,7 @@ class Data {
         SELECT      tracks.id, tracks.trackId, tracks.artist, tracks.year, tracks.name FROM tracks
         INNER JOIN  playlist_has_tracks ON tracks.id = playlist_has_tracks.trackId
         WHERE       playlist_has_tracks.playlistId = ${playlistId}`;
+
     return tracks;
   }
 
@@ -343,7 +346,7 @@ class Data {
           const trackCreate = await this.prisma.track.create({
             data: {
               trackId: track.id,
-              name: track.name,
+              name: this.utils.cleanTrackName(track.name),
               isrc: track.isrc,
               artist: track.artist,
               spotifyLink: track.link,

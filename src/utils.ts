@@ -29,6 +29,17 @@ class Utils {
     }
   }
 
+  public cleanTrackName(name: string): string {
+    let str = name;
+
+    // Some titles are like "Track Name - Remastered". We want to remove the "- Remastered" part. If there is a " - " in the title, we remove everything after it.
+    if (str.includes(' - ')) {
+      str = str.split(' - ')[0];
+    }
+
+    return str;
+  }
+
   public parseAcceptLanguage(header: string) {
     const languages = parser.parse(header);
     let lang = 'en';

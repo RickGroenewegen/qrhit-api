@@ -6,10 +6,12 @@ import { Playlist } from './interfaces/Playlist';
 import { Track } from './interfaces/Track';
 import Cache from './cache';
 import Data from './data';
+import Utils from './utils';
 
 class Spotify {
   private cache = Cache.getInstance();
   private data = new Data();
+  private utils = new Utils();
 
   // create a refresh token method
   public async refreshAccessToken(refreshToken: string): Promise<ApiResult> {
@@ -205,17 +207,6 @@ class Spotify {
     }
   }
 
-  private cleanTrackName(name: string): string {
-    let str = name;
-
-    // Some titles are like "Track Name - Remastered". We want to remove the "- Remastered" part. If there is a " - " in the title, we remove everything after it.
-    if (str.includes(' - ')) {
-      str = str.split(' - ')[0];
-    }
-
-    return str;
-  }
-
   public async getTracks(
     playlistId: string,
     cache: boolean = true
@@ -247,7 +238,7 @@ class Spotify {
 
           const tracks: Track[] = response.data.items.map((item: any) => ({
             id: item.track.id,
-            name: this.cleanTrackName(item.track.name),
+            name: this.utils.cleanTrackName(item.track.name),
             artist: item.track.artists[0].name,
             link: item.track.external_urls.spotify,
             isrc: item.track.external_ids.isrc,
