@@ -178,20 +178,14 @@ class Qr {
 
   private async generateQR(link: string, outputPath: string) {
     try {
-      // Check if the QR code already exists
-      try {
-        await fs.access(outputPath);
-        return;
-      } catch (error) {
-        await QRCode.toFile(outputPath, link, {
-          type: 'png',
-          color: {
-            dark: '#000000', // Color of the dark squares
-            light: '0000', // Color of the light squares (usually background)
-          },
-          errorCorrectionLevel: 'H', // High error correction level
-        });
-      }
+      await QRCode.toFile(outputPath, link, {
+        type: 'png',
+        color: {
+          dark: '#000000', // Color of the dark squares
+          light: '0000', // Color of the light squares (usually background)
+        },
+        errorCorrectionLevel: 'H', // High error correction level
+      });
     } catch (error) {
       this.logger.log(color.red.bold('Error generating QR code!'));
     }
