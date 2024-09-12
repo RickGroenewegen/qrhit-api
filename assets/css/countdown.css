@@ -1,0 +1,145 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background: linear-gradient(135deg, #0077be, #00264d);
+    color: #ffffff;
+    font-family: 'Roboto', sans-serif;
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+}
+
+.title {
+    font-size: 3rem;
+    font-weight: bold;
+    margin-bottom: 2rem;
+    text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
+}
+
+.message-top {
+    font-size: 1.2rem;
+    text-align: center;
+    max-width: 100%;
+    margin-bottom: 1rem;
+}
+
+.countdown {
+    font-size: 8rem;
+    font-weight: bold;
+    transition: transform 0.3s ease-in-out;
+}
+
+.zoom {
+    transform: scale(1.2);
+}
+
+.message-bottom {
+    font-size: 1.2rem;
+    text-align: center;
+    max-width: 100%;
+    margin-top: 2rem;
+}
+
+.footer {
+    position: fixed;
+    bottom: 2rem;
+    font-size: 0.9rem;
+    opacity: 0.7;
+}
+
+#onboarding-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, #0077be, #00264d);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+}
+
+.onboarding-content {
+    text-align: center;
+    max-width: 80%;
+}
+
+.install-instructions {
+    text-align: left;
+    margin-top: 20px;
+}
+
+#close-onboarding {
+    margin-top: 20px;
+    padding: 10px 20px;
+    background-color: #ffffff;
+    color: #0077be;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    font-weight: bold;
+}
+
+.qr-icon {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 1.2rem;
+}
+
+.qr-icon i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+#qr-video {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1001;
+}
+
+#qr-canvas {
+    display: none;
+}
+
+#countdown-container {
+    display: none;
+    text-align: center;
+}
+
+#close-scanner {
+    display: none;
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    padding: 10px 20px;
+    background-color: #ffffff;
+    color: #0077be;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    font-weight: bold;
+    z-index: 1002;
+}
