@@ -36,7 +36,7 @@ class Server {
   private static instance: Server;
   private fastify: FastifyInstance;
   private logger = new Logger();
-  private port = 3003;
+  private port = 3004;
   private workerId: number = 0;
   private isMainServer: boolean = false;
   private utils = new Utils();
