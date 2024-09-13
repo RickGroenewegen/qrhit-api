@@ -34,11 +34,22 @@
     background-image: url('<%= process.env['API_URI'] %>/public/images/card_background.png');
     background-size: cover; /* Ensures the background covers the entire front */
     display: flex;
+    flex-direction: column;
     align-items: center; /* Vertical centering */
     justify-content: space-between; /* Changes here to distribute space */
     border-right: 2px dashed #ccc;
     position: relative; /* Ensure positioning is relative for fine control */
 }
+    .domain {
+        font-size: 10px;
+        color: #909090;
+        transform: rotate(-90deg);
+        position: absolute;
+        bottom: 10mm;
+        right: -15mm;
+        width: 50mm;
+        text-align: center;
+    }
 
   .title {
     writing-mode: vertical-lr;
@@ -99,11 +110,13 @@
                     <img src="<%= process.env['API_URI'] %>/public/qr/<%= threeChars %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 70%; height: auto;">
                 </div>
                 <!-- <div class="title" style="padding-left:2mm;padding-right:2mm;"><%= playlist.name %></div> -->
+                <div class="domain"><%= process.env['APP_DOMAIN'] %></div>
             </div>
             <div class="card back">
                 <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= track.artist %></div>
                 <div class="text" style="margin-top: 5mm;font-size:36px;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= track.year %></div>
                 <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;padding-left:2mm;padding-right:2mm;"><%= track.name %></div>
+                <div class="text" style="margin-top: 5mm;font-size:10px;color:#909090;"><%= process.env['APP_DOMAIN'] %></div>
             </div>
         </div>
         <% index++ %> 
