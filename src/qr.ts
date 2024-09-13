@@ -33,6 +33,7 @@ class Qr {
 
   public async generate(params: any, ip: string): Promise<void> {
     let filename = '';
+    let filenameDigital = '';
 
     this.progress.setProgress(params.paymentId, 0, 'Started ...');
 
@@ -50,6 +51,10 @@ class Qr {
 
     filename = sanitizeFilename(
       `${hash}_printer.pdf`.replace(/ /g, '_')
+    ).toLowerCase();
+
+    filenameDigital = sanitizeFilename(
+      `${hash}_digital.pdf`.replace(/ /g, '_')
     ).toLowerCase();
 
     const fullPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
@@ -160,11 +165,25 @@ class Qr {
         payment,
         'printer',
         80,
-        99
+        89
       );
+
+      if (payment.orderType.name == 'digital') {
+        // Also create a digital version of the PDF
+        filenameDigital = await this.generatePDF(
+          filename,
+          playlist,
+          payment,
+          'digital',
+          90,
+          99
+        );
+      }
     }
 
-    await this.order.createOrder(payment, filename);
+    if (payment.orderType.name != 'digital') {
+      await this.order.createOrder(payment, filename);
+    }
 
     payment = await this.mollie.getPayment(params.paymentId);
 
