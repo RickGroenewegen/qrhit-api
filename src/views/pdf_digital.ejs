@@ -90,11 +90,13 @@
 </head>
 <body>
 <div class="page">
+    <% let index = 0; %> 
     <% tracks.forEach(function(track) { %>
         <div class="card-container">
             <div class="card front">
                 <div class="qr">
-                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= user.userId %>/<%= track.trackId %>.png" alt="QR Code" style="width: 76%; height: auto;">
+                    <% const threeChars = tracks[index].trackId.substring(0, 4); %>
+                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= threeChars %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 70%; height: auto;">
                 </div>
                 <!-- <div class="title" style="padding-left:2mm;padding-right:2mm;"><%= playlist.name %></div> -->
             </div>
@@ -104,6 +106,7 @@
                 <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;padding-left:2mm;padding-right:2mm;"><%= track.name %></div>
             </div>
         </div>
+        <% index++ %> 
     <% }); %>
 </div>
 </body>
