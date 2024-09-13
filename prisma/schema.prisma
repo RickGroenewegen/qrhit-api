@@ -50,6 +50,7 @@ model Payment {
   updatedAt               DateTime  @updatedAt
   playlistId              Int?
   filename                String?
+  filenameDigital         String?
   orderTypeId             Int
   fullname                String?
   email                   String?

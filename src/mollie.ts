@@ -314,6 +314,7 @@ class Mollie {
         amount: true,
         status: true,
         filename: true,
+        filenameDigital: true,
         createdAt: true,
         taxRate: true,
         updatedAt: true,

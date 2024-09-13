@@ -86,9 +86,11 @@ class Mail {
   }
 
   async sendEmail(
+    orderType: string,
     payment: Payment,
     playlist: Playlist,
-    filename: string
+    filename: string,
+    filenameDigital: string
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -151,6 +153,19 @@ class Mail {
           contentType: 'application/pdf',
           filename,
           data: fileBase64,
+        });
+      }
+
+      if (orderType === 'digital') {
+        const filePathDigital = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
+        const fileBufferDigital = await fs.readFile(filePathDigital as string);
+        const fileBase64Digital = this.wrapBase64(
+          fileBufferDigital.toString('base64')
+        );
+        attachments.push({
+          contentType: 'application/pdf',
+          filename: filenameDigital,
+          data: fileBase64Digital,
         });
       }
 

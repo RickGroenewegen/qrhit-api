@@ -431,7 +431,13 @@ class Server {
         const playlist = await this.data.getPlaylist(
           payment.playlist.playlistId
         );
-        await this.mail.sendEmail(payment, playlist, payment.filename);
+        await this.mail.sendEmail(
+          'printer',
+          payment,
+          playlist,
+          payment.filename,
+          payment.filenameDigital
+        );
         return { success: true };
       });
       this.fastify.get('/mb/:isrc', async (request: any, _reply) => {

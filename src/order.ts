@@ -264,17 +264,6 @@ class Order {
         },
       },
     });
-
-    // Update the payment with the order id
-    await this.prisma.payment.update({
-      where: {
-        id: payment.id,
-      },
-      data: {
-        printApiOrderId: responseOrder.data.id,
-        filename: filename,
-      },
-    });
   }
 
   public async checkForShipment(): Promise<void> {

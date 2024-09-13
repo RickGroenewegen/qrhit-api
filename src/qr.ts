@@ -14,7 +14,6 @@ import Order from './order';
 import ConvertApi from 'convertapi';
 import PushoverClient from './pushover';
 import crypto from 'crypto';
-
 class Qr {
   private spotify = new Spotify();
   private mollie = new Mollie();
@@ -26,6 +25,7 @@ class Qr {
   private pushover = new PushoverClient();
   private order = Order.getInstance();
   private convertapi = new ConvertApi(process.env['CONVERT_API_KEY']!);
+  private prisma = new PrismaClient();
 
   public async startProgress(paymentId: string) {
     this.progress.startProgress(paymentId);
@@ -159,26 +159,22 @@ class Qr {
 
       this.progress.setProgress(params.paymentId, 80, `progress.generatingPDF`);
 
-      filename = await this.generatePDF(
-        filename,
-        playlist,
-        payment,
-        'printer',
-        80,
-        89
-      );
+      const [generatedFilename, generatedFilenameDigital] = await Promise.all([
+        this.generatePDF(filename, playlist, payment, 'printer', 80, 89),
+        payment.orderType.name === 'digital'
+          ? this.generatePDF(
+              filenameDigital,
+              playlist,
+              payment,
+              'digital',
+              90,
+              99
+            )
+          : Promise.resolve(''),
+      ]);
 
-      if (payment.orderType.name == 'digital') {
-        // Also create a digital version of the PDF
-        filenameDigital = await this.generatePDF(
-          filename,
-          playlist,
-          payment,
-          'digital',
-          90,
-          99
-        );
-      }
+      filename = generatedFilename;
+      filenameDigital = generatedFilenameDigital;
     }
 
     if (payment.orderType.name != 'digital') {
@@ -187,7 +183,25 @@ class Qr {
 
     payment = await this.mollie.getPayment(params.paymentId);
 
-    await this.mail.sendEmail(payment, playlist, filename);
+    if (payment.orderType.name === 'digital') {
+      // Update the payment with the order id
+      await this.prisma.payment.update({
+        where: {
+          id: payment.id,
+        },
+        data: {
+          filenameDigital: filenameDigital,
+        },
+      });
+    }
+
+    await this.mail.sendEmail(
+      payment.orderType.name,
+      payment,
+      playlist,
+      filename,
+      filenameDigital
+    );
 
     this.progress.setProgress(params.paymentId, 100, `Done!`);
 
