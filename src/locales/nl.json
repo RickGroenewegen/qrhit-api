@@ -2,7 +2,7 @@
   "mail.mailSubject": "We hebben bestelling {{ orderId }} ontvangen!",
   "mail.greatNews": "Goed nieuws! Je QR-kaarten voor je afspeellijst zijn verwerkt en worden naar je verzonden zodra ze klaar zijn. Je ontvangt een trackinglink zodra ze zijn verzonden.",
   "mail.belowAreDetails": "Hieronder staan je bestelgegevens. De kaarten worden naar het volgende adres gestuurd",
-  "mail.weHopeYouHaveFun": "We hebben de gratis digitale versie van je afspeellijst aan deze e-mail toegevoegd. We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, aarzel dan niet om ons te mailen via het contactformulier op onze website.",
+  "mail.weHopeYouHaveFun": "We hebben de gratis digitale versie van je afspeellijst aan deze e-mail toegevoegd, zodat je kunt beginnen met spelen terwijl je wacht op de aankomst van je echte kaarten. We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, aarzel dan niet om ons te mailen via het contactformulier op onze website.",
   "mail.greetings": "Met vriendelijke groet",
   "mail.orderInformation": "Bestelinformatie",
   "mail.orderNumber": "Ordernummer",

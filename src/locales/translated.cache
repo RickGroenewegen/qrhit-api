@@ -234,11 +234,6 @@
     "de",
     "fr"
   ],
-  "mail.weHopeYouHaveFun": [
-    "nl",
-    "de",
-    "fr"
-  ],
   "mail.greatNewsDigital": [
     "nl",
     "de",
@@ -260,6 +255,11 @@
     "fr"
   ],
   "payment.digital": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.weHopeYouHaveFun": [
     "nl",
     "de",
     "fr"

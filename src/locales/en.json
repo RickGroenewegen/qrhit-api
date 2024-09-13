@@ -1,7 +1,7 @@
 {
 	"mail.mailSubject" : "We have received order {{ orderId }}!",
 	"mail.greatNews": "Great news! Your QR cards for your playlist have been processed and will be posted to you once they are ready. You will receive a tracking link once they are shipped.",
-	"mail.weHopeYouHaveFun" : "We have attached the free digital version of your playlist to this E-mail. We hope you have lots of musical fun! If you have any further questions do not hesitate to mail us through the contact form on our website.",
+	"mail.weHopeYouHaveFun" : "We have attached the free digital version of your playlist to this E-mail so you can start playing while you await the arrival of your real cards. We hope you have lots of musical fun! If you have any further questions do not hesitate to mail us through the contact form on our website.",
 	"mail.greatNewsDigital": "Great news! Your QR cards for your playlist have been processed. You will find them attached to this email.",
 	"mail.weHopeYouHaveFunDigital" : "We hope you have lots of musical fun! If you have any further questions do not hesitate to mail us through the contact form on our website.",
 	"mail.greetings" : "Best regards",
