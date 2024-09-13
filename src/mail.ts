@@ -130,8 +130,20 @@ class Mail {
 
       let locale = payment.locale;
 
-      const html = await this.templates.render(`mails/ses_html`, mailParams);
-      const text = await this.templates.render(`mails/ses_text`, mailParams);
+      let templateName = 'ses';
+
+      if (orderType === 'digital') {
+        templateName = 'digital';
+      }
+
+      const html = await this.templates.render(
+        `mails/${templateName}_html`,
+        mailParams
+      );
+      const text = await this.templates.render(
+        `mails/${templateName}_text`,
+        mailParams
+      );
 
       const subject = this.translation.translate('mail.mailSubject', locale, {
         orderId: payment.orderId,

@@ -1,29 +1,4 @@
 {
-  "mail.mailSubject": [
-    "nl",
-    "de",
-    "fr"
-  ],
-  "mail.belowAreDetails": [
-    "nl",
-    "de",
-    "fr"
-  ],
-  "mail.weHopeYouHaveFun": [
-    "nl",
-    "de",
-    "fr"
-  ],
-  "mail.greetings": [
-    "nl",
-    "de",
-    "fr"
-  ],
-  "mail.orderInformation": [
-    "nl",
-    "de",
-    "fr"
-  ],
   "mail.orderNumber": [
     "nl",
     "de",
@@ -250,6 +225,41 @@
     "fr"
   ],
   "countdown.allRightsReserved": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.mailSubject": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.weHopeYouHaveFun": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.greatNewsDigital": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.weHopeYouHaveFunDigital": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.greetings": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "mail.orderInformation": [
+    "nl",
+    "de",
+    "fr"
+  ],
+  "payment.digital": [
     "nl",
     "de",
     "fr"

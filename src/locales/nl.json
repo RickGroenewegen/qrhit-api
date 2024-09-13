@@ -2,7 +2,7 @@
   "mail.mailSubject": "We hebben bestelling {{ orderId }} ontvangen!",
   "mail.greatNews": "Goed nieuws! Je QR-kaarten voor je afspeellijst zijn verwerkt en worden naar je verzonden zodra ze klaar zijn. Je ontvangt een trackinglink zodra ze zijn verzonden.",
   "mail.belowAreDetails": "Hieronder staan je bestelgegevens. De kaarten worden naar het volgende adres gestuurd",
-  "mail.weHopeYouHaveFun": "We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, mail ons dan: info@qrsong.io",
+  "mail.weHopeYouHaveFun": "We hebben de gratis digitale versie van je afspeellijst aan deze e-mail toegevoegd. We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, aarzel dan niet om ons te mailen via het contactformulier op onze website.",
   "mail.greetings": "Met vriendelijke groet",
   "mail.orderInformation": "Bestelinformatie",
   "mail.orderNumber": "Ordernummer",
@@ -49,5 +49,8 @@
   "countdown.yourSongWillStart": "Je nummer begint te spelen over",
   "countdown.getReady": "Maak je klaar!",
   "countdown.tapTheCamera": "Tik op het camera-icoon om te scannen",
-  "countdown.allRightsReserved": "Alle rechten voorbehouden"
+  "countdown.allRightsReserved": "Alle rechten voorbehouden",
+  "mail.greatNewsDigital": "Goed nieuws! Je QR-kaarten voor je afspeellijst zijn verwerkt. Je vindt ze in de bijlage van deze e-mail.",
+  "mail.weHopeYouHaveFunDigital": "We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, aarzel dan niet om ons te mailen via het contactformulier op onze website.",
+  "payment.digital": "PDF bevat"
 }

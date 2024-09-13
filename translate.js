@@ -56,7 +56,7 @@ const translate = async (text, currentPath) => {
         {
           headers: {
             'Content-Type': 'application/json',
-            Authorization: 'Bearer ' + process.env['OPENAI_TOKEN'],
+            Authorization: 'Bearer ' + process.env['OPENAI_API_KEY'],
           },
         }
       );
