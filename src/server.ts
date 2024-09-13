@@ -181,6 +181,12 @@ class Server {
   }
 
   public async addRoutes() {
+    this.fastify.get('/robots.txt', async (_request, reply) => {
+      reply
+        .header('Content-Type', 'text/plain')
+        .send('User-agent: *\nDisallow: /');
+    });
+
     this.fastify.get(
       '/spotify/playlists/:playlistId/tracks/:cache',
       async (request: any, _reply) => {
