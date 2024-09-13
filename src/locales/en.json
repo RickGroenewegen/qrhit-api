@@ -37,6 +37,7 @@
 
 	"payment.playlist" : "Playlist",
 	"payment.cards" : "QR Cards",
+	"payment.digital" : "PDF containing",
 
 	"countdown.youNeedToInstall" : "You need to install this app on your mobile device",
 	"countdown.howToInstall" : "How to install",

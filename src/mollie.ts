@@ -47,7 +47,14 @@ class Mollie {
         params.tracks = params.tracks.slice(0, 500);
       }
 
-      const orderType = await this.order.getOrderType(params.tracks.length);
+      console.log(111, params);
+
+      const orderType = await this.order.getOrderType(
+        params.tracks.length,
+        params.extraOrderData.orderType == 'digital'
+      );
+
+      console.log(222, orderType);
 
       // Get the order type
       const calculateResult = await this.order.calculateOrder({
@@ -64,6 +71,25 @@ class Mollie {
         'payment'
       );
 
+      let description =
+        translations!.playlist +
+        ': ' +
+        params.playlist.name +
+        ' (' +
+        params.tracks.length +
+        ' ' +
+        translations!.cards +
+        ')';
+
+      if (params.extraOrderData.orderType == 'digital') {
+        description =
+          translations!.digital +
+          ' ' +
+          params.tracks.length +
+          ' ' +
+          translations!.cards;
+      }
+
       const payment = await paymentClient.payments.create({
         amount: {
           currency: 'EUR',
@@ -72,15 +98,7 @@ class Mollie {
         metadata: {
           clientIp,
         },
-        description:
-          translations!.playlist +
-          ': ' +
-          params.playlist.name +
-          ' (' +
-          params.tracks.length +
-          ' ' +
-          translations!.cards +
-          ')',
+        description: description,
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
       });

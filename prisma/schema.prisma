@@ -29,6 +29,7 @@ model OrderType {
   printApiProductId String?
   createdAt         DateTime  @default(now())
   updatedAt         DateTime  @updatedAt
+  digital           Boolean   @default(false)
   Payment           Payment[]
 
   @@map("order_types")

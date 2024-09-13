@@ -63,16 +63,21 @@ class Order {
           maxCards: true,
           amountWithMargin: true,
         },
-        orderBy: {
-          maxCards: 'asc',
-        },
+        orderBy: [
+          {
+            digital: 'desc',
+          },
+          {
+            maxCards: 'asc',
+          },
+        ],
       });
       this.cache.set(cacheKey, JSON.stringify(orderTypes));
     }
     return orderTypes;
   }
 
-  public async getOrderType(numberOfTracks: number) {
+  public async getOrderType(numberOfTracks: number, digital: boolean = false) {
     let orderType = null;
     if (numberOfTracks > 500) {
       numberOfTracks = 500;
@@ -87,10 +92,13 @@ class Order {
           maxCards: {
             gte: numberOfTracks,
           },
+          digital: digital,
         },
-        orderBy: {
-          maxCards: 'asc',
-        },
+        orderBy: [
+          {
+            maxCards: 'asc',
+          },
+        ],
       });
       this.cache.set(cacheKey, JSON.stringify(orderType));
     }
@@ -139,7 +147,10 @@ class Order {
       };
     }
 
-    const orderType = await this.getOrderType(numberOfTracks);
+    const orderType = await this.getOrderType(
+      numberOfTracks,
+      params.orderType === 'digital'
+    );
 
     if (orderType) {
       price = parseFloat(

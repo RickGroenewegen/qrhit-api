@@ -62,6 +62,7 @@ class Progress {
     if (val) {
       this.progress[paymentId] = JSON.parse(val);
     }
+
     return this.progress[paymentId] || null;
   }
 
