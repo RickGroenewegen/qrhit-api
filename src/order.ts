@@ -79,10 +79,11 @@ class Order {
 
   public async getOrderType(numberOfTracks: number, digital: boolean = false) {
     let orderType = null;
+    let digitalInt = digital ? '1' : '0';
     if (numberOfTracks > 500) {
       numberOfTracks = 500;
     }
-    let cacheKey = `orderType_${numberOfTracks}`;
+    let cacheKey = `orderType_${numberOfTracks}_${digitalInt}`;
     const cachedOrderType = await this.cache.get(cacheKey);
     if (cachedOrderType) {
       orderType = JSON.parse(cachedOrderType);
