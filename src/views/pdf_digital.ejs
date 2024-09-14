@@ -19,35 +19,37 @@
         align-content: start;
     }
     .card-container {
-        width: 100mm;
-        height: 50mm;
+        margin-top:60mm;
+        width: 120mm;
+        height: 60mm;
         display: flex;
         margin-bottom: 0mm;
+        rotate: -90deg;
         border: 1px solid #ccc;
     }
     .card {
-        width: 50mm;
-        height: 50mm;
+        width: 60mm;
+        height: 60mm;
         box-sizing: border-box;
     }
     .front {
-    background-image: url('<%= process.env['API_URI'] %>/public/images/card_background.png');
-    background-size: cover; /* Ensures the background covers the entire front */
-    display: flex;
-    flex-direction: column;
-    align-items: center; /* Vertical centering */
-    justify-content: space-between; /* Changes here to distribute space */
-    border-right: 2px dashed #ccc;
-    position: relative; /* Ensure positioning is relative for fine control */
-}
+        background-image: url('<%= process.env['API_URI'] %>/public/images/card_background.png');
+        background-size: cover; /* Ensures the background covers the entire front */
+        display: flex;
+        flex-direction: column;
+        align-items: center; /* Vertical centering */
+        justify-content: space-between; /* Changes here to distribute space */
+        border-right: 2px dashed #ccc;
+        position: relative; /* Ensure positioning is relative for fine control */
+    }
     .domain {
-        font-size: 10px;
+        font-size: 12px;
         color: #909090;
         transform: rotate(-90deg);
         position: absolute;
-        bottom: 23mm;
-        right: -15mm;
-        width: 50mm;
+        bottom: 28mm;
+        right: -18mm;
+        width: 60mm;
         text-align: center;
     }
 
@@ -74,7 +76,7 @@
         justify-content: center;
         align-items: center;
         text-align: center;
-        height: 50mm;
+        height: 60mm;
         transform: rotate(90deg);
     }
     .text {
@@ -107,7 +109,7 @@
             <div class="card front">
                 <div class="qr">
                     <% const threeChars = tracks[index].trackId.substring(0, 4); %>
-                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= threeChars %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 70%; height: auto;">
+                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= threeChars %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 80%; height: auto;">
                 </div>
                 <!-- <div class="title" style="padding-left:2mm;padding-right:2mm;"><%= playlist.name %></div> -->
                 <div class="domain"><%= process.env['APP_DOMAIN'] %></div>
