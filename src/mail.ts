@@ -168,18 +168,16 @@ class Mail {
         });
       }
 
-      if (orderType === 'digital') {
-        const filePathDigital = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
-        const fileBufferDigital = await fs.readFile(filePathDigital as string);
-        const fileBase64Digital = this.wrapBase64(
-          fileBufferDigital.toString('base64')
-        );
-        attachments.push({
-          contentType: 'application/pdf',
-          filename: filenameDigital,
-          data: fileBase64Digital,
-        });
-      }
+      const filePathDigital = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
+      const fileBufferDigital = await fs.readFile(filePathDigital as string);
+      const fileBase64Digital = this.wrapBase64(
+        fileBufferDigital.toString('base64')
+      );
+      attachments.push({
+        contentType: 'application/pdf',
+        filename: filenameDigital,
+        data: fileBase64Digital,
+      });
 
       const rawEmail = await this.renderRaw({
         from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
