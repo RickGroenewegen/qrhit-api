@@ -410,6 +410,7 @@ class Server {
     });
 
     this.fastify.post('/order/calculate', async (request: any, _reply) => {
+      console.log(333, request.body);
       return await this.order.calculateOrder(request.body);
     });
 
