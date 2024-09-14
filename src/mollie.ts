@@ -39,6 +39,8 @@ class Mollie {
     params: any,
     clientIp: string
   ): Promise<ApiResult> {
+    console.log(111, params, clientIp);
+
     try {
       let amount = params.extraOrderData.amount || 1;
 
