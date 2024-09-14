@@ -87,6 +87,7 @@ class Order {
     if (cachedOrderType) {
       orderType = JSON.parse(cachedOrderType);
     } else {
+      console.log(555, numberOfTracks, digital);
       orderType = await this.prisma.orderType.findFirst({
         where: {
           maxCards: {
@@ -100,6 +101,8 @@ class Order {
           },
         ],
       });
+
+      console.log(777, orderType);
 
       this.cache.set(cacheKey, JSON.stringify(orderType));
     }
