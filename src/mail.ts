@@ -99,7 +99,9 @@ class Mail {
     const mailParams = {
       payment,
       playlist,
-      downloadLink: filename ? `${process.env['API_URI']}/public/pdf/${filename}` : '',
+      downloadLink: filename
+        ? `${process.env['API_URI']}/public/pdf/${filename}`
+        : '',
       orderId: payment.orderId,
       fullname: payment.fullname,
       email: payment.email,

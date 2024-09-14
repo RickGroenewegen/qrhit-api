@@ -159,17 +159,10 @@ class Qr {
 
       this.progress.setProgress(params.paymentId, 80, `progress.generatingPDF`);
 
-      const [generatedFilename, generatedFilenameDigital] = await Promise.all([
-        this.generatePDF(filename, playlist, payment, 'printer', 80, 89),
-        payment.orderType.name === 'digital'
-          ? this.generatePDF(
-              filenameDigital,
-              playlist,
-              payment,
-              'digital',
-              90,
-              99
-            )
+      const [generatedFilenameDigital, generatedFilename] = await Promise.all([
+        this.generatePDF(filenameDigital, playlist, payment, 'digital', 80, 89),
+        payment.orderType.name != 'digital'
+          ? this.generatePDF(filename, playlist, payment, 'printer', 90, 99)
           : Promise.resolve(''),
       ]);
 
@@ -235,7 +228,9 @@ class Qr {
     startProgress: number,
     endProgress: number
   ): Promise<string> {
-    this.logger.log(color.blue.bold('Generating PDF...'));
+    this.logger.log(
+      color.blue.bold('Generating PDF: ') + color.white.bold(template)
+    );
 
     const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}`;
 

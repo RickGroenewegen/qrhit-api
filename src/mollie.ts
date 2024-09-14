@@ -47,14 +47,10 @@ class Mollie {
         params.tracks = params.tracks.slice(0, 500);
       }
 
-      console.log(111, params);
-
       const orderType = await this.order.getOrderType(
         params.tracks.length,
         params.extraOrderData.orderType == 'digital'
       );
-
-      console.log(222, orderType);
 
       // Get the order type
       const calculateResult = await this.order.calculateOrder({
