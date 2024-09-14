@@ -116,6 +116,9 @@ class Mail {
       ),
     };
 
+    console.log(111, filePath);
+    console.log(222, filenameDigital);
+
     try {
       // Read the PDF file and convert it to Base64
       const fileBuffer = await fs.readFile(filePath as string);
@@ -169,6 +172,9 @@ class Mail {
       }
 
       const filePathDigital = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
+
+      console.log('filePathDigital', filePathDigital);
+
       const fileBufferDigital = await fs.readFile(filePathDigital as string);
       const fileBase64Digital = this.wrapBase64(
         fileBufferDigital.toString('base64')
