@@ -94,13 +94,12 @@ class Mail {
   ): Promise<void> {
     if (!this.ses) return;
 
-    const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
     const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
 
     const mailParams = {
       payment,
       playlist,
-      downloadLink: `${process.env['API_URI']}/public/pdf/${filename}`,
+      downloadLink: filename ? `${process.env['API_URI']}/public/pdf/${filename}` : '',
       orderId: payment.orderId,
       fullname: payment.fullname,
       email: payment.email,
@@ -116,28 +115,14 @@ class Mail {
       ),
     };
 
-    console.log(111, filePath);
-    console.log(222, filenameDigital);
-
     try {
-      // Read the PDF file and convert it to Base64
-      const fileBuffer = await fs.readFile(filePath as string);
-      const fileBase64 = this.wrapBase64(fileBuffer.toString('base64'));
-
       // Read the logo file and convert it to Base64
       const logoBuffer = await fs.readFile(logoPath);
       const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
 
-      // Get the filename from the path
-      const filename = path.basename(filePath as string);
-
       let locale = payment.locale;
 
-      let templateName = 'ses';
-
-      if (orderType === 'digital') {
-        templateName = 'digital';
-      }
+      let templateName = orderType === 'digital' ? 'digital' : 'ses';
 
       const html = await this.templates.render(
         `mails/${templateName}_html`,
@@ -163,7 +148,11 @@ class Mail {
         },
       ];
 
-      if (this.utils.isTrustedEmail(payment.email!)) {
+      // Add the non-digital file as an attachment if it exists and the email is trusted
+      if (filename && this.utils.isTrustedEmail(payment.email!)) {
+        const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+        const fileBuffer = await fs.readFile(filePath);
+        const fileBase64 = this.wrapBase64(fileBuffer.toString('base64'));
         attachments.push({
           contentType: 'application/pdf',
           filename,
@@ -171,11 +160,9 @@ class Mail {
         });
       }
 
+      // Add the digital file as an attachment
       const filePathDigital = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
-
-      console.log('filePathDigital', filePathDigital);
-
-      const fileBufferDigital = await fs.readFile(filePathDigital as string);
+      const fileBufferDigital = await fs.readFile(filePathDigital);
       const fileBase64Digital = this.wrapBase64(
         fileBufferDigital.toString('base64')
       );
@@ -204,7 +191,7 @@ class Mail {
         },
       });
 
-      const data = await this.ses.send(command);
+      await this.ses.send(command);
     } catch (error) {
       console.error('Error while sending email with attachment', error);
     }
