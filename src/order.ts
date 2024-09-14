@@ -148,10 +148,14 @@ class Order {
       };
     }
 
+    console.log(111, numberOfTracks, params.orderType == 'digital');
+
     const orderType = await this.getOrderType(
       numberOfTracks,
-      params.orderType === 'digital'
+      params.orderType == 'digital'
     );
+
+    console.log(222, orderType);
 
     if (orderType) {
       price = parseFloat(
