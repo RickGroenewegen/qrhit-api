@@ -57,9 +57,11 @@ class Qr {
       `${hash}_digital.pdf`.replace(/ /g, '_')
     ).toLowerCase();
 
-    const fullPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+    let fullPath = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
 
-    console.log(111, fullPath);
+    if (payment.orderType.name != 'digital') {
+      fullPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+    }
 
     // Check if the file exists using fs
     let exists = false;
@@ -72,8 +74,6 @@ class Qr {
     } catch (error) {
       // Continue
     }
-
-    console.log(222, exists);
 
     const user = await this.data.getUserByUserId(userId);
 
