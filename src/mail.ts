@@ -151,7 +151,11 @@ class Mail {
       ];
 
       // Add the non-digital file as an attachment if it exists and the email is trusted
-      if (filename && this.utils.isTrustedEmail(payment.email!)) {
+      if (
+        filename &&
+        orderType != 'digital' &&
+        this.utils.isTrustedEmail(payment.email!)
+      ) {
         const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
         const fileBuffer = await fs.readFile(filePath);
         const fileBase64 = this.wrapBase64(fileBuffer.toString('base64'));
