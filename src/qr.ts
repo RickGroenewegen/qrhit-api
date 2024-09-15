@@ -57,7 +57,12 @@ class Qr {
       `${hash}_digital.pdf`.replace(/ /g, '_')
     ).toLowerCase();
 
-    // Check if the file(s) exist using fs
+    let fullPath = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
+
+    if (payment.orderType.name != 'digital') {
+      fullPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+    }
+
     let exists = false;
     if (payment.orderType.name === 'digital') {
       const digitalPath = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
@@ -65,7 +70,9 @@ class Qr {
         await fs.access(digitalPath);
         exists = true;
         this.logger.log(
-          color.yellow.bold(`Digital PDF already exists: ${color.white.bold(filenameDigital)}`)
+          color.yellow.bold(
+            `Digital PDF already exists: ${color.white.bold(filenameDigital)}`
+          )
         );
       } catch (error) {
         // Digital file doesn't exist
@@ -77,7 +84,11 @@ class Qr {
         await Promise.all([fs.access(normalPath), fs.access(digitalPath)]);
         exists = true;
         this.logger.log(
-          color.yellow.bold(`Both PDFs already exist: ${color.white.bold(filename)} and ${color.white.bold(filenameDigital)}`)
+          color.yellow.bold(
+            `Both PDFs already exist: ${color.white.bold(
+              filename
+            )} and ${color.white.bold(filenameDigital)}`
+          )
         );
       } catch (error) {
         // At least one of the files doesn't exist
