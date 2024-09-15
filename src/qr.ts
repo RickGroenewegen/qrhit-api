@@ -59,6 +59,8 @@ class Qr {
 
     const fullPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
 
+    console.log(111, fullPath);
+
     // Check if the file exists using fs
     let exists = false;
     try {
@@ -70,6 +72,8 @@ class Qr {
     } catch (error) {
       // Continue
     }
+
+    console.log(222, exists);
 
     const user = await this.data.getUserByUserId(userId);
 
