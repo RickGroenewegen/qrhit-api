@@ -145,7 +145,7 @@ class Server {
     await this.fastify.register(ipPlugin);
     await this.fastify.register(require('@fastify/cors'), {
       origin: 'https://www.qrsong.io',
-      methods: 'GET, POST, OPTIONS, PUT, PATCH, DELETE',
+      methods: 'GET, POST, OPTIONS, PUT, PATCH, DELETE, FETCH',
       allowedHeaders:
         'Origin, X-Requested-With, Content-Type, Accept, sentry-trace, baggage, Authorization',
       credentials: true,
