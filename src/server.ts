@@ -221,7 +221,6 @@ class Server {
     });
 
     this.fastify.post('/mollie/payment', async (request: any, _reply) => {
-      console.log(111, 'mollie post payment', request.body);
       return await this.mollie.getPaymentUri(request.body, request.clientIp);
     });
 

@@ -39,8 +39,6 @@ class Mollie {
     params: any,
     clientIp: string
   ): Promise<ApiResult> {
-    console.log(111, params, clientIp);
-
     try {
       let amount = params.extraOrderData.amount || 1;
 
@@ -196,10 +194,6 @@ class Mollie {
         },
       },
     });
-
-    if (payment) {
-      console.log(111, payment.playlist!.playlistId, playlistId);
-    }
 
     if (payment && payment.playlist!.playlistId == playlistId) {
       return true;
