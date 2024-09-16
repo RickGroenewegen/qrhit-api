@@ -62,9 +62,10 @@
         window.countdownInitialValue = <%= process.env['COUNTDOWN'] %>;
         window.environment = '<%= process.env['ENVIRONMENT'] %>';
         window.apiUri = '<%= process.env['API_URI'] %>';
-        window.translations = <%= translations %>
-    
-      
+        window.translations = {};
+        <% for (let key in translations) { %>
+            window.translations['<%= key %>'] = '<%= translations[key].replace(/'/g, "\\'") %>';
+        <% } %>
     </script>
     <script src="/assets/js/countdown.js?v=<%= version %>"></script>
 </body>
