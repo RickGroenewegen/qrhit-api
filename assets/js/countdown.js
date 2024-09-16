@@ -209,6 +209,17 @@ $(document).ready(function () {
     $(`#${device}-instructions`).addClass('active');
   }
 
+  function detectOS() {
+    const userAgent = navigator.userAgent || navigator.vendor || window.opera;
+    if (/android/i.test(userAgent)) {
+      return 'android';
+    }
+    if (/iPad|iPhone|iPod/.test(userAgent) && !window.MSStream) {
+      return 'ios';
+    }
+    return 'ios'; // Default to iOS if can't determine
+  }
+
   $('#ios-selector').on('click', function() {
     setActiveDevice('ios');
   });
@@ -221,6 +232,7 @@ $(document).ready(function () {
 
   if (!isPWAInstalled() && !hasSeenOnboarding()) {
     showOnboarding();
+    setActiveDevice(detectOS());
   } else {
     $('#main-container').css('display', 'flex');
     $('#qr-icon').show();
