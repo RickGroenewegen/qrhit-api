@@ -81,105 +81,87 @@ $(document).ready(function () {
     return url; // Return original URL if it doesn't match the pattern
   }
 
+  let html5QrCode;
+
   function startScanning() {
-    navigator.mediaDevices
-      .getUserMedia({ video: { facingMode: 'environment' } })
-      .then(function (stream) {
-        scanning = true;
-        videoStream = stream;
-        const $video = $('#qr-video');
-        const $canvasElement = $('#qr-canvas');
-        const canvas = $canvasElement[0].getContext('2d');
+    scanning = true;
+    $('#close-scanner').show();
+    $('#qr-icon').hide();
 
-        $video[0].srcObject = stream;
-        $video.attr('playsinline', true);
-        $video[0].play();
-        $video.show();
-        $('#close-scanner').show();
-        requestAnimationFrame(tick);
+    html5QrCode = new Html5Qrcode("qr-reader");
+    const qrBoxSize = Math.min(window.innerWidth, window.innerHeight) * 0.7;
 
-        function tick() {
-          if ($video[0].readyState === $video[0].HAVE_ENOUGH_DATA) {
-            $canvasElement[0].height = $video[0].videoHeight;
-            $canvasElement[0].width = $video[0].videoWidth;
-            canvas.drawImage(
-              $video[0],
-              0,
-              0,
-              $canvasElement[0].width,
-              $canvasElement[0].height
-            );
-            var imageData = canvas.getImageData(
-              0,
-              0,
-              $canvasElement[0].width,
-              $canvasElement[0].height
-            );
-            var code = jsQR(imageData.data, imageData.width, imageData.height, {
-              inversionAttempts: 'attemptBoth',
-            });
-            if (code) {
-              $countdownContainer.show();
-              $('#qr-icon').hide();
-              if (code.data.includes('/qr/')) {
-                const qrCodeData = code.data.split('/');
-                const qrCodeLink = qrCodeData[qrCodeData.length - 1];
-                $.ajax({
-                  url: apiUri + '/qrlink/' + qrCodeLink,
-                  method: 'GET',
-                  dataType: 'json',
-                  success: function (data) {
-                    spotifyURI = convertToSpotifyURI(data.link);
-                    $('#qr-icon').hide();
-                    $countdownContainer.show();
-                    updateCountdown();
-                  },
-                  error: function (error) {
-                    console.error('Error:', error);
-                  },
-                });
-              } else if (code.data.includes('open.spotify.com')) {
-                setTimeout(function () {
-                  spotifyURI = convertToSpotifyURI(code.data);
-                  $countdownContainer.show();
-                  $('#qr-icon').hide();
-                  updateCountdown();
-                }, 250);
-              } else if (code.data.includes('spotify:')) {
-                setTimeout(function () {
-                  spotifyURI = code.data;
-                  $countdownContainer.show();
-                  $('#qr-icon').hide();
-                  updateCountdown();
-                }, 250);
-              } else {
-                alert(window.translations.invalidLink);
-              }
-              stopScanning();
-            }
-          }
-          if (scanning) {
-            requestAnimationFrame(tick);
-          }
-        }
-      })
-      .catch(function (error) {
-        console.error('Error accessing the camera', error);
-        alert(
-          "Error accessing the camera. Please make sure you've granted camera permissions."
-        );
-      });
+    html5QrCode.start(
+      { facingMode: "environment" },
+      {
+        fps: 10,
+        qrbox: qrBoxSize
+      },
+      onScanSuccess,
+      onScanFailure
+    ).catch((err) => {
+      console.error(`Unable to start scanning: ${err}`);
+      alert("Error accessing the camera. Please make sure you've granted camera permissions.");
+    });
   }
 
   function stopScanning() {
-    scanning = false;
-    if (videoStream) {
-      videoStream.getTracks().forEach((track) => track.stop());
+    if (html5QrCode) {
+      html5QrCode.stop().then(() => {
+        scanning = false;
+        $('#close-scanner').hide();
+        $('#qr-icon').show();
+        $countdownContainer.hide();
+      }).catch((err) => {
+        console.error(`Unable to stop scanning: ${err}`);
+      });
     }
-    $('#qr-video').hide();
-    $('#close-scanner').hide();
-    $('#qr-icon').show();
-    $countdownContainer.hide();
+  }
+
+  function onScanSuccess(decodedText, decodedResult) {
+    $countdownContainer.show();
+    $('#qr-icon').hide();
+
+    if (decodedText.includes('/qr/')) {
+      const qrCodeData = decodedText.split('/');
+      const qrCodeLink = qrCodeData[qrCodeData.length - 1];
+      $.ajax({
+        url: apiUri + '/qrlink/' + qrCodeLink,
+        method: 'GET',
+        dataType: 'json',
+        success: function (data) {
+          spotifyURI = convertToSpotifyURI(data.link);
+          $('#qr-icon').hide();
+          $countdownContainer.show();
+          updateCountdown();
+        },
+        error: function (error) {
+          console.error('Error:', error);
+        },
+      });
+    } else if (decodedText.includes('open.spotify.com')) {
+      setTimeout(function () {
+        spotifyURI = convertToSpotifyURI(decodedText);
+        $countdownContainer.show();
+        $('#qr-icon').hide();
+        updateCountdown();
+      }, 250);
+    } else if (decodedText.includes('spotify:')) {
+      setTimeout(function () {
+        spotifyURI = decodedText;
+        $countdownContainer.show();
+        $('#qr-icon').hide();
+        updateCountdown();
+      }, 250);
+    } else {
+      alert(window.translations.invalidLink);
+    }
+    stopScanning();
+  }
+
+  function onScanFailure(error) {
+    // Handle scan failure, if needed
+    console.warn(`QR code scanning failed: ${error}`);
   }
 
   if (isPWAInstalled()) {
