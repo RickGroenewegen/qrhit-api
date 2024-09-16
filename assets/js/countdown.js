@@ -60,10 +60,12 @@ $(document).ready(function () {
       if (spotifyURI) {
         console.log('Redirecting to Spotify URI:', spotifyURI);
         window.location.href = spotifyURI;
-        countdownValue = window.countdownInitialValue;
-        stopScanning();
+        setTimeout(() => {
+          resetToInitialState();
+        }, 1000); // Wait for 1 second before resetting the state
       } else {
         console.log(window.translations.cameraError);
+        resetToInitialState();
       }
     }
   }
@@ -224,6 +226,14 @@ $(document).ready(function () {
 
   $('#qr-icon').on('click', toggleQRScanner);
   $('#close-scanner').on('click', stopScanning);
+
+  function resetToInitialState() {
+    countdownValue = window.countdownInitialValue;
+    spotifyURI = null;
+    $countdownContainer.hide();
+    $('#qr-icon').show();
+    stopScanning();
+  }
 
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
