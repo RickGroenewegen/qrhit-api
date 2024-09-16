@@ -220,17 +220,17 @@ $(document).ready(function () {
     return 'ios'; // Default to iOS if can't determine
   }
 
-  $('#ios-selector').on('click', function() {
+  $('#ios-selector').on('click', function () {
     setActiveDevice('ios');
   });
 
-  $('#android-selector').on('click', function() {
+  $('#android-selector').on('click', function () {
     setActiveDevice('android');
   });
 
   $('#close-onboarding').on('click', hideOnboarding);
 
-  if (!isPWAInstalled() && !hasSeenOnboarding()) {
+  if (!isPWAInstalled()) {
     showOnboarding();
     setActiveDevice(detectOS());
   } else {
@@ -267,3 +267,16 @@ $(document).ready(function () {
     });
   }
 });
+
+// document.addEventListener('DOMContentLoaded', function () {
+//   alert(isPWAInstalled());
+
+//   const onboardingOverlay = document.getElementById('onboarding-overlay');
+
+//   if (
+//     localStorage.getItem('hasSeenOnboarding') === 'true' ||
+//     isPWAInstalled()
+//   ) {
+//     onboardingOverlay.style.display = 'none';
+//   }
+// });

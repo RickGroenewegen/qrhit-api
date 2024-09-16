@@ -48,7 +48,7 @@
 	"countdown.tapShare": "Tap the share button",
 	"countdown.scrollDown": "Scroll down and tap \"Add to Home Screen\"",
 	"countdown.tapMenu" : "Tap the menu button",
-	"countdown.tapAddToHomeScreen" : "Tap \"Add to Home Screen\"",
+	"countdown.tapAddToHomeScreen" : "Tap \"Add\"",
 	"countdown.gotIt" : "Got it!",
 	"countdown.closeScanner" : "Close",
 	"countdown.cameraError" : "Error accessing the camera. Please make sure you've granted camera permissions.",
