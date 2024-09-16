@@ -125,10 +125,10 @@ body {
 
 .step {
     display: flex;
-    flex-direction: column;
-    align-items: center;
+    flex-direction: row;
+    align-items: flex-start;
     margin-bottom: 1.5rem;
-    text-align: center;
+    text-align: left;
 }
 
 .step-number {
@@ -141,11 +141,16 @@ body {
     justify-content: center;
     align-items: center;
     font-weight: bold;
-    margin-bottom: 0.5rem;
+    margin-right: 1rem;
+    flex-shrink: 0;
 }
 
 .step-content {
-    width: 100%;
+    flex: 1;
+}
+
+.step-content p {
+    margin: 0 0 0.5rem 0;
 }
 
 .animation-container {
