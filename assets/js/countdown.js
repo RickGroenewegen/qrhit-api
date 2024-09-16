@@ -116,7 +116,7 @@ $(document).ready(function () {
               $canvasElement[0].height
             );
             var code = jsQR(imageData.data, imageData.width, imageData.height, {
-              inversionAttempts: 'dontInvert',
+              inversionAttempts: 'attemptBoth',
             });
             if (code) {
               $countdownContainer.show();
