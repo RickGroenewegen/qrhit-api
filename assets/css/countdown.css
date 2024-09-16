@@ -239,10 +239,25 @@ body {
     margin-bottom: 1rem;
 }
 
+#qr-reader-container {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
 #qr-reader {
     width: 100%;
     max-width: 500px;
-    margin: 0 auto;
+    background-color: white;
+    border-radius: 10px;
+    overflow: hidden;
 }
 
 #qr-reader__scan_region {
@@ -259,8 +274,7 @@ body {
 }
 
 #close-scanner {
-    display: none;
-    position: fixed;
+    position: absolute;
     top: 20px;
     right: 20px;
     padding: 10px 20px;

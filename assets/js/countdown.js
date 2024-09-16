@@ -87,7 +87,7 @@ $(document).ready(function () {
 
   function startScanning() {
     scanning = true;
-    $('#close-scanner').show();
+    $('#qr-reader-container').css('display', 'flex');
     $('#qr-icon').hide();
 
     if (hasCameraPermission()) {
@@ -134,7 +134,7 @@ $(document).ready(function () {
     if (html5QrCode) {
       html5QrCode.stop().then(() => {
         scanning = false;
-        $('#close-scanner').hide();
+        $('#qr-reader-container').hide();
         $('#qr-icon').show();
         $countdownContainer.hide();
       }).catch((err) => {

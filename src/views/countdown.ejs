@@ -96,8 +96,10 @@
         </div>
     </div>
 
-    <div id="qr-reader"></div>
-    <button id="close-scanner" onclick="stopScanning()">X <%= translations.closeScanner %></button>
+    <div id="qr-reader-container">
+        <div id="qr-reader"></div>
+        <button id="close-scanner" onclick="stopScanning()">X <%= translations.closeScanner %></button>
+    </div>
 
     <script>
         // Pass EJS variables to JavaScript
