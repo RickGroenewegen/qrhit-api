@@ -3,6 +3,7 @@
   "short_name": "QRSong!",
   "start_url": "/qr/0",
   "display": "standalone",
+  "orientation":  "portrait",
   "background_color": "#0077be",
   "theme_color": "#0077be",
   "icons": [
