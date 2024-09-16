@@ -23,7 +23,7 @@
             <div id="countdown" class="countdown"><%= process.env['COUNTDOWN'] %></div>
             <div class="message-bottom"><%= translations.getReady %></div>
         </div>
-        <div id="qr-icon" class="qr-icon" onclick="toggleQRScanner()">
+        <div id="qr-icon" class="qr-icon">
             <i class="fas fa-camera" style="font-size: 100px;margin-bottom:25px;"></i>
             <div><%= translations.tapTheCamera %></div>
         </div>
@@ -62,9 +62,8 @@
         window.countdownInitialValue = <%= process.env['COUNTDOWN'] %>;
         window.environment = '<%= process.env['ENVIRONMENT'] %>';
         window.apiUri = '<%= process.env['API_URI'] %>';
-        window.translations = {
-            cameraError: '<%= translations.cameraError %>'
-        };
+        window.translations = <%= translations %>
+    
       
     </script>
     <script src="/assets/js/countdown.js?v=<%= version %>"></script>
