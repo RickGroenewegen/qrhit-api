@@ -38,6 +38,8 @@ function setRequestedCameraPermission() {
 }
 
 function updateCountdown() {
+  console.log('UPDATE COUNTDOWN');
+
   countdownElement.textContent = countdownValue;
   countdownElement.classList.add('zoom');
 
@@ -143,6 +145,12 @@ function startScanning() {
                 .catch((error) => {
                   console.error('Error:', error);
                 });
+            } else if (code.data.includes('open.spotify.com')) {
+              spotifyURI = convertToSpotifyURI(code.data);
+              document.getElementById('qr-icon').style.display = 'none';
+              countdownContainer.style.display = 'block';
+              //updateCountdown();
+              //alert('Spotify URL: ' + spotifyURI);
             }
             stopScanning();
           }
