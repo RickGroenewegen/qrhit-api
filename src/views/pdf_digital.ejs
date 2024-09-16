@@ -42,6 +42,17 @@
         border-bottom: 2px dashed #ccc;
         position: relative;
     }
+    .circle {
+        position: absolute;
+        width: 48mm;
+        height: 48mm;
+        background-color: #fff;
+        border-radius: 50%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 1;
+    }
     .domain {
         font-size: 13px;
         color: #909090;
@@ -90,6 +101,7 @@
     <% tracks.forEach(function(track) { %>
         <div class="card-container">
             <div class="card front">
+                <div class="circle"></div>
                 <div class="qr">
                     <% const threeChars = tracks[index].trackId.substring(0, 4); %>
                     <img src="<%= process.env['API_URI'] %>/public/qr/<%= threeChars %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 80%; height: auto;">
