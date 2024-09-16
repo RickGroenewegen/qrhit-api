@@ -49,6 +49,8 @@ function updateCountdown() {
     countdownValue--;
     setTimeout(updateCountdown, 1000);
   } else {
+    console.log('Timeout over: ' + spotifyURI);
+
     if (spotifyURI) {
       console.log('Redirecting to Spotify URI:', spotifyURI);
       window.location.href = spotifyURI;
@@ -128,8 +130,12 @@ function startScanning() {
               fetch(apiUri + '/qrlink/' + qrCodeLink)
                 .then((response) => response.json())
                 .then((data) => {
+                  console.log('Converting link:', data);
+
                   spotifyURI = convertToSpotifyURI(data.link);
-                  stopScanning();
+
+                  console.log('Spotify URI:', spotifyURI);
+
                   document.getElementById('qr-icon').style.display = 'none';
                   countdownContainer.style.display = 'block';
                   updateCountdown();

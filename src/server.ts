@@ -51,6 +51,7 @@ class Server {
   private formatters = new Formatters().getFormatters();
   private translation: Translation = new Translation();
   private cache = Cache.getInstance();
+  private version: string = '1.0.0';
 
   private constructor() {
     this.fastify = Fastify({
@@ -69,10 +70,17 @@ class Server {
 
   public async init() {
     this.isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
+    await this.setVersion();
     await this.createDirs();
     await this.registerPlugins();
     await this.addRoutes();
     await this.startCluster();
+  }
+
+  private async setVersion() {
+    this.version = JSON.parse(
+      (await fs.readFileSync('package.json')).toString()
+    ).version;
   }
 
   private async createDirs() {
@@ -314,7 +322,11 @@ class Server {
         locale,
         'countdown'
       );
-      await reply.view(`countdown.ejs`, { translations });
+      let useVersion = this.version;
+      if (process.env['ENVIRONMENT'] === 'development') {
+        useVersion = new Date().getTime().toString();
+      }
+      await reply.view(`countdown.ejs`, { translations, version: useVersion });
     });
 
     this.fastify.get('/qrlink/:trackId', async (request: any, reply) => {
