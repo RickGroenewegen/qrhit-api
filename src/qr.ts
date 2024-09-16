@@ -113,15 +113,22 @@ class Qr {
       return;
     }
 
+    let cardType = ' fysieke ';
+    let orderName = `${payment.fullname} (${payment.countrycode})`;
+    if (payment.orderType.name === 'digital') {
+      cardType = ' digitale ';
+      orderName = `${payment.fullname}`;
+    }
+
     // Pushover
     this.pushover.sendMessage(
       {
         title: `KA-CHING! € ${payment.orderType.amount
           .toString()
           .replace('.', ',')} verdiend!`,
-        message: `${payment.fullname} (${payment.countrycode}) heeft ${
+        message: `${orderName} heeft ${
           payment.numberOfTracks
-        } kaarten besteld voor € ${payment.totalPrice
+        } ${cardType} kaarten besteld voor € ${payment.totalPrice
           .toString()
           .replace('.', ',')}. Playlist: ${playlist.name}`,
         sound: 'incoming',
