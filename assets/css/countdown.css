@@ -273,10 +273,8 @@ body {
     text-align: center;
 }
 
-#close-scanner {
+#close-scanner, #switch-camera {
     position: absolute;
-    top: 20px;
-    right: 20px;
     padding: 10px 20px;
     background-color: #ffffff;
     color: #0077be;
@@ -286,4 +284,15 @@ body {
     font-size: 1.2rem;
     font-weight: bold;
     z-index: 1002;
+}
+
+#close-scanner {
+    top: 20px;
+    right: 20px;
+}
+
+#switch-camera {
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
 }
