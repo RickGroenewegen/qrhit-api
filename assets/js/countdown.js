@@ -1,203 +1,201 @@
-let countdownValue = window.countdownInitialValue;
-const countdownElement = document.getElementById('countdown');
-const countdownContainer = document.getElementById('countdown-container');
-const environment = window.environment;
-const apiUri = window.apiUri;
+$(document).ready(function() {
+  let countdownValue = window.countdownInitialValue;
+  const $countdownElement = $('#countdown');
+  const $countdownContainer = $('#countdown-container');
+  const environment = window.environment;
+  const apiUri = window.apiUri;
 
-let deferredPrompt;
-let spotifyURI;
-let scanning = false;
-let videoStream;
+  let deferredPrompt;
+  let spotifyURI;
+  let scanning = false;
+  let videoStream;
 
-function isPWAInstalled() {
-  return (
-    window.matchMedia('(display-mode: standalone)').matches ||
-    window.navigator.standalone ||
-    document.referrer.includes('android-app://')
-  );
-}
+  function isPWAInstalled() {
+    return (
+      window.matchMedia('(display-mode: standalone)').matches ||
+      window.navigator.standalone ||
+      document.referrer.includes('android-app://')
+    );
+  }
 
-function hasSeenOnboarding() {
-  return localStorage.getItem('hasSeenOnboarding') === 'true';
-}
+  function hasSeenOnboarding() {
+    return localStorage.getItem('hasSeenOnboarding') === 'true';
+  }
 
-function setOnboardingSeen() {
-  localStorage.setItem('hasSeenOnboarding', 'true');
-}
+  function setOnboardingSeen() {
+    localStorage.setItem('hasSeenOnboarding', 'true');
+  }
 
-function isCameraSupported() {
-  return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
-}
+  function isCameraSupported() {
+    return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
+  }
 
-function hasRequestedCameraPermission() {
-  return localStorage.getItem('hasRequestedCameraPermission') === 'true';
-}
+  function hasRequestedCameraPermission() {
+    return localStorage.getItem('hasRequestedCameraPermission') === 'true';
+  }
 
-function setRequestedCameraPermission() {
-  localStorage.setItem('hasRequestedCameraPermission', 'true');
-}
+  function setRequestedCameraPermission() {
+    localStorage.setItem('hasRequestedCameraPermission', 'true');
+  }
 
-function updateCountdown() {
-  console.log('UPDATE COUNTDOWN');
+  function updateCountdown() {
+    console.log('UPDATE COUNTDOWN');
 
-  countdownElement.textContent = countdownValue;
-  countdownElement.classList.add('zoom');
+    $countdownElement.text(countdownValue).addClass('zoom');
 
-  setTimeout(() => {
-    countdownElement.classList.remove('zoom');
-  }, 300);
+    setTimeout(() => {
+      $countdownElement.removeClass('zoom');
+    }, 300);
 
-  if (countdownValue > 0) {
-    countdownValue--;
-    setTimeout(updateCountdown, 1000);
-  } else {
-    console.log('Timeout over: ' + spotifyURI);
-
-    if (spotifyURI) {
-      console.log('Redirecting to Spotify URI:', spotifyURI);
-      window.location.href = spotifyURI;
-      countdownValue = window.countdownInitialValue;
-      stopScanning();
+    if (countdownValue > 0) {
+      countdownValue--;
+      setTimeout(updateCountdown, 1000);
     } else {
-      console.log(window.translations.cameraError);
+      console.log('Timeout over: ' + spotifyURI);
+
+      if (spotifyURI) {
+        console.log('Redirecting to Spotify URI:', spotifyURI);
+        window.location.href = spotifyURI;
+        countdownValue = window.countdownInitialValue;
+        stopScanning();
+      } else {
+        console.log(window.translations.cameraError);
+      }
     }
   }
-}
 
-function toggleQRScanner() {
-  if (scanning) {
-    stopScanning();
-  } else {
-    startScanning();
-  }
-}
-
-function convertToSpotifyURI(url) {
-  const spotifyWebUrlPattern =
-    /^https?:\/\/open\.spotify\.com\/(track|album|playlist|artist)\/([a-zA-Z0-9]+)(.*)$/;
-  const match = url.match(spotifyWebUrlPattern);
-
-  if (match) {
-    const [, type, id] = match;
-    return `spotify:${type}:${id}`;
+  function toggleQRScanner() {
+    if (scanning) {
+      stopScanning();
+    } else {
+      startScanning();
+    }
   }
 
-  return url; // Return original URL if it doesn't match the pattern
-}
+  function convertToSpotifyURI(url) {
+    const spotifyWebUrlPattern =
+      /^https?:\/\/open\.spotify\.com\/(track|album|playlist|artist)\/([a-zA-Z0-9]+)(.*)$/;
+    const match = url.match(spotifyWebUrlPattern);
 
-function startScanning() {
-  navigator.mediaDevices
-    .getUserMedia({ video: { facingMode: 'environment' } })
-    .then(function (stream) {
-      scanning = true;
-      videoStream = stream;
-      const video = document.getElementById('qr-video');
-      const canvasElement = document.getElementById('qr-canvas');
-      const canvas = canvasElement.getContext('2d');
+    if (match) {
+      const [, type, id] = match;
+      return `spotify:${type}:${id}`;
+    }
 
-      video.srcObject = stream;
-      video.setAttribute('playsinline', true);
-      video.play();
-      video.style.display = 'block';
-      document.getElementById('close-scanner').style.display = 'block';
-      requestAnimationFrame(tick);
+    return url; // Return original URL if it doesn't match the pattern
+  }
 
-      function tick() {
-        if (video.readyState === video.HAVE_ENOUGH_DATA) {
-          canvasElement.height = video.videoHeight;
-          canvasElement.width = video.videoWidth;
-          canvas.drawImage(
-            video,
-            0,
-            0,
-            canvasElement.width,
-            canvasElement.height
-          );
-          var imageData = canvas.getImageData(
-            0,
-            0,
-            canvasElement.width,
-            canvasElement.height
-          );
-          var code = jsQR(imageData.data, imageData.width, imageData.height, {
-            inversionAttempts: 'dontInvert',
-          });
-          if (code) {
-            console.log('Found QR code', code.data);
+  function startScanning() {
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: 'environment' } })
+      .then(function (stream) {
+        scanning = true;
+        videoStream = stream;
+        const $video = $('#qr-video');
+        const $canvasElement = $('#qr-canvas');
+        const canvas = $canvasElement[0].getContext('2d');
 
-            if (code.data.includes('/qr/')) {
-              const qrCodeData = code.data.split('/');
-              const qrCodeLink = qrCodeData[qrCodeData.length - 1];
+        $video[0].srcObject = stream;
+        $video.attr('playsinline', true);
+        $video[0].play();
+        $video.show();
+        $('#close-scanner').show();
+        requestAnimationFrame(tick);
 
-              fetch(apiUri + '/qrlink/' + qrCodeLink)
-                .then((response) => response.json())
-                .then((data) => {
-                  console.log('Converting link:', data);
+        function tick() {
+          if ($video[0].readyState === $video[0].HAVE_ENOUGH_DATA) {
+            $canvasElement[0].height = $video[0].videoHeight;
+            $canvasElement[0].width = $video[0].videoWidth;
+            canvas.drawImage(
+              $video[0],
+              0,
+              0,
+              $canvasElement[0].width,
+              $canvasElement[0].height
+            );
+            var imageData = canvas.getImageData(
+              0,
+              0,
+              $canvasElement[0].width,
+              $canvasElement[0].height
+            );
+            var code = jsQR(imageData.data, imageData.width, imageData.height, {
+              inversionAttempts: 'dontInvert',
+            });
+            if (code) {
+              console.log('Found QR code', code.data);
 
-                  spotifyURI = convertToSpotifyURI(data.link);
+              if (code.data.includes('/qr/')) {
+                const qrCodeData = code.data.split('/');
+                const qrCodeLink = qrCodeData[qrCodeData.length - 1];
 
-                  console.log('Spotify URI:', spotifyURI);
-
-                  document.getElementById('qr-icon').style.display = 'none';
-                  countdownContainer.style.display = 'block';
-                  updateCountdown();
-                })
-                .catch((error) => {
-                  console.error('Error:', error);
+                $.ajax({
+                  url: apiUri + '/qrlink/' + qrCodeLink,
+                  method: 'GET',
+                  dataType: 'json',
+                  success: function(data) {
+                    console.log('Converting link:', data);
+                    spotifyURI = convertToSpotifyURI(data.link);
+                    console.log('Spotify URI:', spotifyURI);
+                    $('#qr-icon').hide();
+                    $countdownContainer.show();
+                    updateCountdown();
+                  },
+                  error: function(error) {
+                    console.error('Error:', error);
+                  }
                 });
-            } else if (code.data.includes('open.spotify.com')) {
-              spotifyURI = convertToSpotifyURI(code.data);
-              document.getElementById('qr-icon').style.display = 'none';
-              countdownContainer.style.display = 'block';
-              //updateCountdown();
-              //alert('Spotify URL: ' + spotifyURI);
+              } else if (code.data.includes('open.spotify.com')) {
+                spotifyURI = convertToSpotifyURI(code.data);
+                $('#qr-icon').hide();
+                $countdownContainer.show();
+              }
+              stopScanning();
             }
-            stopScanning();
+          }
+          if (scanning) {
+            requestAnimationFrame(tick);
           }
         }
-        if (scanning) {
-          requestAnimationFrame(tick);
-        }
-      }
-    })
-    .catch(function (error) {
-      console.error('Error accessing the camera', error);
-      alert(
-        "Error accessing the camera. Please make sure you've granted camera permissions."
-      );
-    });
-}
-
-function stopScanning() {
-  scanning = false;
-  if (videoStream) {
-    videoStream.getTracks().forEach((track) => track.stop());
+      })
+      .catch(function (error) {
+        console.error('Error accessing the camera', error);
+        alert(
+          "Error accessing the camera. Please make sure you've granted camera permissions."
+        );
+      });
   }
-  document.getElementById('qr-video').style.display = 'none';
-  document.getElementById('close-scanner').style.display = 'none';
-  document.getElementById('qr-icon').style.display = 'block';
-  countdownContainer.style.display = 'none';
-}
 
-document.addEventListener('DOMContentLoaded', function () {
+  function stopScanning() {
+    scanning = false;
+    if (videoStream) {
+      videoStream.getTracks().forEach((track) => track.stop());
+    }
+    $('#qr-video').hide();
+    $('#close-scanner').hide();
+    $('#qr-icon').show();
+    $countdownContainer.hide();
+  }
+
   if (isPWAInstalled()) {
     if (isCameraSupported() && !hasRequestedCameraPermission()) {
       // requestCameraPermission();
     }
-    document.getElementById('qr-icon').style.display = 'block';
+    $('#qr-icon').show();
   } else {
-    document.getElementById('onboarding-overlay').style.display = 'flex';
-    document.getElementById('main-container').style.display = 'none';
+    $('#onboarding-overlay').css('display', 'flex');
+    $('#main-container').hide();
   }
 
-  document
-    .getElementById('close-onboarding')
-    .addEventListener('click', function () {
-      document.getElementById('onboarding-overlay').style.display = 'none';
-      document.getElementById('main-container').style.display = 'flex';
-      document.getElementById('qr-icon').style.display = 'block';
-      setOnboardingSeen();
-    });
+  $('#close-onboarding').on('click', function () {
+    $('#onboarding-overlay').hide();
+    $('#main-container').css('display', 'flex');
+    $('#qr-icon').show();
+    setOnboardingSeen();
+  });
+
+  $('#qr-icon').on('click', toggleQRScanner);
+  $('#close-scanner').on('click', stopScanning);
 
   window.addEventListener('beforeinstallprompt', (e) => {
     e.preventDefault();
@@ -208,20 +206,20 @@ document.addEventListener('DOMContentLoaded', function () {
     console.log('PWA was installed');
     setOnboardingSeen();
   });
-});
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker
-      .register('/assets/js/sw.js')
-      .then((registration) => {
-        console.log(
-          'Service Worker registered successfully:',
-          registration.scope
-        );
-      })
-      .catch((error) => {
-        console.log('Service Worker registration failed:', error);
-      });
-  });
-}
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker
+        .register('/assets/js/sw.js')
+        .then((registration) => {
+          console.log(
+            'Service Worker registered successfully:',
+            registration.scope
+          );
+        })
+        .catch((error) => {
+          console.log('Service Worker registration failed:', error);
+        });
+    });
+  }
+});
