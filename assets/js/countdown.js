@@ -38,12 +38,12 @@ $(document).ready(function () {
     return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia);
   }
 
-  function hasRequestedCameraPermission() {
-    return localStorage.getItem('hasRequestedCameraPermission') === 'true';
+  function hasCameraPermission() {
+    return localStorage.getItem('hasCameraPermission') === 'true';
   }
 
-  function setRequestedCameraPermission() {
-    localStorage.setItem('hasRequestedCameraPermission', 'true');
+  function setCameraPermission(granted) {
+    localStorage.setItem('hasCameraPermission', granted.toString());
   }
 
   function updateCountdown() {
@@ -90,6 +90,28 @@ $(document).ready(function () {
     $('#close-scanner').show();
     $('#qr-icon').hide();
 
+    if (hasCameraPermission()) {
+      initializeScanner();
+    } else {
+      requestCameraPermission();
+    }
+  }
+
+  function requestCameraPermission() {
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+      .then(function(stream) {
+        setCameraPermission(true);
+        stream.getTracks().forEach(track => track.stop());
+        initializeScanner();
+      })
+      .catch(function(err) {
+        console.error(`Error requesting camera permission: ${err}`);
+        alert("Error accessing the camera. Please make sure you've granted camera permissions.");
+        setCameraPermission(false);
+      });
+  }
+
+  function initializeScanner() {
     html5QrCode = new Html5Qrcode("qr-reader");
     const qrBoxSize = Math.min(window.innerWidth, window.innerHeight) * 0.7;
 
@@ -104,6 +126,7 @@ $(document).ready(function () {
     ).catch((err) => {
       console.error(`Unable to start scanning: ${err}`);
       alert("Error accessing the camera. Please make sure you've granted camera permissions.");
+      setCameraPermission(false);
     });
   }
 
@@ -167,9 +190,6 @@ $(document).ready(function () {
   }
 
   if (isPWAInstalled()) {
-    if (isCameraSupported() && !hasRequestedCameraPermission()) {
-      // requestCameraPermission();
-    }
     $('#qr-icon').show();
   } else {
     $('#onboarding-overlay').css('display', 'flex');
