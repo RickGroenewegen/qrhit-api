@@ -98,7 +98,7 @@ $(document).ready(function () {
   }
 
   function requestCameraPermission() {
-    navigator.mediaDevices.getUserMedia({ video: { facingMode: "environment" } })
+    navigator.mediaDevices.getUserMedia({ video: { facingMode: { exact: "environment" } } })
       .then(function(stream) {
         setCameraPermission(true);
         stream.getTracks().forEach(track => track.stop());
@@ -106,7 +106,7 @@ $(document).ready(function () {
       })
       .catch(function(err) {
         console.error(`Error requesting camera permission: ${err}`);
-        alert("Error accessing the camera. Please make sure you've granted camera permissions.");
+        alert("Error accessing the rear camera. Please make sure you've granted camera permissions and that your device has a rear camera.");
         setCameraPermission(false);
       });
   }
@@ -116,7 +116,7 @@ $(document).ready(function () {
     const qrBoxSize = Math.min(window.innerWidth, window.innerHeight) * 0.7;
 
     html5QrCode.start(
-      { facingMode: "environment" },
+      { facingMode: { exact: "environment" } },
       {
         fps: 10,
         qrbox: qrBoxSize
@@ -125,7 +125,7 @@ $(document).ready(function () {
       onScanFailure
     ).catch((err) => {
       console.error(`Unable to start scanning: ${err}`);
-      alert("Error accessing the camera. Please make sure you've granted camera permissions.");
+      alert("Error accessing the rear camera. Please make sure you've granted camera permissions and that your device has a rear camera.");
       setCameraPermission(false);
     });
   }
