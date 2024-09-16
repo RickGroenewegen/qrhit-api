@@ -119,6 +119,8 @@ $(document).ready(function () {
               inversionAttempts: 'dontInvert',
             });
             if (code) {
+              $countdownContainer.show();
+              $('#qr-icon').hide();
               if (code.data.includes('/qr/')) {
                 const qrCodeData = code.data.split('/');
                 const qrCodeLink = qrCodeData[qrCodeData.length - 1];
