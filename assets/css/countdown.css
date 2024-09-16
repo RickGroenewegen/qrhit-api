@@ -12,6 +12,30 @@ body {
     font-family: 'Roboto', sans-serif;
 }
 
+ .ios-share-icon {
+     width: 30px;
+     height: 30px;
+     color: #007AFF;
+ }
+
+ .animated-icon.ios-share-icon {
+     animation: pulse 2s infinite;
+ }
+
+ @keyframes pulse {
+     0% {
+         transform: scale(1);
+     }
+
+     50% {
+         transform: scale(1.1);
+     }
+
+     100% {
+         transform: scale(1);
+     }
+ }
+
 .container {
     display: flex;
     flex-direction: column;
