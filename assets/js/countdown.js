@@ -89,6 +89,7 @@ $(document).ready(function () {
     scanning = true;
     $('#qr-reader-container').css('display', 'flex');
     $('#qr-icon').hide();
+    $('.loading-spinner').show();
 
     if (hasCameraPermission()) {
       initializeScanner();
@@ -123,10 +124,13 @@ $(document).ready(function () {
       },
       onScanSuccess,
       onScanFailure
-    ).catch((err) => {
+    ).then(() => {
+      $('.loading-spinner').hide();
+    }).catch((err) => {
       console.error(`Unable to start scanning: ${err}`);
       alert("Error accessing the rear camera. Please make sure you've granted camera permissions and that your device has a rear camera.");
       setCameraPermission(false);
+      $('.loading-spinner').hide();
     });
   }
 
@@ -137,6 +141,7 @@ $(document).ready(function () {
         $('#qr-reader-container').hide();
         $('#qr-icon').show();
         $countdownContainer.hide();
+        $('.loading-spinner').hide();
       }).catch((err) => {
         console.error(`Unable to stop scanning: ${err}`);
       });
