@@ -255,13 +255,12 @@ body {
 #qr-reader {
     width: 100%;
     max-width: 500px;
-    background-color: white;
     border-radius: 10px;
     overflow: hidden;
 }
 
 #qr-reader__scan_region {
-    background: white;
+   
 }
 
 #qr-reader__dashboard_section_swaplink {
