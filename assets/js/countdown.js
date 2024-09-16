@@ -190,12 +190,41 @@ $(document).ready(function () {
     $('#main-container').hide();
   }
 
-  $('#close-onboarding').on('click', function () {
+  function showOnboarding() {
+    $('#onboarding-overlay').css('display', 'flex');
+    $('#main-container').hide();
+  }
+
+  function hideOnboarding() {
     $('#onboarding-overlay').hide();
     $('#main-container').css('display', 'flex');
     $('#qr-icon').show();
     setOnboardingSeen();
+  }
+
+  function setActiveDevice(device) {
+    $('.device-button').removeClass('active');
+    $(`#${device}-selector`).addClass('active');
+    $('.install-instructions').removeClass('active');
+    $(`#${device}-instructions`).addClass('active');
+  }
+
+  $('#ios-selector').on('click', function() {
+    setActiveDevice('ios');
   });
+
+  $('#android-selector').on('click', function() {
+    setActiveDevice('android');
+  });
+
+  $('#close-onboarding').on('click', hideOnboarding);
+
+  if (!isPWAInstalled() && !hasSeenOnboarding()) {
+    showOnboarding();
+  } else {
+    $('#main-container').css('display', 'flex');
+    $('#qr-icon').show();
+  }
 
   $('#qr-icon').on('click', toggleQRScanner);
   $('#close-scanner').on('click', stopScanning);

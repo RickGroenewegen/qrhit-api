@@ -33,23 +33,63 @@
     <div id="onboarding-overlay">
         <div class="onboarding-content">
             <div class="title">
-                <img src="/assets/images/logo_white.png" style="max-width:300px;"/>
+                <img src="/assets/images/logo_white.png" alt="QRSong! Logo" class="logo-image"/>
             </div>
-            <p><%= translations.youNeedToInstall %></p>
-            <div class="install-instructions">
-                <h3><%= translations.howToInstall %>:</h3>
-                <p><%= translations.onIOS %>:</p>
-                <ol>
-                    <li><%= translations.tapShare %></li>
-                    <li><%= translations.scrollDown %></li>
-                </ol>
-                <p><%= translations.onAndroid %>:</p>
-                <ol>
-                    <li><%= translations.tapMenu %> ⋮</li>
-                    <li><%= translations.tapAddToHomeScreen %></li>
-                </ol>
+            <h2 class="onboarding-heading"><%= translations.youNeedToInstall %></h2>
+            <div class="device-selector">
+                <button id="ios-selector" class="device-button active"><i class="fab fa-apple"></i> iOS</button>
+                <button id="android-selector" class="device-button"><i class="fab fa-android"></i> Android</button>
             </div>
-            <button id="close-onboarding"><%= translations.gotIt %></button>
+            <div id="ios-instructions" class="install-instructions active">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <p><%= translations.tapShare %></p>
+                        <div class="animation-container">
+                            <i class="fas fa-share-square animated-icon"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <p><%= translations.scrollDown %></p>
+                        <div class="animation-container">
+                            <i class="fas fa-arrow-down animated-icon"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <div class="step-content">
+                        <p><%= translations.tapAddToHomeScreen %></p>
+                        <div class="animation-container">
+                            <i class="fas fa-plus-square animated-icon"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div id="android-instructions" class="install-instructions">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <div class="step-content">
+                        <p><%= translations.tapMenu %></p>
+                        <div class="animation-container">
+                            <i class="fas fa-ellipsis-v animated-icon"></i>
+                        </div>
+                    </div>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <div class="step-content">
+                        <p><%= translations.tapAddToHomeScreen %></p>
+                        <div class="animation-container">
+                            <i class="fas fa-plus-square animated-icon"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <button id="close-onboarding" class="cta-button"><%= translations.gotIt %></button>
         </div>
     </div>
 
