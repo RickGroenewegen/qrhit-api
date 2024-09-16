@@ -1,4 +1,4 @@
-$(document).ready(function() {
+$(document).ready(function () {
   let countdownValue = window.countdownInitialValue;
   const $countdownElement = $('#countdown');
   const $countdownContainer = $('#countdown-container');
@@ -16,6 +16,14 @@ $(document).ready(function() {
       window.navigator.standalone ||
       document.referrer.includes('android-app://')
     );
+  }
+
+  function toggleQRScanner() {
+    if (scanning) {
+      stopScanning();
+    } else {
+      startScanning();
+    }
   }
 
   function hasSeenOnboarding() {
@@ -39,8 +47,6 @@ $(document).ready(function() {
   }
 
   function updateCountdown() {
-    console.log('UPDATE COUNTDOWN');
-
     $countdownElement.text(countdownValue).addClass('zoom');
 
     setTimeout(() => {
@@ -51,8 +57,6 @@ $(document).ready(function() {
       countdownValue--;
       setTimeout(updateCountdown, 1000);
     } else {
-      console.log('Timeout over: ' + spotifyURI);
-
       if (spotifyURI) {
         console.log('Redirecting to Spotify URI:', spotifyURI);
         window.location.href = spotifyURI;
@@ -61,14 +65,6 @@ $(document).ready(function() {
       } else {
         console.log(window.translations.cameraError);
       }
-    }
-  }
-
-  function toggleQRScanner() {
-    if (scanning) {
-      stopScanning();
-    } else {
-      startScanning();
     }
   }
 
@@ -123,32 +119,39 @@ $(document).ready(function() {
               inversionAttempts: 'dontInvert',
             });
             if (code) {
-              console.log('Found QR code', code.data);
-
               if (code.data.includes('/qr/')) {
                 const qrCodeData = code.data.split('/');
                 const qrCodeLink = qrCodeData[qrCodeData.length - 1];
-
                 $.ajax({
                   url: apiUri + '/qrlink/' + qrCodeLink,
                   method: 'GET',
                   dataType: 'json',
-                  success: function(data) {
-                    console.log('Converting link:', data);
+                  success: function (data) {
                     spotifyURI = convertToSpotifyURI(data.link);
-                    console.log('Spotify URI:', spotifyURI);
                     $('#qr-icon').hide();
                     $countdownContainer.show();
                     updateCountdown();
                   },
-                  error: function(error) {
+                  error: function (error) {
                     console.error('Error:', error);
-                  }
+                  },
                 });
               } else if (code.data.includes('open.spotify.com')) {
-                spotifyURI = convertToSpotifyURI(code.data);
-                $('#qr-icon').hide();
-                $countdownContainer.show();
+                setTimeout(function () {
+                  spotifyURI = convertToSpotifyURI(code.data);
+                  $countdownContainer.show();
+                  $('#qr-icon').hide();
+                  updateCountdown();
+                }, 250);
+              } else if (code.data.includes('spotify:')) {
+                setTimeout(function () {
+                  spotifyURI = code.data;
+                  $countdownContainer.show();
+                  $('#qr-icon').hide();
+                  updateCountdown();
+                }, 250);
+              } else {
+                alert(window.translations.invalidLink);
               }
               stopScanning();
             }

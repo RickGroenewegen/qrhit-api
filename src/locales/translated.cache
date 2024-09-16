@@ -263,5 +263,10 @@
     "nl",
     "de",
     "fr"
+  ],
+  "countdown.invalidLink": [
+    "nl",
+    "de",
+    "fr"
   ]
 }

@@ -41,6 +41,7 @@
 	"payment.digital" : "PDF containing",
 
 	"countdown.youNeedToInstall" : "You need to install this app on your mobile device",
+	"countdown.invalidLink" : "Unrecognized QR code",
 	"countdown.howToInstall" : "How to install",
 	"countdown.onIOS" : "On iOS Safari",
 	"countdown.onAndroid" : "On Android Chrome",

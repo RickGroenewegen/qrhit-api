@@ -52,5 +52,6 @@
   "countdown.allRightsReserved": "Alle rechten voorbehouden",
   "mail.greatNewsDigital": "Goed nieuws! Je QR-kaarten voor je afspeellijst zijn verwerkt. Je vindt ze in de bijlage van deze e-mail.",
   "mail.weHopeYouHaveFunDigital": "We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, aarzel dan niet om ons te mailen via het contactformulier op onze website.",
-  "payment.digital": "PDF bevat"
+  "payment.digital": "PDF bevat",
+  "countdown.invalidLink": "Onbekende QR-code"
 }

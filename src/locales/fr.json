@@ -52,5 +52,6 @@
   "countdown.allRightsReserved": "Tous droits réservés",
   "mail.greatNewsDigital": "Bonne nouvelle ! Vos cartes QR pour votre playlist ont été traitées. Vous les trouverez en pièce jointe de cet e-mail.",
   "mail.weHopeYouHaveFunDigital": "Nous espérons que vous vous amuserez beaucoup avec la musique ! Si vous avez d'autres questions, n'hésitez pas à nous envoyer un mail via le formulaire de contact sur notre site web.",
-  "payment.digital": "PDF contenant"
+  "payment.digital": "PDF contenant",
+  "countdown.invalidLink": "QR code non reconnu"
 }
