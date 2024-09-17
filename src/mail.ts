@@ -48,7 +48,7 @@ class Mail {
     const subject = data.subject;
 
     const message = `
-    <p><strong>E-mail:</strong> ${data.name}</p>
+    <p><strong>Name:</strong> ${data.name}</p>
     <p><strong>E-mail:</strong> ${data.email}</p>
     <p><strong>Subject:</strong> ${data.subject}</p>
     <p><strong>Message:</strong> ${data.message}</p>`;
