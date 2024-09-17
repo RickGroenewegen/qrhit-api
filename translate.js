@@ -8,8 +8,8 @@ require('dotenv').config();
 const baseDirPath = path.join(__dirname, '/src/locales');
 const inputFile = path.join(baseDirPath, 'en.json');
 const cacheFile = path.join(baseDirPath, 'translated.cache');
-const languages = ['nl', 'de', 'fr'];
-const languagesFull = ['Dutch', 'German', 'French'];
+const languages = ['nl', 'de', 'fr', 'es'];
+const languagesFull = ['Dutch', 'German', 'French', 'Spanish'];
 
 // Initialize rate limiter with desired limits
 const limiter = new Bottleneck({
