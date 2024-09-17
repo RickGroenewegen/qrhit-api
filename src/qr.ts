@@ -201,24 +201,34 @@ class Qr {
       filenameDigital = generatedFilenameDigital;
     }
 
+    let printerPageCount = 0;
+    let printApiOrderId = '';
+    let printApiOrderResponse = '';
+
     if (payment.orderType.name != 'digital') {
-      await this.order.createOrder(payment, filename);
+      payment.printerPageCount = await this.utils.countPdfPages(
+        `${process.env['PUBLIC_DIR']}/pdf/${filename}`
+      );
+      const orderData = await this.order.createOrder(payment, filename);
+      printApiOrderId = orderData.id;
+      printApiOrderResponse = JSON.stringify(orderData);
     }
 
     payment = await this.mollie.getPayment(params.paymentId);
 
-    if (payment.orderType.name === 'digital') {
-      // Update the payment with the order id
-      await this.prisma.payment.update({
-        where: {
-          id: payment.id,
-        },
-        data: {
-          filenameDigital: filenameDigital,
-          printerPageCount: 0,
-        },
-      });
-    }
+    // Update the payment with the order id
+    await this.prisma.payment.update({
+      where: {
+        id: payment.id,
+      },
+      data: {
+        filename,
+        filenameDigital,
+        printerPageCount: payment.printerPageCount,
+        printApiOrderId,
+        printApiOrderResponse,
+      },
+    });
 
     await this.mail.sendEmail(
       payment.orderType.name,

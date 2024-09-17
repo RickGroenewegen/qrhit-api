@@ -232,7 +232,7 @@ class Order {
     return authToken;
   }
 
-  public async createOrder(payment: any, filename: string): Promise<void> {
+  public async createOrder(payment: any, filename: string): Promise<any> {
     const authToken = await this.getAuthToken();
 
     const responseOrder = await axios({
@@ -247,7 +247,7 @@ class Order {
         items: [
           {
             productId: payment.orderType.printApiProductId,
-            pageCount: 32,
+            pageCount: payment.printerPageCount,
             quantity: 1,
             files: {
               content: `${process.env.API_URI}/public/pdf/${filename}`,
@@ -266,6 +266,8 @@ class Order {
         },
       },
     });
+
+    return responseOrder.data;
   }
 
   public async checkForShipment(): Promise<void> {
