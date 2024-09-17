@@ -47,6 +47,8 @@ class Mail {
   async sendContactForm(data: any, ip: string): Promise<void> {
     const subject = data.subject;
 
+    console.log(111, data);
+
     const message = `
     <p><strong>Name:</strong> ${data.name}</p>
     <p><strong>E-mail:</strong> ${data.email}</p>
