@@ -1,4 +1,4 @@
-I've developed an app: QRSong
+I've developed an app: QRSong!
 
 It enables users to send a Spotify playlist to us. 
 We will analyse the playlist, determine the release year of the songs.
