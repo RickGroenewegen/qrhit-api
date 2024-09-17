@@ -215,6 +215,7 @@ class Qr {
         },
         data: {
           filenameDigital: filenameDigital,
+          printerPageCount: 0,
         },
       });
     }
