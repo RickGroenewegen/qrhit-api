@@ -153,48 +153,45 @@ const translateJson = async (
     } else {
       let translationNeeded = languages.filter(
         (lang) =>
-          !checkTranslationStatus(translatedCache, currentPath, languages)
+          !checkTranslationStatus(translatedCache, currentPath, [lang])
       );
 
-      if (translationNeeded.length > 0) {
-        let translatedTexts = await translate(json[key], currentPath);
+      for (let lang of languages) {
+        if (!translated[lang]) {
+          translated[lang] = {};
+        }
+        if (!languageFiles[lang]) {
+          languageFiles[lang] = {};
+        }
 
-        if (translatedTexts !== null) {
-          for (let lang of translationNeeded) {
-            if (!translated[lang]) {
-              translated[lang] = {};
-            }
+        if (translationNeeded.includes(lang)) {
+          let translatedTexts = await translate(json[key], currentPath);
+          if (translatedTexts !== null && translatedTexts[lang]) {
             translated[lang][currentPath] = translatedTexts[lang];
+            languageFiles[lang][currentPath] = translatedTexts[lang];
             if (!translatedCache[currentPath]) {
               translatedCache[currentPath] = [];
             }
-            translatedCache[currentPath].push(lang);
-
-            if (!languageFiles[lang]) {
-              languageFiles[lang] = {};
+            if (!translatedCache[currentPath].includes(lang)) {
+              translatedCache[currentPath].push(lang);
             }
-            languageFiles[lang][currentPath] = translatedTexts[lang];
             await fs.writeFile(
               path.join(baseDirPath, `${lang}.json`),
               JSON.stringify(languageFiles[lang], null, 2),
               'utf8'
             );
           }
-
-          await fs.writeFile(
-            cacheFile,
-            JSON.stringify(translatedCache, null, 2),
-            'utf8'
-          );
-        }
-      } else {
-        for (let lang of languages) {
-          if (!translated[lang]) {
-            translated[lang] = {};
-          }
-          translated[lang][currentPath] = json[key];
+        } else {
+          // Use existing translation from languageFiles
+          translated[lang][currentPath] = languageFiles[lang][currentPath] || json[key];
         }
       }
+
+      await fs.writeFile(
+        cacheFile,
+        JSON.stringify(translatedCache, null, 2),
+        'utf8'
+      );
     }
   }
 
