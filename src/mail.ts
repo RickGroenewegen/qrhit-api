@@ -48,12 +48,13 @@ class Mail {
     const subject = data.subject;
 
     const message = `
+    <p><strong>E-mail:</strong> ${data.name}</p>
     <p><strong>E-mail:</strong> ${data.email}</p>
     <p><strong>Subject:</strong> ${data.subject}</p>
     <p><strong>Message:</strong> ${data.message}</p>`;
 
     const rawEmail = await this.renderRaw({
-      from: `${data.email} <${process.env['FROM_EMAIL']}>`,
+      from: `${data.email} <${data.name}>`,
       to: process.env['INFO_EMAIL']!,
       subject: `${process.env['PRODUCT_NAME']} Contact form - ${data.subject}`,
       html: message,
