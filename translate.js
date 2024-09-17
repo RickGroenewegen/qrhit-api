@@ -23,14 +23,16 @@ const pause = (duration) => {
   });
 };
 
-const translate = async (text, currentPath) => {
+const translate = async (text, currentPath, languagesToTranslate) => {
   await pause(5000);
+
+  const languagesToTranslateFull = languagesToTranslate.map(lang => languagesFull[languages.indexOf(lang)]);
 
   const prompt =
     'I want you to translate a text into ' +
-    languagesFull.join(', ') +
+    languagesToTranslateFull.join(', ') +
     '. You should return a JSON object with the keys (' +
-    languages.join(',') +
+    languagesToTranslate.join(',') +
     ') which contain the translations for those languages. Try to keep the translation length the same as the original and not much longer. The output MUST be JSON valid and ONLY JSON. No other text. It is all in the context of a mobile app used for measuring pH. The text you should translate is:\n\n "' +
     text +
     '"';
@@ -40,7 +42,9 @@ const translate = async (text, currentPath) => {
     'Translating key '.blue.bold +
       currentPath.white.bold +
       ' with value: '.blue.bold +
-      text.white.bold
+      text.white.bold +
+      ' for languages: '.blue.bold +
+      languagesToTranslate.join(', ').white.bold
   );
 
   const requestFunc = async () => {
@@ -163,28 +167,34 @@ const translateJson = async (
         if (!languageFiles[lang]) {
           languageFiles[lang] = {};
         }
+      }
 
-        if (translationNeeded.includes(lang)) {
-          let translatedTexts = await translate(json[key], currentPath);
-          if (translatedTexts !== null && translatedTexts[lang]) {
-            translated[lang][currentPath] = translatedTexts[lang];
-            languageFiles[lang][currentPath] = translatedTexts[lang];
-            if (!translatedCache[currentPath]) {
-              translatedCache[currentPath] = [];
+      if (translationNeeded.length > 0) {
+        let translatedTexts = await translate(json[key], currentPath, translationNeeded);
+        if (translatedTexts !== null) {
+          for (let lang of translationNeeded) {
+            if (translatedTexts[lang]) {
+              translated[lang][currentPath] = translatedTexts[lang];
+              languageFiles[lang][currentPath] = translatedTexts[lang];
+              if (!translatedCache[currentPath]) {
+                translatedCache[currentPath] = [];
+              }
+              if (!translatedCache[currentPath].includes(lang)) {
+                translatedCache[currentPath].push(lang);
+              }
+              await fs.writeFile(
+                path.join(baseDirPath, `${lang}.json`),
+                JSON.stringify(languageFiles[lang], null, 2),
+                'utf8'
+              );
             }
-            if (!translatedCache[currentPath].includes(lang)) {
-              translatedCache[currentPath].push(lang);
-            }
-            await fs.writeFile(
-              path.join(baseDirPath, `${lang}.json`),
-              JSON.stringify(languageFiles[lang], null, 2),
-              'utf8'
-            );
           }
-        } else {
-          // Use existing translation from languageFiles
-          translated[lang][currentPath] = languageFiles[lang][currentPath] || json[key];
         }
+      }
+
+      for (let lang of languages) {
+        // Use existing translation from languageFiles or original text if not translated
+        translated[lang][currentPath] = languageFiles[lang][currentPath] || json[key];
       }
 
       await fs.writeFile(
