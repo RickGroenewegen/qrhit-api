@@ -246,7 +246,7 @@ class Order {
         items: [
           {
             productId: payment.orderType.printApiProductId,
-            pageCount: payment.printerPageCount,
+            pageCount: 32, //payment.printerPageCount,
             quantity: 1,
             files: {
               content: `${process.env.API_URI}/public/pdf/${filename}`,
