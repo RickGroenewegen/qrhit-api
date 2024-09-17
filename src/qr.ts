@@ -113,10 +113,10 @@ class Qr {
       return;
     }
 
-    let cardType = ' fysieke ';
+    let cardType = 'fysieke';
     let orderName = `${payment.fullname} (${payment.countrycode})`;
     if (payment.orderType.name === 'digital') {
-      cardType = ' digitale ';
+      cardType = 'digitale';
       orderName = `${payment.fullname}`;
     }
 
