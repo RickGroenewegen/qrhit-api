@@ -4,7 +4,7 @@ import path from 'path';
 
 class Translation {
   private i18n: I18n;
-  private allLocales: string[] = ['en', 'nl', 'de', 'fr'];
+  private allLocales: string[] = ['en', 'nl', 'de', 'fr', 'es'];
   constructor() {
     this.i18n = new I18n({
       locales: this.allLocales,

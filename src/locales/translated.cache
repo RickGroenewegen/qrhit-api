@@ -2,271 +2,325 @@
   "mail.orderNumber": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.playlist": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.items": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.fullname": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.address": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.zipcode": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.city": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.country": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.email": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.greatNews": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.trackingMailSubject": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.orderShipped": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.trackOrder": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.thankYou": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.invoiceNumber": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.invoiceDate": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.paidInFull": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.method": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.product": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.shippingAndHandling": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.total": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.ideal": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.creditcard": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.paypal": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.bankTransfer": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.invoice": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.taxRate1": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.taxRate2": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "invoice.applePay": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "payment.playlist": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "payment.cards": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.youNeedToInstall": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.howToInstall": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.onIOS": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.onAndroid": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.tapShare": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.scrollDown": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.tapMenu": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.tapAddToHomeScreen": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.gotIt": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.closeScanner": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.cameraError": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.yourSongWillStart": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.getReady": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.tapTheCamera": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.allRightsReserved": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.mailSubject": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.greatNewsDigital": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.weHopeYouHaveFunDigital": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.greetings": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.orderInformation": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "payment.digital": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "mail.weHopeYouHaveFun": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ],
   "countdown.invalidLink": [
     "nl",
     "de",
-    "fr"
+    "fr",
+    "es"
   ]
 }
