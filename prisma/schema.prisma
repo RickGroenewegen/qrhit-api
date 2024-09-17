@@ -44,6 +44,7 @@ model Payment {
   printApiStatus          String    @default("Created")
   printApiShipped         Boolean   @default(false)
   printApiOrderResponse   String?   @default("") @db.Text
+  printApiTrackingLink    String?   @default("")
   amount                  Int
   totalPrice              Float
   status                  String

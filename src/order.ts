@@ -306,7 +306,6 @@ class Order {
               )} is shipped`
             )
           );
-
           if (response.data.trackingUrl?.length > 0) {
             trackingLink = response.data.trackingUrl;
             const pdfPath = await this.createInvoice(response.data, payment);
@@ -321,6 +320,7 @@ class Order {
               data: {
                 printApiShipped: true,
                 printApiStatus: response.data.status,
+                printApiTrackingLink: trackingLink,
               },
             });
           }
