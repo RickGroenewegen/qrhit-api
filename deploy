@@ -17,7 +17,7 @@ sudo chmod +x deploy
 sudo chmod +x deploy_api
 sudo chmod +x deploy_frontend
 
-sudo npm install
+sudo npm install --force
 sudo prisma db push
 echo "Repository has been reset and updated."
 
