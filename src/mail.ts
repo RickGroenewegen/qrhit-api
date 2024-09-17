@@ -47,8 +47,6 @@ class Mail {
   async sendContactForm(data: any, ip: string): Promise<void> {
     const subject = data.subject;
 
-    console.log(111, data);
-
     const message = `
     <p><strong>Name:</strong> ${data.name}</p>
     <p><strong>E-mail:</strong> ${data.email}</p>
@@ -56,7 +54,7 @@ class Mail {
     <p><strong>Message:</strong> ${data.message}</p>`;
 
     const rawEmail = await this.renderRaw({
-      from: `${data.email} <${data.name}>`,
+      from: `${data.name} <${process.env['FROM_EMAIL']}>`,
       to: process.env['INFO_EMAIL']!,
       subject: `${process.env['PRODUCT_NAME']} Contact form - ${data.subject}`,
       html: message,
