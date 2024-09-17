@@ -24,7 +24,7 @@ echo "Repository has been reset and updated."
 cd /home/ec2-user/sites/qrsong-frontend
 git reset --hard HEAD
 git pull origin HEAD
-sudo npm install
+sudo npm install --force
 sudo npm run build
 
 pm2 restart qrsong
