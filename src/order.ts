@@ -6,10 +6,9 @@ import { ApiResult } from './interfaces/ApiResult';
 import cluster from 'cluster';
 import Utils from './utils';
 import { CronJob } from 'cron';
-import { color, blue, white } from 'console-log-colors';
+import { color, blue, white, magenta } from 'console-log-colors';
 import Mail from './mail';
 import puppeteer from 'puppeteer';
-import path from 'path';
 import fs from 'fs';
 
 class Order {
@@ -300,24 +299,31 @@ class Order {
         });
 
         if (response.data.status === 'Shipped') {
+          this.logger.log(
+            magenta(
+              `Status of order ${white.bold(
+                payment.printApiOrderId
+              )} is shipped`
+            )
+          );
+
           if (response.data.trackingUrl?.length > 0) {
             trackingLink = response.data.trackingUrl;
+            const pdfPath = await this.createInvoice(response.data, payment);
+
+            this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
+
+            // Update the payment with the printApiShipped flag
+            await this.prisma.payment.update({
+              where: {
+                id: payment.id,
+              },
+              data: {
+                printApiShipped: true,
+                printApiStatus: response.data.status,
+              },
+            });
           }
-
-          const pdfPath = await this.createInvoice(response.data, payment);
-
-          this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
-
-          // Update the payment with the printApiShipped flag
-          await this.prisma.payment.update({
-            where: {
-              id: payment.id,
-            },
-            data: {
-              printApiShipped: true,
-              printApiStatus: response.data.status,
-            },
-          });
         }
       } catch (e) {
         this.logger.log(
