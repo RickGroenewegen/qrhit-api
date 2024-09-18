@@ -346,23 +346,17 @@ class Data {
     `;
 
     // Bulk upsert tracks
-    const trackValues = tracks.map((track: any) => [
-      track.id,
-      this.utils.cleanTrackName(track.name),
-      track.isrc,
-      track.artist,
-      track.link,
-    ]);
-
-    await this.prisma.$executeRaw`
-      INSERT INTO tracks (trackId, name, isrc, artist, spotifyLink)
-      VALUES ${Prisma.join(trackValues)}
-      ON DUPLICATE KEY UPDATE
-        name = VALUES(name),
-        isrc = VALUES(isrc),
-        artist = VALUES(artist),
-        spotifyLink = VALUES(spotifyLink)
-    `;
+    for (const track of tracks) {
+      await this.prisma.$executeRaw`
+        INSERT INTO tracks (trackId, name, isrc, artist, spotifyLink)
+        VALUES (${track.id}, ${this.utils.cleanTrackName(track.name)}, ${track.isrc}, ${track.artist}, ${track.link})
+        ON DUPLICATE KEY UPDATE
+          name = VALUES(name),
+          isrc = VALUES(isrc),
+          artist = VALUES(artist),
+          spotifyLink = VALUES(spotifyLink)
+      `;
+    }
 
     // Bulk insert playlist_has_tracks
     await this.prisma.$executeRaw`
