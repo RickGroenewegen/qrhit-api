@@ -350,33 +350,38 @@ class Data {
     console.log(222);
 
     // Bulk upsert tracks
-    const trackValues = tracks
-      .map(
-        (track: {
-          id: string;
-          name: string;
-          isrc: string | null;
-          artist: string;
-          link: string;
-        }) =>
-          `(${this.prisma.$queryRaw`${track.id}`}, ${this.prisma
-            .$queryRaw`${this.utils.cleanTrackName(track.name)}`}, ${this.prisma
-            .$queryRaw`${track.isrc}`}, ${this.prisma
-            .$queryRaw`${track.artist}`}, ${this.prisma
-            .$queryRaw`${track.link}`})`
-      )
-      .join(', ');
+    if (tracks.length > 0) {
+      const values = tracks.map((track: {
+        id: string;
+        name: string;
+        isrc: string | null;
+        artist: string;
+        link: string;
+      }) => ({
+        trackId: track.id,
+        name: this.utils.cleanTrackName(track.name),
+        isrc: track.isrc,
+        artist: track.artist,
+        spotifyLink: track.link
+      }));
 
-    if (trackValues.length > 0) {
-      await this.prisma.$executeRaw`
-        INSERT INTO tracks (trackId, name, isrc, artist, spotifyLink)
-        VALUES ${Prisma.raw(trackValues)}
-        ON DUPLICATE KEY UPDATE
-          name = VALUES(name),
-          isrc = VALUES(isrc),
-          artist = VALUES(artist),
-          spotifyLink = VALUES(spotifyLink)
-      `;
+      await this.prisma.track.createMany({
+        data: values,
+        skipDuplicates: true,
+      });
+
+      // Update existing tracks
+      for (const track of values) {
+        await this.prisma.track.update({
+          where: { trackId: track.trackId },
+          data: {
+            name: track.name,
+            isrc: track.isrc,
+            artist: track.artist,
+            spotifyLink: track.spotifyLink,
+          },
+        });
+      }
     }
 
     console.log(333);
