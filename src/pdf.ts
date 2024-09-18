@@ -2,14 +2,10 @@ import { color } from 'console-log-colors';
 import Logger from './logger';
 import { Playlist, PrismaClient } from '@prisma/client';
 import Utils from './utils';
-import Progress from './progress';
 import ConvertApi from 'convertapi';
 
 class PDF {
   private logger = new Logger();
-  private utils = new Utils();
-  private prisma = new PrismaClient();
-  private progress = Progress.getInstance();
   private convertapi = new ConvertApi(process.env['CONVERT_API_KEY']!);
 
   public async generatePDF(
@@ -40,11 +36,6 @@ class PDF {
     const intervalId = setInterval(() => {
       if (currentProgress < endProgress) {
         currentProgress++;
-        this.progress.setProgress(
-          payment.paymentId,
-          currentProgress,
-          `Generating PDF...`
-        );
       }
     }, incrementInterval);
 

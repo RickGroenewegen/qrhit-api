@@ -12,7 +12,6 @@ import path from 'path';
 import view from '@fastify/view';
 import ejs from 'ejs';
 import Data from './data';
-import Progress from './progress';
 import fs from 'fs';
 import Order from './order';
 import Mail from './mail';
@@ -44,7 +43,6 @@ class Server {
   private mollie = new Mollie();
   private qr = new Qr();
   private data = new Data();
-  private progress = Progress.getInstance();
   private order = Order.getInstance();
   private mail = new Mail();
   private musicBrainz = new MusicBrainz();
@@ -234,24 +232,6 @@ class Server {
 
     this.fastify.post('/mollie/webhook', async (request: any, _reply) => {
       return await this.mollie.processWebhook(request.body);
-    });
-
-    this.fastify.get(
-      '/progress/:paymentId/start',
-      async (request: any, _reply) => {
-        return await this.progress.startProgress(request.params.paymentId);
-      }
-    );
-
-    this.fastify.get(
-      '/progress/:paymentId/clear',
-      async (request: any, _reply) => {
-        return await this.progress.clearProgress(request.params.paymentId);
-      }
-    );
-
-    this.fastify.get('/progress/:paymentId', async (request: any, _reply) => {
-      return await this.progress.getProgress(request.params.paymentId);
     });
 
     this.fastify.post('/contact', async (request: any, _reply) => {

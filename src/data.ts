@@ -1,8 +1,7 @@
-import { yellow, white, color } from 'console-log-colors';
+import { color } from 'console-log-colors';
 import Logger from './logger';
 import { PrismaClient, Prisma } from '@prisma/client';
 import MusicBrainz from './musicbrainz';
-import Progress from './progress';
 import crypto from 'crypto';
 import { ApiResult } from './interfaces/ApiResult';
 
@@ -19,7 +18,6 @@ class Data {
   private prisma = new PrismaClient();
   private logger = new Logger();
   private musicBrainz = new MusicBrainz();
-  private progress = Progress.getInstance();
   private cache = Cache.getInstance();
   private translate = new Translation();
   private utils = new Utils();
@@ -335,8 +333,6 @@ class Data {
   ): Promise<any> {
     const providedTrackIds = tracks.map((track: any) => track.id);
 
-    console.log(111);
-
     // Remove tracks that are no longer in the provided tracks list
     await this.prisma.$executeRaw`
       DELETE FROM playlist_has_tracks
@@ -347,23 +343,23 @@ class Data {
       )
     `;
 
-    console.log(222);
-
     // Bulk upsert tracks
     if (tracks.length > 0) {
-      const values = tracks.map((track: {
-        id: string;
-        name: string;
-        isrc: string | null;
-        artist: string;
-        link: string;
-      }) => ({
-        trackId: track.id,
-        name: this.utils.cleanTrackName(track.name),
-        isrc: track.isrc,
-        artist: track.artist,
-        spotifyLink: track.link
-      }));
+      const values = tracks.map(
+        (track: {
+          id: string;
+          name: string;
+          isrc: string | null;
+          artist: string;
+          link: string;
+        }) => ({
+          trackId: track.id,
+          name: this.utils.cleanTrackName(track.name),
+          isrc: track.isrc,
+          artist: track.artist,
+          spotifyLink: track.link,
+        })
+      );
 
       await this.prisma.track.createMany({
         data: values,
@@ -384,8 +380,6 @@ class Data {
       }
     }
 
-    console.log(333);
-
     // Bulk insert playlist_has_tracks
     await this.prisma.$executeRaw`
       INSERT IGNORE INTO playlist_has_tracks (playlistId, trackId)
@@ -393,8 +387,6 @@ class Data {
       FROM tracks
       WHERE trackId IN (${Prisma.join(providedTrackIds)})
     `;
-
-    console.log(444);
 
     // Fetch tracks that need year update
     const tracksNeedingYearUpdate = await this.prisma.$queryRaw<
@@ -404,8 +396,6 @@ class Data {
       FROM tracks
       WHERE year IS NULL AND trackId IN (${Prisma.join(providedTrackIds)})
     `;
-
-    console.log(555);
 
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
@@ -430,22 +420,6 @@ class Data {
         );
       }
     }
-
-    console.log(777);
-
-    // Update progress
-    for (let i = 0; i < tracks.length; i++) {
-      const track = tracks[i];
-      const progress = Math.round((i / tracks.length) * 70);
-      await this.progress.setProgress(
-        paymentId,
-        progress,
-        `${track.artist} - ${track.name} (${i + 1} of ${tracks.length})`,
-        track.image
-      );
-    }
-
-    console.log(888);
   }
 }
 

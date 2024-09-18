@@ -1,9 +1,7 @@
-import { color } from 'console-log-colors';
+import { color, blue, white } from 'console-log-colors';
 import Logger from './logger';
-import { Playlist, PrismaClient } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 import Utils from './utils';
-import Progress from './progress';
-import ConvertApi from 'convertapi';
 import Mollie from './mollie';
 import crypto from 'crypto';
 import sanitizeFilename from 'sanitize-filename';
@@ -20,7 +18,6 @@ class Generator {
   private logger = new Logger();
   private utils = new Utils();
   private prisma = new PrismaClient();
-  private progress = Progress.getInstance();
   private data = new Data();
   private pushover = new PushoverClient();
   private spotify = new Spotify();
@@ -37,7 +34,9 @@ class Generator {
     let filename = '';
     let filenameDigital = '';
 
-    this.progress.setProgress(paymentId, 0, 'Started ...');
+    this.logger.log(
+      blue.bold(`Starting generation for payment: ${white.bold(paymentId)}`)
+    );
 
     const paymentStatus = await mollie.checkPaymentStatus(paymentId);
 
@@ -136,7 +135,9 @@ class Generator {
       ip
     );
 
-    this.progress.setProgress(paymentId, 0, 'progress.gettingTracks');
+    this.logger.log(
+      blue.bold(`Retrieving tracks for payment: ${white.bold(paymentId)}`)
+    );
 
     if (playlist.resetCache) {
       exists = false;
@@ -155,7 +156,13 @@ class Generator {
         tracks.splice(500);
       }
 
-      this.progress.setProgress(paymentId, 0, 'progress.storingTracks');
+      this.logger.log(
+        blue.bold(
+          `Storing ${white.bold(
+            tracks.length
+          )} tracks for payment: ${white.bold(paymentId)}`
+        )
+      );
 
       await this.data.storeTracks(
         payment.paymentId,
@@ -163,7 +170,25 @@ class Generator {
         tracks
       );
 
+      this.logger.log(
+        blue.bold(
+          `Retrieving ${white.bold(
+            tracks.length
+          )} tracks for payment: ${white.bold(paymentId)}`
+        )
+      );
+
       const dbTracks = await this.data.getTracks(payment.playlist.id);
+
+      playlist.numberOfTracks = dbTracks.length;
+
+      this.logger.log(
+        blue.bold(
+          `Creating QR codes for ${white.bold(
+            tracks.length
+          )} tracks for payment: ${white.bold(paymentId)}`
+        )
+      );
 
       // Loop through the tracks and create a QR code for each track
       for (const track of dbTracks) {
@@ -180,15 +205,11 @@ class Generator {
         const progress = Math.floor(
           (tracks.indexOf(track) / tracks.length) * 20 + 70
         );
-
-        this.progress.setProgress(
-          paymentId,
-          progress,
-          `Generated QR code for: ${track.name}`
-        );
       }
 
-      this.progress.setProgress(paymentId, 80, `progress.generatingPDF`);
+      this.logger.log(
+        blue.bold(`Creating PDF tracks for payment: ${white.bold(paymentId)}`)
+      );
 
       const [generatedFilenameDigital, generatedFilename] = await Promise.all([
         this.pdf.generatePDF(
@@ -244,8 +265,6 @@ class Generator {
       filename,
       filenameDigital
     );
-
-    this.progress.setProgress(paymentId, 100, `Done!`);
 
     this.logger.log(
       color.green.bold(
