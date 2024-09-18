@@ -346,20 +346,17 @@ class Data {
     `;
 
     // Bulk upsert tracks
-    const trackValues = tracks
-      .map(
-        (track: any) =>
-          `(${this.prisma.$queryRaw`${track.id}`}, ${this.prisma
-            .$queryRaw`${this.utils.cleanTrackName(track.name)}`}, ${this.prisma
-            .$queryRaw`${track.isrc}`}, ${this.prisma
-            .$queryRaw`${track.artist}`}, ${this.prisma
-            .$queryRaw`${track.link}`})`
-      )
-      .join(',');
+    const trackValues = tracks.map((track: any) => [
+      track.id,
+      this.utils.cleanTrackName(track.name),
+      track.isrc,
+      track.artist,
+      track.link,
+    ]);
 
     await this.prisma.$executeRaw`
       INSERT INTO tracks (trackId, name, isrc, artist, spotifyLink)
-      VALUES ${Prisma.raw(trackValues)}
+      VALUES ${Prisma.join(trackValues)}
       ON DUPLICATE KEY UPDATE
         name = VALUES(name),
         isrc = VALUES(isrc),
@@ -376,9 +373,7 @@ class Data {
     `;
 
     // Fetch tracks that need year update
-    const tracksNeedingYearUpdate = await this.prisma.$queryRaw<
-      TrackNeedingYearUpdate[]
-    >`
+    const tracksNeedingYearUpdate = await this.prisma.$queryRaw<TrackNeedingYearUpdate[]>`
       SELECT id, isrc, trackId
       FROM tracks
       WHERE year IS NULL AND trackId IN (${Prisma.join(providedTrackIds)})
