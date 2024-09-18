@@ -5,6 +5,12 @@ import MusicBrainz from './musicbrainz';
 import Progress from './progress';
 import crypto from 'crypto';
 import { ApiResult } from './interfaces/ApiResult';
+
+interface TrackNeedingYearUpdate {
+  id: number;
+  isrc: string | null;
+  trackId: string;
+}
 import Cache from './cache';
 import Translation from './translation';
 import Utils from './utils';
@@ -370,7 +376,7 @@ class Data {
     `;
 
     // Fetch tracks that need year update
-    const tracksNeedingYearUpdate = await this.prisma.$queryRaw`
+    const tracksNeedingYearUpdate = await this.prisma.$queryRaw<TrackNeedingYearUpdate[]>`
       SELECT id, isrc, trackId
       FROM tracks
       WHERE year IS NULL AND trackId IN (${Prisma.join(providedTrackIds)})
