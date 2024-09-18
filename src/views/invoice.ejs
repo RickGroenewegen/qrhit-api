@@ -181,7 +181,11 @@
 				</tr>
 
 				<tr class="item">
-					<td><%= payment.orderType.digital ? 'Digital' : 'Physical' %></td>
+					<% if (payment.orderType.digital) { %>
+						<td>Digital</td>
+					<% } else { %>
+						<td>Physical</td>
+					<% } %>
 					<td style="text-align:right;">1</td>
 					<td style="text-align:right;"><%= euroFormatter.format(payment.productPriceWithoutTax) %></td>
 					<td style="text-align:right;"><%= payment.taxRate %>%</td>
