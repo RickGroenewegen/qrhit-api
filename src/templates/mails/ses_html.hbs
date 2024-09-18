@@ -44,8 +44,8 @@
                                         </td>
                                     </tr>
                                 </table>
-                                <!-- Order Details -->
-                                <table style="width: 100%; border-collapse: collapse; margin-top: 7px;" cellpadding="0" cellspacing="0" role="presentation">
+                                <!-- Combined Order Details, Your Information, Shipping Address, and Invoice Address -->
+                                <table style="width: 100%; border-collapse: collapse; margin-top: 32px;" cellpadding="0" cellspacing="0" role="presentation">
                                     <tr>
                                         <td colspan="2" style="padding: 12px; background-color: #4299e1; color: #ffffff; font-weight: 700; font-size: 16px;">{{ translations.orderData }}</td>
                                     </tr>
@@ -61,9 +61,6 @@
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.items }}</td>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ numberOfTracks }} {{ translations.cards }}</td>
                                     </tr>
-                                </table>
-                                <!-- Your Information -->
-                                <table style="width: 100%; border-collapse: collapse; margin-top: 32px;" cellpadding="0" cellspacing="0" role="presentation">
                                     <tr>
                                         <td colspan="2" style="padding: 12px; background-color: #4299e1; color: #ffffff; font-weight: 700; font-size: 16px;">{{ translations.yourInformation }}</td>
                                     </tr>
@@ -75,9 +72,6 @@
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.email }}</td>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ email }}</td>
                                     </tr>
-                                </table>
-                                <!-- Shipping Address -->
-                                <table style="width: 100%; border-collapse: collapse; margin-top: 32px;" cellpadding="0" cellspacing="0" role="presentation">
                                     <tr>
                                         <td colspan="2" style="padding: 12px; background-color: #4299e1; color: #ffffff; font-weight: 700; font-size: 16px;">{{ translations.shippingAddress }}</td>
                                     </tr>
@@ -97,10 +91,7 @@
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.country }}</td>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ lookup countries country }}</td>
                                     </tr>
-                                </table>
-                                {{#if differentInvoiceAddress }}
-                                <!-- Invoice Address -->
-                                <table style="width: 100%; border-collapse: collapse; margin-top: 32px;" cellpadding="0" cellspacing="0" role="presentation">
+                                    {{#if differentInvoiceAddress }}
                                     <tr>
                                         <td colspan="2" style="padding: 12px; background-color: #4299e1; color: #ffffff; font-weight: 700; font-size: 16px;">{{ translations.invoiceAddress }}</td>
                                     </tr>
@@ -120,8 +111,8 @@
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.country }}</td>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ lookup countries invoiceCountry }}</td>
                                     </tr>
+                                    {{/if}}
                                 </table>
-                                {{/if}}
                                 <!-- Closing -->
                                 <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
                                     <tr>
