@@ -182,7 +182,7 @@
 
 				<tr class="item">
 					<% if (payment.orderType.digital) { %>
-						<td><%= translations.pdfProduct %>: <%= payment.numberOfTracks %> <%= translations.cards %></td>
+						<td><%= translations.pdfProduct %> <%= payment.numberOfTracks %> <%= translations.cards %></td>
 					<% } else { %>
 						<td><%= payment.numberOfTracks %>x <%= translations.physicalProduct %></td>
 					<% } %>
@@ -193,15 +193,16 @@
 					<td style="text-align:right;"><%= euroFormatter.format(payment.price) %></td>
 				</tr>
 
-
-				<tr class="item">
-					<td><%= translations.shippingAndHandling %></td>
-					<td style="text-align:right;">1</td>
-					<td style="text-align:right;"><%= euroFormatter.format(payment.shippingPriceWithoutTax) %></td>
-					<td style="text-align:right;"><%= payment.taxRateShipping %>%</td>
-					<td style="text-align:right;"><%= euroFormatter.format(payment.shippingVATPrice) %></td>
-					<td style="text-align:right;"><%= euroFormatter.format(payment.shipping) %></td>
-				</tr>
+				<% if (!payment.orderType.digital) { %>
+					<tr class="item">
+						<td><%= translations.shippingAndHandling %></td>
+						<td style="text-align:right;">1</td>
+						<td style="text-align:right;"><%= euroFormatter.format(payment.shippingPriceWithoutTax) %></td>
+						<td style="text-align:right;"><%= payment.taxRateShipping %>%</td>
+						<td style="text-align:right;"><%= euroFormatter.format(payment.shippingVATPrice) %></td>
+						<td style="text-align:right;"><%= euroFormatter.format(payment.shipping) %></td>
+					</tr>
+				<% } %>
 
 				<tr class="total">
 					<td colspan="4"><strong><%= translations.total %>: </strong></td>

@@ -113,6 +113,7 @@ class Order {
     let total = 0;
     let minimumAmount = 25;
     let maximumAmount = 500;
+    let returnData: any = {};
 
     if (!params.countrycode) {
       params.countrycode = 'NL';
@@ -162,12 +163,12 @@ class Order {
 
       total += price;
 
-      let response: any = {};
+      const taxRate = await this.data.getTaxRate(params.countrycode);
 
       if (params.orderType !== 'digital') {
         const authToken = await this.getAuthToken();
 
-        response = await axios({
+        let response = await axios({
           method: 'post',
           url: `${process.env['PRINT_API_URL']}/v2/shipping/quote`,
           headers: {
@@ -187,24 +188,31 @@ class Order {
         });
 
         total += response.data.payment;
+
+        total = parseFloat(total.toFixed(2));
+
+        returnData = {
+          success: true,
+          data: {
+            price,
+            total,
+            shipping: response.data.shipping,
+            handling: response.data.handling,
+            taxRateShipping: response.data.taxRate * 100,
+            taxRate,
+            payment: response.data.payment,
+          },
+        };
+      } else {
+        returnData = {
+          success: true,
+          data: {
+            price,
+            total,
+            taxRate,
+          },
+        };
       }
-
-      total = parseFloat(total.toFixed(2));
-
-      const taxRate = await this.data.getTaxRate(params.countrycode);
-
-      const returnData = {
-        success: true,
-        data: {
-          price,
-          total,
-          shipping: response.data.shipping,
-          handling: response.data.handling,
-          taxRateShipping: response.data.taxRate * 100,
-          taxRate,
-          payment: response.data.payment,
-        },
-      };
 
       this.cache.set(cacheToken, JSON.stringify(returnData));
 

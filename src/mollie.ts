@@ -43,6 +43,7 @@ class Mollie {
   ): Promise<ApiResult> {
     try {
       let amount = params.extraOrderData.amount || 1;
+      let useOrderType = params.extraOrderData.orderType;
 
       if (params.tracks.length > 500) {
         // Limit the amount of tracks to 500
@@ -51,10 +52,8 @@ class Mollie {
 
       const orderType = await this.order.getOrderType(
         params.tracks.length,
-        params.extraOrderData.orderType == 'digital'
+        useOrderType == 'digital'
       );
-
-      console.log('Order Type:', orderType);
 
       // Get the order type
       const calculateResult = await this.order.calculateOrder({
@@ -63,6 +62,8 @@ class Mollie {
         amount,
         numberOfTracks: params.tracks.length,
       });
+
+      console.log(111, calculateResult);
 
       const paymentClient = await this.getClient(clientIp);
 
@@ -81,7 +82,7 @@ class Mollie {
         translations!.cards +
         ')';
 
-      if (params.extraOrderData.orderType == 'digital') {
+      if (useOrderType == 'digital') {
         description =
           translations!.digital +
           ' ' +
@@ -135,8 +136,10 @@ class Mollie {
 
       let shippingPriceWithoutTax = 0;
       let shippingVATPrice = 0;
+      let taxRateShipping = 0;
 
-      if (params.extraOrderData.orderType !== 'digital') {
+      if (useOrderType != 'digital') {
+        taxRateShipping = calculateResult.data.taxRateShipping;
         shippingPriceWithoutTax = parseFloat(
           (
             parseFloat(calculateResult.data.payment) /
@@ -154,6 +157,25 @@ class Mollie {
         (productVATPrice + shippingVATPrice).toFixed(2)
       );
 
+      console.log(222, {
+        paymentId: payment.id,
+        userId: userDatabaseId,
+        totalPrice: parseFloat(payment.amount.value),
+        playlistId: playlistDatabaseId,
+        status: payment.status,
+        orderTypeId: orderType!.id,
+        locale: params.locale,
+        taxRate: calculateResult.data.taxRate,
+        taxRateShipping: taxRateShipping,
+        productPriceWithoutTax,
+        shippingPriceWithoutTax,
+        productVATPrice,
+        shippingVATPrice,
+        totalVATPrice,
+        numberOfTracks: params.tracks.length,
+        ...params.extraOrderData,
+      });
+
       // Create the payment in the database
       const insertResult = await this.prisma.payment.create({
         data: {
@@ -162,9 +184,10 @@ class Mollie {
           totalPrice: parseFloat(payment.amount.value),
           playlistId: playlistDatabaseId,
           status: payment.status,
+          orderTypeId: orderType!.id,
           locale: params.locale,
           taxRate: calculateResult.data.taxRate,
-          taxRateShipping: calculateResult.data.taxRateShipping,
+          taxRateShipping: taxRateShipping,
           productPriceWithoutTax,
           shippingPriceWithoutTax,
           productVATPrice,
@@ -172,11 +195,6 @@ class Mollie {
           totalVATPrice,
           numberOfTracks: params.tracks.length,
           ...params.extraOrderData,
-          orderType: {
-            connect: {
-              id: orderType!.id
-            }
-          },
         },
       });
 
