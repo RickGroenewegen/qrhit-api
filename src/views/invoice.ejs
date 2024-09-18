@@ -181,7 +181,7 @@
 				</tr>
 
 				<tr class="item">
-					<td>My product</td>
+					<td><%= payment.orderType.digital ? 'Digital' : 'Physical' %></td>
 					<td style="text-align:right;">1</td>
 					<td style="text-align:right;"><%= euroFormatter.format(payment.productPriceWithoutTax) %></td>
 					<td style="text-align:right;"><%= payment.taxRate %>%</td>
