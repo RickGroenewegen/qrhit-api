@@ -56,12 +56,6 @@ class Generator {
       `${hash}_digital.pdf`.replace(/ /g, '_')
     ).toLowerCase();
 
-    let fullPath = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
-
-    if (payment.orderType.name != 'digital') {
-      fullPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-    }
-
     let exists = false;
     if (payment.orderType.name === 'digital') {
       const digitalPath = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
@@ -141,6 +135,13 @@ class Generator {
 
     if (playlist.resetCache) {
       exists = false;
+      this.logger.log(
+        color.yellow.bold(
+          `User has refreshed the playlist cache for payment: ${white.bold(
+            payment
+          )} so we are regenerating the PDFs`
+        )
+      );
     }
 
     if (!exists) {
