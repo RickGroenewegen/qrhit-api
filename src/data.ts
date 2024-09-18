@@ -340,9 +340,16 @@ class Data {
     `;
 
     // Bulk upsert tracks
-    const trackValues = tracks.map((track: any) => 
-      `(${this.prisma.$queryRaw`${track.id}`}, ${this.prisma.$queryRaw`${this.utils.cleanTrackName(track.name)}`}, ${this.prisma.$queryRaw`${track.isrc}`}, ${this.prisma.$queryRaw`${track.artist}`}, ${this.prisma.$queryRaw`${track.link}`})`
-    ).join(',');
+    const trackValues = tracks
+      .map(
+        (track: any) =>
+          `(${this.prisma.$queryRaw`${track.id}`}, ${this.prisma
+            .$queryRaw`${this.utils.cleanTrackName(track.name)}`}, ${this.prisma
+            .$queryRaw`${track.isrc}`}, ${this.prisma
+            .$queryRaw`${track.artist}`}, ${this.prisma
+            .$queryRaw`${track.link}`})`
+      )
+      .join(',');
 
     await this.prisma.$executeRaw`
       INSERT INTO tracks (trackId, name, isrc, artist, spotifyLink)
@@ -372,7 +379,7 @@ class Data {
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
       let releaseDate = await this.musicBrainz.getReleaseDate(track.isrc);
-      
+
       if (!releaseDate) {
         const spotifyTrack = tracks.find((t: any) => t.id === track.trackId);
         if (spotifyTrack && spotifyTrack.releaseDate) {
@@ -387,7 +394,9 @@ class Data {
           WHERE id = ${track.id}
         `;
       } else {
-        this.logger.log(color.red(`No release dates found for track ID: ${track.id}`));
+        this.logger.log(
+          color.red(`No release dates found for track ID: ${track.id}`)
+        );
       }
     }
 
