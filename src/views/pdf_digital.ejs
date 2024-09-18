@@ -108,8 +108,8 @@
             <div class="card front">
                 <div class="circle"></div>
                 <div class="qr">
-                    <% const threeChars = tracks[index].trackId.substring(0, 4); %>
-                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= threeChars %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 80%; height: auto;">
+                    <% const startChars = tracks[index].trackId.substring(0, 4); %>
+                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= startChars %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 80%; height: auto;">
                 </div>
                 <!-- <div class="title" style="padding-left:2mm;padding-right:2mm;"><%= playlist.name %></div> -->
                 <div class="domain"><%= process.env['APP_DOMAIN'] %></div>

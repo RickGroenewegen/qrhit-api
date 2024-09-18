@@ -260,7 +260,6 @@ class Mollie {
         dbPayment.status != payment.status &&
         payment.status == 'paid'
       ) {
-        console.log('PAID! RUN GENERATION');
         this.generator.generate(params.id, payment.metadata.clientIp, this);
       }
     }
