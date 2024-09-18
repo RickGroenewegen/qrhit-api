@@ -54,6 +54,8 @@ class Mollie {
         params.extraOrderData.orderType == 'digital'
       );
 
+      console.log('Order Type:', orderType);
+
       // Get the order type
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
