@@ -384,7 +384,7 @@ class Data {
 
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
-      let releaseDate = await this.musicBrainz.getReleaseDate(track.isrc);
+      let releaseDate = await this.musicBrainz.getReleaseDate(track.isrc ?? '');
 
       if (!releaseDate) {
         const spotifyTrack = tracks.find((t: any) => t.id === track.trackId);
