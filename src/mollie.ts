@@ -63,8 +63,6 @@ class Mollie {
         numberOfTracks: params.tracks.length,
       });
 
-      console.log(111, calculateResult);
-
       const paymentClient = await this.getClient(clientIp);
 
       const translations = this.translation.getTranslationsByPrefix(
@@ -156,25 +154,6 @@ class Mollie {
       const totalVATPrice = parseFloat(
         (productVATPrice + shippingVATPrice).toFixed(2)
       );
-
-      console.log(222, {
-        paymentId: payment.id,
-        userId: userDatabaseId,
-        totalPrice: parseFloat(payment.amount.value),
-        playlistId: playlistDatabaseId,
-        status: payment.status,
-        orderTypeId: orderType!.id,
-        locale: params.locale,
-        taxRate: calculateResult.data.taxRate,
-        taxRateShipping: taxRateShipping,
-        productPriceWithoutTax,
-        shippingPriceWithoutTax,
-        productVATPrice,
-        shippingVATPrice,
-        totalVATPrice,
-        numberOfTracks: params.tracks.length,
-        ...params.extraOrderData,
-      });
 
       // Create the payment in the database
       const insertResult = await this.prisma.payment.create({
