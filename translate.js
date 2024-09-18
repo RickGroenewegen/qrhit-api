@@ -8,7 +8,7 @@ require('dotenv').config();
 const baseDirPath = path.join(__dirname, '/src/locales');
 const inputFile = path.join(baseDirPath, 'en.json');
 const cacheFile = path.join(baseDirPath, 'translated.cache');
-const languages = ['nl', 'de', 'fr', 'es'];
+const languages = ['nl', 'de', 'fr', 'es', 'it', 'pt'];
 const languagesFull = ['Dutch', 'German', 'French', 'Spanish'];
 
 // Initialize rate limiter with desired limits
@@ -26,7 +26,9 @@ const pause = (duration) => {
 const translate = async (text, currentPath, languagesToTranslate) => {
   await pause(5000);
 
-  const languagesToTranslateFull = languagesToTranslate.map(lang => languagesFull[languages.indexOf(lang)]);
+  const languagesToTranslateFull = languagesToTranslate.map(
+    (lang) => languagesFull[languages.indexOf(lang)]
+  );
 
   const prompt =
     'I want you to translate a text into ' +
@@ -156,8 +158,7 @@ const translateJson = async (
       }
     } else {
       let translationNeeded = languages.filter(
-        (lang) =>
-          !checkTranslationStatus(translatedCache, currentPath, [lang])
+        (lang) => !checkTranslationStatus(translatedCache, currentPath, [lang])
       );
 
       for (let lang of languages) {
@@ -170,7 +171,11 @@ const translateJson = async (
       }
 
       if (translationNeeded.length > 0) {
-        let translatedTexts = await translate(json[key], currentPath, translationNeeded);
+        let translatedTexts = await translate(
+          json[key],
+          currentPath,
+          translationNeeded
+        );
         if (translatedTexts !== null) {
           for (let lang of translationNeeded) {
             if (translatedTexts[lang]) {
@@ -194,7 +199,8 @@ const translateJson = async (
 
       for (let lang of languages) {
         // Use existing translation from languageFiles or original text if not translated
-        translated[lang][currentPath] = languageFiles[lang][currentPath] || json[key];
+        translated[lang][currentPath] =
+          languageFiles[lang][currentPath] || json[key];
       }
 
       await fs.writeFile(
