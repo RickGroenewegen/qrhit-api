@@ -1,21 +1,27 @@
 {{payment.fullname}},
 
-{{ translation.greatNews }}
+{{ translations.greatNews }}
 
-{{!-- {{ translation.belowAreDetails }} --}}
+{{ translations.weHopeYouHaveFun }}
 
-{{ translation.weHopeYouHaveFun }}
-
-{{ translation.orderInformation }}
+{{ translations.orderInformation }}
 -------------------
-{{ translation.orderNumber }}: {{ orderId }}
-{{ translation.playlist }}: {{ playlist.name }}
-{{ translation.items }}: {{ numberOfTracks }} cards
-{{ translation.fullname }}: {{ fullname }}
-{{ translation.email }}: {{ email }}
-{{ translation.address }}: {{ address }}
-{{ translation.city }}: {{ city }}
-{{ translation.zipcode }}: {{ zipcode }}
+{{ translations.orderNumber }}: {{ orderId }}
+{{ translations.playlist }}: {{ playlist.name }}
+{{ translations.items }}: {{ numberOfTracks }} {{ translations.cards }}
+{{ translations.fullname }}: {{ fullname }}
+{{ translations.email }}: {{ email }}
+{{ translations.address }}: {{ address }}
+{{ translations.city }}: {{ city }}
+{{ translations.zipcode }}: {{ zipcode }}
+{{ translations.country }}: {{ lookup countries country }}
 
-{{ translation.greetings }},
-{{ translation.productName }}
+{{#if differentInvoiceAddress }}
+{{ translations.invoiceAddress }}: {{ invoiceAddress }}
+{{ translations.invoiceCity }}: {{ invoiceCity }}
+{{ translations.invoiceZipcode }}: {{ invoiceZipcode }}
+{{ translations.invoiceCountry }}: {{ lookup countries invoiceCountry }}
+{{/if}}
+
+{{ translations.greetings }},
+{{ productName }}
