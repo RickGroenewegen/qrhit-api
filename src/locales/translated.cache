@@ -3,655 +3,873 @@
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.playlist": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.items": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.fullname": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.address": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.zipcode": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.city": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.country": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.email": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.greatNews": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.trackingMailSubject": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.orderShipped": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.trackOrder": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.thankYou": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.invoiceNumber": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.invoiceDate": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.paidInFull": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.method": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.product": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.shippingAndHandling": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.total": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.ideal": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.creditcard": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.paypal": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.bankTransfer": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.invoice": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.taxRate1": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.taxRate2": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.applePay": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "payment.playlist": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "payment.cards": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.youNeedToInstall": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.howToInstall": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.onIOS": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.onAndroid": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.tapShare": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.scrollDown": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.tapMenu": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.tapAddToHomeScreen": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.gotIt": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.closeScanner": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.cameraError": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.yourSongWillStart": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.getReady": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.tapTheCamera": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.allRightsReserved": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.mailSubject": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.greatNewsDigital": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.weHopeYouHaveFunDigital": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.greetings": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.orderInformation": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "payment.digital": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.weHopeYouHaveFun": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countdown.invalidLink": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.description": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.amount": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.pricePerPiece": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.taxRate": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.vatAmount": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.totalInclVAT": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.pdfProduct": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.cards": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "invoice.physicalProduct": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AF": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AX": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AL": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.DZ": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AS": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AD": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AO": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AI": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AQ": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AG": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AR": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AM": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AW": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AU": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AT": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.AZ": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BS": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BH": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BD": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BB": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BY": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BE": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BZ": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BJ": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BM": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BT": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BO": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BQ": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BA": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BW": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BV": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BR": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.IO": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BN": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BG": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BF": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.BI": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.KH": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.CM": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.CA": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.CV": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.KY": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.CF": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.TD": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.CL": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.CN": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "countries.CX": [
     "nl",
@@ -1851,48 +2069,64 @@
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.invoiceZipcode": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.invoiceCity": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.invoiceCountry": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.cards": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.yourInformation": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.shippingAddress": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ],
   "mail.orderData": [
     "nl",
     "de",
     "fr",
-    "es"
+    "es",
+    "it",
+    "pt"
   ]
 }
