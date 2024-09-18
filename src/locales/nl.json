@@ -53,5 +53,14 @@
   "mail.greatNewsDigital": "Goed nieuws! Je QR-kaarten voor je afspeellijst zijn verwerkt. Je vindt ze in de bijlage van deze e-mail.",
   "mail.weHopeYouHaveFunDigital": "We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, aarzel dan niet om ons te mailen via het contactformulier op onze website.",
   "payment.digital": "PDF bevat",
-  "countdown.invalidLink": "Onbekende QR-code"
+  "countdown.invalidLink": "Onbekende QR-code",
+  "invoice.description": "Beschrijving",
+  "invoice.amount": "Hoeveelheid",
+  "invoice.pricePerPiece": "Prijs / st.",
+  "invoice.taxRate": "Belastingtarief",
+  "invoice.vatAmount": "BTW bedrag",
+  "invoice.totalInclVAT": "Totaal incl. BTW",
+  "invoice.pdfProduct": "Een PDF met:",
+  "invoice.cards": "QR-kaarten",
+  "invoice.physicalProduct": "QR-muziekkaarten"
 }

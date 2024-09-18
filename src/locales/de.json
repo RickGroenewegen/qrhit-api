@@ -53,5 +53,14 @@
   "mail.greatNewsDigital": "Großartige Neuigkeiten! Ihre QR-Karten für Ihre Playlist wurden verarbeitet. Sie finden sie im Anhang dieser E-Mail.",
   "mail.weHopeYouHaveFunDigital": "Wir hoffen, dass du viel musikalischen Spaß hast! Wenn du weitere Fragen hast, zögere nicht, uns über das Kontaktformular auf unserer Website zu mailen.",
   "payment.digital": "PDF enthält",
-  "countdown.invalidLink": "Unbekannter QR-Code"
+  "countdown.invalidLink": "Unbekannter QR-Code",
+  "invoice.description": "Beschreibung",
+  "invoice.amount": "Menge",
+  "invoice.pricePerPiece": "Preis / Stk.",
+  "invoice.taxRate": "Steuersatz",
+  "invoice.vatAmount": "MwSt-Betrag",
+  "invoice.totalInclVAT": "Gesamt inkl. MwSt",
+  "invoice.pdfProduct": "Eine PDF mit:",
+  "invoice.cards": "QR-Karten",
+  "invoice.physicalProduct": "QR-Musikkarten"
 }

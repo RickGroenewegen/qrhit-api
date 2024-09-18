@@ -322,5 +322,59 @@
     "de",
     "fr",
     "es"
+  ],
+  "invoice.description": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "invoice.amount": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "invoice.pricePerPiece": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "invoice.taxRate": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "invoice.vatAmount": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "invoice.totalInclVAT": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "invoice.pdfProduct": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "invoice.cards": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "invoice.physicalProduct": [
+    "nl",
+    "de",
+    "fr",
+    "es"
   ]
 }

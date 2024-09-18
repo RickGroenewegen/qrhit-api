@@ -52,5 +52,14 @@
   "countdown.yourSongWillStart": "Tu canción empezará a sonar en",
   "countdown.getReady": "¡Prepárate!",
   "countdown.tapTheCamera": "Toca el ícono de la cámara para escanear",
-  "countdown.allRightsReserved": "Todos los derechos reservados"
+  "countdown.allRightsReserved": "Todos los derechos reservados",
+  "invoice.description": "Descripción",
+  "invoice.amount": "Cantidad",
+  "invoice.pricePerPiece": "Precio / ud.",
+  "invoice.taxRate": "Tasa de impuesto",
+  "invoice.vatAmount": "Importe IVA",
+  "invoice.totalInclVAT": "Total incl. IVA",
+  "invoice.pdfProduct": "Un PDF que contiene:",
+  "invoice.cards": "Tarjetas QR",
+  "invoice.physicalProduct": "Tarjetas de música QR"
 }
