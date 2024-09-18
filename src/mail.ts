@@ -127,6 +127,8 @@ class Mail {
       ),
     };
 
+    console.log(111, mailParams);
+
     try {
       // Read the logo file and convert it to Base64
       const logoBuffer = await fs.readFile(logoPath);

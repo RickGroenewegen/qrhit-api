@@ -24,6 +24,10 @@
 	"mail.invoiceZipcode" : "Invoice zipcode",
 	"mail.invoiceCity" : "Invoice city",
 	"mail.invoiceCountry" : "Invoice country",
+	"mail.yourInformation" : "Your information",
+	"mail.shippingAddress" : "Shipping address",
+	"mail.orderData" : "Order data",
+	
 
 	"invoice.description" : "Description",
 	"invoice.amount" : "Amount",
@@ -49,6 +53,7 @@
 	"invoice.pdfProduct" : "A PDF containing: ",
 	"invoice.cards": "QR Cards",
 	"invoice.physicalProduct" : "QR music cards",
+	
 
 	"payment.playlist" : "Playlist",
 	"payment.cards" : "QR Cards",

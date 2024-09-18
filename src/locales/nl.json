@@ -308,5 +308,13 @@
   "countries.YE": "Jemen",
   "countries.ZM": "Zambia",
   "countries.ZW": "Zimbabwe",
-  "mail.cards": "kaarten"
+  "mail.cards": "kaarten",
+  "mail.invoiceAddress": "Factuuradres",
+  "mail.invoiceZipcode": "Factuur postcode",
+  "mail.invoiceCity": "Factuurstad",
+  "mail.invoiceCountry": "Factuurland",
+  "invoice.orderData": "Bestelgegevens",
+  "invoice.yourInformation": "Uw informatie",
+  "invoice.shippingAddress": "Verzendadres",
+  "invoice.invoiceAddress": "Factuuradres"
 }

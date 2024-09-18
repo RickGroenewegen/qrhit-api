@@ -307,5 +307,13 @@
   "countries.YE": "Yemen",
   "countries.ZM": "Zambia",
   "countries.ZW": "Zimbabue",
-  "mail.cards": "cartas"
+  "mail.cards": "cartas",
+  "mail.invoiceAddress": "Dirección de facturación",
+  "mail.invoiceZipcode": "Código postal de la factura",
+  "mail.invoiceCity": "Ciudad de factura",
+  "mail.invoiceCountry": "País de facturación",
+  "invoice.orderData": "Datos de pedido",
+  "invoice.yourInformation": "Tu información",
+  "invoice.shippingAddress": "Dirección de envío",
+  "invoice.invoiceAddress": "Dirección de facturación"
 }

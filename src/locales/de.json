@@ -308,5 +308,13 @@
   "countries.YE": "Jemen",
   "countries.ZM": "Sambia",
   "countries.ZW": "Simbabwe",
-  "mail.cards": "Karten"
+  "mail.cards": "Karten",
+  "mail.invoiceAddress": "Rechnungsadresse",
+  "mail.invoiceZipcode": "Rechnungs-PLZ",
+  "mail.invoiceCity": "Rechnungsstadt",
+  "mail.invoiceCountry": "Rechnungsland",
+  "invoice.orderData": "Bestelldaten",
+  "invoice.yourInformation": "Ihre Informationen",
+  "invoice.shippingAddress": "Lieferadresse",
+  "invoice.invoiceAddress": "Rechnungsadresse"
 }

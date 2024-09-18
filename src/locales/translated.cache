@@ -1852,5 +1852,53 @@
     "de",
     "fr",
     "es"
+  ],
+  "mail.invoiceAddress": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "mail.invoiceZipcode": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "mail.invoiceCity": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "mail.invoiceCountry": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "invoice.orderData": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "invoice.yourInformation": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "invoice.shippingAddress": [
+    "nl",
+    "de",
+    "fr",
+    "es"
+  ],
+  "invoice.invoiceAddress": [
+    "nl",
+    "de",
+    "fr",
+    "es"
   ]
 }
