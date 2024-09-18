@@ -336,7 +336,6 @@ class Data {
   }
 
   public async storeTracks(
-    paymentId: string,
     playlistDatabaseId: number,
     tracks: any
   ): Promise<any> {
@@ -409,14 +408,12 @@ class Data {
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
       let releaseDate = await this.musicBrainz.getReleaseDate(track.isrc ?? '');
-
       if (!releaseDate) {
         const spotifyTrack = tracks.find((t: any) => t.id === track.trackId);
         if (spotifyTrack && spotifyTrack.releaseDate) {
           releaseDate = parseInt(spotifyTrack.releaseDate.split('-')[0]);
         }
       }
-
       if (releaseDate > 0) {
         await this.prisma.$executeRaw`
           UPDATE tracks

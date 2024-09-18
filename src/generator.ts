@@ -165,11 +165,7 @@ class Generator {
         )
       );
 
-      await this.data.storeTracks(
-        payment.paymentId,
-        payment.playlist.id,
-        tracks
-      );
+      await this.data.storeTracks(payment.playlist.id, tracks);
 
       this.logger.log(
         blue.bold(
