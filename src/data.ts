@@ -248,7 +248,7 @@ class Data {
 
   public async getPayment(paymentId: string, playlistId: string): Promise<any> {
     const payment: any[] = await this.prisma.$queryRaw`
-        SELECT      payments.paymentId AS orderId,
+        SELECT      payments.orderId,
                     payments.numberOfTracks,
                     payments.createdAt,
                     payments.fullname,
@@ -256,7 +256,13 @@ class Data {
                     payments.address,
                     payments.city,
                     payments.zipcode,
+                    payments.countryCode,
                     payments.status,
+                    payments.differentInvoiceAddress,
+                    payments.invoiceAddress,
+                    payments.invoiceCity,
+                    payments.invoiceZipcode,
+                    payments.invoiceCountrycode,
                     order_types.name AS orderType 
         FROM        payments
         INNER JOIN  playlists ON payments.playlistId = playlists.id
