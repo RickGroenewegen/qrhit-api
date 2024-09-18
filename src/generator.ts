@@ -236,7 +236,7 @@ class Generator {
         `${process.env['PUBLIC_DIR']}/pdf/${filename}`
       );
       const orderData = await this.order.createOrder(payment, filename);
-      printApiOrderId = orderData.id;
+      printApiOrderId = orderData.response.id;
       printApiOrderRequest = JSON.stringify(orderData.request);
       printApiOrderResponse = JSON.stringify(orderData.response);
     }

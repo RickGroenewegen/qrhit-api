@@ -428,6 +428,7 @@ class Server {
         );
         return { success: true };
       });
+
       this.fastify.get('/mb/:isrc', async (request: any, _reply) => {
         const result = await this.musicBrainz.getReleaseDateFromAPI(
           request.params.isrc

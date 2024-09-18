@@ -308,52 +308,57 @@ class Order {
 
     // Loop through the payments and check the status
     for (const payment of payments) {
-      try {
-        let trackingLink = '';
-        const response = await axios({
-          method: 'get',
-          url: `${process.env['PRINT_API_URL']}/v2/orders/${payment.printApiOrderId}`,
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
+      if (payment.printApiOrderId?.length > 0) {
+        try {
+          let trackingLink = '';
+          const url = `${process.env['PRINT_API_URL']}/v2/orders/${payment.printApiOrderId}`;
 
-        if (response.data.status === 'Shipped') {
+          const response = await axios({
+            method: 'get',
+            url,
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+            },
+          });
+
+          if (response.data.status === 'Shipped') {
+            this.logger.log(
+              magenta(
+                `Status of order ${white.bold(
+                  payment.printApiOrderId
+                )} is shipped`
+              )
+            );
+
+            if (response.data.trackingUrl?.length > 0) {
+              trackingLink = response.data.trackingUrl;
+              const pdfPath = await this.createInvoice(response.data, payment);
+
+              this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
+
+              // Update the payment with the printApiShipped flag
+              await this.prisma.payment.update({
+                where: {
+                  id: payment.id,
+                },
+                data: {
+                  printApiShipped: true,
+                  printApiStatus: response.data.status,
+                  printApiTrackingLink: trackingLink,
+                },
+              });
+            }
+          }
+        } catch (e) {
           this.logger.log(
-            magenta(
-              `Status of order ${white.bold(
+            color.red.bold(
+              `Error retrieving Print API order status for order: ${color.white.bold(
                 payment.printApiOrderId
-              )} is shipped`
+              )}`
             )
           );
-          if (response.data.trackingUrl?.length > 0) {
-            trackingLink = response.data.trackingUrl;
-            const pdfPath = await this.createInvoice(response.data, payment);
-
-            this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
-
-            // Update the payment with the printApiShipped flag
-            await this.prisma.payment.update({
-              where: {
-                id: payment.id,
-              },
-              data: {
-                printApiShipped: true,
-                printApiStatus: response.data.status,
-                printApiTrackingLink: trackingLink,
-              },
-            });
-          }
         }
-      } catch (e) {
-        this.logger.log(
-          color.red.bold(
-            `Error retrieving Print API order status for order: ${color.white.bold(
-              payment.printApiOrderId
-            )}`
-          )
-        );
       }
     }
   }
