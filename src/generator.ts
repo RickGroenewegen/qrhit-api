@@ -269,7 +269,7 @@ class Generator {
 
     this.logger.log(
       color.green.bold(
-        `PDF Generated successfully: ${color.white.bold(filename)}`
+        `Order processed successfully for payment: ${white.bold(paymentId)}`
       )
     );
   }
