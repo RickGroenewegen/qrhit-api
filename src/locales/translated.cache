@@ -1847,12 +1847,6 @@
     "fr",
     "es"
   ],
-  "mail.cards": [
-    "nl",
-    "de",
-    "fr",
-    "es"
-  ],
   "mail.invoiceAddress": [
     "nl",
     "de",
@@ -1877,25 +1871,25 @@
     "fr",
     "es"
   ],
-  "invoice.orderData": [
+  "mail.cards": [
     "nl",
     "de",
     "fr",
     "es"
   ],
-  "invoice.yourInformation": [
+  "mail.yourInformation": [
     "nl",
     "de",
     "fr",
     "es"
   ],
-  "invoice.shippingAddress": [
+  "mail.shippingAddress": [
     "nl",
     "de",
     "fr",
     "es"
   ],
-  "invoice.invoiceAddress": [
+  "mail.orderData": [
     "nl",
     "de",
     "fr",

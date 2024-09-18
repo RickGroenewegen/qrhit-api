@@ -316,5 +316,8 @@
   "invoice.orderData": "Données de commande",
   "invoice.yourInformation": "Vos informations",
   "invoice.shippingAddress": "Adresse de livraison",
-  "invoice.invoiceAddress": "Adresse de facturation"
+  "invoice.invoiceAddress": "Adresse de facturation",
+  "mail.yourInformation": "Vos informations",
+  "mail.shippingAddress": "Adresse de livraison",
+  "mail.orderData": "Données de commande"
 }

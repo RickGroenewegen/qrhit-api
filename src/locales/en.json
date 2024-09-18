@@ -15,7 +15,7 @@
 	"mail.city" : "City",
 	"mail.country" : "Country",
 	"mail.email" : "Email",
-	"mail.cards" : "cards`",
+	"mail.cards" : "cards",
 	"mail.trackingMailSubject": "Your QRSong! order {{ orderId }} has been shipped!",
     "mail.orderShipped": "Great news! Your QRSong order has been shipped.",
     "mail.trackOrder": "Track Your Order",

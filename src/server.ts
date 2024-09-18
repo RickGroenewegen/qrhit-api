@@ -420,7 +420,7 @@ class Server {
           payment.playlist.playlistId
         );
         await this.mail.sendEmail(
-          'printer',
+          'digital',
           payment,
           playlist,
           payment.filename,

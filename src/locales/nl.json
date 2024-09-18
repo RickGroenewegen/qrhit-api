@@ -316,5 +316,8 @@
   "invoice.orderData": "Bestelgegevens",
   "invoice.yourInformation": "Uw informatie",
   "invoice.shippingAddress": "Verzendadres",
-  "invoice.invoiceAddress": "Factuuradres"
+  "invoice.invoiceAddress": "Factuuradres",
+  "mail.yourInformation": "Uw informatie",
+  "mail.shippingAddress": "Verzendadres",
+  "mail.orderData": "Bestelgegevens"
 }
