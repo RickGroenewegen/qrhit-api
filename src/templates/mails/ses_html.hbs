@@ -136,11 +136,13 @@
                                     {{ translations.weHopeYouHaveFun }}
                                 </p>
 
-                                <!-- Order Data -->
-                                <h2 style="font-family: Helvetica, sans-serif; font-size: 18px; font-weight: bold; margin: 0; margin-bottom: 16px; color: #333333;">
-                                    {{ translations.orderData }}
-                                </h2>
                                 <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                                    <!-- Order Data -->
+                                    <tr>
+                                        <th colspan="2" style="padding: 10px; border: 1px solid #ddd; background-color: #333333; color: #ffffff; text-align: left;">
+                                            {{ translations.orderData }}
+                                        </th>
+                                    </tr>
                                     <tr>
                                         <th style="padding: 10px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">
                                             {{ translations.orderNumber }}
@@ -165,13 +167,13 @@
                                             {{ numberOfTracks }} {{ translations.cards }}
                                         </td>
                                     </tr>
-                                </table>
 
-                                <!-- Your Information -->
-                                <h2 style="font-family: Helvetica, sans-serif; font-size: 18px; font-weight: bold; margin: 0; margin-bottom: 16px; color: #333333;">
-                                    {{ translations.yourInformation }}
-                                </h2>
-                                <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                                    <!-- Your Information -->
+                                    <tr>
+                                        <th colspan="2" style="padding: 10px; border: 1px solid #ddd; background-color: #333333; color: #ffffff; text-align: left;">
+                                            {{ translations.yourInformation }}
+                                        </th>
+                                    </tr>
                                     <tr>
                                         <th style="padding: 10px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">
                                             {{ translations.fullname }}
@@ -188,13 +190,13 @@
                                             {{ email }}
                                         </td>
                                     </tr>
-                                </table>
 
-                                <!-- Shipping Address -->
-                                <h2 style="font-family: Helvetica, sans-serif; font-size: 18px; font-weight: bold; margin: 0; margin-bottom: 16px; color: #333333;">
-                                    {{ translations.shippingAddress }}
-                                </h2>
-                                <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                                    <!-- Shipping Address -->
+                                    <tr>
+                                        <th colspan="2" style="padding: 10px; border: 1px solid #ddd; background-color: #333333; color: #ffffff; text-align: left;">
+                                            {{ translations.shippingAddress }}
+                                        </th>
+                                    </tr>
                                     <tr>
                                         <th style="padding: 10px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">
                                             {{ translations.address }}
@@ -227,14 +229,14 @@
                                             {{ lookup countries country }}
                                         </td>
                                     </tr>
-                                </table>
 
-                                {{#if differentInvoiceAddress }}
-                                <!-- Invoice Address -->
-                                <h2 style="font-family: Helvetica, sans-serif; font-size: 18px; font-weight: bold; margin: 0; margin-bottom: 16px; color: #333333;">
-                                    {{ translations.invoiceAddress }}
-                                </h2>
-                                <table style="width: 100%; border-collapse: collapse; margin-bottom: 24px;">
+                                    {{#if differentInvoiceAddress }}
+                                    <!-- Invoice Address -->
+                                    <tr>
+                                        <th colspan="2" style="padding: 10px; border: 1px solid #ddd; background-color: #333333; color: #ffffff; text-align: left;">
+                                            {{ translations.invoiceAddress }}
+                                        </th>
+                                    </tr>
                                     <tr>
                                         <th style="padding: 10px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">
                                             {{ translations.address }}
@@ -267,8 +269,8 @@
                                             {{ lookup countries invoiceCountry }}
                                         </td>
                                     </tr>
+                                    {{/if}}
                                 </table>
-                                {{/if}}
                                 <p style="font-family: Helvetica, sans-serif; font-size: 16px; font-weight: normal; margin: 0; margin-top: 16px;">
                                     {{ translations.greetings }},<br />
                                     {{ productName }}
