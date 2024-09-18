@@ -110,11 +110,20 @@ class Mail {
       city: payment.city,
       zipcode: payment.zipcode,
       country: payment.countrycode,
+      invoiceAddress: payment.invoiceAddress,
+      invoiceCity: payment.invoiceCity,
+      invoiceZipcode: payment.invoiceZipcode,
+      invoiceCountry: payment.invoiceCountrycode,
+      differentInvoiceAddress: payment.differentInvoiceAddress,
       numberOfTracks: playlist.numberOfTracks,
       productName: process.env['PRODUCT_NAME'],
       translations: this.translation.getTranslationsByPrefix(
         payment.locale,
         'mail'
+      ),
+      countries: this.translation.getTranslationsByPrefix(
+        payment.locale,
+        'countries'
       ),
     };
 

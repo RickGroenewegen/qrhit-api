@@ -374,6 +374,7 @@ class Mollie {
         productVATPrice: true,
         shippingVATPrice: true,
         totalVATPrice: true,
+        differentInvoiceAddress: true,
         invoiceAddress: true,
         invoiceCity: true,
         invoiceZipcode: true,
