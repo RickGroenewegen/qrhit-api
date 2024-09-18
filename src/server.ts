@@ -236,10 +236,6 @@ class Server {
       return await this.mollie.processWebhook(request.body);
     });
 
-    this.fastify.post('/qr/generate', async (request: any, _reply) => {
-      return await this.qr.generate(request.body, request.clientIp);
-    });
-
     this.fastify.get(
       '/progress/:paymentId/start',
       async (request: any, _reply) => {

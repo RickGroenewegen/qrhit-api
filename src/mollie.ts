@@ -7,6 +7,7 @@ import Data from './data';
 import Order from './order';
 import Translation from './translation';
 import Utils from './utils';
+import Generator from './generator';
 
 class Mollie {
   private prisma = new PrismaClient();
@@ -15,6 +16,7 @@ class Mollie {
   private order = Order.getInstance();
   private translation: Translation = new Translation();
   private utils = new Utils();
+  private generator = new Generator();
 
   private mollieClient = createMollieClient({
     apiKey: process.env['MOLLIE_API_KEY']!,
@@ -213,6 +215,17 @@ class Mollie {
         payment = await this.mollieClientTest.payments.get(params.id);
       }
 
+      const dbPayment = await this.prisma.payment.findUnique({
+        select: {
+          id: true,
+          paymentId: true,
+          status: true,
+        },
+        where: {
+          paymentId: payment.id,
+        },
+      });
+
       this.logger.log(
         color.blue.bold('Processed webhook for payment: ') +
           color.bold.white(payment.id) +
@@ -240,6 +253,15 @@ class Mollie {
           success: false,
           error: 'Failed to update payment',
         };
+      }
+
+      if (
+        dbPayment &&
+        dbPayment.status != payment.status &&
+        payment.status == 'paid'
+      ) {
+        console.log('PAID! RUN GENERATION');
+        this.generator.generate(params.id, payment.metadata.clientIp, this);
       }
     }
     return {
