@@ -335,6 +335,8 @@ class Data {
   ): Promise<any> {
     const providedTrackIds = tracks.map((track: any) => track.id);
 
+    console.log(111);
+
     // Remove tracks that are no longer in the provided tracks list
     await this.prisma.$executeRaw`
       DELETE FROM playlist_has_tracks
@@ -345,10 +347,25 @@ class Data {
       )
     `;
 
+    console.log(222);
+
     // Bulk upsert tracks
-    const trackValues = tracks.map((track: { id: string; name: string; isrc: string | null; artist: string; link: string }) => 
-      `(${this.prisma.$queryRaw`${track.id}`}, ${this.prisma.$queryRaw`${this.utils.cleanTrackName(track.name)}`}, ${this.prisma.$queryRaw`${track.isrc}`}, ${this.prisma.$queryRaw`${track.artist}`}, ${this.prisma.$queryRaw`${track.link}`})`
-    ).join(', ');
+    const trackValues = tracks
+      .map(
+        (track: {
+          id: string;
+          name: string;
+          isrc: string | null;
+          artist: string;
+          link: string;
+        }) =>
+          `(${this.prisma.$queryRaw`${track.id}`}, ${this.prisma
+            .$queryRaw`${this.utils.cleanTrackName(track.name)}`}, ${this.prisma
+            .$queryRaw`${track.isrc}`}, ${this.prisma
+            .$queryRaw`${track.artist}`}, ${this.prisma
+            .$queryRaw`${track.link}`})`
+      )
+      .join(', ');
 
     if (trackValues.length > 0) {
       await this.prisma.$executeRaw`
@@ -362,6 +379,8 @@ class Data {
       `;
     }
 
+    console.log(333);
+
     // Bulk insert playlist_has_tracks
     await this.prisma.$executeRaw`
       INSERT IGNORE INTO playlist_has_tracks (playlistId, trackId)
@@ -370,12 +389,18 @@ class Data {
       WHERE trackId IN (${Prisma.join(providedTrackIds)})
     `;
 
+    console.log(444);
+
     // Fetch tracks that need year update
-    const tracksNeedingYearUpdate = await this.prisma.$queryRaw<TrackNeedingYearUpdate[]>`
+    const tracksNeedingYearUpdate = await this.prisma.$queryRaw<
+      TrackNeedingYearUpdate[]
+    >`
       SELECT id, isrc, trackId
       FROM tracks
       WHERE year IS NULL AND trackId IN (${Prisma.join(providedTrackIds)})
     `;
+
+    console.log(555);
 
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
@@ -401,6 +426,8 @@ class Data {
       }
     }
 
+    console.log(777);
+
     // Update progress
     for (let i = 0; i < tracks.length; i++) {
       const track = tracks[i];
@@ -412,6 +439,8 @@ class Data {
         track.image
       );
     }
+
+    console.log(888);
   }
 }
 
