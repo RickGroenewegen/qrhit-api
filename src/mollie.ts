@@ -133,17 +133,22 @@ class Mollie {
         ).toFixed(2)
       );
 
-      const shippingPriceWithoutTax = parseFloat(
-        (
-          parseFloat(calculateResult.data.payment) /
-          (1 + calculateResult.data.taxRateShipping / 100)
-        ).toFixed(2)
-      );
-      const shippingVATPrice = parseFloat(
-        (
-          parseFloat(calculateResult.data.payment) - shippingPriceWithoutTax
-        ).toFixed(2)
-      );
+      let shippingPriceWithoutTax = 0;
+      let shippingVATPrice = 0;
+
+      if (params.extraOrderData.orderType !== 'digital') {
+        shippingPriceWithoutTax = parseFloat(
+          (
+            parseFloat(calculateResult.data.payment) /
+            (1 + calculateResult.data.taxRateShipping / 100)
+          ).toFixed(2)
+        );
+        shippingVATPrice = parseFloat(
+          (
+            parseFloat(calculateResult.data.payment) - shippingPriceWithoutTax
+          ).toFixed(2)
+        );
+      }
 
       const totalVATPrice = parseFloat(
         (productVATPrice + shippingVATPrice).toFixed(2)
@@ -157,7 +162,6 @@ class Mollie {
           totalPrice: parseFloat(payment.amount.value),
           playlistId: playlistDatabaseId,
           status: payment.status,
-          orderTypeId: orderType!.id,
           locale: params.locale,
           taxRate: calculateResult.data.taxRate,
           taxRateShipping: calculateResult.data.taxRateShipping,
@@ -168,6 +172,11 @@ class Mollie {
           totalVATPrice,
           numberOfTracks: params.tracks.length,
           ...params.extraOrderData,
+          orderType: {
+            connect: {
+              id: orderType!.id
+            }
+          },
         },
       });
 
