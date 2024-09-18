@@ -228,6 +228,7 @@ class Generator {
 
     let printerPageCount = 0;
     let printApiOrderId = '';
+    let printApiOrderRequest = '';
     let printApiOrderResponse = '';
 
     if (payment.orderType.name != 'digital') {
@@ -236,7 +237,8 @@ class Generator {
       );
       const orderData = await this.order.createOrder(payment, filename);
       printApiOrderId = orderData.id;
-      printApiOrderResponse = JSON.stringify(orderData);
+      printApiOrderRequest = JSON.stringify(orderData.request);
+      printApiOrderResponse = JSON.stringify(orderData.response);
     }
 
     payment = await mollie.getPayment(paymentId);
@@ -251,6 +253,7 @@ class Generator {
         filenameDigital,
         printerPageCount: payment.printerPageCount,
         printApiOrderId,
+        printApiOrderRequest,
         printApiOrderResponse,
       },
     });

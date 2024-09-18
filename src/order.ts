@@ -250,6 +250,30 @@ class Order {
   public async createOrder(payment: any, filename: string): Promise<any> {
     const authToken = await this.getAuthToken();
 
+    const body = {
+      email: payment.user.email,
+      items: [
+        {
+          productId: payment.orderType.printApiProductId,
+          pageCount: 32, //payment.printerPageCount,
+          quantity: 1,
+          files: {
+            content: `${process.env.API_URI}/public/pdf/${filename}`,
+            cover: `${process.env.API_URI}/public/pdf/${filename}`,
+          },
+        },
+      ],
+      shipping: {
+        address: {
+          name: payment.fullname,
+          line1: payment.address,
+          postCode: payment.zipcode,
+          city: payment.city,
+          country: payment.countrycode,
+        },
+      },
+    };
+
     const responseOrder = await axios({
       method: 'post',
       url: `${process.env['PRINT_API_URL']}/v2/orders`,
@@ -257,32 +281,13 @@ class Order {
         Authorization: `Bearer ${authToken}`,
         'Content-Type': 'application/json',
       },
-      data: {
-        email: payment.user.email,
-        items: [
-          {
-            productId: payment.orderType.printApiProductId,
-            pageCount: 32, //payment.printerPageCount,
-            quantity: 1,
-            files: {
-              content: `${process.env.API_URI}/public/pdf/${filename}`,
-              cover: `${process.env.API_URI}/public/pdf/${filename}`,
-            },
-          },
-        ],
-        shipping: {
-          address: {
-            name: payment.fullname,
-            line1: payment.address,
-            postCode: payment.zipcode,
-            city: payment.city,
-            country: payment.countrycode,
-          },
-        },
-      },
+      data: body,
     });
 
-    return responseOrder.data;
+    return {
+      request: body,
+      response: responseOrder.data,
+    };
   }
 
   public async checkForShipment(): Promise<void> {

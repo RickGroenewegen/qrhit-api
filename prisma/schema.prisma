@@ -43,6 +43,7 @@ model Payment {
   printApiOrderId         String    @default("")
   printApiStatus          String    @default("Created")
   printApiShipped         Boolean   @default(false)
+  printApiOrderRequest    String?   @default("") @db.Text
   printApiOrderResponse   String?   @default("") @db.Text
   printApiTrackingLink    String?   @default("")
   amount                  Int
