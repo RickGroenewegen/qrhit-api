@@ -1,235 +1,100 @@
-<!doctype html>
-<html lang="en">
-
+<!DOCTYPE html>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+    <meta charset="utf-8">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
     <title>{{ productName }}</title>
-    <style media="all" type="text/css">
-        @media all {
-            .btn-primary table td:hover {
-                background-color: #ec0867 !important;
-            }
-
-            .btn-primary a:hover {
-                background-color: #ec0867 !important;
-                border-color: #ec0867 !important;
-            }
-        }
-
-        @media only screen and (max-width: 640px) {
-
-            .main p,
-            .main td,
-            .main span {
-                font-size: 16px !important;
-            }
-
-            .wrapper {
-                padding: 8px !important;
-            }
-
-            .content {
-                padding: 0 !important;
-            }
-
-            .container {
-                padding: 0 !important;
-                padding-top: 8px !important;
-                width: 100% !important;
-            }
-
-            .main {
-                border-left-width: 0 !important;
-                border-radius: 0 !important;
-                border-right-width: 0 !important;
-            }
-
-            .btn table {
-                max-width: 100% !important;
-                width: 100% !important;
-            }
-
-            .btn a {
-                font-size: 16px !important;
-                max-width: 100% !important;
-                width: 100% !important;
-            }
-        }
-
-        @media all {
-            .ExternalClass {
-                width: 100%;
-            }
-
-            .ExternalClass,
-            .ExternalClass p,
-            .ExternalClass span,
-            .ExternalClass font,
-            .ExternalClass td,
-            .ExternalClass div {
-                line-height: 100%;
-            }
-
-            .apple-link a {
-                color: inherit !important;
-                font-family: inherit !important;
-                font-size: inherit !important;
-                font-weight: inherit !important;
-                line-height: inherit !important;
-                text-decoration: none !important;
-            }
-
-            #MessageViewBody a {
-                color: inherit;
-                text-decoration: none;
-                font-size: inherit;
-                font-family: inherit;
-                font-weight: inherit;
-                line-height: inherit;
-            }
-        }
+    <!--[if mso]>
+    <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+    <style>
+      td,th,div,p,a,h1,h2,h3,h4,h5,h6 {font-family: "Segoe UI", sans-serif; mso-line-height-rule: exactly;}
+    </style>
+    <![endif]-->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap');
     </style>
 </head>
-
-<body
-    style="font-family: Helvetica, sans-serif; -webkit-font-smoothing: antialiased; font-size: 16px; line-height: 1.3; -ms-text-size-adjust: 100%; -webkit-text-size-adjust: 100%; background-color: #f4f5f6; margin: 0; padding: 0;">
-    <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="body"
-        style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; background-color: #f4f5f6; width: 100%;"
-        width="100%" bgcolor="#f4f5f6">
-        <tr>
-            <td style="font-family: Helvetica, sans-serif; font-size: 16px; vertical-align: top;" valign="top">&nbsp;
-            </td>
-            <td class="container"
-                style="font-family: Helvetica, sans-serif; font-size: 16px; vertical-align: top; max-width: 600px; padding: 0; padding-top: 24px; width: 600px; margin: 0 auto;"
-                width="600" valign="top">
-                <!-- Logo -->
-                <div style="text-align: center; margin-bottom: 24px;">
-                    <img src="cid:logo" alt="{{ productName }} Logo" style="max-width: 200px; height: auto;">
-                </div>
-                <div class="content"
-                    style="box-sizing: border-box; display: block; margin: 0 auto; max-width: 600px; padding: 0;">
-
-                    <!-- START CENTERED WHITE CONTAINER -->
-                    <span class="preheader"
-                        style="color: transparent; display: none; height: 0; max-height: 0; max-width: 0; opacity: 0; overflow: hidden; mso-hide: all; visibility: hidden; width: 0;">
-                        {{ greatNews }}
-                    </span>
-                    <table role="presentation" border="0" cellpadding="0" cellspacing="0" class="main"
-                        style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; background: #ffffff; border: 1px solid #eaebed; border-radius: 16px; width: 100%;"
-                        width="100%">
-
-                        <!-- START MAIN CONTENT AREA -->
+<body style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #f8fafc;">
+    <div style="display: none;">{{ translations.greatNews }} - {{ productName }}</div>
+    <div role="article" aria-roledescription="email" aria-label="{{ productName }} Order Confirmation" lang="en" style="font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc;">
+        <table style="width: 100%; font-family: 'Lato', sans-serif;" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+                <td align="center" style="padding: 24px;">
+                    <table class="container" style="width: 100%; max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" cellpadding="0" cellspacing="0" role="presentation">
                         <tr>
-                            <td class="wrapper"
-                                style="font-family: Helvetica, sans-serif; font-size: 16px; vertical-align: top; box-sizing: border-box; padding: 24px;"
-                                valign="top">
-                                <p
-                                    style="font-family: Helvetica, sans-serif; font-size: 16px; font-weight: normal; margin: 0; margin-bottom: 16px;">
-                                    {{payment.fullname}},</p>
-                                <p
-                                    style="font-family: Helvetica, sans-serif; font-size: 16px; font-weight: normal; margin: 0; margin-bottom: 16px;">
-                                    {{ translations.greatNewsDigital }}
-                                </p>
-                                <p
-                                    style="font-family: Helvetica, sans-serif; font-size: 16px; font-weight: normal; margin: 0; margin-bottom: 16px;">
-                                    {{ translations.weHopeYouHaveFunDigital }}
-                                </p>
-
-
-                                <!-- Order Information Table -->
-                                <h2
-                                    style="font-family: Helvetica, sans-serif; font-size: 16px; font-weight: bold; margin: 0; margin-bottom: 16px;">
-                                    {{ translations.orderInformation }}
-                                </h2>
-                                <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+                            <td style="padding: 24px;">
+                                <!-- Logo -->
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
                                     <tr>
-                                        <th
-                                            style="padding: 10px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">
-                                            {{ translations.orderNumber
-                                            }}</th>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">{{
-                                            orderId }}</td>
+                                        <td align="center" style="padding-bottom: 24px;">
+                                            <img src="cid:logo" alt="{{ productName }} Logo" style="max-width: 200px; height: auto;">
+                                        </td>
                                     </tr>
-                                    <tr>
-                                        <th
-                                            style="padding: 10px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">
-                                            {{ translations.playlist
-                                            }}</th>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">{{
-                                            playlist.name }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th
-                                            style="padding: 10px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">
-                                            {{ translations.items
-                                            }}</th>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">{{
-                                            numberOfTracks }} cards</td>
-                                    </tr>
-                                    <tr>
-                                        <th
-                                            style="padding: 10px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">
-                                            {{ translations.fullname
-                                            }}</th>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">{{
-                                            fullname }}</td>
-                                    </tr>
-                                    <tr>
-                                        <th
-                                            style="padding: 10px; border: 1px solid #ddd; background-color: #f2f2f2; text-align: left;">
-                                            {{ translations.email
-                                            }}</th>
-                                        <td style="padding: 10px; border: 1px solid #ddd;">{{
-                                            email }}</td>
-                                    </tr>
-                                
                                 </table>
-                                <p
-                                    style="font-family: Helvetica, sans-serif; font-size: 16px; font-weight: normal; margin: 0; margin-top: 16px;">
-                                    {{ translations.greetings }},<br />
-                                    {{ productName }}
-                                </p>
+                                <!-- Content -->
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td>
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{payment.fullname}},</p>
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.greatNewsDigital }}</p>
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.weHopeYouHaveFunDigital }}</p>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <!-- Order Information Table -->
+                                <table style="width: 100%; border-collapse: collapse; margin-top: 7px;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td colspan="2" style="padding: 12px; background-color: #4299e1; color: #ffffff; font-weight: 700; font-size: 16px;">{{ translations.orderInformation }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.orderNumber }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ orderId }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.playlist }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ playlist.name }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.items }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ numberOfTracks }} {{ translations.cards }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.fullname }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ fullname }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.email }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ email }}</td>
+                                    </tr>
+                                </table>
+                                <!-- Closing -->
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td style="padding-top: 32px;">
+                                            <p style="margin: 0; font-size: 16px; line-height: 24px; color: #4a5568;">
+                                                {{ translations.greetings }},<br>
+                                                {{ productName }}
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
                             </td>
                         </tr>
-
-                        <!-- END MAIN CONTENT AREA -->
                     </table>
-
-                    <!-- START FOOTER -->
-                    <div class="footer" style="clear: both; padding-top: 24px; text-align: center; width: 100%;">
-                        <table role="presentation" border="0" cellpadding="0" cellspacing="0"
-                            style="border-collapse: separate; mso-table-lspace: 0pt; mso-table-rspace: 0pt; width: 100%;"
-                            width="100%">
-                            <tr>
-                                <td class="content-block"
-                                    style="font-family: Helvetica, sans-serif; vertical-align: top; color: #9a9ea6; font-size: 16px; text-align: center;"
-                                    valign="top" align="center">
-                                    <span class="apple-link"
-                                        style="color: #9a9ea6; font-size: 16px; text-align: center;">{{
-                                        productName }}</span>
-
-                                </td>
-                            </tr>
-                            <tr>
-                                <td class="content-block powered-by"
-                                    style="font-family: Helvetica, sans-serif; vertical-align: top; color: #9a9ea6; font-size: 16px; text-align: center;"
-                                    valign="top" align="center">
-
-                                </td>
-                            </tr>
-                        </table>
-                    </div>
-
-                    <!-- END FOOTER -->
-
-                    <!-- END CENTERED WHITE CONTAINER -->
-                </div>
-            </td>
-            <td style="font-family: Helvetica, sans-serif; font-size: 16px; vertical-align: top;" valign="top">&nbsp;
-            </td>
-        </tr>
-    </table>
+                    <!-- Footer -->
+                    <table style="width: 100%; max-width: 600px;" cellpadding="0" cellspacing="0" role="presentation">
+                        <tr>
+                            <td style="padding: 24px; text-align: center; font-size: 12px; color: #718096;">
+                                <p style="margin: 0;">&copy; {{ currentYear }} {{ productName }}. All rights reserved.</p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
 </body>
-
 </html>
