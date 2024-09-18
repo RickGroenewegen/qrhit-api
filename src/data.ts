@@ -376,7 +376,9 @@ class Data {
     `;
 
     // Fetch tracks that need year update
-    const tracksNeedingYearUpdate = await this.prisma.$queryRaw<TrackNeedingYearUpdate[]>`
+    const tracksNeedingYearUpdate = await this.prisma.$queryRaw<
+      TrackNeedingYearUpdate[]
+    >`
       SELECT id, isrc, trackId
       FROM tracks
       WHERE year IS NULL AND trackId IN (${Prisma.join(providedTrackIds)})
