@@ -327,136 +327,80 @@ class Data {
     playlistDatabaseId: number,
     tracks: any
   ): Promise<any> {
-    let trackDatabaseId: number = 0;
-    let counter = 1;
+    const providedTrackIds = tracks.map((track: any) => track.id);
 
-    // Retrieve current tracks associated with the playlist
-    const currentTracks = await this.prisma.playlistHasTrack.findMany({
-      where: {
-        playlistId: playlistDatabaseId,
-      },
-      include: {
-        track: true,
-      },
-    });
+    // Remove tracks that are no longer in the provided tracks list
+    await this.prisma.$executeRaw`
+      DELETE FROM playlist_has_tracks
+      WHERE playlistId = ${playlistDatabaseId}
+      AND trackId NOT IN (
+        SELECT id FROM tracks
+        WHERE trackId IN (${Prisma.join(providedTrackIds)})
+      )
+    `;
 
-    // Create a set of current track IDs for easy lookup
-    const currentTrackIds = new Set(
-      currentTracks.map((pt) => pt.track.trackId)
-    );
+    // Bulk upsert tracks
+    const trackValues = tracks.map((track: any) => 
+      `(${this.prisma.$queryRaw`${track.id}`}, ${this.prisma.$queryRaw`${this.utils.cleanTrackName(track.name)}`}, ${this.prisma.$queryRaw`${track.isrc}`}, ${this.prisma.$queryRaw`${track.artist}`}, ${this.prisma.$queryRaw`${track.link}`})`
+    ).join(',');
 
-    // Create a set of provided track IDs for easy lookup
-    const providedTrackIds = new Set(tracks.map((track: any) => track.id));
+    await this.prisma.$executeRaw`
+      INSERT INTO tracks (trackId, name, isrc, artist, spotifyLink)
+      VALUES ${Prisma.raw(trackValues)}
+      ON DUPLICATE KEY UPDATE
+        name = VALUES(name),
+        isrc = VALUES(isrc),
+        artist = VALUES(artist),
+        spotifyLink = VALUES(spotifyLink)
+    `;
 
-    // Remove playlistHasTrack records for tracks that are no longer in the provided tracks list
-    for (const currentTrack of currentTracks) {
-      if (!providedTrackIds.has(currentTrack.track.trackId)) {
-        this.logger.log(
-          yellow.bold(
-            `Removing track ${white.bold(
-              currentTrack.track.name
-            )} from playlist ${white.bold(playlistDatabaseId)}`
-          )
-        );
+    // Bulk insert playlist_has_tracks
+    await this.prisma.$executeRaw`
+      INSERT IGNORE INTO playlist_has_tracks (playlistId, trackId)
+      SELECT ${playlistDatabaseId}, id
+      FROM tracks
+      WHERE trackId IN (${Prisma.join(providedTrackIds)})
+    `;
 
-        await this.prisma.playlistHasTrack.delete({
-          where: {
-            playlistId_trackId: {
-              playlistId: playlistDatabaseId,
-              trackId: currentTrack.trackId,
-            },
-          },
-        });
+    // Fetch tracks that need year update
+    const tracksNeedingYearUpdate = await this.prisma.$queryRaw`
+      SELECT id, isrc, trackId
+      FROM tracks
+      WHERE year IS NULL AND trackId IN (${Prisma.join(providedTrackIds)})
+    `;
+
+    // Update years for tracks
+    for (const track of tracksNeedingYearUpdate) {
+      let releaseDate = await this.musicBrainz.getReleaseDate(track.isrc);
+      
+      if (!releaseDate) {
+        const spotifyTrack = tracks.find((t: any) => t.id === track.trackId);
+        if (spotifyTrack && spotifyTrack.releaseDate) {
+          releaseDate = parseInt(spotifyTrack.releaseDate.split('-')[0]);
+        }
+      }
+
+      if (releaseDate > 0) {
+        await this.prisma.$executeRaw`
+          UPDATE tracks
+          SET year = ${releaseDate}
+          WHERE id = ${track.id}
+        `;
+      } else {
+        this.logger.log(color.red(`No release dates found for track ID: ${track.id}`));
       }
     }
 
-    // Check if the tracks exist. If not, create them
-    for (const track of tracks) {
-      if (track.id) {
-        const trackDatabase = await this.prisma.track.findUnique({
-          where: {
-            trackId: track.id,
-          },
-        });
-
-        trackDatabaseId = 0;
-        let year = null;
-
-        if (!trackDatabase) {
-          // create the track
-          const trackCreate = await this.prisma.track.create({
-            data: {
-              trackId: track.id,
-              name: this.utils.cleanTrackName(track.name),
-              isrc: track.isrc,
-              artist: track.artist,
-              spotifyLink: track.link,
-            },
-          });
-
-          trackDatabaseId = trackCreate.id;
-        } else {
-          trackDatabaseId = trackDatabase.id;
-          year = trackDatabase.year;
-        }
-
-        if (!year) {
-          // We need to retrieve the year of the track from MusicBrainz
-          let releaseDate = await this.musicBrainz.getReleaseDate(track.isrc);
-
-          if (!releaseDate && track.releaseDate) {
-            releaseDate = parseInt(track.releaseDate.split('-')[0]);
-          }
-
-          if (releaseDate > 0) {
-            // Update the track with the release date
-            await this.prisma.track.update({
-              where: {
-                id: trackDatabaseId,
-              },
-              data: {
-                year: releaseDate,
-              },
-            });
-          } else {
-            this.logger.log(
-              color.red(`No release dates found for: ${track.name}`)
-            );
-          }
-        }
-
-        // Check if there is a playlist_has_track entry. If not, create it
-        const playlistHasTrack = await this.prisma.playlistHasTrack.findFirst({
-          where: {
-            playlistId: playlistDatabaseId, // ID of the playlist
-            trackId: trackDatabaseId, // ID of the track
-          },
-        });
-
-        if (!playlistHasTrack) {
-          // create the playlist_has_track entry
-          await this.prisma.playlistHasTrack.create({
-            data: {
-              playlistId: playlistDatabaseId, // ID of the playlist
-              trackId: trackDatabaseId, // ID of the track
-            },
-          });
-        }
-
-        // Calculate the progress from 0-70% based on the number of tracks
-        const progress = Math.round(
-          (tracks.indexOf(track) / tracks.length) * 70
-        );
-
-        // Update the progress
-        await this.progress.setProgress(
-          paymentId,
-          progress,
-          `${track.artist} - ${track.name} (${counter} of ${tracks.length})`,
-          track.image
-        );
-      }
-      counter++;
+    // Update progress
+    for (let i = 0; i < tracks.length; i++) {
+      const track = tracks[i];
+      const progress = Math.round((i / tracks.length) * 70);
+      await this.progress.setProgress(
+        paymentId,
+        progress,
+        `${track.artist} - ${track.name} (${i + 1} of ${tracks.length})`,
+        track.image
+      );
     }
   }
 }
