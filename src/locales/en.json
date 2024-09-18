@@ -20,6 +20,9 @@
     "mail.trackOrder": "Track Your Order",
     "mail.thankYou": "We hope you have lots of musical fun! If you have any further questions do not hesitate to mail us: info@qrsong.io",
 
+	"invoice.description" : "Description",
+	"invoice.amount" : "Amount",
+	"invoice.pricePerPiece" : "Price / pc.",
 	"invoice.invoiceNumber": "Invoice number",
 	"invoice.invoiceDate": "Invoice date",
 	"invoice.paidInFull": "Paid in full",
@@ -35,6 +38,12 @@
 	"invoice.invoice": "Invoice",
 	"invoice.taxRate1": "Incl.",
 	"invoice.taxRate2": "VAT",
+	"invoice.taxRate": "Tax rate",
+	"invoice.vatAmount": "VAT amount",
+	"invoice.totalInclVAT": "Total incl. VAT",
+	"invoice.pdfProduct" : "A PDF containing: ",
+	"invoice.cards": "QR Cards",
+	"invoice.physicalProduct" : "QR music cards",
 
 	"payment.playlist" : "Playlist",
 	"payment.cards" : "QR Cards",

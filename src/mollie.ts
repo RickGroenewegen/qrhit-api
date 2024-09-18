@@ -119,19 +119,33 @@ class Mollie {
       delete params.extraOrderData.agreeTerms;
       params.extraOrderData.amount = parseInt(params.extraOrderData.amount);
 
-      const taxRate = await this.data.getTaxRate(
-        new Date(),
-        params.extraOrderData.countrycode
+      const productPriceWithoutTax = parseFloat(
+        (
+          parseFloat(calculateResult.data.price) /
+          (1 + calculateResult.data.taxRate / 100)
+        ).toFixed(2)
+      );
+      const productVATPrice = parseFloat(
+        (
+          parseFloat(calculateResult.data.price) - productPriceWithoutTax
+        ).toFixed(2)
       );
 
-      // totalPriceWithoutTax
-      let totalPriceWithoutTax = calculateResult.data.total;
+      const shippingPriceWithoutTax = parseFloat(
+        (
+          parseFloat(calculateResult.data.payment) /
+          (1 + calculateResult.data.taxRateShipping / 100)
+        ).toFixed(2)
+      );
+      const shippingVATPrice = parseFloat(
+        (
+          parseFloat(calculateResult.data.payment) - shippingPriceWithoutTax
+        ).toFixed(2)
+      );
 
-      if (taxRate) {
-        totalPriceWithoutTax = parseFloat(
-          (parseFloat(payment.amount.value) / (1 + taxRate / 100)).toFixed(2)
-        );
-      }
+      const totalVATPrice = parseFloat(
+        (productVATPrice + shippingVATPrice).toFixed(2)
+      );
 
       // Create the payment in the database
       const insertResult = await this.prisma.payment.create({
@@ -143,8 +157,13 @@ class Mollie {
           status: payment.status,
           orderTypeId: orderType!.id,
           locale: params.locale,
-          taxRate,
-          totalPriceWithoutTax,
+          taxRate: calculateResult.data.taxRate,
+          taxRateShipping: calculateResult.data.taxRateShipping,
+          productPriceWithoutTax,
+          shippingPriceWithoutTax,
+          productVATPrice,
+          shippingVATPrice,
+          totalVATPrice,
           numberOfTracks: params.tracks.length,
           ...params.extraOrderData,
         },
@@ -334,6 +353,7 @@ class Mollie {
         filenameDigital: true,
         createdAt: true,
         taxRate: true,
+        taxRateShipping: true,
         updatedAt: true,
         orderType: true,
         orderId: true,
@@ -341,7 +361,11 @@ class Mollie {
         paymentMethod: true,
         printApiOrderId: true,
         locale: true,
-        totalPriceWithoutTax: true,
+        productPriceWithoutTax: true,
+        shippingPriceWithoutTax: true,
+        productVATPrice: true,
+        shippingVATPrice: true,
+        totalVATPrice: true,
         invoiceAddress: true,
         invoiceCity: true,
         invoiceZipcode: true,

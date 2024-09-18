@@ -120,7 +120,7 @@
 	<body>
 		
 		<div class="invoice-box">
-            (<%= JSON.stringify(payment, null, 2) %>)
+            <!-- (<%= JSON.stringify(payment, null, 2) %>) -->
 			<table border="0">
 				<tr class="top">
 					<td colspan="6">
@@ -182,12 +182,12 @@
 
 				<tr class="item">
 					<% if (payment.orderType.digital) { %>
-						<td>Digital</td>
+						<td><%= translations.pdfProduct %>: <%= payment.numberOfTracks %> <%= translations.cards %></td>
 					<% } else { %>
-						<td>Physical</td>
+						<td><%= payment.numberOfTracks %>x <%= translations.physicalProduct %></td>
 					<% } %>
-					<td style="text-align:right;">1</td>
-					<td style="text-align:right;"><%= euroFormatter.format(payment.productPriceWithoutTax) %></td>
+					<td style="text-align:right;"><%= payment.amount %></td>
+					<td style="text-align:right;"><%= euroFormatter.format(payment.productPriceWithoutTax / payment.amount) %></td>
 					<td style="text-align:right;"><%= payment.taxRate %>%</td>
 					<td style="text-align:right;"><%= euroFormatter.format(payment.productVATPrice) %></td>
 					<td style="text-align:right;"><%= euroFormatter.format(payment.price) %></td>

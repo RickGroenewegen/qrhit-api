@@ -82,8 +82,8 @@ class Data {
   }
 
   public async getTaxRate(
-    date: Date,
-    countryCode: string
+    countryCode: string,
+    date: Date = new Date()
   ): Promise<number | null> {
     if (!this.euCountryCodes.includes(countryCode)) {
       return 0;

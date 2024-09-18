@@ -10,6 +10,7 @@ import { color, blue, white, magenta } from 'console-log-colors';
 import Mail from './mail';
 import puppeteer from 'puppeteer';
 import fs from 'fs';
+import Data from './data';
 
 class Order {
   private static instance: Order;
@@ -20,6 +21,7 @@ class Order {
   private utils = new Utils();
   private logger = new Log();
   private mail = new Mail();
+  private data = new Data();
 
   private constructor() {
     if (cluster.isPrimary) {
@@ -189,12 +191,18 @@ class Order {
 
       total = parseFloat(total.toFixed(2));
 
+      const taxRate = await this.data.getTaxRate(params.countrycode);
+
       const returnData = {
         success: true,
         data: {
           price,
           total,
-          ...response.data,
+          shipping: response.data.shipping,
+          handling: response.data.handling,
+          taxRateShipping: response.data.taxRate * 100,
+          taxRate,
+          payment: response.data.payment,
         },
       };
 

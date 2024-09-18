@@ -62,7 +62,8 @@ model Payment {
   countrycode             String?
   shipping                Float?
   price                   Float?
-  taxRatePrinter          Float?
+  taxRate                 Float?
+  taxRateShipping         Float?
   marketingEmails         Boolean   @default(false)
   differentInvoiceAddress Boolean   @default(false)
   invoiceAddress          String?
@@ -70,8 +71,11 @@ model Payment {
   invoiceZipcode          String?
   invoiceCountrycode      String?
   paymentMethod           String?
-  taxRate                 Float?
-  totalPriceWithoutTax    Float?
+  productPriceWithoutTax  Float
+  shippingPriceWithoutTax Float
+  productVATPrice         Float
+  shippingVATPrice        Float
+  totalVATPrice           Float
   printerPageCount        Int       @default(0)
   locale                  String    @default("en")
   numberOfTracks          Int       @default(0)
