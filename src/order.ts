@@ -306,7 +306,7 @@ class Order {
       },
     };
 
-    console.log(222, body);
+    console.log(222, JSON.stringify(body, null, 2));
 
     try {
       const responseOrder = await axios({
