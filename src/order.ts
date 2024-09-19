@@ -33,6 +33,36 @@ class Order {
     }
   }
 
+  public async updateFeaturedPlaylists(): Promise<void> {
+    try {
+      // Get all featured playlists
+      const featuredPlaylists = await this.prisma.playlist.findMany({
+        where: { featured: true },
+      });
+
+      for (const playlist of featuredPlaylists) {
+        // Get the order type based on the number of tracks
+        const orderType = await this.getOrderType(playlist.numberOfTracks);
+
+        if (orderType) {
+          // Update the playlist's price with the order type's amount
+          await this.prisma.playlist.update({
+            where: { id: playlist.id },
+            data: { price: orderType.amountWithMargin },
+          });
+
+          this.logger.log(`Updated price for playlist ${playlist.name} to ${orderType.amountWithMargin}`);
+        } else {
+          this.logger.log(`No suitable order type found for playlist ${playlist.name} with ${playlist.numberOfTracks} tracks`);
+        }
+      }
+
+      this.logger.log('Featured playlists prices updated successfully');
+    } catch (error) {
+      this.logger.log(`Error updating featured playlists prices: ${error}`);
+    }
+  }
+
   public static getInstance(): Order {
     if (!Order.instance) {
       Order.instance = new Order();
@@ -47,6 +77,10 @@ class Order {
     }).start();
     new CronJob(process.env['CRON_PATTERN_TRACKING']!, async () => {
       await this.checkForShipment();
+    }).start();
+    new CronJob('0 0 * * *', async () => {
+      await this.updateFeaturedPlaylists();
+      this.logger.log(color.blue.bold(`Updated featured playlists prices`));
     }).start();
   }
 
