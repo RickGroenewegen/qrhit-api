@@ -10,7 +10,7 @@ import Utils from './utils';
 import Generator from './generator';
 
 class Mollie {
-  private prisma = new PrismaClient({ log: ['query'] });
+  private prisma = new PrismaClient();
   private logger = new Logger();
   private data = new Data();
   private order = Order.getInstance();

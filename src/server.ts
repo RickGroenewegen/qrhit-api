@@ -406,7 +406,9 @@ class Server {
         process.env['ENVIRONMENT'] == 'development' ||
         this.utils.isTrustedIp(request.clientIp)
       ) {
-        this.cache.flush();
+        await this.cache.flush();
+        await this.order.updateFeaturedPlaylists();
+        await this.cache.flush();
         return { success: true };
       } else {
         return { success: false };

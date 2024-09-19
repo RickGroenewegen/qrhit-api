@@ -17,7 +17,7 @@ import Order from './order';
 class Generator {
   private logger = new Logger();
   private utils = new Utils();
-  private prisma = new PrismaClient({ log: ['query'] });
+  private prisma = new PrismaClient();
   private data = new Data();
   private pushover = new PushoverClient();
   private spotify = new Spotify();

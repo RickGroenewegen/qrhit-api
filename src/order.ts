@@ -51,15 +51,33 @@ class Order {
             data: { price: orderType.amountWithMargin },
           });
 
-          this.logger.log(`Updated price for playlist ${playlist.name} to ${orderType.amountWithMargin}`);
+          this.logger.log(
+            color.magenta(
+              `Updated price for playlist ${white.bold(
+                playlist.name
+              )} to ${white.bold(orderType.amountWithMargin)}`
+            )
+          );
         } else {
-          this.logger.log(`No suitable order type found for playlist ${playlist.name} with ${playlist.numberOfTracks} tracks`);
+          this.logger.log(
+            color.red.bold(
+              `No suitable order type found for playlist ${white.bold(
+                playlist.name
+              )} with ${white.bold(playlist.numberOfTracks)} tracks`
+            )
+          );
         }
       }
 
-      this.logger.log('Featured playlists prices updated successfully');
+      this.logger.log(
+        color.magenta('Featured playlists prices updated successfully')
+      );
     } catch (error) {
-      this.logger.log(`Error updating featured playlists prices: ${error}`);
+      this.logger.log(
+        color.red.bold(
+          `Error updating featured playlists prices: ${color.white.bold(error)}`
+        )
+      );
     }
   }
 
