@@ -279,6 +279,10 @@ class Order {
 
   public async testOrder() {
     const authToken = await this.getAuthToken();
+    const pdfURL = `${process.env.API_URI}/assets/pdf/example_digital.pdf`;
+
+    console.log(111, pdfURL);
+
     const body = {
       email: 'west14@gmail.com',
       items: [
@@ -287,7 +291,7 @@ class Order {
           pageCount: 2, //payment.printerPageCount,
           quantity: 1,
           files: {
-            content: `${process.env.API_URI}/assets/pdf/example_digital.pdf`,
+            content: pdfURL,
           },
         },
       ],
@@ -302,7 +306,7 @@ class Order {
       },
     };
 
-    console.log(111, body);
+    console.log(222, body);
 
     try {
       const responseOrder = await axios({
@@ -314,7 +318,7 @@ class Order {
         },
         data: body,
       });
-      console.log(222, JSON.stringify(responseOrder.data, null, 2));
+      console.log(333, JSON.stringify(responseOrder.data, null, 2));
     } catch (e) {
       if (axios.isAxiosError(e) && e.response) {
         console.log(999, JSON.stringify(e.response.data, null, 2));

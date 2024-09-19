@@ -419,6 +419,11 @@ class Server {
       console.log(123, request.body);
     });
 
+    this.fastify.get('/testorder', async (request: any, _reply) => {
+      await this.order.testOrder();
+      return { success: true };
+    });
+
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.get('/mail/:paymentId', async (request: any, _reply) => {
         const payment = await this.mollie.getPayment(request.params.paymentId);
@@ -440,11 +445,6 @@ class Server {
           request.params.isrc
         );
         return { success: true, data: result };
-      });
-
-      this.fastify.get('/testorder', async (request: any, _reply) => {
-        await this.order.testOrder();
-        return { success: true };
       });
     }
   }
