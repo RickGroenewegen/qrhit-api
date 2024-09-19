@@ -350,6 +350,7 @@ class Order {
 
   public async createOrder(payment: any, filename: string): Promise<any> {
     const authToken = await this.getAuthToken();
+    let response: string = '';
 
     const body = {
       email: payment.user.email,
@@ -375,19 +376,26 @@ class Order {
       },
     };
 
-    const responseOrder = await axios({
-      method: 'post',
-      url: `${process.env['PRINT_API_URL']}/v2/orders`,
-      headers: {
-        Authorization: `Bearer ${authToken}`,
-        'Content-Type': 'application/json',
-      },
-      data: body,
-    });
+    try {
+      const responseOrder = await axios({
+        method: 'post',
+        url: `${process.env['PRINT_API_URL']}/v2/orders`,
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        data: body,
+      });
+      response = responseOrder.data;
+    } catch (e) {
+      if (axios.isAxiosError(e) && e.response) {
+        response = e.response.data;
+      }
+    }
 
     return {
       request: body,
-      response: responseOrder.data,
+      response: response,
     };
   }
 
