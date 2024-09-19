@@ -18,6 +18,20 @@ class Mollie {
   private utils = new Utils();
   private generator = new Generator();
 
+  private getMollieLocale(locale: string): string {
+    const localeMap: { [key: string]: string } = {
+      'en': 'en_US',
+      'nl': 'nl_NL',
+      'de': 'de_DE',
+      'fr': 'fr_FR',
+      'es': 'es_ES',
+      'it': 'it_IT',
+      'pt': 'pt_PT'
+    };
+
+    return localeMap[locale] || 'en_US'; // Default to en_US if no match is found
+  }
+
   private mollieClient = createMollieClient({
     apiKey: process.env['MOLLIE_API_KEY']!,
   });
@@ -100,7 +114,7 @@ class Mollie {
         description: description,
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
-        locale: 'en', // Add this line to set the payment page language
+        locale: this.getMollieLocale(params.locale),
       });
 
       const userDatabaseId = await this.data.storeUser({
