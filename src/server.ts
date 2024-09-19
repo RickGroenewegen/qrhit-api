@@ -413,6 +413,10 @@ class Server {
       }
     });
 
+    this.fastify.post('/printapi/webhook', async (request: any, _reply) => {
+      console.log(123, request.body);
+    });
+
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.get('/mail/:paymentId', async (request: any, _reply) => {
         const payment = await this.mollie.getPayment(request.params.paymentId);
