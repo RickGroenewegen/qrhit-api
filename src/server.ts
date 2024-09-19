@@ -441,6 +441,11 @@ class Server {
         );
         return { success: true, data: result };
       });
+
+      this.fastify.get('/testorder', async (request: any, _reply) => {
+        await this.order.testOrder();
+        return { success: true };
+      });
     }
   }
 }

@@ -277,6 +277,51 @@ class Order {
     }
   }
 
+  public async testOrder() {
+    const authToken = await this.getAuthToken();
+    const body = {
+      email: 'west14@gmail.com',
+      items: [
+        {
+          productId: 'kaarten_dubbel_10x10_9st',
+          pageCount: 2, //payment.printerPageCount,
+          quantity: 1,
+          files: {
+            content: `${process.env.API_URI}/assets/pdf/example_digital.pdf`,
+          },
+        },
+      ],
+      shipping: {
+        address: {
+          name: 'Rick Groenewegen',
+          line1: 'Prinsenhof 1',
+          postCode: '2171XZ',
+          city: 'Sassenheim',
+          country: 'NL',
+        },
+      },
+    };
+
+    console.log(111, body);
+
+    try {
+      const responseOrder = await axios({
+        method: 'post',
+        url: `${process.env['PRINT_API_URL']}/v2/orders`,
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        data: body,
+      });
+      console.log(222, JSON.stringify(responseOrder.data, null, 2));
+    } catch (e) {
+      if (axios.isAxiosError(e) && e.response) {
+        console.log(999, JSON.stringify(e.response.data, null, 2));
+      }
+    }
+  }
+
   private async getAuthToken(force: boolean = false): Promise<string | null> {
     let authToken: string | null = '';
     authToken = await this.cache.get(this.APIcacheToken);
