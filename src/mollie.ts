@@ -1,5 +1,5 @@
 import { ApiResult } from './interfaces/ApiResult';
-import { createMollieClient } from '@mollie/api-client';
+import { createMollieClient, Locale } from '@mollie/api-client';
 import { Payment, PrismaClient } from '@prisma/client';
 import { color } from 'console-log-colors';
 import Logger from './logger';
@@ -18,18 +18,18 @@ class Mollie {
   private utils = new Utils();
   private generator = new Generator();
 
-  private getMollieLocale(locale: string): string {
+  private getMollieLocale(locale: string): Locale {
     const localeMap: { [key: string]: string } = {
-      'en': 'en_US',
-      'nl': 'nl_NL',
-      'de': 'de_DE',
-      'fr': 'fr_FR',
-      'es': 'es_ES',
-      'it': 'it_IT',
-      'pt': 'pt_PT'
+      en: 'en_US',
+      nl: 'nl_NL',
+      de: 'de_DE',
+      fr: 'fr_FR',
+      es: 'es_ES',
+      it: 'it_IT',
+      pt: 'pt_PT',
     };
 
-    return localeMap[locale] || 'en_US'; // Default to en_US if no match is found
+    return (localeMap[locale] || 'en_US') as Locale; // Default to en_US if no match is found
   }
 
   private mollieClient = createMollieClient({
