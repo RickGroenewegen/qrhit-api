@@ -55,7 +55,7 @@ class Order {
             color.magenta(
               `Updated price for playlist ${white.bold(
                 playlist.name
-              )} to ${white.bold(orderType.amountWithMargin)}`
+              )} to: ${white.bold(orderType.amountWithMargin)}`
             )
           );
         } else {
