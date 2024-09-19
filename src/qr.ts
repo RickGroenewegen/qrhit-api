@@ -1,14 +1,9 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
-import { PrismaClient } from '@prisma/client';
-import Utils from './utils';
 import * as QRCode from 'qrcode';
 
 class Qr {
   private logger = new Logger();
-  private utils = new Utils();
-  private prisma = new PrismaClient();
-
   public async generateQR(link: string, outputPath: string) {
     try {
       await QRCode.toFile(outputPath, link, {

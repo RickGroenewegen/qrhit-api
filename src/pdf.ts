@@ -1,6 +1,6 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
-import { Playlist, PrismaClient } from '@prisma/client';
+import { Playlist } from '@prisma/client';
 import Utils from './utils';
 import ConvertApi from 'convertapi';
 

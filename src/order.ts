@@ -14,7 +14,7 @@ import Data from './data';
 
 class Order {
   private static instance: Order;
-  private prisma = new PrismaClient();
+  private prisma = new PrismaClient({ log: ['query'] });
   private APIcacheToken: string = 'printapi_auth_token';
   private pricingCacheToken: string = 'printapi_pricing_token';
   private cache = Cache.getInstance();

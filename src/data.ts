@@ -15,7 +15,7 @@ import Translation from './translation';
 import Utils from './utils';
 
 class Data {
-  private prisma = new PrismaClient();
+  private prisma = new PrismaClient({ log: ['query'] });
   private logger = new Logger();
   private musicBrainz = new MusicBrainz();
   private cache = Cache.getInstance();

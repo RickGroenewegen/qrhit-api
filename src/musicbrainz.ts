@@ -10,7 +10,7 @@ class MusicBrainz {
   private axiosInstance: AxiosInstance;
   private readonly maxRetries: number = 5;
   private readonly maxRateLimit: number = 1200;
-  private prisma = new PrismaClient();
+  private prisma = new PrismaClient({ log: ['query'] });
 
   constructor() {
     this.axiosInstance = axios.create({
