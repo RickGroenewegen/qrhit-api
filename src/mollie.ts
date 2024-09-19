@@ -100,7 +100,7 @@ class Mollie {
         description: description,
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
-        locale: params.locale, // Add this line to set the payment page language
+        locale: 'en', // Add this line to set the payment page language
       });
 
       const userDatabaseId = await this.data.storeUser({
