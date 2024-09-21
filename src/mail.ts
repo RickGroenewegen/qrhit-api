@@ -48,33 +48,13 @@ class Mail {
   private async verifyRecaptcha(token: string): Promise<boolean> {
     try {
       const secretKey = process.env['RECAPTCHA_SECRET_KEY'];
-      const verifyUrl = `https://www.google.com/recaptcha/api/siteverify`;
+      const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
 
-      console.log('Verifying reCAPTCHA token:', token);
+      const response = await axios.post(verifyUrl);
 
-      const response = await axios.post(verifyUrl, null, {
-        params: {
-          secret: secretKey,
-          response: token,
-        },
-      });
-
-      console.log('reCAPTCHA response:', response.data);
-
-      if (!response.data.success) {
-        console.error('reCAPTCHA verification failed:', response.data['error-codes']);
-        if (response.data['error-codes'].includes('browser-error')) {
-          console.error('Browser error detected. This might be due to an invalid or expired token.');
-        }
-        return false;
-      }
-
-      return true;
+      return response.data.success;
     } catch (error) {
-      console.error('reCAPTCHA verification error:', error);
-      if (axios.isAxiosError(error)) {
-        console.error('Axios error details:', error.response?.data);
-      }
+      console.error('reCAPTCHA verification failed:', error);
       return false;
     }
   }
@@ -82,16 +62,11 @@ class Mail {
   async sendContactForm(data: any, ip: string): Promise<void> {
     const { captchaToken, ...otherData } = data;
 
-    console.log('Received captcha token:', captchaToken);
-
-    // Verify reCAPTCHA token
+    // // Verify reCAPTCHA token
     const isHuman = await this.verifyRecaptcha(captchaToken);
 
-    console.log('Is human verification result:', isHuman);
-
     if (!isHuman) {
-      console.error('reCAPTCHA verification failed. Token:', captchaToken);
-      throw new Error('reCAPTCHA verification failed. Please try again or contact support if the issue persists.');
+      throw new Error('reCAPTCHA verification failed');
     }
 
     const subject = otherData.subject;
@@ -122,24 +97,15 @@ class Mail {
     });
 
     if (this.ses) {
-      try {
-        const result = await this.ses.send(command);
-        console.log('Email sent successfully:', result);
-        await this.pushover.sendMessage(
-          {
-            title: `QRSong! Contactformulier`,
-            message: `Nieuw bericht: van ${data.email}`,
-            sound: 'incoming',
-          },
-          ip
-        );
-      } catch (error) {
-        console.error('Error sending email:', error);
-        throw new Error('Failed to send email. Please try again later or contact support.');
-      }
-    } else {
-      console.error('SES client is not initialized');
-      throw new Error('Email service is not available. Please try again later or contact support.');
+      const result = await this.ses.send(command);
+      this.pushover.sendMessage(
+        {
+          title: `QRSong! Contactformulier`,
+          message: `Nieuw bericht: van ${data.email}`,
+          sound: 'incoming',
+        },
+        ip
+      );
     }
   }
 
