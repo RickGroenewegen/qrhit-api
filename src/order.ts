@@ -1,5 +1,5 @@
 import Log from './logger';
-import { PrismaClient } from '@prisma/client';
+import PrismaInstance from './prismaClient';
 import axios from 'axios';
 import Cache from './cache';
 import { ApiResult } from './interfaces/ApiResult';
@@ -14,7 +14,7 @@ import Data from './data';
 
 class Order {
   private static instance: Order;
-  private prisma = new PrismaClient();
+  private prisma = PrismaInstance.getInstance();
   private APIcacheToken: string = 'printapi_auth_token';
   private pricingCacheToken: string = 'printapi_pricing_token';
   private cache = Cache.getInstance();

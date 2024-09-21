@@ -2,7 +2,7 @@ import { color } from 'console-log-colors';
 import Logger from './logger';
 import axios, { AxiosInstance } from 'axios';
 import * as xml2js from 'xml2js';
-import { PrismaClient } from '@prisma/client';
+import PrismaInstance from './prismaClient';
 
 class MusicBrainz {
   private logger = new Logger();
@@ -10,7 +10,7 @@ class MusicBrainz {
   private axiosInstance: AxiosInstance;
   private readonly maxRetries: number = 5;
   private readonly maxRateLimit: number = 1200;
-  private prisma = new PrismaClient();
+  private prisma = PrismaInstance.getInstance();
 
   constructor() {
     this.axiosInstance = axios.create({

@@ -1,6 +1,7 @@
 import { ApiResult } from './interfaces/ApiResult';
 import { createMollieClient, Locale } from '@mollie/api-client';
-import { Payment, PrismaClient } from '@prisma/client';
+import { Payment } from '@prisma/client';
+import PrismaInstance from './prismaClient';
 import { color } from 'console-log-colors';
 import Logger from './logger';
 import Data from './data';
@@ -10,7 +11,7 @@ import Utils from './utils';
 import Generator from './generator';
 
 class Mollie {
-  private prisma = new PrismaClient();
+  private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private data = new Data();
   private order = Order.getInstance();

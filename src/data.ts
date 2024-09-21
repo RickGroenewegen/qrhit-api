@@ -1,6 +1,7 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
-import { PrismaClient, Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
+import PrismaInstance from './prismaClient';
 import MusicBrainz from './musicbrainz';
 import crypto from 'crypto';
 import { ApiResult } from './interfaces/ApiResult';
@@ -15,7 +16,7 @@ import Translation from './translation';
 import Utils from './utils';
 
 class Data {
-  private prisma = new PrismaClient();
+  private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private musicBrainz = new MusicBrainz();
   private cache = Cache.getInstance();

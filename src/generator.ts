@@ -1,6 +1,6 @@
 import { color, blue, white } from 'console-log-colors';
 import Logger from './logger';
-import { PrismaClient } from '@prisma/client';
+import PrismaInstance from './prismaClient';
 import Utils from './utils';
 import Mollie from './mollie';
 import crypto from 'crypto';
@@ -17,7 +17,7 @@ import Order from './order';
 class Generator {
   private logger = new Logger();
   private utils = new Utils();
-  private prisma = new PrismaClient();
+  private prisma = PrismaInstance.getInstance();
   private data = new Data();
   private pushover = new PushoverClient();
   private spotify = new Spotify();
