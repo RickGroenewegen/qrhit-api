@@ -48,15 +48,25 @@ class Mail {
   private async verifyRecaptcha(token: string): Promise<boolean> {
     try {
       const secretKey = process.env['RECAPTCHA_SECRET_KEY'];
-      const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
+      const verifyUrl = `https://www.google.com/recaptcha/api/siteverify`;
 
-      const response = await axios.post(verifyUrl);
+      const response = await axios.post(verifyUrl, null, {
+        params: {
+          secret: secretKey,
+          response: token,
+        },
+      });
 
-      console.log(222, response.data);
+      console.log('reCAPTCHA response:', response.data);
 
-      return response.data.success;
+      if (!response.data.success) {
+        console.error('reCAPTCHA verification failed:', response.data['error-codes']);
+        return false;
+      }
+
+      return true;
     } catch (error) {
-      console.error('reCAPTCHA verification failed:', error);
+      console.error('reCAPTCHA verification error:', error);
       return false;
     }
   }
@@ -64,55 +74,64 @@ class Mail {
   async sendContactForm(data: any, ip: string): Promise<void> {
     const { captchaToken, ...otherData } = data;
 
-    console.log(111, captchaToken);
+    console.log('Received captcha token:', captchaToken);
 
-    // // Verify reCAPTCHA token
+    // Verify reCAPTCHA token
     const isHuman = await this.verifyRecaptcha(captchaToken);
 
-    console.log(333, isHuman);
+    console.log('Is human verification result:', isHuman);
 
-    // if (!isHuman) {
-    //   throw new Error('reCAPTCHA verification failed');
-    // }
+    if (!isHuman) {
+      throw new Error('reCAPTCHA verification failed');
+    }
 
-    // const subject = otherData.subject;
+    const subject = otherData.subject;
 
-    // const message = `
-    // <p><strong>Name:</strong> ${otherData.name}</p>
-    // <p><strong>E-mail:</strong> ${otherData.email}</p>
-    // <p><strong>Message:</strong> ${otherData.message}</p>`;
+    const message = `
+    <p><strong>Name:</strong> ${otherData.name}</p>
+    <p><strong>E-mail:</strong> ${otherData.email}</p>
+    <p><strong>Message:</strong> ${otherData.message}</p>`;
 
-    // const rawEmail = await this.renderRaw({
-    //   from: `${data.name} <${process.env['FROM_EMAIL']}>`,
-    //   to: process.env['INFO_EMAIL']!,
-    //   subject: `${process.env['PRODUCT_NAME']} Contact form`,
-    //   html: message,
-    //   text: message,
-    //   attachments: [] as Attachment[],
-    //   unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
-    //   replyTo: data.email,
-    // });
+    const rawEmail = await this.renderRaw({
+      from: `${data.name} <${process.env['FROM_EMAIL']}>`,
+      to: process.env['INFO_EMAIL']!,
+      subject: `${process.env['PRODUCT_NAME']} Contact form`,
+      html: message,
+      text: message,
+      attachments: [] as Attachment[],
+      unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+      replyTo: data.email,
+    });
 
-    // const emailBuffer = Buffer.from(rawEmail);
+    const emailBuffer = Buffer.from(rawEmail);
 
-    // // Prepare and send the raw email
-    // const command = new SendRawEmailCommand({
-    //   RawMessage: {
-    //     Data: emailBuffer,
-    //   },
-    // });
+    // Prepare and send the raw email
+    const command = new SendRawEmailCommand({
+      RawMessage: {
+        Data: emailBuffer,
+      },
+    });
 
-    // if (this.ses) {
-    //   const result = await this.ses.send(command);
-    //   this.pushover.sendMessage(
-    //     {
-    //       title: `QRSong! Contactformulier`,
-    //       message: `Nieuw bericht: van ${data.email}`,
-    //       sound: 'incoming',
-    //     },
-    //     ip
-    //   );
-    // }
+    if (this.ses) {
+      try {
+        const result = await this.ses.send(command);
+        console.log('Email sent successfully:', result);
+        await this.pushover.sendMessage(
+          {
+            title: `QRSong! Contactformulier`,
+            message: `Nieuw bericht: van ${data.email}`,
+            sound: 'incoming',
+          },
+          ip
+        );
+      } catch (error) {
+        console.error('Error sending email:', error);
+        throw new Error('Failed to send email');
+      }
+    } else {
+      console.error('SES client is not initialized');
+      throw new Error('Email service is not available');
+    }
   }
 
   async sendEmail(
