@@ -70,14 +70,21 @@ class Mail {
     const subject = otherData.subject;
 
     const message = `
+<<<<<<< HEAD
     <p><strong>Name:</strong> ${otherData.name}</p>
     <p><strong>E-mail:</strong> ${otherData.email}</p>
     <p><strong>Message:</strong> ${otherData.message}</p>`;
+=======
+    <p><strong>Name:</strong> ${data.name}</p>
+    <p><strong>E-mail:</strong> ${data.email}</p>
+    <p><strong>Subject:</strong> ${data.subject}</p>
+    <p><strong>Message:</strong> ${data.message}</p>`;
+>>>>>>> parent of 14d890a (No subject)
 
     const rawEmail = await this.renderRaw({
       from: `${data.name} <${process.env['FROM_EMAIL']}>`,
       to: process.env['INFO_EMAIL']!,
-      subject: `${process.env['PRODUCT_NAME']} Contact form`,
+      subject: `${process.env['PRODUCT_NAME']} Contact form - ${data.subject}`,
       html: message,
       text: message,
       attachments: [] as Attachment[],
@@ -99,7 +106,7 @@ class Mail {
       this.pushover.sendMessage(
         {
           title: `QRSong! Contactformulier`,
-          message: `Nieuw bericht: van ${data.email}`,
+          message: `Nieuw bericht: ${data.subject} van ${data.email}`,
           sound: 'incoming',
         },
         ip
