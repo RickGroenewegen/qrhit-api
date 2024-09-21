@@ -35,19 +35,6 @@ class Mail {
   private pushover = new PushoverClient();
   private utils = new Utils();
 
-  private async verifyRecaptcha(token: string): Promise<boolean> {
-    try {
-      const secretKey = process.env['RECAPTCHA_SECRET_KEY'];
-      const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
-
-      const response = await axios.post(verifyUrl);
-      return response.data.success;
-    } catch (error) {
-      console.error('reCAPTCHA verification failed:', error);
-      return false;
-    }
-  }
-
   constructor() {
     this.ses = new SESClient({
       credentials: {
@@ -64,6 +51,9 @@ class Mail {
       const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
 
       const response = await axios.post(verifyUrl);
+
+      console.log(222, response.data);
+
       return response.data.success;
     } catch (error) {
       console.error('reCAPTCHA verification failed:', error);
@@ -74,50 +64,55 @@ class Mail {
   async sendContactForm(data: any, ip: string): Promise<void> {
     const { captchaToken, ...otherData } = data;
 
-    // Verify reCAPTCHA token
+    console.log(111, captchaToken);
+
+    // // Verify reCAPTCHA token
     const isHuman = await this.verifyRecaptcha(captchaToken);
-    if (!isHuman) {
-      throw new Error('reCAPTCHA verification failed');
-    }
 
-    const subject = otherData.subject;
+    console.log(333, isHuman);
 
-    const message = `
-    <p><strong>Name:</strong> ${otherData.name}</p>
-    <p><strong>E-mail:</strong> ${otherData.email}</p>
-    <p><strong>Message:</strong> ${otherData.message}</p>`;
+    // if (!isHuman) {
+    //   throw new Error('reCAPTCHA verification failed');
+    // }
 
-    const rawEmail = await this.renderRaw({
-      from: `${data.name} <${process.env['FROM_EMAIL']}>`,
-      to: process.env['INFO_EMAIL']!,
-      subject: `${process.env['PRODUCT_NAME']} Contact form`,
-      html: message,
-      text: message,
-      attachments: [] as Attachment[],
-      unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
-      replyTo: data.email,
-    });
+    // const subject = otherData.subject;
 
-    const emailBuffer = Buffer.from(rawEmail);
+    // const message = `
+    // <p><strong>Name:</strong> ${otherData.name}</p>
+    // <p><strong>E-mail:</strong> ${otherData.email}</p>
+    // <p><strong>Message:</strong> ${otherData.message}</p>`;
 
-    // Prepare and send the raw email
-    const command = new SendRawEmailCommand({
-      RawMessage: {
-        Data: emailBuffer,
-      },
-    });
+    // const rawEmail = await this.renderRaw({
+    //   from: `${data.name} <${process.env['FROM_EMAIL']}>`,
+    //   to: process.env['INFO_EMAIL']!,
+    //   subject: `${process.env['PRODUCT_NAME']} Contact form`,
+    //   html: message,
+    //   text: message,
+    //   attachments: [] as Attachment[],
+    //   unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+    //   replyTo: data.email,
+    // });
 
-    if (this.ses) {
-      const result = await this.ses.send(command);
-      this.pushover.sendMessage(
-        {
-          title: `QRSong! Contactformulier`,
-          message: `Nieuw bericht: van ${data.email}`,
-          sound: 'incoming',
-        },
-        ip
-      );
-    }
+    // const emailBuffer = Buffer.from(rawEmail);
+
+    // // Prepare and send the raw email
+    // const command = new SendRawEmailCommand({
+    //   RawMessage: {
+    //     Data: emailBuffer,
+    //   },
+    // });
+
+    // if (this.ses) {
+    //   const result = await this.ses.send(command);
+    //   this.pushover.sendMessage(
+    //     {
+    //       title: `QRSong! Contactformulier`,
+    //       message: `Nieuw bericht: van ${data.email}`,
+    //       sound: 'incoming',
+    //     },
+    //     ip
+    //   );
+    // }
   }
 
   async sendEmail(
