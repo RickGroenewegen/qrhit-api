@@ -133,6 +133,7 @@ class Mollie {
       delete params.extraOrderData.orderType;
       delete params.extraOrderData.total;
       delete params.extraOrderData.agreeTerms;
+      delete params.extraOrderData.agreeNoRefund;
       params.extraOrderData.amount = parseInt(params.extraOrderData.amount);
 
       const productPriceWithoutTax = parseFloat(
