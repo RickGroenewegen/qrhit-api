@@ -1,6 +1,6 @@
 import { color, blue, white } from 'console-log-colors';
 import Logger from './logger';
-import PrismaInstance from './prismaClient';
+import PrismaInstance from '../prismaClient';
 import Utils from './utils';
 import Mollie from './mollie';
 import crypto from 'crypto';

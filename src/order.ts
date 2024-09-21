@@ -1,5 +1,5 @@
 import Log from './logger';
-import PrismaInstance from './prismaClient';
+import PrismaInstance from '../prismaClient';
 import axios from 'axios';
 import Cache from './cache';
 import { ApiResult } from './interfaces/ApiResult';

@@ -1,7 +1,7 @@
 import { ApiResult } from './interfaces/ApiResult';
 import { createMollieClient, Locale } from '@mollie/api-client';
 import { Payment } from '@prisma/client';
-import PrismaInstance from './prismaClient';
+import PrismaInstance from '../prismaClient';
 import { color } from 'console-log-colors';
 import Logger from './logger';
 import Data from './data';

@@ -1,7 +1,7 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
 import { Prisma } from '@prisma/client';
-import PrismaInstance from './prismaClient';
+import PrismaInstance from '../prismaClient';
 import MusicBrainz from './musicbrainz';
 import crypto from 'crypto';
 import { ApiResult } from './interfaces/ApiResult';
