@@ -2,7 +2,7 @@ import { color } from 'console-log-colors';
 import Logger from './logger';
 import axios, { AxiosInstance } from 'axios';
 import * as xml2js from 'xml2js';
-import PrismaInstance from '../prismaClient';
+import PrismaInstance from './prisma';
 
 class MusicBrainz {
   private logger = new Logger();
