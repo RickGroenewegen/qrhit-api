@@ -46,6 +46,7 @@ model Payment {
   printApiOrderRequest    String?   @default("") @db.Text
   printApiOrderResponse   String?   @default("") @db.Text
   printApiTrackingLink    String?   @default("")
+  clientIp                String?
   amount                  Int
   totalPrice              Float
   status                  String

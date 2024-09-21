@@ -187,6 +187,7 @@ class Mollie {
           productVATPrice,
           shippingVATPrice,
           totalVATPrice,
+          clientIp,
           numberOfTracks: params.tracks.length,
           ...params.extraOrderData,
         },
