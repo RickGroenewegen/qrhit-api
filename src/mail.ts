@@ -50,6 +50,8 @@ class Mail {
       const secretKey = process.env['RECAPTCHA_SECRET_KEY'];
       const verifyUrl = `https://www.google.com/recaptcha/api/siteverify`;
 
+      console.log('Verifying reCAPTCHA token:', token);
+
       const response = await axios.post(verifyUrl, null, {
         params: {
           secret: secretKey,
@@ -61,12 +63,18 @@ class Mail {
 
       if (!response.data.success) {
         console.error('reCAPTCHA verification failed:', response.data['error-codes']);
+        if (response.data['error-codes'].includes('browser-error')) {
+          console.error('Browser error detected. This might be due to an invalid or expired token.');
+        }
         return false;
       }
 
       return true;
     } catch (error) {
       console.error('reCAPTCHA verification error:', error);
+      if (axios.isAxiosError(error)) {
+        console.error('Axios error details:', error.response?.data);
+      }
       return false;
     }
   }
@@ -82,7 +90,8 @@ class Mail {
     console.log('Is human verification result:', isHuman);
 
     if (!isHuman) {
-      throw new Error('reCAPTCHA verification failed');
+      console.error('reCAPTCHA verification failed. Token:', captchaToken);
+      throw new Error('reCAPTCHA verification failed. Please try again or contact support if the issue persists.');
     }
 
     const subject = otherData.subject;
@@ -126,11 +135,11 @@ class Mail {
         );
       } catch (error) {
         console.error('Error sending email:', error);
-        throw new Error('Failed to send email');
+        throw new Error('Failed to send email. Please try again later or contact support.');
       }
     } else {
       console.error('SES client is not initialized');
-      throw new Error('Email service is not available');
+      throw new Error('Email service is not available. Please try again later or contact support.');
     }
   }
 
