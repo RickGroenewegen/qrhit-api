@@ -319,5 +319,6 @@
   "invoice.invoiceAddress": "Rechnungsadresse",
   "mail.yourInformation": "Ihre Informationen",
   "mail.shippingAddress": "Lieferadresse",
-  "mail.orderData": "Bestelldaten"
+  "mail.orderData": "Bestelldaten",
+  "invoice.bancontact": "Bancontact"
 }

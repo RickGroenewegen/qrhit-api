@@ -43,6 +43,7 @@
 	"invoice.creditcard": "Creditcard",
 	"invoice.paypal": "Paypal",
 	"invoice.applePay": "Apple Pay",
+	"invoice.bancontact": "Bancontact",
 	"invoice.bankTransfer": "Bank transfer",
 	"invoice.invoice": "Invoice",
 	"invoice.taxRate1": "Incl.",

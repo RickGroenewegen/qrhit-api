@@ -318,5 +318,6 @@
   "invoice.invoiceAddress": "Dirección de facturación",
   "mail.yourInformation": "Tu información",
   "mail.shippingAddress": "Dirección de envío",
-  "mail.orderData": "Datos de pedido"
+  "mail.orderData": "Datos de pedido",
+  "invoice.bancontact": "Bancontact"
 }

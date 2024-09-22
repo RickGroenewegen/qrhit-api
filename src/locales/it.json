@@ -314,5 +314,6 @@
   "countries.EH": "Sahara Occidentale",
   "countries.YE": "Yemen",
   "countries.ZM": "Zambia",
-  "countries.ZW": "Zimbabwe"
+  "countries.ZW": "Zimbabwe",
+  "invoice.bancontact": "Bancontact"
 }

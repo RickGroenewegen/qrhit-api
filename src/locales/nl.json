@@ -319,5 +319,6 @@
   "invoice.invoiceAddress": "Factuuradres",
   "mail.yourInformation": "Uw informatie",
   "mail.shippingAddress": "Verzendadres",
-  "mail.orderData": "Bestelgegevens"
+  "mail.orderData": "Bestelgegevens",
+  "invoice.bancontact": "Bancontact"
 }
