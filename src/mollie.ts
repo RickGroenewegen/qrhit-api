@@ -305,7 +305,8 @@ class Mollie {
         dbPayment.status != payment.status &&
         payment.status == 'paid'
       ) {
-        this.generator.generate(params.id, payment.metadata.clientIp, this);
+        const metadata = payment.metadata as { clientIp: string };
+        this.generator.generate(params.id, metadata.clientIp, this);
       }
     }
     return {
