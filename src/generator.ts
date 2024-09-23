@@ -108,7 +108,7 @@ class Generator {
     payment: any,
     playlist: any,
     ip: string
-  ): Promise<void> {
+  ): Promise<{ filename: string; filenameDigital: string }> {
     let filename = '';
     let filenameDigital = '';
 
