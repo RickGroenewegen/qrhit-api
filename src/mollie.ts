@@ -56,6 +56,8 @@ class Mollie {
     params: any,
     clientIp: string
   ): Promise<ApiResult> {
+    console.log(111, params);
+
     try {
       let amount = params.extraOrderData.amount || 1;
       let useOrderType = params.extraOrderData.orderType;
@@ -74,8 +76,7 @@ class Mollie {
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
         countrycode: params.extraOrderData.countrycode,
-        amount,
-        numberOfTracks: params.tracks.length,
+        cart: params.cart,
       });
 
       const paymentClient = await this.getClient(clientIp);
