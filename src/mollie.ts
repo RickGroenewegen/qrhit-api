@@ -118,6 +118,8 @@ class Mollie {
         true // TODO: Fix this
       );
 
+      console.log(111, userDatabaseId, playlistDatabaseIds);
+
       // delete params.extraOrderData.orderType;
       // delete params.extraOrderData.total;
       // delete params.extraOrderData.agreeTerms;
@@ -160,11 +162,14 @@ class Mollie {
       // );
 
       // // Create the payment in the database
+
+      console.log(333, calculateResult.data);
+
       const insertResult = await this.prisma.payment.create({
         data: {
           paymentId: payment.id,
           user: {
-            connect: { id: userDatabaseId }
+            connect: { id: userDatabaseId },
           },
           totalPrice: parseFloat(payment.amount.value),
           status: payment.status,
