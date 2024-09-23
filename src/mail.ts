@@ -112,20 +112,24 @@ class Mail {
   async sendEmail(
     orderType: string,
     payment: Payment,
-    playlist: Playlist,
-    filename: string,
-    filenameDigital: string
+    playlists: Playlist[] | [],
+    filename: string = '',
+    filenameDigital: string = ''
   ): Promise<void> {
     if (!this.ses) return;
 
     const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
 
+    let numberOfTracks = 0;
+
+    // Calculate the total number of tracks
+    for (const playlist of playlists) {
+      numberOfTracks += playlist.numberOfTracks;
+    }
+
     const mailParams = {
       payment,
-      playlist,
-      downloadLink: filename
-        ? `${process.env['API_URI']}/public/pdf/${filename}`
-        : '',
+      playlists,
       orderId: payment.orderId,
       fullname: payment.fullname,
       email: payment.email,
@@ -138,7 +142,7 @@ class Mail {
       invoiceZipcode: payment.invoiceZipcode,
       invoiceCountry: payment.invoiceCountrycode,
       differentInvoiceAddress: payment.differentInvoiceAddress,
-      numberOfTracks: playlist.numberOfTracks,
+      numberOfTracks,
       productName: process.env['PRODUCT_NAME'],
       translations: this.translation.getTranslationsByPrefix(
         payment.locale,
@@ -157,7 +161,7 @@ class Mail {
 
       let locale = payment.locale;
 
-      let templateName = orderType === 'digital' ? 'digital' : 'ses';
+      let templateName = orderType;
 
       const html = await this.templates.render(
         `mails/${templateName}_html`,
@@ -168,10 +172,29 @@ class Mail {
         mailParams
       );
 
-      const subject = this.translation.translate('mail.mailSubject', locale, {
-        orderId: payment.orderId,
-        playlist: playlist.name,
-      });
+      let subject = '';
+
+      if (orderType === 'digital') {
+        subject = this.translation.translate(
+          'mail.mailSubjectDigital',
+          locale,
+          {
+            orderId: payment.orderId,
+            playlist: playlists[0].name,
+          }
+        );
+      } else if (playlists.length == 1) {
+        subject = this.translation.translate('mail.mailSubject', locale, {
+          orderId: payment.orderId,
+          playlist: playlists[0].name,
+        });
+      } else {
+        subject = this.translation.translate('mail.mailSubject', locale, {
+          orderId: payment.orderId,
+        });
+      }
+
+      console.log(111, subject);
 
       let attachments: Attachment[] = [
         {
@@ -186,6 +209,7 @@ class Mail {
       // Add the non-digital file as an attachment if it exists and the email is trusted
       if (
         filename &&
+        filename.length > 0 &&
         orderType != 'digital' &&
         this.utils.isTrustedEmail(payment.email!)
       ) {
@@ -200,16 +224,18 @@ class Mail {
       }
 
       // Add the digital file as an attachment
-      const filePathDigital = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
-      const fileBufferDigital = await fs.readFile(filePathDigital);
-      const fileBase64Digital = this.wrapBase64(
-        fileBufferDigital.toString('base64')
-      );
-      attachments.push({
-        contentType: 'application/pdf',
-        filename: filenameDigital,
-        data: fileBase64Digital,
-      });
+      if (filenameDigital && filenameDigital.length > 0) {
+        const filePathDigital = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
+        const fileBufferDigital = await fs.readFile(filePathDigital);
+        const fileBase64Digital = this.wrapBase64(
+          fileBufferDigital.toString('base64')
+        );
+        attachments.push({
+          contentType: 'application/pdf',
+          filename: filenameDigital,
+          data: fileBase64Digital,
+        });
+      }
 
       const rawEmail = await this.renderRaw({
         from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
