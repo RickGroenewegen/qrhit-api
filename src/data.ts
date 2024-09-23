@@ -252,7 +252,6 @@ class Data {
   public async getPayment(paymentId: string, playlistId: string): Promise<any> {
     const payment: any[] = await this.prisma.$queryRaw`
         SELECT      payments.orderId,
-                    payments.numberOfTracks,
                     payments.createdAt,
                     payments.fullname,
                     payments.email,
@@ -266,7 +265,7 @@ class Data {
                     payments.invoiceCity,
                     payments.invoiceZipcode,
                     payments.invoiceCountrycode,
-                    order_types.name AS orderType 
+                    'digital' AS orderType 
         FROM        payments
         INNER JOIN  playlists ON payments.playlistId = playlists.id
         INNER JOIN  user_has_playlists ON playlists.id = user_has_playlists.playlistId
