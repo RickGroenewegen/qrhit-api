@@ -9,6 +9,7 @@ import Order from './order';
 import Translation from './translation';
 import Utils from './utils';
 import Generator from './generator';
+import { CartItem } from './interfaces/CartItem';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -114,7 +115,6 @@ class Mollie {
       const playlistDatabaseIds = await this.data.storePlaylists(
         userDatabaseId,
         params.cart.items,
-        calculateResult.data.price,
         true // TODO: Fix this
       );
 
@@ -166,7 +166,6 @@ class Mollie {
           userId: userDatabaseId,
           totalPrice: parseFloat(payment.amount.value),
           status: payment.status,
-          orderTypeId: 'digital', // TODO: Fix this
           locale: params.locale,
           taxRate: calculateResult.data.taxRate,
           taxRateShipping: calculateResult.data.taxRateShipping,
@@ -231,11 +230,12 @@ class Mollie {
             ).toFixed(2)
           ),
           clientIp,
-          numberOfTracks: params.tracks.length,
           PaymentHasPlaylist: {
             create: params.cart.items.map((item: CartItem, index: number) => ({
               playlistId: playlistDatabaseIds[index],
               amount: item.amount,
+              orderTypeId: 123, //TODO: Fix this
+              numberOfTracks: item.amountOfTracks,
               type: item.type,
             })),
           },
@@ -424,15 +424,11 @@ class Mollie {
         id: true,
         userId: true,
         paymentId: true,
-        amount: true,
         status: true,
-        filename: true,
-        filenameDigital: true,
         createdAt: true,
         taxRate: true,
         taxRateShipping: true,
         updatedAt: true,
-        orderType: true,
         orderId: true,
         totalPrice: true,
         paymentMethod: true,
@@ -455,7 +451,6 @@ class Mollie {
         address: true,
         city: true,
         zipcode: true,
-        numberOfTracks: true,
         countrycode: true,
         user: {
           select: {
