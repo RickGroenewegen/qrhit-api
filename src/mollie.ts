@@ -234,7 +234,7 @@ class Mollie {
             create: params.cart.items.map((item: CartItem, index: number) => ({
               playlistId: playlistDatabaseIds[index],
               amount: item.amount,
-              orderTypeId: 123, //TODO: Fix this
+              orderTypeId: (await this.order.getOrderType(item.amountOfTracks, item.type === 'digital'))?.id || 0,
               numberOfTracks: item.amountOfTracks,
               type: item.type,
             })),
