@@ -84,7 +84,7 @@ class Data {
   }
 
   public async getPlaylistsByPaymentId(paymentId: string): Promise<any[]> {
-    const playlists = await this.prisma.$queryRaw`
+    const playlists = await this.prisma.$queryRaw<any[]>`
       SELECT 
         playlists.id,
         playlists.playlistId,
