@@ -158,42 +158,16 @@ class Spotify {
 
   public async getPlaylistTrackCount(playlistId: string, cache: boolean = true): Promise<ApiResult> {
     try {
-      const cacheKey = `playlist_${playlistId}`;
-      const cacheResult = await this.cache.get(cacheKey);
+      const playlistResult = await this.getPlaylist(playlistId, cache);
 
-      let numberOfTracks: number;
-
-      if (!cacheResult || !cache) {
-        const options = {
-          method: 'GET',
-          url: 'https://spotify23.p.rapidapi.com/playlist',
-          params: {
-            id: playlistId,
-          },
-          headers: {
-            'x-rapidapi-key': process.env['RAPID_API_KEY'],
-            'x-rapidapi-host': 'spotify23.p.rapidapi.com',
-          },
-        };
-
-        const response = await axios.request(options);
-        numberOfTracks = response.data.tracks.total;
-
-        // Cache the playlist data for future use
-        this.cache.set(cacheKey, JSON.stringify({
-          id: playlistId,
-          name: response.data.name,
-          numberOfTracks,
-          image: response.data.images.length > 0 ? response.data.images[0].url : '',
-        }), 3600);
-      } else {
-        const playlist = JSON.parse(cacheResult);
-        numberOfTracks = playlist.numberOfTracks;
+      if (!playlistResult.success) {
+        return { success: false, error: 'Error getting playlist track count' };
       }
 
+      const playlist = playlistResult.data as Playlist;
       return {
         success: true,
-        data: numberOfTracks,
+        data: playlist.numberOfTracks,
       };
     } catch (e) {
       return { success: false, error: 'Error getting playlist track count' };
