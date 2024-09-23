@@ -242,12 +242,7 @@ class Mollie {
     });
 
     if (payment) {
-      console.log(
-        111,
-        payment.PaymentHasPlaylist.some(
-          (relation) => relation.playlistId === Number(playlistId)
-        )
-      );
+      console.log(111, playlistId, payment.PaymentHasPlaylist);
 
       return payment.PaymentHasPlaylist.some(
         (relation) => relation.playlistId === parseInt(playlistId)
