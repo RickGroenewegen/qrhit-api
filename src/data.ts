@@ -83,6 +83,23 @@ class Data {
     return userDatabaseId;
   }
 
+  public async getPlaylistsByPaymentId(paymentId: string): Promise<any[]> {
+    const playlists = await this.prisma.$queryRaw`
+      SELECT 
+        playlists.id,
+        playlists.playlistId,
+        playlists.name,
+        playlists.numberOfTracks
+      FROM 
+        payment_has_playlist
+      INNER JOIN 
+        playlists ON payment_has_playlist.playlistId = playlists.id
+      WHERE 
+        payment_has_playlist.paymentId = ${paymentId}`;
+
+    return playlists;
+  }
+
   public async getTaxRate(
     countryCode: string,
     date: Date = new Date()
