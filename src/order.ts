@@ -165,6 +165,7 @@ class Order {
 
   public async calculateOrder(params: any): Promise<ApiResult> {
     const cartItems = params.cart.items;
+    const taxRate = await this.data.getTaxRate(params.countrycode);
     const itemsForApi: any[] = [];
 
     let total = 0;
