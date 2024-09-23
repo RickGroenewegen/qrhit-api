@@ -355,7 +355,7 @@ class Order {
     return authToken;
   }
 
-  public async createOrder(payment: any, filename: string): Promise<any> {
+  public async createOrder(payment: any, filenames: any[]): Promise<any> {
     const authToken = await this.getAuthToken();
     let response: string = '';
 
