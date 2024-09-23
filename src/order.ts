@@ -168,6 +168,7 @@ class Order {
     const itemsForApi: any[] = [];
 
     let total = 0;
+    let totalProductPriceWithoutVAT = 0;
     const minimumAmount = 25;
     const maximumAmount = 500;
 
@@ -197,6 +198,10 @@ class Order {
         const itemPrice = parseFloat(
           (orderType.amountWithMargin * item.amount).toFixed(2)
         );
+        const productPriceWithoutVAT = parseFloat(
+          (itemPrice / (1 + taxRate / 100)).toFixed(2)
+        );
+        totalProductPriceWithoutVAT += productPriceWithoutVAT;
         total += itemPrice;
 
         itemsForApi.push({
@@ -264,6 +269,7 @@ class Order {
           handling: response.data.handling,
           taxRateShipping: response.data.taxRate * 100,
           taxRate,
+          price: totalProductPriceWithoutVAT,
           payment: response.data.payment,
         },
       };
