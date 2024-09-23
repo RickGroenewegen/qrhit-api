@@ -52,7 +52,6 @@ model Payment {
   status                  String
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
-  playlistId              Int?
   filename                String?
   filenameDigital         String?
   orderTypeId             Int
@@ -82,7 +81,6 @@ model Payment {
   locale                  String    @default("en")
   numberOfTracks          Int       @default(0)
   orderType               OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
-  playlist                Playlist? @relation(fields: [playlistId], references: [id], onDelete: Cascade)
   user                    User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId]) // Index for performance on queries
@@ -130,7 +128,7 @@ model Playlist {
   resetCache     Boolean            @default(false)
   users          UserHasPlaylist[]
   tracks         PlaylistHasTrack[]
-  Payment        Payment[]
+  Payment        PaymentHasPlaylist[]
 
   @@index([playlistId])
   @@map("playlists")
@@ -174,4 +172,15 @@ model PlaylistHasTrack {
 
   @@id([playlistId, trackId]) // Composite primary key
   @@map("playlist_has_tracks")
+}
+model PaymentHasPlaylist {
+  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentId Int
+  playlist  Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  playlistId Int
+  amount    Int
+  type      String
+
+  @@id([paymentId, playlistId]) // Composite primary key
+  @@map("payment_has_playlist")
 }
