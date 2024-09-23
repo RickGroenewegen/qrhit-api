@@ -68,7 +68,9 @@ class Generator {
       if (playlist.orderType !== 'digital') {
         physicalPlaylists.push({ playlist, filename });
       }
-      await this.generatePDF(payment, playlist, ip);
+
+      // Call sendEmail to notify the user
+      await this.sendEmail(playlist.orderType, payment, playlist, filename, filenameDigital);
     }
 
     let printApiOrderId = '';
