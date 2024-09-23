@@ -156,7 +156,10 @@ class Spotify {
     }
   }
 
-  public async getPlaylistTrackCount(playlistId: string, cache: boolean = true): Promise<ApiResult> {
+  public async getPlaylistTrackCount(
+    playlistId: string,
+    cache: boolean = true
+  ): Promise<ApiResult> {
     try {
       const playlistResult = await this.getPlaylist(playlistId, cache);
 
