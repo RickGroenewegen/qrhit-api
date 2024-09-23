@@ -74,7 +74,7 @@ class Generator {
       }
 
       // Call sendEmail to notify the user
-      await this.sendEmail(
+      await this.mail.sendEmail(
         playlist.orderType,
         payment,
         playlist,
