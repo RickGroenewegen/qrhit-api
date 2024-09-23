@@ -63,14 +63,24 @@ class Generator {
     const physicalPlaylists = [];
 
     for (const playlist of playlists) {
-      const { filename, filenameDigital } = await this.generatePDF(payment, playlist, ip);
+      const { filename, filenameDigital } = await this.generatePDF(
+        payment,
+        playlist,
+        ip
+      );
 
       if (playlist.orderType !== 'digital') {
         physicalPlaylists.push({ playlist, filename });
       }
 
       // Call sendEmail to notify the user
-      await this.sendEmail(playlist.orderType, payment, playlist, filename, filenameDigital);
+      await this.sendEmail(
+        playlist.orderType,
+        payment,
+        playlist,
+        filename,
+        filenameDigital
+      );
     }
 
     let printApiOrderId = '';
@@ -81,7 +91,10 @@ class Generator {
       payment.printerPageCount = await this.utils.countPdfPages(
         `${process.env['PUBLIC_DIR']}/pdf/${physicalPlaylists[0].filename}`
       );
-      const orderData = await this.order.createOrder(payment, physicalPlaylists);
+      const orderData = await this.order.createOrder(
+        payment,
+        physicalPlaylists
+      );
       printApiOrderId = orderData.response.id;
       printApiOrderRequest = JSON.stringify(orderData.request);
       printApiOrderResponse = JSON.stringify(orderData.response);
@@ -315,7 +328,6 @@ class Generator {
         )}`
       )
     );
-  }
   }
 }
 
