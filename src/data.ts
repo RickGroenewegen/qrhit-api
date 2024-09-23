@@ -189,8 +189,7 @@ class Data {
 
   public async storePlaylist(
     userDatabaseId: number,
-    playlistParams: any,
-    price: number,
+    cartItem: CartItem,
     resetCache: boolean = false
   ): Promise<number> {
     let playlistDatabaseId: number = 0;
@@ -198,22 +197,19 @@ class Data {
     // Check if the playlist exists. If not, create it
     const playlist = await this.prisma.playlist.findUnique({
       where: {
-        playlistId: playlistParams.id,
+        playlistId: cartItem.playlistId,
       },
     });
 
     if (!playlist) {
       // create the playlist
-
-      let name = playlistParams.name;
-
       const playlistCreate = await this.prisma.playlist.create({
         data: {
-          playlistId: playlistParams.id,
-          name: playlistParams.name,
-          image: playlistParams.image,
-          price: price,
-          numberOfTracks: playlistParams.numberOfTracks,
+          playlistId: cartItem.playlistId,
+          name: cartItem.playlistName,
+          image: '', // Assuming image is not provided in CartItem
+          price: cartItem.price,
+          numberOfTracks: cartItem.amountOfTracks,
         },
       });
       playlistDatabaseId = playlistCreate.id;
@@ -230,10 +226,9 @@ class Data {
           id: playlistDatabaseId,
         },
         data: {
-          price: price,
-          numberOfTracks: playlistParams.numberOfTracks,
-          name: playlistParams.name,
-          image: playlistParams.image,
+          price: cartItem.price,
+          numberOfTracks: cartItem.amountOfTracks,
+          name: cartItem.playlistName,
           resetCache: doResetCache,
         },
       });
