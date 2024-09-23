@@ -121,12 +121,23 @@ class Mollie {
         ).toFixed(2)
       );
 
-      const shippingPriceWithoutTax = parseFloat(
-        (
-          parseFloat(calculateResult.data.payment) /
-          (1 + calculateResult.data.taxRateShipping / 100)
-        ).toFixed(2)
-      );
+      let shippingPriceWithoutTax = 0;
+      let shippingVATPrice = 0;
+
+      if (useOrderType == 'physical') {
+        shippingPriceWithoutTax = parseFloat(
+          (
+            parseFloat(calculateResult.data.payment) /
+            (1 + calculateResult.data.taxRateShipping / 100)
+          ).toFixed(2)
+        );
+
+        shippingVATPrice = parseFloat(
+          (
+            parseFloat(calculateResult.data.payment) - shippingPriceWithoutTax
+          ).toFixed(2)
+        );
+      }
 
       const productVATPrice = parseFloat(
         (
@@ -134,27 +145,23 @@ class Mollie {
         ).toFixed(2)
       );
 
-      const shippingVATPrice = parseFloat(
-        (
-          parseFloat(calculateResult.data.payment) - shippingPriceWithoutTax
-        ).toFixed(2)
-      );
-
       const totalVATPrice = parseFloat(
         (productVATPrice + shippingVATPrice).toFixed(2)
       );
 
+      console.log(111, params.cart.items);
+
       const playlists = await Promise.all(
         params.cart.items.map(async (item: CartItem, index: number) => {
           const orderType = await this.order.getOrderType(
-            item.amountOfTracks,
+            item.numberOfTracks,
             item.type === 'digital'
           );
           return {
             playlistId: playlistDatabaseIds[index],
             amount: item.amount,
             orderTypeId: orderType?.id || 0,
-            numberOfTracks: item.amountOfTracks,
+            numberOfTracks: item.numberOfTracks,
             type: item.type,
           };
         })
@@ -235,6 +242,13 @@ class Mollie {
     });
 
     if (payment) {
+      console.log(
+        111,
+        payment.PaymentHasPlaylist.some(
+          (relation) => relation.playlistId === parseInt(playlistId)
+        )
+      );
+
       return payment.PaymentHasPlaylist.some(
         (relation) => relation.playlistId === parseInt(playlistId)
       );
@@ -300,8 +314,7 @@ class Mollie {
         payment.status == 'paid'
       ) {
         const metadata = payment.metadata as { clientIp: string };
-        console.log(111, 'GENERATE!');
-        //this.generator.generate(params.id, metadata.clientIp, this);
+        this.generator.generate(params.id, metadata.clientIp, this);
       }
     }
     return {
