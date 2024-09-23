@@ -265,7 +265,15 @@ class Data {
                     payments.invoiceCity,
                     payments.invoiceZipcode,
                     payments.invoiceCountrycode,
-                    'digital' AS orderType 
+                    CASE 
+                      WHEN EXISTS (
+                        SELECT 1 
+                        FROM payment_has_playlist 
+                        WHERE payment_has_playlist.paymentId = payments.id 
+                        AND payment_has_playlist.type = 'physical'
+                      ) THEN 'physical'
+                      ELSE 'digital'
+                    END AS orderType
         FROM        payments
         INNER JOIN  playlists ON payments.playlistId = playlists.id
         INNER JOIN  user_has_playlists ON playlists.id = user_has_playlists.playlistId
