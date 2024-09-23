@@ -59,25 +59,14 @@ class Mollie {
     console.log(111, params);
 
     try {
-      let amount = params.extraOrderData.amount || 1;
-      let useOrderType = params.extraOrderData.orderType;
-
-      if (params.tracks.length > 500) {
-        // Limit the amount of tracks to 500
-        params.tracks = params.tracks.slice(0, 500);
-      }
-
-      const orderType = await this.order.getOrderType(
-        params.tracks.length,
-        useOrderType == 'digital'
-      );
-
-      const cartItems = params.cart.items;
+      let useOrderType = 'digital';
+      let description = '';
+      let totalCards = 0;
 
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
         countrycode: params.extraOrderData.countrycode,
-        cart: { items: cartItems },
+        cart: params.cart,
       });
 
       const paymentClient = await this.getClient(clientIp);
@@ -87,23 +76,19 @@ class Mollie {
         'payment'
       );
 
-      let description =
-        translations!.playlist +
-        ': ' +
-        params.playlist.name +
-        ' (' +
-        params.tracks.length +
-        ' ' +
-        translations!.cards +
-        ')';
+      // if any of params.items has a type of 'physical' then we need to set useOrderType to 'physical'
+      for (let i = 0; i < params.cart.items.length; i++) {
+        if (params.cart.items[i].type == 'physical') {
+          useOrderType = 'physical';
+          totalCards += params.cart.items[i].amount;
+        }
+      }
 
-      if (useOrderType == 'digital') {
-        description =
-          translations!.digital +
-          ' ' +
-          params.tracks.length +
-          ' ' +
-          translations!.cards;
+      console.log(222, params.cart);
+
+      description = `${params.cart.items[0].type} - ${params.cart.items[0].playlistName}`;
+      if (params.cart.length > 1) {
+        description = `${params.cart.items.length}x ${translations!.playlists}`;
       }
 
       const payment = await paymentClient.payments.create({
@@ -130,93 +115,97 @@ class Mollie {
         userDatabaseId,
         params.playlist,
         calculateResult.data.price,
-        !params.playlist.cached
+        true // TODO: Fix this
       );
 
-      delete params.extraOrderData.orderType;
-      delete params.extraOrderData.total;
-      delete params.extraOrderData.agreeTerms;
-      delete params.extraOrderData.agreeNoRefund;
-      params.extraOrderData.amount = parseInt(params.extraOrderData.amount);
+      // delete params.extraOrderData.orderType;
+      // delete params.extraOrderData.total;
+      // delete params.extraOrderData.agreeTerms;
+      // delete params.extraOrderData.agreeNoRefund;
+      // params.extraOrderData.amount = parseInt(params.extraOrderData.amount);
 
-      const productPriceWithoutTax = parseFloat(
-        (
-          parseFloat(calculateResult.data.price) /
-          (1 + calculateResult.data.taxRate / 100)
-        ).toFixed(2)
-      );
-      const productVATPrice = parseFloat(
-        (
-          parseFloat(calculateResult.data.price) - productPriceWithoutTax
-        ).toFixed(2)
-      );
+      // const productPriceWithoutTax = parseFloat(
+      //   (
+      //     parseFloat(calculateResult.data.price) /
+      //     (1 + calculateResult.data.taxRate / 100)
+      //   ).toFixed(2)
+      // );
+      // const productVATPrice = parseFloat(
+      //   (
+      //     parseFloat(calculateResult.data.price) - productPriceWithoutTax
+      //   ).toFixed(2)
+      // );
 
-      let shippingPriceWithoutTax = 0;
-      let shippingVATPrice = 0;
-      let taxRateShipping = 0;
+      // let shippingPriceWithoutTax = 0;
+      // let shippingVATPrice = 0;
+      // let taxRateShipping = 0;
 
-      if (useOrderType != 'digital') {
-        taxRateShipping = calculateResult.data.taxRateShipping;
-        shippingPriceWithoutTax = parseFloat(
-          (
-            parseFloat(calculateResult.data.payment) /
-            (1 + calculateResult.data.taxRateShipping / 100)
-          ).toFixed(2)
-        );
-        shippingVATPrice = parseFloat(
-          (
-            parseFloat(calculateResult.data.payment) - shippingPriceWithoutTax
-          ).toFixed(2)
-        );
-      }
+      // if (useOrderType != 'digital') {
+      //   taxRateShipping = calculateResult.data.taxRateShipping;
+      //   shippingPriceWithoutTax = parseFloat(
+      //     (
+      //       parseFloat(calculateResult.data.payment) /
+      //       (1 + calculateResult.data.taxRateShipping / 100)
+      //     ).toFixed(2)
+      //   );
+      //   shippingVATPrice = parseFloat(
+      //     (
+      //       parseFloat(calculateResult.data.payment) - shippingPriceWithoutTax
+      //     ).toFixed(2)
+      //   );
+      // }
 
-      const totalVATPrice = parseFloat(
-        (productVATPrice + shippingVATPrice).toFixed(2)
-      );
+      // const totalVATPrice = parseFloat(
+      //   (productVATPrice + shippingVATPrice).toFixed(2)
+      // );
 
-      // Create the payment in the database
-      const insertResult = await this.prisma.payment.create({
-        data: {
-          paymentId: payment.id,
-          userId: userDatabaseId,
-          totalPrice: parseFloat(payment.amount.value),
-          playlistId: playlistDatabaseId,
-          status: payment.status,
-          orderTypeId: orderType!.id,
-          locale: params.locale,
-          taxRate: calculateResult.data.taxRate,
-          taxRateShipping: taxRateShipping,
-          productPriceWithoutTax,
-          shippingPriceWithoutTax,
-          productVATPrice,
-          shippingVATPrice,
-          totalVATPrice,
-          clientIp,
-          numberOfTracks: params.tracks.length,
-          ...params.extraOrderData,
-        },
-      });
+      // // Create the payment in the database
+      // const insertResult = await this.prisma.payment.create({
+      //   data: {
+      //     paymentId: payment.id,
+      //     userId: userDatabaseId,
+      //     totalPrice: parseFloat(payment.amount.value),
+      //     status: payment.status,
+      //     orderTypeId: 'digital', // TODO: Fix this
+      //     locale: params.locale,
+      //     taxRate: calculateResult.data.taxRate,
+      //     taxRateShipping: taxRateShipping,
+      //     productPriceWithoutTax,
+      //     shippingPriceWithoutTax,
+      //     productVATPrice,
+      //     shippingVATPrice,
+      //     totalVATPrice,
+      //     clientIp,
+      //     numberOfTracks: params.tracks.length,
+      //     ...params.extraOrderData,
+      //   },
+      // });
 
-      const paymentId = insertResult.id;
+      // const paymentId = insertResult.id;
 
-      const newOrderId = 100000000 + paymentId;
+      // const newOrderId = 100000000 + paymentId;
 
-      // update the payment in the database
-      await this.prisma.payment.update({
-        where: {
-          id: paymentId,
-        },
-        data: {
-          orderId: newOrderId.toString(),
-        },
-      });
+      // // update the payment in the database
+      // await this.prisma.payment.update({
+      //   where: {
+      //     id: paymentId,
+      //   },
+      //   data: {
+      //     orderId: newOrderId.toString(),
+      //   },
+      // });
+
+      // return {
+      //   success: true,
+      //   data: {
+      //     paymentId: payment.id,
+      //     paymentUri: payment.getCheckoutUrl(),
+      //   },
+      // };
 
       return {
-        success: true,
-        data: {
-          paymentId: payment.id,
-          paymentUri: payment.getCheckoutUrl(),
-        },
+        success: false,
+        error: 'TODO: REMOVE THIS',
       };
     } catch (e) {
       console.log(e);
@@ -231,24 +220,26 @@ class Mollie {
     playlistId: string,
     paymentId: string
   ): Promise<boolean> {
-    const payment = await this.prisma.payment.findUnique({
-      where: {
-        paymentId: paymentId,
-      },
-      select: {
-        playlist: {
-          select: {
-            playlistId: true,
-          },
-        },
-      },
-    });
+    return true; // TODO: FIX THIS
 
-    if (payment && payment.playlist!.playlistId == playlistId) {
-      return true;
-    } else {
-      return false;
-    }
+    // const payment = await this.prisma.payment.findUnique({
+    //   where: {
+    //     paymentId: paymentId,
+    //   },
+    //   select: {
+    //     playlist: {
+    //       select: {
+    //         playlistId: true,
+    //       },
+    //     },
+    //   },
+    // });
+
+    // if (payment && payment.playlist!.playlistId == playlistId) {
+    //   return true;
+    // } else {
+    //   return false;
+    // }
   }
 
   public async processWebhook(params: any): Promise<ApiResult> {
