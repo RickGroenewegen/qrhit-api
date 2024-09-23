@@ -54,10 +54,12 @@
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ orderId }}</td>
                                     </tr>
                                     {{#each playlists}}
+                                    {{#if @first}}
                                     <tr>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ ../translations.playlists }}</td>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ this.name }}</td>
                                     </tr>
+                                    {{/if}}
                                     {{/each}}
                                     <tr>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.items }}</td>
