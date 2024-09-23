@@ -113,7 +113,7 @@ class Mollie {
 
       const playlistDatabaseId = await this.data.storePlaylist(
         userDatabaseId,
-        params.playlist,
+        cart.items,
         calculateResult.data.price,
         true // TODO: Fix this
       );
@@ -160,33 +160,33 @@ class Mollie {
       // );
 
       // // Create the payment in the database
-      const insertResult = await this.prisma.payment.create({
-        data: {
-          paymentId: payment.id,
-          userId: userDatabaseId,
-          totalPrice: parseFloat(payment.amount.value),
-          status: payment.status,
-          orderTypeId: 'digital', // TODO: Fix this
-          locale: params.locale,
-          taxRate: calculateResult.data.taxRate,
-          taxRateShipping: taxRateShipping,
-          productPriceWithoutTax,
-          shippingPriceWithoutTax,
-          productVATPrice,
-          shippingVATPrice,
-          totalVATPrice,
-          clientIp,
-          numberOfTracks: params.tracks.length,
-          PaymentHasPlaylist: {
-            create: params.cart.items.map((item: any) => ({
-              playlistId: item.playlistId,
-              amount: item.amount,
-              type: item.type,
-            })),
-          },
-          ...params.extraOrderData,
-        },
-      });
+      // const insertResult = await this.prisma.payment.create({
+      //   data: {
+      //     paymentId: payment.id,
+      //     userId: userDatabaseId,
+      //     totalPrice: parseFloat(payment.amount.value),
+      //     status: payment.status,
+      //     orderTypeId: 'digital', // TODO: Fix this
+      //     locale: params.locale,
+      //     taxRate: calculateResult.data.taxRate,
+      //     taxRateShipping: taxRateShipping,
+      //     productPriceWithoutTax,
+      //     shippingPriceWithoutTax,
+      //     productVATPrice,
+      //     shippingVATPrice,
+      //     totalVATPrice,
+      //     clientIp,
+      //     numberOfTracks: params.tracks.length,
+      //     PaymentHasPlaylist: {
+      //       create: params.cart.items.map((item: any) => ({
+      //         playlistId: item.playlistId,
+      //         amount: item.amount,
+      //         type: item.type,
+      //       })),
+      //     },
+      //     ...params.extraOrderData,
+      //   },
+      // });
 
       // const paymentId = insertResult.id;
 
