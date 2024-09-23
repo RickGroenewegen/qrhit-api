@@ -235,7 +235,11 @@ class Mollie {
       select: {
         PaymentHasPlaylist: {
           select: {
-            playlistId: true,
+            playlist: {
+              select: {
+                playlistId: true,
+              },
+            },
           },
         },
       },
@@ -245,7 +249,7 @@ class Mollie {
       console.log(111, playlistId, payment.PaymentHasPlaylist);
 
       return payment.PaymentHasPlaylist.some(
-        (relation) => relation.playlistId === parseInt(playlistId)
+        (relation) => relation.playlist.playlistId === playlistId
       );
     } else {
       return false;
