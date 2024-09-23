@@ -57,8 +57,6 @@ class Mollie {
     params: any,
     clientIp: string
   ): Promise<ApiResult> {
-    console.log(111, params);
-
     try {
       let useOrderType = 'digital';
       let description = '';
@@ -84,8 +82,6 @@ class Mollie {
           totalCards += params.cart.items[i].amount;
         }
       }
-
-      console.log(222, params.cart);
 
       description = `${params.cart.items[0].type} - ${params.cart.items[0].playlistName}`;
       if (params.cart.length > 1) {
@@ -118,65 +114,11 @@ class Mollie {
         true // TODO: Fix this
       );
 
-      console.log(111, userDatabaseId, playlistDatabaseIds);
-
-      // delete params.extraOrderData.orderType;
-      // delete params.extraOrderData.total;
-      // delete params.extraOrderData.agreeTerms;
-      // delete params.extraOrderData.agreeNoRefund;
-      // params.extraOrderData.amount = parseInt(params.extraOrderData.amount);
-
-      // const productPriceWithoutTax = parseFloat(
-      //   (
-      //     parseFloat(calculateResult.data.price) /
-      //     (1 + calculateResult.data.taxRate / 100)
-      //   ).toFixed(2)
-      // );
-      // const productVATPrice = parseFloat(
-      //   (
-      //     parseFloat(calculateResult.data.price) - productPriceWithoutTax
-      //   ).toFixed(2)
-      // );
-
-      // let shippingPriceWithoutTax = 0;
-      // let shippingVATPrice = 0;
-      // let taxRateShipping = 0;
-
-      // if (useOrderType != 'digital') {
-      //   taxRateShipping = calculateResult.data.taxRateShipping;
-      //   shippingPriceWithoutTax = parseFloat(
-      //     (
-      //       parseFloat(calculateResult.data.payment) /
-      //       (1 + calculateResult.data.taxRateShipping / 100)
-      //     ).toFixed(2)
-      //   );
-      //   shippingVATPrice = parseFloat(
-      //     (
-      //       parseFloat(calculateResult.data.payment) - shippingPriceWithoutTax
-      //     ).toFixed(2)
-      //   );
-      // }
-
-      // const totalVATPrice = parseFloat(
-      //   (productVATPrice + shippingVATPrice).toFixed(2)
-      // );
-
-      // // Create the payment in the database
-
-      console.log(333, calculateResult.data);
-
       const productPriceWithoutTax = parseFloat(
         (
           parseFloat(calculateResult.data.price) /
           (1 + calculateResult.data.taxRate / 100)
         ).toFixed(2)
-      );
-
-      console.log(
-        444,
-        calculateResult.data.price,
-        calculateResult.data.taxRate,
-        productPriceWithoutTax
       );
 
       const shippingPriceWithoutTax = parseFloat(
@@ -202,25 +144,26 @@ class Mollie {
         (productVATPrice + shippingVATPrice).toFixed(2)
       );
 
-      const playlists = {
-        create: await Promise.all(
-          params.cart.items.map(async (item: CartItem, index: number) => {
-            const orderType = await this.order.getOrderType(
-              item.amountOfTracks,
-              item.type === 'digital'
-            );
-            return {
-              playlistId: playlistDatabaseIds[index],
-              amount: item.amount,
-              orderTypeId: orderType?.id || 0,
-              numberOfTracks: item.amountOfTracks,
-              type: item.type,
-            };
-          })
-        ),
-      };
+      const playlists = await Promise.all(
+        params.cart.items.map(async (item: CartItem, index: number) => {
+          const orderType = await this.order.getOrderType(
+            item.amountOfTracks,
+            item.type === 'digital'
+          );
+          return {
+            playlistId: playlistDatabaseIds[index],
+            amount: item.amount,
+            orderTypeId: orderType?.id || 0,
+            numberOfTracks: item.amountOfTracks,
+            type: item.type,
+          };
+        })
+      );
 
-      console.log(555, playlists);
+      delete params.extraOrderData.orderType;
+      delete params.extraOrderData.total;
+      delete params.extraOrderData.agreeTerms;
+      delete params.extraOrderData.agreeNoRefund;
 
       const insertResult = await this.prisma.payment.create({
         data: {
@@ -239,7 +182,7 @@ class Mollie {
           shippingVATPrice,
           totalVATPrice,
           clientIp,
-          PaymentHasPlaylist: playlists,
+          PaymentHasPlaylist: { create: playlists },
           ...params.extraOrderData,
         },
       });

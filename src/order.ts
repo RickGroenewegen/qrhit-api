@@ -200,7 +200,7 @@ class Order {
           (orderType.amountWithMargin * item.amount).toFixed(2)
         );
         const productPriceWithoutVAT = parseFloat(
-          (itemPrice / (1 + taxRate / 100)).toFixed(2)
+          (itemPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)
         );
         totalProductPriceWithoutVAT += productPriceWithoutVAT;
         total += itemPrice;
@@ -240,8 +240,6 @@ class Order {
         this.cache.del(cacheToken);
       }
     }
-
-    const taxRate = await this.data.getTaxRate(params.countrycode);
 
     if (itemsForApi.length > 0) {
       const authToken = await this.getAuthToken();
