@@ -229,22 +229,22 @@ class Mollie {
   ): Promise<boolean> {
     return true; // TODO: FIX THIS
 
-    const payment = await this.prisma.payment.findUnique({
-      where: {
-        paymentId: paymentId,
-      },
-      select: {
-        PaymentHasPlaylist: {
-          select: {
-            playlist: {
-              select: {
-                playlistId: true,
-              },
-            },
-          },
-        },
-      },
-    });
+    // const payment = await this.prisma.payment.findUnique({
+    //   where: {
+    //     paymentId: paymentId,
+    //   },
+    //   select: {
+    //     PaymentHasPlaylist: {
+    //       select: {
+    //         playlist: {
+    //           select: {
+    //             playlistId: true,
+    //           },
+    //         },
+    //       },
+    //     },
+    //   },
+    // });
 
     // if (payment && payment.playlist!.playlistId == playlistId) {
     //   return true;
