@@ -8,7 +8,7 @@
 -------------------
 {{ translations.orderNumber }}: {{ orderId }}
 {{#each playlists}}
-{{#if @first}}{{ ../translations.playlists }}: {{/if}} {{ this.name }}
+{{ ../translations.playlists }}: {{ this.name }}
 {{/each}}
 {{ translations.items }}: {{ numberOfTracks }} {{ translations.cards }}
 {{ translations.fullname }}: {{ fullname }}

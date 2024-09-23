@@ -53,10 +53,12 @@
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.orderNumber }}</td>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ orderId }}</td>
                                     </tr>
+                                    {{#each playlists}}
                                     <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.playlist }}</td>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ playlist.name }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ ../translations.playlist }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ this.name }}</td>
                                     </tr>
+                                    {{/each}}
                                     <tr>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.items }}</td>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ numberOfTracks }} {{ translations.cards }}</td>

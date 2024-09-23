@@ -20,6 +20,7 @@ import ipPlugin from './plugins/ipPlugin';
 import Formatters from './formatters';
 import Translation from './translation';
 import Cache from './cache';
+import Generator from './generator';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -49,6 +50,8 @@ class Server {
   private formatters = new Formatters().getFormatters();
   private translation: Translation = new Translation();
   private cache = Cache.getInstance();
+  private generator = new Generator();
+
   private version: string = '1.0.0';
 
   private constructor() {
@@ -419,12 +422,21 @@ class Server {
       console.log(123, request.body);
     });
 
-    this.fastify.get('/testorder', async (request: any, _reply) => {
-      await this.order.testOrder();
-      return { success: true };
-    });
-
     if (process.env['ENVIRONMENT'] == 'development') {
+      this.fastify.get('/testorder', async (request: any, _reply) => {
+        await this.order.testOrder();
+        return { success: true };
+      });
+
+      this.fastify.get('/generate/:paymentId', async (request: any, _reply) => {
+        await this.generator.generate(
+          request.params.paymentId,
+          request.clientId,
+          this.mollie
+        );
+        return { success: true };
+      });
+
       this.fastify.get('/mail/:paymentId', async (request: any, _reply) => {
         const payment = await this.mollie.getPayment(request.params.paymentId);
         const playlist = await this.data.getPlaylist(

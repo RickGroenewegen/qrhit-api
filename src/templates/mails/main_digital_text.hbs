@@ -7,7 +7,9 @@
 {{ translations.orderInformation }}
 -------------------
 {{ translations.orderNumber }}: {{ orderId }}
-{{ translations.playlist }}: {{ playlist.name }}
+{{#each playlists}}
+{{ ../translations.playlists }}: {{ this.name }}
+{{/each}}
 {{ translations.items }}: {{ numberOfTracks }} {{ translations.cards }}
 {{ translations.fullname }}: {{ fullname }}
 {{ translations.email }}: {{ email }}

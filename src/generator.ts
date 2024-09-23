@@ -35,6 +35,8 @@ class Generator {
       blue.bold(`Starting generation for payment: ${white.bold(paymentId)}`)
     );
 
+    let orderType = 'digital';
+
     const paymentStatus = await mollie.checkPaymentStatus(paymentId);
     const userId = paymentStatus.data.payment.user.userId;
     let payment = await mollie.getPayment(paymentId);
@@ -57,10 +59,18 @@ class Generator {
     // Get all playlists associated with the payment
     const playlists = await this.data.getPlaylistsByPaymentId(paymentId);
 
-    console.log(111, payment);
-    console.log(222, playlists);
+    // If any of the playlists is not digital, we need to create a physical order
+    for (const playlist of playlists) {
+      if (playlist.orderType !== 'digital') {
+        orderType = 'physical';
+        break;
+      }
+    }
 
     const physicalPlaylists = [];
+
+    // Send the main mail
+    //await this.mail.sendEmail('main_' + orderType, payment, playlists);
 
     for (const playlist of playlists) {
       const { filename, filenameDigital } = await this.generatePDF(
@@ -75,9 +85,9 @@ class Generator {
 
       // Call sendEmail to notify the user
       await this.mail.sendEmail(
-        playlist.orderType,
+        'digital',
         payment,
-        playlist,
+        [playlist],
         filename,
         filenameDigital
       );
@@ -294,40 +304,6 @@ class Generator {
     }
 
     return { filename, filenameDigital };
-  }
-
-  private async sendEmail(
-    orderTypeName: string,
-    payment: any,
-    playlist: any,
-    filename: string,
-    filenameDigital: string
-  ): Promise<void> {
-    const emailParams = {
-      to: payment.email,
-      subject: `Your ${orderTypeName} order is ready`,
-      html: `<p>Dear ${payment.fullname},</p>
-             <p>Your order for the playlist ${playlist.name} is ready.</p>
-             <p>Attached are your files:</p>
-             <ul>
-               <li>${filename}</li>
-               <li>${filenameDigital}</li>
-             </ul>`,
-      attachments: [
-        { path: `${process.env['PUBLIC_DIR']}/pdf/${filename}` },
-        { path: `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}` },
-      ],
-    };
-
-    await this.mail.sendEmail(emailParams);
-
-    this.logger.log(
-      color.green.bold(
-        `Email sent successfully for playlist: ${white.bold(
-          playlist.playlistId
-        )}`
-      )
-    );
   }
 }
 

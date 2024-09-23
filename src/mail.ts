@@ -155,6 +155,8 @@ class Mail {
       ),
     };
 
+    console.log(111, mailParams);
+
     try {
       // Read the logo file and convert it to Base64
       const logoBuffer = await fs.readFile(logoPath);
@@ -181,13 +183,13 @@ class Mail {
           locale,
           {
             orderId: payment.orderId,
-            playlist: decode(playlists[0].name),
+            playlist: playlists[0].name,
           }
         );
       } else if (playlists.length == 1) {
         subject = this.translation.translate('mail.mailSubject', locale, {
           orderId: payment.orderId,
-          playlist: decode(playlists[0].name),
+          playlist: playlists[0].name,
         });
       } else {
         subject = this.translation.translate('mail.mailSubject', locale, {
@@ -195,7 +197,7 @@ class Mail {
         });
       }
 
-      console.log(111, subject);
+      subject = decode(subject);
 
       let attachments: Attachment[] = [
         {

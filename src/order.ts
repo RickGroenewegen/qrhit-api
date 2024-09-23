@@ -361,11 +361,10 @@ class Order {
 
     const items = playlists.map((playlist) => ({
       productId: playlist.orderTypeId,
-      pageCount: payment.printerPageCount,
+      pageCount: 2,
       quantity: 1,
       files: {
         content: `${process.env.API_URI}/public/pdf/${playlist.filename}`,
-        cover: `${process.env.API_URI}/public/pdf/${playlist.filename}`,
       },
     }));
 

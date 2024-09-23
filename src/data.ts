@@ -89,13 +89,16 @@ class Data {
         playlists.id,
         playlists.playlistId,
         playlists.name,
-        playlists.numberOfTracks
+        playlists.numberOfTracks,
+        payment_has_playlist.type AS orderType
       FROM 
         payment_has_playlist
       INNER JOIN 
         playlists ON payment_has_playlist.playlistId = playlists.id
+      INNER JOIN 
+        payments ON payment_has_playlist.paymentId = payments.id
       WHERE 
-        payment_has_playlist.paymentId = ${paymentId}`;
+        payments.paymentId = ${paymentId}`;
 
     return playlists;
   }
