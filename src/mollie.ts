@@ -172,6 +172,13 @@ class Mollie {
         ).toFixed(2)
       );
 
+      console.log(
+        444,
+        calculateResult.data.price,
+        calculateResult.data.taxRate,
+        productPriceWithoutTax
+      );
+
       const shippingPriceWithoutTax = parseFloat(
         (
           parseFloat(calculateResult.data.payment) /
@@ -195,6 +202,26 @@ class Mollie {
         (productVATPrice + shippingVATPrice).toFixed(2)
       );
 
+      const playlists = {
+        create: params.cart.items.map(
+          async (item: CartItem, index: number) => ({
+            playlistId: playlistDatabaseIds[index],
+            amount: item.amount,
+            orderTypeId:
+              (
+                await this.order.getOrderType(
+                  item.amountOfTracks,
+                  item.type === 'digital'
+                )
+              )?.id || 0,
+            numberOfTracks: item.amountOfTracks,
+            type: item.type,
+          })
+        ),
+      };
+
+      console.log(555, playlists);
+
       const insertResult = await this.prisma.payment.create({
         data: {
           paymentId: payment.id,
@@ -212,23 +239,7 @@ class Mollie {
           shippingVATPrice,
           totalVATPrice,
           clientIp,
-          PaymentHasPlaylist: {
-            create: params.cart.items.map(
-              async (item: CartItem, index: number) => ({
-                playlistId: playlistDatabaseIds[index],
-                amount: item.amount,
-                orderTypeId:
-                  (
-                    await this.order.getOrderType(
-                      item.amountOfTracks,
-                      item.type === 'digital'
-                    )
-                  )?.id || 0,
-                numberOfTracks: item.amountOfTracks,
-                type: item.type,
-              })
-            ),
-          },
+          PaymentHasPlaylist: playlists,
           ...params.extraOrderData,
         },
       });
