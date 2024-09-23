@@ -276,12 +276,8 @@ class Data {
                     END AS orderType
         FROM        payments
         INNER JOIN  payment_has_playlist ON payments.id = payment_has_playlist.paymentId
-        INNER JOIN  playlists ON payment_has_playlist.playlistId = playlists.id
-        INNER JOIN  user_has_playlists ON playlists.id = user_has_playlists.playlistId
-        INNER JOIN  order_types ON payments.orderTypeId = order_types.id
         WHERE       payments.paymentId = ${paymentId}
-        AND         playlists.playlistId = ${playlistId}
-        AND         payments.userId = user_has_playlists.userId`;
+        AND         payment_has_playlist.playlistId = ${playlistId}`;
 
     console.log(111, payment);
 
