@@ -231,13 +231,21 @@ class Mollie {
           ),
           clientIp,
           PaymentHasPlaylist: {
-            create: params.cart.items.map((item: CartItem, index: number) => ({
-              playlistId: playlistDatabaseIds[index],
-              amount: item.amount,
-              orderTypeId: (await this.order.getOrderType(item.amountOfTracks, item.type === 'digital'))?.id || 0,
-              numberOfTracks: item.amountOfTracks,
-              type: item.type,
-            })),
+            create: params.cart.items.map(
+              async (item: CartItem, index: number) => ({
+                playlistId: playlistDatabaseIds[index],
+                amount: item.amount,
+                orderTypeId:
+                  (
+                    await this.order.getOrderType(
+                      item.amountOfTracks,
+                      item.type === 'digital'
+                    )
+                  )?.id || 0,
+                numberOfTracks: item.amountOfTracks,
+                type: item.type,
+              })
+            ),
           },
           ...params.extraOrderData,
         },
