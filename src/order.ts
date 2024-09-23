@@ -162,16 +162,22 @@ class Order {
 
   public async calculateOrder(params: any): Promise<ApiResult> {
     const cartItems = params.cart.items;
+    const itemsForApi: any[] = [];
 
     console.log(111, JSON.stringify(params, null, 2));
 
     let total = 0;
     for (const item of cartItems) {
       const numberOfTracks = Math.min(Math.max(item.amountOfTracks, 25), 500);
-      const orderType = await this.getOrderType(numberOfTracks, item.type === 'digital');
+      const orderType = await this.getOrderType(
+        numberOfTracks,
+        item.type === 'digital'
+      );
 
       if (orderType) {
-        const itemPrice = parseFloat((orderType.amountWithMargin * item.amount).toFixed(2));
+        const itemPrice = parseFloat(
+          (orderType.amountWithMargin * item.amount).toFixed(2)
+        );
         total += itemPrice;
 
         itemsForApi.push({
@@ -186,7 +192,7 @@ class Order {
         };
       }
     }
-    const itemsForApi: any[] = [];
+
     let minimumAmount = 25;
     let maximumAmount = 500;
     let returnData: any = {};
