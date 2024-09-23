@@ -163,7 +163,9 @@ class Mollie {
       const insertResult = await this.prisma.payment.create({
         data: {
           paymentId: payment.id,
-          userId: userDatabaseId,
+          user: {
+            connect: { id: userDatabaseId }
+          },
           totalPrice: parseFloat(payment.amount.value),
           status: payment.status,
           locale: params.locale,
