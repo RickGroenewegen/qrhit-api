@@ -8,6 +8,7 @@ import Translation from './translation';
 import PushoverClient from './pushover';
 import Utils from './utils';
 import axios from 'axios';
+import { decode } from 'he';
 
 interface MailParams {
   to: string | null;
@@ -175,14 +176,10 @@ class Mail {
       let subject = '';
 
       if (orderType === 'digital') {
-        subject = this.translation.translate(
-          'mail.mailSubjectDigital',
-          locale,
-          {
-            orderId: payment.orderId,
-            playlist: playlists[0].name,
-          }
-        );
+        subject = this.translation.translate('mail.mailSubjectDigital', locale, {
+          orderId: payment.orderId,
+          playlist: decode(playlists[0].name),
+        });
       } else if (playlists.length == 1) {
         subject = this.translation.translate('mail.mailSubject', locale, {
           orderId: payment.orderId,
