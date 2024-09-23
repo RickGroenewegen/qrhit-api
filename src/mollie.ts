@@ -245,7 +245,7 @@ class Mollie {
       console.log(
         111,
         payment.PaymentHasPlaylist.some(
-          (relation) => relation.playlistId === parseInt(playlistId)
+          (relation) => relation.playlistId === Number(playlistId)
         )
       );
 
