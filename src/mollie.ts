@@ -72,11 +72,12 @@ class Mollie {
         useOrderType == 'digital'
       );
 
-      // Get the order type
+      const cartItems = params.cart.items;
+
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
         countrycode: params.extraOrderData.countrycode,
-        cart: params.cart,
+        cart: { items: cartItems },
       });
 
       const paymentClient = await this.getClient(clientIp);
