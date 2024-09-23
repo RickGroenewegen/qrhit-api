@@ -187,59 +187,65 @@ class Data {
     return returnList;
   }
 
-  public async storePlaylist(
+  public async storePlaylists(
     userDatabaseId: number,
-    cartItem: CartItem,
+    cartItems: CartItem[],
     resetCache: boolean = false
-  ): Promise<number> {
-    let playlistDatabaseId: number = 0;
+  ): Promise<number[]> {
+    const playlistDatabaseIds: number[] = [];
 
-    // Check if the playlist exists. If not, create it
-    const playlist = await this.prisma.playlist.findUnique({
-      where: {
-        playlistId: cartItem.playlistId,
-      },
-    });
+    for (const cartItem of cartItems) {
+      let playlistDatabaseId: number = 0;
 
-    if (!playlist) {
-      // create the playlist
-      const playlistCreate = await this.prisma.playlist.create({
-        data: {
+      // Check if the playlist exists. If not, create it
+      const playlist = await this.prisma.playlist.findUnique({
+        where: {
           playlistId: cartItem.playlistId,
-          name: cartItem.playlistName,
-          image: '', // Assuming image is not provided in CartItem
-          price: cartItem.price,
-          numberOfTracks: cartItem.amountOfTracks,
         },
       });
-      playlistDatabaseId = playlistCreate.id;
-    } else {
-      playlistDatabaseId = playlist.id;
 
-      let doResetCache = false;
-      if (!playlist.featured && resetCache) {
-        doResetCache = true;
+      if (!playlist) {
+        // create the playlist
+        const playlistCreate = await this.prisma.playlist.create({
+          data: {
+            playlistId: cartItem.playlistId,
+            name: cartItem.playlistName,
+            image: '', // Assuming image is not provided in CartItem
+            price: cartItem.price,
+            numberOfTracks: cartItem.amountOfTracks,
+          },
+        });
+        playlistDatabaseId = playlistCreate.id;
+      } else {
+        playlistDatabaseId = playlist.id;
+
+        let doResetCache = false;
+        if (!playlist.featured && resetCache) {
+          doResetCache = true;
+        }
+
+        await this.prisma.playlist.update({
+          where: {
+            id: playlistDatabaseId,
+          },
+          data: {
+            price: cartItem.price,
+            numberOfTracks: cartItem.amountOfTracks,
+            name: cartItem.playlistName,
+            resetCache: doResetCache,
+          },
+        });
       }
 
-      await this.prisma.playlist.update({
-        where: {
-          id: playlistDatabaseId,
-        },
-        data: {
-          price: cartItem.price,
-          numberOfTracks: cartItem.amountOfTracks,
-          name: cartItem.playlistName,
-          resetCache: doResetCache,
-        },
-      });
+      await this.prisma.$executeRaw`
+      INSERT INTO   user_has_playlists (userId, playlistId)
+      VALUES        (${userDatabaseId}, ${playlistDatabaseId})
+      ON DUPLICATE KEY UPDATE userId = userId;`;
+
+      playlistDatabaseIds.push(playlistDatabaseId);
     }
 
-    await this.prisma.$executeRaw`
-    INSERT INTO   user_has_playlists (userId, playlistId)
-    VALUES        (${userDatabaseId}, ${playlistDatabaseId})
-    ON DUPLICATE KEY UPDATE userId = userId;`;
-
-    return playlistDatabaseId;
+    return playlistDatabaseIds;
   }
 
   public async getPayment(paymentId: string, playlistId: string): Promise<any> {
