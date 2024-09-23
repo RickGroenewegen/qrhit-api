@@ -179,18 +179,16 @@
 					<td style="text-align:right;"><%= translations.totalInclVAT %></td>
 				</tr>
 
-				<tr class="item">
-					<% if (payment.orderType.digital) { %>
-						<td><%= translations.pdfProduct %> <%= payment.numberOfTracks %> <%= translations.cards %></td>
-					<% } else { %>
-						<td><%= payment.numberOfTracks %>x <%= translations.physicalProduct %></td>
-					<% } %>
-					<td style="text-align:right;"><%= payment.amount %></td>
-					<td style="text-align:right;"><%= euroFormatter.format(payment.productPriceWithoutTax / payment.amount) %></td>
-					<td style="text-align:right;"><%= payment.taxRate %>%</td>
-					<td style="text-align:right;"><%= euroFormatter.format(payment.productVATPrice) %></td>
-					<td style="text-align:right;"><%= euroFormatter.format(payment.price) %></td>
-				</tr>
+				<% payment.playlists.forEach(function(playlist) { %>
+					<tr class="item">
+						<td><%= playlist.numberOfTracks %>x <%= playlist.playlistName %></td>
+						<td style="text-align:right;"><%= playlist.amount %></td>
+						<td style="text-align:right;"><%= euroFormatter.format(payment.productPriceWithoutTax / playlist.amount) %></td>
+						<td style="text-align:right;"><%= payment.taxRate %>%</td>
+						<td style="text-align:right;"><%= euroFormatter.format(payment.productVATPrice) %></td>
+						<td style="text-align:right;"><%= euroFormatter.format(payment.price) %></td>
+					</tr>
+				<% }); %>
 
 				<% if (!payment.orderType.digital) { %>
 					<tr class="item">
