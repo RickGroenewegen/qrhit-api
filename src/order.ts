@@ -11,6 +11,7 @@ import Mail from './mail';
 import puppeteer from 'puppeteer';
 import fs from 'fs';
 import Data from './data';
+import crypto from 'crypto';
 
 class Order {
   private static instance: Order;
@@ -201,7 +202,9 @@ class Order {
       params.countrycode = 'NL';
     }
 
-    let cacheToken = `${this.pricingCacheToken}_${params.orderType}_${params.amount}_${params.numberOfTracks}_${params.countrycode}`;
+    const hash = crypto.createHash('sha256');
+    hash.update(JSON.stringify(cartItems));
+    const cacheToken = `${this.pricingCacheToken}_${hash.digest('hex')}`;
 
     const cachedPrice = await this.cache.get(cacheToken);
 
