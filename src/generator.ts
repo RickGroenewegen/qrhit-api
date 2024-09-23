@@ -30,7 +30,7 @@ class Generator {
     paymentId: string,
     ip: string,
     mollie: Mollie
-  ): Promise<{ filename: string; filenameDigital: string }> {
+  ): Promise<void> {
     this.logger.log(
       blue.bold(`Starting generation for payment: ${white.bold(paymentId)}`)
     );
