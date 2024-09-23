@@ -226,7 +226,6 @@ class Generator {
       filenameDigital = generatedFilenameDigital;
     }
 
-    let printerPageCount = 0;
     let printApiOrderId = '';
     let printApiOrderRequest = '';
     let printApiOrderResponse = '';
