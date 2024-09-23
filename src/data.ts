@@ -108,7 +108,7 @@ class Data {
     date: Date = new Date()
   ): Promise<number | null> {
     if (!this.euCountryCodes.includes(countryCode)) {
-      return 0;
+      return 21; // Default NL
     }
 
     const taxRates = await this.prisma.taxRate.findMany({

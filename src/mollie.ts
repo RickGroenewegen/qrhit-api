@@ -110,8 +110,7 @@ class Mollie {
 
       const playlistDatabaseIds = await this.data.storePlaylists(
         userDatabaseId,
-        params.cart.items,
-        true // TODO: Fix this
+        params.cart.items
       );
 
       const productPriceWithoutTax = parseFloat(
