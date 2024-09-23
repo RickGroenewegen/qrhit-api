@@ -282,6 +282,9 @@ class Data {
         WHERE       payments.paymentId = ${paymentId}
         AND         playlists.playlistId = ${playlistId}
         AND         payments.userId = user_has_playlists.userId`;
+
+    console.log(111, payment);
+
     return payment[0];
   }
 
