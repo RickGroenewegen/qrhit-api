@@ -187,7 +187,7 @@ class Mail {
       } else if (playlists.length == 1) {
         subject = this.translation.translate('mail.mailSubject', locale, {
           orderId: payment.orderId,
-          playlist: playlists[0].name,
+          playlist: decode(playlists[0].name),
         });
       } else {
         subject = this.translation.translate('mail.mailSubject', locale, {
