@@ -149,8 +149,6 @@ class Mollie {
         (productVATPrice + shippingVATPrice).toFixed(2)
       );
 
-      console.log(111, params.cart.items);
-
       const playlists = await Promise.all(
         params.cart.items.map(async (item: CartItem, index: number) => {
           const orderType = await this.order.getOrderType(
@@ -246,8 +244,6 @@ class Mollie {
     });
 
     if (payment) {
-      console.log(111, playlistId, payment.PaymentHasPlaylist);
-
       return payment.PaymentHasPlaylist.some(
         (relation) => relation.playlist.playlistId === playlistId
       );

@@ -70,7 +70,7 @@ class Generator {
     const physicalPlaylists = [];
 
     // Send the main mail
-    //await this.mail.sendEmail('main_' + orderType, payment, playlists);
+    await this.mail.sendEmail('main_' + orderType, payment, playlists);
 
     for (const playlist of playlists) {
       const { filename, filenameDigital } = await this.generatePDF(

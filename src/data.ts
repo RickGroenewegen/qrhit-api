@@ -233,7 +233,7 @@ class Data {
             name: cartItem.playlistName,
             image: '', // Assuming image is not provided in CartItem
             price: cartItem.price,
-            numberOfTracks: cartItem.amountOfTracks,
+            numberOfTracks: cartItem.numberOfTracks,
           },
         });
         playlistDatabaseId = playlistCreate.id;
@@ -251,7 +251,7 @@ class Data {
           },
           data: {
             price: cartItem.price,
-            numberOfTracks: cartItem.amountOfTracks,
+            numberOfTracks: cartItem.numberOfTracks,
             name: cartItem.playlistName,
             resetCache: doResetCache,
           },
@@ -303,6 +303,7 @@ class Data {
                     playlists.playlistId,
                     playlists.numberOfTracks,
                     payment_has_playlist.amount,
+                    payment_has_playlist.type,
                     playlists.name AS playlistName
         FROM        payment_has_playlist
         INNER JOIN  playlists ON payment_has_playlist.playlistId = playlists.id

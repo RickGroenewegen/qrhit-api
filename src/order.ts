@@ -144,7 +144,6 @@ class Order {
 
     if (cachedOrderType) {
       orderType = JSON.parse(cachedOrderType);
-      console.log(111, orderType);
     } else {
       orderType = await this.prisma.orderType.findFirst({
         where: {
@@ -206,11 +205,13 @@ class Order {
         totalProductPriceWithoutVAT += productPriceWithoutVAT;
         total += itemPrice;
 
-        itemsForApi.push({
-          productId: orderType.printApiProductId,
-          quantity: item.amount,
-          pageCount: 25, // TODO: Get this from somewhere
-        });
+        if (item.type != 'digital') {
+          itemsForApi.push({
+            productId: orderType.printApiProductId,
+            quantity: item.amount,
+            pageCount: 2, // TODO: Get this from somewhere
+          });
+        }
       } else {
         return {
           success: false,
@@ -273,13 +274,16 @@ class Order {
           payment: response.data.payment,
         },
       };
-
       this.cache.set(cacheToken, JSON.stringify(returnData));
       return returnData;
     } else {
       return {
-        success: false,
-        error: 'No valid items found for order',
+        success: true,
+        data: {
+          total,
+          price: totalProductPriceWithoutVAT,
+          taxRate,
+        },
       };
     }
   }
