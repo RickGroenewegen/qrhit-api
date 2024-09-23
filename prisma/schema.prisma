@@ -20,41 +20,38 @@ model Isrc {
 }
 
 model OrderType {
-  id                Int       @id @default(autoincrement())
-  name              String    @unique
-  description       String
-  amount            Float
-  amountWithMargin  Float     @default(10)
-  maxCards          Int       @default(0)
-  printApiProductId String?
-  createdAt         DateTime  @default(now())
-  updatedAt         DateTime  @updatedAt
-  digital           Boolean   @default(false)
-  Payment           Payment[]
+  id                 Int                  @id @default(autoincrement())
+  name               String               @unique
+  description        String
+  amount             Float
+  amountWithMargin   Float                @default(10)
+  maxCards           Int                  @default(0)
+  printApiProductId  String?
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  digital            Boolean              @default(false)
+  Payment            Payment[]
+  PaymentHasPlaylist PaymentHasPlaylist[]
 
   @@map("order_types")
 }
 
 model Payment {
-  id                      Int       @id @default(autoincrement())
+  id                      Int                  @id @default(autoincrement())
   userId                  Int? // Removed the @unique constraint, and made optional
-  paymentId               String    @unique
-  orderId                 String    @default("")
-  printApiOrderId         String    @default("")
-  printApiStatus          String    @default("Created")
-  printApiShipped         Boolean   @default(false)
-  printApiOrderRequest    String?   @default("") @db.Text
-  printApiOrderResponse   String?   @default("") @db.Text
-  printApiTrackingLink    String?   @default("")
+  paymentId               String               @unique
+  orderId                 String               @default("")
+  printApiOrderId         String               @default("")
+  printApiStatus          String               @default("Created")
+  printApiShipped         Boolean              @default(false)
+  printApiOrderRequest    String?              @default("") @db.Text
+  printApiOrderResponse   String?              @default("") @db.Text
+  printApiTrackingLink    String?              @default("")
   clientIp                String?
-  amount                  Int
   totalPrice              Float
   status                  String
-  createdAt               DateTime  @default(now())
-  updatedAt               DateTime  @updatedAt
-  filename                String?
-  filenameDigital         String?
-  orderTypeId             Int
+  createdAt               DateTime             @default(now())
+  updatedAt               DateTime             @updatedAt
   fullname                String?
   email                   String?
   address                 String?
@@ -65,8 +62,8 @@ model Payment {
   price                   Float?
   taxRate                 Float?
   taxRateShipping         Float?
-  marketingEmails         Boolean   @default(false)
-  differentInvoiceAddress Boolean   @default(false)
+  marketingEmails         Boolean              @default(false)
+  differentInvoiceAddress Boolean              @default(false)
   invoiceAddress          String?
   invoiceCity             String?
   invoiceZipcode          String?
@@ -77,11 +74,11 @@ model Payment {
   productVATPrice         Float
   shippingVATPrice        Float
   totalVATPrice           Float
-  printerPageCount        Int       @default(0)
-  locale                  String    @default("en")
-  numberOfTracks          Int       @default(0)
-  orderType               OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
-  user                    User?     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  locale                  String               @default("en")
+  user                    User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  PaymentHasPlaylist      PaymentHasPlaylist[]
+  OrderType               OrderType?           @relation(fields: [orderTypeId], references: [id])
+  orderTypeId             Int?
 
   @@index([userId]) // Index for performance on queries
   @@index([paymentId])
@@ -115,17 +112,17 @@ model taxRate {
 }
 
 model Playlist {
-  id             Int                @id @default(autoincrement())
-  playlistId     String             @unique
+  id             Int                  @id @default(autoincrement())
+  playlistId     String               @unique
   name           String
-  createdAt      DateTime           @default(now())
-  updatedAt      DateTime           @updatedAt
-  featured       Boolean            @default(false)
+  createdAt      DateTime             @default(now())
+  updatedAt      DateTime             @updatedAt
+  featured       Boolean              @default(false)
   featuredLocale String?
   image          String
-  price          Float              @default(0)
-  numberOfTracks Int                @default(0)
-  resetCache     Boolean            @default(false)
+  price          Float                @default(0)
+  numberOfTracks Int                  @default(0)
+  resetCache     Boolean              @default(false)
   users          UserHasPlaylist[]
   tracks         PlaylistHasTrack[]
   Payment        PaymentHasPlaylist[]
@@ -173,13 +170,21 @@ model PlaylistHasTrack {
   @@id([playlistId, trackId]) // Composite primary key
   @@map("playlist_has_tracks")
 }
+
 model PaymentHasPlaylist {
-  payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  paymentId Int
-  playlist  Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
-  playlistId Int
-  amount    Int
-  type      String
+  payment          Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentId        Int
+  playlist         Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  playlistId       Int
+  amount           Int
+  numberOfTracks   Int
+  orderTypeId      Int
+  type             String
+  filename         String?
+  filenameDigital  String?
+  printerPageCount Int      @default(0)
+
+  orderType OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
 
   @@id([paymentId, playlistId]) // Composite primary key
   @@map("payment_has_playlist")
