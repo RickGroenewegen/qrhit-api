@@ -165,6 +165,36 @@ class Mollie {
 
       console.log(333, calculateResult.data);
 
+      const productPriceWithoutTax = parseFloat(
+        (
+          parseFloat(calculateResult.data.price) /
+          (1 + calculateResult.data.taxRate / 100)
+        ).toFixed(2)
+      );
+
+      const shippingPriceWithoutTax = parseFloat(
+        (
+          parseFloat(calculateResult.data.payment) /
+          (1 + calculateResult.data.taxRateShipping / 100)
+        ).toFixed(2)
+      );
+
+      const productVATPrice = parseFloat(
+        (
+          parseFloat(calculateResult.data.price) - productPriceWithoutTax
+        ).toFixed(2)
+      );
+
+      const shippingVATPrice = parseFloat(
+        (
+          parseFloat(calculateResult.data.payment) - shippingPriceWithoutTax
+        ).toFixed(2)
+      );
+
+      const totalVATPrice = parseFloat(
+        (productVATPrice + shippingVATPrice).toFixed(2)
+      );
+
       const insertResult = await this.prisma.payment.create({
         data: {
           paymentId: payment.id,
@@ -176,66 +206,11 @@ class Mollie {
           locale: params.locale,
           taxRate: calculateResult.data.taxRate,
           taxRateShipping: calculateResult.data.taxRateShipping,
-          productPriceWithoutTax: parseFloat(
-            (
-              parseFloat(calculateResult.data.price) /
-              (1 + calculateResult.data.taxRate / 100)
-            ).toFixed(2)
-          ),
-          shippingPriceWithoutTax: parseFloat(
-            (
-              parseFloat(calculateResult.data.payment) /
-              (1 + calculateResult.data.taxRateShipping / 100)
-            ).toFixed(2)
-          ),
-          productVATPrice: parseFloat(
-            (
-              parseFloat(calculateResult.data.price) -
-              parseFloat(
-                (
-                  parseFloat(calculateResult.data.price) /
-                  (1 + calculateResult.data.taxRate / 100)
-                ).toFixed(2)
-              )
-            ).toFixed(2)
-          ),
-          shippingVATPrice: parseFloat(
-            (
-              parseFloat(calculateResult.data.payment) -
-              parseFloat(
-                (
-                  parseFloat(calculateResult.data.payment) /
-                  (1 + calculateResult.data.taxRateShipping / 100)
-                ).toFixed(2)
-              )
-            ).toFixed(2)
-          ),
-          totalVATPrice: parseFloat(
-            (
-              parseFloat(
-                (
-                  parseFloat(calculateResult.data.price) -
-                  parseFloat(
-                    (
-                      parseFloat(calculateResult.data.price) /
-                      (1 + calculateResult.data.taxRate / 100)
-                    ).toFixed(2)
-                  )
-                ).toFixed(2)
-              ) +
-              parseFloat(
-                (
-                  parseFloat(calculateResult.data.payment) -
-                  parseFloat(
-                    (
-                      parseFloat(calculateResult.data.payment) /
-                      (1 + calculateResult.data.taxRateShipping / 100)
-                    ).toFixed(2)
-                  )
-                ).toFixed(2)
-              )
-            ).toFixed(2)
-          ),
+          productPriceWithoutTax,
+          shippingPriceWithoutTax,
+          productVATPrice,
+          shippingVATPrice,
+          totalVATPrice,
           clientIp,
           PaymentHasPlaylist: {
             create: params.cart.items.map(
