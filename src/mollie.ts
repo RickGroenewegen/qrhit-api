@@ -203,19 +203,19 @@ class Mollie {
       );
 
       const playlists = {
-        create: params.cart.items.map(
-          async (item: CartItem, index: number) => ({
-            playlistId: playlistDatabaseIds[index],
-            amount: item.amount,
-            orderTypeId:
-              (
-                await this.order.getOrderType(
-                  item.amountOfTracks,
-                  item.type === 'digital'
-                )
-              )?.id || 0,
-            numberOfTracks: item.amountOfTracks,
-            type: item.type,
+        create: await Promise.all(
+          params.cart.items.map(async (item: CartItem, index: number) => {
+            const orderType = await this.order.getOrderType(
+              item.amountOfTracks,
+              item.type === 'digital'
+            );
+            return {
+              playlistId: playlistDatabaseIds[index],
+              amount: item.amount,
+              orderTypeId: orderType?.id || 0,
+              numberOfTracks: item.amountOfTracks,
+              type: item.type,
+            };
           })
         ),
       };
