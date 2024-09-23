@@ -159,22 +159,15 @@ class Spotify {
   public async getPlaylistTrackCount(
     playlistId: string,
     cache: boolean = true
-  ): Promise<ApiResult> {
-    try {
-      const playlistResult = await this.getPlaylist(playlistId, cache);
+  ): Promise<number> {
+    const playlistResult = await this.getPlaylist(playlistId, cache);
 
-      if (!playlistResult.success) {
-        return { success: false, error: 'Error getting playlist track count' };
-      }
-
-      const playlist = playlistResult.data as Playlist;
-      return {
-        success: true,
-        data: playlist.numberOfTracks,
-      };
-    } catch (e) {
-      return { success: false, error: 'Error getting playlist track count' };
+    if (!playlistResult.success) {
+      throw new Error('Error getting playlist track count');
     }
+
+    const playlist = playlistResult.data as Playlist;
+    return playlist.numberOfTracks;
   }
 
   public async getPlaylist(
