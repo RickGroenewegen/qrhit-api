@@ -14,6 +14,7 @@ interface TrackNeedingYearUpdate {
 import Cache from './cache';
 import Translation from './translation';
 import Utils from './utils';
+import { CartItem } from './interfaces/CartItem';
 
 class Data {
   private prisma = PrismaInstance.getInstance();

@@ -12,6 +12,7 @@ import puppeteer from 'puppeteer';
 import fs from 'fs';
 import Data from './data';
 import crypto from 'crypto';
+import Spotify from './spotify';
 
 class Order {
   private static instance: Order;
@@ -23,6 +24,7 @@ class Order {
   private logger = new Log();
   private mail = new Mail();
   private data = new Data();
+  private spotify = new Spotify();
 
   private constructor() {
     if (cluster.isPrimary) {
@@ -165,23 +167,27 @@ class Order {
     const cartItems = params.cart.items;
     const itemsForApi: any[] = [];
 
-    console.log(111, JSON.stringify(params, null, 2));
-
     let total = 0;
     const minimumAmount = 25;
     const maximumAmount = 500;
 
     for (const item of cartItems) {
-      let numberOfTracks = item.amountOfTracks;
+      let numberOfTracks = await this.spotify.getPlaylistTrackCount(
+        item.playlistId
+      );
 
-      if (isNaN(numberOfTracks)) {
-        return {
-          success: false,
-          error: `Invalid number of tracks for item ${item.playlistName}`,
-        };
+      if (numberOfTracks < minimumAmount) {
+        numberOfTracks = minimumAmount;
       }
 
-      numberOfTracks = Math.min(Math.max(numberOfTracks, minimumAmount), maximumAmount);
+      if (numberOfTracks > maximumAmount) {
+        numberOfTracks = maximumAmount;
+      }
+
+      numberOfTracks = Math.min(
+        Math.max(numberOfTracks, minimumAmount),
+        maximumAmount
+      );
       const orderType = await this.getOrderType(
         numberOfTracks,
         item.type === 'digital'
@@ -206,8 +212,6 @@ class Order {
       }
     }
 
-    let minimumAmount = 25;
-    let maximumAmount = 500;
     let returnData: any = {};
 
     if (!params.countrycode) {
@@ -229,23 +233,6 @@ class Order {
       } catch (e) {
         this.cache.del(cacheToken);
       }
-    }
-
-    let numberOfTracks = parseInt(params.numberOfTracks);
-
-    if (numberOfTracks < minimumAmount) {
-      numberOfTracks = minimumAmount;
-    }
-
-    if (numberOfTracks > maximumAmount) {
-      numberOfTracks = maximumAmount;
-    }
-
-    if (isNaN(numberOfTracks)) {
-      return {
-        success: false,
-        error: 'Invalid number of cards',
-      };
     }
 
     const taxRate = await this.data.getTaxRate(params.countrycode);

@@ -248,14 +248,16 @@ class Generator {
         id: payment.id,
       },
       data: {
-        filename,
-        filenameDigital,
-        printerPageCount: payment.printerPageCount,
         printApiOrderId,
         printApiOrderRequest,
         printApiOrderResponse,
       },
     });
+
+    //TODO: UPDATE the following:
+    //  filename: '', //filename,
+    //     filenameDigital: '', //filenameDigital,
+    //     printerPageCount: payment.printerPageCount,
 
     await this.mail.sendEmail(
       payment.orderType.name,
