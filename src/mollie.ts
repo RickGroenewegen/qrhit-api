@@ -227,30 +227,26 @@ class Mollie {
     playlistId: string,
     paymentId: string
   ): Promise<boolean> {
-    return true; // TODO: FIX THIS
+    const payment = await this.prisma.payment.findUnique({
+      where: {
+        paymentId: paymentId,
+      },
+      select: {
+        PaymentHasPlaylist: {
+          select: {
+            playlistId: true,
+          },
+        },
+      },
+    });
 
-    // const payment = await this.prisma.payment.findUnique({
-    //   where: {
-    //     paymentId: paymentId,
-    //   },
-    //   select: {
-    //     PaymentHasPlaylist: {
-    //       select: {
-    //         playlist: {
-    //           select: {
-    //             playlistId: true,
-    //           },
-    //         },
-    //       },
-    //     },
-    //   },
-    // });
-
-    // if (payment && payment.playlist!.playlistId == playlistId) {
-    //   return true;
-    // } else {
-    //   return false;
-    // }
+    if (payment) {
+      return payment.PaymentHasPlaylist.some(
+        (relation) => relation.playlistId === parseInt(playlistId)
+      );
+    } else {
+      return false;
+    }
   }
 
   public async processWebhook(params: any): Promise<ApiResult> {
