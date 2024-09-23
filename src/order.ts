@@ -161,6 +161,10 @@ class Order {
   }
 
   public async calculateOrder(params: any): Promise<ApiResult> {
+    const cartItems = params.items;
+
+    console.log(111, JSON.stringify(params, null, 2));
+
     let price = 0;
     let total = 0;
     let minimumAmount = 25;
