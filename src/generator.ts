@@ -282,20 +282,38 @@ class Generator {
   }
 
   private async sendEmail(
-      payment.orderType.name,
-      payment,
-      playlist,
-      filename,
-      filenameDigital
-    );
+    orderTypeName: string,
+    payment: any,
+    playlist: any,
+    filename: string,
+    filenameDigital: string
+  ): Promise<void> {
+    const emailParams = {
+      to: payment.email,
+      subject: `Your ${orderTypeName} order is ready`,
+      html: `<p>Dear ${payment.fullname},</p>
+             <p>Your order for the playlist ${playlist.name} is ready.</p>
+             <p>Attached are your files:</p>
+             <ul>
+               <li>${filename}</li>
+               <li>${filenameDigital}</li>
+             </ul>`,
+      attachments: [
+        { path: `${process.env['PUBLIC_DIR']}/pdf/${filename}` },
+        { path: `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}` },
+      ],
+    };
+
+    await this.mail.sendEmail(emailParams);
 
     this.logger.log(
       color.green.bold(
-        `PDF generated successfully for playlist: ${white.bold(
+        `Email sent successfully for playlist: ${white.bold(
           playlist.playlistId
         )}`
       )
     );
+  }
   }
 }
 
