@@ -156,6 +156,8 @@ class Spotify {
     }
   }
 
+  public async getPlaylistTrackCount() {}
+
   public async getPlaylist(
     playlistId: string,
     cache: boolean = true
