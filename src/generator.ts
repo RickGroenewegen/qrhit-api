@@ -30,7 +30,7 @@ class Generator {
     paymentId: string,
     ip: string,
     mollie: Mollie
-  ): Promise<void> {
+  ): Promise<{ filename: string; filenameDigital: string }> {
     this.logger.log(
       blue.bold(`Starting generation for payment: ${white.bold(paymentId)}`)
     );
@@ -60,7 +60,14 @@ class Generator {
     console.log(111, payment);
     console.log(222, playlists);
 
+    const physicalPlaylists = [];
+
     for (const playlist of playlists) {
+      const { filename, filenameDigital } = await this.generatePDF(payment, playlist, ip);
+
+      if (playlist.orderType !== 'digital') {
+        physicalPlaylists.push({ playlist, filename });
+      }
       await this.generatePDF(payment, playlist, ip);
     }
 
@@ -68,15 +75,15 @@ class Generator {
     let printApiOrderRequest = '';
     let printApiOrderResponse = '';
 
-    // if (playlist.orderType != 'digital') {
-    //   payment.printerPageCount = await this.utils.countPdfPages(
-    //     `${process.env['PUBLIC_DIR']}/pdf/${filename}`
-    //   );
-    //   const orderData = await this.order.createOrder(payment, filename);
-    //   printApiOrderId = orderData.response.id;
-    //   printApiOrderRequest = JSON.stringify(orderData.request);
-    //   printApiOrderResponse = JSON.stringify(orderData.response);
-    // }
+    if (physicalPlaylists.length > 0) {
+      payment.printerPageCount = await this.utils.countPdfPages(
+        `${process.env['PUBLIC_DIR']}/pdf/${physicalPlaylists[0].filename}`
+      );
+      const orderData = await this.order.createOrder(payment, physicalPlaylists);
+      printApiOrderId = orderData.response.id;
+      printApiOrderRequest = JSON.stringify(orderData.request);
+      printApiOrderResponse = JSON.stringify(orderData.response);
+    }
 
     // Update the payment with the order id
     await this.prisma.payment.update({
@@ -271,7 +278,10 @@ class Generator {
       filenameDigital = generatedFilenameDigital;
     }
 
-    await this.mail.sendEmail(
+    return { filename, filenameDigital };
+  }
+
+  private async sendEmail(
       payment.orderType.name,
       payment,
       playlist,
