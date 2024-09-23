@@ -300,7 +300,8 @@ class Mollie {
         payment.status == 'paid'
       ) {
         const metadata = payment.metadata as { clientIp: string };
-        this.generator.generate(params.id, metadata.clientIp, this);
+        console.log(111, 'GENERATE!');
+        //this.generator.generate(params.id, metadata.clientIp, this);
       }
     }
     return {

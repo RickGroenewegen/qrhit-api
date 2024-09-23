@@ -144,6 +144,7 @@ class Order {
 
     if (cachedOrderType) {
       orderType = JSON.parse(cachedOrderType);
+      console.log(111, orderType);
     } else {
       orderType = await this.prisma.orderType.findFirst({
         where: {

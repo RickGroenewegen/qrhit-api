@@ -251,7 +251,8 @@ class Data {
 
   public async getPayment(paymentId: string, playlistId: string): Promise<any> {
     const paymentDetails: any[] = await this.prisma.$queryRaw`
-        SELECT      payments.orderId,
+        SELECT      payments.id,
+                    payments.orderId,
                     payments.createdAt,
                     payments.fullname,
                     payments.email,
@@ -280,14 +281,16 @@ class Data {
     const connectedPlaylists: any[] = await this.prisma.$queryRaw`
         SELECT      playlists.id,
                     playlists.playlistId,
-                    playlists.name
+                    playlists.numberOfTracks,
+                    payment_has_playlist.amount,
+                    playlists.name AS playlistName
         FROM        payment_has_playlist
         INNER JOIN  playlists ON payment_has_playlist.playlistId = playlists.id
         WHERE       payment_has_playlist.paymentId = ${paymentDetails[0].id}`;
 
     return {
       payment: paymentDetails[0],
-      playlists: connectedPlaylists
+      playlists: connectedPlaylists,
     };
   }
 
