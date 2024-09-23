@@ -161,12 +161,32 @@ class Order {
   }
 
   public async calculateOrder(params: any): Promise<ApiResult> {
-    const cartItems = params.items;
+    const cartItems = params.cart.items;
 
     console.log(111, JSON.stringify(params, null, 2));
 
-    let price = 0;
     let total = 0;
+    for (const item of cartItems) {
+      const numberOfTracks = Math.min(Math.max(item.amountOfTracks, 25), 500);
+      const orderType = await this.getOrderType(numberOfTracks, item.type === 'digital');
+
+      if (orderType) {
+        const itemPrice = parseFloat((orderType.amountWithMargin * item.amount).toFixed(2));
+        total += itemPrice;
+
+        itemsForApi.push({
+          productId: orderType.printApiProductId,
+          quantity: item.amount,
+          pageCount: 25, // TODO: Get this from somewhere
+        });
+      } else {
+        return {
+          success: false,
+          error: `Order type not found for item ${item.playlistName}`,
+        };
+      }
+    }
+    const itemsForApi: any[] = [];
     let minimumAmount = 25;
     let maximumAmount = 500;
     let returnData: any = {};
@@ -207,76 +227,45 @@ class Order {
       };
     }
 
-    const orderType = await this.getOrderType(
-      numberOfTracks,
-      params.orderType == 'digital'
-    );
+    const taxRate = await this.data.getTaxRate(params.countrycode);
 
-    if (orderType) {
-      price = parseFloat(
-        (orderType.amountWithMargin * parseInt(params.amount)).toFixed(2)
-      );
+    if (itemsForApi.length > 0) {
+      const authToken = await this.getAuthToken();
 
-      total += price;
+      let response = await axios({
+        method: 'post',
+        url: `${process.env['PRINT_API_URL']}/v2/shipping/quote`,
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        data: {
+          country: params.countrycode || 'NL',
+          items: itemsForApi,
+        },
+      });
 
-      const taxRate = await this.data.getTaxRate(params.countrycode);
+      total += response.data.payment;
+      total = parseFloat(total.toFixed(2));
 
-      if (params.orderType !== 'digital') {
-        const authToken = await this.getAuthToken();
-
-        let response = await axios({
-          method: 'post',
-          url: `${process.env['PRINT_API_URL']}/v2/shipping/quote`,
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-          data: {
-            country: params.countrycode || 'NL',
-            items: [
-              {
-                productId: orderType.printApiProductId,
-                quantity: params.amount,
-                pageCount: 25, // TODO: Get this from somewhere
-              },
-            ],
-          },
-        });
-
-        total += response.data.payment;
-
-        total = parseFloat(total.toFixed(2));
-
-        returnData = {
-          success: true,
-          data: {
-            price,
-            total,
-            shipping: response.data.shipping,
-            handling: response.data.handling,
-            taxRateShipping: response.data.taxRate * 100,
-            taxRate,
-            payment: response.data.payment,
-          },
-        };
-      } else {
-        returnData = {
-          success: true,
-          data: {
-            price,
-            total,
-            taxRate,
-          },
-        };
-      }
+      returnData = {
+        success: true,
+        data: {
+          total,
+          shipping: response.data.shipping,
+          handling: response.data.handling,
+          taxRateShipping: response.data.taxRate * 100,
+          taxRate,
+          payment: response.data.payment,
+        },
+      };
 
       this.cache.set(cacheToken, JSON.stringify(returnData));
-
       return returnData;
     } else {
       return {
         success: false,
-        error: 'Order type not found',
+        error: 'No valid items found for order',
       };
     }
   }
