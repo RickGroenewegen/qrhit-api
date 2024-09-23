@@ -38,7 +38,7 @@ model OrderType {
 
 model Payment {
   id                      Int                  @id @default(autoincrement())
-  userId                  Int? // Removed the @unique constraint, and made optional
+  userId                  Int
   paymentId               String               @unique
   orderId                 String               @default("")
   printApiOrderId         String               @default("")
