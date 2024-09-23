@@ -168,8 +168,20 @@ class Order {
     console.log(111, JSON.stringify(params, null, 2));
 
     let total = 0;
+    const minimumAmount = 25;
+    const maximumAmount = 500;
+
     for (const item of cartItems) {
-      const numberOfTracks = Math.min(Math.max(item.amountOfTracks, 25), 500);
+      let numberOfTracks = item.amountOfTracks;
+
+      if (isNaN(numberOfTracks)) {
+        return {
+          success: false,
+          error: `Invalid number of tracks for item ${item.playlistName}`,
+        };
+      }
+
+      numberOfTracks = Math.min(Math.max(numberOfTracks, minimumAmount), maximumAmount);
       const orderType = await this.getOrderType(
         numberOfTracks,
         item.type === 'digital'
