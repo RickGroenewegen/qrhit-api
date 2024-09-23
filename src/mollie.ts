@@ -160,26 +160,33 @@ class Mollie {
       // );
 
       // // Create the payment in the database
-      // const insertResult = await this.prisma.payment.create({
-      //   data: {
-      //     paymentId: payment.id,
-      //     userId: userDatabaseId,
-      //     totalPrice: parseFloat(payment.amount.value),
-      //     status: payment.status,
-      //     orderTypeId: 'digital', // TODO: Fix this
-      //     locale: params.locale,
-      //     taxRate: calculateResult.data.taxRate,
-      //     taxRateShipping: taxRateShipping,
-      //     productPriceWithoutTax,
-      //     shippingPriceWithoutTax,
-      //     productVATPrice,
-      //     shippingVATPrice,
-      //     totalVATPrice,
-      //     clientIp,
-      //     numberOfTracks: params.tracks.length,
-      //     ...params.extraOrderData,
-      //   },
-      // });
+      const insertResult = await this.prisma.payment.create({
+        data: {
+          paymentId: payment.id,
+          userId: userDatabaseId,
+          totalPrice: parseFloat(payment.amount.value),
+          status: payment.status,
+          orderTypeId: 'digital', // TODO: Fix this
+          locale: params.locale,
+          taxRate: calculateResult.data.taxRate,
+          taxRateShipping: taxRateShipping,
+          productPriceWithoutTax,
+          shippingPriceWithoutTax,
+          productVATPrice,
+          shippingVATPrice,
+          totalVATPrice,
+          clientIp,
+          numberOfTracks: params.tracks.length,
+          PaymentHasPlaylist: {
+            create: params.cart.items.map((item: any) => ({
+              playlistId: item.playlistId,
+              amount: item.amount,
+              type: item.type,
+            })),
+          },
+          ...params.extraOrderData,
+        },
+      });
 
       // const paymentId = insertResult.id;
 
@@ -222,18 +229,22 @@ class Mollie {
   ): Promise<boolean> {
     return true; // TODO: FIX THIS
 
-    // const payment = await this.prisma.payment.findUnique({
-    //   where: {
-    //     paymentId: paymentId,
-    //   },
-    //   select: {
-    //     playlist: {
-    //       select: {
-    //         playlistId: true,
-    //       },
-    //     },
-    //   },
-    // });
+    const payment = await this.prisma.payment.findUnique({
+      where: {
+        paymentId: paymentId,
+      },
+      select: {
+        PaymentHasPlaylist: {
+          select: {
+            playlist: {
+              select: {
+                playlistId: true,
+              },
+            },
+          },
+        },
+      },
+    });
 
     // if (payment && payment.playlist!.playlistId == playlistId) {
     //   return true;
@@ -405,10 +416,14 @@ class Mollie {
             email: true,
           },
         },
-        playlist: {
+        PaymentHasPlaylist: {
           select: {
-            playlistId: true, // Only selecting the playlistId from the related Playlist
-            id: true,
+            playlist: {
+              select: {
+                playlistId: true, // Only selecting the playlistId from the related Playlist
+                id: true,
+              },
+            },
           },
         },
       },
