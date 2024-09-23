@@ -355,23 +355,23 @@ class Order {
     return authToken;
   }
 
-  public async createOrder(payment: any, filenames: any[]): Promise<any> {
+  public async createOrder(payment: any, playlists: any[]): Promise<any> {
     const authToken = await this.getAuthToken();
     let response: string = '';
 
+    const items = playlists.map((playlist) => ({
+      productId: playlist.orderTypeId,
+      pageCount: payment.printerPageCount,
+      quantity: 1,
+      files: {
+        content: `${process.env.API_URI}/public/pdf/${playlist.filename}`,
+        cover: `${process.env.API_URI}/public/pdf/${playlist.filename}`,
+      },
+    }));
+
     const body = {
-      email: payment.user.email,
-      items: [
-        {
-          productId: payment.orderType.printApiProductId,
-          pageCount: 32, //payment.printerPageCount,
-          quantity: 1,
-          files: {
-            content: `${process.env.API_URI}/public/pdf/${filename}`,
-            cover: `${process.env.API_URI}/public/pdf/${filename}`,
-          },
-        },
-      ],
+      email: payment.email,
+      items,
       shipping: {
         address: {
           name: payment.fullname,
