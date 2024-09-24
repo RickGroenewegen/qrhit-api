@@ -94,7 +94,7 @@ class Mollie {
       const payment = await paymentClient.payments.create({
         amount: {
           currency: 'EUR',
-          value: calculateResult.data.total.toString(),
+          value: calculateResult.data.total.toFixed(2),
         },
         metadata: {
           clientIp,
