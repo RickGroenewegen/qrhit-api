@@ -155,9 +155,9 @@ class Mollie {
             item.type === 'digital'
           );
 
-          const itemPrice = item.amount * parseFloat(calculateResult.data.price);
-          const itemPriceWithoutVAT = itemPrice / (1 + calculateResult.data.taxRate / 100);
-          const itemPriceVAT = itemPrice - itemPriceWithoutVAT;
+          const itemPrice = parseFloat((item.amount * parseFloat(calculateResult.data.price)).toFixed(2));
+          const itemPriceWithoutVAT = parseFloat((itemPrice / (1 + calculateResult.data.taxRate / 100)).toFixed(2));
+          const itemPriceVAT = parseFloat((itemPrice - itemPriceWithoutVAT).toFixed(2));
 
           return {
             playlistId: playlistDatabaseIds[index],
