@@ -202,6 +202,7 @@ class Order {
         const productPriceWithoutVAT = parseFloat(
           (itemPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)
         );
+
         totalProductPriceWithoutVAT += productPriceWithoutVAT;
         total += itemPrice;
 

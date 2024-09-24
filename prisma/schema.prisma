@@ -47,6 +47,7 @@ model Payment {
   printApiOrderRequest    String?              @default("") @db.Text
   printApiOrderResponse   String?              @default("") @db.Text
   printApiTrackingLink    String?              @default("")
+  printApiPrice           Float                @default(0)
   clientIp                String?
   totalPrice              Float
   status                  String
@@ -59,7 +60,6 @@ model Payment {
   zipcode                 String?
   countrycode             String?
   shipping                Float?
-  price                   Float?
   taxRate                 Float?
   taxRateShipping         Float?
   marketingEmails         Boolean              @default(false)
@@ -74,6 +74,7 @@ model Payment {
   productVATPrice         Float
   shippingVATPrice        Float
   totalVATPrice           Float
+  profit                  Float                @default(0)
   locale                  String               @default("en")
   user                    User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
   PaymentHasPlaylist      PaymentHasPlaylist[]
@@ -172,6 +173,7 @@ model PaymentHasPlaylist {
   price           Float
   priceWithoutVAT Float
   priceVAT        Float
+  printApiPrice   Float    @default(0)
 
   printerPageCount Int @default(0)
 

@@ -197,12 +197,12 @@ class Generator {
       orderName = `${payment.fullname}`;
     }
 
-    const profit = payment.price - payment.totalPriceWithoutTax;
-
     // Pushover
     this.pushover.sendMessage(
       {
-        title: `KA-CHING! € ${profit.toString().replace('.', ',')} verdiend!`,
+        title: `KA-CHING! € ${payment.profit
+          .toString()
+          .replace('.', ',')} verdiend!`,
         message: `${orderName} heeft ${
           payment.numberOfTracks
         } ${cardType} kaarten besteld voor € ${payment.totalPrice

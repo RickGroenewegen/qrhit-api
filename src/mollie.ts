@@ -115,10 +115,7 @@ class Mollie {
       );
 
       const productPriceWithoutTax = parseFloat(
-        (
-          parseFloat(calculateResult.data.price) /
-          (1 + calculateResult.data.taxRate / 100)
-        ).toFixed(2)
+        parseFloat(calculateResult.data.price).toFixed(2)
       );
 
       let shippingPriceWithoutTax = 0;
@@ -150,12 +147,22 @@ class Mollie {
         (productVATPrice + shippingVATPrice).toFixed(2)
       );
 
+      let totalPrintApiPrice = 0;
+
+      if (useOrderType == 'physical') {
+        totalPrintApiPrice += shippingPriceWithoutTax;
+      }
+
       const playlists = await Promise.all(
         params.cart.items.map(async (item: CartItem, index: number) => {
           const orderType = await this.order.getOrderType(
             item.numberOfTracks,
             item.type === 'digital'
           );
+
+          const printApiItemPrice = orderType.amount * item.amount;
+
+          totalPrintApiPrice += printApiItemPrice;
 
           const itemPrice = item.price * item.amount;
 
@@ -175,14 +182,26 @@ class Mollie {
             price: itemPrice,
             priceWithoutVAT: itemPriceWithoutVAT,
             priceVAT: itemPriceVAT,
+            printApiPrice: printApiItemPrice,
           };
         })
       );
 
+      let totalProfit = parseFloat(
+        (
+          productPriceWithoutTax +
+          shippingPriceWithoutTax -
+          totalPrintApiPrice
+        ).toFixed(2)
+      );
+
       delete params.extraOrderData.orderType;
       delete params.extraOrderData.total;
+      delete params.extraOrderData.price;
       delete params.extraOrderData.agreeTerms;
       delete params.extraOrderData.agreeNoRefund;
+
+      console.log(111, params.extraOrderData);
 
       const insertResult = await this.prisma.payment.create({
         data: {
@@ -201,6 +220,8 @@ class Mollie {
           shippingVATPrice,
           totalVATPrice,
           clientIp,
+          profit: totalProfit,
+          printApiPrice: totalPrintApiPrice,
           PaymentHasPlaylist: { create: playlists },
           ...params.extraOrderData,
         },
@@ -403,6 +424,7 @@ class Mollie {
         status: true,
         createdAt: true,
         taxRate: true,
+        profit: true,
         taxRateShipping: true,
         updatedAt: true,
         orderId: true,
@@ -420,7 +442,6 @@ class Mollie {
         invoiceCity: true,
         invoiceZipcode: true,
         invoiceCountrycode: true,
-        price: true,
         shipping: true,
         fullname: true,
         email: true,
