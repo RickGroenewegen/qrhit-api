@@ -138,8 +138,6 @@ class Mollie {
         );
       }
 
-      console.log(111, calculateResult.data);
-
       const productVATPrice = parseFloat(
         (
           parseFloat(calculateResult.data.price) *
@@ -147,14 +145,9 @@ class Mollie {
         ).toFixed(2)
       );
 
-      console.log(222, productVATPrice);
-      console.log(333, shippingVATPrice);
-
       const totalVATPrice = parseFloat(
         (productVATPrice + shippingVATPrice).toFixed(2)
       );
-
-      console.log(444, totalVATPrice);
 
       const playlists = await Promise.all(
         params.cart.items.map(async (item: CartItem, index: number) => {
@@ -171,8 +164,6 @@ class Mollie {
           const itemPriceVAT = parseFloat(
             (itemPrice - itemPriceWithoutVAT).toFixed(2)
           );
-
-          console.log(111, itemPrice, itemPriceWithoutVAT, itemPriceVAT);
 
           return {
             playlistId: playlistDatabaseIds[index],

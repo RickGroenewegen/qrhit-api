@@ -1,7 +1,7 @@
 {
   "mail.mailSubject": "Abbiamo ricevuto l'ordine {{ orderId }}!",
-  "mail.greatNews": "Ottime notizie! Le tue carte QR per la tua playlist sono state elaborate e ti saranno spedite una volta pronte. Riceverai un link di tracciamento una volta spedite.",
-  "mail.weHopeYouHaveFun": "Stiamo attualmente generando la versione digitale gratuita. Dovresti riceverla via e-mail tra pochi minuti. Speriamo che ti diverta molto con la musica! Se hai ulteriori domande, non esitare a contattarci tramite il modulo di contatto sul nostro sito web.",
+  "mail.greatNews": "Abbiamo ricevuto il tuo ordine! Le carte verranno spedite una volta pronte. Riceverai anche un link di tracciamento.",
+  "mail.weHopeYouHaveFun": "Stiamo attualmente generando la versione digitale gratuita che puoi giocare mentre aspetti le carte reali. Dovresti riceverla via e-mail in pochi minuti. Speriamo che ti diverta molto musicalmente! Se hai ulteriori domande, non esitare a contattarci tramite il modulo di contatto sul nostro sito web.",
   "mail.greatNewsDigital": "Ottime notizie! Le tue carte QR per la tua playlist sono state elaborate. Le troverai allegate a questa email.",
   "mail.weHopeYouHaveFunDigital": "Speriamo che ti diverta molto con la musica! Se hai altre domande, non esitare a scriverci tramite il modulo di contatto sul nostro sito web.",
   "mail.greetings": "Cordiali saluti",
@@ -17,7 +17,7 @@
   "mail.email": "Email",
   "mail.cards": "schede",
   "mail.trackingMailSubject": "Il tuo ordine QRSong! {{ orderId }} è stato spedito!",
-  "mail.orderShipped": "Ottime notizie! Il tuo ordine QRSong è stato spedito. Abbiamo allegato la fattura a questa mail.",
+  "mail.orderShipped": "Ottime notizie! Il tuo ordine QRSong è stato spedito. Abbiamo allegato la tua fattura a questa mail.",
   "mail.trackOrder": "Traccia il tuo ordine",
   "mail.thankYou": "Speriamo che ti diverta molto con la musica! Se hai altre domande, non esitare a scriverci: info@qrsong.io",
   "mail.invoiceAddress": "Indirizzo di fatturazione",

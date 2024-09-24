@@ -359,8 +359,6 @@ class Server {
         }
       }
 
-      console.log(111, playlists);
-
       await reply.view(`invoice.ejs`, {
         payment,
         playlists,

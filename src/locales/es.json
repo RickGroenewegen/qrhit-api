@@ -1,7 +1,7 @@
 {
   "mail.mailSubject": "¡Hemos recibido el pedido {{ orderId }}!",
-  "mail.greatNews": "¡Buenas noticias! Tus tarjetas QR para tu lista de reproducción han sido procesadas y se enviarán una vez que estén listas. Recibirás un enlace de seguimiento una vez que se hayan enviado.",
-  "mail.weHopeYouHaveFun": "Actualmente estamos generando la versión digital gratuita. Deberías recibirla por correo electrónico en unos minutos. ¡Esperamos que te diviertas mucho con la música! Si tienes alguna pregunta, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
+  "mail.greatNews": "¡Hemos recibido su pedido! Las tarjetas se enviarán una vez que estén listas. También recibirá un enlace de seguimiento.",
+  "mail.weHopeYouHaveFun": "Actualmente estamos generando la versión digital gratuita que puedes jugar mientras esperas las cartas reales. Deberías recibirla por correo electrónico en unos minutos. ¡Esperamos que te diviertas mucho musicalmente! Si tienes alguna pregunta, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
   "mail.greatNewsDigital": "¡Buenas noticias! Tus tarjetas QR para tu lista de reproducción han sido procesadas. Las encontrarás adjuntas a este correo electrónico.",
   "mail.weHopeYouHaveFunDigital": "¡Esperamos que te diviertas mucho con la música! Si tienes más preguntas, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
   "mail.greetings": "Saludos cordiales",
@@ -16,7 +16,7 @@
   "mail.country": "País",
   "mail.email": "Correo",
   "mail.trackingMailSubject": "¡Tu pedido QRSong! {{ orderId }} ha sido enviado!",
-  "mail.orderShipped": "¡Buenas noticias! Su pedido de QRSong ha sido enviado. Hemos adjuntado la factura a este correo.",
+  "mail.orderShipped": "¡Buenas noticias! Su pedido de QRSong ha sido enviado. Hemos adjuntado su factura a este correo.",
   "mail.trackOrder": "Rastrea tu pedido",
   "mail.thankYou": "¡Esperamos que te diviertas mucho con la música! Si tienes más preguntas, no dudes en escribirnos: info@qrsong.io",
   "invoice.invoiceNumber": "Número de factura",

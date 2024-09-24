@@ -1,7 +1,7 @@
 {
   "mail.mailSubject": "Recebemos o pedido {{ orderId }}!",
-  "mail.greatNews": "Ótimas notícias! Seus cartões QR para sua playlist foram processados e serão enviados para você assim que estiverem prontos. Você receberá um link de rastreamento assim que forem enviados.",
-  "mail.weHopeYouHaveFun": "Estamos atualmente a gerar a versão digital gratuita. Deverá recebê-la por e-mail dentro de alguns minutos. Esperamos que se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contacto no nosso site.",
+  "mail.greatNews": "Recebemos o seu pedido! Os cartões serão enviados assim que estiverem prontos. Você também receberá um link de rastreamento.",
+  "mail.weHopeYouHaveFun": "Estamos atualmente gerando a versão digital gratuita que você pode jogar enquanto aguarda as cartas reais. Você deve recebê-la por e-mail em alguns minutos. Esperamos que você se divirta muito musicalmente! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contato em nosso site.",
   "mail.greatNewsDigital": "Ótimas notícias! Seus cartões QR para sua playlist foram processados. Você os encontrará anexados a este e-mail.",
   "mail.weHopeYouHaveFunDigital": "Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contato em nosso site.",
   "mail.greetings": "Atenciosamente",
@@ -17,7 +17,7 @@
   "mail.email": "Email",
   "mail.cards": "cartões",
   "mail.trackingMailSubject": "Seu pedido QRSong! {{ orderId }} foi enviado!",
-  "mail.orderShipped": "Boas notícias! Seu pedido QRSong foi enviado. Anexamos a fatura a este e-mail.",
+  "mail.orderShipped": "Boas notícias! Seu pedido QRSong foi enviado. Anexamos sua fatura a este e-mail.",
   "mail.trackOrder": "Acompanhe seu pedido",
   "mail.thankYou": "Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail: info@qrsong.io",
   "mail.invoiceAddress": "Endereço de faturamento",

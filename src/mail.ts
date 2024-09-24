@@ -378,7 +378,7 @@ To: ${params.to}
 Subject: ${params.subject}
 ${replyToHeader}MIME-Version: 1.0
 Content-Type: multipart/mixed; boundary="MixedBoundaryString"
-List-Unsubscribe: <https://www.qrsong.io/contact>
+List-Unsubscribe: <${process.env['UNSUBSCRIBE_EMAIL']}>
 
 --MixedBoundaryString
 Content-Type: multipart/alternative; boundary="AltBoundaryString"
