@@ -215,6 +215,7 @@ class Spotify {
         data: playlist,
       };
     } catch (e) {
+      console.log(123, e);
       return { success: false, error: 'Error getting playlist' };
     }
   }
