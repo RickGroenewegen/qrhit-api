@@ -154,12 +154,20 @@ class Mollie {
             item.numberOfTracks,
             item.type === 'digital'
           );
+
+          const itemPrice = item.amount * parseFloat(calculateResult.data.price);
+          const itemPriceWithoutVAT = itemPrice / (1 + calculateResult.data.taxRate / 100);
+          const itemPriceVAT = itemPrice - itemPriceWithoutVAT;
+
           return {
             playlistId: playlistDatabaseIds[index],
             amount: item.amount,
             orderTypeId: orderType?.id || 0,
             numberOfTracks: item.numberOfTracks,
             type: item.type,
+            price: itemPrice,
+            priceWithoutVAT: itemPriceWithoutVAT,
+            priceVAT: itemPriceVAT,
           };
         })
       );
