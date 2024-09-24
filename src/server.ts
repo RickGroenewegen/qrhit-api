@@ -445,6 +445,7 @@ class Server {
         await this.generator.generate(
           request.params.paymentId,
           request.clientId,
+          '',
           this.mollie
         );
         return { success: true };

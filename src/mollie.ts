@@ -95,6 +95,7 @@ class Mollie {
         },
         metadata: {
           clientIp,
+          refreshPlaylists: params.refreshPlaylists.join(','),
         },
         description: description,
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
@@ -321,8 +322,17 @@ class Mollie {
         dbPayment.status != payment.status &&
         payment.status == 'paid'
       ) {
-        const metadata = payment.metadata as { clientIp: string };
-        this.generator.generate(params.id, metadata.clientIp, this);
+        const metadata = payment.metadata as {
+          clientIp: string;
+          refreshPlaylists: string;
+        };
+
+        this.generator.generate(
+          params.id,
+          metadata.clientIp,
+          metadata.refreshPlaylists,
+          this
+        );
       }
     }
     return {

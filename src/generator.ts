@@ -29,6 +29,7 @@ class Generator {
   public async generate(
     paymentId: string,
     ip: string,
+    refreshPlaylists: string,
     mollie: Mollie
   ): Promise<void> {
     this.logger.log(
@@ -36,6 +37,8 @@ class Generator {
     );
 
     let orderType = 'digital';
+
+    const refreshPlaylistArray = refreshPlaylists.split(',');
 
     const paymentStatus = await mollie.checkPaymentStatus(paymentId);
     const userId = paymentStatus.data.payment.user.userId;
@@ -76,7 +79,8 @@ class Generator {
       const { filename, filenameDigital } = await this.generatePDF(
         payment,
         playlist,
-        ip
+        ip,
+        refreshPlaylistArray.includes(playlist.playlistId)
       );
 
       if (playlist.orderType !== 'digital') {
@@ -132,7 +136,8 @@ class Generator {
   private async generatePDF(
     payment: any,
     playlist: any,
-    ip: string
+    ip: string,
+    refreshCache: boolean = false
   ): Promise<{ filename: string; filenameDigital: string }> {
     let filename = '';
     let filenameDigital = '';
@@ -214,7 +219,7 @@ class Generator {
       )
     );
 
-    if (playlist.resetCache) {
+    if (refreshCache) {
       exists = false;
       this.logger.log(
         color.yellow.bold(
