@@ -88,9 +88,6 @@ class Mollie {
         description = `${params.cart.items.length}x ${translations!.playlists}`;
       }
 
-      console.log(111, calculateResult);
-      console.log(222, calculateResult.data.total.toString());
-
       const payment = await paymentClient.payments.create({
         amount: {
           currency: 'EUR',
@@ -141,15 +138,23 @@ class Mollie {
         );
       }
 
+      console.log(111, calculateResult.data);
+
       const productVATPrice = parseFloat(
         (
-          parseFloat(calculateResult.data.price) - productPriceWithoutTax
+          parseFloat(calculateResult.data.price) *
+          (calculateResult.data.taxRate / 100)
         ).toFixed(2)
       );
+
+      console.log(222, productVATPrice);
+      console.log(333, shippingVATPrice);
 
       const totalVATPrice = parseFloat(
         (productVATPrice + shippingVATPrice).toFixed(2)
       );
+
+      console.log(444, totalVATPrice);
 
       const playlists = await Promise.all(
         params.cart.items.map(async (item: CartItem, index: number) => {
@@ -158,15 +163,16 @@ class Mollie {
             item.type === 'digital'
           );
 
-          const itemPrice = parseFloat(
-            (item.amount * parseFloat(calculateResult.data.price)).toFixed(2)
-          );
+          const itemPrice = item.price * item.amount;
+
           const itemPriceWithoutVAT = parseFloat(
             (itemPrice / (1 + calculateResult.data.taxRate / 100)).toFixed(2)
           );
           const itemPriceVAT = parseFloat(
             (itemPrice - itemPriceWithoutVAT).toFixed(2)
           );
+
+          console.log(111, itemPrice, itemPriceWithoutVAT, itemPriceVAT);
 
           return {
             playlistId: playlistDatabaseIds[index],

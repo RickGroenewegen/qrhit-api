@@ -89,6 +89,9 @@ class Data {
         playlists.id,
         playlists.playlistId,
         playlists.name,
+        payment_has_playlist.price,
+        payment_has_playlist.priceWithoutVAT,
+        payment_has_playlist.priceVAT,
         payment_has_playlist.amount,
         playlists.numberOfTracks,
         payment_has_playlist.type AS orderType
@@ -258,11 +261,6 @@ class Data {
           },
         });
       }
-
-      await this.prisma.$executeRaw`
-      INSERT INTO   user_has_playlists (userId, playlistId)
-      VALUES        (${userDatabaseId}, ${playlistDatabaseId})
-      ON DUPLICATE KEY UPDATE userId = userId;`;
 
       playlistDatabaseIds.push(playlistDatabaseId);
     }

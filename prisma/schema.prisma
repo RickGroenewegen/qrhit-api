@@ -86,15 +86,14 @@ model Payment {
 }
 
 model User {
-  id              Int               @id @default(autoincrement())
-  userId          String            @unique
-  email           String            @unique
-  displayName     String
-  hash            String
-  payments        Payment[] // One-to-many relation to payments
-  createdAt       DateTime          @default(now())
-  updatedAt       DateTime          @updatedAt
-  UserHasPlaylist UserHasPlaylist[]
+  id          Int       @id @default(autoincrement())
+  userId      String    @unique
+  email       String    @unique
+  displayName String
+  hash        String
+  payments    Payment[] // One-to-many relation to payments
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
   @@index([hash])
   @@map("users")
@@ -123,24 +122,11 @@ model Playlist {
   price          Float                @default(0)
   numberOfTracks Int                  @default(0)
   resetCache     Boolean              @default(false)
-  users          UserHasPlaylist[]
   tracks         PlaylistHasTrack[]
   Payment        PaymentHasPlaylist[]
 
   @@index([playlistId])
   @@map("playlists")
-}
-
-// This is the join table for the many-to-many relationship
-model UserHasPlaylist {
-  playlist   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
-  playlistId Int
-  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  userId     Int
-  hash       String
-
-  @@id([playlistId, userId]) // Composite primary key
-  @@map("user_has_playlists")
 }
 
 model Track {
@@ -172,18 +158,22 @@ model PlaylistHasTrack {
 }
 
 model PaymentHasPlaylist {
-  id               Int      @id @default(autoincrement())
-  payment          Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  paymentId        Int
-  playlist         Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
-  playlistId       Int
-  amount           Int
-  numberOfTracks   Int
-  orderTypeId      Int
-  type             String
-  filename         String?
-  filenameDigital  String?
-  printerPageCount Int      @default(0)
+  id              Int      @id @default(autoincrement())
+  payment         Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentId       Int
+  playlist        Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  playlistId      Int
+  amount          Int
+  numberOfTracks  Int
+  orderTypeId     Int
+  type            String
+  filename        String?
+  filenameDigital String?
+  price           Float
+  priceWithoutVAT Float
+  priceVAT        Float
+
+  printerPageCount Int @default(0)
 
   orderType OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
 

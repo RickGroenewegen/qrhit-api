@@ -183,18 +183,18 @@
 					<tr class="item">
 						<td><%= playlist.name %></td>
 						<td style="text-align:right;"><%= playlist.amount %>x</td>
-						<td style="text-align:right;"><%= euroFormatter.format(payment.productPriceWithoutTax / playlist.amount) %></td>
+						<td style="text-align:right;"><%= euroFormatter.format(playlist.price / playlist.amount) %></td>
 						<td style="text-align:right;"><%= payment.taxRate %>%</td>
-						<td style="text-align:right;"><%= euroFormatter.format(payment.productVATPrice) %></td>
-						<td style="text-align:right;"><%= euroFormatter.format(payment.price) %></td>
+						<td style="text-align:right;"><%= euroFormatter.format(playlist.priceVAT) %></td>
+						<td style="text-align:right;"><%= euroFormatter.format(playlist.price) %></td>
 					</tr>
 				<% }); %>
 
-				<% if (orderType == 'digital') { %>
+				<% if (orderType != 'digital') { %>
 					<tr class="item">
 						<td><%= translations.shippingAndHandling %></td>
 						<td style="text-align:right;">1</td>
-						<td style="text-align:right;"><%= euroFormatter.format(payment.shippingPriceWithoutTax) %></td>
+						<td style="text-align:right;"><%= euroFormatter.format(payment.shipping) %></td>
 						<td style="text-align:right;"><%= payment.taxRateShipping %>%</td>
 						<td style="text-align:right;"><%= euroFormatter.format(payment.shippingVATPrice) %></td>
 						<td style="text-align:right;"><%= euroFormatter.format(payment.shipping) %></td>
