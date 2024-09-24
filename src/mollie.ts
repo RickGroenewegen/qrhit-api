@@ -88,6 +88,9 @@ class Mollie {
         description = `${params.cart.items.length}x ${translations!.playlists}`;
       }
 
+      console.log(111, calculateResult);
+      console.log(222, calculateResult.data.total.toString());
+
       const payment = await paymentClient.payments.create({
         amount: {
           currency: 'EUR',
@@ -155,9 +158,15 @@ class Mollie {
             item.type === 'digital'
           );
 
-          const itemPrice = parseFloat((item.amount * parseFloat(calculateResult.data.price)).toFixed(2));
-          const itemPriceWithoutVAT = parseFloat((itemPrice / (1 + calculateResult.data.taxRate / 100)).toFixed(2));
-          const itemPriceVAT = parseFloat((itemPrice - itemPriceWithoutVAT).toFixed(2));
+          const itemPrice = parseFloat(
+            (item.amount * parseFloat(calculateResult.data.price)).toFixed(2)
+          );
+          const itemPriceWithoutVAT = parseFloat(
+            (itemPrice / (1 + calculateResult.data.taxRate / 100)).toFixed(2)
+          );
+          const itemPriceVAT = parseFloat(
+            (itemPrice - itemPriceWithoutVAT).toFixed(2)
+          );
 
           return {
             playlistId: playlistDatabaseIds[index],
