@@ -347,9 +347,24 @@ class Server {
         reply.status(404).send({ error: 'Payment not found' });
         return;
       }
+      const playlists = await this.data.getPlaylistsByPaymentId(
+        payment.paymentId
+      );
+
+      let orderType = 'digital';
+      for (const playlist of playlists) {
+        if (playlist.orderType !== 'digital') {
+          orderType = 'physical';
+          break;
+        }
+      }
+
+      console.log(111, playlists);
 
       await reply.view(`invoice.ejs`, {
         payment,
+        playlists,
+        orderType,
         ...this.formatters,
         translations: this.translation.getTranslationsByPrefix(
           payment.locale,

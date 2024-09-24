@@ -21,7 +21,7 @@
 	"mail.email" : "Email",
 	"mail.cards" : "cards",
 	"mail.trackingMailSubject": "Your QRSong! order {{ orderId }} has been shipped!",
-    "mail.orderShipped": "Great news! Your QRSong order has been shipped.",
+    "mail.orderShipped": "Great news! Your QRSong order has been shipped. We have attached the invoice to this mail.",
     "mail.trackOrder": "Track Your Order",
     "mail.thankYou": "We hope you have lots of musical fun! If you have any further questions do not hesitate to mail us: info@qrsong.io",
 	"mail.invoiceAddress" : "Invoice address",

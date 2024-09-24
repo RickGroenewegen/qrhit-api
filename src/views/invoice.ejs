@@ -179,10 +179,10 @@
 					<td style="text-align:right;"><%= translations.totalInclVAT %></td>
 				</tr>
 
-				<% payment.playlists.forEach(function(playlist) { %>
+				<% playlists.forEach(function(playlist) { %>
 					<tr class="item">
-						<td><%= playlist.numberOfTracks %>x <%= playlist.playlistName %></td>
-						<td style="text-align:right;"><%= playlist.amount %></td>
+						<td><%= playlist.name %></td>
+						<td style="text-align:right;"><%= playlist.amount %>x</td>
 						<td style="text-align:right;"><%= euroFormatter.format(payment.productPriceWithoutTax / playlist.amount) %></td>
 						<td style="text-align:right;"><%= payment.taxRate %>%</td>
 						<td style="text-align:right;"><%= euroFormatter.format(payment.productVATPrice) %></td>
@@ -190,7 +190,7 @@
 					</tr>
 				<% }); %>
 
-				<% if (!payment.orderType.digital) { %>
+				<% if (orderType == 'digital') { %>
 					<tr class="item">
 						<td><%= translations.shippingAndHandling %></td>
 						<td style="text-align:right;">1</td>

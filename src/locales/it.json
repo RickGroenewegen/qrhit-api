@@ -1,9 +1,9 @@
 {
   "mail.mailSubject": "Abbiamo ricevuto l'ordine {{ orderId }}!",
   "mail.greatNews": "Ottime notizie! Le tue carte QR per la tua playlist sono state elaborate e ti saranno spedite una volta pronte. Riceverai un link di tracciamento una volta spedite.",
-  "mail.weHopeYouHaveFun": "Abbiamo allegato la versione digitale gratuita della tua playlist a questa e-mail così puoi iniziare a suonare mentre aspetti l'arrivo delle tue carte reali. Speriamo che ti diverta molto con la musica! Se hai ulteriori domande non esitare a contattarci tramite il modulo di contatto sul nostro sito web.",
+  "mail.weHopeYouHaveFun": "Stiamo attualmente generando la versione digitale gratuita. Dovresti riceverla via e-mail tra pochi minuti. Speriamo che ti diverta molto con la musica! Se hai ulteriori domande, non esitare a contattarci tramite il modulo di contatto sul nostro sito web.",
   "mail.greatNewsDigital": "Ottime notizie! Le tue carte QR per la tua playlist sono state elaborate. Le troverai allegate a questa email.",
-  "mail.weHopeYouHaveFunDigital": "Speriamo che ti diverta molto con la musica! Se hai altre domande, non esitare a contattarci tramite il modulo sul nostro sito.",
+  "mail.weHopeYouHaveFunDigital": "Speriamo che ti diverta molto con la musica! Se hai altre domande, non esitare a scriverci tramite il modulo di contatto sul nostro sito web.",
   "mail.greetings": "Cordiali saluti",
   "mail.orderInformation": "Informazioni sull'ordine",
   "mail.orderNumber": "Numero d'ordine",
@@ -17,7 +17,7 @@
   "mail.email": "Email",
   "mail.cards": "schede",
   "mail.trackingMailSubject": "Il tuo ordine QRSong! {{ orderId }} è stato spedito!",
-  "mail.orderShipped": "Ottime notizie! Il tuo ordine QRSong è stato spedito.",
+  "mail.orderShipped": "Ottime notizie! Il tuo ordine QRSong è stato spedito. Abbiamo allegato la fattura a questa mail.",
   "mail.trackOrder": "Traccia il tuo ordine",
   "mail.thankYou": "Speriamo che ti diverta molto con la musica! Se hai altre domande, non esitare a scriverci: info@qrsong.io",
   "mail.invoiceAddress": "Indirizzo di fatturazione",
@@ -315,5 +315,10 @@
   "countries.YE": "Yemen",
   "countries.ZM": "Zambia",
   "countries.ZW": "Zimbabwe",
-  "invoice.bancontact": "Bancontact"
+  "invoice.bancontact": "Bancontact",
+  "mail.mailSubjectDigital": "Ecco il tuo PDF per '{{ playlist }}'!",
+  "mail.greatNewsMainDigital": "Abbiamo ricevuto il tuo ordine!",
+  "mail.weHopeYouHaveFunMainDigital": "La versione digitale delle tue playlist è in fase di creazione e dovresti riceverla via e-mail tra pochi minuti. Speriamo che ti diverta molto con la musica! Se hai ulteriori domande, non esitare a contattarci tramite il modulo di contatto sul nostro sito web.",
+  "mail.playlists": "Playlist",
+  "payment.playlists": "playlist con carte QR"
 }

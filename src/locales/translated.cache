@@ -87,14 +87,6 @@
     "it",
     "pt"
   ],
-  "mail.orderShipped": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt"
-  ],
   "mail.trackOrder": [
     "nl",
     "de",
@@ -2512,6 +2504,70 @@
     "pt"
   ],
   "invoice.bancontact": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "mail.mailSubjectDigital": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "mail.weHopeYouHaveFun": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "mail.greatNewsMainDigital": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "mail.weHopeYouHaveFunMainDigital": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "mail.weHopeYouHaveFunDigital": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "mail.playlists": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "mail.orderShipped": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "payment.playlists": [
     "nl",
     "de",
     "fr",

@@ -2,7 +2,7 @@
   "mail.mailSubject": "Nous avons reçu la commande {{ orderId }} !",
   "mail.greatNews": "Bonne nouvelle ! Vos cartes QR pour votre playlist ont été traitées et vous seront envoyées une fois prêtes. Vous recevrez un lien de suivi une fois qu'elles seront expédiées.",
   "mail.belowAreDetails": "Ci-dessous, vos détails de commande. Les cartes seront envoyées à l'adresse suivante",
-  "mail.weHopeYouHaveFun": "Nous avons joint la version numérique gratuite de votre playlist à cet e-mail afin que vous puissiez commencer à jouer en attendant l'arrivée de vos vraies cartes. Nous espérons que vous vous amuserez beaucoup avec la musique ! Si vous avez d'autres questions, n'hésitez pas à nous envoyer un e-mail via le formulaire de contact sur notre site web.",
+  "mail.weHopeYouHaveFun": "Nous générons actuellement la version numérique gratuite. Vous devriez la recevoir par e-mail dans quelques minutes. Nous espérons que vous vous amuserez beaucoup avec la musique ! Si vous avez d'autres questions, n'hésitez pas à nous contacter via le formulaire de contact sur notre site web.",
   "mail.greetings": "Cordialement",
   "mail.orderInformation": "Informations de commande",
   "mail.orderNumber": "Numéro de commande",
@@ -15,7 +15,7 @@
   "mail.country": "Pays",
   "mail.email": "E-mail",
   "mail.trackingMailSubject": "Votre commande QRSong! {{ orderId }} a été expédiée !",
-  "mail.orderShipped": "Bonne nouvelle ! Votre commande QRSong a été expédiée.",
+  "mail.orderShipped": "Bonne nouvelle ! Votre commande QRSong a été expédiée. Nous avons joint la facture à ce mail.",
   "mail.trackOrder": "Suivez votre commande",
   "mail.thankYou": "Nous espérons que vous vous amuserez beaucoup avec la musique ! Si vous avez d'autres questions, n'hésitez pas à nous envoyer un mail : info@qrsong.io",
   "invoice.invoiceNumber": "Numéro de facture",
@@ -51,7 +51,7 @@
   "countdown.tapTheCamera": "Appuyez sur l'icône de la caméra pour scanner",
   "countdown.allRightsReserved": "Tous droits réservés",
   "mail.greatNewsDigital": "Bonne nouvelle ! Vos cartes QR pour votre playlist ont été traitées. Vous les trouverez en pièce jointe de cet e-mail.",
-  "mail.weHopeYouHaveFunDigital": "Nous espérons que vous vous amuserez beaucoup avec la musique ! Si vous avez d'autres questions, n'hésitez pas à nous envoyer un mail via le formulaire de contact sur notre site web.",
+  "mail.weHopeYouHaveFunDigital": "Nous espérons que vous vous amuserez beaucoup avec la musique ! Si vous avez d'autres questions, n'hésitez pas à nous envoyer un mail via le formulaire de contact sur notre site.",
   "payment.digital": "PDF contenant",
   "countdown.invalidLink": "QR code non reconnu",
   "invoice.description": "Description",
@@ -320,5 +320,10 @@
   "mail.yourInformation": "Vos informations",
   "mail.shippingAddress": "Adresse de livraison",
   "mail.orderData": "Données de commande",
-  "invoice.bancontact": "Bancontact"
+  "invoice.bancontact": "Bancontact",
+  "mail.mailSubjectDigital": "Voici votre PDF pour '{{ playlist }}' !",
+  "mail.greatNewsMainDigital": "Nous avons reçu votre commande !",
+  "mail.weHopeYouHaveFunMainDigital": "La ou les versions numériques de votre ou vos playlists sont en cours de création et vous devriez les recevoir par e-mail dans quelques minutes. Nous espérons que vous aurez beaucoup de plaisir musical ! Si vous avez d'autres questions, n'hésitez pas à nous envoyer un e-mail via le formulaire de contact sur notre site web.",
+  "mail.playlists": "Liste(s) de lecture",
+  "payment.playlists": "listes de lecture avec cartes QR"
 }

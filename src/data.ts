@@ -89,6 +89,7 @@ class Data {
         playlists.id,
         playlists.playlistId,
         playlists.name,
+        payment_has_playlist.amount,
         playlists.numberOfTracks,
         payment_has_playlist.type AS orderType
       FROM 

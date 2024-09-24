@@ -1,7 +1,7 @@
 {
   "mail.mailSubject": "¡Hemos recibido el pedido {{ orderId }}!",
   "mail.greatNews": "¡Buenas noticias! Tus tarjetas QR para tu lista de reproducción han sido procesadas y se enviarán una vez que estén listas. Recibirás un enlace de seguimiento una vez que se hayan enviado.",
-  "mail.weHopeYouHaveFun": "Hemos adjuntado la versión digital gratuita de tu lista de reproducción a este correo electrónico para que puedas empezar a jugar mientras esperas la llegada de tus cartas reales. ¡Esperamos que te diviertas mucho con la música! Si tienes más preguntas, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
+  "mail.weHopeYouHaveFun": "Actualmente estamos generando la versión digital gratuita. Deberías recibirla por correo electrónico en unos minutos. ¡Esperamos que te diviertas mucho con la música! Si tienes alguna pregunta, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
   "mail.greatNewsDigital": "¡Buenas noticias! Tus tarjetas QR para tu lista de reproducción han sido procesadas. Las encontrarás adjuntas a este correo electrónico.",
   "mail.weHopeYouHaveFunDigital": "¡Esperamos que te diviertas mucho con la música! Si tienes más preguntas, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
   "mail.greetings": "Saludos cordiales",
@@ -16,7 +16,7 @@
   "mail.country": "País",
   "mail.email": "Correo",
   "mail.trackingMailSubject": "¡Tu pedido QRSong! {{ orderId }} ha sido enviado!",
-  "mail.orderShipped": "¡Buenas noticias! Tu pedido de QRSong ha sido enviado.",
+  "mail.orderShipped": "¡Buenas noticias! Su pedido de QRSong ha sido enviado. Hemos adjuntado la factura a este correo.",
   "mail.trackOrder": "Rastrea tu pedido",
   "mail.thankYou": "¡Esperamos que te diviertas mucho con la música! Si tienes más preguntas, no dudes en escribirnos: info@qrsong.io",
   "invoice.invoiceNumber": "Número de factura",
@@ -319,5 +319,10 @@
   "mail.yourInformation": "Tu información",
   "mail.shippingAddress": "Dirección de envío",
   "mail.orderData": "Datos de pedido",
-  "invoice.bancontact": "Bancontact"
+  "invoice.bancontact": "Bancontact",
+  "mail.mailSubjectDigital": "Aquí está tu PDF para '{{ playlist }}'!",
+  "mail.greatNewsMainDigital": "¡Hemos recibido su pedido!",
+  "mail.weHopeYouHaveFunMainDigital": "La(s) versión(es) digital(es) de tu(s) lista(s) de reproducción se están creando en este momento y deberías recibirlas por correo electrónico en unos minutos. ¡Esperamos que te diviertas mucho con la música! Si tienes alguna pregunta, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
+  "mail.playlists": "Lista(s) de reproducción",
+  "payment.playlists": "listas de reproducción con tarjetas QR"
 }

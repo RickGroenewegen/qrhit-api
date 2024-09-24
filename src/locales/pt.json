@@ -1,9 +1,9 @@
 {
   "mail.mailSubject": "Recebemos o pedido {{ orderId }}!",
   "mail.greatNews": "Ótimas notícias! Seus cartões QR para sua playlist foram processados e serão enviados para você assim que estiverem prontos. Você receberá um link de rastreamento assim que forem enviados.",
-  "mail.weHopeYouHaveFun": "Anexamos a versão digital gratuita da sua playlist a este e-mail para que você possa começar a tocar enquanto aguarda a chegada dos seus cartões reais. Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos contatar através do formulário de contato em nosso site.",
+  "mail.weHopeYouHaveFun": "Estamos atualmente a gerar a versão digital gratuita. Deverá recebê-la por e-mail dentro de alguns minutos. Esperamos que se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contacto no nosso site.",
   "mail.greatNewsDigital": "Ótimas notícias! Seus cartões QR para sua playlist foram processados. Você os encontrará anexados a este e-mail.",
-  "mail.weHopeYouHaveFunDigital": "Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos contatar pelo formulário no nosso site.",
+  "mail.weHopeYouHaveFunDigital": "Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contato em nosso site.",
   "mail.greetings": "Atenciosamente",
   "mail.orderInformation": "Informações do pedido",
   "mail.orderNumber": "Número do pedido",
@@ -17,7 +17,7 @@
   "mail.email": "Email",
   "mail.cards": "cartões",
   "mail.trackingMailSubject": "Seu pedido QRSong! {{ orderId }} foi enviado!",
-  "mail.orderShipped": "Ótima notícia! Seu pedido QRSong foi enviado.",
+  "mail.orderShipped": "Boas notícias! Seu pedido QRSong foi enviado. Anexamos a fatura a este e-mail.",
   "mail.trackOrder": "Acompanhe seu pedido",
   "mail.thankYou": "Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail: info@qrsong.io",
   "mail.invoiceAddress": "Endereço de faturamento",
@@ -315,5 +315,10 @@
   "countries.YE": "Iémen",
   "countries.ZM": "Zâmbia",
   "countries.ZW": "Zimbábue",
-  "invoice.bancontact": "Bancontact"
+  "invoice.bancontact": "Bancontact",
+  "mail.mailSubjectDigital": "Aqui está o seu PDF para '{{ playlist }}'!",
+  "mail.greatNewsMainDigital": "Recebemos seu pedido!",
+  "mail.weHopeYouHaveFunMainDigital": "A(s) versão(ões) digital(is) da sua(s) playlist(s) está(ão) sendo criada(s) enquanto falamos e você deve recebê-la(s) por e-mail em alguns minutos. Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contato em nosso site.",
+  "mail.playlists": "Lista(s) de reprodução",
+  "payment.playlists": "listas de reprodução com cartões QR"
 }
