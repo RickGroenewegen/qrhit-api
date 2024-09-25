@@ -33,6 +33,7 @@ class Mollie {
     };
 
     return (localeMap[locale] || 'en_US') as Locale; // Default to en_US if no match is found
+    return { payments, totalItems };
   }
 
   public async getPaymentList(search: OrderSearch, page: number, itemsPerPage: number): Promise<{ payments: Payment[], totalItems: number }> {
