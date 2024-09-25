@@ -62,7 +62,9 @@ class Mollie {
       },
       skip: (search.page - 1) * search.itemsPerPage,
       take: search.itemsPerPage,
-      select: {
+      orderBy: {
+        createdAt: 'desc',
+      },
         id: true,
         paymentId: true,
         status: true,
