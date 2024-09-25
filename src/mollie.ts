@@ -38,7 +38,7 @@ class Mollie {
   public async getPaymentList(search: OrderSearch): Promise<Payment[]> {
     console.log(111, search);
 
-    const whereClause = search.status && search.status.length > 0 ? { status: { in: search.status } } : {};
+    const whereClause = Array.isArray(search.status) && search.status.length > 0 ? { status: { in: search.status } } : {};
     return await this.prisma.payment.findMany({
       where: whereClause,
     });
