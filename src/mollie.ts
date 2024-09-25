@@ -35,12 +35,17 @@ class Mollie {
     return (localeMap[locale] || 'en_US') as Locale; // Default to en_US if no match is found
   }
 
-  public async getPaymentList(search: OrderSearch): Promise<Payment[]> {
-    console.log(111, search);
-
+  public async getPaymentList(search: OrderSearch, page: number, itemsPerPage: number): Promise<{ payments: Payment[], totalItems: number }> {
     const whereClause = Array.isArray(search.status) && search.status.length > 0 ? { status: { in: search.status } } : {};
-    return await this.prisma.payment.findMany({
+
+    const totalItems = await this.prisma.payment.count({
+      where: whereClause
+    });
+
+    const payments = await this.prisma.payment.findMany({
       where: whereClause,
+      skip: (page - 1) * itemsPerPage,
+      take: itemsPerPage,
     });
   }
 

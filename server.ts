@@ -33,9 +33,14 @@ app.post('/orders', async (req, res) => {
   const page = req.body.page || 1;
   const itemsPerPage = req.body.itemsPerPage || 10;
 
-  const payments = await mollie.getPaymentList(search, page, itemsPerPage);
+  const { payments, totalItems } = await mollie.getPaymentList(search, page, itemsPerPage);
 
-  res.json(payments);
+  res.json({
+    data: payments,
+    totalItems,
+    currentPage: page,
+    itemsPerPage
+  });
 });
 
 app.listen(3000, () => {
