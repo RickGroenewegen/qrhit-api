@@ -34,6 +34,13 @@ class Mollie {
     return (localeMap[locale] || 'en_US') as Locale; // Default to en_US if no match is found
   }
 
+  public async getPaymentList(status?: string): Promise<Payment[]> {
+    const whereClause = status ? { status } : {};
+    return await this.prisma.payment.findMany({
+      where: whereClause,
+    });
+  }
+
   private mollieClient = createMollieClient({
     apiKey: process.env['MOLLIE_API_KEY']!,
   });
