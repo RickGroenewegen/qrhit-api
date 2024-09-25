@@ -87,26 +87,17 @@ class Generator {
         physicalPlaylists.push({ playlist, filename });
       }
 
-      // Find the PaymentHasPlaylist entry to get the unique id
-      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findUnique({
+      // Update the paymentHasPlaylist with the filenames
+      await this.prisma.paymentHasPlaylist.update({
         where: {
           paymentId: payment.id,
           playlistId: playlist.id,
         },
+        data: {
+          filename,
+          filenameDigital,
+        },
       });
-
-      if (paymentHasPlaylist) {
-        // Update the paymentHasPlaylist with the filenames
-        await this.prisma.paymentHasPlaylist.update({
-          where: {
-            id: paymentHasPlaylist.id,
-          },
-          data: {
-            filename,
-            filenameDigital,
-          },
-        });
-      }
 
       // Call sendEmail to notify the user
       await this.mail.sendEmail(
