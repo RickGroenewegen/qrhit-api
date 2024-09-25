@@ -107,8 +107,8 @@ class Server {
       reply.send({
         data: payments,
         totalItems,
-        currentPage: page,
-        itemsPerPage
+        currentPage: search.page,
+        itemsPerPage: search.itemsPerPage,
       });
     });
   }
