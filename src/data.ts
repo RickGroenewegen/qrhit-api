@@ -89,6 +89,7 @@ class Data {
         playlists.id,
         playlists.playlistId,
         playlists.name,
+        payment_has_playlist.id AS paymentHasPlaylistId,
         payment_has_playlist.price,
         payment_has_playlist.priceWithoutVAT,
         payment_has_playlist.priceVAT,

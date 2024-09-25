@@ -76,9 +76,14 @@ class Mollie {
         address: true,
         city: true,
         zipcode: true,
+        printApiShipped: true,
         countrycode: true,
         PaymentHasPlaylist: {
           select: {
+            amount: true,
+            filename: true,
+            filenameDigital: true,
+            type: true,
             playlist: {
               select: {
                 name: true,

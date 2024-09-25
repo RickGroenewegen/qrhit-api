@@ -46,16 +46,6 @@ class Order {
     return pdfPath;
   }
 
-  public async getInvoice(invoiceId: string): Promise<string> {
-    const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${invoiceId}.pdf`;
-
-    if (!fs.existsSync(pdfPath)) {
-      throw new Error('Invoice not found');
-    }
-
-    return pdfPath;
-  }
-
   public async updateFeaturedPlaylists(): Promise<void> {
     try {
       // Get all featured playlists
