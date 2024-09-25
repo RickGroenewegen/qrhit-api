@@ -43,7 +43,7 @@ class Mollie {
         ? { status: { in: search.status } }
         : {};
 
-    const textSearchClause = search.textSearch
+    const textSearchClause = search.textSearch && search.textSearch.trim() !== ''
       ? { lastname: { contains: search.textSearch, mode: 'insensitive' } }
       : {};
 
