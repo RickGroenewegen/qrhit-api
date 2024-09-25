@@ -128,8 +128,6 @@ class Generator {
 
     let orderName = `${payment.fullname} (${payment.countrycode})`;
 
-    console.log(111, payment);
-
     let totalNumberOfTracks = 0;
     // Loop through the playlists and update the total number of tracks
     for (const playlist of playlists) {
