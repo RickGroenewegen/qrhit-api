@@ -179,5 +179,6 @@ model PaymentHasPlaylist {
 
   orderType OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
 
+  @@unique([paymentId, playlistId])
   @@map("payment_has_playlist")
 }
