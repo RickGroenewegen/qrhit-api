@@ -42,13 +42,13 @@ class Mollie {
       where: whereClause
     });
 
-    return { payments, totalItems };
-
     const payments = await this.prisma.payment.findMany({
       where: whereClause,
       skip: (page - 1) * itemsPerPage,
       take: itemsPerPage,
     });
+
+    return { payments, totalItems };
   }
 
   private mollieClient = createMollieClient({
