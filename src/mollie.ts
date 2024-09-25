@@ -59,11 +59,13 @@ class Mollie {
         createdAt: true,
         updatedAt: true,
         profit: true,
-        user: {
-          select: {
-            email: true,
-          },
-        },
+        email: true,
+        fullname: true,
+        locale: true,
+        address: true,
+        city: true,
+        zipcode: true,
+        countrycode: true,
         PaymentHasPlaylist: {
           select: {
             playlist: {
