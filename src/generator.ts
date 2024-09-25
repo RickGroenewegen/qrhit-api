@@ -126,6 +126,32 @@ class Generator {
       },
     });
 
+    let orderName = `${payment.fullname} (${payment.countrycode})`;
+
+    console.log(111, payment);
+
+    let totalNumberOfTracks = 0;
+    // Loop through the playlists and update the total number of tracks
+    for (const playlist of playlists) {
+      totalNumberOfTracks += playlist.numberOfTracks;
+    }
+
+    // Pushover
+    this.pushover.sendMessage(
+      {
+        title: `KA-CHING! € ${payment.profit
+          .toString()
+          .replace('.', ',')} verdiend!`,
+        message: `${orderName} heeft ${
+          payment.PaymentHasPlaylist.length
+        } set(s) met in totaal ${totalNumberOfTracks} kaarten besteld voor totaal € ${payment.totalPrice
+          .toString()
+          .replace('.', ',')}.`,
+        sound: 'incoming',
+      },
+      ip
+    );
+
     this.logger.log(
       color.green.bold(
         `Order processed successfully for payment: ${white.bold(paymentId)}`
@@ -189,29 +215,6 @@ class Generator {
         // At least one of the files doesn't exist
       }
     }
-
-    let cardType = 'fysieke';
-    let orderName = `${payment.fullname} (${payment.countrycode})`;
-    if (playlist.orderType === 'digital') {
-      cardType = 'digitale';
-      orderName = `${payment.fullname}`;
-    }
-
-    // Pushover
-    this.pushover.sendMessage(
-      {
-        title: `KA-CHING! € ${payment.profit
-          .toString()
-          .replace('.', ',')} verdiend!`,
-        message: `${orderName} heeft ${
-          payment.numberOfTracks
-        } ${cardType} kaarten besteld voor € ${payment.totalPrice
-          .toString()
-          .replace('.', ',')}. Playlist: ${playlist.name}`,
-        sound: 'incoming',
-      },
-      ip
-    );
 
     this.logger.log(
       blue.bold(
