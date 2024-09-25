@@ -43,15 +43,12 @@ class Mollie {
         ? { status: { in: search.status } }
         : {};
 
-    const textSearchClause = search.textSearch && search.textSearch.trim() !== ''
-      ? { lastname: { contains: search.textSearch, mode: 'insensitive' } }
-      : {};
+    const textSearchClause =
+      search.textSearch && search.textSearch.trim() !== ''
+        ? { fullname: { contains: search.textSearch, mode: 'insensitive' } }
+        : {};
 
     const totalItems = await this.prisma.payment.count({
-      where: {
-        ...whereClause,
-        ...textSearchClause,
-      },
       where: {
         ...whereClause,
         ...textSearchClause,
