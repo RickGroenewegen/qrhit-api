@@ -30,7 +30,10 @@ app.post('/orders', async (req, res) => {
 
   const mollie = new Mollie();
   const search = req.body as OrderSearch;
-  const payments = await mollie.getPaymentList(search);
+  const page = req.body.page || 1;
+  const itemsPerPage = req.body.itemsPerPage || 10;
+
+  const payments = await mollie.getPaymentList(search, page, itemsPerPage);
 
   res.json(payments);
 });

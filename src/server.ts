@@ -97,7 +97,10 @@ class Server {
       }
 
       const search = request.body as OrderSearch;
-      const payments = await this.mollie.getPaymentList(search);
+      const page = request.body.page || 1;
+      const itemsPerPage = request.body.itemsPerPage || 10;
+
+      const payments = await this.mollie.getPaymentList(search, page, itemsPerPage);
 
       reply.send(payments);
     });
