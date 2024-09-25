@@ -56,7 +56,10 @@ class Mollie {
     });
 
     const payments = await this.prisma.payment.findMany({
-      where: whereClause,
+      where: {
+        ...whereClause,
+        ...textSearchClause,
+      },
       skip: (search.page - 1) * search.itemsPerPage,
       take: search.itemsPerPage,
       select: {
