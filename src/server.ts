@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify/types/instance';
 import { generateToken, verifyToken } from './auth';
 import Fastify from 'fastify';
+import { OrderSearch } from './interfaces/OrderSearch';
 import Logger from './logger';
 import { color } from 'console-log-colors';
 import cluster from 'cluster';
@@ -95,7 +96,7 @@ class Server {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
-      const search = request.body as { status?: string };
+      const search = request.body as OrderSearch;
       const payments = await this.mollie.getPaymentList(search.status);
 
       reply.send(payments);

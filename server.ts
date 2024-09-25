@@ -2,6 +2,7 @@ import express from 'express';
 import bodyParser from 'body-parser';
 import { generateToken, verifyToken } from './auth';
 import Mollie from './mollie';
+import { OrderSearch } from './interfaces/OrderSearch';
 
 const app = express();
 app.use(bodyParser.json());
@@ -28,7 +29,7 @@ app.post('/orders', async (req, res) => {
   }
 
   const mollie = new Mollie();
-  const search = req.body;
+  const search = req.body as OrderSearch;
   const payments = await mollie.getPaymentList(search.status);
 
   res.json(payments);
