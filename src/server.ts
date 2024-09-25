@@ -120,7 +120,7 @@ class Server {
         const decoded = verifyToken(token || '');
 
         if (!decoded) {
-          // return reply.status(401).send({ error: 'Unauthorized' });
+          return reply.status(401).send({ error: 'Unauthorized' });
         }
 
         const { invoiceId } = request.params;
@@ -137,7 +137,10 @@ class Server {
           }
 
           // Serve the file for download
-          reply.header('Content-Disposition', 'attachment; filename=' + path.basename(invoicePath));
+          reply.header(
+            'Content-Disposition',
+            'attachment; filename=' + path.basename(invoicePath)
+          );
           reply.type('application/pdf');
 
           // Read the file into memory and send it as a buffer
