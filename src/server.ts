@@ -96,11 +96,13 @@ class Server {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
-      const search = request.body as OrderSearch;
-      const page = request.body.page || 1;
-      const itemsPerPage = request.body.itemsPerPage || 10;
+      const search = {
+        ...request.body,
+        page: request.body.page || 1,
+        itemsPerPage: request.body.itemsPerPage || 10,
+      };
 
-      const { payments, totalItems } = await this.mollie.getPaymentList({ ...search, page, itemsPerPage });
+      const { payments, totalItems } = await this.mollie.getPaymentList(search);
 
       reply.send({
         data: payments,
