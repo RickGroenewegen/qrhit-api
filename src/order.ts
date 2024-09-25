@@ -293,8 +293,6 @@ class Order {
     const authToken = await this.getAuthToken();
     const pdfURL = `${process.env.API_URI}/assets/pdf/example_digital.pdf`;
 
-    console.log(111, pdfURL);
-
     const body = {
       email: 'west14@gmail.com',
       items: [

@@ -83,8 +83,11 @@ class Mollie {
         }
       }
 
-      description = `${params.cart.items[0].type} - ${params.cart.items[0].playlistName}`;
-      if (params.cart.length > 1) {
+      description = `${translations!.playlist} : ${
+        params.cart.items[0].playlistName
+      }`;
+
+      if (params.cart.items.length > 1) {
         description = `${params.cart.items.length}x ${translations!.playlists}`;
       }
 
@@ -200,8 +203,6 @@ class Mollie {
       delete params.extraOrderData.price;
       delete params.extraOrderData.agreeTerms;
       delete params.extraOrderData.agreeNoRefund;
-
-      console.log(111, params.extraOrderData);
 
       const insertResult = await this.prisma.payment.create({
         data: {
