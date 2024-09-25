@@ -31,7 +31,25 @@ interface QueryParameters {
 declare module 'fastify' {
   export interface FastifyInstance {
     authenticate: any;
-  }
+    });
+
+    this.fastify.get('/download_invoice/:invoiceId', async (request: any, reply: any) => {
+      const token = request.headers.authorization?.split(' ')[1];
+      const decoded = verifyToken(token || '');
+
+      if (!decoded) {
+        return reply.status(401).send({ error: 'Unauthorized' });
+      }
+
+      const { invoiceId } = request.params;
+      const order = Order.getInstance();
+
+      try {
+        const invoicePath = await order.getInvoice(invoiceId);
+        reply.download(invoicePath);
+      } catch (error) {
+        reply.status(500).send({ error: 'Failed to download invoice' });
+      }
 }
 
 class Server {
