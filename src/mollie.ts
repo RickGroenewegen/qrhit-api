@@ -58,6 +58,7 @@ class Mollie {
         totalPrice: true,
         createdAt: true,
         updatedAt: true,
+        profit: true,
         user: {
           select: {
             email: true,
