@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify/types/instance';
+import { generateToken, verifyToken } from './auth';
 import Fastify from 'fastify';
 import Logger from './logger';
 import { color } from 'console-log-colors';
@@ -29,6 +30,35 @@ interface QueryParameters {
 declare module 'fastify' {
   export interface FastifyInstance {
     authenticate: any;
+  }
+
+  private async addAuthRoutes() {
+    this.fastify.post('/validate', async (request, reply) => {
+      const { username, password } = request.body as { username: string; password: string };
+      const validUsername = process.env.ENV_ADMIN_USERNAME;
+      const validPassword = process.env.ENV_ADMIN_PASSWORD;
+
+      if (username === validUsername && password === validPassword) {
+        const token = generateToken(username);
+        reply.send({ token });
+      } else {
+        reply.status(401).send({ error: 'Invalid credentials' });
+      }
+    });
+
+    this.fastify.post('/orders', async (request, reply) => {
+      const token = request.headers.authorization?.split(' ')[1];
+      const decoded = verifyToken(token || '');
+
+      if (!decoded) {
+        return reply.status(401).send({ error: 'Unauthorized' });
+      }
+
+      const { status } = request.body as { status?: string };
+      const payments = await this.mollie.getPaymentList(status);
+
+      reply.send(payments);
+    });
   }
 }
 
@@ -75,6 +105,7 @@ class Server {
     await this.createDirs();
     await this.registerPlugins();
     await this.addRoutes();
+    await this.addAuthRoutes();
     await this.startCluster();
   }
 
