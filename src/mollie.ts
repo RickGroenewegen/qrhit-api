@@ -10,6 +10,7 @@ import Translation from './translation';
 import Utils from './utils';
 import Generator from './generator';
 import { CartItem } from './interfaces/CartItem';
+import { OrderSearch } from './interfaces/OrderSearch';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
