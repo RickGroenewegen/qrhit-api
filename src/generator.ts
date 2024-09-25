@@ -90,10 +90,8 @@ class Generator {
       // Find the PaymentHasPlaylist entry to get the unique id
       const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findUnique({
         where: {
-          paymentId_playlistId: {
-            paymentId: payment.id,
-            playlistId: playlist.id,
-          },
+          paymentId: payment.id,
+          playlistId: playlist.id,
         },
       });
 
