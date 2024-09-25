@@ -95,8 +95,8 @@ class Server {
         return reply.status(401).send({ error: 'Unauthorized' });
       }
 
-      const { status } = request.body as { status?: string };
-      const payments = await this.mollie.getPaymentList(status);
+      const search = request.body as { status?: string };
+      const payments = await this.mollie.getPaymentList(search.status);
 
       reply.send(payments);
     });

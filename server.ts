@@ -28,8 +28,8 @@ app.post('/orders', async (req, res) => {
   }
 
   const mollie = new Mollie();
-  const { status } = req.body;
-  const payments = await mollie.getPaymentList(status);
+  const search = req.body;
+  const payments = await mollie.getPaymentList(search.status);
 
   res.json(payments);
 });
