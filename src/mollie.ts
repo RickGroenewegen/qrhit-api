@@ -67,7 +67,7 @@ class Mollie {
           select: {
             playlist: {
               select: {
-                playlistId: true,
+                name: true,
               },
             },
           },
