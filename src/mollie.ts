@@ -45,7 +45,7 @@ class Mollie {
 
     const textSearchClause =
       search.textSearch && search.textSearch.trim() !== ''
-        ? { fullname: { contains: search.textSearch, mode: 'insensitive' } }
+        ? { fullname: { contains: search.textSearch } }
         : {};
 
     const totalItems = await this.prisma.payment.count({
