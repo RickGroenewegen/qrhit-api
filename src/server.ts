@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify/types/instance';
 import { generateToken, verifyToken } from './auth';
 import Fastify from 'fastify';
+import replyFrom from '@fastify/reply-from';
 import { OrderSearch } from './interfaces/OrderSearch';
 import Logger from './logger';
 import { color } from 'console-log-colors';
@@ -127,7 +128,7 @@ class Server {
 
         try {
           const invoicePath = await orderInstance.getInvoice(invoiceId);
-          reply.download(invoicePath);
+          reply.from(invoicePath);
         } catch (error) {
           console.log(error);
           reply.status(500).send({ error: 'Failed to download invoice' });
@@ -220,6 +221,7 @@ class Server {
     await this.fastify.register(require('@fastify/multipart'));
     await this.fastify.register(require('@fastify/formbody'));
     await this.fastify.register(ipPlugin);
+    await this.fastify.register(replyFrom);
     await this.fastify.register(require('@fastify/cors'), {
       origin: '*',
       methods: 'GET, POST, OPTIONS, PUT, PATCH, DELETE',
