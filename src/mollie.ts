@@ -33,7 +33,6 @@ class Mollie {
     };
 
     return (localeMap[locale] || 'en_US') as Locale; // Default to en_US if no match is found
-    return { payments, totalItems };
   }
 
   public async getPaymentList(search: OrderSearch, page: number, itemsPerPage: number): Promise<{ payments: Payment[], totalItems: number }> {
@@ -42,6 +41,8 @@ class Mollie {
     const totalItems = await this.prisma.payment.count({
       where: whereClause
     });
+
+    return { payments, totalItems };
 
     const payments = await this.prisma.payment.findMany({
       where: whereClause,
