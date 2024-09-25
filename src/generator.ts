@@ -90,8 +90,10 @@ class Generator {
       // Update the paymentHasPlaylist with the filenames
       await this.prisma.paymentHasPlaylist.update({
         where: {
-          paymentId: payment.id,
-          playlistId: playlist.id,
+          paymentId_playlistId: {
+            paymentId: payment.id,
+            playlistId: playlist.id,
+          },
         },
         data: {
           filename,
