@@ -42,10 +42,10 @@ declare module 'fastify' {
       }
 
       const { invoiceId } = request.params;
-      const order = Order.getInstance();
+      const orderInstance = this.order;
 
       try {
-        const invoicePath = await order.getInvoice(invoiceId);
+        const invoicePath = await orderInstance.getInvoice(invoiceId);
         reply.download(invoicePath);
       } catch (error) {
         reply.status(500).send({ error: 'Failed to download invoice' });
@@ -89,7 +89,7 @@ class Server {
     return Server.instance;
   }
 
-  private async addAuthRoutes() {
+  private addAuthRoutes = async () => {
     this.fastify.post('/validate', async (request: any, reply: any) => {
       const { username, password } = request.body as {
         username: string;
@@ -131,7 +131,7 @@ class Server {
     });
   }
 
-  public async init() {
+  public init = async () => {
     this.isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
     await this.setVersion();
     await this.createDirs();
