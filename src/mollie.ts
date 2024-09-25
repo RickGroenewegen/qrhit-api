@@ -35,7 +35,7 @@ class Mollie {
     return (localeMap[locale] || 'en_US') as Locale; // Default to en_US if no match is found
   }
 
-  public async getPaymentList(search: OrderSearch, page: number, itemsPerPage: number): Promise<{ payments: Payment[], totalItems: number }> {
+  public async getPaymentList(search: OrderSearch & { page: number, itemsPerPage: number }): Promise<{ payments: Payment[], totalItems: number }> {
     const whereClause = Array.isArray(search.status) && search.status.length > 0 ? { status: { in: search.status } } : {};
 
     const totalItems = await this.prisma.payment.count({
@@ -44,8 +44,8 @@ class Mollie {
 
     const payments = await this.prisma.payment.findMany({
       where: whereClause,
-      skip: (page - 1) * itemsPerPage,
-      take: itemsPerPage,
+      skip: (search.page - 1) * search.itemsPerPage,
+      take: search.itemsPerPage,
       select: {
         id: true,
         paymentId: true,

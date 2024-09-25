@@ -100,7 +100,7 @@ class Server {
       const page = request.body.page || 1;
       const itemsPerPage = request.body.itemsPerPage || 10;
 
-      const { payments, totalItems } = await this.mollie.getPaymentList(search, page, itemsPerPage);
+      const { payments, totalItems } = await this.mollie.getPaymentList({ ...search, page, itemsPerPage });
 
       reply.send({
         data: payments,
