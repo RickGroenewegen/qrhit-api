@@ -31,7 +31,6 @@ declare module 'fastify' {
   export interface FastifyInstance {
     authenticate: any;
   }
-
 }
 
 class Server {
@@ -73,7 +72,10 @@ class Server {
 
   private async addAuthRoutes() {
     this.fastify.post('/validate', async (request: any, reply: any) => {
-      const { username, password } = request.body as { username: string; password: string };
+      const { username, password } = request.body as {
+        username: string;
+        password: string;
+      };
       const validUsername = process.env.ENV_ADMIN_USERNAME;
       const validPassword = process.env.ENV_ADMIN_PASSWORD;
 
