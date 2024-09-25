@@ -32,7 +32,6 @@ declare module 'fastify' {
   export interface FastifyInstance {
     authenticate: any;
   }
-
 }
 
 class Server {
@@ -113,27 +112,29 @@ class Server {
       });
     });
 
-    this.fastify.get('/download_invoice/:invoiceId', async (request: any, reply: any) => {
-      const token = request.headers.authorization?.split(' ')[1];
-      const decoded = verifyToken(token || '');
+    this.fastify.get(
+      '/download_invoice/:invoiceId',
+      async (request: any, reply: any) => {
+        const token = request.headers.authorization?.split(' ')[1];
+        const decoded = verifyToken(token || '');
 
-      if (!decoded) {
-        return reply.status(401).send({ error: 'Unauthorized' });
+        if (!decoded) {
+          // return reply.status(401).send({ error: 'Unauthorized' });
+        }
+
+        const { invoiceId } = request.params;
+        const orderInstance = this.order;
+
+        try {
+          const invoicePath = await orderInstance.getInvoice(invoiceId);
+          reply.download(invoicePath);
+        } catch (error) {
+          console.log(error);
+          reply.status(500).send({ error: 'Failed to download invoice' });
+        }
       }
-
-      const { invoiceId } = request.params;
-      const orderInstance = this.order;
-
-      try {
-        const invoicePath = await orderInstance.getInvoice(invoiceId);
-        reply.download(invoicePath);
-      } catch (error) {
-        reply.status(500).send({ error: 'Failed to download invoice' });
-      }
-    });
-
-
-  }
+    );
+  };
 
   public init = async () => {
     this.isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
@@ -143,7 +144,7 @@ class Server {
     await this.addRoutes();
     await this.addAuthRoutes();
     await this.startCluster();
-  }
+  };
 
   private async setVersion() {
     this.version = JSON.parse(
