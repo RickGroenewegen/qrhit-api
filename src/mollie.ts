@@ -46,6 +46,19 @@ class Mollie {
       where: whereClause,
       skip: (page - 1) * itemsPerPage,
       take: itemsPerPage,
+      select: {
+        id: true,
+        paymentId: true,
+        status: true,
+        amount: true,
+        createdAt: true,
+        updatedAt: true,
+        user: {
+          select: {
+            email: true,
+          },
+        },
+      },
     });
 
     return { payments, totalItems };
