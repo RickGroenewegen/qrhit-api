@@ -62,24 +62,7 @@ class Server {
       logger: false,
       bodyLimit: 1024 * 1024 * 10, // 10 MB, adjust as needed
     });
-    this.fastify.get('/download_invoice/:invoiceId', async (request: any, reply: any) => {
-      const token = request.headers.authorization?.split(' ')[1];
-      const decoded = verifyToken(token || '');
-
-      if (!decoded) {
-        return reply.status(401).send({ error: 'Unauthorized' });
-      }
-
-      const { invoiceId } = request.params;
-      const orderInstance = this.order;
-
-      try {
-        const invoicePath = await orderInstance.getInvoice(invoiceId);
-        reply.download(invoicePath);
-      } catch (error) {
-        reply.status(500).send({ error: 'Failed to download invoice' });
-      }
-    });
+  }
 
   // Static method to get the instance of the class
   public static getInstance(): Server {
@@ -129,6 +112,27 @@ class Server {
         itemsPerPage: search.itemsPerPage,
       });
     });
+
+    this.fastify.get('/download_invoice/:invoiceId', async (request: any, reply: any) => {
+      const token = request.headers.authorization?.split(' ')[1];
+      const decoded = verifyToken(token || '');
+
+      if (!decoded) {
+        return reply.status(401).send({ error: 'Unauthorized' });
+      }
+
+      const { invoiceId } = request.params;
+      const orderInstance = this.order;
+
+      try {
+        const invoicePath = await orderInstance.getInvoice(invoiceId);
+        reply.download(invoicePath);
+      } catch (error) {
+        reply.status(500).send({ error: 'Failed to download invoice' });
+      }
+    });
+
+
   }
 
   public init = async () => {
