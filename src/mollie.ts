@@ -34,8 +34,8 @@ class Mollie {
     return (localeMap[locale] || 'en_US') as Locale; // Default to en_US if no match is found
   }
 
-  public async getPaymentList(status?: string): Promise<Payment[]> {
-    const whereClause = status ? { status } : {};
+  public async getPaymentList(search: OrderSearch): Promise<Payment[]> {
+    const whereClause = search.status ? { status: search.status } : {};
     return await this.prisma.payment.findMany({
       where: whereClause,
     });

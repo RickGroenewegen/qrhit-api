@@ -97,7 +97,7 @@ class Server {
       }
 
       const search = request.body as OrderSearch;
-      const payments = await this.mollie.getPaymentList(search.status);
+      const payments = await this.mollie.getPaymentList(search);
 
       reply.send(payments);
     });

@@ -30,7 +30,7 @@ app.post('/orders', async (req, res) => {
 
   const mollie = new Mollie();
   const search = req.body as OrderSearch;
-  const payments = await mollie.getPaymentList(search.status);
+  const payments = await mollie.getPaymentList(search);
 
   res.json(payments);
 });
