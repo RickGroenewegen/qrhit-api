@@ -61,7 +61,7 @@ class Server {
     this.fastify = Fastify({
       logger: false,
       bodyLimit: 1024 * 1024 * 10, // 10 MB, adjust as needed
-    });
+  };
   }
 
   // Static method to get the instance of the class
