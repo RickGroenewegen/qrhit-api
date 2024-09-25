@@ -128,7 +128,25 @@ class Server {
 
         try {
           const invoicePath = await orderInstance.getInvoice(invoiceId);
-          reply.from(invoicePath);
+          // Ensure the file exists and is readable
+          try {
+            await fs.promises.access(invoicePath, fs.constants.R_OK);
+          } catch (error) {
+            reply.code(404).send('File not found.');
+            return;
+          }
+
+          // Serve the file for download
+          reply.header('Content-Disposition', 'attachment; filename=' + path.basename(invoicePath));
+          reply.type('application/pdf');
+
+          // Read the file into memory and send it as a buffer
+          try {
+            const fileContent = await fs.promises.readFile(invoicePath);
+            reply.send(fileContent);
+          } catch (error) {
+            reply.code(500).send('Error reading file.');
+          }
         } catch (error) {
           console.log(error);
           reply.status(500).send({ error: 'Failed to download invoice' });
