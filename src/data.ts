@@ -355,6 +355,7 @@ class Data {
 
   public async getLink(trackId: number): Promise<ApiResult> {
     let link = '';
+    this.analytics.increaseCounter('songs', 'played');
     const cachedLink = await this.cache.get('link' + trackId);
     if (cachedLink) {
       return {
@@ -379,8 +380,6 @@ class Data {
         };
       }
     }
-
-    this.analytics.increaseCounter('songs', 'played');
 
     return {
       success: false,
