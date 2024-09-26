@@ -310,9 +310,9 @@ class Order {
           productId: 'kaarten_dubbel_10x10_9st',
           pageCount: 2, //payment.printerPageCount,
           quantity: 1,
-          files: {
-            content: pdfURL,
-          },
+          // files: {
+          //   content: pdfURL,
+          // },
         },
       ],
       shipping: {
@@ -338,6 +338,10 @@ class Order {
         },
         data: body,
       });
+
+      const url = responseOrder.data.items[0].files.content.uploadUrl;
+      console.log(225, url);
+
       console.log(333, JSON.stringify(responseOrder.data, null, 2));
     } catch (e) {
       if (axios.isAxiosError(e) && e.response) {
