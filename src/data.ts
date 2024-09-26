@@ -469,6 +469,7 @@ class Data {
         const spotifyTrack = tracks.find((t: any) => t.id === track.trackId);
         if (spotifyTrack && spotifyTrack.releaseDate) {
           year = parseInt(spotifyTrack.releaseDate.split('-')[0]);
+          source = 'spotify';
         }
       }
       if (year > 0) {
