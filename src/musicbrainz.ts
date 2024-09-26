@@ -50,13 +50,11 @@ class MusicBrainz {
     if (result) {
       source = 'database';
       year = result.year;
-      console.log('db', year);
     } else {
       const result = await this.getReleaseDateFromAPI(isrc);
       if (result.year > 0) {
         year = result.year;
         source = result.source;
-        console.log('api', year);
       } else {
         const aiResult = await this.openai.ask(
           `${artist} - ${title} - ISRC: ${isrc}`
