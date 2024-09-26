@@ -56,6 +56,12 @@ class AnalyticsClient {
       throw error; // Re-throwing so that specific call sites can also handle if needed
     }
   }
+
+  public async getEventCount(category: string, action: string): Promise<number> {
+    const cacheKey = `analytics:${category}:${action}`;
+    const value = await this.executeCommand('get', cacheKey);
+    return value ? parseInt(value, 10) : 0;
+  }
 }
 
 export default AnalyticsClient;
