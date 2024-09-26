@@ -12,6 +12,11 @@ class AnalyticsClient {
       throw new Error('REDIS_URL environment variable is not defined');
     }
     this.client = new Redis(redisUrl);
+    this.client.select(1).then(() => {
+      this.logger.log('Connected to Redis database index 1');
+    }).catch((error) => {
+      this.logger.log(`Error selecting Redis database index 1: ${error.message}`);
+    });
   }
 
   public static getInstance(): AnalyticsClient {
