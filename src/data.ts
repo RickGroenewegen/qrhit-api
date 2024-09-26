@@ -373,13 +373,14 @@ class Data {
       }
 
       if (link.length > 0) {
-        this.analytics.increaseCounter('songs', 'played');
         return {
           success: true,
           data: { link: linkQuery[0].spotifyLink },
         };
       }
     }
+
+    this.analytics.increaseCounter('songs', 'played');
 
     return {
       success: false,
