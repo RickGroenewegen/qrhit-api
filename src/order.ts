@@ -310,9 +310,6 @@ class Order {
           productId: 'kaarten_dubbel_10x10_9st',
           pageCount: 2, //payment.printerPageCount,
           quantity: 1,
-          // files: {
-          //   content: pdfURL,
-          // },
         },
       ],
       shipping: {
@@ -343,9 +340,23 @@ class Order {
       console.log(225, url);
 
       console.log(333, JSON.stringify(responseOrder.data, null, 2));
+
+      // Post the PDF file to the received URL
+      const pdfFile = await axios.get(pdfURL, { responseType: 'arraybuffer' });
+      const pdfBuffer = Buffer.from(pdfFile.data, 'binary');
+
+      await axios.put(url, pdfBuffer, {
+        headers: {
+          'Content-Type': 'application/pdf',
+        },
+      });
+
+      console.log('PDF file uploaded successfully');
     } catch (e) {
       if (axios.isAxiosError(e) && e.response) {
         console.log(999, JSON.stringify(e.response.data, null, 2));
+      } else {
+        console.error('Error:', e);
       }
     }
   }
