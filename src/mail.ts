@@ -211,7 +211,7 @@ class Mail {
       if (
         filename &&
         filename.length > 0 &&
-        orderType != 'digital' &&
+        orderType == 'digital' &&
         this.utils.isTrustedEmail(payment.email!)
       ) {
         const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
@@ -231,6 +231,7 @@ class Mail {
         const fileBase64Digital = this.wrapBase64(
           fileBufferDigital.toString('base64')
         );
+
         attachments.push({
           contentType: 'application/pdf',
           filename: filenameDigital,
