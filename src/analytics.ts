@@ -27,7 +27,7 @@ class AnalyticsClient {
     value: string
   ): Promise<void> {
     const cacheKey = `analytics:${category}:${action}`;
-    await this.executeCommand('set', 1, cacheKey, value);
+    await this.executeCommand('set', cacheKey, value);
   }
 
   private async executeCommand(command: string, ...args: any[]): Promise<any> {
@@ -35,7 +35,7 @@ class AnalyticsClient {
       // @ts-ignore: Dynamic command execution
       return await this.client[command](...args);
     } catch (error) {
-      this.logger.log('Redis command error:' + (error as Error).message);
+      this.logger.log(`Redis command error: ${command} ${args.join(' ')} - ${(error as Error).message}`);
       throw error; // Re-throwing so that specific call sites can also handle if needed
     }
   }
