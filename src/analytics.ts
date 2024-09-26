@@ -1,7 +1,7 @@
 import Analytics from '@google-analytics/data';
 import Logger from './logger';
 
-class Analytics {
+class AnalyticsClient {
   private logger = new Logger();
   private analyticsClient: Analytics;
 
@@ -26,4 +26,4 @@ class Analytics {
   }
 }
 
-export default Analytics;
+export default AnalyticsClient;
