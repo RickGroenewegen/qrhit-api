@@ -74,6 +74,19 @@ class AnalyticsClient {
 
     return result;
   }
+
+  public async getAnalyticsCount(): Promise<number> {
+    let cursor = '0';
+    let totalCount = 0;
+
+    do {
+      const [nextCursor, keys] = await this.executeCommand('scan', cursor, 'MATCH', 'analytics:*', 'COUNT', '100');
+      cursor = nextCursor;
+      totalCount += keys.length;
+    } while (cursor !== '0');
+
+    return totalCount;
+  }
 }
 
 export default AnalyticsClient;
