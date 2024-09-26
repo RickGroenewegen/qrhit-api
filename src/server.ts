@@ -102,28 +102,37 @@ class Server {
       }
     });
 
-    this.fastify.post('/orders', { preHandler: verifyTokenMiddleware }, async (request: any, reply: any) => {
-      const search = {
-        ...request.body,
-        page: request.body.page || 1,
-        itemsPerPage: request.body.itemsPerPage || 10,
-      };
+    this.fastify.post(
+      '/orders',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply: any) => {
+        const search = {
+          ...request.body,
+          page: request.body.page || 1,
+          itemsPerPage: request.body.itemsPerPage || 10,
+        };
 
-      const { payments, totalItems } = await this.mollie.getPaymentList(search);
+        const { payments, totalItems } = await this.mollie.getPaymentList(
+          search
+        );
 
-      reply.send({
-        data: payments,
-        totalItems,
-        currentPage: search.page,
-        itemsPerPage: search.itemsPerPage,
-      });
-    });
+        reply.send({
+          data: payments,
+          totalItems,
+          currentPage: search.page,
+          itemsPerPage: search.itemsPerPage,
+        });
+      }
+    );
 
-    this.fastify.get('/test', { preHandler: verifyTokenMiddleware }, async (request: any, reply: any) => {
-      this.analytics.increaseCounter('testCategory', 'testAction');
-      const analytics = await this.analytics.getAllCounters();
-      reply.send({ success: true, data: analytics });
-    });
+    this.fastify.get(
+      '/analytics',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply: any) => {
+        const analytics = await this.analytics.getAllCounters();
+        reply.send({ success: true, data: analytics });
+      }
+    );
 
     this.fastify.get(
       '/download_invoice/:invoiceId',

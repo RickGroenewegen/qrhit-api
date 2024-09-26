@@ -15,6 +15,7 @@ import Cache from './cache';
 import Translation from './translation';
 import Utils from './utils';
 import { CartItem } from './interfaces/CartItem';
+import AnalyticsClient from './analytics';
 
 class Data {
   private prisma = PrismaInstance.getInstance();
@@ -23,6 +24,7 @@ class Data {
   private cache = Cache.getInstance();
   private translate = new Translation();
   private utils = new Utils();
+  private analytics = AnalyticsClient.getInstance();
 
   private euCountryCodes: string[] = [
     'AT', // Austria
@@ -371,6 +373,7 @@ class Data {
       }
 
       if (link.length > 0) {
+        this.analytics.increaseCounter('songs', 'played');
         return {
           success: true,
           data: { link: linkQuery[0].spotifyLink },

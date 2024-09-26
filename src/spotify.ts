@@ -7,11 +7,13 @@ import { Track } from './interfaces/Track';
 import Cache from './cache';
 import Data from './data';
 import Utils from './utils';
+import AnalyticsClient from './analytics';
 
 class Spotify {
   private cache = Cache.getInstance();
   private data = new Data();
   private utils = new Utils();
+  private analytics = AnalyticsClient.getInstance();
 
   // create a refresh token method
   public async refreshAccessToken(refreshToken: string): Promise<ApiResult> {
@@ -195,6 +197,8 @@ class Spotify {
 
         const response = await axios.request(options);
 
+        this.analytics.increaseCounter('spotify', 'playlist', 1);
+
         let image = '';
         if (response.data.images.length > 0) {
           image = response.data.images[0].url;
@@ -248,6 +252,8 @@ class Spotify {
           };
 
           const response = await axios.request(options);
+
+          this.analytics.increaseCounter('spotify', 'tracks', 1);
 
           const tracks: Track[] = response.data.items.map((item: any) => ({
             id: item.track.id,

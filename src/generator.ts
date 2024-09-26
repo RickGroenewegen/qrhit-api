@@ -13,6 +13,7 @@ import Mail from './mail';
 import QR from './qr';
 import PDF from './pdf';
 import Order from './order';
+import AnalyticsClient from './analytics';
 
 class Generator {
   private logger = new Logger();
@@ -25,6 +26,7 @@ class Generator {
   private qr = new QR();
   private pdf = new PDF();
   private order = Order.getInstance();
+  private analytics = AnalyticsClient.getInstance();
 
   public async generate(
     paymentId: string,
@@ -98,6 +100,23 @@ class Generator {
         },
       });
 
+      this.analytics.increaseCounter(
+        'qr',
+        'generated',
+        playlist.numberOfTracks
+      );
+
+      if (playlist.orderType === 'digital') {
+        this.analytics.increaseCounter('purchase', 'digital', 1);
+      } else {
+        this.analytics.increaseCounter('purchase', 'physical', 1);
+        this.analytics.increaseCounter(
+          'purchase',
+          'cards',
+          playlist.numberOfTracks
+        );
+      }
+
       // Call sendEmail to notify the user
       await this.mail.sendEmail(
         'digital',
@@ -144,6 +163,17 @@ class Generator {
     for (const playlist of playlists) {
       totalNumberOfTracks += playlist.numberOfTracks;
     }
+
+    this.analytics.increaseCounter(
+      'finance',
+      'profit',
+      parseInt(payment.profit)
+    );
+    this.analytics.increaseCounter(
+      'finance',
+      'turnover',
+      parseInt(payment.totalPrice)
+    );
 
     // Pushover
     this.pushover.sendMessage(

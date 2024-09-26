@@ -3,10 +3,12 @@ import Logger from './logger';
 import { Playlist } from '@prisma/client';
 import Utils from './utils';
 import ConvertApi from 'convertapi';
+import AnalyticsClient from './analytics';
 
 class PDF {
   private logger = new Logger();
   private convertapi = new ConvertApi(process.env['CONVERT_API_KEY']!);
+  private analytics = AnalyticsClient.getInstance();
 
   public async generatePDF(
     filename: string,
@@ -54,6 +56,9 @@ class PDF {
         },
         'htm'
       );
+
+      this.analytics.increaseCounter('pdf', 'generated', 1);
+
       await result.saveFiles(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
     } finally {
       clearInterval(intervalId); // Clear the interval once the PDF generation is complete
