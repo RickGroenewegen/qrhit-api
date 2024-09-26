@@ -8,37 +8,15 @@
         font-family: Arial, sans-serif;
         margin: 0;
         padding: 0;
-        page-break-after: always;
     }
-    .page {
-        width: 210mm;
-        height: 297mm;
-        padding: 5mm;
-        box-sizing: border-box;
-        display: flex;
-        flex-wrap: wrap;
-        justify-content: space-between; /* Ensures even distribution across the page */
-        align-content: space-around;
-    }
-    .row {
-        display: flex;
-        justify-content: space-between;
-        width: 100%;
-    }
-    .card-container {
+    .card {
         width: 60mm;
-        height: 60mm;
-        margin: 2mm;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        box-sizing: border-box;
-        position: relative;
+        height: 120mm;
+        page-break-after: always;
     }
     .front, .back {
         width: 100%;
-        height: 100%;
+        height: 60mm;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -48,7 +26,6 @@
     .front {
         background-image: url('<%= process.env['API_URI'] %>/public/images/card_background2.png');
         background-size: cover;
-        position: relative;
     }
     .qr {
         width: 60%;
@@ -77,67 +54,29 @@
         bottom: 5mm;
         text-align: center;
         width: 100%;
-        margin-bottom:20px;
         font-style: italic;
         color: #909090;
-        z-index: 3; /* Higher than the green circle */
-    }
-    .url {
-        bottom: 5mm;
+        z-index: 3;
     }
     .url-bottom {
-        bottom: -2mm;
-        
-    }
-    .invisible {
-        visibility: hidden;
+        bottom: 2mm;
     }
 </style>
 </head>
 <body>
-<% for (let i = 0; i < tracks.length; i += 12) { %>
-    <div class="page">
-        <% for (let row = 0; row < 4; row++) { %>
-            <div class="row">
-                <% for (let col = 0; col < 3; col++) { %>
-                    <div class="card-container">
-                        <% let index = i + row * 3 + col; %>                        
-                        <% if (index < tracks.length) { %>
-                            <% const startChars = tracks[index].trackId.substring(0, 4); %>
-                            <div class="front">
-                                <div class="circle"></div>
-                                <img src="<%= process.env['API_URI'] %>/public/qr/<%= startChars %>/<%= tracks[index].trackId %>.png" alt="QR Code" class="qr">
-                                <div class="url"><%= process.env['APP_DOMAIN'] %></div>
-                            </div>
-                        <% } else { %>
-                            <div class="front invisible"></div> <!-- Invisible placeholder -->
-                        <% } %>
-                    </div>
-                <% } %>
-            </div>
-        <% } %>
+<% tracks.forEach((track, index) => { %>
+    <div class="card">
+        <div class="front">
+            <img src="<%= process.env['API_URI'] %>/public/qr/<%= track.trackId.substring(0, 4) %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
+            <div class="url"><%= process.env['APP_DOMAIN'] %></div>
+        </div>
+        <div class="back">
+            <div class="text artist"><%= track.artist %></div>
+            <div class="text year"><%= track.year %></div>
+            <div class="text name"><%= track.name %></div>
+            <div class="url-bottom"><%= process.env['APP_DOMAIN'] %></div>
+        </div>
     </div>
-    <div class="page">
-        <% for (let row = 0; row < 4; row++) { %>
-            <div class="row">
-                <% for (let col = 2; col >= 0; col--) { %>
-                    <div class="card-container">
-                        <% let index = i + row * 3 + col; %>
-                        <% if (index < tracks.length) { %>
-                            <div class="back">
-                                <div class="text artist"><%= tracks[index].artist %></div>
-                                <div class="text year"><%= tracks[index].year %></div>
-                                <div class="text name"><%= tracks[index].name %></div>
-                                <div class="url-bottom"><%= process.env['APP_DOMAIN'] %></div>
-                            </div>
-                        <% } else { %>
-                            <div class="back invisible"></div> <!-- Invisible placeholder -->
-                        <% } %>
-                    </div>
-                <% } %>
-            </div>
-        <% } %>
-    </div>
-<% } %>
+<% }); %>
 </body>
 </html>
