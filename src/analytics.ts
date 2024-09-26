@@ -1,4 +1,4 @@
-import { Analytics } from '@google-analytics/data';
+import Analytics from '@google-analytics/data';
 import Logger from './logger';
 
 class Analytics {
