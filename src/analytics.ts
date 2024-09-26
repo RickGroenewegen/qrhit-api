@@ -1,5 +1,6 @@
 import Logger from './logger';
 import Redis from 'ioredis';
+import { color } from 'console-log-colors';
 
 class AnalyticsClient {
   private static instance: AnalyticsClient;
@@ -12,11 +13,18 @@ class AnalyticsClient {
       throw new Error('REDIS_URL environment variable is not defined');
     }
     this.client = new Redis(redisUrl);
-    this.client.select(1).then(() => {
-      this.logger.log('Connected to Redis database index 1');
-    }).catch((error) => {
-      this.logger.log(`Error selecting Redis database index 1: ${error.message}`);
-    });
+    this.client
+      .select(1)
+      .then(() => {})
+      .catch((error) => {
+        this.logger.log(
+          color.red.bold(
+            `Error selecting Redis database index 1: ${color.white.bold(
+              error.message
+            )}`
+          )
+        );
+      });
   }
 
   public static getInstance(): AnalyticsClient {
@@ -40,7 +48,11 @@ class AnalyticsClient {
       // @ts-ignore: Dynamic command execution
       return await this.client[command](...args);
     } catch (error) {
-      this.logger.log(`Redis command error: ${command} ${args.join(' ')} - ${(error as Error).message}`);
+      this.logger.log(
+        `Redis command error: ${command} ${args.join(' ')} - ${
+          (error as Error).message
+        }`
+      );
       throw error; // Re-throwing so that specific call sites can also handle if needed
     }
   }
