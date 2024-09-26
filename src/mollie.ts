@@ -65,6 +65,7 @@ class Mollie {
       orderBy: {
         createdAt: 'desc',
       },
+      select: {
         id: true,
         paymentId: true,
         status: true,

@@ -5,4 +5,5 @@ export interface CartItem {
   numberOfTracks: number;
   amount: number;
   price: number;
+  image: string;
 }

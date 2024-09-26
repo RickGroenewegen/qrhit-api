@@ -232,11 +232,12 @@ class Data {
 
       if (!playlist) {
         // create the playlist
+
         const playlistCreate = await this.prisma.playlist.create({
           data: {
             playlistId: cartItem.playlistId,
             name: cartItem.playlistName,
-            image: '', // Assuming image is not provided in CartItem
+            image: cartItem.image,
             price: cartItem.price,
             numberOfTracks: cartItem.numberOfTracks,
           },
