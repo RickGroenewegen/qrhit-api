@@ -9,7 +9,7 @@ import { CronJob } from 'cron';
 import { color, blue, white, magenta } from 'console-log-colors';
 import Mail from './mail';
 import puppeteer from 'puppeteer';
-import fs from 'fs';
+import fs from 'fs/promises';
 import Data from './data';
 import crypto from 'crypto';
 import Spotify from './spotify';
@@ -39,7 +39,9 @@ class Order {
   public async getInvoice(invoiceId: string): Promise<string> {
     const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${invoiceId}.pdf`;
 
-    if (!fs.existsSync(pdfPath)) {
+    try {
+      await fs.access(pdfPath);
+    } catch (error) {
       throw new Error('Invoice not found');
     }
 
@@ -452,7 +454,7 @@ class Order {
         );
 
         // read the file into pdf buffer
-        const pdfBuffer = fs.readFileSync(pdfPath);
+        const pdfBuffer = await fs.readFile(pdfPath);
 
         let uploadSuccess = false;
         let uploadResponse = '';
@@ -587,8 +589,11 @@ class Order {
 
     const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${payment.paymentId}.pdf`;
 
-    // Only write if pdf does not exist
-    if (!fs.existsSync(pdfPath)) {
+    try {
+      // Check if the file exists
+      await fs.access(pdfPath);
+    } catch (error) {
+      // If the file doesn't exist, create it
       await page.pdf({ path: pdfPath, format: 'A4' });
     }
     await browser.close();
