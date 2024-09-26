@@ -13,19 +13,27 @@ class AnalyticsClient {
     this.visitor = ua(trackingId);
   }
 
-  public logEvent(eventCategory: string, eventAction: string, eventLabel?: string, eventValue?: number): void {
-    this.visitor.event({
-      ec: eventCategory,
-      ea: eventAction,
-      el: eventLabel,
-      ev: eventValue,
-    }, (err) => {
-      if (err) {
-        this.logger.log(`Failed to log event: ${err}`);
-      } else {
-        this.logger.log(`Event logged: ${eventCategory} - ${eventAction}`);
+  public logEvent(
+    eventCategory: string,
+    eventAction: string,
+    eventLabel?: string,
+    eventValue?: number
+  ): void {
+    this.visitor.event(
+      {
+        ec: eventCategory,
+        ea: eventAction,
+        el: eventLabel,
+        ev: eventValue,
+      },
+      (err) => {
+        if (err) {
+          this.logger.log(`Failed to log event: ${err}`);
+        } else {
+          this.logger.log(`Event logged: ${eventCategory} - ${eventAction}`);
+        }
       }
-    });
+    );
   }
 }
 
