@@ -75,6 +75,17 @@ class Server {
   }
 
   private addAuthRoutes = async () => {
+    // Middleware for token verification
+    const verifyTokenMiddleware = async (request: any, reply: any) => {
+      const token = request.headers.authorization?.split(' ')[1];
+      const decoded = verifyToken(token || '');
+      if (!decoded) {
+        reply.status(401).send({ error: 'Unauthorized' });
+        return false;
+      }
+      return true;
+    };
+
     this.fastify.post('/validate', async (request: any, reply: any) => {
       const { username, password } = request.body as {
         username: string;
@@ -91,14 +102,7 @@ class Server {
       }
     });
 
-    this.fastify.post('/orders', async (request: any, reply: any) => {
-      const token = request.headers.authorization?.split(' ')[1];
-      const decoded = verifyToken(token || '');
-
-      if (!decoded) {
-        return reply.status(401).send({ error: 'Unauthorized' });
-      }
-
+    this.fastify.post('/orders', { preHandler: verifyTokenMiddleware }, async (request: any, reply: any) => {
       const search = {
         ...request.body,
         page: request.body.page || 1,
@@ -113,30 +117,18 @@ class Server {
         currentPage: search.page,
         itemsPerPage: search.itemsPerPage,
       });
+    });
 
-      this.fastify.get('/test', async (request: any, _reply) => {
-        const token = request.headers.authorization?.split(' ')[1];
-        const decoded = verifyToken(token || '');
-
-        if (!decoded) {
-          return reply.status(401).send({ error: 'Unauthorized' });
-        }
-        this.analytics.increaseCounter('testCategory', 'testAction');
-        const analytics = await this.analytics.getAllCounters();
-        return { success: true, data: analytics };
-      });
+    this.fastify.get('/test', { preHandler: verifyTokenMiddleware }, async (request: any, reply: any) => {
+      this.analytics.increaseCounter('testCategory', 'testAction');
+      const analytics = await this.analytics.getAllCounters();
+      reply.send({ success: true, data: analytics });
     });
 
     this.fastify.get(
       '/download_invoice/:invoiceId',
+      { preHandler: verifyTokenMiddleware },
       async (request: any, reply: any) => {
-        const token = request.headers.authorization?.split(' ')[1];
-        const decoded = verifyToken(token || '');
-
-        if (!decoded) {
-          return reply.status(401).send({ error: 'Unauthorized' });
-        }
-
         const { invoiceId } = request.params;
         const orderInstance = this.order;
 
