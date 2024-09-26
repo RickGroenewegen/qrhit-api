@@ -399,7 +399,7 @@ class Order {
       const orderType = await this.getOrderType(playlist.numberOfTracks, false);
       itemsToSend.push({
         productId: orderType.printApiProductId,
-        pageCount: playlist.numberOfTracks * 2, // Front and back of the card. Each one their own page
+        pageCount: 2, // playlist.playlist.numberOfTracks * 2, // Front and back of the card. Each one their own page
         metadata: JSON.stringify({
           filename: playlist.filename,
           id: playlist.playlist.paymentHasPlaylistId,
@@ -422,8 +422,6 @@ class Order {
       },
     };
 
-    console.log(111, body);
-
     try {
       const responseOrder = await axios({
         method: 'post',
@@ -435,8 +433,6 @@ class Order {
         data: body,
       });
       response = responseOrder.data;
-
-      console.log(222, response);
 
       for (var i = 0; i < responseOrder.data.items.length; i++) {
         const item = responseOrder.data.items[i];
@@ -501,6 +497,9 @@ class Order {
         response = e.response.data;
       }
     }
+
+    // Fully output the response with console.log
+    //console.log(999, JSON.stringify(response, null, 2));
 
     return {
       request: body,
