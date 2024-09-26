@@ -113,6 +113,18 @@ class Server {
         currentPage: search.page,
         itemsPerPage: search.itemsPerPage,
       });
+
+      this.fastify.get('/test', async (request: any, _reply) => {
+        const token = request.headers.authorization?.split(' ')[1];
+        const decoded = verifyToken(token || '');
+
+        if (!decoded) {
+          return reply.status(401).send({ error: 'Unauthorized' });
+        }
+        this.analytics.increaseCounter('testCategory', 'testAction');
+        const analytics = await this.analytics.getAllCounters();
+        return { success: true, data: analytics };
+      });
     });
 
     this.fastify.get(
