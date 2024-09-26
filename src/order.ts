@@ -390,8 +390,6 @@ class Order {
     const authToken = await this.getAuthToken();
     let response: string = '';
 
-    console.log(111, playlists);
-
     let items = [];
 
     for (var i = 0; i < playlists.length; i++) {
@@ -404,15 +402,6 @@ class Order {
         quantity: playlist.playlist.amount,
       });
     }
-
-    // const items = playlists.map((playlist) => ({
-    //   productId: playlist.orderTypeId,
-    //   pageCount: 2,
-    //   quantity: playlist.amount,
-    //   files: {
-    //     content: `${process.env.API_URI}/public/pdf/${playlist.filename}`,
-    //   },
-    // }));
 
     const body = {
       email: payment.email,
@@ -428,8 +417,6 @@ class Order {
       },
     };
 
-    console.log(222, body);
-
     try {
       const responseOrder = await axios({
         method: 'post',
@@ -442,16 +429,30 @@ class Order {
       });
       response = responseOrder.data;
 
-      console.log(333, response.items);
+      for (var i = 0; i < responseOrder.data.items.length; i++) {
+        const item = responseOrder.data.items[i];
+        const metadata = JSON.parse(item.metadata);
+        const filename = metadata.filename;
+        const uploadURL = item.files.content.uploadUrl;
+        const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+
+        // read the file into pdf buffer
+        const pdfBuffer = fs.readFileSync(pdfPath);
+
+        const uploadResult = await axios.post(uploadURL, pdfBuffer, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/pdf',
+          },
+        });
+      }
     } catch (e) {
       if (axios.isAxiosError(e) && e.response) {
         response = e.response.data;
-      } else {
-        response = { error: 'An unknown error occurred' };
       }
     }
 
-    console.log(999, JSON.stringify(response, null, 2));
+    console.log(999, response);
 
     return {
       request: body,
