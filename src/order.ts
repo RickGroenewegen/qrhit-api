@@ -446,10 +446,12 @@ class Order {
     } catch (e) {
       if (axios.isAxiosError(e) && e.response) {
         response = e.response.data;
+      } else {
+        response = { error: 'An unknown error occurred' };
       }
     }
 
-    console.log(999, response);
+    console.log(999, JSON.stringify(response, null, 2));
 
     return {
       request: body,
