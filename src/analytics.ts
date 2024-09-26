@@ -1,14 +1,12 @@
-import Analytics from '@google-analytics/data';
+import { BetaAnalyticsDataClient } from '@google-analytics/data';
 import Logger from './logger';
 
 class AnalyticsClient {
   private logger = new Logger();
-  private analyticsClient: typeof Analytics;
+  private analyticsClient: BetaAnalyticsDataClient;
 
   constructor() {
-    this.analyticsClient = new Analytics({
-      trackingId: process.env['GOOGLE_ANALYTICS_TRACKING_ID']!,
-    });
+    this.analyticsClient = new BetaAnalyticsDataClient();
   }
 
   public async logEvent(eventCategory: string, eventAction: string, eventLabel?: string, eventValue?: number): Promise<void> {
