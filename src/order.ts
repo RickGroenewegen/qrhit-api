@@ -390,22 +390,25 @@ class Order {
     const authToken = await this.getAuthToken();
     let response: string = '';
 
-    let items = [];
+    let itemsToSend = [];
 
     for (var i = 0; i < playlists.length; i++) {
       const playlist = playlists[i];
       const orderType = await this.getOrderType(playlist.numberOfTracks, false);
-      items.push({
+      itemsToSend.push({
         productId: orderType.printApiProductId,
         pageCount: 2,
-        metadata: JSON.stringify({ filename: playlist.filename }),
+        metadata: JSON.stringify({
+          filename: playlist.filename,
+          id: playlist.playlist.paymentHasPlaylistId,
+        }),
         quantity: playlist.playlist.amount,
       });
     }
 
     const body = {
       email: payment.email,
-      items,
+      items: itemsToSend,
       shipping: {
         address: {
           name: payment.fullname,
@@ -439,10 +442,43 @@ class Order {
         // read the file into pdf buffer
         const pdfBuffer = fs.readFileSync(pdfPath);
 
-        const uploadResult = await axios.post(uploadURL, pdfBuffer, {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            'Content-Type': 'application/pdf',
+        let uploadSuccess = false;
+        let uploadResponse = '';
+        try {
+          const uploadResult = await axios.post(uploadURL, pdfBuffer, {
+            headers: {
+              Authorization: `Bearer ${authToken}`,
+              'Content-Type': 'application/pdf',
+            },
+          });
+
+          this.logger.log(
+            blue.bold(
+              `PDF file uploaded successfully for ${white.bold(filename)}`
+            )
+          );
+
+          uploadSuccess = true;
+          uploadResponse = uploadResult.data;
+        } catch (e) {
+          if (axios.isAxiosError(e) && e.response) {
+            uploadResponse = e.response.data;
+          }
+
+          this.logger.log(
+            color.red.bold(
+              `Error uploading PDF file for ${white.bold(filename)}`
+            )
+          );
+        }
+        // Update the paymentHasPlaylist with the filenames
+        await this.prisma.paymentHasPlaylist.update({
+          where: {
+            id: metadata.id,
+          },
+          data: {
+            printApiUploaded: uploadSuccess,
+            printApiUploadResponse: JSON.stringify(uploadResponse),
           },
         });
       }
@@ -451,8 +487,6 @@ class Order {
         response = e.response.data;
       }
     }
-
-    console.log(999, response);
 
     return {
       request: body,
