@@ -137,7 +137,7 @@ model Track {
   artist      String
   isrc        String?
   year        Int?
-  yearSpotify Int?
+  yearSource  String?
   spotifyLink String?
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt

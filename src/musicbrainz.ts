@@ -3,6 +3,7 @@ import Logger from './logger';
 import axios, { AxiosInstance } from 'axios';
 import * as xml2js from 'xml2js';
 import PrismaInstance from './prisma';
+import { ChatGPT } from './chatgpt';
 
 class MusicBrainz {
   private logger = new Logger();
@@ -11,6 +12,7 @@ class MusicBrainz {
   private readonly maxRetries: number = 5;
   private readonly maxRateLimit: number = 1200;
   private prisma = PrismaInstance.getInstance();
+  private openai = new ChatGPT();
 
   constructor() {
     this.axiosInstance = axios.create({
@@ -32,8 +34,13 @@ class MusicBrainz {
     }
   }
 
-  public async getReleaseDate(isrc: string): Promise<number> {
+  public async getReleaseDate(
+    isrc: string,
+    artist: string,
+    title: string
+  ): Promise<{ year: number; source: string }> {
     let year = 0;
+    let source = '';
     const result = await this.prisma.isrc.findUnique({
       where: {
         isrc: isrc,
@@ -41,15 +48,30 @@ class MusicBrainz {
     });
 
     if (result) {
+      source = 'database';
       year = result.year;
+      console.log('db', year);
     } else {
-      year = await this.getReleaseDateFromAPI(isrc);
+      const result = await this.getReleaseDateFromAPI(isrc);
+      if (result.year > 0) {
+        year = result.year;
+        source = result.source;
+        console.log('api', year);
+      } else {
+        const aiResult = await this.openai.ask(
+          `${artist} - ${title} - ISRC: ${isrc}`
+        );
+        year = aiResult;
+        source = 'ai';
+      }
     }
 
-    return year;
+    return { year, source };
   }
 
-  public async getReleaseDateFromAPI(isrc: string): Promise<number> {
+  public async getReleaseDateFromAPI(
+    isrc: string
+  ): Promise<{ year: number; source: string }> {
     let retryCount = 0;
     while (retryCount < this.maxRetries) {
       await this.rateLimitDelay(); // Ensure that we respect the rate limit
@@ -79,9 +101,9 @@ class MusicBrainz {
         }
 
         if (!earliestDate) {
-          return 0;
+          return { year: 0, source: '' };
         }
-        return parseInt(earliestDate.split('-')[0]); // Assuming the date format is YYYY-MM-DD
+        return { year: parseInt(earliestDate.split('-')[0]), source: 'api' }; // Assuming the date format is YYYY-MM-DD
       } catch (error: any) {
         this.logger.log(
           color.red(
@@ -93,7 +115,7 @@ class MusicBrainz {
         retryCount++;
       }
     }
-    return 0;
+    return { year: 0, source: '' };
   }
 }
 

@@ -25,6 +25,7 @@ import Translation from './translation';
 import Cache from './cache';
 import Generator from './generator';
 import AnalyticsClient from './analytics';
+import { ChatGPT } from './chatgpt';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -56,6 +57,7 @@ class Server {
   private cache = Cache.getInstance();
   private generator = new Generator();
   private analytics = AnalyticsClient.getInstance();
+  private openai = new ChatGPT();
 
   private version: string = '1.0.0';
 
@@ -571,6 +573,11 @@ class Server {
           payment.filenameDigital
         );
         return { success: true };
+      });
+
+      this.fastify.get('/release/:query', async (request: any, _reply) => {
+        const year = await this.openai.ask(request.params.query);
+        return { success: true, year };
       });
 
       this.fastify.get('/mb/:isrc', async (request: any, _reply) => {

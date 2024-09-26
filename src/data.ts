@@ -10,6 +10,8 @@ interface TrackNeedingYearUpdate {
   id: number;
   isrc: string | null;
   trackId: string;
+  name: string;
+  artist: string;
 }
 import Cache from './cache';
 import Translation from './translation';
@@ -451,24 +453,29 @@ class Data {
     const tracksNeedingYearUpdate = await this.prisma.$queryRaw<
       TrackNeedingYearUpdate[]
     >`
-      SELECT id, isrc, trackId
+      SELECT id, isrc, trackId, name, artist
       FROM tracks
       WHERE year IS NULL AND trackId IN (${Prisma.join(providedTrackIds)})
     `;
 
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
-      let releaseDate = await this.musicBrainz.getReleaseDate(track.isrc ?? '');
-      if (!releaseDate) {
+      let { year, source } = await this.musicBrainz.getReleaseDate(
+        track.isrc ?? '',
+        track.artist,
+        track.name
+      );
+      if (!year) {
         const spotifyTrack = tracks.find((t: any) => t.id === track.trackId);
         if (spotifyTrack && spotifyTrack.releaseDate) {
-          releaseDate = parseInt(spotifyTrack.releaseDate.split('-')[0]);
+          year = parseInt(spotifyTrack.releaseDate.split('-')[0]);
         }
       }
-      if (releaseDate > 0) {
+      if (year > 0) {
         await this.prisma.$executeRaw`
           UPDATE tracks
-          SET year = ${releaseDate}
+          SET year        = ${year},
+              yearSource  = ${source}
           WHERE id = ${track.id}
         `;
       } else {
