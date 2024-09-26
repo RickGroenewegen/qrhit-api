@@ -43,6 +43,23 @@ class AnalyticsClient {
     const key = this.getKey(category, action);
     await this.client.set(key, value.toString());
   }
+
+  public async getAllCounters(): Promise<Record<string, Record<string, number>>> {
+    const keys = await this.client.keys('analytics:*');
+    const result: Record<string, Record<string, number>> = {};
+
+    for (const key of keys) {
+      const [, category, action] = key.split(':');
+      const value = await this.client.get(key);
+      
+      if (!result[category]) {
+        result[category] = {};
+      }
+      result[category][action] = parseInt(value || '0', 10);
+    }
+
+    return result;
+  }
 }
 
 export default AnalyticsClient;
