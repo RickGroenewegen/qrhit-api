@@ -1,26 +1,31 @@
-import { BetaAnalyticsDataClient } from '@google-analytics/data';
+import ua from 'universal-analytics';
 import Logger from './logger';
 
 class AnalyticsClient {
   private logger = new Logger();
-  private analyticsClient: BetaAnalyticsDataClient;
+  private visitor: ua.Visitor;
 
   constructor() {
-    this.analyticsClient = new BetaAnalyticsDataClient();
+    const trackingId = process.env.GA_TRACKING_ID;
+    if (!trackingId) {
+      throw new Error('GA_TRACKING_ID environment variable is not set');
+    }
+    this.visitor = ua(trackingId);
   }
 
-  public async logEvent(eventCategory: string, eventAction: string, eventLabel?: string, eventValue?: number): Promise<void> {
-    try {
-      await this.analyticsClient.event({
-        category: eventCategory,
-        action: eventAction,
-        label: eventLabel,
-        value: eventValue,
-      });
-      this.logger.log(`Event logged: ${eventCategory} - ${eventAction}`);
-    } catch (error) {
-      this.logger.log(`Failed to log event: ${error}`);
-    }
+  public logEvent(eventCategory: string, eventAction: string, eventLabel?: string, eventValue?: number): void {
+    this.visitor.event({
+      ec: eventCategory,
+      ea: eventAction,
+      el: eventLabel,
+      ev: eventValue,
+    }, (err) => {
+      if (err) {
+        this.logger.log(`Failed to log event: ${err}`);
+      } else {
+        this.logger.log(`Event logged: ${eventCategory} - ${eventAction}`);
+      }
+    });
   }
 }
 
