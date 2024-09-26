@@ -24,6 +24,7 @@ import Formatters from './formatters';
 import Translation from './translation';
 import Cache from './cache';
 import Generator from './generator';
+import AnalyticsClient from './analytics';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -54,6 +55,7 @@ class Server {
   private translation: Translation = new Translation();
   private cache = Cache.getInstance();
   private generator = new Generator();
+  private analytics = new AnalyticsClient();
 
   private version: string = '1.0.0';
 
@@ -463,6 +465,7 @@ class Server {
     });
 
     this.fastify.get('/test', async (request: any, _reply) => {
+      this.analytics.logEvent('testCategory', 'testAction', 'testLabel', 7);
       return { success: true };
     });
 
