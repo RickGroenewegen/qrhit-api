@@ -42,20 +42,23 @@ class PDF {
     }, incrementInterval);
 
     try {
-      const result = await this.convertapi.convert(
-        'pdf',
-        {
-          File: url,
-          RespectViewport: 'false',
-          PageSize: 'a4',
-          MarginTop: 0,
-          MarginRight: 0,
-          MarginBottom: 0,
-          MarginLeft: 0,
-          CompressPDF: 'true',
-        },
-        'htm'
-      );
+      let options = {
+        File: url,
+        RespectViewport: 'false',
+        PageSize: 'a4',
+        MarginTop: 0,
+        MarginRight: 0,
+        MarginBottom: 0,
+        MarginLeft: 0,
+        CompressPDF: 'true',
+      } as any;
+
+      if (template == 'printer') {
+        options['PageWidth'] = 60;
+        options['PageHeight'] = 60;
+      }
+
+      const result = await this.convertapi.convert('pdf', options, 'htm');
 
       this.analytics.increaseCounter('pdf', 'generated', 1);
 
