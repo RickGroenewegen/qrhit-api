@@ -345,11 +345,14 @@ class Order {
       const pdfFile = await axios.get(pdfURL, { responseType: 'arraybuffer' });
       const pdfBuffer = Buffer.from(pdfFile.data, 'binary');
 
-      await axios.put(url, pdfBuffer, {
+      const uploadResult = await axios.post(url, pdfBuffer, {
         headers: {
+          Authorization: `Bearer ${authToken}`,
           'Content-Type': 'application/pdf',
         },
       });
+
+      console.log(444, JSON.stringify(uploadResult.data, null, 2));
 
       console.log('PDF file uploaded successfully');
     } catch (e) {
@@ -387,14 +390,29 @@ class Order {
     const authToken = await this.getAuthToken();
     let response: string = '';
 
-    const items = playlists.map((playlist) => ({
-      productId: playlist.orderTypeId,
-      pageCount: 2,
-      quantity: 1,
-      files: {
-        content: `${process.env.API_URI}/public/pdf/${playlist.filename}`,
-      },
-    }));
+    console.log(111, playlists);
+
+    let items = [];
+
+    for (var i = 0; i < playlists.length; i++) {
+      const playlist = playlists[i];
+      const orderType = await this.getOrderType(playlist.numberOfTracks, false);
+      items.push({
+        productId: orderType.printApiProductId,
+        pageCount: 2,
+        metadata: JSON.stringify({ filename: playlist.filename }),
+        quantity: playlist.playlist.amount,
+      });
+    }
+
+    // const items = playlists.map((playlist) => ({
+    //   productId: playlist.orderTypeId,
+    //   pageCount: 2,
+    //   quantity: playlist.amount,
+    //   files: {
+    //     content: `${process.env.API_URI}/public/pdf/${playlist.filename}`,
+    //   },
+    // }));
 
     const body = {
       email: payment.email,
@@ -410,6 +428,8 @@ class Order {
       },
     };
 
+    console.log(222, body);
+
     try {
       const responseOrder = await axios({
         method: 'post',
@@ -421,11 +441,15 @@ class Order {
         data: body,
       });
       response = responseOrder.data;
+
+      console.log(333, response.items);
     } catch (e) {
       if (axios.isAxiosError(e) && e.response) {
         response = e.response.data;
       }
     }
+
+    console.log(999, response);
 
     return {
       request: body,
