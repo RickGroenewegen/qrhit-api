@@ -91,6 +91,8 @@ class Mollie {
             amount: true,
             filename: true,
             filenameDigital: true,
+            printApiUploaded: true,
+            printApiUploadResponse: true,
             type: true,
             playlist: {
               select: {

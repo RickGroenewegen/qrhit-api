@@ -175,7 +175,7 @@ model PaymentHasPlaylist {
   priceVAT               Float
   printApiPrice          Float    @default(0)
   printApiUploaded       Boolean  @default(false)
-  printApiUploadResponse String?
+  printApiUploadResponse String?  @db.Text
 
   printerPageCount Int @default(0)
 
