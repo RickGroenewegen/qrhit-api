@@ -9,13 +9,8 @@
         margin: 0;
         padding: 0;
     }
-    .card {
+    .card-front, .card-back {
         width: 60mm;
-        height: 120mm;
-        page-break-after: always;
-    }
-    .front, .back {
-        width: 100%;
         height: 60mm;
         display: flex;
         flex-direction: column;
@@ -23,9 +18,12 @@
         align-items: center;
         position: relative;
     }
-    .front {
+    .card-front {
         background-image: url('<%= process.env['API_URI'] %>/public/images/card_background2.png');
         background-size: cover;
+    }
+    .card-back {
+        background-color: #ffffff; /* or any other color you prefer */
     }
     .qr {
         width: 60%;
@@ -65,17 +63,16 @@
 </head>
 <body>
 <% tracks.forEach((track, index) => { %>
-    <div class="card">
-        <div class="front">
-            <img src="<%= process.env['API_URI'] %>/public/qr/<%= track.trackId.substring(0, 4) %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
-            <div class="url"><%= process.env['APP_DOMAIN'] %></div>
-        </div>
-        <div class="back">
-            <div class="text artist"><%= track.artist %></div>
-            <div class="text year"><%= track.year %></div>
-            <div class="text name"><%= track.name %></div>
-            <div class="url-bottom"><%= process.env['APP_DOMAIN'] %></div>
-        </div>
+    <div class="card-front">
+        <img src="<%= process.env['API_URI'] %>/public/qr/<%= track.trackId.substring(0, 4) %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
+        <div class="url"><%= process.env['APP_DOMAIN'] %></div>
+    </div>
+    <div style="page-break-after: always;"></div>
+    <div class="card-back">
+        <div class="text artist"><%= track.artist %></div>
+        <div class="text year"><%= track.year %></div>
+        <div class="text name"><%= track.name %></div>
+        <div class="url-bottom"><%= process.env['APP_DOMAIN'] %></div>
     </div>
     <div style="page-break-after: always;"></div>
 <% }); %>
