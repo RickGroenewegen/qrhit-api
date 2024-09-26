@@ -55,7 +55,7 @@ class Server {
   private translation: Translation = new Translation();
   private cache = Cache.getInstance();
   private generator = new Generator();
-  private analytics = new AnalyticsClient();
+  private analytics = AnalyticsClient.getInstance();
 
   private version: string = '1.0.0';
 
@@ -465,7 +465,7 @@ class Server {
     });
 
     this.fastify.get('/test', async (request: any, _reply) => {
-      this.analytics.logEvent('testCategory', 'testAction', 'testLabel', 7);
+      this.analytics.increaseCounter('testCategory', 'testAction');
       return { success: true };
     });
 
