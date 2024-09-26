@@ -3,7 +3,7 @@ import Logger from './logger';
 
 class AnalyticsClient {
   private logger = new Logger();
-  private analyticsClient: Analytics;
+  private analyticsClient: typeof Analytics;
 
   constructor() {
     this.analyticsClient = new Analytics({
