@@ -62,6 +62,18 @@ class AnalyticsClient {
     const value = await this.executeCommand('get', cacheKey);
     return value ? parseInt(value, 10) : 0;
   }
+
+  public async getAllAnalytics(): Promise<Record<string, number>> {
+    const keys = await this.executeCommand('keys', 'analytics:*');
+    const result: Record<string, number> = {};
+
+    for (const key of keys) {
+      const value = await this.executeCommand('get', key);
+      result[key] = value ? parseInt(value, 10) : 0;
+    }
+
+    return result;
+  }
 }
 
 export default AnalyticsClient;
