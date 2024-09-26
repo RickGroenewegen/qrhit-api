@@ -75,12 +75,24 @@ class AnalyticsClient {
     return result;
   }
 
-  public async getAnalyticsCount(): Promise<number> {
+  public async getAnalyticsCount(category?: string, action?: string): Promise<number> {
     let cursor = '0';
     let totalCount = 0;
+    let pattern = 'analytics:';
+
+    if (category) {
+      pattern += `${category}`;
+      if (action) {
+        pattern += `:${action}`;
+      } else {
+        pattern += ':*';
+      }
+    } else {
+      pattern += '*';
+    }
 
     do {
-      const [nextCursor, keys] = await this.executeCommand('scan', cursor, 'MATCH', 'analytics:*', 'COUNT', '100');
+      const [nextCursor, keys] = await this.executeCommand('scan', cursor, 'MATCH', pattern, 'COUNT', '100');
       cursor = nextCursor;
       totalCount += keys.length;
     } while (cursor !== '0');
