@@ -420,6 +420,8 @@ class Order {
       },
     };
 
+    console.log(111, body);
+
     try {
       const responseOrder = await axios({
         method: 'post',
@@ -432,12 +434,22 @@ class Order {
       });
       response = responseOrder.data;
 
+      console.log(222, response);
+
       for (var i = 0; i < responseOrder.data.items.length; i++) {
         const item = responseOrder.data.items[i];
         const metadata = JSON.parse(item.metadata);
         const filename = metadata.filename;
         const uploadURL = item.files.content.uploadUrl;
         const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+
+        this.logger.log(
+          blue.bold(
+            `Uploading PDF file ${white.bold(filename)} to URL ${white.bold(
+              uploadURL
+            )}`
+          )
+        );
 
         // read the file into pdf buffer
         const pdfBuffer = fs.readFileSync(pdfPath);
