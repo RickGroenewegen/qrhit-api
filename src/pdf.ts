@@ -87,25 +87,34 @@ class PDF {
         );
       }
 
-      // Merge all temporary PDFs
-      await this.mergePDFs(filename, tempFiles);
-
-      this.analytics.increaseCounter('pdf', 'merged', 1);
-
-      this.logger.log(
-        color.blue.bold(`Merged PDF saved: ${color.white.bold(filename)}`)
-      );
+      if (tempFiles.length === 1) {
+        // If there's only one PDF, rename it instead of merging
+        const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+        fs.renameSync(tempFiles[0], finalPath);
+        this.logger.log(
+          color.blue.bold(`Single PDF renamed: ${color.white.bold(filename)}`)
+        );
+      } else {
+        // Merge all temporary PDFs
+        await this.mergePDFs(filename, tempFiles);
+        this.analytics.increaseCounter('pdf', 'merged', 1);
+        this.logger.log(
+          color.blue.bold(`Merged PDF saved: ${color.white.bold(filename)}`)
+        );
+      }
     } finally {
       // Clean up temporary files
       for (const tempFile of tempFiles) {
-        fs.unlinkSync(tempFile);
-        this.logger.log(
-          color.blue.bold(
-            `Deleted temporary file: ${color.white.bold(
-              path.basename(tempFile)
-            )}`
-          )
-        );
+        if (fs.existsSync(tempFile)) {
+          fs.unlinkSync(tempFile);
+          this.logger.log(
+            color.blue.bold(
+              `Deleted temporary file: ${color.white.bold(
+                path.basename(tempFile)
+              )}`
+            )
+          );
+        }
       }
     }
 
