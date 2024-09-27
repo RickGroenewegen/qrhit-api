@@ -43,9 +43,12 @@ class PDF {
 
     try {
       for (let i = 0; i < totalPages; i += maxPagesPerPDF) {
-        const startIndex = i * itemsPerPage / pagesPerTrack;
-        const endIndex = Math.min((i + maxPagesPerPDF) * itemsPerPage / pagesPerTrack, numberOfTracks);
-        
+        const startIndex = (i * itemsPerPage) / pagesPerTrack;
+        const endIndex = Math.min(
+          ((i + maxPagesPerPDF) * itemsPerPage) / pagesPerTrack,
+          numberOfTracks
+        );
+
         const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}`;
 
         this.logger.log(
@@ -75,15 +78,19 @@ class PDF {
         await result.saveFiles(tempFilePath);
         tempFiles.push(tempFilePath);
 
+        this.analytics.increaseCounter('pdf', 'generated', 1);
+
         this.logger.log(
-          color.blue.bold(`Generated temporary PDF: ${color.white.bold(tempFilename)}`)
+          color.blue.bold(
+            `Generated temporary PDF: ${color.white.bold(tempFilename)}`
+          )
         );
       }
 
       // Merge all temporary PDFs
       await this.mergePDFs(filename, tempFiles);
 
-      this.analytics.increaseCounter('pdf', 'generated', 1);
+      this.analytics.increaseCounter('pdf', 'merged', 1);
 
       this.logger.log(
         color.blue.bold(`Merged PDF saved: ${color.white.bold(filename)}`)
@@ -93,7 +100,11 @@ class PDF {
       for (const tempFile of tempFiles) {
         fs.unlinkSync(tempFile);
         this.logger.log(
-          color.blue.bold(`Deleted temporary file: ${color.white.bold(path.basename(tempFile))}`)
+          color.blue.bold(
+            `Deleted temporary file: ${color.white.bold(
+              path.basename(tempFile)
+            )}`
+          )
         );
       }
     }
