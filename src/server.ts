@@ -426,7 +426,7 @@ class Server {
     });
 
     this.fastify.get(
-      '/qr/pdf/:playlistId/:paymentId/:template',
+      '/qr/pdf/:playlistId/:paymentId/:template/:startIndex/:endIndex',
       async (request: any, reply) => {
         const valid = await this.mollie.canDownloadPDF(
           request.params.playlistId,
@@ -436,10 +436,16 @@ class Server {
           reply.status(403).send({ error: 'Forbidden' });
           return;
         }
+
         const playlist = await this.data.getPlaylist(request.params.playlistId);
-        const tracks = await this.data.getTracks(playlist.id);
+        let tracks = await this.data.getTracks(playlist.id);
         const payment = await this.mollie.getPayment(request.params.paymentId);
         const user = await this.data.getUser(payment.userId);
+
+        // Slice the tracks based on the start and end index which is 0-based
+        const startIndex = parseInt(request.params.startIndex);
+        const endIndex = parseInt(request.params.endIndex);
+        tracks = tracks.slice(startIndex, endIndex + 1);
 
         await reply.view(`pdf_${request.params.template}.ejs`, {
           playlist,

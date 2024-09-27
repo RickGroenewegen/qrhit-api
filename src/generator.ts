@@ -333,16 +333,9 @@ class Generator {
       );
 
       const [generatedFilenameDigital, generatedFilename] = await Promise.all([
-        this.pdf.generatePDF(
-          filenameDigital,
-          playlist,
-          payment,
-          'digital',
-          80,
-          89
-        ),
+        this.pdf.generatePDF(filenameDigital, playlist, payment, 'digital'),
         playlist.orderType != 'digital'
-          ? this.pdf.generatePDF(filename, playlist, payment, 'printer', 90, 99)
+          ? this.pdf.generatePDF(filename, playlist, payment, 'printer')
           : Promise.resolve(''),
       ]);
 
