@@ -10,19 +10,39 @@ class PDF {
   private convertapi = new ConvertApi(process.env['CONVERT_API_KEY']!);
   private analytics = AnalyticsClient.getInstance();
 
+  public async mergePDFs(filename: string, files: string[]) {
+    const result = await this.convertapi.convert(
+      'merge',
+      {
+        Files: files,
+      },
+      'pdf'
+    );
+    await result.saveFiles(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
+  }
+
   public async generatePDF(
     filename: string,
     playlist: Playlist,
     payment: any,
-    template: string,
-    startProgress: number,
-    endProgress: number
+    template: string
   ): Promise<string> {
+    const numberOfTracks = playlist.numberOfTracks;
+    let itemsPerPage = 1;
+    let startIndex = 0;
+    let endIndex = 0;
+
+    if (template == 'digital') {
+      itemsPerPage = 12;
+    }
+
     this.logger.log(
       color.blue.bold('Generating PDF: ') + color.white.bold(template)
     );
 
-    const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}`;
+    let startPage = 1;
+
+    const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}`;
 
     this.logger.log(
       color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)
@@ -31,15 +51,6 @@ class PDF {
     this.logger.log(
       color.blue.bold(`Converting to PDF: ${color.white.bold(filename)}`)
     );
-
-    // Start a timer to increment progress
-    const incrementInterval = (13 * 1000) / (endProgress - startProgress); // 13 seconds divided into the progress range
-    let currentProgress = startProgress;
-    const intervalId = setInterval(() => {
-      if (currentProgress < endProgress) {
-        currentProgress++;
-      }
-    }, incrementInterval);
 
     try {
       let options = {
