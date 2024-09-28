@@ -25,17 +25,17 @@ class RapidAPIQueue {
   }
 
   public async enqueue(request: AxiosRequestConfig): Promise<void> {
-    await this.cache.enqueueRapidAPIRequest(JSON.stringify(request));
+    await this.enqueueRapidAPIRequest(JSON.stringify(request));
   }
 
   public async processQueue(): Promise<void> {
     while (true) {
-      const queueLength = await this.cache.getRapidAPIQueueLength();
+      const queueLength = await this.getRapidAPIQueueLength();
       if (queueLength === 0) {
         break;
       }
 
-      const lastRequestTime = await this.cache.getLastRequestTimestamp();
+      const lastRequestTime = await this.getLastRequestTimestamp();
       const now = Date.now();
       const timeSinceLastRequest = now - lastRequestTime;
 
@@ -43,17 +43,38 @@ class RapidAPIQueue {
         await new Promise(resolve => setTimeout(resolve, 250 - timeSinceLastRequest));
       }
 
-      const request = await this.cache.dequeueRapidAPIRequest();
+      const request = await this.dequeueRapidAPIRequest();
       if (request) {
         try {
           const requestConfig = JSON.parse(request);
           await axios(requestConfig);
-          await this.cache.setLastRequestTimestamp(Date.now());
+          await this.setLastRequestTimestamp(Date.now());
         } catch (error) {
           console.error('Error processing RapidAPI request:', error);
         }
       }
     }
+  }
+
+  private async enqueueRapidAPIRequest(request: string): Promise<void> {
+    await this.cache.executeCommand('rpush', 'rapidapi_queue', request);
+  }
+
+  private async dequeueRapidAPIRequest(): Promise<string | null> {
+    return await this.cache.executeCommand('lpop', 'rapidapi_queue');
+  }
+
+  private async getRapidAPIQueueLength(): Promise<number> {
+    return await this.cache.executeCommand('llen', 'rapidapi_queue');
+  }
+
+  private async setLastRequestTimestamp(timestamp: number): Promise<void> {
+    await this.cache.executeCommand('set', 'last_rapidapi_request', timestamp.toString());
+  }
+
+  private async getLastRequestTimestamp(): Promise<number> {
+    const timestamp = await this.cache.executeCommand('get', 'last_rapidapi_request');
+    return timestamp ? parseInt(timestamp, 10) : 0;
   }
 }
 

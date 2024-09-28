@@ -112,27 +112,6 @@ class Cache {
     await this.client.quit();
   }
 
-  // New methods for RapidAPI queue
-  async enqueueRapidAPIRequest(request: string): Promise<void> {
-    await this.executeCommand('rpush', 'rapidapi_queue', request);
-  }
-
-  async dequeueRapidAPIRequest(): Promise<string | null> {
-    return await this.executeCommand('lpop', 'rapidapi_queue');
-  }
-
-  async getRapidAPIQueueLength(): Promise<number> {
-    return await this.executeCommand('llen', 'rapidapi_queue');
-  }
-
-  async setLastRequestTimestamp(timestamp: number): Promise<void> {
-    await this.executeCommand('set', 'last_rapidapi_request', timestamp.toString());
-  }
-
-  async getLastRequestTimestamp(): Promise<number> {
-    const timestamp = await this.executeCommand('get', 'last_rapidapi_request');
-    return timestamp ? parseInt(timestamp, 10) : 0;
-  }
 }
 
 export default Cache;
