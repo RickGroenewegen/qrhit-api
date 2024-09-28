@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { white } from 'console-log-colors';
-import axios from 'axios';
+import axios, { AxiosRequestConfig } from 'axios';
 import { ApiResult } from './interfaces/ApiResult';
 import { Playlist } from './interfaces/Playlist';
 import { Track } from './interfaces/Track';
@@ -9,11 +9,60 @@ import Data from './data';
 import Utils from './utils';
 import AnalyticsClient from './analytics';
 
+class RapidAPIQueue {
+  private cache: Cache;
+  private static instance: RapidAPIQueue;
+
+  private constructor() {
+    this.cache = Cache.getInstance();
+  }
+
+  public static getInstance(): RapidAPIQueue {
+    if (!RapidAPIQueue.instance) {
+      RapidAPIQueue.instance = new RapidAPIQueue();
+    }
+    return RapidAPIQueue.instance;
+  }
+
+  public async enqueue(request: AxiosRequestConfig): Promise<void> {
+    await this.cache.enqueueRapidAPIRequest(JSON.stringify(request));
+  }
+
+  public async processQueue(): Promise<void> {
+    while (true) {
+      const queueLength = await this.cache.getRapidAPIQueueLength();
+      if (queueLength === 0) {
+        break;
+      }
+
+      const lastRequestTime = await this.cache.getLastRequestTimestamp();
+      const now = Date.now();
+      const timeSinceLastRequest = now - lastRequestTime;
+
+      if (timeSinceLastRequest < 250) { // 250ms = 4 requests per second
+        await new Promise(resolve => setTimeout(resolve, 250 - timeSinceLastRequest));
+      }
+
+      const request = await this.cache.dequeueRapidAPIRequest();
+      if (request) {
+        try {
+          const requestConfig = JSON.parse(request);
+          await axios(requestConfig);
+          await this.cache.setLastRequestTimestamp(Date.now());
+        } catch (error) {
+          console.error('Error processing RapidAPI request:', error);
+        }
+      }
+    }
+  }
+}
+
 class Spotify {
   private cache = Cache.getInstance();
   private data = new Data();
   private utils = new Utils();
   private analytics = AnalyticsClient.getInstance();
+  private rapidAPIQueue = RapidAPIQueue.getInstance();
 
   // create a refresh token method
   public async refreshAccessToken(refreshToken: string): Promise<ApiResult> {
@@ -195,6 +244,8 @@ class Spotify {
           },
         };
 
+        await this.rapidAPIQueue.enqueue(options);
+        await this.rapidAPIQueue.processQueue();
         const response = await axios.request(options);
 
         this.analytics.increaseCounter('spotify', 'playlist', 1);
@@ -251,6 +302,8 @@ class Spotify {
             },
           };
 
+          await this.rapidAPIQueue.enqueue(options);
+          await this.rapidAPIQueue.processQueue();
           const response = await axios.request(options);
 
           this.analytics.increaseCounter('spotify', 'tracks', 1);
