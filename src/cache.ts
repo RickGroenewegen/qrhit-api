@@ -41,7 +41,7 @@ class Cache {
     ).version;
   }
 
-  private async executeCommand(command: string, ...args: any[]): Promise<any> {
+  public async executeCommand(command: string, ...args: any[]): Promise<any> {
     try {
       // @ts-ignore: Dynamic command execution
       return await this.client[command](...args);
