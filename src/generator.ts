@@ -192,7 +192,7 @@ class Generator {
     let printApiOrderResponse = '';
 
     if (physicalPlaylists.length > 0) {
-      payment.printerPageCount = await this.utils.countPdfPages(
+      payment.printerPageCount = await this.pdf.countPDFPages(
         `${process.env['PUBLIC_DIR']}/pdf/${physicalPlaylists[0].filename}`
       );
       const orderData = await this.order.createOrder(

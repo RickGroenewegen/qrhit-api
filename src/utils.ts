@@ -4,7 +4,6 @@ import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2';
 import axios from 'axios';
 import parser from 'accept-language-parser';
 import Translation from './translation';
-import { PDFDocument } from 'pdf-lib';
 
 class Utils {
   private translation: Translation = new Translation();
@@ -17,19 +16,6 @@ class Utils {
       return (await this.getInstanceName()) == 'WS1';
     }
     return false;
-  }
-
-  public async countPdfPages(filePath: string): Promise<number> {
-    // Read the PDF file into a Uint8Array
-    const pdfBytes = await fs.readFile(filePath);
-
-    // Load the PDF document
-    const pdfDoc = await PDFDocument.load(pdfBytes);
-
-    // Get the number of pages
-    const pageCount = pdfDoc.getPageCount();
-
-    return pageCount;
   }
 
   public isTrustedIp(ip: string): boolean {

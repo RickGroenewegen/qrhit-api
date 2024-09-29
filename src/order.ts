@@ -222,7 +222,7 @@ class Order {
           itemsForApi.push({
             productId: orderType.printApiProductId,
             quantity: item.amount,
-            pageCount: 2, // TODO: Get this from somewhere
+            pageCount: 2, // numberOfTracks * 2
           });
         }
       } else {
