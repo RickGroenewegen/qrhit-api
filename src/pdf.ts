@@ -1,11 +1,11 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
 import { Playlist } from '@prisma/client';
-import Utils from './utils';
 import ConvertApi from 'convertapi';
 import AnalyticsClient from './analytics';
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import path from 'path';
+import { PDFDocument } from 'pdf-lib';
 
 class PDF {
   private logger = new Logger();
@@ -21,6 +21,19 @@ class PDF {
       'pdf'
     );
     await result.saveFiles(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
+  }
+
+  public async countPDFPages(filePath: string): Promise<number> {
+    // Read the PDF file into a Uint8Array
+    const pdfBytes = await fs.readFile(filePath);
+
+    // Load the PDF document
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+
+    // Get the number of pages
+    const pageCount = pdfDoc.getPageCount();
+
+    return pageCount;
   }
 
   public async generatePDF(
@@ -91,7 +104,7 @@ class PDF {
       if (tempFiles.length === 1) {
         // If there's only one PDF, rename it instead of merging
         const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-        fs.renameSync(tempFiles[0], finalPath);
+        fs.rename(tempFiles[0], finalPath);
         this.logger.log(
           color.blue.bold(`Single PDF renamed: ${color.white.bold(filename)}`)
         );
