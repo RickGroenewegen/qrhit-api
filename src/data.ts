@@ -455,7 +455,7 @@ class Data {
     >`
       SELECT id, isrc, trackId, name, artist
       FROM tracks
-      WHERE year IS NULL OR yearSouce IS NULL AND trackId IN (${Prisma.join(
+      WHERE year IS NULL OR yearSource IS NULL AND trackId IN (${Prisma.join(
         providedTrackIds
       )})
     `;
