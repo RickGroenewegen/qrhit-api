@@ -492,20 +492,19 @@ class Data {
   public async updateAllTrackYears(): Promise<void> {
     const tracks = await this.prisma.track.findMany({
       where: {
-        OR: [
-          { year: null },
-          { yearSource: null }
-        ]
+        OR: [{ year: null }, { yearSource: null }],
       },
       select: {
         id: true,
         isrc: true,
         artist: true,
-        name: true
-      }
+        name: true,
+      },
     });
 
-    this.logger.log(`Updating years for ${tracks.length} tracks`);
+    this.logger.log(
+      color.blue(`Updating years for ${color.white.bold(tracks.length)} tracks`)
+    );
 
     for (const track of tracks) {
       try {
@@ -520,15 +519,23 @@ class Data {
             where: { id: track.id },
             data: {
               year: year,
-              yearSource: source
-            }
+              yearSource: source,
+            },
           });
-          this.logger.log(`Updated track ID ${track.id} with year ${year} from ${source}`);
+          this.logger.log(
+            color.blue(
+              `Updated track ID ${track.id} with year ${year} from ${source}`
+            )
+          );
         } else {
-          this.logger.log(color.yellow(`No release date found for track ID: ${track.id}`));
+          this.logger.log(
+            color.yellow(`No release date found for track ID: ${track.id}`)
+          );
         }
       } catch (error) {
-        this.logger.log(color.red(`Error updating track ID ${track.id}: ${error.message}`));
+        this.logger.log(
+          color.red(`Error updating track ID ${track.id}: ${error.message}`)
+        );
       }
     }
 
