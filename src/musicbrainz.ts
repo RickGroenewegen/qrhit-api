@@ -1,7 +1,6 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
 import axios, { AxiosInstance } from 'axios';
-import * as xml2js from 'xml2js';
 import PrismaInstance from './prisma';
 import { ChatGPT } from './chatgpt';
 
@@ -75,21 +74,17 @@ class MusicBrainz {
       await this.rateLimitDelay(); // Ensure that we respect the rate limit
       try {
         const response = await this.axiosInstance.get(
-          `recording/?query=isrc:${isrc}&fmt=xml`
+          `recording/?query=isrc:${isrc}&fmt=json`
         );
         this.lastRequestTime = Date.now(); // Update the time of the last request
 
-        const parsedResult = await xml2js.parseStringPromise(response.data);
-        const recordings = parsedResult.metadata['recording-list'][0].recording;
-
+        const recordings = response.data.recordings;
         let earliestDate: string | null = null;
 
-        if (recordings) {
+        if (recordings && recordings.length > 0) {
           earliestDate = recordings.reduce(
             (earliest: string | null, recording: any) => {
-              const releaseDate = recording['first-release-date']
-                ? recording['first-release-date'][0]
-                : null;
+              const releaseDate = recording['first-release-date'] || null;
               return releaseDate && (!earliest || releaseDate < earliest)
                 ? releaseDate
                 : earliest;
@@ -101,7 +96,7 @@ class MusicBrainz {
         if (!earliestDate) {
           return { year: 0, source: '' };
         }
-        return { year: parseInt(earliestDate.split('-')[0]), source: 'api' }; // Assuming the date format is YYYY-MM-DD
+        return { year: parseInt(earliestDate.split('-')[0]), source: 'api' };
       } catch (error: any) {
         this.logger.log(
           color.red(
