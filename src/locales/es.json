@@ -324,5 +324,7 @@
   "mail.greatNewsMainDigital": "¡Hemos recibido su pedido!",
   "mail.weHopeYouHaveFunMainDigital": "La(s) versión(es) digital(es) de tu(s) lista(s) de reproducción se están creando en este momento y deberías recibirlas por correo electrónico en unos minutos. ¡Esperamos que te diviertas mucho con la música! Si tienes alguna pregunta, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
   "mail.playlists": "Lista(s) de reproducción",
-  "payment.playlists": "listas de reproducción con tarjetas QR"
+  "payment.playlists": "listas de reproducción con tarjetas QR",
+  "mail.downloadLink": "Descarga tu PDF",
+  "mail.physicalDownloadLink": "Descargar PDF de impresora"
 }

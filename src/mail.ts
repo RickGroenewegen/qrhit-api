@@ -128,6 +128,27 @@ class Mail {
       numberOfTracks += playlist.numberOfTracks;
     }
 
+    const translations = this.translation.getTranslationsByPrefix(
+      payment.locale,
+      'mail'
+    );
+
+    const sendPhysicalLink =
+      filename &&
+      filename.length > 0 &&
+      orderType == 'digital' &&
+      this.utils.isTrustedEmail(payment.email!);
+
+    console.log(
+      111,
+      filename,
+      filename.length,
+      orderType,
+      this.utils.isTrustedEmail(payment.email!)
+    );
+
+    console.log(222, sendPhysicalLink);
+
     const mailParams = {
       payment,
       playlists,
@@ -143,12 +164,12 @@ class Mail {
       invoiceZipcode: payment.invoiceZipcode,
       invoiceCountry: payment.invoiceCountrycode,
       differentInvoiceAddress: payment.differentInvoiceAddress,
+      digitalDownloadLink: `${process.env['API_URI']}/public/pdf/${filenameDigital}`,
+      downloadLink: `${process.env['API_URI']}/public/pdf/${filename}`,
+      sendPhysicalLink,
       numberOfTracks,
       productName: process.env['PRODUCT_NAME'],
-      translations: this.translation.getTranslationsByPrefix(
-        payment.locale,
-        'mail'
-      ),
+      translations,
       countries: this.translation.getTranslationsByPrefix(
         payment.locale,
         'countries'
@@ -217,11 +238,11 @@ class Mail {
         const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
         const fileBuffer = await fs.readFile(filePath);
         const fileBase64 = this.wrapBase64(fileBuffer.toString('base64'));
-        attachments.push({
-          contentType: 'application/pdf',
-          filename,
-          data: fileBase64,
-        });
+        // attachments.push({
+        //   contentType: 'application/pdf',
+        //   filename,
+        //   data: fileBase64,
+        // });
       }
 
       // Add the digital file as an attachment
@@ -232,11 +253,11 @@ class Mail {
           fileBufferDigital.toString('base64')
         );
 
-        attachments.push({
-          contentType: 'application/pdf',
-          filename: filenameDigital,
-          data: fileBase64Digital,
-        });
+        // attachments.push({
+        //   contentType: 'application/pdf',
+        //   filename: filenameDigital,
+        //   data: fileBase64Digital,
+        // });
       }
 
       const rawEmail = await this.renderRaw({

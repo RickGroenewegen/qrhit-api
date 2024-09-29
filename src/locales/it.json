@@ -320,5 +320,7 @@
   "mail.greatNewsMainDigital": "Abbiamo ricevuto il tuo ordine!",
   "mail.weHopeYouHaveFunMainDigital": "La versione digitale delle tue playlist è in fase di creazione e dovresti riceverla via e-mail tra pochi minuti. Speriamo che ti diverta molto con la musica! Se hai ulteriori domande, non esitare a contattarci tramite il modulo di contatto sul nostro sito web.",
   "mail.playlists": "Playlist",
-  "payment.playlists": "playlist con carte QR"
+  "payment.playlists": "playlist con carte QR",
+  "mail.downloadLink": "Scarica il tuo PDF",
+  "mail.physicalDownloadLink": "Scarica PDF stampante"
 }

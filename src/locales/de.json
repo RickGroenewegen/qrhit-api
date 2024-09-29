@@ -325,5 +325,7 @@
   "mail.greatNewsMainDigital": "Wir haben Ihre Bestellung erhalten!",
   "mail.weHopeYouHaveFunMainDigital": "Die digitale Version(en) Ihrer Playlist(s) werden gerade erstellt und Sie sollten sie in wenigen Minuten per E-Mail erhalten. Wir hoffen, Sie haben viel musikalischen Spaß! Wenn Sie weitere Fragen haben, zögern Sie nicht, uns über das Kontaktformular auf unserer Website zu mailen.",
   "mail.playlists": "Wiedergabeliste(n)",
-  "payment.playlists": "Wiedergabelisten mit QR-Karten"
+  "payment.playlists": "Wiedergabelisten mit QR-Karten",
+  "mail.downloadLink": "Lade dein PDF herunter",
+  "mail.physicalDownloadLink": "Drucker-PDF herunterladen"
 }

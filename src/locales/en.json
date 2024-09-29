@@ -31,8 +31,11 @@
 	"mail.yourInformation" : "Your information",
 	"mail.shippingAddress" : "Shipping address",
 	"mail.orderData" : "Order data",
+	"mail.downloadLink" : "Download your PDF",
+	"mail.physicalDownloadLink" : "Download printer PDF",
+	"mail.downloadButton" : "Download your PDF",
+	"mail.physicalDownloadButton" : "Download printer PDF",
 	
-
 	"invoice.description" : "Description",
 	"invoice.amount" : "Amount",
 	"invoice.pricePerPiece" : "Price / pc.",

@@ -325,5 +325,7 @@
   "mail.greatNewsMainDigital": "We hebben uw bestelling ontvangen!",
   "mail.weHopeYouHaveFunMainDigital": "De digitale versie(s) van je afspeellijst(en) worden op dit moment gemaakt en je zou ze binnen enkele minuten per e-mail moeten ontvangen. We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, aarzel dan niet om ons te mailen via het contactformulier op onze website.",
   "mail.playlists": "Afspeellijst(en)",
-  "payment.playlists": "afspeellijsten met QR-kaarten"
+  "payment.playlists": "afspeellijsten met QR-kaarten",
+  "mail.downloadLink": "Download je PDF",
+  "mail.physicalDownloadLink": "Download printer PDF"
 }

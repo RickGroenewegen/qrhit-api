@@ -2574,5 +2574,21 @@
     "es",
     "it",
     "pt"
+  ],
+  "mail.downloadLink": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "mail.physicalDownloadLink": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
   ]
 }
