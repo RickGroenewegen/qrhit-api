@@ -554,7 +554,7 @@ class Data {
       }
     }
 
-    this.logger.log('Finished updating all track years');
+    this.logger.log(color.blue.bold('Finished updating all track years'));
   }
 }
 
