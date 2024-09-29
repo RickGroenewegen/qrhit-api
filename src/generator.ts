@@ -314,8 +314,7 @@ class Generator {
         const link = `${process.env['API_URI']}/qr/${track.id}`;
 
         // Get the first 3 characters of the track id
-        const startChars = track.trackId.substring(0, 4);
-        const outputDir = `${process.env['PUBLIC_DIR']}/qr/${startChars}`;
+        const outputDir = `${process.env['PUBLIC_DIR']}/qr`;
         const outputPath = `${outputDir}/${track.trackId}.png`;
         await this.utils.createDir(outputDir);
         await this.qr.generateQR(link, outputPath);
