@@ -78,12 +78,16 @@ class Generator {
     // Send the main mail
     await this.mail.sendEmail('main_' + orderType, payment, playlists);
 
+    // Create a random 16 character string
+    const subdir = sanitizeFilename(crypto.randomBytes(8).toString('hex'));
+
     for (const playlist of playlists) {
       const { filename, filenameDigital } = await this.generatePDF(
         payment,
         playlist,
         ip,
-        refreshPlaylistArray.includes(playlist.playlistId)
+        refreshPlaylistArray.includes(playlist.playlistId),
+        subdir
       );
 
       if (playlist.orderType !== 'digital') {
@@ -206,7 +210,8 @@ class Generator {
     payment: any,
     playlist: any,
     ip: string,
-    refreshCache: boolean = false
+    refreshCache: boolean = false,
+    subdir: string
   ): Promise<{ filename: string; filenameDigital: string }> {
     let filename = '';
     let filenameDigital = '';
@@ -317,8 +322,7 @@ class Generator {
       for (const track of dbTracks) {
         const link = `${process.env['API_URI']}/qr/${track.id}`;
 
-        // Get the first 3 characters of the track id
-        const outputDir = `${process.env['PUBLIC_DIR']}/qr`;
+        const outputDir = `${process.env['PUBLIC_DIR']}/qr/${subdir}`;
         const outputPath = `${outputDir}/${track.trackId}.png`;
         await this.utils.createDir(outputDir);
         await this.qr.generateQR(link, outputPath);
@@ -336,9 +340,15 @@ class Generator {
       );
 
       const [generatedFilenameDigital, generatedFilename] = await Promise.all([
-        this.pdf.generatePDF(filenameDigital, playlist, payment, 'digital'),
+        this.pdf.generatePDF(
+          filenameDigital,
+          playlist,
+          payment,
+          'digital',
+          subdir
+        ),
         playlist.orderType != 'digital'
-          ? this.pdf.generatePDF(filename, playlist, payment, 'printer')
+          ? this.pdf.generatePDF(filename, playlist, payment, 'printer', subdir)
           : Promise.resolve(''),
       ]);
 
@@ -358,7 +368,9 @@ class Generator {
           await fs.unlink(path.join(qrDir, file));
         }
       }
-      this.logger.log(color.green.bold('QR code cleanup completed successfully'));
+      this.logger.log(
+        color.green.bold('QR code cleanup completed successfully')
+      );
     } catch (error) {
       this.logger.log(color.red.bold(`Error during QR code cleanup: ${error}`));
     }
