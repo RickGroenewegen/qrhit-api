@@ -524,18 +524,31 @@ class Data {
           });
           this.logger.log(
             color.blue(
-              `Updated track ID ${color.white.bold(track.id)} with year ${color.white.bold(year)} from ${color.white.bold(source)}`
+              `Updated track ID ${color.white.bold(
+                track.id
+              )} with year ${color.white.bold(year)} from ${color.white.bold(
+                source
+              )}`
             )
           );
         } else {
           this.logger.log(
-            color.yellow(`No release date found for track ID: ${color.white.bold(track.id)}`)
+            color.yellow(
+              `No release date found for track ID: ${color.white.bold(
+                track.id
+              )}`
+            )
           );
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         this.logger.log(
-          color.red(`Error updating track ID ${color.white.bold(track.id)}: ${color.white.bold(errorMessage)}`)
+          color.red(
+            `Error updating track ID ${color.white.bold(
+              track.id
+            )}: ${color.white.bold(errorMessage)}`
+          )
         );
       }
     }
