@@ -203,7 +203,7 @@ class Generator {
     );
 
     // Clean up QR code files
-    await this.cleanupQRCodes();
+    await this.cleanupQRCodes(subdir);
   }
 
   private async generatePDF(
@@ -359,20 +359,15 @@ class Generator {
     return { filename, filenameDigital };
   }
 
-  private async cleanupQRCodes(): Promise<void> {
-    const qrDir = `${process.env['PUBLIC_DIR']}/qr`;
+  private async cleanupQRCodes(subdir: string): Promise<void> {
+    const qrSubDir = `${process.env['PUBLIC_DIR']}/qr/${subdir}`;
     try {
-      const files = await fs.readdir(qrDir);
-      for (const file of files) {
-        if (path.extname(file).toLowerCase() === '.png') {
-          await fs.unlink(path.join(qrDir, file));
-        }
-      }
+      await fs.rm(qrSubDir, { recursive: true, force: true });
       this.logger.log(
-        color.green.bold('QR code cleanup completed successfully')
+        color.green.bold(`QR code cleanup completed successfully for ${subdir}`)
       );
     } catch (error) {
-      this.logger.log(color.red.bold(`Error during QR code cleanup: ${error}`));
+      this.logger.log(color.red.bold(`Error during QR code cleanup for ${subdir}: ${error}`));
     }
   }
 }
