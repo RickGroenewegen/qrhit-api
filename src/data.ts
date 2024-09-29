@@ -491,9 +491,6 @@ class Data {
 
   public async updateAllTrackYears(): Promise<void> {
     const tracks = await this.prisma.track.findMany({
-      where: {
-        OR: [{ year: null }, { yearSource: null }],
-      },
       select: {
         id: true,
         isrc: true,
@@ -503,7 +500,9 @@ class Data {
     });
 
     this.logger.log(
-      color.blue(`Updating years for ${color.white.bold(tracks.length)} tracks`)
+      color.blue.bold(
+        `Updating years for ${color.white.bold(tracks.length)} tracks`
+      )
     );
 
     for (const track of tracks) {
@@ -523,10 +522,12 @@ class Data {
             },
           });
           this.logger.log(
-            color.blue(
+            color.blue.bold(
               `Updated track ID ${color.white.bold(
                 track.id
-              )} with year ${color.white.bold(year)} from ${color.white.bold(
+              )} named '${color.white.bold(track.artist)} - ${color.white.bold(
+                track.name
+              )}' with year ${color.white.bold(year)} from ${color.white.bold(
                 source
               )}`
             )

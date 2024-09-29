@@ -77,7 +77,7 @@ const mysqlConfig = {
       console.log(
         `Processed ${processedRecords} records (${progressPercentage}%)`
       );
-      console.log(`Inserted: ${result.affectedRows - result.changedRows}, Updated: ${result.changedRows}`);
+      // console.log(`Inserted: ${result.affectedRows - result.changedRows}, Updated: ${result.changedRows}`);
     }
 
     console.log('Records inserted into the MySQL database successfully');
