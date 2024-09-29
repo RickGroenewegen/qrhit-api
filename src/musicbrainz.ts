@@ -54,6 +54,13 @@ class MusicBrainz {
       if (result.year > 0) {
         year = result.year;
         source = result.source;
+        // Create a record in the isrc table
+        await this.prisma.isrc.create({
+          data: {
+            isrc: isrc,
+            year: year,
+          },
+        });
       } else {
         const aiResult = await this.openai.ask(
           `${artist} - ${title} - ISRC: ${isrc}`
