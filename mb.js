@@ -57,8 +57,14 @@ const mysqlConfig = {
       const values = batch.map((row) => [row.isrc, row.year]);
 
       const insertQuery = `
-        INSERT INTO isrc (isrc, year) VALUES ?
-        ON DUPLICATE KEY UPDATE year = VALUES(year)
+        INSERT INTO isrc (isrc, year) 
+        VALUES ? 
+        ON DUPLICATE KEY UPDATE 
+          year = CASE
+            WHEN VALUES(year) < isrc.year OR isrc.year IS NULL
+            THEN VALUES(year)
+            ELSE isrc.year
+          END
       `;
 
       await mysqlConnection.query(insertQuery, [values]);
