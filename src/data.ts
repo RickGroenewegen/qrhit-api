@@ -488,6 +488,52 @@ class Data {
       }
     }
   }
+
+  public async updateAllTrackYears(): Promise<void> {
+    const tracks = await this.prisma.track.findMany({
+      where: {
+        OR: [
+          { year: null },
+          { yearSource: null }
+        ]
+      },
+      select: {
+        id: true,
+        isrc: true,
+        artist: true,
+        name: true
+      }
+    });
+
+    this.logger.log(`Updating years for ${tracks.length} tracks`);
+
+    for (const track of tracks) {
+      try {
+        let { year, source } = await this.musicBrainz.getReleaseDate(
+          track.isrc ?? '',
+          track.artist,
+          track.name
+        );
+
+        if (year > 0) {
+          await this.prisma.track.update({
+            where: { id: track.id },
+            data: {
+              year: year,
+              yearSource: source
+            }
+          });
+          this.logger.log(`Updated track ID ${track.id} with year ${year} from ${source}`);
+        } else {
+          this.logger.log(color.yellow(`No release date found for track ID: ${track.id}`));
+        }
+      } catch (error) {
+        this.logger.log(color.red(`Error updating track ID ${track.id}: ${error.message}`));
+      }
+    }
+
+    this.logger.log('Finished updating all track years');
+  }
 }
 
 export default Data;
