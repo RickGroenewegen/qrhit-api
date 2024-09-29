@@ -67,7 +67,7 @@ const mysqlConfig = {
           END
       `;
 
-      await mysqlConnection.query(insertQuery, [values]);
+      const [result] = await mysqlConnection.query(insertQuery, [values]);
 
       processedRecords += batch.length;
       const progressPercentage = (
@@ -77,6 +77,7 @@ const mysqlConfig = {
       console.log(
         `Processed ${processedRecords} records (${progressPercentage}%)`
       );
+      console.log(`Inserted: ${result.affectedRows - result.changedRows}, Updated: ${result.changedRows}`);
     }
 
     console.log('Records inserted into the MySQL database successfully');
