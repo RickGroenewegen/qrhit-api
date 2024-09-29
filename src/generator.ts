@@ -15,6 +15,7 @@ import QR from './qr';
 import PDF from './pdf';
 import Order from './order';
 import AnalyticsClient from './analytics';
+import { CronJob } from 'cron';
 
 class Generator {
   private logger = new Logger();
@@ -202,8 +203,16 @@ class Generator {
       )
     );
 
-    // Clean up QR code files
-    await this.cleanupQRCodes(subdir);
+    let cleanUpAfter = 1000 * 60 * 5; // 5 minutes
+
+    if (process.env['NODE_ENV'] === 'development') {
+      cleanUpAfter = 1000 * 60 * 60 * 24; // 24 hours
+    }
+
+    // Clean up QR code files after 5 minutes
+    setTimeout(async () => {
+      await this.cleanupQRCodes(subdir);
+    }, cleanUpAfter);
   }
 
   private async generatePDF(
@@ -364,10 +373,20 @@ class Generator {
     try {
       await fs.rm(qrSubDir, { recursive: true, force: true });
       this.logger.log(
-        color.green.bold(`QR code cleanup completed successfully for ${subdir}`)
+        color.blue.bold(
+          `QR code cleanup completed successfully for ${color.white.bold(
+            subdir
+          )}`
+        )
       );
     } catch (error) {
-      this.logger.log(color.red.bold(`Error during QR code cleanup for ${subdir}: ${error}`));
+      this.logger.log(
+        color.red.bold(
+          `Error during QR code cleanup for ${color.white.bold(
+            subdir
+          )}: ${color.white.bold(error)}`
+        )
+      );
     }
   }
 }
