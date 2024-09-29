@@ -533,8 +533,9 @@ class Data {
           );
         }
       } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error);
         this.logger.log(
-          color.red(`Error updating track ID ${color.white.bold(track.id)}: ${color.white.bold(error.message)}`)
+          color.red(`Error updating track ID ${color.white.bold(track.id)}: ${color.white.bold(errorMessage)}`)
         );
       }
     }
