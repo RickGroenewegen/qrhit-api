@@ -39,8 +39,11 @@ class RapidAPIQueue {
       const now = Date.now();
       const timeSinceLastRequest = now - lastRequestTime;
 
-      if (timeSinceLastRequest < 250) { // 250ms = 4 requests per second
-        await new Promise(resolve => setTimeout(resolve, 250 - timeSinceLastRequest));
+      if (timeSinceLastRequest < 250) {
+        // 250ms = 4 requests per second
+        await new Promise((resolve) =>
+          setTimeout(resolve, 250 - timeSinceLastRequest)
+        );
       }
 
       const request = await this.dequeueRapidAPIRequest();
@@ -69,11 +72,18 @@ class RapidAPIQueue {
   }
 
   private async setLastRequestTimestamp(timestamp: number): Promise<void> {
-    await this.cache.executeCommand('set', 'last_rapidapi_request', timestamp.toString());
+    await this.cache.executeCommand(
+      'set',
+      'last_rapidapi_request',
+      timestamp.toString()
+    );
   }
 
   private async getLastRequestTimestamp(): Promise<number> {
-    const timestamp = await this.cache.executeCommand('get', 'last_rapidapi_request');
+    const timestamp = await this.cache.executeCommand(
+      'get',
+      'last_rapidapi_request'
+    );
     return timestamp ? parseInt(timestamp, 10) : 0;
   }
 }
