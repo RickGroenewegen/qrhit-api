@@ -118,18 +118,30 @@ class PDF {
       }
     } finally {
       // Clean up temporary files
-      for (const tempFile of tempFiles) {
-        if (fs.existsSync(tempFile)) {
-          fs.unlinkSync(tempFile);
-          this.logger.log(
-            color.blue.bold(
-              `Deleted temporary file: ${color.white.bold(
-                path.basename(tempFile)
-              )}`
-            )
-          );
-        }
-      }
+      await Promise.all(
+        tempFiles.map(async (tempFile) => {
+          try {
+            await fs.access(tempFile);
+            await fs.unlink(tempFile);
+            this.logger.log(
+              color.blue.bold(
+                `Deleted temporary file: ${color.white.bold(
+                  path.basename(tempFile)
+                )}`
+              )
+            );
+          } catch (error) {
+            // File doesn't exist or couldn't be deleted, log the error
+            this.logger.log(
+              color.yellow.bold(
+                `Failed to delete temporary file: ${color.white.bold(
+                  path.basename(tempFile)
+                )}`
+              )
+            );
+          }
+        })
+      );
     }
 
     return filename;
