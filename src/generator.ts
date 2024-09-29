@@ -30,6 +30,36 @@ class Generator {
   private order = Order.getInstance();
   private analytics = AnalyticsClient.getInstance();
 
+  constructor() {
+    this.setupQRCleanupCron();
+  }
+
+  private setupQRCleanupCron() {
+    new CronJob('*/5 * * * *', async () => {
+      await this.cleanupQRCodes();
+    }, null, true, 'Europe/Amsterdam');
+  }
+
+  private async cleanupQRCodes(): Promise<void> {
+    const qrDir = `${process.env['PUBLIC_DIR']}/qr`;
+    const now = Date.now();
+    const maxAge = process.env['NODE_ENV'] === 'development' ? 24 * 60 * 60 * 1000 : 5 * 60 * 1000;
+
+    try {
+      const subdirs = await fs.readdir(qrDir);
+      for (const subdir of subdirs) {
+        const subdirPath = path.join(qrDir, subdir);
+        const stats = await fs.stat(subdirPath);
+        if (stats.isDirectory() && now - stats.mtimeMs > maxAge) {
+          await fs.rm(subdirPath, { recursive: true, force: true });
+          this.logger.log(color.blue.bold(`Cleaned up QR code directory: ${color.white.bold(subdir)}`));
+        }
+      }
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error during QR code cleanup: ${color.white.bold(error)}`));
+    }
+  }
+
   public async generate(
     paymentId: string,
     ip: string,
@@ -202,17 +232,6 @@ class Generator {
         `Order processed successfully for payment: ${white.bold(paymentId)}`
       )
     );
-
-    let cleanUpAfter = 1000 * 60 * 5; // 5 minutes
-
-    if (process.env['NODE_ENV'] === 'development') {
-      cleanUpAfter = 1000 * 60 * 60 * 24; // 24 hours
-    }
-
-    // Clean up QR code files after 5 minutes
-    setTimeout(async () => {
-      await this.cleanupQRCodes(subdir);
-    }, cleanUpAfter);
   }
 
   private async generatePDF(
@@ -368,27 +387,6 @@ class Generator {
     return { filename, filenameDigital };
   }
 
-  private async cleanupQRCodes(subdir: string): Promise<void> {
-    const qrSubDir = `${process.env['PUBLIC_DIR']}/qr/${subdir}`;
-    try {
-      await fs.rm(qrSubDir, { recursive: true, force: true });
-      this.logger.log(
-        color.blue.bold(
-          `QR code cleanup completed successfully for ${color.white.bold(
-            subdir
-          )}`
-        )
-      );
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(
-          `Error during QR code cleanup for ${color.white.bold(
-            subdir
-          )}: ${color.white.bold(error)}`
-        )
-      );
-    }
-  }
 }
 
 export default Generator;
