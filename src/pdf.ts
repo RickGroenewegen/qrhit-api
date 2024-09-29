@@ -104,10 +104,12 @@ class PDF {
       if (tempFiles.length === 1) {
         // If there's only one PDF, rename it instead of merging
         const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-        fs.rename(tempFiles[0], finalPath);
+        await fs.rename(tempFiles[0], finalPath);
         this.logger.log(
           color.blue.bold(`Single PDF renamed: ${color.white.bold(filename)}`)
         );
+        // Clear the tempFiles array as we've renamed the file
+        tempFiles.length = 0;
       } else {
         // Merge all temporary PDFs
         await this.mergePDFs(filename, tempFiles);
@@ -117,31 +119,33 @@ class PDF {
         );
       }
     } finally {
-      // Clean up temporary files
-      await Promise.all(
-        tempFiles.map(async (tempFile) => {
-          try {
-            await fs.access(tempFile);
-            await fs.unlink(tempFile);
-            this.logger.log(
-              color.blue.bold(
-                `Deleted temporary file: ${color.white.bold(
-                  path.basename(tempFile)
-                )}`
-              )
-            );
-          } catch (error) {
-            // File doesn't exist or couldn't be deleted, log the error
-            this.logger.log(
-              color.yellow.bold(
-                `Failed to delete temporary file: ${color.white.bold(
-                  path.basename(tempFile)
-                )}`
-              )
-            );
-          }
-        })
-      );
+      // Clean up temporary files only if they were merged
+      if (tempFiles.length > 0) {
+        await Promise.all(
+          tempFiles.map(async (tempFile) => {
+            try {
+              await fs.access(tempFile);
+              await fs.unlink(tempFile);
+              this.logger.log(
+                color.blue.bold(
+                  `Deleted temporary file: ${color.white.bold(
+                    path.basename(tempFile)
+                  )}`
+                )
+              );
+            } catch (error) {
+              // File doesn't exist or couldn't be deleted, log the error
+              this.logger.log(
+                color.yellow.bold(
+                  `Failed to delete temporary file: ${color.white.bold(
+                    path.basename(tempFile)
+                  )}`
+                )
+              );
+            }
+          })
+        );
+      }
     }
 
     return filename;
