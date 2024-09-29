@@ -139,16 +139,6 @@ class Mail {
       orderType == 'digital' &&
       this.utils.isTrustedEmail(payment.email!);
 
-    console.log(
-      111,
-      filename,
-      filename.length,
-      orderType,
-      this.utils.isTrustedEmail(payment.email!)
-    );
-
-    console.log(222, sendPhysicalLink);
-
     const mailParams = {
       payment,
       playlists,

@@ -426,7 +426,7 @@ class Server {
     });
 
     this.fastify.get(
-      '/qr/pdf/:playlistId/:paymentId/:template/:startIndex/:endIndex',
+      '/qr/pdf/:playlistId/:paymentId/:template/:startIndex/:endIndex/:subdir',
       async (request: any, reply) => {
         const valid = await this.mollie.canDownloadPDF(
           request.params.playlistId,
@@ -448,6 +448,7 @@ class Server {
         tracks = tracks.slice(startIndex, endIndex + 1);
 
         await reply.view(`pdf_${request.params.template}.ejs`, {
+          subdir: request.params.subdir,
           playlist,
           tracks,
           user,

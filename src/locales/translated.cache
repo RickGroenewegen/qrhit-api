@@ -359,14 +359,6 @@
     "it",
     "pt"
   ],
-  "mail.greatNewsDigital": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt"
-  ],
   "mail.greetings": [
     "nl",
     "de",
@@ -2584,6 +2576,30 @@
     "pt"
   ],
   "mail.physicalDownloadLink": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "mail.greatNewsDigital": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "mail.downloadButton": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "mail.physicalDownloadButton": [
     "nl",
     "de",
     "fr",

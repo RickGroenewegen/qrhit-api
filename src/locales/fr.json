@@ -50,7 +50,7 @@
   "countdown.getReady": "Prépare-toi!",
   "countdown.tapTheCamera": "Appuyez sur l'icône de la caméra pour scanner",
   "countdown.allRightsReserved": "Tous droits réservés",
-  "mail.greatNewsDigital": "Bonne nouvelle ! Vos cartes QR pour votre playlist ont été traitées. Vous les trouverez en pièce jointe de cet e-mail.",
+  "mail.greatNewsDigital": "Bonne nouvelle ! Vos cartes QR pour votre playlist ont été transformées en PDF. Vous les trouverez en pièce jointe de cet e-mail.",
   "mail.weHopeYouHaveFunDigital": "Nous espérons que vous vous amuserez beaucoup avec la musique ! Si vous avez d'autres questions, n'hésitez pas à nous envoyer un mail via le formulaire de contact sur notre site.",
   "payment.digital": "PDF contenant",
   "countdown.invalidLink": "QR code non reconnu",
@@ -327,5 +327,7 @@
   "mail.playlists": "Liste(s) de lecture",
   "payment.playlists": "listes de lecture avec cartes QR",
   "mail.downloadLink": "Téléchargez votre PDF",
-  "mail.physicalDownloadLink": "Télécharger PDF imprimante"
+  "mail.physicalDownloadLink": "Télécharger PDF imprimante",
+  "mail.downloadButton": "Téléchargez votre PDF",
+  "mail.physicalDownloadButton": "Télécharger PDF imprimante"
 }

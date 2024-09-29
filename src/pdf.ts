@@ -27,7 +27,8 @@ class PDF {
     filename: string,
     playlist: Playlist,
     payment: any,
-    template: string
+    template: string,
+    subdir: string
   ): Promise<string> {
     const numberOfTracks = playlist.numberOfTracks;
     let itemsPerPage = template === 'digital' ? 12 : 1;
@@ -49,7 +50,7 @@ class PDF {
           numberOfTracks
         );
 
-        const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}`;
+        const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}/${subdir}`;
 
         this.logger.log(
           color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)

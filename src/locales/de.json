@@ -50,7 +50,7 @@
   "countdown.getReady": "Mach dich bereit!",
   "countdown.tapTheCamera": "Tippen Sie auf das Kamera-Symbol zum Scannen",
   "countdown.allRightsReserved": "Alle Rechte vorbehalten",
-  "mail.greatNewsDigital": "Großartige Neuigkeiten! Ihre QR-Karten für Ihre Playlist wurden verarbeitet. Sie finden sie im Anhang dieser E-Mail.",
+  "mail.greatNewsDigital": "Großartige Neuigkeiten! Ihre QR-Karten für Ihre Playlist wurden in eine PDF umgewandelt. Sie finden sie im Anhang dieser E-Mail.",
   "mail.weHopeYouHaveFunDigital": "Wir hoffen, dass du viel musikalischen Spaß hast! Wenn du weitere Fragen hast, zögere nicht, uns über das Kontaktformular auf unserer Website zu mailen.",
   "payment.digital": "PDF enthält",
   "countdown.invalidLink": "Unbekannter QR-Code",
@@ -327,5 +327,7 @@
   "mail.playlists": "Wiedergabeliste(n)",
   "payment.playlists": "Wiedergabelisten mit QR-Karten",
   "mail.downloadLink": "Lade dein PDF herunter",
-  "mail.physicalDownloadLink": "Drucker-PDF herunterladen"
+  "mail.physicalDownloadLink": "Drucker-PDF herunterladen",
+  "mail.downloadButton": "Lade dein PDF herunter",
+  "mail.physicalDownloadButton": "Drucker-PDF herunterladen"
 }

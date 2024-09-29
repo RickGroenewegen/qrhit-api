@@ -8,6 +8,7 @@ class Qr {
     try {
       await QRCode.toFile(outputPath, link, {
         type: 'png',
+        width: 600,
         color: {
           dark: '#000000', // Color of the dark squares
           light: '0000', // Color of the light squares (usually background)

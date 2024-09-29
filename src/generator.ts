@@ -16,6 +16,7 @@ import PDF from './pdf';
 import Order from './order';
 import AnalyticsClient from './analytics';
 import { CronJob } from 'cron';
+import cluster from 'cluster';
 
 class Generator {
   private logger = new Logger();
@@ -35,15 +36,30 @@ class Generator {
   }
 
   private setupQRCleanupCron() {
-    new CronJob('*/5 * * * *', async () => {
-      await this.cleanupQRCodes();
-    }, null, true, 'Europe/Amsterdam');
+    const isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
+    const isPrimary = cluster.isPrimary;
+
+    if (isMainServer && isPrimary) {
+      new CronJob(
+        '*/1 * * * *',
+        async () => {
+          await this.cleanupQRCodes();
+        },
+        null,
+        true,
+        'Europe/Amsterdam'
+      );
+    }
   }
 
   private async cleanupQRCodes(): Promise<void> {
     const qrDir = `${process.env['PUBLIC_DIR']}/qr`;
     const now = Date.now();
-    const maxAge = process.env['NODE_ENV'] === 'development' ? 24 * 60 * 60 * 1000 : 5 * 60 * 1000;
+
+    const maxAge =
+      process.env['ENVIRONMENT'] === 'development'
+        ? 10000 // 24 * 60 * 60 * 1000
+        : 5 * 60 * 1000;
 
     try {
       const subdirs = await fs.readdir(qrDir);
@@ -52,11 +68,19 @@ class Generator {
         const stats = await fs.stat(subdirPath);
         if (stats.isDirectory() && now - stats.mtimeMs > maxAge) {
           await fs.rm(subdirPath, { recursive: true, force: true });
-          this.logger.log(color.blue.bold(`Cleaned up QR code directory: ${color.white.bold(subdir)}`));
+          this.logger.log(
+            color.blue.bold(
+              `Cleaned up QR code directory: ${color.white.bold(subdir)}`
+            )
+          );
         }
       }
     } catch (error) {
-      this.logger.log(color.red.bold(`Error during QR code cleanup: ${color.white.bold(error)}`));
+      this.logger.log(
+        color.red.bold(
+          `Error during QR code cleanup: ${color.white.bold(error)}`
+        )
+      );
     }
   }
 
@@ -386,7 +410,6 @@ class Generator {
 
     return { filename, filenameDigital };
   }
-
 }
 
 export default Generator;
