@@ -6,6 +6,7 @@ import Mollie from './mollie';
 import crypto from 'crypto';
 import sanitizeFilename from 'sanitize-filename';
 import * as fs from 'fs/promises';
+import * as path from 'path';
 import Data from './data';
 import PushoverClient from './pushover';
 import Spotify from './spotify';
@@ -196,6 +197,9 @@ class Generator {
         `Order processed successfully for payment: ${white.bold(paymentId)}`
       )
     );
+
+    // Clean up QR code files
+    await this.cleanupQRCodes();
   }
 
   private async generatePDF(
@@ -343,6 +347,21 @@ class Generator {
     }
 
     return { filename, filenameDigital };
+  }
+
+  private async cleanupQRCodes(): Promise<void> {
+    const qrDir = `${process.env['PUBLIC_DIR']}/qr`;
+    try {
+      const files = await fs.readdir(qrDir);
+      for (const file of files) {
+        if (path.extname(file).toLowerCase() === '.png') {
+          await fs.unlink(path.join(qrDir, file));
+        }
+      }
+      this.logger.log(color.green.bold('QR code cleanup completed successfully'));
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error during QR code cleanup: ${error}`));
+    }
   }
 }
 
