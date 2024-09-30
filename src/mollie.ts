@@ -116,6 +116,13 @@ class Mollie {
   });
 
   private async getClient(ip: string) {
+    console.log(
+      111,
+      process.env['ENVIRONMENT'],
+      ip,
+      this.utils.isTrustedIp(ip)
+    );
+
     if (
       process.env['ENVIRONMENT'] == 'development' ||
       this.utils.isTrustedIp(ip)
