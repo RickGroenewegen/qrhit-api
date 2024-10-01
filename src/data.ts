@@ -89,7 +89,7 @@ class Data {
 
     const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
     return {
-      fileName: sanitizedFileName,
+      fileName: sanitizedFileName + '.pdf',
       filePath: filePath,
     };
   }
