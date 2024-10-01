@@ -481,6 +481,9 @@ class Server {
               amount: orderType.amountWithMargin,
               description: orderType.description,
               maxCards: orderType.maxCards,
+              available:
+                orderType.digital ||
+                (await this.utils.isTrustedIp(request.clientIp)),
             },
           };
         } else {
