@@ -53,6 +53,10 @@ class Data {
           playlistId: playlistId,
         },
       },
+      select: {
+        filename: true,
+        filenameDigital: true,
+      },
     });
 
     console.log(222, paymentHasPlaylist);
@@ -61,13 +65,13 @@ class Data {
       return null;
     }
 
-    let filename: string | null = '';
+    let filename: string | null = null;
 
     console.log(331, type);
 
-    if (type == 'digital') {
+    if (type === 'digital') {
       filename = paymentHasPlaylist.filenameDigital;
-    } else if (type == 'printer') {
+    } else if (type === 'printer') {
       filename = paymentHasPlaylist.filename;
     }
 
