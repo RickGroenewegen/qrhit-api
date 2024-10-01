@@ -5,7 +5,7 @@ import PrismaInstance from './prisma';
 import MusicBrainz from './musicbrainz';
 import crypto from 'crypto';
 import { ApiResult } from './interfaces/ApiResult';
-import path from 'path';
+import sanitizeFilename from 'sanitize-filename';
 
 interface TrackNeedingYearUpdate {
   id: number;
@@ -33,7 +33,7 @@ class Data {
     userId: string,
     playlistId: string,
     type: string
-  ): Promise<{ playlistName: string; filePath: string } | null> {
+  ): Promise<{ fileName: string; filePath: string } | null> {
     const user = await this.prisma.user.findFirst({
       where: { hash: userId },
       select: {
@@ -84,7 +84,9 @@ class Data {
     // Assuming the PDFs are stored in a 'pdfs' directory at the root of the project
     const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
     return {
-      playlistName: paymentHasPlaylist.playlist.name,
+      fileName: sanitizeFilename(
+        paymentHasPlaylist.playlist.name.replace(/ /g, '_')
+      ).toLowerCase(),
       filePath: filePath,
     };
   }
