@@ -329,5 +329,8 @@
   "mail.downloadLink": "Lade dein PDF herunter",
   "mail.physicalDownloadLink": "Drucker-PDF herunterladen",
   "mail.downloadButton": "Lade dein PDF herunter",
-  "mail.physicalDownloadButton": "Drucker-PDF herunterladen"
+  "mail.physicalDownloadButton": "Drucker-PDF herunterladen",
+  "countdown.appStore": "App Store",
+  "countdown.googlePlay": "Google Play",
+  "countdown.other": "Andere"
 }

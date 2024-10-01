@@ -68,7 +68,7 @@
 	"payment.playlists" : "playlists",
 	"payment.digital" : "PDF containing",
 
-	"countdown.youNeedToInstall" : "You need to install this app on your mobile device",
+	"countdown.youNeedToInstall" : "Install this app on your mobile device",
 	"countdown.invalidLink" : "Unrecognized QR code",
 	"countdown.howToInstall" : "How to install",
 	"countdown.onIOS" : "On iOS Safari",
@@ -84,6 +84,10 @@
 	"countdown.getReady" : "Get ready!",
 	"countdown.tapTheCamera" : "Tap the camera icon to scan",
 	"countdown.allRightsReserved" : "All rights reserved",
+
+	"countdown.appStore" : "App Store",
+	"countdown.googlePlay" : "Google Play",
+	"countdown.other" : "Other",
 
 	"countries.AF" : "Afghanistan",
 	"countries.AX" : "Aland Islands",

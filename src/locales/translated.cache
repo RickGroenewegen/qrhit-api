@@ -2606,5 +2606,29 @@
     "es",
     "it",
     "pt"
+  ],
+  "countdown.appStore": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "countdown.googlePlay": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "countdown.other": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
   ]
 }

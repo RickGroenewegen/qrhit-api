@@ -329,5 +329,8 @@
   "mail.downloadLink": "Téléchargez votre PDF",
   "mail.physicalDownloadLink": "Télécharger PDF imprimante",
   "mail.downloadButton": "Téléchargez votre PDF",
-  "mail.physicalDownloadButton": "Télécharger PDF imprimante"
+  "mail.physicalDownloadButton": "Télécharger PDF imprimante",
+  "countdown.appStore": "App Store",
+  "countdown.googlePlay": "Google Play",
+  "countdown.other": "Autre"
 }

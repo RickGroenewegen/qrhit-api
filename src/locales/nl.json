@@ -329,5 +329,8 @@
   "mail.downloadLink": "Download je PDF",
   "mail.physicalDownloadLink": "Download printer PDF",
   "mail.downloadButton": "Download je PDF",
-  "mail.physicalDownloadButton": "Download printer PDF"
+  "mail.physicalDownloadButton": "Download printer PDF",
+  "countdown.appStore": "App Store",
+  "countdown.googlePlay": "Google Play",
+  "countdown.other": "Overig"
 }
