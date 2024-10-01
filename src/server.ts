@@ -26,7 +26,6 @@ import Cache from './cache';
 import Generator from './generator';
 import AnalyticsClient from './analytics';
 import { ChatGPT } from './chatgpt';
-import path from 'path';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -354,38 +353,6 @@ class Server {
       return { ip: request.ip, clientIp: request.clientIp };
     });
 
-    // Setup a route to download a PDF
-    this.fastify.get('/download/:filename', async (request: any, reply) => {
-      const filename = path.basename(request.params.filename); // Use basename to avoid path traversal
-      const filePath = path.join(process.env['PUBLIC_DIR']!, 'pdf', filename);
-
-      // Ensure the file is a PDF for security reasons
-      if (path.extname(filename) !== '.pdf') {
-        reply.code(400).send('Only PDF files can be downloaded.');
-        return;
-      }
-
-      // Check if the file exists and is readable
-      try {
-        await fs.promises.access(filePath, fs.constants.R_OK);
-      } catch (error) {
-        reply.code(404).send('File not found.');
-        return;
-      }
-
-      // Serve the PDF file using the filePath
-      reply.header('Content-Disposition', 'attachment; filename=' + filename);
-      reply.type('application/pdf');
-
-      // Read the file into memory and send it as a buffer
-      try {
-        const fileContent = await fs.promises.readFile(filePath);
-        reply.send(fileContent);
-      } catch (error) {
-        reply.code(500).send('Error reading file.');
-      }
-    });
-
     this.fastify.get(
       '/progress/:playlistId/:paymentId',
       async (request: any, _reply) => {
@@ -538,12 +505,10 @@ class Server {
           request.params.playlistId,
           request.params.type
         );
-        
         if (filePath) {
-          reply.header('Content-Disposition', 'attachment; filename=cards.pdf');
-          reply.type('application/pdf');
-          const fileName = path.basename(filePath);
-          return reply.sendFile(fileName, path.dirname(filePath));
+          const stream = fs.createReadStream('../test.pdf', 'binary');
+          reply.header('Content-Type', 'application/pdf');
+          reply.send(stream).type('application/pdf').code(200);
         } else {
           reply.code(404).send('PDF not found');
         }
