@@ -15,7 +15,7 @@ import path from 'path';
 import view from '@fastify/view';
 import ejs from 'ejs';
 import Data from './data';
-import fs from 'fs';
+import fs from 'fs/promises';
 import Order from './order';
 import Mail from './mail';
 import MusicBrainz from './musicbrainz';
@@ -147,7 +147,7 @@ class Server {
           const invoicePath = await orderInstance.getInvoice(invoiceId);
           // Ensure the file exists and is readable
           try {
-            await fs.promises.access(invoicePath, fs.constants.R_OK);
+            await fs.access(invoicePath, fs.constants.R_OK);
           } catch (error) {
             reply.code(404).send('File not found.');
             return;
@@ -162,7 +162,7 @@ class Server {
 
           // Read the file into memory and send it as a buffer
           try {
-            const fileContent = await fs.promises.readFile(invoicePath);
+            const fileContent = await fs.readFile(invoicePath);
             reply.send(fileContent);
           } catch (error) {
             reply.code(500).send('Error reading file.');
@@ -187,7 +187,7 @@ class Server {
 
   private async setVersion() {
     this.version = JSON.parse(
-      (await fs.readFileSync('package.json')).toString()
+      (await fs.readFile('package.json', 'utf-8'))
     ).version;
   }
 
@@ -505,12 +505,13 @@ class Server {
           request.params.playlistId,
           request.params.type
         );
-        if (filePath && fs.existsSync(filePath)) {
+        try {
+          await fs.access(filePath, fs.constants.R_OK);
           reply.header('Content-Disposition', 'attachment; filename=cards.pdf');
           reply.type('application/pdf');
-          const fileContent = await fs.promises.readFile(filePath);
+          const fileContent = await fs.readFile(filePath);
           reply.send(fileContent);
-        } else {
+        } catch (error) {
           reply.code(404).send('PDF not found');
         }
       }
