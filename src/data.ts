@@ -31,11 +31,14 @@ class Data {
 
   public async getPDFFilepath(
     userId: string,
-    playlistId: string
+    playlistId: string,
+    type: string
   ): Promise<string | null> {
-    const user = await this.prisma.user.findUnique({
-      where: { userId: userId },
+    const user = await this.prisma.user.findFirst({
+      where: { hash: userId },
     });
+
+    console.log(111, user);
 
     if (!user) {
       return null;
@@ -50,25 +53,32 @@ class Data {
           playlistId: playlistId,
         },
       },
-      include: {
-        orderType: true,
-      },
     });
+
+    console.log(222, paymentHasPlaylist);
 
     if (!paymentHasPlaylist) {
       return null;
     }
 
-    const filename = paymentHasPlaylist.orderType.digital
-      ? paymentHasPlaylist.filenameDigital
-      : paymentHasPlaylist.filename;
+    let filename: string | null = '';
+
+    console.log(331, type);
+
+    if (type == 'digital') {
+      filename = paymentHasPlaylist.filenameDigital;
+    } else if (type == 'printer') {
+      filename = paymentHasPlaylist.filename;
+    }
+
+    console.log(333, filename);
 
     if (!filename) {
       return null;
     }
 
     // Assuming the PDFs are stored in a 'pdfs' directory at the root of the project
-    return path.join(process.env.APP_ROOT || '', 'pdfs', filename);
+    return `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
   }
 
   private euCountryCodes: string[] = [
