@@ -285,6 +285,9 @@ class Utils {
   public async generateRandomNumber(min: number, max: number): Promise<number> {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
+  public generateFilename(name: string): string {
+    return name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+  }
 }
 
 export default Utils;

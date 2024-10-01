@@ -5,7 +5,6 @@ import PrismaInstance from './prisma';
 import MusicBrainz from './musicbrainz';
 import crypto from 'crypto';
 import { ApiResult } from './interfaces/ApiResult';
-import sanitizeFilename from 'sanitize-filename';
 
 interface TrackNeedingYearUpdate {
   id: number;
@@ -77,9 +76,9 @@ class Data {
     }
 
     let filename = '';
-    let sanitizedFileName = sanitizeFilename(
-      paymentHasPlaylist.playlist.name.replace(/ /g, '_')
-    ).toLowerCase();
+    let sanitizedFileName = this.utils.generateFilename(
+      paymentHasPlaylist.playlist.name
+    );
 
     if (type == 'printer') {
       filename = paymentHasPlaylist.filename!;
