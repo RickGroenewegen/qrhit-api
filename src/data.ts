@@ -30,11 +30,11 @@ class Data {
   private analytics = AnalyticsClient.getInstance();
 
   public async getPDFFilepath(
-    userHash: string,
+    userId: string,
     playlistId: string
   ): Promise<string | null> {
     const user = await this.prisma.user.findUnique({
-      where: { hash: userHash },
+      where: { userId: userId },
     });
 
     if (!user) {
