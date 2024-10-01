@@ -529,6 +529,17 @@ class Server {
       }
     });
 
+    this.fastify.get(
+      '/download/:userHash/:playlistId:/:type',
+      async (request: any, _reply) => {
+        return await this.data.getPDFFilepath(
+          request.params.userHash,
+          request.params.playListId,
+          request.params.type
+        );
+      }
+    );
+
     this.fastify.post('/order/calculate', async (request: any, _reply) => {
       return await this.order.calculateOrder(request.body);
     });
