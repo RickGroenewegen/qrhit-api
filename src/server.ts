@@ -500,20 +500,20 @@ class Server {
     this.fastify.get(
       '/download/:userHash/:playlistId/:type',
       async (request: any, reply) => {
-        const { fileName, filePath } = await this.data.getPDFFilepath(
+        const pdfFile = await this.data.getPDFFilepath(
           request.params.userHash,
           request.params.playlistId,
           request.params.type
         );
-        if (filePath) {
+        if (pdfFile && pdfFile.filePath) {
           try {
-            await fs.access(filePath, fs.constants.R_OK);
+            await fs.access(pdfFile.filePath, fs.constants.R_OK);
             reply.header(
               'Content-Disposition',
               'attachment; filename=cards.pdf'
             );
             reply.type('application/pdf');
-            const fileContent = await fs.readFile(filePath);
+            const fileContent = await fs.readFile(pdfFile.filePath);
             reply.send(fileContent);
           } catch (error) {
             reply.code(404).send('PDF not found');
