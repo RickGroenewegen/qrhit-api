@@ -41,42 +41,27 @@ class Data {
       return null;
     }
 
-    const payment = await this.prisma.payment.findFirst({
+    const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findFirst({
       where: {
-        userId: user.id,
-        PaymentHasPlaylist: {
-          some: {
-            playlist: {
-              playlistId: playlistId,
-            },
-          },
+        payment: {
+          userId: user.id,
+        },
+        playlist: {
+          playlistId: playlistId,
         },
       },
       include: {
-        PaymentHasPlaylist: {
-          where: {
-            playlist: {
-              playlistId: playlistId,
-            },
-          },
-          select: {
-            filename: true,
-            filenameDigital: true,
-            type: true,
-          },
-        },
+        orderType: true,
       },
     });
 
-    if (!payment || payment.PaymentHasPlaylist.length === 0) {
+    if (!paymentHasPlaylist) {
       return null;
     }
 
-    const paymentHasPlaylist = payment.PaymentHasPlaylist[0];
-    const filename =
-      paymentHasPlaylist.type === 'physical'
-        ? paymentHasPlaylist.filename
-        : paymentHasPlaylist.filenameDigital;
+    const filename = paymentHasPlaylist.orderType.digital
+      ? paymentHasPlaylist.filenameDigital
+      : paymentHasPlaylist.filename;
 
     if (!filename) {
       return null;
