@@ -34,16 +34,15 @@ class Data {
     playlistId: string,
     type: string
   ): Promise<{ fileName: string; filePath: string } | null> {
+    if (type !== 'digital' && !this.utils.isTrustedIp(clientIp)) {
+      return null;
+    }
 
     const cacheKey = `pdfFilePath:${userId}:${playlistId}:${type}`;
     const cachedFilePath = await this.cache.get(cacheKey);
 
     if (cachedFilePath) {
       return JSON.parse(cachedFilePath);
-    }
-
-    if (type !== 'digital' && !this.utils.isTrustedIp(clientIp)) {
-      return null;
     }
 
     const user = await this.prisma.user.findFirst({
@@ -98,7 +97,7 @@ class Data {
       fileName: sanitizedFileName + '.pdf',
       filePath: filePath,
     };
-    await this.cache.set(cacheKey, JSON.stringify(result), 3600); // Cache for 1 hour
+    await this.cache.set(cacheKey, JSON.stringify(result));
     return result;
   }
 

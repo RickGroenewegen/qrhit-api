@@ -91,7 +91,7 @@ model User {
   userId      String    @unique
   email       String    @unique
   displayName String
-  hash        String
+  hash        String    @unique
   payments    Payment[] // One-to-many relation to payments
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt

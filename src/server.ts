@@ -26,6 +26,7 @@ import Cache from './cache';
 import Generator from './generator';
 import AnalyticsClient from './analytics';
 import { ChatGPT } from './chatgpt';
+import { PDFImage } from 'pdf-lib';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -501,6 +502,7 @@ class Server {
       '/download/:userHash/:playlistId/:type',
       async (request: any, reply) => {
         const pdfFile = await this.data.getPDFFilepath(
+          request.clientIp,
           request.params.userHash,
           request.params.playlistId,
           request.params.type
@@ -510,7 +512,7 @@ class Server {
             await fs.access(pdfFile.filePath, fs.constants.R_OK);
             reply.header(
               'Content-Disposition',
-              'attachment; filename=cards.pdf'
+              'attachment; filename=' + pdfFile.fileName
             );
             reply.type('application/pdf');
             const fileContent = await fs.readFile(pdfFile.filePath);
