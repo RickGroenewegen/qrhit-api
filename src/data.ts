@@ -30,10 +30,17 @@ class Data {
   private analytics = AnalyticsClient.getInstance();
 
   public async getPDFFilepath(
+    clientIp: string,
     userId: string,
     playlistId: string,
     type: string
   ): Promise<{ fileName: string; filePath: string } | null> {
+    console.log(111, type, clientIp);
+
+    if (type != 'digital' && !this.utils.isTrustedIp(clientIp)) {
+      return null;
+    }
+
     const user = await this.prisma.user.findFirst({
       where: { hash: userId },
       select: {
@@ -69,11 +76,19 @@ class Data {
       return null;
     }
 
-    const sanitizedFileName = sanitizeFilename(
+    let filename = '';
+    let sanitizedFileName = sanitizeFilename(
       paymentHasPlaylist.playlist.name.replace(/ /g, '_')
     ).toLowerCase();
 
-    const filePath = `${process.env['PUBLIC_DIR']}/pdf/${sanitizedFileName}`;
+    if (type == 'printer') {
+      filename = paymentHasPlaylist.filename!;
+      sanitizedFileName = `printer_${sanitizedFileName}`;
+    } else {
+      filename = paymentHasPlaylist.filenameDigital!;
+    }
+
+    const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
     return {
       fileName: sanitizedFileName,
       filePath: filePath,
