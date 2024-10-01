@@ -83,12 +83,7 @@ class Data {
 
     // Assuming the PDFs are stored in a 'pdfs' directory at the root of the project
     const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-    return {
-      fileName: sanitizeFilename(
-        paymentHasPlaylist.playlist.name.replace(/ /g, '_')
-      ).toLowerCase(),
-      filePath: filePath,
-    };
+    return { filePath: filePath };
   }
 
   private euCountryCodes: string[] = [
