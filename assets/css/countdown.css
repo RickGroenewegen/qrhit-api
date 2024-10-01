@@ -147,6 +147,12 @@ body {
     color: #0077be;
 }
 
+.install-instructions a {
+    color: #ffffff;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
 .install-instructions {
     display: none;
 }
