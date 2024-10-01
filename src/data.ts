@@ -5,6 +5,7 @@ import PrismaInstance from './prisma';
 import MusicBrainz from './musicbrainz';
 import crypto from 'crypto';
 import { ApiResult } from './interfaces/ApiResult';
+import path from 'path';
 
 interface TrackNeedingYearUpdate {
   id: number;
@@ -27,6 +28,57 @@ class Data {
   private translate = new Translation();
   private utils = new Utils();
   private analytics = AnalyticsClient.getInstance();
+
+  public async getPDFFilepath(userHash: string, playlistId: string): Promise<string | null> {
+    const user = await this.prisma.user.findUnique({
+      where: { hash: userHash },
+    });
+
+    if (!user) {
+      return null;
+    }
+
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        userId: user.id,
+        PaymentHasPlaylist: {
+          some: {
+            playlist: {
+              playlistId: playlistId,
+            },
+          },
+        },
+      },
+      include: {
+        PaymentHasPlaylist: {
+          where: {
+            playlist: {
+              playlistId: playlistId,
+            },
+          },
+          select: {
+            filename: true,
+            filenameDigital: true,
+            type: true,
+          },
+        },
+      },
+    });
+
+    if (!payment || payment.PaymentHasPlaylist.length === 0) {
+      return null;
+    }
+
+    const paymentHasPlaylist = payment.PaymentHasPlaylist[0];
+    const filename = paymentHasPlaylist.type === 'physical' ? paymentHasPlaylist.filename : paymentHasPlaylist.filenameDigital;
+
+    if (!filename) {
+      return null;
+    }
+
+    // Assuming the PDFs are stored in a 'pdfs' directory at the root of the project
+    return path.join(process.env.APP_ROOT || '', 'pdfs', filename);
+  }
 
   private euCountryCodes: string[] = [
     'AT', // Austria
