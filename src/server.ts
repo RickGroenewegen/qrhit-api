@@ -26,6 +26,7 @@ import Cache from './cache';
 import Generator from './generator';
 import AnalyticsClient from './analytics';
 import { ChatGPT } from './chatgpt';
+import path from 'path';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -541,7 +542,8 @@ class Server {
         if (filePath) {
           reply.header('Content-Disposition', 'attachment; filename=cards.pdf');
           reply.type('application/pdf');
-          return reply.sendFile(filePath);
+          const fileName = path.basename(filePath);
+          return reply.sendFile(fileName, path.dirname(filePath));
         } else {
           reply.code(404).send('PDF not found');
         }
