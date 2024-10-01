@@ -530,13 +530,21 @@ class Server {
     });
 
     this.fastify.get(
-      '/download/:userHash/:playlistId:/:type',
-      async (request: any, _reply) => {
-        return await this.data.getPDFFilepath(
+      '/download/:userHash/:playlistId/:type',
+      async (request: any, reply) => {
+        const filePath = await this.data.getPDFFilepath(
           request.params.userHash,
-          request.params.playListId,
+          request.params.playlistId,
           request.params.type
         );
+        
+        if (filePath) {
+          reply.header('Content-Disposition', 'attachment; filename=cards.pdf');
+          reply.type('application/pdf');
+          return reply.sendFile(filePath);
+        } else {
+          reply.code(404).send('PDF not found');
+        }
       }
     );
 
