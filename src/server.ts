@@ -500,7 +500,7 @@ class Server {
     this.fastify.get(
       '/download/:userHash/:playlistId/:type',
       async (request: any, reply) => {
-        const { filePath } = await this.data.getPDFFilepath(
+        const { fileName, filePath } = await this.data.getPDFFilepath(
           request.params.userHash,
           request.params.playlistId,
           request.params.type

@@ -83,7 +83,10 @@ class Data {
 
     // Assuming the PDFs are stored in a 'pdfs' directory at the root of the project
     const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-    return { filePath: filePath };
+    return {
+      fileName: filename,
+      filePath: filePath,
+    };
   }
 
   private euCountryCodes: string[] = [
