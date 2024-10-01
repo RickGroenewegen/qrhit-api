@@ -69,22 +69,13 @@ class Data {
       return null;
     }
 
-    let filename: string | null = null;
+    const sanitizedFileName = sanitizeFilename(
+      paymentHasPlaylist.playlist.name.replace(/ /g, '_')
+    ).toLowerCase();
 
-    if (type === 'digital') {
-      filename = paymentHasPlaylist.filenameDigital;
-    } else if (type === 'printer') {
-      filename = paymentHasPlaylist.filename;
-    }
-
-    if (!filename) {
-      return null;
-    }
-
-    // Assuming the PDFs are stored in a 'pdfs' directory at the root of the project
-    const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+    const filePath = `${process.env['PUBLIC_DIR']}/pdf/${sanitizedFileName}`;
     return {
-      fileName: filename,
+      fileName: sanitizedFileName,
       filePath: filePath,
     };
   }
