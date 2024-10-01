@@ -112,7 +112,7 @@ class Mail {
 
   async sendEmail(
     orderType: string,
-    payment: Payment,
+    payment: any,
     playlists: Playlist[] | [],
     filename: string = '',
     filenameDigital: string = ''
@@ -154,8 +154,8 @@ class Mail {
       invoiceZipcode: payment.invoiceZipcode,
       invoiceCountry: payment.invoiceCountrycode,
       differentInvoiceAddress: payment.differentInvoiceAddress,
-      digitalDownloadLink: `${process.env['API_URI']}/public/pdf/${filenameDigital}`,
-      downloadLink: `${process.env['API_URI']}/public/pdf/${filename}`,
+      digitalDownloadLink: `${process.env['API_URI']}/download/${payment.user.hash}/${playlists[0].playlistId}/digital`,
+      downloadLink: `${process.env['API_URI']}/download/${payment.user.hash}/${playlists[0].playlistId}/printer`,
       sendPhysicalLink,
       numberOfTracks,
       productName: process.env['PRODUCT_NAME'],

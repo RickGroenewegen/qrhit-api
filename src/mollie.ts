@@ -526,6 +526,7 @@ class Mollie {
         user: {
           select: {
             email: true,
+            hash: true,
           },
         },
         PaymentHasPlaylist: {

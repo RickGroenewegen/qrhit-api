@@ -287,6 +287,7 @@ class Spotify {
         }
         playlist = {
           id: playlistId,
+          playlistId: playlistId,
           name: response.data.name,
           numberOfTracks: response.data.tracks.total,
           image,
