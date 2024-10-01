@@ -29,7 +29,10 @@ class Data {
   private utils = new Utils();
   private analytics = AnalyticsClient.getInstance();
 
-  public async getPDFFilepath(userHash: string, playlistId: string): Promise<string | null> {
+  public async getPDFFilepath(
+    userHash: string,
+    playlistId: string
+  ): Promise<string | null> {
     const user = await this.prisma.user.findUnique({
       where: { hash: userHash },
     });
@@ -70,7 +73,10 @@ class Data {
     }
 
     const paymentHasPlaylist = payment.PaymentHasPlaylist[0];
-    const filename = paymentHasPlaylist.type === 'physical' ? paymentHasPlaylist.filename : paymentHasPlaylist.filenameDigital;
+    const filename =
+      paymentHasPlaylist.type === 'physical'
+        ? paymentHasPlaylist.filename
+        : paymentHasPlaylist.filenameDigital;
 
     if (!filename) {
       return null;
