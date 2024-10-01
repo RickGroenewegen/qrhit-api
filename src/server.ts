@@ -506,10 +506,10 @@ class Server {
           request.params.type
         );
         if (filePath && fs.existsSync(filePath)) {
-          const stream = fs.createReadStream(filePath, 'binary');
-          reply.header('Content-Type', 'application/pdf');
-          reply.header('Content-Disposition', `attachment; filename="${path.basename(filePath)}"`);
-          reply.send(stream).type('application/pdf').code(200);
+          reply.header('Content-Disposition', 'attachment; filename=cards.pdf');
+          reply.type('application/pdf');
+          const fileContent = await fs.promises.readFile(filePath);
+          reply.send(fileContent);
         } else {
           reply.code(404).send('PDF not found');
         }
