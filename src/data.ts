@@ -36,9 +36,10 @@ class Data {
   ): Promise<string | null> {
     const user = await this.prisma.user.findFirst({
       where: { hash: userId },
+      select: {
+        id: true,
+      },
     });
-
-    console.log(111, user);
 
     if (!user) {
       return null;
@@ -59,23 +60,17 @@ class Data {
       },
     });
 
-    console.log(222, paymentHasPlaylist);
-
     if (!paymentHasPlaylist) {
       return null;
     }
 
     let filename: string | null = null;
 
-    console.log(331, type);
-
     if (type === 'digital') {
       filename = paymentHasPlaylist.filenameDigital;
     } else if (type === 'printer') {
       filename = paymentHasPlaylist.filename;
     }
-
-    console.log(333, filename);
 
     if (!filename) {
       return null;

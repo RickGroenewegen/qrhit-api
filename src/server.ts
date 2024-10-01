@@ -187,7 +187,7 @@ class Server {
 
   private async setVersion() {
     this.version = JSON.parse(
-      (await fs.readFile('package.json', 'utf-8'))
+      await fs.readFile('package.json', 'utf-8')
     ).version;
   }
 
@@ -500,18 +500,25 @@ class Server {
     this.fastify.get(
       '/download/:userHash/:playlistId/:type',
       async (request: any, reply) => {
-        const filePath = await this.data.getPDFFilepath(
+        const { fileName, filePath } = await this.data.getPDFFilepath(
           request.params.userHash,
           request.params.playlistId,
           request.params.type
         );
-        try {
-          await fs.access(filePath, fs.constants.R_OK);
-          reply.header('Content-Disposition', 'attachment; filename=cards.pdf');
-          reply.type('application/pdf');
-          const fileContent = await fs.readFile(filePath);
-          reply.send(fileContent);
-        } catch (error) {
+        if (filePath) {
+          try {
+            await fs.access(filePath, fs.constants.R_OK);
+            reply.header(
+              'Content-Disposition',
+              'attachment; filename=cards.pdf'
+            );
+            reply.type('application/pdf');
+            const fileContent = await fs.readFile(filePath);
+            reply.send(fileContent);
+          } catch (error) {
+            reply.code(404).send('PDF not found');
+          }
+        } else {
           reply.code(404).send('PDF not found');
         }
       }
