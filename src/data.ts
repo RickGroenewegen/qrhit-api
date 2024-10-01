@@ -33,7 +33,7 @@ class Data {
     userId: string,
     playlistId: string,
     type: string
-  ): Promise<string | null> {
+  ): Promise<{ playlistName: string; filePath: string } | null> {
     const user = await this.prisma.user.findFirst({
       where: { hash: userId },
       select: {
@@ -57,6 +57,11 @@ class Data {
       select: {
         filename: true,
         filenameDigital: true,
+        playlist: {
+          select: {
+            name: true,
+          },
+        },
       },
     });
 
@@ -77,7 +82,11 @@ class Data {
     }
 
     // Assuming the PDFs are stored in a 'pdfs' directory at the root of the project
-    return `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+    const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+    return {
+      playlistName: paymentHasPlaylist.playlist.name,
+      filePath: filePath,
+    };
   }
 
   private euCountryCodes: string[] = [
