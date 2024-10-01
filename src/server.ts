@@ -505,9 +505,10 @@ class Server {
           request.params.playlistId,
           request.params.type
         );
-        if (filePath) {
-          const stream = fs.createReadStream('../test.pdf', 'binary');
+        if (filePath && fs.existsSync(filePath)) {
+          const stream = fs.createReadStream(filePath, 'binary');
           reply.header('Content-Type', 'application/pdf');
+          reply.header('Content-Disposition', `attachment; filename="${path.basename(filePath)}"`);
           reply.send(stream).type('application/pdf').code(200);
         } else {
           reply.code(404).send('PDF not found');
