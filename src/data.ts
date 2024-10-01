@@ -34,9 +34,15 @@ class Data {
     playlistId: string,
     type: string
   ): Promise<{ fileName: string; filePath: string } | null> {
-    console.log(111, type, clientIp);
 
-    if (type != 'digital' && !this.utils.isTrustedIp(clientIp)) {
+    const cacheKey = `pdfFilePath:${userId}:${playlistId}:${type}`;
+    const cachedFilePath = await this.cache.get(cacheKey);
+
+    if (cachedFilePath) {
+      return JSON.parse(cachedFilePath);
+    }
+
+    if (type !== 'digital' && !this.utils.isTrustedIp(clientIp)) {
       return null;
     }
 
@@ -88,10 +94,12 @@ class Data {
     }
 
     const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-    return {
+    const result = {
       fileName: sanitizedFileName + '.pdf',
       filePath: filePath,
     };
+    await this.cache.set(cacheKey, JSON.stringify(result), 3600); // Cache for 1 hour
+    return result;
   }
 
   private euCountryCodes: string[] = [
