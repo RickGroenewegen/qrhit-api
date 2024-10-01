@@ -239,6 +239,18 @@ $(document).ready(function () {
     setActiveDevice('android');
   });
 
+  $('#app-store').on('click', function () {
+    setActiveDevice('app-store');
+  });
+
+  $('#google-play').on('click', function () {
+    setActiveDevice('google-play');
+  });
+
+  $('#pwa').on('click', function () {
+    setActiveDevice('pwa');
+  });
+
   $('#close-onboarding').on('click', hideOnboarding);
 
   if (!isPWAInstalled()) {
