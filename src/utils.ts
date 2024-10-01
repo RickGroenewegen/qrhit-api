@@ -286,7 +286,7 @@ class Utils {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   }
   public generateFilename(name: string): string {
-    return name.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+    return name.replace(/[^a-zA-Z0-9]/g, '_').replace(/_+/g, '_').toLowerCase();
   }
 }
 
