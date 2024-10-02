@@ -231,14 +231,6 @@
     "it",
     "pt"
   ],
-  "countdown.youNeedToInstall": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt"
-  ],
   "countdown.howToInstall": [
     "nl",
     "de",
@@ -2624,6 +2616,14 @@
     "pt"
   ],
   "countdown.other": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt"
+  ],
+  "countdown.youNeedToInstall": [
     "nl",
     "de",
     "fr",

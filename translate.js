@@ -42,7 +42,7 @@ const translate = async (text, currentPath, languagesToTranslate) => {
     languagesToTranslateFull.join(', ') +
     '. You should return a JSON object with the keys (' +
     languagesToTranslate.join(',') +
-    ') which contain the translations for those languages. Try to keep the translation length the same as the original and not much longer. The output MUST be JSON valid and ONLY JSON. No other text. It is all in the context of a mobile app used for measuring pH. The text you should translate is:\n\n "' +
+    ') which contain the translations for those languages. Try to keep the translation length the same as the original and not much longer. The output MUST be JSON valid and ONLY JSON. No other text. It is all in the context of a mobile app that generates QR music cards out of Spotify playlists and lets the user play games with them. The text you should translate is:\n\n "' +
     text +
     '"';
 

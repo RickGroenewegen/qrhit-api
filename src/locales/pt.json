@@ -54,7 +54,7 @@
   "payment.playlist": "Playlist",
   "payment.cards": "Cartões QR",
   "payment.digital": "PDF contendo",
-  "countdown.youNeedToInstall": "Você precisa instalar este app no seu dispositivo móvel",
+  "countdown.youNeedToInstall": "Instale este app no seu dispositivo móvel",
   "countdown.invalidLink": "Código QR não reconhecido",
   "countdown.howToInstall": "Como instalar",
   "countdown.onIOS": "No Safari iOS",
