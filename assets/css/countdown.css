@@ -12,6 +12,13 @@ body {
     font-family: 'Roboto', sans-serif;
 }
 
+.download-button {
+    width: 200px;
+    height: 50px;
+    font-size: 18px;
+    margin: 10px;
+}
+
  .ios-share-icon {
      width: 30px;
      height: 30px;
