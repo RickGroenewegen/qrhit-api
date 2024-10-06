@@ -366,7 +366,10 @@ class Spotify {
           allTracks = allTracks.concat(filteredTracks);
 
           // Check if there are more tracks to fetch or if we reached the limit of MAX_CARDS tracks
-          if (response.data.items.length < limit || allTracks.length >= MAX_CARDS) {
+          if (
+            response.data.items.length < limit ||
+            allTracks.length >= MAX_CARDS
+          ) {
             // Limit the tracks to MAX_CARDS if we have more
             allTracks = allTracks.slice(0, MAX_CARDS);
             this.cache.set(cacheKey, JSON.stringify(allTracks));
