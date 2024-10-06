@@ -1,4 +1,5 @@
 import Log from './logger';
+import { MAX_CARDS } from './config/constants';
 import PrismaInstance from './prisma';
 import axios from 'axios';
 import Cache from './cache';
@@ -148,8 +149,8 @@ class Order {
   public async getOrderType(numberOfTracks: number, digital: boolean = false) {
     let orderType = null;
     let digitalInt = digital ? '1' : '0';
-    if (numberOfTracks > 500) {
-      numberOfTracks = 500;
+    if (numberOfTracks > MAX_CARDS) {
+      numberOfTracks = MAX_CARDS;
     }
     let cacheKey = `orderType_${numberOfTracks}_${digitalInt}`;
     const cachedOrderType = await this.cache.get(cacheKey);
