@@ -164,6 +164,10 @@ class Mollie {
         description = `${params.cart.items.length}x ${translations!.playlists}`;
       }
 
+      if (calculateResult.data.total <= 10) {
+        throw new Error('Order calculation');
+      }
+
       const payment = await paymentClient.payments.create({
         amount: {
           currency: 'EUR',
