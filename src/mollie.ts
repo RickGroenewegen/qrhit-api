@@ -181,6 +181,7 @@ class Mollie {
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
         locale: this.getMollieLocale(params.locale),
+        method: params.paymentMethods, // Add this line to specify payment methods
       });
 
       const userDatabaseId = await this.data.storeUser({
