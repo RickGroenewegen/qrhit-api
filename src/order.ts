@@ -263,36 +263,51 @@ class Order {
     if (itemsForApi.length > 0) {
       const authToken = await this.getAuthToken();
 
-      let response = await axios({
-        method: 'post',
-        url: `${process.env['PRINT_API_URL']}/v2/shipping/quote`,
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        data: {
-          country: params.countrycode || 'NL',
-          items: itemsForApi,
-        },
-      });
+      try {
+        let response = await axios({
+          method: 'post',
+          url: `${process.env['PRINT_API_URL']}/v2/shipping/quote`,
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          data: {
+            country: params.countrycode || 'NL',
+            items: itemsForApi,
+          },
+        });
 
-      total += response.data.payment;
-      total = parseFloat(total.toFixed(2));
+        total += response.data.payment;
+        total = parseFloat(total.toFixed(2));
 
-      returnData = {
-        success: true,
-        data: {
-          total,
-          shipping: response.data.shipping,
-          handling: response.data.handling,
-          taxRateShipping: response.data.taxRate * 100,
-          taxRate,
-          price: totalProductPriceWithoutVAT,
-          payment: response.data.payment,
-        },
-      };
-      this.cache.set(cacheToken, JSON.stringify(returnData));
-      return returnData;
+        returnData = {
+          success: true,
+          data: {
+            total,
+            shipping: response.data.shipping,
+            handling: response.data.handling,
+            taxRateShipping: response.data.taxRate * 100,
+            taxRate,
+            price: totalProductPriceWithoutVAT,
+            payment: response.data.payment,
+          },
+        };
+        this.cache.set(cacheToken, JSON.stringify(returnData));
+        return returnData;
+      } catch (e) {
+        if (axios.isAxiosError(e) && e.response) {
+          console.log(JSON.stringify(e.response.data, null, 2));
+          return {
+            success: false,
+            error: `Error calculating order`,
+          };
+        } else {
+          return {
+            success: false,
+            error: `Error calculating order`,
+          };
+        }
+      }
     } else {
       return {
         success: true,
