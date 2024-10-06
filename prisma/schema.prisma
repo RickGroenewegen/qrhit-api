@@ -30,6 +30,7 @@ model OrderType {
   createdAt          DateTime             @default(now())
   updatedAt          DateTime             @updatedAt
   digital            Boolean              @default(false)
+  visible            Boolean              @default(true)
   Payment            Payment[]
   PaymentHasPlaylist PaymentHasPlaylist[]
 

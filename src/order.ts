@@ -132,6 +132,9 @@ class Order {
           maxCards: true,
           amountWithMargin: true,
         },
+        where: {
+          visible: true,
+        },
         orderBy: [
           {
             digital: 'desc',
