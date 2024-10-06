@@ -1,4 +1,5 @@
 import { format } from 'date-fns';
+import { MAX_CARDS } from './config/constants';
 import { white } from 'console-log-colors';
 import axios, { AxiosRequestConfig } from 'axios';
 import { ApiResult } from './interfaces/ApiResult';
@@ -364,10 +365,10 @@ class Spotify {
 
           allTracks = allTracks.concat(filteredTracks);
 
-          // Check if there are more tracks to fetch or if we reached the limit of 500 tracks
-          if (response.data.items.length < limit || allTracks.length >= 500) {
-            // Limit the tracks to 500 if we have more
-            allTracks = allTracks.slice(0, 500);
+          // Check if there are more tracks to fetch or if we reached the limit of MAX_CARDS tracks
+          if (response.data.items.length < limit || allTracks.length >= MAX_CARDS) {
+            // Limit the tracks to MAX_CARDS if we have more
+            allTracks = allTracks.slice(0, MAX_CARDS);
             this.cache.set(cacheKey, JSON.stringify(allTracks));
             break;
           }
@@ -378,8 +379,8 @@ class Spotify {
         allTracks = JSON.parse(cacheResult);
       }
 
-      // Limit the tracks to 500 if we have more
-      allTracks = allTracks.slice(0, 500);
+      // Limit the tracks to MAX_CARDS if we have more
+      allTracks = allTracks.slice(0, MAX_CARDS);
 
       return {
         success: true,
