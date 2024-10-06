@@ -54,7 +54,7 @@
   "payment.playlist": "Playlist",
   "payment.cards": "Carte QR",
   "payment.digital": "PDF contenente",
-  "countdown.youNeedToInstall": "Installa questa app sul tuo dispositivo mobile",
+  "countdown.youNeedToInstall": "Installa la nostra app per scansionare le tue carte!",
   "countdown.invalidLink": "Codice QR non riconosciuto",
   "countdown.howToInstall": "Come installare",
   "countdown.onIOS": "Su Safari iOS",

@@ -68,7 +68,7 @@
 	"payment.playlists" : "playlists",
 	"payment.digital" : "PDF containing",
 
-	"countdown.youNeedToInstall" : "Install this app on your mobile device",
+	"countdown.youNeedToInstall" : "Install our app to scan your cards!",
 	"countdown.invalidLink" : "Unrecognized QR code",
 	"countdown.howToInstall" : "How to install",
 	"countdown.onIOS" : "On iOS Safari",
