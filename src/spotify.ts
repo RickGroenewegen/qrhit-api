@@ -364,8 +364,10 @@ class Spotify {
 
           allTracks = allTracks.concat(filteredTracks);
 
-          // Check if there are more tracks to fetch
-          if (response.data.items.length < limit) {
+          // Check if there are more tracks to fetch or if we reached the limit of 500 tracks
+          if (response.data.items.length < limit || allTracks.length >= 500) {
+            // Limit the tracks to 500 if we have more
+            allTracks = allTracks.slice(0, 500);
             this.cache.set(cacheKey, JSON.stringify(allTracks));
             break;
           }
@@ -375,6 +377,9 @@ class Spotify {
       } else {
         allTracks = JSON.parse(cacheResult);
       }
+
+      // Limit the tracks to 500 if we have more
+      allTracks = allTracks.slice(0, 500);
 
       return {
         success: true,
