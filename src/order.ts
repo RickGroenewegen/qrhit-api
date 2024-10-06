@@ -262,7 +262,10 @@ class Order {
 
     if (itemsForApi.length > 0) {
       const authToken = await this.getAuthToken();
-
+      const data = {
+        country: params.countrycode || 'NL',
+        items: itemsForApi,
+      };
       try {
         let response = await axios({
           method: 'post',
@@ -271,10 +274,7 @@ class Order {
             Authorization: `Bearer ${authToken}`,
             'Content-Type': 'application/json',
           },
-          data: {
-            country: params.countrycode || 'NL',
-            items: itemsForApi,
-          },
+          data,
         });
 
         total += response.data.payment;
@@ -296,6 +296,7 @@ class Order {
         return returnData;
       } catch (e) {
         if (axios.isAxiosError(e) && e.response) {
+          console.log(data);
           console.log(JSON.stringify(e.response.data, null, 2));
           return {
             success: false,
