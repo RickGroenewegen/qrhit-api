@@ -16,7 +16,7 @@ class Cache {
       throw new Error('REDIS_URL environment variable is not defined');
     }
 
-    this.client = new Redis(redisUrl);
+    this.client = new Redis(redisUrl, { db: 0 });
 
     // Handle connection errors
     this.client.on('error', (error) => {
@@ -73,7 +73,7 @@ class Cache {
   }
 
   async flush(): Promise<void> {
-    await this.executeCommand('flushall');
+    await this.executeCommand('flushdb');
   }
 
   async del(key: string): Promise<void> {
