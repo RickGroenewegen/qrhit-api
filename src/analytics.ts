@@ -9,7 +9,7 @@ class AnalyticsClient {
     if (!redisUrl) {
       throw new Error('REDIS_URL environment variable is not defined');
     }
-    this.client = new Redis(redisUrl);
+    this.client = new Redis(redisUrl, { db: 1 });
   }
 
   public static getInstance(): AnalyticsClient {
