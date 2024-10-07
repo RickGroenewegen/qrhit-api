@@ -22,7 +22,10 @@ class Mollie {
   private utils = new Utils();
   private generator = new Generator();
 
-  private getMollieLocaleData(locale: string, locationCountryCode: string): {
+  private getMollieLocaleData(
+    locale: string,
+    locationCountryCode: string
+  ): {
     locale: Locale;
     paymentMethods: PaymentMethod[];
   } {
@@ -70,12 +73,16 @@ class Mollie {
       pl: [PaymentMethod.przelewy24, PaymentMethod.blik],
     };
 
-    let paymentMethods = paymentMethodMap[locale] || [
-      PaymentMethod.banktransfer,
-    ];
+    let paymentMethods = paymentMethodMap[locale] || [];
 
-    if (locationCountryCode && paymentMethodMap[locationCountryCode]) {
-      paymentMethods = [...paymentMethods, ...paymentMethodMap[locationCountryCode]];
+    if (
+      locationCountryCode.length > 0 &&
+      paymentMethodMap[locationCountryCode]
+    ) {
+      paymentMethods = [
+        ...paymentMethods,
+        ...paymentMethodMap[locationCountryCode],
+      ];
     }
 
     return {
@@ -224,12 +231,17 @@ class Mollie {
           timeout: 1000,
         });
         const location = response.data;
+        console.log(111, location);
         if (!location.error) {
           locationCountryCode = location.country.toLowerCase();
+          console.log(222, locationCountryCode);
         }
       } catch (error) {}
 
-      const localeData = this.getMollieLocaleData(params.locale, locationCountryCode);
+      const localeData = this.getMollieLocaleData(
+        params.locale,
+        locationCountryCode
+      );
       const defaultMethods: PaymentMethod[] = [
         PaymentMethod.applepay,
         PaymentMethod.ideal,
@@ -251,7 +263,7 @@ class Mollie {
         description: description,
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
-        locale: this.getMollieLocaleData(params.locale).locale,
+        locale: localeData.locale,
       });
 
       const userDatabaseId = await this.data.storeUser({

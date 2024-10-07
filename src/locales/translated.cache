@@ -5,7 +5,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.playlist": [
     "nl",
@@ -13,7 +14,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.items": [
     "nl",
@@ -21,7 +23,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.fullname": [
     "nl",
@@ -29,7 +32,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.address": [
     "nl",
@@ -37,7 +41,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.zipcode": [
     "nl",
@@ -45,7 +50,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.city": [
     "nl",
@@ -53,7 +59,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.country": [
     "nl",
@@ -61,7 +68,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.email": [
     "nl",
@@ -69,7 +77,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.trackingMailSubject": [
     "nl",
@@ -77,7 +86,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.trackOrder": [
     "nl",
@@ -85,7 +95,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.thankYou": [
     "nl",
@@ -93,7 +104,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.invoiceNumber": [
     "nl",
@@ -101,7 +113,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.invoiceDate": [
     "nl",
@@ -109,7 +122,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.paidInFull": [
     "nl",
@@ -117,7 +131,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.method": [
     "nl",
@@ -125,7 +140,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.product": [
     "nl",
@@ -133,7 +149,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.shippingAndHandling": [
     "nl",
@@ -141,7 +158,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.total": [
     "nl",
@@ -149,7 +167,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.ideal": [
     "nl",
@@ -157,7 +176,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.creditcard": [
     "nl",
@@ -165,7 +185,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.paypal": [
     "nl",
@@ -173,7 +194,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.bankTransfer": [
     "nl",
@@ -181,7 +203,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.invoice": [
     "nl",
@@ -189,7 +212,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.taxRate1": [
     "nl",
@@ -197,7 +221,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.taxRate2": [
     "nl",
@@ -205,7 +230,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.applePay": [
     "nl",
@@ -213,7 +239,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "payment.playlist": [
     "nl",
@@ -221,7 +248,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "payment.cards": [
     "nl",
@@ -229,7 +257,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.howToInstall": [
     "nl",
@@ -237,7 +266,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.onIOS": [
     "nl",
@@ -245,7 +275,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.onAndroid": [
     "nl",
@@ -253,7 +284,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.tapShare": [
     "nl",
@@ -261,7 +293,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.scrollDown": [
     "nl",
@@ -269,7 +302,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.tapMenu": [
     "nl",
@@ -277,7 +311,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.tapAddToHomeScreen": [
     "nl",
@@ -285,7 +320,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.gotIt": [
     "nl",
@@ -293,7 +329,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.closeScanner": [
     "nl",
@@ -301,7 +338,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.cameraError": [
     "nl",
@@ -309,7 +347,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.yourSongWillStart": [
     "nl",
@@ -317,7 +356,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.getReady": [
     "nl",
@@ -325,7 +365,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.tapTheCamera": [
     "nl",
@@ -333,7 +374,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.allRightsReserved": [
     "nl",
@@ -341,7 +383,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.mailSubject": [
     "nl",
@@ -349,7 +392,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.greetings": [
     "nl",
@@ -357,7 +401,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.orderInformation": [
     "nl",
@@ -365,7 +410,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "payment.digital": [
     "nl",
@@ -373,7 +419,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.invalidLink": [
     "nl",
@@ -381,7 +428,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.description": [
     "nl",
@@ -389,7 +437,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.amount": [
     "nl",
@@ -397,7 +446,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.pricePerPiece": [
     "nl",
@@ -405,7 +455,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.taxRate": [
     "nl",
@@ -413,7 +464,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.vatAmount": [
     "nl",
@@ -421,7 +473,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.totalInclVAT": [
     "nl",
@@ -429,7 +482,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.pdfProduct": [
     "nl",
@@ -437,7 +491,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.cards": [
     "nl",
@@ -445,7 +500,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.physicalProduct": [
     "nl",
@@ -453,7 +509,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AF": [
     "nl",
@@ -461,7 +518,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AX": [
     "nl",
@@ -469,7 +527,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AL": [
     "nl",
@@ -477,7 +536,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.DZ": [
     "nl",
@@ -485,7 +545,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AS": [
     "nl",
@@ -493,7 +554,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AD": [
     "nl",
@@ -501,7 +563,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AO": [
     "nl",
@@ -509,7 +572,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AI": [
     "nl",
@@ -517,7 +581,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AQ": [
     "nl",
@@ -525,7 +590,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AG": [
     "nl",
@@ -533,7 +599,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AR": [
     "nl",
@@ -541,7 +608,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AM": [
     "nl",
@@ -549,7 +617,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AW": [
     "nl",
@@ -557,7 +626,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AU": [
     "nl",
@@ -565,7 +635,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AT": [
     "nl",
@@ -573,7 +644,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.AZ": [
     "nl",
@@ -581,7 +653,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BS": [
     "nl",
@@ -589,7 +662,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BH": [
     "nl",
@@ -597,7 +671,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BD": [
     "nl",
@@ -605,7 +680,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BB": [
     "nl",
@@ -613,7 +689,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BY": [
     "nl",
@@ -621,7 +698,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BE": [
     "nl",
@@ -629,7 +707,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BZ": [
     "nl",
@@ -637,7 +716,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BJ": [
     "nl",
@@ -645,7 +725,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BM": [
     "nl",
@@ -653,7 +734,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BT": [
     "nl",
@@ -661,7 +743,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BO": [
     "nl",
@@ -669,7 +752,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BQ": [
     "nl",
@@ -677,7 +761,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BA": [
     "nl",
@@ -685,7 +770,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BW": [
     "nl",
@@ -693,7 +779,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BV": [
     "nl",
@@ -701,7 +788,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BR": [
     "nl",
@@ -709,7 +797,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.IO": [
     "nl",
@@ -717,7 +806,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BN": [
     "nl",
@@ -725,7 +815,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BG": [
     "nl",
@@ -733,7 +824,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BF": [
     "nl",
@@ -741,7 +833,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.BI": [
     "nl",
@@ -749,7 +842,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.KH": [
     "nl",
@@ -757,7 +851,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CM": [
     "nl",
@@ -765,7 +860,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CA": [
     "nl",
@@ -773,7 +869,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CV": [
     "nl",
@@ -781,7 +878,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.KY": [
     "nl",
@@ -789,7 +887,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CF": [
     "nl",
@@ -797,7 +896,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.TD": [
     "nl",
@@ -805,7 +905,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CL": [
     "nl",
@@ -813,7 +914,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CN": [
     "nl",
@@ -821,7 +923,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CX": [
     "nl",
@@ -829,7 +932,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CC": [
     "nl",
@@ -837,7 +941,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CO": [
     "nl",
@@ -845,7 +950,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.KM": [
     "nl",
@@ -853,7 +959,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CG": [
     "nl",
@@ -861,7 +968,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CD": [
     "nl",
@@ -869,7 +977,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CK": [
     "nl",
@@ -877,7 +986,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CR": [
     "nl",
@@ -885,7 +995,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CI": [
     "nl",
@@ -893,7 +1004,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.HR": [
     "nl",
@@ -901,7 +1013,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CW": [
     "nl",
@@ -909,7 +1022,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CY": [
     "nl",
@@ -917,7 +1031,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.CZ": [
     "nl",
@@ -925,7 +1040,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.DK": [
     "nl",
@@ -933,7 +1049,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.DJ": [
     "nl",
@@ -941,7 +1058,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.DM": [
     "nl",
@@ -949,7 +1067,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.DO": [
     "nl",
@@ -957,7 +1076,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.EC": [
     "nl",
@@ -965,7 +1085,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.EG": [
     "nl",
@@ -973,7 +1094,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.SV": [
     "nl",
@@ -981,7 +1103,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GQ": [
     "nl",
@@ -989,7 +1112,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.ER": [
     "nl",
@@ -997,7 +1121,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.EE": [
     "nl",
@@ -1005,7 +1130,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.ET": [
     "nl",
@@ -1013,7 +1139,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.FK": [
     "nl",
@@ -1029,7 +1156,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.FJ": [
     "nl",
@@ -1037,7 +1165,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.FI": [
     "nl",
@@ -1045,7 +1174,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.FR": [
     "nl",
@@ -1053,7 +1183,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GF": [
     "nl",
@@ -1061,7 +1192,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.PF": [
     "nl",
@@ -1069,7 +1201,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.TF": [
     "nl",
@@ -1077,7 +1210,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GA": [
     "nl",
@@ -1085,7 +1219,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GM": [
     "nl",
@@ -1093,7 +1228,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GE": [
     "nl",
@@ -1101,7 +1237,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.DE": [
     "nl",
@@ -1109,7 +1246,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GH": [
     "nl",
@@ -1117,7 +1255,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GI": [
     "nl",
@@ -1125,7 +1264,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GR": [
     "nl",
@@ -1133,7 +1273,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GL": [
     "nl",
@@ -1141,7 +1282,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GD": [
     "nl",
@@ -1149,7 +1291,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GP": [
     "nl",
@@ -1157,7 +1300,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GU": [
     "nl",
@@ -1165,7 +1309,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GT": [
     "nl",
@@ -1173,7 +1318,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GG": [
     "nl",
@@ -1181,7 +1327,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GN": [
     "nl",
@@ -1189,7 +1336,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GW": [
     "nl",
@@ -1197,7 +1345,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.GY": [
     "nl",
@@ -1205,7 +1354,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.HT": [
     "nl",
@@ -1213,7 +1363,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.HM": [
     "nl",
@@ -1221,7 +1372,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.VA": [
     "nl",
@@ -2421,7 +2573,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.invoiceZipcode": [
     "nl",
@@ -2429,7 +2582,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.invoiceCity": [
     "nl",
@@ -2437,7 +2591,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.invoiceCountry": [
     "nl",
@@ -2445,7 +2600,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.cards": [
     "nl",
@@ -2453,7 +2609,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.yourInformation": [
     "nl",
@@ -2461,7 +2618,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.shippingAddress": [
     "nl",
@@ -2469,7 +2627,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.orderData": [
     "nl",
@@ -2477,7 +2636,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "invoice.bancontact": [
     "nl",
@@ -2485,7 +2645,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.mailSubjectDigital": [
     "nl",
@@ -2493,7 +2654,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.greatNewsMainDigital": [
     "nl",
@@ -2501,7 +2663,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.weHopeYouHaveFunMainDigital": [
     "nl",
@@ -2509,7 +2672,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.weHopeYouHaveFunDigital": [
     "nl",
@@ -2517,7 +2681,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.playlists": [
     "nl",
@@ -2525,7 +2690,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "payment.playlists": [
     "nl",
@@ -2533,7 +2699,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.greatNews": [
     "nl",
@@ -2541,7 +2708,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.weHopeYouHaveFun": [
     "nl",
@@ -2549,7 +2717,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.orderShipped": [
     "nl",
@@ -2557,7 +2726,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.downloadLink": [
     "nl",
@@ -2565,7 +2735,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.physicalDownloadLink": [
     "nl",
@@ -2573,7 +2744,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.greatNewsDigital": [
     "nl",
@@ -2581,7 +2753,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.downloadButton": [
     "nl",
@@ -2589,7 +2762,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "mail.physicalDownloadButton": [
     "nl",
@@ -2597,7 +2771,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.appStore": [
     "nl",
@@ -2605,7 +2780,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.googlePlay": [
     "nl",
@@ -2613,7 +2789,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.other": [
     "nl",
@@ -2621,7 +2798,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countdown.youNeedToInstall": [
     "nl",
@@ -2629,6 +2807,7 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ]
 }
