@@ -3,6 +3,7 @@ import Logger from './logger';
 import axios, { AxiosInstance } from 'axios';
 import PrismaInstance from './prisma';
 import { ChatGPT } from './chatgpt';
+import { search, OrganicResult } from 'google-sr';
 
 class MusicBrainz {
   private logger = new Logger();
@@ -37,9 +38,17 @@ class MusicBrainz {
     isrc: string,
     artist: string,
     title: string
-  ): Promise<{ year: number; source: string }> {
+  ): Promise<{
+    year: number;
+    source: string;
+    certainty: number;
+    reasoning: string;
+  }> {
     let year = 0;
     let source = '';
+    let reasoning = '';
+    let certainty = 0;
+
     const result = await this.prisma.isrc.findUnique({
       where: {
         isrc: isrc,
@@ -64,16 +73,21 @@ class MusicBrainz {
       } else {
         const searchResults = await this.performGoogleSearch(artist, title);
 
-        console.log(111, searchResults);
+        const aiResult = await this.openai
+          .ask(`  I would like to know the release date for the following song: ${artist} - ${title}
+                  Use your own knowledge or the results from the search engine to determine the release year. 
+                  Wikipedia is considered the most reliable source. Discogs after that. Here is the search engine result:
+                  ${searchResults}
+          `);
 
-        const aiResult = await this.openai.ask(`${artist} - ${title}`);
-
-        year = aiResult;
+        year = aiResult.year;
+        certainty = aiResult.certainty;
+        reasoning = aiResult.reasoning;
         source = 'ai';
       }
     }
 
-    return { year, source };
+    return { year, source, certainty, reasoning };
   }
 
   public async getReleaseDateFromAPI(
@@ -124,53 +138,23 @@ class MusicBrainz {
     artist: string,
     title: string
   ): Promise<string> {
-    const apiKey = process.env.GOOGLE_API_KEY;
-    const searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID;
-    const query = `${artist} - ${title}`;
-    const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
-      query
-    )}&key=${apiKey}&cx=${searchEngineId}`;
+    const queryResult = await search({
+      query: `${artist} - ${title}`,
+      // OrganicResult is the default, however it is recommended to ALWAYS specify the result type
+      resultTypes: [OrganicResult],
+      requestConfig: {
+        params: {
+          safe: 'active',
+        },
+      },
+    });
 
-    try {
-      const response = await axios.get(url);
-      const items = response.data.items;
-      const searchResults = items
-        .map((item: any) => `${item.title}: ${item.snippet}`)
-        .join('\n');
-      return searchResults;
-    } catch (error: any) {
-      this.logger.log(
-        color.red(`Error fetching Google search results: ${error.message}`)
-      );
-      return '';
+    let searchResults = '';
+    for (const result of queryResult) {
+      searchResults += `Title: ${result.title}\nDescription: ${result.description}\nLink: ${result.link}\n\n`;
     }
-  }
 
-  private async queryKnowledgeGraph(
-    artist: string,
-    title: string
-  ): Promise<string> {
-    const apiKey = process.env.GOOGLE_API_KEY;
-    const query = `${artist} ${title}`;
-    const url = `https://kgsearch.googleapis.com/v1/entities:search?query=${encodeURIComponent(
-      query
-    )}&key=${apiKey}&limit=1&indent=True`;
-
-    console.log(123, url);
-
-    try {
-      const response = await axios.get(url);
-      const elements = response.data.itemListElement;
-      const knowledgeGraphInfo = elements
-        .map((element: any) => element.result.description)
-        .join('\n');
-      return knowledgeGraphInfo;
-    } catch (error: any) {
-      this.logger.log(
-        color.red(`Error fetching Knowledge Graph data: ${error.message}`)
-      );
-      return '';
-    }
+    return searchResults;
   }
 }
 export default MusicBrainz;
