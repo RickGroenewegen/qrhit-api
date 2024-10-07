@@ -62,7 +62,7 @@ class MusicBrainz {
           },
         });
       } else {
-        const searchResults = await this.performGoogleSearch(artist, title);
+        const searchResults = await this.queryKnowledgeGraph(artist, title);
 
         console.log(111, searchResults);
 
@@ -120,7 +120,10 @@ class MusicBrainz {
     }
     return { year: 0, source: '' };
   }
-  private async performGoogleSearch(artist: string, title: string): Promise<string> {
+  private async performGoogleSearch(
+    artist: string,
+    title: string
+  ): Promise<string> {
     const apiKey = process.env.GOOGLE_API_KEY;
     const searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID;
     const query = `${artist} - ${title}`;
@@ -141,18 +144,29 @@ class MusicBrainz {
     }
   }
 
-  private async queryKnowledgeGraph(artist: string, title: string): Promise<string> {
+  private async queryKnowledgeGraph(
+    artist: string,
+    title: string
+  ): Promise<string> {
     const apiKey = process.env.GOOGLE_API_KEY;
     const query = `${artist} ${title}`;
-    const url = `https://kgsearch.googleapis.com/v1/entities:search?query=${encodeURIComponent(query)}&key=${apiKey}&limit=1&indent=True`;
+    const url = `https://kgsearch.googleapis.com/v1/entities:search?query=${encodeURIComponent(
+      query
+    )}&key=${apiKey}&limit=1&indent=True`;
+
+    console.log(123, url);
 
     try {
       const response = await axios.get(url);
       const elements = response.data.itemListElement;
-      const knowledgeGraphInfo = elements.map((element: any) => element.result.description).join('\n');
+      const knowledgeGraphInfo = elements
+        .map((element: any) => element.result.description)
+        .join('\n');
       return knowledgeGraphInfo;
     } catch (error: any) {
-      this.logger.log(color.red(`Error fetching Knowledge Graph data: ${error.message}`));
+      this.logger.log(
+        color.red(`Error fetching Knowledge Graph data: ${error.message}`)
+      );
       return '';
     }
   }
