@@ -3,7 +3,6 @@ import Logger from './logger';
 import axios, { AxiosInstance } from 'axios';
 import PrismaInstance from './prisma';
 import { ChatGPT } from './chatgpt';
-import { search, OrganicResult } from 'google-sr';
 
 class MusicBrainz {
   private logger = new Logger();
@@ -138,23 +137,29 @@ class MusicBrainz {
     artist: string,
     title: string
   ): Promise<string> {
-    const queryResult = await search({
-      query: `${artist} - ${title}`,
-      // OrganicResult is the default, however it is recommended to ALWAYS specify the result type
-      resultTypes: [OrganicResult],
-      requestConfig: {
-        params: {
-          safe: 'active',
-        },
-      },
-    });
+    try {
+      const response = await this.axiosInstance.get(
+        'https://real-time-web-search.p.rapidapi.com/search',
+        {
+          params: { q: `${artist} ${title}`, limit: 10 },
+          headers: {
+            'x-rapidapi-host': 'real-time-web-search.p.rapidapi.com',
+            'x-rapidapi-key': '42e69a22d8msh4408bc64840a986p19d543jsnf06b8b8d982c',
+          },
+        }
+      );
 
-    let searchResults = '';
-    for (const result of queryResult) {
-      searchResults += `Title: ${result.title}\nDescription: ${result.description}\nLink: ${result.link}\n\n`;
+      const results = response.data.results;
+      let searchResults = '';
+      for (const result of results) {
+        searchResults += `Title: ${result.title}\nDescription: ${result.description}\nLink: ${result.url}\n\n`;
+      }
+
+      return searchResults;
+    } catch (error) {
+      this.logger.log(color.red(`Error fetching search results: ${error.message}`));
+      return '';
     }
-
-    return searchResults;
   }
 }
 export default MusicBrainz;
