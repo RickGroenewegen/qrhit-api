@@ -134,7 +134,9 @@ class MusicBrainz {
     try {
       const response = await axios.get(url);
       const items = response.data.items;
-      const searchResults = items.map((item: any) => item.title).join('\n');
+      const searchResults = items
+        .map((item: any) => `${item.title}: ${item.snippet}`)
+        .join('\n');
       return searchResults;
     } catch (error: any) {
       this.logger.log(
