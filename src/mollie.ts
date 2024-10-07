@@ -11,6 +11,7 @@ import Utils from './utils';
 import Generator from './generator';
 import { CartItem } from './interfaces/CartItem';
 import { OrderSearch } from './interfaces/OrderSearch';
+import axios from 'axios';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -21,7 +22,10 @@ class Mollie {
   private utils = new Utils();
   private generator = new Generator();
 
-  private getMollieLocaleData(locale: string): { locale: Locale; paymentMethods: PaymentMethod[] } {
+  private getMollieLocaleData(locale: string): {
+    locale: Locale;
+    paymentMethods: PaymentMethod[];
+  } {
     const localeMap: { [key: string]: string } = {
       en: 'en_US',
       nl: 'nl_NL',
@@ -30,19 +34,45 @@ class Mollie {
       es: 'es_ES',
       it: 'it_IT',
       pt: 'pt_PT',
+      pl: 'pl_PL',
     };
 
     const paymentMethodMap: { [key: string]: PaymentMethod[] } = {
-      en: [PaymentMethod.banktransfer, PaymentMethod.paysafecard, PaymentMethod.trustly],
-      nl: [PaymentMethod.bancontact, PaymentMethod.belfius, PaymentMethod.kbc],
-      de: [PaymentMethod.banktransfer, PaymentMethod.paypal],
-      fr: [PaymentMethod.bancontact, PaymentMethod.belfius],
-      es: [PaymentMethod.przelewy24, PaymentMethod.blik],
-      it: [PaymentMethod.satispay, PaymentMethod.twint],
-      pt: [PaymentMethod.eps, PaymentMethod.mybank],
+      en: [PaymentMethod.paysafecard, PaymentMethod.trustly],
+      nl: [
+        PaymentMethod.ideal,
+        PaymentMethod.bancontact,
+        PaymentMethod.belfius,
+        PaymentMethod.kbc,
+        PaymentMethod.satispay,
+        PaymentMethod.trustly,
+        PaymentMethod.riverty,
+      ],
+      de: [
+        PaymentMethod.satispay,
+        PaymentMethod.trustly,
+        PaymentMethod.eps,
+        PaymentMethod.riverty,
+      ],
+      fr: [
+        PaymentMethod.bancontact,
+        PaymentMethod.belfius,
+        PaymentMethod.kbc,
+        PaymentMethod.satispay,
+      ],
+      es: [PaymentMethod.satispay, PaymentMethod.trustly],
+      it: [
+        PaymentMethod.satispay,
+        PaymentMethod.twint,
+        PaymentMethod.bancomatpay,
+      ],
+      pt: [PaymentMethod.satispay],
+      pl: [PaymentMethod.przelewy24, PaymentMethod.blik],
     };
 
-    const paymentMethods = paymentMethodMap[locale] || [PaymentMethod.banktransfer];
+    const paymentMethods = paymentMethodMap[locale] || [
+      PaymentMethod.banktransfer,
+    ];
 
     return {
       locale: (localeMap[locale] || 'en_US') as Locale,
@@ -183,10 +213,20 @@ class Mollie {
         throw new Error('Order calculation');
       }
 
-      //alma applepay bacs bancomatpay bancontact banktransfer belfius blik creditcard directdebit eps giftcard ideal kbc mybank paypal paysafecard przelewy24 satispay trustly twint
+      // Try to get the country code
+      let locationCountryCode = '';
+      try {
+        const response = await axios.get(`https://ipapi.co/${clientIp}/json`, {
+          timeout: 1000,
+        });
+        const location = response.data;
+        if (!location.error) {
+          locationCountryCode = location.country.toLowerCase();
+        }
+      } catch (error) {}
 
       const localeData = this.getMollieLocaleData(params.locale);
-      const defaultMethods = [
+      const defaultMethods: PaymentMethod[] = [
         PaymentMethod.applepay,
         PaymentMethod.ideal,
         PaymentMethod.paypal,
@@ -195,7 +235,6 @@ class Mollie {
       const paymentMethods = [...defaultMethods, ...localeData.paymentMethods];
 
       const payment = await paymentClient.payments.create({
-        method: paymentMethods,
         amount: {
           currency: 'EUR',
           value: calculateResult.data.total.toFixed(2),
@@ -204,7 +243,7 @@ class Mollie {
           clientIp,
           refreshPlaylists: params.refreshPlaylists.join(','),
         },
-        method: [PaymentMethod.ideal],
+        method: paymentMethods,
         description: description,
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
