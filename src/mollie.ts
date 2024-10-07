@@ -106,6 +106,7 @@ class Mollie {
 
     const totalItems = await this.prisma.payment.count({
       where: {
+        test: false,
         ...whereClause,
         ...textSearchClause,
       },
