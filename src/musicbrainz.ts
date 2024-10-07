@@ -120,6 +120,27 @@ class MusicBrainz {
     }
     return { year: 0, source: '' };
   }
+  private async performGoogleSearch(artist: string, title: string): Promise<string> {
+    const apiKey = process.env.GOOGLE_API_KEY;
+    const searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID;
+    const query = `${artist} - ${title}`;
+    const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(
+      query
+    )}&key=${apiKey}&cx=${searchEngineId}`;
+
+    try {
+      const response = await axios.get(url);
+      const items = response.data.items;
+      const searchResults = items.map((item: any) => item.title).join('\n');
+      return searchResults;
+    } catch (error: any) {
+      this.logger.log(
+        color.red(`Error fetching Google search results: ${error.message}`)
+      );
+      return '';
+    }
+  }
+
   private async queryKnowledgeGraph(artist: string, title: string): Promise<string> {
     const apiKey = process.env.GOOGLE_API_KEY;
     const query = `${artist} ${title}`;
