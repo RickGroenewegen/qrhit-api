@@ -142,7 +142,7 @@ class MusicBrainz {
       const response = await this.axiosInstance.get(
         'https://real-time-web-search.p.rapidapi.com/search',
         {
-          params: { q: `${artist} - ${title}`, limit: 10 },
+          params: { q: `${artist} - ${title} (song)`, limit: 10 },
           headers: {
             'x-rapidapi-host': 'real-time-web-search.p.rapidapi.com',
             'x-rapidapi-key': process.env['RAPID_API_KEY'],
