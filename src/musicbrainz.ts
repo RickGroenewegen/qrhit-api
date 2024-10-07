@@ -62,7 +62,7 @@ class MusicBrainz {
           },
         });
       } else {
-        const searchResults = await this.queryKnowledgeGraph(artist, title);
+        const searchResults = await this.performGoogleSearch(artist, title);
 
         console.log(111, searchResults);
 
