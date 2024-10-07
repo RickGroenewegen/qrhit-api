@@ -185,7 +185,17 @@ class Mollie {
 
       //alma applepay bacs bancomatpay bancontact banktransfer belfius blik creditcard directdebit eps giftcard ideal kbc mybank paypal paysafecard przelewy24 satispay trustly twint
 
+      const localeData = this.getMollieLocaleData(params.locale);
+      const defaultMethods = [
+        PaymentMethod.applepay,
+        PaymentMethod.ideal,
+        PaymentMethod.paypal,
+        PaymentMethod.creditcard,
+      ];
+      const paymentMethods = [...defaultMethods, ...localeData.paymentMethods];
+
       const payment = await paymentClient.payments.create({
+        method: paymentMethods,
         amount: {
           currency: 'EUR',
           value: calculateResult.data.total.toFixed(2),
