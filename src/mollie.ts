@@ -21,7 +21,7 @@ class Mollie {
   private utils = new Utils();
   private generator = new Generator();
 
-  private getMollieLocale(locale: string): Locale {
+  private getMollieLocaleData(locale: string): { locale: Locale; paymentMethods: PaymentMethod[] } {
     const localeMap: { [key: string]: string } = {
       en: 'en_US',
       nl: 'nl_NL',
@@ -32,7 +32,22 @@ class Mollie {
       pt: 'pt_PT',
     };
 
-    return (localeMap[locale] || 'en_US') as Locale; // Default to en_US if no match is found
+    const paymentMethodMap: { [key: string]: PaymentMethod[] } = {
+      en: ['banktransfer', 'paysafecard', 'trustly'],
+      nl: ['bancontact', 'belfius', 'kbc'],
+      de: ['sofort', 'giropay'],
+      fr: ['cartes_bancaires', 'belfius'],
+      es: ['przelewy24', 'blik'],
+      it: ['satispay', 'twint'],
+      pt: ['eps', 'mybank'],
+    };
+
+    const paymentMethods = paymentMethodMap[locale] || ['banktransfer'];
+
+    return {
+      locale: (localeMap[locale] || 'en_US') as Locale,
+      paymentMethods,
+    };
   }
 
   public async getPaymentList(
@@ -183,7 +198,7 @@ class Mollie {
         description: description,
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
-        locale: this.getMollieLocale(params.locale),
+        locale: this.getMollieLocaleData(params.locale).locale,
       });
 
       const userDatabaseId = await this.data.storeUser({
