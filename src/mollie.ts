@@ -35,7 +35,7 @@ class Mollie {
     const paymentMethodMap: { [key: string]: PaymentMethod[] } = {
       en: [PaymentMethod.banktransfer, PaymentMethod.paysafecard, PaymentMethod.trustly],
       nl: [PaymentMethod.bancontact, PaymentMethod.belfius, PaymentMethod.kbc],
-      de: [PaymentMethod.sofort, PaymentMethod.giropay],
+      de: [PaymentMethod.banktransfer, PaymentMethod.paypal],
       fr: [PaymentMethod.bancontact, PaymentMethod.belfius],
       es: [PaymentMethod.przelewy24, PaymentMethod.blik],
       it: [PaymentMethod.satispay, PaymentMethod.twint],
