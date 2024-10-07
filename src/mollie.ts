@@ -224,17 +224,15 @@ class Mollie {
         throw new Error('Order calculation');
       }
 
-      // Try to get the country code
+      // Try to get the country code from the IP to improve the payment methods
       let locationCountryCode = '';
       try {
         const response = await axios.get(`https://ipapi.co/${clientIp}/json`, {
           timeout: 1000,
         });
         const location = response.data;
-        console.log(111, location);
         if (!location.error) {
           locationCountryCode = location.country.toLowerCase();
-          console.log(222, locationCountryCode);
         }
       } catch (error) {}
 
