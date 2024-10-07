@@ -228,7 +228,7 @@ class Mollie {
       let locationCountryCode = '';
       try {
         const response = await axios.get(`https://ipapi.co/${clientIp}/json`, {
-          timeout: 1000,
+          timeout: 2000,
         });
         const location = response.data;
         if (!location.error) {
