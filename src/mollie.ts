@@ -33,16 +33,16 @@ class Mollie {
     };
 
     const paymentMethodMap: { [key: string]: PaymentMethod[] } = {
-      en: ['banktransfer', 'paysafecard', 'trustly'],
-      nl: ['bancontact', 'belfius', 'kbc'],
-      de: ['sofort', 'giropay'],
-      fr: ['cartes_bancaires', 'belfius'],
-      es: ['przelewy24', 'blik'],
-      it: ['satispay', 'twint'],
-      pt: ['eps', 'mybank'],
+      en: [PaymentMethod.banktransfer, PaymentMethod.paysafecard, PaymentMethod.trustly],
+      nl: [PaymentMethod.bancontact, PaymentMethod.belfius, PaymentMethod.kbc],
+      de: [PaymentMethod.sofort, PaymentMethod.giropay],
+      fr: [PaymentMethod.cartes_bancaires, PaymentMethod.belfius],
+      es: [PaymentMethod.przelewy24, PaymentMethod.blik],
+      it: [PaymentMethod.satispay, PaymentMethod.twint],
+      pt: [PaymentMethod.eps, PaymentMethod.mybank],
     };
 
-    const paymentMethods = paymentMethodMap[locale] || ['banktransfer'];
+    const paymentMethods = paymentMethodMap[locale] || [PaymentMethod.banktransfer];
 
     return {
       locale: (localeMap[locale] || 'en_US') as Locale,
