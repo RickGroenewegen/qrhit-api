@@ -46,12 +46,12 @@ class MusicBrainz {
       },
     });
 
-    if (result) {
+    if (false && result) {
       source = 'database';
-      year = result.year;
+      //year = result.year;
     } else {
       const result = await this.getReleaseDateFromAPI(isrc);
-      if (result.year > 0) {
+      if (false && result.year > 0) {
         year = result.year;
         source = result.source;
         // Create a record in the isrc table
@@ -62,9 +62,8 @@ class MusicBrainz {
           },
         });
       } else {
-        const aiResult = await this.openai.ask(
-          `${artist} - ${title} - ISRC: ${isrc}`
-        );
+        const aiResult = await this.openai.ask(`${artist} - ${title}`);
+
         year = aiResult;
         source = 'ai';
       }
