@@ -1,5 +1,5 @@
 import { ApiResult } from './interfaces/ApiResult';
-import { createMollieClient, Locale } from '@mollie/api-client';
+import { createMollieClient, Locale, PaymentMethod } from '@mollie/api-client';
 import { Payment } from '@prisma/client';
 import PrismaInstance from './prisma';
 import { color } from 'console-log-colors';
@@ -168,6 +168,8 @@ class Mollie {
         throw new Error('Order calculation');
       }
 
+      //alma applepay bacs bancomatpay bancontact banktransfer belfius blik creditcard directdebit eps giftcard ideal kbc mybank paypal paysafecard przelewy24 satispay trustly twint
+
       const payment = await paymentClient.payments.create({
         amount: {
           currency: 'EUR',
@@ -177,11 +179,11 @@ class Mollie {
           clientIp,
           refreshPlaylists: params.refreshPlaylists.join(','),
         },
+        method: [PaymentMethod.ideal],
         description: description,
         redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
         webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
         locale: this.getMollieLocale(params.locale),
-        method: params.paymentMethods, // Add this line to specify payment methods
       });
 
       const userDatabaseId = await this.data.storeUser({
