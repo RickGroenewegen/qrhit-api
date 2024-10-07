@@ -113,6 +113,7 @@ class Mollie {
 
     const payments = await this.prisma.payment.findMany({
       where: {
+        test: false,
         ...whereClause,
         ...textSearchClause,
       },
@@ -379,6 +380,7 @@ class Mollie {
           shippingVATPrice,
           totalVATPrice,
           clientIp,
+          test: payment.mode == 'test',
           profit: totalProfit,
           printApiPrice: totalPrintApiPrice,
           PaymentHasPlaylist: { create: playlists },

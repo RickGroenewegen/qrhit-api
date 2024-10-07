@@ -81,6 +81,7 @@ model Payment {
   PaymentHasPlaylist      PaymentHasPlaylist[]
   OrderType               OrderType?           @relation(fields: [orderTypeId], references: [id])
   orderTypeId             Int?
+  test                    Boolean              @default(false)
 
   @@index([userId]) // Index for performance on queries
   @@index([paymentId])
