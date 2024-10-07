@@ -1,5 +1,6 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
+import axios from 'axios';
 import axios, { AxiosInstance } from 'axios';
 import PrismaInstance from './prisma';
 import { ChatGPT } from './chatgpt';
@@ -62,7 +63,8 @@ class MusicBrainz {
           },
         });
       } else {
-        const aiResult = await this.openai.ask(`${artist} - ${title}`);
+        const searchResults = await this.performGoogleSearch(artist, title);
+        const aiResult = await this.openai.ask(searchResults);
 
         year = aiResult;
         source = 'ai';
@@ -116,6 +118,21 @@ class MusicBrainz {
     }
     return { year: 0, source: '' };
   }
-}
+  private async performGoogleSearch(artist: string, title: string): Promise<string> {
+    const apiKey = process.env.GOOGLE_API_KEY;
+    const searchEngineId = process.env.GOOGLE_SEARCH_ENGINE_ID;
+    const query = `${artist} ${title}`;
+    const url = `https://www.googleapis.com/customsearch/v1?q=${encodeURIComponent(query)}&key=${apiKey}&cx=${searchEngineId}`;
+
+    try {
+      const response = await axios.get(url);
+      const items = response.data.items;
+      const searchResults = items.map((item: any) => item.title).join('\n');
+      return searchResults;
+    } catch (error) {
+      this.logger.log(color.red(`Error fetching Google search results: ${error.message}`));
+      return '';
+    }
+  }
 
 export default MusicBrainz;
