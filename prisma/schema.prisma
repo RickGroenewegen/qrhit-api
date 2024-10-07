@@ -141,6 +141,8 @@ model Track {
   year        Int?
   yearSource  String?
   spotifyLink String?
+  certainty   Int                @default(0)
+  reasoning   String?            @db.Text
   createdAt   DateTime           @default(now())
   updatedAt   DateTime           @updatedAt
   playlists   PlaylistHasTrack[]

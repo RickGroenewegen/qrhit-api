@@ -535,11 +535,12 @@ class Data {
 
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
-      let { year, source } = await this.musicBrainz.getReleaseDate(
-        track.isrc ?? '',
-        track.artist,
-        track.name
-      );
+      let { year, source, certainty, reasoning } =
+        await this.musicBrainz.getReleaseDate(
+          track.isrc ?? '',
+          track.artist,
+          track.name
+        );
       if (!year) {
         const spotifyTrack = tracks.find((t: any) => t.id === track.trackId);
         if (spotifyTrack && spotifyTrack.releaseDate) {
@@ -552,6 +553,8 @@ class Data {
           UPDATE tracks
           SET year        = ${year},
               yearSource  = ${source}
+              certainty   = ${certainty}
+              reasoning   = '${reasoning}'
           WHERE id = ${track.id}
         `;
       } else {
@@ -569,6 +572,10 @@ class Data {
         isrc: true,
         artist: true,
         name: true,
+        year: true,
+      },
+      where: {
+        yearSource: 'ai',
       },
     });
 
@@ -580,31 +587,53 @@ class Data {
 
     for (const track of tracks) {
       try {
-        let { year, source } = await this.musicBrainz.getReleaseDate(
-          track.isrc ?? '',
-          track.artist,
-          track.name
-        );
-
-        if (year > 0) {
-          await this.prisma.track.update({
-            where: { id: track.id },
-            data: {
-              year: year,
-              yearSource: source,
-            },
-          });
-          this.logger.log(
-            color.blue.bold(
-              `Updated track ID ${color.white.bold(
-                track.id
-              )} named '${color.white.bold(track.artist)} - ${color.white.bold(
-                track.name
-              )}' with year ${color.white.bold(year)} from ${color.white.bold(
-                source
-              )}`
-            )
+        let { year, source, certainty, reasoning } =
+          await this.musicBrainz.getReleaseDate(
+            track.isrc ?? '',
+            track.artist,
+            track.name,
+            true
           );
+        if (year > 0) {
+          if (track.year !== year) {
+            await this.prisma.track.update({
+              where: { id: track.id },
+              data: {
+                year: year,
+                yearSource: source,
+                reasoning,
+                certainty,
+              },
+            });
+
+            this.logger.log(
+              color.blue.bold(
+                `Updated track ID ${color.white.bold(
+                  track.id
+                )} named '${color.white.bold(
+                  track.artist
+                )} - ${color.white.bold(
+                  track.name
+                )}' with year ${color.white.bold(year)} from ${color.white.bold(
+                  source
+                )} (Old year: ${color.white.bold(track.year)})`
+              )
+            );
+          } else {
+            this.logger.log(
+              color.yellow(
+                `Track ID ${color.white.bold(
+                  track.id
+                )} named '${color.white.bold(
+                  track.artist
+                )} - ${color.white.bold(
+                  track.name
+                )}' already has year ${color.white.bold(
+                  year
+                )} from ${color.white.bold(source)}`
+              )
+            );
+          }
         } else {
           this.logger.log(
             color.yellow(
@@ -615,6 +644,8 @@ class Data {
           );
         }
       } catch (error) {
+        console.log(error);
+
         const errorMessage =
           error instanceof Error ? error.message : String(error);
         this.logger.log(

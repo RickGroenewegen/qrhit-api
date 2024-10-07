@@ -8,10 +8,10 @@ export class ChatGPT {
   });
 
   private async parseYear(year: any): Promise<number> {
-    return year.year;
+    return year;
   }
 
-  public async ask(prompt: string): Promise<number> {
+  public async ask(prompt: string): Promise<any> {
     let answer = undefined;
 
     const result = await this.openai.chat.completions.create({
@@ -20,13 +20,11 @@ export class ChatGPT {
       messages: [
         {
           role: 'system',
-          content: `You are a helpfull assistant that helps me determine the release year of a song based on its ISRC code, title and artist.`,
+          content: `You are a helpfull assistant that helps me determine the release year of a song based on its title and artist. I am sure the artist and title are provided are correct. So do not talk about other songs or artists. If you are not sure about the release year, please let me know.`,
         },
         {
           role: 'user',
-          content:
-            `I would like to know the release date for the following song: ` +
-            prompt,
+          content: prompt,
         },
       ],
       function_call: { name: 'parseYear' },
@@ -40,8 +38,17 @@ export class ChatGPT {
                 type: 'number',
                 description: 'The release year of the song',
               },
+              reasoning: {
+                type: 'string',
+                description: 'The explanation of how the year was determined',
+              },
+              certainty: {
+                type: 'number',
+                description:
+                  'The certainty in % of how sure you are of the year',
+              },
             },
-            required: ['year'],
+            required: ['year', 'reasoning'],
           },
         },
       ],

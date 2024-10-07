@@ -36,7 +36,8 @@ class MusicBrainz {
   public async getReleaseDate(
     isrc: string,
     artist: string,
-    title: string
+    title: string,
+    forceAI: boolean = false
   ): Promise<{
     year: number;
     source: string;
@@ -59,7 +60,7 @@ class MusicBrainz {
       //year = result.year;
     } else {
       const result = await this.getReleaseDateFromAPI(isrc);
-      if (false && result.year > 0) {
+      if (!forceAI && result.year > 0) {
         year = result.year;
         source = result.source;
         // Create a record in the isrc table
@@ -141,23 +142,26 @@ class MusicBrainz {
       const response = await this.axiosInstance.get(
         'https://real-time-web-search.p.rapidapi.com/search',
         {
-          params: { q: `${artist} ${title}`, limit: 10 },
+          params: { q: `${artist} - ${title}`, limit: 10 },
           headers: {
             'x-rapidapi-host': 'real-time-web-search.p.rapidapi.com',
-            'x-rapidapi-key': '42e69a22d8msh4408bc64840a986p19d543jsnf06b8b8d982c',
+            'x-rapidapi-key': process.env['RAPID_API_KEY'],
           },
         }
       );
 
-      const results = response.data.results;
+      const results = response.data.data;
+
       let searchResults = '';
       for (const result of results) {
-        searchResults += `Title: ${result.title}\nDescription: ${result.description}\nLink: ${result.url}\n\n`;
+        searchResults += `Title: ${result.title}\nDescription: ${result.snippet}\nLink: ${result.url}\n\n`;
       }
 
       return searchResults;
-    } catch (error) {
-      this.logger.log(color.red(`Error fetching search results: ${error.message}`));
+    } catch (error: any) {
+      this.logger.log(
+        color.red(`Error fetching search results: ${error.message}`)
+      );
       return '';
     }
   }
