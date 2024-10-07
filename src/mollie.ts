@@ -22,7 +22,7 @@ class Mollie {
   private utils = new Utils();
   private generator = new Generator();
 
-  private getMollieLocaleData(locale: string): {
+  private getMollieLocaleData(locale: string, locationCountryCode: string): {
     locale: Locale;
     paymentMethods: PaymentMethod[];
   } {
@@ -70,9 +70,13 @@ class Mollie {
       pl: [PaymentMethod.przelewy24, PaymentMethod.blik],
     };
 
-    const paymentMethods = paymentMethodMap[locale] || [
+    let paymentMethods = paymentMethodMap[locale] || [
       PaymentMethod.banktransfer,
     ];
+
+    if (locationCountryCode && paymentMethodMap[locationCountryCode]) {
+      paymentMethods = [...paymentMethods, ...paymentMethodMap[locationCountryCode]];
+    }
 
     return {
       locale: (localeMap[locale] || 'en_US') as Locale,
@@ -225,7 +229,7 @@ class Mollie {
         }
       } catch (error) {}
 
-      const localeData = this.getMollieLocaleData(params.locale);
+      const localeData = this.getMollieLocaleData(params.locale, locationCountryCode);
       const defaultMethods: PaymentMethod[] = [
         PaymentMethod.applepay,
         PaymentMethod.ideal,
