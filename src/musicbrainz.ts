@@ -55,9 +55,9 @@ class MusicBrainz {
       },
     });
 
-    if (false && result) {
+    if (result) {
       source = 'database';
-      //year = result.year;
+      year = result.year;
     } else {
       const result = await this.getReleaseDateFromAPI(isrc);
       if (!forceAI && result.year > 0) {

@@ -576,6 +576,7 @@ class Data {
       },
       where: {
         yearSource: 'ai',
+        certainty: 0,
       },
     });
 
