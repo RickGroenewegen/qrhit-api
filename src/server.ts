@@ -593,7 +593,8 @@ class Server {
           const result = await this.musicBrainz.getReleaseDate(
             request.params.isrc,
             request.params.artist,
-            request.params.title
+            request.params.title,
+            true
           );
           return { success: true, data: result };
         }

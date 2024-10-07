@@ -55,7 +55,7 @@ class MusicBrainz {
       },
     });
 
-    if (result) {
+    if (!forceAI && result) {
       source = 'database';
       year = result.year;
     } else {
