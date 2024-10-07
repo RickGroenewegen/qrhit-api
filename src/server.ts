@@ -605,12 +605,11 @@ class Server {
         );
         return { success: true, data: result };
       });
-
-      this.fastify.get('/mball', async (request: any, _reply) => {
-        const result = await this.data.updateAllTrackYears();
-        return { success: true, data: result };
-      });
     }
+    this.fastify.get('/mball', async (request: any, _reply) => {
+      const result = await this.data.updateAllTrackYears();
+      return { success: true, data: result };
+    });
   }
 }
 
