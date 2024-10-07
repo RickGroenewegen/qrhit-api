@@ -36,7 +36,7 @@ class Mollie {
       en: [PaymentMethod.banktransfer, PaymentMethod.paysafecard, PaymentMethod.trustly],
       nl: [PaymentMethod.bancontact, PaymentMethod.belfius, PaymentMethod.kbc],
       de: [PaymentMethod.sofort, PaymentMethod.giropay],
-      fr: [PaymentMethod.cartes_bancaires, PaymentMethod.belfius],
+      fr: [PaymentMethod.bancontact, PaymentMethod.belfius],
       es: [PaymentMethod.przelewy24, PaymentMethod.blik],
       it: [PaymentMethod.satispay, PaymentMethod.twint],
       pt: [PaymentMethod.eps, PaymentMethod.mybank],
