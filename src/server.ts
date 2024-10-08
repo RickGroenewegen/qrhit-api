@@ -520,6 +520,13 @@ class Server {
             );
             reply.type('application/pdf');
             const fileContent = await fs.readFile(pdfFile.filePath);
+
+            this.logger.log(
+              color.blue.bold(
+                `User downloaded file: ${color.white.bold(pdfFile.filePath)}`
+              )
+            );
+
             reply.send(fileContent);
           } catch (error) {
             reply.code(404).send('PDF not found');

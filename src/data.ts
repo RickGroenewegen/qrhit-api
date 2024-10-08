@@ -70,7 +70,9 @@ class Data {
 
     const paymentHasPlaylist = result[0];
     let filename = '';
-    let sanitizedFileName = this.utils.generateFilename(paymentHasPlaylist.name);
+    let sanitizedFileName = this.utils.generateFilename(
+      paymentHasPlaylist.name
+    );
 
     if (type == 'printer') {
       filename = paymentHasPlaylist.filename!;
