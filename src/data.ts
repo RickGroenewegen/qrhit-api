@@ -34,7 +34,10 @@ class Data {
     playlistId: string,
     type: string
   ): Promise<{ fileName: string; filePath: string } | null> {
-    if (type !== 'digital' && !this.utils.isTrustedIp(clientIp)) {
+    if (
+      type == 'digital' ||
+      (type !== 'digital' && !this.utils.isTrustedIp(clientIp))
+    ) {
       return null;
     }
 
@@ -51,8 +54,6 @@ class Data {
         id: true,
       },
     });
-
-    console.log(111, user);
 
     if (!user) {
       return null;
@@ -77,9 +78,6 @@ class Data {
         },
       },
     });
-
-    // Output the raw query
-    console.log(222, paymentHasPlaylist);
 
     if (!paymentHasPlaylist) {
       return null;
