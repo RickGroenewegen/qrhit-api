@@ -387,7 +387,7 @@ ${attachment.data}
 
     const rawEmail = `From: ${params.from}
 To: ${params.to}
-Bcc: info@qrsong.io
+Bcc: ${process.env['INFO_EMAIL']!}
 Subject: ${params.subject}
 ${replyToHeader}MIME-Version: 1.0
 Content-Type: multipart/mixed; boundary="MixedBoundaryString"
