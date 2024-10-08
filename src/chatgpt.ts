@@ -40,7 +40,8 @@ export class ChatGPT {
               },
               reasoning: {
                 type: 'string',
-                description: 'The explanation of how the year was determined',
+                description:
+                  'The explanation of how the year was determined (max 100 chars)',
               },
               certainty: {
                 type: 'number',

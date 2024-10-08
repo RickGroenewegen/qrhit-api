@@ -467,6 +467,14 @@ class Data {
   ): Promise<any> {
     const providedTrackIds = tracks.map((track: any) => track.id);
 
+    this.logger.log(
+      color.blue.bold(
+        `Deleting removed tracks from playlist ${color.white.bold(
+          playlistDatabaseId
+        )}`
+      )
+    );
+
     // Remove tracks that are no longer in the provided tracks list
     await this.prisma.$executeRaw`
       DELETE FROM playlist_has_tracks
@@ -476,6 +484,14 @@ class Data {
         WHERE trackId IN (${Prisma.join(providedTrackIds)})
       )
     `;
+
+    this.logger.log(
+      color.blue.bold(
+        `Bulk upsert tracks for playlist ${color.white.bold(
+          playlistDatabaseId
+        )}`
+      )
+    );
 
     // Bulk upsert tracks
     if (tracks.length > 0) {
@@ -514,6 +530,14 @@ class Data {
       }
     }
 
+    this.logger.log(
+      color.blue.bold(
+        `Creating playlist_has_tracks records for playlist ${color.white.bold(
+          playlistDatabaseId
+        )}`
+      )
+    );
+
     // Bulk insert playlist_has_tracks
     await this.prisma.$executeRaw`
       INSERT IGNORE INTO playlist_has_tracks (playlistId, trackId)
@@ -533,6 +557,12 @@ class Data {
       )})
     `;
 
+    this.logger.log(
+      color.blue.bold(
+        `Updating years for playlist ${color.white.bold(playlistDatabaseId)}`
+      )
+    );
+
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
       let { year, source, certainty, reasoning } =
@@ -549,12 +579,14 @@ class Data {
         }
       }
       if (year > 0) {
+        console.log(111, year, source, certainty, reasoning);
+
         await this.prisma.$executeRaw`
           UPDATE tracks
           SET year        = ${year},
               yearSource  = ${source},
               certainty   = ${certainty},
-              reasoning   = '${reasoning}'
+              reasoning   = ${reasoning}
           WHERE id = ${track.id}
         `;
       } else {
