@@ -579,7 +579,17 @@ class Data {
         }
       }
       if (year > 0) {
-        console.log(111, year, source, certainty, reasoning);
+        if (source == 'ai') {
+          console.log(
+            111,
+            track.artist,
+            track.name,
+            year,
+            source,
+            certainty,
+            reasoning
+          );
+        }
 
         await this.prisma.$executeRaw`
           UPDATE tracks

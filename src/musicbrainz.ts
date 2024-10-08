@@ -47,7 +47,7 @@ class MusicBrainz {
     let year = 0;
     let source = '';
     let reasoning = '';
-    let certainty = 0;
+    let certainty = 100;
 
     const result = await this.prisma.isrc.findUnique({
       where: {
