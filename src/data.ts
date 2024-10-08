@@ -48,8 +48,8 @@ class Data {
 
     const result: any[] = await this.prisma.$queryRaw`
       SELECT 
-        p.filename,
-        p.filenameDigital,
+        php.filename,
+        php.filenameDigital,
         pl.name
       FROM 
         payment_has_playlist php
@@ -63,6 +63,8 @@ class Data {
         pm.status = 'paid' AND
         u.hash = ${userHash}
     `;
+
+    console.log(1111, result);
 
     if (result.length === 0) {
       return null;
