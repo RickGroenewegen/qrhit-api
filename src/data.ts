@@ -31,6 +31,7 @@ class Data {
   public async getPDFFilepath(
     clientIp: string,
     paymentId: string,
+    userHash: string,
     playlistId: string,
     type: string
   ): Promise<{ fileName: string; filePath: string } | null> {
@@ -59,7 +60,8 @@ class Data {
       WHERE 
         pm.paymentId = ${paymentId} AND 
         pl.playlistId = ${playlistId} AND 
-        pm.status = 'paid'
+        pm.status = 'paid' AND
+        u.hash = ${userHash}
     `;
 
     if (result.length === 0) {

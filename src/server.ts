@@ -507,6 +507,7 @@ class Server {
         const pdfFile = await this.data.getPDFFilepath(
           request.clientIp,
           request.params.paymentId,
+          request.params.userHash,
           request.params.playlistId,
           request.params.type
         );
