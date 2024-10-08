@@ -43,10 +43,7 @@ class Data {
       this.utils.isTrustedIp(clientIp)
     );
 
-    if (
-      type == 'digital' ||
-      (type !== 'digital' && !this.utils.isTrustedIp(clientIp))
-    ) {
+    if (type == 'printer' && !this.utils.isTrustedIp(clientIp)) {
       return null;
     }
 

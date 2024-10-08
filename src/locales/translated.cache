@@ -1148,7 +1148,8 @@
     "fr",
     "es",
     "it",
-    "pt"
+    "pt",
+    "pl"
   ],
   "countries.FO": [
     "nl",
@@ -2878,24 +2879,6 @@
     "pt",
     "pl"
   ],
-  "mail.downloadLink": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl"
-  ],
-  "mail.physicalDownloadLink": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl"
-  ],
   "mail.greatNewsDigital": [
     "nl",
     "de",
@@ -2951,6 +2934,24 @@
     "pl"
   ],
   "countdown.youNeedToInstall": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl"
+  ],
+  "mail.downloadLink": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl"
+  ],
+  "mail.physicalDownloadLink": [
     "nl",
     "de",
     "fr",
