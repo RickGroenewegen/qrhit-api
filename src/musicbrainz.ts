@@ -71,14 +71,19 @@ class MusicBrainz {
           },
         });
       } else {
-        const searchResults = await this.performGoogleSearch(artist, title);
+        let searchResults = await this.performGoogleSearch(artist, title);
+        let prompt = `I would like to know the release date for the following song: ${artist} - ${title}
+                      Use your own knowledge`;
 
-        const aiResult = await this.openai
-          .ask(`  I would like to know the release date for the following song: ${artist} - ${title}
-                  Use your own knowledge or the results from the search engine to determine the release year. 
-                  Wikipedia is considered the most reliable source. Discogs after that. Here is the search engine result:
-                  ${searchResults}
-          `);
+        if (searchResults) {
+          prompt += ` or the results from the search engine to determine the release year. 
+                     Wikipedia is considered the most reliable source. Discogs after that. Here is the search engine result:
+                     ${searchResults}`;
+        } else {
+          prompt += ` to determine the release year.`;
+        }
+
+        const aiResult = await this.openai.ask(prompt);
 
         year = aiResult.year;
         certainty = aiResult.certainty;
