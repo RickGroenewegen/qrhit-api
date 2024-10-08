@@ -57,6 +57,8 @@ class Data {
         payments pm ON php.paymentId = pm.id
       INNER JOIN 
         playlists pl ON php.playlistId = pl.id
+      INNER JOIN 
+        users u ON pm.userid = u.id
       WHERE 
         pm.paymentId = ${paymentId} AND 
         pl.playlistId = ${playlistId} AND 
