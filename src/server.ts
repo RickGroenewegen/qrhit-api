@@ -502,11 +502,11 @@ class Server {
     });
 
     this.fastify.get(
-      '/download/:userHash/:playlistId/:type',
+      '/download/:paymentId/:userHash/:playlistId/:type',
       async (request: any, reply) => {
         const pdfFile = await this.data.getPDFFilepath(
           request.clientIp,
-          request.params.userHash,
+          request.params.paymentId,
           request.params.playlistId,
           request.params.type
         );

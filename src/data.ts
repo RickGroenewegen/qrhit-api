@@ -30,7 +30,7 @@ class Data {
 
   public async getPDFFilepath(
     clientIp: string,
-    userId: string,
+    paymentId: string,
     playlistId: string,
     type: string
   ): Promise<{ fileName: string; filePath: string } | null> {
@@ -38,53 +38,37 @@ class Data {
       return null;
     }
 
-    const cacheKey = `pdfFilePath:${userId}:${playlistId}:${type}`;
+    const cacheKey = `pdfFilePath:${paymentId}:${playlistId}:${type}`;
     const cachedFilePath = await this.cache.get(cacheKey);
 
     if (cachedFilePath) {
       return JSON.parse(cachedFilePath);
     }
 
-    const user = await this.prisma.user.findFirst({
-      where: { hash: userId },
-      select: {
-        id: true,
-      },
-    });
+    const result: any[] = await this.prisma.$queryRaw`
+      SELECT 
+        p.filename,
+        p.filenameDigital,
+        pl.name
+      FROM 
+        payment_has_playlist php
+      INNER JOIN 
+        payments pm ON php.paymentId = pm.id
+      INNER JOIN 
+        playlists pl ON php.playlistId = pl.id
+      WHERE 
+        pm.paymentId = ${paymentId} AND 
+        pl.playlistId = ${playlistId} AND 
+        pm.status = 'paid'
+    `;
 
-    if (!user) {
+    if (result.length === 0) {
       return null;
     }
 
-    const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findFirst({
-      where: {
-        payment: {
-          userId: user.id,
-          status: 'paid',
-        },
-        playlist: {
-          playlistId: playlistId,
-        },
-      },
-      select: {
-        filename: true,
-        filenameDigital: true,
-        playlist: {
-          select: {
-            name: true,
-          },
-        },
-      },
-    });
-
-    if (!paymentHasPlaylist) {
-      return null;
-    }
-
+    const paymentHasPlaylist = result[0];
     let filename = '';
-    let sanitizedFileName = this.utils.generateFilename(
-      paymentHasPlaylist.playlist.name
-    );
+    let sanitizedFileName = this.utils.generateFilename(paymentHasPlaylist.name);
 
     if (type == 'printer') {
       filename = paymentHasPlaylist.filename!;
@@ -94,12 +78,12 @@ class Data {
     }
 
     const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-    const result = {
+    const finalResult = {
       fileName: sanitizedFileName + '.pdf',
       filePath: filePath,
     };
-    await this.cache.set(cacheKey, JSON.stringify(result));
-    return result;
+    await this.cache.set(cacheKey, JSON.stringify(finalResult));
+    return finalResult;
   }
 
   private euCountryCodes: string[] = [
