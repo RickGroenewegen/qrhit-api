@@ -52,6 +52,8 @@ class Data {
       },
     });
 
+    console.log(111, user);
+
     if (!user) {
       return null;
     }
@@ -75,6 +77,9 @@ class Data {
         },
       },
     });
+
+    // Output the raw query
+    console.log(222, paymentHasPlaylist);
 
     if (!paymentHasPlaylist) {
       return null;
