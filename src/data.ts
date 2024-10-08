@@ -66,8 +66,6 @@ class Data {
         u.hash = ${userHash}
     `;
 
-    console.log(1111, result);
-
     if (result.length === 0) {
       return null;
     }
