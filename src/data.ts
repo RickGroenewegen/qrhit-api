@@ -552,8 +552,8 @@ class Data {
         await this.prisma.$executeRaw`
           UPDATE tracks
           SET year        = ${year},
-              yearSource  = ${source}
-              certainty   = ${certainty}
+              yearSource  = ${source},
+              certainty   = ${certainty},
               reasoning   = '${reasoning}'
           WHERE id = ${track.id}
         `;
