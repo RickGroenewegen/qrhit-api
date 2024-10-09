@@ -487,12 +487,12 @@ class Data {
       )
     );
 
-    // Step 1: Identify existing tracks
+    // Step 1: Identify existing tracks with full data
     const existingTracks = await this.prisma.track.findMany({
       where: {
         trackId: { in: providedTrackIds },
       },
-      select: { trackId: true },
+      select: { trackId: true, name: true, isrc: true, artist: true, spotifyLink: true },
     });
 
     this.logger.log(
@@ -501,18 +501,27 @@ class Data {
       )
     );
 
-    // Convert existing tracks to a Set for quick lookup
-    const existingTrackIds = new Set(
-      existingTracks.map((track) => track.trackId)
+    // Convert existing tracks to a Map for quick lookup
+    const existingTrackMap = new Map(
+      existingTracks.map((track) => [track.trackId, track])
     );
 
-    // Step 2: Separate new and existing tracks
+    // Step 2: Separate new and existing tracks, and check for changes
     const newTracks = [];
     const tracksToUpdate = [];
 
     for (const track of tracks) {
-      if (existingTrackIds.has(track.id)) {
-        tracksToUpdate.push(track);
+      const existingTrack = existingTrackMap.get(track.id);
+      if (existingTrack) {
+        // Check if any data has changed
+        if (
+          existingTrack.name !== this.utils.cleanTrackName(track.name) ||
+          existingTrack.isrc !== track.isrc ||
+          existingTrack.artist !== track.artist ||
+          existingTrack.spotifyLink !== track.link
+        ) {
+          tracksToUpdate.push(track);
+        }
       } else {
         newTracks.push(track);
       }
