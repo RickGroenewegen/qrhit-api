@@ -84,8 +84,8 @@ class PDF {
         } as any;
 
         if (template === 'printer') {
-          options['PageWidth'] = 60;
-          options['PageHeight'] = 60;
+          options['PageWidth'] = 66;
+          options['PageHeight'] = 66;
           options['MarginTop'] = 0;
           options['MarginLeft'] = 0;
         }
