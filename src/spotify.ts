@@ -316,6 +316,7 @@ class Spotify {
       let cacheKey = `tracks_${playlistId}`;
       const cacheResult = await this.cache.get(cacheKey);
       let allTracks: Track[] = [];
+      const uniqueTrackIds = new Set<string>();
       let offset = 0;
       const limit = 100;
 
@@ -363,7 +364,12 @@ class Spotify {
             (track) => track.artist && track.image
           );
 
-          allTracks = allTracks.concat(filteredTracks);
+          filteredTracks.forEach((track) => {
+            if (!uniqueTrackIds.has(track.id)) {
+              uniqueTrackIds.add(track.id);
+              allTracks.push(track);
+            }
+          });
 
           // Check if there are more tracks to fetch or if we reached the limit of MAX_CARDS tracks
           if (
