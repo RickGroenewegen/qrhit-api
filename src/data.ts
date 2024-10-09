@@ -487,45 +487,54 @@ class Data {
       )
     );
 
-    // Bulk upsert tracks
-    if (tracks.length > 0) {
-      const values = tracks.map(
-        (track: {
-          id: string;
-          name: string;
-          isrc: string | null;
-          artist: string;
-          link: string;
-        }) => ({
+    // Step 1: Identify existing tracks
+    const existingTracks = await this.prisma.track.findMany({
+      where: {
+        trackId: { in: providedTrackIds },
+      },
+      select: { trackId: true },
+    });
+
+    // Convert existing tracks to a Set for quick lookup
+    const existingTrackIds = new Set(existingTracks.map(track => track.trackId));
+
+    // Step 2: Separate new and existing tracks
+    const newTracks = [];
+    const tracksToUpdate = [];
+
+    for (const track of tracks) {
+      if (existingTrackIds.has(track.id)) {
+        tracksToUpdate.push(track);
+      } else {
+        newTracks.push(track);
+      }
+    }
+
+    // Step 3: Insert new tracks
+    if (newTracks.length > 0) {
+      await this.prisma.track.createMany({
+        data: newTracks.map(track => ({
           trackId: track.id,
           name: this.utils.cleanTrackName(track.name),
           isrc: track.isrc,
           artist: track.artist,
           spotifyLink: track.link,
-        })
-      );
-
-      this.logger.log(
-        color.blue.bold(`Creating items:  ${color.white.bold(tracks.length)}`)
-      );
-
-      await this.prisma.track.createMany({
-        data: values,
+        })),
         skipDuplicates: true,
       });
+    }
 
-      // Update existing tracks
-      for (const track of values) {
-        await this.prisma.track.update({
-          where: { trackId: track.trackId },
-          data: {
-            name: track.name,
-            isrc: track.isrc,
-            artist: track.artist,
-            spotifyLink: track.spotifyLink,
-          },
-        });
-      }
+    // Update existing tracks
+    for (const track of tracksToUpdate) {
+      await this.prisma.track.update({
+        where: { trackId: track.id },
+        data: {
+          name: this.utils.cleanTrackName(track.name),
+          isrc: track.isrc,
+          artist: track.artist,
+          spotifyLink: track.link,
+        },
+      });
     }
 
     this.logger.log(
