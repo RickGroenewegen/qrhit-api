@@ -23,7 +23,9 @@ class PDF {
     await result.saveFiles(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
   }
 
-  public async getFirstPageDimensions(filePath: string): Promise<{ width: number; height: number }> {
+  public async getPageDimensions(
+    filePath: string
+  ): Promise<{ width: number; height: number }> {
     // Read the PDF file into a Uint8Array
     const pdfBytes = await fs.readFile(filePath);
 
@@ -113,6 +115,8 @@ class PDF {
         const result = await this.convertapi.convert('pdf', options, 'htm');
         await result.saveFiles(tempFilePath);
         tempFiles.push(tempFilePath);
+
+        // TODO: Add resize here
 
         this.analytics.increaseCounter('pdf', 'generated', 1);
 
