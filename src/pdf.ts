@@ -210,6 +210,8 @@ class PDF {
       page.scaleContent(scaleX, scaleY);
 
       // Set the new page size
+      // Set the new page size
+      page.setSize(widthPts, heightPts);
     });
 
     // Serialize the PDFDocument to bytes (a Uint8Array)
