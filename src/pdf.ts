@@ -197,10 +197,19 @@ class PDF {
     // Load the PDF document
     const pdfDoc = await PDFDocument.load(pdfBytes);
 
-    // Resize each page
+    // Resize each page and scale the content
     const pages = pdfDoc.getPages();
     pages.forEach((page) => {
-      page.setSize(widthPts, heightPts);
+      const { width, height } = page.getSize();
+
+      // Calculate the scale factors
+      const scaleX = widthPts / width;
+      const scaleY = heightPts / height;
+
+      // Scale the content
+      page.scaleContent(scaleX, scaleY);
+
+      // Set the new page size
     });
 
     // Serialize the PDFDocument to bytes (a Uint8Array)
