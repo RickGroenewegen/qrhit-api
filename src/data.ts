@@ -457,15 +457,14 @@ class Data {
 
   public async storeTracks(
     playlistDatabaseId: number,
+    playlistId: string,
     tracks: any
   ): Promise<any> {
     const providedTrackIds = tracks.map((track: any) => track.id);
 
     this.logger.log(
       color.blue.bold(
-        `Deleting removed tracks from playlist ${color.white.bold(
-          playlistDatabaseId
-        )}`
+        `Deleting removed tracks from playlist ${color.white.bold(playlistId)}`
       )
     );
 
@@ -481,9 +480,7 @@ class Data {
 
     this.logger.log(
       color.blue.bold(
-        `Bulk upsert tracks for playlist ${color.white.bold(
-          playlistDatabaseId
-        )}`
+        `Bulk upsert tracks for playlist ${color.white.bold(playlistId)}`
       )
     );
 
@@ -575,7 +572,7 @@ class Data {
     this.logger.log(
       color.blue.bold(
         `Creating playlist_has_tracks records for playlist ${color.white.bold(
-          playlistDatabaseId
+          playlistId
         )}`
       )
     );
@@ -601,7 +598,7 @@ class Data {
 
     this.logger.log(
       color.blue.bold(
-        `Updating years for playlist ${color.white.bold(playlistDatabaseId)}`
+        `Updating years for playlist ${color.white.bold(playlistId)}`
       )
     );
 

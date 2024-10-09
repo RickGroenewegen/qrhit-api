@@ -351,7 +351,11 @@ class Generator {
           )} tracks for playlist: ${white.bold(playlist.playlistId)}`
         )
       );
-      await this.data.storeTracks(playlist.id, tracks);
+      await this.data.storeTracks(
+        playlist.id,
+        playlist.playlistId,
+        tracks.tracks
+      );
 
       this.logger.log(
         blue.bold(
