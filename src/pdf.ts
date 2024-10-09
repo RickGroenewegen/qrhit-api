@@ -23,6 +23,26 @@ class PDF {
     await result.saveFiles(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
   }
 
+  public async getFirstPageDimensions(filePath: string): Promise<{ width: number; height: number }> {
+    // Read the PDF file into a Uint8Array
+    const pdfBytes = await fs.readFile(filePath);
+
+    // Load the PDF document
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+
+    // Get the first page
+    const firstPage = pdfDoc.getPage(0);
+
+    // Get the dimensions in points
+    const { width, height } = firstPage.getSize();
+
+    // Convert points to millimeters (1 point = 0.352778 mm)
+    const widthMm = width * 0.352778;
+    const heightMm = height * 0.352778;
+
+    return { width: widthMm, height: heightMm };
+  }
+
   public async countPDFPages(filePath: string): Promise<number> {
     // Read the PDF file into a Uint8Array
     const pdfBytes = await fs.readFile(filePath);
