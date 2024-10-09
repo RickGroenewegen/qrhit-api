@@ -337,7 +337,7 @@ class Generator {
     if (!exists || process.env['ENVIRONMENT'] === 'development') {
       // Retrieve the tracks from Spotify
       const response = await this.spotify.getTracks(playlist.playlistId);
-      const tracks = response.data;
+      const tracks = response.data.tracks;
 
       // If there are more than 500 remove the last tracks
       if (tracks.length > MAX_CARDS) {
@@ -351,11 +351,8 @@ class Generator {
           )} tracks for playlist: ${white.bold(playlist.playlistId)}`
         )
       );
-      await this.data.storeTracks(
-        playlist.id,
-        playlist.playlistId,
-        tracks.tracks
-      );
+
+      await this.data.storeTracks(playlist.id, playlist.playlistId, tracks);
 
       this.logger.log(
         blue.bold(
