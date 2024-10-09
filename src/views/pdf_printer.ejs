@@ -19,14 +19,14 @@
         position: relative;
     }
     .card-front {
-        background-color: red;
+        background-color: #fff;
         background-image: url('<%= process.env['API_URI'] %>/public/images/card_background2.png');
         background-size: 60mm 60mm;
         background-position: center;
         background-repeat: no-repeat;
     }
     .card-back {
-        background-color: blue; /* or any other color you prefer */
+        background-color: #fff;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -34,13 +34,10 @@
         text-align: center;
     }
     .qr {
-        width: 60mm;
-        height: 60mm;
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 3;
+        width: 60%;
+        height: auto;
+        position: relative;
+
     }
     .text {
         text-align: center;
@@ -60,7 +57,7 @@
     .url, .url-bottom {
         font-size: 12px;
         position: absolute;
-        bottom: 10mm;
+        bottom: 12mm;
         text-align: center;
         width: 100%;
         font-style: italic;
@@ -68,7 +65,7 @@
         z-index: 3;
     }
     .url-bottom {
-        bottom: 5mm;
+        bottom: 8mm;
     }
 </style>
 </head>

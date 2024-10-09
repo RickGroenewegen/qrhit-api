@@ -14,6 +14,7 @@ import fs from 'fs/promises';
 import Data from './data';
 import crypto from 'crypto';
 import Spotify from './spotify';
+import PDF from './pdf';
 
 class Order {
   private static instance: Order;
@@ -26,6 +27,7 @@ class Order {
   private mail = new Mail();
   private data = new Data();
   private spotify = new Spotify();
+  private pdf = new PDF();
 
   private constructor() {
     if (cluster.isPrimary) {
@@ -461,11 +463,16 @@ class Order {
         const uploadURL = item.files.content.uploadUrl;
         const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
 
+        const dimensions = await this.pdf.getPageDimensions(pdfPath);
+
+        const width = dimensions.width.toFixed(2);
+        const height = dimensions.height.toFixed(2);
+
         this.logger.log(
           blue.bold(
-            `Uploading PDF file ${white.bold(filename)} to URL ${white.bold(
-              uploadURL
-            )}`
+            `Uploading PDF file (${color.white(width)} x ${color.white(
+              height
+            )} mm) ${white.bold(filename)} to URL ${white.bold(uploadURL)}`
           )
         );
 

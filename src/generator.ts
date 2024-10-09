@@ -59,7 +59,7 @@ class Generator {
 
     const maxAge =
       process.env['ENVIRONMENT'] === 'development'
-        ? 10000 // 24 * 60 * 60 * 1000
+        ? 24 * 60 * 60 * 1000
         : 5 * 60 * 1000;
 
     try {
@@ -334,7 +334,7 @@ class Generator {
       );
     }
 
-    if (!exists) {
+    if (!exists || process.env['ENVIRONMENT'] === 'development') {
       // Retrieve the tracks from Spotify
       const response = await this.spotify.getTracks(playlist.playlistId);
       const tracks = response.data;

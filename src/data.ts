@@ -60,10 +60,13 @@ class Data {
       INNER JOIN 
         users u ON pm.userid = u.id
       WHERE 
-        pm.paymentId = ${paymentId} AND 
-        pl.playlistId = ${playlistId} AND 
-        pm.status = 'paid' AND
+        pm.paymentId = ${paymentId} 
+      AND 
+        pl.playlistId = ${playlistId} 
+      AND
         u.hash = ${userHash}
+      AND 
+        pm.status = 'paid' 
     `;
 
     if (result.length === 0) {
@@ -543,7 +546,7 @@ class Data {
     >`
       SELECT id, isrc, trackId, name, artist
       FROM tracks
-      WHERE year IS NULL OR yearSource IS NULL AND trackId IN (${Prisma.join(
+      WHERE (year IS NULL OR yearSource IS NULL) AND trackId IN (${Prisma.join(
         providedTrackIds
       )})
     `;

@@ -1,4 +1,4 @@
-import { color } from 'console-log-colors';
+import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import { Playlist } from '@prisma/client';
 import ConvertApi from 'convertapi';
@@ -210,7 +210,6 @@ class PDF {
       page.scaleContent(scaleX, scaleY);
 
       // Set the new page size
-      // Set the new page size
       page.setSize(widthPts, heightPts);
     });
 
@@ -222,9 +221,9 @@ class PDF {
 
     this.logger.log(
       color.blue.bold(
-        `PDF pages resized to ${widthMm}x${heightMm} mm: ${color.white.bold(
-          inputPath
-        )}`
+        `PDF pages resized to ${white.bold(widthMm.toFixed(2))} x ${white.bold(
+          heightMm.toFixed(2)
+        )} mm: ${color.white.bold(inputPath)}`
       )
     );
   }
