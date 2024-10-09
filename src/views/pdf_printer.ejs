@@ -10,8 +10,8 @@
         padding: 0;
     }
     .card-front, .card-back {
-        width: 60mm;
-        height: 60mm;
+        width: 66mm;
+        height: 66mm;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -21,15 +21,19 @@
     .card-front {
         background-color: red;
         background-image: url('<%= process.env['API_URI'] %>/public/images/card_background2.png');
-        background-size: cover;
+        background-size: 60mm 60mm;
+        background-position: center;
     }
     .card-back {
         background-color: blue; /* or any other color you prefer */
     }
     .qr {
-        width: 60%;
-        height: auto;
-        position: relative;
+        width: 60mm;
+        height: 60mm;
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
         z-index: 3;
     }
     .text {
