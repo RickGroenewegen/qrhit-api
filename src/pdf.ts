@@ -177,7 +177,40 @@ class PDF {
     return filename;
   }
 
-  public async compressPDF(
+  public async resizePDFPages(
+    inputPath: string,
+    outputPath: string,
+    widthMm: number = 66,
+    heightMm: number = 66
+  ): Promise<void> {
+    // Convert millimeters to points (1 mm = 2.83465 points)
+    const widthPts = widthMm * 2.83465;
+    const heightPts = heightMm * 2.83465;
+
+    // Read the PDF file into a Uint8Array
+    const pdfBytes = await fs.readFile(inputPath);
+
+    // Load the PDF document
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+
+    // Resize each page
+    const pages = pdfDoc.getPages();
+    pages.forEach((page) => {
+      page.setSize(widthPts, heightPts);
+    });
+
+    // Serialize the PDFDocument to bytes (a Uint8Array)
+    const pdfBytesResized = await pdfDoc.save();
+
+    // Write the resized PDF to the output path
+    await fs.writeFile(outputPath, pdfBytesResized);
+
+    this.logger.log(
+      color.blue.bold(
+        `PDF pages resized to ${widthMm}x${heightMm} mm: ${color.white.bold(outputPath)}`
+      )
+    );
+  }
     inputPath: string,
     outputPath: string
   ): Promise<void> {
