@@ -127,9 +127,11 @@ class PDF {
         );
       }
 
+      const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+
       if (tempFiles.length === 1) {
         // If there's only one PDF, rename it instead of merging
-        const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+
         await fs.rename(tempFiles[0], finalPath);
         this.logger.log(
           color.blue.bold(`Single PDF renamed: ${color.white.bold(filename)}`)
@@ -143,6 +145,9 @@ class PDF {
         this.logger.log(
           color.blue.bold(`Merged PDF saved: ${color.white.bold(filename)}`)
         );
+      }
+      if (template === 'printer') {
+        await this.resizePDFPages(finalPath, 66, 66);
       }
     } finally {
       // Clean up temporary files only if they were merged
@@ -179,7 +184,6 @@ class PDF {
 
   public async resizePDFPages(
     inputPath: string,
-    outputPath: string,
     widthMm: number = 66,
     heightMm: number = 66
   ): Promise<void> {
@@ -203,14 +207,18 @@ class PDF {
     const pdfBytesResized = await pdfDoc.save();
 
     // Write the resized PDF to the output path
-    await fs.writeFile(outputPath, pdfBytesResized);
+    await fs.writeFile(inputPath, pdfBytesResized);
 
     this.logger.log(
       color.blue.bold(
-        `PDF pages resized to ${widthMm}x${heightMm} mm: ${color.white.bold(outputPath)}`
+        `PDF pages resized to ${widthMm}x${heightMm} mm: ${color.white.bold(
+          inputPath
+        )}`
       )
     );
   }
+
+  public async compressPDF(
     inputPath: string,
     outputPath: string
   ): Promise<void> {
