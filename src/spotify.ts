@@ -393,7 +393,11 @@ class Spotify {
 
       return {
         success: true,
-        data: allTracks,
+        data: {
+          maxReached: allTracks.length >= MAX_CARDS,
+          totalTracks: allTracks.length,
+          tracks: allTracks,
+        },
       };
     } catch (e) {
       return { success: false, error: 'Error getting tracks' };
