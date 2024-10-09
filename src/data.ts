@@ -623,9 +623,11 @@ class Data {
       if (year > 0) {
         if (source == 'ai') {
           this.logger.log(
-            `AI claims year for '${white.bold(track.artist)} - ${white.bold(
-              track.name
-            )}' is ${white.bold(year)} because ${white.bold(reasoning)}`
+            color.blue.bold(
+              `AI claims year for '${white.bold(track.artist)} - ${white.bold(
+                track.name
+              )}' is ${white.bold(year)} because ${white.bold(reasoning)}`
+            )
           );
         }
 
