@@ -505,6 +505,10 @@ class Data {
         })
       );
 
+      this.logger.log(
+        color.blue.bold(`Creating items:  ${color.white.bold(tracks.length)}`)
+      );
+
       await this.prisma.track.createMany({
         data: values,
         skipDuplicates: true,
