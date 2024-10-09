@@ -1,4 +1,4 @@
-import { color } from 'console-log-colors';
+import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import { Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
@@ -492,7 +492,13 @@ class Data {
       where: {
         trackId: { in: providedTrackIds },
       },
-      select: { trackId: true, name: true, isrc: true, artist: true, spotifyLink: true },
+      select: {
+        trackId: true,
+        name: true,
+        isrc: true,
+        artist: true,
+        spotifyLink: true,
+      },
     });
 
     this.logger.log(
@@ -616,14 +622,10 @@ class Data {
       }
       if (year > 0) {
         if (source == 'ai') {
-          console.log(
-            111,
-            track.artist,
-            track.name,
-            year,
-            source,
-            certainty,
-            reasoning
+          this.logger.log(
+            `AI claims year for '${white.bold(track.artist)} - ${white.bold(
+              track.name
+            )}' is ${white.bold(year)} because ${white.bold(reasoning)}`
           );
         }
 
