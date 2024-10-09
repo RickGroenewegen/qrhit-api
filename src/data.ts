@@ -495,8 +495,16 @@ class Data {
       select: { trackId: true },
     });
 
+    this.logger.log(
+      color.blue.bold(
+        `Existing tracks: ${color.white.bold(existingTracks.length)}`
+      )
+    );
+
     // Convert existing tracks to a Set for quick lookup
-    const existingTrackIds = new Set(existingTracks.map(track => track.trackId));
+    const existingTrackIds = new Set(
+      existingTracks.map((track) => track.trackId)
+    );
 
     // Step 2: Separate new and existing tracks
     const newTracks = [];
@@ -510,10 +518,16 @@ class Data {
       }
     }
 
+    this.logger.log(
+      color.blue.bold(
+        `Inserting new tracks: ${color.white.bold(newTracks.length)}`
+      )
+    );
+
     // Step 3: Insert new tracks
     if (newTracks.length > 0) {
       await this.prisma.track.createMany({
-        data: newTracks.map(track => ({
+        data: newTracks.map((track) => ({
           trackId: track.id,
           name: this.utils.cleanTrackName(track.name),
           isrc: track.isrc,
@@ -523,6 +537,12 @@ class Data {
         skipDuplicates: true,
       });
     }
+
+    this.logger.log(
+      color.blue.bold(
+        `Updating tracks: ${color.white.bold(tracksToUpdate.length)}`
+      )
+    );
 
     // Update existing tracks
     for (const track of tracksToUpdate) {
