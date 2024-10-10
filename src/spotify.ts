@@ -1,6 +1,6 @@
 import { format } from 'date-fns';
 import { MAX_CARDS } from './config/constants';
-import { white } from 'console-log-colors';
+import { color, white } from 'console-log-colors';
 import axios, { AxiosRequestConfig } from 'axios';
 import { ApiResult } from './interfaces/ApiResult';
 import { Playlist } from './interfaces/Playlist';
@@ -9,10 +9,12 @@ import Cache from './cache';
 import Data from './data';
 import Utils from './utils';
 import AnalyticsClient from './analytics';
+import Logger from './logger';
 
 class RapidAPIQueue {
   private cache: Cache;
   private static instance: RapidAPIQueue;
+  private logger = new Logger();
 
   private constructor() {
     this.cache = Cache.getInstance();
@@ -59,9 +61,12 @@ class RapidAPIQueue {
             break; // Exit loop if request is successful
           } catch (error) {
             attempt++;
-            console.error(`Error processing RapidAPI request in processQueue, attempt ${attempt}/${maxAttempts}:`, error);
+            this.logger.log(
+              color.red.bold(
+                `Error processing RapidAPI request in processQueue, attempt ${attempt} / ${maxAttempts}. Retrying in 1 second...`
+              )
+            );
             if (attempt < maxAttempts) {
-              console.log(`Retrying in 1 second...`);
               await new Promise((resolve) => setTimeout(resolve, 1000));
             }
           }
