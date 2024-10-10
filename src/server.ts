@@ -29,7 +29,7 @@ import { ChatGPT } from './chatgpt';
 import { PDFImage } from 'pdf-lib';
 import {
   ElasticLoadBalancingV2Client,
-  DescribeTargetHealthCommand,
+  DescribeLoadBalancersCommand,
 } from '@aws-sdk/client-elastic-load-balancing-v2';
 
 interface QueryParameters {
@@ -210,7 +210,8 @@ class Server {
             Names: [loadBalancerName],
           });
           const loadBalancersResponse = await client.send(loadBalancersCommand);
-          const loadBalancerArn = loadBalancersResponse.LoadBalancers?.[0].LoadBalancerArn;
+          const loadBalancerArn =
+            loadBalancersResponse.LoadBalancers?.[0].LoadBalancerArn;
 
           if (loadBalancerArn) {
             const targetGroupsCommand = new DescribeTargetGroupsCommand({
@@ -226,11 +227,17 @@ class Server {
                 const targetHealthCommand = new DescribeTargetHealthCommand({
                   TargetGroupArn: targetGroupArn,
                 });
-                const targetHealthResponse = await client.send(targetHealthCommand);
-                const instanceIds = targetHealthResponse.TargetHealthDescriptions?.map(
-                  (desc) => desc.Target?.Id
+                const targetHealthResponse = await client.send(
+                  targetHealthCommand
                 );
-                console.log(`Instances in target group ${targetGroupArn}:`, instanceIds);
+                const instanceIds =
+                  targetHealthResponse.TargetHealthDescriptions?.map(
+                    (desc) => desc.Target?.Id
+                  );
+                console.log(
+                  `Instances in target group ${targetGroupArn}:`,
+                  instanceIds
+                );
               }
             }
           }
