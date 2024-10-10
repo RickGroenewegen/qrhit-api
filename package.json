@@ -7,7 +7,7 @@
     "build": "rimraf ./build && tsc --incremental --skipDefaultLibCheck --strictFunctionTypes",
     "start:dev": "tsc -w & nodemon --watch build --ext js --exec 'node --no-deprecation build/src/app.js' --exitcrash",
     "start": "npm run build && ncp ./src ./build && ts-node build/src/app.js",
-    "start_pm2": "sudo git reset --hard HEAD && sudo git pull origin HEAD && sudo npm install --force && sudo prisma db push && npm run build && ncp ./src ./build && ts-node build/src/app.js",
+    "start_pm2": "git reset --hard HEAD && git pull origin HEAD && sudo npm install --force && sudo prisma db push && npm run build && ncp ./src ./build && ts-node build/src/app.js",
     "test": "npm run build && ncp ./src ./build && node build/test.js"
   },
   "keywords": [],
