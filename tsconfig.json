@@ -106,19 +106,6 @@
   "exclude": [
    "node_modules", // It's common to exclude the node_modules directory as well
     // You can add more directories or specific files here
+    "**/*.spec.ts"
   ]
-}
-{
-  "compilerOptions": {
-    "target": "ES6",
-    "module": "commonjs",
-    "outDir": "build/src",
-    "rootDir": "src",
-    "strict": true,
-    "esModuleInterop": true,
-    "skipLibCheck": true,
-    "forceConsistentCasingInFileNames": true
-  },
-  "include": ["src/**/*"],
-  "exclude": ["node_modules", "**/*.spec.ts"]
 }
