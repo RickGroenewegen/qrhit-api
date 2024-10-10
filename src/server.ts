@@ -191,7 +191,18 @@ class Server {
     if (this.isMainServer && cluster.isPrimary) {
       const hostName = os.hostname();
       if (hostName == process.env['MAIN_SERVER_HOSTNAME']) {
-        console.log(111, hostName);
+        const { ElasticLoadBalancingV2Client, DescribeTargetHealthCommand } = require("@aws-sdk/client-elastic-load-balancing-v2");
+
+        const client = new ElasticLoadBalancingV2Client({ region: process.env['AWS_REGION'] });
+        const command = new DescribeTargetHealthCommand({ TargetGroupArn: process.env['TARGET_GROUP_ARN'] });
+
+        try {
+          const response = await client.send(command);
+          const instanceIds = response.TargetHealthDescriptions?.map(desc => desc.Target?.Id);
+          console.log("Instances in target group:", instanceIds);
+        } catch (error) {
+          console.error("Error retrieving instances:", error);
+        }
       }
     }
   }
