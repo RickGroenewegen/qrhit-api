@@ -193,7 +193,7 @@ class Server {
       console.log(111, 'deploy');
 
       const ec2Metadata = new AWS.MetadataService();
-      ec2Metadata.request('/latest/meta-data/instance-id', (err, data) => {
+      ec2Metadata.request('/latest/meta-data/instance-id', (err: Error, data) => {
         if (err) {
           console.error('Error retrieving instance ID:', err);
         } else {
