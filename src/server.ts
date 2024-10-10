@@ -178,6 +178,7 @@ class Server {
 
   public init = async () => {
     this.isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
+    await this.deploy();
     await this.setVersion();
     await this.createDirs();
     await this.registerPlugins();
@@ -185,6 +186,12 @@ class Server {
     await this.addAuthRoutes();
     await this.startCluster();
   };
+
+  private async deploy() {
+    if (this.isMainServer && cluster.isPrimary) {
+      console.log(111, 'deploy');
+    }
+  }
 
   private async setVersion() {
     this.version = JSON.parse(
