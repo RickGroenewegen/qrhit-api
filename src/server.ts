@@ -33,6 +33,7 @@ import {
   DescribeTargetGroupsCommand,
   DescribeTargetHealthCommand,
 } from '@aws-sdk/client-elastic-load-balancing-v2';
+import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -246,6 +247,31 @@ class Server {
                     `Instances in target group ${targetGroupArn}:`,
                     instanceIds
                   );
+
+                  if (instanceIds && instanceIds.length > 0) {
+                    const ec2Client = new EC2Client({
+                      region: process.env['AWS_ELB_REGION'],
+                      credentials: {
+                        accessKeyId: process.env['AWS_ELB_ACCESS_KEY']!,
+                        secretAccessKey: process.env['AWS_ELB_SECRET_KEY']!,
+                      },
+                    });
+
+                    const describeInstancesCommand = new DescribeInstancesCommand({
+                      InstanceIds: instanceIds,
+                    });
+
+                    try {
+                      const describeInstancesResponse = await ec2Client.send(describeInstancesCommand);
+                      const internalIps = describeInstancesResponse.Reservations?.flatMap(reservation =>
+                        reservation.Instances?.map(instance => instance.PrivateIpAddress)
+                      );
+
+                      console.log(`Internal IPs for instances in target group ${targetGroupArn}:`, internalIps);
+                    } catch (error) {
+                      console.error('Error retrieving instance IPs:', error);
+                    }
+                  }
                 }
               }
             }
