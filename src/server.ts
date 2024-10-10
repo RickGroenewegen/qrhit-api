@@ -1,4 +1,4 @@
-import AWS from 'aws-sdk';
+import { EC2MetadataClient, GetInstanceIdentityDocumentCommand } from "@aws-sdk/client-ec2-metadata";
 import { FastifyInstance } from 'fastify/types/instance';
 import { generateToken, verifyToken } from './auth';
 import Fastify from 'fastify';
@@ -192,17 +192,14 @@ class Server {
     if (this.isMainServer && cluster.isPrimary) {
       console.log(111, 'deploy');
 
-      const ec2Metadata = new AWS.MetadataService();
-      ec2Metadata.request(
-        '/latest/meta-data/instance-id',
-        (err: Error, data) => {
-          if (err) {
-            console.error('Error retrieving instance ID:', err);
-          } else {
-            console.log('Instance ID:', data);
-          }
-        }
-      );
+      const client = new EC2MetadataClient({});
+      try {
+        const command = new GetInstanceIdentityDocumentCommand({});
+        const data = await client.send(command);
+        console.log('Instance ID:', data.instanceId);
+      } catch (err) {
+        console.error('Error retrieving instance ID:', err);
+      }
     }
   }
 
