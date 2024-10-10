@@ -190,7 +190,9 @@ class Server {
   private async deploy() {
     if (this.isMainServer && cluster.isPrimary) {
       const hostName = os.hostname();
-      console.log(111, 'deploy', hostName);
+      if (hostName == process.env['MAIN_SERVER_HOSTNAME']) {
+        console.log(111, hostName);
+      }
     }
   }
 
