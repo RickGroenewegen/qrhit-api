@@ -62,6 +62,7 @@ class Generator {
         ? 24 * 60 * 60 * 1000
         : 5 * 60 * 1000;
 
+    const cleanedDirs = new Set<string>();
     try {
       const subdirs = await fs.readdir(qrDir);
       for (const subdir of subdirs) {
@@ -69,11 +70,14 @@ class Generator {
         const stats = await fs.stat(subdirPath);
         if (stats.isDirectory() && now - stats.mtimeMs > maxAge) {
           await fs.rm(subdirPath, { recursive: true, force: true });
-          this.logger.log(
-            color.blue.bold(
-              `Cleaned up QR code directory: ${color.white.bold(subdir)}`
-            )
-          );
+          if (!cleanedDirs.has(subdir)) {
+            this.logger.log(
+              color.blue.bold(
+                `Cleaned up QR code directory: ${color.white.bold(subdir)}`
+              )
+            );
+            cleanedDirs.add(subdir);
+          }
         }
       }
     } catch (error) {
