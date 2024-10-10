@@ -132,6 +132,10 @@ class Server {
             accessKeyId: 'your-access-key-id',
             secretAccessKey: 'your-secret-access-key',
           },
+          credentials: {
+            accessKeyId: 'your-access-key-id',
+            secretAccessKey: 'your-secret-access-key',
+          },
         });
       }
     );
