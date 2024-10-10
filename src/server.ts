@@ -240,7 +240,7 @@ class Server {
                 const instanceIds =
                   targetHealthResponse.TargetHealthDescriptions?.map(
                     (desc) => desc.Target?.Id
-                  );
+                  ).filter((id): id is string => id !== undefined);
 
                 if (targetGroupArn == process.env['AWS_ELB_TARGET_GROUP_ARN']) {
                   console.log(
