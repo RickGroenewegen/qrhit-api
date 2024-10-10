@@ -30,6 +30,8 @@ import { PDFImage } from 'pdf-lib';
 import {
   ElasticLoadBalancingV2Client,
   DescribeLoadBalancersCommand,
+  DescribeTargetGroupsCommand,
+  DescribeTargetHealthCommand,
 } from '@aws-sdk/client-elastic-load-balancing-v2';
 
 interface QueryParameters {
