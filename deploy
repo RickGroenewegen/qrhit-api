@@ -1,33 +1,16 @@
 #!/bin/bash
-
-# Navigate to the Git repository directory
-# Replace '/path/to/your/repo' with the actual path to your Git repository
 cd /home/ec2-user/sites/qrsong
-
-# Reset the repository to HEAD
 git reset --hard HEAD
-# 43d01d2e980787e984931296caf0c127e79fef60
-# pm2 start npm --name "qrsong" -- run start
-# pm2 start dist/qrhit/server/server.mjs --name "qrsong-frontend"
-
-# Pull the latest changes from the remote repository
 git pull origin HEAD
-
 sudo chmod +x deploy
 sudo chmod +x deploy_api
 sudo chmod +x deploy_frontend
-
 sudo npm install --force
 sudo prisma db push
 echo "Repository has been reset and updated."
-
 cd /home/ec2-user/sites/qrsong-frontend
 git reset --hard HEAD
 git pull origin HEAD
 sudo npm install --force
 sudo npm run build
-
-pm2 restart qrsong
-pm2 restart qrsong-frontend
-
-pm2 logs qrsong --lines 1000
+npm run start

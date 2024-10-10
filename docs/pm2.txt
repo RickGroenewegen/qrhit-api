@@ -1,0 +1,5 @@
+# 43d01d2e980787e984931296caf0c127e79fef60
+# pm2 start npm --name "qrsong" -- run start
+# pm2 start dist/qrhit/server/server.mjs --name "qrsong-frontend"
+
+# Pull the latest changes from the remote repository
