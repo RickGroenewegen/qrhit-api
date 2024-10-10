@@ -200,8 +200,8 @@ class Server {
         const client = new ElasticLoadBalancingV2Client({
           region: process.env['AWS_ELB_REGION'],
           credentials: {
-            accessKeyId: 'your-access-key-id',
-            secretAccessKey: 'your-secret-access-key',
+            accessKeyId: process.env['AWS_ELB_ACCESS_KEY']!,
+            secretAccessKey: process.env['AWS_ELB_SECRET_KEY']!,
           },
         });
 
@@ -240,10 +240,13 @@ class Server {
                   targetHealthResponse.TargetHealthDescriptions?.map(
                     (desc) => desc.Target?.Id
                   );
-                console.log(
-                  `Instances in target group ${targetGroupArn}:`,
-                  instanceIds
-                );
+
+                if (targetGroupArn == process.env['AWS_ELB_TARGET_GROUP_ARN']) {
+                  console.log(
+                    `Instances in target group ${targetGroupArn}:`,
+                    instanceIds
+                  );
+                }
               }
             }
           }
