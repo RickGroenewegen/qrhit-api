@@ -1,4 +1,4 @@
-import { EC2Client, DescribeInstancesCommand } from "@aws-sdk/client-ec2";
+import { EC2MetadataClient, GetInstanceIdentityDocumentCommand } from "@aws-sdk/client-ec2";
 import { FastifyInstance } from 'fastify/types/instance';
 import { generateToken, verifyToken } from './auth';
 import Fastify from 'fastify';
@@ -192,19 +192,11 @@ class Server {
     if (this.isMainServer && cluster.isPrimary) {
       console.log(111, 'deploy');
 
-      const client = new EC2Client({});
-      const instanceId = process.env.INSTANCE_ID;
-      if (!instanceId) {
-        console.error('INSTANCE_ID is not set in the environment variables.');
-        return;
-      }
+      const client = new EC2MetadataClient({});
       try {
-        const command = new DescribeInstancesCommand({
-          InstanceIds: [instanceId],
-        });
+        const command = new GetInstanceIdentityDocumentCommand({});
         const data = await client.send(command);
-        const retrievedInstanceId = data.Reservations?.[0]?.Instances?.[0]?.InstanceId;
-        console.log('Instance ID:', retrievedInstanceId);
+        console.log('Instance ID:', data.instanceId);
       } catch (err) {
         console.error('Error retrieving instance ID:', err);
       }
