@@ -197,17 +197,43 @@ class Server {
       if (hostName == process.env['MAIN_SERVER_HOSTNAME']) {
         const client = new ElasticLoadBalancingV2Client({
           region: process.env['AWS_ELB_REGION'],
-        });
-        const command = new DescribeTargetHealthCommand({
-          TargetGroupArn: process.env['AWS_TARGET_GROUP_ARN'],
+          credentials: {
+            accessKeyId: 'your-access-key-id',
+            secretAccessKey: 'your-secret-access-key',
+          },
         });
 
+        const loadBalancerName = process.env['AWS_LOAD_BALANCER_NAME'];
+
         try {
-          const response = await client.send(command);
-          const instanceIds = response.TargetHealthDescriptions?.map(
-            (desc: { Target?: { Id?: string } }) => desc.Target?.Id
-          );
-          console.log('Instances in target group:', instanceIds);
+          const loadBalancersCommand = new DescribeLoadBalancersCommand({
+            Names: [loadBalancerName],
+          });
+          const loadBalancersResponse = await client.send(loadBalancersCommand);
+          const loadBalancerArn = loadBalancersResponse.LoadBalancers?.[0].LoadBalancerArn;
+
+          if (loadBalancerArn) {
+            const targetGroupsCommand = new DescribeTargetGroupsCommand({
+              LoadBalancerArn: loadBalancerArn,
+            });
+            const targetGroupsResponse = await client.send(targetGroupsCommand);
+            const targetGroupArns = targetGroupsResponse.TargetGroups?.map(
+              (tg) => tg.TargetGroupArn
+            );
+
+            if (targetGroupArns) {
+              for (const targetGroupArn of targetGroupArns) {
+                const targetHealthCommand = new DescribeTargetHealthCommand({
+                  TargetGroupArn: targetGroupArn,
+                });
+                const targetHealthResponse = await client.send(targetHealthCommand);
+                const instanceIds = targetHealthResponse.TargetHealthDescriptions?.map(
+                  (desc) => desc.Target?.Id
+                );
+                console.log(`Instances in target group ${targetGroupArn}:`, instanceIds);
+              }
+            }
+          }
         } catch (error) {
           console.error('Error retrieving instances:', error);
         }
