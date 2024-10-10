@@ -54,7 +54,9 @@ class RapidAPIQueue {
         const requestConfig = JSON.parse(request);
         let attempt = 0;
         const maxAttempts = 3;
-        const functionName = requestConfig.url.includes('playlist_tracks') ? 'getTracks' : 'getPlaylist';
+        const functionName = requestConfig.url.includes('playlist_tracks')
+          ? 'getTracks'
+          : 'getPlaylist';
         while (attempt < maxAttempts) {
           try {
             await axios(requestConfig);
