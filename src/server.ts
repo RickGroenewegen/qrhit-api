@@ -457,7 +457,19 @@ class Server {
 
     this.fastify.get('/test', async (request: any, _reply) => {
       this.analytics.increaseCounter('testCategory', 'testAction');
-      return { success: true };
+      
+      const interfaces = os.networkInterfaces();
+      let localIp = 'Not found';
+      for (const name of Object.keys(interfaces)) {
+        for (const iface of interfaces[name]!) {
+          if (iface.family === 'IPv4' && !iface.internal) {
+            localIp = iface.address;
+            break;
+          }
+        }
+      }
+
+      return { success: true, localIp };
     });
 
     this.fastify.get('/featured/:locale', async (request: any, _reply) => {
