@@ -1,3 +1,4 @@
+import AWS from 'aws-sdk';
 import { FastifyInstance } from 'fastify/types/instance';
 import { generateToken, verifyToken } from './auth';
 import Fastify from 'fastify';
@@ -190,6 +191,15 @@ class Server {
   private async deploy() {
     if (this.isMainServer && cluster.isPrimary) {
       console.log(111, 'deploy');
+
+      const ec2Metadata = new AWS.MetadataService();
+      ec2Metadata.request('/latest/meta-data/instance-id', (err, data) => {
+        if (err) {
+          console.error('Error retrieving instance ID:', err);
+        } else {
+          console.log('Instance ID:', data);
+        }
+      });
     }
   }
 
