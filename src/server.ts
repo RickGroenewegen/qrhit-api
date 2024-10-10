@@ -243,11 +243,6 @@ class Server {
                   ).filter((id): id is string => id !== undefined);
 
                 if (targetGroupArn == process.env['AWS_ELB_TARGET_GROUP_ARN']) {
-                  console.log(
-                    `Instances in target group ${targetGroupArn}:`,
-                    instanceIds
-                  );
-
                   if (instanceIds && instanceIds.length > 0) {
                     const ec2Client = new EC2Client({
                       region: process.env['AWS_ELB_REGION'],
@@ -257,17 +252,27 @@ class Server {
                       },
                     });
 
-                    const describeInstancesCommand = new DescribeInstancesCommand({
-                      InstanceIds: instanceIds,
-                    });
+                    const describeInstancesCommand =
+                      new DescribeInstancesCommand({
+                        InstanceIds: instanceIds,
+                      });
 
                     try {
-                      const describeInstancesResponse = await ec2Client.send(describeInstancesCommand);
-                      const internalIps = describeInstancesResponse.Reservations?.flatMap(reservation =>
-                        reservation.Instances?.map(instance => instance.PrivateIpAddress)
+                      const describeInstancesResponse = await ec2Client.send(
+                        describeInstancesCommand
                       );
+                      const internalIps =
+                        describeInstancesResponse.Reservations?.flatMap(
+                          (reservation) =>
+                            reservation.Instances?.map(
+                              (instance) => instance.PrivateIpAddress
+                            )
+                        );
 
-                      console.log(`Internal IPs for instances in target group ${targetGroupArn}:`, internalIps);
+                      console.log(
+                        `Internal IPs for instances in target group ${targetGroupArn}:`,
+                        internalIps
+                      );
                     } catch (error) {
                       console.error('Error retrieving instance IPs:', error);
                     }
