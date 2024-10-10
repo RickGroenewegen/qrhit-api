@@ -5,7 +5,7 @@
   "main": "index.js",
   "scripts": {
     "build": "rimraf ./build && tsc --incremental --skipDefaultLibCheck --strictFunctionTypes",
-    "start:dev": "tsc -w & nodemon --watch build --ext js --exec 'node build/src/app.js' --exitcrash --node-options --trace-deprecation",
+    "start:dev": "tsc -w & nodemon --watch build --ext js --exec 'node --no-deprecation build/src/app.js' --exitcrash",
     "start": "npm run build && ncp ./src ./build && ts-node build/src/app.js",
     "test": "npm run build && ncp ./src ./build && node build/test.js"
   },
