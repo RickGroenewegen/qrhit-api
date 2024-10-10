@@ -193,13 +193,18 @@ class Server {
       console.log(111, 'deploy');
 
       const client = new EC2Client({});
+      const instanceId = process.env.INSTANCE_ID;
+      if (!instanceId) {
+        console.error('INSTANCE_ID is not set in the environment variables.');
+        return;
+      }
       try {
         const command = new DescribeInstancesCommand({
-          InstanceIds: [process.env.INSTANCE_ID], // Ensure INSTANCE_ID is set in your environment
+          InstanceIds: [instanceId],
         });
         const data = await client.send(command);
-        const instanceId = data.Reservations?.[0]?.Instances?.[0]?.InstanceId;
-        console.log('Instance ID:', instanceId);
+        const retrievedInstanceId = data.Reservations?.[0]?.Instances?.[0]?.InstanceId;
+        console.log('Instance ID:', retrievedInstanceId);
       } catch (err) {
         console.error('Error retrieving instance ID:', err);
       }
