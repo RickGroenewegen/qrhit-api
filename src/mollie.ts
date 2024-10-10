@@ -401,6 +401,16 @@ class Mollie {
 
       const newOrderId = 100000000 + paymentId;
 
+      // Update the users marketingEmails field
+      await this.prisma.user.update({
+        where: {
+          id: userDatabaseId,
+        },
+        data: {
+          marketingEmails: params.extraOrderData.marketingEmails,
+        },
+      })
+
       // update the payment in the database
       await this.prisma.payment.update({
         where: {
