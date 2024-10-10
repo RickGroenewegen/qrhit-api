@@ -469,7 +469,7 @@ class Server {
         }
       }
 
-      return { success: true, localIp };
+      return { success: true, localIp, version: this.version };
     });
 
     this.fastify.get('/featured/:locale', async (request: any, _reply) => {
