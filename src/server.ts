@@ -269,9 +269,21 @@ class Server {
                             )
                         );
 
+                      const interfaces = os.networkInterfaces();
+                      let localIp = 'Not found';
+                      for (const name of Object.keys(interfaces)) {
+                        for (const iface of interfaces[name]!) {
+                          if (iface.family === 'IPv4' && !iface.internal) {
+                            localIp = iface.address;
+                            break;
+                          }
+                        }
+                      }
+
                       console.log(
                         `Internal IPs for instances in target group ${targetGroupArn}:`,
-                        internalIps
+                        internalIps,
+                        `Server's internal IP: ${localIp}`
                       );
                     } catch (error) {
                       console.error('Error retrieving instance IPs:', error);
