@@ -128,14 +128,6 @@ class Server {
           totalItems,
           currentPage: search.page,
           itemsPerPage: search.itemsPerPage,
-          credentials: {
-            accessKeyId: 'your-access-key-id',
-            secretAccessKey: 'your-secret-access-key',
-          },
-          credentials: {
-            accessKeyId: 'your-access-key-id',
-            secretAccessKey: 'your-secret-access-key',
-          },
         });
       }
     );
