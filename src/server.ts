@@ -191,10 +191,10 @@ class Server {
     if (this.isMainServer && cluster.isPrimary) {
       const hostName = os.hostname();
       if (hostName == process.env['MAIN_SERVER_HOSTNAME']) {
-        const {
+        import {
           ElasticLoadBalancingV2Client,
           DescribeTargetHealthCommand,
-        } = require('@aws-sdk/client-elastic-load-balancing-v2');
+        } from '@aws-sdk/client-elastic-load-balancing-v2';
 
         const client = new ElasticLoadBalancingV2Client({
           region: process.env['AWS_ELB_REGION'],
@@ -287,11 +287,14 @@ class Server {
   }
 
   public async registerPlugins() {
-    await this.fastify.register(require('@fastify/multipart'));
-    await this.fastify.register(require('@fastify/formbody'));
+    import multipart from '@fastify/multipart';
+    import formbody from '@fastify/formbody';
+    await this.fastify.register(multipart);
+    await this.fastify.register(formbody);
     await this.fastify.register(ipPlugin);
     await this.fastify.register(replyFrom);
-    await this.fastify.register(require('@fastify/cors'), {
+    import cors from '@fastify/cors';
+    await this.fastify.register(cors, {
       origin: '*',
       methods: 'GET, POST, OPTIONS, PUT, PATCH, DELETE',
       allowedHeaders:
@@ -300,7 +303,8 @@ class Server {
     });
 
     await this.fastify.register((instance, opts, done) => {
-      instance.register(require('@fastify/static'), {
+      import fastifyStatic from '@fastify/static';
+      instance.register(fastifyStatic, {
         root: process.env['PUBLIC_DIR'] as string,
         prefix: '/public/',
       });
