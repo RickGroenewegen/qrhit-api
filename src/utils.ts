@@ -227,7 +227,7 @@ class Utils {
         case '0':
           return false;
         default:
-          throw new Error(`Unrecognized string value: ${value}`);
+          return false; // Default to false for unrecognized string values
       }
     }
 
