@@ -457,7 +457,7 @@ class Server {
 
     this.fastify.get('/test', async (request: any, _reply) => {
       this.analytics.increaseCounter('testCategory', 'testAction');
-      
+
       const interfaces = os.networkInterfaces();
       let localIp = 'Not found';
       for (const name of Object.keys(interfaces)) {
