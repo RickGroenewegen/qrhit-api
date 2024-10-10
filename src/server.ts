@@ -205,6 +205,10 @@ class Server {
 
         const loadBalancerName = process.env['AWS_LOAD_BALANCER_NAME'];
 
+        if (!loadBalancerName) {
+          throw new Error('Load balancer name is not defined');
+        }
+
         try {
           const loadBalancersCommand = new DescribeLoadBalancersCommand({
             Names: [loadBalancerName],
