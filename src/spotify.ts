@@ -49,12 +49,22 @@ class RapidAPIQueue {
 
       const request = await this.dequeueRapidAPIRequest();
       if (request) {
-        try {
-          const requestConfig = JSON.parse(request);
-          await axios(requestConfig);
-          await this.setLastRequestTimestamp(Date.now());
-        } catch (error) {
-          console.error('Error processing RapidAPI request:', error);
+        const requestConfig = JSON.parse(request);
+        let attempt = 0;
+        const maxAttempts = 3;
+        while (attempt < maxAttempts) {
+          try {
+            await axios(requestConfig);
+            await this.setLastRequestTimestamp(Date.now());
+            break; // Exit loop if request is successful
+          } catch (error) {
+            attempt++;
+            console.error(`Error processing RapidAPI request in processQueue, attempt ${attempt}/${maxAttempts}:`, error);
+            if (attempt < maxAttempts) {
+              console.log(`Retrying in 1 second...`);
+              await new Promise((resolve) => setTimeout(resolve, 1000));
+            }
+          }
         }
       }
     }
