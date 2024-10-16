@@ -332,5 +332,21 @@
   "mail.physicalDownloadButton": "Drucker-PDF herunterladen",
   "countdown.appStore": "App Store",
   "countdown.googlePlay": "Google Play",
-  "countdown.other": "Andere"
+  "countdown.other": "Andere",
+  "payment.paysafecard": "Paysafecard",
+  "payment.trustly": "Trustly",
+  "payment.ideal": "iDEAL",
+  "payment.bancontact": "Bancontact",
+  "invoice.paysafecard": "Paysafecard",
+  "invoice.trustly": "Trustly",
+  "invoice.belfius": "Belfius",
+  "invoice.kbc": "KBC",
+  "invoice.satispay": "Satispay",
+  "invoice.riverty": "Riverty",
+  "invoice.eps": "EPS",
+  "invoice.twint": "Twint",
+  "invoice.bancomatpay": "Bancomat Pay",
+  "invoice.przelewy24": "Przelewy24",
+  "invoice.blik": "Blik",
+  "invoice.applepay": "Apple Pay"
 }

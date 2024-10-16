@@ -327,5 +327,21 @@
   "countries.YE": "Jemen",
   "countries.ZM": "Zambia",
   "countries.ZW": "Zimbabwe",
-  "countries.FK": "Falklandy (Malwiny)"
+  "countries.FK": "Falklandy (Malwiny)",
+  "payment.paysafecard": "Paysafecard",
+  "payment.trustly": "Trustly",
+  "payment.ideal": "iDEAL",
+  "payment.bancontact": "Bancontact",
+  "invoice.paysafecard": "Paysafecard",
+  "invoice.trustly": "Trustly",
+  "invoice.belfius": "Belfius",
+  "invoice.kbc": "KBC",
+  "invoice.satispay": "Satispay",
+  "invoice.riverty": "Riverty",
+  "invoice.eps": "EPS",
+  "invoice.twint": "Twint",
+  "invoice.bancomatpay": "Bancomat Pay",
+  "invoice.przelewy24": "Przelewy24",
+  "invoice.blik": "Blik",
+  "invoice.applepay": "Apple Pay"
 }

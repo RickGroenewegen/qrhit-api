@@ -49,14 +49,8 @@ class Mollie {
         PaymentMethod.kbc,
         PaymentMethod.satispay,
         PaymentMethod.trustly,
-        PaymentMethod.riverty,
       ],
-      de: [
-        PaymentMethod.satispay,
-        PaymentMethod.trustly,
-        PaymentMethod.eps,
-        PaymentMethod.riverty,
-      ],
+      de: [PaymentMethod.satispay, PaymentMethod.trustly, PaymentMethod.eps],
       fr: [
         PaymentMethod.bancontact,
         PaymentMethod.belfius,
@@ -409,7 +403,7 @@ class Mollie {
         data: {
           marketingEmails: params.extraOrderData.marketingEmails,
         },
-      })
+      });
 
       // update the payment in the database
       await this.prisma.payment.update({
