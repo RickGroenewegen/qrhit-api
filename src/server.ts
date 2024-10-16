@@ -566,6 +566,10 @@ class Server {
           payment.locale,
           'invoice'
         ),
+        countries: this.translation.getTranslationsByPrefix(
+          payment.locale,
+          'countries'
+        ),
       });
     });
 

@@ -28,13 +28,16 @@ class Order {
   private data = new Data();
   private spotify = new Spotify();
   private pdf = new PDF();
+  private cronLockKey: string = 'checkForShipmentLock';
 
   private constructor() {
-    const lockKey = 'checkForShipmentLock';
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
-        await this.cache.del(lockKey);
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+          if (process.env['ENVIRONMENT'] === 'development') {
+            this.cronLockKey = 'checkForShipmentLock_' + new Date().getTime();
+          }
+          await this.cache.del(this.cronLockKey);
           this.startCron();
         }
       });
@@ -114,7 +117,6 @@ class Order {
       this.logger.log(color.blue.bold(`Refreshed Print API token`));
     }).start();
     new CronJob(process.env['CRON_PATTERN_TRACKING']!, async () => {
-      console.log(111);
       await this.checkForShipment();
     }).start();
     new CronJob('0 0 * * *', async () => {
@@ -538,11 +540,11 @@ class Order {
   }
 
   public async checkForShipment(): Promise<void> {
-    const lockKey = 'checkForShipmentLock';
     const lockValue = 'locked';
 
     // Try to acquire the lock
-    const isLocked = await this.cache.get(lockKey);
+    const isLocked = await this.cache.get(this.cronLockKey, false);
+
     if (isLocked) {
       this.logger.log(
         color.yellow.bold('checkForShipment is already running.')
@@ -551,7 +553,7 @@ class Order {
     }
 
     // Set the lock with an expiration time to prevent stale locks
-    await this.cache.set(lockKey, lockValue, 600); // Lock expires in 10 minutes
+    await this.cache.set(this.cronLockKey, lockValue, 600); // Lock expires in 10 minutes
 
     const authToken = await this.getAuthToken();
 
@@ -584,9 +586,7 @@ class Order {
             },
           });
 
-          console.log(payment.id, response.data.status);
-
-          if (response.data.status === 'Shipped') {
+          if (response.data.status === 'Shipped' || payment.id == 180) {
             this.logger.log(
               magenta(
                 `Status of order ${white.bold(
@@ -595,7 +595,7 @@ class Order {
               )
             );
 
-            if (response.data.trackingUrl?.length > 0) {
+            if (response.data.trackingUrl?.length > 0 || true) {
               trackingLink = response.data.trackingUrl;
               const pdfPath = await this.createInvoice(response.data, payment);
 
@@ -634,12 +634,16 @@ class Order {
         }
       }
     }
+    await this.cache.del(this.cronLockKey);
   }
 
   private async createInvoice(order: any, payment: any): Promise<string> {
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     const invoiceUrl = `${process.env['API_URI']}/invoice/${payment.paymentId}`;
+
+    this.logger.log(blue.bold(`Invoice URL: ${white.bold(invoiceUrl)}`));
+
     await page.goto(invoiceUrl, { waitUntil: 'networkidle0' });
 
     const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${payment.paymentId}.pdf`;

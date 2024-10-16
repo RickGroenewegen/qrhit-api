@@ -148,12 +148,13 @@
 									<%= process.env['PRODUCT_POSTBOX'] %><br />
 									<%= process.env['PRODUCT_ADDRESS'] %><br />
 									<%= process.env['PRODUCT_ZIPCODE'] %> <%= process.env['PRODUCT_CITY'] %><br/>
-                                    <%= process.env['PRODUCT_COUNTRY'] %>
+                                    <%= countries[process.env['PRODUCT_COUNTRY']] %>
 								</td>
 								<td>
 									<%= payment.fullname %><br />
 									<%= payment.invoiceAddress || payment.address %><br/>
-                                    <%= payment.invoiceZipcode || payment.zipcode %> <%= payment.invoiceCity || payment.city %> <%= payment.invoiceCountrycode || payment.countrycode %><br/>
+                                    <%= payment.invoiceZipcode || payment.zipcode %> <%= payment.invoiceCity || payment.city %><br/>
+									<%= countries[payment.invoiceCountrycode || payment.countrycode] %><br/>
 								</td>
 							</tr>
 						</table>
