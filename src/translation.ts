@@ -1,5 +1,5 @@
 import { I18n } from 'i18n';
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import path from 'path';
 
 class Translation {
@@ -47,11 +47,26 @@ class Translation {
       `${locale}.json`
     );
 
-    if (!fs.existsSync(translationsPath)) {
-      throw new Error(`Locale file for ${locale} not found.`);
-    }
+    return fs.access(translationsPath)
+      .then(() => fs.readFile(translationsPath, 'utf-8'))
+      .then((data) => {
+        const translations = JSON.parse(data);
+        const filteredTranslations: Record<string, string> = {};
 
-    const translations = JSON.parse(fs.readFileSync(translationsPath, 'utf-8'));
+        for (const key in translations) {
+          if (key.startsWith(prefix)) {
+            const newKey = key.slice(prefix.length + 1);
+            filteredTranslations[newKey] = translations[key];
+          }
+        }
+
+        return Object.keys(filteredTranslations).length > 0
+          ? filteredTranslations
+          : null;
+      })
+      .catch(() => {
+        throw new Error(`Locale file for ${locale} not found.`);
+      });
     const filteredTranslations: Record<string, string> = {};
 
     for (const key in translations) {
