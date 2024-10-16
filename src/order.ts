@@ -30,6 +30,7 @@ class Order {
   private pdf = new PDF();
 
   private constructor() {
+    const lockKey = 'checkForShipmentLock';
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
         await this.cache.del(lockKey);
