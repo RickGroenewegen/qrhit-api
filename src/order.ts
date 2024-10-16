@@ -112,6 +112,7 @@ class Order {
       this.logger.log(color.blue.bold(`Refreshed Print API token`));
     }).start();
     new CronJob(process.env['CRON_PATTERN_TRACKING']!, async () => {
+      console.log(111);
       await this.checkForShipment();
     }).start();
     new CronJob('0 0 * * *', async () => {
@@ -566,6 +567,8 @@ class Order {
             },
           });
 
+          console.log(payment.id, response.data.status);
+
           if (response.data.status === 'Shipped') {
             this.logger.log(
               magenta(
@@ -593,6 +596,15 @@ class Order {
                 },
               });
             }
+          } else {
+            await this.prisma.payment.update({
+              where: {
+                id: payment.id,
+              },
+              data: {
+                printApiStatus: response.data.status,
+              },
+            });
           }
         } catch (e) {
           this.logger.log(
