@@ -30,21 +30,14 @@ class Order {
   private pdf = new PDF();
 
   private constructor() {
-    this.initialize();
-  }
-
-  private async initialize() {
     if (cluster.isPrimary) {
-      this.utils.isMainServer().then((isMainServer) => {
+      this.utils.isMainServer().then(async (isMainServer) => {
+        await this.cache.del(lockKey);
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
           this.startCron();
         }
       });
     }
-      // Release the lock
-      await this.cache.del(lockKey);
-    }
-  }
   }
 
   public async getInvoice(invoiceId: string): Promise<string> {
@@ -550,7 +543,9 @@ class Order {
     // Try to acquire the lock
     const isLocked = await this.cache.get(lockKey);
     if (isLocked) {
-      this.logger.log(color.yellow.bold('checkForShipment is already running.'));
+      this.logger.log(
+        color.yellow.bold('checkForShipment is already running.')
+      );
       return;
     }
 
