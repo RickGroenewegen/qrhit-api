@@ -340,17 +340,6 @@ class Mail {
         });
       }
 
-      console.log(1111, {
-        from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
-        to: payment.email,
-        subject,
-        html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
-        text,
-        attachments,
-        unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
-        replyTo: process.env['REPLY_TO_EMAIL'],
-      });
-
       const rawEmail = await this.renderRaw({
         from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
         to: payment.email,
@@ -371,7 +360,7 @@ class Mail {
         },
       });
 
-      const data = await this.ses.send(command);
+      await this.ses.send(command);
     } catch (error) {
       console.error('Error while sending email with attachment', error);
     }
