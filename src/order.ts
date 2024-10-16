@@ -37,6 +37,8 @@ class Order {
         }
       });
     }
+    // Release the lock
+    await this.cache.del(lockKey);
   }
 
   public async getInvoice(invoiceId: string): Promise<string> {
@@ -536,6 +538,19 @@ class Order {
   }
 
   public async checkForShipment(): Promise<void> {
+    const lockKey = 'checkForShipmentLock';
+    const lockValue = 'locked';
+
+    // Try to acquire the lock
+    const isLocked = await this.cache.get(lockKey);
+    if (isLocked) {
+      this.logger.log(color.yellow.bold('checkForShipment is already running.'));
+      return;
+    }
+
+    // Set the lock with an expiration time to prevent stale locks
+    await this.cache.set(lockKey, lockValue, 600); // Lock expires in 10 minutes
+
     const authToken = await this.getAuthToken();
 
     // Get all payments that have a printApiOrderId and the printApiStatus is not 'Shipped' or 'Cancelled'
