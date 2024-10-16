@@ -30,6 +30,10 @@ class Order {
   private pdf = new PDF();
 
   private constructor() {
+    this.initialize();
+  }
+
+  private async initialize() {
     if (cluster.isPrimary) {
       this.utils.isMainServer().then((isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
@@ -37,8 +41,10 @@ class Order {
         }
       });
     }
-    // Release the lock
-    await this.cache.del(lockKey);
+      // Release the lock
+      await this.cache.del(lockKey);
+    }
+  }
   }
 
   public async getInvoice(invoiceId: string): Promise<string> {
