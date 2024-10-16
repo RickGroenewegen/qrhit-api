@@ -38,47 +38,34 @@ class Translation {
   }
 
   // Method to get all translations for a specific locale that start with a given prefix
-  public getTranslationsByPrefix(
+  public async getTranslationsByPrefix(
     locale: string,
     prefix: string
-  ): Record<string, string> | null {
+  ): Promise<Record<string, string> | null> {
     const translationsPath = path.join(
       `${process.env['APP_ROOT']}/locales`,
       `${locale}.json`
     );
 
-    return fs.access(translationsPath)
-      .then(() => fs.readFile(translationsPath, 'utf-8'))
-      .then((data) => {
-        const translations = JSON.parse(data);
-        const filteredTranslations: Record<string, string> = {};
+    try {
+      await fs.access(translationsPath);
+      const data = await fs.readFile(translationsPath, 'utf-8');
+      const translations = JSON.parse(data);
+      const filteredTranslations: Record<string, string> = {};
 
-        for (const key in translations) {
-          if (key.startsWith(prefix)) {
-            const newKey = key.slice(prefix.length + 1);
-            filteredTranslations[newKey] = translations[key];
-          }
+      for (const key in translations) {
+        if (key.startsWith(prefix)) {
+          const newKey = key.slice(prefix.length + 1);
+          filteredTranslations[newKey] = translations[key];
         }
-
-        return Object.keys(filteredTranslations).length > 0
-          ? filteredTranslations
-          : null;
-      })
-      .catch(() => {
-        throw new Error(`Locale file for ${locale} not found.`);
-      });
-    const filteredTranslations: Record<string, string> = {};
-
-    for (const key in translations) {
-      if (key.startsWith(prefix)) {
-        const newKey = key.slice(prefix.length + 1);
-        filteredTranslations[newKey] = translations[key];
       }
-    }
 
-    return Object.keys(filteredTranslations).length > 0
-      ? filteredTranslations
-      : null;
+      return Object.keys(filteredTranslations).length > 0
+        ? filteredTranslations
+        : null;
+    } catch {
+      throw new Error(`Locale file for ${locale} not found.`);
+    }
   }
 }
 
