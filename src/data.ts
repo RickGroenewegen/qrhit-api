@@ -670,9 +670,9 @@ class Data {
           await this.musicBrainz.getReleaseDate(
             track.isrc ?? '',
             track.artist,
-            track.name
+            track.name,
+            true
           );
-
         if (year > 0) {
           if (track.year !== year) {
             await this.prisma.track.update({
