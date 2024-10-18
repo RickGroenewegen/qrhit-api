@@ -33,7 +33,9 @@ class Cache {
     if (lastRequestTime) {
       const elapsedTime = currentTime - parseInt(lastRequestTime, 10);
       if (elapsedTime < delay) {
-        await new Promise((resolve) => setTimeout(resolve, delay - elapsedTime));
+        await new Promise((resolve) =>
+          setTimeout(resolve, delay - elapsedTime)
+        );
       }
     }
     await this.set(key, currentTime.toString());

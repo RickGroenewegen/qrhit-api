@@ -635,12 +635,17 @@ class Server {
         }
       );
 
-      this.fastify.get('/mb/:isrc', async (request: any, _reply) => {
-        const result = await this.musicBrainz.getReleaseDateFromAPI(
-          request.params.isrc
-        );
-        return { success: true, data: result };
-      });
+      this.fastify.get(
+        '/mb/:isrc/:artist/:title',
+        async (request: any, _reply) => {
+          const result = await this.musicBrainz.getReleaseDateFromAPI(
+            request.params.isrc,
+            request.params.artist,
+            request.params.title
+          );
+          return { success: true, data: result };
+        }
+      );
     }
     this.fastify.get('/mball', async (request: any, _reply) => {
       const result = await this.data.updateAllTrackYears();
