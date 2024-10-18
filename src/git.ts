@@ -29,6 +29,10 @@ class GitChecker {
 
   private checkForChanges() {
     exec('git fetch && git status -uno', (error, stdout, stderr) => {
+      console.log(111, error);
+      console.log(222, stdout);
+      console.log(333, stderr);
+
       if (error) {
         console.error(`Error executing git command: ${error.message}`);
         return;
