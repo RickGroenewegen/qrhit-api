@@ -28,32 +28,20 @@ class GitChecker {
   }
 
   private checkForChanges() {
-    exec('git fetch && git status -uno', (error, stdout, stderr) => {
-      console.log(111, error);
-      console.log(222, stdout);
-      console.log(333, stderr);
-
+    exec('git fetch && git status -uno', (error, stdout) => {
       if (error) {
         console.error(`Error executing git command: ${error.message}`);
-        return;
-      }
-      if (stderr) {
-        console.error(`Git stderr: ${stderr}`);
         return;
       }
       if (stdout.includes('Your branch is behind')) {
         console.log('There are new changes in the repository.');
         exec(
           'git reset --hard HEAD && git pull origin HEAD && pm2 restart qrsong',
-          (resetError, resetStdout, resetStderr) => {
+          (resetError, resetStdout) => {
             if (resetError) {
               console.error(
                 `Error executing reset and pull: ${resetError.message}`
               );
-              return;
-            }
-            if (resetStderr) {
-              console.error(`Reset and pull stderr: ${resetStderr}`);
               return;
             }
             console.log(
