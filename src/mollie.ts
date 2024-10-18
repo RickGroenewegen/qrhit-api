@@ -203,7 +203,7 @@ class Mollie {
 
       const paymentClient = await this.getClient(clientIp);
 
-      const translations = this.translation.getTranslationsByPrefix(
+      const translations = await this.translation.getTranslationsByPrefix(
         params.locale,
         'payment'
       );
