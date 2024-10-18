@@ -28,7 +28,7 @@ class Cache {
   }
 
   async rateLimit(key: string, delay: number): Promise<void> {
-    const lastRequestTime = await this.get(key);
+    const lastRequestTime = await this.get(key, false);
     const currentTime = Date.now();
     if (lastRequestTime) {
       const elapsedTime = currentTime - parseInt(lastRequestTime, 10);
