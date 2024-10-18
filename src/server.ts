@@ -488,7 +488,7 @@ class Server {
       const locale = this.utils.parseAcceptLanguage(
         request.headers['accept-language']
       );
-      const translations = this.translation.getTranslationsByPrefix(
+      const translations = await this.translation.getTranslationsByPrefix(
         locale,
         'countdown'
       );
@@ -562,11 +562,11 @@ class Server {
         playlists,
         orderType,
         ...this.formatters,
-        translations: this.translation.getTranslationsByPrefix(
+        translations: await this.translation.getTranslationsByPrefix(
           payment.locale,
           'invoice'
         ),
-        countries: this.translation.getTranslationsByPrefix(
+        countries: await this.translation.getTranslationsByPrefix(
           payment.locale,
           'countries'
         ),

@@ -128,7 +128,7 @@ class Mail {
       numberOfTracks += playlist.numberOfTracks;
     }
 
-    const translations = this.translation.getTranslationsByPrefix(
+    const translations = await this.translation.getTranslationsByPrefix(
       payment.locale,
       'mail'
     );
@@ -160,7 +160,7 @@ class Mail {
       numberOfTracks,
       productName: process.env['PRODUCT_NAME'],
       translations,
-      countries: this.translation.getTranslationsByPrefix(
+      countries: await this.translation.getTranslationsByPrefix(
         payment.locale,
         'countries'
       ),
@@ -288,7 +288,7 @@ class Mail {
       payment,
       trackingLink,
       productName: process.env['PRODUCT_NAME'],
-      translations: this.translation.getTranslationsByPrefix(
+      translations: await this.translation.getTranslationsByPrefix(
         payment.locale,
         'mail'
       ),
