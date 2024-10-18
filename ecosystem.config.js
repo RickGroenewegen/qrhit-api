@@ -3,16 +3,16 @@ module.exports = {
     {
       name: 'qrsong',
       script: 'npm',
-      user: 'ec2-user',
       args: 'run start_pm2',
-      autorestart: true,
       watch: false,
-      max_memory_restart: '1G',
+      autorestart: true,
       env: {
         NODE_ENV: 'development',
+        GIT_SSH_COMMAND: 'ssh -i ~/.ssh/id_rsa -o IdentitiesOnly=yes',
       },
       env_production: {
         NODE_ENV: 'production',
+        GIT_SSH_COMMAND: 'ssh -i ~/.ssh/id_rsa -o IdentitiesOnly=yes',
       },
     },
   ],
