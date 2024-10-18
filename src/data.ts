@@ -670,8 +670,7 @@ class Data {
           await this.musicBrainz.getReleaseDate(
             track.isrc ?? '',
             track.artist,
-            track.name,
-            true
+            track.name
           );
         if (year > 0) {
           if (track.year !== year) {
