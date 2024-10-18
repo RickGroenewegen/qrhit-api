@@ -188,7 +188,6 @@ class Server {
 
   public init = async () => {
     this.isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
-    await this.deploy();
     await this.setVersion();
     await this.createDirs();
     await this.registerPlugins();
@@ -196,112 +195,6 @@ class Server {
     await this.addAuthRoutes();
     await this.startCluster();
   };
-
-  private async deploy() {
-    if (this.isMainServer && cluster.isPrimary) {
-      const hostName = os.hostname();
-      if (hostName == process.env['MAIN_SERVER_HOSTNAME']) {
-        const client = new ElasticLoadBalancingV2Client({
-          region: process.env['AWS_ELB_REGION'],
-          credentials: {
-            accessKeyId: process.env['AWS_ELB_ACCESS_KEY']!,
-            secretAccessKey: process.env['AWS_ELB_SECRET_KEY']!,
-          },
-        });
-
-        const loadBalancerName = process.env['AWS_LOAD_BALANCER_NAME'];
-
-        if (!loadBalancerName) {
-          throw new Error('Load balancer name is not defined');
-        }
-
-        try {
-          const loadBalancersCommand = new DescribeLoadBalancersCommand({
-            Names: [loadBalancerName],
-          });
-          const loadBalancersResponse = await client.send(loadBalancersCommand);
-          const loadBalancerArn =
-            loadBalancersResponse.LoadBalancers?.[0].LoadBalancerArn;
-
-          if (loadBalancerArn) {
-            const targetGroupsCommand = new DescribeTargetGroupsCommand({
-              LoadBalancerArn: loadBalancerArn,
-            });
-            const targetGroupsResponse = await client.send(targetGroupsCommand);
-            const targetGroupArns = targetGroupsResponse.TargetGroups?.map(
-              (tg) => tg.TargetGroupArn
-            );
-
-            if (targetGroupArns) {
-              for (const targetGroupArn of targetGroupArns) {
-                const targetHealthCommand = new DescribeTargetHealthCommand({
-                  TargetGroupArn: targetGroupArn,
-                });
-                const targetHealthResponse = await client.send(
-                  targetHealthCommand
-                );
-                const instanceIds =
-                  targetHealthResponse.TargetHealthDescriptions?.map(
-                    (desc) => desc.Target?.Id
-                  ).filter((id): id is string => id !== undefined);
-
-                if (targetGroupArn == process.env['AWS_ELB_TARGET_GROUP_ARN']) {
-                  if (instanceIds && instanceIds.length > 0) {
-                    const ec2Client = new EC2Client({
-                      region: process.env['AWS_ELB_REGION'],
-                      credentials: {
-                        accessKeyId: process.env['AWS_ELB_ACCESS_KEY']!,
-                        secretAccessKey: process.env['AWS_ELB_SECRET_KEY']!,
-                      },
-                    });
-
-                    const describeInstancesCommand =
-                      new DescribeInstancesCommand({
-                        InstanceIds: instanceIds,
-                      });
-
-                    try {
-                      const describeInstancesResponse = await ec2Client.send(
-                        describeInstancesCommand
-                      );
-                      const internalIps =
-                        describeInstancesResponse.Reservations?.flatMap(
-                          (reservation) =>
-                            reservation.Instances?.map(
-                              (instance) => instance.PrivateIpAddress
-                            )
-                        );
-
-                      const interfaces = os.networkInterfaces();
-                      let localIp = 'Not found';
-                      for (const name of Object.keys(interfaces)) {
-                        for (const iface of interfaces[name]!) {
-                          if (iface.family === 'IPv4' && !iface.internal) {
-                            localIp = iface.address;
-                            break;
-                          }
-                        }
-                      }
-
-                      console.log(
-                        `Internal IPs for instances in target group ${targetGroupArn}:`,
-                        internalIps,
-                        `Server's internal IP: ${localIp}`
-                      );
-                    } catch (error) {
-                      console.error('Error retrieving instance IPs:', error);
-                    }
-                  }
-                }
-              }
-            }
-          }
-        } catch (error) {
-          console.error('Error retrieving instances:', error);
-        }
-      }
-    }
-  }
 
   private async setVersion() {
     this.version = JSON.parse(

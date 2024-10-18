@@ -31,7 +31,7 @@ class GitChecker {
   }
 
   private async checkForChanges() {
-    exec('git fetch origin master && git status -uno', (error, stdout) => {
+    exec('git fetch origin main && git status -uno', (error, stdout) => {
       if (error) {
         this.logger.log(
           color.red.bold(
