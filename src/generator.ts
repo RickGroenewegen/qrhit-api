@@ -240,6 +240,12 @@ class Generator {
       parseInt(payment.totalPrice)
     );
 
+    this.logger.log(
+      color.green.bold(
+        `Order processed successfully for payment: ${white.bold(paymentId)}`
+      )
+    );
+
     // Pushover
     this.pushover.sendMessage(
       {
@@ -254,12 +260,6 @@ class Generator {
         sound: 'incoming',
       },
       ip
-    );
-
-    this.logger.log(
-      color.green.bold(
-        `Order processed successfully for payment: ${white.bold(paymentId)}`
-      )
     );
   }
 

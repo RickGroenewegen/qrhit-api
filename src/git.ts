@@ -61,7 +61,7 @@ class GitChecker {
           console.log(resetStdout);
         });
       } else {
-        this.logger.log(color.blue.bold('No new changes in the repository.'));
+        //this.logger.log(color.blue.bold('No new changes in the repository.'));
       }
     });
   }
