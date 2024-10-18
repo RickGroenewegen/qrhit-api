@@ -672,6 +672,7 @@ class Data {
             track.artist,
             track.name
           );
+
         if (year > 0) {
           if (track.year !== year) {
             await this.prisma.track.update({
