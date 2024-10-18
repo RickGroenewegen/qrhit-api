@@ -67,12 +67,20 @@ class MusicBrainz {
         year = result.year;
         source = result.source;
         // Create a record in the isrc table
-        await this.prisma.isrc.create({
-          data: {
+        const existingRecord = await this.prisma.isrc.findUnique({
+          where: {
             isrc: isrc,
-            year: year,
           },
         });
+
+        if (!existingRecord) {
+          await this.prisma.isrc.create({
+            data: {
+              isrc: isrc,
+              year: year,
+            },
+          });
+        }
       } else {
         let searchResults = await this.performGoogleSearch(artist, title);
         let prompt = `I would like to know the release date for the following song: ${artist} - ${title}
