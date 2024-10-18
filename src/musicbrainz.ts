@@ -116,10 +116,12 @@ class MusicBrainz {
       await this.rateLimitDelay();
       await this.cache.rateLimit('musicbrainz:rateLimit', this.maxRateLimit);
       try {
+        // const response = await this.axiosInstance.get(
+        //   `recording?query=artist:"${artist}"+AND+recording:"${title}"&fmt=json`
+        // );
         const response = await this.axiosInstance.get(
-          `recording?query=artist:"${artist}"+AND+recording:"${title}"&fmt=json`
+          `recording/?query=isrc:${isrc}&fmt=json`
         );
-
         const recordings = response.data.recordings.filter(
           (recording: any) => recording.score >= 95
         );

@@ -586,11 +586,6 @@ class Server {
       return { success: true };
     });
 
-    this.fastify.get('/mball', async (request: any, _reply) => {
-      const result = await this.data.updateAllTrackYears();
-      return { success: true, data: result };
-    });
-
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.get('/testorder', async (request: any, _reply) => {
         await this.order.testOrder();
@@ -652,6 +647,10 @@ class Server {
         }
       );
     }
+    this.fastify.get('/mball', async (request: any, _reply) => {
+      const result = await this.data.updateAllTrackYears();
+      return { success: true, data: result };
+    });
   }
 }
 
