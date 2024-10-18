@@ -3,6 +3,7 @@ import Logger from './logger';
 import axios, { AxiosInstance } from 'axios';
 import PrismaInstance from './prisma';
 import { ChatGPT } from './chatgpt';
+import Cache from './cache';
 
 class MusicBrainz {
   private logger = new Logger();
@@ -12,6 +13,7 @@ class MusicBrainz {
   private readonly maxRateLimit: number = 1200;
   private prisma = PrismaInstance.getInstance();
   private openai = new ChatGPT();
+  private cache = Cache.getInstance();
 
   constructor() {
     this.axiosInstance = axios.create({
@@ -103,8 +105,7 @@ class MusicBrainz {
   ): Promise<{ year: number; source: string }> {
     let retryCount = 0;
     while (retryCount < this.maxRetries) {
-      await this.rateLimitDelay(); // Ensure that we respect the rate limit
-      this.lastRequestTime = Date.now(); // Update the time of the last request
+      await this.cache.rateLimit('musicbrainz:rateLimit', this.maxRateLimit);
       try {
         const response = await this.axiosInstance.get(
           `recording?query=artist:"${artist}"+AND+recording:"${title}"&fmt=json`

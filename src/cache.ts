@@ -27,6 +27,18 @@ class Cache {
     });
   }
 
+  async rateLimit(key: string, delay: number): Promise<void> {
+    const lastRequestTime = await this.get(key);
+    const currentTime = Date.now();
+    if (lastRequestTime) {
+      const elapsedTime = currentTime - parseInt(lastRequestTime, 10);
+      if (elapsedTime < delay) {
+        await new Promise((resolve) => setTimeout(resolve, delay - elapsedTime));
+      }
+    }
+    await this.set(key, currentTime.toString());
+  }
+
   public static getInstance(): Cache {
     if (!Cache.instance) {
       Cache.instance = new Cache();
