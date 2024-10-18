@@ -30,4 +30,3 @@ sudo npm run build
 pm2 restart qrsong
 pm2 restart qrsong-frontend
 
-pm2 logs qrsong --lines 1000
