@@ -654,7 +654,9 @@ class Data {
         year: true,
       },
       where: {
-        yearSource: 'ai',
+        yearSource: {
+          in: ['ai', 'api'],
+        },
       },
     });
 
