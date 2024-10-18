@@ -28,6 +28,9 @@ class MusicBrainz {
       timeSinceLastRequest < this.maxRateLimit
         ? this.maxRateLimit - timeSinceLastRequest
         : 0;
+
+    console.log(1111, delay);
+
     if (delay > 0) {
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
@@ -102,8 +105,8 @@ class MusicBrainz {
   ): Promise<{ year: number; source: string }> {
     let retryCount = 0;
     while (retryCount < this.maxRetries) {
+      await this.rateLimitDelay(); // Ensure that we respect the rate limit
       try {
-        await this.rateLimitDelay(); // Ensure that we respect the rate limit
         const response = await this.axiosInstance.get(
           `recording?query=artist:"${artist}"+AND+recording:"${title}"&fmt=json`
         );
