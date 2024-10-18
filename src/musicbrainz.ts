@@ -106,11 +106,11 @@ class MusicBrainz {
     let retryCount = 0;
     while (retryCount < this.maxRetries) {
       await this.rateLimitDelay(); // Ensure that we respect the rate limit
+      this.lastRequestTime = Date.now(); // Update the time of the last request
       try {
         const response = await this.axiosInstance.get(
           `recording?query=artist:"${artist}"+AND+recording:"${title}"&fmt=json`
         );
-        this.lastRequestTime = Date.now(); // Update the time of the last request
 
         const recordings = response.data.recordings.filter(
           (recording: any) => recording.score >= 95
