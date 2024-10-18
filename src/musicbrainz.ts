@@ -109,7 +109,9 @@ class MusicBrainz {
         );
         this.lastRequestTime = Date.now(); // Update the time of the last request
 
-        const recordings = response.data.recordings;
+        const recordings = response.data.recordings.filter(
+          (recording: any) => recording.score >= 95
+        );
         let earliestDate: string | null = null;
 
         if (recordings && recordings.length > 0) {
