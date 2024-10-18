@@ -102,8 +102,8 @@ class MusicBrainz {
   ): Promise<{ year: number; source: string }> {
     let retryCount = 0;
     while (retryCount < this.maxRetries) {
-      await this.rateLimitDelay(); // Ensure that we respect the rate limit
       try {
+        await this.rateLimitDelay(); // Ensure that we respect the rate limit
         const response = await this.axiosInstance.get(
           `recording?query=artist:"${artist}"+AND+recording:"${title}"&fmt=json`
         );
