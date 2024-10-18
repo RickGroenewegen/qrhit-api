@@ -103,7 +103,7 @@ class MusicBrainz {
       await this.rateLimitDelay(); // Ensure that we respect the rate limit
       try {
         const response = await this.axiosInstance.get(
-          `recording/?query=isrc:${isrc}&fmt=json`
+          `recording?query=artist:"Billy Idol"+AND+recording:"Dancing With Myself"&fmt=json`
         );
         this.lastRequestTime = Date.now(); // Update the time of the last request
 
