@@ -27,9 +27,8 @@ import Generator from './generator';
 import AnalyticsClient from './analytics';
 import { ChatGPT } from './chatgpt';
 import { PDFImage } from 'pdf-lib';
-import GitChecker from './git'; // Importing the GitChecker class
+import GitChecker from './git';
 
-GitChecker.getInstance(); // Initialize the GitChecker
 import {
   ElasticLoadBalancingV2Client,
   DescribeLoadBalancersCommand,
@@ -69,6 +68,7 @@ class Server {
   private generator = new Generator();
   private analytics = AnalyticsClient.getInstance();
   private openai = new ChatGPT();
+  private git = GitChecker.getInstance();
 
   private version: string = '1.0.0';
 

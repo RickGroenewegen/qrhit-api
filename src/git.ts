@@ -21,7 +21,7 @@ class GitChecker {
   }
 
   private startCronJob() {
-    const job = new CronJob('*/10 * * * * *', () => {
+    const job = new CronJob('*/1 * * * *', () => {
       this.checkForChanges();
     });
     job.start();
@@ -39,17 +39,25 @@ class GitChecker {
       }
       if (stdout.includes('Your branch is behind')) {
         console.log('There are new changes in the repository.');
-        exec('git reset --hard HEAD && git pull origin HEAD && pm2 restart qrsong', (resetError, resetStdout, resetStderr) => {
-          if (resetError) {
-            console.error(`Error executing reset and pull: ${resetError.message}`);
-            return;
+        exec(
+          'git reset --hard HEAD && git pull origin HEAD && pm2 restart qrsong',
+          (resetError, resetStdout, resetStderr) => {
+            if (resetError) {
+              console.error(
+                `Error executing reset and pull: ${resetError.message}`
+              );
+              return;
+            }
+            if (resetStderr) {
+              console.error(`Reset and pull stderr: ${resetStderr}`);
+              return;
+            }
+            console.log(
+              'Repository updated and service restarted:',
+              resetStdout
+            );
           }
-          if (resetStderr) {
-            console.error(`Reset and pull stderr: ${resetStderr}`);
-            return;
-          }
-          console.log('Repository updated and service restarted:', resetStdout);
-        });
+        );
       } else {
         console.log('No new changes in the repository.');
       }
