@@ -2,8 +2,17 @@ import { CronJob } from 'cron';
 import { exec } from 'child_process';
 
 class GitChecker {
-  constructor() {
+  private static instance: GitChecker;
+
+  private constructor() {
     this.startCronJob();
+  }
+
+  public static getInstance(): GitChecker {
+    if (!GitChecker.instance) {
+      GitChecker.instance = new GitChecker();
+    }
+    return GitChecker.instance;
   }
 
   private startCronJob() {
@@ -32,4 +41,4 @@ class GitChecker {
   }
 }
 
-new GitChecker();
+export default GitChecker;

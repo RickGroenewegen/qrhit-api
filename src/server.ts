@@ -27,7 +27,9 @@ import Generator from './generator';
 import AnalyticsClient from './analytics';
 import { ChatGPT } from './chatgpt';
 import { PDFImage } from 'pdf-lib';
-import './git'; // Importing the GitChecker to initialize it
+import GitChecker from './git'; // Importing the GitChecker class
+
+GitChecker.getInstance(); // Initialize the GitChecker
 import {
   ElasticLoadBalancingV2Client,
   DescribeLoadBalancersCommand,
