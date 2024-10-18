@@ -1,11 +1,16 @@
 import { CronJob } from 'cron';
 import { exec } from 'child_process';
+import Utils from './utils';
+import cluster from 'cluster';
 
 class GitChecker {
   private static instance: GitChecker;
+  private utils = new Utils();
 
   private constructor() {
-    this.startCronJob();
+    if (cluster.isPrimary) {
+      this.startCronJob();
+    }
   }
 
   public static getInstance(): GitChecker {
@@ -16,7 +21,7 @@ class GitChecker {
   }
 
   private startCronJob() {
-    const job = new CronJob('*/1 * * * *', () => {
+    const job = new CronJob('*/10 * * * * *', () => {
       this.checkForChanges();
     });
     job.start();
