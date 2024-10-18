@@ -44,7 +44,7 @@ class GitChecker {
         this.logger.log(
           color.blue.bold('There are new changes in the repository.')
         );
-        exec('sudo deploy_qrsong', (resetError, resetStdout) => {
+        exec('deploy_qrsong', (resetError, resetStdout) => {
           if (resetError) {
             this.logger.log(
               color.red.bold(
