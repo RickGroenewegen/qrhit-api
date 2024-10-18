@@ -105,6 +105,7 @@ class MusicBrainz {
   ): Promise<{ year: number; source: string }> {
     let retryCount = 0;
     while (retryCount < this.maxRetries) {
+      await this.rateLimitDelay();
       await this.cache.rateLimit('musicbrainz:rateLimit', this.maxRateLimit);
       try {
         const response = await this.axiosInstance.get(
