@@ -406,13 +406,15 @@ class Spotify {
         allTracks = JSON.parse(cacheResult);
       }
 
+      let maxReached = allTracks.length > MAX_CARDS;
+
       // Limit the tracks to MAX_CARDS if we have more
       allTracks = allTracks.slice(0, MAX_CARDS);
 
       return {
         success: true,
         data: {
-          maxReached: allTracks.length >= MAX_CARDS,
+          maxReached,
           totalTracks: allTracks.length,
           tracks: allTracks,
         },
