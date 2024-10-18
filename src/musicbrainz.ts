@@ -29,8 +29,6 @@ class MusicBrainz {
         ? this.maxRateLimit - timeSinceLastRequest
         : 0;
 
-    console.log(1111, delay);
-
     if (delay > 0) {
       await new Promise((resolve) => setTimeout(resolve, delay));
     }
@@ -135,12 +133,11 @@ class MusicBrainz {
         return { year: parseInt(earliestDate.split('-')[0]), source: 'api' };
       } catch (error: any) {
         this.logger.log(
-          color.red(
+          color.yellow(
             'Failed to fetch data from MusicBrainz API! Try: ' +
               (retryCount + 1)
           )
         );
-        this.logger.log(color.red(`Error: ${error.message}`));
         retryCount++;
       }
     }
