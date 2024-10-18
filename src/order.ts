@@ -28,19 +28,117 @@ class Order {
   private data = new Data();
   private spotify = new Spotify();
   private pdf = new PDF();
-  private cronLockKey: string = 'checkForShipmentLock';
 
   private constructor() {
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-          if (process.env['ENVIRONMENT'] === 'development') {
-            this.cronLockKey = 'checkForShipmentLock_' + new Date().getTime();
-          }
-          await this.cache.del(this.cronLockKey);
           this.startCron();
         }
       });
+    }
+  }
+
+  public async processPrintApiWebhook(printApiOrderId: string) {
+    this.logger.log(
+      color.blue.bold(
+        `Processing Print API webhook for order ${color.white.bold(
+          printApiOrderId
+        )}`
+      )
+    );
+
+    // Get the payment based on the printApiOrderId
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        printApiOrderId: printApiOrderId,
+        printApiShipped: false || process.env['ENVIRONMENT'] === 'development',
+      },
+    });
+    if (payment) {
+      // Process the webhook
+      this.logger.log(
+        color.blue.bold(
+          `Updating payment ${color.white.bold(
+            payment.id
+          )} with Print API status`
+        )
+      );
+
+      try {
+        let trackingLink = '';
+        const url = `${process.env['PRINT_API_URL']}/v2/orders/${payment.printApiOrderId}`;
+        const authToken = await this.getAuthToken();
+
+        const response = await axios({
+          method: 'get',
+          url,
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+        });
+
+        if (
+          response.data.status === 'Shipped' ||
+          process.env['ENVIRONMENT'] === 'development'
+        ) {
+          this.logger.log(
+            magenta(
+              `Status of order ${white.bold(
+                payment.printApiOrderId
+              )} is shipped`
+            )
+          );
+
+          if (
+            response.data.trackingUrl?.length > 0 ||
+            process.env['ENVIRONMENT'] === 'development'
+          ) {
+            trackingLink = response.data.trackingUrl;
+            const pdfPath = await this.createInvoice(response.data, payment);
+
+            this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
+
+            this.logger.log(
+              magenta(
+                `Sent tracking e-mail for ${white.bold(
+                  payment.printApiOrderId
+                )}`
+              )
+            );
+
+            // Update the payment with the printApiShipped flag
+            await this.prisma.payment.update({
+              where: {
+                id: payment.id,
+              },
+              data: {
+                printApiShipped: true,
+                printApiStatus: response.data.status,
+                printApiTrackingLink: trackingLink,
+              },
+            });
+          }
+        } else {
+          await this.prisma.payment.update({
+            where: {
+              id: payment.id,
+            },
+            data: {
+              printApiStatus: response.data.status,
+            },
+          });
+        }
+      } catch (e) {
+        this.logger.log(
+          color.red.bold(
+            `Error retrieving Print API order status for order: ${color.white.bold(
+              payment.printApiOrderId
+            )}`
+          )
+        );
+      }
     }
   }
 
@@ -115,9 +213,6 @@ class Order {
     new CronJob('*/10 * * * *', async () => {
       await this.getAuthToken(true);
       this.logger.log(color.blue.bold(`Refreshed Print API token`));
-    }).start();
-    new CronJob(process.env['CRON_PATTERN_TRACKING']!, async () => {
-      await this.checkForShipment();
     }).start();
     new CronJob('0 0 * * *', async () => {
       await this.updateFeaturedPlaylists();
@@ -537,104 +632,6 @@ class Order {
       request: body,
       response: response,
     };
-  }
-
-  public async checkForShipment(): Promise<void> {
-    const lockValue = 'locked';
-
-    // Try to acquire the lock
-    const isLocked = await this.cache.get(this.cronLockKey, false);
-
-    if (isLocked) {
-      this.logger.log(
-        color.yellow.bold('checkForShipment is already running.')
-      );
-      return;
-    }
-
-    // Set the lock with an expiration time to prevent stale locks
-    await this.cache.set(this.cronLockKey, lockValue, 600); // Lock expires in 10 minutes
-
-    const authToken = await this.getAuthToken();
-
-    // Get all payments that have a printApiOrderId and the printApiStatus is not 'Shipped' or 'Cancelled'
-    const payments = await this.prisma.payment.findMany({
-      where: {
-        printApiOrderId: {
-          not: undefined,
-        },
-        printApiShipped: false,
-        printApiStatus: {
-          notIn: ['Shipped', 'Cancelled'],
-        },
-      },
-    });
-
-    // Loop through the payments and check the status
-    for (const payment of payments) {
-      if (payment.printApiOrderId?.length > 0) {
-        try {
-          let trackingLink = '';
-          const url = `${process.env['PRINT_API_URL']}/v2/orders/${payment.printApiOrderId}`;
-
-          const response = await axios({
-            method: 'get',
-            url,
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-              'Content-Type': 'application/json',
-            },
-          });
-
-          if (response.data.status === 'Shipped' || payment.id == 180) {
-            this.logger.log(
-              magenta(
-                `Status of order ${white.bold(
-                  payment.printApiOrderId
-                )} is shipped`
-              )
-            );
-
-            if (response.data.trackingUrl?.length > 0 || true) {
-              trackingLink = response.data.trackingUrl;
-              const pdfPath = await this.createInvoice(response.data, payment);
-
-              this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
-
-              // Update the payment with the printApiShipped flag
-              await this.prisma.payment.update({
-                where: {
-                  id: payment.id,
-                },
-                data: {
-                  printApiShipped: true,
-                  printApiStatus: response.data.status,
-                  printApiTrackingLink: trackingLink,
-                },
-              });
-            }
-          } else {
-            await this.prisma.payment.update({
-              where: {
-                id: payment.id,
-              },
-              data: {
-                printApiStatus: response.data.status,
-              },
-            });
-          }
-        } catch (e) {
-          this.logger.log(
-            color.red.bold(
-              `Error retrieving Print API order status for order: ${color.white.bold(
-                payment.printApiOrderId
-              )}`
-            )
-          );
-        }
-      }
-    }
-    await this.cache.del(this.cronLockKey);
   }
 
   private async createInvoice(order: any, payment: any): Promise<string> {

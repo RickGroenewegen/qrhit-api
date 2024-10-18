@@ -582,7 +582,8 @@ class Server {
     });
 
     this.fastify.post('/printapi/webhook', async (request: any, _reply) => {
-      console.log(123, request.body);
+      await this.order.processPrintApiWebhook(request.body.orderId);
+      return { success: true };
     });
 
     if (process.env['ENVIRONMENT'] == 'development') {
