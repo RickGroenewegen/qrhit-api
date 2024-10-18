@@ -11,7 +11,7 @@ class GitChecker {
   private logger = new Logger();
 
   private constructor() {
-    if (cluster.isPrimary && process.env.NODE_ENV === 'production') {
+    if (cluster.isPrimary && process.env['ENVIRONMENT'] === 'production') {
       this.startCronJob();
     }
   }
