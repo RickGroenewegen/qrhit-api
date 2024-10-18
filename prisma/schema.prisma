@@ -85,6 +85,7 @@ model Payment {
 
   @@index([userId]) // Index for performance on queries
   @@index([paymentId])
+  @@index([printApiOrderId])
   @@map("payments")
 }
 
