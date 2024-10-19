@@ -7,7 +7,9 @@ class Qr {
   public async generateQR(link: string, outputPath: string) {
     if (process.env['ENVIRONMENT'] === 'development') {
       // Old QR method logic
-      this.logger.log(color.yellow.bold('Using old QR method in development mode.'));
+      this.logger.log(
+        color.yellow.bold('Using old QR method in development mode.')
+      );
       // Implement the old QR method here
     } else {
       const lambdaClient = new LambdaClient({
