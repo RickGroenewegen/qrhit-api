@@ -225,6 +225,11 @@ class Mollie {
         description = `${params.cart.items.length}x ${translations!.playlists}`;
       }
 
+      // Description is 255 characters max
+      if (description.length > 255) {
+        description = description.substring(0, 250);
+      }
+
       if (calculateResult.data.total <= 10) {
         throw new Error('Order calculation');
       }
