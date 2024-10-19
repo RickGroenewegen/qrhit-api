@@ -4,7 +4,7 @@ import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 
 class Qr {
   private logger = new Logger();
-  public async generateQR(link: string, outputPath: string) {
+  public async generateQRLambda(link: string, outputPath: string) {
     const lambdaClient = new LambdaClient({
       region: 'eu-west-1',
       credentials: {
@@ -39,7 +39,7 @@ class Qr {
     }
   }
 
-  public async generateQROldMethod(link: string, outputPath: string) {
+  public async generateQR(link: string, outputPath: string) {
     this.logger.log(
       color.yellow.bold('Using old QR method in development mode.')
     );
