@@ -8,14 +8,14 @@ class Qr {
     const lambdaClient = new LambdaClient({
       region: 'eu-west-1',
       credentials: {
-        accessKeyId: 'DUMMY_ACCESS_KEY_ID',
-        secretAccessKey: 'DUMMY_SECRET_ACCESS_KEY',
+        accessKeyId: process.env['AWS_LAMBDA_ACCESS_KEY_ID']!,
+        secretAccessKey: process.env['AWS_LAMBDA_SECRET_KEY_ID']!,
       },
     });
     const command = new InvokeCommand({
       FunctionName: 'arn:aws:lambda:eu-west-1:071455255929:function:qrLambda',
       Payload: new TextEncoder().encode(
-        JSON.stringify({ url: link, outputPath: outputPath })
+        JSON.stringify({ action: 'qr', url: link, outputPath: outputPath })
       ),
     });
 
