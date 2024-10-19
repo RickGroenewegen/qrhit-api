@@ -146,7 +146,7 @@ class PDF {
         );
       }
       if (template === 'printer') {
-        if (process.env['ENVIRONMENT'] === 'production') {
+        if (false && process.env['ENVIRONMENT'] === 'production') {
           await this.resizePDFPagesLambda(finalPath, 66, 66);
         } else {
           await this.resizePDFPages(finalPath, 66, 66);
@@ -219,7 +219,7 @@ class PDF {
       if (result.statusCode == 500) {
         const errorObject = JSON.parse(result.body);
         this.logger.log(
-          color.red.bold('Error running PDF Resize  Lambda function: ') +
+          color.red.bold('Error running PDF Resize Lambda function: ') +
             color.white.bold(errorObject.error)
         );
       } else {
