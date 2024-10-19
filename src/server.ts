@@ -312,6 +312,9 @@ class Server {
     this.fastify.get(
       '/.well-known/apple-app-site-association',
       async (_request, reply) => {
+    this.fastify.get(
+      '/.well-known/apple-app-site-association',
+      async (_request, reply) => {
         const filePath = path.join(
           process.env['APP_ROOT'] as string,
           '..',
