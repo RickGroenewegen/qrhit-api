@@ -3,7 +3,7 @@ module.exports = {
     {
       name: 'qrsong',
       script: 'npm',
-      args: 'run start_pm2',
+      args: 'run start',
       watch: false,
       autorestart: true,
       env: {

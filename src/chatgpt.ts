@@ -57,6 +57,32 @@ export class ChatGPT {
 
     if (result) {
       if (result.choices[0].message.function_call) {
+        // Log the used tokens
+        // const promptTokens = result.usage!.prompt_tokens;
+        // const completionTokens = result.usage!.completion_tokens;
+        // const totalTokens = result.usage!.total_tokens;
+
+        // console.log();
+
+        // console.log(
+        //   `Prompt tokens: ${promptTokens} (Cost: $${(
+        //     (promptTokens / 1_000_000) *
+        //     5
+        //   ).toFixed(2)})`
+        // );
+        // console.log(
+        //   `Completion tokens: ${completionTokens} (Cost: $${(
+        //     (completionTokens / 1_000_000) *
+        //     15
+        //   ).toFixed(2)})`
+        // );
+        // console.log(
+        //   `Total tokens: ${totalTokens} (Cost: $${(
+        //     (promptTokens / 1_000_000) * 5 +
+        //     (completionTokens / 1_000_000) * 15
+        //   ).toFixed(2)})`
+        // );
+
         const funcCall = result.choices[0].message.function_call;
         const functionCallName = funcCall.name;
         const completionArguments = JSON.parse(funcCall.arguments as string);
