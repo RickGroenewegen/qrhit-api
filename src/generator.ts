@@ -388,8 +388,8 @@ class Generator {
           await this.qr.generateQROldMethod(link, outputPath);
         }
       } else {
-        // Use new method in parallel batches of 100
-        const batchSize = 100;
+        // Use new method in parallel batches of 25
+        const batchSize = 25;
         for (let i = 0; i < dbTracks.length; i += batchSize) {
           const batch = dbTracks.slice(i, i + batchSize);
           await Promise.all(
