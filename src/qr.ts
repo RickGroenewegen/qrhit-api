@@ -8,12 +8,16 @@ class Qr {
     const lambdaClient = new LambdaClient({});
     const command = new InvokeCommand({
       FunctionName: 'qrLambda',
-      Payload: new TextEncoder().encode(JSON.stringify({ url: link, outputPath: outputPath })),
+      Payload: new TextEncoder().encode(
+        JSON.stringify({ url: link, outputPath: outputPath })
+      ),
     });
 
     try {
       const response = await lambdaClient.send(command);
-      const result = JSON.parse(new TextDecoder('utf-8').decode(response.Payload));
+      const result = JSON.parse(
+        new TextDecoder('utf-8').decode(response.Payload)
+      );
 
       if (result.errorMessage) {
         throw new Error(result.errorMessage);
@@ -22,6 +26,7 @@ class Qr {
       this.logger.log(color.green.bold('QR code generated successfully!'));
     } catch (error) {
       this.logger.log(color.red.bold('Error generating QR code via Lambda!'));
+      console.log(error);
     }
   }
 }
