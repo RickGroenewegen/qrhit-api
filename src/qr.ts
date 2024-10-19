@@ -5,7 +5,7 @@ import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 class Qr {
   private logger = new Logger();
   public async generateQR(link: string, outputPath: string) {
-    if (process.env['ENVIRONMENT'] === 'development') {
+    if (process.env['ENVIRONMENT'] === 'development' && false) {
       // Old QR method logic
       this.logger.log(
         color.yellow.bold('Using old QR method in development mode.')
@@ -20,7 +20,9 @@ class Qr {
         },
         errorCorrectionLevel: 'H',
       });
-      this.logger.log(color.green.bold('QR code generated successfully using the old method!'));
+      this.logger.log(
+        color.green.bold('QR code generated successfully using the old method!')
+      );
     } else {
       const lambdaClient = new LambdaClient({
         region: 'eu-west-1',
