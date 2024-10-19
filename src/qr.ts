@@ -7,7 +7,7 @@ class Qr {
   public async generateQR(link: string, outputPath: string) {
     const lambdaClient = new LambdaClient({});
     const command = new InvokeCommand({
-      FunctionName: 'qrLambda',
+      FunctionName: 'arn:aws:lambda:eu-west-1:071455255929:function:qrLambda',
       Payload: new TextEncoder().encode(
         JSON.stringify({ url: link, outputPath: outputPath })
       ),
