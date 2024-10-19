@@ -5,24 +5,8 @@ import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 class Qr {
   private logger = new Logger();
   public async generateQR(link: string, outputPath: string) {
-    if (process.env['ENVIRONMENT'] === 'development' && false) {
-      // Old QR method logic
-      this.logger.log(
-        color.yellow.bold('Using old QR method in development mode.')
-      );
-      const QRCode = require('qrcode');
-      await QRCode.toFile(outputPath, link, {
-        type: 'png',
-        width: 600,
-        color: {
-          dark: '#000000',
-          light: '#0000',
-        },
-        errorCorrectionLevel: 'H',
-      });
-      this.logger.log(
-        color.green.bold('QR code generated successfully using the old method!')
-      );
+    if (process.env['ENVIRONMENT'] === 'development') {
+      await this.generateQROldMethod(link, outputPath);
     } else {
       const lambdaClient = new LambdaClient({
         region: 'eu-west-1',
@@ -55,6 +39,24 @@ class Qr {
       }
     }
   }
-}
+  }
+
+  private async generateQROldMethod(link: string, outputPath: string) {
+    this.logger.log(
+      color.yellow.bold('Using old QR method in development mode.')
+    );
+    const QRCode = require('qrcode');
+    await QRCode.toFile(outputPath, link, {
+      type: 'png',
+      width: 600,
+      color: {
+        dark: '#000000',
+        light: '#0000',
+      },
+      errorCorrectionLevel: 'H',
+    });
+    this.logger.log(
+      color.green.bold('QR code generated successfully using the old method!')
+    );
 
 export default Qr;
