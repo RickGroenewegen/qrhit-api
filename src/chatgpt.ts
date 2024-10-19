@@ -15,7 +15,7 @@ export class ChatGPT {
     let answer = undefined;
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4o-mini',
       temperature: 0,
       messages: [
         {
@@ -58,29 +58,29 @@ export class ChatGPT {
     if (result) {
       if (result.choices[0].message.function_call) {
         // Log the used tokens
-        // const promptTokens = result.usage!.prompt_tokens;
-        // const completionTokens = result.usage!.completion_tokens;
-        // const totalTokens = result.usage!.total_tokens;
+        const promptTokens = result.usage!.prompt_tokens;
+        const completionTokens = result.usage!.completion_tokens;
+        const totalTokens = result.usage!.total_tokens;
 
         // console.log();
 
         // console.log(
         //   `Prompt tokens: ${promptTokens} (Cost: $${(
         //     (promptTokens / 1_000_000) *
-        //     5
-        //   ).toFixed(2)})`
+        //     0.15
+        //   ).toFixed(6)})`
         // );
         // console.log(
         //   `Completion tokens: ${completionTokens} (Cost: $${(
         //     (completionTokens / 1_000_000) *
-        //     15
-        //   ).toFixed(2)})`
+        //     0.6
+        //   ).toFixed(6)})`
         // );
         // console.log(
         //   `Total tokens: ${totalTokens} (Cost: $${(
-        //     (promptTokens / 1_000_000) * 5 +
-        //     (completionTokens / 1_000_000) * 15
-        //   ).toFixed(2)})`
+        //     (promptTokens / 1_000_000) * 0.15 +
+        //     (completionTokens / 1_000_000) * 0.6
+        //   ).toFixed(6)})`
         // );
 
         const funcCall = result.choices[0].message.function_call;
