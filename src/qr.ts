@@ -5,7 +5,7 @@ import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 class Qr {
   private logger = new Logger();
   public async generateQR(link: string, outputPath: string) {
-    const lambdaClient = new LambdaClient({});
+    const lambdaClient = new LambdaClient({ region: 'eu-west-1' });
     const command = new InvokeCommand({
       FunctionName: 'arn:aws:lambda:eu-west-1:071455255929:function:qrLambda',
       Payload: new TextEncoder().encode(
