@@ -8,7 +8,7 @@ class Qr {
     const lambda = new AWS.Lambda();
     const params = {
       FunctionName: 'qrLambda',
-      Payload: JSON.stringify({ link, outputPath }),
+      Payload: JSON.stringify({ url: link, outputPath: outputPath }),
     };
 
     try {
