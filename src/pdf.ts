@@ -6,6 +6,7 @@ import AnalyticsClient from './analytics';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
+import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
 
 class PDF {
   private logger = new Logger();
@@ -116,8 +117,6 @@ class PDF {
         await result.saveFiles(tempFilePath);
         tempFiles.push(tempFilePath);
 
-        // TODO: Add resize here
-
         this.analytics.increaseCounter('pdf', 'generated', 1);
 
         this.logger.log(
@@ -147,7 +146,11 @@ class PDF {
         );
       }
       if (template === 'printer') {
-        await this.resizePDFPages(finalPath, 66, 66);
+        if (process.env['ENVIRONMENT'] === 'production') {
+          await this.resizePDFPagesLambda(finalPath, 66, 66);
+        } else {
+          await this.resizePDFPages(finalPath, 66, 66);
+        }
       }
     } finally {
       // Clean up temporary files only if they were merged
@@ -180,6 +183,60 @@ class PDF {
     }
 
     return filename;
+  }
+
+  public async resizePDFPagesLambda(
+    inputPath: string,
+    widthMm: number = 66,
+    heightMm: number = 66
+  ) {
+    const lambdaClient = new LambdaClient({
+      region: 'eu-west-1',
+      credentials: {
+        accessKeyId: process.env['AWS_LAMBDA_ACCESS_KEY_ID']!,
+        secretAccessKey: process.env['AWS_LAMBDA_SECRET_KEY_ID']!,
+      },
+    });
+
+    const params = {
+      action: 'resize',
+      path: inputPath,
+      width: widthMm,
+      height: heightMm,
+    };
+
+    const command = new InvokeCommand({
+      FunctionName: 'arn:aws:lambda:eu-west-1:071455255929:function:qrLambda',
+      Payload: new TextEncoder().encode(JSON.stringify(params)),
+    });
+
+    try {
+      const response = await lambdaClient.send(command);
+      const result = JSON.parse(
+        new TextDecoder('utf-8').decode(response.Payload)
+      );
+
+      if (result.statusCode == 500) {
+        const errorObject = JSON.parse(result.body);
+        this.logger.log(
+          color.red.bold('Error running PDF Resize  Lambda function: ') +
+            color.white.bold(errorObject.error)
+        );
+      } else {
+        this.logger.log(
+          color.blue.bold(
+            `PDF pages resized using AWS Lambda to ${white.bold(
+              widthMm.toFixed(2)
+            )} x ${white.bold(heightMm.toFixed(2))} mm: ${color.white.bold(
+              inputPath
+            )}`
+          )
+        );
+      }
+    } catch (error) {
+      this.logger.log(color.red.bold('Error resizing PDF with Lambda!'));
+      console.log(error);
+    }
   }
 
   public async resizePDFPages(
