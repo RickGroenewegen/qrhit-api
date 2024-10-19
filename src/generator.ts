@@ -376,19 +376,29 @@ class Generator {
         )
       );
 
-      // Loop through the tracks and create a QR code for each track
-      for (const track of dbTracks) {
-        const link = `${process.env['API_URI']}/qr/${track.id}`;
+      const outputDir = `${process.env['PUBLIC_DIR']}/qr/${subdir}`;
+      await this.utils.createDir(outputDir);
 
-        const outputDir = `${process.env['PUBLIC_DIR']}/qr/${subdir}`;
-        const outputPath = `${outputDir}/${track.trackId}.png`;
-        await this.utils.createDir(outputDir);
-        await this.qr.generateQR(link, outputPath);
-
-        // Create a progress based on 70-90% of the total tracks
-        const progress = Math.floor(
-          (tracks.indexOf(track) / tracks.length) * 20 + 70
-        );
+      if (process.env['ENVIRONMENT'] === 'development') {
+        // Use old method in series
+        for (const track of dbTracks) {
+          const link = `${process.env['API_URI']}/qr/${track.id}`;
+          const outputPath = `${outputDir}/${track.trackId}.png`;
+          await this.qr.generateQROldMethod(link, outputPath);
+        }
+      } else {
+        // Use new method in parallel batches of 25
+        const batchSize = 25;
+        for (let i = 0; i < dbTracks.length; i += batchSize) {
+          const batch = dbTracks.slice(i, i + batchSize);
+          await Promise.all(
+            batch.map(async (track) => {
+              const link = `${process.env['API_URI']}/qr/${track.id}`;
+              const outputPath = `${outputDir}/${track.trackId}.png`;
+              await this.qr.generateQR(link, outputPath);
+            })
+          );
+        }
       }
 
       this.logger.log(
