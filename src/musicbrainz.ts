@@ -83,15 +83,27 @@ class MusicBrainz {
         }
       } else {
         let searchResults = await this.performGoogleSearch(artist, title);
+        const searchByArtistAndTitleResults = await this.getReleaseDateFromAPI(
+          isrc,
+          artist,
+          title,
+          'artistAndTitle'
+        );
+        let searchByArtistAndTitleYear = searchByArtistAndTitleResults.year;
+
         let prompt = `I would like to know the release date for the following song: ${artist} - ${title}
                       Use your own knowledge`;
 
         if (searchResults) {
           prompt += ` or the results from the search engine to determine the release year. 
-                     Wikipedia is considered the most reliable source. Discogs after that. Here is the search engine result:
+                     Wikipedia is considered the most reliable source. Discogs after that. Here is the search engine result:\n
                      ${searchResults}`;
         } else {
           prompt += ` to determine the release year.`;
+        }
+
+        if (searchByArtistAndTitleYear > 0) {
+          prompt += `\nI found a possible release year of ${searchByArtistAndTitleYear} based on the artist and title search in MusicBrainz. If this year is earlier than the other sources, please use this year.`;
         }
 
         const aiResult = await this.openai.ask(prompt);
@@ -109,19 +121,19 @@ class MusicBrainz {
   public async getReleaseDateFromAPI(
     isrc: string,
     artist: string,
-    title: string
+    title: string,
+    mode: string = 'isrc'
   ): Promise<{ year: number; source: string }> {
     let retryCount = 0;
     while (retryCount < this.maxRetries) {
       await this.rateLimitDelay();
       await this.cache.rateLimit('musicbrainz:rateLimit', this.maxRateLimit);
       try {
-        // const response = await this.axiosInstance.get(
-        //   `recording?query=artist:"${artist}"+AND+recording:"${title}"&fmt=json`
-        // );
-        const response = await this.axiosInstance.get(
-          `recording/?query=isrc:${isrc}&fmt=json`
-        );
+        let url = `recording/?query=isrc:${isrc}&fmt=json`;
+        if (mode === 'artistAndTitle') {
+          url = `recording?query=artist:"${artist}"+AND+recording:"${title}"&fmt=json`;
+        }
+        const response = await this.axiosInstance.get(url);
         const recordings = response.data.recordings.filter(
           (recording: any) => recording.score >= 95
         );

@@ -586,12 +586,12 @@ class Server {
       return { success: true };
     });
 
-    this.fastify.get('/mball', async (request: any, _reply) => {
-      const result = await this.data.updateAllTrackYears();
-      return { success: true, data: result };
-    });
-
     if (process.env['ENVIRONMENT'] == 'development') {
+      this.fastify.get('/mball', async (request: any, _reply) => {
+        const result = await this.data.updateAllTrackYears();
+        return { success: true, data: result };
+      });
+
       this.fastify.get('/testorder', async (request: any, _reply) => {
         await this.order.testOrder();
         return { success: true };
@@ -641,12 +641,13 @@ class Server {
       );
 
       this.fastify.get(
-        '/mb/:isrc/:artist/:title',
+        '/mb/:isrc/:artist/:title/:mode',
         async (request: any, _reply) => {
           const result = await this.musicBrainz.getReleaseDateFromAPI(
             request.params.isrc,
             request.params.artist,
-            request.params.title
+            request.params.title,
+            request.params.mode
           );
           return { success: true, data: result };
         }
