@@ -309,6 +309,16 @@ class Server {
   }
 
   public async addRoutes() {
+    this.fastify.get('/.well-known/apple-app-site-association', async (_request, reply) => {
+      const filePath = path.join(process.env['PUBLIC_DIR'] as string, 'apple-app-site-association');
+      try {
+        const fileContent = await fs.readFile(filePath, 'utf-8');
+        reply.header('Content-Type', 'application/json').send(fileContent);
+      } catch (error) {
+        reply.status(404).send({ error: 'File not found' });
+      }
+    });
+
     this.fastify.get('/robots.txt', async (_request, reply) => {
       reply
         .header('Content-Type', 'text/plain')
