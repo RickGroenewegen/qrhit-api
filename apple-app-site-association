@@ -3,7 +3,7 @@
     "apps": [],
     "details": [
       {
-        "appID": "TEAMID.nl.rickgroenewegen.qrsong",
+        "appID": "7CNC4K97KZ.nl.rickgroenewegen.qrsong",
         "paths": [ "/qr/*" ]
       }
     ]
