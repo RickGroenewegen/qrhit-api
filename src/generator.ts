@@ -385,7 +385,7 @@ class Generator {
         for (const track of dbTracks) {
           const link = `${process.env['API_URI']}/qr/${track.id}`;
           const outputPath = `${outputDir}/${track.trackId}.png`;
-          await this.qr.generateQROldMethod(link, outputPath);
+          await this.qr.generateQR(link, outputPath);
         }
       } else {
         // Use new method in parallel batches of 25
@@ -396,7 +396,7 @@ class Generator {
             batch.map(async (track: Track) => {
               const link = `${process.env['API_URI']}/qr/${track.id}`;
               const outputPath = `${outputDir}/${track.trackId}.png`;
-              await this.qr.generateQR(link, outputPath);
+              await this.qr.generateQRLambda(link, outputPath);
             })
           );
         }
