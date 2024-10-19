@@ -337,6 +337,7 @@ class Spotify {
       const uniqueTrackIds = new Set<string>();
       let offset = 0;
       const limit = 100;
+      let maxReached = false;
 
       if (!cacheResult || !cache) {
         while (true) {
@@ -394,6 +395,9 @@ class Spotify {
             response.data.items.length < limit ||
             allTracks.length >= MAX_CARDS
           ) {
+            if (allTracks.length > MAX_CARDS) {
+              maxReached = true;
+            }
             // Limit the tracks to MAX_CARDS if we have more
             allTracks = allTracks.slice(0, MAX_CARDS);
             this.cache.set(cacheKey, JSON.stringify(allTracks));
@@ -405,8 +409,6 @@ class Spotify {
       } else {
         allTracks = JSON.parse(cacheResult);
       }
-
-      let maxReached = allTracks.length > MAX_CARDS;
 
       // Limit the tracks to MAX_CARDS if we have more
       allTracks = allTracks.slice(0, MAX_CARDS);
