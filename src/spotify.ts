@@ -400,18 +400,24 @@ class Spotify {
             }
             // Limit the tracks to MAX_CARDS if we have more
             allTracks = allTracks.slice(0, MAX_CARDS);
-            this.cache.set(cacheKey, JSON.stringify(allTracks));
+            const result = {
+              success: true,
+              data: {
+                maxReached,
+                totalTracks: allTracks.length,
+                tracks: allTracks,
+              },
+            };
+            this.cache.set(cacheKey, JSON.stringify(result));
             break;
           }
 
           offset += limit;
         }
       } else {
-        allTracks = JSON.parse(cacheResult);
+        const cachedResult = JSON.parse(cacheResult);
+        return cachedResult;
       }
-
-      // Limit the tracks to MAX_CARDS if we have more
-      allTracks = allTracks.slice(0, MAX_CARDS);
 
       return {
         success: true,
