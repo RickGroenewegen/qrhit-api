@@ -1,22 +1,27 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
-import * as QRCode from 'qrcode';
+import AWS from 'aws-sdk';
 
 class Qr {
   private logger = new Logger();
   public async generateQR(link: string, outputPath: string) {
+    const lambda = new AWS.Lambda();
+    const params = {
+      FunctionName: 'qrLambda',
+      Payload: JSON.stringify({ link, outputPath }),
+    };
+
     try {
-      await QRCode.toFile(outputPath, link, {
-        type: 'png',
-        width: 600,
-        color: {
-          dark: '#000000', // Color of the dark squares
-          light: '0000', // Color of the light squares (usually background)
-        },
-        errorCorrectionLevel: 'H', // High error correction level
-      });
+      const response = await lambda.invoke(params).promise();
+      const result = JSON.parse(response.Payload as string);
+
+      if (result.errorMessage) {
+        throw new Error(result.errorMessage);
+      }
+
+      this.logger.log(color.green.bold('QR code generated successfully!'));
     } catch (error) {
-      this.logger.log(color.red.bold('Error generating QR code!'));
+      this.logger.log(color.red.bold('Error generating QR code via Lambda!'));
     }
   }
 }
