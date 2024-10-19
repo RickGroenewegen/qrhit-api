@@ -592,6 +592,14 @@ class Server {
         return { success: true, data: result };
       });
 
+      this.fastify.post('/qrtest', async (request: any, _reply) => {
+        const result = await this.qr.generateQR(
+          `${request.body.url}`,
+          `/mnt/efs/qrsong/${request.body.filename}`
+        );
+        return { success: true };
+      });
+
       this.fastify.get('/testorder', async (request: any, _reply) => {
         await this.order.testOrder();
         return { success: true };

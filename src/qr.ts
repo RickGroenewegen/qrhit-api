@@ -5,43 +5,41 @@ import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 class Qr {
   private logger = new Logger();
   public async generateQR(link: string, outputPath: string) {
-    if (process.env['ENVIRONMENT'] === 'development') {
-      await this.generateQROldMethod(link, outputPath);
-    } else {
-      const lambdaClient = new LambdaClient({
-        region: 'eu-west-1',
-        credentials: {
-          accessKeyId: process.env['AWS_LAMBDA_ACCESS_KEY_ID']!,
-          secretAccessKey: process.env['AWS_LAMBDA_SECRET_KEY_ID']!,
-        },
-      });
-      const command = new InvokeCommand({
-        FunctionName: 'arn:aws:lambda:eu-west-1:071455255929:function:qrLambda',
-        Payload: new TextEncoder().encode(
-          JSON.stringify({ action: 'qr', url: link, outputPath: outputPath })
-        ),
-      });
+    const lambdaClient = new LambdaClient({
+      region: 'eu-west-1',
+      credentials: {
+        accessKeyId: process.env['AWS_LAMBDA_ACCESS_KEY_ID']!,
+        secretAccessKey: process.env['AWS_LAMBDA_SECRET_KEY_ID']!,
+      },
+    });
 
-      try {
-        const response = await lambdaClient.send(command);
-        const result = JSON.parse(
-          new TextDecoder('utf-8').decode(response.Payload)
+    const params = { action: 'qr', url: link, outputPath: outputPath };
+
+    const command = new InvokeCommand({
+      FunctionName: 'arn:aws:lambda:eu-west-1:071455255929:function:qrLambda',
+      Payload: new TextEncoder().encode(JSON.stringify(params)),
+    });
+
+    try {
+      const response = await lambdaClient.send(command);
+      const result = JSON.parse(
+        new TextDecoder('utf-8').decode(response.Payload)
+      );
+
+      if (result.statusCode == 500) {
+        const errorObject = JSON.parse(result.body);
+        this.logger.log(
+          color.red.bold('Error running Lambda function: ') +
+            color.white.bold(errorObject.error)
         );
-
-        if (result.errorMessage) {
-          throw new Error(result.errorMessage);
-        }
-
-        this.logger.log(color.green.bold('QR code generated successfully!'));
-      } catch (error) {
-        this.logger.log(color.red.bold('Error generating QR code via Lambda!'));
-        console.log(error);
       }
+    } catch (error) {
+      this.logger.log(color.red.bold('Error generating QR code via Lambda!'));
+      console.log(error);
     }
   }
-  }
 
-  private async generateQROldMethod(link: string, outputPath: string) {
+  public async generateQROldMethod(link: string, outputPath: string) {
     this.logger.log(
       color.yellow.bold('Using old QR method in development mode.')
     );
@@ -58,5 +56,7 @@ class Qr {
     this.logger.log(
       color.green.bold('QR code generated successfully using the old method!')
     );
+  }
+}
 
 export default Qr;

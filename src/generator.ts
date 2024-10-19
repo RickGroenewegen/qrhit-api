@@ -18,6 +18,7 @@ import Order from './order';
 import AnalyticsClient from './analytics';
 import { CronJob } from 'cron';
 import cluster from 'cluster';
+import { Track } from '@prisma/client';
 
 class Generator {
   private logger = new Logger();
@@ -387,12 +388,12 @@ class Generator {
           await this.qr.generateQROldMethod(link, outputPath);
         }
       } else {
-        // Use new method in parallel batches of 25
-        const batchSize = 25;
+        // Use new method in parallel batches of 100
+        const batchSize = 100;
         for (let i = 0; i < dbTracks.length; i += batchSize) {
           const batch = dbTracks.slice(i, i + batchSize);
           await Promise.all(
-            batch.map(async (track) => {
+            batch.map(async (track: Track) => {
               const link = `${process.env['API_URI']}/qr/${track.id}`;
               const outputPath = `${outputDir}/${track.trackId}.png`;
               await this.qr.generateQR(link, outputPath);
