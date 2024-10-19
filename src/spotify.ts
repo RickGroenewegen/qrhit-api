@@ -400,15 +400,6 @@ class Spotify {
             }
             // Limit the tracks to MAX_CARDS if we have more
             allTracks = allTracks.slice(0, MAX_CARDS);
-            const result = {
-              success: true,
-              data: {
-                maxReached,
-                totalTracks: allTracks.length,
-                tracks: allTracks,
-              },
-            };
-            this.cache.set(cacheKey, JSON.stringify(result));
             break;
           }
 
@@ -428,6 +419,7 @@ class Spotify {
         },
       };
 
+      this.cache.set(cacheKey, JSON.stringify(result));
       return result;
     } catch (e) {
       return { success: false, error: 'Error getting tracks' };
