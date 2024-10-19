@@ -32,6 +32,8 @@ class Qr {
           color.red.bold('Error running Lambda function: ') +
             color.white.bold(errorObject.error)
         );
+        // Fallback to old method
+        this.generateQR(link, outputPath);
       }
     } catch (error) {
       this.logger.log(color.red.bold('Error generating QR code via Lambda!'));
