@@ -419,7 +419,7 @@ class Spotify {
         return cachedResult;
       }
 
-      return {
+      const result = {
         success: true,
         data: {
           maxReached,
@@ -427,6 +427,8 @@ class Spotify {
           tracks: allTracks,
         },
       };
+
+      return result;
     } catch (e) {
       return { success: false, error: 'Error getting tracks' };
     }
