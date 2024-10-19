@@ -10,7 +10,17 @@ class Qr {
       this.logger.log(
         color.yellow.bold('Using old QR method in development mode.')
       );
-      // Implement the old QR method here
+      const QRCode = require('qrcode');
+      await QRCode.toFile(outputPath, link, {
+        type: 'png',
+        width: 600,
+        color: {
+          dark: '#000000',
+          light: '#0000',
+        },
+        errorCorrectionLevel: 'H',
+      });
+      this.logger.log(color.green.bold('QR code generated successfully using the old method!'));
     } else {
       const lambdaClient = new LambdaClient({
         region: 'eu-west-1',
