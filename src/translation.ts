@@ -13,6 +13,7 @@ class Translation {
     'it',
     'pt',
     'pl',
+    'hin',
   ];
   constructor() {
     this.i18n = new I18n({
