@@ -38,6 +38,7 @@ class Mollie {
       it: 'it_IT',
       pt: 'pt_PT',
       pl: 'pl_PL',
+      hin: 'en_US',
     };
 
     const paymentMethodMap: { [key: string]: PaymentMethod[] } = {

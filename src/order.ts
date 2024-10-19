@@ -521,7 +521,7 @@ class Order {
       const orderType = await this.getOrderType(playlist.numberOfTracks, false);
       itemsToSend.push({
         productId: orderType.printApiProductId,
-        pageCount: 2, // playlist.playlist.numberOfTracks * 2, // Front and back of the card. Each one their own page
+        pageCount: 2, //TODO:  playlist.playlist.numberOfTracks * 2, // Front and back of the card. Each one their own page
         metadata: JSON.stringify({
           filename: playlist.filename,
           id: playlist.playlist.paymentHasPlaylistId,

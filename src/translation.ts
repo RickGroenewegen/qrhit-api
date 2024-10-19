@@ -14,6 +14,7 @@ class Translation {
     'pt',
     'pl',
     'hin',
+    'jp',
   ];
   constructor() {
     this.i18n = new I18n({
