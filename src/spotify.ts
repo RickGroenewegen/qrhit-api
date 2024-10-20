@@ -361,9 +361,6 @@ class Spotify {
 
           this.analytics.increaseCounter('spotify', 'tracks', 1);
 
-          // Output response.data.items in full
-          console.log(111, response.data.items, null, 2);
-
           const tracks: Track[] = response.data.items
             .filter((item: any) => item.track.is_playable)
             .map((item: any) => ({
