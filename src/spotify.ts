@@ -364,22 +364,24 @@ class Spotify {
           // Output response.data.items in full
           console.log(111, response.data.items, null, 2);
 
-          const tracks: Track[] = response.data.items.map((item: any) => ({
-            id: item.track.id,
-            name: this.utils.cleanTrackName(item.track.name),
-            artist: item.track.artists[0].name,
-            link: item.track.external_urls.spotify,
-            isrc: item.track.external_ids.isrc,
-            image:
-              item.track.album.images.length > 0
-                ? item.track.album.images[1].url
-                : null,
+          const tracks: Track[] = response.data.items
+            .filter((item: any) => item.track.is_playable)
+            .map((item: any) => ({
+              id: item.track.id,
+              name: this.utils.cleanTrackName(item.track.name),
+              artist: item.track.artists[0].name,
+              link: item.track.external_urls.spotify,
+              isrc: item.track.external_ids.isrc,
+              image:
+                item.track.album.images.length > 0
+                  ? item.track.album.images[1].url
+                  : null,
 
-            releaseDate: format(
-              new Date(item.track.album.release_date),
-              'yyyy-MM-dd'
-            ),
-          }));
+              releaseDate: format(
+                new Date(item.track.album.release_date),
+                'yyyy-MM-dd'
+              ),
+            }));
 
           // remove all items that do not have an artist or image
           const filteredTracks = tracks.filter(
