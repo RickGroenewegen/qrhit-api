@@ -361,6 +361,9 @@ class Spotify {
 
           this.analytics.increaseCounter('spotify', 'tracks', 1);
 
+          // Output response.data.items in full
+          console.log(111, response.data.items, null, 2);
+
           const tracks: Track[] = response.data.items.map((item: any) => ({
             id: item.track.id,
             name: this.utils.cleanTrackName(item.track.name),
