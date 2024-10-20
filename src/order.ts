@@ -519,9 +519,14 @@ class Order {
     for (var i = 0; i < playlists.length; i++) {
       const playlist = playlists[i];
       const orderType = await this.getOrderType(playlist.numberOfTracks, false);
+
+      const pageCount = await this.pdf.countPDFPages(
+        `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
+      );
+
       itemsToSend.push({
         productId: orderType.printApiProductId,
-        pageCount: 2, // playlist.playlist.numberOfTracks * 2, // Front and back of the card. Each one their own page
+        pageCount: 2, //TODO: Replace with this pageCount,
         metadata: JSON.stringify({
           filename: playlist.filename,
           id: playlist.playlist.paymentHasPlaylistId,
