@@ -1,4 +1,5 @@
 import { color } from 'console-log-colors';
+import QRCode from 'qrcode';
 import Logger from './logger';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 
@@ -42,10 +43,6 @@ class Qr {
   }
 
   public async generateQR(link: string, outputPath: string) {
-    this.logger.log(
-      color.yellow.bold('Using old QR method in development mode.')
-    );
-    const QRCode = require('qrcode');
     await QRCode.toFile(outputPath, link, {
       type: 'png',
       width: 600,
@@ -55,9 +52,6 @@ class Qr {
       },
       errorCorrectionLevel: 'H',
     });
-    this.logger.log(
-      color.green.bold('QR code generated successfully using the old method!')
-    );
   }
 }
 
