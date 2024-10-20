@@ -395,7 +395,7 @@ class Spotify {
             response.data.items.length < limit ||
             allTracks.length >= MAX_CARDS
           ) {
-            if (allTracks.length > MAX_CARDS) {
+            if (allTracks.length >= MAX_CARDS) {
               maxReached = true;
             }
             // Limit the tracks to MAX_CARDS if we have more
