@@ -212,11 +212,9 @@ class Order {
   public startCron(): void {
     new CronJob('*/10 * * * *', async () => {
       await this.getAuthToken(true);
-      this.logger.log(color.blue.bold(`Refreshed Print API token`));
     }).start();
     new CronJob('0 0 * * *', async () => {
       await this.updateFeaturedPlaylists();
-      this.logger.log(color.blue.bold(`Updated featured playlists prices`));
     }).start();
   }
 
