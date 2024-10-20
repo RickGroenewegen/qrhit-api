@@ -54,8 +54,8 @@ model Payment {
   status                  String
   createdAt               DateTime             @default(now())
   updatedAt               DateTime             @updatedAt
-  fullname                String?
-  email                   String?
+  fullname                String
+  email                   String
   address                 String?
   city                    String?
   zipcode                 String?
