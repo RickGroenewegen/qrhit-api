@@ -239,6 +239,46 @@ class PDF {
     }
   }
 
+  private async mmToPoints(mm: number): Promise<number> {
+    return mm * (72 / 25.4);
+  }
+
+  public async addBleed(inputPath: string, bleed: number) {
+    const bleedSizeInPoints = await this.mmToPoints(bleed);
+    const existingPdfBytes = await fs.readFile(inputPath);
+
+    // Load a PDFDocument from the existing PDF bytes
+    const pdfDoc = await PDFDocument.load(existingPdfBytes);
+
+    // Calculate new dimensions and bleed
+    const pages = pdfDoc.getPages();
+    pages.forEach((page) => {
+      const { width, height } = page.getSize();
+      const newWidth = width + 2 * bleedSizeInPoints; // add bleed to both sides horizontally
+      const newHeight = height + 2 * bleedSizeInPoints; // add bleed to both sides vertically
+
+      // Resize page
+      page.setSize(newWidth, newHeight);
+
+      // Move existing content into the center, accounting for bleed
+      page.translateContent(bleedSizeInPoints, bleedSizeInPoints);
+    });
+
+    // Serialize the PDFDocument to bytes (a Uint8Array)
+    const pdfBytes = await pdfDoc.save();
+
+    // Write the PDF to a file
+    await fs.writeFile(inputPath, pdfBytes);
+
+    this.logger.log(
+      color.blue.bold(
+        `Added a ${white.bold(bleed)}mm bleed to PDF file: ${color.white.bold(
+          inputPath
+        )}`
+      )
+    );
+  }
+
   public async resizePDFPages(
     inputPath: string,
     widthMm: number = 66,
