@@ -10,8 +10,8 @@
         padding: 0;
     }
     .card-front, .card-back {
-        width: 66mm;
-        height: 66mm;
+        width: 60mm;
+        height: 60mm;
         display: flex;
         flex-direction: column;
         justify-content: center;
@@ -19,25 +19,16 @@
         position: relative;
     }
     .card-front {
-        background-color: #fff;
-        background-image: url('<%= process.env['API_URI'] %>/assets/images/card_background2.png');
-        background-size: 60mm 60mm;
-        background-position: center top 3.1mm;
-        background-repeat: no-repeat;
+        background-size: cover;
     }
     .card-back {
-        background-color: #fff;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        text-align: center;
+        background-color: #ffffff; /* or any other color you prefer */
     }
     .qr {
         width: 60%;
         height: auto;
         position: relative;
-
+        z-index: 3;
     }
     .text {
         text-align: center;
@@ -57,7 +48,7 @@
     .url, .url-bottom {
         font-size: 12px;
         position: absolute;
-        bottom: 12mm;
+        bottom: 10mm;
         text-align: center;
         width: 100%;
         font-style: italic;
@@ -65,7 +56,7 @@
         z-index: 3;
     }
     .url-bottom {
-        bottom: 8mm;
+        bottom: 5mm;
     }
 </style>
 </head>
