@@ -56,6 +56,9 @@ class Utils {
       str = str.substring(0, 67) + '...';
     }
 
+    // Remove (Remastered) from the title
+    str = str.replace(/\(Remastered\)/gi, '').trim();
+
     return str;
   }
 
