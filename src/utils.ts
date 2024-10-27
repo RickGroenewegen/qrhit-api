@@ -51,6 +51,11 @@ class Utils {
     // Remove "(feat. ...)" from the title
     str = str.replace(/\(feat\..*?\)/gi, '').trim();
 
+    // Title can be max. 70 characters. Add "..." if it's longer
+    if (str.length > 70) {
+      str = str.substring(0, 67) + '...';
+    }
+
     return str;
   }
 
