@@ -48,6 +48,9 @@ class Utils {
       str = str.split(' - ')[0];
     }
 
+    // Remove "(feat. ...)" from the title
+    str = str.replace(/\(feat\..*?\)/gi, '').trim();
+
     return str;
   }
 
