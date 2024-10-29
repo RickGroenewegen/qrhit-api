@@ -386,7 +386,7 @@ class Order {
             total,
             shipping: response.data.shipping,
             handling: response.data.handling,
-            taxRateShipping: response.data.taxRate * 100,
+            taxRateShipping: taxRate,
             taxRate,
             price: totalProductPriceWithoutVAT,
             payment: response.data.payment,
