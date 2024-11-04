@@ -57,7 +57,7 @@ class Discount {
         });
 
         if (!discount) {
-          return { success: false, message: 'Discount code not found' };
+          return { success: false, message: 'discountCodeNotFound' };
         }
 
         const now = new Date();
@@ -65,7 +65,7 @@ class Discount {
           (discount.startDate && discount.startDate > now) ||
           (discount.endDate && discount.endDate < now)
         ) {
-          return { success: false, message: 'Discount code is not active' };
+          return { success: false, message: 'discountNotActive' };
         }
 
         const amountLeft = await this.calculateAmountLeft(
