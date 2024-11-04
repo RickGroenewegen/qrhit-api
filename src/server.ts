@@ -26,6 +26,7 @@ import Cache from './cache';
 import Generator from './generator';
 import AnalyticsClient from './analytics';
 import { ChatGPT } from './chatgpt';
+import Discount from './discount';
 import { PDFImage } from 'pdf-lib';
 import GitChecker from './git';
 
@@ -69,6 +70,7 @@ class Server {
   private analytics = AnalyticsClient.getInstance();
   private openai = new ChatGPT();
   private git = GitChecker.getInstance();
+  private discount = new Discount();
 
   private version: string = '1.0.0';
 
@@ -138,7 +140,15 @@ class Server {
       }
     );
 
-    this.fastify.get(
+    this.fastify.get('/discount/:code', async (request: any, reply: any) => {
+      const result = await this.discount.checkDiscount(request.params.code);
+      reply.send(result);
+    });
+
+    this.fastify.post('/discount/:code', async (request: any, reply: any) => {
+      const result = await this.discount.redeemDiscount(request.params.code);
+      reply.send(result);
+    });
       '/analytics',
       { preHandler: verifyTokenMiddleware },
       async (request: any, reply: any) => {
