@@ -19,6 +19,32 @@ model Isrc {
   @@map("isrc")
 }
 
+model DiscountCode {
+  id                Int                 @id @default(autoincrement())
+  code              String              @unique
+  amount            Float
+  startDate         DateTime?
+  endDate           DateTime?
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  DiscountCodedUses DiscountCodedUses[]
+
+  @@map("discount_codes")
+}
+
+model DiscountCodedUses {
+  id             Int          @id @default(autoincrement())
+  amount         Float
+  discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
+  discountCodeId Int
+  payment        Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentId      Int
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@map("discount_codes_uses")
+}
+
 model OrderType {
   id                 Int                  @id @default(autoincrement())
   name               String               @unique
@@ -82,6 +108,7 @@ model Payment {
   OrderType               OrderType?           @relation(fields: [orderTypeId], references: [id])
   orderTypeId             Int?
   test                    Boolean              @default(false)
+  DiscountCodedUses       DiscountCodedUses[]
 
   @@index([userId]) // Index for performance on queries
   @@index([paymentId])
