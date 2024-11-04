@@ -23,7 +23,7 @@ class Discount {
       });
 
       if (!discount) {
-        return { success: false, message: 'Discount code not found' };
+        return { success: false, message: 'discountCodeNotFound' };
       }
 
       const now = new Date();
@@ -31,7 +31,7 @@ class Discount {
         (discount.startDate && discount.startDate > now) ||
         (discount.endDate && discount.endDate < now)
       ) {
-        return { success: false, message: 'Discount code is not active' };
+        return { success: false, message: 'discountNotActive' };
       }
 
       const amountLeft = await this.calculateAmountLeft(
@@ -45,7 +45,7 @@ class Discount {
         amountLeft: amountLeft,
       };
     } catch (error) {
-      return { success: false, message: 'Error checking discount code', error };
+      return { success: false, message: 'errorCheckingDiscountCode', error };
     }
   }
 
@@ -74,7 +74,7 @@ class Discount {
         );
 
         if (amountLeft < amount) {
-          return { success: false, message: 'Insufficient discount amount left' };
+          return { success: false, message: 'insufficientDiscountAmountLeft' };
         }
 
         // Assuming a paymentId is available in the context.
@@ -88,12 +88,12 @@ class Discount {
           },
         });
 
-        return { success: true, message: 'Discount code redeemed successfully' };
+        return { success: true, message: 'discountRedeemedSuccessfully' };
       });
     } catch (error) {
       return {
         success: false,
-        message: 'Error redeeming discount code',
+        message: 'errorRedeemingDiscountCode',
         error,
       };
     }
