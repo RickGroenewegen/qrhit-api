@@ -21,7 +21,6 @@ class Discount {
   }
 
   public async checkDiscount(code: string): Promise<any> {
-    const lockKey = `lock:discount:${code}`;
 
     try {
       const discount = await this.prisma.discountCode.findUnique({
@@ -52,9 +51,6 @@ class Discount {
       };
     } catch (error: any) {
       return { success: false, message: 'errorCheckingDiscountCode', error };
-    } finally {
-      // Release the lock
-      await this.cache.executeCommand('del', lockKey);
     }
   }
 
