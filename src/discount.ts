@@ -1,6 +1,8 @@
 import { PrismaClient } from '@prisma/client';
+import Utils from './utils';
 
 const prisma = new PrismaClient();
+const utils = new Utils();
 
 class Discount {
   private async calculateAmountLeft(
@@ -49,7 +51,18 @@ class Discount {
     }
   }
 
-  public async redeemDiscount(code: string, amount: number, paymentId: string): Promise<any> {
+  public async redeemDiscount(
+    code: string,
+    amount: number,
+    paymentId: string,
+    captchaToken: string
+  ): Promise<any> {
+    const isHuman = await utils.verifyRecaptcha(captchaToken);
+
+    if (!isHuman && process.env['ENVIRONMENT'] != 'development') {
+      throw new Error('reCAPTCHA verification failed');
+    }
+
     try {
       return await prisma.$transaction(async (prisma) => {
         const discount = await prisma.discountCode.findUnique({
@@ -96,6 +109,8 @@ class Discount {
         return { success: true, message: 'discountRedeemedSuccessfully' };
       });
     } catch (error) {
+      console.log(error);
+
       return {
         success: false,
         message: 'errorRedeemingDiscountCode',
