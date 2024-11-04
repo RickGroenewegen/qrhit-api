@@ -702,6 +702,11 @@ class Server {
         }
       );
     }
+
+    this.fastify.get('/discount/voucher/:type', async (request: any, reply: any) => {
+      const { type } = request.params;
+      await reply.view(`voucher_${type}.ejs`);
+    });
   }
 }
 
