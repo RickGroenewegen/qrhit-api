@@ -12,11 +12,13 @@ import Generator from './generator';
 import { CartItem } from './interfaces/CartItem';
 import { OrderSearch } from './interfaces/OrderSearch';
 import axios from 'axios';
+import Discount from './discount';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private data = new Data();
+  private discount = new Discount();
   private order = Order.getInstance();
   private translation: Translation = new Translation();
   private utils = new Utils();
@@ -202,10 +204,9 @@ class Mollie {
 
       if (params.cart.discounts && params.cart.discounts.length > 0) {
         const discount = params.cart.discounts[0];
-        const discountResult = await this.data.redeemDiscount(
+        const discountResult = await this.discount.redeemDiscount(
           discount.code,
-          discount.amountLeft,
-          params.captchaToken
+          discount.amountLeft
         );
 
         if (discountResult.success) {
