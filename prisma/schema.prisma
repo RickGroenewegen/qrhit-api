@@ -49,6 +49,7 @@ model DiscountCodedUses {
 
 model OrderType {
   id                 Int                  @id @default(autoincrement())
+  type               String               @default("cards")
   name               String               @unique
   description        String
   amount             Float

@@ -218,7 +218,7 @@ class Order {
     }).start();
   }
 
-  public async getOrderTypes() {
+  public async getOrderTypes(type: string = 'cards') {
     let orderTypes = null;
     let cacheKey = `orderTypes`;
     const cachedOrderType = await this.cache.get(cacheKey);
@@ -234,6 +234,7 @@ class Order {
         },
         where: {
           visible: true,
+          type,
         },
         orderBy: [
           {
@@ -249,7 +250,11 @@ class Order {
     return orderTypes;
   }
 
-  public async getOrderType(numberOfTracks: number, digital: boolean = false) {
+  public async getOrderType(
+    numberOfTracks: number,
+    digital: boolean = false,
+    type: string = 'cards'
+  ) {
     let orderType = null;
     let digitalInt = digital ? '1' : '0';
     if (numberOfTracks > MAX_CARDS) {
@@ -263,6 +268,7 @@ class Order {
     } else {
       orderType = await this.prisma.orderType.findFirst({
         where: {
+          type,
           maxCards: {
             gte: numberOfTracks,
           },
