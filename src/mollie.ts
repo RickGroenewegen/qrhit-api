@@ -220,6 +220,10 @@ class Mollie {
         cart: params.cart,
       });
 
+      if (discountAmount > calculateResult.data.total) {
+        discountAmount = calculateResult.data.total;
+      }
+
       calculateResult.data.total -= discountAmount;
 
       const paymentClient = await this.getClient(clientIp);
