@@ -196,6 +196,8 @@ class Mollie {
       let description = '';
       let totalCards = 0;
 
+      console.log(111, params.cart);
+
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
         countrycode: params.extraOrderData.countrycode,
