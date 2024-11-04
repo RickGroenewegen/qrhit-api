@@ -23,6 +23,9 @@ class Mollie {
   private translation: Translation = new Translation();
   private utils = new Utils();
   private generator = new Generator();
+  private openPaymentStatus = ['open', 'pending', 'authorized'];
+  private paidPaymentStatus = ['paid'];
+  private failedPaymentStatus = ['failed', 'canceled', 'expired'];
 
   private getMollieLocaleData(
     locale: string,
@@ -201,6 +204,7 @@ class Mollie {
       console.log(111, params.cart);
 
       let discountAmount = 0;
+      let discountUseId = 0;
 
       if (params.cart.discounts && params.cart.discounts.length > 0) {
         const discount = params.cart.discounts[0];
@@ -208,6 +212,7 @@ class Mollie {
           discount.code,
           discount.amountLeft
         );
+        discountUseId = discountResult.discountUseId;
 
         if (discountResult.success) {
           discountAmount = discount.amountLeft;
@@ -439,7 +444,7 @@ class Mollie {
       if (params.cart.discounts && params.cart.discounts.length > 0) {
         const discount = params.cart.discounts[0];
         await this.discount.associatePaymentWithDiscountUse(
-          discount.code,
+          discountUseId,
           paymentId
         );
       }
@@ -509,6 +514,8 @@ class Mollie {
         payment = await this.mollieClientTest.payments.get(params.id);
       }
 
+      console.log(111, payment);
+
       const dbPayment = await this.prisma.payment.findUnique({
         select: {
           id: true,
@@ -549,22 +556,22 @@ class Mollie {
         };
       }
 
-      if (
-        dbPayment &&
-        dbPayment.status != payment.status &&
-        payment.status == 'paid'
-      ) {
-        const metadata = payment.metadata as {
-          clientIp: string;
-          refreshPlaylists: string;
-        };
+      if (dbPayment && dbPayment.status != payment.status) {
+        if (payment.status == 'paid') {
+          const metadata = payment.metadata as {
+            clientIp: string;
+            refreshPlaylists: string;
+          };
 
-        this.generator.generate(
-          params.id,
-          metadata.clientIp,
-          metadata.refreshPlaylists,
-          this
-        );
+          this.generator.generate(
+            params.id,
+            metadata.clientIp,
+            metadata.refreshPlaylists,
+            this
+          );
+        } else if (this.failedPaymentStatus.includes(payment.status)) {
+          // Remove any usage of discounts (TODO)
+        }
       }
     }
     return {
@@ -573,10 +580,6 @@ class Mollie {
   }
 
   public async checkPaymentStatus(paymentId: string): Promise<ApiResult> {
-    const openPaymentStatus = ['open', 'pending', 'authorized'];
-    const paidPaymentStatus = ['paid'];
-    const failedPaymentStatus = ['failed', 'canceled', 'expired'];
-
     // Get the payment from the database
     const payment = await this.prisma.payment.findUnique({
       where: {
@@ -593,7 +596,7 @@ class Mollie {
       },
     });
 
-    if (payment && paidPaymentStatus.includes(payment.status)) {
+    if (payment && this.paidPaymentStatus.includes(payment.status)) {
       return {
         success: true,
         data: {
@@ -601,14 +604,14 @@ class Mollie {
           payment,
         },
       };
-    } else if (payment && openPaymentStatus.includes(payment.status)) {
+    } else if (payment && this.openPaymentStatus.includes(payment.status)) {
       return {
         success: false,
         data: {
           status: 'open',
         },
       };
-    } else if (payment && failedPaymentStatus.includes(payment.status)) {
+    } else if (payment && this.failedPaymentStatus.includes(payment.status)) {
       return {
         success: false,
         data: {

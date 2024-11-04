@@ -21,28 +21,18 @@ class Discount {
   }
 
   public async associatePaymentWithDiscountUse(
-    discountCode: string,
+    discountUseId: number,
     paymentId: number
   ): Promise<any> {
     try {
-      const discount = await this.prisma.discountCode.findUnique({
-        where: { code: discountCode },
-      });
-
-      if (!discount) {
-        return { success: false, message: 'discountCodeNotFound' };
-      }
-
-      await this.prisma.discountCodedUses.updateMany({
+      await this.prisma.discountCodedUses.update({
         where: {
-          discountCodeId: discount.id,
-          paymentId: null,
+          id: discountUseId,
         },
         data: {
           paymentId: paymentId,
         },
       });
-
       return { success: true, message: 'paymentAssociatedSuccessfully' };
     } catch (error) {
       return { success: false, message: 'errorAssociatingPayment', error };
@@ -132,7 +122,7 @@ class Discount {
           };
         }
 
-        await prisma.discountCodedUses.create({
+        const insertResult = await prisma.discountCodedUses.create({
           data: {
             amount: parseFloat(amount.toFixed(2)),
             discountCodeId: discount.id,
@@ -144,6 +134,7 @@ class Discount {
           message: 'discountRedeemedSuccessfully',
           fullAmount: discount.amount,
           amountLeft: parseFloat((amountLeft - amount).toFixed(2)),
+          discountUseId: insertResult.id,
         };
       });
     } catch (error) {
