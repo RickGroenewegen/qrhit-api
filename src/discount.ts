@@ -21,7 +21,19 @@ class Discount {
         return { success: false, message: 'Discount code is not active' };
       }
 
-      return { success: true, discount };
+      const totalUsed = await prisma.discountCodedUses.aggregate({
+        where: { discountCodeId: discount.id },
+        _sum: { amount: true },
+      });
+
+      const amountUsed = totalUsed._sum.amount || 0;
+      const amountLeft = discount.amount - amountUsed;
+
+      return {
+        success: true,
+        fullAmount: discount.amount,
+        amountLeft: amountLeft,
+      };
     } catch (error) {
       return { success: false, message: 'Error checking discount code', error };
     }
