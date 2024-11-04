@@ -20,6 +20,19 @@ class Discount {
     return discountAmount - amountUsed;
   }
 
+  public async removeDiscountUsesByPaymentId(paymentId: number): Promise<any> {
+    try {
+      await this.prisma.discountCodedUses.deleteMany({
+        where: {
+          paymentId: paymentId,
+        },
+      });
+      return { success: true, message: 'discountUsesRemovedSuccessfully' };
+    } catch (error) {
+      return { success: false, message: 'errorRemovingDiscountUses', error };
+    }
+  }
+
   public async associatePaymentWithDiscountUse(
     discountUseId: number,
     paymentId: number
@@ -62,8 +75,17 @@ class Discount {
         discount.amount
       );
 
+      if (amountLeft <= 0) {
+        return {
+          success: false,
+          message: 'discountCodeExhausted',
+          fullAmount: discount.amount,
+          amountLeft: parseFloat(amountLeft.toFixed(2)),
+        };
+      }
+
       return {
-        success: amountLeft > 0,
+        success: true,
         fullAmount: discount.amount,
         amountLeft: parseFloat(amountLeft.toFixed(2)),
       };

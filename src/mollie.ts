@@ -201,8 +201,6 @@ class Mollie {
       let description = '';
       let totalCards = 0;
 
-      console.log(111, params.cart);
-
       let discountAmount = 0;
       let discountUseId = 0;
 
@@ -557,6 +555,8 @@ class Mollie {
       }
 
       if (dbPayment && dbPayment.status != payment.status) {
+        console.log(222, payment.status);
+        console.log(333, this.failedPaymentStatus.includes(payment.status));
         if (payment.status == 'paid') {
           const metadata = payment.metadata as {
             clientIp: string;
@@ -570,7 +570,7 @@ class Mollie {
             this
           );
         } else if (this.failedPaymentStatus.includes(payment.status)) {
-          // Remove any usage of discounts (TODO)
+          await this.discount.removeDiscountUsesByPaymentId(dbPayment.id);
         }
       }
     }

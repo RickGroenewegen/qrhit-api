@@ -148,11 +148,14 @@ class Server {
     this.fastify.post('/discount/:code', async (request: any, reply: any) => {
       const result = await this.discount.redeemDiscount(
         request.params.code,
-        parseFloat(request.body.amount),
-        request.body.paymentId,
-        request.body.captchaToken
+        parseFloat(request.body.amount)
       );
-      reply.send(result);
+      reply.send({
+        success: result.success,
+        message: result.message,
+        fullAmount: result.fullAmount,
+        amountLeft: result.amountLeft,
+      });
     });
 
     this.fastify.get(

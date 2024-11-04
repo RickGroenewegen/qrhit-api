@@ -38,8 +38,8 @@ model DiscountCodedUses {
   amount         Float
   discountCode   DiscountCode @relation(fields: [discountCodeId], references: [id], onDelete: Cascade)
   discountCodeId Int
-  payment        Payment      @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  paymentId      Int
+  payment        Payment?     @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentId      Int?
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
@@ -104,6 +104,7 @@ model Payment {
   shippingVATPrice        Float
   totalVATPrice           Float
   profit                  Float                @default(0)
+  discount                Float                @default(0)
   locale                  String               @default("en")
   user                    User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
   PaymentHasPlaylist      PaymentHasPlaylist[]
