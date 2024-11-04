@@ -44,7 +44,7 @@ class Discount {
       return {
         success: amountLeft > 0,
         fullAmount: discount.amount,
-        amountLeft: amountLeft,
+        amountLeft: parseFloat(amountLeft.toFixed(2)),
       };
     } catch (error) {
       return { success: false, message: 'errorCheckingDiscountCode', error };
@@ -100,7 +100,7 @@ class Discount {
 
         await prisma.discountCodedUses.create({
           data: {
-            amount: amount,
+            amount: parseFloat(amount.toFixed(2)),
             discountCodeId: discount.id,
             paymentId: payment.id,
           },
@@ -110,7 +110,7 @@ class Discount {
           success: true,
           message: 'discountRedeemedSuccessfully',
           fullAmount: discount.amount,
-          amountLeft: amountLeft - amount,
+          amountLeft: parseFloat((amountLeft - amount).toFixed(2)),
         };
       });
     } catch (error) {
