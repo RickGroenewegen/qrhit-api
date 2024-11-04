@@ -198,11 +198,28 @@ class Mollie {
 
       console.log(111, params.cart);
 
+      let discountAmount = 0;
+
+      if (params.cart.discounts && params.cart.discounts.length > 0) {
+        const discount = params.cart.discounts[0];
+        const discountResult = await this.data.redeemDiscount(
+          discount.code,
+          discount.amountLeft,
+          params.captchaToken
+        );
+
+        if (discountResult.success) {
+          discountAmount = discount.amountLeft;
+        }
+      }
+
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
         countrycode: params.extraOrderData.countrycode,
         cart: params.cart,
       });
+
+      calculateResult.data.total -= discountAmount;
 
       const paymentClient = await this.getClient(clientIp);
 
