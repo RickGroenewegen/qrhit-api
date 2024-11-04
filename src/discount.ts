@@ -20,6 +20,35 @@ class Discount {
     return discountAmount - amountUsed;
   }
 
+  public async associatePaymentWithDiscountUse(
+    discountCode: string,
+    paymentId: number
+  ): Promise<any> {
+    try {
+      const discount = await this.prisma.discountCode.findUnique({
+        where: { code: discountCode },
+      });
+
+      if (!discount) {
+        return { success: false, message: 'discountCodeNotFound' };
+      }
+
+      await this.prisma.discountCodedUses.updateMany({
+        where: {
+          discountCodeId: discount.id,
+          paymentId: null,
+        },
+        data: {
+          paymentId: paymentId,
+        },
+      });
+
+      return { success: true, message: 'paymentAssociatedSuccessfully' };
+    } catch (error) {
+      return { success: false, message: 'errorAssociatingPayment', error };
+    }
+  }
+
   public async checkDiscount(code: string): Promise<any> {
     try {
       const discount = await this.prisma.discountCode.findUnique({

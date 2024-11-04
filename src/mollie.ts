@@ -435,7 +435,14 @@ class Mollie {
         },
       });
 
-      // update the payment in the database
+      // Associate the payment with the discount use
+      if (params.cart.discounts && params.cart.discounts.length > 0) {
+        const discount = params.cart.discounts[0];
+        await this.discount.associatePaymentWithDiscountUse(
+          discount.code,
+          paymentId
+        );
+      }
       await this.prisma.payment.update({
         where: {
           id: paymentId,
