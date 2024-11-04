@@ -2,10 +2,70 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <title>Voucher Type 1</title>
+    <title>Voucher Template</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            page-break-after: always;
+        }
+        .page {
+            width: 216mm;
+            height: 303mm;
+            box-sizing: border-box;
+            padding: 10mm;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            background-color: #f7f7f7;
+        }
+        .voucher {
+            width: 196mm;
+            height: 283mm;
+            border: 2px solid #ccc;
+            background-color: #fff;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        }
+        .voucher-header {
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .voucher-content {
+            font-size: 16px;
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .voucher-footer {
+            font-size: 14px;
+            color: #909090;
+        }
+    </style>
 </head>
 <body>
-    <h1>Voucher Type 1</h1>
-    <p>This is a minimal layout for voucher type 1.</p>
+    <div class="page">
+        <div class="voucher">
+            <div class="voucher-header">Voucher Title</div>
+            <div class="voucher-content">
+                <p>Congratulations! You have received a special voucher.</p>
+                <p>Use this voucher to enjoy exclusive benefits.</p>
+            </div>
+            <div class="voucher-footer">Valid until: <%= expirationDate %></div>
+        </div>
+    </div>
+    <div class="page">
+        <div class="voucher">
+            <div class="voucher-content">
+                <p>Terms and Conditions:</p>
+                <p>Lorem ipsum dolor sit amet, consectetur adipiscing elit. Integer nec odio. Praesent libero. Sed cursus ante dapibus diam.</p>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
