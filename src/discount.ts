@@ -6,6 +6,9 @@ const prisma = new PrismaClient();
 const utils = new Utils();
 
 class Discount {
+
+  private cache = Cache.getInstance();
+
   private async calculateAmountLeft(
     discountId: number,
     discountAmount: number
@@ -20,6 +23,9 @@ class Discount {
   }
 
   public async checkDiscount(code: string): Promise<any> {
+
+    const lockKey = `lock:discount:${code}`;
+
     try {
       const discount = await prisma.discountCode.findUnique({
         where: { code },
@@ -47,14 +53,17 @@ class Discount {
         fullAmount: discount.amount,
         amountLeft: parseFloat(amountLeft.toFixed(2)),
       };
+    }  catch(error:any) {
+      return { success: false, message: 'errorCheckingDiscountCode', error };
+  
     } finally {
       // Release the lock
-      await cache.executeCommand('del', lockKey);
-    }
-  } catch (error) {
-      return { success: false, message: 'errorCheckingDiscountCode', error };
-    }
+      await this.cache.executeCommand('del', lockKey);
+    } 
   }
+ 
+
+
 
   public async redeemDiscount(
     code: string,
@@ -143,6 +152,7 @@ class Discount {
       };
     }
   }
+
 }
 
 export default Discount;
