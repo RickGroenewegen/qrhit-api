@@ -601,7 +601,11 @@ class Server {
     );
 
     this.fastify.post('/order/calculate', async (request: any, _reply) => {
-      return await this.order.calculateOrder(request.body);
+      try {
+        return await this.order.calculateOrder(request.body);
+      } catch (e) {
+        return { success: false };
+      }
     });
 
     this.fastify.get('/cache', async (request: any, _reply) => {
