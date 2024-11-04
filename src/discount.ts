@@ -58,7 +58,11 @@ class Discount {
 
       return { success: true, message: 'Discount code redeemed successfully' };
     } catch (error) {
-      return { success: false, message: 'Error redeeming discount code', error };
+      return {
+        success: false,
+        message: 'Error redeeming discount code',
+        error,
+      };
     }
   }
 }
