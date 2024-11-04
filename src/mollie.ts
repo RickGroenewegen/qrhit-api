@@ -555,15 +555,14 @@ class Mollie {
       }
 
       if (dbPayment && dbPayment.status != payment.status) {
-        console.log(222, payment.status);
-        console.log(333, this.failedPaymentStatus.includes(payment.status));
         if (payment.status == 'paid') {
           const metadata = payment.metadata as {
             clientIp: string;
             refreshPlaylists: string;
           };
 
-          const totalDiscount = await this.discount.calculateTotalDiscountForPayment(dbPayment.id);
+          const totalDiscount =
+            await this.discount.calculateTotalDiscountForPayment(dbPayment.id);
           await this.prisma.payment.update({
             where: {
               id: dbPayment.id,
