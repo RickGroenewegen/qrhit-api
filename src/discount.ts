@@ -1,5 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import Utils from './utils';
+import Cache from './cache';
 
 const prisma = new PrismaClient();
 const utils = new Utils();
@@ -46,7 +47,11 @@ class Discount {
         fullAmount: discount.amount,
         amountLeft: parseFloat(amountLeft.toFixed(2)),
       };
-    } catch (error) {
+    } finally {
+      // Release the lock
+      await cache.executeCommand('del', lockKey);
+    }
+  } catch (error) {
       return { success: false, message: 'errorCheckingDiscountCode', error };
     }
   }
@@ -57,7 +62,17 @@ class Discount {
     paymentId: string,
     captchaToken: string
   ): Promise<any> {
-    const isHuman = await utils.verifyRecaptcha(captchaToken);
+    const cache = Cache.getInstance();
+    const lockKey = `lock:discount:${code}`;
+    const lockTimeout = 5000; // 5 seconds
+
+    const isLocked = await cache.executeCommand('set', lockKey, 'locked', 'NX', 'PX', lockTimeout);
+    if (!isLocked) {
+      return { success: false, message: 'discountCodeInUse' };
+    }
+
+    try {
+      const isHuman = await utils.verifyRecaptcha(captchaToken);
 
     if (!isHuman && process.env['ENVIRONMENT'] != 'development') {
       throw new Error('reCAPTCHA verification failed');
