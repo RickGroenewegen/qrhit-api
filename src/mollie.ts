@@ -205,15 +205,22 @@ class Mollie {
       let discountUseId = 0;
 
       if (params.cart.discounts && params.cart.discounts.length > 0) {
-        const discount = params.cart.discounts[0];
-        const discountResult = await this.discount.redeemDiscount(
-          discount.code,
-          discount.amountLeft
-        );
-        discountUseId = discountResult.discountUseId;
+        for (const discount of params.cart.discounts) {
+          const discountResult = await this.discount.redeemDiscount(
+            discount.code,
+            discount.amountLeft
+          );
 
-        if (discountResult.success) {
-          discountAmount = discount.amountLeft;
+          if (discountResult.success) {
+            discountAmount += discount.amountLeft;
+            discountUseId = discountResult.discountUseId;
+
+            // Associate the payment with the discount use
+            await this.discount.associatePaymentWithDiscountUse(
+              discountUseId,
+              paymentId
+            );
+          }
         }
       }
 
