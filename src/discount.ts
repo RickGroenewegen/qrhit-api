@@ -75,19 +75,19 @@ class Discount {
     const lockKey = `lock:discount:${code}`;
     const lockTimeout = 5000; // 5 seconds
 
-    const isLocked = await cache.executeCommand('set', lockKey, 'locked', 'NX', 'PX', lockTimeout);
-    if (!isLocked) {
-      return { success: false, message: 'discountCodeInUse' };
-    }
-
+    let lockAcquired = false;
     try {
+      lockAcquired = await cache.executeCommand('set', lockKey, 'locked', 'NX', 'PX', lockTimeout);
+      if (!lockAcquired) {
+        return { success: false, message: 'discountCodeInUse' };
+      }
+
       const isHuman = await utils.verifyRecaptcha(captchaToken);
 
-    if (!isHuman && process.env['ENVIRONMENT'] != 'development') {
-      throw new Error('reCAPTCHA verification failed');
-    }
+      if (!isHuman && process.env['ENVIRONMENT'] != 'development') {
+        throw new Error('reCAPTCHA verification failed');
+      }
 
-    try {
       return await prisma.$transaction(async (prisma) => {
         const discount = await prisma.discountCode.findUnique({
           where: { code },
@@ -150,8 +150,11 @@ class Discount {
         message: 'errorRedeemingDiscountCode',
         error,
       };
+    } finally {
+      if (lockAcquired) {
+        await cache.executeCommand('del', lockKey);
+      }
     }
-  }
 
 }
 
