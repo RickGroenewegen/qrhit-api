@@ -1,3 +1,7 @@
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
 class Discount {
   public async checkDiscount(code: string): Promise<any> {
     try {
