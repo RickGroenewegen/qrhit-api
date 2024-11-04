@@ -202,7 +202,7 @@ class Mollie {
       let totalCards = 0;
 
       let discountAmount = 0;
-      let discountUseId = 0;
+      let discountUseIds: number[] = [];
 
       if (params.cart.discounts && params.cart.discounts.length > 0) {
         for (const discount of params.cart.discounts) {
@@ -213,7 +213,7 @@ class Mollie {
 
           if (discountResult.success) {
             discountAmount += discount.amountLeft;
-            discountUseId = discountResult.discountUseId;
+            discountUseIds.push(discountResult.discountUseId);
           }
         }
       }
@@ -439,9 +439,8 @@ class Mollie {
         },
       });
 
-      // Associate the payment with the discount use
-      if (params.cart.discounts && params.cart.discounts.length > 0) {
-        const discount = params.cart.discounts[0];
+      // Associate the payment with each discount use
+      for (const discountUseId of discountUseIds) {
         await this.discount.associatePaymentWithDiscountUse(
           discountUseId,
           paymentId
