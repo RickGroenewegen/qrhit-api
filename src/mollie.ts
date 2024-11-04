@@ -214,12 +214,6 @@ class Mollie {
           if (discountResult.success) {
             discountAmount += discount.amountLeft;
             discountUseId = discountResult.discountUseId;
-
-            // Associate the payment with the discount use
-            await this.discount.associatePaymentWithDiscountUse(
-              discountUseId,
-              paymentId
-            );
           }
         }
       }
