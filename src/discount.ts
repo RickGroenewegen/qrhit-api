@@ -106,7 +106,12 @@ class Discount {
           },
         });
 
-        return { success: true, message: 'discountRedeemedSuccessfully' };
+        return {
+          success: true,
+          message: 'discountRedeemedSuccessfully',
+          fullAmount: discount.amount,
+          amountLeft: amountLeft - amount,
+        };
       });
     } catch (error) {
       console.log(error);
