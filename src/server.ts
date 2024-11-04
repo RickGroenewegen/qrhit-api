@@ -146,9 +146,16 @@ class Server {
     });
 
     this.fastify.post('/discount/:code', async (request: any, reply: any) => {
-      const result = await this.discount.redeemDiscount(request.params.code);
+      const result = await this.discount.redeemDiscount(
+        request.params.code,
+        parseFloat(request.body.amount),
+        request.body.paymentId,
+        request.body.captchaToken
+      );
       reply.send(result);
     });
+
+    this.fastify.get(
       '/analytics',
       { preHandler: verifyTokenMiddleware },
       async (request: any, reply: any) => {
