@@ -21,7 +21,6 @@ class Discount {
   }
 
   public async checkDiscount(code: string): Promise<any> {
-
     try {
       const discount = await this.prisma.discountCode.findUnique({
         where: { code },
@@ -54,11 +53,7 @@ class Discount {
     }
   }
 
-  public async redeemDiscount(
-    code: string,
-    amount: number,
-    captchaToken: string
-  ): Promise<any> {
+  public async redeemDiscount(code: string, amount: number): Promise<any> {
     const cache = Cache.getInstance();
     const lockKey = `lock:discount:${code}`;
     const lockTimeout = 5000; // 5 seconds
@@ -75,12 +70,6 @@ class Discount {
       );
       if (!lockAcquired) {
         return { success: false, message: 'discountCodeInUse' };
-      }
-
-      const isHuman = await this.utils.verifyRecaptcha(captchaToken);
-
-      if (!isHuman && process.env['ENVIRONMENT'] != 'development') {
-        throw new Error('reCAPTCHA verification failed');
       }
 
       return await this.prisma.$transaction(async (prisma) => {
