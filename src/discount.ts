@@ -3,6 +3,16 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 class Discount {
+  private async calculateAmountLeft(discountId: number, discountAmount: number): Promise<number> {
+    const totalUsed = await prisma.discountCodedUses.aggregate({
+      where: { discountCodeId: discountId },
+      _sum: { amount: true },
+    });
+
+    const amountUsed = totalUsed._sum.amount || 0;
+    return discountAmount - amountUsed;
+  }
+
   public async checkDiscount(code: string): Promise<any> {
     try {
       const discount = await prisma.discountCode.findUnique({
@@ -21,13 +31,7 @@ class Discount {
         return { success: false, message: 'Discount code is not active' };
       }
 
-      const totalUsed = await prisma.discountCodedUses.aggregate({
-        where: { discountCodeId: discount.id },
-        _sum: { amount: true },
-      });
-
-      const amountUsed = totalUsed._sum.amount || 0;
-      const amountLeft = discount.amount - amountUsed;
+      const amountLeft = await this.calculateAmountLeft(discount.id, discount.amount);
 
       return {
         success: true,
@@ -57,7 +61,13 @@ class Discount {
         return { success: false, message: 'Discount code is not active' };
       }
 
-      // Assuming a paymentId is available in the context
+      const amountLeft = await this.calculateAmountLeft(discount.id, discount.amount);
+
+      if (amountLeft <= 0) {
+        return { success: false, message: 'No discount amount left' };
+      }
+
+      // Assuming a paymentId is available in the context.
       const paymentId = 1; // Replace with actual payment ID
 
       await prisma.discountCodedUses.create({
