@@ -3,7 +3,10 @@ import { PrismaClient } from '@prisma/client';
 const prisma = new PrismaClient();
 
 class Discount {
-  private async calculateAmountLeft(discountId: number, discountAmount: number): Promise<number> {
+  private async calculateAmountLeft(
+    discountId: number,
+    discountAmount: number
+  ): Promise<number> {
     const totalUsed = await prisma.discountCodedUses.aggregate({
       where: { discountCodeId: discountId },
       _sum: { amount: true },
@@ -31,10 +34,13 @@ class Discount {
         return { success: false, message: 'Discount code is not active' };
       }
 
-      const amountLeft = await this.calculateAmountLeft(discount.id, discount.amount);
+      const amountLeft = await this.calculateAmountLeft(
+        discount.id,
+        discount.amount
+      );
 
       return {
-        success: true,
+        success: amountLeft > 0,
         fullAmount: discount.amount,
         amountLeft: amountLeft,
       };
@@ -61,7 +67,10 @@ class Discount {
         return { success: false, message: 'Discount code is not active' };
       }
 
-      const amountLeft = await this.calculateAmountLeft(discount.id, discount.amount);
+      const amountLeft = await this.calculateAmountLeft(
+        discount.id,
+        discount.amount
+      );
 
       if (amountLeft <= 0) {
         return { success: false, message: 'No discount amount left' };
