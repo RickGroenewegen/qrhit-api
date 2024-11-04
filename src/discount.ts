@@ -2,18 +2,16 @@ import { PrismaClient } from '@prisma/client';
 import Utils from './utils';
 import Cache from './cache';
 
-const prisma = new PrismaClient();
-const utils = new Utils();
-
 class Discount {
-
   private cache = Cache.getInstance();
+  private prisma = new PrismaClient();
+  private utils = new Utils();
 
   private async calculateAmountLeft(
     discountId: number,
     discountAmount: number
   ): Promise<number> {
-    const totalUsed = await prisma.discountCodedUses.aggregate({
+    const totalUsed = await this.prisma.discountCodedUses.aggregate({
       where: { discountCodeId: discountId },
       _sum: { amount: true },
     });
@@ -23,11 +21,10 @@ class Discount {
   }
 
   public async checkDiscount(code: string): Promise<any> {
-
     const lockKey = `lock:discount:${code}`;
 
     try {
-      const discount = await prisma.discountCode.findUnique({
+      const discount = await this.prisma.discountCode.findUnique({
         where: { code },
       });
 
@@ -53,17 +50,13 @@ class Discount {
         fullAmount: discount.amount,
         amountLeft: parseFloat(amountLeft.toFixed(2)),
       };
-    }  catch(error:any) {
+    } catch (error: any) {
       return { success: false, message: 'errorCheckingDiscountCode', error };
-  
     } finally {
       // Release the lock
       await this.cache.executeCommand('del', lockKey);
-    } 
+    }
   }
- 
-
-
 
   public async redeemDiscount(
     code: string,
@@ -77,18 +70,25 @@ class Discount {
 
     let lockAcquired = false;
     try {
-      lockAcquired = await cache.executeCommand('set', lockKey, 'locked', 'NX', 'PX', lockTimeout);
+      lockAcquired = await cache.executeCommand(
+        'set',
+        lockKey,
+        'locked',
+        'NX',
+        'PX',
+        lockTimeout
+      );
       if (!lockAcquired) {
         return { success: false, message: 'discountCodeInUse' };
       }
 
-      const isHuman = await utils.verifyRecaptcha(captchaToken);
+      const isHuman = await this.utils.verifyRecaptcha(captchaToken);
 
       if (!isHuman && process.env['ENVIRONMENT'] != 'development') {
         throw new Error('reCAPTCHA verification failed');
       }
 
-      return await prisma.$transaction(async (prisma) => {
+      return await this.prisma.$transaction(async (prisma) => {
         const discount = await prisma.discountCode.findUnique({
           where: { code },
         });
@@ -155,7 +155,7 @@ class Discount {
         await cache.executeCommand('del', lockKey);
       }
     }
-
+  }
 }
 
 export default Discount;
