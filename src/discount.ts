@@ -57,7 +57,6 @@ class Discount {
   public async redeemDiscount(
     code: string,
     amount: number,
-    paymentId: string,
     captchaToken: string
   ): Promise<any> {
     const cache = Cache.getInstance();
@@ -115,19 +114,10 @@ class Discount {
           };
         }
 
-        const payment = await prisma.payment.findUnique({
-          where: { paymentId },
-        });
-
-        if (!payment) {
-          return { success: false, message: 'paymentNotFound' };
-        }
-
         await prisma.discountCodedUses.create({
           data: {
             amount: parseFloat(amount.toFixed(2)),
             discountCodeId: discount.id,
-            paymentId: payment.id,
           },
         });
 
