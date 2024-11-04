@@ -20,6 +20,15 @@ class Discount {
     return discountAmount - amountUsed;
   }
 
+  public async calculateTotalDiscountForPayment(paymentId: number): Promise<number> {
+    const totalDiscount = await this.prisma.discountCodedUses.aggregate({
+      where: { paymentId: paymentId },
+      _sum: { amount: true },
+    });
+
+    return totalDiscount._sum.amount || 0;
+  }
+
   public async removeDiscountUsesByPaymentId(paymentId: number): Promise<any> {
     try {
       await this.prisma.discountCodedUses.deleteMany({

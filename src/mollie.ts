@@ -563,6 +563,16 @@ class Mollie {
             refreshPlaylists: string;
           };
 
+          const totalDiscount = await this.discount.calculateTotalDiscountForPayment(dbPayment.id);
+          await this.prisma.payment.update({
+            where: {
+              id: dbPayment.id,
+            },
+            data: {
+              discount: totalDiscount,
+            },
+          });
+
           this.generator.generate(
             params.id,
             metadata.clientIp,
