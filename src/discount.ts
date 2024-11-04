@@ -49,7 +49,7 @@ class Discount {
     }
   }
 
-  public async redeemDiscount(code: string, amount: number): Promise<any> {
+  public async redeemDiscount(code: string, amount: number, paymentId: string): Promise<any> {
     try {
       return await prisma.$transaction(async (prisma) => {
         const discount = await prisma.discountCode.findUnique({
@@ -77,14 +77,19 @@ class Discount {
           return { success: false, message: 'insufficientDiscountAmountLeft' };
         }
 
-        // Assuming a paymentId is available in the context.
-        const paymentId = 1; // Replace with actual payment ID or handle it as needed
+        const payment = await prisma.payment.findUnique({
+          where: { paymentId },
+        });
+
+        if (!payment) {
+          return { success: false, message: 'paymentNotFound' };
+        }
 
         await prisma.discountCodedUses.create({
           data: {
             amount: amount,
             discountCodeId: discount.id,
-            paymentId,
+            paymentId: payment.id,
           },
         });
 
