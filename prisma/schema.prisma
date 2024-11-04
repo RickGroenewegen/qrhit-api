@@ -29,6 +29,7 @@ model DiscountCode {
   updatedAt         DateTime            @updatedAt
   DiscountCodedUses DiscountCodedUses[]
 
+  @@index([code])
   @@map("discount_codes")
 }
 
@@ -42,6 +43,7 @@ model DiscountCodedUses {
   createdAt      DateTime     @default(now())
   updatedAt      DateTime     @updatedAt
 
+  @@index([discountCodeId])
   @@map("discount_codes_uses")
 }
 
