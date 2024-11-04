@@ -87,7 +87,12 @@ class Discount {
         );
 
         if (amountLeft < amount) {
-          return { success: false, message: 'insufficientDiscountAmountLeft' };
+          return {
+            success: false,
+            message: 'insufficientDiscountAmountLeft',
+            fullAmount: discount.amount,
+            amountLeft: parseFloat(amountLeft.toFixed(2)),
+          };
         }
 
         const payment = await prisma.payment.findUnique({
