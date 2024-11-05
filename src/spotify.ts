@@ -363,6 +363,10 @@ class Spotify {
 
           console.log(response.data.items);
 
+          // Log items without a 'track' property
+          const itemsWithoutTrack = response.data.items.filter((item: any) => !item.track);
+          console.log('Items without track:', itemsWithoutTrack);
+
           const tracks: Track[] = response.data.items
             .filter((item: any) => item.track.is_playable)
             .map((item: any) => ({
