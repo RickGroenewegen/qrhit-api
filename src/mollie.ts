@@ -523,6 +523,8 @@ class Mollie {
   }
 
   public async processWebhook(params: any): Promise<ApiResult> {
+    console.log(123, params);
+
     if (params.id) {
       let payment;
 
@@ -573,7 +575,11 @@ class Mollie {
         };
       }
 
-      if (dbPayment && dbPayment.status != payment.status) {
+      if (
+        dbPayment &&
+        (dbPayment.status != payment.status ||
+          process.env['ENVIRONMENT'] == 'development')
+      ) {
         if (payment.status == 'paid') {
           const metadata = payment.metadata as {
             clientIp: string;

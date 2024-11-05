@@ -703,18 +703,21 @@ class Server {
       );
     }
 
-    this.fastify.get('/discount/voucher/:type', async (request: any, reply: any) => {
-      const { type } = request.params;
-      try {
-        await reply.view(`voucher_${type}.ejs`);
-      } catch (error) {
-        if (error.code === 'ENOENT') {
-          reply.status(404).send({ error: 'Template not found' });
-        } else {
-          reply.status(500).send({ error: 'Internal Server Error' });
+    this.fastify.get(
+      '/discount/voucher/:type',
+      async (request: any, reply: any) => {
+        const { type } = request.params;
+        try {
+          await reply.view(`voucher_${type}.ejs`);
+        } catch (error) {
+          if (error.code === 'ENOENT') {
+            reply.status(404).send({ error: 'Template not found' });
+          } else {
+            reply.status(500).send({ error: 'Internal Server Error' });
+          }
         }
       }
-    });
+    );
   }
 }
 

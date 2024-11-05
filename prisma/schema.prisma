@@ -149,6 +149,7 @@ model taxRate {
 model Playlist {
   id             Int                  @id @default(autoincrement())
   playlistId     String               @unique
+  type           String               @default("playlist")
   name           String
   createdAt      DateTime             @default(now())
   updatedAt      DateTime             @updatedAt

@@ -126,6 +126,8 @@ class Generator {
     // Get all playlists associated with the payment
     const playlists = await this.data.getPlaylistsByPaymentId(paymentId);
 
+    console.log(1111, playlists);
+
     // If any of the playlists is not digital, we need to create a physical order
     for (const playlist of playlists) {
       if (playlist.orderType !== 'digital') {
