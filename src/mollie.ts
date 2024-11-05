@@ -40,7 +40,7 @@ class Mollie {
   }
 
   public startCron(): void {
-    new CronJob('*/1 * * *', async () => {
+    new CronJob('*/1 * * * *', async () => {
       await this.cleanPayments();
     }).start();
   }
