@@ -39,6 +39,12 @@ class Mollie {
     }
   }
 
+  public startCron(): void {
+    new CronJob('*/1 * * *', async () => {
+      await this.cleanPayments();
+    }).start();
+  }
+
   private async cleanPayments(): Promise<void> {
     try {
       const expiredPayments = await this.prisma.payment.findMany({
@@ -50,7 +56,7 @@ class Mollie {
         },
       });
 
-      const expiredPaymentIds = expiredPayments.map(payment => payment.id);
+      const expiredPaymentIds = expiredPayments.map((payment) => payment.id);
 
       if (expiredPaymentIds.length > 0) {
         await this.prisma.payment.deleteMany({
@@ -60,23 +66,20 @@ class Mollie {
         });
 
         this.logger.log(
-          color.green.bold(`Deleted ${expiredPaymentIds.length} expired payments.`)
+          color.green.bold(
+            `Deleted ${color.white.bold(
+              expiredPaymentIds.length
+            )} expired payments.`
+          )
         );
       } else {
-        this.logger.log(color.yellow.bold('No expired payments found to delete.'));
+        this.logger.log(
+          color.yellow.bold('No expired payments found to delete.')
+        );
       }
-    } catch (error) {
-      this.logger.log(
-        color.red.bold('Error cleaning expired payments: ') + color.white.bold(error.message)
-      );
+    } catch (error: any) {
+      this.logger.log(color.red.bold('Error cleaning expired payments!'));
     }
-  }
-
-  public startCron(): void {
-    new CronJob('*/10 * * * *', async () => {
-      // 10 0 * * *
-      await this.cleanPayments();
-    }).start();
   }
 
   private getMollieLocaleData(
