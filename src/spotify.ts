@@ -361,6 +361,8 @@ class Spotify {
 
           this.analytics.increaseCounter('spotify', 'tracks', 1);
 
+          console.log(response.data.items);
+
           const tracks: Track[] = response.data.items
             .filter((item: any) => item.track.is_playable)
             .map((item: any) => ({
@@ -424,6 +426,8 @@ class Spotify {
       this.cache.set(cacheKey, JSON.stringify(result));
       return result;
     } catch (e) {
+      console.log(111, e);
+
       return { success: false, error: 'Error getting tracks' };
     }
   }
