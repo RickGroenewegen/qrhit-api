@@ -39,6 +39,39 @@ class Mollie {
     }
   }
 
+  private async cleanPayments(): Promise<void> {
+    try {
+      const expiredPayments = await this.prisma.payment.findMany({
+        where: {
+          status: 'expired',
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      const expiredPaymentIds = expiredPayments.map(payment => payment.id);
+
+      if (expiredPaymentIds.length > 0) {
+        await this.prisma.payment.deleteMany({
+          where: {
+            id: { in: expiredPaymentIds },
+          },
+        });
+
+        this.logger.log(
+          color.green.bold(`Deleted ${expiredPaymentIds.length} expired payments.`)
+        );
+      } else {
+        this.logger.log(color.yellow.bold('No expired payments found to delete.'));
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold('Error cleaning expired payments: ') + color.white.bold(error.message)
+      );
+    }
+  }
+
   public startCron(): void {
     new CronJob('*/10 * * * *', async () => {
       // 10 0 * * *
