@@ -361,14 +361,8 @@ class Spotify {
 
           this.analytics.increaseCounter('spotify', 'tracks', 1);
 
-          console.log(response.data.items);
-
-          // Log items without a 'track' property
-          const itemsWithoutTrack = response.data.items.filter((item: any) => !item.track);
-          console.log('Items without track:', itemsWithoutTrack);
-
           const tracks: Track[] = response.data.items
-            .filter((item: any) => item.track.is_playable)
+            .filter((item: any) => item.track && item.track.is_playable)
             .map((item: any) => ({
               id: item.track.id,
               name: this.utils.cleanTrackName(item.track.name),
