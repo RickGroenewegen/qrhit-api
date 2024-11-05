@@ -213,7 +213,7 @@ class Order {
     new CronJob('*/10 * * * *', async () => {
       await this.getAuthToken(true);
     }).start();
-    new CronJob('0 1 * * *', async () => {
+    new CronJob('0 0 * * *', async () => {
       await this.updateFeaturedPlaylists();
     }).start();
   }
