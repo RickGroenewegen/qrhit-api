@@ -13,6 +13,8 @@ import { CartItem } from './interfaces/CartItem';
 import { OrderSearch } from './interfaces/OrderSearch';
 import axios from 'axios';
 import Discount from './discount';
+import { CronJob } from 'cron';
+import cluster from 'cluster';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -26,6 +28,23 @@ class Mollie {
   private openPaymentStatus = ['open', 'pending', 'authorized'];
   private paidPaymentStatus = ['paid'];
   private failedPaymentStatus = ['failed', 'canceled', 'expired'];
+
+  constructor() {
+    if (cluster.isPrimary) {
+      this.utils.isMainServer().then(async (isMainServer) => {
+        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+          this.startCron();
+        }
+      });
+    }
+  }
+
+  public startCron(): void {
+    new CronJob('*/10 * * * *', async () => {
+      // 10 0 * * *
+      await this.cleanPayments();
+    }).start();
+  }
 
   private getMollieLocaleData(
     locale: string,
