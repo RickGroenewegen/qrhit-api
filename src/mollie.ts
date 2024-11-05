@@ -245,12 +245,33 @@ class Mollie {
         }
       }
 
-      description = `${translations!.playlist} : ${
-        params.cart.items[0].playlistName
-      }`;
+      if (params.cart.items[0].productType == 'giftcard') {
+        description = `${translations!.giftcard}`;
+      } else {
+        description = `${translations!.playlist} : ${
+          params.cart.items[0].playlistName
+        }`;
+      }
 
       if (params.cart.items.length > 1) {
-        description = `${params.cart.items.length}x ${translations!.playlists}`;
+        // If it only contains giftcards, we can use the giftcard translation
+        if (
+          params.cart.items.every((item: any) => item.productType == 'giftcard')
+        ) {
+          description = `${params.cart.items.length}x ${
+            translations!.giftcards
+          }`;
+        } else if (
+          // If it only contains playlists, we can use the playlist translation
+          params.cart.items.every((item: any) => item.productType == 'playlist')
+        ) {
+          description = `${params.cart.items.length}x ${
+            translations!.playlists
+          }`;
+        } else {
+          // If it contains a mix of playlists and giftcards, we can use the items translation
+          description = `${params.cart.items.length}x ${translations!.items}`;
+        }
       }
 
       // Description is 255 characters max
@@ -511,8 +532,6 @@ class Mollie {
       } catch (e) {
         payment = await this.mollieClientTest.payments.get(params.id);
       }
-
-      console.log(111, payment);
 
       const dbPayment = await this.prisma.payment.findUnique({
         select: {

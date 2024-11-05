@@ -78,8 +78,11 @@
 	
 
 	"payment.playlist" : "Playlist",
+	"payment.giftcard" : "Gift card",
 	"payment.cards" : "QR Cards",
 	"payment.playlists" : "playlists",
+	"payment.giftcards" : "Gift cards",
+	"payment.items" : "Items",
 	"payment.digital" : "PDF containing",
 
 	"countdown.youNeedToInstall" : "Install our app to scan your cards!",

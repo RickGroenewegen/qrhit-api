@@ -220,7 +220,7 @@ class Order {
 
   public async getOrderTypes(type: string = 'cards') {
     let orderTypes = null;
-    let cacheKey = `orderTypes`;
+    let cacheKey = `orderTypes_${type}`;
     const cachedOrderType = await this.cache.get(cacheKey);
     if (cachedOrderType) {
       orderTypes = JSON.parse(cachedOrderType);
@@ -260,7 +260,7 @@ class Order {
     if (numberOfTracks > MAX_CARDS) {
       numberOfTracks = MAX_CARDS;
     }
-    let cacheKey = `orderType_${numberOfTracks}_${digitalInt}`;
+    let cacheKey = `orderType_${numberOfTracks}_${digitalInt}_${type}`;
     const cachedOrderType = await this.cache.get(cacheKey);
 
     if (cachedOrderType) {
@@ -292,35 +292,47 @@ class Order {
 
     let total = 0;
     let totalProductPriceWithoutVAT = 0;
+    let numberOfTracks = 0;
     const minimumAmount = 25;
     const maximumAmount = 500;
 
     for (const item of cartItems) {
-      let numberOfTracks = await this.spotify.getPlaylistTrackCount(
-        item.playlistId
-      );
+      if (item.productType == 'playlist') {
+        numberOfTracks = await this.spotify.getPlaylistTrackCount(
+          item.playlistId
+        );
 
-      if (numberOfTracks < minimumAmount) {
-        numberOfTracks = minimumAmount;
+        if (numberOfTracks < minimumAmount) {
+          numberOfTracks = minimumAmount;
+        }
+
+        if (numberOfTracks > maximumAmount) {
+          numberOfTracks = maximumAmount;
+        }
+
+        numberOfTracks = Math.min(
+          Math.max(numberOfTracks, minimumAmount),
+          maximumAmount
+        );
       }
 
-      if (numberOfTracks > maximumAmount) {
-        numberOfTracks = maximumAmount;
-      }
-
-      numberOfTracks = Math.min(
-        Math.max(numberOfTracks, minimumAmount),
-        maximumAmount
-      );
       const orderType = await this.getOrderType(
         numberOfTracks,
-        item.type === 'digital'
+        item.type === 'digital',
+        item.productType
       );
 
       if (orderType) {
-        const itemPrice = parseFloat(
-          (orderType.amountWithMargin * item.amount).toFixed(2)
-        );
+        let itemPrice = 0;
+
+        if (item.productType === 'playlist') {
+          itemPrice = parseFloat(
+            (orderType.amountWithMargin * item.amount).toFixed(2)
+          );
+        } else if (item.productType === 'giftcard') {
+          itemPrice = parseFloat(item.price.toFixed(2));
+        }
+
         const productPriceWithoutVAT = parseFloat(
           (itemPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)
         );
