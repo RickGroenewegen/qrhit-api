@@ -1,8 +1,8 @@
 import { PrismaClient } from '@prisma/client';
 import Utils from './utils';
 import Cache from './cache';
-import { uuidv7 as uuid } from 'uuidv7';
 import shortid from 'shortid';
+
 class Discount {
   private cache = Cache.getInstance();
   private prisma = new PrismaClient();
@@ -12,9 +12,11 @@ class Discount {
     try {
       // Configure shortid to use uppercase only and numbers
       shortid.characters('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ');
-      
+
       // Generate code in XXXX-XXXX-XXXX-XXXX format
-      const parts = Array.from({ length: 4 }, () => shortid.generate().substring(0, 4));
+      const parts = Array.from({ length: 4 }, () =>
+        shortid.generate().substring(0, 4)
+      );
       const code = parts.join('-');
 
       const discount = await this.prisma.discountCode.create({
