@@ -7,6 +7,24 @@ class Discount {
   private prisma = new PrismaClient();
   private utils = new Utils();
 
+  public async createDiscountCode(amount: number): Promise<number> {
+    try {
+      // Generate a random 8 character alphanumeric code
+      const code = Math.random().toString(36).substring(2, 10).toUpperCase();
+      
+      const discount = await this.prisma.discountCode.create({
+        data: {
+          code,
+          amount,
+        },
+      });
+
+      return discount.id;
+    } catch (error) {
+      throw new Error(`Failed to create discount code: ${error}`);
+    }
+  }
+
   private async calculateAmountLeft(
     discountId: number,
     discountAmount: number
