@@ -8,17 +8,18 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
     <style>
         @page {
-            size: A5;
+            size: A5 landscape;
             margin: 0;
         }
         body {
             margin: 0;
             padding: 0;
             font-family: 'Inter', sans-serif;
+            background: white;
         }
         .page {
-            width: 148mm;
-            height: 210mm;
+            width: 210mm;
+            height: 148mm;
             position: relative;
             overflow: hidden;
             page-break-after: always;
@@ -27,10 +28,10 @@
             position: absolute;
             top: 0;
             right: 0;
-            width: 50%;
+            width: 45%;
             height: 100%;
             background: #4B96D1;
-            clip-path: polygon(100% 0, 0 0, 100% 100%);
+            clip-path: polygon(100% 0, 30% 0, 100% 100%);
             z-index: -1;
         }
         .content {
@@ -46,16 +47,19 @@
             margin-bottom: 40px;
         }
         .gift-voucher {
-            font-size: 48px;
+            font-size: 42px;
             font-weight: 900;
             margin: 0;
             line-height: 1;
+            color: #000;
+            margin-top: 20px;
         }
         .amount {
-            font-size: 120px;
+            font-size: 110px;
             font-weight: 900;
             margin: 0;
             line-height: 1;
+            color: #000;
         }
         .description {
             font-size: 16px;
@@ -96,10 +100,10 @@
         }
         .cards-image {
             position: absolute;
-            right: 20px;
-            top: 50%;
+            right: 40px;
+            top: 45%;
             transform: translateY(-50%);
-            width: 300px;
+            width: 380px;
             height: auto;
         }
     </style>
