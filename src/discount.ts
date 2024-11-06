@@ -8,7 +8,9 @@ class Discount {
   private prisma = new PrismaClient();
   private utils = new Utils();
 
-  public async createDiscountCode(amount: number): Promise<{id: number, code: string}> {
+  public async createDiscountCode(
+    amount: number
+  ): Promise<{ id: number; code: string }> {
     try {
       // Configure shortid to use uppercase only and numbers
       shortid.characters('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ');
@@ -28,7 +30,7 @@ class Discount {
 
       return {
         id: discount.id,
-        code: code
+        code: code,
       };
     } catch (error) {
       throw new Error(`Failed to create discount code: ${error}`);
