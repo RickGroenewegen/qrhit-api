@@ -514,8 +514,6 @@ class Generator {
         : Promise.resolve(''),
     ]);
 
-    console.log(222, generatedFilenameDigital, generatedFilename);
-
     filename = generatedFilename;
     filenameDigital = generatedFilenameDigital;
 

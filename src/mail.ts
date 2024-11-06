@@ -206,36 +206,15 @@ class Mail {
         },
       ];
 
-      // Add the non-digital file as an attachment if it exists and the email is trusted
-      if (
-        filename &&
-        filename.length > 0 &&
-        orderType == 'digital' &&
-        this.utils.isTrustedEmail(payment.email!)
-      ) {
-        const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+      if (orderType === 'voucher_digital') {
+        const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
         const fileBuffer = await fs.readFile(filePath);
         const fileBase64 = this.wrapBase64(fileBuffer.toString('base64'));
-        // attachments.push({
-        //   contentType: 'application/pdf',
-        //   filename,
-        //   data: fileBase64,
-        // });
-      }
-
-      // Add the digital file as an attachment
-      if (filenameDigital && filenameDigital.length > 0) {
-        const filePathDigital = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
-        const fileBufferDigital = await fs.readFile(filePathDigital);
-        const fileBase64Digital = this.wrapBase64(
-          fileBufferDigital.toString('base64')
-        );
-
-        // attachments.push({
-        //   contentType: 'application/pdf',
-        //   filename: filenameDigital,
-        //   data: fileBase64Digital,
-        // });
+        attachments.push({
+          contentType: 'application/pdf',
+          filename: 'voucher.pdf',
+          data: fileBase64,
+        });
       }
 
       const rawEmail = await this.renderRaw({
