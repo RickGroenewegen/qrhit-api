@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import Utils from './utils';
 import Cache from './cache';
-import shortid from 'shortid';
+import { customAlphabet } from 'nanoid';
 
 class Discount {
   private cache = Cache.getInstance();
@@ -12,13 +12,11 @@ class Discount {
     amount: number
   ): Promise<{ id: number; code: string }> {
     try {
-      // Configure shortid with exactly 64 unique characters
-      shortid.characters('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ_-#@$*()+=[]{}|;:,.<>?/!~^%&abcdefgh');
-
+      // Create nanoid with only uppercase letters and numbers
+      const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 4);
+      
       // Generate code in XXXX-XXXX-XXXX-XXXX format
-      const parts = Array.from({ length: 4 }, () =>
-        shortid.generate().substring(0, 4)
-      );
+      const parts = Array.from({ length: 4 }, () => nanoid());
       const code = parts.join('-');
 
       const discount = await this.prisma.discountCode.create({
