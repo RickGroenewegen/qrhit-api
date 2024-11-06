@@ -163,6 +163,18 @@ const checkTranslationStatus = (translatedCache, key, languages) => {
   );
 };
 
+const flattenJson = (obj, parentKey = '', result = {}) => {
+  for (let key in obj) {
+    const newKey = parentKey ? `${parentKey}.${key}` : key;
+    if (typeof obj[key] === 'object' && obj[key] !== null) {
+      flattenJson(obj[key], newKey, result);
+    } else {
+      result[newKey] = obj[key];
+    }
+  }
+  return result;
+};
+
 const translateJson = async (
   json,
   translatedCache,
@@ -173,6 +185,8 @@ const translateJson = async (
   const batchSize = 10; // Adjust this value based on your needs and API limits
   let batchTexts = [];
   let batchPaths = [];
+
+  json = flattenJson(json);
 
   const processBatch = async () => {
     if (batchTexts.length > 0) {
