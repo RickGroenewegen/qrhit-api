@@ -124,14 +124,7 @@ const translate = async (texts, currentPaths, translatedCache) => {
 
 const mergeTranslations = (target, translated) => {
   for (let key in translated) {
-    if (
-      typeof translated[key] === 'object' &&
-      typeof target[key] === 'object'
-    ) {
-      mergeTranslations(target[key], translated[key]);
-    } else {
-      target[key] = translated[key];
-    }
+    target[key] = translated[key];
   }
 };
 
@@ -254,49 +247,34 @@ const translateJson = async (
   for (let key in json) {
     let currentPath = parentKey ? `${parentKey}.${key}` : key;
 
-    if (typeof json[key] === 'object') {
-      let translatedNested = await translateJson(
-        json[key],
-        translatedCache,
-        currentPath,
-        languageFiles
-      );
-      for (let lang in translatedNested) {
+    let translationNeeded = languages.some(
+      (lang) => !checkTranslationStatus(translatedCache, currentPath, [lang])
+    );
+
+    if (translationNeeded) {
+      batchTexts.push(json[key]);
+      batchPaths.push(currentPath);
+
+      if (batchTexts.length >= batchSize) {
+        await processBatch();
+      }
+    } else {
+      for (let lang of languages) {
         if (!translated[lang]) {
           translated[lang] = {};
         }
-        translated[lang][key] = translatedNested[lang];
-      }
-    } else {
-      let translationNeeded = languages.some(
-        (lang) => !checkTranslationStatus(translatedCache, currentPath, [lang])
-      );
-
-      if (translationNeeded) {
-        batchTexts.push(json[key]);
-        batchPaths.push(currentPath);
-
-        if (batchTexts.length >= batchSize) {
-          await processBatch();
-        }
-      } else {
-        for (let lang of languages) {
-          if (!translated[lang]) {
-            translated[lang] = {};
+        // Use existing translation from languageFiles
+        let tempObj = languageFiles[lang];
+        const pathParts = currentPath.split('.');
+        for (let part of pathParts) {
+          if (tempObj && tempObj[part]) {
+            tempObj = tempObj[part];
+          } else {
+            tempObj = undefined;
+            break;
           }
-          // Use existing translation from languageFiles
-          let tempObj = languageFiles[lang];
-          const pathParts = currentPath.split('.');
-          for (let part of pathParts) {
-            if (tempObj && tempObj[part]) {
-              tempObj = tempObj[part];
-            } else {
-              tempObj = undefined;
-              break;
-            }
-          }
-          translated[lang][key] = tempObj !== undefined ? tempObj : json[key];
         }
+        translated[lang][key] = tempObj !== undefined ? tempObj : json[key];
       }
     }
   }
