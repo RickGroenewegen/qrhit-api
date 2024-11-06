@@ -273,11 +273,15 @@ class Mollie {
         }
       }
 
+      console.log(111, params.cart);
+
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
         countrycode: params.extraOrderData.countrycode,
         cart: params.cart,
       });
+
+      console.log(222, calculateResult);
 
       if (discountAmount > calculateResult.data.total) {
         discountAmount = calculateResult.data.total;

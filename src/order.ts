@@ -297,7 +297,7 @@ class Order {
     const maximumAmount = 500;
 
     for (const item of cartItems) {
-      if (item.productType == 'playlist') {
+      if (item.productType == 'cards') {
         numberOfTracks = await this.spotify.getPlaylistTrackCount(
           item.playlistId
         );
@@ -325,7 +325,7 @@ class Order {
       if (orderType) {
         let itemPrice = 0;
 
-        if (item.productType === 'playlist') {
+        if (item.productType === 'cards') {
           itemPrice = parseFloat(
             (orderType.amountWithMargin * item.amount).toFixed(2)
           );

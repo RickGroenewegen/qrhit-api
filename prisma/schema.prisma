@@ -24,7 +24,7 @@ model DiscountCode {
   code              String              @unique
   amount            Float
   message           String?
-  from              String?
+  from              String?             @db.Text
   startDate         DateTime?
   endDate           DateTime?
   createdAt         DateTime            @default(now())
