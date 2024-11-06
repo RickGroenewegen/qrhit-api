@@ -217,7 +217,7 @@ class Generator {
         );
       } else if (productType == 'giftcard') {
         await this.mail.sendEmail(
-          'voucher_digital',
+          'voucher_' + playlist.orderType,
           payment,
           [playlist],
           filename,
@@ -236,7 +236,8 @@ class Generator {
       );
       const orderData = await this.order.createOrder(
         payment,
-        physicalPlaylists
+        physicalPlaylists,
+        productType
       );
       printApiOrderId = orderData.response.id;
       printApiOrderRequest = JSON.stringify(orderData.request);

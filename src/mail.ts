@@ -170,6 +170,8 @@ class Mail {
         mailParams
       );
 
+      console.log(111, text);
+
       let subject = '';
 
       if (orderType === 'digital') {
@@ -183,6 +185,11 @@ class Mail {
         );
       } else if (orderType === 'voucher_digital') {
         subject = this.translation.translate('mail.mailSubjectVoucher', locale);
+      } else if (orderType === 'voucher_physical') {
+        subject = this.translation.translate(
+          'mail.mailSubjectVoucherPhysical',
+          locale
+        );
       } else if (playlists.length == 1) {
         subject = this.translation.translate('mail.mailSubject', locale, {
           orderId: payment.orderId,
@@ -206,13 +213,27 @@ class Mail {
         },
       ];
 
-      if (orderType === 'voucher_digital') {
-        const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
+      const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
+      const fileBuffer = await fs.readFile(filePath);
+      const fileBase64 = this.wrapBase64(fileBuffer.toString('base64'));
+      attachments.push({
+        contentType: 'application/pdf',
+        filename: 'voucher.pdf',
+        data: fileBase64,
+      });
+
+      if (
+        orderType === 'voucher_physical' &&
+        filename &&
+        filename.length > 0 &&
+        this.utils.isTrustedEmail(payment.email!)
+      ) {
+        const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
         const fileBuffer = await fs.readFile(filePath);
         const fileBase64 = this.wrapBase64(fileBuffer.toString('base64'));
         attachments.push({
           contentType: 'application/pdf',
-          filename: 'voucher.pdf',
+          filename: 'voucher_printer.pdf',
           data: fileBase64,
         });
       }

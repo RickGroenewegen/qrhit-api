@@ -526,7 +526,11 @@ class Order {
     return authToken;
   }
 
-  public async createOrder(payment: any, playlists: any[]): Promise<any> {
+  public async createOrder(
+    payment: any,
+    playlists: any[],
+    productType: string
+  ): Promise<any> {
     const authToken = await this.getAuthToken();
     let response: string = '';
 
@@ -534,15 +538,22 @@ class Order {
 
     for (var i = 0; i < playlists.length; i++) {
       const playlist = playlists[i];
-      const orderType = await this.getOrderType(playlist.numberOfTracks, false);
-
-      const pageCount = await this.pdf.countPDFPages(
-        `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
+      const orderType = await this.getOrderType(
+        playlist.numberOfTracks,
+        false,
+        productType
       );
+
+      let pageCount = 2;
+
+      if (orderType != 'giftcard') {
+        // pageCount = await this.pdf.countPDFPages(
+        // `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
+      }
 
       itemsToSend.push({
         productId: orderType.printApiProductId,
-        pageCount: 2, //TODO: Replace with this pageCount,
+        pageCount, //TODO: Replace with this pageCount,
         metadata: JSON.stringify({
           filename: playlist.filename,
           id: playlist.playlist.paymentHasPlaylistId,
