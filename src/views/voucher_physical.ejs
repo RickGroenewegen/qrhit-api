@@ -46,6 +46,7 @@
             font-size: 14px;
             color: #333;
             margin-bottom: 35px;
+            margin-top:5px;
         }
         .gift-voucher {
             font-size: 32px;
@@ -63,8 +64,8 @@
             margin: 0;
             line-height: 0.9;
             color: #1a1a1a;
-            letter-spacing: -2px;
-            margin-bottom: 15px;
+            letter-spacing: 5px;
+            margin-bottom: 20px;
         }
         .description {
             font-size: 15px;
@@ -126,25 +127,25 @@
         <div class="blue-triangle"></div>
         <div class="content">
             <img src="https://www.qrsong.io/assets/images/logo.png" alt="QRSong Logo" class="logo">
-            <div class="tagline">Transform your Spotify playlists into real QR music cards!</div>
+            <div class="tagline"><%= translations.transform %></div>
             
-            <h1 class="gift-voucher">GIFT VOUCHER</h1>
-            <h2 class="amount">€20</h2>
+            <h1 class="gift-voucher"><%= translations.title %></h1>
+            <h2 class="amount">€<%= discount.amount %></h2>
             
-            <p class="description">"Turn any Spotify playlist into QR music cards delivered to your doorstep!"</p>
+            <p class="description">"<%= translations.turn %>"</p>
             
             <div class="instructions">
-                <h3>Claim your Gift Voucher</h3>
+                <h3><%= translations.claim %></h3>
                 <ol>
-                    <li>Go to https://www.qrsong.io</li>
-                    <li>Click 'Gift cards'</li>
-                    <li>Enter the voucher code and click 'Redeem'</li>
-                    <li>Discount will be applied on first purchase</li>
+                    <li><%= translations.goTo %>: https://<%= process.env['APP_DOMAIN'] %></li>
+                    <li><%= translations.click %></li>
+                    <li><%= translations.enterCode %></li>
+                    <li><%= translations.discountWillBeApplied %></li>
                 </ol>
             </div>
 
-            <a href="https://www.qrsong.io" class="website">www.qrsong.io</a>
-            <div class="voucher-code">Code: XXXX-XXXX-XXXX-XXXX</div>
+            <a href="https://www.qrsong.io" class="website"><%= process.env['APP_DOMAIN'] %></a>
+            <div class="voucher-code"><%= translations.code %>: <%= discount.code %></div>
             
             <img src="https://www.qrsong.io/assets/images/cards_transparant.png" alt="QR Cards" class="cards-image">
         </div>
