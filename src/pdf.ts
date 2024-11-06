@@ -204,12 +204,12 @@ class PDF {
     let options = {
       File: url,
       RespectViewport: 'false',
-      PageSize: 'a5',
+      PageSize: 'a4',
       MarginTop: 0,
       MarginRight: 0,
       MarginBottom: 0,
       MarginLeft: 0,
-      PageRange: '1-2',
+      PageRange: '1',
       CompressPDF: 'true',
     } as any;
 
@@ -217,6 +217,7 @@ class PDF {
       options['PageSize'] = 'a5';
       options['MarginTop'] = 0;
       options['MarginLeft'] = 0;
+      options['PageRange'] = '1-2';
     }
 
     const result = await this.convertapi.convert('pdf', options, 'htm');
