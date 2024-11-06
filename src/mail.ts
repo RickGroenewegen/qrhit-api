@@ -181,6 +181,8 @@ class Mail {
             playlist: playlists[0].name,
           }
         );
+      } else if (orderType === 'voucher_digital') {
+        subject = this.translation.translate('mail.mailSubjectVoucher', locale);
       } else if (playlists.length == 1) {
         subject = this.translation.translate('mail.mailSubject', locale, {
           orderId: payment.orderId,

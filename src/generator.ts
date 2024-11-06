@@ -162,7 +162,7 @@ class Generator {
           subdir
         );
         filename = result.filename;
-        filenameDigital = result.filename;
+        filenameDigital = result.filenameDigital;
       } else if (productType == 'giftcard') {
         const result = await this.generateGiftcardPDF(
           payment,
@@ -171,7 +171,7 @@ class Generator {
           subdir
         );
         filename = result.filename;
-        filenameDigital = result.filename;
+        filenameDigital = result.filenameDigital;
       }
 
       if (playlist.orderType !== 'digital') {
@@ -207,13 +207,23 @@ class Generator {
       }
 
       // Call sendEmail to notify the user
-      await this.mail.sendEmail(
-        'digital',
-        payment,
-        [playlist],
-        filename,
-        filenameDigital
-      );
+      if (productType == 'cards') {
+        await this.mail.sendEmail(
+          'digital',
+          payment,
+          [playlist],
+          filename,
+          filenameDigital
+        );
+      } else if (productType == 'giftcard') {
+        await this.mail.sendEmail(
+          'voucher_digital',
+          payment,
+          [playlist],
+          filename,
+          filenameDigital
+        );
+      }
     }
 
     let printApiOrderId = '';
@@ -503,6 +513,8 @@ class Generator {
           )
         : Promise.resolve(''),
     ]);
+
+    console.log(222, generatedFilenameDigital, generatedFilename);
 
     filename = generatedFilename;
     filenameDigital = generatedFilenameDigital;

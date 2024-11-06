@@ -222,22 +222,22 @@ class PDF {
     const result = await this.convertapi.convert('pdf', options, 'htm');
     await result.saveFiles(tempFilePath);
 
-    // this.analytics.increaseCounter('pdf', 'generated', 1);
+    this.analytics.increaseCounter('pdf', 'generated', 1);
 
-    // this.logger.log(
-    //   color.blue.bold(
-    //     `Generated temporary PDF: ${color.white.bold(tempFilename)}`
-    //   )
-    // );
+    this.logger.log(
+      color.blue.bold(
+        `Generated temporary PDF: ${color.white.bold(tempFilename)}`
+      )
+    );
 
-    // const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+    const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
 
-    // if (template === 'printer') {
-    //   // Resize them to exactly 60x60 mm because convertAPI is slightly off
-    //   await this.resizePDFPages(finalPath, 60, 60);
-    //   // Add a 3 mm bleed for PrintAPI
-    //   await this.addBleed(finalPath, 3);
-    // }
+    if (template === 'printer') {
+      // Resize them to exactly 60x60 mm because convertAPI is slightly off
+      await this.resizePDFPages(finalPath, 210, 148);
+      // Add a 3 mm bleed for PrintAPI
+      await this.addBleed(finalPath, 3);
+    }
 
     return filename;
   }
