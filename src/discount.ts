@@ -182,6 +182,30 @@ class Discount {
       }
     }
   }
+
+  public async getDiscountDetails(code: string): Promise<any> {
+    try {
+      const discount = await this.prisma.discountCode.findUnique({
+        where: { code },
+        select: {
+          id: true,
+          amount: true
+        }
+      });
+
+      if (!discount) {
+        return { success: false, message: 'discountCodeNotFound' };
+      }
+
+      return {
+        success: true,
+        id: discount.id,
+        amount: discount.amount
+      };
+    } catch (error) {
+      return { success: false, message: 'errorRetrievingDiscountCode', error };
+    }
+  }
 }
 
 export default Discount;
