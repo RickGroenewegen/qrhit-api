@@ -23,8 +23,8 @@ const languagesFull = [
 
 // Initialize rate limiter with desired limits
 const limiter = new Bottleneck({
-  maxConcurrent: 2, // Number of concurrent requests
-  minTime: 2000, // Minimum time (in milliseconds) between consecutive requests
+  maxConcurrent: 2,
+  minTime: 2000,
 });
 
 const pause = (duration) => {
@@ -33,6 +33,20 @@ const pause = (duration) => {
   });
 };
 
+// Flattens nested JSON objects into dot notation
+const flattenJson = (obj, parentKey = '', result = {}) => {
+  for (let key in obj) {
+    const newKey = parentKey ? `${parentKey}.${key}` : key;
+    if (typeof obj[key] === 'object' && obj[key] !== null) {
+      flattenJson(obj[key], newKey, result);
+    } else {
+      result[newKey] = obj[key];
+    }
+  }
+  return result;
+};
+
+// Convert flat json back to nested (removed - we'll keep everything flat)
 const translate = async (texts, currentPaths, translatedCache) => {
   await pause(5000);
 
@@ -89,20 +103,13 @@ const translate = async (texts, currentPaths, translatedCache) => {
       let answer = completion.choices[0].message.content.trim();
       let returnValue = null;
 
-      // Find the index of the first '{'
       const index = answer.indexOf('{');
-
-      // Remove all characters before the first '{'
       answer = answer.slice(index);
-
-      // Remove trailing ```
       answer = answer.replace(/```/g, '');
 
       try {
         returnValue = JSON.parse(answer);
-        console.log(returnValue);
       } catch (e) {
-        // Invalid JSON response
         console.error(
           'Invalid JSON response: '.red.bold + e.message.white.bold
         );
@@ -111,21 +118,13 @@ const translate = async (texts, currentPaths, translatedCache) => {
 
       return returnValue;
     } catch (error) {
-      // Axios request error
       console.error('Axios request error:'.red.bold, error.message.white.bold);
       return null;
     }
   };
 
-  // Rate limit the translation function
   const translatedTexts = await limiter.schedule(requestFunc);
   return translatedTexts;
-};
-
-const mergeTranslations = (target, translated) => {
-  for (let key in translated) {
-    target[key] = translated[key];
-  }
 };
 
 const checkExistingFiles = async () => {
@@ -156,30 +155,27 @@ const checkTranslationStatus = (translatedCache, key, languages) => {
   );
 };
 
-const flattenJson = (obj, parentKey = '', result = {}) => {
-  for (let key in obj) {
-    const newKey = parentKey ? `${parentKey}.${key}` : key;
-    if (typeof obj[key] === 'object' && obj[key] !== null) {
-      flattenJson(obj[key], newKey, result);
-    } else {
-      result[newKey] = obj[key];
-    }
-  }
-  return result;
-};
-
 const translateJson = async (
   json,
   translatedCache,
   parentKey = '',
   languageFiles = {}
 ) => {
-  const translated = {};
-  const batchSize = 10; // Adjust this value based on your needs and API limits
+  const flatJson = flattenJson(json);
+  const batchSize = 10;
   let batchTexts = [];
   let batchPaths = [];
 
-  json = flattenJson(json);
+  // Initialize flat language files
+  for (let lang of languages) {
+    if (!languageFiles[lang]) {
+      languageFiles[lang] = {};
+    }
+    // Ensure existing translations are flat
+    if (Object.keys(languageFiles[lang]).length > 0) {
+      languageFiles[lang] = flattenJson(languageFiles[lang]);
+    }
+  }
 
   const processBatch = async () => {
     if (batchTexts.length > 0) {
@@ -192,15 +188,12 @@ const translateJson = async (
       if (translatedTexts !== null) {
         for (let i = 0; i < batchTexts.length; i++) {
           let currentPath = batchPaths[i];
-          let key = currentPath.split('.').pop();
 
           for (let lang of languages) {
-            if (!translated[lang]) {
-              translated[lang] = {};
-            }
-
             if (translatedTexts[i] && translatedTexts[i][lang]) {
-              translated[lang][key] = translatedTexts[i][lang];
+              // Store translations with flat keys
+              languageFiles[lang][currentPath] = translatedTexts[i][lang];
+
               if (!translatedCache[currentPath]) {
                 translatedCache[currentPath] = [];
               }
@@ -208,20 +201,7 @@ const translateJson = async (
                 translatedCache[currentPath].push(lang);
               }
 
-              if (!languageFiles[lang]) {
-                languageFiles[lang] = {};
-              }
-              let tempObj = languageFiles[lang];
-              const pathParts = currentPath.split('.');
-              for (let j = 0; j < pathParts.length - 1; j++) {
-                if (!tempObj[pathParts[j]]) {
-                  tempObj[pathParts[j]] = {};
-                }
-                tempObj = tempObj[pathParts[j]];
-              }
-              tempObj[pathParts[pathParts.length - 1]] =
-                translatedTexts[i][lang];
-
+              // Write flat structure to file
               await fs.writeFile(
                 path.join(baseDirPath, `${lang}.json`),
                 JSON.stringify(languageFiles[lang], null, 2),
@@ -244,37 +224,27 @@ const translateJson = async (
     }
   };
 
-  for (let key in json) {
-    let currentPath = parentKey ? `${parentKey}.${key}` : key;
-
+  for (let key in flatJson) {
     let translationNeeded = languages.some(
-      (lang) => !checkTranslationStatus(translatedCache, currentPath, [lang])
+      (lang) => !checkTranslationStatus(translatedCache, key, [lang])
     );
 
     if (translationNeeded) {
-      batchTexts.push(json[key]);
-      batchPaths.push(currentPath);
+      batchTexts.push(flatJson[key]);
+      batchPaths.push(key);
 
       if (batchTexts.length >= batchSize) {
         await processBatch();
       }
     } else {
+      // Copy existing translations while maintaining flat structure
       for (let lang of languages) {
-        if (!translated[lang]) {
-          translated[lang] = {};
+        if (languageFiles[lang][key]) {
+          // Use existing translation
+          continue;
         }
-        // Use existing translation from languageFiles
-        let tempObj = languageFiles[lang];
-        const pathParts = currentPath.split('.');
-        for (let part of pathParts) {
-          if (tempObj && tempObj[part]) {
-            tempObj = tempObj[part];
-          } else {
-            tempObj = undefined;
-            break;
-          }
-        }
-        translated[lang][key] = tempObj !== undefined ? tempObj : json[key];
+        // If no translation exists, copy from source
+        languageFiles[lang][key] = flatJson[key];
       }
     }
   }
@@ -288,7 +258,7 @@ const translateJson = async (
     'utf8'
   );
 
-  return translated;
+  return languageFiles;
 };
 
 const main = async () => {
@@ -302,7 +272,6 @@ const main = async () => {
       .catch(() => false)
   ) {
     const cacheData = await fs.readFile(cacheFile, 'utf8');
-
     translatedCache = JSON.parse(cacheData);
   }
 

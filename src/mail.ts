@@ -170,8 +170,6 @@ class Mail {
         mailParams
       );
 
-      console.log(111, text);
-
       let subject = '';
 
       if (orderType === 'digital') {
