@@ -30,6 +30,7 @@ model DiscountCode {
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   DiscountCodedUses DiscountCodedUses[]
+  Playlist          Playlist[]
 
   @@index([code])
   @@map("discount_codes")
@@ -149,20 +150,25 @@ model taxRate {
 }
 
 model Playlist {
-  id             Int                  @id @default(autoincrement())
-  playlistId     String               @unique
-  type           String               @default("playlist")
-  name           String
-  createdAt      DateTime             @default(now())
-  updatedAt      DateTime             @updatedAt
-  featured       Boolean              @default(false)
-  featuredLocale String?
-  image          String
-  price          Float                @default(0)
-  numberOfTracks Int                  @default(0)
-  resetCache     Boolean              @default(false)
-  tracks         PlaylistHasTrack[]
-  Payment        PaymentHasPlaylist[]
+  id              Int                  @id @default(autoincrement())
+  playlistId      String               @unique
+  type            String               @default("cards")
+  name            String
+  createdAt       DateTime             @default(now())
+  updatedAt       DateTime             @updatedAt
+  featured        Boolean              @default(false)
+  featuredLocale  String?
+  image           String
+  price           Float                @default(0)
+  numberOfTracks  Int                  @default(0)
+  resetCache      Boolean              @default(false)
+  discountId      Int?
+  giftcardAmount  Float                @default(0)
+  giftcardFrom    String?
+  giftcardMessage String?
+  DiscountCode    DiscountCode?        @relation(fields: [discountId], references: [id])
+  tracks          PlaylistHasTrack[]
+  Payment         PaymentHasPlaylist[]
 
   @@index([playlistId])
   @@map("playlists")

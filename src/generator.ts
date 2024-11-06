@@ -19,6 +19,7 @@ import AnalyticsClient from './analytics';
 import { CronJob } from 'cron';
 import cluster from 'cluster';
 import { Track } from '@prisma/client';
+import Discount from './discount';
 
 class Generator {
   private logger = new Logger();
@@ -32,6 +33,7 @@ class Generator {
   private pdf = new PDF();
   private order = Order.getInstance();
   private analytics = AnalyticsClient.getInstance();
+  private discount = new Discount();
 
   constructor() {
     this.setupQRCleanupCron();
@@ -101,6 +103,7 @@ class Generator {
     );
 
     let orderType = 'digital';
+    let productType = 'cards';
 
     const refreshPlaylistArray = refreshPlaylists.split(',');
 
@@ -126,32 +129,50 @@ class Generator {
     // Get all playlists associated with the payment
     const playlists = await this.data.getPlaylistsByPaymentId(paymentId);
 
-    console.log(1111, playlists);
-
     // If any of the playlists is not digital, we need to create a physical order
     for (const playlist of playlists) {
       if (playlist.orderType !== 'digital') {
         orderType = 'physical';
-        break;
+      }
+      if (playlist.productType == 'giftcard') {
+        productType = 'giftcard';
       }
     }
 
     const physicalPlaylists = [];
 
     // Send the main mail
-    await this.mail.sendEmail('main_' + orderType, payment, playlists);
+    if (productType == 'cards') {
+      await this.mail.sendEmail('main_' + orderType, payment, playlists);
+    }
 
     // Create a random 16 character string
     const subdir = sanitizeFilename(crypto.randomBytes(8).toString('hex'));
 
     for (const playlist of playlists) {
-      const { filename, filenameDigital } = await this.generatePDF(
-        payment,
-        playlist,
-        ip,
-        refreshPlaylistArray.includes(playlist.playlistId),
-        subdir
-      );
+      let filename = '';
+      let filenameDigital = '';
+
+      if (productType == 'cards') {
+        const result = await this.generatePDF(
+          payment,
+          playlist,
+          ip,
+          refreshPlaylistArray.includes(playlist.playlistId),
+          subdir
+        );
+        filename = result.filename;
+        filenameDigital = result.filename;
+      } else if (productType == 'giftcard') {
+        const result = await this.generateGiftcardPDF(
+          payment,
+          playlist,
+          ip,
+          subdir
+        );
+        filename = result.filename;
+        filenameDigital = result.filename;
+      }
 
       if (playlist.orderType !== 'digital') {
         physicalPlaylists.push({ playlist, filename });
@@ -426,6 +447,65 @@ class Generator {
       filename = generatedFilename;
       filenameDigital = generatedFilenameDigital;
     }
+
+    return { filename, filenameDigital };
+  }
+
+  private async generateGiftcardPDF(
+    payment: any,
+    playlist: any,
+    ip: string,
+    subdir: string
+  ): Promise<{ filename: string; filenameDigital: string }> {
+    let filename = '';
+    let filenameDigital = '';
+
+    this.logger.log(
+      blue.bold(`Generating PDF for giftcard: ${white.bold(playlist.name)}`)
+    );
+
+    const hash = crypto
+      .createHmac('sha256', process.env['PLAYLIST_SECRET']!)
+      .update(playlist.playlistId)
+      .digest('hex');
+
+    filename = sanitizeFilename(
+      `${hash}_printer.pdf`.replace(/ /g, '_')
+    ).toLowerCase();
+    filenameDigital = sanitizeFilename(
+      `${hash}_digital.pdf`.replace(/ /g, '_')
+    ).toLowerCase();
+
+    // Now we generate the discount code
+    const discount = await this.discount.createDiscountCode(
+      playlist.giftcardAmount,
+      playlist.giftcardFrom,
+      playlist.giftcardMessage
+    );
+
+    const [generatedFilenameDigital, generatedFilename] = await Promise.all([
+      this.pdf.generateGiftcardPDF(
+        filenameDigital,
+        playlist,
+        discount,
+        payment,
+        'digital',
+        subdir
+      ),
+      playlist.orderType != 'digital'
+        ? this.pdf.generateGiftcardPDF(
+            filename,
+            playlist,
+            discount,
+            payment,
+            'printer',
+            subdir
+          )
+        : Promise.resolve(''),
+    ]);
+
+    filename = generatedFilename;
+    filenameDigital = generatedFilenameDigital;
 
     return { filename, filenameDigital };
   }

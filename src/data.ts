@@ -160,6 +160,10 @@ class Data {
         playlists.id,
         playlists.playlistId,
         playlists.name,
+        playlists.type AS productType,
+        playlists.giftcardAmount,
+        playlists.giftcardFrom,
+        playlists.giftcardMessage,
         payment_has_playlist.id AS paymentHasPlaylistId,
         payment_has_playlist.price,
         payment_has_playlist.priceWithoutVAT,
@@ -311,6 +315,10 @@ class Data {
             image: cartItem.image,
             price: cartItem.price,
             numberOfTracks: cartItem.numberOfTracks,
+            type: cartItem.productType,
+            giftcardAmount: cartItem.price,
+            giftcardFrom: cartItem.fromName,
+            giftcardMessage: cartItem.personalMessage,
           },
         });
         playlistDatabaseId = playlistCreate.id;

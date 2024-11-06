@@ -184,6 +184,64 @@ class PDF {
     return filename;
   }
 
+  public async generateGiftcardPDF(
+    filename: string,
+    playlist: Playlist,
+    discount: any,
+    payment: any,
+    template: string,
+    subdir: string
+  ): Promise<string> {
+    const url = `${process.env['API_URI']}/discount/voucher/${template}/${discount.code}/${payment.paymentId}`;
+
+    this.logger.log(
+      color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)
+    );
+
+    const tempFilename = `${filename}`;
+    const tempFilePath = `${process.env['PUBLIC_DIR']}/pdf/${tempFilename}`;
+
+    let options = {
+      File: url,
+      RespectViewport: 'false',
+      PageSize: 'a5',
+      MarginTop: 0,
+      MarginRight: 0,
+      MarginBottom: 0,
+      MarginLeft: 0,
+      PageRange: '1-2',
+      CompressPDF: 'true',
+    } as any;
+
+    if (template === 'printer') {
+      options['PageSize'] = 'a5';
+      options['MarginTop'] = 0;
+      options['MarginLeft'] = 0;
+    }
+
+    const result = await this.convertapi.convert('pdf', options, 'htm');
+    await result.saveFiles(tempFilePath);
+
+    // this.analytics.increaseCounter('pdf', 'generated', 1);
+
+    // this.logger.log(
+    //   color.blue.bold(
+    //     `Generated temporary PDF: ${color.white.bold(tempFilename)}`
+    //   )
+    // );
+
+    // const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+
+    // if (template === 'printer') {
+    //   // Resize them to exactly 60x60 mm because convertAPI is slightly off
+    //   await this.resizePDFPages(finalPath, 60, 60);
+    //   // Add a 3 mm bleed for PrintAPI
+    //   await this.addBleed(finalPath, 3);
+    // }
+
+    return filename;
+  }
+
   private async mmToPoints(mm: number): Promise<number> {
     return mm * (72 / 25.4);
   }

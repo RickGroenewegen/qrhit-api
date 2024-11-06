@@ -9,11 +9,13 @@ class Discount {
   private utils = new Utils();
 
   public async createDiscountCode(
-    amount: number
+    amount: number,
+    from: string,
+    message: string
   ): Promise<{ id: number; code: string }> {
     try {
       const CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      
+
       // Generate 4 groups of 4 characters
       const generatePart = () => {
         const bytes = randomBytes(4);
@@ -31,6 +33,8 @@ class Discount {
         data: {
           code,
           amount,
+          from,
+          message,
         },
       });
 
