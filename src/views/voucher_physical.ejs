@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>QRSong Gift Voucher</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&display=swap" rel="stylesheet">
+    <style>
+        @page {
+            size: A5;
+            margin: 0;
+        }
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', sans-serif;
+        }
+        .page {
+            width: 148mm;
+            height: 210mm;
+            position: relative;
+            overflow: hidden;
+            page-break-after: always;
+        }
+        .blue-triangle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 50%;
+            height: 100%;
+            background: #4B96D1;
+            clip-path: polygon(100% 0, 0 0, 100% 100%);
+            z-index: -1;
+        }
+        .content {
+            padding: 20px;
+        }
+        .logo {
+            width: 200px;
+            margin-bottom: 10px;
+        }
+        .tagline {
+            font-size: 16px;
+            color: #333;
+            margin-bottom: 40px;
+        }
+        .gift-voucher {
+            font-size: 48px;
+            font-weight: 900;
+            margin: 0;
+            line-height: 1;
+        }
+        .amount {
+            font-size: 120px;
+            font-weight: 900;
+            margin: 0;
+            line-height: 1;
+        }
+        .description {
+            font-size: 16px;
+            max-width: 300px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .instructions {
+            margin: 30px 0;
+        }
+        .instructions h3 {
+            font-size: 18px;
+            margin-bottom: 10px;
+        }
+        .instructions ol {
+            margin: 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin-bottom: 5px;
+        }
+        .website {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: #4B96D1;
+            color: white;
+            padding: 8px 20px;
+            border-radius: 5px;
+            text-decoration: none;
+        }
+        .voucher-code {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            font-size: 16px;
+            color: #666;
+        }
+        .cards-image {
+            position: absolute;
+            right: 20px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 300px;
+            height: auto;
+        }
+    </style>
+</head>
+<body>
+    <div class="page">
+        <div class="blue-triangle"></div>
+        <div class="content">
+            <img src="https://www.qrsong.io/assets/images/logo.png" alt="QRSong Logo" class="logo">
+            <div class="tagline">Transform your Spotify playlists into real QR music cards!</div>
+            
+            <h1 class="gift-voucher">GIFT VOUCHER</h1>
+            <h2 class="amount">€20</h2>
+            
+            <p class="description">"Turn any Spotify playlist into QR music cards delivered to your doorstep!"</p>
+            
+            <div class="instructions">
+                <h3>Claim your Gift Voucher</h3>
+                <ol>
+                    <li>Go to https://www.qrsong.io</li>
+                    <li>Click 'Gift cards'</li>
+                    <li>Enter the voucher code and click 'Redeem'</li>
+                    <li>The discount will be applied on first purchase</li>
+                </ol>
+            </div>
+
+            <a href="https://www.qrsong.io" class="website">www.qrsong.io</a>
+            <div class="voucher-code">XXXX-XXXX-XXXX-XXXX</div>
+            
+            <img src="https://www.qrsong.io/assets/images/cards.png" alt="QR Cards" class="cards-image">
+        </div>
+    </div>
+    
+    <!-- Empty second page -->
+    <div class="page"></div>
+</body>
+</html>
