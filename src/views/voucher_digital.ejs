@@ -181,11 +181,12 @@
             </div>
 
             <a href="https://www.qrsong.io" class="website"><%= process.env['APP_DOMAIN'] %></a>
-            <div class="voucher-code"><%= translations.code %>: <%= discount.code %></div>
             
             <img src="https://www.qrsong.io/assets/images/cards_transparant.png" alt="QR Cards" class="cards-image">
             
-            <div class="greeting">
+            <div class="voucher-code"><%= translations.code %>: <%= discount.code %></div>
+
+            <div class="greeting">            
                 <div class="title"><%= translations.dearMusicLover %>,</div>
                 <div class="message" id="message">
                     <%= discount.message %>
