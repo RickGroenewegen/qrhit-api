@@ -12,8 +12,8 @@ class Discount {
     amount: number
   ): Promise<{ id: number; code: string }> {
     try {
-      // Configure shortid to use uppercase only and numbers
-      shortid.characters('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ');
+      // Configure shortid with a 64-character alphabet while keeping uppercase and numbers
+      shortid.characters('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789');
 
       // Generate code in XXXX-XXXX-XXXX-XXXX format
       const parts = Array.from({ length: 4 }, () =>
