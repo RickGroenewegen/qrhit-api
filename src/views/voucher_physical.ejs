@@ -164,14 +164,35 @@
                 </div>
                 <div style="flex: 1.4; margin-left: -100px; padding: 20px; margin-top: -20px;">
                     <div style="font-family: 'Satisfy', cursive; color: #1a1a1a; background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
-                        <div style="font-size: 24px; margin-bottom: 20px; color: #4B96D1;"><%= translations.dearMusicLover %>,</div>
-                        <div style="font-size: 18px; line-height: 1.6; margin-bottom: 25px;">
+                        <div style="font-size: 24px; margin-bottom: 20px; color: #4B96D1;" id="greeting"><%= translations.dearMusicLover %>,</div>
+                        <div style="font-size: 18px; line-height: 1.6; margin-bottom: 25px;" id="message">
                             <%= discount.message %>
                         </div>
                         <div style="font-size: 20px; margin-top: 30px; color: #4B96D1;">
                             <%= translations.withMusicalGreetings %>,<br>
                             <span style="font-size: 28px; margin-top: 15px; display: block; color: #1a1a1a;"><%= discount.from %></span>
                         </div>
+                        <script>
+                            window.onload = function() {
+                                const messageElement = document.getElementById('message');
+                                const messageLength = messageElement.textContent.trim().length;
+                                let fontSize;
+                            
+                                if (messageLength < 50) {
+                                    fontSize = 22;
+                                } else if (messageLength < 100) {
+                                    fontSize = 20;
+                                } else if (messageLength < 150) {
+                                    fontSize = 18;
+                                } else if (messageLength < 200) {
+                                    fontSize = 16;
+                                } else {
+                                    fontSize = 14;
+                                }
+                            
+                                messageElement.style.fontSize = fontSize + 'px';
+                            }
+                        </script>
                     </div>
                 </div>
             </div>
