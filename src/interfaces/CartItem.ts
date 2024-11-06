@@ -5,6 +5,7 @@ export interface CartItem {
   numberOfTracks: number;
   amount: number;
   price: number;
+  extraPrice?: number;
   image: string;
   productType: string;
   fromName?: string;

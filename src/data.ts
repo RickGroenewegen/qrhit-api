@@ -307,6 +307,12 @@ class Data {
 
       if (!playlist) {
         // create the playlist
+        let extraPrice = 0;
+
+        // Extra protection. Messing the other way around will increase the price
+        if (cartItem.price < 0) {
+          extraPrice = 0;
+        }
 
         const playlistCreate = await this.prisma.playlist.create({
           data: {
@@ -316,7 +322,7 @@ class Data {
             price: cartItem.price,
             numberOfTracks: cartItem.numberOfTracks,
             type: cartItem.productType,
-            giftcardAmount: cartItem.price,
+            giftcardAmount: cartItem.price - cartItem.extraPrice!,
             giftcardFrom: cartItem.fromName,
             giftcardMessage: cartItem.personalMessage,
           },
