@@ -704,13 +704,26 @@ class Server {
     }
 
     this.fastify.get(
-      '/discount/voucher/:type',
+      '/discount/voucher/:type/:code/:paymentId',
       async (request: any, reply: any) => {
-        const { type } = request.params;
-        try {
-          await reply.view(`voucher_${type}.ejs`);
-        } catch (error) {
-          reply.status(500).send({ error: 'Internal Server Error' });
+        const { type, code, paymentId } = request.params;
+        const discount = await this.discount.getDiscountDetails(code);
+        const payment = await this.mollie.getPayment(paymentId);
+        if (discount) {
+          try {
+            const translations = await this.translation.getTranslationsByPrefix(
+              payment.locale,
+              'voucher'
+            );
+            await reply.view(`voucher_${type}.ejs`, {
+              discount,
+              translations,
+            });
+          } catch (error) {
+            reply.status(500).send({ error: 'Internal Server Error' });
+          }
+        } else {
+          reply.status(404).send({ error: 'Code not found' });
         }
       }
     );

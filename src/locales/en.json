@@ -65,7 +65,6 @@
 	"invoice.przelewy24": "Przelewy24",
 	"invoice.blik": "Blik",
 	"invoice.applepay": "Apple Pay",
-
 	"invoice.invoice": "Invoice",
 	"invoice.taxRate1": "Incl.",
 	"invoice.taxRate2": "VAT",
@@ -75,7 +74,6 @@
 	"invoice.pdfProduct" : "A PDF containing: ",
 	"invoice.cards": "QR Cards",
 	"invoice.physicalProduct" : "QR music cards",
-	
 
 	"payment.playlist" : "Playlist",
 	"payment.giftcard" : "Gift card",
@@ -85,6 +83,18 @@
 	"payment.items" : "Items",
 	"payment.digital" : "PDF containing",
 
+	"voucher.transform" : "Transform your Spotify playlists into real QR music cards!",
+	"voucher.title" : "Gift voucher",
+	"voucher.turn" : "Turn any Spotify playlist into QR music cards delivered to your doorstep!",
+	"voucher.claim" : "Clain your gift voucher!",
+	"voucher.goTo" : "Go to",
+	"voucher.click" : "Click 'Gift cards'",
+	"voucher.enterCode" : "Enter the voucher code and click 'Redeem'",
+	"voucher.discountWillBeApplied" : "Discount will be applied on first purchase",
+	"voucher.code" : "Your code",
+	"voucher.dearMusicLover" : "Dear music lover",
+	"voucher.withMusicalGreetings" : "With musical greetings",
+	
 	"countdown.youNeedToInstall" : "Install our app to scan your cards!",
 	"countdown.invalidLink" : "Unrecognized QR code",
 	"countdown.howToInstall" : "How to install",

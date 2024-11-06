@@ -23,6 +23,8 @@ model DiscountCode {
   id                Int                 @id @default(autoincrement())
   code              String              @unique
   amount            Float
+  message           String?
+  from              String?
   startDate         DateTime?
   endDate           DateTime?
   createdAt         DateTime            @default(now())

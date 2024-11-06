@@ -20,7 +20,9 @@ class Discount {
     return discountAmount - amountUsed;
   }
 
-  public async calculateTotalDiscountForPayment(paymentId: number): Promise<number> {
+  public async calculateTotalDiscountForPayment(
+    paymentId: number
+  ): Promise<number> {
     const totalDiscount = await this.prisma.discountCodedUses.aggregate({
       where: { paymentId: paymentId },
       _sum: { amount: true },
@@ -189,8 +191,11 @@ class Discount {
         where: { code },
         select: {
           id: true,
-          amount: true
-        }
+          code: true,
+          amount: true,
+          from: true,
+          message: true,
+        },
       });
 
       if (!discount) {
@@ -199,8 +204,7 @@ class Discount {
 
       return {
         success: true,
-        id: discount.id,
-        amount: discount.amount
+        ...discount,
       };
     } catch (error) {
       return { success: false, message: 'errorRetrievingDiscountCode', error };
