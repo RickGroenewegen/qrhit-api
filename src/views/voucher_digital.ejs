@@ -8,7 +8,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;700;900&family=Patrick+Hand&display=swap" rel="stylesheet">
     <style>
         @page {
-            size: A5 landscape;
+            size: A4 portrait;
             margin: 0;
         }
         body {
@@ -19,13 +19,13 @@
         }
         .page {
             width: 210mm;
-            height: 148mm;
+            height: 297mm;
             position: relative;
             overflow: hidden;
         }
         .blue-triangle {
             position: absolute;
-            top: -80%;
+            top: -20%;
             right: -10%;
             width: 100%;
             height: 200%;
@@ -34,18 +34,17 @@
             z-index: -1;
         }
         .content {
-            padding: 20px;
+            padding: 40px;
         }
         .logo {
-            width: 240px;
+            width: 200px;
             margin-bottom: 10px;
-            margin-left: -10px;
         }
         .tagline {
             font-size: 14px;
             color: #333;
-            margin-bottom: 35px;
-            margin-top:5px;
+            margin-bottom: 20px;
+            margin-top: 5px;
         }
         .gift-voucher {
             font-size: 32px;
@@ -58,7 +57,7 @@
             letter-spacing: -0.5px;
         }
         .amount {
-            font-size: 95px;
+            font-size: 80px;
             font-weight: 900;
             margin: 0;
             line-height: 0.9;
@@ -117,10 +116,45 @@
         .cards-image {
             position: absolute;
             right: -20px;
-            top: 55%;
+            top: 70%;
             transform: translateY(-50%);
-            width: 500px;
+            width: 400px;
             height: auto;
+        }
+        .greeting {
+            font-family: 'Patrick Hand', cursive;
+            color: #1a1a1a;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 25px;
+            border-radius: 15px;
+            -webkit-mask-image: -webkit-radial-gradient(white, black);
+            -webkit-transform: translateZ(0);
+            position: relative;
+            isolation: isolate;
+            border: 2px solid #4B96D1;
+            z-index: 1;
+            margin-top: 20px;
+        }
+        .greeting .title {
+            font-size: 24px;
+            margin-bottom: 20px;
+            color: #4B96D1;
+        }
+        .greeting .message {
+            font-size: 18px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+        .greeting .signature {
+            font-size: 20px;
+            margin-top: 30px;
+            color: #4B96D1;
+        }
+        .greeting .signature span {
+            font-size: 28px;
+            margin-top: 15px;
+            display: block;
+            color: #1a1a1a;
         }
     </style>
 </head>
@@ -150,51 +184,15 @@
             <div class="voucher-code"><%= translations.code %>: <%= discount.code %></div>
             
             <img src="https://www.qrsong.io/assets/images/cards_transparant.png" alt="QR Cards" class="cards-image">
-        </div>
-    </div>
-    <!-- Back page -->
-    <div class="page" style="position: relative;">
-        <div class="blue-triangle" style="clip-path: polygon(-50% -80%, 70% 100%, -50% 100%); background: #f5f5f5; transform: translateX(-240px);"></div>
-        <div class="content">
-            <img src="https://www.qrsong.io/assets/images/logo.png" alt="QRSong Logo" class="logo">
-            <div class="tagline"><%= translations.transform %></div>
             
-            <div style="display: flex; margin-top: 40px; align-items: center;">
-                <div style="flex: 0.8;">
-                    <img src="https://www.qrsong.io/assets/images/voucher_phone.png" alt="QRSong App" style="width: 180px; height: auto;">
+            <div class="greeting">
+                <div class="title"><%= translations.dearMusicLover %>,</div>
+                <div class="message" id="message">
+                    <%= discount.message %>
                 </div>
-                <div style="flex: 1.4; margin-left: -100px; padding: 20px; margin-top: -20px;">
-                    <div style="font-family: 'Patrick Hand', cursive; color: #1a1a1a; background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; -webkit-mask-image: -webkit-radial-gradient(white, black); -webkit-transform: translateZ(0); position: relative; isolation: isolate; border: 2px solid #4B96D1; z-index: 1;">
-                        <div style="font-size: 24px; margin-bottom: 20px; color: #4B96D1;" id="greeting"><%= translations.dearMusicLover %>,</div>
-                        <div style="font-size: 18px; line-height: 1.6; margin-bottom: 25px;" id="message">
-                            <%= discount.message %>
-                        </div>
-                        <div style="font-size: 20px; margin-top: 30px; color: #4B96D1;">
-                            <%= translations.withMusicalGreetings %>,<br>
-                            <span style="font-size: 28px; margin-top: 15px; display: block; color: #1a1a1a;"><%= discount.from %></span>
-                        </div>
-                        <script>
-                            window.onload = function() {
-                                const messageElement = document.getElementById('message');
-                                const messageLength = messageElement.textContent.trim().length;
-                                let fontSize;
-                            
-                                if (messageLength < 50) {
-                                    fontSize = 22;
-                                } else if (messageLength < 100) {
-                                    fontSize = 20;
-                                } else if (messageLength < 150) {
-                                    fontSize = 18;
-                                } else if (messageLength < 200) {
-                                    fontSize = 16;
-                                } else {
-                                    fontSize = 14;
-                                }
-                            
-                                messageElement.style.fontSize = fontSize + 'px';
-                            }
-                        </script>
-                    </div>
+                <div class="signature">
+                    <%= translations.withMusicalGreetings %>,<br>
+                    <span><%= discount.from %></span>
                 </div>
             </div>
         </div>
@@ -202,5 +200,26 @@
             www.qrsong.io
         </div>
     </div>
+    <script>
+        window.onload = function() {
+            const messageElement = document.getElementById('message');
+            const messageLength = messageElement.textContent.trim().length;
+            let fontSize;
+        
+            if (messageLength < 50) {
+                fontSize = 22;
+            } else if (messageLength < 100) {
+                fontSize = 20;
+            } else if (messageLength < 150) {
+                fontSize = 18;
+            } else if (messageLength < 200) {
+                fontSize = 16;
+            } else {
+                fontSize = 14;
+            }
+        
+            messageElement.style.fontSize = fontSize + 'px';
+        }
+    </script>
 </body>
 </html>
