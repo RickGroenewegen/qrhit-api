@@ -1,17 +1,32 @@
 import { PrismaClient } from '@prisma/client';
 import Utils from './utils';
 import Cache from './cache';
-import { customAlphabet } from 'nanoid';
+import { PrismaClient } from '@prisma/client';
+import Utils from './utils';
+import Cache from './cache';
+
+// We'll create the nanoid function at runtime
+let customAlphabet: (alphabet: string, size: number) => () => string;
 
 class Discount {
   private cache = Cache.getInstance();
   private prisma = new PrismaClient();
   private utils = new Utils();
 
+  constructor() {
+    // Initialize nanoid
+    import('nanoid').then(module => {
+      customAlphabet = module.customAlphabet;
+    });
+  }
+
   public async createDiscountCode(
     amount: number
   ): Promise<{ id: number; code: string }> {
     try {
+      if (!customAlphabet) {
+        throw new Error('Nanoid not initialized');
+      }
       // Create nanoid with only uppercase letters and numbers
       const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 4);
       
