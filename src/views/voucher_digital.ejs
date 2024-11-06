@@ -109,14 +109,10 @@
             background: rgba(255, 255, 255, 0.9);
             padding: 4px 12px;
             border-radius: 20px;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            -webkit-border-radius: 20px;
-            -webkit-background-clip: padding-box;
-            -webkit-print-color-adjust: exact;
-            transform: translateZ(0);
-            backface-visibility: hidden;
-            perspective: 1000;
-            overflow: hidden;
+            -webkit-mask-image: -webkit-radial-gradient(white, black);
+            -webkit-transform: translateZ(0);
+            position: relative;
+            isolation: isolate;
         }
         .cards-image {
             position: absolute;
@@ -168,7 +164,7 @@
                     <img src="https://www.qrsong.io/assets/images/voucher_phone.png" alt="QRSong App" style="width: 180px; height: auto;">
                 </div>
                 <div style="flex: 1.4; margin-left: -100px; padding: 20px; margin-top: -20px;">
-                    <div style="font-family: 'Patrick Hand', cursive; color: #1a1a1a; background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; -webkit-border-radius: 15px; -webkit-background-clip: padding-box; box-shadow: 0 4px 15px rgba(0,0,0,0.08); -webkit-print-color-adjust: exact; transform: translateZ(0); backface-visibility: hidden; perspective: 1000; overflow: hidden;">
+                    <div style="font-family: 'Patrick Hand', cursive; color: #1a1a1a; background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; -webkit-mask-image: -webkit-radial-gradient(white, black); -webkit-transform: translateZ(0); position: relative; isolation: isolate; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">
                         <div style="font-size: 24px; margin-bottom: 20px; color: #4B96D1;" id="greeting"><%= translations.dearMusicLover %>,</div>
                         <div style="font-size: 18px; line-height: 1.6; margin-bottom: 25px;" id="message">
                             <%= discount.message %>
