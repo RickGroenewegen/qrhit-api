@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import Utils from './utils';
 import Cache from './cache';
-import { customAlphabet } from 'nanoid';
+import { randomBytes } from 'crypto';
 
 class Discount {
   private cache = Cache.getInstance();
@@ -12,11 +12,19 @@ class Discount {
     amount: number
   ): Promise<{ id: number; code: string }> {
     try {
-      // Create nanoid with only uppercase letters and numbers
-      const nanoid = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 4);
+      const CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      
+      // Generate 4 groups of 4 characters
+      const generatePart = () => {
+        const bytes = randomBytes(4);
+        let result = '';
+        for (let i = 0; i < 4; i++) {
+          result += CHARS[bytes[i] % CHARS.length];
+        }
+        return result;
+      };
 
-      // Generate code in XXXX-XXXX-XXXX-XXXX format
-      const parts = Array.from({ length: 4 }, () => nanoid());
+      const parts = Array.from({ length: 4 }, generatePart);
       const code = parts.join('-');
 
       const discount = await this.prisma.discountCode.create({
