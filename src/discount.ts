@@ -1,7 +1,7 @@
 import { PrismaClient } from '@prisma/client';
 import Utils from './utils';
 import Cache from './cache';
-
+import { uuidv7 as uuid } from 'uuidv7';
 class Discount {
   private cache = Cache.getInstance();
   private prisma = new PrismaClient();
@@ -11,7 +11,7 @@ class Discount {
     try {
       // Generate a random 8 character alphanumeric code
       const code = Math.random().toString(36).substring(2, 10).toUpperCase();
-      
+
       const discount = await this.prisma.discountCode.create({
         data: {
           code,
