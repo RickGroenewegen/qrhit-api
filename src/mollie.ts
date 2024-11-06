@@ -13,6 +13,8 @@ import { CartItem } from './interfaces/CartItem';
 import { OrderSearch } from './interfaces/OrderSearch';
 import axios from 'axios';
 import Discount from './discount';
+import { CronJob } from 'cron';
+import cluster from 'cluster';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -26,6 +28,59 @@ class Mollie {
   private openPaymentStatus = ['open', 'pending', 'authorized'];
   private paidPaymentStatus = ['paid'];
   private failedPaymentStatus = ['failed', 'canceled', 'expired'];
+
+  constructor() {
+    if (cluster.isPrimary) {
+      this.utils.isMainServer().then(async (isMainServer) => {
+        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+          this.startCron();
+        }
+      });
+    }
+  }
+
+  public startCron(): void {
+    new CronJob('0 1 * * *', async () => {
+      await this.cleanPayments();
+    }).start();
+  }
+
+  private async cleanPayments(): Promise<void> {
+    try {
+      const expiredPayments = await this.prisma.payment.findMany({
+        where: {
+          status: 'expired',
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      const expiredPaymentIds = expiredPayments.map((payment) => payment.id);
+
+      if (expiredPaymentIds.length > 0) {
+        await this.prisma.payment.deleteMany({
+          where: {
+            id: { in: expiredPaymentIds },
+          },
+        });
+
+        this.logger.log(
+          color.green.bold(
+            `Deleted ${color.white.bold(
+              expiredPaymentIds.length
+            )} expired payments.`
+          )
+        );
+      } else {
+        this.logger.log(
+          color.yellow.bold('No expired payments found to delete.')
+        );
+      }
+    } catch (error: any) {
+      this.logger.log(color.red.bold('Error cleaning expired payments!'));
+    }
+  }
 
   private getMollieLocaleData(
     locale: string,
