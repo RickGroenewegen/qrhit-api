@@ -3994,5 +3994,16 @@
     "pl",
     "hin",
     "jp"
+  ],
+  "invoice.giftcard": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp"
   ]
 }

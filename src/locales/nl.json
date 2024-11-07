@@ -367,5 +367,6 @@
   "voucher.discountWillBeApplied": "Korting wordt toegepast bij eerste aankoop",
   "voucher.code": "Jouw code",
   "voucher.dearMusicLover": "Beste muziekliefhebber",
-  "voucher.withMusicalGreetings": "Met muzikale groeten"
+  "voucher.withMusicalGreetings": "Met muzikale groeten",
+  "invoice.giftcard": "Cadeaubon"
 }

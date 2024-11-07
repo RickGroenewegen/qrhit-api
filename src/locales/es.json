@@ -366,5 +366,6 @@
   "voucher.discountWillBeApplied": "El descuento se aplicará en la primera compra",
   "voucher.code": "Tu código",
   "voucher.dearMusicLover": "Querido amante de la música",
-  "voucher.withMusicalGreetings": "Con saludos musicales"
+  "voucher.withMusicalGreetings": "Con saludos musicales",
+  "invoice.giftcard": "Tarjeta regalo"
 }
