@@ -103,7 +103,14 @@ class Discount {
     }
   }
 
-  public async checkDiscount(code: string): Promise<any> {
+  public async checkDiscount(code: string, token: string): Promise<any> {
+    // Verify reCAPTCHA token
+    const isHuman = await this.utils.verifyRecaptcha(token);
+
+    if (!isHuman) {
+      throw new Error('reCAPTCHA verification failed');
+    }
+
     try {
       const discount = await this.prisma.discountCode.findUnique({
         where: { code },
@@ -251,7 +258,10 @@ class Discount {
     }
   }
 
-  public async calculateDiscounts(cart: any, totalAmount: number): Promise<{
+  public async calculateDiscounts(
+    cart: any,
+    totalAmount: number
+  ): Promise<{
     discountAmount: number;
     discountUseIds: number[];
     discountUsed: boolean;
@@ -289,7 +299,7 @@ class Discount {
     return {
       discountAmount,
       discountUseIds,
-      discountUsed
+      discountUsed,
     };
   }
 }

@@ -140,22 +140,12 @@ class Server {
       }
     );
 
-    this.fastify.get('/discount/:code', async (request: any, reply: any) => {
-      const result = await this.discount.checkDiscount(request.params.code);
-      reply.send(result);
-    });
-
     this.fastify.post('/discount/:code', async (request: any, reply: any) => {
-      const result = await this.discount.redeemDiscount(
+      const result = await this.discount.checkDiscount(
         request.params.code,
-        parseFloat(request.body.amount)
+        request.body.token
       );
-      reply.send({
-        success: result.success,
-        message: result.message,
-        fullAmount: result.fullAmount,
-        amountLeft: result.amountLeft,
-      });
+      reply.send(result);
     });
 
     this.fastify.get(
