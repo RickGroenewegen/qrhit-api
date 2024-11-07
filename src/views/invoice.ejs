@@ -182,7 +182,7 @@
 
 				<% playlists.forEach(function(playlist) { %>
 					<tr class="item">
-						<td><%= playlist.name %></td>
+						<td><%= playlist.productType === 'giftcard' ? translations.giftcard : playlist.name %></td>
 						<td style="text-align:right;"><%= playlist.amount %>x</td>
 						<td style="text-align:right;"><%= euroFormatter.format(playlist.price / playlist.amount) %></td>
 						<td style="text-align:right;"><%= payment.taxRate %>%</td>
