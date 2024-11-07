@@ -348,7 +348,7 @@ class Order {
           itemsForApi.push({
             productId: orderType.printApiProductId,
             quantity: item.amount,
-            pageCount: 2, // numberOfTracks * 2
+            pageCount: numberOfTracks * 2,
           });
         }
       } else {
@@ -542,8 +542,9 @@ class Order {
 
     for (var i = 0; i < playlists.length; i++) {
       const playlist = playlists[i];
+
       const orderType = await this.getOrderType(
-        playlist.numberOfTracks,
+        playlist.playlist.numberOfTracks,
         false,
         productType
       );
@@ -551,8 +552,9 @@ class Order {
       let pageCount = 2;
 
       if (orderType != 'giftcard') {
-        // pageCount = await this.pdf.countPDFPages(
-        // `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
+        pageCount = await this.pdf.countPDFPages(
+          `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
+        );
       }
 
       itemsToSend.push({
