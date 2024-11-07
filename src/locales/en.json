@@ -79,6 +79,7 @@
 	"invoice.pdfProduct" : "A PDF containing: ",
 	"invoice.cards": "QR Cards",
 	"invoice.physicalProduct" : "QR music cards",
+	"invoice.giftcard" : "Gift card",
 
 	"payment.playlist" : "Playlist",
 	"payment.giftcard" : "Gift card",

@@ -398,7 +398,6 @@ class Server {
           request.params.paymentId,
           request.params.playlistId
         );
-
         return {
           success: true,
           data,

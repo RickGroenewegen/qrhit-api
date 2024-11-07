@@ -390,7 +390,9 @@ class Data {
                     playlists.numberOfTracks,
                     payment_has_playlist.amount,
                     payment_has_playlist.type,
-                    playlists.name AS playlistName
+                    playlists.name AS playlistName,
+                    playlists.type AS productType,
+                    playlists.giftcardAmount
         FROM        payment_has_playlist
         INNER JOIN  playlists ON payment_has_playlist.playlistId = playlists.id
         WHERE       payment_has_playlist.paymentId = ${paymentDetails[0].id}`;
