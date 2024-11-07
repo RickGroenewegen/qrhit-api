@@ -314,6 +314,16 @@ class Data {
           extraPrice = 0;
         }
 
+        let giftcardAmount = 0;
+        let giftcardFrom = '';
+        let giftcardMessage = '';
+
+        if (cartItem.productType == 'giftcard') {
+          giftcardAmount = cartItem.price - extraPrice;
+          giftcardFrom = cartItem.fromName!;
+          giftcardMessage = cartItem.personalMessage!;
+        }
+
         const playlistCreate = await this.prisma.playlist.create({
           data: {
             playlistId: cartItem.playlistId,
@@ -322,9 +332,9 @@ class Data {
             price: cartItem.price,
             numberOfTracks: cartItem.numberOfTracks,
             type: cartItem.productType,
-            giftcardAmount: cartItem.price - cartItem.extraPrice!,
-            giftcardFrom: cartItem.fromName,
-            giftcardMessage: cartItem.personalMessage,
+            giftcardAmount,
+            giftcardFrom,
+            giftcardMessage,
           },
         });
         playlistDatabaseId = playlistCreate.id;
