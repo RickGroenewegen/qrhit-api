@@ -51,9 +51,7 @@ class Order {
     // Get the payment based on the printApiOrderId
     const whereClause = {
       printApiOrderId: printApiOrderId,
-      ...(process.env['ENVIRONMENT'] !== 'development' && {
-        printApiShipped: false,
-      }),
+      printApiShipped: false,
     };
 
     const payment = await this.prisma.payment.findFirst({
@@ -64,9 +62,9 @@ class Order {
       // Process the webhook
       this.logger.log(
         color.blue.bold(
-          `Updating payment ${color.white.bold(
-            payment.id
-          )} with Print API status`
+          `Retrieving order ${color.white.bold(
+            payment.printApiOrderId
+          )} from PrintAPI`
         )
       );
 
@@ -84,27 +82,31 @@ class Order {
           },
         });
 
-        if (
-          response.data.status === 'Shipped' ||
-          process.env['ENVIRONMENT'] === 'development'
-        ) {
+        if (response.data.status === 'Shipped') {
+          // Update the payment with the printApiShipped flag
+          await this.prisma.payment.update({
+            where: {
+              id: payment.id,
+            },
+            data: {
+              printApiShipped: true,
+              printApiStatus: response.data.status,
+              printApiTrackingLink: trackingLink,
+            },
+          });
+
           this.logger.log(
             magenta(
               `Status of order ${white.bold(
                 payment.printApiOrderId
-              )} is shipped`
+              )} is: ${white.bold(response.data.status)}`
             )
           );
 
-          if (
-            response.data.trackingUrl?.length > 0 ||
-            process.env['ENVIRONMENT'] === 'development'
-          ) {
+          if (response.data.trackingUrl?.length > 0) {
             trackingLink = response.data.trackingUrl;
             const pdfPath = await this.createInvoice(response.data, payment);
-
             this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
-
             this.logger.log(
               magenta(
                 `Sent tracking e-mail for ${white.bold(
@@ -112,28 +114,25 @@ class Order {
                 )}`
               )
             );
-
-            // Update the payment with the printApiShipped flag
+          }
+        } else {
+          if (response.data.status !== payment.printApiStatus) {
             await this.prisma.payment.update({
               where: {
                 id: payment.id,
               },
               data: {
-                printApiShipped: true,
                 printApiStatus: response.data.status,
-                printApiTrackingLink: trackingLink,
               },
             });
+            this.logger.log(
+              magenta(
+                `Status of order ${white.bold(
+                  payment.printApiOrderId
+                )} changed to: ${white.bold(response.data.status)}`
+              )
+            );
           }
-        } else {
-          await this.prisma.payment.update({
-            where: {
-              id: payment.id,
-            },
-            data: {
-              printApiStatus: response.data.status,
-            },
-          });
         }
       } catch (e) {
         this.logger.log(
