@@ -55,6 +55,9 @@ class Order {
         printApiShipped: false || process.env['ENVIRONMENT'] === 'development',
       },
     });
+
+    console.log(111, payment);
+
     if (payment) {
       // Process the webhook
       this.logger.log(
