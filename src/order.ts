@@ -19,8 +19,8 @@ import PDF from './pdf';
 class Order {
   private static instance: Order;
   private prisma = PrismaInstance.getInstance();
-  private APIcacheToken: string = 'printapi_auth_token';
-  private pricingCacheToken: string = 'printapi_pricing_token';
+  private APIcacheToken: string = `printapi_auth_token_${process.env['PRINT_API_CLIENTID']}`;
+  private pricingCacheToken: string = `printapi_pricing_token_${process.env['PRINT_API_CLIENTID']}`;
   private cache = Cache.getInstance();
   private utils = new Utils();
   private logger = new Log();
