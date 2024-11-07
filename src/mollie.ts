@@ -274,16 +274,29 @@ class Mollie {
       console.log(111, calculateResult.data.total);
 
       if (params.cart.discounts && params.cart.discounts.length > 0) {
-        for (const discount of params.cart.discounts) {
-          const discountResult = await this.discount.redeemDiscount(
-            discount.code,
-            discount.amountLeft
-          );
+        let remainingTotal = calculateResult.data.total;
 
-          if (discountResult.success) {
-            discountAmount += discount.amountLeft;
-            discountUseIds.push(discountResult.discountUseId);
-            discountUsed = true;
+        for (const discount of params.cart.discounts) {
+          // Calculate how much of this discount code we can actually use
+          const usableAmount = Math.min(discount.amountLeft, remainingTotal);
+
+          if (usableAmount > 0) {
+            const discountResult = await this.discount.redeemDiscount(
+              discount.code,
+              usableAmount
+            );
+
+            if (discountResult.success) {
+              discountAmount += usableAmount;
+              discountUseIds.push(discountResult.discountUseId);
+              discountUsed = true;
+              remainingTotal -= usableAmount;
+            }
+          }
+
+          // Stop if we've fully discounted the order
+          if (remainingTotal <= 0) {
+            break;
           }
         }
       }
