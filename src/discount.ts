@@ -108,7 +108,7 @@ class Discount {
     const isHuman = await this.utils.verifyRecaptcha(token);
 
     if (!isHuman) {
-      throw new Error('reCAPTCHA verification failed');
+      throw new Error('Request failed');
     }
 
     try {
