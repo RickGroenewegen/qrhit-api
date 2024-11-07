@@ -127,6 +127,7 @@
             border: 2px solid #4B96D1;
             z-index: 1;
             margin-top: 20px;
+            min-height: 200px;
         }
         .greeting .title {
             font-size: 24px;
@@ -179,22 +180,20 @@
             
             <img src="https://www.qrsong.io/assets/images/cards_transparant.png" alt="QR Cards" class="cards-image">
             
-            <% if (discount.message.trim() || discount.from.trim()) { %>
             <div class="greeting">
                 <% if (discount.message.trim()) { %>
-                <div class="title" id="greeting"><%= translations.dearMusicLover %>,</div>
-                <div class="message" id="message">
-                    <%= discount.message %>
-                </div>
+                    <div class="title" id="greeting"><%= translations.dearMusicLover %>,</div>
+                    <div class="message" id="message">
+                        <%= discount.message %>
+                    </div>
                 <% } %>
                 <% if (discount.from.trim()) { %>
-                <div class="signature" id="from">
-                    <%= translations.withMusicalGreetings %>,<br>
-                    <span><%= discount.from %></span>
-                </div>
+                    <div class="signature" id="from">
+                        <%= translations.withMusicalGreetings %>,<br>
+                        <span><%= discount.from %></span>
+                    </div>
                 <% } %>
             </div>
-            <% } %>
         </div>
     </div>
     <script>
