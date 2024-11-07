@@ -211,14 +211,16 @@ class Mail {
         },
       ];
 
-      const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
-      const fileBuffer = await fs.readFile(filePath);
-      const fileBase64 = this.wrapBase64(fileBuffer.toString('base64'));
-      attachments.push({
-        contentType: 'application/pdf',
-        filename: 'voucher.pdf',
-        data: fileBase64,
-      });
+      if (orderType === 'voucher_physical' || orderType === 'voucher_digital') {
+        const filePath = `${process.env['PUBLIC_DIR']}/pdf/${filenameDigital}`;
+        const fileBuffer = await fs.readFile(filePath);
+        const fileBase64 = this.wrapBase64(fileBuffer.toString('base64'));
+        attachments.push({
+          contentType: 'application/pdf',
+          filename: 'voucher.pdf',
+          data: fileBase64,
+        });
+      }
 
       if (
         orderType === 'voucher_physical' &&
