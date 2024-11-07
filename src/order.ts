@@ -49,14 +49,16 @@ class Order {
     );
 
     // Get the payment based on the printApiOrderId
-    const payment = await this.prisma.payment.findFirst({
-      where: {
-        printApiOrderId: printApiOrderId,
-        printApiShipped: false || process.env['ENVIRONMENT'] === 'development',
-      },
-    });
+    const whereClause = {
+      printApiOrderId: printApiOrderId,
+      ...(process.env['ENVIRONMENT'] !== 'development' && {
+        printApiShipped: false,
+      }),
+    };
 
-    console.log(111, payment);
+    const payment = await this.prisma.payment.findFirst({
+      where: whereClause,
+    });
 
     if (payment) {
       // Process the webhook
