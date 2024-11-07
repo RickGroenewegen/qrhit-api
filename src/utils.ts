@@ -66,12 +66,9 @@ class Utils {
     try {
       const secretKey = process.env['RECAPTCHA_SECRET_KEY'];
       const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
-
       const response = await axios.post(verifyUrl);
-
       return response.data.success;
     } catch (error) {
-      console.error('reCAPTCHA verification failed:', error);
       return false;
     }
   }
