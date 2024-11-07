@@ -250,6 +250,48 @@ class Discount {
       return { success: false, message: 'errorRetrievingDiscountCode', error };
     }
   }
+
+  public async calculateDiscounts(cart: any, totalAmount: number): Promise<{
+    discountAmount: number;
+    discountUseIds: number[];
+    discountUsed: boolean;
+  }> {
+    let discountAmount = 0;
+    let discountUseIds: number[] = [];
+    let discountUsed = false;
+
+    if (cart.discounts && cart.discounts.length > 0) {
+      let remainingTotal = totalAmount;
+
+      for (const discount of cart.discounts) {
+        const usableAmount = Math.min(discount.amountLeft, remainingTotal);
+
+        if (usableAmount > 0) {
+          const discountResult = await this.redeemDiscount(
+            discount.code,
+            usableAmount
+          );
+
+          if (discountResult.success) {
+            discountAmount += usableAmount;
+            discountUseIds.push(discountResult.discountUseId);
+            discountUsed = true;
+            remainingTotal -= usableAmount;
+          }
+        }
+
+        if (remainingTotal <= 0) {
+          break;
+        }
+      }
+    }
+
+    return {
+      discountAmount,
+      discountUseIds,
+      discountUsed
+    };
+  }
 }
 
 export default Discount;
