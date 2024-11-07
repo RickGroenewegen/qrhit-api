@@ -241,9 +241,9 @@ class Mollie {
       process.env['ENVIRONMENT'] == 'development' ||
       this.utils.isTrustedIp(ip)
     ) {
-      return this.mollieClientTest;
+      return { test: true, client: this.mollieClientTest };
     } else {
-      return this.mollieClient;
+      return { test: false, client: this.mollieClient };
     }
   }
 
@@ -255,9 +255,23 @@ class Mollie {
       let useOrderType = 'digital';
       let description = '';
       let totalCards = 0;
-
+      let molliePaymentId = '';
+      let mollieCheckoutUrl = '';
+      let mollieTest = false;
+      let molliePaymentStatus = 'noMollie';
+      let molliePaymentAmount = 0;
       let discountAmount = 0;
       let discountUseIds: number[] = [];
+      let discountUsed = false;
+      let triggerDirectGeneration: boolean = false;
+
+      const calculateResult = await this.order.calculateOrder({
+        orderType: params.orderType,
+        countrycode: params.extraOrderData.countrycode,
+        cart: params.cart,
+      });
+
+      console.log(111, calculateResult.data.total);
 
       if (params.cart.discounts && params.cart.discounts.length > 0) {
         for (const discount of params.cart.discounts) {
@@ -269,23 +283,21 @@ class Mollie {
           if (discountResult.success) {
             discountAmount += discount.amountLeft;
             discountUseIds.push(discountResult.discountUseId);
+            discountUsed = true;
           }
         }
       }
-
-      const calculateResult = await this.order.calculateOrder({
-        orderType: params.orderType,
-        countrycode: params.extraOrderData.countrycode,
-        cart: params.cart,
-      });
 
       if (discountAmount > calculateResult.data.total) {
         discountAmount = calculateResult.data.total;
       }
 
       calculateResult.data.total -= discountAmount;
+      calculateResult.data.discount = discountAmount;
 
-      const paymentClient = await this.getClient(clientIp);
+      const paymentClientResult = await this.getClient(clientIp);
+      const paymentClient = paymentClientResult.client;
+      mollieTest = paymentClientResult.test;
 
       const translations = await this.translation.getTranslationsByPrefix(
         params.locale,
@@ -334,49 +346,69 @@ class Mollie {
         description = description.substring(0, 250);
       }
 
-      if (calculateResult.data.total <= 10) {
-        throw new Error('Order calculation');
-      }
-
-      // Try to get the country code from the IP to improve the payment methods
-      let locationCountryCode = '';
-      try {
-        const response = await axios.get(`https://ipapi.co/${clientIp}/json`, {
-          timeout: 2000,
-        });
-        const location = response.data;
-        if (!location.error) {
-          locationCountryCode = location.country.toLowerCase();
+      if (calculateResult.data.total === 0 && discountUsed) {
+        molliePaymentId = `free_${this.utils.generateRandomString(10)}`;
+        molliePaymentAmount = 0;
+        molliePaymentStatus = 'paid';
+        mollieCheckoutUrl = `${process.env['FRONTEND_URI']}/generate/progress`;
+        triggerDirectGeneration = true;
+      } else {
+        if (calculateResult.data.total <= 10) {
+          throw new Error('Order calculation');
         }
-      } catch (error) {}
 
-      const localeData = this.getMollieLocaleData(
-        params.locale,
-        locationCountryCode
-      );
-      const defaultMethods: PaymentMethod[] = [
-        PaymentMethod.applepay,
-        PaymentMethod.ideal,
-        PaymentMethod.paypal,
-        PaymentMethod.creditcard,
-      ];
-      const paymentMethods = [...defaultMethods, ...localeData.paymentMethods];
+        // Try to get the country code from the IP to improve the payment methods
+        let locationCountryCode = '';
+        try {
+          const response = await axios.get(
+            `https://ipapi.co/${clientIp}/json`,
+            {
+              timeout: 2000,
+            }
+          );
+          const location = response.data;
+          if (!location.error) {
+            locationCountryCode = location.country.toLowerCase();
+          }
+        } catch (error) {}
 
-      const payment = await paymentClient.payments.create({
-        amount: {
-          currency: 'EUR',
-          value: calculateResult.data.total.toFixed(2),
-        },
-        metadata: {
-          clientIp,
-          refreshPlaylists: params.refreshPlaylists.join(','),
-        },
-        method: paymentMethods,
-        description: description,
-        redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
-        webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
-        locale: localeData.locale,
-      });
+        const localeData = this.getMollieLocaleData(
+          params.locale,
+          locationCountryCode
+        );
+        const defaultMethods: PaymentMethod[] = [
+          PaymentMethod.applepay,
+          PaymentMethod.ideal,
+          PaymentMethod.paypal,
+          PaymentMethod.creditcard,
+        ];
+        const paymentMethods = [
+          ...defaultMethods,
+          ...localeData.paymentMethods,
+        ];
+
+        const payment = await paymentClient.payments.create({
+          amount: {
+            currency: 'EUR',
+            value: calculateResult.data.total.toFixed(2),
+          },
+          metadata: {
+            clientIp,
+            refreshPlaylists: params.refreshPlaylists.join(','),
+          },
+          method: paymentMethods,
+          description: description,
+          redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
+          webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
+          locale: localeData.locale,
+        });
+
+        molliePaymentId = payment.id;
+        mollieTest = payment.mode == 'test';
+        molliePaymentAmount = parseFloat(payment.amount.value);
+        molliePaymentStatus = payment.status;
+        mollieCheckoutUrl = payment.getCheckoutUrl()!;
+      }
 
       const userDatabaseId = await this.data.storeUser({
         userId: params.extraOrderData.email,
@@ -478,12 +510,12 @@ class Mollie {
 
       const insertResult = await this.prisma.payment.create({
         data: {
-          paymentId: payment.id,
+          paymentId: molliePaymentId,
           user: {
             connect: { id: userDatabaseId },
           },
-          totalPrice: parseFloat(payment.amount.value),
-          status: payment.status,
+          totalPrice: molliePaymentAmount,
+          status: molliePaymentStatus,
           locale: params.locale,
           taxRate: calculateResult.data.taxRate,
           taxRateShipping: calculateResult.data.taxRateShipping,
@@ -493,9 +525,10 @@ class Mollie {
           shippingVATPrice,
           totalVATPrice,
           clientIp,
-          test: payment.mode == 'test',
+          test: mollieTest,
           profit: totalProfit,
           printApiPrice: totalPrintApiPrice,
+          discount: discountAmount,
           PaymentHasPlaylist: { create: playlists },
           ...params.extraOrderData,
         },
@@ -531,11 +564,20 @@ class Mollie {
         },
       });
 
+      if (triggerDirectGeneration) {
+        this.generator.generate(
+          molliePaymentId,
+          clientIp,
+          params.refreshPlaylists.join(','),
+          this
+        );
+      }
+
       return {
         success: true,
         data: {
-          paymentId: payment.id,
-          paymentUri: payment.getCheckoutUrl(),
+          paymentId: molliePaymentId,
+          paymentUri: mollieCheckoutUrl,
         },
       };
     } catch (e) {
@@ -638,17 +680,6 @@ class Mollie {
             clientIp: string;
             refreshPlaylists: string;
           };
-
-          const totalDiscount =
-            await this.discount.calculateTotalDiscountForPayment(dbPayment.id);
-          await this.prisma.payment.update({
-            where: {
-              id: dbPayment.id,
-            },
-            data: {
-              discount: totalDiscount,
-            },
-          });
 
           this.generator.generate(
             params.id,
