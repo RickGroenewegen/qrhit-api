@@ -261,14 +261,21 @@ class Spotify {
     playlistId: string,
     cache: boolean = true
   ): Promise<number> {
-    const playlistResult = await this.getPlaylist(playlistId, cache);
+    let cacheKeyCount = `trackcount_${playlistId}`;
 
-    if (!playlistResult.success) {
+    const cacheResult = await this.cache.get(cacheKeyCount);
+
+    if (cacheResult) {
+      return parseInt(cacheResult);
+    }
+
+    const tracks = await this.getTracks(playlistId, cache);
+
+    if (!tracks.success) {
       throw new Error('Error getting playlist track count');
     }
 
-    const playlist = playlistResult.data as Playlist;
-    return playlist.numberOfTracks;
+    return tracks.data.totalTracks;
   }
 
   public async getPlaylist(
@@ -332,6 +339,7 @@ class Spotify {
   ): Promise<ApiResult> {
     try {
       let cacheKey = `tracks_${playlistId}`;
+      let cacheKeyCount = `trackcount_${playlistId}`;
       const cacheResult = await this.cache.get(cacheKey);
       let allTracks: Track[] = [];
       const uniqueTrackIds = new Set<string>();
@@ -421,6 +429,7 @@ class Spotify {
         },
       };
 
+      this.cache.set(cacheKeyCount, allTracks.length.toString());
       this.cache.set(cacheKey, JSON.stringify(result));
       return result;
     } catch (e) {
