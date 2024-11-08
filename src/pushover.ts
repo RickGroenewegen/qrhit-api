@@ -10,7 +10,7 @@ class PushoverClient {
     message.token = process.env.PUSHOVER_APP_KEY as string;
     message.user = process.env.PUSHOVER_USER_KEY as string;
     try {
-      if (!this.utils.isTrustedIp(ip)) {
+      if (!this.utils.isTrustedIp(ip) || true) {
         await axios.post(this.apiUrl, message);
       }
     } catch (error) {
