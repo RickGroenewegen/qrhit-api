@@ -128,7 +128,7 @@
     <div class="page">
         <div class="blue-triangle"></div>
         <div class="content">
-            <img src="https://www.qrsong.io/assets/images/logo.png" alt="QRSong Logo" class="logo">
+            <img src="<%= process.env['FRONTEND_URI'] %>/assets/images/logo.png" alt="QRSong Logo" class="logo">
             <div class="tagline"><%= translations.transform %></div>
             
             <h1 class="gift-voucher"><%= translations.title %></h1>
@@ -148,21 +148,21 @@
 
             <div class="voucher-code"><%= translations.code %>: <%= discount.code %></div>
 
-            <a href="https://www.qrsong.io" class="website"><%= process.env['APP_DOMAIN'] %></a>
+            <a href="<%= process.env['FRONTEND_URI'] %>" class="website"><%= process.env['APP_DOMAIN'] %></a>
             
-            <img src="https://www.qrsong.io/assets/images/cards_transparant.png" alt="QR Cards" class="cards-image">
+            <img src="<%= process.env['FRONTEND_URI'] %>/assets/images/cards_transparant.png?v=2" alt="QR Cards" class="cards-image">
         </div>
     </div>
     <!-- Back page -->
     <div class="page" style="position: relative;">    
         <div class="blue-triangle" style="clip-path: polygon(-50% -80%, 70% 100%, -50% 100%); background: #f5f5f5; transform: translateX(-240px);"></div>
         <div class="content">
-            <img src="https://www.qrsong.io/assets/images/logo.png" alt="QRSong Logo" class="logo">
+            <img src="<%= process.env['FRONTEND_URI'] %>/assets/images/logo.png" alt="QRSong Logo" class="logo">
             <div class="tagline"><%= translations.transform %></div>
             
             <div style="display: flex; margin-top: 40px; align-items: center;">
                 <div style="flex: 0.8;">
-                    <img src="https://www.qrsong.io/assets/images/voucher_phone.png" alt="QRSong App" style="width: 180px; height: auto;">
+                    <img src="<%= process.env['FRONTEND_URI'] %>/assets/images/voucher_phone.png" alt="QRSong App" style="width: 180px; height: auto;">
                 </div>
                 <div style="flex: 1.4; margin-left: -100px; padding: 20px; margin-top: -20px;">
                     <div style="font-family: 'Patrick Hand', cursive; color: #1a1a1a; background: rgba(255, 255, 255, 0.95); padding: 25px; border-radius: 15px; -webkit-mask-image: -webkit-radial-gradient(white, black); -webkit-transform: translateZ(0); position: relative; isolation: isolate; border: 2px solid #4B96D1; z-index: 1; min-height: 200px;">

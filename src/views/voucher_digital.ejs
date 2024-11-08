@@ -156,7 +156,7 @@
     <div class="page">
         <div class="blue-triangle"></div>
         <div class="content">
-            <img src="https://www.qrsong.io/assets/images/logo.png" alt="QRSong Logo" class="logo">
+            <img src="<%= process.env['FRONTEND_URI'] %>/assets/images/logo.png" alt="QRSong Logo" class="logo">
             <div class="tagline"><%= translations.transform %></div>
             
             <h1 class="gift-voucher"><%= translations.title %></h1>
@@ -176,9 +176,9 @@
 
             <div class="voucher-code"><%= translations.code %>: <%= discount.code %></div>
 
-            <a href="https://www.qrsong.io" class="website"><%= process.env['APP_DOMAIN'] %></a>
+            <a href="<%= process.env['FRONTEND_URI'] %>" class="website"><%= process.env['APP_DOMAIN'] %></a>
             
-            <img src="https://www.qrsong.io/assets/images/cards_transparant.png" alt="QR Cards" class="cards-image">
+            <img src="<%= process.env['FRONTEND_URI'] %>/assets/images/cards_transparant.png" alt="QR Cards" class="cards-image">
             
             <div class="greeting">
                 <% if (discount.message.trim()) { %>
