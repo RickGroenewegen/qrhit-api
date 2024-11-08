@@ -494,6 +494,15 @@ class Mollie {
         ).toFixed(2)
       );
 
+      if (params.cart.items[0].productType == 'giftcard') {
+        if (useOrderType == 'physical') {
+          totalProfit =
+            molliePaymentAmount - (shippingPriceWithoutTax + shippingVATPrice);
+        } else {
+          totalProfit = params.cart.items[0].price;
+        }
+      }
+
       delete params.extraOrderData.orderType;
       delete params.extraOrderData.total;
       delete params.extraOrderData.price;
