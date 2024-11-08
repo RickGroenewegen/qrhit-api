@@ -535,7 +535,7 @@ class Server {
               maxCards: orderType.maxCards,
               available:
                 orderType.digital ||
-                (await this.utils.isTrustedIp(request.clientIp)),
+                (await this.utils.isTrustedIp(request.clientIp)), // SHould be true once we have the physical cards
             },
           };
         } else {

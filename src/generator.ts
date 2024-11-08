@@ -281,17 +281,26 @@ class Generator {
       )
     );
 
+    let message = `${orderName} heeft ${
+      payment.PaymentHasPlaylist.length
+    } set(s) met in totaal ${totalNumberOfTracks} kaarten besteld voor totaal € ${payment.totalPrice
+      .toString()
+      .replace('.', ',')}.`;
+    let title = `KA-CHING! € ${payment.profit
+      .toString()
+      .replace('.', ',')} verdiend!`;
+
+    if (productType == 'giftcard') {
+      message = `${orderName} heeft een cadeaubon van € ${(
+        payment.totalPrice - (payment.shipping ? payment.shipping : 0)
+      ).toFixed(2)} besteld.`;
+    }
+
     // Pushover
     this.pushover.sendMessage(
       {
-        title: `KA-CHING! € ${payment.profit
-          .toString()
-          .replace('.', ',')} verdiend!`,
-        message: `${orderName} heeft ${
-          payment.PaymentHasPlaylist.length
-        } set(s) met in totaal ${totalNumberOfTracks} kaarten besteld voor totaal € ${payment.totalPrice
-          .toString()
-          .replace('.', ',')}.`,
+        title,
+        message,
         sound: 'incoming',
       },
       ip
