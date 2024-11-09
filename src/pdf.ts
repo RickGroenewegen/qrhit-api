@@ -215,8 +215,6 @@ class PDF {
 
     if (template === 'printer') {
       options['PageSize'] = 'a5';
-      options['MarginTop'] = 0;
-      options['MarginLeft'] = 0;
       options['PageRange'] = '1-2';
     }
 
