@@ -83,18 +83,6 @@ class Order {
         });
 
         if (response.data.status === 'Shipped') {
-          // Update the payment with the printApiShipped flag
-          await this.prisma.payment.update({
-            where: {
-              id: payment.id,
-            },
-            data: {
-              printApiShipped: true,
-              printApiStatus: response.data.status,
-              printApiTrackingLink: trackingLink,
-            },
-          });
-
           this.logger.log(
             magenta(
               `Status of order ${white.bold(
@@ -115,6 +103,18 @@ class Order {
               )
             );
           }
+
+          // Update the payment with the printApiShipped flag
+          await this.prisma.payment.update({
+            where: {
+              id: payment.id,
+            },
+            data: {
+              printApiShipped: true,
+              printApiStatus: response.data.status,
+              printApiTrackingLink: trackingLink,
+            },
+          });
         } else {
           if (response.data.status !== payment.printApiStatus) {
             await this.prisma.payment.update({
