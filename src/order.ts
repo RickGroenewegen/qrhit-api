@@ -91,6 +91,8 @@ class Order {
             )
           );
 
+          console.log(111, response.data);
+
           if (response.data.trackingUrl?.length > 0) {
             trackingLink = response.data.trackingUrl;
             const pdfPath = await this.createInvoice(response.data, payment);
@@ -142,7 +144,7 @@ class Order {
             )}`
           )
         );
-        console.log(111, e);
+        console.log(999, e);
       }
     }
   }
