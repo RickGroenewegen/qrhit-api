@@ -61,7 +61,7 @@ class Server {
   private qr = new Qr();
   private data = new Data();
   private order = Order.getInstance();
-  private mail = new Mail();
+  private mail = Mail.getInstance();
   private musicBrainz = new MusicBrainz();
   private formatters = new Formatters().getFormatters();
   private translation: Translation = new Translation();

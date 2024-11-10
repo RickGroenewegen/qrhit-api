@@ -37,6 +37,7 @@ interface Attachment {
 }
 
 class Mail {
+  private static instance: Mail;
   private ses: SESClient | null = null;
   private templates: Templates = new Templates();
   private translation: Translation = new Translation();
@@ -44,8 +45,19 @@ class Mail {
   private utils = new Utils();
   private logger = new Logger();
 
-  constructor() {
-    const isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
+  private constructor() {
+    this.initializeSES();
+    this.initializeCron();
+  }
+
+  public static getInstance(): Mail {
+    if (!Mail.instance) {
+      Mail.instance = new Mail();
+    }
+    return Mail.instance;
+  }
+
+  private initializeSES(): void {
     this.ses = new SESClient({
       credentials: {
         accessKeyId: process.env['AWS_SES_ACCESS_KEY_ID']!,
@@ -53,9 +65,10 @@ class Mail {
       },
       region: process.env['AWS_SES_REGION'],
     });
+  }
 
-    console.log(1234, isMainServer, cluster.isPrimary);
-
+  private async initializeCron(): Promise<void> {
+    const isMainServer = await this.utils.isMainServer();
     if (isMainServer && cluster.isPrimary) {
       this.startCron();
     }
