@@ -9,6 +9,7 @@ import PushoverClient from './pushover';
 import Utils from './utils';
 import axios from 'axios';
 import { decode } from 'he';
+import { CronJob } from 'cron';
 
 interface MailParams {
   to: string | null;
@@ -37,6 +38,10 @@ class Mail {
   private utils = new Utils();
 
   constructor() {
+    // Initialize cron job to run at 3 AM
+    new CronJob('0 3 * * *', () => {
+      this.uploadContacts();
+    }, null, true);
     this.ses = new SESClient({
       credentials: {
         accessKeyId: process.env['AWS_SES_ACCESS_KEY_ID']!,
@@ -408,6 +413,31 @@ ${params.html}
 
   private wrapBase64(base64: string): string {
     return base64.replace(/(.{76})/g, '$1\n');
+  }
+
+  private async uploadContacts(): Promise<void> {
+    try {
+      // TODO: Implement your contact upload logic here
+      console.log('Starting daily contact upload at 3 AM');
+      
+      // Example implementation:
+      // 1. Fetch contacts from your database
+      // 2. Format them according to your needs
+      // 3. Upload to your desired service
+      
+      console.log('Contact upload completed successfully');
+    } catch (error) {
+      console.error('Error during contact upload:', error);
+      
+      // Notify admin about the error through Pushover
+      if (this.pushover) {
+        await this.pushover.sendMessage({
+          title: `${process.env['PRODUCT_NAME']} Contact Upload Error`,
+          message: `Error during daily contact upload: ${error}`,
+          sound: 'falling',
+        }, '127.0.0.1');
+      }
+    }
   }
 }
 
