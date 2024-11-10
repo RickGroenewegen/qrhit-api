@@ -162,8 +162,8 @@ model Playlist {
   numberOfTracks  Int                  @default(0)
   resetCache      Boolean              @default(false)
   giftcardAmount  Float                @default(0)
-  giftcardFrom    String?
-  giftcardMessage String?
+  giftcardFrom    String?             @db.VarChar(100)
+  giftcardMessage String?             @db.VarChar(255)
   tracks          PlaylistHasTrack[]
   Payment         PaymentHasPlaylist[]
 
