@@ -489,46 +489,40 @@ ${params.html}
       const apiKey = process.env.MAIL_OCTOPUS_API_KEY;
       const apiUrl = `https://api.emailoctopus.com/lists/${listId}/contacts`;
 
-      // Upload contacts in batches of 100 (Mail Octopus recommendation)
-      const batchSize = 100;
-      for (let i = 0; i < contacts.length; i += batchSize) {
-        const batch = contacts.slice(i, i + batchSize);
-
-        for (const contact of batch) {
-          try {
-            const result = await axios.put(
-              apiUrl,
-              {
-                api_key: apiKey,
-                email_address: contact.email,
-                fields: contact.fields,
-                status: contact.status,
-                list_id: listId,
+      for (const contact of contacts) {
+        try {
+          const result = await axios.put(
+            apiUrl,
+            {
+              api_key: apiKey,
+              email_address: contact.email,
+              fields: contact.fields,
+              status: contact.status,
+              list_id: listId,
+            },
+            {
+              headers: {
+                'Content-Type': 'application/json',
+                Authorization: `Bearer ${apiKey}`,
               },
-              {
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${apiKey}`,
-                },
-              }
-            );
+            }
+          );
 
-            this.logger.log(
-              color.green.bold(
-                `Successfully uploaded contact ${white.bold(contact.email)}`
-              )
-            );
-          } catch (err: any) {
-            // Log individual contact errors but continue with others
-            this.logger.log(
-              color.red(
-                `Error uploading contact ${white.bold(
-                  contact.email
-                )}: ${white.bold(err.message)}`
-              )
-            );
-            console.log(err);
-          }
+          this.logger.log(
+            color.green.bold(
+              `Successfully uploaded contact ${white.bold(contact.email)}`
+            )
+          );
+        } catch (err: any) {
+          // Log individual contact errors but continue with others
+          this.logger.log(
+            color.red(
+              `Error uploading contact ${white.bold(
+                contact.email
+              )}: ${white.bold(err.message)}`
+            )
+          );
+          console.log(err);
         }
       }
 
