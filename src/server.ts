@@ -616,6 +616,11 @@ class Server {
       return { success: true };
     });
 
+    this.fastify.get('/upload_contacts', async (request: any, _reply) => {
+      const result = await this.mail.uploadContacts();
+      return { success: true };
+    });
+
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.get('/mball', async (request: any, _reply) => {
         const result = await this.data.updateAllTrackYears();

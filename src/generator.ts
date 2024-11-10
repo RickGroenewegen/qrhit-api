@@ -28,7 +28,7 @@ class Generator {
   private data = new Data();
   private pushover = new PushoverClient();
   private spotify = new Spotify();
-  private mail = new Mail();
+  private mail = Mail.getInstance();
   private qr = new QR();
   private pdf = new PDF();
   private order = Order.getInstance();

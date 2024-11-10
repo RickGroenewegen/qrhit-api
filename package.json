@@ -6,6 +6,7 @@
   "scripts": {
     "build": "rimraf ./build && tsc --incremental --skipDefaultLibCheck --strictFunctionTypes",
     "start:dev": "tsc -w & nodemon --watch build --ext js --exec 'node --no-deprecation build/src/app.js' --exitcrash",
+    "start:dev2": "tsx watch src/app.ts",
     "start": "npm run build && ncp ./src ./build && ts-node build/src/app.js",
     "start_pm2": "git reset --hard HEAD && git pull origin HEAD && sudo npm install --force && sudo prisma db push && npm run build && ncp ./src ./build && ts-node build/src/app.js",
     "test": "npm run build && ncp ./src ./build && node build/test.js"
@@ -60,7 +61,8 @@
     "sanitize-filename": "^1.6.3",
     "sanitize-html": "^2.13.1",
     "shortid": "^2.2.16",
-    "ts-node": "^10.9.2"
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.2"
   },
   "devDependencies": {
     "@types/accept-language-parser": "^1.5.6",
