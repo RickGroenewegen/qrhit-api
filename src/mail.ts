@@ -10,6 +10,9 @@ import Utils from './utils';
 import axios from 'axios';
 import { decode } from 'he';
 import { CronJob } from 'cron';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 interface MailParams {
   to: string | null;
