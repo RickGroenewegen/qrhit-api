@@ -54,6 +54,8 @@ class Mail {
       region: process.env['AWS_SES_REGION'],
     });
 
+    console.log(1234, isMainServer, cluster.isPrimary);
+
     if (isMainServer && cluster.isPrimary) {
       this.startCron();
     }
@@ -61,8 +63,6 @@ class Mail {
 
   public startCron(): void {
     // Initialize cron job to run at 3 AM
-
-    console.log(1234);
 
     new CronJob(
       '0 3 * * *',
