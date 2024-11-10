@@ -481,13 +481,13 @@ ${params.html}
           FirstName: user.displayName,
           SignupDate: user.createdAt.toISOString(),
         },
-        status: user.marketingEmails ? 'SUBSCRIBED' : 'UNSUBSCRIBED',
+        status: user.marketingEmails ? 'subscribed' : 'unsubscribed',
       }));
 
       // Mail Octopus API v2 endpoint
       const listId = process.env.MAIL_OCTOPUS_LIST_ID;
       const apiKey = process.env.MAIL_OCTOPUS_API_KEY;
-      const apiUrl = 'https://emailoctopus.com/api/2.0/contacts';
+      const apiUrl = `https://api.emailoctopus.com/lists/${listId}/contacts`;
 
       // Upload contacts in batches of 100 (Mail Octopus recommendation)
       const batchSize = 100;
