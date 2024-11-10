@@ -417,23 +417,66 @@ ${params.html}
 
   private async uploadContacts(): Promise<void> {
     try {
-      // TODO: Implement your contact upload logic here
-      console.log('Starting daily contact upload at 3 AM');
+      console.log('Starting daily contact upload to Mail Octopus at 3 AM');
       
-      // Example implementation:
-      // 1. Fetch contacts from your database
-      // 2. Format them according to your needs
-      // 3. Upload to your desired service
-      
-      console.log('Contact upload completed successfully');
-    } catch (error) {
+      // Get all users who opted in for marketing emails
+      const users = await prisma.user.findMany({
+        where: {
+          marketingEmails: true
+        },
+        select: {
+          email: true,
+          displayName: true,
+          createdAt: true
+        }
+      });
+
+      if (users.length === 0) {
+        console.log('No marketing contacts found to upload');
+        return;
+      }
+
+      // Format contacts for Mail Octopus API
+      const contacts = users.map(user => ({
+        email: user.email,
+        fields: {
+          FirstName: user.displayName,
+          SignupDate: user.createdAt.toISOString()
+        },
+        status: 'SUBSCRIBED'
+      }));
+
+      // Mail Octopus API endpoint - replace LIST_ID with your actual list ID
+      const apiUrl = 'https://emailoctopus.com/api/1.6/lists/{LIST_ID}/contacts';
+      const apiKey = process.env.MAIL_OCTOPUS_API_KEY;
+
+      // Upload contacts in batches of 100 (Mail Octopus recommendation)
+      const batchSize = 100;
+      for (let i = 0; i < contacts.length; i += batchSize) {
+        const batch = contacts.slice(i, i + batchSize);
+        
+        for (const contact of batch) {
+          try {
+            await axios.post(apiUrl, {
+              api_key: apiKey,
+              ...contact
+            });
+          } catch (err: any) {
+            // Log individual contact errors but continue with others
+            console.error(`Error uploading contact ${contact.email}:`, err.message);
+          }
+        }
+      }
+
+      console.log(`Successfully uploaded ${contacts.length} contacts to Mail Octopus`);
+    } catch (error: any) {
       console.error('Error during contact upload:', error);
       
       // Notify admin about the error through Pushover
       if (this.pushover) {
         await this.pushover.sendMessage({
           title: `${process.env['PRODUCT_NAME']} Contact Upload Error`,
-          message: `Error during daily contact upload: ${error}`,
+          message: `Error during daily contact upload: ${error.message}`,
           sound: 'falling',
         }, '127.0.0.1');
       }
