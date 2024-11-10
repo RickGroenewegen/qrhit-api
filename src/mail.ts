@@ -486,9 +486,9 @@ ${params.html}
         status: 'SUBSCRIBED',
       }));
 
-      // Mail Octopus API endpoint - replace LIST_ID with your actual list ID
-      const apiUrl =
-        'https://emailoctopus.com/api/1.6/lists/d652bc66-9f55-11ef-b995-1d6900e1c2ff/contacts';
+      // Mail Octopus API v2 endpoint
+      const apiUrl = 'https://emailoctopus.com/api/2.0/contacts';
+      const listId = process.env.MAIL_OCTOPUS_LIST_ID;
       const apiKey = process.env.MAIL_OCTOPUS_API_KEY;
 
       // Upload contacts in batches of 100 (Mail Octopus recommendation)
@@ -497,15 +497,27 @@ ${params.html}
         const batch = contacts.slice(i, i + batchSize);
 
         for (const contact of batch) {
-          console.log(111, contact);
-
           try {
             const result = await axios.post(apiUrl, {
-              api_key: apiKey,
-              ...contact,
+              list_id: listId,
+              email_address: contact.email,
+              fields: {
+                FirstName: contact.fields.FirstName,
+                SignupDate: contact.fields.SignupDate
+              },
+              status: 'SUBSCRIBED'
+            }, {
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Token ${apiKey}`
+              }
             });
 
-            console.log(222, result.data);
+            this.logger.log(
+              color.green(
+                `Successfully uploaded contact ${white.bold(contact.email)}`
+              )
+            );
           } catch (err: any) {
             // Log individual contact errors but continue with others
             this.logger.log(
