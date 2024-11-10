@@ -459,20 +459,18 @@ ${params.html}
         color.blue.bold('Starting daily contact upload to Mail Octopus')
       );
 
-      // Get all users who opted in for marketing emails
+      // Get all users
       const users = await prisma.user.findMany({
-        where: {
-          marketingEmails: true,
-        },
         select: {
           email: true,
           displayName: true,
           createdAt: true,
+          marketingEmails: true,
         },
       });
 
       if (users.length === 0) {
-        this.logger.log(color.yellow('No marketing contacts found to upload'));
+        this.logger.log(color.yellow('No users found to process'));
         return;
       }
 
@@ -483,13 +481,13 @@ ${params.html}
           FirstName: user.displayName,
           SignupDate: user.createdAt.toISOString(),
         },
-        status: 'SUBSCRIBED',
+        status: user.marketingEmails ? 'SUBSCRIBED' : 'UNSUBSCRIBED',
       }));
 
       // Mail Octopus API v2 endpoint
       const listId = process.env.MAIL_OCTOPUS_LIST_ID;
       const apiKey = process.env.MAIL_OCTOPUS_API_KEY;
-      const apiUrl = `https://api.emailoctopus.com/lists/${listId}/contacts`;
+      const apiUrl = 'https://emailoctopus.com/api/2.0/contacts';
 
       // Upload contacts in batches of 100 (Mail Octopus recommendation)
       const batchSize = 100;
@@ -501,12 +499,11 @@ ${params.html}
             const result = await axios.put(
               apiUrl,
               {
-                list_id: listId,
+                api_key: apiKey,
                 email_address: contact.email,
-                fields: {
-                  FirstName: contact.fields.FirstName,
-                },
-                status: 'subscribed',
+                fields: contact.fields,
+                status: contact.status,
+                list_id: listId,
               },
               {
                 headers: {
