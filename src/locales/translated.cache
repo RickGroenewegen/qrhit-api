@@ -3885,17 +3885,6 @@
     "hin",
     "jp"
   ],
-  "voucher.turn": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp"
-  ],
   "voucher.goTo": [
     "nl",
     "de",
@@ -3996,6 +3985,17 @@
     "jp"
   ],
   "voucher.claim": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp"
+  ],
+  "voucher.turn": [
     "nl",
     "de",
     "fr",
