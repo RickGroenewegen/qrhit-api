@@ -3874,17 +3874,6 @@
     "hin",
     "jp"
   ],
-  "voucher.transform": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp"
-  ],
   "voucher.title": [
     "nl",
     "de",
@@ -3897,17 +3886,6 @@
     "jp"
   ],
   "voucher.turn": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp"
-  ],
-  "voucher.claim": [
     "nl",
     "de",
     "fr",
@@ -3996,6 +3974,28 @@
     "jp"
   ],
   "invoice.giftcard": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp"
+  ],
+  "voucher.transform": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp"
+  ],
+  "voucher.claim": [
     "nl",
     "de",
     "fr",
