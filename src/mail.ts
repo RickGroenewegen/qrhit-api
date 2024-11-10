@@ -13,6 +13,7 @@ import { CronJob } from 'cron';
 import { PrismaClient } from '@prisma/client';
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
+import cluster from 'cluster';
 
 const prisma = new PrismaClient();
 
@@ -44,15 +45,8 @@ class Mail {
   private logger = new Logger();
 
   constructor() {
-    // Initialize cron job to run at 3 AM
-    new CronJob(
-      '0 3 * * *',
-      () => {
-        this.uploadContacts();
-      },
-      null,
-      true
-    );
+    const isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
+    const isPrimary = cluster.isPrimary;
     this.ses = new SESClient({
       credentials: {
         accessKeyId: process.env['AWS_SES_ACCESS_KEY_ID']!,
@@ -60,6 +54,26 @@ class Mail {
       },
       region: process.env['AWS_SES_REGION'],
     });
+
+    console.log(1234, isMainServer, isPrimary);
+
+    if (isMainServer && isPrimary) {
+      this.startCron();
+    }
+  }
+
+  public startCron(): void {
+    // console.log(1234);
+
+    // Initialize cron job to run at 3 AM
+    new CronJob(
+      '*/10 * * * * *',
+      () => {
+        this.uploadContacts();
+      },
+      null,
+      true
+    );
   }
 
   async sendContactForm(data: any, ip: string): Promise<void> {
@@ -429,7 +443,7 @@ ${params.html}
   private async uploadContacts(): Promise<void> {
     try {
       this.logger.log(
-        color.blue.bold('Starting daily contact upload to Mail Octopus at 3 AM')
+        color.blue.bold('Starting daily contact upload to Mail Octopus')
       );
 
       // Get all users who opted in for marketing emails
@@ -470,21 +484,23 @@ ${params.html}
         const batch = contacts.slice(i, i + batchSize);
 
         for (const contact of batch) {
-          try {
-            await axios.post(apiUrl, {
-              api_key: apiKey,
-              ...contact,
-            });
-          } catch (err: any) {
-            // Log individual contact errors but continue with others
-            this.logger.log(
-              color.red(
-                `Error uploading contact ${white.bold(
-                  contact.email
-                )}: ${white.bold(err.message)}`
-              )
-            );
-          }
+          console.log(111, contact);
+
+          // try {
+          //   await axios.post(apiUrl, {
+          //     api_key: apiKey,
+          //     ...contact,
+          //   });
+          // } catch (err: any) {
+          //   // Log individual contact errors but continue with others
+          //   this.logger.log(
+          //     color.red(
+          //       `Error uploading contact ${white.bold(
+          //         contact.email
+          //       )}: ${white.bold(err.message)}`
+          //     )
+          //   );
+          // }
         }
       }
 
