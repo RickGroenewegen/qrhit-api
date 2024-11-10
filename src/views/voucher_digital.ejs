@@ -188,7 +188,7 @@
                 <% if (discount.message.trim()) { %>
                     <div class="title" id="greeting"><%= translations.dearMusicLover %>,</div>
                     <div class="message" id="message">
-                        <%= discount.message %>
+                        <%= discount.message.substring(0, 255) %>
                     </div>
                 <% } %>
                 <% if (discount.from.trim()) { %>
