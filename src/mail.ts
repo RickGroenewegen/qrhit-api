@@ -80,7 +80,7 @@ class Mail {
   public startCron(): void {
     // Initialize cron job to run at 3 AM
     new CronJob(
-      '*/10 * * * * *',
+      '* 3 * * *',
       () => {
         this.uploadContacts();
       },
@@ -453,7 +453,7 @@ ${params.html}
     return base64.replace(/(.{76})/g, '$1\n');
   }
 
-  private async uploadContacts(): Promise<void> {
+  public async uploadContacts(): Promise<void> {
     try {
       this.logger.log(
         color.blue.bold('Starting daily contact upload to Mail Octopus')
@@ -487,9 +487,9 @@ ${params.html}
       }));
 
       // Mail Octopus API v2 endpoint
-      const apiUrl = 'https://emailoctopus.com/api/2.0/contacts';
       const listId = process.env.MAIL_OCTOPUS_LIST_ID;
       const apiKey = process.env.MAIL_OCTOPUS_API_KEY;
+      const apiUrl = `https://api.emailoctopus.com/lists/${listId}/contacts`;
 
       // Upload contacts in batches of 100 (Mail Octopus recommendation)
       const batchSize = 100;
@@ -498,23 +498,26 @@ ${params.html}
 
         for (const contact of batch) {
           try {
-            const result = await axios.post(apiUrl, {
-              list_id: listId,
-              email_address: contact.email,
-              fields: {
-                FirstName: contact.fields.FirstName,
-                SignupDate: contact.fields.SignupDate
+            const result = await axios.put(
+              apiUrl,
+              {
+                list_id: listId,
+                email_address: contact.email,
+                fields: {
+                  FirstName: contact.fields.FirstName,
+                },
+                status: 'subscribed',
               },
-              status: 'SUBSCRIBED'
-            }, {
-              headers: {
-                'Content-Type': 'application/json',
-                'Authorization': `Token ${apiKey}`
+              {
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${apiKey}`,
+                },
               }
-            });
+            );
 
             this.logger.log(
-              color.green(
+              color.green.bold(
                 `Successfully uploaded contact ${white.bold(contact.email)}`
               )
             );
