@@ -69,16 +69,18 @@ class Mail {
 
   private async initializeCron(): Promise<void> {
     const isMainServer = await this.utils.isMainServer();
-    if (isMainServer && cluster.isPrimary) {
+    if (
+      (isMainServer || process.env['ENVIRONMENT'] === 'development') &&
+      cluster.isPrimary
+    ) {
       this.startCron();
     }
   }
 
   public startCron(): void {
     // Initialize cron job to run at 3 AM
-
     new CronJob(
-      '0 3 * * *',
+      '*/10 * * * * *',
       () => {
         this.uploadContacts();
       },
@@ -497,21 +499,24 @@ ${params.html}
         for (const contact of batch) {
           console.log(111, contact);
 
-          // try {
-          //   await axios.post(apiUrl, {
-          //     api_key: apiKey,
-          //     ...contact,
-          //   });
-          // } catch (err: any) {
-          //   // Log individual contact errors but continue with others
-          //   this.logger.log(
-          //     color.red(
-          //       `Error uploading contact ${white.bold(
-          //         contact.email
-          //       )}: ${white.bold(err.message)}`
-          //     )
-          //   );
-          // }
+          try {
+            const result = await axios.post(apiUrl, {
+              api_key: apiKey,
+              ...contact,
+            });
+
+            console.log(222, result.data);
+          } catch (err: any) {
+            // Log individual contact errors but continue with others
+            this.logger.log(
+              color.red(
+                `Error uploading contact ${white.bold(
+                  contact.email
+                )}: ${white.bold(err.message)}`
+              )
+            );
+            console.log(err);
+          }
         }
       }
 
