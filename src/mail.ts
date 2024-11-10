@@ -11,6 +11,8 @@ import axios from 'axios';
 import { decode } from 'he';
 import { CronJob } from 'cron';
 import { PrismaClient } from '@prisma/client';
+import { color, white } from 'console-log-colors';
+import Logger from './logger';
 
 const prisma = new PrismaClient();
 
@@ -39,12 +41,18 @@ class Mail {
   private translation: Translation = new Translation();
   private pushover = new PushoverClient();
   private utils = new Utils();
+  private logger = new Logger();
 
   constructor() {
     // Initialize cron job to run at 3 AM
-    new CronJob('0 3 * * *', () => {
-      this.uploadContacts();
-    }, null, true);
+    new CronJob(
+      '0 3 * * *',
+      () => {
+        this.uploadContacts();
+      },
+      null,
+      true
+    );
     this.ses = new SESClient({
       credentials: {
         accessKeyId: process.env['AWS_SES_ACCESS_KEY_ID']!,
@@ -420,68 +428,88 @@ ${params.html}
 
   private async uploadContacts(): Promise<void> {
     try {
-      console.log('Starting daily contact upload to Mail Octopus at 3 AM');
-      
+      this.logger.log(
+        color.blue.bold('Starting daily contact upload to Mail Octopus at 3 AM')
+      );
+
       // Get all users who opted in for marketing emails
       const users = await prisma.user.findMany({
         where: {
-          marketingEmails: true
+          marketingEmails: true,
         },
         select: {
           email: true,
           displayName: true,
-          createdAt: true
-        }
+          createdAt: true,
+        },
       });
 
       if (users.length === 0) {
-        console.log('No marketing contacts found to upload');
+        this.logger.log(color.yellow('No marketing contacts found to upload'));
         return;
       }
 
       // Format contacts for Mail Octopus API
-      const contacts = users.map(user => ({
+      const contacts = users.map((user) => ({
         email: user.email,
         fields: {
           FirstName: user.displayName,
-          SignupDate: user.createdAt.toISOString()
+          SignupDate: user.createdAt.toISOString(),
         },
-        status: 'SUBSCRIBED'
+        status: 'SUBSCRIBED',
       }));
 
       // Mail Octopus API endpoint - replace LIST_ID with your actual list ID
-      const apiUrl = 'https://emailoctopus.com/api/1.6/lists/{LIST_ID}/contacts';
+      const apiUrl =
+        'https://emailoctopus.com/api/1.6/lists/d652bc66-9f55-11ef-b995-1d6900e1c2ff/contacts';
       const apiKey = process.env.MAIL_OCTOPUS_API_KEY;
 
       // Upload contacts in batches of 100 (Mail Octopus recommendation)
       const batchSize = 100;
       for (let i = 0; i < contacts.length; i += batchSize) {
         const batch = contacts.slice(i, i + batchSize);
-        
+
         for (const contact of batch) {
           try {
             await axios.post(apiUrl, {
               api_key: apiKey,
-              ...contact
+              ...contact,
             });
           } catch (err: any) {
             // Log individual contact errors but continue with others
-            console.error(`Error uploading contact ${contact.email}:`, err.message);
+            this.logger.log(
+              color.red(
+                `Error uploading contact ${white.bold(
+                  contact.email
+                )}: ${white.bold(err.message)}`
+              )
+            );
           }
         }
       }
 
-      console.log(`Successfully uploaded ${contacts.length} contacts to Mail Octopus`);
+      this.logger.log(
+        color.blue.bold(
+          `Successfully uploaded ${white.bold(
+            contacts.length
+          )} contacts to Mail Octopus`
+        )
+      );
     } catch (error: any) {
-      console.error('Error during contact upload:', error);
-      
+      this.logger.log(
+        color.red(`Error during contact upload: ${white.bold(error.message)}`)
+      );
+
       // Notify admin about the error through Pushover
       if (this.pushover) {
-        await this.pushover.sendMessage({
-          title: `${process.env['PRODUCT_NAME']} Contact Upload Error`,
-          message: `Error during daily contact upload: ${error.message}`,
-          sound: 'falling',
-        }, '127.0.0.1');
+        await this.pushover.sendMessage(
+          {
+            title: `${process.env['PRODUCT_NAME']} Contact Upload Error`,
+            message: `Error during daily contact upload: ${error.message}`,
+            sound: 'falling',
+          },
+          '127.0.0.1'
+        );
       }
     }
   }
