@@ -46,7 +46,6 @@ class Mail {
 
   constructor() {
     const isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
-    const isPrimary = cluster.isPrimary;
     this.ses = new SESClient({
       credentials: {
         accessKeyId: process.env['AWS_SES_ACCESS_KEY_ID']!,
@@ -62,6 +61,9 @@ class Mail {
 
   public startCron(): void {
     // Initialize cron job to run at 3 AM
+
+    console.log(1234);
+
     new CronJob(
       '0 3 * * *',
       () => {
