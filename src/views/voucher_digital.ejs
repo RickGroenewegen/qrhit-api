@@ -196,7 +196,7 @@
                 <% if (discount.from.trim()) { %>
                     <div class="signature" id="from">
                         <%= translations.withMusicalGreetings %>,<br>
-                        <span><%= discount.from %></span>
+                        <span><%= discount.from.substring(0,100) %></span>
                     </div>
                 <% } %>
             </div>
