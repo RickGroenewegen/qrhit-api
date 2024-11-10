@@ -45,6 +45,7 @@ class Mail {
   private logger = new Logger();
 
   constructor() {
+    const isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
     this.ses = new SESClient({
       credentials: {
         accessKeyId: process.env['AWS_SES_ACCESS_KEY_ID']!,
@@ -53,11 +54,8 @@ class Mail {
       region: process.env['AWS_SES_REGION'],
     });
 
-    this.initializeCron();
-  }
+    console.log(1234, isMainServer, cluster.isPrimary);
 
-  private async initializeCron(): Promise<void> {
-    const isMainServer = await this.utils.isMainServer();
     if (isMainServer && cluster.isPrimary) {
       this.startCron();
     }
