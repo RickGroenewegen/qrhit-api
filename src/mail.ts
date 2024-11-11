@@ -80,7 +80,7 @@ class Mail {
   public startCron(): void {
     // Initialize cron job to run at 3 AM
     new CronJob(
-      '* 3 * * *',
+      '0 3 * * *',
       () => {
         this.uploadContacts();
       },
