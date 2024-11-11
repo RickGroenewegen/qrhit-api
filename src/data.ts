@@ -145,6 +145,7 @@ class Data {
           email: userParams.email,
           displayName: userParams.displayName,
           hash: hash,
+          sync: true,
         },
       });
       userDatabaseId = userCreate.id;

@@ -129,6 +129,7 @@ model User {
   displayName     String
   hash            String    @unique
   marketingEmails Boolean   @default(false)
+  sync            Boolean   @default(false)
   payments        Payment[] // One-to-many relation to payments
   createdAt       DateTime  @default(now())
   updatedAt       DateTime  @updatedAt
@@ -162,8 +163,8 @@ model Playlist {
   numberOfTracks  Int                  @default(0)
   resetCache      Boolean              @default(false)
   giftcardAmount  Float                @default(0)
-  giftcardFrom    String?             @db.VarChar(100)
-  giftcardMessage String?             @db.VarChar(255)
+  giftcardFrom    String?              @db.VarChar(100)
+  giftcardMessage String?              @db.VarChar(255)
   tracks          PlaylistHasTrack[]
   Payment         PaymentHasPlaylist[]
 

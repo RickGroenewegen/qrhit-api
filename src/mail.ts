@@ -468,12 +468,12 @@ ${params.html}
           marketingEmails: true,
         },
         where: {
-          marketingEmails: true,
+          sync: true,
         },
       });
 
       if (users.length === 0) {
-        this.logger.log(color.yellow('No users found to process'));
+        this.logger.log(color.yellow.bold('No users found to process'));
         return;
       }
 
@@ -516,6 +516,16 @@ ${params.html}
               `Successfully uploaded contact ${white.bold(contact.email)}`
             )
           );
+
+          // Set sync to false after successful upload
+          await prisma.user.update({
+            where: {
+              email: contact.email,
+            },
+            data: {
+              sync: false,
+            },
+          });
         } catch (err: any) {
           // Log individual contact errors but continue with others
           this.logger.log(

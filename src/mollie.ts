@@ -546,6 +546,7 @@ class Mollie {
         },
         data: {
           marketingEmails: params.extraOrderData.marketingEmails,
+          sync: true,
         },
       });
 
