@@ -320,6 +320,10 @@ class Data {
         let giftcardMessage = '';
 
         if (cartItem.productType == 'giftcard') {
+          if (cartItem.type == 'physical') {
+            extraPrice = cartItem.extraPrice!;
+          }
+
           giftcardAmount = cartItem.price - extraPrice;
           giftcardFrom = cartItem.fromName!;
           giftcardMessage = cartItem.personalMessage!;
