@@ -467,6 +467,9 @@ ${params.html}
           createdAt: true,
           marketingEmails: true,
         },
+        where: {
+          marketingEmails: true,
+        },
       });
 
       if (users.length === 0) {
