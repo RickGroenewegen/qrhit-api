@@ -831,11 +831,23 @@ class Data {
         const row = rows[i] as string[];
         // Check if column E (index 4) has data
         if (row && row[4]) {
-          this.logger.log(
-            `Row ${i + 1}: ${row[0]}, ${row[1]}, ${row[2]}, ${row[3]}, ${
-              row[4]
-            }`
-          );
+          const trackId = parseInt(row[0]);
+          const newYear = parseInt(row[4]);
+          
+          if (!isNaN(trackId) && !isNaN(newYear)) {
+            await this.prisma.track.update({
+              where: { id: trackId },
+              data: { 
+                year: newYear,
+                yearSource: 'manual',
+                manuallyChecked: true
+              }
+            });
+            
+            this.logger.log(
+              `Updated track ${trackId} with year ${newYear}`
+            );
+          }
         }
       }
     } catch (error) {
