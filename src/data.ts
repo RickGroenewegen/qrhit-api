@@ -824,13 +824,13 @@ class Data {
         `${process.env['APP_ROOT']}/../docs/tracks_to_check.xlsx`
       );
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+      const rows = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 });
 
       // Start from row 2 (index 1) to skip header
       for (let i = 1; i < rows.length; i++) {
-        const row = rows[i];
+        const row = rows[i] as string[];
         // Check if column E (index 4) has data
-        if (row[4]) {
+        if (row && row[4]) {
           this.logger.log(
             `Row ${i + 1}: ${row[0]}, ${row[1]}, ${row[2]}, ${row[3]}, ${
               row[4]
