@@ -447,19 +447,19 @@ class Data {
   public async getFirstUncheckedTrack(): Promise<any> {
     const track = await this.prisma.track.findFirst({
       where: {
-        manuallyChecked: false
+        manuallyChecked: false,
       },
       select: {
-        title: true,
-        artist: true, 
+        name: true,
+        artist: true,
         year: true,
         yearSource: true,
         certainty: true,
-        reasoning: true
+        reasoning: true,
       },
       orderBy: {
-        id: 'asc'
-      }
+        id: 'asc',
+      },
     });
     return track;
   }

@@ -158,7 +158,7 @@ class Server {
     );
 
     this.fastify.get(
-      '/year',
+      '/yearcheck',
       { preHandler: verifyTokenMiddleware },
       async (request: any, reply: any) => {
         reply.send({ success: true });
