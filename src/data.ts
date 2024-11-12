@@ -833,19 +833,25 @@ class Data {
         if (row && row[4]) {
           const trackId = parseInt(row[0]);
           const newYear = parseInt(row[4]);
-          
+
           if (!isNaN(trackId) && !isNaN(newYear)) {
             await this.prisma.track.update({
               where: { id: trackId },
-              data: { 
+              data: {
                 year: newYear,
                 yearSource: 'manual',
-                manuallyChecked: true
-              }
+                manuallyChecked: true,
+              },
             });
-            
+
             this.logger.log(
-              `Updated track ${trackId} with year ${newYear}`
+              color.magenta(
+                `Updated track ${color.white.bold(trackId)} (${color.white.bold(
+                  row[1]
+                )} - ${color.white.bold(row[2])}) with year ${color.white.bold(
+                  newYear
+                )}`
+              )
             );
           }
         }

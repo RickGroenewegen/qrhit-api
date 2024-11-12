@@ -93,13 +93,7 @@ class Server {
     // Middleware for token verification
     const verifyTokenMiddleware = async (request: any, reply: any) => {
       const token = request.headers.authorization?.split(' ')[1];
-
-      console.log(111, token);
-
       const decoded = verifyToken(token || '');
-
-      console.log(222, decoded);
-
       if (!decoded) {
         reply.status(401).send({ error: 'Unauthorized' });
         return false;
