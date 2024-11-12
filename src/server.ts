@@ -676,6 +676,11 @@ class Server {
         return { success: true };
       });
 
+      this.fastify.get('/fix_years', async (request: any, _reply) => {
+        await this.data.fixYears();
+        return { success: true };
+      });
+
       this.fastify.get('/generate/:paymentId', async (request: any, _reply) => {
         await this.generator.generate(
           request.params.paymentId,

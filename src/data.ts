@@ -18,6 +18,7 @@ import Translation from './translation';
 import Utils from './utils';
 import { CartItem } from './interfaces/CartItem';
 import AnalyticsClient from './analytics';
+import * as XLSX from 'xlsx';
 
 class Data {
   private prisma = PrismaInstance.getInstance();
@@ -815,6 +816,27 @@ class Data {
     }
 
     this.logger.log(color.blue.bold('Finished updating all track years'));
+  }
+
+  public async fixYears(): Promise<void> {
+    try {
+      const workbook = XLSX.readFile('./docs/tracks_to_check.xlsx');
+      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
+
+      // Start from row 2 (index 1) to skip header
+      for (let i = 1; i < rows.length; i++) {
+        const row = rows[i];
+        // Check if column E (index 4) has data
+        if (row[4]) {
+          this.logger.log(
+            `Row ${i + 1}: ${row[0]}, ${row[1]}, ${row[2]}, ${row[3]}, ${row[4]}`
+          );
+        }
+      }
+    } catch (error) {
+      this.logger.log(`Error reading Excel file: ${error}`);
+    }
   }
 }
 
