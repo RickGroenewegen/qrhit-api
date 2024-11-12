@@ -158,6 +158,14 @@ class Server {
     );
 
     this.fastify.get(
+      '/year',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply: any) => {
+        reply.send({ success: true });
+      }
+    );
+
+    this.fastify.get(
       '/download_invoice/:invoiceId',
       { preHandler: verifyTokenMiddleware },
       async (request: any, reply: any) => {
