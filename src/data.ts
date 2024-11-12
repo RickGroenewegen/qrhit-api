@@ -444,6 +444,26 @@ class Data {
     return user;
   }
 
+  public async getFirstUncheckedTrack(): Promise<any> {
+    const track = await this.prisma.track.findFirst({
+      where: {
+        manuallyChecked: false
+      },
+      select: {
+        title: true,
+        artist: true, 
+        year: true,
+        yearSource: true,
+        certainty: true,
+        reasoning: true
+      },
+      orderBy: {
+        id: 'asc'
+      }
+    });
+    return track;
+  }
+
   public async getUserByUserId(userId: string): Promise<any> {
     const user = await this.prisma.user.findUnique({
       where: {

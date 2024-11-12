@@ -503,6 +503,15 @@ class Server {
       });
     });
 
+    this.fastify.get('/year', async (_request: any, reply) => {
+      const track = await this.data.getFirstUncheckedTrack();
+      if (!track) {
+        reply.code(404).send({ error: 'No unchecked tracks found' });
+        return;
+      }
+      reply.send(track);
+    });
+
     this.fastify.get('/test', async (request: any, _reply) => {
       this.analytics.increaseCounter('testCategory', 'testAction');
 
