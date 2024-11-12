@@ -820,7 +820,9 @@ class Data {
 
   public async fixYears(): Promise<void> {
     try {
-      const workbook = XLSX.readFile('./docs/tracks_to_check.xlsx');
+      const workbook = XLSX.readFile(
+        `${process.env['APP_ROOT']}/../docs/tracks_to_check.xlsx`
+      );
       const worksheet = workbook.Sheets[workbook.SheetNames[0]];
       const rows = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
 
@@ -830,7 +832,9 @@ class Data {
         // Check if column E (index 4) has data
         if (row[4]) {
           this.logger.log(
-            `Row ${i + 1}: ${row[0]}, ${row[1]}, ${row[2]}, ${row[3]}, ${row[4]}`
+            `Row ${i + 1}: ${row[0]}, ${row[1]}, ${row[2]}, ${row[3]}, ${
+              row[4]
+            }`
           );
         }
       }
