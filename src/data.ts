@@ -450,6 +450,7 @@ class Data {
         manuallyChecked: false,
       },
       select: {
+        id: true,
         name: true,
         artist: true,
         year: true,
@@ -461,7 +462,30 @@ class Data {
         id: 'asc',
       },
     });
+
+    console.log(111, track);
+
     return track;
+  }
+
+  public async updateTrackCheck(
+    trackId: number,
+    year: number
+  ): Promise<boolean> {
+    try {
+      await this.prisma.track.update({
+        where: {
+          id: trackId,
+        },
+        data: {
+          manuallyChecked: true,
+          year,
+        },
+      });
+      return true;
+    } catch (error) {
+      return false;
+    }
   }
 
   public async getUserByUserId(userId: string): Promise<any> {

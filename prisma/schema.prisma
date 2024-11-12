@@ -173,19 +173,20 @@ model Playlist {
 }
 
 model Track {
-  id          Int                @id @default(autoincrement())
-  trackId     String             @unique
-  name        String
-  artist      String
-  isrc        String?
-  year        Int?
-  yearSource  String?
-  spotifyLink String?
-  certainty   Int                @default(0)
-  reasoning   String?            @db.Text
-  createdAt   DateTime           @default(now())
-  updatedAt   DateTime           @updatedAt
-  playlists   PlaylistHasTrack[]
+  id              Int                @id @default(autoincrement())
+  trackId         String             @unique
+  name            String
+  artist          String
+  isrc            String?
+  year            Int?
+  yearSource      String?
+  spotifyLink     String?
+  certainty       Int                @default(0)
+  reasoning       String?            @db.Text
+  manuallyChecked Boolean            @default(false)
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  playlists       PlaylistHasTrack[]
 
   @@index([trackId])
   @@map("tracks")

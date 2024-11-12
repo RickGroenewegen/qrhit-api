@@ -161,6 +161,19 @@ class Server {
       '/yearcheck',
       { preHandler: verifyTokenMiddleware },
       async (request: any, reply: any) => {
+        const track = await this.data.getFirstUncheckedTrack();
+        reply.send({ success: true, track });
+      }
+    );
+
+    this.fastify.post(
+      '/yearcheck',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply: any) => {
+        const track = await this.data.updateTrackCheck(
+          request.body.trackId,
+          request.body.year
+        );
         reply.send({ success: true });
       }
     );
