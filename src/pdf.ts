@@ -247,20 +247,44 @@ class PDF {
     const pdfDoc = await PDFDocument.load(await fs.readFile(filePath));
     const newPdfDoc = await PDFDocument.create();
 
-    // Copy all pages to new document
     for (let i = 0; i < pdfDoc.getPageCount(); i++) {
-      const [copiedPage] = await newPdfDoc.copyPages(pdfDoc, [i]);
-      newPdfDoc.addPage(copiedPage);
+      // Create a temporary PDF with just this page
+      const tempDoc = await PDFDocument.create();
+      const [copiedPage] = await tempDoc.copyPages(pdfDoc, [i]);
+      tempDoc.addPage(copiedPage);
+
+      const { width, height } = copiedPage.getSize();
+
+      // Convert page to PNG at 300 DPI (1 point = 1/72 inch, so multiply by ~4.17 for 300 DPI)
+      const pngData = await sharp(
+        Buffer.from(await tempDoc.saveAsBase64(), 'base64')
+      )
+        .resize(Math.round(width * 4.17), Math.round(height * 4.17), {
+          fit: 'fill',
+        })
+        .png()
+        .toBuffer();
+
+      // Embed PNG back into new PDF
+      const image = await newPdfDoc.embedPng(pngData);
+      const page = newPdfDoc.addPage([width, height]);
+      page.drawImage(image, {
+        x: 0,
+        y: 0,
+        width: width,
+        height: height,
+      });
     }
 
-    // Save the new PDF (pdf-lib automatically flattens interactive elements)
-    const pdfBytes = await newPdfDoc.save({
-      useObjectStreams: false, // Simplifies PDF structure
-    });
+    const pdfBytes = await newPdfDoc.save();
     await fs.writeFile(filePath, pdfBytes);
 
     this.logger.log(
-      color.blue.bold(`Flattened PDF saved to ${color.white.bold(filePath)}`)
+      color.blue.bold(
+        `Flattened PDF (rasterized to 300 DPI) saved to ${color.white.bold(
+          filePath
+        )}`
+      )
     );
   }
 
