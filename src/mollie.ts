@@ -225,12 +225,23 @@ class Mollie {
             playlist: {
               select: {
                 name: true,
+                tracks: {
+                  select: {
+                    track: {
+                      select: {
+                        manuallyChecked: true,
+                      },
+                    },
+                  },
+                },
               },
             },
           },
         },
       },
     });
+
+    console.log(payments);
 
     return { payments, totalItems };
   }
