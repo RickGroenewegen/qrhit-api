@@ -161,11 +161,17 @@ class Mollie {
         ? { fullname: { contains: search.textSearch } }
         : {};
 
+    const finalizedClause = 
+      typeof search.finalized === 'boolean'
+        ? { finalized: search.finalized }
+        : {};
+
     const totalItems = await this.prisma.payment.count({
       where: {
         test: showTestPayments,
         ...whereClause,
         ...textSearchClause,
+        ...finalizedClause,
       },
     });
 
@@ -174,6 +180,7 @@ class Mollie {
         test: showTestPayments,
         ...whereClause,
         ...textSearchClause,
+        ...finalizedClause,
       },
       skip: (search.page - 1) * search.itemsPerPage,
       take: search.itemsPerPage,
