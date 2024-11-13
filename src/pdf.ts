@@ -256,7 +256,7 @@ class PDF {
       // Export the current page as a PNG image using Sharp
       const pdfPageBuffer = await pdfDoc.saveAsBase64({ dataUri: true });
       const imageBuffer = await sharp(Buffer.from(pdfPageBuffer, 'base64'))
-        .resize(width, height)
+        .resize(Math.round(width), Math.round(height))
         .png()
         .toBuffer();
 
