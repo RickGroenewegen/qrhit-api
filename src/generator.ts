@@ -356,7 +356,7 @@ class Generator {
 
     for (const playlist of playlists) {
       if (playlist.productType === 'giftcard') {
-        await this.finalizeGiftcardOrder(payment, playlist);
+        await this.finalizeGiftcardOrder(payment, playlist, physicalPlaylists);
         continue;
       }
 
@@ -453,7 +453,8 @@ class Generator {
 
   private async finalizeGiftcardOrder(
     payment: any,
-    playlist: any
+    playlist: any,
+    physicalPlaylists: any[] = []
   ): Promise<void> {
     const hash = crypto
       .createHmac('sha256', process.env['PLAYLIST_SECRET']!)
@@ -472,8 +473,6 @@ class Generator {
       playlist.giftcardFrom,
       playlist.giftcardMessage
     );
-
-    console.log(1111);
 
     const [generatedFilenameDigital, generatedFilename] = await Promise.all([
       this.pdf.generateGiftcardPDF(
@@ -505,6 +504,13 @@ class Generator {
         filenameDigital: generatedFilenameDigital,
       },
     });
+
+    if (playlist.orderType !== 'digital') {
+      physicalPlaylists.push({
+        playlist,
+        filename: generatedFilename,
+      });
+    }
 
     await this.mail.sendEmail(
       'voucher_' + playlist.orderType,
