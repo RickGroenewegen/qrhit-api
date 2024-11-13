@@ -193,7 +193,6 @@ class Generator {
 
     // Generate PDFs and finalize order
     if (productType == 'giftcard') {
-      await this.generateGiftcardPDF(payment, playlists[0], ip, subdir);
       await this.finalizeOrder(payment.paymentId, mollie);
     }
 
@@ -350,7 +349,9 @@ class Generator {
     mollie: Mollie
   ): Promise<void> {
     const payment = await mollie.getPayment(paymentId);
-    const playlists = await this.data.getPlaylistsByPaymentId(payment.paymentId);
+    const playlists = await this.data.getPlaylistsByPaymentId(
+      payment.paymentId
+    );
     const physicalPlaylists = [];
 
     for (const playlist of playlists) {
@@ -364,15 +365,33 @@ class Generator {
         .update(playlist.playlistId)
         .digest('hex');
 
-      const filename = sanitizeFilename(`${hash}_printer.pdf`.replace(/ /g, '_')).toLowerCase();
-      const filenameDigital = sanitizeFilename(`${hash}_digital.pdf`.replace(/ /g, '_')).toLowerCase();
+      const filename = sanitizeFilename(
+        `${hash}_printer.pdf`.replace(/ /g, '_')
+      ).toLowerCase();
+      const filenameDigital = sanitizeFilename(
+        `${hash}_digital.pdf`.replace(/ /g, '_')
+      ).toLowerCase();
 
       const [generatedFilenameDigital, generatedFilename] = await Promise.all([
-        this.pdf.generatePDF(filenameDigital, playlist, payment, 'digital', payment.qrSubDir),
+        this.pdf.generatePDF(
+          filenameDigital,
+          playlist,
+          payment,
+          'digital',
+          payment.qrSubDir
+        ),
         playlist.orderType != 'digital'
-          ? this.pdf.generatePDF(filename, playlist, payment, 'printer', payment.qrSubDir)
+          ? this.pdf.generatePDF(
+              filename,
+              playlist,
+              payment,
+              'printer',
+              payment.qrSubDir
+            )
           : Promise.resolve(''),
       ]);
+
+      console.log(1112, playlist);
 
       if (playlist.orderType !== 'digital') {
         physicalPlaylists.push({
@@ -403,6 +422,8 @@ class Generator {
     let printApiOrderId = '';
     let printApiOrderRequest = '';
     let printApiOrderResponse = '';
+
+    console.log(2222, physicalPlaylists);
 
     if (physicalPlaylists.length > 0) {
       payment.printerPageCount = await this.pdf.countPDFPages(
@@ -439,14 +460,20 @@ class Generator {
       .update(playlist.playlistId)
       .digest('hex');
 
-    const filename = sanitizeFilename(`${hash}_printer.pdf`.replace(/ /g, '_')).toLowerCase();
-    const filenameDigital = sanitizeFilename(`${hash}_digital.pdf`.replace(/ /g, '_')).toLowerCase();
+    const filename = sanitizeFilename(
+      `${hash}_printer.pdf`.replace(/ /g, '_')
+    ).toLowerCase();
+    const filenameDigital = sanitizeFilename(
+      `${hash}_digital.pdf`.replace(/ /g, '_')
+    ).toLowerCase();
 
     const discount = await this.discount.createDiscountCode(
       playlist.giftcardAmount,
       playlist.giftcardFrom,
       playlist.giftcardMessage
     );
+
+    console.log(1111);
 
     const [generatedFilenameDigital, generatedFilename] = await Promise.all([
       this.pdf.generateGiftcardPDF(
