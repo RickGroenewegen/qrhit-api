@@ -6,7 +6,6 @@ import AnalyticsClient from './analytics';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
-import sharp from 'sharp';
 
 class PDF {
   private logger = new Logger();
@@ -152,7 +151,7 @@ class PDF {
         await this.addBleed(finalPath, 3);
       } else {
         // Flatten the PDF to remove any interactive elements
-        await this.flattenPdf(finalPath);
+        //await this.flattenPdf(finalPath);
       }
     } finally {
       // Clean up temporary files only if they were merged
@@ -242,58 +241,6 @@ class PDF {
     }
 
     return filename;
-  }
-
-  private async flattenPdf(filePath: string) {
-    const pdfDoc = await PDFDocument.load(await fs.readFile(filePath));
-    const newPdfDoc = await PDFDocument.create();
-
-    for (let i = 0; i < pdfDoc.getPageCount(); i++) {
-      // Create a temporary PDF with just this page
-      const tempDoc = await PDFDocument.create();
-      const [copiedPage] = await tempDoc.copyPages(pdfDoc, [i]);
-      tempDoc.addPage(copiedPage);
-
-      const { width, height } = copiedPage.getSize();
-
-      // Save temp PDF to file
-      const tempPdfPath = `${process.env['PUBLIC_DIR']}/pdf/temp_${i}.pdf`;
-      await fs.writeFile(tempPdfPath, await tempDoc.save());
-
-      // Convert PDF to PNG using pdf2png
-      const pngPath = `${process.env['PUBLIC_DIR']}/pdf/temp_${i}.png`;
-      await this.convertapi.convert('png', {
-        File: tempPdfPath,
-        ImageResolutionH: 300,
-        ImageResolutionV: 300,
-      }, 'pdf').then(result => result.saveFiles(pngPath));
-
-      // Read PNG and embed back into PDF
-      const pngData = await fs.readFile(pngPath);
-      const image = await newPdfDoc.embedPng(pngData);
-
-      // Cleanup temp files
-      await fs.unlink(tempPdfPath);
-      await fs.unlink(pngPath);
-      const page = newPdfDoc.addPage([width, height]);
-      page.drawImage(image, {
-        x: 0,
-        y: 0,
-        width: width,
-        height: height,
-      });
-    }
-
-    const pdfBytes = await newPdfDoc.save();
-    await fs.writeFile(filePath, pdfBytes);
-
-    this.logger.log(
-      color.blue.bold(
-        `Flattened PDF (rasterized to 300 DPI) saved to ${color.white.bold(
-          filePath
-        )}`
-      )
-    );
   }
 
   private async mmToPoints(mm: number): Promise<number> {
