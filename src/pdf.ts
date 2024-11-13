@@ -6,6 +6,7 @@ import AnalyticsClient from './analytics';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
+import sharp from 'sharp';
 
 class PDF {
   private logger = new Logger();
