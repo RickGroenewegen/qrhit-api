@@ -161,8 +161,12 @@ class Server {
       '/yearcheck',
       { preHandler: verifyTokenMiddleware },
       async (request: any, reply: any) => {
-        const track = await this.data.getFirstUncheckedTrack();
-        reply.send({ success: true, track });
+        const result = await this.data.getFirstUncheckedTrack();
+        reply.send({
+          success: true,
+          track: result.track,
+          totalUnchecked: result.totalUnchecked,
+        });
       }
     );
 
@@ -537,15 +541,6 @@ class Server {
           'countries'
         ),
       });
-    });
-
-    this.fastify.get('/year', async (_request: any, reply) => {
-      const track = await this.data.getFirstUncheckedTrack();
-      if (!track) {
-        reply.code(404).send({ error: 'No unchecked tracks found' });
-        return;
-      }
-      reply.send(track);
     });
 
     this.fastify.get('/test', async (request: any, _reply) => {
