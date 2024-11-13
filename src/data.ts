@@ -470,7 +470,7 @@ class Data {
   public async updateTrackCheck(
     trackId: number,
     year: number
-  ): Promise<boolean> {
+  ): Promise<{ success: boolean; checkedPaymentIds?: string[] }> {
     try {
       await this.prisma.track.update({
         where: {
@@ -482,14 +482,16 @@ class Data {
         },
       });
 
-      const checkedPaymentIds = this.checkUnfinalizedPayments();
+      const checkedPaymentIds = await this.checkUnfinalizedPayments();
 
       return {
-        succes: true,
+        success: true,
         checkedPaymentIds,
       };
     } catch (error) {
-      return false;
+      return {
+        success: false,
+      };
     }
   }
 
@@ -844,7 +846,9 @@ class Data {
       AND t.manuallyChecked = false
     `;
 
-    const allChecked = result[0].uncheckedCount === 0;
+    const allChecked = Math.round(result[0].uncheckedCount) === 0;
+
+    console.log(111, allChecked, Math.round(result[0].uncheckedCount));
 
     this.logger.log(
       allChecked
@@ -859,6 +863,8 @@ class Data {
             )} unchecked tracks for payment ${color.white.bold(paymentId)}`
           )
     );
+
+    console.log(222, allChecked);
 
     return allChecked;
   }
