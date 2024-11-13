@@ -349,42 +349,28 @@ class Generator {
     paymentId: string,
     mollie: Mollie
   ): Promise<void> {
+    const payment = await mollie.getPayment(paymentId);
+    const playlists = await this.data.getPlaylistsByPaymentId(payment.paymentId);
     const physicalPlaylists = [];
 
-    const payment = await mollie.getPayment(paymentId);
-    const playlists = await this.data.getPlaylistsByPaymentId(
-      payment.paymentId
-    );
-
     for (const playlist of playlists) {
+      if (playlist.productType === 'giftcard') {
+        await this.finalizeGiftcardOrder(payment, playlist);
+        continue;
+      }
+
       const hash = crypto
         .createHmac('sha256', process.env['PLAYLIST_SECRET']!)
         .update(playlist.playlistId)
         .digest('hex');
 
-      const filename = sanitizeFilename(
-        `${hash}_printer.pdf`.replace(/ /g, '_')
-      ).toLowerCase();
-      const filenameDigital = sanitizeFilename(
-        `${hash}_digital.pdf`.replace(/ /g, '_')
-      ).toLowerCase();
+      const filename = sanitizeFilename(`${hash}_printer.pdf`.replace(/ /g, '_')).toLowerCase();
+      const filenameDigital = sanitizeFilename(`${hash}_digital.pdf`.replace(/ /g, '_')).toLowerCase();
 
       const [generatedFilenameDigital, generatedFilename] = await Promise.all([
-        this.pdf.generatePDF(
-          filenameDigital,
-          playlist,
-          payment,
-          'digital',
-          payment.qrSubDir
-        ),
+        this.pdf.generatePDF(filenameDigital, playlist, payment, 'digital', payment.qrSubDir),
         playlist.orderType != 'digital'
-          ? this.pdf.generatePDF(
-              filename,
-              playlist,
-              payment,
-              'printer',
-              payment.qrSubDir
-            )
+          ? this.pdf.generatePDF(filename, playlist, payment, 'printer', payment.qrSubDir)
           : Promise.resolve(''),
       ]);
 
@@ -395,7 +381,6 @@ class Generator {
         });
       }
 
-      // Update the paymentHasPlaylist with the filenames
       await this.prisma.paymentHasPlaylist.update({
         where: {
           id: playlist.paymentHasPlaylistId,
@@ -406,24 +391,13 @@ class Generator {
         },
       });
 
-      // Send individual playlist emails
-      if (playlist.productType == 'cards') {
-        await this.mail.sendEmail(
-          'digital',
-          payment,
-          [playlist],
-          generatedFilename,
-          generatedFilenameDigital
-        );
-      } else if (playlist.productType == 'giftcard') {
-        await this.mail.sendEmail(
-          'voucher_' + playlist.orderType,
-          payment,
-          [playlist],
-          generatedFilename,
-          generatedFilenameDigital
-        );
-      }
+      await this.mail.sendEmail(
+        'digital',
+        payment,
+        [playlist],
+        generatedFilename,
+        generatedFilenameDigital
+      );
     }
 
     let printApiOrderId = '';
@@ -437,14 +411,13 @@ class Generator {
       const orderData = await this.order.createOrder(
         payment,
         physicalPlaylists,
-        playlists[0].productType
+        'cards'
       );
       printApiOrderId = orderData.response.id;
       printApiOrderRequest = JSON.stringify(orderData.request);
       printApiOrderResponse = JSON.stringify(orderData.response);
     }
 
-    // Update the payment with the order id
     await this.prisma.payment.update({
       where: {
         id: payment.id,
@@ -455,6 +428,64 @@ class Generator {
         printApiOrderResponse,
       },
     });
+  }
+
+  private async finalizeGiftcardOrder(
+    payment: any,
+    playlist: any
+  ): Promise<void> {
+    const hash = crypto
+      .createHmac('sha256', process.env['PLAYLIST_SECRET']!)
+      .update(playlist.playlistId)
+      .digest('hex');
+
+    const filename = sanitizeFilename(`${hash}_printer.pdf`.replace(/ /g, '_')).toLowerCase();
+    const filenameDigital = sanitizeFilename(`${hash}_digital.pdf`.replace(/ /g, '_')).toLowerCase();
+
+    const discount = await this.discount.createDiscountCode(
+      playlist.giftcardAmount,
+      playlist.giftcardFrom,
+      playlist.giftcardMessage
+    );
+
+    const [generatedFilenameDigital, generatedFilename] = await Promise.all([
+      this.pdf.generateGiftcardPDF(
+        filenameDigital,
+        playlist,
+        discount,
+        payment,
+        'digital',
+        payment.qrSubDir
+      ),
+      playlist.orderType != 'digital'
+        ? this.pdf.generateGiftcardPDF(
+            filename,
+            playlist,
+            discount,
+            payment,
+            'printer',
+            payment.qrSubDir
+          )
+        : Promise.resolve(''),
+    ]);
+
+    await this.prisma.paymentHasPlaylist.update({
+      where: {
+        id: playlist.paymentHasPlaylistId,
+      },
+      data: {
+        filename: generatedFilename,
+        filenameDigital: generatedFilenameDigital,
+      },
+    });
+
+    await this.mail.sendEmail(
+      'voucher_' + playlist.orderType,
+      payment,
+      [playlist],
+      generatedFilename,
+      generatedFilenameDigital
+    );
   }
 
   private async generateGiftcardPDF(
