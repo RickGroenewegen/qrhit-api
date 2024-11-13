@@ -464,8 +464,6 @@ class Data {
       },
     });
 
-    console.log(111, track);
-
     return track;
   }
 
@@ -483,6 +481,9 @@ class Data {
           year,
         },
       });
+
+      this.checkUnfinalizedPayments();
+
       return true;
     } catch (error) {
       return false;
@@ -818,10 +819,14 @@ class Data {
     this.logger.log(color.blue.bold('Finished updating all track years'));
   }
 
-  public async areAllTracksManuallyChecked(paymentId: string): Promise<boolean> {
+  public async areAllTracksManuallyChecked(
+    paymentId: string
+  ): Promise<boolean> {
     this.logger.log(
       color.blue.bold(
-        `Checking manually checked status for payment ${color.white.bold(paymentId)}`
+        `Checking manually checked status for payment ${color.white.bold(
+          paymentId
+        )}`
       )
     );
 
@@ -872,22 +877,18 @@ class Data {
 
     this.logger.log(
       color.blue.bold(
-        `Found ${color.white.bold(unfinalizedPayments.length)} unfinalized payments`
+        `Found ${color.white.bold(
+          unfinalizedPayments.length
+        )} unfinalized payments`
       )
     );
 
     for (const payment of unfinalizedPayments) {
-      const allChecked = await this.areAllTracksManuallyChecked(payment.paymentId);
-      
-      if (allChecked) {
-        await this.prisma.payment.update({
-          where: { id: payment.id },
-          data: { 
-            finalized: true,
-            allTracksChecked: true
-          },
-        });
+      const allChecked = await this.areAllTracksManuallyChecked(
+        payment.paymentId
+      );
 
+      if (allChecked) {
         this.logger.log(
           color.green.bold(
             `Payment ${color.white.bold(
