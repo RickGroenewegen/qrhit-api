@@ -109,6 +109,8 @@ model Payment {
   profit                  Float                @default(0)
   discount                Float                @default(0)
   locale                  String               @default("en")
+  qrSubDir                String?
+  finalized               Boolean              @default(false)
   user                    User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
   PaymentHasPlaylist      PaymentHasPlaylist[]
   OrderType               OrderType?           @relation(fields: [orderTypeId], references: [id])
