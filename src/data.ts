@@ -835,7 +835,7 @@ class Data {
       )
     );
 
-    const result = await this.prisma.$queryRaw<{ uncheckedCount: number }[]>`
+    const result = await this.prisma.$queryRaw<[{ uncheckedCount: bigint }]>`
       SELECT COUNT(*) as uncheckedCount
       FROM payments p
       JOIN payment_has_playlist php ON php.paymentId = p.id
@@ -846,9 +846,8 @@ class Data {
       AND t.manuallyChecked = false
     `;
 
-    const allChecked = Math.round(result[0].uncheckedCount) === 0;
-
-    console.log(111, allChecked, Math.round(result[0].uncheckedCount));
+    const uncheckedCount = Number(result[0].uncheckedCount);
+    const allChecked = uncheckedCount === 0;
 
     this.logger.log(
       allChecked
@@ -864,7 +863,6 @@ class Data {
           )
     );
 
-    console.log(222, allChecked);
 
     return allChecked;
   }
