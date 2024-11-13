@@ -111,6 +111,7 @@ model Payment {
   locale                  String               @default("en")
   qrSubDir                String?
   finalized               Boolean              @default(false)
+  allTracksChecked        Boolean              @default(false)
   user                    User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
   PaymentHasPlaylist      PaymentHasPlaylist[]
   OrderType               OrderType?           @relation(fields: [orderTypeId], references: [id])

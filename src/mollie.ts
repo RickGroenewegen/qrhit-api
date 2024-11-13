@@ -161,7 +161,7 @@ class Mollie {
         ? { fullname: { contains: search.textSearch } }
         : {};
 
-    const finalizedClause = 
+    const finalizedClause =
       typeof search.finalized === 'boolean'
         ? { finalized: search.finalized }
         : {};
