@@ -423,8 +423,6 @@ class Generator {
     let printApiOrderRequest = '';
     let printApiOrderResponse = '';
 
-    console.log(2222, physicalPlaylists);
-
     if (physicalPlaylists.length > 0) {
       payment.printerPageCount = await this.pdf.countPDFPages(
         `${process.env['PUBLIC_DIR']}/pdf/${physicalPlaylists[0].filename}`
@@ -432,7 +430,7 @@ class Generator {
       const orderData = await this.order.createOrder(
         payment,
         physicalPlaylists,
-        'cards'
+        playlists[0].productType
       );
       printApiOrderId = orderData.response.id;
       printApiOrderRequest = JSON.stringify(orderData.request);
