@@ -818,6 +818,43 @@ class Data {
     this.logger.log(color.blue.bold('Finished updating all track years'));
   }
 
+  public async areAllTracksManuallyChecked(paymentId: string): Promise<boolean> {
+    this.logger.log(
+      color.blue.bold(
+        `Checking manually checked status for payment ${color.white.bold(paymentId)}`
+      )
+    );
+
+    const result = await this.prisma.$queryRaw<{ uncheckedCount: number }[]>`
+      SELECT COUNT(*) as uncheckedCount
+      FROM payments p
+      JOIN payment_has_playlist php ON php.paymentId = p.id
+      JOIN playlists pl ON pl.id = php.playlistId
+      JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
+      JOIN tracks t ON t.id = pht.trackId
+      WHERE p.paymentId = ${paymentId}
+      AND t.manuallyChecked = false
+    `;
+
+    const allChecked = result[0].uncheckedCount === 0;
+
+    this.logger.log(
+      allChecked
+        ? color.green.bold(
+            `All tracks for payment ${color.white.bold(
+              paymentId
+            )} are manually checked`
+          )
+        : color.yellow.bold(
+            `Found ${color.white.bold(
+              result[0].uncheckedCount
+            )} unchecked tracks for payment ${color.white.bold(paymentId)}`
+          )
+    );
+
+    return allChecked;
+  }
+
   public async fixYears(): Promise<void> {
     try {
       const workbook = XLSX.readFile(
