@@ -759,6 +759,7 @@ class Mollie {
         createdAt: true,
         taxRate: true,
         profit: true,
+        finalized: true,
         taxRateShipping: true,
         updatedAt: true,
         orderId: true,
@@ -782,6 +783,7 @@ class Mollie {
         address: true,
         city: true,
         zipcode: true,
+        qrSubDir: true,
         countrycode: true,
         user: {
           select: {
