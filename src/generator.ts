@@ -43,17 +43,17 @@ class Generator {
     const isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
     const isPrimary = cluster.isPrimary;
 
-    if (isMainServer && isPrimary) {
-      new CronJob(
-        '*/1 * * * *',
-        async () => {
-          await this.cleanupQRCodes();
-        },
-        null,
-        true,
-        'Europe/Amsterdam'
-      );
-    }
+    // if (isMainServer && isPrimary) {
+    //   new CronJob(
+    //     '*/1 * * * *',
+    //     async () => {
+    //       await this.cleanupQRCodes();
+    //     },
+    //     null,
+    //     true,
+    //     'Europe/Amsterdam'
+    //   );
+    // }
   }
 
   private async cleanupQRCodes(): Promise<void> {
@@ -181,9 +181,23 @@ class Generator {
         }
       }
     }
+    // Update the payment with the QR code directory
+    await this.prisma.payment.update({
+      where: {
+        id: payment.id,
+      },
+      data: {
+        qrSubDir: subdir,
+      },
+    });
 
     // Generate PDFs and finalize order
-    await this.finalizeOrder(payment, playlists, subdir);
+    if (productType == 'giftcard') {
+      await this.generateGiftcardPDF(payment, playlists[0], ip, subdir);
+      await this.finalizeOrder(payment.paymentId, mollie);
+    }
+
+    //await this.finalizeOrder(payment.paymentId, mollie);
 
     let orderName = `${payment.fullname} (${payment.countrycode})`;
 
@@ -332,11 +346,15 @@ class Generator {
   }
 
   private async finalizeOrder(
-    payment: any,
-    playlists: any[],
-    subdir: string
+    paymentId: string,
+    mollie: Mollie
   ): Promise<void> {
     const physicalPlaylists = [];
+
+    const payment = await mollie.getPayment(paymentId);
+    const playlists = await this.data.getPlaylistsByPaymentId(
+      payment.paymentId
+    );
 
     for (const playlist of playlists) {
       const hash = crypto
@@ -357,10 +375,16 @@ class Generator {
           playlist,
           payment,
           'digital',
-          subdir
+          payment.qrSubDir
         ),
         playlist.orderType != 'digital'
-          ? this.pdf.generatePDF(filename, playlist, payment, 'printer', subdir)
+          ? this.pdf.generatePDF(
+              filename,
+              playlist,
+              payment,
+              'printer',
+              payment.qrSubDir
+            )
           : Promise.resolve(''),
       ]);
 
