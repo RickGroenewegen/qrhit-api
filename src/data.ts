@@ -855,6 +855,52 @@ class Data {
     return allChecked;
   }
 
+  public async checkUnfinalizedPayments(): Promise<void> {
+    this.logger.log(
+      color.blue.bold('Checking all unfinalized payments for track status')
+    );
+
+    const unfinalizedPayments = await this.prisma.payment.findMany({
+      where: {
+        finalized: false,
+      },
+      select: {
+        id: true,
+        paymentId: true,
+      },
+    });
+
+    this.logger.log(
+      color.blue.bold(
+        `Found ${color.white.bold(unfinalizedPayments.length)} unfinalized payments`
+      )
+    );
+
+    for (const payment of unfinalizedPayments) {
+      const allChecked = await this.areAllTracksManuallyChecked(payment.paymentId);
+      
+      if (allChecked) {
+        await this.prisma.payment.update({
+          where: { id: payment.id },
+          data: { 
+            finalized: true,
+            allTracksChecked: true
+          },
+        });
+
+        this.logger.log(
+          color.green.bold(
+            `Payment ${color.white.bold(
+              payment.paymentId
+            )} has been marked as finalized`
+          )
+        );
+      }
+    }
+
+    this.logger.log(color.blue.bold('Finished checking unfinalized payments'));
+  }
+
   public async fixYears(): Promise<void> {
     try {
       const workbook = XLSX.readFile(
