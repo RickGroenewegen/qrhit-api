@@ -250,12 +250,16 @@ class PDF {
     const newPdfDoc = await PDFDocument.create();
 
     for (let i = 0; i < pdfDoc.getPageCount(); i++) {
-      const page = pdfDoc.getPage(i);
-      const { width, height } = page.getSize();
+      const tempDoc = await PDFDocument.create();
+      const [copiedPage] = await tempDoc.copyPages(pdfDoc, [i]);
+      tempDoc.addPage(copiedPage);
 
-      // Export the current page as a PNG image using Sharp
-      const pdfPageBuffer = await pdfDoc.saveAsBase64({ dataUri: true });
-      const imageBuffer = await sharp(Buffer.from(pdfPageBuffer, 'base64'))
+      // Export just this page as PNG
+      const pageBuffer = await tempDoc.saveAsBase64({ dataUri: true });
+      const base64Data = pageBuffer.split(',')[1]; // Remove data URI prefix
+      
+      const { width, height } = copiedPage.getSize();
+      const imageBuffer = await sharp(Buffer.from(base64Data, 'base64'))
         .resize(Math.round(width), Math.round(height))
         .png()
         .toBuffer();
@@ -273,7 +277,7 @@ class PDF {
 
     // Save the new flattened PDF
     const pdfBytes = await newPdfDoc.save();
-    fs.writeFile(filePath, pdfBytes);
+    await fs.writeFile(filePath, pdfBytes);
 
     this.logger.log(
       color.blue.bold(`Flattened PDF saved to ${color.white.bold(filePath)}`)
