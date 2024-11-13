@@ -7,6 +7,7 @@ import { promises as fs } from 'fs';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
 import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
+import sharp from 'sharp';
 
 class PDF {
   private logger = new Logger();
@@ -150,6 +151,9 @@ class PDF {
         await this.resizePDFPages(finalPath, 60, 60);
         // Add a 3 mm bleed for PrintAPI
         await this.addBleed(finalPath, 3);
+      } else {
+        // Flatten the PDF to remove any interactive elements
+        await this.flattenPdf(finalPath);
       }
     } finally {
       // Clean up temporary files only if they were merged
@@ -239,6 +243,41 @@ class PDF {
     }
 
     return filename;
+  }
+
+  private async flattenPdf(filePath: string) {
+    const pdfDoc = await PDFDocument.load(await fs.readFile(filePath));
+    const newPdfDoc = await PDFDocument.create();
+
+    for (let i = 0; i < pdfDoc.getPageCount(); i++) {
+      const page = pdfDoc.getPage(i);
+      const { width, height } = page.getSize();
+
+      // Export the current page as a PNG image using Sharp
+      const pdfPageBuffer = await pdfDoc.saveAsBase64({ dataUri: true });
+      const imageBuffer = await sharp(Buffer.from(pdfPageBuffer, 'base64'))
+        .resize(width, height)
+        .png()
+        .toBuffer();
+
+      // Embed the PNG image into the new PDF
+      const embeddedImage = await newPdfDoc.embedPng(imageBuffer);
+      const newPage = newPdfDoc.addPage([width, height]);
+      newPage.drawImage(embeddedImage, {
+        x: 0,
+        y: 0,
+        width: width,
+        height: height,
+      });
+    }
+
+    // Save the new flattened PDF
+    const pdfBytes = await newPdfDoc.save();
+    fs.writeFile(filePath, pdfBytes);
+
+    this.logger.log(
+      color.blue.bold(`Flattened PDF saved to ${color.white.bold(filePath)}`)
+    );
   }
 
   private async mmToPoints(mm: number): Promise<number> {
