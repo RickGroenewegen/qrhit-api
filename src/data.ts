@@ -482,9 +482,12 @@ class Data {
         },
       });
 
-      this.checkUnfinalizedPayments();
+      const checkedPaymentIds = this.checkUnfinalizedPayments();
 
-      return true;
+      return {
+        succes: true,
+        checkedPaymentIds,
+      };
     } catch (error) {
       return false;
     }
@@ -860,7 +863,7 @@ class Data {
     return allChecked;
   }
 
-  public async checkUnfinalizedPayments(): Promise<void> {
+  public async checkUnfinalizedPayments(): Promise<string[]> {
     this.logger.log(
       color.blue.bold('Checking all unfinalized payments for track status')
     );
@@ -883,23 +886,34 @@ class Data {
       )
     );
 
+    const checkedPaymentIds: string[] = [];
+
     for (const payment of unfinalizedPayments) {
       const allChecked = await this.areAllTracksManuallyChecked(
         payment.paymentId
       );
 
       if (allChecked) {
+        checkedPaymentIds.push(payment.paymentId);
         this.logger.log(
           color.green.bold(
             `Payment ${color.white.bold(
               payment.paymentId
-            )} has been marked as finalized`
+            )} has all tracks manually checked`
           )
         );
       }
     }
 
-    this.logger.log(color.blue.bold('Finished checking unfinalized payments'));
+    this.logger.log(
+      color.blue.bold(
+        `Found ${color.white.bold(
+          checkedPaymentIds.length
+        )} payments with all tracks checked`
+      )
+    );
+
+    return checkedPaymentIds;
   }
 
   public async fixYears(): Promise<void> {
