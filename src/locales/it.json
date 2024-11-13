@@ -2,7 +2,7 @@
   "mail.mailSubject": "Abbiamo ricevuto l'ordine {{ orderId }}!",
   "mail.greatNews": "Abbiamo ricevuto il tuo ordine! Le carte verranno spedite una volta pronte. Riceverai anche un link di tracciamento.",
   "mail.weHopeYouHaveFun": "Stiamo attualmente generando la versione digitale gratuita che puoi giocare mentre aspetti le carte reali. Dovresti riceverla via e-mail in pochi minuti. Speriamo che ti diverta molto musicalmente! Se hai ulteriori domande, non esitare a contattarci tramite il modulo di contatto sul nostro sito web.",
-  "mail.greatNewsDigital": "Ottime notizie! Le tue carte QR per la tua playlist sono state elaborate in un PDF. Lo troverai allegato a questa email.",
+  "mail.greatNewsDigital": "Ottime notizie! Le tue carte QR per la playlist sono state trasformate in un PDF. Puoi scaricarlo cliccando sul pulsante qui sotto.",
   "mail.weHopeYouHaveFunDigital": "Speriamo che ti diverta molto con la musica! Se hai altre domande, non esitare a scriverci tramite il modulo di contatto sul nostro sito web.",
   "mail.greetings": "Cordiali saluti",
   "mail.orderInformation": "Informazioni sull'ordine",

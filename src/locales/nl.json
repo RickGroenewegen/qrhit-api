@@ -1,6 +1,6 @@
 {
   "mail.mailSubject": "We hebben bestelling {{ orderId }} ontvangen!",
-  "mail.greatNews": "We hebben uw bestelling ontvangen! De kaarten worden verzonden zodra ze klaar zijn. U ontvangt dan ook een trackinglink.",
+  "mail.greatNews": "We hebben je bestelling ontvangen! De kaarten worden verzonden zodra ze klaar zijn. Je krijgt dan ook een trackinglink.",
   "mail.belowAreDetails": "Hieronder staan je bestelgegevens. De kaarten worden naar het volgende adres gestuurd",
   "mail.weHopeYouHaveFun": "We genereren momenteel de gratis digitale versie die je kunt spelen terwijl je op de echte kaarten wacht. Je ontvangt het binnen enkele minuten per e-mail. We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, aarzel dan niet om ons te mailen via het contactformulier op onze website.",
   "mail.greetings": "Met vriendelijke groet",
@@ -50,7 +50,7 @@
   "countdown.getReady": "Maak je klaar!",
   "countdown.tapTheCamera": "Tik op het camera-icoon om te scannen",
   "countdown.allRightsReserved": "Alle rechten voorbehouden",
-  "mail.greatNewsDigital": "Goed nieuws! Je QR-kaarten voor je afspeellijst zijn verwerkt in een PDF. Je vindt het als bijlage bij deze e-mail.",
+  "mail.greatNewsDigital": "Goed nieuws! Je QR-kaarten voor je playlist zijn verwerkt in een PDF. Je kunt het downloaden door op de knop hieronder te klikken.",
   "mail.weHopeYouHaveFunDigital": "We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, aarzel dan niet om ons te mailen via het contactformulier op onze website.",
   "payment.digital": "PDF bevat",
   "countdown.invalidLink": "Onbekende QR-code",

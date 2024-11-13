@@ -1,11 +1,11 @@
 {
   "mail.mailSubject": "注文{{ orderId }}を受け取りました！",
   "mail.mailSubjectDigital": "「{{ playlist }}」のPDFはこちら！",
-  "mail.greatNews": "注文を受け取りました！カードが準備でき次第発送します。追跡リンクも送ります。",
+  "mail.greatNews": "ご注文を受け取りました！ カードが準備でき次第発送します。追跡リンクもお送りします。",
   "mail.weHopeYouHaveFun": "本物のカードを待つ間に遊べる無料デジタル版を作成中です。数分でメールで届くはずです。音楽を楽しんでね！質問があれば、サイトのコンタクトフォームからメールしてください。",
   "mail.greatNewsMainDigital": "注文を受け取りました！",
   "mail.weHopeYouHaveFunMainDigital": "プレイリストのデジタル版を作成中です。数分でメールで届くはずです。音楽を楽しんでね！質問があれば、サイトのコンタクトフォームからメールしてください。",
-  "mail.greatNewsDigital": "朗報です！プレイリストのQRカードがPDFになりました。下のボタンをクリックしてダウンロードできます。",
+  "mail.greatNewsDigital": "良いニュースです！ プレイリストのQRカードがPDFに変換されました。下のボタンをクリックしてダウンロードできます。",
   "mail.weHopeYouHaveFunDigital": "音楽を楽しんでね！質問があれば、サイトのコンタクトフォームからメールしてください。",
   "mail.greetings": "よろしく",
   "mail.orderInformation": "注文情報",

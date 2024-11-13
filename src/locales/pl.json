@@ -1,11 +1,11 @@
 {
   "mail.mailSubject": "Otrzymaliśmy zamówienie {{ orderId }}!",
   "mail.mailSubjectDigital": "Oto Twój PDF dla '{{ playlist }}'!",
-  "mail.greatNews": "Otrzymaliśmy Twoje zamówienie! Karty zostaną wysłane do Ciebie, gdy będą gotowe. Otrzymasz wtedy również link do śledzenia.",
+  "mail.greatNews": "Otrzymaliśmy twoje zamówienie! Karty zostaną wysłane, gdy będą gotowe. Otrzymasz wtedy link do śledzenia.",
   "mail.weHopeYouHaveFun": "Obecnie generujemy darmową wersję cyfrową, którą możesz grać, czekając na prawdziwe karty. Powinieneś otrzymać ją e-mailem za kilka minut. Mamy nadzieję, że będziesz się świetnie bawić muzycznie! Jeśli masz dalsze pytania, nie wahaj się napisać do nas przez formularz kontaktowy na naszej stronie.",
   "mail.greatNewsMainDigital": "Otrzymaliśmy Twoje zamówienie!",
   "mail.weHopeYouHaveFunMainDigital": "Cyfrowa wersja Twojej playlisty jest tworzona w tej chwili i powinnaś ją otrzymać e-mailem za kilka minut. Mamy nadzieję, że będziesz się świetnie bawić muzycznie! Jeśli masz jakiekolwiek pytania, nie wahaj się napisać do nas przez formularz kontaktowy na naszej stronie.",
-  "mail.greatNewsDigital": "Świetne wieści! Twoje karty QR dla playlisty zostały przetworzone do PDF. Możesz je pobrać, klikając przycisk poniżej.",
+  "mail.greatNewsDigital": "Dobre wieści! Twoje karty QR do playlisty zostały przetworzone na PDF. Możesz je pobrać, klikając przycisk poniżej.",
   "mail.weHopeYouHaveFunDigital": "Mamy nadzieję, że będziesz się świetnie bawić muzyką! Jeśli masz dalsze pytania, nie wahaj się napisać do nas przez formularz kontaktowy na naszej stronie.",
   "mail.greetings": "Pozdrawiam",
   "mail.orderInformation": "Informacje o zamówieniu",

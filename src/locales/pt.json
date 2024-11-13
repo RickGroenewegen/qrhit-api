@@ -1,8 +1,8 @@
 {
   "mail.mailSubject": "Recebemos o pedido {{ orderId }}!",
-  "mail.greatNews": "Recebemos o seu pedido! Os cartões serão enviados assim que estiverem prontos. Você também receberá um link de rastreamento.",
+  "mail.greatNews": "Recebemos o teu pedido! As cartas serão enviadas quando estiverem prontas. Também receberás um link de rastreamento.",
   "mail.weHopeYouHaveFun": "Estamos atualmente gerando a versão digital gratuita que você pode jogar enquanto aguarda as cartas reais. Você deve recebê-la por e-mail em alguns minutos. Esperamos que você se divirta muito musicalmente! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contato em nosso site.",
-  "mail.greatNewsDigital": "Ótimas notícias! Seus cartões QR para sua playlist foram processados em um PDF. Você o encontrará anexado a este e-mail.",
+  "mail.greatNewsDigital": "Boas notícias! As tuas cartas QR para a playlist foram convertidas num PDF. Podes descarregá-lo clicando no botão abaixo.",
   "mail.weHopeYouHaveFunDigital": "Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contato em nosso site.",
   "mail.greetings": "Atenciosamente",
   "mail.orderInformation": "Informações do pedido",

@@ -3486,17 +3486,6 @@
     "hin",
     "jp"
   ],
-  "mail.greatNews": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp"
-  ],
   "mail.weHopeYouHaveFun": [
     "nl",
     "de",
@@ -3509,17 +3498,6 @@
     "jp"
   ],
   "mail.orderShipped": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp"
-  ],
-  "mail.greatNewsDigital": [
     "nl",
     "de",
     "fr",
@@ -3996,6 +3974,28 @@
     "jp"
   ],
   "voucher.turn": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp"
+  ],
+  "mail.greatNews": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp"
+  ],
+  "mail.greatNewsDigital": [
     "nl",
     "de",
     "fr",

@@ -1,6 +1,6 @@
 {
   "mail.mailSubject": "Wir haben Bestellung {{ orderId }} erhalten!",
-  "mail.greatNews": "Wir haben Ihre Bestellung erhalten! Die Karten werden versendet, sobald sie fertig sind. Sie erhalten dann auch einen Tracking-Link.",
+  "mail.greatNews": "Wir haben deine Bestellung erhalten! Die Karten werden verschickt, sobald sie fertig sind. Du erhältst dann auch einen Tracking-Link.",
   "mail.belowAreDetails": "Nachfolgend sind Ihre Bestelldetails. Die Karten werden an die folgende Adresse gesendet",
   "mail.weHopeYouHaveFun": "Wir erstellen gerade die kostenlose digitale Version, die Sie spielen können, während Sie auf die echten Karten warten. Sie sollten es in wenigen Minuten per E-Mail erhalten. Wir hoffen, Sie haben viel musikalischen Spaß! Wenn Sie weitere Fragen haben, zögern Sie nicht, uns über das Kontaktformular auf unserer Website zu mailen.",
   "mail.greetings": "Mit freundlichen Grüßen",
@@ -50,7 +50,7 @@
   "countdown.getReady": "Mach dich bereit!",
   "countdown.tapTheCamera": "Tippen Sie auf das Kamera-Symbol zum Scannen",
   "countdown.allRightsReserved": "Alle Rechte vorbehalten",
-  "mail.greatNewsDigital": "Großartige Neuigkeiten! Ihre QR-Karten für Ihre Playlist wurden in eine PDF umgewandelt. Sie finden sie im Anhang dieser E-Mail.",
+  "mail.greatNewsDigital": "Gute Nachrichten! Deine QR-Karten für deine Playlist wurden in ein PDF umgewandelt. Du kannst es herunterladen, indem du unten auf den Button klickst.",
   "mail.weHopeYouHaveFunDigital": "Wir hoffen, dass du viel musikalischen Spaß hast! Wenn du weitere Fragen hast, zögere nicht, uns über das Kontaktformular auf unserer Website zu mailen.",
   "payment.digital": "PDF enthält",
   "countdown.invalidLink": "Unbekannter QR-Code",
