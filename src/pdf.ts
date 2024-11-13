@@ -6,8 +6,6 @@ import AnalyticsClient from './analytics';
 import { promises as fs } from 'fs';
 import path from 'path';
 import { PDFDocument } from 'pdf-lib';
-import { InvokeCommand, LambdaClient } from '@aws-sdk/client-lambda';
-import sharp from 'sharp';
 
 class PDF {
   private logger = new Logger();
@@ -257,8 +255,7 @@ class PDF {
 
     // Save the new PDF (pdf-lib automatically flattens interactive elements)
     const pdfBytes = await newPdfDoc.save({
-      updateMetadata: false, // Removes metadata
-      useObjectStreams: false // Simplifies PDF structure
+      useObjectStreams: false, // Simplifies PDF structure
     });
     await fs.writeFile(filePath, pdfBytes);
 
