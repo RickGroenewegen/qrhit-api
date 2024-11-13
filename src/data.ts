@@ -445,26 +445,39 @@ class Data {
     return user;
   }
 
-  public async getFirstUncheckedTrack(): Promise<any> {
-    const track = await this.prisma.track.findFirst({
-      where: {
-        manuallyChecked: false,
-      },
-      select: {
-        id: true,
-        name: true,
-        artist: true,
-        year: true,
-        yearSource: true,
-        certainty: true,
-        reasoning: true,
-      },
-      orderBy: {
-        id: 'asc',
-      },
-    });
+  public async getFirstUncheckedTrack(): Promise<{
+    track: any;
+    totalUnchecked: number;
+  }> {
+    const [track, totalCount] = await Promise.all([
+      this.prisma.track.findFirst({
+        where: {
+          manuallyChecked: false,
+        },
+        select: {
+          id: true,
+          name: true,
+          artist: true,
+          year: true,
+          yearSource: true,
+          certainty: true,
+          reasoning: true,
+        },
+        orderBy: {
+          id: 'asc',
+        },
+      }),
+      this.prisma.track.count({
+        where: {
+          manuallyChecked: false,
+        },
+      }),
+    ]);
 
-    return track;
+    return {
+      track,
+      totalUnchecked: totalCount,
+    };
   }
 
   public async updateTrackCheck(
