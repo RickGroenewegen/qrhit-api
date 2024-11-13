@@ -241,8 +241,6 @@ class Mollie {
       },
     });
 
-    console.log(payments);
-
     return { payments, totalItems };
   }
 

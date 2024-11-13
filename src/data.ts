@@ -827,14 +827,6 @@ class Data {
   public async areAllTracksManuallyChecked(
     paymentId: string
   ): Promise<boolean> {
-    this.logger.log(
-      color.blue.bold(
-        `Checking manually checked status for payment ${color.white.bold(
-          paymentId
-        )}`
-      )
-    );
-
     const result = await this.prisma.$queryRaw<[{ uncheckedCount: bigint }]>`
       SELECT COUNT(*) as uncheckedCount
       FROM payments p
@@ -846,32 +838,21 @@ class Data {
       AND t.manuallyChecked = false
     `;
 
-    const uncheckedCount = Number(result[0].uncheckedCount);
-    const allChecked = uncheckedCount === 0;
-
     this.logger.log(
-      allChecked
-        ? color.green.bold(
-            `All tracks for payment ${color.white.bold(
-              paymentId
-            )} are manually checked`
-          )
-        : color.yellow.bold(
-            `Found ${color.white.bold(
-              result[0].uncheckedCount
-            )} unchecked tracks for payment ${color.white.bold(paymentId)}`
-          )
+      color.blue.bold(
+        `Payment ${color.white.bold(paymentId)} has ${color.white.bold(
+          result[0].uncheckedCount
+        )} unchecked tracks`
+      )
     );
 
+    const uncheckedCount = Number(result[0].uncheckedCount);
+    const allChecked = uncheckedCount === 0;
 
     return allChecked;
   }
 
   public async checkUnfinalizedPayments(): Promise<string[]> {
-    this.logger.log(
-      color.blue.bold('Checking all unfinalized payments for track status')
-    );
-
     const unfinalizedPayments = await this.prisma.payment.findMany({
       where: {
         finalized: false,

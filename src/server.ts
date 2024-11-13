@@ -170,10 +170,33 @@ class Server {
       '/yearcheck',
       { preHandler: verifyTokenMiddleware },
       async (request: any, reply: any) => {
-        const track = await this.data.updateTrackCheck(
+        const result = await this.data.updateTrackCheck(
           request.body.trackId,
           request.body.year
         );
+        if (result.success && result.checkedPaymentIds!.length > 0) {
+          for (const paymentId of result.checkedPaymentIds!) {
+            this.generator.finalizeOrder(paymentId, this.mollie);
+          }
+        }
+        reply.send({ success: true });
+      }
+    );
+
+    this.fastify.get(
+      '/check_unfinalized',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply: any) => {
+        this.data.checkUnfinalizedPayments();
+        reply.send({ success: true });
+      }
+    );
+
+    this.fastify.post(
+      '/finalize',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply: any) => {
+        this.generator.finalizeOrder(request.body.paymentId, this.mollie);
         reply.send({ success: true });
       }
     );

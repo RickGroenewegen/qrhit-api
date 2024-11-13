@@ -20,6 +20,7 @@ import { CronJob } from 'cron';
 import cluster from 'cluster';
 import { Track } from '@prisma/client';
 import Discount from './discount';
+import { ApiResult } from './interfaces/ApiResult';
 
 class Generator {
   private logger = new Logger();
@@ -191,12 +192,17 @@ class Generator {
       },
     });
 
+    const allTracksChecked = await this.data.areAllTracksManuallyChecked(
+      payment.paymentId
+    );
+
     // Generate PDFs and finalize order
-    if (productType == 'giftcard') {
+    if (
+      productType == 'giftcard' ||
+      (productType == 'cards' && allTracksChecked)
+    ) {
       await this.finalizeOrder(payment.paymentId, mollie);
     }
-
-    //await this.finalizeOrder(payment.paymentId, mollie);
 
     let orderName = `${payment.fullname} (${payment.countrycode})`;
 
@@ -344,109 +350,139 @@ class Generator {
     }
   }
 
-  private async finalizeOrder(
+  public async finalizeOrder(
     paymentId: string,
     mollie: Mollie
-  ): Promise<void> {
+  ): Promise<ApiResult> {
     const payment = await mollie.getPayment(paymentId);
-    const playlists = await this.data.getPlaylistsByPaymentId(
-      payment.paymentId
-    );
-    const physicalPlaylists = [];
 
-    for (const playlist of playlists) {
-      if (playlist.productType === 'giftcard') {
-        await this.finalizeGiftcardOrder(payment, playlist, physicalPlaylists);
-        continue;
-      }
-
-      const hash = crypto
-        .createHmac('sha256', process.env['PLAYLIST_SECRET']!)
-        .update(playlist.playlistId)
-        .digest('hex');
-
-      const filename = sanitizeFilename(
-        `${hash}_printer.pdf`.replace(/ /g, '_')
-      ).toLowerCase();
-      const filenameDigital = sanitizeFilename(
-        `${hash}_digital.pdf`.replace(/ /g, '_')
-      ).toLowerCase();
-
-      const [generatedFilenameDigital, generatedFilename] = await Promise.all([
-        this.pdf.generatePDF(
-          filenameDigital,
-          playlist,
-          payment,
-          'digital',
-          payment.qrSubDir
-        ),
-        playlist.orderType != 'digital'
-          ? this.pdf.generatePDF(
-              filename,
-              playlist,
-              payment,
-              'printer',
-              payment.qrSubDir
-            )
-          : Promise.resolve(''),
-      ]);
-
-      console.log(1112, playlist);
-
-      if (playlist.orderType !== 'digital') {
-        physicalPlaylists.push({
-          playlist,
-          filename: generatedFilename,
-        });
-      }
-
-      await this.prisma.paymentHasPlaylist.update({
+    if (!payment.finalized) {
+      // update payment finalized
+      await this.prisma.payment.update({
         where: {
-          id: playlist.paymentHasPlaylistId,
+          id: payment.id,
         },
         data: {
-          filename: generatedFilename,
-          filenameDigital: generatedFilenameDigital,
+          finalized: true,
         },
       });
 
-      await this.mail.sendEmail(
-        'digital',
-        payment,
-        [playlist],
-        generatedFilename,
-        generatedFilenameDigital
+      const playlists = await this.data.getPlaylistsByPaymentId(
+        payment.paymentId
       );
+      const physicalPlaylists = [];
+
+      for (const playlist of playlists) {
+        if (playlist.productType === 'giftcard') {
+          await this.finalizeGiftcardOrder(
+            payment,
+            playlist,
+            physicalPlaylists
+          );
+          continue;
+        }
+
+        const hash = crypto
+          .createHmac('sha256', process.env['PLAYLIST_SECRET']!)
+          .update(playlist.playlistId)
+          .digest('hex');
+
+        const filename = sanitizeFilename(
+          `${hash}_printer.pdf`.replace(/ /g, '_')
+        ).toLowerCase();
+        const filenameDigital = sanitizeFilename(
+          `${hash}_digital.pdf`.replace(/ /g, '_')
+        ).toLowerCase();
+
+        const [generatedFilenameDigital, generatedFilename] = await Promise.all(
+          [
+            this.pdf.generatePDF(
+              filenameDigital,
+              playlist,
+              payment,
+              'digital',
+              payment.qrSubDir
+            ),
+            playlist.orderType != 'digital'
+              ? this.pdf.generatePDF(
+                  filename,
+                  playlist,
+                  payment,
+                  'printer',
+                  payment.qrSubDir
+                )
+              : Promise.resolve(''),
+          ]
+        );
+
+        if (playlist.orderType !== 'digital') {
+          physicalPlaylists.push({
+            playlist,
+            filename: generatedFilename,
+          });
+        }
+
+        await this.prisma.paymentHasPlaylist.update({
+          where: {
+            id: playlist.paymentHasPlaylistId,
+          },
+          data: {
+            filename: generatedFilename,
+            filenameDigital: generatedFilenameDigital,
+          },
+        });
+
+        await this.mail.sendEmail(
+          'digital',
+          payment,
+          [playlist],
+          generatedFilename,
+          generatedFilenameDigital
+        );
+      }
+
+      let printApiOrderId = '';
+      let printApiOrderRequest = '';
+      let printApiOrderResponse = '';
+
+      if (physicalPlaylists.length > 0) {
+        payment.printerPageCount = await this.pdf.countPDFPages(
+          `${process.env['PUBLIC_DIR']}/pdf/${physicalPlaylists[0].filename}`
+        );
+        const orderData = await this.order.createOrder(
+          payment,
+          physicalPlaylists,
+          playlists[0].productType
+        );
+        printApiOrderId = orderData.response.id;
+        printApiOrderRequest = JSON.stringify(orderData.request);
+        printApiOrderResponse = JSON.stringify(orderData.response);
+      }
+
+      await this.prisma.payment.update({
+        where: {
+          id: payment.id,
+        },
+        data: {
+          printApiOrderId,
+          printApiOrderRequest,
+          printApiOrderResponse,
+        },
+      });
+      return {
+        success: true,
+      };
+    } else {
+      this.logger.log(
+        color.yellow.bold(
+          'Order already finalized for payment: ' + color.white.bold(paymentId)
+        )
+      );
+      return {
+        success: false,
+        error: 'Order already finalized',
+      };
     }
-
-    let printApiOrderId = '';
-    let printApiOrderRequest = '';
-    let printApiOrderResponse = '';
-
-    if (physicalPlaylists.length > 0) {
-      payment.printerPageCount = await this.pdf.countPDFPages(
-        `${process.env['PUBLIC_DIR']}/pdf/${physicalPlaylists[0].filename}`
-      );
-      const orderData = await this.order.createOrder(
-        payment,
-        physicalPlaylists,
-        playlists[0].productType
-      );
-      printApiOrderId = orderData.response.id;
-      printApiOrderRequest = JSON.stringify(orderData.request);
-      printApiOrderResponse = JSON.stringify(orderData.response);
-    }
-
-    await this.prisma.payment.update({
-      where: {
-        id: payment.id,
-      },
-      data: {
-        printApiOrderId,
-        printApiOrderRequest,
-        printApiOrderResponse,
-      },
-    });
   }
 
   private async finalizeGiftcardOrder(
