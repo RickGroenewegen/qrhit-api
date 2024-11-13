@@ -256,18 +256,25 @@ class PDF {
 
       const { width, height } = copiedPage.getSize();
 
-      // Convert page to PNG at 300 DPI (1 point = 1/72 inch, so multiply by ~4.17 for 300 DPI)
-      const pngData = await sharp(
-        Buffer.from(await tempDoc.saveAsBase64(), 'base64')
-      )
-        .resize(Math.round(width * 4.17), Math.round(height * 4.17), {
-          fit: 'fill',
-        })
-        .png()
-        .toBuffer();
+      // Save temp PDF to file
+      const tempPdfPath = `${process.env['PUBLIC_DIR']}/pdf/temp_${i}.pdf`;
+      await fs.writeFile(tempPdfPath, await tempDoc.save());
 
-      // Embed PNG back into new PDF
+      // Convert PDF to PNG using pdf2png
+      const pngPath = `${process.env['PUBLIC_DIR']}/pdf/temp_${i}.png`;
+      await this.convertapi.convert('png', {
+        File: tempPdfPath,
+        ImageResolutionH: 300,
+        ImageResolutionV: 300,
+      }, 'pdf').then(result => result.saveFiles(pngPath));
+
+      // Read PNG and embed back into PDF
+      const pngData = await fs.readFile(pngPath);
       const image = await newPdfDoc.embedPng(pngData);
+
+      // Cleanup temp files
+      await fs.unlink(tempPdfPath);
+      await fs.unlink(pngPath);
       const page = newPdfDoc.addPage([width, height]);
       page.drawImage(image, {
         x: 0,
