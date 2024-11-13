@@ -249,34 +249,17 @@ class PDF {
     const pdfDoc = await PDFDocument.load(await fs.readFile(filePath));
     const newPdfDoc = await PDFDocument.create();
 
+    // Copy all pages to new document
     for (let i = 0; i < pdfDoc.getPageCount(); i++) {
-      const tempDoc = await PDFDocument.create();
-      const [copiedPage] = await tempDoc.copyPages(pdfDoc, [i]);
-      tempDoc.addPage(copiedPage);
-
-      // Export just this page as PNG
-      const pageBuffer = await tempDoc.saveAsBase64({ dataUri: true });
-      const base64Data = pageBuffer.split(',')[1]; // Remove data URI prefix
-      
-      const { width, height } = copiedPage.getSize();
-      const imageBuffer = await sharp(Buffer.from(base64Data, 'base64'))
-        .resize(Math.round(width), Math.round(height))
-        .png()
-        .toBuffer();
-
-      // Embed the PNG image into the new PDF
-      const embeddedImage = await newPdfDoc.embedPng(imageBuffer);
-      const newPage = newPdfDoc.addPage([width, height]);
-      newPage.drawImage(embeddedImage, {
-        x: 0,
-        y: 0,
-        width: width,
-        height: height,
-      });
+      const [copiedPage] = await newPdfDoc.copyPages(pdfDoc, [i]);
+      newPdfDoc.addPage(copiedPage);
     }
 
-    // Save the new flattened PDF
-    const pdfBytes = await newPdfDoc.save();
+    // Save the new PDF (pdf-lib automatically flattens interactive elements)
+    const pdfBytes = await newPdfDoc.save({
+      updateMetadata: false, // Removes metadata
+      useObjectStreams: false // Simplifies PDF structure
+    });
     await fs.writeFile(filePath, pdfBytes);
 
     this.logger.log(
