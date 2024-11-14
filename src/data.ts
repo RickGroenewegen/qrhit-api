@@ -520,10 +520,10 @@ class Data {
     return user;
   }
 
-  private async findTrackByISRC(isrc: string): Promise<any> {
-    if (!isrc) return null;
+  private async findAndUpdateTrackByISRC(isrc: string, trackId: number): Promise<boolean> {
+    if (!isrc) return false;
     
-    return await this.prisma.track.findFirst({
+    const existingTrack = await this.prisma.track.findFirst({
       where: {
         isrc: isrc,
         year: {
@@ -539,6 +539,22 @@ class Data {
         reasoning: true,
       },
     });
+
+    if (existingTrack) {
+      await this.prisma.track.update({
+        where: { id: trackId },
+        data: {
+          year: existingTrack.year,
+          yearSource: 'otherTrack_' + existingTrack.yearSource,
+          certainty: existingTrack.certainty,
+          reasoning: existingTrack.reasoning,
+          manuallyChecked: true,
+        },
+      });
+      return true;
+    }
+
+    return false;
   }
 
   public async getLink(trackId: number): Promise<ApiResult> {
@@ -723,33 +739,17 @@ class Data {
 
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
-      // Check for existing track with same ISRC
-      const trackWithIsrc = await this.findTrackByISRC(track.isrc ?? '');
-      if (trackWithIsrc) {
-          await this.prisma.track.update({
-            where: { id: track.id },
-            data: {
-              year: trackWithIsrc.year,
-              yearSource: 'otherTrack_' + trackWithIsrc.yearSource,
-              certainty: trackWithIsrc.certainty,
-              reasoning: trackWithIsrc.reasoning,
-              manuallyChecked: true,
-            },
-          });
-
-          this.logger.log(
-            color.blue.bold(
-              `Updated year for track ID ${color.white.bold(
-                track.id
-              )} with ISRC ${color.white.bold(
-                track.isrc
-              )} from track ID ${color.white.bold(
-                trackWithIsrc.id
-              )} (Year: ${color.white.bold(trackWithIsrc.year)})`
-            )
-          );
-          continue;
-        }
+      // Check for existing track with same ISRC and update if found
+      const wasUpdated = await this.findAndUpdateTrackByISRC(track.isrc ?? '', track.id);
+      if (wasUpdated) {
+        this.logger.log(
+          color.blue.bold(
+            `Updated year for track ID ${color.white.bold(
+              track.id
+            )} with ISRC ${color.white.bold(track.isrc)}`
+          )
+        );
+        continue;
       }
 
       let { year, source, certainty, reasoning } =
