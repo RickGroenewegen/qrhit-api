@@ -151,7 +151,10 @@ class PDF {
         await this.addBleed(finalPath, 3);
       } else {
         // Flatten the PDF to remove any interactive elements
-        // await this.flattenPdf(finalPath);
+        // https://open.spotify.com/playlist/6dUmjwrJhvTWpkxGwpNFv6
+        if (process.env['ENVIROMENT'] === 'production') {
+          await this.flattenPdf(finalPath);
+        }
       }
     } finally {
       // Clean up temporary files only if they were merged

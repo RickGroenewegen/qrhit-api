@@ -34,7 +34,7 @@
         box-sizing: border-box;
     }
     .front {
-        /* background-image: url('<%= process.env['API_URI'] %>/assets/images/card_background2.png'); */
+        background-image: url('<%= process.env['API_URI'] %>/assets/images/card_background2.png');
         background-size: cover;
         display: flex;
         flex-direction: column;
@@ -55,10 +55,7 @@
         left: 50%;
         transform: translate(-50%, -50%);
         z-index: 1;
-        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
         border: 1px solid #e0e0e0;
-        -webkit-print-color-adjust: exact;
-        print-color-adjust: exact;
     }
     .domain {
         font-size: 13px;
