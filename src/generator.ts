@@ -21,6 +21,7 @@ import cluster from 'cluster';
 import { Track } from '@prisma/client';
 import Discount from './discount';
 import { ApiResult } from './interfaces/ApiResult';
+import Cache from './cache';
 
 class Generator {
   private logger = new Logger();
@@ -35,7 +36,6 @@ class Generator {
   private order = Order.getInstance();
   private analytics = AnalyticsClient.getInstance();
   private discount = new Discount();
-
   private cache = Cache.getInstance();
 
   constructor() {
