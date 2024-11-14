@@ -36,6 +36,8 @@ class Generator {
   private analytics = AnalyticsClient.getInstance();
   private discount = new Discount();
 
+  private cache = Cache.getInstance();
+
   constructor() {
     this.setupQRCleanupCron();
   }
@@ -354,141 +356,163 @@ class Generator {
     paymentId: string,
     mollie: Mollie
   ): Promise<ApiResult> {
-    const payment = await mollie.getPayment(paymentId);
-
-    if (!payment.finalized) {
-      // update payment finalized
-      await this.prisma.payment.update({
-        where: {
-          id: payment.id,
-        },
-        data: {
-          finalized: true,
-        },
-      });
-
-      const playlists = await this.data.getPlaylistsByPaymentId(
-        payment.paymentId
-      );
-      const physicalPlaylists = [];
-
-      for (const playlist of playlists) {
-        if (playlist.productType === 'giftcard') {
-          await this.finalizeGiftcardOrder(
-            payment,
-            playlist,
-            physicalPlaylists
-          );
-          continue;
-        }
-
-        const hash = crypto
-          .createHmac('sha256', process.env['PLAYLIST_SECRET']!)
-          .update(playlist.playlistId)
-          .digest('hex');
-
-        const filename = sanitizeFilename(
-          `${hash}_printer.pdf`.replace(/ /g, '_')
-        ).toLowerCase();
-        const filenameDigital = sanitizeFilename(
-          `${hash}_digital.pdf`.replace(/ /g, '_')
-        ).toLowerCase();
-
-        const [generatedFilenameDigital, generatedFilename] = await Promise.all(
-          [
-            this.pdf.generatePDF(
-              filenameDigital,
-              playlist,
-              payment,
-              'digital',
-              payment.qrSubDir
-            ),
-            playlist.orderType == 'physical'
-              ? this.pdf.generatePDF(
-                  filename,
-                  playlist,
-                  payment,
-                  'printer',
-                  payment.qrSubDir
-                )
-              : Promise.resolve(''),
-          ]
-        );
-
-        if (playlist.orderType == 'physical') {
-          physicalPlaylists.push({
-            playlist,
-            filename: generatedFilename,
-          });
-        }
-
-        await this.prisma.paymentHasPlaylist.update({
-          where: {
-            id: playlist.paymentHasPlaylistId,
-          },
-          data: {
-            filename: generatedFilename,
-            filenameDigital: generatedFilenameDigital,
-          },
-        });
-
-        await this.mail.sendEmail(
-          'digital',
-          payment,
-          [playlist],
-          generatedFilename,
-          generatedFilenameDigital
-        );
-      }
-
-      let printApiOrderId = '';
-      let printApiOrderRequest = '';
-      let printApiOrderResponse = '';
-
-      if (physicalPlaylists.length > 0) {
-        payment.printerPageCount = await this.pdf.countPDFPages(
-          `${process.env['PUBLIC_DIR']}/pdf/${physicalPlaylists[0].filename}`
-        );
-        const orderData = await this.order.createOrder(
-          payment,
-          physicalPlaylists,
-          playlists[0].productType
-        );
-        printApiOrderId = orderData.response.id;
-        printApiOrderRequest = JSON.stringify(orderData.request);
-        printApiOrderResponse = JSON.stringify(orderData.response);
-      }
-
-      await this.prisma.payment.update({
-        where: {
-          id: payment.id,
-        },
-        data: {
-          printApiOrderId,
-          printApiOrderRequest,
-          printApiOrderResponse,
-        },
-      });
-
-      this.logger.log(
-        color.green.bold(
-          `Order finalized for payment: ${white.bold(paymentId)}`
-        )
-      );
-
-      return {
-        success: true,
-      };
-    } else {
+    // Try to acquire a lock for this payment
+    const lockAcquired = await this.cache.acquireLock(
+      `finalizeOrder:${paymentId}`
+    );
+    if (!lockAcquired) {
       this.logger.log(
         color.yellow.bold(
-          'Order already finalized for payment: ' + color.white.bold(paymentId)
+          'Order finalization already in progress for payment: ' +
+            color.white.bold(paymentId)
         )
       );
       return {
         success: false,
-        error: 'Order already finalized',
+        error: 'Order finalization already in progress',
       };
+    }
+
+    try {
+      const payment = await mollie.getPayment(paymentId);
+
+      if (!payment.finalized) {
+        // update payment finalized
+        await this.prisma.payment.update({
+          where: {
+            id: payment.id,
+          },
+          data: {
+            finalized: true,
+          },
+        });
+
+        const playlists = await this.data.getPlaylistsByPaymentId(
+          payment.paymentId
+        );
+        const physicalPlaylists = [];
+
+        for (const playlist of playlists) {
+          if (playlist.productType === 'giftcard') {
+            await this.finalizeGiftcardOrder(
+              payment,
+              playlist,
+              physicalPlaylists
+            );
+            continue;
+          }
+
+          const hash = crypto
+            .createHmac('sha256', process.env['PLAYLIST_SECRET']!)
+            .update(playlist.playlistId)
+            .digest('hex');
+
+          const filename = sanitizeFilename(
+            `${hash}_printer.pdf`.replace(/ /g, '_')
+          ).toLowerCase();
+          const filenameDigital = sanitizeFilename(
+            `${hash}_digital.pdf`.replace(/ /g, '_')
+          ).toLowerCase();
+
+          const [generatedFilenameDigital, generatedFilename] =
+            await Promise.all([
+              this.pdf.generatePDF(
+                filenameDigital,
+                playlist,
+                payment,
+                'digital',
+                payment.qrSubDir
+              ),
+              playlist.orderType == 'physical'
+                ? this.pdf.generatePDF(
+                    filename,
+                    playlist,
+                    payment,
+                    'printer',
+                    payment.qrSubDir
+                  )
+                : Promise.resolve(''),
+            ]);
+
+          if (playlist.orderType == 'physical') {
+            physicalPlaylists.push({
+              playlist,
+              filename: generatedFilename,
+            });
+          }
+
+          await this.prisma.paymentHasPlaylist.update({
+            where: {
+              id: playlist.paymentHasPlaylistId,
+            },
+            data: {
+              filename: generatedFilename,
+              filenameDigital: generatedFilenameDigital,
+            },
+          });
+
+          await this.mail.sendEmail(
+            'digital',
+            payment,
+            [playlist],
+            generatedFilename,
+            generatedFilenameDigital
+          );
+        }
+
+        let printApiOrderId = '';
+        let printApiOrderRequest = '';
+        let printApiOrderResponse = '';
+
+        if (physicalPlaylists.length > 0) {
+          payment.printerPageCount = await this.pdf.countPDFPages(
+            `${process.env['PUBLIC_DIR']}/pdf/${physicalPlaylists[0].filename}`
+          );
+          const orderData = await this.order.createOrder(
+            payment,
+            physicalPlaylists,
+            playlists[0].productType
+          );
+          printApiOrderId = orderData.response.id;
+          printApiOrderRequest = JSON.stringify(orderData.request);
+          printApiOrderResponse = JSON.stringify(orderData.response);
+        }
+
+        await this.prisma.payment.update({
+          where: {
+            id: payment.id,
+          },
+          data: {
+            printApiOrderId,
+            printApiOrderRequest,
+            printApiOrderResponse,
+          },
+        });
+
+        this.logger.log(
+          color.green.bold(
+            `Order finalized for payment: ${white.bold(paymentId)}`
+          )
+        );
+
+        return {
+          success: true,
+        };
+      } else {
+        this.logger.log(
+          color.yellow.bold(
+            'Order already finalized for payment: ' +
+              color.white.bold(paymentId)
+          )
+        );
+        return {
+          success: false,
+          error: 'Order already finalized',
+        };
+      }
+    } finally {
+      // Always release the lock when done
+      await this.cache.releaseLock(`finalizeOrder:${paymentId}`);
     }
   }
 
