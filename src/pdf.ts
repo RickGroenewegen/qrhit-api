@@ -152,7 +152,7 @@ class PDF {
       } else {
         // Flatten the PDF to remove any interactive elements
         // https://open.spotify.com/playlist/6dUmjwrJhvTWpkxGwpNFv6
-        if (process.env['ENVIROMENT'] === 'production') {
+        if (process.env['ENVIRONMENT'] === 'production') {
           await this.flattenPdf(finalPath);
         }
       }
