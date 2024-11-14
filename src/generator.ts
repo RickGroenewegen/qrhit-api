@@ -354,12 +354,11 @@ class Generator {
     paymentId: string,
     mollie: Mollie
   ): Promise<ApiResult> {
-    return await this.prisma.$transaction(async (tx) => {
-      const payment = await mollie.getPayment(paymentId);
+    const payment = await mollie.getPayment(paymentId);
 
-      if (!payment.finalized) {
-        // update payment finalized
-        await tx.payment.update({
+    if (!payment.finalized) {
+      // update payment finalized
+      await this.prisma.payment.update({
         where: {
           id: payment.id,
         },
@@ -423,7 +422,7 @@ class Generator {
           });
         }
 
-        await tx.paymentHasPlaylist.update({
+        await this.prisma.paymentHasPlaylist.update({
           where: {
             id: playlist.paymentHasPlaylistId,
           },
@@ -460,7 +459,7 @@ class Generator {
         printApiOrderResponse = JSON.stringify(orderData.response);
       }
 
-      await tx.payment.update({
+      await this.prisma.payment.update({
         where: {
           id: payment.id,
         },
@@ -480,18 +479,17 @@ class Generator {
       return {
         success: true,
       };
-      } else {
-        this.logger.log(
-          color.yellow.bold(
-            'Order already finalized for payment: ' + color.white.bold(paymentId)
-          )
-        );
-        return {
-          success: false,
-          error: 'Order already finalized',
-        };
-      }
-    });
+    } else {
+      this.logger.log(
+        color.yellow.bold(
+          'Order already finalized for payment: ' + color.white.bold(paymentId)
+        )
+      );
+      return {
+        success: false,
+        error: 'Order already finalized',
+      };
+    }
   }
 
   private async finalizeGiftcardOrder(
