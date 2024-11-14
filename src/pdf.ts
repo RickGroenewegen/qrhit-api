@@ -151,7 +151,7 @@ class PDF {
         await this.addBleed(finalPath, 3);
       } else {
         // Flatten the PDF to remove any interactive elements
-        //await this.flattenPdf(finalPath);
+        await this.flattenPdf(finalPath);
       }
     } finally {
       // Clean up temporary files only if they were merged
@@ -245,6 +245,28 @@ class PDF {
 
   private async mmToPoints(mm: number): Promise<number> {
     return mm * (72 / 25.4);
+  }
+
+  public async flattenPdf(inputPath: string): Promise<void> {
+    try {
+      const result = await this.convertapi.convert(
+        'flatten',
+        {
+          File: inputPath
+        },
+        'pdf'
+      );
+
+      await result.saveFiles(inputPath);
+
+      this.logger.log(
+        color.blue.bold(
+          `PDF flattening successful: ${color.white.bold(inputPath)}`
+        )
+      );
+    } catch (error) {
+      this.logger.log(color.red.bold('Error flattening PDF!'));
+    }
   }
 
   public async addBleed(inputPath: string, bleed: number) {
