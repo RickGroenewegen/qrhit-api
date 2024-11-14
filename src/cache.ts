@@ -125,6 +125,17 @@ class Cache {
   async close(): Promise<void> {
     await this.client.quit();
   }
+
+  async acquireLock(key: string, ttlSeconds: number = 300): Promise<boolean> {
+    const lockKey = `lock:${key}`;
+    const result = await this.executeCommand('set', lockKey, '1', 'NX', 'EX', ttlSeconds);
+    return result === 'OK';
+  }
+
+  async releaseLock(key: string): Promise<void> {
+    const lockKey = `lock:${key}`;
+    await this.executeCommand('del', lockKey);
+  }
 }
 
 export default Cache;
