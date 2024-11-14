@@ -520,6 +520,27 @@ class Data {
     return user;
   }
 
+  private async findTrackByISRC(isrc: string): Promise<any> {
+    if (!isrc) return null;
+    
+    return await this.prisma.track.findFirst({
+      where: {
+        isrc: isrc,
+        year: {
+          not: null,
+        },
+        manuallyChecked: true,
+      },
+      select: {
+        id: true,
+        year: true,
+        yearSource: true,
+        certainty: true,
+        reasoning: true,
+      },
+    });
+  }
+
   public async getLink(trackId: number): Promise<ApiResult> {
     let link = '';
     this.analytics.increaseCounter('songs', 'played');
@@ -702,26 +723,9 @@ class Data {
 
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
-      // If the track has an ISRC, try to see if there is already a track with the same ISRC. If so: copy the year
-      if (track.isrc) {
-        const trackWithIsrc = await this.prisma.track.findFirst({
-          where: {
-            isrc: track.isrc,
-            year: {
-              not: null,
-            },
-            manuallyChecked: true,
-          },
-          select: {
-            id: true,
-            year: true,
-            yearSource: true,
-            certainty: true,
-            reasoning: true,
-          },
-        });
-
-        if (trackWithIsrc) {
+      // Check for existing track with same ISRC
+      const trackWithIsrc = await this.findTrackByISRC(track.isrc ?? '');
+      if (trackWithIsrc) {
           await this.prisma.track.update({
             where: { id: track.id },
             data: {
