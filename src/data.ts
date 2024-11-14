@@ -520,9 +520,12 @@ class Data {
     return user;
   }
 
-  private async findAndUpdateTrackByISRC(isrc: string, trackId: number): Promise<boolean> {
+  private async findAndUpdateTrackByISRC(
+    isrc: string,
+    trackId: number
+  ): Promise<boolean> {
     if (!isrc) return false;
-    
+
     const existingTrack = await this.prisma.track.findFirst({
       where: {
         isrc: isrc,
@@ -740,13 +743,18 @@ class Data {
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
       // Check for existing track with same ISRC and update if found
-      const wasUpdated = await this.findAndUpdateTrackByISRC(track.isrc ?? '', track.id);
+      const wasUpdated = await this.findAndUpdateTrackByISRC(
+        track.isrc ?? '',
+        track.id
+      );
       if (wasUpdated) {
         this.logger.log(
           color.blue.bold(
             `Updated year for track ID ${color.white.bold(
-              track.id
-            )} with ISRC ${color.white.bold(track.isrc)}`
+              track.name
+            )} with ISRC ${color.white.bold(
+              track.isrc
+            )} with the year from a track with the same ISRC`
           )
         );
         continue;
