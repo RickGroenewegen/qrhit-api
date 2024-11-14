@@ -281,10 +281,14 @@ class Generator {
       );
     }
 
+    console.log(1111, refreshCache);
+
     if (refreshCache || process.env['ENVIRONMENT'] === 'development') {
       // Retrieve the tracks from Spotify
       const response = await this.spotify.getTracks(playlist.playlistId);
       const tracks = response.data.tracks;
+
+      console.log(2222, tracks.length);
 
       // If there are more than 500 remove the last tracks
       if (tracks.length > MAX_CARDS) {
