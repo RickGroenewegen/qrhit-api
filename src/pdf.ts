@@ -151,7 +151,7 @@ class PDF {
         await this.addBleed(finalPath, 3);
       } else {
         // Flatten the PDF to remove any interactive elements
-        await this.flattenPdf(finalPath);
+        // await this.flattenPdf(finalPath);
       }
     } finally {
       // Clean up temporary files only if they were merged
@@ -247,12 +247,12 @@ class PDF {
     return mm * (72 / 25.4);
   }
 
-  public async flattenPdf(inputPath: string): Promise<void> {
+  private async flattenPdf(inputPath: string): Promise<void> {
     try {
       const result = await this.convertapi.convert(
         'flatten',
         {
-          File: inputPath
+          File: inputPath,
         },
         'pdf'
       );
