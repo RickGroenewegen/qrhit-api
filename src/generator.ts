@@ -283,38 +283,39 @@ class Generator {
 
     console.log(1111, refreshCache);
 
-    if (refreshCache || process.env['ENVIRONMENT'] === 'development') {
-      // Retrieve the tracks from Spotify
-      const response = await this.spotify.getTracks(playlist.playlistId);
-      const tracks = response.data.tracks;
+    // Retrieve the tracks from Spotify
+    const response = await this.spotify.getTracks(
+      playlist.playlistId,
+      !refreshCache
+    );
+    const tracks = response.data.tracks;
 
-      console.log(2222, tracks.length);
+    console.log(2222, tracks.length);
 
-      // If there are more than 500 remove the last tracks
-      if (tracks.length > MAX_CARDS) {
-        tracks.splice(MAX_CARDS);
-      }
-
-      this.logger.log(
-        blue.bold(
-          `Storing ${white.bold(
-            tracks.length
-          )} tracks for playlist: ${white.bold(playlist.playlistId)}`
-        )
-      );
-
-      await this.data.storeTracks(playlist.id, playlist.playlistId, tracks);
-
-      this.logger.log(
-        blue.bold(
-          `Retrieving ${white.bold(
-            tracks.length
-          )} tracks for playlist: ${white.bold(playlist.playlistId)}`
-        )
-      );
-      const dbTracks = await this.data.getTracks(playlist.id);
-      playlist.numberOfTracks = dbTracks.length;
+    // If there are more than 500 remove the last tracks
+    if (tracks.length > MAX_CARDS) {
+      tracks.splice(MAX_CARDS);
     }
+
+    this.logger.log(
+      blue.bold(
+        `Storing ${white.bold(tracks.length)} tracks for playlist: ${white.bold(
+          playlist.playlistId
+        )}`
+      )
+    );
+
+    await this.data.storeTracks(playlist.id, playlist.playlistId, tracks);
+
+    this.logger.log(
+      blue.bold(
+        `Retrieving ${white.bold(
+          tracks.length
+        )} tracks for playlist: ${white.bold(playlist.playlistId)}`
+      )
+    );
+    const dbTracks = await this.data.getTracks(playlist.id);
+    playlist.numberOfTracks = dbTracks.length;
   }
 
   private async generateQRCodes(
