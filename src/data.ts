@@ -702,6 +702,52 @@ class Data {
 
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
+      // If the track has an ISRC, try to see if there is already a track with the same ISRC. If so: copy the year
+      if (track.isrc) {
+        const trackWithIsrc = await this.prisma.track.findFirst({
+          where: {
+            isrc: track.isrc,
+            year: {
+              not: null,
+            },
+            manuallyChecked: true,
+          },
+          select: {
+            id: true,
+            year: true,
+            yearSource: true,
+            certainty: true,
+            reasoning: true,
+          },
+        });
+
+        if (trackWithIsrc) {
+          await this.prisma.track.update({
+            where: { id: track.id },
+            data: {
+              year: trackWithIsrc.year,
+              yearSource: 'otherTrack_' + trackWithIsrc.yearSource,
+              certainty: trackWithIsrc.certainty,
+              reasoning: trackWithIsrc.reasoning,
+              manuallyChecked: true,
+            },
+          });
+
+          this.logger.log(
+            color.blue.bold(
+              `Updated year for track ID ${color.white.bold(
+                track.id
+              )} with ISRC ${color.white.bold(
+                track.isrc
+              )} from track ID ${color.white.bold(
+                trackWithIsrc.id
+              )} (Year: ${color.white.bold(trackWithIsrc.year)})`
+            )
+          );
+          continue;
+        }
+      }
+
       let { year, source, certainty, reasoning } =
         await this.musicBrainz.getReleaseDate(
           track.isrc ?? '',
