@@ -1,7 +1,7 @@
 {
   "mail.mailSubject": "Abbiamo ricevuto l'ordine {{ orderId }}!",
   "mail.greatNews": "Abbiamo ricevuto il tuo ordine! Le carte verranno spedite una volta pronte. Riceverai anche un link di tracciamento.",
-  "mail.weHopeYouHaveFun": "Stiamo attualmente generando la versione digitale gratuita che puoi giocare mentre aspetti le carte reali. Dovresti riceverla via e-mail in pochi minuti. Speriamo che ti diverta molto musicalmente! Se hai ulteriori domande, non esitare a contattarci tramite il modulo di contatto sul nostro sito web.",
+  "mail.weHopeYouHaveFun": "Stiamo attualmente confermando tutti i dati di rilascio. Una volta fatto, riceverai la versione digitale gratuita mentre aspetti che le carte reali arrivino per posta. Dovresti ricevere la versione digitale via e-mail entro le prossime 24 ore. Speriamo che ti diverta un sacco con la musica! Se hai altre domande, non esitare a contattarci tramite il modulo di contatto sul nostro sito.",
   "mail.greatNewsDigital": "Ottime notizie! Le tue carte QR per la playlist sono state trasformate in un PDF. Puoi scaricarlo cliccando sul pulsante qui sotto.",
   "mail.weHopeYouHaveFunDigital": "Speriamo che ti diverta molto con la musica! Se hai altre domande, non esitare a scriverci tramite il modulo di contatto sul nostro sito web.",
   "mail.greetings": "Cordiali saluti",
@@ -318,7 +318,7 @@
   "invoice.bancontact": "Bancontact",
   "mail.mailSubjectDigital": "Ecco il tuo PDF per '{{ playlist }}'!",
   "mail.greatNewsMainDigital": "Abbiamo ricevuto il tuo ordine!",
-  "mail.weHopeYouHaveFunMainDigital": "La versione digitale delle tue playlist è in fase di creazione e dovresti riceverla via e-mail tra pochi minuti. Speriamo che ti diverta molto con la musica! Se hai ulteriori domande, non esitare a contattarci tramite il modulo di contatto sul nostro sito web.",
+  "mail.weHopeYouHaveFunMainDigital": "Le versioni digitali della tua playlist sono in fase di creazione. Stiamo confermando tutti i dati di rilascio e dovresti riceverli via e-mail entro le prossime 24 ore. Speriamo che ti diverta un sacco con la musica! Se hai altre domande, non esitare a contattarci tramite il modulo di contatto sul nostro sito.",
   "mail.playlists": "Playlist",
   "payment.playlists": "playlist con carte QR",
   "mail.downloadLink": "Scarica il tuo PDF",

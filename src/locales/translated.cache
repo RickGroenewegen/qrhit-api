@@ -3442,17 +3442,6 @@
     "hin",
     "jp"
   ],
-  "mail.weHopeYouHaveFunMainDigital": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp"
-  ],
   "mail.weHopeYouHaveFunDigital": [
     "nl",
     "de",
@@ -3476,17 +3465,6 @@
     "jp"
   ],
   "payment.playlists": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp"
-  ],
-  "mail.weHopeYouHaveFun": [
     "nl",
     "de",
     "fr",
@@ -3996,6 +3974,28 @@
     "jp"
   ],
   "mail.greatNewsDigital": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp"
+  ],
+  "mail.weHopeYouHaveFun": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp"
+  ],
+  "mail.weHopeYouHaveFunMainDigital": [
     "nl",
     "de",
     "fr",

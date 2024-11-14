@@ -1,7 +1,7 @@
 {
   "mail.mailSubject": "¡Hemos recibido el pedido {{ orderId }}!",
   "mail.greatNews": "¡Hemos recibido tu pedido! Las cartas se enviarán cuando estén listas. También recibirás un enlace de seguimiento.",
-  "mail.weHopeYouHaveFun": "Actualmente estamos generando la versión digital gratuita que puedes jugar mientras esperas las cartas reales. Deberías recibirla por correo electrónico en unos minutos. ¡Esperamos que te diviertas mucho musicalmente! Si tienes alguna pregunta, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
+  "mail.weHopeYouHaveFun": "Actualmente estamos confirmando todos los datos de lanzamiento. Una vez hecho esto, recibirás la versión digital gratuita mientras esperas que las cartas reales lleguen por correo. Deberías recibir la versión digital por correo electrónico en las próximas 24 horas. ¡Esperamos que te diviertas mucho con la música! Si tienes más preguntas, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
   "mail.greatNewsDigital": "¡Buenas noticias! Tus tarjetas QR para tu lista de reproducción se han convertido en un PDF. Puedes descargarlo haciendo clic en el botón de abajo.",
   "mail.weHopeYouHaveFunDigital": "¡Esperamos que te diviertas mucho con la música! Si tienes más preguntas, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
   "mail.greetings": "Saludos cordiales",
@@ -322,7 +322,7 @@
   "invoice.bancontact": "Bancontact",
   "mail.mailSubjectDigital": "Aquí está tu PDF para '{{ playlist }}'!",
   "mail.greatNewsMainDigital": "¡Hemos recibido su pedido!",
-  "mail.weHopeYouHaveFunMainDigital": "La(s) versión(es) digital(es) de tu(s) lista(s) de reproducción se están creando en este momento y deberías recibirlas por correo electrónico en unos minutos. ¡Esperamos que te diviertas mucho con la música! Si tienes alguna pregunta, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
+  "mail.weHopeYouHaveFunMainDigital": "La(s) versión(es) digital(es) de tu(s) lista(s) de reproducción se están creando en este momento. Estamos confirmando todos los datos de lanzamiento y deberías recibirlo por correo electrónico en las próximas 24 horas. ¡Esperamos que te diviertas mucho con la música! Si tienes más preguntas, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
   "mail.playlists": "Lista(s) de reproducción",
   "payment.playlists": "listas de reproducción con tarjetas QR",
   "mail.downloadLink": "Descarga tu PDF",

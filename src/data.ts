@@ -453,6 +453,9 @@ class Data {
       this.prisma.track.findFirst({
         where: {
           manuallyChecked: false,
+          year: {
+            gt: 0,
+          },
         },
         select: {
           id: true,
@@ -931,14 +934,14 @@ class Data {
           const newYear = parseInt(row[4]);
 
           if (!isNaN(trackId) && !isNaN(newYear)) {
-            await this.prisma.track.update({
-              where: { id: trackId },
-              data: {
-                year: newYear,
-                yearSource: 'manual',
-                manuallyChecked: true,
-              },
-            });
+            // await this.prisma.track.update({
+            //   where: { id: trackId },
+            //   data: {
+            //     year: newYear,
+            //     yearSource: 'manual',
+            //     manuallyChecked: false,
+            //   },
+            // });
 
             this.logger.log(
               color.magenta(

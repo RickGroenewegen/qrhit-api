@@ -403,7 +403,7 @@ class Generator {
               'digital',
               payment.qrSubDir
             ),
-            playlist.orderType != 'digital'
+            playlist.orderType == 'physical'
               ? this.pdf.generatePDF(
                   filename,
                   playlist,
@@ -415,7 +415,7 @@ class Generator {
           ]
         );
 
-        if (playlist.orderType !== 'digital') {
+        if (playlist.orderType == 'physical') {
           physicalPlaylists.push({
             playlist,
             filename: generatedFilename,
@@ -469,6 +469,13 @@ class Generator {
           printApiOrderResponse,
         },
       });
+
+      this.logger.log(
+        color.green.bold(
+          `Order finalized for payment: ${white.bold(paymentId)}`
+        )
+      );
+
       return {
         success: true,
       };

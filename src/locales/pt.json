@@ -1,7 +1,7 @@
 {
   "mail.mailSubject": "Recebemos o pedido {{ orderId }}!",
   "mail.greatNews": "Recebemos o teu pedido! As cartas serão enviadas quando estiverem prontas. Também receberás um link de rastreamento.",
-  "mail.weHopeYouHaveFun": "Estamos atualmente gerando a versão digital gratuita que você pode jogar enquanto aguarda as cartas reais. Você deve recebê-la por e-mail em alguns minutos. Esperamos que você se divirta muito musicalmente! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contato em nosso site.",
+  "mail.weHopeYouHaveFun": "Estamos atualmente confirmando todos os dados de lançamento. Assim que isso for feito, você receberá a versão digital gratuita enquanto aguarda as cartas reais chegarem pelo correio. Você deve receber a versão digital por e-mail nas próximas 24 horas. Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contato em nosso site.",
   "mail.greatNewsDigital": "Boas notícias! As tuas cartas QR para a playlist foram convertidas num PDF. Podes descarregá-lo clicando no botão abaixo.",
   "mail.weHopeYouHaveFunDigital": "Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contato em nosso site.",
   "mail.greetings": "Atenciosamente",
@@ -318,7 +318,7 @@
   "invoice.bancontact": "Bancontact",
   "mail.mailSubjectDigital": "Aqui está o seu PDF para '{{ playlist }}'!",
   "mail.greatNewsMainDigital": "Recebemos seu pedido!",
-  "mail.weHopeYouHaveFunMainDigital": "A(s) versão(ões) digital(is) da sua(s) playlist(s) está(ão) sendo criada(s) enquanto falamos e você deve recebê-la(s) por e-mail em alguns minutos. Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contato em nosso site.",
+  "mail.weHopeYouHaveFunMainDigital": "As versões digitais da sua playlist estão sendo criadas enquanto falamos. Estamos confirmando todos os dados de lançamento e você deve recebê-los por e-mail nas próximas 24 horas. Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contato em nosso site.",
   "mail.playlists": "Lista(s) de reprodução",
   "payment.playlists": "listas de reprodução com cartões QR",
   "mail.downloadLink": "Baixe seu PDF",
