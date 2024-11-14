@@ -357,8 +357,9 @@ class Generator {
     const payment = await mollie.getPayment(paymentId);
 
     if (!payment.finalized) {
-      // update payment finalized
-      await this.prisma.payment.update({
+      return await this.prisma.$transaction(async (tx) => {
+        // update payment finalized
+        await tx.payment.update({
         where: {
           id: payment.id,
         },
@@ -422,7 +423,7 @@ class Generator {
           });
         }
 
-        await this.prisma.paymentHasPlaylist.update({
+        await tx.paymentHasPlaylist.update({
           where: {
             id: playlist.paymentHasPlaylistId,
           },
@@ -459,7 +460,7 @@ class Generator {
         printApiOrderResponse = JSON.stringify(orderData.response);
       }
 
-      await this.prisma.payment.update({
+      await tx.payment.update({
         where: {
           id: payment.id,
         },
@@ -479,6 +480,7 @@ class Generator {
       return {
         success: true,
       };
+      });
     } else {
       this.logger.log(
         color.yellow.bold(
