@@ -999,9 +999,12 @@ class Data {
             });
 
             if (track?.isrc) {
-              // Update all tracks with matching ISRC
+              // Update all OTHER tracks with matching ISRC
               await this.prisma.track.updateMany({
-                where: { isrc: track.isrc },
+                where: { 
+                  isrc: track.isrc,
+                  id: { not: trackId } // Exclude the original track
+                },
                 data: {
                   year: newYear,
                   yearSource: 'manual',
@@ -1011,7 +1014,10 @@ class Data {
 
               // Get count of updated tracks
               const updatedCount = await this.prisma.track.count({
-                where: { isrc: track.isrc }
+                where: { 
+                  isrc: track.isrc,
+                  id: { not: trackId }
+                }
               });
 
               this.logger.log(
