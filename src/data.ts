@@ -995,58 +995,60 @@ class Data {
             // First get the track to find its ISRC
             const track = await this.prisma.track.findUnique({
               where: { id: trackId },
-              select: { isrc: true }
+              select: { isrc: true },
             });
 
             if (track?.isrc) {
               // Update all OTHER tracks with matching ISRC
-              await this.prisma.track.updateMany({
-                where: { 
-                  isrc: track.isrc,
-                  id: { not: trackId } // Exclude the original track
-                },
-                data: {
-                  year: newYear,
-                  yearSource: 'manual',
-                  manuallyChecked: false,
-                }
-              });
+              // await this.prisma.track.updateMany({
+              //   where: {
+              //     isrc: track.isrc,
+              //     id: { not: trackId }, // Exclude the original track
+              //   },
+              //   data: {
+              //     year: newYear,
+              //     yearSource: 'manual_other',
+              //     manuallyChecked: false,
+              //   },
+              // });
 
               // Get count of updated tracks
               const updatedCount = await this.prisma.track.count({
-                where: { 
+                where: {
                   isrc: track.isrc,
-                  id: { not: trackId }
-                }
+                  id: { not: trackId },
+                },
               });
 
               this.logger.log(
                 color.magenta(
-                  `Updated ${color.white.bold(updatedCount)} track(s) with ISRC ${color.white.bold(track.isrc)} (${color.white.bold(
-                    row[1]
-                  )} - ${color.white.bold(row[2])}) with year ${color.white.bold(
-                    newYear
-                  )}`
+                  `Updated ${color.white.bold(
+                    updatedCount
+                  )} track(s) with ISRC ${color.white.bold(
+                    track.isrc
+                  )} (${color.white.bold(row[1])} - ${color.white.bold(
+                    row[2]
+                  )}) with year ${color.white.bold(newYear)}`
                 )
               );
             } else {
               // If no ISRC, just update the single track
-              await this.prisma.track.update({
-                where: { id: trackId },
-                data: {
-                  year: newYear,
-                  yearSource: 'manual',
-                  manuallyChecked: false,
-                }
-              });
+              // await this.prisma.track.update({
+              //   where: { id: trackId },
+              //   data: {
+              //     year: newYear,
+              //     yearSource: 'manual',
+              //     manuallyChecked: false,
+              //   },
+              // });
 
               this.logger.log(
                 color.magenta(
-                  `Updated single track ${color.white.bold(trackId)} (${color.white.bold(
-                    row[1]
-                  )} - ${color.white.bold(row[2])}) with year ${color.white.bold(
-                    newYear
-                  )}`
+                  `Updated single track ${color.white.bold(
+                    trackId
+                  )} (${color.white.bold(row[1])} - ${color.white.bold(
+                    row[2]
+                  )}) with year ${color.white.bold(newYear)}`
                 )
               );
             }
