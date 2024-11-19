@@ -669,6 +669,11 @@ class Server {
       return { success: true };
     });
 
+    this.fastify.get('/fix_years', async (request: any, _reply) => {
+      await this.data.fixYears();
+      return { success: true };
+    });
+
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.get('/mball', async (request: any, _reply) => {
         const result = await this.data.updateAllTrackYears();
@@ -685,11 +690,6 @@ class Server {
 
       this.fastify.get('/testorder', async (request: any, _reply) => {
         await this.order.testOrder();
-        return { success: true };
-      });
-
-      this.fastify.get('/fix_years', async (request: any, _reply) => {
-        await this.data.fixYears();
         return { success: true };
       });
 
