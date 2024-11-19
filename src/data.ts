@@ -999,27 +999,27 @@ class Data {
             });
 
             // // Update the original track
-            // await this.prisma.track.update({
-            //   where: { id: trackId },
-            //   data: {
-            //     year: newYear,
-            //     yearSource: 'manual',
-            //     manuallyChecked: false,
-            //   },
-            // });
+            await this.prisma.track.update({
+              where: { id: trackId },
+              data: {
+                year: newYear,
+                yearSource: 'manual',
+                manuallyChecked: true,
+              },
+            });
 
-            // // Update all other tracks with matching ISRC
-            // await this.prisma.track.updateMany({
-            //   where: {
-            //     isrc: track!.isrc,
-            //     id: { not: trackId }, // Exclude the original track
-            //   },
-            //   data: {
-            //     year: newYear,
-            //     yearSource: 'manual_other',
-            //     manuallyChecked: false,
-            //   },
-            // });
+            // Update all other tracks with matching ISRC
+            await this.prisma.track.updateMany({
+              where: {
+                isrc: track!.isrc,
+                id: { not: trackId }, // Exclude the original track
+              },
+              data: {
+                year: newYear,
+                yearSource: 'manual_other',
+                manuallyChecked: true,
+              },
+            });
 
             // Get count of updated tracks
             const updatedCount = await this.prisma.track.count({
