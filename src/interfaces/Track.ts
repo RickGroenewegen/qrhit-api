@@ -6,4 +6,5 @@ export interface Track {
   isrc: string;
   image: string;
   spotifyLink: string;
+  trueYear?: number;
 }

@@ -369,24 +369,49 @@ class Spotify {
 
           this.analytics.increaseCounter('spotify', 'tracks', 1);
 
-          const tracks: Track[] = response.data.items
-            .filter((item: any) => item.track)
-            .map((item: any) => ({
-              id: item.track.id,
-              name: this.utils.cleanTrackName(item.track.name),
-              artist: item.track.artists[0].name,
-              link: item.track.external_urls.spotify,
-              isrc: item.track.external_ids.isrc,
-              image:
-                item.track.album.images.length > 0
-                  ? item.track.album.images[1].url
-                  : null,
+          const tracks: Track[] = await Promise.all(
+            response.data.items
+              .filter((item: any) => item.track)
+              .map(async (item: any) => {
+                const trackId = item.track.id;
+                let trueYear: number | undefined;
 
-              releaseDate: format(
-                new Date(item.track.album.release_date),
-                'yyyy-MM-dd'
-              ),
-            }));
+                // Check cache first
+                const cachedYear = await this.cache.get(`year_${trackId}`);
+                if (cachedYear) {
+                  trueYear = parseInt(cachedYear);
+                } else {
+                  // Query DB for the track's year
+                  const dbTrack = await this.data.prisma.track.findUnique({
+                    where: { trackId },
+                    select: { year: true }
+                  });
+
+                  if (dbTrack?.year) {
+                    trueYear = dbTrack.year;
+                    // Cache the year for future use
+                    await this.cache.set(`year_${trackId}`, trueYear.toString());
+                  }
+                }
+
+                return {
+                  id: trackId,
+                  name: this.utils.cleanTrackName(item.track.name),
+                  artist: item.track.artists[0].name,
+                  link: item.track.external_urls.spotify,
+                  isrc: item.track.external_ids.isrc,
+                  image:
+                    item.track.album.images.length > 0
+                      ? item.track.album.images[1].url
+                      : null,
+                  releaseDate: format(
+                    new Date(item.track.album.release_date),
+                    'yyyy-MM-dd'
+                  ),
+                  trueYear
+                };
+              })
+          );
 
           // remove all items that do not have an artist or image
           const filteredTracks = tracks.filter(
