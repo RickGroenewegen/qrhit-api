@@ -116,6 +116,7 @@ class Spotify {
   private utils = new Utils();
   private analytics = AnalyticsClient.getInstance();
   private rapidAPIQueue = RapidAPIQueue.getInstance();
+  private prisma = PrismaInstance.getInstance();
 
   // create a refresh token method
   public async refreshAccessToken(refreshToken: string): Promise<ApiResult> {
