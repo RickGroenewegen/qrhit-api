@@ -387,6 +387,7 @@ class Spotify {
               SELECT trackId, year 
               FROM tracks 
               WHERE trackId IN (${Prisma.join(trackIds)})
+              AND manuallyChecked = 1
             `;
           }
 
