@@ -10,11 +10,14 @@ import Data from './data';
 import Utils from './utils';
 import AnalyticsClient from './analytics';
 import Logger from './logger';
+import { Prisma } from '@prisma/client';
+import PrismaInstance from './prisma';
 
 class RapidAPIQueue {
   private cache: Cache;
   private static instance: RapidAPIQueue;
   private logger = new Logger();
+  private prisma = PrismaInstance.getInstance();
 
   private constructor() {
     this.cache = Cache.getInstance();
@@ -382,15 +385,18 @@ class Spotify {
                   trueYear = parseInt(cachedYear);
                 } else {
                   // Query DB for the track's year
-                  const dbTrack = await this.data.prisma.track.findUnique({
+                  const dbTrack = await this.prisma.track.findUnique({
                     where: { trackId },
-                    select: { year: true }
+                    select: { year: true },
                   });
 
                   if (dbTrack?.year) {
                     trueYear = dbTrack.year;
                     // Cache the year for future use
-                    await this.cache.set(`year_${trackId}`, trueYear.toString());
+                    await this.cache.set(
+                      `year_${trackId}`,
+                      trueYear.toString()
+                    );
                   }
                 }
 
@@ -408,7 +414,7 @@ class Spotify {
                     new Date(item.track.album.release_date),
                     'yyyy-MM-dd'
                   ),
-                  trueYear
+                  trueYear,
                 };
               })
           );
