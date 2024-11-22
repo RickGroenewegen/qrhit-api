@@ -390,11 +390,13 @@ class Spotify {
           // Create a map of trackId to year for quick lookup
           const yearMap = new Map(yearResults.map((r) => [r.trackId, r.year]));
 
-          // Cache all years at once
+          // Cache all years at once, only for tracks that have a year
           await Promise.all(
-            yearResults.map((r) =>
-              this.cache.set(`year_${r.trackId}`, r.year.toString())
-            )
+            yearResults
+              .filter((r) => r.year !== null)
+              .map((r) =>
+                this.cache.set(`year_${r.trackId}`, r.year.toString())
+              )
           );
 
           const tracks: Track[] = await Promise.all(
