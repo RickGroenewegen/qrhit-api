@@ -385,14 +385,16 @@ class Spotify {
                 if (cachedYear) {
                   trueYear = parseInt(cachedYear);
                 } else {
-                  // Query DB for the track's year
-                  const dbTrack = await this.prisma.track.findUnique({
-                    where: { trackId },
-                    select: { year: true },
-                  });
+                  // Use raw query for better performance
+                  const [result] = await this.prisma.$queryRaw<{year: number}[]>`
+                    SELECT year 
+                    FROM tracks 
+                    WHERE trackId = ${trackId}
+                    LIMIT 1
+                  `;
 
-                  if (dbTrack?.year) {
-                    trueYear = dbTrack.year;
+                  if (result?.year) {
+                    trueYear = result.year;
                     // Cache the year for future use
                     await this.cache.set(
                       `year_${trackId}`,
