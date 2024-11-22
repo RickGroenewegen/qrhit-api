@@ -379,13 +379,16 @@ class Spotify {
             .map((item: any) => item.track.id);
 
           // Get years for all tracks in one query
-          const yearResults = await this.prisma.$queryRaw<
-            { trackId: string; year: number }[]
-          >`
-            SELECT trackId, year 
-            FROM tracks 
-            WHERE trackId IN (${Prisma.join(trackIds)})
-          `;
+          let yearResults: { trackId: string; year: number }[] = [];
+          if (trackIds.length > 0) {
+            yearResults = await this.prisma.$queryRaw<
+              { trackId: string; year: number }[]
+            >`
+              SELECT trackId, year 
+              FROM tracks 
+              WHERE trackId IN (${Prisma.join(trackIds)})
+            `;
+          }
 
           // Create a map of trackId to year for quick lookup
           const yearMap = new Map(yearResults.map((r) => [r.trackId, r.year]));
