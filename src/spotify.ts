@@ -373,6 +373,30 @@ class Spotify {
 
           this.analytics.increaseCounter('spotify', 'tracks', 1);
 
+          // Get all track IDs from this batch
+          const trackIds = response.data.items
+            .filter((item: any) => item.track)
+            .map((item: any) => item.track.id);
+
+          // Get years for all tracks in one query
+          const yearResults = await this.prisma.$queryRaw<
+            { trackId: string; year: number }[]
+          >`
+            SELECT trackId, year 
+            FROM tracks 
+            WHERE trackId IN (${Prisma.join(trackIds)})
+          `;
+
+          // Create a map of trackId to year for quick lookup
+          const yearMap = new Map(yearResults.map((r) => [r.trackId, r.year]));
+
+          // Cache all years at once
+          await Promise.all(
+            yearResults.map((r) =>
+              this.cache.set(`year_${r.trackId}`, r.year.toString())
+            )
+          );
+
           const tracks: Track[] = await Promise.all(
             response.data.items
               .filter((item: any) => item.track)
@@ -385,24 +409,8 @@ class Spotify {
                 if (cachedYear) {
                   trueYear = parseInt(cachedYear);
                 } else {
-                  // Use raw query for better performance
-                  const [result] = await this.prisma.$queryRaw<{year: number}[]>`
-                    SELECT year 
-                    FROM tracks 
-                    WHERE trackId = ${trackId}
-                    LIMIT 1
-                  `;
-
-                  if (result?.year) {
-                    trueYear = result.year;
-                    // Cache the year for future use
-                    await this.cache.set(
-                      `year_${trackId}`,
-                      trueYear.toString()
-                    );
-                  }
+                  trueYear = yearMap.get(trackId);
                 }
-
                 return {
                   id: trackId,
                   name: this.utils.cleanTrackName(item.track.name),
