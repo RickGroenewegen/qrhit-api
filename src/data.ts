@@ -19,6 +19,7 @@ import Utils from './utils';
 import { CartItem } from './interfaces/CartItem';
 import AnalyticsClient from './analytics';
 import * as XLSX from 'xlsx';
+import { OpenPerplex } from './openperplex';
 
 class Data {
   private prisma = PrismaInstance.getInstance();
@@ -28,6 +29,7 @@ class Data {
   private translate = new Translation();
   private utils = new Utils();
   private analytics = AnalyticsClient.getInstance();
+  private openperplex = new OpenPerplex();
 
   public async getPDFFilepath(
     clientIp: string,
@@ -789,7 +791,7 @@ class Data {
           SET year        = ${year},
               yearSource  = ${source},
               certainty   = ${certainty},
-              reasoning   = ${reasoning}
+              reasoning   = ${reasoning},
           WHERE id = ${track.id}
         `;
       } else {
@@ -1029,19 +1031,19 @@ class Data {
               },
             });
 
-            this.logger.log(
-              color.magenta(
-                `Updated original track ${color.white.bold(
-                  trackId
-                )} and ${color.white.bold(
-                  updatedCount
-                )} other track(s) with ISRC ${color.white.bold(
-                  track!.isrc
-                )} (${color.white.bold(row[1])} - ${color.white.bold(
-                  row[2]
-                )}) with year ${color.white.bold(newYear)}`
-              )
-            );
+            // this.logger.log(
+            //   color.magenta(
+            //     `Updated original track ${color.white.bold(
+            //       trackId
+            //     )} and ${color.white.bold(
+            //       updatedCount
+            //     )} other track(s) with ISRC ${color.white.bold(
+            //       track!.isrc
+            //     )} (${color.white.bold(row[1])} - ${color.white.bold(
+            //       row[2]
+            //     )}) with year ${color.white.bold(newYear)}`
+            //   )
+            // );
           }
         }
       }

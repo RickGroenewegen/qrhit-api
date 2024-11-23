@@ -1,18 +1,8 @@
-import Utils from './utils';
-import axios from 'axios';
+import { color, white } from 'console-log-colors';
+import Logger from './logger';
 
 export class OpenPerplex {
-  private utils = new Utils();
-  private apiKey: string;
-  private baseUrl = 'https://api.perplexity.ai';
-
-  constructor() {
-    const apiKey = process.env['PERPLEXITY_API_KEY'];
-    if (!apiKey) {
-      throw new Error('PERPLEXITY_API_KEY environment variable is not defined');
-    }
-    this.apiKey = apiKey;
-  }
+  private logger = new Logger();
 
   public async ask(artist: string, title: string): Promise<number> {
     let year = 0;
@@ -57,9 +47,17 @@ export class OpenPerplex {
       });
 
       if (response.status === 429) {
+        console.log('again');
+
+        this.logger.log(
+          color.yellow.bold(
+            'Rate limited by OpenPerplex. Trying again in 5 seconds ...'
+          )
+        );
+
         // Wait 3 seconds and try again
-        await new Promise(resolve => setTimeout(resolve, 3000));
-        return this.ask(artist, title);
+        await new Promise((resolve) => setTimeout(resolve, 5000));
+        return await this.ask(artist, title);
       } else if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }

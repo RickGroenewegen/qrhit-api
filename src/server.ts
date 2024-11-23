@@ -27,16 +27,8 @@ import Generator from './generator';
 import AnalyticsClient from './analytics';
 import { ChatGPT } from './chatgpt';
 import Discount from './discount';
-import { PDFImage } from 'pdf-lib';
 import GitChecker from './git';
-
-import {
-  ElasticLoadBalancingV2Client,
-  DescribeLoadBalancersCommand,
-  DescribeTargetGroupsCommand,
-  DescribeTargetHealthCommand,
-} from '@aws-sdk/client-elastic-load-balancing-v2';
-import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2';
+import { OpenPerplex } from './openperplex';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -71,6 +63,7 @@ class Server {
   private openai = new ChatGPT();
   private git = GitChecker.getInstance();
   private discount = new Discount();
+  private openperplex = new OpenPerplex();
 
   private version: string = '1.0.0';
 
@@ -116,6 +109,18 @@ class Server {
         reply.status(401).send({ error: 'Invalid credentials' });
       }
     });
+
+    this.fastify.post(
+      '/openperplex',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, _reply) => {
+        const year = await this.openperplex.ask(
+          request.body.artist,
+          request.body.title
+        );
+        return { success: true, year };
+      }
+    );
 
     this.fastify.post(
       '/orders',
