@@ -14,8 +14,10 @@ export class Perplexity {
     this.apiKey = apiKey;
   }
 
-  public async ask(prompt: string): Promise<string> {
+  public async ask(artist: string, title: string): Promise<string> {
     try {
+      const prompt = `What is the release date of the song "${title}" by ${artist}?`;
+
       const response = await axios.post(
         `${this.baseUrl}/chat/completions`,
         {
