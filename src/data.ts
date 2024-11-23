@@ -791,7 +791,7 @@ class Data {
           SET year        = ${year},
               yearSource  = ${source},
               certainty   = ${certainty},
-              reasoning   = ${reasoning},
+              reasoning   = ${reasoning}
           WHERE id = ${track.id}
         `;
       } else {
