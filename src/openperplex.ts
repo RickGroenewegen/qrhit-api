@@ -56,7 +56,11 @@ export class OpenPerplex {
         }),
       });
 
-      if (!response.ok) {
+      if (response.status === 429) {
+        // Wait 3 seconds and try again
+        await new Promise(resolve => setTimeout(resolve, 3000));
+        return this.ask(artist, title);
+      } else if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
