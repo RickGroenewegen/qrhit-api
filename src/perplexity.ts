@@ -15,11 +15,13 @@ export class Perplexity {
   }
 
   public async ask(artist: string, title: string): Promise<string> {
+    const prompt = `What is the release date of the song ${title} by ${artist}?`;
+
     const baseUrl =
       'https://44c57909-d9e2-41cb-9244-9cd4a443cb41.app.bhs.ai.cloud.ovh.net';
     const apiKey = process.env['OPENPERPLEX_API_KEY']; // Replace with your actual API key
     const options = {
-      query: 'Tom cruise',
+      query: prompt,
       date_context: '2024-09-09 7:00PM',
       location: 'us',
       pro_mode: 'false',
@@ -39,12 +41,18 @@ export class Perplexity {
     );
 
     try {
+      if (!apiKey) {
+        throw new Error(
+          'OPENPERPLEX_API_KEY environment variable is not defined'
+        );
+      }
+
       const response = await fetch(`${baseUrl}/search?${params}`, {
         method: 'GET',
-        headers: {
+        headers: new Headers({
           'X-API-Key': apiKey,
           'Content-Type': 'application/json',
-        },
+        }),
       });
 
       if (!response.ok) {
