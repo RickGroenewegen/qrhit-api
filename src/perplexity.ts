@@ -22,19 +22,21 @@ export class Perplexity {
       query: 'Tom cruise',
       date_context: '2024-09-09 7:00PM',
       location: 'us',
-      pro_mode: false,
+      pro_mode: 'false',
       response_language: 'en',
       answer_type: 'text',
       search_type: 'general',
-      verbose_mode: false,
-      return_sources: false,
-      return_images: false,
-      return_citations: false,
+      verbose_mode: 'false',
+      return_sources: 'false',
+      return_images: 'false',
+      return_citations: 'false',
       recency_filter: 'anytime',
     };
-    const params = new URLSearchParams({
-      ...options,
-    });
+    const params = new URLSearchParams(
+      Object.fromEntries(
+        Object.entries(options).map(([key, value]) => [key, String(value)])
+      )
+    );
 
     try {
       const response = await fetch(`${baseUrl}/search?${params}`, {
