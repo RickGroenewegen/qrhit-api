@@ -15,45 +15,50 @@ export class Perplexity {
   }
 
   public async ask(artist: string, title: string): Promise<string> {
+    const baseUrl =
+      'https://44c57909-d9e2-41cb-9244-9cd4a443cb41.app.bhs.ai.cloud.ovh.net';
+    const apiKey = process.env['OPENPERPLEX_API_KEY']; // Replace with your actual API key
+    const options = {
+      query: 'Tom cruise',
+      date_context: '2024-09-09 7:00PM',
+      location: 'us',
+      pro_mode: false,
+      response_language: 'en',
+      answer_type: 'text',
+      search_type: 'general',
+      verbose_mode: false,
+      return_sources: false,
+      return_images: false,
+      return_citations: false,
+      recency_filter: 'anytime',
+    };
+    const params = new URLSearchParams({
+      ...options,
+    });
+
     try {
-      const prompt = `What is the release date of the song "${title}" by ${artist}?`;
-
-      const response = await axios.post(
-        `${this.baseUrl}/chat/completions`,
-        {
-          model: 'llama-3.1-sonar-small-128k-online',
-          messages: [
-            {
-              role: 'system',
-              content: 'Be precise and concise.'
-            },
-            {
-              role: 'user',
-              content: prompt,
-            },
-          ],
-          temperature: 0.2,
-          top_p: 0.9,
-          search_domain_filter: ['perplexity.ai'],
-          return_images: false,
-          return_related_questions: false,
-          search_recency_filter: 'month',
-          top_k: 0,
-          stream: false,
-          presence_penalty: 0,
-          frequency_penalty: 1
+      const response = await fetch(`${baseUrl}/search?${params}`, {
+        method: 'GET',
+        headers: {
+          'X-API-Key': apiKey,
+          'Content-Type': 'application/json',
         },
-        {
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${this.apiKey}`,
-          },
-        }
-      );
+      });
 
-      return response.data.choices[0].message.content;
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const data = await response.json();
+
+      console.log('Sources : ', data.sources); // if return sources true
+      console.log('IMAGES : ', data.images); // if return images true
+      console.log('LLM RESPONSE : ', data.llm_response);
+      console.log('Response Time : ', data.response_time);
+
+      return data;
     } catch (error) {
-      console.error('Error calling Perplexity API:', error);
+      console.error('Error:', error);
       throw error;
     }
   }
