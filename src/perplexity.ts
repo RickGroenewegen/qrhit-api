@@ -1,4 +1,5 @@
 import Utils from './utils';
+import axios from 'axios';
 
 export class Perplexity {
   private utils = new Utils();
@@ -15,14 +16,9 @@ export class Perplexity {
 
   public async ask(prompt: string): Promise<string> {
     try {
-      const response = await fetch(`${this.baseUrl}/chat/completions`, {
-        method: 'POST',
-        headers: {
-          Accept: 'application/json',
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${this.apiKey}`,
-        },
-        body: JSON.stringify({
+      const response = await axios.post(
+        `${this.baseUrl}/chat/completions`,
+        {
           model: 'mixtral-8x7b-instruct',
           messages: [
             {
@@ -30,15 +26,17 @@ export class Perplexity {
               content: prompt,
             },
           ],
-        }),
-      });
+        },
+        {
+          headers: {
+            Accept: 'application/json',
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${this.apiKey}`,
+          },
+        }
+      );
 
-      if (!response.ok) {
-        throw new Error(`Perplexity API error: ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      return data.choices[0].message.content;
+      return response.data.choices[0].message.content;
     } catch (error) {
       console.error('Error calling Perplexity API:', error);
       throw error;
