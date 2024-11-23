@@ -21,17 +21,30 @@ export class Perplexity {
       const response = await axios.post(
         `${this.baseUrl}/chat/completions`,
         {
-          model: 'mixtral-8x7b-instruct',
+          model: 'llama-3.1-sonar-small-128k-online',
           messages: [
+            {
+              role: 'system',
+              content: 'Be precise and concise.'
+            },
             {
               role: 'user',
               content: prompt,
             },
           ],
+          temperature: 0.2,
+          top_p: 0.9,
+          search_domain_filter: ['perplexity.ai'],
+          return_images: false,
+          return_related_questions: false,
+          search_recency_filter: 'month',
+          top_k: 0,
+          stream: false,
+          presence_penalty: 0,
+          frequency_penalty: 1
         },
         {
           headers: {
-            Accept: 'application/json',
             'Content-Type': 'application/json',
             Authorization: `Bearer ${this.apiKey}`,
           },
