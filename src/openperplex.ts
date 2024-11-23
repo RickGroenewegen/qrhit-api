@@ -47,8 +47,6 @@ export class OpenPerplex {
       });
 
       if (response.status === 429) {
-        console.log('again');
-
         this.logger.log(
           color.yellow.bold(
             'Rate limited by OpenPerplex. Trying again in 5 seconds ...'
@@ -66,6 +64,14 @@ export class OpenPerplex {
 
       try {
         year = parseInt(data.llm_response, 10);
+
+        this.logger.log(
+          color.blue.bold(
+            `OpenPerplex claims release year for ${color.white.bold(
+              title
+            )} by ${color.white.bold(artist)} is ${color.white.bold(year)}`
+          )
+        );
       } catch (e) {}
 
       return year;
