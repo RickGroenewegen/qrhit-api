@@ -802,7 +802,7 @@ class Data {
                 track.artist
               )} - ${color.white.bold(
                 track.name
-              )}' using data from another track with matching ISRC or metadata`
+              )}' using data from another track with matching ISRC`
             )
           );
         } else {
@@ -812,7 +812,7 @@ class Data {
                 track.artist
               )} - ${color.white.bold(
                 track.name
-              )}' using data from another track with matching metadata`
+              )}' using data from another track with matching artist and title`
             )
           );
         }

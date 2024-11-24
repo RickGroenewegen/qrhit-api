@@ -71,6 +71,9 @@ export class OpenPerplex {
               'Failed to parse year from OpenPerplex response. Trying again in 5 seconds ...'
             )
           );
+
+          console.log(111, data);
+
           await new Promise((resolve) => setTimeout(resolve, 5000));
           return await this.ask(artist, title);
         }
