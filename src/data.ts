@@ -525,8 +525,8 @@ class Data {
   private async findAndUpdateTrackByISRC(
     isrc: string,
     trackId: number
-  ): Promise<boolean> {
-    if (!isrc) return false;
+  ): Promise<{ wasUpdated: boolean; method: string }> {
+    if (!isrc) return { wasUpdated: false, method: '' };
 
     // First try finding a track with matching ISRC
     const existingTrackByISRC = await this.prisma.track.findFirst({
@@ -557,7 +557,7 @@ class Data {
           manuallyChecked: true,
         },
       });
-      return true;
+      return { wasUpdated: true, method: 'isrc' };
     }
 
     // If no ISRC match, try finding a track with matching artist and title
@@ -593,17 +593,18 @@ class Data {
           where: { id: trackId },
           data: {
             year: existingTrackByMetadata.year,
-            yearSource: 'otherTrack_metadata_' + existingTrackByMetadata.yearSource,
+            yearSource:
+              'otherTrack_metadata_' + existingTrackByMetadata.yearSource,
             certainty: existingTrackByMetadata.certainty,
             reasoning: existingTrackByMetadata.reasoning,
             manuallyChecked: true,
           },
         });
-        return true;
+        return { wasUpdated: true, method: 'artistTitle' };
       }
     }
 
-    return false;
+    return { wasUpdated: false, method: '' };
   }
 
   public async getLink(trackId: number): Promise<ApiResult> {
@@ -789,18 +790,32 @@ class Data {
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
       // Check for existing track with same ISRC and update if found
-      const wasUpdated = await this.findAndUpdateTrackByISRC(
+      const { wasUpdated, method } = await this.findAndUpdateTrackByISRC(
         track.isrc ?? '',
         track.id
       );
       if (wasUpdated) {
-        this.logger.log(
-          color.blue.bold(
-            `Updated year for track '${color.white.bold(track.artist)} - ${color.white.bold(
-              track.name
-            )}' using data from another track with matching ISRC or metadata`
-          )
-        );
+        if (method == 'isrc') {
+          this.logger.log(
+            color.blue.bold(
+              `Updated year for track '${color.white.bold(
+                track.artist
+              )} - ${color.white.bold(
+                track.name
+              )}' using data from another track with matching ISRC or metadata`
+            )
+          );
+        } else {
+          this.logger.log(
+            color.blue.bold(
+              `Updated year for track '${color.white.bold(
+                track.artist
+              )} - ${color.white.bold(
+                track.name
+              )}' using data from another track with matching metadata`
+            )
+          );
+        }
         continue;
       }
 

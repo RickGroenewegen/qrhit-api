@@ -193,6 +193,7 @@ model Track {
 
   @@index([trackId])
   @@index([isrc])
+  @@index([artist, name])
   @@map("tracks")
 }
 
