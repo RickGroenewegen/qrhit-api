@@ -92,14 +92,6 @@ export class OpenPerplex {
             return await this.ask(artist, title);
           }
         }
-
-        this.logger.log(
-          color.blue.bold(
-            `OpenPerplex claims release year for ${color.white.bold(
-              title
-            )} by ${color.white.bold(artist)} is ${color.white.bold(year)}`
-          )
-        );
       } catch (e) {}
 
       return year;
