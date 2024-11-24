@@ -8,7 +8,7 @@ export class OpenPerplex {
 
   public async ask(artist: string, title: string): Promise<number> {
     let year = 0;
-    const prompt = `What is the release date of the song ${title} by ${artist}. Only output the year`;
+    const prompt = `What is the release date of the song ${title} by ${artist}. Only output the year! For example, "The song was released in 1999." should be answered with "1999".`;
 
     const baseUrl =
       'https://44c57909-d9e2-41cb-9244-9cd4a443cb41.app.bhs.ai.cloud.ovh.net';

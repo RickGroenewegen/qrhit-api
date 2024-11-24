@@ -851,6 +851,30 @@ class Data {
               reasoning   = ${reasoning}
           WHERE id = ${track.id}
         `;
+
+        const perplexYear = await this.openperplex.ask(
+          track.artist,
+          track.name
+        );
+
+        if (perplexYear > 0 && perplexYear == year) {
+          // Update manuallyChecked to true
+          await this.prisma.$executeRaw`
+            UPDATE tracks
+            SET manuallyChecked = true
+            WHERE id = ${track.id}
+          `;
+
+          this.logger.log(
+            color.blue.bold(
+              `OpenPerplex confirms the year for '${white.bold(
+                track.artist
+              )} - ${white.bold(track.name)}' which is ${white.bold(
+                perplexYear
+              )}. The year is now confirmed.`
+            )
+          );
+        }
       } else {
         this.logger.log(
           color.red(`No release dates found for track ID: ${track.id}`)
