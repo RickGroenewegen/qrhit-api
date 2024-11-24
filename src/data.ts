@@ -796,11 +796,9 @@ class Data {
       if (wasUpdated) {
         this.logger.log(
           color.blue.bold(
-            `Updated year for track ID ${color.white.bold(
+            `Updated year for track '${color.white.bold(track.artist)} - ${color.white.bold(
               track.name
-            )} with ISRC ${color.white.bold(
-              track.isrc
-            )} with the year from a track with the same ISRC`
+            )}' using data from another track with matching ISRC or metadata`
           )
         );
         continue;
