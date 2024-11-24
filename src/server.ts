@@ -123,6 +123,18 @@ class Server {
     );
 
     this.fastify.post(
+      '/googlesearch',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, _reply) => {
+        const results = await this.musicBrainz.performGoogleSearchRaw(
+          request.body.artist,
+          request.body.title
+        );
+        return { success: true, results };
+      }
+    );
+
+    this.fastify.post(
       '/orders',
       { preHandler: verifyTokenMiddleware },
       async (request: any, reply: any) => {
