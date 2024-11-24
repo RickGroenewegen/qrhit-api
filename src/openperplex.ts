@@ -77,7 +77,7 @@ export class OpenPerplex {
           );
 
           const chatGptResponse = await this.chatgpt.ask(
-            `What year is being referred to in this text: "${data.llm_response}"`
+            `What is the release year according to this text: "${data.llm_response}"`
           );
 
           if (chatGptResponse && chatGptResponse.year) {
