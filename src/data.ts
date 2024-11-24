@@ -528,7 +528,8 @@ class Data {
   ): Promise<boolean> {
     if (!isrc) return false;
 
-    const existingTrack = await this.prisma.track.findFirst({
+    // First try finding a track with matching ISRC
+    const existingTrackByISRC = await this.prisma.track.findFirst({
       where: {
         isrc: isrc,
         year: {
@@ -545,18 +546,61 @@ class Data {
       },
     });
 
-    if (existingTrack) {
+    if (existingTrackByISRC) {
       await this.prisma.track.update({
         where: { id: trackId },
         data: {
-          year: existingTrack.year,
-          yearSource: 'otherTrack_' + existingTrack.yearSource,
-          certainty: existingTrack.certainty,
-          reasoning: existingTrack.reasoning,
+          year: existingTrackByISRC.year,
+          yearSource: 'otherTrack_' + existingTrackByISRC.yearSource,
+          certainty: existingTrackByISRC.certainty,
+          reasoning: existingTrackByISRC.reasoning,
           manuallyChecked: true,
         },
       });
       return true;
+    }
+
+    // If no ISRC match, try finding a track with matching artist and title
+    const currentTrack = await this.prisma.track.findUnique({
+      where: { id: trackId },
+      select: { artist: true, name: true },
+    });
+
+    if (currentTrack) {
+      const existingTrackByMetadata = await this.prisma.track.findFirst({
+        where: {
+          artist: currentTrack.artist,
+          name: currentTrack.name,
+          year: {
+            not: null,
+          },
+          manuallyChecked: true,
+          id: {
+            not: trackId, // Exclude the current track
+          },
+        },
+        select: {
+          id: true,
+          year: true,
+          yearSource: true,
+          certainty: true,
+          reasoning: true,
+        },
+      });
+
+      if (existingTrackByMetadata) {
+        await this.prisma.track.update({
+          where: { id: trackId },
+          data: {
+            year: existingTrackByMetadata.year,
+            yearSource: 'otherTrack_metadata_' + existingTrackByMetadata.yearSource,
+            certainty: existingTrackByMetadata.certainty,
+            reasoning: existingTrackByMetadata.reasoning,
+            manuallyChecked: true,
+          },
+        });
+        return true;
+      }
     }
 
     return false;
