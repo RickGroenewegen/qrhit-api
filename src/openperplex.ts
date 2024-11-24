@@ -65,6 +65,16 @@ export class OpenPerplex {
       try {
         year = parseInt(data.llm_response, 10);
 
+        if (isNaN(year)) {
+          this.logger.log(
+            color.yellow.bold(
+              'Failed to parse year from OpenPerplex response. Trying again in 5 seconds ...'
+            )
+          );
+          await new Promise((resolve) => setTimeout(resolve, 5000));
+          return await this.ask(artist, title);
+        }
+
         this.logger.log(
           color.blue.bold(
             `OpenPerplex claims release year for ${color.white.bold(
