@@ -1,8 +1,10 @@
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
+import { ChatGPT } from './chatgpt';
 
 export class OpenPerplex {
   private logger = new Logger();
+  private chatgpt = new ChatGPT();
 
   public async ask(artist: string, title: string): Promise<number> {
     let year = 0;
@@ -63,19 +65,32 @@ export class OpenPerplex {
       const data = await response.json();
 
       try {
+        // First try direct parsing
         year = parseInt(data.llm_response, 10);
 
         if (isNaN(year)) {
+          // If direct parsing fails, try using ChatGPT to extract the year
           this.logger.log(
             color.yellow.bold(
-              'Failed to parse year from OpenPerplex response. Trying again in 5 seconds ...'
+              'Failed to parse year directly. Asking ChatGPT to interpret the response...'
             )
           );
 
-          console.log(111, data);
+          const chatGptResponse = await this.chatgpt.ask(
+            `What year is being referred to in this text: "${data.llm_response}"`
+          );
 
-          await new Promise((resolve) => setTimeout(resolve, 5000));
-          return await this.ask(artist, title);
+          if (chatGptResponse && chatGptResponse.year) {
+            year = chatGptResponse.year;
+          } else {
+            this.logger.log(
+              color.yellow.bold(
+                'Failed to get year from ChatGPT. Trying again in 5 seconds...'
+              )
+            );
+            await new Promise((resolve) => setTimeout(resolve, 5000));
+            return await this.ask(artist, title);
+          }
         }
 
         this.logger.log(
