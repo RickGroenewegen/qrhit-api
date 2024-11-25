@@ -686,6 +686,17 @@ class Server {
       return { success: true };
     });
 
+    this.fastify.post('/newsletter_subscribe', async (request: any, reply) => {
+      const { email } = request.body;
+      if (!email || !this.utils.isValidEmail(email)) {
+        reply.status(400).send({ success: false, error: 'Invalid email address' });
+        return;
+      }
+      
+      const result = await this.mail.subscribeToNewsletter(email);
+      return { success: result };
+    });
+
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.get('/mball', async (request: any, _reply) => {
         const result = await this.data.updateAllTrackYears();

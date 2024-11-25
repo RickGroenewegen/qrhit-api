@@ -453,6 +453,42 @@ ${params.html}
     return base64.replace(/(.{76})/g, '$1\n');
   }
 
+  public async subscribeToNewsletter(email: string): Promise<boolean> {
+    try {
+      // Try to find existing user
+      const existingUser = await prisma.user.findUnique({
+        where: { email }
+      });
+
+      if (existingUser) {
+        // Update existing user
+        await prisma.user.update({
+          where: { email },
+          data: { 
+            marketingEmails: true,
+            sync: true
+          }
+        });
+      } else {
+        // Create new user
+        await prisma.user.create({
+          data: {
+            email,
+            userId: this.utils.generateUUID(),
+            displayName: email.split('@')[0],
+            hash: this.utils.generateUUID(),
+            marketingEmails: true,
+            sync: true
+          }
+        });
+      }
+      return true;
+    } catch (error) {
+      console.error('Error subscribing to newsletter:', error);
+      return false;
+    }
+  }
+
   public async uploadContacts(): Promise<void> {
     try {
       this.logger.log(
