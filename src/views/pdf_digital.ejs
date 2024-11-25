@@ -4,6 +4,20 @@
 <meta charset="UTF-8">
 <title>Your QR Cards</title>
 <style>
+    @media print {
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        img {
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }
+    }
    
     body {
         font-family: Arial, sans-serif;
@@ -66,7 +80,7 @@
     }
     .domain {
         font-size: 13px;
-        color: #909090;
+        color: cmyk(0%, 0%, 0%, 40%);
         position: absolute;
         bottom: 10mm;
         width: 100%;
@@ -82,6 +96,12 @@
         position: relative;
         z-index: 2;
     }
+    .qr img {
+        width: 36mm;
+        height: 36mm;
+        object-fit: contain;
+        image-resolution: 300dpi;
+    }
     .back {
         display: flex;
         flex-direction: column;
@@ -92,6 +112,12 @@
     }
     .text {
         font-size: 12px;
+        margin-top: 2mm;
+        padding: 0 2mm;
+        max-width: 56mm;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     .text.artist {
         font-size: 18px;
