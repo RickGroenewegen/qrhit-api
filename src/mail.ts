@@ -13,6 +13,7 @@ import { CronJob } from 'cron';
 import { PrismaClient } from '@prisma/client';
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
+import crypto from 'crypto';
 import cluster from 'cluster';
 
 const prisma = new PrismaClient();
@@ -453,33 +454,44 @@ ${params.html}
     return base64.replace(/(.{76})/g, '$1\n');
   }
 
-  public async subscribeToNewsletter(email: string): Promise<boolean> {
+  public async subscribeToNewsletter(
+    email: string,
+    captchaToken: string
+  ): Promise<boolean> {
+    // Verify reCAPTCHA token
+    const isHuman = await this.utils.verifyRecaptcha(captchaToken);
+
+    if (!isHuman) {
+      throw new Error('Verification failed');
+    }
+
     try {
       // Try to find existing user
       const existingUser = await prisma.user.findUnique({
-        where: { email }
+        where: { email },
       });
 
       if (existingUser) {
         // Update existing user
         await prisma.user.update({
           where: { email },
-          data: { 
+          data: {
             marketingEmails: true,
-            sync: true
-          }
+            sync: true,
+          },
         });
       } else {
         // Create new user
+        const hash = crypto.randomBytes(8).toString('hex').slice(0, 16);
         await prisma.user.create({
           data: {
             email,
-            userId: this.utils.generateUUID(),
+            userId: email,
             displayName: email.split('@')[0],
-            hash: this.utils.generateUUID(),
+            hash: hash,
             marketingEmails: true,
-            sync: true
-          }
+            sync: true,
+          },
         });
       }
       return true;

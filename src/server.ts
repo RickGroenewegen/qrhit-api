@@ -687,13 +687,15 @@ class Server {
     });
 
     this.fastify.post('/newsletter_subscribe', async (request: any, reply) => {
-      const { email } = request.body;
+      const { email, captchaToken } = request.body;
       if (!email || !this.utils.isValidEmail(email)) {
-        reply.status(400).send({ success: false, error: 'Invalid email address' });
+        reply
+          .status(400)
+          .send({ success: false, error: 'Invalid email address' });
         return;
       }
-      
-      const result = await this.mail.subscribeToNewsletter(email);
+
+      const result = await this.mail.subscribeToNewsletter(email, captchaToken);
       return { success: result };
     });
 
