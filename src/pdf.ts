@@ -149,11 +149,6 @@ class PDF {
         await this.resizePDFPages(finalPath, 60, 60);
         // Add a 3 mm bleed for PrintAPI
         await this.addBleed(finalPath, 3);
-      } else {
-        // Flatten the PDF to remove any interactive elements
-        if (process.env['ENVIRONMENT'] === 'production') {
-          await this.flattenPdf(finalPath);
-        }
       }
     } finally {
       // Clean up temporary files only if they were merged
