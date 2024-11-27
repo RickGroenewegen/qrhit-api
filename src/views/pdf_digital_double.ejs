@@ -150,17 +150,33 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
     <div class="page">
         <% for(let rowStart = startIdx; rowStart < endIdx; rowStart += 3) { %>
             <div class="row">
-                <% for(let i = rowStart; i < Math.min(rowStart + 3, endIdx); i++) { %>
-                    <div class="card front">
-                <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/card_background2.png" alt="Card Background">
-                <div class="circle"></div>
-                <div class="qr">
-                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 60%; height: auto;">
-                    <br/>
-                </div>
-                <div class="domain"><%= process.env['APP_DOMAIN'] %></div>
-                    </div>
-                <% } %>
+                <% 
+                // Get indices for this row and pad to 3 cards if needed
+                let rowIndices = [];
+                for(let i = rowStart; i < rowStart + 3; i++) {
+                    if (i < endIdx) {
+                        rowIndices.push(i);
+                    } else {
+                        rowIndices.push(null); // Padding for incomplete row
+                    }
+                }
+                
+                // Render the cards in this row
+                rowIndices.forEach(function(i) { %>
+                    <% if (i !== null) { %>
+                        <div class="card front">
+                            <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/card_background2.png" alt="Card Background">
+                            <div class="circle"></div>
+                            <div class="qr">
+                                <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 60%; height: auto;">
+                                <br/>
+                            </div>
+                            <div class="domain"><%= process.env['APP_DOMAIN'] %></div>
+                        </div>
+                    <% } else { %>
+                        <div class="card front"></div>
+                    <% } %>
+                <% }); %>
             </div>
         <% } %>
     </div>
