@@ -118,9 +118,8 @@
         margin-top: 2mm;
         padding: 0 2mm;
         max-width: 56mm;
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
+        margin-left: 3mm;
+        margin-right: 3mm;
     }
     .text.artist {
         font-size: 18px;
@@ -154,7 +153,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                 <div class="circle"></div>
                 <div class="qr">
                     <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 60%; height: auto;">
-                    <br/>(<%= tracks[i].name %>)
+                    <br/>
                 </div>
                 <div class="domain"><%= process.env['APP_DOMAIN'] %></div>
                     </div>
