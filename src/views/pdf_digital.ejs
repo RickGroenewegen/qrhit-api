@@ -161,22 +161,30 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
         <% 
         // Create arrays for each row (3 cards per row)
         for(let rowStart = startIdx; rowStart < endIdx; rowStart += 3) {
-            // Get indices for this row
+            // Get indices for this row and pad to 3 cards if needed
             let rowIndices = [];
-            for(let i = rowStart; i < Math.min(rowStart + 3, endIdx); i++) {
-                rowIndices.push(i);
+            for(let i = rowStart; i < rowStart + 3; i++) {
+                if (i < endIdx) {
+                    rowIndices.push(i);
+                } else {
+                    rowIndices.push(null); // Padding for incomplete row
+                }
             }
             // Reverse the row indices
             rowIndices.reverse();
             
             // Render the cards in this row
             rowIndices.forEach(function(i) { %>
-                <div class="card back">
-                    <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= tracks[i].artist %></div>
-                    <div class="text" style="margin-top: 5mm;font-size:36px;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= tracks[i].year %></div>
-                    <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;padding-left:2mm;padding-right:2mm;"><%= tracks[i].name %></div>
-                    <div class="text" style="margin-top: 5mm;font-size:14px;color:#909090;"><%= process.env['APP_DOMAIN'] %></div>
-                </div>
+                <% if (i !== null) { %>
+                    <div class="card back">
+                        <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= tracks[i].artist %></div>
+                        <div class="text" style="margin-top: 5mm;font-size:36px;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= tracks[i].year %></div>
+                        <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;padding-left:2mm;padding-right:2mm;"><%= tracks[i].name %></div>
+                        <div class="text" style="margin-top: 5mm;font-size:14px;color:#909090;"><%= process.env['APP_DOMAIN'] %></div>
+                    </div>
+                <% } else { %>
+                    <div class="card back"></div>
+                <% } %>
             <% }); %>
         <% } %>
     </div>
