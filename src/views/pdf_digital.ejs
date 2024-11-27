@@ -29,11 +29,16 @@
         height: 297mm;
         box-sizing: border-box;
         display: flex;
-        flex-wrap: wrap;
-        justify-content: flex-start;
-        align-content: flex-start;
-        padding: 15mm 10mm;
+        flex-direction: column;
+        align-items: center;
+        padding: 15mm 0;
         page-break-after: always;
+    }
+    .row {
+        width: 180mm; /* 3 cards × 60mm */
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 0;
     }
     .card {
         width: 60mm;
@@ -141,8 +146,10 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
 %>
     <!-- Front side page <%= pageNum + 1 %> -->
     <div class="page">
-        <% for(let i = startIdx; i < endIdx; i++) { %>
-            <div class="card front">
+        <% for(let rowStart = startIdx; rowStart < endIdx; rowStart += 3) { %>
+            <div class="row">
+                <% for(let i = rowStart; i < Math.min(rowStart + 3, endIdx); i++) { %>
+                    <div class="card front">
                 <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/card_background2.png" alt="Card Background">
                 <div class="circle"></div>
                 <div class="qr">
@@ -150,6 +157,8 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                     <br/>(<%= tracks[i].name %>)
                 </div>
                 <div class="domain"><%= process.env['APP_DOMAIN'] %></div>
+                    </div>
+                <% } %>
             </div>
         <% } %>
     </div>
@@ -158,7 +167,9 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
     <div class="page">
         <% 
         // Create arrays for each row (3 cards per row)
-        for(let rowStart = startIdx; rowStart < endIdx; rowStart += 3) {
+        for(let rowStart = startIdx; rowStart < endIdx; rowStart += 3) { %>
+            <div class="row">
+            <% 
             // Get indices for this row and pad to 3 cards if needed
             let rowIndices = [];
             for(let i = rowStart; i < rowStart + 3; i++) {
@@ -184,6 +195,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                     <div class="card back"></div>
                 <% } %>
             <% }); %>
+            </div>
         <% } %>
     </div>
 <% } %>
