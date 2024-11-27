@@ -93,7 +93,7 @@ class Mail {
   async sendContactForm(data: any, ip: string): Promise<void> {
     const { captchaToken, ...otherData } = data;
 
-    // // Verify reCAPTCHA token
+    // Verify reCAPTCHA token
     const isHuman = await this.utils.verifyRecaptcha(captchaToken);
 
     if (!isHuman) {

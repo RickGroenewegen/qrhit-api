@@ -284,7 +284,9 @@ class Generator {
     // Retrieve the tracks from Spotify
     const response = await this.spotify.getTracks(
       playlist.playlistId,
-      !refreshCache
+      !refreshCache,
+      '',
+      false
     );
     const tracks = response.data.tracks;
 

@@ -407,23 +407,27 @@ class Server {
         .send('User-agent: *\nDisallow: /');
     });
 
-    this.fastify.get(
-      '/spotify/playlists/:playlistId/tracks/:cache',
+    this.fastify.post(
+      '/spotify/playlists/tracks',
       async (request: any, _reply) => {
         return await this.spotify.getTracks(
-          request.params.playlistId,
-          this.utils.parseBoolean(request.params.cache)
+          request.body.playlistId,
+          this.utils.parseBoolean(request.body.cache),
+          request.body.captchaToken,
+          true
         );
       }
     );
 
-    this.fastify.get(
-      '/spotify/playlists/:playlistId/:cache',
+    this.fastify.post(
+      '/spotify/playlists',
 
       async (request: any, _reply) => {
         return await this.spotify.getPlaylist(
-          request.params.playlistId,
-          this.utils.parseBoolean(request.params.cache)
+          request.body.playlistId,
+          this.utils.parseBoolean(request.body.cache),
+          request.body.captchaToken,
+          true
         );
       }
     );

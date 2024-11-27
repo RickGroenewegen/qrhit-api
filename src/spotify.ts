@@ -273,7 +273,7 @@ class Spotify {
       return parseInt(cacheResult);
     }
 
-    const tracks = await this.getTracks(playlistId, cache);
+    const tracks = await this.getTracks(playlistId, cache, '', false);
 
     if (!tracks.success) {
       throw new Error('Error getting playlist track count');
@@ -284,9 +284,20 @@ class Spotify {
 
   public async getPlaylist(
     playlistId: string,
-    cache: boolean = true
+    cache: boolean = true,
+    captchaToken: string = '',
+    checkCaptcha: boolean
   ): Promise<ApiResult> {
     let playlist: Playlist | null = null;
+
+    if (checkCaptcha) {
+      // Verify reCAPTCHA token
+      const isHuman = await this.utils.verifyRecaptcha(captchaToken);
+
+      if (!isHuman) {
+        throw new Error('reCAPTCHA verification failed');
+      }
+    }
 
     try {
       const cacheKey = `playlist_${playlistId}`;
@@ -340,7 +351,8 @@ class Spotify {
   public async getTracks(
     playlistId: string,
     cache: boolean = true,
-    captchaToken: string = ''
+    captchaToken: string = '',
+    checkCaptcha: boolean
   ): Promise<ApiResult> {
     try {
       let cacheKey = `tracks_${playlistId}`;
@@ -352,7 +364,14 @@ class Spotify {
       const limit = 100;
       let maxReached = false;
 
-      console.log(1111, playlistId, cache, captchaToken);
+      if (checkCaptcha) {
+        // Verify reCAPTCHA token
+        const isHuman = await this.utils.verifyRecaptcha(captchaToken);
+
+        if (!isHuman) {
+          throw new Error('reCAPTCHA verification failed');
+        }
+      }
 
       if (!cacheResult || !cache) {
         while (true) {
