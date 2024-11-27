@@ -339,7 +339,8 @@ class Spotify {
 
   public async getTracks(
     playlistId: string,
-    cache: boolean = true
+    cache: boolean = true,
+    captchaToken: string = ''
   ): Promise<ApiResult> {
     try {
       let cacheKey = `tracks_${playlistId}`;
@@ -350,6 +351,8 @@ class Spotify {
       let offset = 0;
       const limit = 100;
       let maxReached = false;
+
+      console.log(1111, playlistId, cache, captchaToken);
 
       if (!cacheResult || !cache) {
         while (true) {
