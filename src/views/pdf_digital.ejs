@@ -159,15 +159,21 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
     <!-- Back side page <%= pageNum + 1 %> -->
     <div class="page">
         <% 
-        // Create an array of indices for this page and reverse it
-        let pageIndices = [];
-        for(let i = startIdx; i < endIdx; i++) {
-            pageIndices.push(i);
+        // Create arrays for each row (4 cards per row)
+        let rows = [];
+        for(let i = startIdx; i < endIdx; i += 3) {
+            let row = [];
+            for(let j = i; j < Math.min(i + 3, endIdx); j++) {
+                row.push(j);
+            }
+            // Reverse each row horizontally
+            row.reverse();
+            rows.push(row);
         }
-        pageIndices.reverse();
         
-        // Use reversed indices for back sides
-        for(let i of pageIndices) { 
+        // Render cards using the row arrays
+        for(let row of rows) {
+            for(let i of row) {
         %>
             <div class="card back">
                 <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= tracks[i].artist %></div>
