@@ -10,6 +10,8 @@ git reset --hard HEAD
 # pm2 start npm --name "qrsong" -- run start
 # pm2 start dist/qrhit/server/server.mjs --name "qrsong-frontend"
 
+pm2 restart qrsong
+
 # Pull the latest changes from the remote repository
 git pull origin HEAD
 
@@ -27,6 +29,5 @@ git pull origin HEAD
 sudo npm install --force
 sudo npm run build
 
-pm2 restart qrsong
 pm2 restart qrsong-frontend
 
