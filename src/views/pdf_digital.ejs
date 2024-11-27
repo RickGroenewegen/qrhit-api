@@ -158,7 +158,17 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
 
     <!-- Back side page <%= pageNum + 1 %> -->
     <div class="page">
-        <% for(let i = startIdx; i < endIdx; i++) { %>
+        <% 
+        // Create an array of indices for this page and reverse it
+        let pageIndices = [];
+        for(let i = startIdx; i < endIdx; i++) {
+            pageIndices.push(i);
+        }
+        pageIndices.reverse();
+        
+        // Use reversed indices for back sides
+        for(let i of pageIndices) { 
+        %>
             <div class="card back">
                 <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= tracks[i].artist %></div>
                 <div class="text" style="margin-top: 5mm;font-size:36px;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= tracks[i].year %></div>
