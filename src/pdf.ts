@@ -98,18 +98,16 @@ class PDF {
           File: url,
           RespectViewport: 'false',
           PageSize: 'a4',
-          MarginTop: 10,
+          MarginTop: 0,
           MarginRight: 0,
           MarginBottom: 0,
-          MarginLeft: 10,
+          MarginLeft: 0,
           CompressPDF: 'true',
         } as any;
 
         if (template === 'printer') {
           options['PageWidth'] = 60;
           options['PageHeight'] = 60;
-          options['MarginTop'] = 0;
-          options['MarginLeft'] = 0;
         }
 
         const result = await this.convertapi.convert('pdf', options, 'htm');

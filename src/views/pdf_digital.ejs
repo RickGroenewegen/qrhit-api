@@ -23,30 +23,23 @@
         font-family: Arial, sans-serif;
         margin: 0;
         padding: 0;
+        page-break-after: always;
     }
     .page {
         width: 210mm;
         height: 297mm;
         box-sizing: border-box;
         display: flex;
-        flex-direction: column;
-        align-items: center;
-        padding: 15mm 0;
-        page-break-after: always;
-        margin: 0 auto;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        align-content: flex-start;
+        padding: 15mm 10mm;
     }
-    .row {
-        width: 180mm; /* 3 cards × 60mm */
-        display: flex;
-        justify-content: center;
-        gap: 0mm;
-        margin-bottom: 0;
-        margin: 0 auto;
-    }
-    .card {
+    .card-container {
         width: 60mm;
-        height: 60mm;
-        margin: 0;
+        height: 120mm;
+        display: flex;
+        flex-direction: column;
         border: 1px solid #ccc;
     }
     .card {
@@ -59,6 +52,7 @@
         flex-direction: column;
         align-items: center;
         justify-content: space-between;
+        border-bottom: 2px dashed #ccc;
         position: relative;
         overflow: hidden;
     }
@@ -121,8 +115,9 @@
         margin-top: 2mm;
         padding: 0 2mm;
         max-width: 56mm;
-        margin-left: 3mm;
-        margin-right: 3mm;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
     .text.artist {
         font-size: 18px;
@@ -135,71 +130,34 @@
         font-size: 16px;
         font-style: italic;
     }
+    .card-container:nth-of-type(6n) {
+        page-break-after: always;
+    }
 </style>
 </head>
 <body>
-<% 
-let cardsPerPage = 12;
-let totalPages = Math.ceil(tracks.length / cardsPerPage);
-
-for(let pageNum = 0; pageNum < totalPages; pageNum++) { 
-    let startIdx = pageNum * cardsPerPage;
-    let endIdx = Math.min(startIdx + cardsPerPage, tracks.length);
-%>
-    <!-- Front side page <%= pageNum + 1 %> -->
-    <div class="page">
-        <% for(let rowStart = startIdx; rowStart < endIdx; rowStart += 3) { %>
-            <div class="row">
-                <% for(let i = rowStart; i < Math.min(rowStart + 3, endIdx); i++) { %>
-                    <div class="card front">
+<div class="page">
+    <% let index = 0; %> 
+    <% tracks.forEach(function(track) { %>
+        <div class="card-container">
+            <div class="card front">
                 <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/card_background2.png" alt="Card Background">
                 <div class="circle"></div>
                 <div class="qr">
-                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 60%; height: auto;">
-                    <br/>
+                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 60%; height: auto;">
                 </div>
+                <!-- <div class="title" style="padding-left:2mm;padding-right:2mm;"><%= playlist.name %></div> -->
                 <div class="domain"><%= process.env['APP_DOMAIN'] %></div>
-                    </div>
-                <% } %>
             </div>
-        <% } %>
-    </div>
- 
-    <!-- Back side page <%= pageNum + 1 %> -->
-    <div class="page">
-        <% 
-        // Create arrays for each row (3 cards per row)
-        for(let rowStart = startIdx; rowStart < endIdx; rowStart += 3) { %>
-            <div class="row">
-            <% 
-            // Get indices for this row and pad to 3 cards if needed
-            let rowIndices = [];
-            for(let i = rowStart; i < rowStart + 3; i++) {
-                if (i < endIdx) {
-                    rowIndices.push(i);
-                } else {
-                    rowIndices.push(null); // Padding for incomplete row
-                }
-            }
-            // Reverse the row indices
-            rowIndices.reverse();
-            
-            // Render the cards in this row
-            rowIndices.forEach(function(i) { %>
-                <% if (i !== null) { %>
-                    <div class="card back">
-                        <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= tracks[i].artist %></div>
-                        <div class="text" style="margin-top: 5mm;font-size:36px;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= tracks[i].year %></div>
-                        <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;padding-left:2mm;padding-right:2mm;"><%= tracks[i].name %></div>
-                        <div class="text" style="margin-top: 5mm;font-size:14px;color:#909090;"><%= process.env['APP_DOMAIN'] %></div>
-                    </div>
-                <% } else { %>
-                    <div class="card back"></div>
-                <% } %>
-            <% }); %>
+            <div class="card back">
+                <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= track.artist %></div>
+                <div class="text" style="margin-top: 5mm;font-size:36px;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= track.year %></div>
+                <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;padding-left:2mm;padding-right:2mm;"><%= track.name %></div>
+                <div class="text" style="margin-top: 5mm;font-size:14px;color:#909090;"><%= process.env['APP_DOMAIN'] %></div>
             </div>
-        <% } %>
-    </div>
-<% } %>
+        </div>
+        <% index++ %> 
+    <% }); %>
+</div>
 </body>
 </html>

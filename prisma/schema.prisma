@@ -209,23 +209,25 @@ model PlaylistHasTrack {
 }
 
 model PaymentHasPlaylist {
-  id                     Int      @id @default(autoincrement())
-  payment                Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
-  paymentId              Int
-  playlist               Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
-  playlistId             Int
-  amount                 Int
-  numberOfTracks         Int
-  orderTypeId            Int
-  type                   String
-  filename               String?
-  filenameDigital        String?
-  price                  Float
-  priceWithoutVAT        Float
-  priceVAT               Float
-  printApiPrice          Float    @default(0)
-  printApiUploaded       Boolean  @default(false)
-  printApiUploadResponse String?  @db.Text
+  id                         Int      @id @default(autoincrement())
+  payment                    Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  paymentId                  Int
+  playlist                   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  playlistId                 Int
+  amount                     Int
+  numberOfTracks             Int
+  orderTypeId                Int
+  type                       String
+  filename                   String?
+  filenameDigital            String?
+  filenameDigitalDoubleSided String?
+  doubleSided                Boolean  @default(false)
+  price                      Float
+  priceWithoutVAT            Float
+  priceVAT                   Float
+  printApiPrice              Float    @default(0)
+  printApiUploaded           Boolean  @default(false)
+  printApiUploadResponse     String?  @db.Text
 
   printerPageCount Int @default(0)
 

@@ -415,13 +415,19 @@ class Generator {
             `${hash}_digital.pdf`.replace(/ /g, '_')
           ).toLowerCase();
 
+          let digitalTemplate = 'digital';
+
+          if (playlist.doubleSided == 1) {
+            digitalTemplate = 'digital_double';
+          }
+
           const [generatedFilenameDigital, generatedFilename] =
             await Promise.all([
               this.pdf.generatePDF(
                 filenameDigital,
                 playlist,
                 payment,
-                'digital',
+                digitalTemplate,
                 payment.qrSubDir
               ),
               playlist.orderType == 'physical'

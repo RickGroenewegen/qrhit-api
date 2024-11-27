@@ -494,6 +494,7 @@ class Mollie {
             orderTypeId: orderType?.id || 0,
             numberOfTracks: item.numberOfTracks,
             type: item.type,
+            doubleSided: item.doubleSided,
             price: itemPrice,
             priceWithoutVAT: itemPriceWithoutVAT,
             priceVAT: itemPriceVAT,

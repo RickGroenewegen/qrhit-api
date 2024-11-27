@@ -10,4 +10,5 @@ export interface CartItem {
   productType: string;
   fromName?: string;
   personalMessage?: string;
+  doubleSided?: boolean;
 }

@@ -53,6 +53,7 @@ class Data {
       SELECT 
         php.filename,
         php.filenameDigital,
+        php.filenameDigitalDoubleSided,
         pl.name
       FROM 
         payment_has_playlist php
@@ -153,6 +154,15 @@ class Data {
       });
       userDatabaseId = userCreate.id;
     } else {
+      // Update the display name. Since they might have been created with a temporary name in the newsletter
+      await this.prisma.user.update({
+        where: {
+          id: user.id,
+        },
+        data: {
+          displayName: userParams.displayName,
+        },
+      });
       userDatabaseId = user.id;
     }
     return userDatabaseId;
@@ -173,6 +183,7 @@ class Data {
         payment_has_playlist.priceWithoutVAT,
         payment_has_playlist.priceVAT,
         payment_has_playlist.amount,
+        payment_has_playlist.doubleSided,
         playlists.numberOfTracks,
         payment_has_playlist.type AS orderType
       FROM 
