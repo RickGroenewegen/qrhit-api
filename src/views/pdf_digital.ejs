@@ -34,12 +34,12 @@
         justify-content: flex-start;
         align-content: flex-start;
         padding: 15mm 10mm;
+        page-break-after: always;
     }
-    .card-container {
+    .card {
         width: 60mm;
-        height: 120mm;
-        display: flex;
-        flex-direction: column;
+        height: 60mm;
+        margin: 0;
         border: 1px solid #ccc;
     }
     .card {
@@ -130,31 +130,34 @@
         font-size: 16px;
         font-style: italic;
     }
-    .card-container:nth-of-type(6n) {
-        page-break-after: always;
-    }
 </style>
 </head>
 <body>
+<!-- Front side page -->
 <div class="page">
     <% let index = 0; %> 
     <% tracks.forEach(function(track) { %>
-        <div class="card-container">
-            <div class="card front">
-                <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/card_background2.png" alt="Card Background">
-                <div class="circle"></div>
-                <div class="qr">
-                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 60%; height: auto;">
-                </div>
-                <!-- <div class="title" style="padding-left:2mm;padding-right:2mm;"><%= playlist.name %></div> -->
-                <div class="domain"><%= process.env['APP_DOMAIN'] %></div>
+        <div class="card front">
+            <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/card_background2.png" alt="Card Background">
+            <div class="circle"></div>
+            <div class="qr">
+                <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 60%; height: auto;">
             </div>
-            <div class="card back">
-                <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= track.artist %></div>
-                <div class="text" style="margin-top: 5mm;font-size:36px;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= track.year %></div>
-                <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;padding-left:2mm;padding-right:2mm;"><%= track.name %></div>
-                <div class="text" style="margin-top: 5mm;font-size:14px;color:#909090;"><%= process.env['APP_DOMAIN'] %></div>
-            </div>
+            <div class="domain"><%= process.env['APP_DOMAIN'] %></div>
+        </div>
+        <% index++ %> 
+    <% }); %>
+</div>
+
+<!-- Back side page -->
+<div class="page">
+    <% index = 0; %> 
+    <% tracks.forEach(function(track) { %>
+        <div class="card back">
+            <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= track.artist %></div>
+            <div class="text" style="margin-top: 5mm;font-size:36px;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= track.year %></div>
+            <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;padding-left:2mm;padding-right:2mm;"><%= track.name %></div>
+            <div class="text" style="margin-top: 5mm;font-size:14px;color:#909090;"><%= process.env['APP_DOMAIN'] %></div>
         </div>
         <% index++ %> 
     <% }); %>
