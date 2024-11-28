@@ -141,6 +141,17 @@ model User {
   @@map("users")
 }
 
+model PushToken {
+  id        Int      @id @default(autoincrement())
+  token     String   @unique
+  type      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([token])
+  @@map("push_tokens")
+}
+
 model taxRate {
   id        Int       @id @default(autoincrement())
   rate      Float

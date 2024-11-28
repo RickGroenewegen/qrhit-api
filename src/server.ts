@@ -29,6 +29,7 @@ import { ChatGPT } from './chatgpt';
 import Discount from './discount';
 import GitChecker from './git';
 import { OpenPerplex } from './openperplex';
+import Push from './push';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -64,6 +65,7 @@ class Server {
   private git = GitChecker.getInstance();
   private discount = new Discount();
   private openperplex = new OpenPerplex();
+  private push = Push.getInstance();
 
   private version: string = '1.0.0';
 
@@ -122,6 +124,12 @@ class Server {
       }
     );
 
+    this.fastify.post('/push/broadcast', async (request: any, reply: any) => {
+      const { title, message } = request.body;
+      await this.push.broadcastNotification(title, message);
+      reply.send({ success: true });
+    });
+
     this.fastify.post(
       '/googlesearch',
       { preHandler: verifyTokenMiddleware },
@@ -163,6 +171,17 @@ class Server {
         request.body.token
       );
       reply.send(result);
+    });
+
+    this.fastify.post('/push/register', async (request: any, reply: any) => {
+      const { token, type } = request.body;
+      if (!token || !type) {
+        reply.status(400).send({ error: 'Invalid request' });
+        return;
+      }
+
+      await this.push.addToken(token, type);
+      reply.send({ success: true });
     });
 
     this.fastify.get(
@@ -707,6 +726,12 @@ class Server {
       this.fastify.get('/mball', async (request: any, _reply) => {
         const result = await this.data.updateAllTrackYears();
         return { success: true, data: result };
+      });
+
+      this.fastify.post('/push', async (request: any, reply: any) => {
+        const { token, title, message } = request.body;
+        await this.push.sendPushNotification(token, title, message);
+        reply.send({ success: true });
       });
 
       this.fastify.post('/qrtest', async (request: any, _reply) => {
