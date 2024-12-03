@@ -473,6 +473,7 @@ class Data {
         select: {
           id: true,
           name: true,
+          spotifyLink: true,
           artist: true,
           year: true,
           yearSource: true,
