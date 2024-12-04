@@ -869,11 +869,12 @@ class Data {
           track.name
         );
 
-        if (perplexYear > 0 && perplexYear == year) {
-          // Update manuallyChecked to true
+        if (perplexYear > 0 && (perplexYear == year || Math.abs(perplexYear - year) == 1)) {
+          // Update the year with perplexYear and set manuallyChecked to true
           await this.prisma.$executeRaw`
             UPDATE tracks
-            SET manuallyChecked = true
+            SET year = ${perplexYear},
+                manuallyChecked = true
             WHERE id = ${track.id}
           `;
 
