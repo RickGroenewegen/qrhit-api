@@ -869,7 +869,10 @@ class Data {
           track.name
         );
 
-        if (perplexYear > 0 && (perplexYear == year || Math.abs(perplexYear - year) == 1)) {
+        if (
+          perplexYear > 0 &&
+          (perplexYear == year || Math.abs(perplexYear - year) == 1)
+        ) {
           // Update the year with perplexYear and set manuallyChecked to true
           await this.prisma.$executeRaw`
             UPDATE tracks
@@ -884,6 +887,8 @@ class Data {
                 track.artist
               )} - ${white.bold(track.name)}' which is ${white.bold(
                 perplexYear
+              )}. Previous year was ${white.bold(
+                year
               )}. The year is now confirmed.`
             )
           );
