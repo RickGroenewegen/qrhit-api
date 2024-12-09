@@ -45,7 +45,8 @@ class Push {
   public async broadcastNotification(
     title: string,
     message: string,
-    test: boolean
+    test: boolean,
+    dry: boolean
   ): Promise<void> {
     const tokens = await this.prisma.pushToken.findMany({
       where: test ? { test } : {},
@@ -53,14 +54,22 @@ class Push {
 
     this.logger.log(
       color.blue.bold(
-        `Broadcasting ${test ? 'test' : 'live'} notification to ${color.white.bold(
-          tokens.length
-        )} devices`
+        `Broadcasting ${
+          test ? 'test' : 'live'
+        } notification to ${color.white.bold(tokens.length)} devices`
       )
     );
 
+    if (dry) {
+      this.logger.log(
+        color.yellow.bold('Dry run enabled, no push notifications will be sent')
+      );
+    }
+
     const sendPromises = tokens.map(async (token) => {
-      await this.sendPushNotification(token.token, title, message);
+      if (!dry) {
+        await this.sendPushNotification(token.token, title, message);
+      }
     });
 
     // Create the pushMessage in the database
@@ -69,6 +78,8 @@ class Push {
         title,
         message,
         numberOfDevices: tokens.length,
+        test,
+        dry,
       },
     });
 
@@ -76,17 +87,17 @@ class Push {
       await Promise.all(sendPromises);
       this.logger.log(
         color.blue.bold(
-          `Broadcast ${test ? 'test' : 'live'} notification sent to ${color.white.bold(
-            tokens.length
-          )} devices`
+          `Broadcast ${
+            test ? 'test' : 'live'
+          } notification sent to ${color.white.bold(tokens.length)} devices`
         )
       );
     } catch (error) {
       this.logger.log(
         color.red.bold(
-          `Error sending broadcast ${test ? 'test' : 'live'} notification to ${color.white.bold(
-            tokens.length
-          )} devices`
+          `Error sending broadcast ${
+            test ? 'test' : 'live'
+          } notification to ${color.white.bold(tokens.length)} devices`
         )
       );
     }
@@ -99,6 +110,7 @@ class Push {
         title: true,
         message: true,
         test: true,
+        dry: true,
         numberOfDevices: true,
         createdAt: true,
       },

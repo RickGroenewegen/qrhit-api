@@ -124,11 +124,28 @@ class Server {
       }
     );
 
-    this.fastify.post('/push/broadcast', async (request: any, reply: any) => {
-      const { title, message } = request.body;
-      await this.push.broadcastNotification(title, message);
-      reply.send({ success: true });
-    });
+    this.fastify.post(
+      '/push/broadcast',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply: any) => {
+        const { title, message, test, dry } = request.body;
+        await this.push.broadcastNotification(
+          title,
+          message,
+          this.utils.parseBoolean(test),
+          this.utils.parseBoolean(dry)
+        );
+        reply.send({ success: true });
+      }
+    );
+
+    this.fastify.get(
+      '/push/messages',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply: any) => {
+        return await this.push.getMessages();
+      }
+    );
 
     this.fastify.post(
       '/googlesearch',
