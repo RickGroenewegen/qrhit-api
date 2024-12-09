@@ -98,6 +98,7 @@ class Push {
         id: true,
         title: true,
         message: true,
+        test: true,
         numberOfDevices: true,
         createdAt: true,
       },
