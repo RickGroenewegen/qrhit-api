@@ -44,7 +44,8 @@ class Push {
 
   public async broadcastNotification(
     title: string,
-    message: string
+    message: string,
+    test: boolean
   ): Promise<void> {
     const tokens = await this.prisma.pushToken.findMany();
 
@@ -58,6 +59,15 @@ class Push {
 
     const sendPromises = tokens.map(async (token) => {
       await this.sendPushNotification(token.token, title, message);
+    });
+
+    // Create the pushMessage in the database
+    await this.prisma.pushMessage.create({
+      data: {
+        title,
+        message,
+        numberOfDevices: tokens.length,
+      },
     });
 
     try {
@@ -78,6 +88,19 @@ class Push {
         )
       );
     }
+  }
+
+  public async getMessages(): Promise<any> {
+    return this.prisma.pushMessage.findMany({
+      select: {
+        id: true,
+        title: true,
+        message: true,
+        numberOfDevices: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
   }
 
   public async sendPushNotification(
