@@ -48,7 +48,7 @@ class Push {
     test: boolean
   ): Promise<void> {
     const tokens = await this.prisma.pushToken.findMany({
-      where: { test },
+      where: test ? { test } : {},
     });
 
     this.logger.log(
