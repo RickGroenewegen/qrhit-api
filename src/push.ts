@@ -53,7 +53,7 @@ class Push {
 
     this.logger.log(
       color.blue.bold(
-        `Broadcasting notification to ${color.white.bold(
+        `Broadcasting ${test ? 'test' : 'live'} notification to ${color.white.bold(
           tokens.length
         )} devices`
       )
@@ -76,7 +76,7 @@ class Push {
       await Promise.all(sendPromises);
       this.logger.log(
         color.blue.bold(
-          `Broadcast notification sent to ${color.white.bold(
+          `Broadcast ${test ? 'test' : 'live'} notification sent to ${color.white.bold(
             tokens.length
           )} devices`
         )
@@ -84,7 +84,7 @@ class Push {
     } catch (error) {
       this.logger.log(
         color.red.bold(
-          `Error sending broadcast notification to ${color.white.bold(
+          `Error sending broadcast ${test ? 'test' : 'live'} notification to ${color.white.bold(
             tokens.length
           )} devices`
         )
