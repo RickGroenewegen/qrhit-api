@@ -108,10 +108,15 @@ class AnalyticsClient {
       },
     });
 
+    const initialResult: Record<string, number> = {
+      digital: 0,
+      physical: 0,
+    };
+
     return result.reduce((acc, item) => {
       acc[item.type] = item._sum.amount || 0;
       return acc;
-    }, {} as Record<string, number>);
+    }, initialResult);
   }
 
   public async getProfitAndTurnOver(
