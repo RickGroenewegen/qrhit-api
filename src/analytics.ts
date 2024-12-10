@@ -83,8 +83,8 @@ class AnalyticsClient {
 
     result['purchase']['digital'] = soldResult.digital.amount;
     result['purchase']['physical'] = soldResult.physical.amount;
-
-    console.log(111, soldResult);
+    result['purchase']['cards'] =
+      soldResult.physical.tracks + soldResult.digital.tracks;
 
     return result;
   }
