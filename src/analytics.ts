@@ -81,6 +81,9 @@ class AnalyticsClient {
 
     const soldResult = await this.getTotalPlaylistsSoldByType();
 
+    // result['purchase']['digital'] = soldResult.totalProfit;
+    // result['purchase']['physical'] = soldResult.totalPrice;
+
     console.log(111, soldResult);
 
     return result;
