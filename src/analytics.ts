@@ -1,8 +1,10 @@
 import Redis from 'ioredis';
+import PrismaInstance from './prisma';
 
 class AnalyticsClient {
   private static instance: AnalyticsClient;
   private client: Redis;
+  private prisma = PrismaInstance.getInstance();
 
   private constructor() {
     const redisUrl = process.env['REDIS_URL'];
@@ -72,7 +74,59 @@ class AnalyticsClient {
       result[category][action] = parseInt(value || '0', 10);
     }
 
+    const financeResult = await this.getProfitAndTurnOver();
+
+    result['finance']['profit'] = financeResult.totalProfit;
+    result['finance']['turnover'] = financeResult.totalPrice;
+
+    const soldResult = await this.getTotalPlaylistsSoldByType();
+
+    console.log(111, soldResult);
+
     return result;
+  }
+
+  public async getTotalPlaylistsSoldByType(): Promise<Record<string, number>> {
+    const result = await this.prisma.paymentHasPlaylist.groupBy({
+      by: ['type'],
+      _sum: {
+        amount: true,
+      },
+    });
+
+    return result.reduce((acc, item) => {
+      acc[item.type] = item._sum.amount || 0;
+      return acc;
+    }, {} as Record<string, number>);
+  }
+
+  public async getProfitAndTurnOver(
+    excludedEmails: string[] = ['west14@gmail.com', 'info@rickgroenewegen.nl']
+  ): Promise<{ totalPrice: number; totalProfit: number }> {
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        user: {
+          email: {
+            notIn: excludedEmails,
+          },
+        },
+      },
+      select: {
+        totalPrice: true,
+        profit: true,
+      },
+    });
+
+    const totals = payments.reduce(
+      (acc, payment) => {
+        acc.totalPrice += payment.totalPrice;
+        acc.totalProfit += payment.profit;
+        return acc;
+      },
+      { totalPrice: 0, totalProfit: 0 }
+    );
+
+    return totals;
   }
 }
 
