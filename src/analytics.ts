@@ -86,11 +86,22 @@ class AnalyticsClient {
     return result;
   }
 
-  public async getTotalPlaylistsSoldByType(): Promise<Record<string, number>> {
+  public async getTotalPlaylistsSoldByType(
+    excludedEmails: string[] = ['west14@gmail.com', 'info@rickgroenewegen.nl']
+  ): Promise<Record<string, number>> {
     const result = await this.prisma.paymentHasPlaylist.groupBy({
       by: ['type'],
       _sum: {
         amount: true,
+      },
+      where: {
+        payment: {
+          user: {
+            email: {
+              notIn: excludedEmails,
+            },
+          },
+        },
       },
     });
 
