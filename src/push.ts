@@ -1,4 +1,4 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, PushToken } from '@prisma/client';
 import admin from 'firebase-admin';
 import { color } from 'console-log-colors';
 import Logger from './logger';
@@ -56,7 +56,7 @@ class Push {
       color.blue.bold(
         `Broadcasting ${
           test ? 'test' : 'live'
-        } notification to ${color.white.bold(tokens.length)} devices`
+        } notification to ${color.white.bold(tokens.length)} device(s)`
       )
     );
 
@@ -68,7 +68,7 @@ class Push {
 
     const sendPromises = tokens.map(async (token) => {
       if (!dry) {
-        await this.sendPushNotification(token.token, title, message);
+        await this.sendPushNotification(token, title, message);
       }
     });
 
@@ -89,7 +89,7 @@ class Push {
         color.blue.bold(
           `Broadcast ${
             test ? 'test' : 'live'
-          } notification sent to ${color.white.bold(tokens.length)} devices`
+          } notification sent to ${color.white.bold(tokens.length)} device(s)`
         )
       );
     } catch (error) {
@@ -97,7 +97,7 @@ class Push {
         color.red.bold(
           `Error sending broadcast ${
             test ? 'test' : 'live'
-          } notification to ${color.white.bold(tokens.length)} devices`
+          } notification to ${color.white.bold(tokens.length)} device(s)`
         )
       );
     }
@@ -119,12 +119,12 @@ class Push {
   }
 
   public async sendPushNotification(
-    token: string,
+    token: PushToken,
     title: string,
     message: string
   ): Promise<void> {
     const messagePayload = {
-      token: token,
+      token: token.token,
       notification: {
         title: title,
         body: message,
@@ -135,13 +135,20 @@ class Push {
       await admin.messaging().send(messagePayload);
       this.logger.log(
         color.blue.bold(
-          `Push notification sent to token: ${color.white.bold(token)}`
+          `Push notification sent to token: ${color.white.bold(token.token)}`
         )
       );
     } catch (error) {
+      // If the token is invalid, mark it as invalid in the database
+      await this.prisma.pushToken.update({
+        where: { id: token.id },
+        data: { valid: false },
+      });
       this.logger.log(
         color.red.bold(
-          `Error sending push notification to token: ${color.white.bold(token)}`
+          `Error sending push notification to token: ${color.white.bold(
+            token.token
+          )}`
         )
       );
     }

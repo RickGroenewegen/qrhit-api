@@ -159,6 +159,7 @@ model PushToken {
   token     String   @unique
   type      String
   test      Boolean  @default(false)
+  valid     Boolean  @default(true)
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
