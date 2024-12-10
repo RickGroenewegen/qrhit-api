@@ -39,35 +39,6 @@ class Mollie {
     }
   }
 
-  public async getTotalExcludingEmails(
-    excludedEmails: string[] = ['west14@gmail.com', 'info@rickgroenewegen.nl']
-  ): Promise<{ totalPrice: number; totalProfit: number }> {
-    const payments = await this.prisma.payment.findMany({
-      where: {
-        user: {
-          email: {
-            notIn: excludedEmails,
-          },
-        },
-      },
-      select: {
-        totalPrice: true,
-        profit: true,
-      },
-    });
-
-    const totals = payments.reduce(
-      (acc, payment) => {
-        acc.totalPrice += payment.totalPrice;
-        acc.totalProfit += payment.profit;
-        return acc;
-      },
-      { totalPrice: 0, totalProfit: 0 }
-    );
-
-    return totals;
-  }
-
   public startCron(): void {
     new CronJob('0 1 * * *', async () => {
       await this.cleanPayments();
