@@ -91,11 +91,12 @@ class AnalyticsClient {
 
   public async getTotalPlaylistsSoldByType(
     excludedEmails: string[] = ['west14@gmail.com', 'info@rickgroenewegen.nl']
-  ): Promise<Record<string, number>> {
+  ): Promise<Record<string, { amount: number; tracks: number }>> {
     const result = await this.prisma.paymentHasPlaylist.groupBy({
       by: ['type'],
       _sum: {
         amount: true,
+        numberOfTracks: true,
       },
       where: {
         payment: {
@@ -108,13 +109,16 @@ class AnalyticsClient {
       },
     });
 
-    const initialResult: Record<string, number> = {
-      digital: 0,
-      physical: 0,
+    const initialResult: Record<string, { amount: number; tracks: number }> = {
+      digital: { amount: 0, tracks: 0 },
+      physical: { amount: 0, tracks: 0 },
     };
 
     return result.reduce((acc, item) => {
-      acc[item.type] = item._sum.amount || 0;
+      acc[item.type] = {
+        amount: item._sum.amount || 0,
+        tracks: item._sum.numberOfTracks || 0,
+      };
       return acc;
     }, initialResult);
   }
