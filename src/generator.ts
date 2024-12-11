@@ -99,7 +99,8 @@ class Generator {
     paymentId: string,
     ip: string,
     refreshPlaylists: string,
-    mollie: Mollie
+    mollie: Mollie,
+    forceFinalize: boolean = false
   ): Promise<void> {
     this.logger.log(
       blue.bold(`Starting generation for payment: ${white.bold(paymentId)}`)
@@ -203,7 +204,7 @@ class Generator {
       productType == 'giftcard' ||
       (productType == 'cards' && allTracksChecked)
     ) {
-      await this.finalizeOrder(payment.paymentId, mollie);
+      await this.finalizeOrder(payment.paymentId, mollie, forceFinalize);
     }
 
     let orderName = `${payment.fullname} (${payment.countrycode})`;
@@ -357,7 +358,8 @@ class Generator {
 
   public async finalizeOrder(
     paymentId: string,
-    mollie: Mollie
+    mollie: Mollie,
+    forceFinalize: boolean = false
   ): Promise<ApiResult> {
     // Try to acquire a lock for this payment
     const lockAcquired = await this.cache.acquireLock(
@@ -379,7 +381,7 @@ class Generator {
     try {
       const payment = await mollie.getPayment(paymentId);
 
-      if (!payment.finalized) {
+      if (!payment.finalized || forceFinalize) {
         // update payment finalized
         await this.prisma.payment.update({
           where: {

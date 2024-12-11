@@ -159,6 +159,22 @@ class Server {
       }
     );
 
+    this.fastify.get(
+      '/regenerate/:paymentId',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, _reply) => {
+        await this.mollie.clearPDFs(request.params.paymentId);
+        await this.generator.generate(
+          request.params.paymentId,
+          request.clientIp,
+          '',
+          this.mollie,
+          true // Force finalize
+        );
+        return { success: true };
+      }
+    );
+
     this.fastify.post(
       '/orders',
       { preHandler: verifyTokenMiddleware },
@@ -772,7 +788,7 @@ class Server {
       this.fastify.get('/generate/:paymentId', async (request: any, _reply) => {
         await this.generator.generate(
           request.params.paymentId,
-          request.clientId,
+          request.clientIp,
           '',
           this.mollie
         );
