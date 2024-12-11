@@ -149,44 +149,30 @@ class Mollie {
 
   public async clearPDFs(paymentId: string) {
     const payment = await this.getPayment(paymentId);
-    // Get all the playlists for this payment
     const playlists = payment.PaymentHasPlaylist;
 
-    // Loop over playlists and delete the PDFs if their filename is not ''
-    for (const playlist of playlists) {
-      if (playlist.filename !== '') {
-        const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`;
+    const deletePDF = async (filename: string, type: string) => {
+      if (filename !== '') {
+        const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
         try {
           await fs.unlink(pdfPath);
           this.logger.log(
-            color.blue.bold(`Deleted PDF: ${color.white.bold(pdfPath)}`)
+            color.blue.bold(`Deleted ${type} PDF: ${color.white.bold(pdfPath)}`)
           );
         } catch (e) {
           this.logger.log(
             color.yellow.bold(
-              `Failed to delete PDF: ${color.white.bold(pdfPath)}`
+              `Failed to delete ${type} PDF: ${color.white.bold(pdfPath)}`
             )
           );
         }
       }
-      if (playlist.filenameDigital !== '') {
-        const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${playlist.filenameDigital}`;
-        try {
-          await fs.unlink(pdfPath);
-          this.logger.log(
-            color.blue.bold(`Deleted digital PDF: ${color.white.bold(pdfPath)}`)
-          );
-        } catch (e) {
-          this.logger.log(
-            color.yellow.bold(
-              `Failed to delete digital PDF: ${color.white.bold(pdfPath)}`
-            )
-          );
-        }
-      }
-    }
+    };
 
-    console.log(111, playlists);
+    for (const playlist of playlists) {
+      await deletePDF(playlist.filename, 'standard');
+      await deletePDF(playlist.filenameDigital, 'digital');
+    }
   }
 
   public async getPaymentList(
