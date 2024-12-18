@@ -448,14 +448,33 @@ class Order {
 
   public async testOrder() {
     const authToken = await this.getAuthToken();
-    const pdfURL = `${process.env.API_URI}/assets/pdf/example_digital.pdf`;
 
     const body = {
       email: 'west14@gmail.com',
       items: [
         {
-          productId: 'kaarten_dubbel_10x10_9st',
-          pageCount: 2, //payment.printerPageCount,
+          productId: 'kaart_dubbel_a4_sta',
+          pageCount: 2,
+          quantity: 1,
+        },
+        {
+          productId: 'kaart_dubbel_a4_sta',
+          pageCount: 2,
+          quantity: 1,
+        },
+        {
+          productId: 'kaart_dubbel_a4_sta',
+          pageCount: 2,
+          quantity: 1,
+        },
+        {
+          productId: 'kaart_dubbel_a4_sta',
+          pageCount: 2,
+          quantity: 1,
+        },
+        {
+          productId: 'kaart_dubbel_a4_sta',
+          pageCount: 2,
           quantity: 1,
         },
       ],
@@ -483,12 +502,20 @@ class Order {
         data: body,
       });
 
-      const url = responseOrder.data.items[0].files.content.uploadUrl;
-      console.log(225, url);
+      const url1 = responseOrder.data.items[0].files.content.uploadUrl;
+      const url2 = responseOrder.data.items[1].files.content.uploadUrl;
+      const url3 = responseOrder.data.items[2].files.content.uploadUrl;
+      const url4 = responseOrder.data.items[3].files.content.uploadUrl;
+      const url5 = responseOrder.data.items[4].files.content.uploadUrl;
 
-      console.log(333, JSON.stringify(responseOrder.data, null, 2));
+      console.log(111, url1);
+      console.log(222, url2);
+      console.log(333, url3);
+      console.log(444, url4);
+      console.log(555, url5);
 
-      // Post the PDF file to the received URL
+      // console.log(333, JSON.stringify(responseOrder.data, null, 2));
+
       const pdfFile = await axios.get(pdfURL, { responseType: 'arraybuffer' });
       const pdfBuffer = Buffer.from(pdfFile.data, 'binary');
 
@@ -499,7 +526,7 @@ class Order {
         },
       });
 
-      console.log(444, JSON.stringify(uploadResult.data, null, 2));
+      // console.log(444, JSON.stringify(uploadResult.data, null, 2));
 
       console.log('PDF file uploaded successfully');
     } catch (e) {
