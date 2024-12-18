@@ -44,6 +44,12 @@ class Mollie {
     startDate: Date,
     endDate: Date
   ): Promise<any> {
+    let ignoreEmails: string[] = [];
+
+    if (process.env['ENVIRONMENT'] == 'production') {
+      ignoreEmails = ['west14@gmail.com', 'info@rickgroenewegen.nl'];
+    }
+
     const report = await this.prisma.payment.groupBy({
       by: ['countrycode'],
       where: {
@@ -61,7 +67,7 @@ class Mollie {
           },
         ],
         email: {
-          notIn: ['west14@gmail.com', 'info@rickgroenewegen.nl'],
+          notIn: ignoreEmails,
         },
       },
       _count: {
