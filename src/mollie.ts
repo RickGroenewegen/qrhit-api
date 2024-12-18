@@ -84,8 +84,6 @@ class Mollie {
             createdAt: {
               gte: startDate,
               lte: endDate,
-            },
-            createdAt: {
               gt: new Date('2024-12-05'),
             },
           },
