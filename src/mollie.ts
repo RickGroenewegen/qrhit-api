@@ -38,16 +38,12 @@ class Mollie {
         }
       });
     }
-    });
+  }
 
-    return report.map((entry) => ({
-      country: entry.countrycode || 'Unknown',
-      numberOfSales: entry._count._all,
-      totalTotalPrice: entry._sum.totalPrice,
-      totalProductPriceWithoutTax: entry._sum.productPriceWithoutTax,
-    }));
-
-  public async getPaymentsByMonth(startDate: Date, endDate: Date): Promise<any> {
+  public async getPaymentsByMonth(
+    startDate: Date,
+    endDate: Date
+  ): Promise<any> {
     const report = await this.prisma.payment.groupBy({
       by: ['countrycode'],
       where: {
@@ -64,6 +60,12 @@ class Mollie {
         productPriceWithoutTax: true,
       },
     });
+    return report.map((entry) => ({
+      country: entry.countrycode || 'Unknown',
+      numberOfSales: entry._count._all,
+      totalTotalPrice: entry._sum.totalPrice,
+      totalProductPriceWithoutTax: entry._sum.productPriceWithoutTax,
+    }));
   }
 
   public startCron(): void {
