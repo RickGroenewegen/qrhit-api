@@ -51,7 +51,9 @@ class Mollie {
           gte: startDate,
           lte: endDate,
         },
-      },
+        email: {
+          notIn: ['west14@gmail.com', 'info@rickgroenewegen.nl'],
+        },
       _count: {
         _all: true,
       },
