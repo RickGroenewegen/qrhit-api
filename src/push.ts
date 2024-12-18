@@ -36,6 +36,7 @@ class Push {
         data: { type },
       });
     } else {
+      console.log(111, token, type);
       await this.prisma.pushToken.create({
         data: { token, type },
       });
