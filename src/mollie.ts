@@ -38,10 +38,17 @@ class Mollie {
         }
       });
     }
-  }
+    });
+
+    return report.map((entry) => ({
+      country: entry.countrycode || 'Unknown',
+      numberOfSales: entry._count._all,
+      totalTotalPrice: entry._sum.totalPrice,
+      totalProductPriceWithoutTax: entry._sum.productPriceWithoutTax,
+    }));
 
   public async getPaymentsByMonth(startDate: Date, endDate: Date): Promise<any> {
-    return await this.prisma.payment.groupBy({
+    const report = await this.prisma.payment.groupBy({
       by: ['countrycode'],
       where: {
         createdAt: {

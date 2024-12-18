@@ -278,16 +278,9 @@ class Server {
 
         const report = await this.mollie.getPaymentsByMonth(startDate, endDate);
 
-        const formattedReport = report.map((entry) => ({
-          country: entry.countrycode || 'Unknown',
-          numberOfSales: entry._count._all,
-          totalTotalPrice: entry._sum.totalPrice,
-          totalProductPriceWithoutTax: entry._sum.productPriceWithoutTax,
-        }));
-
         reply.send({
           success: true,
-          data: formattedReport,
+          data: report,
         });
       }
     );
