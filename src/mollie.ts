@@ -47,10 +47,19 @@ class Mollie {
     const report = await this.prisma.payment.groupBy({
       by: ['countrycode'],
       where: {
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
-        },
+        AND: [
+          {
+            createdAt: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          {
+            createdAt: {
+              gt: new Date('2024-12-05'),
+            },
+          },
+        ],
         // email: {
         //   notIn: ['west14@gmail.com', 'info@rickgroenewegen.nl'],
         // },
