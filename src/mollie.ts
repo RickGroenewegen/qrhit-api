@@ -66,7 +66,6 @@ class Mollie {
       },
       _count: {
         _all: true,
-        PaymentHasPlaylist: true,
       },
       _sum: {
         totalPrice: true,
@@ -77,14 +76,26 @@ class Mollie {
       },
     });
 
-    return report.map((entry) => ({
-      country: entry.countrycode || 'Unknown',
-      numberOfSales: entry._count._all,
-      totalPrice: entry._sum.totalPrice,
-      totalPriceWithoutTax: entry._sum.productPriceWithoutTax,
-      taxRate: entry._max.taxRate,
-      totalPlaylistsSold: entry._count.PaymentHasPlaylist,
-    }));
+    const detailedReport = await Promise.all(
+      report.map(async (entry) => {
+        const playlistsCount = await this.prisma.paymentHasPlaylist.count({
+          where: {
+            paymentId: entry.id,
+          },
+        });
+
+        return {
+          country: entry.countrycode || 'Unknown',
+          numberOfSales: entry._count._all,
+          totalPrice: entry._sum.totalPrice,
+          totalPriceWithoutTax: entry._sum.productPriceWithoutTax,
+          taxRate: entry._max.taxRate,
+          totalPlaylistsSold: playlistsCount,
+        };
+      })
+    );
+
+    return detailedReport;
   }
 
   public startCron(): void {
