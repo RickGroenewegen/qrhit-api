@@ -1,85 +1,236 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<title>Your QR Cards</title>
-<style>
-    body {
-        font-family: Arial, sans-serif;
-        margin: 0;
-        padding: 0;
-    }
-    .card-front, .card-back {
-        width: 60mm;
-        height: 60mm;
-        display: flex;
-        flex-direction: column;
-        justify-content: center;
-        align-items: center;
-        position: relative;
-    }
-    .card-front {
-        background-image: url('<%= process.env['API_URI'] %>/assets/images/card_background2.png');
-        background-size: cover;
-    }
-    .card-back {
-        background-color: #ffffff; /* or any other color you prefer */
-    }
-    .qr {
-        width: 60%;
-        height: auto;
-        position: relative;
-        z-index: 3;
-    }
-    .text {
-        text-align: center;
-        padding-top: 2mm;
-        padding-bottom: 2mm;
-    }
-    .text.artist {
-        margin-left: 3mm;
-        margin-right: 3mm;
-        font-size: 18px;
-    }
-    .text.year {
-        font-size: 40px;
-        font-weight: bold;
-    }
-    .text.name {
-        margin-left: 3mm;
-        margin-right: 3mm;
-        font-size: 16px;
-        font-style: italic;
-    }
-    .url, .url-bottom {
-        font-size: 12px;
-        position: absolute;
-        bottom: 10mm;
-        text-align: center;
-        width: 100%;
-        font-style: italic;
-        color: #909090;
-        z-index: 3;
-    }
-    .url-bottom {
-        bottom: 5mm;
-    }
-</style>
+    <meta charset="UTF-8">
+    <title>Your QR Cards</title>
+    <style>
+        @media print {
+            @page {
+                size: A4;
+                margin: 0;
+            }
+            body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+            img {
+                image-rendering: -webkit-optimize-contrast;
+                image-rendering: crisp-edges;
+            }
+        }
+       
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+
+        .page {
+            width: 210mm;
+            height: 297mm;
+            box-sizing: border-box;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            page-break-after: always;
+            margin: 0 auto;
+            padding: 0;
+        }
+
+        .row {
+            width: 210mm;
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            margin: 0;
+        }
+
+        .card {
+            width: 52.5mm;
+            height: 52.5mm;
+            margin: 0;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        .front {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: space-between;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .background-image {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            z-index: 0;
+        }
+       
+        .circle {
+            position: absolute;
+            width: 42mm;
+            height: 42mm;
+            background-color: #fff;
+            border-radius: 50%;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1;
+            border: 1px solid #e0e0e0;
+        }
+
+        .domain {
+            font-size: 11px;
+            color: #909090;
+            position: absolute;
+            bottom: 8mm;
+            width: 100%;
+            text-align: center;
+            z-index: 2;
+        }
+
+        .qr {
+            flex: 0 0 80%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: auto;
+            position: relative;
+            z-index: 2;
+        }
+
+        .qr img {
+            width: 31.5mm;
+            height: 31.5mm;
+            object-fit: contain;
+            image-resolution: 300dpi;
+        }
+
+        .back {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            height: 52.5mm;
+        }
+
+        .text {
+            margin: 1mm 2mm;
+            padding: 0 2mm;
+            max-width: 48.5mm;
+        }
+
+        .text.artist {
+            font-size: 16px;
+            margin-top: 0;
+        }
+
+        .text.year {
+            font-size: 32px;
+            font-weight: bold;
+            margin-top: 3mm;
+        }
+
+        .text.name {
+            font-size: 14px;
+            font-style: italic;
+            margin-top: 5mm;
+        }
+
+        .text.domain {
+            font-size: 12px;
+            color: #909090;
+            margin-top: 3mm;
+        }
+
+        .text.domainback {
+            position:absolute;
+            font-size: 12px;
+            color: #909090;
+            margin-top: 42mm;
+            
+        }
+    </style>
 </head>
 <body>
-<% tracks.forEach((track, index) => { %>
-    <div class="card-front">
-        <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
-        <div class="url"><%= process.env['APP_DOMAIN'] %></div>
+<% 
+let cardsPerPage = 20;
+let totalPages = Math.ceil(tracks.length / cardsPerPage);
+
+for(let pageNum = 0; pageNum < totalPages; pageNum++) { 
+    let startIdx = pageNum * cardsPerPage;
+    let endIdx = Math.min(startIdx + cardsPerPage, tracks.length);
+%>
+    <!-- Front side page <%= pageNum + 1 %> -->
+    <div class="page">
+        <% for(let rowStart = startIdx; rowStart < endIdx; rowStart += 4) { %>
+            <div class="row">
+                <% 
+                let rowIndices = [];
+                for(let i = rowStart; i < rowStart + 4; i++) {
+                    if (i < endIdx) {
+                        rowIndices.push(i);
+                    } else {
+                        rowIndices.push(null);
+                    }
+                }
+                
+                rowIndices.forEach(function(i) { %>
+                    <% if (i !== null) { %>
+                        <div class="card front">
+                            <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/card_background2.png" alt="Card Background">
+                            <div class="circle"></div>
+                            <div class="qr">
+                                <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code">
+                            </div>
+                            <div class="domain"><%= process.env['APP_DOMAIN'] %></div>
+                        </div>
+                    <% } else { %>
+                        <div class="card front"></div>
+                    <% } %>
+                <% }); %>
+            </div>
+        <% } %>
     </div>
-    <div style="page-break-after: always;"></div>
-    <div class="card-back">
-        <div class="text artist"><%= track.artist %></div>
-        <div class="text year"><%= track.year %></div>
-        <div class="text name"><%= track.name %></div>
-        <div class="url-bottom"><%= process.env['APP_DOMAIN'] %></div>
+ 
+    <!-- Back side page <%= pageNum + 1 %> -->
+    <div class="page">
+        <% for(let rowStart = startIdx; rowStart < endIdx; rowStart += 4) { %>
+            <div class="row">
+            <% 
+            let rowIndices = [];
+            for(let i = rowStart; i < rowStart + 4; i++) {
+                if (i < endIdx) {
+                    rowIndices.push(i);
+                } else {
+                    rowIndices.push(null);
+                }
+            }
+            rowIndices.reverse();
+            
+            rowIndices.forEach(function(i) { %>
+                <% if (i !== null) { %>
+                    <div class="card back">
+                        <div class="text artist"><%= tracks[i].artist %></div>
+                        <div class="text year"><%= tracks[i].year %></div>
+                        <div class="text name"><%= tracks[i].name %></div>
+                        <div class="text domainback"><%= process.env['APP_DOMAIN'] %></div>
+                    </div>
+                <% } else { %>
+                    <div class="card back"></div>
+                <% } %>
+            <% }); %>
+            </div>
+        <% } %>
     </div>
-    <div style="page-break-after: always;"></div>
-<% }); %>
+<% } %>
 </body>
 </html>
