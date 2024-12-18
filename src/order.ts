@@ -502,33 +502,22 @@ class Order {
         data: body,
       });
 
-      const url1 = responseOrder.data.items[0].files.content.uploadUrl;
-      const url2 = responseOrder.data.items[1].files.content.uploadUrl;
-      const url3 = responseOrder.data.items[2].files.content.uploadUrl;
-      const url4 = responseOrder.data.items[3].files.content.uploadUrl;
-      const url5 = responseOrder.data.items[4].files.content.uploadUrl;
-
-      console.log(111, url1);
-      console.log(222, url2);
-      console.log(333, url3);
-      console.log(444, url4);
-      console.log(555, url5);
-
-      // console.log(333, JSON.stringify(responseOrder.data, null, 2));
-
       const pdfFile = await axios.get(pdfURL, { responseType: 'arraybuffer' });
       const pdfBuffer = Buffer.from(pdfFile.data, 'binary');
 
-      const uploadResult = await axios.post(url, pdfBuffer, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          'Content-Type': 'application/pdf',
-        },
-      });
+      for (let i = 0; i < 5; i++) {
+        const uploadUrl = responseOrder.data.items[i].files.content.uploadUrl;
+        console.log(`Uploading to URL ${i + 1}:`, uploadUrl);
 
-      // console.log(444, JSON.stringify(uploadResult.data, null, 2));
+        const uploadResult = await axios.post(uploadUrl, pdfBuffer, {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/pdf',
+          },
+        });
 
-      console.log('PDF file uploaded successfully');
+        console.log(`PDF file ${i + 1} uploaded successfully`);
+      }
     } catch (e) {
       if (axios.isAxiosError(e) && e.response) {
         console.log(999, JSON.stringify(e.response.data, null, 2));
