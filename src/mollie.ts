@@ -78,11 +78,31 @@ class Mollie {
 
     const detailedReport = await Promise.all(
       report.map(async (entry) => {
-        const playlistsCount = await this.prisma.paymentHasPlaylist.count({
+        const payments = await this.prisma.payment.findMany({
           where: {
-            paymentId: entry.id,
+            countrycode: entry.countrycode,
+            createdAt: {
+              gte: startDate,
+              lte: endDate,
+            },
+            createdAt: {
+              gt: new Date('2024-12-05'),
+            },
+          },
+          select: {
+            id: true,
           },
         });
+
+        let totalPlaylistsSold = 0;
+        for (const payment of payments) {
+          const playlistsCount = await this.prisma.paymentHasPlaylist.count({
+            where: {
+              paymentId: payment.id,
+            },
+          });
+          totalPlaylistsSold += playlistsCount;
+        }
 
         return {
           country: entry.countrycode || 'Unknown',
@@ -90,7 +110,7 @@ class Mollie {
           totalPrice: entry._sum.totalPrice,
           totalPriceWithoutTax: entry._sum.productPriceWithoutTax,
           taxRate: entry._max.taxRate,
-          totalPlaylistsSold: playlistsCount,
+          totalPlaylistsSold,
         };
       })
     );
