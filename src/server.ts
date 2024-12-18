@@ -276,26 +276,18 @@ class Server {
         const startDate = new Date(year, month - 1, 1);
         const endDate = new Date(year, month, 0, 23, 59, 59);
 
-        const payments = await this.mollie.getPaymentsByMonth(startDate, endDate);
+        const report = await this.mollie.getPaymentsByMonth(startDate, endDate);
 
-        const report = payments.reduce((acc, payment) => {
-          const country = payment.countrycode || 'Unknown';
-          if (!acc[country]) {
-            acc[country] = {
-              numberOfSales: 0,
-              totalTotalPrice: 0,
-              totalProductPriceWithoutTax: 0,
-            };
-          }
-          acc[country].numberOfSales += 1;
-          acc[country].totalTotalPrice += payment.totalPrice;
-          acc[country].totalProductPriceWithoutTax += payment.productPriceWithoutTax;
-          return acc;
-        }, {});
+        const formattedReport = report.map((entry) => ({
+          country: entry.countrycode || 'Unknown',
+          numberOfSales: entry._count._all,
+          totalTotalPrice: entry._sum.totalPrice,
+          totalProductPriceWithoutTax: entry._sum.productPriceWithoutTax,
+        }));
 
         reply.send({
           success: true,
-          data: report,
+          data: formattedReport,
         });
       }
     );

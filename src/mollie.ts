@@ -40,15 +40,19 @@ class Mollie {
     }
   }
 
-  public async getPaymentsByMonth(startDate: Date, endDate: Date): Promise<Payment[]> {
-    return await this.prisma.payment.findMany({
+  public async getPaymentsByMonth(startDate: Date, endDate: Date): Promise<any> {
+    return await this.prisma.payment.groupBy({
+      by: ['countrycode'],
       where: {
         createdAt: {
           gte: startDate,
           lte: endDate,
         },
       },
-      select: {
+      _count: {
+        _all: true,
+      },
+      _sum: {
         totalPrice: true,
         productPriceWithoutTax: true,
       },
