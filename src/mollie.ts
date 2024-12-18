@@ -113,7 +113,7 @@ class Mollie {
       })
     );
 
-    return detailedReport;
+    return detailedReport.sort((a, b) => b.numberOfSales - a.numberOfSales);
   }
 
   public startCron(): void {
