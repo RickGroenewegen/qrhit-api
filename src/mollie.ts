@@ -66,7 +66,11 @@ class Mollie {
       },
       _count: {
         _all: true,
-        PaymentHasPlaylist: true,
+        PaymentHasPlaylist: {
+          select: {
+            _all: true,
+          },
+        },
       },
       _sum: {
         totalPrice: true,
