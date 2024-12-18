@@ -1,0 +1,31 @@
+Good day,
+
+I'm Rick from QRSong! (https://www.qrsong.io) and we are looking for a Print & Fulfillment partner for one of our products.
+
+What we do: 
+
+Our service enables users to transform their Spotify playlists into QR Music cards which can be used for games & trivia. We have been selling digital versions for some time now and are looking to expand to real physical cards.
+
+What we are looking for:
+
+- A partner that prints, handles and ships the cards worldwide
+- The cards are square. Currently they are 60x60mm but we can change that if it suits your process better
+- Cards are printed on both sides
+- Front side is greyscale, back side is full color
+- You must have an automated way for us to send the cards to you (Rest API, or anything similar).
+- We can provide the cards in any format. Currenlty we are using PDF.
+- Most importantly: Each set is unique to the customer. It is their own Spotify playlist, so no set is alike.
+- A set can contain 50 to 500 cards
+- A plus would be if you could also provide packaging
+
+An example PDF can be downloaded at:
+
+https://api.qrsong.io/public/pdf/b62733e7ae0ab2ebcd3992bfcdd3fb6b229fe0cb648312b0a7ee5d0328573744_digital.pdf
+
+The format of this PDF can be changed to your wishes if needed.
+
+If this is something you can do: Can you provide us an explanation of your process and pricing quote?
+
+Looking forward to your response!
+
+Rick Groenewegen

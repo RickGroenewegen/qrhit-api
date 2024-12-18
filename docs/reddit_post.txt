@@ -1,0 +1,32 @@
+We just launched QRSong! 
+
+QRSong! is a service that lets you turn your Spotify playlists into QR music cards. What makes us different? We've built a complete ecosystem around the concept!
+
+Check us out at:
+
+https://www.qrsong.io
+
+What is different about our service:
+
+• We offer a dedicated companion app for both iOS and Android:
+    https://apps.apple.com/app/qrsong/id6727011939
+    https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong
+• The app offers a small countdown so you have enough time to flip your phone
+• The app supports all cards that support Spotify links, not just our own cards
+• We offer both single-sided and double-sided PDF's
+• We tidy up the song titles to keep them short (We remove stuff like '(Remastered)' etc).
+• No more incorrect release years! For determining the correct release year we use 10+ online sources in combination with AI.
+• If AI cannot determine the release year, all release info is hand-checked by our team 
+• Still find a mistake? Let us know and you'll get a replacement PDF for free
+• You will receive your order within 24 hours by e-mail
+• We offer both digital and physical giftcards which you can give to your family & friends so they can purchase their own playlists.
+• Both our site and app are supported in 11 different languages
+
+Coming soon:
+
+Real, physical cards delivered to your doorstep. We've been working on this for quite some time now and hope to offer real cards very soon!
+
+We would love to get your feedback on this! 
+
+Cheers
+

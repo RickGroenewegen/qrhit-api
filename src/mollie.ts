@@ -60,9 +60,9 @@ class Mollie {
             },
           },
         ],
-        // email: {
-        //   notIn: ['west14@gmail.com', 'info@rickgroenewegen.nl'],
-        // },
+        email: {
+          notIn: ['west14@gmail.com', 'info@rickgroenewegen.nl'],
+        },
       },
       _count: {
         _all: true,
@@ -108,7 +108,7 @@ class Mollie {
           totalPrice: entry._sum.totalPrice,
           totalPriceWithoutTax: entry._sum.productPriceWithoutTax,
           taxRate: entry._max.taxRate,
-          totalPlaylistsSold,
+          totalPlaylists: totalPlaylistsSold,
         };
       })
     );
