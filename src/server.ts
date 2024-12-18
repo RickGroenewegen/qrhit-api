@@ -278,17 +278,24 @@ class Server {
 
         const payments = await this.mollie.getPaymentsByMonth(startDate, endDate);
 
-        const numberOfSales = payments.length;
-        const totalTotalPrice = payments.reduce((sum, payment) => sum + payment.totalPrice, 0);
-        const totalProductPriceWithoutTax = payments.reduce((sum, payment) => sum + payment.productPriceWithoutTax, 0);
+        const report = payments.reduce((acc, payment) => {
+          const country = payment.countrycode || 'Unknown';
+          if (!acc[country]) {
+            acc[country] = {
+              numberOfSales: 0,
+              totalTotalPrice: 0,
+              totalProductPriceWithoutTax: 0,
+            };
+          }
+          acc[country].numberOfSales += 1;
+          acc[country].totalTotalPrice += payment.totalPrice;
+          acc[country].totalProductPriceWithoutTax += payment.productPriceWithoutTax;
+          return acc;
+        }, {});
 
         reply.send({
           success: true,
-          data: {
-            numberOfSales,
-            totalTotalPrice,
-            totalProductPriceWithoutTax,
-          },
+          data: report,
         });
       }
     );
