@@ -265,6 +265,34 @@ class Server {
       }
     );
 
+    this.fastify.get(
+      '/month_report/:yearMonth',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply: any) => {
+        const { yearMonth } = request.params;
+        const year = parseInt(yearMonth.substring(0, 4));
+        const month = parseInt(yearMonth.substring(4, 6));
+
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59);
+
+        const payments = await this.mollie.getPaymentsByMonth(startDate, endDate);
+
+        const numberOfSales = payments.length;
+        const totalTotalPrice = payments.reduce((sum, payment) => sum + payment.totalPrice, 0);
+        const totalProductPriceWithoutTax = payments.reduce((sum, payment) => sum + payment.productPriceWithoutTax, 0);
+
+        reply.send({
+          success: true,
+          data: {
+            numberOfSales,
+            totalTotalPrice,
+            totalProductPriceWithoutTax,
+          },
+        });
+      }
+    );
+
     this.fastify.post(
       '/finalize',
       { preHandler: verifyTokenMiddleware },

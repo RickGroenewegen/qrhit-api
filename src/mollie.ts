@@ -40,6 +40,21 @@ class Mollie {
     }
   }
 
+  public async getPaymentsByMonth(startDate: Date, endDate: Date): Promise<Payment[]> {
+    return await this.prisma.payment.findMany({
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      select: {
+        totalPrice: true,
+        productPriceWithoutTax: true,
+      },
+    });
+  }
+
   public startCron(): void {
     new CronJob('0 1 * * *', async () => {
       await this.cleanPayments();
