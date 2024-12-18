@@ -175,7 +175,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
             <div class="row">
                 <% 
                 let rowIndices = [];
-                for(let i = rowStart; i < rowStart + 4; i++) {
+                for(let i = rowStart; i < rowStart + 3; i++) {
                     if (i < endIdx) {
                         rowIndices.push(i);
                     } else {
@@ -203,7 +203,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
  
     <!-- Back side page <%= pageNum + 1 %> -->
     <div class="page">
-        <% for(let rowStart = startIdx; rowStart < endIdx; rowStart += 4) { %>
+        <% for(let rowStart = startIdx; rowStart < endIdx; rowStart += 3) { %>
             <div class="row">
             <% 
             let rowIndices = [];
