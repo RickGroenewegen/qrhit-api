@@ -66,6 +66,7 @@ class Mollie {
       },
       _count: {
         _all: true,
+        PaymentHasPlaylist: true,
       },
       _sum: {
         totalPrice: true,
@@ -82,6 +83,7 @@ class Mollie {
       totalPrice: entry._sum.totalPrice,
       totalPriceWithoutTax: entry._sum.productPriceWithoutTax,
       taxRate: entry._max.taxRate,
+      totalPlaylistsSold: entry._count.PaymentHasPlaylist,
     }));
   }
 
