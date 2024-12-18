@@ -70,15 +70,9 @@ class Mollie {
     return report.map((entry) => ({
       country: entry.countrycode || 'Unknown',
       numberOfSales: entry._count._all,
-      totalTotalPrice: entry._sum.totalPrice,
-      totalProductPriceWithoutTax: entry._sum.productPriceWithoutTax,
-      maxTaxRate: entry._max.taxRate,
-    }));
-    return report.map((entry) => ({
-      country: entry.countrycode || 'Unknown',
-      numberOfSales: entry._count._all,
-      totalTotalPrice: entry._sum.totalPrice,
-      totalProductPriceWithoutTax: entry._sum.productPriceWithoutTax,
+      totalPrice: entry._sum.totalPrice,
+      totalPriceWithoutTax: entry._sum.productPriceWithoutTax,
+      taxRate: entry._max.taxRate,
     }));
   }
 
