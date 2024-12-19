@@ -40,6 +40,24 @@ class Data {
         }
       });
     }
+    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+    <loc>${process.env['BASE_URL']}/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+  <url>
+    <loc>${process.env['BASE_URL']}/faq</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.8</priority>
+  </url>
+</urlset>`;
+
+    const sitemapPath = path.join(process.env['PUBLIC_DIR'], 'sitemap.xml');
+
+    fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
+    this.logger.log(color.green.bold(`Sitemap created at ${sitemapPath}`));
   }
 
   private async createSiteMap(): Promise<void> {
