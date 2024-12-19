@@ -563,7 +563,10 @@ class Server {
     });
 
     this.fastify.get('/qrlink/:trackId', async (request: any, reply) => {
-      const result = await this.data.getLink(request.params.trackId);
+      const result = await this.data.getLink(
+        request.params.trackId,
+        request.clientIp
+      );
       let link = '';
       if (result.success) {
         link = result.data.link;
