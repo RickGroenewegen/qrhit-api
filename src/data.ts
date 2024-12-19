@@ -111,9 +111,9 @@ class Data {
     const trackIds = ipInfoList
       .map((ipInfoJson: any) => {
         const ipInfo = JSON.parse(ipInfoJson);
-        return ipInfo.trackId;
+        return parseInt(ipInfo.trackId);
       })
-      .filter((trackId: string) => parseInt(trackId));
+      .filter((trackId: number) => !isNaN(trackId));
 
     const tracks = await this.prisma.track.findMany({
       where: { id: { in: trackIds } },
