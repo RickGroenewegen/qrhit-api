@@ -67,10 +67,7 @@ class RapidAPIQueue {
             break; // Exit loop if request is successful
           } catch (error: any) {
             if (error.response && error.response.status === 404) {
-              this.logger.log(
-                color.red.bold(`Error in ${functionName}: playlist not found.`)
-              );
-              return { success: false, error: 'playlistNotFound' };
+              break;
             } else {
               attempt++;
               this.logger.log(
@@ -349,7 +346,7 @@ class Spotify {
         success: true,
         data: playlist,
       };
-    } catch (e) {
+    } catch (e: any) {
       if (e.response && e.response.status === 404) {
         return { success: false, error: 'playlistNotFound' };
       }
@@ -512,7 +509,7 @@ class Spotify {
       this.cache.set(cacheKeyCount, allTracks.length.toString());
       this.cache.set(cacheKey, JSON.stringify(result));
       return result;
-    } catch (e) {
+    } catch (e: any) {
       if (e.response && e.response.status === 404) {
         return { success: false, error: 'playlistNotFound' };
       }

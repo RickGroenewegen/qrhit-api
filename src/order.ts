@@ -448,33 +448,14 @@ class Order {
 
   public async testOrder() {
     const authToken = await this.getAuthToken();
+    const pdfURL = `${process.env.API_URI}/assets/pdf/example_digital.pdf`;
 
     const body = {
       email: 'west14@gmail.com',
       items: [
         {
-          productId: 'kaart_dubbel_a4_sta',
-          pageCount: 2,
-          quantity: 1,
-        },
-        {
-          productId: 'kaart_dubbel_a4_sta',
-          pageCount: 2,
-          quantity: 1,
-        },
-        {
-          productId: 'kaart_dubbel_a4_sta',
-          pageCount: 2,
-          quantity: 1,
-        },
-        {
-          productId: 'kaart_dubbel_a4_sta',
-          pageCount: 2,
-          quantity: 1,
-        },
-        {
-          productId: 'kaart_dubbel_a4_sta',
-          pageCount: 2,
+          productId: 'kaarten_enkel_a5_lig_8st_indv',
+          pageCount: 16,
           quantity: 1,
         },
       ],
@@ -502,25 +483,48 @@ class Order {
         data: body,
       });
 
-      const pdfFile = await axios.get(pdfURL, { responseType: 'arraybuffer' });
-      const pdfBuffer = Buffer.from(pdfFile.data, 'binary');
+      const url1 = responseOrder.data.items[0].files.content.uploadUrl;
+      // const url2 = responseOrder.data.items[1].files.content.uploadUrl;
+      // const url3 = responseOrder.data.items[2].files.content.uploadUrl;
+      // const url4 = responseOrder.data.items[3].files.content.uploadUrl;
+      // const url5 = responseOrder.data.items[4].files.content.uploadUrl;
 
-      for (let i = 0; i < 5; i++) {
-        const uploadUrl = responseOrder.data.items[i].files.content.uploadUrl;
-        console.log(`Uploading to URL ${i + 1}:`, uploadUrl);
+      console.log(111, url1);
+      // console.log(222, url2);
+      // console.log(333, url3);
+      // console.log(444, url4);
+      // console.log(555, url5);
 
-        const uploadResult = await axios.post(uploadUrl, pdfBuffer, {
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            'Content-Type': 'application/pdf',
-          },
-        });
+      // console.log(333, JSON.stringify(responseOrder.data, null, 2));
+      const pdfURL1 = `${process.env.API_URI}/public/pdf/a5.pdf`;
 
-        console.log(`PDF file ${i + 1} uploaded successfully`);
-      }
+      console.log(222, pdfURL1);
+
+      const pdfFile1 = await axios.get(pdfURL1, {
+        responseType: 'arraybuffer',
+      });
+
+      console.log(333);
+
+      const pdfBuffer1 = Buffer.from(pdfFile1.data, 'binary');
+
+      console.log(444);
+
+      const uploadResult = await axios.post(url1, pdfBuffer1, {
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/pdf',
+        },
+      });
+
+      console.log(555, JSON.stringify(uploadResult.data, null, 2));
+
+      console.log('PDF file uploaded successfully');
     } catch (e) {
       if (axios.isAxiosError(e) && e.response) {
-        console.log(999, JSON.stringify(e.response.data, null, 2));
+        console.log(e);
+
+        ///console.log(999, JSON.stringify(e.response.data, null, 2));
       } else {
         console.error('Error:', e);
       }
