@@ -126,7 +126,7 @@ class Server {
 
     this.fastify.get(
       '/lastplays',
-      //{ preHandler: verifyTokenMiddleware },
+      { preHandler: verifyTokenMiddleware },
       async (_request: any, reply: any) => {
         const lastPlays = await this.data.getLastPlays();
         reply.send({ success: true, data: lastPlays });

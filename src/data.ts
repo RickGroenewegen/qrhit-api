@@ -142,7 +142,7 @@ class Data {
       })
       .filter(Boolean);
 
-    return lastPlays.reverse();
+    return lastPlays;
   }
 
   private euCountryCodes: string[] = [
@@ -667,7 +667,11 @@ class Data {
 
   public async logLink(trackId: number, clientIp: string): Promise<void> {
     const ipInfo = await this.utils.lookupIp(clientIp);
-    const ipInfoWithTrackId = { ...ipInfo, trackId, timestamp: new Date().toISOString() };
+    const ipInfoWithTrackId = {
+      ...ipInfo,
+      trackId,
+      timestamp: new Date().toISOString(),
+    };
     this.logger.log(`IP Info: ${JSON.stringify(ipInfoWithTrackId)}`);
 
     // Store the IP info in a list and maintain only the last 100 entries
