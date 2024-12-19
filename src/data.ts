@@ -1096,6 +1096,7 @@ class Data {
     const unfinalizedPayments = await this.prisma.payment.findMany({
       where: {
         finalized: false,
+        status: 'paid',
       },
       select: {
         id: true,
