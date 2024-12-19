@@ -47,38 +47,27 @@ class Data {
   private async createSiteMap(): Promise<void> {
     this.logger.log(color.blue.bold('Creating sitemap'));
 
+    const paths = [
+      { loc: '/', lastmod: '2024-09-16', changefreq: 'daily', priority: '1.0' },
+      { loc: '/faq', lastmod: '2024-09-15', changefreq: 'monthly', priority: '0.8' },
+      { loc: '/pricing', lastmod: '2024-09-15', changefreq: 'monthly', priority: '0.8' },
+      { loc: '/generate', lastmod: '2024-09-15', changefreq: 'monthly', priority: '0.8' },
+      { loc: '/contact', lastmod: '2024-09-15', changefreq: 'monthly', priority: '0.8' },
+    ];
+
     const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  ${paths
+    .map(
+      (path) => `
   <url>
-        <loc>${process.env['FRONTEND_URI']}</loc>
-        <lastmod>2024-09-16</lastmod>
-        <changefreq>daily</changefreq>
-        <priority>1.0</priority>
-    </url>
-    <url>
-        <loc>${process.env['FRONTEND_URI']}/faq</loc>
-        <lastmod>2024-09-15</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
-    </url>
-    <url>
-        <loc>${process.env['FRONTEND_URI']}/pricing</loc>
-        <lastmod>2024-09-15</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
-    </url>
-    <url>
-        <loc>${process.env['FRONTEND_URI']}/generate</loc>
-        <lastmod>2024-09-15</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
-    </url>
-    <url>
-        <loc>${process.env['FRONTEND_URI']}/contact</loc>
-        <lastmod>2024-09-15</lastmod>
-        <changefreq>monthly</changefreq>
-        <priority>0.8</priority>
-    </url>
+    <loc>${process.env['FRONTEND_URI']}${path.loc}</loc>
+    <lastmod>${path.lastmod}</lastmod>
+    <changefreq>${path.changefreq}</changefreq>
+    <priority>${path.priority}</priority>
+  </url>`
+    )
+    .join('')}
 </urlset>`;
 
     console.log(111, process.env['FRONTEND_ROOT']);
