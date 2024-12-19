@@ -65,15 +65,22 @@ class RapidAPIQueue {
             await axios(requestConfig);
             await this.setLastRequestTimestamp(Date.now());
             break; // Exit loop if request is successful
-          } catch (error) {
-            attempt++;
-            this.logger.log(
-              color.red.bold(
-                `Error in ${functionName}, attempt ${attempt} / ${maxAttempts}. Retrying in 1 second...`
-              )
-            );
-            if (attempt < maxAttempts) {
-              await new Promise((resolve) => setTimeout(resolve, 1000));
+          } catch (error: any) {
+            if (error.response && error.response.status === 404) {
+              this.logger.log(
+                color.red.bold(`Error in ${functionName}: playlist not found.`)
+              );
+              return { success: false, error: 'playlistNotFound' };
+            } else {
+              attempt++;
+              this.logger.log(
+                color.red.bold(
+                  `Error in ${functionName}, attempt ${attempt} / ${maxAttempts}. Retrying in 1 second...`
+                )
+              );
+              if (attempt < maxAttempts) {
+                await new Promise((resolve) => setTimeout(resolve, 1000));
+              }
             }
           }
         }
