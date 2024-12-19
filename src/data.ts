@@ -619,7 +619,7 @@ class Data {
     return { wasUpdated: false, method: '' };
   }
 
-  public async getLink(trackId: number): Promise<ApiResult> {
+  public async getLink(trackId: number, clientIp: string): Promise<ApiResult> {
     let link = '';
     this.analytics.increaseCounter('songs', 'played');
     const cachedLink = await this.cache.get('link' + trackId);
