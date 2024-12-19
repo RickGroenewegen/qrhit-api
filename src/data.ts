@@ -672,8 +672,6 @@ class Data {
       trackId,
       timestamp: new Date().toISOString(),
     };
-    this.logger.log(`IP Info: ${JSON.stringify(ipInfoWithTrackId)}`);
-
     // Store the IP info in a list and maintain only the last 100 entries
     const ipInfoListKey = 'ipInfoList';
     await this.cache.executeCommand(
