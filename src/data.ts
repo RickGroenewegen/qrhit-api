@@ -108,32 +108,34 @@ class Data {
       -1
     );
 
-    const lastPlays = [];
-
-    for (const ipInfoJson of ipInfoList) {
+    const trackIds = ipInfoList.map((ipInfoJson) => {
       const ipInfo = JSON.parse(ipInfoJson);
+      return ipInfo.trackId;
+    }).filter((trackId) => trackId);
 
-      if (ipInfo.trackId) {
-        console.log(111, ipInfo.trackId);
+    const tracks = await this.prisma.track.findMany({
+      where: { id: { in: trackIds } },
+      select: { id: true, name: true, artist: true },
+    });
 
-        const track = await this.prisma.track.findUnique({
-          where: { id: parseInt(ipInfo.trackId) },
-          select: { name: true, artist: true },
-        });
+    const trackMap = new Map(tracks.map(track => [track.id, track]));
 
-        if (track) {
-          lastPlays.push({
-            title: track.name,
-            artist: track.artist,
-            city: ipInfo.city,
-            region: ipInfo.region,
-            country: ipInfo.country,
-            latitude: ipInfo.latitude,
-            longitude: ipInfo.longitude,
-          });
-        }
+    const lastPlays = ipInfoList.map((ipInfoJson) => {
+      const ipInfo = JSON.parse(ipInfoJson);
+      const track = trackMap.get(parseInt(ipInfo.trackId));
+
+      if (track) {
+        return {
+          title: track.name,
+          artist: track.artist,
+          city: ipInfo.city,
+          region: ipInfo.region,
+          country: ipInfo.country,
+          latitude: ipInfo.latitude,
+          longitude: ipInfo.longitude,
+        };
       }
-    }
+    }).filter(Boolean);
 
     return lastPlays;
   }
