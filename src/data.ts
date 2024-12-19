@@ -101,27 +101,37 @@ class Data {
 
   public async getLastPlays(): Promise<any[]> {
     const ipInfoListKey = 'ipInfoList';
-    const ipInfoList = await this.cache.executeCommand('lrange', ipInfoListKey, 0, -1);
+    const ipInfoList = await this.cache.executeCommand(
+      'lrange',
+      ipInfoListKey,
+      0,
+      -1
+    );
 
     const lastPlays = [];
 
     for (const ipInfoJson of ipInfoList) {
       const ipInfo = JSON.parse(ipInfoJson);
-      const track = await this.prisma.track.findUnique({
-        where: { id: ipInfo.trackId },
-        select: { name: true, artist: true },
-      });
 
-      if (track) {
-        lastPlays.push({
-          title: track.name,
-          artist: track.artist,
-          city: ipInfo.city,
-          region: ipInfo.region,
-          country: ipInfo.country,
-          latitude: ipInfo.latitude,
-          longitude: ipInfo.longitude,
+      if (ipInfo.trackId) {
+        console.log(111, ipInfo.trackId);
+
+        const track = await this.prisma.track.findUnique({
+          where: { id: parseInt(ipInfo.trackId) },
+          select: { name: true, artist: true },
         });
+
+        if (track) {
+          lastPlays.push({
+            title: track.name,
+            artist: track.artist,
+            city: ipInfo.city,
+            region: ipInfo.region,
+            country: ipInfo.country,
+            latitude: ipInfo.latitude,
+            longitude: ipInfo.longitude,
+          });
+        }
       }
     }
 
