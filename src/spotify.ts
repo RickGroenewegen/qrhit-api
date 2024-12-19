@@ -350,6 +350,9 @@ class Spotify {
         data: playlist,
       };
     } catch (e) {
+      if (e.response && e.response.status === 404) {
+        return { success: false, error: 'playlistNotFound' };
+      }
       console.log(123, e);
       return { success: false, error: 'Error getting playlist' };
     }
@@ -510,8 +513,10 @@ class Spotify {
       this.cache.set(cacheKey, JSON.stringify(result));
       return result;
     } catch (e) {
+      if (e.response && e.response.status === 404) {
+        return { success: false, error: 'playlistNotFound' };
+      }
       console.log(111, e);
-
       return { success: false, error: 'Error getting tracks' };
     }
   }
