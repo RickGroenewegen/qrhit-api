@@ -621,11 +621,16 @@ class Data {
 
   public async logLink(trackId: number, clientIp: string): Promise<void> {
     const ipInfo = await this.utils.lookupIp(clientIp);
-    this.logger.log(`IP Info: ${JSON.stringify(ipInfo)}`);
+    const ipInfoWithTrackId = { ...ipInfo, trackId };
+    this.logger.log(`IP Info: ${JSON.stringify(ipInfoWithTrackId)}`);
 
     // Store the IP info in a list and maintain only the last 100 entries
     const ipInfoListKey = 'ipInfoList';
-    await this.cache.executeCommand('lpush', ipInfoListKey, JSON.stringify(ipInfo));
+    await this.cache.executeCommand(
+      'lpush',
+      ipInfoListKey,
+      JSON.stringify(ipInfoWithTrackId)
+    );
     await this.cache.executeCommand('ltrim', ipInfoListKey, 0, 99); // Keep only the last 100 entries
   }
 
