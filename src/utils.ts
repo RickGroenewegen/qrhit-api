@@ -343,7 +343,12 @@ class Utils {
     }
 
     try {
-      const response = await axios.get(`https://ipapi.co/${ip}/json/`);
+      const apiKey = process.env['IPLOOKUP_KEY'];
+      const response = await axios.get(`https://ipapi.co/${ip}/json/`, {
+        headers: {
+          'Authorization': `Bearer ${apiKey}`
+        }
+      });
       const data = response.data;
       await cache.set(cacheKey, JSON.stringify(data), 86400); // Cache for 1 day
       return data;
