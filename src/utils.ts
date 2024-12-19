@@ -4,7 +4,6 @@ import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2';
 import axios from 'axios';
 import parser from 'accept-language-parser';
 import Translation from './translation';
-import axios from 'axios';
 import Cache from './cache';
 
 class Utils {
@@ -333,7 +332,6 @@ class Utils {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     return emailRegex.test(email);
   }
-  }
 
   public async lookupIp(ip: string): Promise<any> {
     const cache = Cache.getInstance();
@@ -354,5 +352,6 @@ class Utils {
       return null;
     }
   }
+}
 
 export default Utils;
