@@ -108,34 +108,38 @@ class Data {
       -1
     );
 
-    const trackIds = ipInfoList.map((ipInfoJson) => {
-      const ipInfo = JSON.parse(ipInfoJson);
-      return ipInfo.trackId;
-    }).filter((trackId) => trackId);
+    const trackIds = ipInfoList
+      .map((ipInfoJson: any) => {
+        const ipInfo = JSON.parse(ipInfoJson);
+        return ipInfo.trackId;
+      })
+      .filter((trackId: string) => parseInt(trackId));
 
     const tracks = await this.prisma.track.findMany({
       where: { id: { in: trackIds } },
       select: { id: true, name: true, artist: true },
     });
 
-    const trackMap = new Map(tracks.map(track => [track.id, track]));
+    const trackMap = new Map(tracks.map((track) => [track.id, track]));
 
-    const lastPlays = ipInfoList.map((ipInfoJson) => {
-      const ipInfo = JSON.parse(ipInfoJson);
-      const track = trackMap.get(parseInt(ipInfo.trackId));
+    const lastPlays = ipInfoList
+      .map((ipInfoJson: any) => {
+        const ipInfo = JSON.parse(ipInfoJson);
+        const track = trackMap.get(parseInt(ipInfo.trackId));
 
-      if (track) {
-        return {
-          title: track.name,
-          artist: track.artist,
-          city: ipInfo.city,
-          region: ipInfo.region,
-          country: ipInfo.country,
-          latitude: ipInfo.latitude,
-          longitude: ipInfo.longitude,
-        };
-      }
-    }).filter(Boolean);
+        if (track) {
+          return {
+            title: track.name,
+            artist: track.artist,
+            city: ipInfo.city,
+            region: ipInfo.region,
+            country: ipInfo.country,
+            latitude: ipInfo.latitude,
+            longitude: ipInfo.longitude,
+          };
+        }
+      })
+      .filter(Boolean);
 
     return lastPlays;
   }
