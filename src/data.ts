@@ -619,11 +619,15 @@ class Data {
     return { wasUpdated: false, method: '' };
   }
 
+  public async logLink(trackId: number, clientIp: string): Promise<void> {
+    const ipInfo = await this.utils.lookupIp(clientIp);
+    this.logger.log(`IP Info: ${JSON.stringify(ipInfo)}`);
+  }
+
   public async getLink(trackId: number, clientIp: string): Promise<ApiResult> {
     let link = '';
     this.analytics.increaseCounter('songs', 'played');
-    const ipInfo = await this.utils.lookupIp(clientIp);
-    this.logger.log(`IP Info: ${JSON.stringify(ipInfo)}`);
+    this.logLink(trackId, clientIp);
 
     const cachedLink = await this.cache.get('link' + trackId);
     if (cachedLink) {
