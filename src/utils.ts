@@ -354,7 +354,12 @@ class Utils {
         `https://ipapi.co/${ipToCheck}/json/?key=${apiKey}`
       );
       const data = response.data;
-      await cache.set(cacheKey, JSON.stringify(data), 86400); // Cache for 1 day
+      await cache.set(cacheKey, JSON.stringify(data), 86400); // Cache individual IP info for 1 day
+
+      // Store the IP info in a list and maintain only the last 100 entries
+      const ipInfoListKey = 'ipInfoList';
+      await cache.executeCommand('lpush', ipInfoListKey, JSON.stringify(data));
+      await cache.executeCommand('ltrim', ipInfoListKey, 0, 99); // Keep only the last 100 entries
       return data;
     } catch (error) {
       console.error(`Error looking up IP ${ip}:`, error);
