@@ -66,7 +66,8 @@ class PDF {
     subdir: string
   ): Promise<string> {
     const numberOfTracks = playlist.numberOfTracks;
-    let itemsPerPage = template === 'digital' ? 12 : 1;
+    let itemsPerPage =
+      template === 'digital' || template === 'digital_double' ? 12 : 1;
     const pagesPerTrack = template === 'printer' ? 2 : 1;
     const totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
     const maxPagesPerPDF = 100;
@@ -111,8 +112,6 @@ class PDF {
           // options['PageWidth'] = 60;
           // options['PageHeight'] = 60;
         }
-
-        console.log(111, options);
 
         const result = await this.convertapi.convert('pdf', options, 'htm');
         await result.saveFiles(tempFilePath);
