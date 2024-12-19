@@ -141,7 +141,7 @@ class Data {
       })
       .filter(Boolean);
 
-    return lastPlays;
+    return lastPlays.reverse();
   }
 
   private euCountryCodes: string[] = [
