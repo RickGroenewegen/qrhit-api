@@ -622,6 +622,9 @@ class Data {
   public async getLink(trackId: number, clientIp: string): Promise<ApiResult> {
     let link = '';
     this.analytics.increaseCounter('songs', 'played');
+    const ipInfo = await this.utils.lookupIp(clientIp);
+    this.logger.log(`IP Info: ${JSON.stringify(ipInfo)}`);
+
     const cachedLink = await this.cache.get('link' + trackId);
     if (cachedLink) {
       return {

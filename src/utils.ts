@@ -4,6 +4,8 @@ import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2';
 import axios from 'axios';
 import parser from 'accept-language-parser';
 import Translation from './translation';
+import axios from 'axios';
+import Cache from './cache';
 
 class Utils {
   private translation: Translation = new Translation();
@@ -331,6 +333,26 @@ class Utils {
     const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
     return emailRegex.test(email);
   }
-}
+  }
+
+  public async lookupIp(ip: string): Promise<any> {
+    const cache = Cache.getInstance();
+    const cacheKey = `ipLookup:${ip}`;
+    const cachedResult = await cache.get(cacheKey);
+
+    if (cachedResult) {
+      return JSON.parse(cachedResult);
+    }
+
+    try {
+      const response = await axios.get(`https://ipapi.co/${ip}/json/`);
+      const data = response.data;
+      await cache.set(cacheKey, JSON.stringify(data), 86400); // Cache for 1 day
+      return data;
+    } catch (error) {
+      console.error(`Error looking up IP ${ip}:`, error);
+      return null;
+    }
+  }
 
 export default Utils;
