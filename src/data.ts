@@ -20,6 +20,7 @@ import { CartItem } from './interfaces/CartItem';
 import AnalyticsClient from './analytics';
 import * as XLSX from 'xlsx';
 import { OpenPerplex } from './openperplex';
+import cluster from 'cluster';
 
 class Data {
   private prisma = PrismaInstance.getInstance();
@@ -30,6 +31,20 @@ class Data {
   private utils = new Utils();
   private analytics = AnalyticsClient.getInstance();
   private openperplex = new OpenPerplex();
+
+  constructor() {
+    if (cluster.isPrimary) {
+      this.utils.isMainServer().then(async (isMainServer) => {
+        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+          this.createSiteMap();
+        }
+      });
+    }
+  }
+
+  private async createSiteMap(): Promise<void> {
+    this.logger.log(color.blue.bold('Creating sitemap'));
+  }
 
   public async getPDFFilepath(
     clientIp: string,
