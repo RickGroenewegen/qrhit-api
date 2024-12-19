@@ -5,6 +5,8 @@ import PrismaInstance from './prisma';
 import MusicBrainz from './musicbrainz';
 import crypto from 'crypto';
 import { ApiResult } from './interfaces/ApiResult';
+import fs from 'fs';
+import path from 'path';
 
 interface TrackNeedingYearUpdate {
   id: number;
@@ -40,28 +42,56 @@ class Data {
         }
       });
     }
-    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url>
-    <loc>${process.env['BASE_URL']}/</loc>
-    <changefreq>daily</changefreq>
-    <priority>1.0</priority>
-  </url>
-  <url>
-    <loc>${process.env['BASE_URL']}/faq</loc>
-    <changefreq>weekly</changefreq>
-    <priority>0.8</priority>
-  </url>
-</urlset>`;
-
-    const sitemapPath = path.join(process.env['PUBLIC_DIR'], 'sitemap.xml');
-
-    fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
-    this.logger.log(color.green.bold(`Sitemap created at ${sitemapPath}`));
   }
 
   private async createSiteMap(): Promise<void> {
     this.logger.log(color.blue.bold('Creating sitemap'));
+
+    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  <url>
+        <loc>${process.env['FRONTEND_URI']}</loc>
+        <lastmod>2024-09-16</lastmod>
+        <changefreq>daily</changefreq>
+        <priority>1.0</priority>
+    </url>
+    <url>
+        <loc>${process.env['FRONTEND_URI']}/faq</loc>
+        <lastmod>2024-09-15</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>${process.env['FRONTEND_URI']}/pricing</loc>
+        <lastmod>2024-09-15</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>${process.env['FRONTEND_URI']}/generate</loc>
+        <lastmod>2024-09-15</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+    <url>
+        <loc>${process.env['FRONTEND_URI']}/contact</loc>
+        <lastmod>2024-09-15</lastmod>
+        <changefreq>monthly</changefreq>
+        <priority>0.8</priority>
+    </url>
+</urlset>`;
+
+    console.log(111, process.env['FRONTEND_ROOT']);
+
+    const sitemapPath = path.join(
+      process.env['FRONTEND_ROOT']!,
+      '/sitemap.xml'
+    );
+
+    fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
+    this.logger.log(
+      color.green.bold(`Sitemap created at ${color.white.bold(sitemapPath)}`)
+    );
   }
 
   public async getPDFFilepath(
