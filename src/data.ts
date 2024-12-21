@@ -365,7 +365,7 @@ class Data {
 
   public async getFeaturedPlaylists(locale: string): Promise<any> {
     let returnList: any[] = [];
-    const cacheKey = 'featuredPlaylists_' + locale;
+    const cacheKey = 'featuredPlaylists2_' + locale;
     const cachedPlaylists = await this.cache.get(cacheKey);
 
     //test
