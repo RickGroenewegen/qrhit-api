@@ -38,7 +38,7 @@ class Data {
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-          this.createSiteMap();
+          // this.createSiteMap();
         }
       });
     }
