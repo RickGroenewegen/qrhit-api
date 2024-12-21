@@ -49,10 +49,30 @@ class Data {
 
     const paths = [
       { loc: '/', lastmod: '2024-09-16', changefreq: 'daily', priority: '1.0' },
-      { loc: '/faq', lastmod: '2024-09-15', changefreq: 'monthly', priority: '0.8' },
-      { loc: '/pricing', lastmod: '2024-09-15', changefreq: 'monthly', priority: '0.8' },
-      { loc: '/generate', lastmod: '2024-09-15', changefreq: 'monthly', priority: '0.8' },
-      { loc: '/contact', lastmod: '2024-09-15', changefreq: 'monthly', priority: '0.8' },
+      {
+        loc: '/faq',
+        lastmod: '2024-09-15',
+        changefreq: 'monthly',
+        priority: '0.8',
+      },
+      {
+        loc: '/pricing',
+        lastmod: '2024-09-15',
+        changefreq: 'monthly',
+        priority: '0.8',
+      },
+      {
+        loc: '/generate',
+        lastmod: '2024-09-15',
+        changefreq: 'monthly',
+        priority: '0.8',
+      },
+      {
+        loc: '/contact',
+        lastmod: '2024-09-15',
+        changefreq: 'monthly',
+        priority: '0.8',
+      },
     ];
 
     const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
@@ -69,8 +89,6 @@ class Data {
     )
     .join('')}
 </urlset>`;
-
-    console.log(111, process.env['FRONTEND_ROOT']);
 
     const sitemapPath = path.join(
       process.env['FRONTEND_ROOT']!,
@@ -363,7 +381,8 @@ class Data {
         playlists.name,
         playlists.image,
         playlists.price,
-        playlists.numberOfTracks
+        playlists.numberOfTracks,
+        playlists.featuredLocale
       FROM 
         playlists
       WHERE 
