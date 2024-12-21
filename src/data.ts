@@ -368,6 +368,7 @@ class Data {
     const cacheKey = 'featuredPlaylists_' + locale;
     const cachedPlaylists = await this.cache.get(cacheKey);
 
+    //test
     if (!this.translate.isValidLocale(locale)) {
       return [];
     }
