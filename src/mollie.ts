@@ -336,6 +336,7 @@ class Mollie {
             playlist: {
               select: {
                 name: true,
+                playlistId: true,
                 tracks: {
                   select: {
                     track: {
