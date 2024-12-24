@@ -367,7 +367,7 @@ class Data {
   public async getFeaturedPlaylists(locale: string): Promise<any> {
     let returnList: any[] = [];
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    const cacheKey = `featuredPlaylists2_${today}_${locale}`;
+    const cacheKey = `featuredPlaylists_${today}_${locale}`;
     const cachedPlaylists = await this.cache.get(cacheKey);
 
     //test
