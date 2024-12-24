@@ -607,6 +607,7 @@ class Mollie {
             numberOfTracks: item.numberOfTracks,
             type: item.type,
             doubleSided: item.doubleSided,
+            eco: item.eco,
             price: itemPrice,
             priceWithoutVAT: itemPriceWithoutVAT,
             priceVAT: itemPriceVAT,

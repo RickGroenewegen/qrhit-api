@@ -63,7 +63,8 @@ class PDF {
     playlist: Playlist,
     payment: any,
     template: string,
-    subdir: string
+    subdir: string,
+    eco: boolean = false
   ): Promise<string> {
     const numberOfTracks = playlist.numberOfTracks;
     let itemsPerPage =
@@ -71,6 +72,7 @@ class PDF {
     const pagesPerTrack = template === 'printer' ? 2 : 1;
     const totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
     const maxPagesPerPDF = 100;
+    let ecoInt = eco ? 1 : 0;
 
     this.logger.log(
       color.blue.bold('Generating PDF: ') + color.white.bold(template)
@@ -86,7 +88,7 @@ class PDF {
           numberOfTracks
         );
 
-        const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}/${subdir}`;
+        const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}/${subdir}/${ecoInt}`;
 
         this.logger.log(
           color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)

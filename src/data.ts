@@ -300,6 +300,7 @@ class Data {
         payment_has_playlist.priceVAT,
         payment_has_playlist.amount,
         payment_has_playlist.doubleSided,
+        payment_has_playlist.eco,
         playlists.numberOfTracks,
         payment_has_playlist.type AS orderType
       FROM 
@@ -365,7 +366,7 @@ class Data {
 
   public async getFeaturedPlaylists(locale: string): Promise<any> {
     let returnList: any[] = [];
-    const today = new Date().toISOString().slice(0,10).replace(/-/g,'');
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
     const cacheKey = `featuredPlaylists2_${today}_${locale}`;
     const cachedPlaylists = await this.cache.get(cacheKey);
 

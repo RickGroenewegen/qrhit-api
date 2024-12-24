@@ -584,7 +584,7 @@ class Server {
     });
 
     this.fastify.get(
-      '/qr/pdf/:playlistId/:paymentId/:template/:startIndex/:endIndex/:subdir',
+      '/qr/pdf/:playlistId/:paymentId/:template/:startIndex/:endIndex/:subdir/:eco',
       async (request: any, reply) => {
         const valid = await this.mollie.canDownloadPDF(
           request.params.playlistId,
@@ -603,6 +603,7 @@ class Server {
         // Slice the tracks based on the start and end index which is 0-based
         const startIndex = parseInt(request.params.startIndex);
         const endIndex = parseInt(request.params.endIndex);
+        const eco = this.utils.parseBoolean(request.params.eco);
         tracks = tracks.slice(startIndex, endIndex + 1);
 
         await reply.view(`pdf_${request.params.template}.ejs`, {
@@ -610,6 +611,7 @@ class Server {
           playlist,
           tracks,
           user,
+          eco,
         });
       }
     );

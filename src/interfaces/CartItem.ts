@@ -11,4 +11,5 @@ export interface CartItem {
   fromName?: string;
   personalMessage?: string;
   doubleSided?: boolean;
+  eco?: boolean;
 }

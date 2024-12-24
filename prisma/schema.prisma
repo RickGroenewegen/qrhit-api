@@ -248,6 +248,7 @@ model PaymentHasPlaylist {
   filenameDigital            String?
   filenameDigitalDoubleSided String?
   doubleSided                Boolean  @default(false)
+  eco                        Boolean  @default(false)
   price                      Float
   priceWithoutVAT            Float
   priceVAT                   Float

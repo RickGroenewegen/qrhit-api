@@ -420,9 +420,14 @@ class Generator {
           ).toLowerCase();
 
           let digitalTemplate = 'digital';
+          let eco = false;
 
           if (playlist.doubleSided == 1) {
             digitalTemplate = 'digital_double';
+          }
+
+          if (playlist.eco == 1) {
+            eco = true;
           }
 
           const [generatedFilenameDigital, generatedFilename] =
@@ -432,7 +437,8 @@ class Generator {
                 playlist,
                 payment,
                 digitalTemplate,
-                payment.qrSubDir
+                payment.qrSubDir,
+                eco
               ),
               playlist.orderType == 'physical'
                 ? this.pdf.generatePDF(
