@@ -412,22 +412,25 @@ class Generator {
             .update(playlist.playlistId)
             .digest('hex');
 
-          const filename = sanitizeFilename(
-            `${hash}_printer.pdf`.replace(/ /g, '_')
-          ).toLowerCase();
-          const filenameDigital = sanitizeFilename(
-            `${hash}_digital.pdf`.replace(/ /g, '_')
-          ).toLowerCase();
-
-          let digitalTemplate = 'digital';
           let eco = false;
-
-          if (playlist.doubleSided == 1) {
-            digitalTemplate = 'digital_double';
-          }
+          let ecoString = '';
 
           if (playlist.eco == 1) {
             eco = true;
+            ecoString = '_eco';
+          }
+
+          const filename = sanitizeFilename(
+            `${hash}_printer${ecoString}.pdf`.replace(/ /g, '_')
+          ).toLowerCase();
+          const filenameDigital = sanitizeFilename(
+            `${hash}_digital${ecoString}.pdf`.replace(/ /g, '_')
+          ).toLowerCase();
+
+          let digitalTemplate = 'digital';
+
+          if (playlist.doubleSided == 1) {
+            digitalTemplate = 'digital_double';
           }
 
           const [generatedFilenameDigital, generatedFilename] =
