@@ -68,9 +68,6 @@ class Mollie {
         totalPrice: true,
         productPriceWithoutTax: true,
       },
-      _max: {
-        taxRate: true,
-      },
     });
 
     // Process the results to group by day and calculate totals
@@ -82,16 +79,12 @@ class Mollie {
         existingDay.numberOfSales += entry._count._all;
         existingDay.totalPrice += entry._sum.totalPrice || 0;
         existingDay.totalPriceWithoutTax += entry._sum.productPriceWithoutTax || 0;
-        if (entry._max.taxRate > existingDay.taxRate) {
-          existingDay.taxRate = entry._max.taxRate;
-        }
       } else {
         acc.push({
           day,
           numberOfSales: entry._count._all,
           totalPrice: entry._sum.totalPrice || 0,
-          totalPriceWithoutTax: entry._sum.productPriceWithoutTax || 0,
-          taxRate: entry._max.taxRate || 0
+          totalPriceWithoutTax: entry._sum.productPriceWithoutTax || 0
         });
       }
       return acc;
