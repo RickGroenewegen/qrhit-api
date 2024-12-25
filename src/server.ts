@@ -294,6 +294,18 @@ class Server {
       }
     );
 
+    this.fastify.get(
+      '/day_report',
+      { preHandler: verifyTokenMiddleware },
+      async (_request: any, reply: any) => {
+        const report = await this.mollie.getPaymentsByDay();
+        reply.send({
+          success: true,
+          data: report,
+        });
+      }
+    );
+
     this.fastify.post(
       '/finalize',
       { preHandler: verifyTokenMiddleware },

@@ -40,6 +40,67 @@ class Mollie {
     }
   }
 
+  public async getPaymentsByDay(): Promise<any> {
+    let ignoreEmails: string[] = [];
+
+    if (process.env['ENVIRONMENT'] == 'production') {
+      ignoreEmails = ['west14@gmail.com', 'info@rickgroenewegen.nl'];
+    }
+
+    const report = await this.prisma.payment.groupBy({
+      by: ['createdAt'],
+      where: {
+        AND: [
+          {
+            createdAt: {
+              gt: new Date('2024-12-05'),
+            },
+          },
+        ],
+        email: {
+          notIn: ignoreEmails,
+        },
+      },
+      _count: {
+        _all: true,
+      },
+      _sum: {
+        totalPrice: true,
+        productPriceWithoutTax: true,
+      },
+      _max: {
+        taxRate: true,
+      },
+    });
+
+    // Process the results to group by day and calculate totals
+    const dailyReport = report.reduce((acc: any[], entry) => {
+      const day = new Date(entry.createdAt).toISOString().split('T')[0];
+      
+      const existingDay = acc.find(item => item.day === day);
+      if (existingDay) {
+        existingDay.numberOfSales += entry._count._all;
+        existingDay.totalPrice += entry._sum.totalPrice || 0;
+        existingDay.totalPriceWithoutTax += entry._sum.productPriceWithoutTax || 0;
+        if (entry._max.taxRate > existingDay.taxRate) {
+          existingDay.taxRate = entry._max.taxRate;
+        }
+      } else {
+        acc.push({
+          day,
+          numberOfSales: entry._count._all,
+          totalPrice: entry._sum.totalPrice || 0,
+          totalPriceWithoutTax: entry._sum.productPriceWithoutTax || 0,
+          taxRate: entry._max.taxRate || 0
+        });
+      }
+      return acc;
+    }, []);
+
+    // Sort by day descending (newest first)
+    return dailyReport.sort((a, b) => b.day.localeCompare(a.day));
+  }
+
   public async getPaymentsByMonth(
     startDate: Date,
     endDate: Date
