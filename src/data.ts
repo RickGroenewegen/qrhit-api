@@ -394,7 +394,7 @@ class Data {
 
       // Add locale condition
       if (locale) {
-        query += ` AND (playlists.featuredLocale = '${locale}' OR playlists.featuredLocale IS NULL)`;
+        query += ` AND (FIND_IN_SET('${locale}', playlists.featuredLocale) > 0 OR playlists.featuredLocale IS NULL)`;
       } else {
         query += ` AND playlists.featuredLocale IS NULL`;
       }
@@ -404,7 +404,7 @@ class Data {
         query += `
         ORDER BY 
           CASE 
-            WHEN playlists.featuredLocale = '${locale}' THEN 0 
+            WHEN FIND_IN_SET('${locale}', playlists.featuredLocale) > 0 THEN 0 
             ELSE 1 
           END
       `;
