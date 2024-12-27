@@ -596,7 +596,7 @@ class Server {
     });
 
     this.fastify.get(
-      '/qr/pdf/:playlistId/:paymentId/:template/:startIndex/:endIndex/:subdir/:eco',
+      '/qr/pdf/:playlistId/:paymentId/:template/:startIndex/:endIndex/:subdir/:eco/:emptyPages',
       async (request: any, reply) => {
         const valid = await this.mollie.canDownloadPDF(
           request.params.playlistId,
@@ -616,6 +616,7 @@ class Server {
         const startIndex = parseInt(request.params.startIndex);
         const endIndex = parseInt(request.params.endIndex);
         const eco = this.utils.parseBoolean(request.params.eco);
+        const emptyPages = parseInt(request.params.emptyPages);
         tracks = tracks.slice(startIndex, endIndex + 1);
 
         await reply.view(`pdf_${request.params.template}.ejs`, {
@@ -624,6 +625,7 @@ class Server {
           tracks,
           user,
           eco,
+          emptyPages,
         });
       }
     );

@@ -68,11 +68,22 @@ class PDF {
   ): Promise<string> {
     const numberOfTracks = playlist.numberOfTracks;
     let itemsPerPage =
-      template === 'digital' || template === 'digital_double' ? 12 : 1;
+      template === 'digital' || template === 'digital_double' ? 12 : 6;
     const pagesPerTrack = template === 'printer' ? 2 : 1;
     const totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
     const maxPagesPerPDF = 100;
+    const printApiSizes = [9, 13, 17, 25, 34, 42, 50, 59, 67, 75, 84];
     let ecoInt = eco ? 1 : 0;
+    let emptyPages = 0;
+
+    if (template === 'printer') {
+      let numberOfSheets = totalPages / 2;
+      // Find the first item in the printApiSizes array that is larger than the number of sheets
+      let sheetSize =
+        printApiSizes.find((size) => size >= numberOfSheets) || 84;
+      emptyPages = sheetSize * 2 - totalPages;
+    }
+
 
     this.logger.log(
       color.blue.bold('Generating PDF: ') + color.white.bold(template)
@@ -88,7 +99,7 @@ class PDF {
           numberOfTracks
         );
 
-        const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}/${subdir}/${ecoInt}`;
+        const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}/${subdir}/${ecoInt}/${emptyPages}`;
 
         this.logger.log(
           color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)
