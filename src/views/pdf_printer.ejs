@@ -235,5 +235,30 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
         <% } %>
     </div>
 <% } %>
+
+<% // Add empty pages if requested
+for(let emptyPageNum = 0; emptyPageNum < emptyPages; emptyPageNum++) { %>
+    <!-- Empty Front Page -->
+    <div class="page">
+        <% for(let row = 0; row < 2; row++) { %>
+            <div class="row">
+                <% for(let card = 0; card < 3; card++) { %>
+                    <div class="card front"></div>
+                <% } %>
+            </div>
+        <% } %>
+    </div>
+
+    <!-- Empty Back Page -->
+    <div class="page">
+        <% for(let row = 0; row < 2; row++) { %>
+            <div class="row">
+                <% for(let card = 0; card < 3; card++) { %>
+                    <div class="card back"></div>
+                <% } %>
+            </div>
+        <% } %>
+    </div>
+<% } %>
 </body>
 </html>
