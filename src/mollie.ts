@@ -73,18 +73,19 @@ class Mollie {
     // Process the results to group by day and calculate totals
     const dailyReport = report.reduce((acc: any[], entry) => {
       const day = new Date(entry.createdAt).toISOString().split('T')[0];
-      
-      const existingDay = acc.find(item => item.day === day);
+
+      const existingDay = acc.find((item) => item.day === day);
       if (existingDay) {
         existingDay.numberOfSales += entry._count._all;
         existingDay.totalPrice += entry._sum.totalPrice || 0;
-        existingDay.totalPriceWithoutTax += entry._sum.productPriceWithoutTax || 0;
+        existingDay.totalPriceWithoutTax +=
+          entry._sum.productPriceWithoutTax || 0;
       } else {
         acc.push({
           day,
           numberOfSales: entry._count._all,
           totalPrice: entry._sum.totalPrice || 0,
-          totalPriceWithoutTax: entry._sum.productPriceWithoutTax || 0
+          totalPriceWithoutTax: entry._sum.productPriceWithoutTax || 0,
         });
       }
       return acc;
@@ -165,7 +166,7 @@ class Mollie {
         return {
           country: entry.countrycode || 'Unknown',
           numberOfSales: entry._count._all,
-          totalPrice: entry._sum.totalPrice,
+          totalPrice: entry._sum.totalPrice || 0,
           totalPriceWithoutTax: entry._sum.productPriceWithoutTax,
           taxRate: entry._max.taxRate,
           totalPlaylists: totalPlaylistsSold,
@@ -173,7 +174,7 @@ class Mollie {
       })
     );
 
-    return detailedReport.sort((a, b) => b.numberOfSales - a.numberOfSales);
+    return detailedReport.sort((a, b) => b.totalPrice - a.totalPrice);
   }
 
   public startCron(): void {
