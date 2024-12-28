@@ -99,6 +99,57 @@ class Mollie {
     startDate: Date,
     endDate: Date
   ): Promise<any> {
+    
+  public async getPaymentsByTaxRate(
+    startDate: Date,
+    endDate: Date
+  ): Promise<any> {
+    let ignoreEmails: string[] = [];
+
+    if (process.env['ENVIRONMENT'] == 'production') {
+      ignoreEmails = ['west14@gmail.com', 'info@rickgroenewegen.nl'];
+    }
+
+    const report = await this.prisma.payment.groupBy({
+      by: ['taxRate'],
+      where: {
+        AND: [
+          {
+            createdAt: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+          {
+            createdAt: {
+              gt: new Date('2024-12-05'),
+            },
+          },
+        ],
+        email: {
+          notIn: ignoreEmails,
+        },
+      },
+      _count: {
+        _all: true,
+      },
+      _sum: {
+        totalPrice: true,
+        productPriceWithoutTax: true,
+        productVATPrice: true,
+      },
+    });
+
+    const detailedReport = report.map((entry) => ({
+      taxRate: entry.taxRate || 0,
+      numberOfSales: entry._count._all,
+      totalPrice: entry._sum.totalPrice || 0,
+      totalPriceWithoutTax: entry._sum.productPriceWithoutTax || 0,
+      totalVAT: entry._sum.productVATPrice || 0,
+    }));
+
+    return detailedReport.sort((a, b) => b.totalPrice - a.totalPrice);
+  }
     let ignoreEmails: string[] = [];
 
     if (process.env['ENVIRONMENT'] == 'production') {

@@ -295,6 +295,26 @@ class Server {
     );
 
     this.fastify.get(
+      '/tax_report/:yearMonth',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply: any) => {
+        const { yearMonth } = request.params;
+        const year = parseInt(yearMonth.substring(0, 4));
+        const month = parseInt(yearMonth.substring(4, 6));
+
+        const startDate = new Date(year, month - 1, 1);
+        const endDate = new Date(year, month, 0, 23, 59, 59);
+
+        const report = await this.mollie.getPaymentsByTaxRate(startDate, endDate);
+
+        reply.send({
+          success: true,
+          data: report,
+        });
+      }
+    );
+
+    this.fastify.get(
       '/day_report',
       { preHandler: verifyTokenMiddleware },
       async (_request: any, reply: any) => {
