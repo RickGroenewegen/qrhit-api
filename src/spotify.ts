@@ -290,7 +290,8 @@ class Spotify {
     playlistId: string,
     cache: boolean = true,
     captchaToken: string = '',
-    checkCaptcha: boolean
+    checkCaptcha: boolean,
+    featured: boolean = false
   ): Promise<ApiResult> {
     let playlist: Playlist | null = null;
 
@@ -330,10 +331,22 @@ class Spotify {
         if (response.data.images.length > 0) {
           image = response.data.images[0].url;
         }
+
+        let playlistName = response.data.name;
+
+        if (featured) {
+          // Get the name from DB if it's a featured playlist
+          const dbPlaylist = await this.prisma.playlist.findUnique({
+            where: { playlistId },
+          });
+
+          playlistName = dbPlaylist?.name || playlistName;
+        }
+
         playlist = {
           id: playlistId,
           playlistId: playlistId,
-          name: response.data.name,
+          name: playlistName,
           numberOfTracks: response.data.tracks.total,
           image,
         };
