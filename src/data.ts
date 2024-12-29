@@ -38,7 +38,7 @@ class Data {
   constructor() {
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
-        if (isMainServer) {
+        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
           this.createSiteMap();
         }
       });
@@ -53,13 +53,13 @@ class Data {
       where: {
         featured: true,
         slug: {
-          not: ''
-        }
+          not: '',
+        },
       },
       select: {
         slug: true,
-        updatedAt: true
-      }
+        updatedAt: true,
+      },
     });
 
     const paths = [
@@ -89,12 +89,12 @@ class Data {
         priority: '0.8',
       },
       // Add product pages for featured playlists
-      ...featuredPlaylists.map(playlist => ({
+      ...featuredPlaylists.map((playlist) => ({
         loc: `/product/${playlist.slug}`,
         lastmod: playlist.updatedAt.toISOString().split('T')[0],
         changefreq: 'daily',
-        priority: '0.9'
-      }))
+        priority: '0.9',
+      })),
     ];
 
     const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
