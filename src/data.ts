@@ -38,8 +38,8 @@ class Data {
   constructor() {
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
-        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-          // this.createSiteMap();
+        if (isMainServer) {
+          this.createSiteMap();
         }
       });
     }
