@@ -183,6 +183,7 @@ model Playlist {
   playlistId      String               @unique
   type            String               @default("cards")
   name            String
+  slug            String               @default("")
   createdAt       DateTime             @default(now())
   updatedAt       DateTime             @updatedAt
   featured        Boolean              @default(false)

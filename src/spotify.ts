@@ -291,7 +291,8 @@ class Spotify {
     cache: boolean = true,
     captchaToken: string = '',
     checkCaptcha: boolean,
-    featured: boolean = false
+    featured: boolean = false,
+    isSlug: boolean = false
   ): Promise<ApiResult> {
     let playlist: Playlist | null = null;
 
@@ -309,11 +310,23 @@ class Spotify {
       const cacheResult = await this.cache.get(cacheKey);
 
       if (!cacheResult || !cache) {
+        let checkPlaylistId = playlistId;
+
+        if (isSlug) {
+          const dbPlaylist = await this.prisma.playlist.findFirst({
+            where: { slug: playlistId },
+          });
+          if (!dbPlaylist) {
+            return { success: false, error: 'playlistNotFound' };
+          }
+          checkPlaylistId = dbPlaylist.playlistId;
+        }
+
         const options = {
           method: 'GET',
           url: 'https://spotify23.p.rapidapi.com/playlist',
           params: {
-            id: playlistId,
+            id: checkPlaylistId,
           },
           headers: {
             'x-rapidapi-key': process.env['RAPID_API_KEY'],
@@ -372,7 +385,8 @@ class Spotify {
     playlistId: string,
     cache: boolean = true,
     captchaToken: string = '',
-    checkCaptcha: boolean
+    checkCaptcha: boolean,
+    isSlug: boolean = false
   ): Promise<ApiResult> {
     try {
       let cacheKey = `tracks_${playlistId}`;
@@ -394,12 +408,24 @@ class Spotify {
       }
 
       if (!cacheResult || !cache) {
+        let checkPlaylistId = playlistId;
+
+        if (isSlug) {
+          const dbPlaylist = await this.prisma.playlist.findFirst({
+            where: { slug: playlistId },
+          });
+          if (!dbPlaylist) {
+            return { success: false, error: 'playlistNotFound' };
+          }
+          checkPlaylistId = dbPlaylist.playlistId;
+        }
+
         while (true) {
           const options = {
             method: 'GET',
             url: 'https://spotify23.p.rapidapi.com/playlist_tracks',
             params: {
-              id: playlistId,
+              id: checkPlaylistId,
               limit,
               offset,
             },

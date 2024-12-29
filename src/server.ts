@@ -530,7 +530,8 @@ class Server {
           request.body.playlistId,
           this.utils.parseBoolean(request.body.cache),
           request.body.captchaToken,
-          true
+          true,
+          this.utils.parseBoolean(request.body.slug)
         );
       }
     );
@@ -544,7 +545,8 @@ class Server {
           this.utils.parseBoolean(request.body.cache),
           request.body.captchaToken,
           true,
-          this.utils.parseBoolean(request.body.featured)
+          this.utils.parseBoolean(request.body.featured),
+          this.utils.parseBoolean(request.body.slug)
         );
       }
     );
