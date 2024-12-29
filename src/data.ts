@@ -1,6 +1,7 @@
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import { Prisma } from '@prisma/client';
+import slugify from 'slugify';
 import PrismaInstance from './prisma';
 import MusicBrainz from './musicbrainz';
 import crypto from 'crypto';
@@ -463,8 +464,10 @@ class Data {
           giftcardMessage = cartItem.personalMessage!;
         }
 
-        // TODO: Fix slug
-        const slug = '';
+        const slug = slugify(cartItem.playlistName, {
+          lower: true,
+          strict: true,
+        });
 
         const playlistCreate = await this.prisma.playlist.create({
           data: {
