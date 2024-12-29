@@ -26,21 +26,11 @@ class Push {
   }
 
   public async addToken(token: string, type: string): Promise<void> {
-    const existingToken = await this.prisma.pushToken.findUnique({
+    await this.prisma.pushToken.upsert({
       where: { token },
+      update: { type },
+      create: { token, type }
     });
-
-    if (existingToken) {
-      await this.prisma.pushToken.update({
-        where: { token },
-        data: { type },
-      });
-    } else {
-      console.log(111, token, type);
-      await this.prisma.pushToken.create({
-        data: { token, type },
-      });
-    }
   }
 
   public async broadcastNotification(
