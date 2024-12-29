@@ -48,6 +48,20 @@ class Data {
   private async createSiteMap(): Promise<void> {
     this.logger.log(color.blue.bold('Creating sitemap'));
 
+    // Get featured playlists with non-empty slugs
+    const featuredPlaylists = await this.prisma.playlist.findMany({
+      where: {
+        featured: true,
+        slug: {
+          not: ''
+        }
+      },
+      select: {
+        slug: true,
+        updatedAt: true
+      }
+    });
+
     const paths = [
       { loc: '/', lastmod: '2024-09-16', changefreq: 'daily', priority: '1.0' },
       {
@@ -74,6 +88,13 @@ class Data {
         changefreq: 'monthly',
         priority: '0.8',
       },
+      // Add product pages for featured playlists
+      ...featuredPlaylists.map(playlist => ({
+        loc: `/product/${playlist.slug}`,
+        lastmod: playlist.updatedAt.toISOString().split('T')[0],
+        changefreq: 'daily',
+        priority: '0.9'
+      }))
     ];
 
     const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
