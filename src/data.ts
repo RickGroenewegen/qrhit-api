@@ -46,8 +46,6 @@ class Data {
   }
 
   private async createSiteMap(): Promise<void> {
-    this.logger.log(color.blue.bold('Creating sitemap'));
-
     // Get featured playlists with non-empty slugs
     const featuredPlaylists = await this.prisma.playlist.findMany({
       where: {
@@ -118,9 +116,6 @@ class Data {
     );
 
     await fs.writeFile(sitemapPath, sitemapContent, 'utf8');
-    this.logger.log(
-      color.green.bold(`Sitemap created at ${color.white.bold(sitemapPath)}`)
-    );
   }
 
   public async getPDFFilepath(
