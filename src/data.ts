@@ -6,7 +6,7 @@ import PrismaInstance from './prisma';
 import MusicBrainz from './musicbrainz';
 import crypto from 'crypto';
 import { ApiResult } from './interfaces/ApiResult';
-import fs from 'fs';
+import { promises as fs } from 'fs';
 import path from 'path';
 
 interface TrackNeedingYearUpdate {
@@ -117,7 +117,7 @@ class Data {
       '/sitemap.xml'
     );
 
-    fs.writeFileSync(sitemapPath, sitemapContent, 'utf8');
+    await fs.writeFile(sitemapPath, sitemapContent, 'utf8');
     this.logger.log(
       color.green.bold(`Sitemap created at ${color.white.bold(sitemapPath)}`)
     );
