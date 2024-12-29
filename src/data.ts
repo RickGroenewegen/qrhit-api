@@ -463,10 +463,14 @@ class Data {
           giftcardMessage = cartItem.personalMessage!;
         }
 
+        // TODO: Fix slug
+        const slug = '';
+
         const playlistCreate = await this.prisma.playlist.create({
           data: {
             playlistId: cartItem.playlistId,
             name: cartItem.playlistName,
+            slug,
             image: cartItem.image,
             price: cartItem.price,
             numberOfTracks: cartItem.numberOfTracks,
