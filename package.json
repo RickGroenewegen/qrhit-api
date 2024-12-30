@@ -4,7 +4,7 @@
   "description": "",
   "main": "index.js",
   "scripts": {
-    "build": "rimraf ./build && tsc --incremental --skipDefaultLibCheck --strictFunctionTypes",
+    "build": "rm -rf ./.build-temp && tsc --outDir ./.build-temp --incremental --skipDefaultLibCheck --strictFunctionTypes && ncp ./src ./.build-temp && rm -rf ./build && mv ./.build-temp ./build",
     "start:dev": "tsc -w & nodemon --watch build --ext js --exec 'node --no-deprecation build/src/app.js' --exitcrash",
     "start:dev2": "tsx watch src/app.ts",
     "start": "npm run build && ncp ./src ./build && ts-node build/src/app.js",
