@@ -26,11 +26,20 @@ class Push {
   }
 
   public async addToken(token: string, type: string): Promise<void> {
-    await this.prisma.pushToken.upsert({
-      where: { token },
-      update: { type },
-      create: { token, type }
-    });
+    try {
+      await this.prisma.pushToken.upsert({
+        where: { token },
+        update: { type, valid: true },  // Also ensure token is marked as valid when updated
+        create: { token, type, valid: true }
+      });
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error adding push token: ${color.white.bold(token)}`
+        )
+      );
+      throw error;
+    }
   }
 
   public async broadcastNotification(
