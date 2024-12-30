@@ -296,14 +296,14 @@ class Spotify {
   ): Promise<ApiResult> {
     let playlist: Playlist | null = null;
 
-    if (checkCaptcha) {
-      // Verify reCAPTCHA token
-      const isHuman = await this.utils.verifyRecaptcha(captchaToken);
+    // if (checkCaptcha) {
+    //   // Verify reCAPTCHA token
+    //   const isHuman = await this.utils.verifyRecaptcha(captchaToken);
 
-      if (!isHuman) {
-        throw new Error('reCAPTCHA verification failed');
-      }
-    }
+    //   if (!isHuman) {
+    //     throw new Error('reCAPTCHA verification failed');
+    //   }
+    // }
 
     try {
       const cacheKey = `playlist_${playlistId}`;
@@ -398,14 +398,14 @@ class Spotify {
       const limit = 100;
       let maxReached = false;
 
-      if (checkCaptcha) {
-        // Verify reCAPTCHA token
-        const isHuman = await this.utils.verifyRecaptcha(captchaToken);
+      // if (checkCaptcha) {
+      //   // Verify reCAPTCHA token
+      //   const isHuman = await this.utils.verifyRecaptcha(captchaToken);
 
-        if (!isHuman) {
-          throw new Error('reCAPTCHA verification failed');
-        }
-      }
+      //   if (!isHuman) {
+      //     throw new Error('reCAPTCHA verification failed');
+      //   }
+      // }
 
       if (!cacheResult || !cache) {
         let checkPlaylistId = playlistId;
