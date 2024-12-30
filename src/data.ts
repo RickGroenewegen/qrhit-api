@@ -399,6 +399,7 @@ class Data {
         playlists.id,
         playlists.playlistId,
         playlists.name,
+        playlists.slug,
         playlists.image,
         playlists.price,
         playlists.numberOfTracks,
