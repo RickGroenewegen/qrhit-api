@@ -777,7 +777,7 @@ class Data {
       ipInfoListKey,
       JSON.stringify(ipInfoWithTrackId)
     );
-    await this.cache.executeCommand('ltrim', ipInfoListKey, 0, 99); // Keep only the last 100 entries
+    await this.cache.executeCommand('ltrim', ipInfoListKey, 0, 999); // Keep only the last 100 entries
   }
 
   public async getLink(trackId: number, clientIp: string): Promise<ApiResult> {
