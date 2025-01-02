@@ -27,6 +27,7 @@ import { OpenPerplex } from './openperplex';
 import cluster from 'cluster';
 
 class Data {
+  private static instance: Data;
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private musicBrainz = new MusicBrainz();
@@ -36,7 +37,7 @@ class Data {
   private analytics = AnalyticsClient.getInstance();
   private openperplex = new OpenPerplex();
 
-  constructor() {
+  private constructor() {
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
@@ -1367,6 +1368,12 @@ class Data {
     } catch (error) {
       this.logger.log(`Error reading Excel file: ${error}`);
     }
+  }
+  public static getInstance(): Data {
+    if (!Data.instance) {
+      Data.instance = new Data();
+    }
+    return Data.instance;
   }
 }
 

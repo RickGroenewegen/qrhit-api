@@ -25,7 +25,7 @@ class Order {
   private utils = new Utils();
   private logger = new Log();
   private mail = Mail.getInstance();
-  private data = new Data();
+  private data = Data.getInstance();
   private spotify = new Spotify();
   private pdf = new PDF();
 
