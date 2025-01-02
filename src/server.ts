@@ -52,7 +52,7 @@ class Server {
   private spotify = new Spotify();
   private mollie = new Mollie();
   private qr = new Qr();
-  private data = new Data();
+  private data = Data.getInstance();
   private order = Order.getInstance();
   private mail = Mail.getInstance();
   private musicBrainz = new MusicBrainz();

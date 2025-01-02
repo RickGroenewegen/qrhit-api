@@ -116,7 +116,7 @@ class RapidAPIQueue {
 
 class Spotify {
   private cache = Cache.getInstance();
-  private data = new Data();
+  private data = Data.getInstance();
   private utils = new Utils();
   private analytics = AnalyticsClient.getInstance();
   private rapidAPIQueue = RapidAPIQueue.getInstance();

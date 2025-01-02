@@ -27,7 +27,7 @@ class Generator {
   private logger = new Logger();
   private utils = new Utils();
   private prisma = PrismaInstance.getInstance();
-  private data = new Data();
+  private data = Data.getInstance();
   private pushover = new PushoverClient();
   private spotify = new Spotify();
   private mail = Mail.getInstance();

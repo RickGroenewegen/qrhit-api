@@ -58,8 +58,6 @@ class Data {
   }
 
   private async prefillLinkCache(): Promise<void> {
-    this.logger.log(color.blue.bold('Pre-filling link cache'));
-
     const tracks = await this.prisma.track.findMany({
       select: {
         id: true,
@@ -1348,20 +1346,6 @@ class Data {
                 id: { not: trackId },
               },
             });
-
-            // this.logger.log(
-            //   color.magenta(
-            //     `Updated original track ${color.white.bold(
-            //       trackId
-            //     )} and ${color.white.bold(
-            //       updatedCount
-            //     )} other track(s) with ISRC ${color.white.bold(
-            //       track!.isrc
-            //     )} (${color.white.bold(row[1])} - ${color.white.bold(
-            //       row[2]
-            //     )}) with year ${color.white.bold(newYear)}`
-            //   )
-            // );
           }
         }
       }

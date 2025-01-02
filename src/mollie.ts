@@ -20,7 +20,7 @@ import { promises as fs } from 'fs';
 class Mollie {
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
-  private data = new Data();
+  private data = Data.getInstance();
   private discount = new Discount();
   private order = Order.getInstance();
   private translation: Translation = new Translation();
