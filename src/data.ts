@@ -5,6 +5,7 @@ import slugify from 'slugify';
 import PrismaInstance from './prisma';
 import MusicBrainz from './musicbrainz';
 import crypto from 'crypto';
+import cron from 'node-cron';
 import { ApiResult } from './interfaces/ApiResult';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -40,9 +41,42 @@ class Data {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
           this.createSiteMap();
+          await this.prefillLinkCache();
+          
+          // Schedule hourly cache refresh
+          cron.schedule('0 * * * *', async () => {
+            this.logger.log(color.blue.bold('Running scheduled link cache refresh'));
+            await this.prefillLinkCache();
+          });
         }
       });
     }
+  }
+
+  private async prefillLinkCache(): Promise<void> {
+    this.logger.log(color.blue.bold('Pre-filling link cache'));
+    
+    const tracks = await this.prisma.track.findMany({
+      select: {
+        id: true,
+        spotifyLink: true
+      },
+      where: {
+        spotifyLink: {
+          not: ''
+        }
+      }
+    });
+
+    let cacheCount = 0;
+    for (const track of tracks) {
+      if (track.spotifyLink) {
+        await this.cache.set('link' + track.id, track.spotifyLink);
+        cacheCount++;
+      }
+    }
+
+    this.logger.log(color.blue.bold(`Cached ${color.white.bold(cacheCount)} track links`));
   }
 
   private async createSiteMap(): Promise<void> {
