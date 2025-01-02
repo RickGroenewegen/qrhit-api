@@ -5,7 +5,7 @@ import slugify from 'slugify';
 import PrismaInstance from './prisma';
 import MusicBrainz from './musicbrainz';
 import crypto from 'crypto';
-import cron from 'node-cron';
+import { schedule } from 'cron';
 import { ApiResult } from './interfaces/ApiResult';
 import { promises as fs } from 'fs';
 import path from 'path';
@@ -44,10 +44,11 @@ class Data {
           await this.prefillLinkCache();
           
           // Schedule hourly cache refresh
-          cron.schedule('0 * * * *', async () => {
+          const job = new schedule('0 * * * *', async () => {
             this.logger.log(color.blue.bold('Running scheduled link cache refresh'));
             await this.prefillLinkCache();
           });
+          job.start();
         }
       });
     }
