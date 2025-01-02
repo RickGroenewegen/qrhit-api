@@ -42,10 +42,12 @@ class Data {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
           this.createSiteMap();
           await this.prefillLinkCache();
-          
+
           // Schedule hourly cache refresh
           const job = new CronJob('0 * * * *', async () => {
-            this.logger.log(color.blue.bold('Running scheduled link cache refresh'));
+            this.logger.log(
+              color.blue.bold('Running scheduled link cache refresh')
+            );
             await this.prefillLinkCache();
           });
           job.start();
@@ -56,17 +58,17 @@ class Data {
 
   private async prefillLinkCache(): Promise<void> {
     this.logger.log(color.blue.bold('Pre-filling link cache'));
-    
+
     const tracks = await this.prisma.track.findMany({
       select: {
         id: true,
-        spotifyLink: true
+        spotifyLink: true,
       },
       where: {
         spotifyLink: {
-          not: ''
-        }
-      }
+          not: '',
+        },
+      },
     });
 
     let cacheCount = 0;
@@ -77,7 +79,9 @@ class Data {
       }
     }
 
-    this.logger.log(color.blue.bold(`Cached ${color.white.bold(cacheCount)} track links`));
+    this.logger.log(
+      color.blue.bold(`Cached ${color.white.bold(cacheCount)} track links`)
+    );
   }
 
   private async createSiteMap(): Promise<void> {
