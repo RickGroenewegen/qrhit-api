@@ -105,32 +105,44 @@ class Trustpilot {
         url: 'https://trustpilot-company-and-reviews-data.p.rapidapi.com/company-details',
         params: {
           company_domain: 'qrsong.io',
-          locale: 'en-US'
+          locale: 'en-US',
         },
         headers: {
           'x-rapidapi-key': process.env.RAPID_API_KEY,
-          'x-rapidapi-host': 'trustpilot-company-and-reviews-data.p.rapidapi.com'
-        }
+          'x-rapidapi-host':
+            'trustpilot-company-and-reviews-data.p.rapidapi.com',
+        },
       };
 
       const response = await axios.request(options);
       const data = response.data.data;
 
       const company: TrustpilotCompany = {
-        name: data.name,
-        website: data.website,
-        logo: data.logo,
-        score: data.score,
-        reviewCount: data.total_reviews,
-        stars: data.stars,
-        yearlyReviews: data.yearly_reviews,
-        categories: data.categories,
-        description: data.description
+        name: data.company.name,
+        domain: data.company.domain,
+        website: data.company.website,
+        logo: data.company.logo,
+        trust_score: data.company.trust_score,
+        review_count: data.company.review_count,
+        rating: data.company.rating,
+        categories: data.company.categories,
+        phone: data.company.phone,
+        email: data.company.email,
+        address: data.company.address,
+        city: data.company.city,
+        country: data.company.country,
+        about_company: data.company.about_company,
+        average_days_to_reply: data.company.average_days_to_reply,
+        negative_review_count: data.company.negative_review_count,
+        negative_review_count_with_reply:
+          data.company.negative_review_count_with_reply,
+        reply_to_negative_review_percent:
+          data.company.reply_to_negative_review_percent,
       };
 
       const result = {
         success: true,
-        company
+        company,
       };
 
       // Cache for 24 hours
@@ -142,7 +154,7 @@ class Trustpilot {
       console.log(error);
       return {
         success: false,
-        error: 'Error fetching Trustpilot company details'
+        error: 'Error fetching Trustpilot company details',
       };
     }
   }
