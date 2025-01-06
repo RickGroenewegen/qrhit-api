@@ -42,10 +42,19 @@ class Review {
       };
     }
 
+    // Check if already reviewed
+    if (payment.Review.length > 0) {
+      return {
+        success: false,
+        error: 'alreadyReviewed',
+      };
+    }
 
     return {
       success: true,
-      
+      data: {
+        canReview: true
+      }
     };
   }
 
