@@ -30,7 +30,8 @@ class Trustpilot {
 
   public async getReviews(cache: boolean = true): Promise<ApiResult> {
     try {
-      const cacheKey = 'trustpilot_reviews';
+      const today = new Date().toISOString().split('T')[0];
+      const cacheKey = `trustpilot_reviews_${today}`;
       const cacheResult = await this.cache.get(cacheKey);
 
       if (cacheResult && cache) {
