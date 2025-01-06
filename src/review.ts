@@ -8,6 +8,7 @@ class Review {
   private static instance: Review;
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
+  private mail = Mail.getInstance();
 
   private constructor() {
     // Schedule review emails to run every hour
@@ -201,14 +202,13 @@ class Review {
           });
 
           if (fullPayment) {
-            const mail = Mail.getInstance();
-            await mail.sendReviewEmail(fullPayment);
+            // await this.mail.sendReviewEmail(fullPayment);
 
-            // Update reviewMailSent flag
-            await this.prisma.payment.update({
-              where: { id: payment.id },
-              data: { reviewMailSent: true },
-            });
+            // // Update reviewMailSent flag
+            // await this.prisma.payment.update({
+            //   where: { id: payment.id },
+            //   data: { reviewMailSent: true },
+            // });
 
             this.logger.log(
               color.blue.bold(
@@ -216,6 +216,14 @@ class Review {
               )
             );
           }
+        } else {
+          this.logger.log(
+            color.yellow.bold(
+              `Skipping review email for ${white.bold(
+                payment.email
+              )} since they have already received one`
+            )
+          );
         }
       }
       counter++;
