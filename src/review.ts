@@ -155,7 +155,7 @@ class Review {
         lt: timeAgo,
       },
       reviewMailSent: false,
-      marketingEmails: true
+      marketingEmails: true,
     };
 
     const payments = await this.prisma.payment.findMany({
@@ -177,52 +177,46 @@ class Review {
       );
     }
 
-    let counter = 1;
-
     for (const payment of payments) {
       // Send review email to first user only
-      if (counter <= 6) {
-        // Check if this user has already has payments other than this one where reviewMailSent is true
-        const otherPayments = await this.prisma.payment.findMany({
-          where: {
-            email: payment.email,
-            reviewMailSent: true,
-            id: {
-              not: payment.id,
-            },
+
+      // Check if this user has already has payments other than this one where reviewMailSent is true
+      const otherPayments = await this.prisma.payment.findMany({
+        where: {
+          email: payment.email,
+          reviewMailSent: true,
+          id: {
+            not: payment.id,
           },
+        },
+      });
+
+      if (otherPayments.length == 0) {
+        const fullPayment = await this.prisma.payment.findUnique({
+          where: { id: payment.id },
         });
 
-        if (otherPayments.length == 0) {
-          const fullPayment = await this.prisma.payment.findUnique({
-            where: { id: payment.id },
-          });
+        if (fullPayment) {
+          await this.mail.sendReviewEmail(fullPayment);
 
-          if (fullPayment) {
-            await this.mail.sendReviewEmail(fullPayment);
-
-            this.logger.log(
-              color.blue.bold(
-                `Sent review email to ${white.bold(payment.email)}`
-              )
-            );
-          }
-        } else {
           this.logger.log(
-            color.yellow.bold(
-              `Skipping review email for ${white.bold(
-                payment.email
-              )} since they have already received one`
-            )
+            color.blue.bold(`Sent review email to ${white.bold(payment.email)}`)
           );
         }
-        // Update reviewMailSent flag
-        await this.prisma.payment.update({
-          where: { id: payment.id },
-          data: { reviewMailSent: true },
-        });
+      } else {
+        this.logger.log(
+          color.yellow.bold(
+            `Skipping review email for ${white.bold(
+              payment.email
+            )} since they have already received one`
+          )
+        );
       }
-      counter++;
+      // Update reviewMailSent flag
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: { reviewMailSent: true },
+      });
     }
 
     return {
