@@ -126,6 +126,10 @@ class Server {
       }
     );
 
+    this.fastify.get('/review/:paymentId', async (request: any, _reply) => {
+      return await this.review.checkReview(request.params.paymentId);
+    });
+
     this.fastify.get(
       '/lastplays',
       { preHandler: verifyTokenMiddleware },
