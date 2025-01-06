@@ -52,21 +52,28 @@ class Trustpilot {
 
       const response = await axios.request(options);
       
-      const reviews: TrustpilotReview[] = response.data.reviews.map((review: any) => ({
-        id: review.id,
-        stars: review.stars,
-        title: review.title,
-        text: review.text,
-        author: review.author.name,
-        date: review.date_posted,
-        link: review.link
+      const reviews: TrustpilotReview[] = response.data.data.reviews.map((review: any) => ({
+        id: review.review_id,
+        stars: review.review_rating,
+        title: review.review_title,
+        text: review.review_text,
+        author: review.consumer_name,
+        date: review.review_time,
+        reply: review.reply_text,
+        authorImage: review.consumer_image,
+        authorCountry: review.consumer_country,
+        authorReviewCount: review.consumer_review_count,
+        isVerified: review.consumer_is_verified
       }));
 
       const result = {
         success: true,
         data: {
-          totalReviews: reviews.length,
-          averageRating: response.data.average_rating,
+          totalReviews: response.data.data.total_reviews,
+          averageRating: Object.entries(response.data.data.rating_distribution)
+            .reduce((acc, [rating, count]) => acc + (Number(rating) * Number(count)), 0) / 
+            Object.values(response.data.data.rating_distribution)
+              .reduce((acc, count) => acc + Number(count), 0),
           reviews: reviews
         }
       };
