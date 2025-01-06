@@ -119,6 +119,34 @@ class Review {
       success: true,
     };
   }
+
+  public async getUnsentReviewEmails() {
+    this.logger.log(
+      color.blue.bold('Getting list of unsent review emails')
+    );
+
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        reviewMailSent: false,
+        status: 'paid',
+        Review: {
+          none: {} // No reviews exist
+        }
+      },
+      select: {
+        id: true,
+        paymentId: true,
+        email: true,
+        fullname: true,
+        createdAt: true
+      }
+    });
+
+    return {
+      success: true,
+      data: payments
+    };
+  }
 }
 
 export default Review;

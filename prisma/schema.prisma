@@ -129,6 +129,7 @@ model Payment {
   OrderType               OrderType?           @relation(fields: [orderTypeId], references: [id])
   orderTypeId             Int?
   test                    Boolean              @default(false)
+  reviewMailSent          Boolean              @default(false)
   DiscountCodedUses       DiscountCodedUses[]
   Review                  Review[]
 
