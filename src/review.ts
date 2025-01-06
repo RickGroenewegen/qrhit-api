@@ -142,17 +142,23 @@ class Review {
       checker = true;
     }
 
-    const payments = await this.prisma.payment.findMany({
-      where: {
-        reviewMailSent: checker,
-        status: 'paid',
-        Review: {
-          none: {}, // No reviews exist
-        },
-        finalizedAt: {
-          lt: fortyEightHoursAgo,
-        },
+    let whereClause: any = {
+      status: 'paid',
+      Review: {
+        none: {}, // No reviews exist
       },
+      finalizedAt: {
+        lt: fortyEightHoursAgo,
+      }
+    };
+
+    // Only check reviewMailSent in production
+    if (process.env['ENVIRONMENT'] !== 'development') {
+      whereClause.reviewMailSent = false;
+    }
+
+    const payments = await this.prisma.payment.findMany({
+      where: whereClause,
       select: {
         id: true,
         paymentId: true,
