@@ -1,6 +1,7 @@
 import PrismaInstance from './prisma';
 import Logger from './logger';
 import { color, white } from 'console-log-colors';
+import Mail from './mail';
 
 class Review {
   private static instance: Review;
@@ -161,6 +162,18 @@ class Review {
           )}`
         )
       );
+
+      // Send review email to first user only
+      if (payments.indexOf(payment) === 0) {
+        const mail = Mail.getInstance();
+        await mail.sendReviewEmail(payment);
+        this.logger.log(
+          color.blue.bold(
+            `Sent review email to ${white.bold(payment.email)}`
+          )
+        );
+        break;
+      }
     }
 
     return {
