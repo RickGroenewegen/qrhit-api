@@ -145,7 +145,23 @@ class Review {
       },
     });
 
-    console.log(111, payments);
+    this.logger.log(
+      color.blue.bold(
+        `Found ${white.bold(payments.length)} unsent review emails`
+      )
+    );
+
+    for (const payment of payments) {
+      this.logger.log(
+        color.blue.bold(
+          `Payment ${white.bold(payment.paymentId)} from ${white.bold(
+            payment.fullname
+          )} (${white.bold(payment.email)}) created at ${white.bold(
+            payment.createdAt.toISOString()
+          )}`
+        )
+      );
+    }
 
     return {
       success: true,
