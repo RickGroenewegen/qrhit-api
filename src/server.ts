@@ -31,6 +31,7 @@ import GitChecker from './git';
 import { OpenPerplex } from './openperplex';
 import Push from './push';
 import Review from './review';
+import Trustpilot from './trustpilot';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -68,6 +69,7 @@ class Server {
   private openperplex = new OpenPerplex();
   private push = Push.getInstance();
   private review = Review.getInstance();
+  private trustpilot = Trustpilot.getInstance();
 
   private version: string = '1.0.0';
 
@@ -125,6 +127,10 @@ class Server {
         return { success: true, year };
       }
     );
+
+    this.fastify.get('/reviews', async (request: any, _reply) => {
+      return await this.trustpilot.getReviews(request.params.paymentId);
+    });
 
     this.fastify.get('/review/:paymentId', async (request: any, _reply) => {
       return await this.review.checkReview(request.params.paymentId);
@@ -851,7 +857,9 @@ class Server {
       if (result) {
         reply.send({ success: true, message: 'Successfully unsubscribed' });
       } else {
-        reply.status(400).send({ success: false, message: 'Invalid unsubscribe link' });
+        reply
+          .status(400)
+          .send({ success: false, message: 'Invalid unsubscribe link' });
       }
     });
 
