@@ -173,6 +173,13 @@ class Review {
         if (fullPayment) {
           const mail = Mail.getInstance();
           await mail.sendReviewEmail(fullPayment);
+          
+          // Update reviewMailSent flag
+          await this.prisma.payment.update({
+            where: { id: payment.id },
+            data: { reviewMailSent: true }
+          });
+          
           this.logger.log(
             color.blue.bold(`Sent review email to ${white.bold(payment.email)}`)
           );
