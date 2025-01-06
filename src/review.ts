@@ -202,13 +202,13 @@ class Review {
           });
 
           if (fullPayment) {
-            // await this.mail.sendReviewEmail(fullPayment);
+            await this.mail.sendReviewEmail(fullPayment);
 
-            // // Update reviewMailSent flag
-            // await this.prisma.payment.update({
-            //   where: { id: payment.id },
-            //   data: { reviewMailSent: true },
-            // });
+            // Update reviewMailSent flag
+            await this.prisma.payment.update({
+              where: { id: payment.id },
+              data: { reviewMailSent: true },
+            });
 
             this.logger.log(
               color.blue.bold(
