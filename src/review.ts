@@ -137,15 +137,20 @@ class Review {
 
     const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
 
+    let checker = false;
+    if (process.env['ENVIRONMENT'] == 'development') {
+      checker = true;
+    }
+
     const payments = await this.prisma.payment.findMany({
       where: {
-        reviewMailSent: false,
+        reviewMailSent: checker,
         status: 'paid',
         Review: {
           none: {}, // No reviews exist
         },
-        createdAt: {
-          lt: fortyEightHoursAgo, // Only payments older than 48 hours
+        finalizedAt: {
+          lt: fortyEightHoursAgo,
         },
       },
       select: {
@@ -157,6 +162,8 @@ class Review {
       },
     });
 
+    console.log(111, payments);
+
     this.logger.log(
       color.blue.bold(
         `Found ${white.bold(payments.length)} unsent review emails`
@@ -165,27 +172,26 @@ class Review {
 
     for (const payment of payments) {
       // Send review email to first user only
-      if (payments.indexOf(payment) === 0) {
-        const fullPayment = await this.prisma.payment.findUnique({
+
+      const fullPayment = await this.prisma.payment.findUnique({
+        where: { id: payment.id },
+      });
+
+      if (fullPayment) {
+        const mail = Mail.getInstance();
+        await mail.sendReviewEmail(fullPayment);
+
+        // Update reviewMailSent flag
+        await this.prisma.payment.update({
           where: { id: payment.id },
+          data: { reviewMailSent: true },
         });
 
-        if (fullPayment) {
-          const mail = Mail.getInstance();
-          await mail.sendReviewEmail(fullPayment);
-          
-          // Update reviewMailSent flag
-          await this.prisma.payment.update({
-            where: { id: payment.id },
-            data: { reviewMailSent: true }
-          });
-          
-          this.logger.log(
-            color.blue.bold(`Sent review email to ${white.bold(payment.email)}`)
-          );
-        }
-        break;
+        this.logger.log(
+          color.blue.bold(`Sent review email to ${white.bold(payment.email)}`)
+        );
       }
+      break;
     }
 
     return {
