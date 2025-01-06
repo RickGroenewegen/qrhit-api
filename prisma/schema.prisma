@@ -19,6 +19,18 @@ model Isrc {
   @@map("isrc")
 }
 
+model Review {
+  id        Int      @id @default(autoincrement())
+  paymentId Int
+  rating    Int
+  review    String   @default("") @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  Payment   Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@map("reviews")
+}
+
 model DiscountCode {
   id                Int                 @id @default(autoincrement())
   code              String              @unique
@@ -118,6 +130,7 @@ model Payment {
   orderTypeId             Int?
   test                    Boolean              @default(false)
   DiscountCodedUses       DiscountCodedUses[]
+  Review                  Review[]
 
   @@index([userId]) // Index for performance on queries
   @@index([paymentId])

@@ -31,7 +31,7 @@ class Review {
             playlist: true,
           },
         },
-        Review: true
+        Review: true,
       },
     });
 
@@ -43,7 +43,10 @@ class Review {
     }
 
     // Check if already reviewed
-    if (payment.Review.length > 0) {
+    if (
+      payment.Review.length > 0 &&
+      process.env['ENVIRONMENT'] != 'development'
+    ) {
       return {
         success: false,
         error: 'alreadyReviewed',
@@ -53,16 +56,14 @@ class Review {
     return {
       success: true,
       data: {
-        canReview: true
-      }
+        canReview: true,
+      },
     };
   }
 
   public async createReview(paymentId: string, rating: number, review: string) {
     this.logger.log(
-      color.blue.bold(
-        `Creating review for payment ${white.bold(paymentId)}`
-      )
+      color.blue.bold(`Creating review for payment ${white.bold(paymentId)}`)
     );
 
     const payment = await this.prisma.payment.findUnique({
@@ -76,6 +77,8 @@ class Review {
         },
       },
     });
+
+    console.log(111, paymentId, rating, review);
 
     if (!payment) {
       return {
@@ -93,30 +96,18 @@ class Review {
     }
 
     // Check if already reviewed
-    if (payment.Review.length > 0) {
+    if (
+      payment.Review.length > 0 &&
+      process.env['ENVIRONMENT'] != 'development'
+    ) {
       return {
         success: false,
         error: 'alreadyReviewed',
       };
     }
 
-    // Check if eligible for review
-    const reviewThreshold = new Date();
-    reviewThreshold.setDate(reviewThreshold.getDate() - 7);
-
-    const isEligibleForReview = payment.createdAt < reviewThreshold;
-    const hasPhysicalProducts = payment.PaymentHasPlaylist.some(php => php.type !== 'digital');
-    const isDelivered = payment.printApiStatus === 'Shipped';
-
-    if (!isEligibleForReview || (hasPhysicalProducts && !isDelivered)) {
-      return {
-        success: false,
-        error: 'notEligible',
-      };
-    }
-
     // Create the review
-    const newReview = await this.prisma.review.create({
+    await this.prisma.review.create({
       data: {
         paymentId: payment.id,
         rating,
@@ -126,7 +117,6 @@ class Review {
 
     return {
       success: true,
-      data: newReview
     };
   }
 }
