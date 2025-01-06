@@ -44,6 +44,7 @@
 	"mail.reviewMailSubject": "We'd love your feedback!",
 	"mail.reviewRequest": "Thank you for your recent QRSong! purchase. We hope you are enjoying your cards! We would love to hear your feedback. Please take a moment to leave a review on our website.",
 	"mail.leaveReview": "Leave a Review",
+	"mail.unsubscribe": "Unsubscribe",
 		
 	"invoice.description" : "Description",
 	"invoice.amount" : "Amount",
