@@ -846,6 +846,10 @@ class Server {
       return { success: result };
     });
 
+    this.fastify.get('/unsent_reviews', async (request: any, _reply) => {
+      return await this.review.processReviewEmails();
+    });
+
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.get('/mball', async (request: any, _reply) => {
         const result = await this.data.updateAllTrackYears();
@@ -874,10 +878,6 @@ class Server {
       this.fastify.get('/fix_years', async (request: any, _reply) => {
         await this.data.fixYears();
         return { success: true };
-      });
-
-      this.fastify.get('/unsent_reviews', async (request: any, _reply) => {
-        return await this.review.processReviewEmails();
       });
 
       this.fastify.get('/generate/:paymentId', async (request: any, _reply) => {
