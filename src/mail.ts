@@ -580,8 +580,19 @@ ${params.html}
 
   public async unsubscribe(hash: string): Promise<boolean> {
     try {
-      const user = await prisma.user.update({
-        where: { hash },
+      // First try to find the user
+      const user = await prisma.user.findUnique({
+        where: { hash }
+      });
+
+      if (!user) {
+        console.error('User not found with hash:', hash);
+        return false;
+      }
+
+      // Update the user if found
+      await prisma.user.update({
+        where: { id: user.id },
         data: { 
           marketingEmails: false,
           sync: true // Trigger sync to update Mail Octopus
