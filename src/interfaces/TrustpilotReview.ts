@@ -5,5 +5,9 @@ export interface TrustpilotReview {
   text: string;
   author: string;
   date: string;
-  link: string;
+  reply?: string;
+  authorImage?: string;
+  authorCountry: string;
+  authorReviewCount: number;
+  isVerified: boolean;
 }
