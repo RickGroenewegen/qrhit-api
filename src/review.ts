@@ -183,24 +183,39 @@ class Review {
 
     for (const payment of payments) {
       // Send review email to first user only
-      if (counter == 1) {
-        const fullPayment = await this.prisma.payment.findUnique({
-          where: { id: payment.id },
+      if (counter <= 6) {
+        // Check if this user has already has payments other than this one where reviewMailSent is true
+        const otherPayments = await this.prisma.payment.findMany({
+          where: {
+            email: payment.email,
+            reviewMailSent: true,
+            id: {
+              not: payment.id,
+            },
+          },
         });
 
-        if (fullPayment) {
-          const mail = Mail.getInstance();
-          await mail.sendReviewEmail(fullPayment);
-
-          // Update reviewMailSent flag
-          await this.prisma.payment.update({
+        if (otherPayments.length == 0) {
+          const fullPayment = await this.prisma.payment.findUnique({
             where: { id: payment.id },
-            data: { reviewMailSent: true },
           });
 
-          this.logger.log(
-            color.blue.bold(`Sent review email to ${white.bold(payment.email)}`)
-          );
+          if (fullPayment) {
+            const mail = Mail.getInstance();
+            await mail.sendReviewEmail(fullPayment);
+
+            // Update reviewMailSent flag
+            await this.prisma.payment.update({
+              where: { id: payment.id },
+              data: { reviewMailSent: true },
+            });
+
+            this.logger.log(
+              color.blue.bold(
+                `Sent review email to ${white.bold(payment.email)}`
+              )
+            );
+          }
         }
       }
       counter++;
