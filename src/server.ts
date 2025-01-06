@@ -132,6 +132,10 @@ class Server {
       return await this.trustpilot.getReviews(request.params.paymentId);
     });
 
+    this.fastify.get('/reviews_details', async (_request: any, _reply) => {
+      return await this.trustpilot.getCompanyDetails();
+    });
+
     this.fastify.get('/review/:paymentId', async (request: any, _reply) => {
       return await this.review.checkReview(request.params.paymentId);
     });
