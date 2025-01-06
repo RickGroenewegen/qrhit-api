@@ -30,6 +30,7 @@ import Discount from './discount';
 import GitChecker from './git';
 import { OpenPerplex } from './openperplex';
 import Push from './push';
+import Review from './review';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -66,6 +67,7 @@ class Server {
   private discount = new Discount();
   private openperplex = new OpenPerplex();
   private push = Push.getInstance();
+  private review = Review.getInstance();
 
   private version: string = '1.0.0';
 
