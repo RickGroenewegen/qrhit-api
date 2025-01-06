@@ -28,42 +28,23 @@ class Review {
       include: {
         PaymentHasPlaylist: {
           include: {
-            playlist: true
-          }
-        }
-      }
+            playlist: true,
+          },
+        },
+      },
     });
 
     if (!payment) {
       return {
         success: false,
-        error: 'Payment not found'
+        error: 'notFound',
       };
     }
 
-    // Check if payment is old enough for review (e.g., 7 days)
-    const reviewThreshold = new Date();
-    reviewThreshold.setDate(reviewThreshold.getDate() - 7);
-
-    const isEligibleForReview = payment.createdAt < reviewThreshold;
-    const hasPhysicalProducts = payment.PaymentHasPlaylist.some(php => php.type !== 'digital');
-    const isDelivered = payment.printApiStatus === 'Shipped';
+    console.log(111, payment);
 
     return {
       success: true,
-      data: {
-        eligible: isEligibleForReview && (!hasPhysicalProducts || (hasPhysicalProducts && isDelivered)),
-        payment: {
-          id: payment.paymentId,
-          createdAt: payment.createdAt,
-          status: payment.status,
-          printApiStatus: payment.printApiStatus,
-          playlists: payment.PaymentHasPlaylist.map(php => ({
-            name: php.playlist.name,
-            type: php.type
-          }))
-        }
-      }
     };
   }
 }
