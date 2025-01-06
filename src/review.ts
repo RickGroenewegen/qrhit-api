@@ -120,7 +120,7 @@ class Review {
     };
   }
 
-  public async getUnsentReviewEmails() {
+  public async processReviewEmails() {
     this.logger.log(color.blue.bold('Getting list of unsent review emails'));
 
     const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
@@ -133,8 +133,8 @@ class Review {
           none: {}, // No reviews exist
         },
         createdAt: {
-          lt: fortyEightHoursAgo // Only payments older than 48 hours
-        }
+          lt: fortyEightHoursAgo, // Only payments older than 48 hours
+        },
       },
       select: {
         id: true,
@@ -144,6 +144,8 @@ class Review {
         createdAt: true,
       },
     });
+
+    console.log(111, payments);
 
     return {
       success: true,
