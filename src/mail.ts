@@ -578,6 +578,22 @@ ${params.html}
     }
   }
 
+  public async unsubscribe(hash: string): Promise<boolean> {
+    try {
+      const user = await prisma.user.update({
+        where: { hash },
+        data: { 
+          marketingEmails: false,
+          sync: true // Trigger sync to update Mail Octopus
+        }
+      });
+      return true;
+    } catch (error) {
+      console.error('Error unsubscribing user:', error);
+      return false;
+    }
+  }
+
   public async uploadContacts(): Promise<void> {
     try {
       this.logger.log(
