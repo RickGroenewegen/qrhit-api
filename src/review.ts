@@ -153,25 +153,19 @@ class Review {
     );
 
     for (const payment of payments) {
-      this.logger.log(
-        color.blue.bold(
-          `Payment ${white.bold(payment.paymentId)} from ${white.bold(
-            payment.fullname
-          )} (${white.bold(payment.email)}) created at ${white.bold(
-            payment.createdAt.toISOString()
-          )}`
-        )
-      );
-
       // Send review email to first user only
       if (payments.indexOf(payment) === 0) {
-        const mail = Mail.getInstance();
-        await mail.sendReviewEmail(payment);
-        this.logger.log(
-          color.blue.bold(
-            `Sent review email to ${white.bold(payment.email)}`
-          )
-        );
+        const fullPayment = await this.prisma.payment.findUnique({
+          where: { id: payment.id },
+        });
+
+        if (fullPayment) {
+          const mail = Mail.getInstance();
+          await mail.sendReviewEmail(fullPayment);
+          this.logger.log(
+            color.blue.bold(`Sent review email to ${white.bold(payment.email)}`)
+          );
+        }
         break;
       }
     }
