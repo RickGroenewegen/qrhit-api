@@ -2,13 +2,19 @@ import PrismaInstance from './prisma';
 import Logger from './logger';
 import { color, white } from 'console-log-colors';
 import Mail from './mail';
+import { CronJob } from 'cron';
 
 class Review {
   private static instance: Review;
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
 
-  private constructor() {}
+  private constructor() {
+    // Schedule review emails to run every hour
+    new CronJob('0 * * * *', async () => {
+      await this.processReviewEmails();
+    }, null, true);
+  }
 
   public static getInstance(): Review {
     if (!Review.instance) {
