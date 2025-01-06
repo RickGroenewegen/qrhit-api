@@ -846,6 +846,15 @@ class Server {
       return { success: result };
     });
 
+    this.fastify.get('/unsubscribe/:hash', async (request: any, reply) => {
+      const result = await this.mail.unsubscribe(request.params.hash);
+      if (result) {
+        reply.send({ success: true, message: 'Successfully unsubscribed' });
+      } else {
+        reply.status(400).send({ success: false, message: 'Invalid unsubscribe link' });
+      }
+    });
+
     this.fastify.get('/unsent_reviews', async (request: any, _reply) => {
       return await this.review.processReviewEmails();
     });
