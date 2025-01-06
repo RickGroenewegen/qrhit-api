@@ -154,12 +154,9 @@ class Review {
       finalizedAt: {
         lt: timeAgo,
       },
+      reviewMailSent: false,
+      marketingEmails: true
     };
-
-    // Only check reviewMailSent in production
-    if (process.env['ENVIRONMENT'] !== 'development') {
-      whereClause.reviewMailSent = false;
-    }
 
     const payments = await this.prisma.payment.findMany({
       where: whereClause,
