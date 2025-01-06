@@ -40,6 +40,10 @@
 	"mail.downloadButton" : "Download your PDF",
 	"mail.physicalDownloadButton" : "Download printer PDF",
 	"mail.downloadButtonVoucher" : "Download your gift voucher",
+	
+	"mail.reviewMailSubject": "We'd love your feedback!",
+	"mail.reviewRequest": "Thank you for your purchase. We'd appreciate it if you could take a moment to share your experience with us by leaving a review.",
+	"mail.leaveReview": "Leave a Review",
 		
 	"invoice.description" : "Description",
 	"invoice.amount" : "Amount",
