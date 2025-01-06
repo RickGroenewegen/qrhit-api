@@ -872,6 +872,10 @@ class Server {
         return { success: true };
       });
 
+      this.fastify.get('/unsent_reviews', async (request: any, _reply) => {
+        return await this.review.getUnsentReviewEmails();
+      });
+
       this.fastify.get('/generate/:paymentId', async (request: any, _reply) => {
         await this.generator.generate(
           request.params.paymentId,
