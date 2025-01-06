@@ -11,9 +11,14 @@ class Review {
 
   private constructor() {
     // Schedule review emails to run every hour
-    new CronJob('0 * * * *', async () => {
-      await this.processReviewEmails();
-    }, null, true);
+    new CronJob(
+      '0 * * * *',
+      async () => {
+        await this.processReviewEmails();
+      },
+      null,
+      true
+    );
   }
 
   public static getInstance(): Review {
