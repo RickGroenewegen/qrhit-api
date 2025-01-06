@@ -371,5 +371,6 @@
   "invoice.giftcard": "Carte cadeau",
   "mail.reviewMailSubject": "On aimerait ton avis !",
   "mail.reviewRequest": "Merci pour ton récent achat de QRSong! On espère que tu profites de tes cartes ! On aimerait avoir ton avis. Laisse un avis sur notre site, s'il te plaît.",
-  "mail.leaveReview": "Laisse un avis"
+  "mail.leaveReview": "Laisse un avis",
+  "mail.unsubscribe": "Se désabonner"
 }

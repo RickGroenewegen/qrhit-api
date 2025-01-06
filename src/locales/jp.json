@@ -362,5 +362,6 @@
   "invoice.giftcard": "ギフトカード",
   "mail.reviewMailSubject": "フィードバックをお願いします！",
   "mail.reviewRequest": "最近のQRSong!購入ありがとうございます。カードを楽しんでいることを願っています！フィードバックをお聞かせください。ウェブサイトにレビューをお願いします。",
-  "mail.leaveReview": "レビューを残す"
+  "mail.leaveReview": "レビューを残す",
+  "mail.unsubscribe": "登録解除"
 }

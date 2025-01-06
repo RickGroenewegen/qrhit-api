@@ -457,15 +457,23 @@ ${params.html}
 
     const reviewLink = `${process.env['FRONTEND_URI']}/review/${payment.paymentId}`;
 
+    // Get the payment user
+    const user = await prisma.user.findUnique({
+      where: { id: payment.userId },
+    });
+
+    const unsubscribeLink = `${process.env['FRONTEND_URI']}/unsubscribe/${user?.hash}`;
+
     const mailParams = {
       payment,
+      unsubscribeLink,
       reviewLink,
       productName: process.env['PRODUCT_NAME'],
       translations: await this.translation.getTranslationsByPrefix(
         payment.locale,
         'mail'
       ),
-      currentYear: new Date().getFullYear()
+      currentYear: new Date().getFullYear(),
     };
 
     try {
@@ -519,9 +527,8 @@ ${params.html}
       // Update reviewMailSent flag
       await prisma.payment.update({
         where: { id: payment.id },
-        data: { reviewMailSent: true }
+        data: { reviewMailSent: true },
       });
-
     } catch (error) {
       console.error('Error while sending review email:', error);
     }
@@ -582,25 +589,23 @@ ${params.html}
     try {
       // First try to find the user
       const user = await prisma.user.findUnique({
-        where: { hash }
+        where: { hash },
       });
 
       if (!user) {
-        console.error('User not found with hash:', hash);
         return false;
       }
 
       // Update the user if found
       await prisma.user.update({
         where: { id: user.id },
-        data: { 
+        data: {
           marketingEmails: false,
-          sync: true // Trigger sync to update Mail Octopus
-        }
+          sync: true, // Trigger sync to update Mail Octopus
+        },
       });
       return true;
     } catch (error) {
-      console.error('Error unsubscribing user:', error);
       return false;
     }
   }

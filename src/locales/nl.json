@@ -371,5 +371,6 @@
   "invoice.giftcard": "Cadeaubon",
   "mail.reviewMailSubject": "We horen graag je feedback!",
   "mail.reviewRequest": "Bedankt voor je recente QRSong! aankoop. We hopen dat je geniet van je kaarten! We horen graag je feedback. Laat alsjeblieft een recensie achter op onze website.",
-  "mail.leaveReview": "Laat een recensie achter"
+  "mail.leaveReview": "Laat een recensie achter",
+  "mail.unsubscribe": "Afmelden"
 }

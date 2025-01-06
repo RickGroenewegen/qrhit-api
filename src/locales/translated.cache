@@ -4402,5 +4402,17 @@
     "hin",
     "jp",
     "cn"
+  ],
+  "mail.unsubscribe": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp",
+    "cn"
   ]
 }
