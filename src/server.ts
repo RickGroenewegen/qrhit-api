@@ -130,6 +130,11 @@ class Server {
       return await this.review.checkReview(request.params.paymentId);
     });
 
+    this.fastify.post('/review/:paymentId', async (request: any, _reply) => {
+      const { rating, review } = request.body;
+      return await this.review.createReview(request.params.paymentId, rating, review);
+    });
+
     this.fastify.get(
       '/lastplays',
       { preHandler: verifyTokenMiddleware },
