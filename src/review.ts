@@ -42,30 +42,10 @@ class Review {
       };
     }
 
-    // Check if payment is old enough for review (e.g., 7 days)
-    const reviewThreshold = new Date();
-    reviewThreshold.setDate(reviewThreshold.getDate() - 7);
-
-    const isEligibleForReview = payment.createdAt < reviewThreshold;
-    const hasPhysicalProducts = payment.PaymentHasPlaylist.some(php => php.type !== 'digital');
-    const isDelivered = payment.printApiStatus === 'Shipped';
-    const hasReview = payment.Review.length > 0;
 
     return {
       success: true,
-      data: {
-        eligible: isEligibleForReview && (!hasPhysicalProducts || (hasPhysicalProducts && isDelivered)) && !hasReview,
-        payment: {
-          id: payment.paymentId,
-          createdAt: payment.createdAt,
-          status: payment.status,
-          printApiStatus: payment.printApiStatus,
-          playlists: payment.PaymentHasPlaylist.map(php => ({
-            name: php.playlist.name,
-            type: php.type
-          }))
-        }
-      }
+      
     };
   }
 
