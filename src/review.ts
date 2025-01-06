@@ -123,6 +123,8 @@ class Review {
   public async getUnsentReviewEmails() {
     this.logger.log(color.blue.bold('Getting list of unsent review emails'));
 
+    const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+
     const payments = await this.prisma.payment.findMany({
       where: {
         reviewMailSent: false,
@@ -130,6 +132,9 @@ class Review {
         Review: {
           none: {}, // No reviews exist
         },
+        createdAt: {
+          lt: fortyEightHoursAgo // Only payments older than 48 hours
+        }
       },
       select: {
         id: true,
