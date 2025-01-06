@@ -132,7 +132,11 @@ class Server {
 
     this.fastify.post('/review/:paymentId', async (request: any, _reply) => {
       const { rating, review } = request.body;
-      return await this.review.createReview(request.params.paymentId, rating, review);
+      return await this.review.createReview(
+        request.params.paymentId,
+        rating,
+        review
+      );
     });
 
     this.fastify.get(
@@ -873,7 +877,7 @@ class Server {
       });
 
       this.fastify.get('/unsent_reviews', async (request: any, _reply) => {
-        return await this.review.getUnsentReviewEmails();
+        return await this.review.processReviewEmails();
       });
 
       this.fastify.get('/generate/:paymentId', async (request: any, _reply) => {

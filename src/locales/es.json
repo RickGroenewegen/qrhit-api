@@ -367,5 +367,8 @@
   "voucher.code": "Tu código",
   "voucher.dearMusicLover": "Querido amante de la música",
   "voucher.withMusicalGreetings": "Con saludos musicales",
-  "invoice.giftcard": "Tarjeta regalo"
+  "invoice.giftcard": "Tarjeta regalo",
+  "mail.reviewMailSubject": "¡Nos encantaría tu opinión!",
+  "mail.reviewRequest": "Gracias por tu reciente compra de QRSong! Esperamos que disfrutes de tus cartas. Nos encantaría tu opinión. Por favor, deja una reseña en nuestro sitio web.",
+  "mail.leaveReview": "Deja una reseña"
 }

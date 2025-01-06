@@ -130,6 +130,7 @@ model Payment {
   orderTypeId             Int?
   test                    Boolean              @default(false)
   reviewMailSent          Boolean              @default(false)
+  finalizedAt             DateTime?
   DiscountCodedUses       DiscountCodedUses[]
   Review                  Review[]
 

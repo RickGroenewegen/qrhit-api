@@ -11,14 +11,16 @@ class Review {
 
   private constructor() {
     // Schedule review emails to run every hour
-    new CronJob(
-      '0 * * * *',
-      async () => {
-        await this.processReviewEmails();
-      },
-      null,
-      true
-    );
+    if (process.env['ENVIRONMENT'] != 'development') {
+      new CronJob(
+        '0 * * * *',
+        async () => {
+          await this.processReviewEmails();
+        },
+        null,
+        true
+      );
+    }
   }
 
   public static getInstance(): Review {
@@ -135,7 +137,8 @@ class Review {
   public async processReviewEmails() {
     this.logger.log(color.blue.bold('Getting list of unsent review emails'));
 
-    const fortyEightHoursAgo = new Date(Date.now() - 48 * 60 * 60 * 1000);
+    const timeAgoHours = 72;
+    const timeAgo = new Date(Date.now() - timeAgoHours * 60 * 60 * 1000);
 
     let checker = false;
     if (process.env['ENVIRONMENT'] == 'development') {
@@ -148,8 +151,8 @@ class Review {
         none: {}, // No reviews exist
       },
       finalizedAt: {
-        lt: fortyEightHoursAgo,
-      }
+        lt: timeAgo,
+      },
     };
 
     // Only check reviewMailSent in production
@@ -168,36 +171,39 @@ class Review {
       },
     });
 
-    console.log(111, payments);
+    if (payments.length > 0) {
+      this.logger.log(
+        color.blue.bold(
+          `Found ${white.bold(payments.length)} unsent review emails`
+        )
+      );
+    }
 
-    this.logger.log(
-      color.blue.bold(
-        `Found ${white.bold(payments.length)} unsent review emails`
-      )
-    );
+    let counter = 1;
 
     for (const payment of payments) {
       // Send review email to first user only
-
-      const fullPayment = await this.prisma.payment.findUnique({
-        where: { id: payment.id },
-      });
-
-      if (fullPayment) {
-        const mail = Mail.getInstance();
-        await mail.sendReviewEmail(fullPayment);
-
-        // Update reviewMailSent flag
-        await this.prisma.payment.update({
+      if (counter == 1) {
+        const fullPayment = await this.prisma.payment.findUnique({
           where: { id: payment.id },
-          data: { reviewMailSent: true },
         });
 
-        this.logger.log(
-          color.blue.bold(`Sent review email to ${white.bold(payment.email)}`)
-        );
+        if (fullPayment) {
+          const mail = Mail.getInstance();
+          await mail.sendReviewEmail(fullPayment);
+
+          // Update reviewMailSent flag
+          await this.prisma.payment.update({
+            where: { id: payment.id },
+            data: { reviewMailSent: true },
+          });
+
+          this.logger.log(
+            color.blue.bold(`Sent review email to ${white.bold(payment.email)}`)
+          );
+        }
       }
-      break;
+      counter++;
     }
 
     return {

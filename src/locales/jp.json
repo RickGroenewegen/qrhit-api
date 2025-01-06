@@ -359,5 +359,8 @@
   "voucher.code": "あなたのコード",
   "voucher.dearMusicLover": "親愛なる音楽愛好家",
   "voucher.withMusicalGreetings": "音楽の挨拶を込めて",
-  "invoice.giftcard": "ギフトカード"
+  "invoice.giftcard": "ギフトカード",
+  "mail.reviewMailSubject": "フィードバックをお願いします！",
+  "mail.reviewRequest": "最近のQRSong!購入ありがとうございます。カードを楽しんでいることを願っています！フィードバックをお聞かせください。ウェブサイトにレビューをお願いします。",
+  "mail.leaveReview": "レビューを残す"
 }

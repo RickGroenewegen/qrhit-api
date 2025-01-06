@@ -389,6 +389,7 @@ class Generator {
           },
           data: {
             finalized: true,
+            finalizedAt: new Date(),
           },
         });
 

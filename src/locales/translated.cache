@@ -4366,5 +4366,41 @@
     "hin",
     "jp",
     "cn"
+  ],
+  "mail.reviewMailSubject": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp",
+    "cn"
+  ],
+  "mail.reviewRequest": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp",
+    "cn"
+  ],
+  "mail.leaveReview": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp",
+    "cn"
   ]
 }
