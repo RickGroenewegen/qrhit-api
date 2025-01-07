@@ -118,26 +118,9 @@ class Trustpilot {
       const data = response.data.data;
 
       const company: TrustpilotCompany = {
-        name: data.company.name,
-        domain: data.company.domain,
-        website: data.company.website,
-        logo: data.company.logo,
         trust_score: data.company.trust_score,
         review_count: data.company.review_count,
         rating: data.company.rating,
-        categories: data.company.categories,
-        phone: data.company.phone,
-        email: data.company.email,
-        address: data.company.address,
-        city: data.company.city,
-        country: data.company.country,
-        about_company: data.company.about_company,
-        average_days_to_reply: data.company.average_days_to_reply,
-        negative_review_count: data.company.negative_review_count,
-        negative_review_count_with_reply:
-          data.company.negative_review_count_with_reply,
-        reply_to_negative_review_percent:
-          data.company.reply_to_negative_review_percent,
       };
 
       const result = {

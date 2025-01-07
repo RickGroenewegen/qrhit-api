@@ -3,24 +3,31 @@ import Logger from './logger';
 import { color, white } from 'console-log-colors';
 import Mail from './mail';
 import { CronJob } from 'cron';
+import Utils from './utils';
+import cluster from 'cluster';
 
 class Review {
   private static instance: Review;
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private mail = Mail.getInstance();
+  private utils = new Utils();
 
   private constructor() {
     // Schedule review emails to run every hour
-    if (process.env['ENVIRONMENT'] != 'development') {
-      new CronJob(
-        '0 * * * *',
-        async () => {
-          await this.processReviewEmails();
-        },
-        null,
-        true
-      );
+    if (cluster.isPrimary) {
+      this.utils.isMainServer().then(async (isMainServer) => {
+        if (isMainServer || process.env['ENVIRONMENT'] != 'development') {
+          new CronJob(
+            '0 * * * *',
+            async () => {
+              await this.processReviewEmails();
+            },
+            null,
+            true
+          );
+        }
+      });
     }
   }
 
