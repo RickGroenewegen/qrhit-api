@@ -100,8 +100,6 @@ class Review {
       },
     });
 
-    console.log(111, paymentId, rating, review);
-
     if (!payment) {
       return {
         success: false,

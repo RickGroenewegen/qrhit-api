@@ -7,6 +7,7 @@ import AnalyticsClient from './analytics';
 import Logger from './logger';
 import PrismaInstance from './prisma';
 import axios from 'axios';
+import cluster from 'cluster';
 
 class Trustpilot {
   private cache = Cache.getInstance();
@@ -19,6 +20,13 @@ class Trustpilot {
   private constructor() {
     if (!process.env.RAPID_API_KEY) {
       throw new Error('RAPID_API_KEY environment variable is not defined');
+    }
+    if (cluster.isPrimary) {
+      this.utils.isMainServer().then(async (isMainServer) => {
+        if (isMainServer || process.env['ENVIRONMENT'] == 'development') {
+          await this.getReviews();
+        }
+      });
     }
   }
 
