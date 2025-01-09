@@ -489,10 +489,18 @@ class Data {
     for (const cartItem of cartItems) {
       let playlistDatabaseId: number = 0;
 
+      let usePlaylistId = cartItem.playlistId;
+      if (cartItem.isSlug) {
+        const dbPlaylist = await this.prisma.playlist.findFirst({
+          where: { slug: cartItem.playlistId },
+        });
+        usePlaylistId = dbPlaylist!.playlistId;
+      }
+
       // Check if the playlist exists. If not, create it
       const playlist = await this.prisma.playlist.findUnique({
         where: {
-          playlistId: cartItem.playlistId,
+          playlistId: usePlaylistId,
         },
       });
 
@@ -526,7 +534,7 @@ class Data {
 
         const playlistCreate = await this.prisma.playlist.create({
           data: {
-            playlistId: cartItem.playlistId,
+            playlistId: usePlaylistId,
             name: cartItem.playlistName,
             slug,
             image: cartItem.image,

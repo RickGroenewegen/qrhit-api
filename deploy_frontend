@@ -8,6 +8,7 @@ sudo chmod +x deploy_frontend
 cd /home/ec2-user/sites/qrsong-frontend
 git reset --hard HEAD
 git pull origin HEAD
+# git checkout 5ef384f615b09a1ea3c5f2b37b12a7eaec2f51d8
 sudo npm install --force
 sudo npm run build
 

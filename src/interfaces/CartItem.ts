@@ -12,4 +12,5 @@ export interface CartItem {
   personalMessage?: string;
   doubleSided?: boolean;
   eco?: boolean;
+  isSlug?: boolean;
 }

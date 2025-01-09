@@ -306,7 +306,9 @@ class Order {
     for (const item of cartItems) {
       if (item.productType == 'cards') {
         numberOfTracks = await this.spotify.getPlaylistTrackCount(
-          item.playlistId
+          item.playlistId,
+          true,
+          item.isSlug
         );
 
         if (numberOfTracks < minimumAmount) {

@@ -693,6 +693,12 @@ class Mollie {
             item.type === 'digital'
           );
 
+          if (item.isSlug) {
+            const dbPlaylist = await this.prisma.playlist.findFirst({
+              where: { slug: item.playlistId },
+            });
+          }
+
           const printApiItemPrice = orderType.amount * item.amount;
 
           totalPrintApiPrice += printApiItemPrice;

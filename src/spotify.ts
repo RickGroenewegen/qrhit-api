@@ -267,7 +267,8 @@ class Spotify {
 
   public async getPlaylistTrackCount(
     playlistId: string,
-    cache: boolean = true
+    cache: boolean = true,
+    isSlug: boolean = false
   ): Promise<number> {
     let cacheKeyCount = `trackcount_${playlistId}`;
 
@@ -277,7 +278,7 @@ class Spotify {
       return parseInt(cacheResult);
     }
 
-    const tracks = await this.getTracks(playlistId, cache, '', false);
+    const tracks = await this.getTracks(playlistId, cache, '', false, isSlug);
 
     if (!tracks.success) {
       throw new Error('Error getting playlist track count');
