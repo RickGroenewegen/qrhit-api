@@ -16,6 +16,12 @@ import crypto from 'crypto';
 import Spotify from './spotify';
 import PDF from './pdf';
 
+interface PriceResult {
+  totalPrice: number;
+  pricePerCard: number;
+  discountPercentage: number;
+}
+
 class Order {
   private static instance: Order;
   private prisma = PrismaInstance.getInstance();
@@ -37,6 +43,40 @@ class Order {
         }
       });
     }
+  }
+
+  public async calculateCardPrice(quantity: number): Promise<PriceResult> {
+    // Constants
+    const BASE_PRICE_PER_CARD = 13 / 500; // €0.026 per card
+    const MIN_QUANTITY_FOR_DISCOUNT = 500;
+    const MAX_DISCOUNT_QUANTITY = 2500;
+    const MAX_DISCOUNT_PERCENTAGE = 0.3; // 30%
+
+    // Calculate discount percentage
+    let discountPercentage = 0;
+
+    if (quantity > MIN_QUANTITY_FOR_DISCOUNT) {
+      if (quantity >= MAX_DISCOUNT_QUANTITY) {
+        discountPercentage = MAX_DISCOUNT_PERCENTAGE;
+      } else {
+        // Linear interpolation formula:
+        // discount = (quantity - minQuantity) * (maxDiscount / (maxQuantity - minQuantity))
+        discountPercentage =
+          (quantity - MIN_QUANTITY_FOR_DISCOUNT) *
+          (MAX_DISCOUNT_PERCENTAGE /
+            (MAX_DISCOUNT_QUANTITY - MIN_QUANTITY_FOR_DISCOUNT));
+      }
+    }
+
+    // Calculate final price
+    const pricePerCard = BASE_PRICE_PER_CARD * (1 - discountPercentage);
+    const totalPrice = quantity * pricePerCard;
+
+    return {
+      totalPrice: Number(totalPrice.toFixed(2)),
+      pricePerCard: Number(pricePerCard.toFixed(4)),
+      discountPercentage: Number((discountPercentage * 100).toFixed(2)),
+    };
   }
 
   public async processPrintApiWebhook(printApiOrderId: string) {

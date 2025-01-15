@@ -901,6 +901,7 @@ class Data {
         isrc: true,
         artist: true,
         spotifyLink: true,
+        manuallyCorrected: true,
       },
     });
 
@@ -929,7 +930,9 @@ class Data {
           existingTrack.artist !== track.artist ||
           existingTrack.spotifyLink !== track.link
         ) {
-          tracksToUpdate.push(track);
+          if (!existingTrack.manuallyCorrected) {
+            tracksToUpdate.push(track);
+          }
         }
       } else {
         newTracks.push(track);
@@ -964,15 +967,17 @@ class Data {
 
     // Update existing tracks
     for (const track of tracksToUpdate) {
-      await this.prisma.track.update({
-        where: { trackId: track.id },
-        data: {
-          name: this.utils.cleanTrackName(track.name),
-          isrc: track.isrc,
-          artist: track.artist,
-          spotifyLink: track.link,
-        },
-      });
+      if (!track.manuallyCorrected) {
+        await this.prisma.track.update({
+          where: { trackId: track.id },
+          data: {
+            name: this.utils.cleanTrackName(track.name),
+            isrc: track.isrc,
+            artist: track.artist,
+            spotifyLink: track.link,
+          },
+        });
+      }
     }
 
     this.logger.log(
