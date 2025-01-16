@@ -319,9 +319,11 @@ class Order {
       orderType = await this.prisma.orderType.findFirst({
         where: {
           type,
-          maxCards: {
-            gte: numberOfTracks,
-          },
+          ...(digital ? {} : {
+            maxCards: {
+              gte: numberOfTracks,
+            }
+          }),
           digital: digital,
         },
         orderBy: [
