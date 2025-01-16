@@ -45,9 +45,12 @@ class Order {
     }
   }
 
-  public async calculateCardPrice(quantity: number): Promise<PriceResult> {
+  public async calculateCardPrice(
+    basePrice: number,
+    quantity: number
+  ): Promise<PriceResult> {
     // Constants
-    const BASE_PRICE_PER_CARD = 13 / 500; // €0.026 per card
+    const BASE_PRICE_PER_CARD = basePrice / 500; // €0.026 per card
     const MIN_QUANTITY_FOR_DISCOUNT = 500;
     const MAX_DISCOUNT_QUANTITY = 2500;
     const MAX_DISCOUNT_PERCENTAGE = 0.3; // 30%
@@ -327,6 +330,9 @@ class Order {
           },
         ],
       });
+
+      console.log(111, orderType);
+
       this.cache.set(cacheKey, JSON.stringify(orderType));
     }
     return orderType;
