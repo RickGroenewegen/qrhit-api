@@ -456,7 +456,8 @@ ${params.html}
     const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
 
     const reviewLink = `${process.env['FRONTEND_URI']}/review/${payment.paymentId}`;
-
+    const reviewLinkTrustPilot =
+      'https://www.trustpilot.com/evaluate/qrsong.io';
     // Get the payment user
     const user = await prisma.user.findUnique({
       where: { id: payment.userId },
@@ -468,6 +469,7 @@ ${params.html}
       payment,
       unsubscribeLink,
       reviewLink,
+      reviewLinkTrustPilot,
       productName: process.env['PRODUCT_NAME'],
       translations: await this.translation.getTranslationsByPrefix(
         payment.locale,
