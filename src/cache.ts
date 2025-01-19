@@ -128,7 +128,14 @@ class Cache {
 
   async acquireLock(key: string, ttlSeconds: number = 300): Promise<boolean> {
     const lockKey = `lock:${key}`;
-    const result = await this.executeCommand('set', lockKey, '1', 'NX', 'EX', ttlSeconds);
+    const result = await this.executeCommand(
+      'set',
+      lockKey,
+      '1',
+      'NX',
+      'EX',
+      ttlSeconds
+    );
     return result === 'OK';
   }
 

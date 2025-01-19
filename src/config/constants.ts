@@ -1,1 +1,1 @@
-export const MAX_CARDS = 500;
+export const MAX_CARDS = 3000;

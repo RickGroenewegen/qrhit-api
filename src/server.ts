@@ -740,10 +740,11 @@ class Server {
     });
 
     this.fastify.get(
-      '/ordertype/:numberOfTracks',
+      '/ordertype/:numberOfTracks/:digital',
       async (request: any, _reply) => {
         const orderType = await this.order.getOrderType(
-          parseInt(request.params.numberOfTracks)
+          parseInt(request.params.numberOfTracks),
+          this.utils.parseBoolean(request.params.digital)
         );
         if (orderType) {
           return {
@@ -753,6 +754,8 @@ class Server {
               amount: orderType.amountWithMargin,
               description: orderType.description,
               maxCards: orderType.maxCards,
+              discountPercentage: orderType.discountPercentage,
+              pricePerCard: orderType.pricePerCard,
               available:
                 orderType.digital ||
                 (await this.utils.isTrustedIp(request.clientIp)), // SHould be true once we have the physical cards

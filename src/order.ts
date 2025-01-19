@@ -53,7 +53,7 @@ class Order {
     const BASE_PRICE_PER_CARD = basePrice / 500; // €0.026 per card
     const MIN_QUANTITY_FOR_DISCOUNT = 500;
     const MAX_DISCOUNT_QUANTITY = 2500;
-    const MAX_DISCOUNT_PERCENTAGE = 0.3; // 30%
+    const MAX_DISCOUNT_PERCENTAGE = 0.5; // 30%
 
     // Calculate discount percentage
     let discountPercentage = 0;
@@ -75,8 +75,14 @@ class Order {
     const pricePerCard = BASE_PRICE_PER_CARD * (1 - discountPercentage);
     const totalPrice = quantity * pricePerCard;
 
+    let roundedTotalPrice = Math.round(totalPrice);
+
+    if (roundedTotalPrice < basePrice) {
+      roundedTotalPrice = basePrice;
+    }
+
     return {
-      totalPrice: Number(totalPrice.toFixed(2)),
+      totalPrice: roundedTotalPrice,
       pricePerCard: Number(pricePerCard.toFixed(4)),
       discountPercentage: Number((discountPercentage * 100).toFixed(2)),
     };
@@ -297,6 +303,7 @@ class Order {
       });
       this.cache.set(cacheKey, JSON.stringify(orderTypes));
     }
+
     return orderTypes;
   }
 
@@ -311,6 +318,11 @@ class Order {
       numberOfTracks = MAX_CARDS;
     }
     let cacheKey = `orderType_${numberOfTracks}_${digitalInt}_${type}`;
+    if (digital) {
+      // There is just one digital product
+      cacheKey = `orderType_${digitalInt}_${type}`;
+    }
+
     const cachedOrderType = await this.cache.get(cacheKey);
 
     if (cachedOrderType) {
@@ -319,11 +331,13 @@ class Order {
       orderType = await this.prisma.orderType.findFirst({
         where: {
           type,
-          ...(digital ? {} : {
-            maxCards: {
-              gte: numberOfTracks,
-            }
-          }),
+          ...(digital
+            ? {}
+            : {
+                maxCards: {
+                  gte: numberOfTracks,
+                },
+              }),
           digital: digital,
         },
         orderBy: [
@@ -333,10 +347,29 @@ class Order {
         ],
       });
 
-      console.log(111, orderType);
-
       this.cache.set(cacheKey, JSON.stringify(orderType));
     }
+
+    orderType.discountPercentage = 0;
+    orderType.pricePerCard = 0;
+
+    // If it's digital we calculate the true price
+    if (orderType && digital) {
+      const price = await this.calculateCardPrice(
+        orderType.amountWithMargin,
+        numberOfTracks
+      );
+
+      orderType = {
+        ...orderType,
+        discountPercentage: price.discountPercentage,
+        pricePerCard: price.pricePerCard,
+      };
+      orderType.amountWithMargin = price.totalPrice;
+      orderType.discountPercentage = price.discountPercentage;
+      orderType.pricePerCard = price.pricePerCard;
+    }
+
     return orderType;
   }
 
@@ -349,7 +382,7 @@ class Order {
     let totalProductPriceWithoutVAT = 0;
     let numberOfTracks = 0;
     const minimumAmount = 25;
-    const maximumAmount = 500;
+    const maximumAmount = MAX_CARDS;
 
     for (const item of cartItems) {
       if (item.productType == 'cards') {

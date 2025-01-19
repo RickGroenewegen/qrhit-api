@@ -68,7 +68,7 @@ class PDF {
   ): Promise<string> {
     const numberOfTracks = playlist.numberOfTracks;
     let itemsPerPage =
-      template === 'digital' || template === 'digital_double' ? 12 : 6;
+      template === 'digital' || template === 'digital_double' ? 6 : 6;
     const pagesPerTrack = template === 'printer' ? 2 : 1;
     const totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
     const maxPagesPerPDF = 100;
@@ -83,7 +83,6 @@ class PDF {
         printApiSizes.find((size) => size >= numberOfSheets) || 84;
       emptyPages = sheetSize * 2 - totalPages;
     }
-
 
     this.logger.log(
       color.blue.bold('Generating PDF: ') + color.white.bold(template)
@@ -111,6 +110,7 @@ class PDF {
         let options = {
           File: url,
           RespectViewport: 'false',
+          ConversionDelay: 10,
           PageSize: 'a4',
           MarginTop: 0,
           MarginRight: 0,
