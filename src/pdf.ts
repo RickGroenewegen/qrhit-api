@@ -111,20 +111,19 @@ class PDF {
           File: url,
           RespectViewport: 'false',
           ConversionDelay: 10,
-          MarginTop: 0,
+          PageSize: 'a4',
+          MarginTop: 10,
           MarginRight: 0,
           MarginBottom: 0,
-          MarginLeft: 0,
+          MarginLeft: 10,
           CompressPDF: 'true',
         } as any;
 
         if (template === 'printer') {
-          // options['PageSize'] = 'a5';
-          // options['PageOrientation'] = 'Landscape';
           options['PageWidth'] = 60;
           options['PageHeight'] = 60;
-        } else {
-          options['PageSize'] = 'a4';
+          options['MarginTop'] = 0;
+          options['MarginLeft'] = 0;
         }
 
         const result = await this.convertapi.convert('pdf', options, 'htm');
@@ -161,7 +160,7 @@ class PDF {
       }
       if (template === 'printer') {
         // Resize them to exactly 60x60 mm because convertAPI is slightly off
-        await this.resizePDFPages(finalPath, 210, 148);
+        await this.resizePDFPages(finalPath, 60, 60);
         // Add a 3 mm bleed for PrintAPI
         await this.addBleed(finalPath, 3);
       }
