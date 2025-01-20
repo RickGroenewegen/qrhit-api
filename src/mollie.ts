@@ -239,7 +239,7 @@ class Mollie {
       const expiredPayments = await this.prisma.payment.findMany({
         where: {
           status: {
-            in: ['expired', 'canceled']
+            in: ['expired', 'canceled'],
           },
         },
         select: {
