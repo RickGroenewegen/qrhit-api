@@ -75,7 +75,7 @@ class Order {
     const pricePerCard = BASE_PRICE_PER_CARD * (1 - discountPercentage);
     const totalPrice = quantity * pricePerCard;
 
-    let roundedTotalPrice = Math.round(totalPrice);
+    let roundedTotalPrice = Math.ceil(totalPrice);
 
     if (roundedTotalPrice < basePrice) {
       roundedTotalPrice = basePrice;
