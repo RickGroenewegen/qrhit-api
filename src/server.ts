@@ -260,6 +260,29 @@ class Server {
       }
     );
 
+    this.fastify.post(
+      '/tracks/search',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, _reply) => {
+        const { searchTerm = '' } = request.body;
+        const tracks = await this.data.searchTracks(searchTerm);
+        return { success: true, data: tracks };
+      }
+    );
+
+    this.fastify.post(
+      '/tracks/update',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, _reply) => {
+        const { id, artist, name, year } = request.body;
+        if (!id || !artist || !name || !year) {
+          return { success: false, error: 'Missing required fields' };
+        }
+        const success = await this.data.updateTrack(id, artist, name, year);
+        return { success };
+      }
+    );
+
     this.fastify.get(
       '/yearcheck',
       { preHandler: verifyTokenMiddleware },
@@ -872,21 +895,6 @@ class Server {
 
     this.fastify.get('/unsent_reviews', async (request: any, _reply) => {
       return await this.review.processReviewEmails();
-    });
-
-    this.fastify.post('/tracks/search', async (request: any, _reply) => {
-      const { searchTerm = '' } = request.body;
-      const tracks = await this.data.searchTracks(searchTerm);
-      return { success: true, data: tracks };
-    });
-
-    this.fastify.post('/tracks/update', async (request: any, _reply) => {
-      const { id, artist, name, year } = request.body;
-      if (!id || !artist || !name || !year) {
-        return { success: false, error: 'Missing required fields' };
-      }
-      const success = await this.data.updateTrack(id, artist, name, year);
-      return { success };
     });
 
     if (process.env['ENVIRONMENT'] == 'development') {
