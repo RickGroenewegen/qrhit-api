@@ -1367,7 +1367,7 @@ class Data {
     }
   }
   public async searchTracks(searchTerm: string): Promise<any[]> {
-    const tracks = await this.prisma.$queryRaw`
+    const tracks = await this.prisma.$queryRaw<any[]>`
       SELECT id, artist, name, year 
       FROM tracks 
       WHERE LOWER(artist) LIKE LOWER(${`%${searchTerm}%`})
