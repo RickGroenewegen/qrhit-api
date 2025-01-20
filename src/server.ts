@@ -875,10 +875,7 @@ class Server {
     });
 
     this.fastify.post('/tracks/search', async (request: any, _reply) => {
-      const { searchTerm } = request.body;
-      if (!searchTerm || searchTerm.length < 2) {
-        return { success: false, error: 'Search term too short' };
-      }
+      const { searchTerm = '' } = request.body;
       const tracks = await this.data.searchTracks(searchTerm);
       return { success: true, data: tracks };
     });

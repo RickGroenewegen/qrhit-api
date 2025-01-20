@@ -1372,7 +1372,7 @@ class Data {
       FROM tracks 
       WHERE LOWER(artist) LIKE LOWER(${`%${searchTerm}%`})
       OR LOWER(name) LIKE LOWER(${`%${searchTerm}%`})
-      LIMIT 100
+      LIMIT 25
     `;
     return tracks;
   }
