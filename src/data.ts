@@ -1,6 +1,6 @@
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
-import { Prisma } from '@prisma/client';
+import { Prisma, PrismaClient } from '@prisma/client';
 import slugify from 'slugify';
 import PrismaInstance from './prisma';
 import MusicBrainz from './musicbrainz';
