@@ -1373,13 +1373,13 @@ class Data {
           {
             artist: {
               contains: searchTerm,
-              mode: 'insensitive'
+              mode: Prisma.QueryMode.insensitive
             }
           },
           {
             name: {
               contains: searchTerm,
-              mode: 'insensitive'
+              mode: Prisma.QueryMode.insensitive
             }
           }
         ]
