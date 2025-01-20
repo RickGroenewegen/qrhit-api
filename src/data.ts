@@ -1367,31 +1367,13 @@ class Data {
     }
   }
   public async searchTracks(searchTerm: string): Promise<any[]> {
-    const tracks = await this.prisma.track.findMany({
-      where: {
-        OR: [
-          {
-            artist: {
-              contains: searchTerm,
-              mode: 'insensitive'
-            }
-          },
-          {
-            name: {
-              contains: searchTerm,
-              mode: 'insensitive'
-            }
-          }
-        ]
-      },
-      select: {
-        id: true,
-        artist: true,
-        name: true,
-        year: true
-      },
-      take: 100
-    });
+    const tracks = await this.prisma.$queryRaw`
+      SELECT id, artist, name, year 
+      FROM tracks 
+      WHERE LOWER(artist) LIKE LOWER(${`%${searchTerm}%`})
+      OR LOWER(name) LIKE LOWER(${`%${searchTerm}%`})
+      LIMIT 100
+    `;
     return tracks;
   }
 
