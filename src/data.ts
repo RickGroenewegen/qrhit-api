@@ -1366,6 +1366,52 @@ class Data {
       this.logger.log(`Error reading Excel file: ${error}`);
     }
   }
+  public async searchTracks(searchTerm: string): Promise<any[]> {
+    const tracks = await this.prisma.track.findMany({
+      where: {
+        OR: [
+          {
+            artist: {
+              contains: searchTerm,
+              mode: 'insensitive'
+            }
+          },
+          {
+            name: {
+              contains: searchTerm,
+              mode: 'insensitive'
+            }
+          }
+        ]
+      },
+      select: {
+        id: true,
+        artist: true,
+        name: true,
+        year: true
+      },
+      take: 100
+    });
+    return tracks;
+  }
+
+  public async updateTrack(id: number, artist: string, name: string, year: number): Promise<boolean> {
+    try {
+      await this.prisma.track.update({
+        where: { id },
+        data: {
+          artist,
+          name,
+          year,
+          manuallyCorrected: true
+        }
+      });
+      return true;
+    } catch (error) {
+      return false;
+    }
+  }
+
   public static getInstance(): Data {
     if (!Data.instance) {
       Data.instance = new Data();
