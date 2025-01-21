@@ -2,6 +2,7 @@ import PrismaInstance from './prisma';
 import Logger from './logger';
 import axios, { AxiosInstance } from 'axios';
 import { color } from 'console-log-colors';
+import wiki from 'wikipedia';
 
 export class Music {
   private prisma = PrismaInstance.getInstance();
@@ -34,6 +35,17 @@ export class Music {
       return DBYear.year;
     }
 
+    // Try Wikipedia search
+    try {
+      const wikiResult = await this.searchWikipedia(artist, title);
+      if (wikiResult > 0) {
+        return wikiResult;
+      }
+    } catch (error) {
+      this.logger.log(color.yellow(`Wikipedia search failed: ${error}`));
+    }
+
+    // Try Google search as fallback
     const googleResult = await this.performGoogleSearch(
       artist,
       title + ' (song)'
@@ -128,6 +140,32 @@ export class Music {
         color.red(`Error fetching Google search results: ${error.message}`)
       );
       return '';
+    }
+  }
+
+  private async searchWikipedia(artist: string, title: string): Promise<number> {
+    try {
+      // Search for the song
+      const searchResults = await wiki.search(`${artist} ${title} song`);
+      
+      if (searchResults.results.length > 0) {
+        // Get the first result's page
+        const page = await wiki.page(searchResults.results[0].title);
+        const summary = await page.summary();
+        
+        // Look for year patterns in the summary
+        const yearPattern = /(?:19|20)\d{2}/g;
+        const years = summary.extract.match(yearPattern);
+        
+        if (years && years.length > 0) {
+          // Return the earliest year found
+          return Math.min(...years.map(y => parseInt(y)));
+        }
+      }
+      return 0;
+    } catch (error) {
+      this.logger.log(color.red(`Error in Wikipedia search: ${error}`));
+      return 0;
     }
   }
 }
