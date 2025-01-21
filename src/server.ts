@@ -32,6 +32,7 @@ import { OpenPerplex } from './openperplex';
 import Push from './push';
 import Review from './review';
 import Trustpilot from './trustpilot';
+import { Music } from './music';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -70,6 +71,7 @@ class Server {
   private push = Push.getInstance();
   private review = Review.getInstance();
   private trustpilot = Trustpilot.getInstance();
+  private music = new Music();
 
   private version: string = '1.0.0';
 
@@ -978,6 +980,18 @@ class Server {
             request.params.artist,
             request.params.title,
             request.params.mode
+          );
+          return { success: true, data: result };
+        }
+      );
+
+      this.fastify.get(
+        '/yearv2/:isrc/:artist/:title',
+        async (request: any, _reply) => {
+          const result = await this.music.getReleaseDate(
+            request.params.isrc,
+            request.params.artist,
+            request.params.title
           );
           return { success: true, data: result };
         }
