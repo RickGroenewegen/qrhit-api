@@ -30,29 +30,13 @@ export class Music {
     });
   }
 
-  interface ReleaseResult {
-    year: number;
-    standardDeviation: number;
-    sources: {
-      spotify: number;
-      mb: number;
-      ai: number;
-      openPerplex: number;
-      discogs: number;
-    };
-  }
-
   public async getReleaseDate(
     id: number,
     isrc: string,
     artist: string,
     title: string,
     spotifyReleaseYear: number
-  ): Promise<ReleaseResult> {
-    console.log(111, isrc, artist, title);
-
-    let year = 0;
-
+  ): Promise<any> {
     // Step 1: Try to find the year from the ISRC, artist, and title
     const DBYear = await this.findInDB(id, isrc, artist, title);
 
@@ -163,6 +147,7 @@ export class Music {
     const fullResult = {
       year: finalYear,
       standardDeviation: Math.round(stdDev * 100) / 100, // Round to 2 decimal places
+      googleResults: JSON.stringify(googleResults),
       sources: {
         spotify: spotifyReleaseYear,
         mb: mbResult.year,
