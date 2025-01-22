@@ -1299,6 +1299,7 @@ class Data {
         us.year as suggestedYear,
         us.extraNameAttribute,
         us.extraArtistAttribute,
+        p.suggestionsPending,
         CASE 
           WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id) > 0 
           THEN 'true' 
@@ -1313,7 +1314,6 @@ class Data {
       LEFT JOIN usersuggestions us ON us.trackId = t.id
       WHERE p.paymentId = ${paymentId}
       AND u.hash = ${userHash}
-      AND p.suggestionsPending = 0
       AND t.manuallyChecked = true
     `;
     return tracks;
@@ -1335,7 +1335,7 @@ class Data {
 
     return {
       verified: payment.length > 0,
-      paymentDbId: payment.length > 0 ? payment[0].id : undefined
+      paymentDbId: payment.length > 0 ? payment[0].id : undefined,
     };
   }
 
@@ -1352,8 +1352,13 @@ class Data {
     }
   ): Promise<boolean> {
     try {
-      const { verified, paymentDbId } = await this.verifyPaymentOwnership(paymentId, userHash);
+      const { verified, paymentDbId } = await this.verifyPaymentOwnership(
+        paymentId,
+        userHash
+      );
+
       if (!verified) {
+        console.log(111);
         return false;
       }
 
@@ -1363,12 +1368,14 @@ class Data {
         FROM payment_has_playlist php
         JOIN playlists pl ON pl.id = php.playlistId
         JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
-        WHERE php.paymentId = ${payment[0].id}
+        JOIN payments p ON p.id = php.paymentId
+        WHERE p.paymentId = ${paymentId}
         AND pht.trackId = ${trackId}
         LIMIT 1
       `;
 
       if (hasAccess.length === 0) {
+        console.log(222, paymentId, trackId);
         return false;
       }
 
@@ -1410,6 +1417,7 @@ class Data {
       return true;
     } catch (error) {
       console.error('Error saving user suggestion:', error);
+      console.log(333);
       return false;
     }
   }
@@ -1419,14 +1427,17 @@ class Data {
     userHash: string
   ): Promise<boolean> {
     try {
-      const { verified, paymentDbId } = await this.verifyPaymentOwnership(paymentId, userHash);
+      const { verified, paymentDbId } = await this.verifyPaymentOwnership(
+        paymentId,
+        userHash
+      );
       if (!verified) {
         return false;
       }
 
       await this.prisma.payment.update({
         where: { id: paymentDbId },
-        data: { suggestionsPending: true }
+        data: { suggestionsPending: true },
       });
 
       return true;
