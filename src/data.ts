@@ -1319,6 +1319,26 @@ class Data {
     return tracks;
   }
 
+  private async verifyPaymentOwnership(
+    paymentId: string,
+    userHash: string
+  ): Promise<{ verified: boolean; paymentDbId?: number }> {
+    const payment = await this.prisma.$queryRaw<any[]>`
+      SELECT p.id, p.status
+      FROM payments p
+      JOIN users u ON p.userId = u.id
+      WHERE p.paymentId = ${paymentId}
+      AND u.hash = ${userHash}
+      AND p.status = 'paid'
+      LIMIT 1
+    `;
+
+    return {
+      verified: payment.length > 0,
+      paymentDbId: payment.length > 0 ? payment[0].id : undefined
+    };
+  }
+
   public async saveUserSuggestion(
     paymentId: string,
     userHash: string,
@@ -1332,18 +1352,8 @@ class Data {
     }
   ): Promise<boolean> {
     try {
-      // First verify the payment exists and belongs to this user
-      const payment = await this.prisma.$queryRaw<any[]>`
-        SELECT p.id, p.status
-        FROM payments p
-        JOIN users u ON p.userId = u.id
-        WHERE p.paymentId = ${paymentId}
-        AND u.hash = ${userHash}
-        AND p.status = 'paid'
-        LIMIT 1
-      `;
-
-      if (payment.length === 0) {
+      const { verified, paymentDbId } = await this.verifyPaymentOwnership(paymentId, userHash);
+      if (!verified) {
         return false;
       }
 
@@ -1400,6 +1410,28 @@ class Data {
       return true;
     } catch (error) {
       console.error('Error saving user suggestion:', error);
+      return false;
+    }
+  }
+
+  public async submitUserSuggestions(
+    paymentId: string,
+    userHash: string
+  ): Promise<boolean> {
+    try {
+      const { verified, paymentDbId } = await this.verifyPaymentOwnership(paymentId, userHash);
+      if (!verified) {
+        return false;
+      }
+
+      await this.prisma.payment.update({
+        where: { id: paymentDbId },
+        data: { suggestionsPending: true }
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error submitting user suggestions:', error);
       return false;
     }
   }

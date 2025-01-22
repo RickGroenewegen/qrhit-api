@@ -917,6 +917,14 @@ class Server {
       return { success };
     });
 
+    this.fastify.post('/usersuggestions/:paymentId/:userHash/submit', async (request: any, reply) => {
+      const success = await this.data.submitUserSuggestions(
+        request.params.paymentId,
+        request.params.userHash
+      );
+      return { success };
+    });
+
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.post('/push', async (request: any, reply: any) => {
         const { token, title, message } = request.body;
