@@ -1453,7 +1453,10 @@ class Data {
     trackId: number
   ): Promise<boolean> {
     try {
-      const { verified } = await this.verifyPaymentOwnership(paymentId, userHash);
+      const { verified } = await this.verifyPaymentOwnership(
+        paymentId,
+        userHash
+      );
       if (!verified) {
         return false;
       }
@@ -1477,8 +1480,8 @@ class Data {
       // Delete the suggestion
       await this.prisma.userSuggestion.deleteMany({
         where: {
-          trackId: trackId
-        }
+          trackId: trackId,
+        },
       });
 
       return true;
