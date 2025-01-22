@@ -1358,7 +1358,6 @@ class Data {
       );
 
       if (!verified) {
-        console.log(111);
         return false;
       }
 
@@ -1375,7 +1374,6 @@ class Data {
       `;
 
       if (hasAccess.length === 0) {
-        console.log(222, paymentId, trackId);
         return false;
       }
 
@@ -1432,8 +1430,7 @@ class Data {
 
       return true;
     } catch (error) {
-      console.error('Error saving user suggestion:', error);
-      console.log(333);
+      
       return false;
     }
   }
