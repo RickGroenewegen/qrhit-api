@@ -13,8 +13,11 @@ export class Music {
   private openai = new ChatGPT();
   private readonly mbMaxRetries: number = 5;
   private readonly mbMaxRateLimit: number = 1200;
+  private readonly discogsMaxRetries: number = 3;
+  private readonly discogsMaxRateLimit: number = 1000;
   private cache = Cache.getInstance();
   private mbLastRequestTime: number = 0;
+  private discogsLastRequestTime: number = 0;
 
   constructor() {
     this.axiosInstance = axios.create({
@@ -44,9 +47,12 @@ export class Music {
     }
 
     // Search MusicBrainz
-    const mbResult = await this.searchMusicBrainz(isrc, artist, title);
+    const [mbResult, discogsResult] = await Promise.all([
+      this.searchMusicBrainz(isrc, artist, title),
+      this.searchDiscogs(artist, title)
+    ]);
 
-    console.log(1, mbResult);
+    console.log(1, mbResult, discogsResult);
 
     // Try Google search and extract Wikipedia languages
     const googleResults = await this.performGoogleSearch(artist, title);
@@ -91,7 +97,8 @@ export class Music {
 
                      ${JSON.stringify(wikiResults)}
 
-                    MusicBrainz thinks the release year is ${mbResult.year} 
+                    MusicBrainz thinks the release year is ${mbResult.year}
+                    Discogs thinks the release year is ${discogsResult.year}
 
                     What is the release you think of this song based on the information above? Also explain on which information you based your answer on.
                     `;
@@ -336,5 +343,71 @@ export class Music {
     }
 
     return results;
+  }
+
+  private async searchDiscogs(artist: string, title: string): Promise<{ year: number; source: string }> {
+    let retryCount = 0;
+    const discogsToken = process.env['DISCOGS_TOKEN'];
+    
+    if (!discogsToken) {
+      this.logger.log(color.red('Discogs token not found in environment variables'));
+      return { year: 0, source: '' };
+    }
+
+    while (retryCount < this.discogsMaxRetries) {
+      const timeSinceLastRequest = Date.now() - this.discogsLastRequestTime;
+      const delay = timeSinceLastRequest < this.discogsMaxRateLimit ? 
+        this.discogsMaxRateLimit - timeSinceLastRequest : 0;
+
+      if (delay > 0) {
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+
+      try {
+        const response = await axios.get('https://api.discogs.com/database/search', {
+          params: {
+            q: `${artist} ${title}`,
+            type: 'release',
+            token: discogsToken
+          },
+          headers: {
+            'User-Agent': 'QRHit/1.0 (info@rickgroenewegen.nl)'
+          }
+        });
+
+        this.discogsLastRequestTime = Date.now();
+
+        if (response.data.results && response.data.results.length > 0) {
+          // Filter results to match artist and title more closely
+          const matchingReleases = response.data.results.filter((release: any) => {
+            const releaseTitle = release.title.toLowerCase();
+            return releaseTitle.includes(artist.toLowerCase()) && 
+                   releaseTitle.includes(title.toLowerCase());
+          });
+
+          if (matchingReleases.length > 0) {
+            // Find earliest year
+            const earliestYear = Math.min(...matchingReleases
+              .map((release: any) => parseInt(release.year))
+              .filter((year: number) => !isNaN(year) && year > 0)
+            );
+
+            if (earliestYear !== Infinity) {
+              return { year: earliestYear, source: 'discogs' };
+            }
+          }
+        }
+
+        return { year: 0, source: '' };
+
+      } catch (error: any) {
+        this.logger.log(color.yellow(
+          `Failed to fetch data from Discogs API! Try: ${retryCount + 1}`
+        ));
+        retryCount++;
+      }
+    }
+
+    return { year: 0, source: '' };
   }
 }
