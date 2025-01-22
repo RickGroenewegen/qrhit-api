@@ -1298,7 +1298,12 @@ class Data {
         us.artist as suggestedArtist,
         us.year as suggestedYear,
         us.extraNameAttribute,
-        us.extraArtistAttribute
+        us.extraArtistAttribute,
+        CASE 
+          WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id) > 0 
+          THEN 'true' 
+          ELSE 'false' 
+        END as hasSuggestion
       FROM payments p
       JOIN users u ON p.userId = u.id
       JOIN payment_has_playlist php ON php.paymentId = p.id
@@ -1308,6 +1313,7 @@ class Data {
       LEFT JOIN usersuggestions us ON us.trackId = t.id
       WHERE p.paymentId = ${paymentId}
       AND u.hash = ${userHash}
+      AND p.suggestionsPending = 0
       AND t.manuallyChecked = true
     `;
     return tracks;
