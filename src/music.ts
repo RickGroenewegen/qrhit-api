@@ -137,12 +137,14 @@ export class Music {
     const validYears = Object.values(sources).filter(
       (year) => year && year > 0 && year <= new Date().getFullYear()
     );
-    
+
     let stdDev = 0;
     if (validYears.length > 1) {
-      const mean = validYears.reduce((sum, year) => sum + year, 0) / validYears.length;
-      const squareDiffs = validYears.map(year => Math.pow(year - mean, 2));
-      const avgSquareDiff = squareDiffs.reduce((sum, diff) => sum + diff, 0) / squareDiffs.length;
+      const mean =
+        validYears.reduce((sum, year) => sum + year, 0) / validYears.length;
+      const squareDiffs = validYears.map((year) => Math.pow(year - mean, 2));
+      const avgSquareDiff =
+        squareDiffs.reduce((sum, diff) => sum + diff, 0) / squareDiffs.length;
       stdDev = Math.sqrt(avgSquareDiff);
     }
 
@@ -168,11 +170,13 @@ export class Music {
           aiResult.year
         )}] for track ${color.white.bold(artist)} - ${color.white.bold(
           title
-        )}. Final year: ${color.white.bold(finalYear)}`
+        )} [DV: ${color.white.bold(
+          fullResult.standardDeviation
+        )}] Final year: ${color.white.bold(finalYear)}`
       )
     );
 
-    return finalYear;
+    return fullResult;
   }
 
   public async searchMusicBrainz(
