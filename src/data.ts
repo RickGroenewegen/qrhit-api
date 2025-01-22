@@ -1380,11 +1380,11 @@ class Data {
       // Get the user ID
       const user = await this.prisma.user.findFirst({
         where: {
-          hash: userHash
+          hash: userHash,
         },
         select: {
-          id: true
-        }
+          id: true,
+        },
       });
 
       if (!user) {
@@ -1395,7 +1395,7 @@ class Data {
       const existingSuggestion = await this.prisma.userSuggestion.findFirst({
         where: {
           trackId: trackId,
-          userId: user.id
+          userId: user.id,
         },
       });
 
@@ -1430,7 +1430,6 @@ class Data {
 
       return true;
     } catch (error) {
-      
       return false;
     }
   }
@@ -1490,10 +1489,25 @@ class Data {
         return false;
       }
 
-      // Delete the suggestion
+      // Get the user ID
+      const user = await this.prisma.user.findFirst({
+        where: {
+          hash: userHash,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!user) {
+        return false;
+      }
+
+      // Delete the suggestion for this specific user
       await this.prisma.userSuggestion.deleteMany({
         where: {
           trackId: trackId,
+          userId: user.id,
         },
       });
 
