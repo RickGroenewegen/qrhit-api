@@ -1289,14 +1289,14 @@ class Data {
   ): Promise<any[]> {
     const tracks = await this.prisma.$queryRaw<any[]>`
       SELECT 
-        t.id,
+        CAST(t.id AS SIGNED) as id,
         t.name,
         t.artist,
-        t.year,
-        us.id as suggestionId,
+        CAST(t.year AS SIGNED) as year,
+        CAST(us.id AS SIGNED) as suggestionId,
         us.name as suggestedName,
         us.artist as suggestedArtist,
-        us.year as suggestedYear,
+        CAST(us.year AS SIGNED) as suggestedYear,
         us.extraNameAttribute,
         us.extraArtistAttribute,
         CAST(CASE WHEN us.id IS NOT NULL THEN 1 ELSE 0 END AS SIGNED) as hasSuggestion
