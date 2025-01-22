@@ -49,16 +49,14 @@ export class Music {
     // Search MusicBrainz
     const [mbResult, discogsResult] = await Promise.all([
       this.searchMusicBrainz(isrc, artist, title),
-      this.searchDiscogs(artist, title)
+      this.searchDiscogs(artist, title),
     ]);
 
-    console.log(1, mbResult, discogsResult);
+    console.log(11, discogsResult);
 
     // Try Google search and extract Wikipedia languages
     const googleResults = await this.performGoogleSearch(artist, title);
     const wikiLangs = new Set<string>();
-
-    console.log(2, googleResults);
 
     if (Array.isArray(googleResults)) {
       for (const result of googleResults) {
@@ -83,8 +81,6 @@ export class Music {
       title
     );
 
-    console.log(3, wikiResults);
-
     let prompt = `  I have gaterhered information about a certain song on the internet: ${artist} - ${title}
                     Use your own knowledge. I will share all this information with you below. My goal is to find the release year of this song.
                     If the release date is literally found on Wikipedia, I will use that information.
@@ -103,8 +99,6 @@ export class Music {
                     What is the release you think of this song based on the information above? Also explain on which information you based your answer on.
                     `;
 
-    console.log(888, prompt);
-
     const aiResult = await this.openai.ask(prompt);
 
     const fullResult = {
@@ -113,6 +107,7 @@ export class Music {
         spotify: spotifyReleaseYear,
         mb: mbResult.year,
         ai: aiResult.year,
+        discogs: discogsResult.year,
       },
     };
 
@@ -196,8 +191,6 @@ export class Music {
         let earliestDate: string | null = null;
 
         if (recordings && recordings.length > 0) {
-          console.log(444, recordings[0].releases);
-
           earliestDate = recordings.reduce(
             (earliest: string | null, recording: any) => {
               const releaseDate = recording['first-release-date'] || null;
@@ -345,51 +338,68 @@ export class Music {
     return results;
   }
 
-  private async searchDiscogs(artist: string, title: string): Promise<{ year: number; source: string }> {
+  private async searchDiscogs(
+    artist: string,
+    title: string
+  ): Promise<{ year: number; source: string }> {
     let retryCount = 0;
     const discogsToken = process.env['DISCOGS_TOKEN'];
-    
+
     if (!discogsToken) {
-      this.logger.log(color.red('Discogs token not found in environment variables'));
+      this.logger.log(
+        color.red('Discogs token not found in environment variables')
+      );
       return { year: 0, source: '' };
     }
 
     while (retryCount < this.discogsMaxRetries) {
       const timeSinceLastRequest = Date.now() - this.discogsLastRequestTime;
-      const delay = timeSinceLastRequest < this.discogsMaxRateLimit ? 
-        this.discogsMaxRateLimit - timeSinceLastRequest : 0;
+      const delay =
+        timeSinceLastRequest < this.discogsMaxRateLimit
+          ? this.discogsMaxRateLimit - timeSinceLastRequest
+          : 0;
 
       if (delay > 0) {
-        await new Promise(resolve => setTimeout(resolve, delay));
+        await new Promise((resolve) => setTimeout(resolve, delay));
       }
 
       try {
-        const response = await axios.get('https://api.discogs.com/database/search', {
-          params: {
-            q: `${artist} ${title}`,
-            type: 'release',
-            token: discogsToken
-          },
-          headers: {
-            'User-Agent': 'QRHit/1.0 (info@rickgroenewegen.nl)'
+        const response = await axios.get(
+          'https://api.discogs.com/database/search',
+          {
+            params: {
+              q: `${artist} ${title}`,
+              type: 'release',
+              token: discogsToken,
+            },
+            headers: {
+              'User-Agent': 'QRHit/1.0 (info@rickgroenewegen.nl)',
+            },
           }
-        });
+        );
 
         this.discogsLastRequestTime = Date.now();
 
+        console.log(22, response.data);
+
         if (response.data.results && response.data.results.length > 0) {
           // Filter results to match artist and title more closely
-          const matchingReleases = response.data.results.filter((release: any) => {
-            const releaseTitle = release.title.toLowerCase();
-            return releaseTitle.includes(artist.toLowerCase()) && 
-                   releaseTitle.includes(title.toLowerCase());
-          });
+          const matchingReleases = response.data.results.filter(
+            (release: any) => {
+              const releaseTitle = release.title.toLowerCase();
+              return (
+                releaseTitle.includes(artist.toLowerCase()) &&
+                releaseTitle.includes(title.toLowerCase())
+              );
+            }
+          );
 
           if (matchingReleases.length > 0) {
             // Find earliest year
-            const earliestYear = Math.min(...matchingReleases
-              .map((release: any) => parseInt(release.year))
-              .filter((year: number) => !isNaN(year) && year > 0)
+            const earliestYear = Math.min(
+              ...matchingReleases
+                .map((release: any) => parseInt(release.year))
+                .filter((year: number) => !isNaN(year) && year > 0)
             );
 
             if (earliestYear !== Infinity) {
@@ -399,11 +409,12 @@ export class Music {
         }
 
         return { year: 0, source: '' };
-
       } catch (error: any) {
-        this.logger.log(color.yellow(
-          `Failed to fetch data from Discogs API! Try: ${retryCount + 1}`
-        ));
+        this.logger.log(
+          color.yellow(
+            `Failed to fetch data from Discogs API! Try: ${retryCount + 1}`
+          )
+        );
         retryCount++;
       }
     }
