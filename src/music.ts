@@ -383,28 +383,14 @@ export class Music {
         console.log(22, response.data);
 
         if (response.data.results && response.data.results.length > 0) {
-          // Filter results to match artist and title more closely
-          const matchingReleases = response.data.results.filter(
-            (release: any) => {
-              const releaseTitle = release.title.toLowerCase();
-              return (
-                releaseTitle.includes(artist.toLowerCase()) &&
-                releaseTitle.includes(title.toLowerCase())
-              );
-            }
-          );
+          // Get all valid years from the results
+          const years = response.data.results
+            .map((release: any) => parseInt(release.year))
+            .filter((year: number) => !isNaN(year) && year > 0 && year <= new Date().getFullYear());
 
-          if (matchingReleases.length > 0) {
-            // Find earliest year
-            const earliestYear = Math.min(
-              ...matchingReleases
-                .map((release: any) => parseInt(release.year))
-                .filter((year: number) => !isNaN(year) && year > 0)
-            );
-
-            if (earliestYear !== Infinity) {
-              return { year: earliestYear, source: 'discogs' };
-            }
+          if (years.length > 0) {
+            const earliestYear = Math.min(...years);
+            return { year: earliestYear, source: 'discogs' };
           }
         }
 
