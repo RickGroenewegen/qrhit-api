@@ -36,13 +36,28 @@ export class Music {
       return DBYear.year;
     }
 
-    // Try Google search as fallback
-    const googleResult = await this.performGoogleSearch(artist, title);
+    // Try Google search and extract Wikipedia languages
+    const googleResults = await this.performGoogleSearch(artist, title);
+    const wikiLangs = new Set<string>();
+    
+    if (Array.isArray(googleResults)) {
+      for (const result of googleResults) {
+        const wikiMatch = result.url.match(/https?:\/\/([a-z]{2})\.wikipedia\.org/);
+        if (wikiMatch) {
+          wikiLangs.add(wikiMatch[1]);
+        }
+      }
+    }
+    
+    // Add English as default if no Wikipedia results found
+    if (wikiLangs.size === 0) {
+      wikiLangs.add('en');
+    }
 
-    // Try Wikipedia search
-    const wikiResult = await this.searchWikipedia('en', artist, title);
-
-    // console.log(888, googleResult);
+    // Try Wikipedia search in all found languages
+    const wikiResults = await this.searchWikipedia(Array.from(wikiLangs), artist, title);
+    
+    // console.log('Wikipedia results:', wikiResults);
 
     //const musicBrainzResult = await this.searchMusicBrainz(isrc);
 
@@ -136,27 +151,33 @@ export class Music {
   }
 
   private async searchWikipedia(
-    lang: string = 'en',
+    langs: string[],
     artist: string,
     title: string
-  ): Promise<any> {
-    let returnValue = { summary: '', infobox: '' };
-    try {
-      // Search for the song
-      const changedLang = await wiki.setLang(lang); // sets language to french
-      const searchResults = await wiki.search(`${artist} ${title}`);
+  ): Promise<any[]> {
+    const results = [];
+    
+    for (const lang of langs) {
+      try {
+        await wiki.setLang(lang);
+        const searchResults = await wiki.search(`${artist} ${title}`);
 
-      if (searchResults.results.length > 0) {
-        // Get the first result's page
-        const page = await wiki.page(searchResults.results[0].title);
-
-        const summary = (await page.summary()).extract;
-        const infobox = await page.infobox();
-
-        returnValue = { summary, infobox };
+        if (searchResults.results.length > 0) {
+          const page = await wiki.page(searchResults.results[0].title);
+          const summary = (await page.summary()).extract;
+          const infobox = await page.infobox();
+          
+          results.push({
+            lang,
+            summary,
+            infobox
+          });
+        }
+      } catch (error) {
+        this.logger.log(color.red(`Error in Wikipedia search for ${lang}: ${error}`));
       }
-    } catch (error) {
-      this.logger.log(color.red(`Error in Wikipedia search: ${error}`));
     }
+    
+    return results;
   }
 }
