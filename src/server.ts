@@ -925,6 +925,15 @@ class Server {
       return { success };
     });
 
+    this.fastify.delete('/usersuggestions/:paymentId/:userHash/:trackId', async (request: any, reply) => {
+      const success = await this.data.deleteUserSuggestion(
+        request.params.paymentId,
+        request.params.userHash,
+        parseInt(request.params.trackId)
+      );
+      return { success };
+    });
+
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.post('/push', async (request: any, reply: any) => {
         const { token, title, message } = request.body;

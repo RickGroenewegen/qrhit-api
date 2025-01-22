@@ -1447,6 +1447,47 @@ class Data {
     }
   }
 
+  public async deleteUserSuggestion(
+    paymentId: string,
+    userHash: string,
+    trackId: number
+  ): Promise<boolean> {
+    try {
+      const { verified } = await this.verifyPaymentOwnership(paymentId, userHash);
+      if (!verified) {
+        return false;
+      }
+
+      // Verify the track belongs to this payment
+      const hasAccess = await this.prisma.$queryRaw<any[]>`
+        SELECT 1
+        FROM payment_has_playlist php
+        JOIN playlists pl ON pl.id = php.playlistId
+        JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
+        JOIN payments p ON p.id = php.paymentId
+        WHERE p.paymentId = ${paymentId}
+        AND pht.trackId = ${trackId}
+        LIMIT 1
+      `;
+
+      if (hasAccess.length === 0) {
+        return false;
+      }
+
+      // Delete the suggestion
+      await this.prisma.userSuggestion.deleteMany({
+        where: {
+          trackId: trackId
+        }
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error deleting user suggestion:', error);
+      return false;
+    }
+  }
+
   public static getInstance(): Data {
     if (!Data.instance) {
       Data.instance = new Data();
