@@ -100,11 +100,10 @@ export class Music {
     const aiResult = await this.openai.ask(prompt);
 
     const weights = {
-      ai: 0.35, // Highest weight (35%)
-      openPerplex: 0.25, // Second highest (25%)
-      mb: 0.15, // Middle weight (15%)
-      discogs: 0.15, // Middle weight (15%)
-      spotify: 0.1, // Lowest weight (10%)
+      ai: 0.39, // Highest weight (39%)
+      openPerplex: 0.28, // Second highest (28%)
+      mb: 0.165, // Middle weight (16.5%)
+      discogs: 0.165, // Middle weight (16.5%)
     };
 
     const sources = {
@@ -112,7 +111,6 @@ export class Music {
       openPerplex: openPerlexYear,
       mb: mbResult.year,
       discogs: discogsResult.year,
-      spotify: spotifyReleaseYear,
     };
 
     // Calculate weighted average of valid years
