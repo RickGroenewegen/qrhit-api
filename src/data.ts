@@ -1310,6 +1310,79 @@ class Data {
     return tracks;
   }
 
+  public async saveUserSuggestion(
+    paymentId: string, 
+    userHash: string,
+    trackId: number,
+    suggestion: {
+      name: string;
+      artist: string;
+      year: number;
+      extraNameAttribute?: string;
+      extraArtistAttribute?: string;
+    }
+  ): Promise<boolean> {
+    try {
+      // First verify the user has access to this track
+      const hasAccess = await this.prisma.$queryRaw<any[]>`
+        SELECT 1
+        FROM payments p
+        JOIN users u ON p.userId = u.id
+        JOIN payment_has_playlist php ON php.paymentId = p.id
+        JOIN playlists pl ON pl.id = php.playlistId
+        JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
+        WHERE p.paymentId = ${paymentId}
+        AND u.hash = ${userHash}
+        AND pht.trackId = ${trackId}
+        LIMIT 1
+      `;
+
+      if (hasAccess.length === 0) {
+        return false;
+      }
+
+      // Check if suggestion already exists
+      const existingSuggestion = await this.prisma.userSuggestion.findFirst({
+        where: {
+          trackId: trackId
+        }
+      });
+
+      if (existingSuggestion) {
+        // Update existing suggestion
+        await this.prisma.userSuggestion.update({
+          where: {
+            id: existingSuggestion.id
+          },
+          data: {
+            name: suggestion.name,
+            artist: suggestion.artist,
+            year: suggestion.year,
+            extraNameAttribute: suggestion.extraNameAttribute,
+            extraArtistAttribute: suggestion.extraArtistAttribute
+          }
+        });
+      } else {
+        // Create new suggestion
+        await this.prisma.userSuggestion.create({
+          data: {
+            trackId: trackId,
+            name: suggestion.name,
+            artist: suggestion.artist,
+            year: suggestion.year,
+            extraNameAttribute: suggestion.extraNameAttribute,
+            extraArtistAttribute: suggestion.extraArtistAttribute
+          }
+        });
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error saving user suggestion:', error);
+      return false;
+    }
+  }
+
   public static getInstance(): Data {
     if (!Data.instance) {
       Data.instance = new Data();

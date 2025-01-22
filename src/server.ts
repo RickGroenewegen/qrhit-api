@@ -893,6 +893,30 @@ class Server {
       return { success: true, data: suggestions };
     });
 
+    this.fastify.post('/usersuggestions/:paymentId/:userHash', async (request: any, reply) => {
+      const { trackId, name, artist, year, extraNameAttribute, extraArtistAttribute } = request.body;
+      
+      if (!trackId || !name || !artist || !year) {
+        reply.status(400).send({ success: false, error: 'Missing required fields' });
+        return;
+      }
+
+      const success = await this.data.saveUserSuggestion(
+        request.params.paymentId,
+        request.params.userHash,
+        trackId,
+        {
+          name,
+          artist,
+          year,
+          extraNameAttribute,
+          extraArtistAttribute
+        }
+      );
+
+      return { success };
+    });
+
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.post('/push', async (request: any, reply: any) => {
         const { token, title, message } = request.body;
