@@ -113,7 +113,7 @@ export class Music {
       discogs: discogsResult.year,
     };
 
-    // Calculate weighted average of valid years
+    // Calculate weighted average of valid years (excluding 0)
     let totalWeight = 0;
     let weightedSum = 0;
 
@@ -127,7 +127,7 @@ export class Music {
     const finalYear =
       totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
 
-    // Calculate standard deviation for valid years
+    // Calculate standard deviation for valid years (excluding 0)
     const validYears = Object.values(sources).filter(
       (year) => year && year > 0 && year <= new Date().getFullYear()
     );
