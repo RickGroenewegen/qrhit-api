@@ -1299,7 +1299,7 @@ class Data {
         us.year as suggestedYear,
         us.extraNameAttribute,
         us.extraArtistAttribute,
-        CASE WHEN us.id IS NOT NULL THEN 1 ELSE 0 END as hasSuggestion
+        CAST(CASE WHEN us.id IS NOT NULL THEN 1 ELSE 0 END AS SIGNED) as hasSuggestion
       FROM payments p
       JOIN users u ON p.userId = u.id
       JOIN payment_has_playlist php ON php.paymentId = p.id
