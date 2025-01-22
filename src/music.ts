@@ -133,8 +133,22 @@ export class Music {
     const finalYear =
       totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
 
+    // Calculate standard deviation for valid years
+    const validYears = Object.values(sources).filter(
+      (year) => year && year > 0 && year <= new Date().getFullYear()
+    );
+    
+    let stdDev = 0;
+    if (validYears.length > 1) {
+      const mean = validYears.reduce((sum, year) => sum + year, 0) / validYears.length;
+      const squareDiffs = validYears.map(year => Math.pow(year - mean, 2));
+      const avgSquareDiff = squareDiffs.reduce((sum, diff) => sum + diff, 0) / squareDiffs.length;
+      stdDev = Math.sqrt(avgSquareDiff);
+    }
+
     const fullResult = {
       year: finalYear,
+      standardDeviation: Math.round(stdDev * 100) / 100, // Round to 2 decimal places
       sources: {
         spotify: spotifyReleaseYear,
         mb: mbResult.year,
