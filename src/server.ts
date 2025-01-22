@@ -18,7 +18,6 @@ import Data from './data';
 import fs from 'fs/promises';
 import Order from './order';
 import Mail from './mail';
-import MusicBrainz from './musicbrainz';
 import ipPlugin from './plugins/ipPlugin';
 import Formatters from './formatters';
 import Translation from './translation';
@@ -58,7 +57,6 @@ class Server {
   private data = Data.getInstance();
   private order = Order.getInstance();
   private mail = Mail.getInstance();
-  private musicBrainz = new MusicBrainz();
   private formatters = new Formatters().getFormatters();
   private translation: Translation = new Translation();
   private cache = Cache.getInstance();
@@ -180,18 +178,6 @@ class Server {
       { preHandler: verifyTokenMiddleware },
       async (request: any, reply: any) => {
         return await this.push.getMessages();
-      }
-    );
-
-    this.fastify.post(
-      '/googlesearch',
-      { preHandler: verifyTokenMiddleware },
-      async (request: any, _reply) => {
-        const results = await this.musicBrainz.performGoogleSearchRaw(
-          request.body.artist,
-          request.body.title
-        );
-        return { success: true, results };
       }
     );
 
@@ -900,11 +886,6 @@ class Server {
     });
 
     if (process.env['ENVIRONMENT'] == 'development') {
-      this.fastify.get('/mball', async (request: any, _reply) => {
-        const result = await this.data.updateAllTrackYears();
-        return { success: true, data: result };
-      });
-
       this.fastify.post('/push', async (request: any, reply: any) => {
         const { token, title, message } = request.body;
         await this.push.sendPushNotification(token, title, message);
@@ -960,38 +941,14 @@ class Server {
       });
 
       this.fastify.get(
-        '/year/:isrc/:artist/:title',
-        async (request: any, _reply) => {
-          const result = await this.musicBrainz.getReleaseDate(
-            request.params.isrc,
-            request.params.artist,
-            request.params.title,
-            true
-          );
-          return { success: true, data: result };
-        }
-      );
-
-      this.fastify.get(
-        '/mb/:isrc/:artist/:title/:mode',
-        async (request: any, _reply) => {
-          const result = await this.musicBrainz.getReleaseDateFromAPI(
-            request.params.isrc,
-            request.params.artist,
-            request.params.title,
-            request.params.mode
-          );
-          return { success: true, data: result };
-        }
-      );
-
-      this.fastify.get(
-        '/yearv2/:isrc/:artist/:title',
+        '/yearv2/:id/:isrc/:artist/:title/:spotifyReleaseYear',
         async (request: any, _reply) => {
           const result = await this.music.getReleaseDate(
+            parseInt(request.params.id),
             request.params.isrc,
             request.params.artist,
-            request.params.title
+            request.params.title,
+            parseInt(request.params.spotifyReleaseYear)
           );
           return { success: true, data: result };
         }

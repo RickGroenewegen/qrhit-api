@@ -3,7 +3,6 @@ import Logger from './logger';
 import { Prisma, PrismaClient } from '@prisma/client';
 import slugify from 'slugify';
 import PrismaInstance from './prisma';
-import MusicBrainz from './musicbrainz';
 import crypto from 'crypto';
 import { CronJob } from 'cron';
 import { ApiResult } from './interfaces/ApiResult';
@@ -25,15 +24,16 @@ import AnalyticsClient from './analytics';
 import * as XLSX from 'xlsx';
 import { OpenPerplex } from './openperplex';
 import cluster from 'cluster';
+import { Music } from './music';
 
 class Data {
   private static instance: Data;
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
-  private musicBrainz = new MusicBrainz();
   private cache = Cache.getInstance();
   private translate = new Translation();
   private utils = new Utils();
+  private music = new Music();
   private analytics = AnalyticsClient.getInstance();
   private openperplex = new OpenPerplex();
 
@@ -669,6 +669,13 @@ class Data {
           yearSource: true,
           certainty: true,
           reasoning: true,
+          spotifyYear: true,
+          discogsYear: true,
+          aiYear: true,
+          musicBrainzYear: true,
+          openPerplexYear: true,
+          standardDeviation: true,
+          googleResults: true,
         },
         orderBy: {
           id: 'asc',
@@ -1002,9 +1009,7 @@ class Data {
     >`
       SELECT id, isrc, trackId, name, artist
       FROM tracks
-      WHERE (year IS NULL OR yearSource IS NULL) AND trackId IN (${Prisma.join(
-        providedTrackIds
-      )})
+      WHERE year IS NULL AND trackId IN (${Prisma.join(providedTrackIds)})
     `;
 
     this.logger.log(
@@ -1045,172 +1050,51 @@ class Data {
         continue;
       }
 
-      let { year, source, certainty, reasoning } =
-        await this.musicBrainz.getReleaseDate(
-          track.isrc ?? '',
-          track.artist,
-          track.name
-        );
-      if (!year) {
-        const spotifyTrack = tracks.find((t: any) => t.id === track.trackId);
-        if (spotifyTrack && spotifyTrack.releaseDate) {
-          year = parseInt(spotifyTrack.releaseDate.split('-')[0]);
-          source = 'spotify';
-        }
+      let spotifyYear = 0;
+      const spotifyTrack = tracks.find((t: any) => t.id === track.trackId);
+      if (spotifyTrack && spotifyTrack.releaseDate) {
+        spotifyYear = parseInt(spotifyTrack.releaseDate.split('-')[0]);
       }
-      if (year > 0) {
-        if (source == 'ai') {
-          this.logger.log(
-            color.blue.bold(
-              `AI claims year for '${white.bold(track.artist)} - ${white.bold(
-                track.name
-              )}' is ${white.bold(year)} because ${white.bold(reasoning)}`
-            )
-          );
-        }
 
+      const result = await this.music.getReleaseDate(
+        track.id,
+        track.isrc ?? '',
+        track.artist,
+        track.name,
+        spotifyYear
+      );
+
+      await this.prisma.$executeRaw`
+          UPDATE  tracks
+          SET     year = ${result.year},
+                  spotifyYear = ${result.sources.spotify},
+                  discogsYear = ${result.sources.discogs},
+                  aiYear = ${result.sources.ai},
+                  musicBrainzYear = ${result.sources.mb},
+                  openPerplexYear = ${result.sources.openPerplex},
+                  googleResults = ${result.googleResults},
+                  standardDeviation = ${result.standardDeviation}
+          WHERE   id = ${track.id}`;
+
+      if (result.standardDeviation <= 1) {
+        // Update the year with perplexYear and set manuallyChecked to true
         await this.prisma.$executeRaw`
-          UPDATE tracks
-          SET year        = ${year},
-              yearSource  = ${source},
-              certainty   = ${certainty},
-              reasoning   = ${reasoning}
-          WHERE id = ${track.id}
-        `;
-
-        const perplexYear = await this.openperplex.ask(
-          track.artist,
-          track.name
-        );
-
-        if (
-          perplexYear > 0 &&
-          (perplexYear == year || Math.abs(perplexYear - year) == 1)
-        ) {
-          // Update the year with perplexYear and set manuallyChecked to true
-          await this.prisma.$executeRaw`
-            UPDATE tracks
-            SET year = ${perplexYear},
-                manuallyChecked = true
-            WHERE id = ${track.id}
+            UPDATE  tracks
+            SET     manuallyChecked = true
+            WHERE   id = ${track.id}
           `;
 
-          this.logger.log(
-            color.blue.bold(
-              `OpenPerplex confirms the year for '${white.bold(
-                track.artist
-              )} - ${white.bold(track.name)}' which is ${white.bold(
-                perplexYear
-              )}. Previous year was ${white.bold(
-                year
-              )}. The year is now confirmed.`
-            )
-          );
-        }
-      } else {
         this.logger.log(
-          color.red(`No release dates found for track ID: ${track.id}`)
-        );
-      }
-    }
-  }
-
-  public async updateAllTrackYears(): Promise<void> {
-    const tracks = await this.prisma.track.findMany({
-      select: {
-        id: true,
-        isrc: true,
-        artist: true,
-        name: true,
-        year: true,
-      },
-      where: {
-        yearSource: {
-          in: ['ai', 'api'],
-        },
-      },
-    });
-
-    this.logger.log(
-      color.blue.bold(
-        `Updating years for ${color.white.bold(tracks.length)} tracks`
-      )
-    );
-
-    for (const track of tracks) {
-      try {
-        let { year, source, certainty, reasoning } =
-          await this.musicBrainz.getReleaseDate(
-            track.isrc ?? '',
-            track.artist,
-            track.name,
-            true
-          );
-        if (year > 0) {
-          if (track.year !== year) {
-            await this.prisma.track.update({
-              where: { id: track.id },
-              data: {
-                year: year,
-                yearSource: source,
-                reasoning,
-                certainty,
-              },
-            });
-
-            this.logger.log(
-              color.blue.bold(
-                `Updated track ID ${color.white.bold(
-                  track.id
-                )} named '${color.white.bold(
-                  track.artist
-                )} - ${color.white.bold(
-                  track.name
-                )}' with year ${color.white.bold(year)} from ${color.white.bold(
-                  source
-                )} (Old year: ${color.white.bold(track.year)})`
-              )
-            );
-          } else {
-            this.logger.log(
-              color.yellow(
-                `Track ID ${color.white.bold(
-                  track.id
-                )} named '${color.white.bold(
-                  track.artist
-                )} - ${color.white.bold(
-                  track.name
-                )}' already has year ${color.white.bold(
-                  year
-                )} from ${color.white.bold(source)}`
-              )
-            );
-          }
-        } else {
-          this.logger.log(
-            color.yellow(
-              `No release date found for track ID: ${color.white.bold(
-                track.id
-              )}`
-            )
-          );
-        }
-      } catch (error) {
-        console.log(error);
-
-        const errorMessage =
-          error instanceof Error ? error.message : String(error);
-        this.logger.log(
-          color.red(
-            `Error updating track ID ${color.white.bold(
-              track.id
-            )}: ${color.white.bold(errorMessage)}`
+          color.green.bold(
+            `Determined final year for named '${color.white.bold(
+              track.artist
+            )} - ${color.white.bold(track.name)}' with year ${color.white.bold(
+              result.year
+            )}`
           )
         );
       }
     }
-
-    this.logger.log(color.blue.bold('Finished updating all track years'));
   }
 
   public async areAllTracksManuallyChecked(
@@ -1377,7 +1261,12 @@ class Data {
     return tracks;
   }
 
-  public async updateTrack(id: number, artist: string, name: string, year: number): Promise<boolean> {
+  public async updateTrack(
+    id: number,
+    artist: string,
+    name: string,
+    year: number
+  ): Promise<boolean> {
     try {
       await this.prisma.track.update({
         where: { id },
@@ -1385,8 +1274,8 @@ class Data {
           artist,
           name,
           year,
-          manuallyCorrected: true
-        }
+          manuallyCorrected: true,
+        },
       });
       return true;
     } catch (error) {
