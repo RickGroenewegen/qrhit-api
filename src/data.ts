@@ -1323,16 +1323,28 @@ class Data {
     }
   ): Promise<boolean> {
     try {
-      // First verify the user has access to this track
-      const hasAccess = await this.prisma.$queryRaw<any[]>`
-        SELECT 1
+      // First verify the payment exists and belongs to this user
+      const payment = await this.prisma.$queryRaw<any[]>`
+        SELECT p.id, p.status
         FROM payments p
         JOIN users u ON p.userId = u.id
-        JOIN payment_has_playlist php ON php.paymentId = p.id
-        JOIN playlists pl ON pl.id = php.playlistId
-        JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
         WHERE p.paymentId = ${paymentId}
         AND u.hash = ${userHash}
+        AND p.status = 'paid'
+        LIMIT 1
+      `;
+
+      if (payment.length === 0) {
+        return false;
+      }
+
+      // Then verify the track belongs to this payment
+      const hasAccess = await this.prisma.$queryRaw<any[]>`
+        SELECT 1
+        FROM payment_has_playlist php
+        JOIN playlists pl ON pl.id = php.playlistId
+        JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
+        WHERE php.paymentId = ${payment[0].id}
         AND pht.trackId = ${trackId}
         LIMIT 1
       `;
