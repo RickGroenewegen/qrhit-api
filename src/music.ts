@@ -3,6 +3,7 @@ import Logger from './logger';
 import axios, { AxiosInstance } from 'axios';
 import { color } from 'console-log-colors';
 import wiki from 'wikipedia';
+import { sum } from 'pdf-lib';
 
 export class Music {
   private prisma = PrismaInstance.getInstance();
@@ -35,21 +36,14 @@ export class Music {
       return DBYear.year;
     }
 
-    // Try Wikipedia search
-    try {
-      const wikiResult = await this.searchWikipedia(artist, title);
-      if (wikiResult > 0) {
-        return wikiResult;
-      }
-    } catch (error) {
-      this.logger.log(color.yellow(`Wikipedia search failed: ${error}`));
-    }
-
     // Try Google search as fallback
-    const googleResult = await this.performGoogleSearch(
-      artist,
-      title + ' (song)'
-    );
+    const googleResult = await this.performGoogleSearch(artist, title);
+
+    // Try Wikipedia search
+    const wikiResult = await this.searchWikipedia('en', artist, title);
+
+    // console.log(888, googleResult);
+
     //const musicBrainzResult = await this.searchMusicBrainz(isrc);
 
     return year;
@@ -119,7 +113,10 @@ export class Music {
       const response = await this.axiosInstance.get(
         'https://real-time-web-search.p.rapidapi.com/search',
         {
-          params: { q: `${artist} - ${title} (song)`, limit: 10 },
+          params: {
+            q: `"${artist}" - "${title}" (song) wikipedia discogs`,
+            limit: 10,
+          },
           headers: {
             'x-rapidapi-host': 'real-time-web-search.p.rapidapi.com',
             'x-rapidapi-key': process.env['RAPID_API_KEY'],
@@ -129,12 +126,7 @@ export class Music {
 
       const results = response.data.data;
 
-      let searchResults = '';
-      for (const result of results) {
-        searchResults += `Title: ${result.title}\nDescription: ${result.snippet}\nLink: ${result.url}\n\n`;
-      }
-
-      return searchResults;
+      return results;
     } catch (error: any) {
       this.logger.log(
         color.red(`Error fetching Google search results: ${error.message}`)
@@ -143,29 +135,28 @@ export class Music {
     }
   }
 
-  private async searchWikipedia(artist: string, title: string): Promise<number> {
+  private async searchWikipedia(
+    lang: string = 'en',
+    artist: string,
+    title: string
+  ): Promise<any> {
+    let returnValue = { summary: '', infobox: '' };
     try {
       // Search for the song
-      const searchResults = await wiki.search(`${artist} ${title} song`);
-      
+      const changedLang = await wiki.setLang(lang); // sets language to french
+      const searchResults = await wiki.search(`${artist} ${title}`);
+
       if (searchResults.results.length > 0) {
         // Get the first result's page
         const page = await wiki.page(searchResults.results[0].title);
-        const summary = await page.summary();
-        
-        // Look for year patterns in the summary
-        const yearPattern = /(?:19|20)\d{2}/g;
-        const years = summary.extract.match(yearPattern);
-        
-        if (years && years.length > 0) {
-          // Return the earliest year found
-          return Math.min(...years.map(y => parseInt(y)));
-        }
+
+        const summary = (await page.summary()).extract;
+        const infobox = await page.infobox();
+
+        returnValue = { summary, infobox };
       }
-      return 0;
     } catch (error) {
       this.logger.log(color.red(`Error in Wikipedia search: ${error}`));
-      return 0;
     }
   }
 }
