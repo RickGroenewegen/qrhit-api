@@ -1379,10 +1379,25 @@ class Data {
         return false;
       }
 
+      // Get the user ID
+      const user = await this.prisma.user.findFirst({
+        where: {
+          hash: userHash
+        },
+        select: {
+          id: true
+        }
+      });
+
+      if (!user) {
+        return false;
+      }
+
       // Check if suggestion already exists
       const existingSuggestion = await this.prisma.userSuggestion.findFirst({
         where: {
           trackId: trackId,
+          userId: user.id
         },
       });
 
@@ -1405,6 +1420,7 @@ class Data {
         await this.prisma.userSuggestion.create({
           data: {
             trackId: trackId,
+            userId: user.id,
             name: suggestion.name,
             artist: suggestion.artist,
             year: suggestion.year,
