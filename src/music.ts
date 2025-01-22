@@ -30,13 +30,25 @@ export class Music {
     });
   }
 
+  interface ReleaseResult {
+    year: number;
+    standardDeviation: number;
+    sources: {
+      spotify: number;
+      mb: number;
+      ai: number;
+      openPerplex: number;
+      discogs: number;
+    };
+  }
+
   public async getReleaseDate(
     id: number,
     isrc: string,
     artist: string,
     title: string,
     spotifyReleaseYear: number
-  ): Promise<number> {
+  ): Promise<ReleaseResult> {
     console.log(111, isrc, artist, title);
 
     let year = 0;
