@@ -5,12 +5,14 @@ import { color } from 'console-log-colors';
 import wiki from 'wikipedia';
 import { ChatGPT } from './chatgpt';
 import Cache from './cache';
+import { OpenPerplex } from './openperplex';
 
 export class Music {
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private axiosInstance: AxiosInstance;
   private openai = new ChatGPT();
+  private openperplex = new OpenPerplex();
   private readonly mbMaxRetries: number = 5;
   private readonly mbMaxRateLimit: number = 1200;
   private readonly discogsMaxRetries: number = 3;
@@ -47,12 +49,11 @@ export class Music {
     }
 
     // Search MusicBrainz
-    const [mbResult, discogsResult] = await Promise.all([
+    const [mbResult, discogsResult, openPerlexYear] = await Promise.all([
       this.searchMusicBrainz(isrc, artist, title),
       this.searchDiscogs(artist, title),
+      this.openperplex.ask(artist, title),
     ]);
-
-    console.log(11, discogsResult);
 
     // Try Google search and extract Wikipedia languages
     const googleResults = await this.performGoogleSearch(artist, title);
@@ -95,6 +96,7 @@ export class Music {
 
                     MusicBrainz thinks the release year is ${mbResult.year}
                     Discogs thinks the release year is ${discogsResult.year}
+                    OpenPerlex (AI scraping) thinks the release year is ${openPerlexYear}
 
                     What is the release you think of this song based on the information above? Also explain on which information you based your answer on.
                     `;
@@ -107,6 +109,7 @@ export class Music {
         spotify: spotifyReleaseYear,
         mb: mbResult.year,
         ai: aiResult.year,
+        openPerplex: openPerlexYear,
         discogs: discogsResult.year,
       },
     };
@@ -380,13 +383,14 @@ export class Music {
 
         this.discogsLastRequestTime = Date.now();
 
-        console.log(22, response.data);
-
         if (response.data.results && response.data.results.length > 0) {
           // Get all valid years from the results
           const years = response.data.results
             .map((release: any) => parseInt(release.year))
-            .filter((year: number) => !isNaN(year) && year > 0 && year <= new Date().getFullYear());
+            .filter(
+              (year: number) =>
+                !isNaN(year) && year > 0 && year <= new Date().getFullYear()
+            );
 
           if (years.length > 0) {
             const earliestYear = Math.min(...years);
