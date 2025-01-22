@@ -103,8 +103,38 @@ export class Music {
 
     const aiResult = await this.openai.ask(prompt);
 
+    const weights = {
+      ai: 0.35,           // Highest weight (35%)
+      openPerplex: 0.25,  // Second highest (25%)
+      mb: 0.15,           // Middle weight (15%)
+      discogs: 0.15,      // Middle weight (15%)
+      spotify: 0.10       // Lowest weight (10%)
+    };
+
+    const sources = {
+      ai: aiResult.year,
+      openPerplex: openPerlexYear,
+      mb: mbResult.year,
+      discogs: discogsResult.year,
+      spotify: spotifyReleaseYear
+    };
+
+    // Calculate weighted average of valid years
+    let totalWeight = 0;
+    let weightedSum = 0;
+
+    for (const [source, year] of Object.entries(sources)) {
+      if (year && year > 0 && year <= new Date().getFullYear()) {
+        weightedSum += year * weights[source as keyof typeof weights];
+        totalWeight += weights[source as keyof typeof weights];
+      }
+    }
+
+    const finalYear = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+
     const fullResult = {
-      year: aiResult.year,
+      year: finalYear,
+      weightedYear: finalYear,
       sources: {
         spotify: spotifyReleaseYear,
         mb: mbResult.year,
@@ -116,11 +146,7 @@ export class Music {
 
     console.log(999, fullResult);
 
-    // console.log('Wikipedia results:', wikiResults);
-
-    //const musicBrainzResult = await this.searchMusicBrainz(isrc);
-
-    return year;
+    return finalYear;
   }
 
   public async searchMusicBrainz(
