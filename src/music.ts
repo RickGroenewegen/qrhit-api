@@ -100,10 +100,10 @@ export class Music {
     const aiResult = await this.openai.ask(prompt);
 
     const weights = {
-      ai: 0.39, // Highest weight (39%)
-      openPerplex: 0.28, // Second highest (28%)
-      mb: 0.165, // Middle weight (16.5%)
-      discogs: 0.165, // Middle weight (16.5%)
+      ai: 0.5,
+      openPerplex: 0.28,
+      mb: 0.11,
+      discogs: 0.11,
     };
 
     const sources = {
