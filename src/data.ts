@@ -1283,7 +1283,10 @@ class Data {
     }
   }
 
-  public async getUserSuggestions(paymentId: string, userHash: string): Promise<any[]> {
+  public async getUserSuggestions(
+    paymentId: string,
+    userHash: string
+  ): Promise<any[]> {
     const tracks = await this.prisma.$queryRaw<any[]>`
       SELECT 
         t.id,
@@ -1296,7 +1299,7 @@ class Data {
         us.year as suggestedYear,
         us.extraNameAttribute,
         us.extraArtistAttribute,
-        CASE WHEN us.id IS NOT NULL THEN true ELSE false END as hasSuggestion
+        CASE WHEN us.id IS NOT NULL THEN 1 ELSE 0 END as hasSuggestion
       FROM payments p
       JOIN users u ON p.userId = u.id
       JOIN payment_has_playlist php ON php.paymentId = p.id
@@ -1312,7 +1315,7 @@ class Data {
   }
 
   public async saveUserSuggestion(
-    paymentId: string, 
+    paymentId: string,
     userHash: string,
     trackId: number,
     suggestion: {
@@ -1357,23 +1360,23 @@ class Data {
       // Check if suggestion already exists
       const existingSuggestion = await this.prisma.userSuggestion.findFirst({
         where: {
-          trackId: trackId
-        }
+          trackId: trackId,
+        },
       });
 
       if (existingSuggestion) {
         // Update existing suggestion
         await this.prisma.userSuggestion.update({
           where: {
-            id: existingSuggestion.id
+            id: existingSuggestion.id,
           },
           data: {
             name: suggestion.name,
             artist: suggestion.artist,
             year: suggestion.year,
             extraNameAttribute: suggestion.extraNameAttribute,
-            extraArtistAttribute: suggestion.extraArtistAttribute
-          }
+            extraArtistAttribute: suggestion.extraArtistAttribute,
+          },
         });
       } else {
         // Create new suggestion
@@ -1384,8 +1387,8 @@ class Data {
             artist: suggestion.artist,
             year: suggestion.year,
             extraNameAttribute: suggestion.extraNameAttribute,
-            extraArtistAttribute: suggestion.extraArtistAttribute
-          }
+            extraArtistAttribute: suggestion.extraArtistAttribute,
+          },
         });
       }
 
