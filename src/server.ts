@@ -885,6 +885,14 @@ class Server {
       return await this.review.processReviewEmails();
     });
 
+    this.fastify.get('/usersuggestions/:paymentId/:userHash', async (request: any, reply) => {
+      const suggestions = await this.data.getUserSuggestions(
+        request.params.paymentId,
+        request.params.userHash
+      );
+      return { success: true, data: suggestions };
+    });
+
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.post('/push', async (request: any, reply: any) => {
         const { token, title, message } = request.body;

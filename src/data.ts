@@ -1283,6 +1283,32 @@ class Data {
     }
   }
 
+  public async getUserSuggestions(paymentId: string, userHash: string): Promise<any[]> {
+    const tracks = await this.prisma.$queryRaw<any[]>`
+      SELECT 
+        t.id,
+        t.name,
+        t.artist,
+        t.year,
+        us.id as suggestionId,
+        us.name as suggestedName,
+        us.artist as suggestedArtist,
+        us.year as suggestedYear,
+        us.extraNameAttribute,
+        us.extraArtistAttribute
+      FROM payments p
+      JOIN users u ON p.userId = u.id
+      JOIN payment_has_playlist php ON php.paymentId = p.id
+      JOIN playlists pl ON pl.id = php.playlistId
+      JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
+      JOIN tracks t ON t.id = pht.trackId
+      LEFT JOIN usersuggestions us ON us.trackId = t.id
+      WHERE p.paymentId = ${paymentId}
+      AND u.hash = ${userHash}
+    `;
+    return tracks;
+  }
+
   public static getInstance(): Data {
     if (!Data.instance) {
       Data.instance = new Data();
