@@ -8,7 +8,7 @@ export class OpenPerplex {
 
   public async ask(artist: string, title: string): Promise<number> {
     let year = 0;
-    const prompt = `What is the release date of the song ${title} by ${artist}. Only output the year! For example, "The song was released in 1999." should be answered with "1999".`;
+    const prompt = `What is the release date of the song ${title} by ${artist} and provide your source URL.`;
 
     const baseUrl =
       'https://44c57909-d9e2-41cb-9244-9cd4a443cb41.app.bhs.ai.cloud.ovh.net';
@@ -22,7 +22,7 @@ export class OpenPerplex {
       answer_type: 'text',
       search_type: 'general',
       verbose_mode: 'false',
-      return_sources: 'false',
+      return_sources: 'true',
       return_images: 'false',
       return_citations: 'false',
       recency_filter: 'anytime',
@@ -70,14 +70,13 @@ export class OpenPerplex {
 
         if (isNaN(year)) {
           // If direct parsing fails, try using ChatGPT to extract the year
-          this.logger.log(
-            color.yellow.bold(
-              'Failed to parse year directly. Asking ChatGPT to interpret the response...'
-            )
-          );
 
           const chatGptResponse = await this.chatgpt.ask(
-            `What is the release year according to this text: "${data.llm_response}"`
+            `What is the release year according to this text: "${
+              data.llm_response
+            }". Also provide the source URL. Open perplex provided the following source URL's so pick one:
+              ${JSON.stringify(data.sources, null, 2)}
+            `
           );
 
           if (chatGptResponse && chatGptResponse.year) {

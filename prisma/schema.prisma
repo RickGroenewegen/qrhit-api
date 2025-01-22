@@ -131,6 +131,7 @@ model Payment {
   test                    Boolean              @default(false)
   reviewMailSent          Boolean              @default(false)
   finalizedAt             DateTime?
+  suggestionsPending      Boolean              @default(false)
   DiscountCodedUses       DiscountCodedUses[]
   Review                  Review[]
 
@@ -141,16 +142,17 @@ model Payment {
 }
 
 model User {
-  id              Int       @id @default(autoincrement())
-  userId          String    @unique
-  email           String    @unique
+  id              Int              @id @default(autoincrement())
+  userId          String           @unique
+  email           String           @unique
   displayName     String
-  hash            String    @unique
-  marketingEmails Boolean   @default(false)
-  sync            Boolean   @default(false)
+  hash            String           @unique
+  marketingEmails Boolean          @default(false)
+  sync            Boolean          @default(false)
   payments        Payment[] // One-to-many relation to payments
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+  UserSuggestion  UserSuggestion[]
 
   @@index([hash])
   @@map("users")
@@ -217,6 +219,23 @@ model Playlist {
   @@map("playlists")
 }
 
+model UserSuggestion {
+  id                   Int      @id @default(autoincrement())
+  name                 String
+  artist               String
+  year                 Int
+  extraNameAttribute   String?
+  extraArtistAttribute String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  track                Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  trackId              Int
+  userId               Int
+  user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("usersuggestions")
+}
+
 model Track {
   id                Int                @id @default(autoincrement())
   trackId           String             @unique
@@ -224,6 +243,13 @@ model Track {
   artist            String
   isrc              String?
   year              Int?
+  spotifyYear       Int?
+  discogsYear       Int?
+  aiYear            Int?
+  musicBrainzYear   Int?
+  openPerplexYear   Int?
+  googleResults     String?            @db.Text
+  standardDeviation Float              @default(0)
   yearSource        String?
   spotifyLink       String?
   certainty         Int                @default(0)
@@ -233,6 +259,7 @@ model Track {
   createdAt         DateTime           @default(now())
   updatedAt         DateTime           @updatedAt
   playlists         PlaylistHasTrack[]
+  UserSuggestion    UserSuggestion[]
 
   @@index([trackId])
   @@index([isrc])

@@ -36,17 +36,22 @@ export class ChatGPT {
             properties: {
               year: {
                 type: 'number',
-                description: 'The release year of the song',
+                description:
+                  'The release year of the song based on all sources',
               },
               reasoning: {
                 type: 'string',
                 description:
-                  'The explanation of how the year was determined (max 100 chars)',
+                  'The explanation of how the year was determined. Refer to the source, and explain the reasoning behind the choice.',
               },
               certainty: {
                 type: 'number',
                 description:
                   'The certainty in % of how sure you are of the year',
+              },
+              source: {
+                type: 'string',
+                description: "An URL of the source you've used",
               },
             },
             required: ['year', 'reasoning'],
