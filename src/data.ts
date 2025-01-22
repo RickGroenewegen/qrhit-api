@@ -1289,17 +1289,16 @@ class Data {
   ): Promise<any[]> {
     const tracks = await this.prisma.$queryRaw<any[]>`
       SELECT 
-        CAST(t.id AS SIGNED) as id,
+        t.id,
         t.name,
         t.artist,
-        CAST(t.year AS SIGNED) as year,
-        CAST(us.id AS SIGNED) as suggestionId,
+        t.year,
+        us.id as suggestionId,
         us.name as suggestedName,
         us.artist as suggestedArtist,
-        CAST(us.year AS SIGNED) as suggestedYear,
+        us.year as suggestedYear,
         us.extraNameAttribute,
-        us.extraArtistAttribute,
-        CAST(CASE WHEN us.id IS NOT NULL THEN 1 ELSE 0 END AS SIGNED) as hasSuggestion
+        us.extraArtistAttribute
       FROM payments p
       JOIN users u ON p.userId = u.id
       JOIN payment_has_playlist php ON php.paymentId = p.id
