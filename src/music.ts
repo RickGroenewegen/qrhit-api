@@ -104,11 +104,11 @@ export class Music {
     const aiResult = await this.openai.ask(prompt);
 
     const weights = {
-      ai: 0.35,           // Highest weight (35%)
-      openPerplex: 0.25,  // Second highest (25%)
-      mb: 0.15,           // Middle weight (15%)
-      discogs: 0.15,      // Middle weight (15%)
-      spotify: 0.10       // Lowest weight (10%)
+      ai: 0.35, // Highest weight (35%)
+      openPerplex: 0.25, // Second highest (25%)
+      mb: 0.15, // Middle weight (15%)
+      discogs: 0.15, // Middle weight (15%)
+      spotify: 0.1, // Lowest weight (10%)
     };
 
     const sources = {
@@ -116,7 +116,7 @@ export class Music {
       openPerplex: openPerlexYear,
       mb: mbResult.year,
       discogs: discogsResult.year,
-      spotify: spotifyReleaseYear
+      spotify: spotifyReleaseYear,
     };
 
     // Calculate weighted average of valid years
@@ -130,11 +130,11 @@ export class Music {
       }
     }
 
-    const finalYear = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+    const finalYear =
+      totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
 
     const fullResult = {
       year: finalYear,
-      weightedYear: finalYear,
       sources: {
         spotify: spotifyReleaseYear,
         mb: mbResult.year,
@@ -144,7 +144,19 @@ export class Music {
       },
     };
 
-    console.log(999, fullResult);
+    this.logger.log(
+      color.blue.bold(
+        `[SP: ${color.white.bold(spotifyReleaseYear)}] [MB: ${color.white.bold(
+          mbResult.year
+        )}] [DC: ${color.white.bold(
+          discogsResult.year
+        )}] [OP: ${color.white.bold(openPerlexYear)}] [AI: ${color.white.bold(
+          aiResult.year
+        )}] for track ${color.white.bold(artist)} - ${color.white.bold(
+          title
+        )}. Final year: ${color.white.bold(finalYear)}`
+      )
+    );
 
     return finalYear;
   }
