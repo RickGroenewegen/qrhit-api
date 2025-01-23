@@ -26,6 +26,7 @@ import * as XLSX from 'xlsx';
 import { OpenPerplex } from './openperplex';
 import cluster from 'cluster';
 import { Music } from './music';
+import PushoverClient from './pushover';
 
 class Data {
   private static instance: Data;
@@ -37,6 +38,7 @@ class Data {
   private music = new Music();
   private analytics = AnalyticsClient.getInstance();
   private openperplex = new OpenPerplex();
+  private pushover = new PushoverClient();
 
   private constructor() {
     if (cluster.isPrimary) {
@@ -1286,7 +1288,8 @@ class Data {
 
   public async getUserSuggestions(
     paymentId: string,
-    userHash: string
+    userHash: string,
+    playlistId: string
   ): Promise<any[]> {
     const tracks = await this.prisma.$queryRaw<any[]>`
       SELECT 
@@ -1294,14 +1297,14 @@ class Data {
         t.name,
         t.artist,
         t.year,
-        t.extraNameAttribute,
         t.extraArtistAttribute,
+        t.extraNameAttribute,
         us.id as suggestionId,
         us.name as suggestedName,
         us.artist as suggestedArtist,
         us.year as suggestedYear,
-        us.extraNameAttribute as suggestedExtraNameAttribute,
-        us.extraArtistAttribute as suggestedExtraArtistAttribute,
+        us.extraArtistAttribute as suggestedExtraNameAttribute,
+        us.extraNameAttribute as suggestedExtraArtistAttribute,
         p.suggestionsPending,
         CASE 
           WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id) > 0 
@@ -1345,6 +1348,7 @@ class Data {
   public async saveUserSuggestion(
     paymentId: string,
     userHash: string,
+    playlistId: string,
     trackId: number,
     suggestion: {
       name: string;
@@ -1439,7 +1443,9 @@ class Data {
 
   public async submitUserSuggestions(
     paymentId: string,
-    userHash: string
+    userHash: string,
+    playlistId: string,
+    clientIp: string
   ): Promise<boolean> {
     try {
       const { verified, paymentDbId } = await this.verifyPaymentOwnership(
@@ -1450,10 +1456,26 @@ class Data {
         return false;
       }
 
+      // Get the payment
+      const payment = await this.prisma.payment.findFirst({
+        where: {
+          paymentId,
+        },
+      });
+
       await this.prisma.payment.update({
         where: { id: paymentDbId },
         data: { suggestionsPending: true },
       });
+
+      this.pushover.sendMessage(
+        {
+          title: `QRSong! Correcties doorgegeven`,
+          message: `Correcties doorgegeven door: ${payment?.fullname}`,
+          sound: 'incoming',
+        },
+        clientIp
+      );
 
       return true;
     } catch (error) {
@@ -1465,6 +1487,7 @@ class Data {
   public async deleteUserSuggestion(
     paymentId: string,
     userHash: string,
+    playlistId: string,
     trackId: number
   ): Promise<boolean> {
     try {
