@@ -1370,18 +1370,19 @@ class Data {
       }
 
       // Then verify the track belongs to this payment
-      const hasAccess = await this.prisma.$queryRaw<any[]>`
-        SELECT 1
-        FROM payment_has_playlist php
-        JOIN playlists pl ON pl.id = php.playlistId
-        JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
-        JOIN payments p ON p.id = php.paymentId
+      const check = await this.prisma.$queryRaw<any[]>`
+        SELECT pl.id AS playlistDBId
+        FROM  payment_has_playlist php
+        JOIN  playlists pl ON pl.id = php.playlistId
+        JOIN  playlist_has_tracks pht ON pht.playlistId = pl.id
+        JOIN  payments p ON p.id = php.paymentId
         WHERE p.paymentId = ${paymentId}
-        AND pht.trackId = ${trackId}
+        AND   pht.trackId = ${trackId}
+        AND   pl.playlistId = ${playlistId}
         LIMIT 1
       `;
 
-      if (hasAccess.length === 0) {
+      if (check.length === 0) {
         return false;
       }
 
@@ -1419,7 +1420,6 @@ class Data {
             year: suggestion.year,
             extraNameAttribute: suggestion.extraNameAttribute,
             extraArtistAttribute: suggestion.extraArtistAttribute,
-            playlistId: parseInt(playlistId),
           },
         });
       } else {
@@ -1428,7 +1428,7 @@ class Data {
           data: {
             trackId: trackId,
             userId: user.id,
-            playlistId: parseInt(playlistId),
+            playlistId: check[0].playlistDBId,
             name: suggestion.name,
             artist: suggestion.artist,
             year: suggestion.year,

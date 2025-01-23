@@ -885,54 +885,80 @@ class Server {
       return await this.review.processReviewEmails();
     });
 
-    this.fastify.get('/usersuggestions/:paymentId/:userHash', async (request: any, reply) => {
-      const suggestions = await this.data.getUserSuggestions(
-        request.params.paymentId,
-        request.params.userHash
-      );
-      return { success: true, data: suggestions };
-    });
-
-    this.fastify.post('/usersuggestions/:paymentId/:userHash', async (request: any, reply) => {
-      const { trackId, name, artist, year, extraNameAttribute, extraArtistAttribute } = request.body;
-      
-      if (!trackId || !name || !artist || !year) {
-        reply.status(400).send({ success: false, error: 'Missing required fields' });
-        return;
+    this.fastify.get(
+      '/usersuggestions/:paymentId/:userHash/:playlistId',
+      async (request: any, reply) => {
+        const suggestions = await this.data.getUserSuggestions(
+          request.params.paymentId,
+          request.params.userHash,
+          request.params.playlistId
+        );
+        return { success: true, data: suggestions };
       }
+    );
 
-      const success = await this.data.saveUserSuggestion(
-        request.params.paymentId,
-        request.params.userHash,
-        trackId,
-        {
+    this.fastify.post(
+      '/usersuggestions/:paymentId/:userHash/:playlistId',
+      async (request: any, reply) => {
+        const {
+          trackId,
           name,
           artist,
           year,
           extraNameAttribute,
-          extraArtistAttribute
+          extraArtistAttribute,
+        } = request.body;
+
+        if (!trackId || !name || !artist || !year) {
+          reply
+            .status(400)
+            .send({ success: false, error: 'Missing required fields' });
+          return;
         }
-      );
 
-      return { success };
-    });
+        const success = await this.data.saveUserSuggestion(
+          request.params.paymentId,
+          request.params.userHash,
+          request.params.playlistId,
+          trackId,
+          {
+            name,
+            artist,
+            year,
+            extraNameAttribute,
+            extraArtistAttribute,
+          }
+        );
 
-    this.fastify.post('/usersuggestions/:paymentId/:userHash/submit', async (request: any, reply) => {
-      const success = await this.data.submitUserSuggestions(
-        request.params.paymentId,
-        request.params.userHash
-      );
-      return { success };
-    });
+        return { success };
+      }
+    );
 
-    this.fastify.delete('/usersuggestions/:paymentId/:userHash/:trackId', async (request: any, reply) => {
-      const success = await this.data.deleteUserSuggestion(
-        request.params.paymentId,
-        request.params.userHash,
-        parseInt(request.params.trackId)
-      );
-      return { success };
-    });
+    this.fastify.post(
+      '/usersuggestions/:paymentId/:userHash/:playlistId/submit',
+      async (request: any, reply) => {
+        const success = await this.data.submitUserSuggestions(
+          request.params.paymentId,
+          request.params.userHash,
+          request.params.playlistId,
+          request.clientIp
+        );
+        return { success };
+      }
+    );
+
+    this.fastify.delete(
+      '/usersuggestions/:paymentId/:userHash/:playlistId/:trackId',
+      async (request: any, reply) => {
+        const success = await this.data.deleteUserSuggestion(
+          request.params.paymentId,
+          request.params.userHash,
+          request.params.playlistId,
+          parseInt(request.params.trackId)
+        );
+        return { success };
+      }
+    );
 
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.post('/push', async (request: any, reply: any) => {
