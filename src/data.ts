@@ -1320,6 +1320,7 @@ class Data {
       LEFT JOIN usersuggestions us ON us.trackId = t.id
       WHERE p.paymentId = ${paymentId}
       AND u.hash = ${userHash}
+      AND pl.playlistId = ${playlistId}
       AND t.manuallyChecked = true
     `;
     return tracks;
