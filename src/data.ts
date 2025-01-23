@@ -1640,17 +1640,29 @@ class Data {
             this.logger.log(color.blue.bold(`- ${change}`));
           });
 
-          // Build update query
+          // Build update query with only changed columns
+          const setClauses = [];
+          if (suggestion.originalName !== suggestion.suggestedName) {
+            setClauses.push(`name = ${suggestion.suggestedName}`);
+          }
+          if (suggestion.originalArtist !== suggestion.suggestedArtist) {
+            setClauses.push(`artist = ${suggestion.suggestedArtist}`);
+          }
+          if (suggestion.originalYear !== suggestion.suggestedYear) {
+            setClauses.push(`year = ${suggestion.suggestedYear}`);
+          }
+          if (suggestion.suggestedExtraNameAttribute) {
+            setClauses.push(`extraNameAttribute = ${suggestion.suggestedExtraNameAttribute}`);
+          }
+          if (suggestion.suggestedExtraArtistAttribute) {
+            setClauses.push(`extraArtistAttribute = ${suggestion.suggestedExtraArtistAttribute}`);
+          }
+          setClauses.push('manuallyCorrected = true');
+
           updateQueries.push(
             this.prisma.$executeRaw`
               UPDATE tracks 
-              SET 
-                name = ${suggestion.suggestedName},
-                artist = ${suggestion.suggestedArtist},
-                year = ${suggestion.suggestedYear},
-                extraNameAttribute = ${suggestion.suggestedExtraNameAttribute},
-                extraArtistAttribute = ${suggestion.suggestedExtraArtistAttribute},
-                manuallyCorrected = true
+              SET ${Prisma.raw(setClauses.join(', '))}
               WHERE id = ${suggestion.trackId}
             `
           );
