@@ -367,5 +367,7 @@
   "mail.reviewMailSubject": "Adoraríamos o teu feedback!",
   "mail.reviewRequest": "Obrigado pela tua recente compra de QRSong! Esperamos que estejas a gostar das tuas cartas! Adoraríamos o teu feedback. Por favor, deixa uma avaliação no nosso site.",
   "mail.leaveReview": "Deixa uma avaliação",
-  "mail.unsubscribe": "Cancelar inscrição"
+  "mail.unsubscribe": "Cancelar inscrição",
+  "mail.correctionLink": "Viu um erro ou quer mudar algo? Corrija-os aqui:",
+  "mail.correctionButton": "Viu um erro ou quer mudar algo? Corrija-o aqui"
 }

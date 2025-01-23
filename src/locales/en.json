@@ -36,8 +36,10 @@
 	"mail.shippingAddress" : "Shipping address",
 	"mail.orderData" : "Order data",
 	"mail.downloadLink" : "Download your PDF",
+	"mail.correctionLink" : "Spotted a mistake or want to make changes? Correct them here:",
 	"mail.physicalDownloadLink" : "Download printer PDF",
 	"mail.downloadButton" : "Download your PDF",
+	"mail.correctionButton" : "Spotted a mistake or want to make changes? Correct it here",
 	"mail.physicalDownloadButton" : "Download printer PDF",
 	"mail.downloadButtonVoucher" : "Download your gift voucher",
 	

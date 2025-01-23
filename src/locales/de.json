@@ -372,5 +372,7 @@
   "mail.reviewMailSubject": "Wir freuen uns auf dein Feedback!",
   "mail.reviewRequest": "Danke für deinen kürzlichen QRSong! Kauf. Wir hoffen, du genießt deine Karten! Wir würden uns über dein Feedback freuen. Bitte hinterlasse eine Bewertung auf unserer Website.",
   "mail.leaveReview": "Hinterlasse eine Bewertung",
-  "mail.unsubscribe": "Abmelden"
+  "mail.unsubscribe": "Abmelden",
+  "mail.correctionLink": "Einen Fehler entdeckt oder willst du was ändern? Korrigiere sie hier:",
+  "mail.correctionButton": "Einen Fehler entdeckt oder willst du was ändern? Korrigiere es hier"
 }

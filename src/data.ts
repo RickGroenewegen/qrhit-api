@@ -633,7 +633,7 @@ class Data {
     return playlist[0];
   }
 
-  public async getTracks(playlistId: number, userId?: number): Promise<any> {
+  public async getTracks(playlistId: number, userId: number): Promise<any> {
     const tracks = await this.prisma.$queryRaw`
         SELECT      tracks.id, 
                    tracks.trackId, 

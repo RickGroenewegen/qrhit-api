@@ -363,5 +363,7 @@
   "mail.reviewMailSubject": "フィードバックをお願いします！",
   "mail.reviewRequest": "最近のQRSong!購入ありがとうございます。カードを楽しんでいることを願っています！フィードバックをお聞かせください。ウェブサイトにレビューをお願いします。",
   "mail.leaveReview": "レビューを残す",
-  "mail.unsubscribe": "登録解除"
+  "mail.unsubscribe": "登録解除",
+  "mail.correctionLink": "間違いを見つけた？変更したい？ここで直してね：",
+  "mail.correctionButton": "間違いを見つけた？変更したい？ここで直してね"
 }

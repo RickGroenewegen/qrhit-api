@@ -365,6 +365,28 @@ class Server {
       }
     );
 
+    this.fastify.get(
+      '/corrections',
+      { preHandler: verifyTokenMiddleware },
+      async (_request: any, reply) => {
+        const corrections = await this.data.getCorrections();
+        return { success: true, data: corrections };
+      }
+    );
+
+    this.fastify.post(
+      '/correction/:paymentId/:userHash/:playlistId',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply) => {
+        const corrections = await this.data.processCorrections(
+          request.params.paymentId,
+          request.params.userHash,
+          request.params.playlistId
+        );
+        return { success: true, data: corrections };
+      }
+    );
+
     this.fastify.post(
       '/finalize',
       { preHandler: verifyTokenMiddleware },
@@ -669,10 +691,10 @@ class Server {
           return;
         }
 
-        const playlist = await this.data.getPlaylist(request.params.playlistId);
-        let tracks = await this.data.getTracks(playlist.id);
         const payment = await this.mollie.getPayment(request.params.paymentId);
         const user = await this.data.getUser(payment.userId);
+        const playlist = await this.data.getPlaylist(request.params.playlistId);
+        let tracks = await this.data.getTracks(playlist.id, user.id);
 
         // Slice the tracks based on the start and end index which is 0-based
         const startIndex = parseInt(request.params.startIndex);
@@ -846,15 +868,6 @@ class Server {
         return { success: false };
       }
     });
-
-    this.fastify.get(
-      '/corrections',
-      { preHandler: verifyTokenMiddleware },
-      async (_request: any, reply) => {
-        const corrections = await this.data.getCorrections();
-        return { success: true, data: corrections };
-      }
-    );
 
     this.fastify.post('/printapi/webhook', async (request: any, _reply) => {
       await this.order.processPrintApiWebhook(request.body.orderId);

@@ -4414,5 +4414,29 @@
     "hin",
     "jp",
     "cn"
+  ],
+  "mail.correctionLink": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp",
+    "cn"
+  ],
+  "mail.correctionButton": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp",
+    "cn"
   ]
 }

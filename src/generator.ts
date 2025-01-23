@@ -162,7 +162,7 @@ class Generator {
         );
 
         // Get tracks for QR generation
-        const dbTracks = await this.data.getTracks(playlist.id);
+        const dbTracks = await this.data.getTracks(playlist.id, payment.userId);
 
         // Generate QR codes
         await this.generateQRCodes(playlist, dbTracks, subdir);
@@ -313,7 +313,7 @@ class Generator {
         )} tracks for playlist: ${white.bold(playlist.playlistId)}`
       )
     );
-    const dbTracks = await this.data.getTracks(playlist.id);
+    const dbTracks = await this.data.getTracks(playlist.id, 0);
     playlist.numberOfTracks = dbTracks.length;
   }
 

@@ -5,6 +5,11 @@ import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 dotenv.config();
 
+(BigInt.prototype as any).toJSON = function () {
+  const int = Number.parseInt(this.toString());
+  return int ?? this.toString();
+};
+
 if (process.env['ENVIRONMENT'] !== 'development') {
   Sentry.init({
     dsn: 'https://fbb350c809685382751c422a65a9766f@o1181344.ingest.us.sentry.io/4507950233223168',

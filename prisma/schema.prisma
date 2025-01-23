@@ -196,24 +196,26 @@ model taxRate {
 }
 
 model Playlist {
-  id              Int                  @id @default(autoincrement())
-  playlistId      String               @unique
-  type            String               @default("cards")
-  name            String
-  slug            String               @default("")
-  createdAt       DateTime             @default(now())
-  updatedAt       DateTime             @updatedAt
-  featured        Boolean              @default(false)
-  featuredLocale  String?
-  image           String
-  price           Float                @default(0)
-  numberOfTracks  Int                  @default(0)
-  resetCache      Boolean              @default(false)
-  giftcardAmount  Float                @default(0)
-  giftcardFrom    String?              @db.VarChar(100)
-  giftcardMessage String?              @db.VarChar(255)
-  tracks          PlaylistHasTrack[]
-  Payment         PaymentHasPlaylist[]
+  id                Int                  @id @default(autoincrement())
+  playlistId        String               @unique
+  type              String               @default("cards")
+  name              String
+  slug              String               @default("")
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
+  featured          Boolean              @default(false)
+  featuredLocale    String?
+  image             String
+  price             Float                @default(0)
+  numberOfTracks    Int                  @default(0)
+  resetCache        Boolean              @default(false)
+  giftcardAmount    Float                @default(0)
+  giftcardFrom      String?              @db.VarChar(100)
+  giftcardMessage   String?              @db.VarChar(255)
+  tracks            PlaylistHasTrack[]
+  Payment           PaymentHasPlaylist[]
+  UserSuggestion    UserSuggestion[]
+  PlayListExtraInfo TrackExtraInfo[]
 
   @@index([playlistId])
   @@map("playlists")
@@ -230,15 +232,31 @@ model UserSuggestion {
   updatedAt            DateTime @updatedAt
   track                Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
   trackId              Int
+  playlist             Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  playlistId           Int
   userId               Int
   user                 User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("usersuggestions")
 }
 
+model TrackExtraInfo {
+  id                   Int      @id @default(autoincrement())
+  playlist             Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  playlistId           Int
+  track                Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
+  trackId              Int
+  extraNameAttribute   String?
+  extraArtistAttribute String?
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+
+  @@map("trackextrainfo")
+}
+
 model Track {
-  id                Int                @id @default(autoincrement())
-  trackId           String             @unique
+  id                Int     @id @default(autoincrement())
+  trackId           String  @unique
   name              String
   artist            String
   isrc              String?
@@ -248,18 +266,20 @@ model Track {
   aiYear            Int?
   musicBrainzYear   Int?
   openPerplexYear   Int?
-  googleResults     String?            @db.Text
-  standardDeviation Float              @default(0)
+  googleResults     String? @db.Text
+  standardDeviation Float   @default(0)
   yearSource        String?
   spotifyLink       String?
-  certainty         Int                @default(0)
-  reasoning         String?            @db.Text
-  manuallyChecked   Boolean            @default(false)
-  manuallyCorrected Boolean            @default(false)
-  createdAt         DateTime           @default(now())
-  updatedAt         DateTime           @updatedAt
-  playlists         PlaylistHasTrack[]
-  UserSuggestion    UserSuggestion[]
+  certainty         Int     @default(0)
+  reasoning         String? @db.Text
+  manuallyChecked   Boolean @default(false)
+  manuallyCorrected Boolean @default(false)
+
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+  playlists      PlaylistHasTrack[]
+  UserSuggestion UserSuggestion[]
+  TrackExtraInfo TrackExtraInfo[]
 
   @@index([trackId])
   @@index([isrc])
