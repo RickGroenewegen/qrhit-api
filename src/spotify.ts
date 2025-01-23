@@ -491,11 +491,14 @@ class Spotify {
             yearResults
               .filter((r) => r.year !== null)
               .map((r) =>
-                this.cache.set(`track_${r.trackId}`, JSON.stringify({
-                  year: r.year,
-                  extraNameAttribute: r.extraNameAttribute,
-                  extraArtistAttribute: r.extraArtistAttribute
-                }))
+                this.cache.set(
+                  `trackInfo_${r.trackId}`,
+                  JSON.stringify({
+                    year: r.year,
+                    extraNameAttribute: r.extraNameAttribute,
+                    extraArtistAttribute: r.extraArtistAttribute,
+                  })
+                )
               )
           );
 
@@ -509,7 +512,9 @@ class Spotify {
                 let extraArtistAttribute: string | undefined;
 
                 // Check cache first
-                const cachedTrackInfo = await this.cache.get(`track_${trackId}`);
+                const cachedTrackInfo = await this.cache.get(
+                  `trackInfo_${trackId}`
+                );
                 if (cachedTrackInfo) {
                   const trackInfo = JSON.parse(cachedTrackInfo);
                   trueYear = trackInfo.year;
