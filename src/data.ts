@@ -633,11 +633,19 @@ class Data {
     return playlist[0];
   }
 
-  public async getTracks(playlistId: number): Promise<any> {
+  public async getTracks(playlistId: number, userId?: number): Promise<any> {
     const tracks = await this.prisma.$queryRaw`
-        SELECT      tracks.id, tracks.trackId, tracks.artist, tracks.year, tracks.name FROM tracks
-        INNER JOIN  playlist_has_tracks ON tracks.id = playlist_has_tracks.trackId
-        WHERE       playlist_has_tracks.playlistId = ${playlistId}`;
+        SELECT      tracks.id, 
+                   tracks.trackId, 
+                   tracks.artist, 
+                   tracks.year, 
+                   tracks.name,
+                   tei.extraNameAttribute,
+                   tei.extraArtistAttribute
+        FROM       tracks
+        INNER JOIN playlist_has_tracks ON tracks.id = playlist_has_tracks.trackId
+        LEFT JOIN  trackextrainfo tei ON tei.trackId = tracks.id AND tei.playlistId = ${playlistId}
+        WHERE      playlist_has_tracks.playlistId = ${playlistId}`;
 
     return tracks;
   }
