@@ -448,20 +448,25 @@ class Spotify {
             .map((item: any) => item.track.id);
 
           // Get years for all tracks in one query
-          let yearResults: { trackId: string; year: number }[] = [];
+          let yearResults: { trackId: string; year: number; extraNameAttribute?: string; extraArtistAttribute?: string }[] = [];
           if (trackIds.length > 0) {
             yearResults = await this.prisma.$queryRaw<
-              { trackId: string; year: number }[]
+              { trackId: string; year: number; extraNameAttribute?: string; extraArtistAttribute?: string }[]
             >`
-              SELECT trackId, year 
-              FROM tracks 
-              WHERE trackId IN (${Prisma.join(trackIds)})
-              AND manuallyChecked = 1
+              SELECT t.trackId, t.year, tei.extraNameAttribute, tei.extraArtistAttribute
+              FROM tracks t
+              LEFT JOIN trackextrainfo tei ON t.id = tei.trackId
+              WHERE t.trackId IN (${Prisma.join(trackIds)})
+              AND t.manuallyChecked = 1
             `;
           }
 
           // Create a map of trackId to year for quick lookup
-          const yearMap = new Map(yearResults.map((r) => [r.trackId, r.year]));
+          const yearMap = new Map(yearResults.map((r) => [r.trackId, {
+            year: r.year,
+            extraNameAttribute: r.extraNameAttribute,
+            extraArtistAttribute: r.extraArtistAttribute
+          }]));
 
           // Cache all years at once, only for tracks that have a year
           await Promise.all(
