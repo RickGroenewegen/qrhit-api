@@ -1574,8 +1574,69 @@ class Data {
     paymentId: string,
     userHash: string,
     playlistId: string
-  ) {
-    console.log(111, paymentId, userHash, playlistId);
+  ): Promise<boolean> {
+    try {
+      // First verify ownership
+      const { verified } = await this.verifyPaymentOwnership(paymentId, userHash);
+      if (!verified) {
+        return false;
+      }
+
+      // Get all suggestions for this payment/playlist combination
+      const suggestions = await this.prisma.$queryRaw<any[]>`
+        SELECT 
+          t.id as trackId,
+          t.name as originalName,
+          t.artist as originalArtist,
+          t.year as originalYear,
+          us.name as suggestedName,
+          us.artist as suggestedArtist,
+          us.year as suggestedYear,
+          us.extraNameAttribute as suggestedExtraNameAttribute,
+          us.extraArtistAttribute as suggestedExtraArtistAttribute
+        FROM payments p
+        JOIN users u ON p.userId = u.id
+        JOIN payment_has_playlist php ON php.paymentId = p.id
+        JOIN playlists pl ON pl.id = php.playlistId
+        JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
+        JOIN tracks t ON t.id = pht.trackId
+        JOIN usersuggestions us ON us.trackId = t.id
+        WHERE p.paymentId = ${paymentId}
+        AND u.hash = ${userHash}
+        AND pl.playlistId = ${playlistId}
+      `;
+
+      for (const suggestion of suggestions) {
+        this.logger.log(
+          color.blue.bold(
+            `Track ${color.white.bold(suggestion.trackId)}:`
+          )
+        );
+        this.logger.log(
+          color.blue.bold(
+            `Original: ${color.white.bold(suggestion.originalArtist)} - ${color.white.bold(suggestion.originalName)} (${color.white.bold(suggestion.originalYear)})`
+          )
+        );
+        this.logger.log(
+          color.blue.bold(
+            `Suggested: ${color.white.bold(suggestion.suggestedArtist)} - ${color.white.bold(suggestion.suggestedName)} (${color.white.bold(suggestion.suggestedYear)})`
+          )
+        );
+        if (suggestion.suggestedExtraNameAttribute || suggestion.suggestedExtraArtistAttribute) {
+          this.logger.log(
+            color.blue.bold(
+              `Extra attributes: ${color.white.bold(suggestion.suggestedExtraNameAttribute || 'none')} / ${color.white.bold(suggestion.suggestedExtraArtistAttribute || 'none')}`
+            )
+          );
+        }
+        this.logger.log(''); // Empty line for readability
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error processing corrections:', error);
+      return false;
+    }
   }
 
   public static getInstance(): Data {
