@@ -1,3 +1,4 @@
+import { Track } from './interfaces/Track';
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import { Prisma, PrismaClient } from '@prisma/client';
@@ -1293,12 +1294,14 @@ class Data {
         t.name,
         t.artist,
         t.year,
+        t.extraNameAttribute,
+        t.extraArtistAttribute,
         us.id as suggestionId,
         us.name as suggestedName,
         us.artist as suggestedArtist,
         us.year as suggestedYear,
-        us.extraNameAttribute,
-        us.extraArtistAttribute,
+        us.extraNameAttribute as suggestedExtraNameAttribute,
+        us.extraArtistAttribute as suggestedExtraArtistAttribute,
         p.suggestionsPending,
         CASE 
           WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id) > 0 
