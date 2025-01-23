@@ -1554,6 +1554,9 @@ class Data {
         u.email,
         p.fullname,
         pl.name as playlistName,
+        p.paymentId,
+        u.hash as userHash,
+        pl.playlistId,
         CAST(COUNT(DISTINCT us.id) AS SIGNED) as suggestionCount
       FROM payments p
       JOIN users u ON p.userId = u.id
@@ -1561,7 +1564,7 @@ class Data {
       JOIN playlists pl ON pl.id = php.playlistId
       LEFT JOIN usersuggestions us ON us.playlistId = pl.id
       WHERE p.suggestionsPending = 1
-      GROUP BY u.id, u.email, p.fullname, pl.name
+      GROUP BY u.id, u.email, p.fullname, pl.name, p.paymentId, u.hash, pl.playlistId
     `;
 
     return corrections;
