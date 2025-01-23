@@ -1663,16 +1663,41 @@ class Data {
           if (suggestion.originalYear !== suggestion.suggestedYear) {
             setClauses.push(`year = ${suggestion.suggestedYear}`);
           }
-          if (suggestion.suggestedExtraNameAttribute) {
-            // setClauses.push(
-            //   `extraNameAttribute = ${suggestion.suggestedExtraNameAttribute}`
-            // );
+          // Handle extra attributes in TrackExtraInfo
+          if (suggestion.suggestedExtraNameAttribute || suggestion.suggestedExtraArtistAttribute) {
+            const existingExtraInfo = await this.prisma.trackExtraInfo.findFirst({
+              where: {
+                trackId: suggestion.trackId,
+                playlistId: check[0].playlistDBId
+              }
+            });
+
+            if (existingExtraInfo) {
+              // Update existing record
+              updateQueries.push(
+                this.prisma.trackExtraInfo.update({
+                  where: { id: existingExtraInfo.id },
+                  data: {
+                    extraNameAttribute: suggestion.suggestedExtraNameAttribute || null,
+                    extraArtistAttribute: suggestion.suggestedExtraArtistAttribute || null
+                  }
+                })
+              );
+            } else {
+              // Create new record
+              updateQueries.push(
+                this.prisma.trackExtraInfo.create({
+                  data: {
+                    trackId: suggestion.trackId,
+                    playlistId: check[0].playlistDBId,
+                    extraNameAttribute: suggestion.suggestedExtraNameAttribute || null,
+                    extraArtistAttribute: suggestion.suggestedExtraArtistAttribute || null
+                  }
+                })
+              );
+            }
           }
-          if (suggestion.suggestedExtraArtistAttribute) {
-            // setClauses.push(
-            //   `extraArtistAttribute = ${suggestion.suggestedExtraArtistAttribute}`
-            // );
-          }
+
           setClauses.push('manuallyCorrected = true');
 
           updateQueries.push(
