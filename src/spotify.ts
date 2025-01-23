@@ -459,11 +459,18 @@ class Spotify {
               {
                 trackId: string;
                 year: number;
+                name: string;
+                artist: string;
+                originalName: string;
+                originalArtist: string;
                 extraNameAttribute?: string;
                 extraArtistAttribute?: string;
               }[]
             >`
-              SELECT t.trackId, t.year, t.name, t.artist, tei.extraNameAttribute, tei.extraArtistAttribute
+              SELECT t.trackId, t.year, t.name as originalName, t.artist as originalArtist, 
+                     COALESCE(tei.extraNameAttribute, t.name) as name,
+                     COALESCE(tei.extraArtistAttribute, t.artist) as artist,
+                     tei.extraNameAttribute, tei.extraArtistAttribute
               FROM tracks t
               LEFT JOIN trackextrainfo tei ON t.id = tei.trackId
               LEFT JOIN playlist_has_tracks pht ON t.id = pht.trackId
@@ -480,6 +487,10 @@ class Spotify {
               r.trackId,
               {
                 year: r.year,
+                name: r.name,
+                artist: r.artist,
+                originalName: r.originalName,
+                originalArtist: r.originalArtist,
                 extraNameAttribute: r.extraNameAttribute,
                 extraArtistAttribute: r.extraArtistAttribute,
               },
