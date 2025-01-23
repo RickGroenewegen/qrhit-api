@@ -1419,6 +1419,7 @@ class Data {
             year: suggestion.year,
             extraNameAttribute: suggestion.extraNameAttribute,
             extraArtistAttribute: suggestion.extraArtistAttribute,
+            playlistId: parseInt(playlistId),
           },
         });
       } else {
@@ -1427,6 +1428,7 @@ class Data {
           data: {
             trackId: trackId,
             userId: user.id,
+            playlistId: parseInt(playlistId),
             name: suggestion.name,
             artist: suggestion.artist,
             year: suggestion.year,
