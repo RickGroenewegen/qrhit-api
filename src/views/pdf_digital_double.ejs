@@ -205,9 +205,19 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
             rowIndices.forEach(function(i) { %>
                 <% if (i !== null) { %>
                     <div class="card back">
-                        <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;"><%= tracks[i].artist %> (<%= tracks[i].extraArtistAttribute %>)</div>
+                        <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;">
+                            <%= tracks[i].artist %>
+                            <% if (tracks[i].extraArtistAttribute) { %>
+                                <div style="font-size: 14px; color: #666; margin-top: -1mm;">(<%= tracks[i].extraArtistAttribute %>)</div>
+                            <% } %>
+                        </div>
                         <div class="text" style="margin-top: 5mm;font-size:36px;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= tracks[i].year %></div>
-                        <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;padding-left:2mm;padding-right:2mm;"><%= tracks[i].name %> (<%= tracks[i].extraNameAttribute %>)</div>
+                        <div class="text" style="margin-top: 7mm;font-size:16px;font-style: italic;padding-left:2mm;padding-right:2mm;">
+                            <%= tracks[i].name %>
+                            <% if (tracks[i].extraNameAttribute) { %>
+                                <div style="font-size: 12px; color: #666; margin-top: 1mm;">(<%= tracks[i].extraNameAttribute %>)</div>
+                            <% } %>
+                        </div>
                         <div class="text" style="margin-top: 5mm;font-size:14px;color:#909090;"><%= process.env['APP_DOMAIN'] %></div>
                     </div>
                 <% } else { %>
