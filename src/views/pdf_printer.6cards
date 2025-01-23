@@ -228,14 +228,14 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                         <div class="text artist">
                             <%= paddedTracks[i].artist %>
                             <% if (paddedTracks[i].extraArtistAttribute) { %>
-                                <div style="font-size: 14px; color: #666; margin-top: -1mm;">(<%= paddedTracks[i].extraArtistAttribute %>)</div>
+                                <div style="font-size: 14px; color: #666; margin-top: -1mm;"><%= paddedTracks[i].extraArtistAttribute %></div>
                             <% } %>
                         </div>
                         <div class="text year"><%= paddedTracks[i].year %></div>
                         <div class="text name">
                             <%= paddedTracks[i].name %>
                             <% if (paddedTracks[i].extraNameAttribute) { %>
-                                <div style="font-size: 12px; color: #666; margin-top: 1mm;">(<%= paddedTracks[i].extraNameAttribute %>)</div>
+                                <div style="font-size: 12px; color: #666; margin-top: 1mm;"><%= paddedTracks[i].extraNameAttribute %></div>
                             <% } %>
                         </div>
                         <div class="text domainback"><%= process.env['APP_DOMAIN'] %></div>
