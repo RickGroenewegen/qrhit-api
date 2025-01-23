@@ -422,7 +422,8 @@ export class Music {
           'https://api.discogs.com/database/search',
           {
             params: {
-              q: `${artist} ${title}`,
+              artist: artist,
+              track: title,
               type: 'release',
               token: discogsToken,
             },
