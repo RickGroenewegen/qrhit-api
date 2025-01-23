@@ -1297,8 +1297,8 @@ class Data {
         t.name,
         t.artist,
         t.year,
-        t.extraArtistAttribute,
-        t.extraNameAttribute,
+        '' AS extraArtistAttribute,
+        '' AS extraNameAttribute,
         us.id as suggestionId,
         us.name as suggestedName,
         us.artist as suggestedArtist,
@@ -1664,24 +1664,28 @@ class Data {
             setClauses.push(`year = ${suggestion.suggestedYear}`);
           }
           // Handle extra attributes in TrackExtraInfo
-          if (suggestion.suggestedExtraNameAttribute || suggestion.suggestedExtraArtistAttribute) {
+          if (
+            suggestion.suggestedExtraNameAttribute ||
+            suggestion.suggestedExtraArtistAttribute
+          ) {
             // Get playlist database ID
             const playlist = await this.prisma.playlist.findFirst({
               where: {
-                playlistId: playlistId
+                playlistId: playlistId,
               },
               select: {
-                id: true
-              }
+                id: true,
+              },
             });
 
             if (playlist) {
-              const existingExtraInfo = await this.prisma.trackExtraInfo.findFirst({
-                where: {
-                  trackId: suggestion.trackId,
-                  playlistId: playlist.id
-                }
-              });
+              const existingExtraInfo =
+                await this.prisma.trackExtraInfo.findFirst({
+                  where: {
+                    trackId: suggestion.trackId,
+                    playlistId: playlist.id,
+                  },
+                });
 
               if (existingExtraInfo) {
                 // Update existing record
@@ -1689,9 +1693,11 @@ class Data {
                   this.prisma.trackExtraInfo.update({
                     where: { id: existingExtraInfo.id },
                     data: {
-                      extraNameAttribute: suggestion.suggestedExtraNameAttribute || null,
-                      extraArtistAttribute: suggestion.suggestedExtraArtistAttribute || null
-                    }
+                      extraNameAttribute:
+                        suggestion.suggestedExtraNameAttribute || null,
+                      extraArtistAttribute:
+                        suggestion.suggestedExtraArtistAttribute || null,
+                    },
                   })
                 );
               } else {
@@ -1701,9 +1707,11 @@ class Data {
                     data: {
                       trackId: suggestion.trackId,
                       playlistId: playlist.id,
-                      extraNameAttribute: suggestion.suggestedExtraNameAttribute || null,
-                      extraArtistAttribute: suggestion.suggestedExtraArtistAttribute || null
-                    }
+                      extraNameAttribute:
+                        suggestion.suggestedExtraNameAttribute || null,
+                      extraArtistAttribute:
+                        suggestion.suggestedExtraArtistAttribute || null,
+                    },
                   })
                 );
               }
@@ -1726,18 +1734,20 @@ class Data {
 
       // Execute all updates if there are any
       if (updateQueries.length > 0) {
-        // await Promise.all(updateQueries);
-        // // Update payment status
-        // await this.prisma.$executeRaw`
-        //   UPDATE payments
-        //   SET suggestionsPending = false
-        //   WHERE paymentId = ${paymentId}
-        // `;
-        // this.logger.log(
-        //   color.green.bold(
-        //     `Successfully processed ${color.white.bold(updateQueries.length)} corrections`
-        //   )
-        // );
+        await Promise.all(updateQueries);
+        // Update payment status
+        await this.prisma.$executeRaw`
+          UPDATE payments
+          SET suggestionsPending = false
+          WHERE paymentId = ${paymentId}
+        `;
+        this.logger.log(
+          color.green.bold(
+            `Successfully processed ${color.white.bold(
+              updateQueries.length
+            )} corrections`
+          )
+        );
       } else {
         this.logger.log(
           color.yellow.bold('No changes detected in suggestions')
