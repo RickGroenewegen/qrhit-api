@@ -1665,36 +1665,48 @@ class Data {
           }
           // Handle extra attributes in TrackExtraInfo
           if (suggestion.suggestedExtraNameAttribute || suggestion.suggestedExtraArtistAttribute) {
-            const existingExtraInfo = await this.prisma.trackExtraInfo.findFirst({
+            // Get playlist database ID
+            const playlist = await this.prisma.playlist.findFirst({
               where: {
-                trackId: suggestion.trackId,
-                playlistId: check[0].playlistDBId
+                playlistId: playlistId
+              },
+              select: {
+                id: true
               }
             });
 
-            if (existingExtraInfo) {
-              // Update existing record
-              updateQueries.push(
-                this.prisma.trackExtraInfo.update({
-                  where: { id: existingExtraInfo.id },
-                  data: {
-                    extraNameAttribute: suggestion.suggestedExtraNameAttribute || null,
-                    extraArtistAttribute: suggestion.suggestedExtraArtistAttribute || null
-                  }
-                })
-              );
-            } else {
-              // Create new record
-              updateQueries.push(
-                this.prisma.trackExtraInfo.create({
-                  data: {
-                    trackId: suggestion.trackId,
-                    playlistId: check[0].playlistDBId,
-                    extraNameAttribute: suggestion.suggestedExtraNameAttribute || null,
-                    extraArtistAttribute: suggestion.suggestedExtraArtistAttribute || null
-                  }
-                })
-              );
+            if (playlist) {
+              const existingExtraInfo = await this.prisma.trackExtraInfo.findFirst({
+                where: {
+                  trackId: suggestion.trackId,
+                  playlistId: playlist.id
+                }
+              });
+
+              if (existingExtraInfo) {
+                // Update existing record
+                updateQueries.push(
+                  this.prisma.trackExtraInfo.update({
+                    where: { id: existingExtraInfo.id },
+                    data: {
+                      extraNameAttribute: suggestion.suggestedExtraNameAttribute || null,
+                      extraArtistAttribute: suggestion.suggestedExtraArtistAttribute || null
+                    }
+                  })
+                );
+              } else {
+                // Create new record
+                updateQueries.push(
+                  this.prisma.trackExtraInfo.create({
+                    data: {
+                      trackId: suggestion.trackId,
+                      playlistId: playlist.id,
+                      extraNameAttribute: suggestion.suggestedExtraNameAttribute || null,
+                      extraArtistAttribute: suggestion.suggestedExtraArtistAttribute || null
+                    }
+                  })
+                );
+              }
             }
           }
 
