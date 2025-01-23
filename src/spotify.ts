@@ -501,13 +501,20 @@ class Spotify {
               .map(async (item: any) => {
                 const trackId = item.track.id;
                 let trueYear: number | undefined;
+                let extraNameAttribute: string | undefined;
+                let extraArtistAttribute: string | undefined;
 
                 // Check cache first
                 const cachedYear = await this.cache.get(`year_${trackId}`);
                 if (cachedYear) {
                   trueYear = parseInt(cachedYear);
                 } else {
-                  trueYear = trackMap.get(trackId);
+                  const trackInfo = trackMap.get(trackId);
+                  if (trackInfo) {
+                    trueYear = trackInfo.year;
+                    extraNameAttribute = trackInfo.extraNameAttribute;
+                    extraArtistAttribute = trackInfo.extraArtistAttribute;
+                  }
                 }
                 return {
                   id: trackId,
@@ -524,6 +531,8 @@ class Spotify {
                     'yyyy-MM-dd'
                   ),
                   trueYear,
+                  extraNameAttribute,
+                  extraArtistAttribute,
                 };
               })
           );
