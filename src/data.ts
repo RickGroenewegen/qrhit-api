@@ -1720,12 +1720,23 @@ class Data {
 
           setClauses.push('manuallyCorrected = true');
 
+          // Use parameterized query instead of raw SQL
           updateQueries.push(
-            this.prisma.$executeRaw`
-              UPDATE tracks 
-              SET ${Prisma.raw(setClauses.join(', '))}
-              WHERE id = ${suggestion.trackId}
-            `
+            this.prisma.track.update({
+              where: { id: suggestion.trackId },
+              data: {
+                ...(suggestion.originalName !== suggestion.suggestedName && {
+                  name: suggestion.suggestedName
+                }),
+                ...(suggestion.originalArtist !== suggestion.suggestedArtist && {
+                  artist: suggestion.suggestedArtist
+                }),
+                ...(suggestion.originalYear !== suggestion.suggestedYear && {
+                  year: suggestion.suggestedYear
+                }),
+                manuallyCorrected: true
+              }
+            })
           );
         }
       }
