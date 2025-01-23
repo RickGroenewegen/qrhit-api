@@ -1554,17 +1554,20 @@ class Data {
         u.email,
         p.fullname,
         pl.name as playlistName,
-        COUNT(us.id) as suggestionCount
+        (
+          SELECT COUNT(1)
+          FROM usersuggestions us 
+          WHERE us.playlistId = pl.id
+          AND us.userId = u.id
+        ) as suggestionCount
       FROM payments p
       JOIN users u ON p.userId = u.id
       JOIN payment_has_playlist php ON php.paymentId = p.id
       JOIN playlists pl ON pl.id = php.playlistId
-      LEFT JOIN usersuggestions us ON us.playlistId = pl.id
       WHERE p.suggestionsPending = 1
-      GROUP BY u.id, u.email, p.fullname, pl.name
       HAVING suggestionCount > 0
     `;
-    
+
     return corrections;
   }
 
