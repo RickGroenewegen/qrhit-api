@@ -1570,6 +1570,14 @@ class Data {
     return corrections;
   }
 
+  public async processCorrections(
+    paymentId: string,
+    userHash: string,
+    playlistId: string
+  ) {
+    console.log(111, paymentId, userHash, playlistId);
+  }
+
   public static getInstance(): Data {
     if (!Data.instance) {
       Data.instance = new Data();
