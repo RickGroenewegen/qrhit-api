@@ -1617,15 +1617,27 @@ class Data {
 
         // Check for differences
         if (suggestion.originalName !== suggestion.suggestedName) {
-          changes.push(`name changed from '${suggestion.originalName}' to '${suggestion.suggestedName}'`);
+          changes.push(
+            `Name changed from '${color.white.bold(
+              suggestion.originalName
+            )}' to '${color.white.bold(suggestion.suggestedName)}'`
+          );
           hasChanges = true;
         }
         if (suggestion.originalArtist !== suggestion.suggestedArtist) {
-          changes.push(`artist changed from '${suggestion.originalArtist}' to '${suggestion.suggestedArtist}'`);
+          changes.push(
+            `Artist changed from '${color.white.bold(
+              suggestion.originalArtist
+            )}' to '${color.white.bold(suggestion.suggestedArtist)}'`
+          );
           hasChanges = true;
         }
         if (suggestion.originalYear !== suggestion.suggestedYear) {
-          changes.push(`year changed from ${suggestion.originalYear} to ${suggestion.suggestedYear}`);
+          changes.push(
+            `Year changed from ${color.white.bold(
+              suggestion.originalYear
+            )} to ${color.white.bold(suggestion.suggestedYear)}`
+          );
           hasChanges = true;
         }
 
@@ -1636,8 +1648,8 @@ class Data {
               `Track ${color.white.bold(suggestion.trackId)} changes:`
             )
           );
-          changes.forEach(change => {
-            this.logger.log(color.blue.bold(`- ${change}`));
+          changes.forEach((change) => {
+            this.logger.log(color.blue.bold(`  ${change}`));
           });
 
           // Build update query with only changed columns
@@ -1652,10 +1664,14 @@ class Data {
             setClauses.push(`year = ${suggestion.suggestedYear}`);
           }
           if (suggestion.suggestedExtraNameAttribute) {
-            setClauses.push(`extraNameAttribute = ${suggestion.suggestedExtraNameAttribute}`);
+            setClauses.push(
+              `extraNameAttribute = ${suggestion.suggestedExtraNameAttribute}`
+            );
           }
           if (suggestion.suggestedExtraArtistAttribute) {
-            setClauses.push(`extraArtistAttribute = ${suggestion.suggestedExtraArtistAttribute}`);
+            setClauses.push(
+              `extraArtistAttribute = ${suggestion.suggestedExtraArtistAttribute}`
+            );
           }
           setClauses.push('manuallyCorrected = true');
 
@@ -1669,27 +1685,27 @@ class Data {
         }
       }
 
+      console.log(updateQueries);
+
       // Execute all updates if there are any
       if (updateQueries.length > 0) {
         await Promise.all(updateQueries);
-        
         // Update payment status
         await this.prisma.$executeRaw`
-          UPDATE payments 
+          UPDATE payments
           SET suggestionsPending = false
           WHERE paymentId = ${paymentId}
         `;
-
         this.logger.log(
           color.green.bold(
-            `Successfully processed ${color.white.bold(updateQueries.length)} corrections`
+            `Successfully processed ${color.white.bold(
+              updateQueries.length
+            )} corrections`
           )
         );
       } else {
         this.logger.log(
-          color.yellow.bold(
-            'No changes detected in suggestions'
-          )
+          color.yellow.bold('No changes detected in suggestions')
         );
       }
 
