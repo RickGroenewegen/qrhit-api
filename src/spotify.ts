@@ -486,12 +486,16 @@ class Spotify {
             ])
           );
 
-          // Cache all years at once, only for tracks that have a year
+          // Cache all track info at once
           await Promise.all(
             yearResults
               .filter((r) => r.year !== null)
               .map((r) =>
-                this.cache.set(`year_${r.trackId}`, r.year.toString())
+                this.cache.set(`track_${r.trackId}`, JSON.stringify({
+                  year: r.year,
+                  extraNameAttribute: r.extraNameAttribute,
+                  extraArtistAttribute: r.extraArtistAttribute
+                }))
               )
           );
 
@@ -505,9 +509,12 @@ class Spotify {
                 let extraArtistAttribute: string | undefined;
 
                 // Check cache first
-                const cachedYear = await this.cache.get(`year_${trackId}`);
-                if (cachedYear) {
-                  trueYear = parseInt(cachedYear);
+                const cachedTrackInfo = await this.cache.get(`track_${trackId}`);
+                if (cachedTrackInfo) {
+                  const trackInfo = JSON.parse(cachedTrackInfo);
+                  trueYear = trackInfo.year;
+                  extraNameAttribute = trackInfo.extraNameAttribute;
+                  extraArtistAttribute = trackInfo.extraArtistAttribute;
                 } else {
                   const trackInfo = trackMap.get(trackId);
                   if (trackInfo) {
