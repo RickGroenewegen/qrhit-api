@@ -1736,11 +1736,11 @@ class Data {
       if (updateQueries.length > 0) {
         await Promise.all(updateQueries);
         // Update payment status
-        await this.prisma.$executeRaw`
-          UPDATE payments
-          SET suggestionsPending = false
-          WHERE paymentId = ${paymentId}
-        `;
+        // await this.prisma.$executeRaw`
+        //   UPDATE payments
+        //   SET suggestionsPending = false
+        //   WHERE paymentId = ${paymentId}
+        // `;
         this.logger.log(
           color.green.bold(
             `Successfully processed ${color.white.bold(
