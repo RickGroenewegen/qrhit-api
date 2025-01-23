@@ -451,6 +451,8 @@ class Spotify {
           let yearResults: {
             trackId: string;
             year: number;
+            name: string;
+            artist: string;
             extraNameAttribute?: string;
             extraArtistAttribute?: string;
           }[] = [];
@@ -467,17 +469,13 @@ class Spotify {
                 extraArtistAttribute?: string;
               }[]
             >`
-              SELECT t.trackId, t.year, t.name as originalName, t.artist as originalArtist, 
-                     COALESCE(tei.extraNameAttribute, t.name) as name,
-                     COALESCE(tei.extraArtistAttribute, t.artist) as artist,
-                     tei.extraNameAttribute, tei.extraArtistAttribute
+              SELECT t.trackId, t.year, t.artist, t.name, t.year, tei.extraNameAttribute, tei.extraArtistAttribute
               FROM tracks t
               LEFT JOIN trackextrainfo tei ON t.id = tei.trackId
               LEFT JOIN playlist_has_tracks pht ON t.id = pht.trackId
-              LEFT JOIN playlists p ON pht.playlistId = p.id
+              LEFT JOIN playlists p ON pht.playlistId = p.id AND p.playlistId = ${checkPlaylistId}
               WHERE t.trackId IN (${Prisma.join(trackIds)})
               AND t.manuallyChecked = 1
-              AND p.playlistId = ${checkPlaylistId}
             `;
           }
 
@@ -489,8 +487,6 @@ class Spotify {
                 year: r.year,
                 name: r.name,
                 artist: r.artist,
-                originalName: r.originalName,
-                originalArtist: r.originalArtist,
                 extraNameAttribute: r.extraNameAttribute,
                 extraArtistAttribute: r.extraArtistAttribute,
               },
@@ -503,9 +499,11 @@ class Spotify {
               .filter((r) => r.year !== null)
               .map((r) =>
                 this.cache.set(
-                  `trackInfo_${r.trackId}`,
+                  `trackInfo2_${r.trackId}`,
                   JSON.stringify({
                     year: r.year,
+                    name: r.name,
+                    artist: r.artist,
                     extraNameAttribute: r.extraNameAttribute,
                     extraArtistAttribute: r.extraArtistAttribute,
                   })
@@ -521,28 +519,38 @@ class Spotify {
                 let trueYear: number | undefined;
                 let extraNameAttribute: string | undefined;
                 let extraArtistAttribute: string | undefined;
+                let trueName: string | undefined;
+                let trueArtist: string | undefined;
 
                 // Check cache first
                 const cachedTrackInfo = await this.cache.get(
-                  `trackInfo_${trackId}`
+                  `trackInfo2_${trackId}`
                 );
                 if (cachedTrackInfo) {
                   const trackInfo = JSON.parse(cachedTrackInfo);
                   trueYear = trackInfo.year;
+                  trueName = trackInfo.name;
+                  trueArtist = trackInfo.artist;
                   extraNameAttribute = trackInfo.extraNameAttribute;
                   extraArtistAttribute = trackInfo.extraArtistAttribute;
                 } else {
                   const trackInfo = trackMap.get(trackId);
                   if (trackInfo) {
                     trueYear = trackInfo.year;
+                    trueName = trackInfo.name;
+                    trueArtist = trackInfo.artist;
                     extraNameAttribute = trackInfo.extraNameAttribute;
                     extraArtistAttribute = trackInfo.extraArtistAttribute;
+                  } else {
+                    trueName = item.track.name;
+                    trueArtist = item.track.artists[0].name;
                   }
                 }
+
                 return {
                   id: trackId,
-                  name: this.utils.cleanTrackName(item.track.name),
-                  artist: item.track.artists[0].name,
+                  name: this.utils.cleanTrackName(trueName!),
+                  artist: trueArtist,
                   link: item.track.external_urls.spotify,
                   isrc: item.track.external_ids.isrc,
                   image:
