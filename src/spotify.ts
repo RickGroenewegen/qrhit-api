@@ -448,10 +448,20 @@ class Spotify {
             .map((item: any) => item.track.id);
 
           // Get years for all tracks in one query
-          let yearResults: { trackId: string; year: number; extraNameAttribute?: string; extraArtistAttribute?: string }[] = [];
+          let yearResults: {
+            trackId: string;
+            year: number;
+            extraNameAttribute?: string;
+            extraArtistAttribute?: string;
+          }[] = [];
           if (trackIds.length > 0) {
             yearResults = await this.prisma.$queryRaw<
-              { trackId: string; year: number; extraNameAttribute?: string; extraArtistAttribute?: string }[]
+              {
+                trackId: string;
+                year: number;
+                extraNameAttribute?: string;
+                extraArtistAttribute?: string;
+              }[]
             >`
               SELECT t.trackId, t.year, tei.extraNameAttribute, tei.extraArtistAttribute
               FROM tracks t
@@ -465,11 +475,16 @@ class Spotify {
           }
 
           // Create a map of trackId to year for quick lookup
-          const yearMap = new Map(yearResults.map((r) => [r.trackId, {
-            year: r.year,
-            extraNameAttribute: r.extraNameAttribute,
-            extraArtistAttribute: r.extraArtistAttribute
-          }]));
+          const trackMap = new Map(
+            yearResults.map((r) => [
+              r.trackId,
+              {
+                year: r.year,
+                extraNameAttribute: r.extraNameAttribute,
+                extraArtistAttribute: r.extraArtistAttribute,
+              },
+            ])
+          );
 
           // Cache all years at once, only for tracks that have a year
           await Promise.all(
@@ -492,7 +507,7 @@ class Spotify {
                 if (cachedYear) {
                   trueYear = parseInt(cachedYear);
                 } else {
-                  trueYear = yearMap.get(trackId);
+                  trueYear = trackMap.get(trackId);
                 }
                 return {
                   id: trackId,
