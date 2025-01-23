@@ -1655,10 +1655,10 @@ class Data {
           // Build update query with only changed columns
           const setClauses = [];
           if (suggestion.originalName !== suggestion.suggestedName) {
-            setClauses.push(`name = ${suggestion.suggestedName}`);
+            setClauses.push(`name = '${suggestion.suggestedName}'`);
           }
           if (suggestion.originalArtist !== suggestion.suggestedArtist) {
-            setClauses.push(`artist = ${suggestion.suggestedArtist}`);
+            setClauses.push(`artist = '${suggestion.suggestedArtist}'`);
           }
           if (suggestion.originalYear !== suggestion.suggestedYear) {
             setClauses.push(`year = ${suggestion.suggestedYear}`);
