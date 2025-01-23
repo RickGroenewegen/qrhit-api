@@ -1640,6 +1640,22 @@ class Data {
           );
           hasChanges = true;
         }
+        if (suggestion.suggestedExtraNameAttribute) {
+          changes.push(
+            `Extra name attribute added: '${color.white.bold(
+              suggestion.suggestedExtraNameAttribute
+            )}'`
+          );
+          hasChanges = true;
+        }
+        if (suggestion.suggestedExtraArtistAttribute) {
+          changes.push(
+            `Extra artist attribute added: '${color.white.bold(
+              suggestion.suggestedExtraArtistAttribute
+            )}'`
+          );
+          hasChanges = true;
+        }
 
         if (hasChanges) {
           // Log the changes
