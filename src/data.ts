@@ -37,7 +37,6 @@ class Data {
   private utils = new Utils();
   private music = new Music();
   private analytics = AnalyticsClient.getInstance();
-  private openperplex = new OpenPerplex();
   private pushover = new PushoverClient();
 
   private constructor() {
@@ -1311,8 +1310,8 @@ class Data {
         us.name as suggestedName,
         us.artist as suggestedArtist,
         us.year as suggestedYear,
-        us.extraArtistAttribute as suggestedExtraNameAttribute,
-        us.extraNameAttribute as suggestedExtraArtistAttribute,
+        us.extraArtistAttribute as suggestedExtraArtistAttribute,
+        us.extraNameAttribute as suggestedExtraNameAttribute,
         p.suggestionsPending,
         CASE 
           WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id) > 0 
@@ -1802,6 +1801,15 @@ class Data {
             )} corrections`
           )
         );
+
+        // await this.mollie.clearPDFs(paymentId);
+        // await this.generator.generate(
+        //   paymentId,
+        //   clientIp,
+        //   '',
+        //   this.mollie,
+        //   true // Force finalize
+        // );
       } else {
         this.logger.log(
           color.yellow.bold('No changes detected in suggestions')
