@@ -55,16 +55,11 @@
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td align="center">
-                                                        <table border="0" cellspacing="0" cellpadding="0" role="presentation">
-                                                            <tr>
-                                                                <td align="center" style="border-radius: 4px;" bgcolor="#4299e1">
-                                                                    <a href="{{ digitalDownloadCorrectionLink }}" target="_blank"
-                                                                        style="font-size: 16px; font-family: Helvetica, Arial, sans-serif; color: #ffffff; text-decoration: none; border-radius: 4px; padding: 12px 24px; border: 1px solid #4299e1; display: inline-block; font-weight: bold;">{{
-                                                                        translations.correctionButton }}</a>
-                                                                </td>
-                                                            </tr>
-                                                        </table>
+                                                    <td align="center" style="padding-top: 12px;">
+                                                        <a href="{{ digitalDownloadCorrectionLink }}" target="_blank" 
+                                                           style="color: #4299e1; text-decoration: underline; font-size: 14px;">
+                                                            {{ translations.correctionButton }}
+                                                        </a>
                                                     </td>
                                                 </tr>
                                                 {{#if sendPhysicalLink}}
