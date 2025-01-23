@@ -1663,6 +1663,13 @@ class Data {
           if (suggestion.originalYear !== suggestion.suggestedYear) {
             setClauses.push(`year = ${suggestion.suggestedYear}`);
           }
+
+          console.log(
+            111,
+            suggestion.suggestedExtraNameAttribute,
+            suggestion.suggestedExtraArtistAttribute
+          );
+
           // Handle extra attributes in TrackExtraInfo
           if (
             suggestion.suggestedExtraNameAttribute ||
@@ -1686,6 +1693,8 @@ class Data {
                     playlistId: playlist.id,
                   },
                 });
+
+              console.log(111, existingExtraInfo);
 
               if (existingExtraInfo) {
                 // Update existing record
@@ -1726,16 +1735,17 @@ class Data {
               where: { id: suggestion.trackId },
               data: {
                 ...(suggestion.originalName !== suggestion.suggestedName && {
-                  name: suggestion.suggestedName
+                  name: suggestion.suggestedName,
                 }),
-                ...(suggestion.originalArtist !== suggestion.suggestedArtist && {
-                  artist: suggestion.suggestedArtist
+                ...(suggestion.originalArtist !==
+                  suggestion.suggestedArtist && {
+                  artist: suggestion.suggestedArtist,
                 }),
                 ...(suggestion.originalYear !== suggestion.suggestedYear && {
-                  year: suggestion.suggestedYear
+                  year: suggestion.suggestedYear,
                 }),
-                manuallyCorrected: true
-              }
+                manuallyCorrected: true,
+              },
             })
           );
         }
