@@ -1553,19 +1553,12 @@ class Data {
         u.id as userId,
         u.email,
         p.fullname,
-        pl.name as playlistName,
-        (
-          SELECT COUNT(1)
-          FROM usersuggestions us 
-          WHERE us.playlistId = pl.id
-          AND us.userId = u.id
-        ) as suggestionCount
+        pl.name as playlistName,        
       FROM payments p
       JOIN users u ON p.userId = u.id
       JOIN payment_has_playlist php ON php.paymentId = p.id
       JOIN playlists pl ON pl.id = php.playlistId
       WHERE p.suggestionsPending = 1
-      HAVING suggestionCount > 0
     `;
 
     return corrections;
