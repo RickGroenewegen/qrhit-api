@@ -1680,12 +1680,6 @@ class Data {
             setClauses.push(`year = ${suggestion.suggestedYear}`);
           }
 
-          console.log(
-            111,
-            suggestion.suggestedExtraNameAttribute,
-            suggestion.suggestedExtraArtistAttribute
-          );
-
           // Handle extra attributes in TrackExtraInfo
           if (
             suggestion.suggestedExtraNameAttribute ||
@@ -1709,8 +1703,6 @@ class Data {
                     playlistId: playlist.id,
                   },
                 });
-
-              console.log(111, existingExtraInfo);
 
               if (existingExtraInfo) {
                 // Update existing record
@@ -1767,17 +1759,34 @@ class Data {
         }
       }
 
-      console.log(updateQueries);
-
       // Execute all updates if there are any
       if (updateQueries.length > 0) {
         await Promise.all(updateQueries);
         // Update payment status
-        // await this.prisma.$executeRaw`
-        //   UPDATE payments
-        //   SET suggestionsPending = false
-        //   WHERE paymentId = ${paymentId}
-        // `;
+        await this.prisma.$executeRaw`
+          UPDATE payments
+          SET suggestionsPending = false
+          WHERE paymentId = ${paymentId}
+        `;
+        // Delete all user suggestions for this payment
+        await this.prisma.$executeRaw`
+          DELETE FROM usersuggestions
+          WHERE userId = (SELECT id FROM users WHERE hash = ${userHash})
+          AND trackId IN (
+            SELECT id
+            FROM tracks
+            WHERE id IN (
+              SELECT trackId
+              FROM playlist_has_tracks
+              WHERE playlistId = (
+                SELECT id
+                FROM playlists
+                WHERE playlistId = ${playlistId}
+              )
+            )
+          )
+        `;
+
         this.logger.log(
           color.green.bold(
             `Successfully processed ${color.white.bold(
