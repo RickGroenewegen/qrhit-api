@@ -463,7 +463,7 @@ class Spotify {
                 extraArtistAttribute?: string;
               }[]
             >`
-              SELECT t.trackId, t.year, tei.extraNameAttribute, tei.extraArtistAttribute
+              SELECT t.trackId, t.year, t.name, t.artist, tei.extraNameAttribute, tei.extraArtistAttribute
               FROM tracks t
               LEFT JOIN trackextrainfo tei ON t.id = tei.trackId
               LEFT JOIN playlist_has_tracks pht ON t.id = pht.trackId
