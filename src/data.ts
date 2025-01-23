@@ -1547,6 +1547,27 @@ class Data {
     }
   }
 
+  public async getCorrections(): Promise<any[]> {
+    const corrections = await this.prisma.$queryRaw<any[]>`
+      SELECT 
+        u.id as userId,
+        u.email,
+        p.fullname,
+        pl.name as playlistName,
+        COUNT(us.id) as suggestionCount
+      FROM payments p
+      JOIN users u ON p.userId = u.id
+      JOIN payment_has_playlist php ON php.paymentId = p.id
+      JOIN playlists pl ON pl.id = php.playlistId
+      LEFT JOIN usersuggestions us ON us.playlistId = pl.id
+      WHERE p.suggestionsPending = 1
+      GROUP BY u.id, u.email, p.fullname, pl.name
+      HAVING suggestionCount > 0
+    `;
+    
+    return corrections;
+  }
+
   public static getInstance(): Data {
     if (!Data.instance) {
       Data.instance = new Data();

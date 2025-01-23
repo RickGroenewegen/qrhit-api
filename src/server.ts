@@ -847,6 +847,15 @@ class Server {
       }
     });
 
+    this.fastify.get(
+      '/corrections',
+      { preHandler: verifyTokenMiddleware },
+      async (_request: any, reply) => {
+        const corrections = await this.data.getCorrections();
+        return { success: true, data: corrections };
+      }
+    );
+
     this.fastify.post('/printapi/webhook', async (request: any, _reply) => {
       await this.order.processPrintApiWebhook(request.body.orderId);
       return { success: true };
