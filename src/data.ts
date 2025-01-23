@@ -1609,9 +1609,76 @@ class Data {
         AND pl.playlistId = ${playlistId}
       `;
 
+      const updateQueries = [];
+
       for (const suggestion of suggestions) {
-        console.log(111, suggestion);
-        this.logger.log(''); // Empty line for readability
+        const changes = [];
+        let hasChanges = false;
+
+        // Check for differences
+        if (suggestion.originalName !== suggestion.suggestedName) {
+          changes.push(`name changed from '${suggestion.originalName}' to '${suggestion.suggestedName}'`);
+          hasChanges = true;
+        }
+        if (suggestion.originalArtist !== suggestion.suggestedArtist) {
+          changes.push(`artist changed from '${suggestion.originalArtist}' to '${suggestion.suggestedArtist}'`);
+          hasChanges = true;
+        }
+        if (suggestion.originalYear !== suggestion.suggestedYear) {
+          changes.push(`year changed from ${suggestion.originalYear} to ${suggestion.suggestedYear}`);
+          hasChanges = true;
+        }
+
+        if (hasChanges) {
+          // Log the changes
+          this.logger.log(
+            color.blue.bold(
+              `Track ${color.white.bold(suggestion.trackId)} changes:`
+            )
+          );
+          changes.forEach(change => {
+            this.logger.log(color.blue.bold(`- ${change}`));
+          });
+
+          // Build update query
+          updateQueries.push(
+            this.prisma.$executeRaw`
+              UPDATE tracks 
+              SET 
+                name = ${suggestion.suggestedName},
+                artist = ${suggestion.suggestedArtist},
+                year = ${suggestion.suggestedYear},
+                extraNameAttribute = ${suggestion.suggestedExtraNameAttribute},
+                extraArtistAttribute = ${suggestion.suggestedExtraArtistAttribute},
+                manuallyCorrected = true
+              WHERE id = ${suggestion.trackId}
+            `
+          );
+        }
+      }
+
+      // Execute all updates if there are any
+      if (updateQueries.length > 0) {
+        await Promise.all(updateQueries);
+        
+        // Update payment status
+        await this.prisma.$executeRaw`
+          UPDATE payments 
+          SET suggestionsPending = false
+          WHERE paymentId = ${paymentId}
+        `;
+
+        this.logger.log(
+          color.green.bold(
+            `Successfully processed ${color.white.bold(updateQueries.length)} corrections`
+          )
+        );
+      } else {
+        this.logger.log(
+          color.yellow.bold(
+            'No changes detected in suggestions'
+          )
+        );
       }
 
       return true;
