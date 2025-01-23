@@ -1664,14 +1664,14 @@ class Data {
             setClauses.push(`year = ${suggestion.suggestedYear}`);
           }
           if (suggestion.suggestedExtraNameAttribute) {
-            setClauses.push(
-              `extraNameAttribute = ${suggestion.suggestedExtraNameAttribute}`
-            );
+            // setClauses.push(
+            //   `extraNameAttribute = ${suggestion.suggestedExtraNameAttribute}`
+            // );
           }
           if (suggestion.suggestedExtraArtistAttribute) {
-            setClauses.push(
-              `extraArtistAttribute = ${suggestion.suggestedExtraArtistAttribute}`
-            );
+            // setClauses.push(
+            //   `extraArtistAttribute = ${suggestion.suggestedExtraArtistAttribute}`
+            // );
           }
           setClauses.push('manuallyCorrected = true');
 
@@ -1689,20 +1689,18 @@ class Data {
 
       // Execute all updates if there are any
       if (updateQueries.length > 0) {
-        await Promise.all(updateQueries);
-        // Update payment status
-        await this.prisma.$executeRaw`
-          UPDATE payments
-          SET suggestionsPending = false
-          WHERE paymentId = ${paymentId}
-        `;
-        this.logger.log(
-          color.green.bold(
-            `Successfully processed ${color.white.bold(
-              updateQueries.length
-            )} corrections`
-          )
-        );
+        // await Promise.all(updateQueries);
+        // // Update payment status
+        // await this.prisma.$executeRaw`
+        //   UPDATE payments
+        //   SET suggestionsPending = false
+        //   WHERE paymentId = ${paymentId}
+        // `;
+        // this.logger.log(
+        //   color.green.bold(
+        //     `Successfully processed ${color.white.bold(updateQueries.length)} corrections`
+        //   )
+        // );
       } else {
         this.logger.log(
           color.yellow.bold('No changes detected in suggestions')
