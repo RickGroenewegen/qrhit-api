@@ -1577,7 +1577,10 @@ class Data {
   ): Promise<boolean> {
     try {
       // First verify ownership
-      const { verified } = await this.verifyPaymentOwnership(paymentId, userHash);
+      const { verified } = await this.verifyPaymentOwnership(
+        paymentId,
+        userHash
+      );
       if (!verified) {
         return false;
       }
@@ -1607,28 +1610,7 @@ class Data {
       `;
 
       for (const suggestion of suggestions) {
-        this.logger.log(
-          color.blue.bold(
-            `Track ${color.white.bold(suggestion.trackId)}:`
-          )
-        );
-        this.logger.log(
-          color.blue.bold(
-            `Original: ${color.white.bold(suggestion.originalArtist)} - ${color.white.bold(suggestion.originalName)} (${color.white.bold(suggestion.originalYear)})`
-          )
-        );
-        this.logger.log(
-          color.blue.bold(
-            `Suggested: ${color.white.bold(suggestion.suggestedArtist)} - ${color.white.bold(suggestion.suggestedName)} (${color.white.bold(suggestion.suggestedYear)})`
-          )
-        );
-        if (suggestion.suggestedExtraNameAttribute || suggestion.suggestedExtraArtistAttribute) {
-          this.logger.log(
-            color.blue.bold(
-              `Extra attributes: ${color.white.bold(suggestion.suggestedExtraNameAttribute || 'none')} / ${color.white.bold(suggestion.suggestedExtraArtistAttribute || 'none')}`
-            )
-          );
-        }
+        console.log(111, suggestion);
         this.logger.log(''); // Empty line for readability
       }
 
