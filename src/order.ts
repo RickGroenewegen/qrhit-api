@@ -432,7 +432,6 @@ class Order {
         orderType.pricePerCard = price.pricePerCard;
       } else {
         const orderInfo = await this.calculateOptimalPrintOrder(numberOfTracks);
-
         orderType.amountWithMargin = orderInfo.totalPrice;
       }
     }
@@ -498,11 +497,19 @@ class Order {
         total += itemPrice;
 
         if (item.type != 'digital') {
-          itemsForApi.push({
-            productId: orderType.printApiProductId,
-            quantity: item.amount,
-            pageCount: numberOfTracks * 2,
-          });
+          const orderInfo = await this.calculateOptimalPrintOrder(
+            numberOfTracks
+          );
+
+          for (const order of orderInfo.order) {
+            let numberOfSheets = order.pages;
+            numberOfSheets = 8; //TODO: Remove this line
+            itemsForApi.push({
+              productId: `kaarten_enkel_a5_lig_${numberOfSheets}st_indv`,
+              quantity: item.amount,
+              pageCount: numberOfSheets * 2,
+            });
+          }
         }
       } else {
         return {
@@ -528,7 +535,7 @@ class Order {
       try {
         const cachedData = JSON.parse(cachedPrice);
         if (cachedData.success) {
-          return cachedData;
+          //  return cachedData;
         }
       } catch (e) {
         this.cache.del(cacheToken);
@@ -537,10 +544,12 @@ class Order {
 
     if (itemsForApi.length > 0) {
       const authToken = await this.getAuthToken();
+
       const data = {
         country: params.countrycode || 'NL',
         items: itemsForApi,
       };
+
       try {
         let response = await axios({
           method: 'post',
