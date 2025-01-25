@@ -486,30 +486,27 @@ class Generator {
         let printApiOrderResponse = '';
 
         // TODO: Implement API
-        // if (physicalPlaylists.length > 0) {
-        //   payment.printerPageCount = await this.pdf.countPDFPages(
-        //     `${process.env['PUBLIC_DIR']}/pdf/${physicalPlaylists[0].filename}`
-        //   );
-        //   const orderData = await this.order.createOrder(
-        //     payment,
-        //     physicalPlaylists,
-        //     playlists[0].productType
-        //   );
-        //   printApiOrderId = orderData.response.id;
-        //   printApiOrderRequest = JSON.stringify(orderData.request);
-        //   printApiOrderResponse = JSON.stringify(orderData.response);
-        // }
+        if (physicalPlaylists.length > 0) {
+          const orderData = await this.order.createOrder(
+            payment,
+            physicalPlaylists,
+            playlists[0].productType
+          );
+          printApiOrderId = orderData.response.id;
+          printApiOrderRequest = JSON.stringify(orderData.request);
+          printApiOrderResponse = JSON.stringify(orderData.response);
+        }
 
-        // await this.prisma.payment.update({
-        //   where: {
-        //     id: payment.id,
-        //   },
-        //   data: {
-        //     printApiOrderId,
-        //     printApiOrderRequest,
-        //     printApiOrderResponse,
-        //   },
-        // });
+        await this.prisma.payment.update({
+          where: {
+            id: payment.id,
+          },
+          data: {
+            printApiOrderId,
+            printApiOrderRequest,
+            printApiOrderResponse,
+          },
+        });
 
         this.logger.log(
           color.green.bold(

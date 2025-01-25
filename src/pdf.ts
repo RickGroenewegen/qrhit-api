@@ -285,7 +285,7 @@ class PDF {
     try {
       // Format ranges into the required string format (e.g., "1-54,55-58,59-59")
       const rangeString = ranges
-        .map(range => `${range.start}-${range.end}`)
+        .map((range) => `${range.start}-${range.end}`)
         .join(',');
 
       const result = await this.convertapi.convert(
@@ -293,7 +293,7 @@ class PDF {
         {
           File: inputPath,
           SplitMode: 'ranges',
-          SplitByCustomRange: rangeString
+          SplitByCustomRange: rangeString,
         },
         'pdf'
       );
@@ -301,14 +301,14 @@ class PDF {
       // Get the directory path from the input file
       const dir = path.dirname(inputPath);
       const basename = path.basename(inputPath, '.pdf');
-      
+
       // Save each split file and collect their paths
       const outputPaths: string[] = [];
       for (let i = 0; i < result.files.length; i++) {
         const outputPath = path.join(dir, `${basename}_part${i + 1}.pdf`);
         await result.files[i].save(outputPath);
         outputPaths.push(outputPath);
-        
+
         this.logger.log(
           color.blue.bold(
             `Split PDF part ${i + 1} saved: ${color.white.bold(outputPath)}`

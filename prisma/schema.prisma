@@ -201,6 +201,17 @@ model Playlist {
   type              String               @default("cards")
   name              String
   slug              String               @default("")
+  description_en    String?              @db.Text
+  description_nl    String?              @db.Text
+  description_de    String?              @db.Text
+  description_fr    String?              @db.Text
+  description_es    String?              @db.Text
+  description_it    String?              @db.Text
+  description_pt    String?              @db.Text
+  description_pl    String?              @db.Text
+  description_hin   String?              @db.Text
+  description_jp    String?              @db.Text
+  description_cn    String?              @db.Text
   createdAt         DateTime             @default(now())
   updatedAt         DateTime             @updatedAt
   featured          Boolean              @default(false)
