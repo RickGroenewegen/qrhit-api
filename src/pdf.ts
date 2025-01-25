@@ -104,10 +104,10 @@ class PDF {
           RespectViewport: 'false',
           ConversionDelay: 10,
           PageSize: 'a4',
-          MarginTop: 10,
+          MarginTop: 0,
           MarginRight: 0,
           MarginBottom: 0,
-          MarginLeft: 10,
+          MarginLeft: 0,
           CompressPDF: 'true',
         } as any;
 
