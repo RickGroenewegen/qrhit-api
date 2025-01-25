@@ -737,17 +737,33 @@ class Order {
         pageCount = await this.pdf.countPDFPages(
           `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
         );
-      }
 
-      itemsToSend.push({
-        productId: orderType.printApiProductId,
-        pageCount, //TODO: Replace with this pageCount,
-        metadata: JSON.stringify({
-          filename: playlist.filename,
-          id: playlist.playlist.paymentHasPlaylistId,
-        }),
-        quantity: playlist.playlist.amount,
-      });
+        const orderInfo = await this.calculateOptimalPrintOrder(
+          playlist.numberOfTracks
+        );
+
+        itemsToSend.push({
+          productId: orderType.printApiProductId,
+          pageCount, //TODO: Replace with this pageCount,
+          metadata: JSON.stringify({
+            filename: playlist.filename,
+            id: playlist.playlist.paymentHasPlaylistId,
+          }),
+          quantity: playlist.playlist.amount,
+        });
+
+        console.log(999, orderInfo);
+      } else {
+        itemsToSend.push({
+          productId: orderType.printApiProductId,
+          pageCount, //TODO: Replace with this pageCount,
+          metadata: JSON.stringify({
+            filename: playlist.filename,
+            id: playlist.playlist.paymentHasPlaylistId,
+          }),
+          quantity: playlist.playlist.amount,
+        });
+      }
     }
 
     const body = {
