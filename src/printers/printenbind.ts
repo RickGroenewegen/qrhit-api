@@ -480,6 +480,7 @@ class PrintEnBind {
           'Content-Type': 'application/json',
         },
         data: orderItems[0], // Start with first article
+        transformRequest: [(data) => JSON.stringify(data)],
       });
 
       //   // Add remaining articles to the order
