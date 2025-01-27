@@ -479,48 +479,39 @@ class PrintEnBind {
       try {
         // Log the exact request being sent
         console.log('Request payload:', JSON.stringify(orderItems[0], null, 2));
-
-        console.log(
-          'Request URL:',
-          `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`
-        );
+        console.log('Request URL:', `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`);
         console.log('Request Headers:', {
           Authorization: authToken,
           'Content-Type': 'application/json',
         });
         console.log('Request Data:', orderItems[0]);
 
-        // Add request interceptor to log the exact request
-        axios.interceptors.request.use((request) => {
-          console.log('Full Axios Request:', {
-            method: request.method,
-            url: request.url,
-            headers: request.headers,
-            data: request.data,
-            // Convert data to string to see exact format being sent
-            dataAsString:
-              typeof request.data === 'string'
-                ? request.data
-                : JSON.stringify(request.data),
-          });
-          return request;
-        });
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
-        const response = await axios({
-          method: 'post',
-          url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
-          headers: {
-            Authorization: authToken,
-            'Content-Type': 'application/json',
-          },
-          data: orderItems[0],
-          timeout: 30000, // 30 second timeout
-        });
+        const response = await fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': authToken,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderItems[0]),
+            signal: controller.signal
+          }
+        );
 
-        const responseData = response.data;
+        clearTimeout(timeout);
 
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
+
+        const responseData = await response.json();
+        
         // Get order ID from location header if it exists
-        const orderId = response.headers?.location?.split('/')[1];
+        const orderId = response.headers.get('location')?.split('/')[1];
 
         if (!orderId) {
           return {
@@ -531,27 +522,39 @@ class PrintEnBind {
 
         // Add remaining articles to the order
         for (let i = 1; i < orderItems.length; i++) {
-          await axios({
-            method: 'post',
-            url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-            headers: {
-              Authorization: authToken,
-              'Content-Type': 'application/json',
-            },
-            data: orderItems[i],
-          });
+          const articleResponse = await fetch(
+            `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+            {
+              method: 'POST',
+              headers: {
+                'Authorization': authToken,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify(orderItems[i])
+            }
+          );
+
+          if (!articleResponse.ok) {
+            throw new Error(`Failed to add article ${i + 1}`);
+          }
         }
 
         // Get full order details
-        const orderResponse = await axios({
-          method: 'get',
-          url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-          headers: {
-            Authorization: authToken,
-          },
-        });
+        const orderResponse = await fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+          {
+            method: 'GET',
+            headers: {
+              'Authorization': authToken
+            }
+          }
+        );
 
-        const articles = orderResponse.data;
+        if (!orderResponse.ok) {
+          throw new Error('Failed to get order details');
+        }
+
+        const articles = await orderResponse.json();
         let total = 0;
         let totalTax = 0;
 
@@ -572,18 +575,16 @@ class PrintEnBind {
       } catch (error) {
         console.log(error);
 
-        if (axios.isAxiosError(error)) {
-          if (error.code === 'ECONNABORTED') {
-            return {
-              success: false,
-              error: 'Request timed out after 30 seconds',
-            };
-          } else {
-            return {
-              success: false,
-              error: `API request failed: ${error.message}`,
-            };
-          }
+        if (error.name === 'AbortError') {
+          return {
+            success: false,
+            error: 'Request timed out after 30 seconds',
+          };
+        } else if (error instanceof Error) {
+          return {
+            success: false,
+            error: `API request failed: ${error.message}`,
+          };
         } else {
           return {
             success: false,
