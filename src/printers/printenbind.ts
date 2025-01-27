@@ -662,7 +662,7 @@ class PrintEnBind {
       size: 'custom',
       printside: 'double',
       finishing: 'loose',
-      papertype: 'card',
+      papertype: 'hvo_300', // of 'card'
       size_custom_width: '60',
       size_custom_height: '60',
       check_doc: 'standard',
