@@ -472,16 +472,16 @@ class PrintEnBind {
       console.log(222, orderItems);
 
       // Make API request to create articles
-      const response = await axios({
-        method: 'post',
-        url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        data: orderItems[0], // Start with first article
-        transformRequest: [(data) => JSON.stringify(data)],
-      });
+      const response = await axios.post(
+        `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
+        orderItems[0], // Start with first article
+        {
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
 
       //   // Add remaining articles to the order
       //   const orderId = response.headers.location.split('/')[1];
