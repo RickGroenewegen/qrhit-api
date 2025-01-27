@@ -668,7 +668,7 @@ class PrintEnBind {
     };
   }
 
-  public async calculateOrder(params: any): Promise<ApiResult> {
+  public async calculateOrder(params: any): Promise<any> {
     if (!params.countrycode) {
       params.countrycode = 'NL';
     }
@@ -689,10 +689,12 @@ class PrintEnBind {
         }
       }
 
-      return await this.processOrderRequest(orderItems, {
+      const result = await this.processOrderRequest(orderItems, {
         email: params.email,
         countrycode: params.countrycode,
       });
+
+      console.log(1111, result);
     } catch (error) {
       this.logger.log(color.red.bold(`Error calculating order: ${error}`));
       return {
@@ -795,15 +797,13 @@ class PrintEnBind {
     payment: any,
     playlists: any[],
     productType: string
-  ): Promise<ApiResult> {
-    console.log(2222, playlists);
-
+  ): Promise<any> {
     try {
       const orderItems = [];
 
       for (const playlistItem of playlists) {
         const playlist = playlistItem.playlist;
-        console.log(111, playlist);
+        const filename = playlistItem.filename;
 
         this.logger.log(
           color.blue.bold(
@@ -812,7 +812,7 @@ class PrintEnBind {
         );
 
         await this.pdf.countPDFPages(
-          `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
+          `${process.env['PUBLIC_DIR']}/pdf/${filename}`
         );
 
         const fileUrl = `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`;
@@ -837,9 +837,13 @@ class PrintEnBind {
         true
       );
 
-      console.log(111, result);
-
-      return result;
+      return {
+        request: '',
+        response: {
+          ...result,
+          id: result.data.orderId,
+        },
+      };
     } catch (error) {
       this.logger.log(color.red.bold(`Error creating order: ${error}`));
       return {
