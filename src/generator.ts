@@ -381,7 +381,11 @@ class Generator {
     try {
       const payment = await mollie.getPayment(paymentId);
 
-      if (!payment.finalized || forceFinalize) {
+      if (
+        !payment.finalized ||
+        forceFinalize ||
+        process.env['ENVIRONMENT'] === 'development'
+      ) {
         // update payment finalized
         await this.prisma.payment.update({
           where: {

@@ -22,8 +22,8 @@ interface PriceResult {
   discountPercentage: number;
 }
 
-class PrintEnBind {
-  private static instance: PrintEnBind;
+class PrintAPI {
+  private static instance: PrintAPI;
   private prisma = PrismaInstance.getInstance();
   private APIcacheToken: string = `printapi_auth_token_${process.env['PRINT_API_CLIENTID']}`;
   private pricingCacheToken: string = `printapi_pricing_token_${process.env['PRINT_API_CLIENTID']}`;
@@ -180,7 +180,7 @@ class PrintEnBind {
 
       try {
         let trackingLink = '';
-        const url = `${process.env['PRINTENBIND_API_URL']}/v2/orders/${payment.printApiOrderId}`;
+        const url = `${process.env['PRINT_API_URL']}/v2/orders/${payment.printApiOrderId}`;
         const authToken = await this.getAuthToken();
 
         const response = await axios({
@@ -200,6 +200,8 @@ class PrintEnBind {
               )} is: ${white.bold(response.data.status)}`
             )
           );
+
+          console.log(111, response.data);
 
           if (response.data.trackingUrl?.length > 0) {
             trackingLink = response.data.trackingUrl;
@@ -317,11 +319,11 @@ class PrintEnBind {
     }
   }
 
-  public static getInstance(): PrintEnBind {
-    if (!PrintEnBind.instance) {
-      PrintEnBind.instance = new PrintEnBind();
+  public static getInstance(): PrintAPI {
+    if (!PrintAPI.instance) {
+      PrintAPI.instance = new PrintAPI();
     }
-    return PrintEnBind.instance;
+    return PrintAPI.instance;
   }
 
   public startCron(): void {
@@ -437,256 +439,168 @@ class PrintEnBind {
     return orderType;
   }
 
-  private generateOrderHash(items: any[], countrycode: string): string {
-    const orderData = {
-      items,
-      countrycode,
-    };
-    return crypto
-      .createHash('md5')
-      .update(JSON.stringify(orderData))
-      .digest('hex');
-  }
+  public async calculateOrder(params: any): Promise<ApiResult> {
+    const cartItems = params.cart.items;
+    const taxRate = await this.data.getTaxRate(params.countrycode);
+    const itemsForApi: any[] = [];
 
-  private async processOrderRequest(
-    items: any[],
-    customerInfo: {
-      email: string;
-      countrycode: string;
-      name?: string;
-      street?: string;
-      city?: string;
-      streetnumber?: string;
-      zipcode?: string;
-    },
-    logging: boolean = false,
-    cache: boolean = true
-  ): Promise<ApiResult> {
-    const orderHash = this.generateOrderHash(items, customerInfo.countrycode);
-    const cacheKey = `order_request_${orderHash}`;
+    let total = 0;
+    let totalProductPriceWithoutVAT = 0;
+    let numberOfTracks = 0;
+    const minimumAmount = 25;
+    const maximumAmount = MAX_CARDS;
 
-    // Check cache first
-    const cachedResult = await this.cache.get(cacheKey);
-    if (cachedResult && cache) {
-      return JSON.parse(cachedResult);
-    }
+    for (const item of cartItems) {
+      if (item.productType == 'cards') {
+        numberOfTracks = await this.spotify.getPlaylistTrackCount(
+          item.playlistId,
+          true,
+          item.isSlug
+        );
 
-    const authToken = await this.getAuthToken();
-    const taxRate = (await this.data.getTaxRate(customerInfo.countrycode))!;
-
-    // Create initial order with first article
-    const response = await fetch(
-      `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: authToken!,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(items[0]),
-      }
-    );
-
-    const orderId = response.headers.get('location')?.split('/')[1];
-
-    if (logging) {
-      this.logger.log(
-        color.blue.bold(
-          `Created order: ${color.white.bold(orderId)} and added first article`
-        )
-      );
-    }
-
-    if (!orderId) {
-      return {
-        success: false,
-        error: 'No order ID received in response',
-      };
-    }
-
-    // Add remaining articles
-    for (let i = 1; i < items.length; i++) {
-      const articleResponse = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: authToken!,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(items[i]),
+        if (numberOfTracks < minimumAmount) {
+          numberOfTracks = minimumAmount;
         }
-      );
 
-      if (logging) {
-        this.logger.log(
-          color.blue.bold(
-            `Added article ${i + 1} to order ${color.white.bold(orderId)}`
-          )
+        if (numberOfTracks > maximumAmount) {
+          numberOfTracks = maximumAmount;
+        }
+
+        numberOfTracks = Math.min(
+          Math.max(numberOfTracks, minimumAmount),
+          maximumAmount
         );
       }
 
-      if (!articleResponse.ok) {
-        throw new Error(`Failed to add article ${i + 1}`);
+      const orderType = await this.getOrderType(
+        numberOfTracks,
+        item.type === 'digital',
+        item.productType
+      );
+
+      if (orderType) {
+        let itemPrice = 0;
+
+        if (item.productType === 'cards') {
+          itemPrice = parseFloat(
+            (orderType.amountWithMargin * item.amount).toFixed(2)
+          );
+        } else if (item.productType === 'giftcard') {
+          itemPrice = parseFloat(item.price.toFixed(2));
+        }
+
+        const productPriceWithoutVAT = parseFloat(
+          (itemPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)
+        );
+
+        totalProductPriceWithoutVAT += productPriceWithoutVAT;
+        total += itemPrice;
+
+        if (item.type != 'digital') {
+          const orderInfo = await this.calculateOptimalPrintOrder(
+            numberOfTracks
+          );
+
+          for (const order of orderInfo.order) {
+            let numberOfSheets = order.pages;
+            numberOfSheets = 8; //TODO: Remove this line
+            itemsForApi.push({
+              productId: `kaarten_enkel_a5_lig_${numberOfSheets}st_indv`,
+              quantity: item.amount,
+              pageCount: numberOfSheets * 2,
+            });
+          }
+        }
+      } else {
+        return {
+          success: false,
+          error: `Order type not found for item ${item.playlistName}`,
+        };
       }
     }
 
-    // Set up delivery
-    const deliveryMethod =
-      customerInfo.countrycode === 'NL' ? 'post' : 'international';
-    const deliveryOption = customerInfo.countrycode === 'NL' ? 'standard' : '';
+    let returnData: any = {};
 
-    const deliveryData = {
-      name_contact: customerInfo.name || 'John Doe',
-      street: customerInfo.street || 'Prinsenhof',
-      city: customerInfo.city || 'Sassenheim',
-      streetnumber: customerInfo.streetnumber || '1',
-      zipcode: customerInfo.zipcode || '2171XZ',
-      country: customerInfo.countrycode,
-      delivery_method: deliveryMethod,
-      delivery_option:
-        customerInfo.countrycode === 'NL' ? 'standard' : undefined,
-      blanco: '1',
-      email: customerInfo.email,
-    };
-
-    await fetch(
-      `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: authToken!,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(deliveryData),
-      }
-    );
-
-    this.logger.log(
-      color.blue.bold(
-        `Added delivery data to order ${color.white.bold(orderId)}`
-      )
-    );
-
-    // Get final order details
-    const [orderResponse, deliveryResponse] = await Promise.all([
-      fetch(`${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`, {
-        method: 'GET',
-        headers: { Authorization: authToken! },
-      }),
-      fetch(`${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`, {
-        method: 'GET',
-        headers: { Authorization: authToken! },
-      }),
-    ]);
-
-    this.logger.log(
-      color.blue.bold(
-        `Retrieved order & delivery details for order ${color.white.bold(
-          orderId
-        )}`
-      )
-    );
-
-    const order: any = await orderResponse.json();
-    const delivery: any = await deliveryResponse.json();
-    const taxModifier = 1 + taxRate / 100;
-
-    const result = {
-      success: true,
-      data: {
-        orderId,
-        total: parseFloat(
-          (
-            (parseFloat(order.amount) + parseFloat(delivery.amount)) *
-            taxModifier
-          ).toFixed(2)
-        ),
-        shipping: parseFloat(
-          (parseFloat(delivery.amount) * taxModifier).toFixed(2)
-        ),
-        handling: parseFloat(
-          (parseFloat(order.price_startup) * taxModifier).toFixed(2)
-        ),
-        taxRateShipping: taxRate,
-        taxRate,
-        price: parseFloat(
-          (
-            (parseFloat(order.amount) - parseFloat(order.amount_tax_standard)) *
-            taxModifier
-          ).toFixed(2)
-        ),
-        payment: parseFloat(
-          (parseFloat(delivery.amount) * taxModifier).toFixed(2)
-        ),
-      },
-    };
-
-    // Cache the successful result for 1 hour (3600 seconds)
-    await this.cache.set(cacheKey, JSON.stringify(result), 3600);
-
-    return result;
-  }
-
-  private async createOrderItem(
-    numberOfTracks: number,
-    fileUrl: string = ''
-  ): Promise<any> {
-    const numberOfPages = numberOfTracks * 2;
-    const oddPages = Array.from(
-      { length: numberOfPages },
-      (_, i) => i + 1
-    ).filter((page) => page % 2 !== 0);
-
-    return {
-      product: 'losbladig',
-      number: '1',
-      copies: numberOfPages.toString(),
-      color: 'custom',
-      color_custom_pages: oddPages.join(','),
-      size: 'custom',
-      printside: 'double',
-      finishing: 'loose',
-      papertype: 'card',
-      size_custom_width: '60',
-      size_custom_height: '60',
-      check_doc: 'standard',
-      delivery_method: 'post',
-      add_file_method: 'url',
-      file_url: fileUrl,
-    };
-  }
-
-  public async calculateOrder(params: any): Promise<any> {
     if (!params.countrycode) {
       params.countrycode = 'NL';
     }
 
-    try {
-      const orderItems = [];
+    const hash = crypto.createHash('sha256');
+    hash.update(JSON.stringify(cartItems));
+    const cacheToken = `${this.pricingCacheToken}_${hash.digest('hex')}`;
 
-      for (const item of params.cart.items) {
-        if (item.productType === 'cards') {
-          const numberOfTracks = await this.spotify.getPlaylistTrackCount(
-            item.playlistId,
-            true,
-            item.isSlug
-          );
+    const cachedPrice = await this.cache.get(cacheToken);
 
-          const orderItem = await this.createOrderItem(numberOfTracks);
-          orderItems.push(orderItem);
+    if (cachedPrice) {
+      try {
+        const cachedData = JSON.parse(cachedPrice);
+        if (cachedData.success) {
+          //  return cachedData;
+        }
+      } catch (e) {
+        this.cache.del(cacheToken);
+      }
+    }
+
+    if (itemsForApi.length > 0) {
+      const authToken = await this.getAuthToken();
+
+      const data = {
+        country: params.countrycode || 'NL',
+        items: itemsForApi,
+      };
+
+      try {
+        let response = await axios({
+          method: 'post',
+          url: `${process.env['PRINT_API_URL']}/v2/shipping/quote`,
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          data,
+        });
+
+        total += response.data.payment;
+        total = parseFloat(total.toFixed(2));
+
+        returnData = {
+          success: true,
+          data: {
+            total,
+            shipping: response.data.shipping,
+            handling: response.data.handling,
+            taxRateShipping: taxRate,
+            taxRate,
+            price: totalProductPriceWithoutVAT,
+            payment: response.data.payment,
+          },
+        };
+        this.cache.set(cacheToken, JSON.stringify(returnData));
+        return returnData;
+      } catch (e) {
+        if (axios.isAxiosError(e) && e.response) {
+          console.log(data);
+          console.log(JSON.stringify(e.response.data, null, 2));
+          return {
+            success: false,
+            error: `Error calculating order`,
+          };
+        } else {
+          return {
+            success: false,
+            error: `Error calculating order`,
+          };
         }
       }
-
-      const result = await this.processOrderRequest(orderItems, {
-        email: params.email,
-        countrycode: params.countrycode,
-      });
-    } catch (error) {
-      this.logger.log(color.red.bold(`Error calculating order: ${error}`));
+    } else {
       return {
-        success: false,
-        error: `Error calculating order: ${error}`,
+        success: true,
+        data: {
+          total,
+          price: totalProductPriceWithoutVAT,
+          taxRate,
+        },
       };
     }
   }
@@ -720,7 +634,7 @@ class PrintEnBind {
     try {
       const responseOrder = await axios({
         method: 'post',
-        url: `${process.env['PRINTENBIND_API_URL']}/v2/orders`,
+        url: `${process.env['PRINT_API_URL']}/v2/orders`,
         headers: {
           Authorization: `Bearer ${authToken}`,
           'Content-Type': 'application/json',
@@ -777,49 +691,25 @@ class PrintEnBind {
   }
 
   private async getAuthToken(force: boolean = false): Promise<string | null> {
-    return process.env['PRINTENBIND_API_KEY']!;
-  }
-
-  public async finishOrder(orderId: string): Promise<ApiResult> {
-    try {
-      const authToken = await this.getAuthToken();
-
-      const response = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/finish`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: authToken!,
-            'Content-Type': 'application/json',
-          },
-        }
-      );
-
-      if (!response.ok) {
-        throw new Error(`Failed to finish order: ${response.status}`);
-      }
-
-      this.logger.log(
-        color.green.bold(
-          `Print&Bind order ${color.white.bold(orderId)} finished successfully`
-        )
-      );
-
-      return {
-        success: true,
-        data: {
-          orderId,
+    let authToken: string | null = '';
+    authToken = await this.cache.get(this.APIcacheToken);
+    if (!authToken || force) {
+      const response = await axios({
+        method: 'post',
+        url: `${process.env['PRINT_API_URL']}/v2/oauth`,
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
         },
-      };
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(`Error finishing order ${orderId}: ${error}`)
-      );
-      return {
-        success: false,
-        error: `Error finishing order: ${error}`,
-      };
+        data: {
+          grant_type: 'client_credentials',
+          client_id: process.env['PRINT_API_CLIENTID']!,
+          client_secret: process.env['PRINT_API_SECRET']!,
+        },
+      });
+      authToken = response.data.access_token;
+      this.cache.set(this.APIcacheToken, response.data.access_token, 7200);
     }
+    return authToken;
   }
 
   public async createOrder(
@@ -827,50 +717,157 @@ class PrintEnBind {
     playlists: any[],
     productType: string
   ): Promise<any> {
-    const orderItems = [];
+    const authToken = await this.getAuthToken();
+    let response: string = '';
 
-    for (const playlistItem of playlists) {
-      const playlist = playlistItem.playlist;
-      const filename = playlistItem.filename;
+    let itemsToSend = [];
 
-      this.logger.log(
-        color.blue.bold(
-          `Create Print&Bind playlist: ${color.white(playlist.name)}`
-        )
+    for (var i = 0; i < playlists.length; i++) {
+      const playlist = playlists[i];
+
+      const orderType = await this.getOrderType(
+        playlist.playlist.numberOfTracks,
+        false,
+        productType
       );
 
-      const fileUrl = `${process.env['API_URI']}/public/pdf/${filename}`;
+      let pageCount = 2;
 
-      const orderItem = await this.createOrderItem(
-        playlist.numberOfTracks,
-        fileUrl
-      );
-      orderItems.push(orderItem);
+      if (orderType != 'giftcard') {
+        pageCount = await this.pdf.countPDFPages(
+          `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
+        );
+
+        const orderInfo = await this.calculateOptimalPrintOrder(
+          playlist.playlist.numberOfTracks
+        );
+
+        // Loop through the orderInfo and add the items to the itemsToSend array
+        for (const order of orderInfo.order) {
+          itemsToSend.push({
+            productId: `kaarten_enkel_a5_lig_${order.pages}st_indv`,
+            pageCount: order.pages * 2,
+            metadata: JSON.stringify({
+              filename: playlist.filename,
+              id: playlist.playlist.paymentHasPlaylistId,
+            }),
+            quantity: playlist.playlist.amount,
+          });
+        }
+      } else {
+        itemsToSend.push({
+          productId: orderType.printApiProductId,
+          pageCount, //TODO: Replace with this pageCount,
+          metadata: JSON.stringify({
+            filename: playlist.filename,
+            id: playlist.playlist.paymentHasPlaylistId,
+          }),
+          quantity: playlist.playlist.amount,
+        });
+      }
     }
 
-    const result = await this.processOrderRequest(
-      orderItems,
-      {
-        email: payment.email,
-        countrycode: payment.countrycode,
-        name: payment.fullname,
-        street: payment.address,
-        city: payment.city,
-        streetnumber: payment.streetnumber,
-        zipcode: payment.zipcode,
+    const body = {
+      email: payment.email,
+      items: itemsToSend,
+      shipping: {
+        address: {
+          name: payment.fullname,
+          line1: payment.address,
+          postCode: payment.zipcode,
+          city: payment.city,
+          country: payment.countrycode,
+        },
       },
-      true,
-      false
-    );
+    };
 
-    const finishResult = await this.finishOrder(result.data.orderId);
+    // try {
+    //   const responseOrder = await axios({
+    //     method: 'post',
+    //     url: `${process.env['PRINT_API_URL']}/v2/orders`,
+    //     headers: {
+    //       Authorization: `Bearer ${authToken}`,
+    //       'Content-Type': 'application/json',
+    //     },
+    //     data: body,
+    //   });
+    //   response = responseOrder.data;
+
+    //   for (var i = 0; i < responseOrder.data.items.length; i++) {
+    //     const item = responseOrder.data.items[i];
+    //     const metadata = JSON.parse(item.metadata);
+    //     const filename = metadata.filename;
+    //     const uploadURL = item.files.content.uploadUrl;
+    //     const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+
+    //     const dimensions = await this.pdf.getPageDimensions(pdfPath);
+
+    //     const width = dimensions.width.toFixed(2);
+    //     const height = dimensions.height.toFixed(2);
+
+    //     this.logger.log(
+    //       blue.bold(
+    //         `Uploading PDF file (${color.white(width)} x ${color.white(
+    //           height
+    //         )} mm) ${white.bold(filename)} to URL ${white.bold(uploadURL)}`
+    //       )
+    //     );
+
+    //     // read the file into pdf buffer
+    //     const pdfBuffer = await fs.readFile(pdfPath);
+
+    //     let uploadSuccess = false;
+    //     let uploadResponse = '';
+    //     try {
+    //       const uploadResult = await axios.post(uploadURL, pdfBuffer, {
+    //         headers: {
+    //           Authorization: `Bearer ${authToken}`,
+    //           'Content-Type': 'application/pdf',
+    //         },
+    //       });
+
+    //       this.logger.log(
+    //         blue.bold(
+    //           `PDF file uploaded successfully for ${white.bold(filename)}`
+    //         )
+    //       );
+
+    //       uploadSuccess = true;
+    //       uploadResponse = uploadResult.data;
+    //     } catch (e) {
+    //       if (axios.isAxiosError(e) && e.response) {
+    //         uploadResponse = e.response.data;
+    //       }
+
+    //       this.logger.log(
+    //         color.red.bold(
+    //           `Error uploading PDF file for ${white.bold(filename)}`
+    //         )
+    //       );
+    //     }
+    //     // Update the paymentHasPlaylist with the filenames
+    //     await this.prisma.paymentHasPlaylist.update({
+    //       where: {
+    //         id: metadata.id,
+    //       },
+    //       data: {
+    //         printApiUploaded: uploadSuccess,
+    //         printApiUploadResponse: JSON.stringify(uploadResponse),
+    //       },
+    //     });
+    //   }
+    // } catch (e) {
+    //   if (axios.isAxiosError(e) && e.response) {
+    //     response = e.response.data;
+    //   }
+    // }
+
+    // Fully output the response with console.log
+    //console.log(999, JSON.stringify(response, null, 2));
 
     return {
-      request: '',
-      response: {
-        ...result,
-        id: result.data.orderId,
-      },
+      request: body,
+      response: response,
     };
   }
 
@@ -900,4 +897,4 @@ class PrintEnBind {
   }
 }
 
-export default PrintEnBind;
+export default PrintAPI;

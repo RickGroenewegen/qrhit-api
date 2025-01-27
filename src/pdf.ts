@@ -112,10 +112,10 @@ class PDF {
         } as any;
 
         if (template === 'printer') {
-          options['PageSize'] = 'a5';
-          options['PageOrientation'] = 'Landscape';
-          // options['PageWidth'] = 60;
-          // options['PageHeight'] = 60;
+          // options['PageSize'] = 'a5';
+          // options['PageOrientation'] = 'Landscape';
+          options['PageWidth'] = 60;
+          options['PageHeight'] = 60;
           // options['MarginTop'] = 0;
           // options['MarginLeft'] = 0;
         }
@@ -154,8 +154,8 @@ class PDF {
       }
       if (template === 'printer') {
         // Resize them to exactly 60x60 mm because convertAPI is slightly off
-        //await this.resizePDFPages(finalPath, 60, 60);
-        await this.resizePDFPages(finalPath, 210, 148);
+        await this.resizePDFPages(finalPath, 60, 60);
+        //await this.resizePDFPages(finalPath, 210, 148);
 
         // Add a 3 mm bleed for PrintAPI
         await this.addBleed(finalPath, 3);
