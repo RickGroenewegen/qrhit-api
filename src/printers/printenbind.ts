@@ -747,29 +747,25 @@ class PrintEnBind {
     productType: string
   ): Promise<any> {
     const authToken = await this.getAuthToken();
+    const taxRate = (await this.data.getTaxRate(payment.countrycode))!;
     let response: any = '';
 
-    // Determine delivery method based on country
-    const deliveryMethod = payment.countrycode === 'NL' ? 'post' : 'international';
-    const deliveryOption = payment.countrycode === 'NL' ? 'standard' : '';
-
     let itemsToSend = [];
+    let orderItems = [];
 
     for (const playlist of playlists) {
-      const numberOfTracks = await this.spotify.getPlaylistTrackCount(
-        playlist.playlist.playlistId,
-        true,
-        playlist.playlist.isSlug
+      let pageCount = await this.pdf.countPDFPages(
+        `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
       );
 
-      const numberOfPages = numberOfTracks * 2;
+      const numberOfPages = playlist.numberOfTracks * 2;
       // Create an array of all odd page numbers
       const oddPages = Array.from(
         { length: numberOfPages },
         (_, i) => i + 1
       ).filter((page) => page % 2 !== 0);
 
-      itemsToSend.push({
+      orderItems.push({
         product: 'losbladig',
         number: '1',
         copies: numberOfPages.toString(),
@@ -782,116 +778,268 @@ class PrintEnBind {
         size_custom_width: '60',
         size_custom_height: '60',
         check_doc: 'standard',
-        delivery_method: deliveryMethod,
+        delivery_method: 'post',
         add_file_method: 'url',
-        file_url: `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`,
-        metadata: JSON.stringify({
-          filename: playlist.filename,
-          id: playlist.playlist.paymentHasPlaylistId,
-        }),
+        file_url: playlist.filename,
       });
     }
 
-    const body = {
-      email: payment.email,
-      items: itemsToSend,
-      shipping: {
-        address: {
-          name: payment.fullname,
-          line1: payment.address,
-          postCode: payment.zipcode,
-          city: payment.city,
-          country: payment.countrycode,
-        },
-      },
-      delivery_method: deliveryMethod,
-      delivery_option: deliveryOption,
-      delivery_option_data: '',
-      blanco: false
-    };
-
+    // Make API request to create articles
     try {
-      // Make API request to create articles
-      for (const item of itemsToSend) {
+      // Log the exact request being sent
+      const response = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: authToken!,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(orderItems[0]),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      // Get order ID from location header if it exists
+      const orderId = response.headers.get('location')?.split('/')[1];
+
+      if (!orderId) {
+        return {
+          success: false,
+          error: 'No order ID received in response',
+        };
+      }
+
+      // Add remaining articles to the order
+      for (let i = 1; i < orderItems.length; i++) {
         const articleResponse = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
           {
             method: 'POST',
             headers: {
               Authorization: authToken!,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(item),
+            body: JSON.stringify(orderItems[i]),
           }
         );
 
         if (!articleResponse.ok) {
-          throw new Error(`Failed to add article`);
+          throw new Error(`Failed to add article ${i + 1}`);
         }
-
-        const orderId = articleResponse.headers.get('location')?.split('/')[1];
-        
-        if (!orderId) {
-          throw new Error('No order ID received in response');
-        }
-
-        // Add the delivery to the order
-        const deliveryData = {
-          name_contact: payment.fullname,
-          street: payment.address,
-          city: payment.city,
-          streetnumber: payment.streetnumber,
-          zipcode: payment.zipcode,
-          country: payment.countrycode,
-          delivery_method: deliveryMethod,
-          delivery_option: deliveryOption,
-          blanco: false,
-          email: payment.email,
-        };
-
-        const setDeliveryResponse = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: authToken!,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(deliveryData),
-          }
-        );
-
-        if (!setDeliveryResponse.ok) {
-          throw new Error('Failed to set delivery information');
-        }
-
-        response = {
-          orderId,
-          delivery: await setDeliveryResponse.json()
-        };
-
-        // Update playlist status
-        const metadata = JSON.parse(item.metadata);
-        await this.prisma.paymentHasPlaylist.update({
-          where: {
-            id: metadata.id,
-          },
-          data: {
-            printApiOrderId: orderId,
-            printApiStatus: 'Created'
-          },
-        });
       }
-    } catch (e) {
-      if (e instanceof Error) {
-        response = e.message;
+
+      console.log(1, params);
+
+      const deliveryMethod =
+        params.countrycode === 'NL' ? 'post' : 'international';
+      const deliveryOption = params.countrycode === 'NL' ? 'standard' : '';
+
+      let deliveryData: any = {
+        name_contact: 'John Doe',
+        street: 'Prinsenhof',
+        city: 'Sassenheim',
+        streetnumber: '1',
+        zipcode: '2171XZ',
+        country: params.countrycode,
+        delivery_method: deliveryMethod,
+        blanco: '1',
+        email: params.email,
+      };
+
+      if (params.countrycode == 'NL') {
+        deliveryData['delivery_option'] = 'standard';
+      }
+
+      // Add the delivery to the order
+      const setDeliveryRequest = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: authToken!,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(deliveryData),
+        }
+      );
+
+      const setDeliveryResult = await setDeliveryRequest.json();
+
+      console.log(2, setDeliveryResult);
+
+      // Get full order details
+      const orderResponse = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: authToken!,
+          },
+        }
+      );
+
+      // Get delivery details
+      //printenbind.nl/api/v1/delivery/{orderid}
+      const deliveryResponse = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
+        {
+          method: 'GET',
+          headers: {
+            Authorization: authToken!,
+          },
+        }
+      );
+
+      const order: any = await orderResponse.json();
+      const delivery: any = await deliveryResponse.json();
+      const taxModifier = 1 + taxRate / 100;
+
+      console.log(111, order);
+      console.log(222, delivery);
+      console.log(333, taxRate);
+
+      return {
+        success: true,
+        data: {
+          total:
+            (parseFloat(order.amount) + parseFloat(delivery.amount)) *
+            taxModifier,
+          shipping: parseFloat(delivery.amount) * taxModifier,
+          handling: parseFloat(order.startup) * taxModifier,
+          taxRateShipping: taxRate,
+          taxRate,
+          price:
+            (parseFloat(order.amount) - parseFloat(order.amount_tax_standard)) *
+            taxModifier,
+          payment: parseFloat(delivery.amount) * taxModifier,
+        },
+      };
+    } catch (error: any) {
+      console.log(error);
+
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Request timed out after 30 seconds',
+        };
+      } else if (error instanceof Error) {
+        return {
+          success: false,
+          error: `API request failed: ${error.message}`,
+        };
+      } else {
+        return {
+          success: false,
+          error: `Unexpected error: ${error}`,
+        };
       }
     }
 
-    return {
-      request: body,
-      response: response,
-    };
+    // const body = {
+    //   email: payment.email,
+    //   items: itemsToSend,
+    //   shipping: {
+    //     address: {
+    //       name: payment.fullname,
+    //       line1: payment.address,
+    //       postCode: payment.zipcode,
+    //       city: payment.city,
+    //       country: payment.countrycode,
+    //     },
+    //   },
+    // };
+
+    // try {
+    //   const responseOrder = await fetch(
+    //     `${process.env['PRINTENBIND_API_URL']}/v2/orders`,
+    //     {
+    //       method: 'POST',
+    //       headers: {
+    //         Authorization: `Bearer ${authToken}`,
+    //         'Content-Type': 'application/json',
+    //       },
+    //       body: JSON.stringify(body),
+    //     }
+    //   );
+
+    //   response = await responseOrder.json();
+
+    //   for (const item of response.items) {
+    //     const metadata = JSON.parse(item.metadata);
+    //     const filename = metadata.filename;
+    //     const uploadURL = item.files.content.uploadUrl;
+    //     const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+
+    //     const dimensions = await this.pdf.getPageDimensions(pdfPath);
+    //     const width = dimensions.width.toFixed(2);
+    //     const height = dimensions.height.toFixed(2);
+
+    //     this.logger.log(
+    //       blue.bold(
+    //         `Uploading PDF file (${color.white(width)} x ${color.white(
+    //           height
+    //         )} mm) ${white.bold(filename)} to URL ${white.bold(uploadURL)}`
+    //       )
+    //     );
+
+    //     const pdfBuffer = await fs.readFile(pdfPath);
+
+    //     let uploadSuccess = false;
+    //     let uploadResponse = '';
+
+    //     try {
+    //       const uploadResult = await fetch(uploadURL, {
+    //         method: 'POST',
+    //         headers: {
+    //           Authorization: `Bearer ${authToken}`,
+    //           'Content-Type': 'application/pdf',
+    //         },
+    //         body: pdfBuffer,
+    //       });
+
+    //       uploadSuccess = uploadResult.ok;
+    //       uploadResponse = await uploadResult.json();
+
+    //       this.logger.log(
+    //         blue.bold(
+    //           `PDF file uploaded successfully for ${white.bold(filename)}`
+    //         )
+    //       );
+    //     } catch (e) {
+    //       this.logger.log(
+    //         color.red.bold(
+    //           `Error uploading PDF file for ${white.bold(filename)}`
+    //         )
+    //       );
+    //       if (e instanceof Error) {
+    //         uploadResponse = e.message;
+    //       }
+    //     }
+
+    //     await this.prisma.paymentHasPlaylist.update({
+    //       where: {
+    //         id: metadata.id,
+    //       },
+    //       data: {
+    //         printApiUploaded: uploadSuccess,
+    //         printApiUploadResponse: JSON.stringify(uploadResponse),
+    //       },
+    //     });
+    //   }
+    // } catch (e) {
+    //   if (e instanceof Error) {
+    //     response = e.message;
+    //   }
+    // }
+
+    // return {
+    //   request: body,
+    //   response: response,
+    // };
   }
 
   private async createInvoice(order: any, payment: any): Promise<string> {
