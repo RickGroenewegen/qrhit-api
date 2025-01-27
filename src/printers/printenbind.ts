@@ -448,8 +448,6 @@ class PrintEnBind {
       const orderItems = [];
 
       for (const item of cartItems) {
-        console.log(111, item);
-
         if (item.productType === 'cards') {
           const numberOfTracks = await this.spotify.getPlaylistTrackCount(
             item.playlistId,
@@ -457,7 +455,7 @@ class PrintEnBind {
             item.isSlug
           );
 
-          orderItems.push({
+          const orderItem = {
             product: 'losbladig',
             number: '1',
             copies: '200',
@@ -473,95 +471,130 @@ class PrintEnBind {
             add_file_method: 'url',
             file_url: '',
             filenames: 'example.pdf',
-          });
+          };
+
+          // Convert to string with exact same formatting as curl command
+          const formattedItem = JSON.stringify(orderItem, null, 4);
+          orderItems.push(formattedItem);
         }
       }
 
-      console.log(
-        222,
-        `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
-        orderItems
-      );
-
       // Make API request to create articles
       try {
+        // Log the exact request being sent
+        console.log('Request payload:', JSON.stringify(orderItems[0], null, 2));
+
+        console.log(
+          'Request URL:',
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`
+        );
+        console.log('Request Headers:', {
+          Authorization: authToken,
+          'Content-Type': 'application/json',
+        });
+        console.log('Request Data:', orderItems[0]);
+
+        // Add request interceptor to log the exact request
+        axios.interceptors.request.use((request) => {
+          console.log('Full Axios Request:', {
+            method: request.method,
+            url: request.url,
+            headers: request.headers,
+            data: request.data,
+            // Convert data to string to see exact format being sent
+            dataAsString:
+              typeof request.data === 'string'
+                ? request.data
+                : JSON.stringify(request.data),
+          });
+          return request;
+        });
+
         const response = await axios({
           method: 'post',
           url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
           headers: {
-            Authorization: `Bearer ${authToken}`,
+            Authorization: authToken,
             'Content-Type': 'application/json',
           },
-          data: orderItems[0],
-          timeout: 30000 // 30 second timeout
+          // Don't stringify the data - axios will do it automatically
+          data: orderItems[0], // Now orderItems contains pre-formatted JSON strings
+          timeout: 30000, // 30 second timeout
         });
 
-        console.log('Response status:', response.status);
-        console.log('Response data:', response.data);
         const responseData = response.data;
+
+        // Get order ID from location header if it exists
+        const orderId = response.headers?.location?.split('/')[1];
+
+        if (!orderId) {
+          return {
+            success: false,
+            error: 'No order ID received in response',
+          };
+        }
+
+        // Add remaining articles to the order
+        for (let i = 1; i < orderItems.length; i++) {
+          await axios({
+            method: 'post',
+            url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+            headers: {
+              Authorization: authToken,
+              'Content-Type': 'application/json',
+            },
+            data: orderItems[i],
+          });
+        }
+
+        // Get full order details
+        const orderResponse = await axios({
+          method: 'get',
+          url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+          headers: {
+            Authorization: authToken,
+          },
+        });
+
+        const articles = orderResponse.data;
+        let total = 0;
+        let totalTax = 0;
+
+        articles.forEach((article: any) => {
+          total += article.price_total;
+          totalTax += article.total_tax;
+        });
+
+        return {
+          success: true,
+          data: {
+            total: total + totalTax,
+            price: total,
+            taxRate: (totalTax / total) * 100,
+            articles: articles,
+          },
+        };
       } catch (error) {
         if (axios.isAxiosError(error)) {
           if (error.code === 'ECONNABORTED') {
-            console.log('Request timed out after 30 seconds');
+            return {
+              success: false,
+              error: 'Request timed out after 30 seconds',
+            };
           } else {
-            console.log('Axios error:', error.message);
+            return {
+              success: false,
+              error: `API request failed: ${error.message}`,
+            };
           }
         } else {
-          console.log('Error:', error);
+          return {
+            success: false,
+            error: `Unexpected error: ${error}`,
+          };
         }
-        throw error;
       }
-
-      console.log(333, responseData);
-
-      //   // Add remaining articles to the order
-      //   const orderId = response.headers.location.split('/')[1];
-      //   for (let i = 1; i < orderItems.length; i++) {
-      //     await axios({
-      //       method: 'post',
-      //       url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-      //       headers: {
-      //         Authorization: `Bearer ${authToken}`,
-      //         'Content-Type': 'application/json',
-      //       },
-      //       data: JSON.stringify(orderItems[i]),
-      //     });
-      //   }
-
-      //   // Get full order details
-      //   const orderResponse = await axios({
-      //     method: 'get',
-      //     url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-      //     headers: {
-      //       Authorization: `Bearer ${authToken}`,
-      //     },
-      //   });
-
-      //   console.log(999, orderResponse.data);
-
-      return { success: false, error: 'Not implemented' };
-
-      //   const articles = orderResponse.data;
-      //   let total = 0;
-      //   let totalTax = 0;
-
-      //   articles.forEach((article: any) => {
-      //     total += article.price_total;
-      //     totalTax += article.total_tax;
-      //   });
-
-      //   return {
-      //     success: true,
-      //     data: {
-      //       total: total + totalTax,
-      //       price: total,
-      //       taxRate: (totalTax / total) * 100,
-      //       articles: articles,
-      //     },
-      //   };
     } catch (error) {
-      console.log(error);
-
       this.logger.log(color.red.bold(`Error calculating order: ${error}`));
       return {
         success: false,
