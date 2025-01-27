@@ -749,21 +749,46 @@ class PrintEnBind {
     const authToken = await this.getAuthToken();
     let response: any = '';
 
+    // Determine delivery method based on country
+    const deliveryMethod = payment.countrycode === 'NL' ? 'post' : 'international';
+    const deliveryOption = payment.countrycode === 'NL' ? 'standard' : '';
+
     let itemsToSend = [];
 
     for (const playlist of playlists) {
-      let pageCount = await this.pdf.countPDFPages(
-        `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
+      const numberOfTracks = await this.spotify.getPlaylistTrackCount(
+        playlist.playlist.playlistId,
+        true,
+        playlist.playlist.isSlug
       );
 
+      const numberOfPages = numberOfTracks * 2;
+      // Create an array of all odd page numbers
+      const oddPages = Array.from(
+        { length: numberOfPages },
+        (_, i) => i + 1
+      ).filter((page) => page % 2 !== 0);
+
       itemsToSend.push({
-        productId: `kaarten_enkel_a5_lig_${order.pages}st_indv`,
-        pageCount: order.pages * 2,
+        product: 'losbladig',
+        number: '1',
+        copies: numberOfPages.toString(),
+        color: 'custom',
+        color_custom_pages: oddPages.join(','),
+        size: 'custom',
+        printside: 'double',
+        finishing: 'loose',
+        papertype: 'card',
+        size_custom_width: '60',
+        size_custom_height: '60',
+        check_doc: 'standard',
+        delivery_method: deliveryMethod,
+        add_file_method: 'url',
+        file_url: `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`,
         metadata: JSON.stringify({
           filename: playlist.filename,
           id: playlist.playlist.paymentHasPlaylistId,
         }),
-        quantity: playlist.playlist.amount,
       });
     }
 
@@ -779,82 +804,81 @@ class PrintEnBind {
           country: payment.countrycode,
         },
       },
+      delivery_method: deliveryMethod,
+      delivery_option: deliveryOption,
+      delivery_option_data: '',
+      blanco: false
     };
 
     try {
-      const responseOrder = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v2/orders`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(body),
-        }
-      );
-
-      response = await responseOrder.json();
-
-      for (const item of response.items) {
-        const metadata = JSON.parse(item.metadata);
-        const filename = metadata.filename;
-        const uploadURL = item.files.content.uploadUrl;
-        const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-
-        const dimensions = await this.pdf.getPageDimensions(pdfPath);
-        const width = dimensions.width.toFixed(2);
-        const height = dimensions.height.toFixed(2);
-
-        this.logger.log(
-          blue.bold(
-            `Uploading PDF file (${color.white(width)} x ${color.white(
-              height
-            )} mm) ${white.bold(filename)} to URL ${white.bold(uploadURL)}`
-          )
-        );
-
-        const pdfBuffer = await fs.readFile(pdfPath);
-
-        let uploadSuccess = false;
-        let uploadResponse = '';
-
-        try {
-          const uploadResult = await fetch(uploadURL, {
+      // Make API request to create articles
+      for (const item of itemsToSend) {
+        const articleResponse = await fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
+          {
             method: 'POST',
             headers: {
-              Authorization: `Bearer ${authToken}`,
-              'Content-Type': 'application/pdf',
+              Authorization: authToken!,
+              'Content-Type': 'application/json',
             },
-            body: pdfBuffer,
-          });
-
-          uploadSuccess = uploadResult.ok;
-          uploadResponse = await uploadResult.json();
-
-          this.logger.log(
-            blue.bold(
-              `PDF file uploaded successfully for ${white.bold(filename)}`
-            )
-          );
-        } catch (e) {
-          this.logger.log(
-            color.red.bold(
-              `Error uploading PDF file for ${white.bold(filename)}`
-            )
-          );
-          if (e instanceof Error) {
-            uploadResponse = e.message;
+            body: JSON.stringify(item),
           }
+        );
+
+        if (!articleResponse.ok) {
+          throw new Error(`Failed to add article`);
         }
 
+        const orderId = articleResponse.headers.get('location')?.split('/')[1];
+        
+        if (!orderId) {
+          throw new Error('No order ID received in response');
+        }
+
+        // Add the delivery to the order
+        const deliveryData = {
+          name_contact: payment.fullname,
+          street: payment.address,
+          city: payment.city,
+          streetnumber: payment.streetnumber,
+          zipcode: payment.zipcode,
+          country: payment.countrycode,
+          delivery_method: deliveryMethod,
+          delivery_option: deliveryOption,
+          blanco: false,
+          email: payment.email,
+        };
+
+        const setDeliveryResponse = await fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: authToken!,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(deliveryData),
+          }
+        );
+
+        if (!setDeliveryResponse.ok) {
+          throw new Error('Failed to set delivery information');
+        }
+
+        response = {
+          orderId,
+          delivery: await setDeliveryResponse.json()
+        };
+
+        // Update playlist status
+        const metadata = JSON.parse(item.metadata);
         await this.prisma.paymentHasPlaylist.update({
           where: {
             id: metadata.id,
           },
           data: {
-            printApiUploaded: uploadSuccess,
-            printApiUploadResponse: JSON.stringify(uploadResponse),
+            printApiOrderId: orderId,
+            printApiStatus: 'Created'
           },
         });
       }
