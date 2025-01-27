@@ -485,35 +485,29 @@ class PrintEnBind {
 
       // Make API request to create articles
       try {
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
-        const response = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: `Bearer ${authToken}`,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(orderItems[0]),
-          }
-        );
-
-        clearTimeout(timeout);
-
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
+        const response = await axios({
+          method: 'post',
+          url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          data: orderItems[0],
+          timeout: 30000 // 30 second timeout
+        });
 
         console.log('Response status:', response.status);
-        const responseData = await response.json();
-        console.log('Response data:', responseData);
+        console.log('Response data:', response.data);
+        const responseData = response.data;
       } catch (error) {
-        if (error.name === 'AbortError') {
-          console.log('Request timed out after 30 seconds');
+        if (axios.isAxiosError(error)) {
+          if (error.code === 'ECONNABORTED') {
+            console.log('Request timed out after 30 seconds');
+          } else {
+            console.log('Axios error:', error.message);
+          }
         } else {
-          console.log('Fetch error:', error);
+          console.log('Error:', error);
         }
         throw error;
       }
