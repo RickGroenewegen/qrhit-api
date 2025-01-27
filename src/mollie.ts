@@ -581,7 +581,7 @@ class Mollie {
         mollieCheckoutUrl = `${process.env['FRONTEND_URI']}/generate/progress`;
         triggerDirectGeneration = true;
       } else {
-        if (calculateResult.data.total <= 10) {
+        if (calculateResult.data.total <= 3) {
           throw new Error('Order calculation');
         }
 
