@@ -643,10 +643,15 @@ class PrintEnBind {
     fileUrl: string = ''
   ): Promise<any> {
     const numberOfPages = numberOfTracks * 2;
-    const oddPages = Array.from(
+    let oddPages = Array.from(
       { length: numberOfPages },
       (_, i) => i + 1
     ).filter((page) => page % 2 !== 0);
+
+    // 50 items max
+    if (oddPages.length > 50) {
+      oddPages = oddPages.slice(0, 50);
+    }
 
     return {
       product: 'losbladig',
