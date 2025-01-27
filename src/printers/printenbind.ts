@@ -793,6 +793,40 @@ class PrintEnBind {
     return process.env['PRINTENBIND_API_KEY']!;
   }
 
+  public async finishOrder(orderId: string): Promise<ApiResult> {
+    try {
+      const authToken = await this.getAuthToken();
+      
+      const response = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/finish`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: authToken!,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to finish order: ${response.status}`);
+      }
+
+      return {
+        success: true,
+        data: {
+          orderId
+        }
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error finishing order ${orderId}: ${error}`));
+      return {
+        success: false,
+        error: `Error finishing order: ${error}`
+      };
+    }
+  }
+
   public async createOrder(
     payment: any,
     playlists: any[],
