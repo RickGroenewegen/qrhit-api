@@ -439,6 +439,14 @@ class PrintEnBind {
     return orderType;
   }
 
+  private generateOrderHash(items: any[], countrycode: string): string {
+    const orderData = {
+      items,
+      countrycode
+    };
+    return crypto.createHash('md5').update(JSON.stringify(orderData)).digest('hex');
+  }
+
   private async processOrderRequest(
     items: any[],
     customerInfo: {
@@ -452,6 +460,15 @@ class PrintEnBind {
     },
     logging: boolean = false
   ): Promise<ApiResult> {
+    const orderHash = this.generateOrderHash(items, customerInfo.countrycode);
+    const cacheKey = `order_request_${orderHash}`;
+    
+    // Check cache first
+    const cachedResult = await this.cache.get(cacheKey);
+    if (cachedResult) {
+      return JSON.parse(cachedResult);
+    }
+
     const authToken = await this.getAuthToken();
     const taxRate = (await this.data.getTaxRate(customerInfo.countrycode))!;
 
@@ -523,6 +540,11 @@ class PrintEnBind {
         email: customerInfo.email,
       };
 
+      // Cache the successful result for 1 hour (3600 seconds)
+      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+      
+      return result;
+
       await fetch(
         `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
         {
@@ -554,7 +576,7 @@ class PrintEnBind {
       console.log(111, order);
       console.log(222, delivery);
 
-      return {
+      const result = {
         success: true,
         data: {
           orderId,
