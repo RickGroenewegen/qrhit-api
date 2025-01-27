@@ -458,26 +458,30 @@ class PrintEnBind {
           );
 
           orderItems.push({
-            "product": "losbladig",
-            "number": "1",
-            "copies": "200",
-            "color": "all",
-            "size": "custom",
-            "printside": "double",
-            "papertype": "card",
-            "finishing": "loose",
-            "size_custom_width": "60",
-            "size_custom_height": "80",
-            "check_doc": "standard",
-            "delivery_method": "post",
-            "add_file_method": "url",
-            "file_url" : "",
-            "filenames": "example.pdf"
+            product: 'losbladig',
+            number: '1',
+            copies: '200',
+            color: 'all',
+            size: 'custom',
+            printside: 'double',
+            papertype: 'card',
+            finishing: 'loose',
+            size_custom_width: '60',
+            size_custom_height: '80',
+            check_doc: 'standard',
+            delivery_method: 'post',
+            add_file_method: 'url',
+            file_url: '',
+            filenames: 'example.pdf',
           });
         }
       }
 
-      console.log(222, orderItems);
+      console.log(
+        222,
+        `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
+        orderItems
+      );
 
       // Make API request to create articles
       try {
@@ -489,11 +493,10 @@ class PrintEnBind {
           {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${authToken}`,
+              Authorization: `Bearer ${authToken}`,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(orderItems[0]), // Start with first article
-            signal: controller.signal
+            body: JSON.stringify(orderItems[0]),
           }
         );
 
@@ -506,7 +509,6 @@ class PrintEnBind {
         console.log('Response status:', response.status);
         const responseData = await response.json();
         console.log('Response data:', responseData);
-
       } catch (error) {
         if (error.name === 'AbortError') {
           console.log('Request timed out after 30 seconds');
