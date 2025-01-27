@@ -770,6 +770,10 @@ class PrintEnBind {
       }
     }
 
+    // Determine delivery method based on country
+    const deliveryMethod = payment.countrycode === 'NL' ? 'post' : 'international';
+    const deliveryOption = payment.countrycode === 'NL' ? 'standard' : '';
+
     const body = {
       email: payment.email,
       items: itemsToSend,
@@ -782,6 +786,10 @@ class PrintEnBind {
           country: payment.countrycode,
         },
       },
+      delivery_method: deliveryMethod,
+      delivery_option: deliveryOption,
+      delivery_option_data: '',
+      blanco: false
     };
 
     try {
