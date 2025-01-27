@@ -458,13 +458,21 @@ class PrintEnBind {
           );
 
           orderItems.push({
-            product: 'losbladig',
-            add_file_method: 'url',
-            file_url: `${process.env.API_URI}/public/pdf/${item.filename}`,
-            file_overwrite: true,
-            number: numberOfTracks * 2,
-            check_doc: 'standard',
-            delivery_method: 'post',
+            "product": "losbladig",
+            "number": "1",
+            "copies": "200",
+            "color": "all",
+            "size": "custom",
+            "printside": "double",
+            "papertype": "card",
+            "finishing": "loose",
+            "size_custom_width": "60",
+            "size_custom_height": "80",
+            "check_doc": "standard",
+            "delivery_method": "post",
+            "add_file_method": "url",
+            "file_url" : "",
+            "filenames": "example.pdf"
           });
         }
       }
@@ -477,14 +485,18 @@ class PrintEnBind {
         {
           method: 'POST',
           headers: {
-            'Authorization': `Bearer ${authToken}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
           },
-          body: JSON.stringify(orderItems[0]) // Start with first article
+          body: JSON.stringify(orderItems[0]), // Start with first article
         }
       );
 
+      console.log(223, response);
+
       const responseData = await response.json();
+
+      console.log(333, responseData);
 
       //   // Add remaining articles to the order
       //   const orderId = response.headers.location.split('/')[1];
@@ -698,14 +710,17 @@ class PrintEnBind {
     };
 
     try {
-      const responseOrder = await fetch(`${process.env['PRINTENBIND_API_URL']}/v2/orders`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(body)
-      });
+      const responseOrder = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v2/orders`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(body),
+        }
+      );
 
       response = await responseOrder.json();
 
@@ -731,15 +746,15 @@ class PrintEnBind {
 
         let uploadSuccess = false;
         let uploadResponse = '';
-        
+
         try {
           const uploadResult = await fetch(uploadURL, {
             method: 'POST',
             headers: {
-              'Authorization': `Bearer ${authToken}`,
+              Authorization: `Bearer ${authToken}`,
               'Content-Type': 'application/pdf',
             },
-            body: pdfBuffer
+            body: pdfBuffer,
           });
 
           uploadSuccess = uploadResult.ok;
