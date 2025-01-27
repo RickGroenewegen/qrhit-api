@@ -180,7 +180,7 @@ class PrintEnBind {
 
       try {
         let trackingLink = '';
-        const url = `${process.env['PRINT_API_URL']}/v2/orders/${payment.printApiOrderId}`;
+        const url = `${process.env['PRINTENBIND_API_URL']}/v2/orders/${payment.printApiOrderId}`;
         const authToken = await this.getAuthToken();
 
         const response = await axios({
@@ -440,37 +440,104 @@ class PrintEnBind {
   }
 
   public async calculateOrder(params: any): Promise<ApiResult> {
-    const cartItems = params.cart.items;
-    let numberOfTracks = 0;
+    try {
+      const cartItems = params.cart.items;
+      const authToken = await this.getAuthToken();
 
-    console.log(111, JSON.stringify(params, null, 2));
+      // Create a new order with articles
+      const orderItems = [];
 
-    for (const item of cartItems) {
-      if (item.productType == 'cards') {
-        numberOfTracks = await this.spotify.getPlaylistTrackCount(
-          item.playlistId,
-          true,
-          item.isSlug
-        );
+      for (const item of cartItems) {
+        if (item.productType === 'cards') {
+          const numberOfTracks = await this.spotify.getPlaylistTrackCount(
+            item.playlistId,
+            true,
+            item.isSlug
+          );
+
+          orderItems.push({
+            product: 'kaart',
+            add_file_method: 'url',
+            file_url: `${process.env.API_URI}/public/pdf/${item.filename}`,
+            file_overwrite: true,
+            size: 'a5',
+            copies: item.amount,
+            papertype: '350',
+            printside: 'double',
+            borderless: '1',
+            number: numberOfTracks * 2,
+            check_doc: 'standard',
+          });
+        }
       }
-    }
 
-    // returnData = {
-    //   success: true,
-    //   data: {
-    //     total,
-    //     shipping: response.data.shipping,
-    //     handling: response.data.handling,
-    //     taxRateShipping: taxRate,
-    //     taxRate,
-    //     price: totalProductPriceWithoutVAT,
-    //     payment: response.data.payment,
-    //   },
-    //};
-    return {
-      success: false,
-      error: `Error calculating order`,
-    };
+      // Make API request to create articles
+      const response = await axios({
+        method: 'post',
+        url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        data: orderItems[0], // Start with first article
+      });
+
+      console.log(111, response);
+
+      // Add remaining articles to the order
+      const orderId = response.headers.location.split('/')[1];
+      for (let i = 1; i < orderItems.length; i++) {
+        await axios({
+          method: 'post',
+          url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+          headers: {
+            Authorization: `Bearer ${authToken}`,
+            'Content-Type': 'application/json',
+          },
+          data: orderItems[i],
+        });
+      }
+
+      // Get full order details
+      const orderResponse = await axios({
+        method: 'get',
+        url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+        headers: {
+          Authorization: `Bearer ${authToken}`,
+        },
+      });
+
+      console.log(999, orderResponse.data);
+
+      return { success: false, error: 'Not implemented' };
+
+      //   const articles = orderResponse.data;
+      //   let total = 0;
+      //   let totalTax = 0;
+
+      //   articles.forEach((article: any) => {
+      //     total += article.price_total;
+      //     totalTax += article.total_tax;
+      //   });
+
+      //   return {
+      //     success: true,
+      //     data: {
+      //       total: total + totalTax,
+      //       price: total,
+      //       taxRate: (totalTax / total) * 100,
+      //       articles: articles,
+      //     },
+      //   };
+    } catch (error) {
+      console.log(error);
+
+      this.logger.log(color.red.bold(`Error calculating order: ${error}`));
+      return {
+        success: false,
+        error: `Error calculating order: ${error}`,
+      };
+    }
   }
 
   public async testOrder() {
@@ -502,7 +569,7 @@ class PrintEnBind {
     try {
       const responseOrder = await axios({
         method: 'post',
-        url: `${process.env['PRINT_API_URL']}/v2/orders`,
+        url: `${process.env['PRINTENBIND_API_URL']}/v2/orders`,
         headers: {
           Authorization: `Bearer ${authToken}`,
           'Content-Type': 'application/json',
@@ -559,25 +626,7 @@ class PrintEnBind {
   }
 
   private async getAuthToken(force: boolean = false): Promise<string | null> {
-    let authToken: string | null = '';
-    authToken = await this.cache.get(this.APIcacheToken);
-    if (!authToken || force) {
-      const response = await axios({
-        method: 'post',
-        url: `${process.env['PRINT_API_URL']}/v2/oauth`,
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        data: {
-          grant_type: 'client_credentials',
-          client_id: process.env['PRINT_API_CLIENTID']!,
-          client_secret: process.env['PRINT_API_SECRET']!,
-        },
-      });
-      authToken = response.data.access_token;
-      this.cache.set(this.APIcacheToken, response.data.access_token, 7200);
-    }
-    return authToken;
+    return process.env['PRINTENBIND_API_KEY']!;
   }
 
   public async createOrder(
@@ -652,7 +701,7 @@ class PrintEnBind {
     // try {
     //   const responseOrder = await axios({
     //     method: 'post',
-    //     url: `${process.env['PRINT_API_URL']}/v2/orders`,
+    //     url: `${process.env['PRINTENBIND_API_URL']}/v2/orders`,
     //     headers: {
     //       Authorization: `Bearer ${authToken}`,
     //       'Content-Type': 'application/json',
