@@ -455,27 +455,23 @@ class PrintEnBind {
             item.isSlug
           );
 
-          const orderItem = {
-            product: 'losbladig',
-            number: '1',
-            copies: '200',
-            color: 'all',
-            size: 'custom',
-            printside: 'double',
-            papertype: 'card',
-            finishing: 'loose',
-            size_custom_width: '60',
-            size_custom_height: '80',
-            check_doc: 'standard',
-            delivery_method: 'post',
-            add_file_method: 'url',
-            file_url: '',
-            filenames: 'example.pdf',
-          };
-
-          // Convert to string with exact same formatting as curl command
-          const formattedItem = JSON.stringify(orderItem, null, 4);
-          orderItems.push(formattedItem);
+          orderItems.push({
+            product: "losbladig",
+            number: "1",
+            copies: "200", 
+            color: "all",
+            size: "custom",
+            printside: "double",
+            papertype: "card",
+            finishing: "loose",
+            size_custom_width: "60",
+            size_custom_height: "80",
+            check_doc: "standard",
+            delivery_method: "post",
+            add_file_method: "url",
+            file_url: "",
+            filenames: "example.pdf"
+          });
         }
       }
 
@@ -517,8 +513,7 @@ class PrintEnBind {
             Authorization: authToken,
             'Content-Type': 'application/json',
           },
-          // Don't stringify the data - axios will do it automatically
-          data: orderItems[0], // Now orderItems contains pre-formatted JSON strings
+          data: orderItems[0],
           timeout: 30000, // 30 second timeout
         });
 
