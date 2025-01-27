@@ -456,17 +456,13 @@ class PrintEnBind {
           );
 
           orderItems.push({
-            product: 'kaart',
+            product: 'losbladig',
             add_file_method: 'url',
             file_url: `${process.env.API_URI}/public/pdf/${item.filename}`,
             file_overwrite: true,
-            size: 'a5',
-            copies: item.amount,
-            papertype: '350',
-            printside: 'double',
-            borderless: '1',
             number: numberOfTracks * 2,
             check_doc: 'standard',
+            delivery_method: 'post'
           });
         }
       }
