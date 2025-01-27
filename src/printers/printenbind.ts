@@ -551,11 +551,6 @@ class PrintEnBind {
         email: customerInfo.email,
       };
 
-      // Cache the successful result for 1 hour (3600 seconds)
-      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
-
-      return result;
-
       await fetch(
         `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
         {
@@ -617,6 +612,11 @@ class PrintEnBind {
           ),
         },
       };
+
+      // Cache the successful result for 1 hour (3600 seconds)
+      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+
+      return result;
     } catch (error: any) {
       console.error(error);
 
