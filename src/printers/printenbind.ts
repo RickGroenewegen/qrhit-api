@@ -480,21 +480,41 @@ class PrintEnBind {
       console.log(222, orderItems);
 
       // Make API request to create articles
-      const response = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(orderItems[0]), // Start with first article
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
+        const response = await fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
+          {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(orderItems[0]), // Start with first article
+            signal: controller.signal
+          }
+        );
+
+        clearTimeout(timeout);
+
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
         }
-      );
 
-      console.log(223, response);
+        console.log('Response status:', response.status);
+        const responseData = await response.json();
+        console.log('Response data:', responseData);
 
-      const responseData = await response.json();
+      } catch (error) {
+        if (error.name === 'AbortError') {
+          console.log('Request timed out after 30 seconds');
+        } else {
+          console.log('Fetch error:', error);
+        }
+        throw error;
+      }
 
       console.log(333, responseData);
 
