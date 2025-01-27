@@ -448,6 +448,8 @@ class PrintEnBind {
       const orderItems = [];
 
       for (const item of cartItems) {
+        console.log(111, item);
+
         if (item.productType === 'cards') {
           const numberOfTracks = await this.spotify.getPlaylistTrackCount(
             item.playlistId,
@@ -462,10 +464,12 @@ class PrintEnBind {
             file_overwrite: true,
             number: numberOfTracks * 2,
             check_doc: 'standard',
-            delivery_method: 'post'
+            delivery_method: 'post',
           });
         }
       }
+
+      console.log(222, orderItems);
 
       // Make API request to create articles
       const response = await axios({
@@ -475,35 +479,33 @@ class PrintEnBind {
           Authorization: `Bearer ${authToken}`,
           'Content-Type': 'application/json',
         },
-        data: JSON.stringify(orderItems[0]), // Start with first article
+        data: orderItems[0], // Start with first article
       });
 
-      console.log(111, response);
+      //   // Add remaining articles to the order
+      //   const orderId = response.headers.location.split('/')[1];
+      //   for (let i = 1; i < orderItems.length; i++) {
+      //     await axios({
+      //       method: 'post',
+      //       url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+      //       headers: {
+      //         Authorization: `Bearer ${authToken}`,
+      //         'Content-Type': 'application/json',
+      //       },
+      //       data: JSON.stringify(orderItems[i]),
+      //     });
+      //   }
 
-      // Add remaining articles to the order
-      const orderId = response.headers.location.split('/')[1];
-      for (let i = 1; i < orderItems.length; i++) {
-        await axios({
-          method: 'post',
-          url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-          data: JSON.stringify(orderItems[i]),
-        });
-      }
+      //   // Get full order details
+      //   const orderResponse = await axios({
+      //     method: 'get',
+      //     url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+      //     headers: {
+      //       Authorization: `Bearer ${authToken}`,
+      //     },
+      //   });
 
-      // Get full order details
-      const orderResponse = await axios({
-        method: 'get',
-        url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-        },
-      });
-
-      console.log(999, orderResponse.data);
+      //   console.log(999, orderResponse.data);
 
       return { success: false, error: 'Not implemented' };
 
