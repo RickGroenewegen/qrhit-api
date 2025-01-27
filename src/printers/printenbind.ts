@@ -542,9 +542,9 @@ class PrintEnBind {
 
     const deliveryData = {
       name_contact: customerInfo.name || 'John Doe',
-      street: customerInfo.street || 'Prinsenhof',
+      street: 'Prinsenhof',
       city: customerInfo.city || 'Sassenheim',
-      streetnumber: customerInfo.streetnumber || '1',
+      streetnumber: '1',
       zipcode: customerInfo.zipcode || '2171XZ',
       country: customerInfo.countrycode,
       delivery_method: deliveryMethod,
