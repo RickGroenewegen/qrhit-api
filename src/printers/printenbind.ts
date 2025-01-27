@@ -474,6 +474,8 @@ class PrintEnBind {
     const authToken = await this.getAuthToken();
     const taxRate = (await this.data.getTaxRate(customerInfo.countrycode))!;
 
+    console.log(1111, items);
+
     // Create initial order with first article
     const response = await fetch(
       `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
@@ -487,7 +489,7 @@ class PrintEnBind {
       }
     );
 
-    console.log(111, await response.json());
+    console.log(2222, await response.json());
 
     const orderId = response.headers.get('location')?.split('/')[1];
 
