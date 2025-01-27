@@ -449,7 +449,8 @@ class PrintEnBind {
       city?: string;
       streetnumber?: string;
       zipcode?: string;
-    }
+    },
+    logging: boolean = false
   ): Promise<ApiResult> {
     const authToken = await this.getAuthToken();
     const taxRate = (await this.data.getTaxRate(customerInfo.countrycode))!;
@@ -473,6 +474,9 @@ class PrintEnBind {
       }
 
       const orderId = response.headers.get('location')?.split('/')[1];
+
+      this.logger.log(color.blue(`Created order: ${color.white(orderId)}`));
+
       if (!orderId) {
         return {
           success: false,
@@ -500,8 +504,10 @@ class PrintEnBind {
       }
 
       // Set up delivery
-      const deliveryMethod = customerInfo.countrycode === 'NL' ? 'post' : 'international';
-      const deliveryOption = customerInfo.countrycode === 'NL' ? 'standard' : '';
+      const deliveryMethod =
+        customerInfo.countrycode === 'NL' ? 'post' : 'international';
+      const deliveryOption =
+        customerInfo.countrycode === 'NL' ? 'standard' : '';
 
       const deliveryData = {
         name_contact: customerInfo.name || 'John Doe',
@@ -511,7 +517,8 @@ class PrintEnBind {
         zipcode: customerInfo.zipcode || '2171XZ',
         country: customerInfo.countrycode,
         delivery_method: deliveryMethod,
-        delivery_option: customerInfo.countrycode === 'NL' ? 'standard' : undefined,
+        delivery_option:
+          customerInfo.countrycode === 'NL' ? 'standard' : undefined,
         blanco: '1',
         email: customerInfo.email,
       };
@@ -530,37 +537,51 @@ class PrintEnBind {
 
       // Get final order details
       const [orderResponse, deliveryResponse] = await Promise.all([
-        fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`,
-          {
-            method: 'GET',
-            headers: { Authorization: authToken! },
-          }
-        ),
-        fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
-          {
-            method: 'GET',
-            headers: { Authorization: authToken! },
-          }
-        )
+        fetch(`${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`, {
+          method: 'GET',
+          headers: { Authorization: authToken! },
+        }),
+        fetch(`${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`, {
+          method: 'GET',
+          headers: { Authorization: authToken! },
+        }),
       ]);
 
       const order: any = await orderResponse.json();
       const delivery: any = await deliveryResponse.json();
       const taxModifier = 1 + taxRate / 100;
 
+      console.log(111, order);
+      console.log(222, delivery);
+
       return {
         success: true,
         data: {
           orderId,
-          total: (parseFloat(order.amount) + parseFloat(delivery.amount)) * taxModifier,
-          shipping: parseFloat(delivery.amount) * taxModifier,
-          handling: parseFloat(order.startup) * taxModifier,
+          total: parseFloat(
+            (
+              (parseFloat(order.amount) + parseFloat(delivery.amount)) *
+              taxModifier
+            ).toFixed(2)
+          ),
+          shipping: parseFloat(
+            (parseFloat(delivery.amount) * taxModifier).toFixed(2)
+          ),
+          handling: parseFloat(
+            (parseFloat(order.price_startup) * taxModifier).toFixed(2)
+          ),
           taxRateShipping: taxRate,
           taxRate,
-          price: (parseFloat(order.amount) - parseFloat(order.amount_tax_standard)) * taxModifier,
-          payment: parseFloat(delivery.amount) * taxModifier,
+          price: parseFloat(
+            (
+              (parseFloat(order.amount) -
+                parseFloat(order.amount_tax_standard)) *
+              taxModifier
+            ).toFixed(2)
+          ),
+          payment: parseFloat(
+            (parseFloat(delivery.amount) * taxModifier).toFixed(2)
+          ),
         },
       };
     } catch (error: any) {
@@ -585,7 +606,10 @@ class PrintEnBind {
     }
   }
 
-  private async createOrderItem(numberOfTracks: number, fileUrl: string = ''): Promise<any> {
+  private async createOrderItem(
+    numberOfTracks: number,
+    fileUrl: string = ''
+  ): Promise<any> {
     const numberOfPages = numberOfTracks * 2;
     const oddPages = Array.from(
       { length: numberOfPages },
@@ -634,9 +658,8 @@ class PrintEnBind {
 
       return await this.processOrderRequest(orderItems, {
         email: params.email,
-        countrycode: params.countrycode
+        countrycode: params.countrycode,
       });
-
     } catch (error) {
       this.logger.log(color.red.bold(`Error calculating order: ${error}`));
       return {
@@ -740,29 +763,50 @@ class PrintEnBind {
     playlists: any[],
     productType: string
   ): Promise<ApiResult> {
+    console.log(2222, playlists);
+
     try {
       const orderItems = [];
 
-      for (const playlist of playlists) {
+      for (const playlistItem of playlists) {
+        const playlist = playlistItem.playlist;
+        console.log(111, playlist);
+
+        this.logger.log(
+          color.blue.bold(
+            `Create Print&Bind playlist: ${color.white(playlist.name)}`
+          )
+        );
+
         await this.pdf.countPDFPages(
           `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
         );
 
         const fileUrl = `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`;
-        const orderItem = await this.createOrderItem(playlist.numberOfTracks, fileUrl);
+        const orderItem = await this.createOrderItem(
+          playlist.numberOfTracks,
+          fileUrl
+        );
         orderItems.push(orderItem);
       }
 
-      return await this.processOrderRequest(orderItems, {
-        email: payment.email,
-        countrycode: payment.countrycode,
-        name: payment.fullname,
-        street: payment.address,
-        city: payment.city,
-        streetnumber: payment.streetnumber,
-        zipcode: payment.zipcode
-      });
+      const result = await this.processOrderRequest(
+        orderItems,
+        {
+          email: payment.email,
+          countrycode: payment.countrycode,
+          name: payment.fullname,
+          street: payment.address,
+          city: payment.city,
+          streetnumber: payment.streetnumber,
+          zipcode: payment.zipcode,
+        },
+        true
+      );
 
+      console.log(111, result);
+
+      return result;
     } catch (error) {
       this.logger.log(color.red.bold(`Error creating order: ${error}`));
       return {
@@ -770,108 +814,6 @@ class PrintEnBind {
         error: `Error creating order: ${error}`,
       };
     }
-
-    // const body = {
-    //   email: payment.email,
-    //   items: itemsToSend,
-    //   shipping: {
-    //     address: {
-    //       name: payment.fullname,
-    //       line1: payment.address,
-    //       postCode: payment.zipcode,
-    //       city: payment.city,
-    //       country: payment.countrycode,
-    //     },
-    //   },
-    // };
-
-    // try {
-    //   const responseOrder = await fetch(
-    //     `${process.env['PRINTENBIND_API_URL']}/v2/orders`,
-    //     {
-    //       method: 'POST',
-    //       headers: {
-    //         Authorization: `Bearer ${authToken}`,
-    //         'Content-Type': 'application/json',
-    //       },
-    //       body: JSON.stringify(body),
-    //     }
-    //   );
-
-    //   response = await responseOrder.json();
-
-    //   for (const item of response.items) {
-    //     const metadata = JSON.parse(item.metadata);
-    //     const filename = metadata.filename;
-    //     const uploadURL = item.files.content.uploadUrl;
-    //     const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-
-    //     const dimensions = await this.pdf.getPageDimensions(pdfPath);
-    //     const width = dimensions.width.toFixed(2);
-    //     const height = dimensions.height.toFixed(2);
-
-    //     this.logger.log(
-    //       blue.bold(
-    //         `Uploading PDF file (${color.white(width)} x ${color.white(
-    //           height
-    //         )} mm) ${white.bold(filename)} to URL ${white.bold(uploadURL)}`
-    //       )
-    //     );
-
-    //     const pdfBuffer = await fs.readFile(pdfPath);
-
-    //     let uploadSuccess = false;
-    //     let uploadResponse = '';
-
-    //     try {
-    //       const uploadResult = await fetch(uploadURL, {
-    //         method: 'POST',
-    //         headers: {
-    //           Authorization: `Bearer ${authToken}`,
-    //           'Content-Type': 'application/pdf',
-    //         },
-    //         body: pdfBuffer,
-    //       });
-
-    //       uploadSuccess = uploadResult.ok;
-    //       uploadResponse = await uploadResult.json();
-
-    //       this.logger.log(
-    //         blue.bold(
-    //           `PDF file uploaded successfully for ${white.bold(filename)}`
-    //         )
-    //       );
-    //     } catch (e) {
-    //       this.logger.log(
-    //         color.red.bold(
-    //           `Error uploading PDF file for ${white.bold(filename)}`
-    //         )
-    //       );
-    //       if (e instanceof Error) {
-    //         uploadResponse = e.message;
-    //       }
-    //     }
-
-    //     await this.prisma.paymentHasPlaylist.update({
-    //       where: {
-    //         id: metadata.id,
-    //       },
-    //       data: {
-    //         printApiUploaded: uploadSuccess,
-    //         printApiUploadResponse: JSON.stringify(uploadResponse),
-    //       },
-    //     });
-    //   }
-    // } catch (e) {
-    //   if (e instanceof Error) {
-    //     response = e.message;
-    //   }
-    // }
-
-    // return {
-    //   request: body,
-    //   response: response,
-    // };
   }
 
   private async createInvoice(order: any, payment: any): Promise<string> {
