@@ -440,6 +440,8 @@ class PrintEnBind {
   }
 
   public async calculateOrder(params: any): Promise<ApiResult> {
+    const taxRate = await this.data.getTaxRate(params.countrycode);
+
     try {
       const cartItems = params.cart.items;
       const authToken = await this.getAuthToken();
@@ -455,22 +457,29 @@ class PrintEnBind {
             item.isSlug
           );
 
+          const numberOfPages = numberOfTracks * 2;
+          // Create an array of all odd page numbers
+          const oddPages = Array.from(
+            { length: numberOfPages },
+            (_, i) => i + 1
+          ).filter((page) => page % 2 !== 0);
+
           orderItems.push({
             product: 'losbladig',
             number: '1',
-            copies: '200',
-            color: 'all',
+            copies: numberOfPages.toString(),
+            color: 'custom',
+            color_custom_pages: oddPages.join(','),
             size: 'custom',
             printside: 'double',
-            papertype: 'card',
             finishing: 'loose',
+            papertype: 'card',
             size_custom_width: '60',
             size_custom_height: '80',
             check_doc: 'standard',
             delivery_method: 'post',
             add_file_method: 'url',
             file_url: '',
-            filenames: 'example.pdf',
           });
         }
       }
@@ -479,37 +488,37 @@ class PrintEnBind {
       try {
         // Log the exact request being sent
         console.log('Request payload:', JSON.stringify(orderItems[0], null, 2));
-        console.log('Request URL:', `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`);
+        console.log(
+          'Request URL:',
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`
+        );
         console.log('Request Headers:', {
           Authorization: authToken,
           'Content-Type': 'application/json',
         });
         console.log('Request Data:', orderItems[0]);
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
         const response = await fetch(
           `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
           {
             method: 'POST',
             headers: {
-              'Authorization': authToken,
+              Authorization: authToken!,
               'Content-Type': 'application/json',
             },
             body: JSON.stringify(orderItems[0]),
-            signal: controller.signal
           }
         );
 
-        clearTimeout(timeout);
+        // Output orderResponse response headers
+        console.log('Response headers:', response.headers);
 
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
 
         const responseData = await response.json();
-        
+
         // Get order ID from location header if it exists
         const orderId = response.headers.get('location')?.split('/')[1];
 
@@ -527,10 +536,10 @@ class PrintEnBind {
             {
               method: 'POST',
               headers: {
-                'Authorization': authToken,
+                Authorization: authToken!,
                 'Content-Type': 'application/json',
               },
-              body: JSON.stringify(orderItems[i])
+              body: JSON.stringify(orderItems[i]),
             }
           );
 
@@ -541,12 +550,12 @@ class PrintEnBind {
 
         // Get full order details
         const orderResponse = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`,
           {
             method: 'GET',
             headers: {
-              'Authorization': authToken
-            }
+              Authorization: authToken!,
+            },
           }
         );
 
@@ -554,25 +563,44 @@ class PrintEnBind {
           throw new Error('Failed to get order details');
         }
 
-        const articles = await orderResponse.json();
-        let total = 0;
-        let totalTax = 0;
+        const order: any = await orderResponse.json();
 
-        articles.forEach((article: any) => {
-          total += article.price_total;
-          totalTax += article.total_tax;
-        });
+        console.log(111, order);
 
         return {
           success: true,
           data: {
-            total: total + totalTax,
-            price: total,
-            taxRate: (totalTax / total) * 100,
-            articles: articles,
+            total: parseFloat(order.amount),
+            //shipping: response.data.shipping,
+            //handling: response.data.handling,
+            taxRateShipping: taxRate,
+            taxRate,
+            price:
+              parseFloat(order.amount) - parseFloat(order.amount_tax_standard),
+            //payment: response.data.payment,
           },
         };
-      } catch (error) {
+
+        console.log(111, order);
+
+        // let total = 0;
+        // let totalTax = 0;
+
+        // articles.forEach((article: any) => {
+        //   total += article.price_total;
+        //   totalTax += article.total_tax;
+        // });
+
+        return {
+          success: true,
+          data: {
+            // total: total + totalTax,
+            // price: total,
+            // taxRate: (totalTax / total) * 100,
+            //articles: articles,
+          },
+        };
+      } catch (error: any) {
         console.log(error);
 
         if (error.name === 'AbortError') {
