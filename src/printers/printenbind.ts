@@ -487,6 +487,8 @@ class PrintEnBind {
       }
     );
 
+    console.log(111, await response.json());
+
     const orderId = response.headers.get('location')?.split('/')[1];
 
     if (logging) {
