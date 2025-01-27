@@ -475,7 +475,7 @@ class PrintEnBind {
           Authorization: `Bearer ${authToken}`,
           'Content-Type': 'application/json',
         },
-        data: orderItems[0], // Start with first article
+        data: JSON.stringify(orderItems[0]), // Start with first article
       });
 
       console.log(111, response);
@@ -490,7 +490,7 @@ class PrintEnBind {
             Authorization: `Bearer ${authToken}`,
             'Content-Type': 'application/json',
           },
-          data: orderItems[i],
+          data: JSON.stringify(orderItems[i]),
         });
       }
 
