@@ -634,13 +634,11 @@ class PrintEnBind {
     productType: string
   ): Promise<any> {
     const authToken = await this.getAuthToken();
-    let response: string = '';
+    let response: any = '';
 
     let itemsToSend = [];
 
-    for (var i = 0; i < playlists.length; i++) {
-      const playlist = playlists[i];
-
+    for (const playlist of playlists) {
       const orderType = await this.getOrderType(
         playlist.playlist.numberOfTracks,
         false,
@@ -658,7 +656,6 @@ class PrintEnBind {
           playlist.playlist.numberOfTracks
         );
 
-        // Loop through the orderInfo and add the items to the itemsToSend array
         for (const order of orderInfo.order) {
           itemsToSend.push({
             productId: `kaarten_enkel_a5_lig_${order.pages}st_indv`,
@@ -673,7 +670,7 @@ class PrintEnBind {
       } else {
         itemsToSend.push({
           productId: orderType.printApiProductId,
-          pageCount, //TODO: Replace with this pageCount,
+          pageCount,
           metadata: JSON.stringify({
             filename: playlist.filename,
             id: playlist.playlist.paymentHasPlaylistId,
@@ -697,89 +694,85 @@ class PrintEnBind {
       },
     };
 
-    // try {
-    //   const responseOrder = await axios({
-    //     method: 'post',
-    //     url: `${process.env['PRINTENBIND_API_URL']}/v2/orders`,
-    //     headers: {
-    //       Authorization: `Bearer ${authToken}`,
-    //       'Content-Type': 'application/json',
-    //     },
-    //     data: body,
-    //   });
-    //   response = responseOrder.data;
+    try {
+      const responseOrder = await fetch(`${process.env['PRINTENBIND_API_URL']}/v2/orders`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${authToken}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(body)
+      });
 
-    //   for (var i = 0; i < responseOrder.data.items.length; i++) {
-    //     const item = responseOrder.data.items[i];
-    //     const metadata = JSON.parse(item.metadata);
-    //     const filename = metadata.filename;
-    //     const uploadURL = item.files.content.uploadUrl;
-    //     const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+      response = await responseOrder.json();
 
-    //     const dimensions = await this.pdf.getPageDimensions(pdfPath);
+      for (const item of response.items) {
+        const metadata = JSON.parse(item.metadata);
+        const filename = metadata.filename;
+        const uploadURL = item.files.content.uploadUrl;
+        const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
 
-    //     const width = dimensions.width.toFixed(2);
-    //     const height = dimensions.height.toFixed(2);
+        const dimensions = await this.pdf.getPageDimensions(pdfPath);
+        const width = dimensions.width.toFixed(2);
+        const height = dimensions.height.toFixed(2);
 
-    //     this.logger.log(
-    //       blue.bold(
-    //         `Uploading PDF file (${color.white(width)} x ${color.white(
-    //           height
-    //         )} mm) ${white.bold(filename)} to URL ${white.bold(uploadURL)}`
-    //       )
-    //     );
+        this.logger.log(
+          blue.bold(
+            `Uploading PDF file (${color.white(width)} x ${color.white(
+              height
+            )} mm) ${white.bold(filename)} to URL ${white.bold(uploadURL)}`
+          )
+        );
 
-    //     // read the file into pdf buffer
-    //     const pdfBuffer = await fs.readFile(pdfPath);
+        const pdfBuffer = await fs.readFile(pdfPath);
 
-    //     let uploadSuccess = false;
-    //     let uploadResponse = '';
-    //     try {
-    //       const uploadResult = await axios.post(uploadURL, pdfBuffer, {
-    //         headers: {
-    //           Authorization: `Bearer ${authToken}`,
-    //           'Content-Type': 'application/pdf',
-    //         },
-    //       });
+        let uploadSuccess = false;
+        let uploadResponse = '';
+        
+        try {
+          const uploadResult = await fetch(uploadURL, {
+            method: 'POST',
+            headers: {
+              'Authorization': `Bearer ${authToken}`,
+              'Content-Type': 'application/pdf',
+            },
+            body: pdfBuffer
+          });
 
-    //       this.logger.log(
-    //         blue.bold(
-    //           `PDF file uploaded successfully for ${white.bold(filename)}`
-    //         )
-    //       );
+          uploadSuccess = uploadResult.ok;
+          uploadResponse = await uploadResult.json();
 
-    //       uploadSuccess = true;
-    //       uploadResponse = uploadResult.data;
-    //     } catch (e) {
-    //       if (axios.isAxiosError(e) && e.response) {
-    //         uploadResponse = e.response.data;
-    //       }
+          this.logger.log(
+            blue.bold(
+              `PDF file uploaded successfully for ${white.bold(filename)}`
+            )
+          );
+        } catch (e) {
+          this.logger.log(
+            color.red.bold(
+              `Error uploading PDF file for ${white.bold(filename)}`
+            )
+          );
+          if (e instanceof Error) {
+            uploadResponse = e.message;
+          }
+        }
 
-    //       this.logger.log(
-    //         color.red.bold(
-    //           `Error uploading PDF file for ${white.bold(filename)}`
-    //         )
-    //       );
-    //     }
-    //     // Update the paymentHasPlaylist with the filenames
-    //     await this.prisma.paymentHasPlaylist.update({
-    //       where: {
-    //         id: metadata.id,
-    //       },
-    //       data: {
-    //         printApiUploaded: uploadSuccess,
-    //         printApiUploadResponse: JSON.stringify(uploadResponse),
-    //       },
-    //     });
-    //   }
-    // } catch (e) {
-    //   if (axios.isAxiosError(e) && e.response) {
-    //     response = e.response.data;
-    //   }
-    // }
-
-    // Fully output the response with console.log
-    //console.log(999, JSON.stringify(response, null, 2));
+        await this.prisma.paymentHasPlaylist.update({
+          where: {
+            id: metadata.id,
+          },
+          data: {
+            printApiUploaded: uploadSuccess,
+            printApiUploadResponse: JSON.stringify(uploadResponse),
+          },
+        });
+      }
+    } catch (e) {
+      if (e instanceof Error) {
+        response = e.message;
+      }
+    }
 
     return {
       request: body,
