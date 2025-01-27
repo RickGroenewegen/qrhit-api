@@ -442,9 +442,12 @@ class PrintEnBind {
   private generateOrderHash(items: any[], countrycode: string): string {
     const orderData = {
       items,
-      countrycode
+      countrycode,
     };
-    return crypto.createHash('md5').update(JSON.stringify(orderData)).digest('hex');
+    return crypto
+      .createHash('md5')
+      .update(JSON.stringify(orderData))
+      .digest('hex');
   }
 
   private async processOrderRequest(
@@ -462,7 +465,7 @@ class PrintEnBind {
   ): Promise<ApiResult> {
     const orderHash = this.generateOrderHash(items, customerInfo.countrycode);
     const cacheKey = `order_request_${orderHash}`;
-    
+
     // Check cache first
     const cachedResult = await this.cache.get(cacheKey);
     if (cachedResult) {
@@ -471,6 +474,8 @@ class PrintEnBind {
 
     const authToken = await this.getAuthToken();
     const taxRate = (await this.data.getTaxRate(customerInfo.countrycode))!;
+
+    console.log(111);
 
     try {
       // Create initial order with first article
@@ -486,13 +491,19 @@ class PrintEnBind {
         }
       );
 
+      console.log(222);
+
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
       const orderId = response.headers.get('location')?.split('/')[1];
 
-      this.logger.log(color.blue(`Created order: ${color.white(orderId)}`));
+      if (logging) {
+        this.logger.log(
+          color.blue.bold(`Created order: ${color.white.bold(orderId)}`)
+        );
+      }
 
       if (!orderId) {
         return {
@@ -542,7 +553,7 @@ class PrintEnBind {
 
       // Cache the successful result for 1 hour (3600 seconds)
       await this.cache.set(cacheKey, JSON.stringify(result), 3600);
-      
+
       return result;
 
       await fetch(
