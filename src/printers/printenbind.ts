@@ -562,12 +562,13 @@ class PrintEnBind {
       }
     );
 
-    this.logger.log(
-      color.blue.bold(
-        `Added delivery data to order ${color.white.bold(orderId)}`
-      )
-    );
-
+    if (logging) {
+      this.logger.log(
+        color.blue.bold(
+          `Added delivery data to order ${color.white.bold(orderId)}`
+        )
+      );
+    }
     // Get final order details
     const [orderResponse, deliveryResponse] = await Promise.all([
       fetch(`${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`, {
@@ -580,17 +581,22 @@ class PrintEnBind {
       }),
     ]);
 
-    this.logger.log(
-      color.blue.bold(
-        `Retrieved order & delivery details for order ${color.white.bold(
-          orderId
-        )}`
-      )
-    );
+    if (logging) {
+      this.logger.log(
+        color.blue.bold(
+          `Retrieved order & delivery details for order ${color.white.bold(
+            orderId
+          )}`
+        )
+      );
+    }
 
     const order: any = await orderResponse.json();
     const delivery: any = await deliveryResponse.json();
     const taxModifier = 1 + taxRate / 100;
+
+    console.log(111, order);
+    console.log(222, delivery);
 
     const result = {
       success: true,
@@ -678,7 +684,7 @@ class PrintEnBind {
         }
       }
 
-      const result = await this.processOrderRequest(orderItems, {
+      return await this.processOrderRequest(orderItems, {
         email: params.email,
         countrycode: params.countrycode,
       });
@@ -859,8 +865,7 @@ class PrintEnBind {
         streetnumber: payment.streetnumber,
         zipcode: payment.zipcode,
       },
-      true,
-      false
+      true
     );
 
     const finishResult = await this.finishOrder(result.data.orderId);
