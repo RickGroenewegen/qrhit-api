@@ -439,21 +439,161 @@ class PrintEnBind {
     return orderType;
   }
 
+  private async processOrderRequest(
+    items: any[],
+    customerInfo: {
+      email: string;
+      countrycode: string;
+      name?: string;
+      street?: string;
+      city?: string;
+      streetnumber?: string;
+      zipcode?: string;
+    }
+  ): Promise<ApiResult> {
+    const authToken = await this.getAuthToken();
+    const taxRate = (await this.data.getTaxRate(customerInfo.countrycode))!;
+
+    try {
+      // Create initial order with first article
+      const response = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: authToken!,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(items[0]),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
+
+      const orderId = response.headers.get('location')?.split('/')[1];
+      if (!orderId) {
+        return {
+          success: false,
+          error: 'No order ID received in response',
+        };
+      }
+
+      // Add remaining articles
+      for (let i = 1; i < items.length; i++) {
+        const articleResponse = await fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: authToken!,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(items[i]),
+          }
+        );
+
+        if (!articleResponse.ok) {
+          throw new Error(`Failed to add article ${i + 1}`);
+        }
+      }
+
+      // Set up delivery
+      const deliveryMethod = customerInfo.countrycode === 'NL' ? 'post' : 'international';
+      const deliveryOption = customerInfo.countrycode === 'NL' ? 'standard' : '';
+
+      const deliveryData = {
+        name_contact: customerInfo.name || 'John Doe',
+        street: customerInfo.street || 'Prinsenhof',
+        city: customerInfo.city || 'Sassenheim',
+        streetnumber: customerInfo.streetnumber || '1',
+        zipcode: customerInfo.zipcode || '2171XZ',
+        country: customerInfo.countrycode,
+        delivery_method: deliveryMethod,
+        delivery_option: customerInfo.countrycode === 'NL' ? 'standard' : undefined,
+        blanco: '1',
+        email: customerInfo.email,
+      };
+
+      await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: authToken!,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(deliveryData),
+        }
+      );
+
+      // Get final order details
+      const [orderResponse, deliveryResponse] = await Promise.all([
+        fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`,
+          {
+            method: 'GET',
+            headers: { Authorization: authToken! },
+          }
+        ),
+        fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
+          {
+            method: 'GET',
+            headers: { Authorization: authToken! },
+          }
+        )
+      ]);
+
+      const order: any = await orderResponse.json();
+      const delivery: any = await deliveryResponse.json();
+      const taxModifier = 1 + taxRate / 100;
+
+      return {
+        success: true,
+        data: {
+          orderId,
+          total: (parseFloat(order.amount) + parseFloat(delivery.amount)) * taxModifier,
+          shipping: parseFloat(delivery.amount) * taxModifier,
+          handling: parseFloat(order.startup) * taxModifier,
+          taxRateShipping: taxRate,
+          taxRate,
+          price: (parseFloat(order.amount) - parseFloat(order.amount_tax_standard)) * taxModifier,
+          payment: parseFloat(delivery.amount) * taxModifier,
+        },
+      };
+    } catch (error: any) {
+      console.error(error);
+
+      if (error.name === 'AbortError') {
+        return {
+          success: false,
+          error: 'Request timed out after 30 seconds',
+        };
+      } else if (error instanceof Error) {
+        return {
+          success: false,
+          error: `API request failed: ${error.message}`,
+        };
+      } else {
+        return {
+          success: false,
+          error: `Unexpected error: ${error}`,
+        };
+      }
+    }
+  }
+
   public async calculateOrder(params: any): Promise<ApiResult> {
     if (!params.countrycode) {
       params.countrycode = 'NL';
     }
 
-    const taxRate = (await this.data.getTaxRate(params.countrycode))!;
-
     try {
-      const cartItems = params.cart.items;
-      const authToken = await this.getAuthToken();
-
-      // Create a new order with articles
       const orderItems = [];
 
-      for (const item of cartItems) {
+      for (const item of params.cart.items) {
         if (item.productType === 'cards') {
           const numberOfTracks = await this.spotify.getPlaylistTrackCount(
             item.playlistId,
@@ -462,7 +602,6 @@ class PrintEnBind {
           );
 
           const numberOfPages = numberOfTracks * 2;
-          // Create an array of all odd page numbers
           const oddPages = Array.from(
             { length: numberOfPages },
             (_, i) => i + 1
@@ -488,161 +627,11 @@ class PrintEnBind {
         }
       }
 
-      // Make API request to create articles
-      try {
-        // Log the exact request being sent
-        const response = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: authToken!,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(orderItems[0]),
-          }
-        );
+      return await this.processOrderRequest(orderItems, {
+        email: params.email,
+        countrycode: params.countrycode
+      });
 
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-
-        // Get order ID from location header if it exists
-        const orderId = response.headers.get('location')?.split('/')[1];
-
-        if (!orderId) {
-          return {
-            success: false,
-            error: 'No order ID received in response',
-          };
-        }
-
-        // Add remaining articles to the order
-        for (let i = 1; i < orderItems.length; i++) {
-          const articleResponse = await fetch(
-            `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-            {
-              method: 'POST',
-              headers: {
-                Authorization: authToken!,
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify(orderItems[i]),
-            }
-          );
-
-          if (!articleResponse.ok) {
-            throw new Error(`Failed to add article ${i + 1}`);
-          }
-        }
-
-        console.log(1, params);
-
-        const deliveryMethod =
-          params.countrycode === 'NL' ? 'post' : 'international';
-        const deliveryOption = params.countrycode === 'NL' ? 'standard' : '';
-
-        let deliveryData: any = {
-          name_contact: 'John Doe',
-          street: 'Prinsenhof',
-          city: 'Sassenheim',
-          streetnumber: '1',
-          zipcode: '2171XZ',
-          country: params.countrycode,
-          delivery_method: deliveryMethod,
-          blanco: '1',
-          email: params.email,
-        };
-
-        if (params.countrycode == 'NL') {
-          deliveryData['delivery_option'] = 'standard';
-        }
-
-        // Add the delivery to the order
-        const setDeliveryRequest = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: authToken!,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(deliveryData),
-          }
-        );
-
-        const setDeliveryResult = await setDeliveryRequest.json();
-
-        console.log(2, setDeliveryResult);
-
-        // Get full order details
-        const orderResponse = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`,
-          {
-            method: 'GET',
-            headers: {
-              Authorization: authToken!,
-            },
-          }
-        );
-
-        // Get delivery details
-        //printenbind.nl/api/v1/delivery/{orderid}
-        const deliveryResponse = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
-          {
-            method: 'GET',
-            headers: {
-              Authorization: authToken!,
-            },
-          }
-        );
-
-        const order: any = await orderResponse.json();
-        const delivery: any = await deliveryResponse.json();
-        const taxModifier = 1 + taxRate / 100;
-
-        console.log(111, order);
-        console.log(222, delivery);
-        console.log(333, taxRate);
-
-        return {
-          success: true,
-          data: {
-            total:
-              (parseFloat(order.amount) + parseFloat(delivery.amount)) *
-              taxModifier,
-            shipping: parseFloat(delivery.amount) * taxModifier,
-            handling: parseFloat(order.startup) * taxModifier,
-            taxRateShipping: taxRate,
-            taxRate,
-            price:
-              (parseFloat(order.amount) -
-                parseFloat(order.amount_tax_standard)) *
-              taxModifier,
-            payment: parseFloat(delivery.amount) * taxModifier,
-          },
-        };
-      } catch (error: any) {
-        console.log(error);
-
-        if (error.name === 'AbortError') {
-          return {
-            success: false,
-            error: 'Request timed out after 30 seconds',
-          };
-        } else if (error instanceof Error) {
-          return {
-            success: false,
-            error: `API request failed: ${error.message}`,
-          };
-        } else {
-          return {
-            success: false,
-            error: `Unexpected error: ${error}`,
-          };
-        }
-      }
     } catch (error) {
       this.logger.log(color.red.bold(`Error calculating order: ${error}`));
       return {
@@ -745,198 +734,56 @@ class PrintEnBind {
     payment: any,
     playlists: any[],
     productType: string
-  ): Promise<any> {
-    const authToken = await this.getAuthToken();
-    const taxRate = (await this.data.getTaxRate(payment.countrycode))!;
-    let response: any = '';
-
-    let itemsToSend = [];
-    let orderItems = [];
-
-    for (const playlist of playlists) {
-      let pageCount = await this.pdf.countPDFPages(
-        `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
-      );
-
-      const numberOfPages = playlist.numberOfTracks * 2;
-      // Create an array of all odd page numbers
-      const oddPages = Array.from(
-        { length: numberOfPages },
-        (_, i) => i + 1
-      ).filter((page) => page % 2 !== 0);
-
-      orderItems.push({
-        product: 'losbladig',
-        number: '1',
-        copies: numberOfPages.toString(),
-        color: 'custom',
-        color_custom_pages: oddPages.join(','),
-        size: 'custom',
-        printside: 'double',
-        finishing: 'loose',
-        papertype: 'card',
-        size_custom_width: '60',
-        size_custom_height: '60',
-        check_doc: 'standard',
-        delivery_method: 'post',
-        add_file_method: 'url',
-        file_url: playlist.filename,
-      });
-    }
-
-    // Make API request to create articles
+  ): Promise<ApiResult> {
     try {
-      // Log the exact request being sent
-      const response = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: authToken!,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(orderItems[0]),
-        }
-      );
+      const orderItems = [];
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
-      // Get order ID from location header if it exists
-      const orderId = response.headers.get('location')?.split('/')[1];
-
-      if (!orderId) {
-        return {
-          success: false,
-          error: 'No order ID received in response',
-        };
-      }
-
-      // Add remaining articles to the order
-      for (let i = 1; i < orderItems.length; i++) {
-        const articleResponse = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: authToken!,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(orderItems[i]),
-          }
+      for (const playlist of playlists) {
+        await this.pdf.countPDFPages(
+          `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
         );
 
-        if (!articleResponse.ok) {
-          throw new Error(`Failed to add article ${i + 1}`);
-        }
+        const numberOfPages = playlist.numberOfTracks * 2;
+        const oddPages = Array.from(
+          { length: numberOfPages },
+          (_, i) => i + 1
+        ).filter((page) => page % 2 !== 0);
+
+        orderItems.push({
+          product: 'losbladig',
+          number: '1',
+          copies: numberOfPages.toString(),
+          color: 'custom',
+          color_custom_pages: oddPages.join(','),
+          size: 'custom',
+          printside: 'double',
+          finishing: 'loose',
+          papertype: 'card',
+          size_custom_width: '60',
+          size_custom_height: '60',
+          check_doc: 'standard',
+          delivery_method: 'post',
+          add_file_method: 'url',
+          file_url: `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`,
+        });
       }
 
-      console.log(1, params);
+      return await this.processOrderRequest(orderItems, {
+        email: payment.email,
+        countrycode: payment.countrycode,
+        name: payment.fullname,
+        street: payment.address,
+        city: payment.city,
+        streetnumber: payment.streetnumber,
+        zipcode: payment.zipcode
+      });
 
-      const deliveryMethod =
-        params.countrycode === 'NL' ? 'post' : 'international';
-      const deliveryOption = params.countrycode === 'NL' ? 'standard' : '';
-
-      let deliveryData: any = {
-        name_contact: 'John Doe',
-        street: 'Prinsenhof',
-        city: 'Sassenheim',
-        streetnumber: '1',
-        zipcode: '2171XZ',
-        country: params.countrycode,
-        delivery_method: deliveryMethod,
-        blanco: '1',
-        email: params.email,
-      };
-
-      if (params.countrycode == 'NL') {
-        deliveryData['delivery_option'] = 'standard';
-      }
-
-      // Add the delivery to the order
-      const setDeliveryRequest = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
-        {
-          method: 'POST',
-          headers: {
-            Authorization: authToken!,
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify(deliveryData),
-        }
-      );
-
-      const setDeliveryResult = await setDeliveryRequest.json();
-
-      console.log(2, setDeliveryResult);
-
-      // Get full order details
-      const orderResponse = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: authToken!,
-          },
-        }
-      );
-
-      // Get delivery details
-      //printenbind.nl/api/v1/delivery/{orderid}
-      const deliveryResponse = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
-        {
-          method: 'GET',
-          headers: {
-            Authorization: authToken!,
-          },
-        }
-      );
-
-      const order: any = await orderResponse.json();
-      const delivery: any = await deliveryResponse.json();
-      const taxModifier = 1 + taxRate / 100;
-
-      console.log(111, order);
-      console.log(222, delivery);
-      console.log(333, taxRate);
-
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error creating order: ${error}`));
       return {
-        success: true,
-        data: {
-          total:
-            (parseFloat(order.amount) + parseFloat(delivery.amount)) *
-            taxModifier,
-          shipping: parseFloat(delivery.amount) * taxModifier,
-          handling: parseFloat(order.startup) * taxModifier,
-          taxRateShipping: taxRate,
-          taxRate,
-          price:
-            (parseFloat(order.amount) - parseFloat(order.amount_tax_standard)) *
-            taxModifier,
-          payment: parseFloat(delivery.amount) * taxModifier,
-        },
+        success: false,
+        error: `Error creating order: ${error}`,
       };
-    } catch (error: any) {
-      console.log(error);
-
-      if (error.name === 'AbortError') {
-        return {
-          success: false,
-          error: 'Request timed out after 30 seconds',
-        };
-      } else if (error instanceof Error) {
-        return {
-          success: false,
-          error: `API request failed: ${error.message}`,
-        };
-      } else {
-        return {
-          success: false,
-          error: `Unexpected error: ${error}`,
-        };
-      }
     }
 
     // const body = {
