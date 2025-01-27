@@ -440,7 +440,11 @@ class PrintEnBind {
   }
 
   public async calculateOrder(params: any): Promise<ApiResult> {
-    const taxRate = await this.data.getTaxRate(params.countrycode);
+    if (!params.countrycode) {
+      params.countrycode = 'NL';
+    }
+
+    const taxRate = (await this.data.getTaxRate(params.countrycode))!;
 
     try {
       const cartItems = params.cart.items;
@@ -475,7 +479,7 @@ class PrintEnBind {
             finishing: 'loose',
             papertype: 'card',
             size_custom_width: '60',
-            size_custom_height: '80',
+            size_custom_height: '60',
             check_doc: 'standard',
             delivery_method: 'post',
             add_file_method: 'url',
@@ -487,17 +491,6 @@ class PrintEnBind {
       // Make API request to create articles
       try {
         // Log the exact request being sent
-        console.log('Request payload:', JSON.stringify(orderItems[0], null, 2));
-        console.log(
-          'Request URL:',
-          `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`
-        );
-        console.log('Request Headers:', {
-          Authorization: authToken,
-          'Content-Type': 'application/json',
-        });
-        console.log('Request Data:', orderItems[0]);
-
         const response = await fetch(
           `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
           {
@@ -510,14 +503,9 @@ class PrintEnBind {
           }
         );
 
-        // Output orderResponse response headers
-        console.log('Response headers:', response.headers);
-
         if (!response.ok) {
           throw new Error(`HTTP error! status: ${response.status}`);
         }
-
-        const responseData = await response.json();
 
         // Get order ID from location header if it exists
         const orderId = response.headers.get('location')?.split('/')[1];
@@ -548,6 +536,45 @@ class PrintEnBind {
           }
         }
 
+        console.log(1, params);
+
+        const deliveryMethod =
+          params.countrycode === 'NL' ? 'post' : 'international';
+        const deliveryOption = params.countrycode === 'NL' ? 'standard' : '';
+
+        let deliveryData: any = {
+          name_contact: 'John Doe',
+          street: 'Prinsenhof',
+          city: 'Sassenheim',
+          streetnumber: '1',
+          zipcode: '2171XZ',
+          country: params.countrycode,
+          delivery_method: deliveryMethod,
+          blanco: '1',
+          email: params.email,
+        };
+
+        if (params.countrycode == 'NL') {
+          deliveryData['delivery_option'] = 'standard';
+        }
+
+        // Add the delivery to the order
+        const setDeliveryRequest = await fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: authToken!,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(deliveryData),
+          }
+        );
+
+        const setDeliveryResult = await setDeliveryRequest.json();
+
+        console.log(2, setDeliveryResult);
+
         // Get full order details
         const orderResponse = await fetch(
           `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`,
@@ -559,45 +586,41 @@ class PrintEnBind {
           }
         );
 
-        if (!orderResponse.ok) {
-          throw new Error('Failed to get order details');
-        }
+        // Get delivery details
+        //printenbind.nl/api/v1/delivery/{orderid}
+        const deliveryResponse = await fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
+          {
+            method: 'GET',
+            headers: {
+              Authorization: authToken!,
+            },
+          }
+        );
 
         const order: any = await orderResponse.json();
+        const delivery: any = await deliveryResponse.json();
+        const taxModifier = 1 + taxRate / 100;
 
         console.log(111, order);
+        console.log(222, delivery);
+        console.log(333, taxRate);
 
         return {
           success: true,
           data: {
-            total: parseFloat(order.amount),
-            //shipping: response.data.shipping,
-            //handling: response.data.handling,
+            total:
+              (parseFloat(order.amount) + parseFloat(delivery.amount)) *
+              taxModifier,
+            shipping: parseFloat(delivery.amount) * taxModifier,
+            handling: parseFloat(order.startup) * taxModifier,
             taxRateShipping: taxRate,
             taxRate,
             price:
-              parseFloat(order.amount) - parseFloat(order.amount_tax_standard),
-            //payment: response.data.payment,
-          },
-        };
-
-        console.log(111, order);
-
-        // let total = 0;
-        // let totalTax = 0;
-
-        // articles.forEach((article: any) => {
-        //   total += article.price_total;
-        //   totalTax += article.total_tax;
-        // });
-
-        return {
-          success: true,
-          data: {
-            // total: total + totalTax,
-            // price: total,
-            // taxRate: (totalTax / total) * 100,
-            //articles: articles,
+              (parseFloat(order.amount) -
+                parseFloat(order.amount_tax_standard)) *
+              taxModifier,
+            payment: parseFloat(delivery.amount) * taxModifier,
           },
         };
       } catch (error: any) {
@@ -729,50 +752,20 @@ class PrintEnBind {
     let itemsToSend = [];
 
     for (const playlist of playlists) {
-      const orderType = await this.getOrderType(
-        playlist.playlist.numberOfTracks,
-        false,
-        productType
+      let pageCount = await this.pdf.countPDFPages(
+        `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
       );
 
-      let pageCount = 2;
-
-      if (orderType != 'giftcard') {
-        pageCount = await this.pdf.countPDFPages(
-          `${process.env['PUBLIC_DIR']}/pdf/${playlist.filename}`
-        );
-
-        const orderInfo = await this.calculateOptimalPrintOrder(
-          playlist.playlist.numberOfTracks
-        );
-
-        for (const order of orderInfo.order) {
-          itemsToSend.push({
-            productId: `kaarten_enkel_a5_lig_${order.pages}st_indv`,
-            pageCount: order.pages * 2,
-            metadata: JSON.stringify({
-              filename: playlist.filename,
-              id: playlist.playlist.paymentHasPlaylistId,
-            }),
-            quantity: playlist.playlist.amount,
-          });
-        }
-      } else {
-        itemsToSend.push({
-          productId: orderType.printApiProductId,
-          pageCount,
-          metadata: JSON.stringify({
-            filename: playlist.filename,
-            id: playlist.playlist.paymentHasPlaylistId,
-          }),
-          quantity: playlist.playlist.amount,
-        });
-      }
+      itemsToSend.push({
+        productId: `kaarten_enkel_a5_lig_${order.pages}st_indv`,
+        pageCount: order.pages * 2,
+        metadata: JSON.stringify({
+          filename: playlist.filename,
+          id: playlist.playlist.paymentHasPlaylistId,
+        }),
+        quantity: playlist.playlist.amount,
+      });
     }
-
-    // Determine delivery method based on country
-    const deliveryMethod = payment.countrycode === 'NL' ? 'post' : 'international';
-    const deliveryOption = payment.countrycode === 'NL' ? 'standard' : '';
 
     const body = {
       email: payment.email,
@@ -786,10 +779,6 @@ class PrintEnBind {
           country: payment.countrycode,
         },
       },
-      delivery_method: deliveryMethod,
-      delivery_option: deliveryOption,
-      delivery_option_data: '',
-      blanco: false
     };
 
     try {
