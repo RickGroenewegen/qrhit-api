@@ -456,21 +456,21 @@ class PrintEnBind {
           );
 
           orderItems.push({
-            product: "losbladig",
-            number: "1",
-            copies: "200", 
-            color: "all",
-            size: "custom",
-            printside: "double",
-            papertype: "card",
-            finishing: "loose",
-            size_custom_width: "60",
-            size_custom_height: "80",
-            check_doc: "standard",
-            delivery_method: "post",
-            add_file_method: "url",
-            file_url: "",
-            filenames: "example.pdf"
+            product: 'losbladig',
+            number: '1',
+            copies: '200',
+            color: 'all',
+            size: 'custom',
+            printside: 'double',
+            papertype: 'card',
+            finishing: 'loose',
+            size_custom_width: '60',
+            size_custom_height: '80',
+            check_doc: 'standard',
+            delivery_method: 'post',
+            add_file_method: 'url',
+            file_url: '',
+            filenames: 'example.pdf',
           });
         }
       }
@@ -570,6 +570,8 @@ class PrintEnBind {
           },
         };
       } catch (error) {
+        console.log(error);
+
         if (axios.isAxiosError(error)) {
           if (error.code === 'ECONNABORTED') {
             return {
