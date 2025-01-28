@@ -680,16 +680,59 @@ class PrintEnBind {
     try {
       const orderItems = [];
 
+      let total = 0;
+      let totalProductPriceWithoutVAT = 0;
+      const taxRate = await this.data.getTaxRate(params.countrycode);
+      const minimumAmount = 25;
+      const maximumAmount = MAX_CARDS;
+
       for (const item of params.cart.items) {
+        let numberOfTracks = 0;
+        
         if (item.productType === 'cards') {
-          const numberOfTracks = await this.spotify.getPlaylistTrackCount(
+          numberOfTracks = await this.spotify.getPlaylistTrackCount(
             item.playlistId,
             true,
             item.isSlug
           );
 
-          const orderItem = await this.createOrderItem(numberOfTracks);
-          orderItems.push(orderItem);
+          if (numberOfTracks < minimumAmount) {
+            numberOfTracks = minimumAmount;
+          }
+
+          if (numberOfTracks > maximumAmount) {
+            numberOfTracks = maximumAmount;
+          }
+
+          if (!item.type || item.type === 'physical') {
+            const orderItem = await this.createOrderItem(numberOfTracks);
+            orderItems.push(orderItem);
+          }
+        }
+
+        const orderType = await this.getOrderType(
+          numberOfTracks,
+          item.type === 'digital',
+          item.productType
+        );
+
+        if (orderType) {
+          let itemPrice = 0;
+
+          if (item.productType === 'cards') {
+            itemPrice = parseFloat(
+              (orderType.amountWithMargin * item.amount).toFixed(2)
+            );
+          } else if (item.productType === 'giftcard') {
+            itemPrice = parseFloat(item.price.toFixed(2));
+          }
+
+          const productPriceWithoutVAT = parseFloat(
+            (itemPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)
+          );
+
+          totalProductPriceWithoutVAT += productPriceWithoutVAT;
+          total += itemPrice;
         }
       }
 
@@ -843,10 +886,18 @@ class PrintEnBind {
     productType: string
   ): Promise<any> {
     const orderItems = [];
+    let hasPhysicalItems = false;
 
     for (const playlistItem of playlists) {
       const playlist = playlistItem.playlist;
       const filename = playlistItem.filename;
+
+      // Skip digital items for Print&Bind order
+      if (playlist.type === 'digital') {
+        continue;
+      }
+
+      hasPhysicalItems = true;
 
       this.logger.log(
         color.blue.bold(
@@ -861,6 +912,19 @@ class PrintEnBind {
         fileUrl
       );
       orderItems.push(orderItem);
+    }
+
+    // Only create Print&Bind order if there are physical items
+    if (!hasPhysicalItems) {
+      return {
+        request: '',
+        response: {
+          success: true,
+          data: {
+            orderId: null
+          }
+        }
+      };
     }
 
     const result = await this.processOrderRequest(
