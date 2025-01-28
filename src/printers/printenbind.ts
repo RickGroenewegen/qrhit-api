@@ -465,6 +465,13 @@ class PrintEnBind {
     const orderHash = this.generateOrderHash(items, customerInfo.countrycode);
     const cacheKey = `order_request_${orderHash}`;
 
+    let total = 0;
+    let shipping = 0;
+    let handling = 0;
+    let price = 0;
+    let payment = 0;
+    let totalProductPriceWithoutVAT = 0;
+
     // Check cache first
     const cachedResult = await this.cache.get(cacheKey);
     if (cachedResult && cache) {
@@ -473,162 +480,203 @@ class PrintEnBind {
 
     const authToken = await this.getAuthToken();
     const taxRate = (await this.data.getTaxRate(customerInfo.countrycode))!;
+    let physicalOrderCreated: boolean = false;
+    let orderId = null;
 
     console.log(1111, items);
 
-    // Create initial order with first article
-    const response = await fetch(
-      `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: authToken!,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(items[0]),
-      }
-    );
-
-    console.log(2222, await response.json());
-
-    const orderId = response.headers.get('location')?.split('/')[1];
-
-    if (logging) {
-      this.logger.log(
-        color.blue.bold(
-          `Created order: ${color.white.bold(orderId)} and added first article`
-        )
-      );
-    }
-
-    if (!orderId) {
-      return {
-        success: false,
-        error: 'No order ID received in response',
-      };
-    }
-
     // Add remaining articles
-    for (let i = 1; i < items.length; i++) {
-      const articleResponse = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].product && !physicalOrderCreated) {
+        // Create initial order with first article
+        const response = await fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: authToken!,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(items[i]),
+          }
+        );
+
+        orderId = response.headers.get('location')?.split('/')[1];
+
+        physicalOrderCreated = true;
+
+        if (logging) {
+          this.logger.log(
+            color.blue.bold(
+              `Created order: ${color.white.bold(
+                orderId
+              )} and added first article`
+            )
+          );
+        }
+
+        if (!orderId) {
+          return {
+            success: false,
+            error: 'No order ID received in response',
+          };
+        }
+      } else if (items[i].product && physicalOrderCreated) {
+        const articleResponse = await fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: authToken!,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(items[i]),
+          }
+        );
+
+        if (logging) {
+          this.logger.log(
+            color.blue.bold(
+              `Added article ${i + 1} to order ${color.white.bold(orderId)}`
+            )
+          );
+        }
+
+        if (!articleResponse.ok) {
+          throw new Error(`Failed to add article ${i + 1}`);
+        }
+      } else if (items[i].type == 'digital') {
+        const orderType = await this.getOrderType(
+          items[i].numberOfTracks,
+          items[i].type === 'digital',
+          items[i].productType
+        );
+
+        if (orderType) {
+          let itemPrice = 0;
+
+          if (items[i].productType === 'cards') {
+            itemPrice = parseFloat(
+              (orderType.amountWithMargin * items[i].amount).toFixed(2)
+            );
+          } else if (items[i].productType === 'giftcard') {
+            itemPrice = parseFloat(items[i].price.toFixed(2));
+          }
+
+          const productPriceWithoutVAT = parseFloat(
+            (itemPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)
+          );
+
+          totalProductPriceWithoutVAT += productPriceWithoutVAT;
+          total += itemPrice;
+        }
+      }
+    }
+
+    if (physicalOrderCreated) {
+      // Set up delivery
+      const deliveryMethod =
+        customerInfo.countrycode === 'NL' ? 'post' : 'international';
+      const deliveryOption =
+        customerInfo.countrycode === 'NL' ? 'standard' : '';
+
+      const deliveryData = {
+        name_contact: customerInfo.name || 'John Doe',
+        street: 'Prinsenhof',
+        city: customerInfo.city || 'Sassenheim',
+        streetnumber: '1',
+        zipcode: customerInfo.zipcode || '2171XZ',
+        country: customerInfo.countrycode,
+        delivery_method: deliveryMethod,
+        delivery_option:
+          customerInfo.countrycode === 'NL' ? 'standard' : undefined,
+        blanco: '1',
+        email: customerInfo.email,
+      };
+
+      await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
         {
           method: 'POST',
           headers: {
             Authorization: authToken!,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(items[i]),
+          body: JSON.stringify(deliveryData),
         }
       );
 
       if (logging) {
         this.logger.log(
           color.blue.bold(
-            `Added article ${i + 1} to order ${color.white.bold(orderId)}`
+            `Added delivery data to order ${color.white.bold(orderId)}`
+          )
+        );
+      }
+      // Get final order details
+      const [orderResponse, deliveryResponse] = await Promise.all([
+        fetch(`${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`, {
+          method: 'GET',
+          headers: { Authorization: authToken! },
+        }),
+        fetch(`${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`, {
+          method: 'GET',
+          headers: { Authorization: authToken! },
+        }),
+      ]);
+
+      if (logging) {
+        this.logger.log(
+          color.blue.bold(
+            `Retrieved order & delivery details for order ${color.white.bold(
+              orderId
+            )}`
           )
         );
       }
 
-      if (!articleResponse.ok) {
-        throw new Error(`Failed to add article ${i + 1}`);
-      }
-    }
+      const order: any = await orderResponse.json();
+      const delivery: any = await deliveryResponse.json();
+      const taxModifier = 1 + taxRate / 100;
 
-    // Set up delivery
-    const deliveryMethod =
-      customerInfo.countrycode === 'NL' ? 'post' : 'international';
-    const deliveryOption = customerInfo.countrycode === 'NL' ? 'standard' : '';
+      total += parseFloat(
+        (
+          (parseFloat(order.amount) + parseFloat(delivery.amount)) *
+          taxModifier
+        ).toFixed(2)
+      );
 
-    const deliveryData = {
-      name_contact: customerInfo.name || 'John Doe',
-      street: 'Prinsenhof',
-      city: customerInfo.city || 'Sassenheim',
-      streetnumber: '1',
-      zipcode: customerInfo.zipcode || '2171XZ',
-      country: customerInfo.countrycode,
-      delivery_method: deliveryMethod,
-      delivery_option:
-        customerInfo.countrycode === 'NL' ? 'standard' : undefined,
-      blanco: '1',
-      email: customerInfo.email,
-    };
+      shipping += parseFloat(
+        (parseFloat(delivery.amount) * taxModifier).toFixed(2)
+      );
 
-    await fetch(
-      `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
-      {
-        method: 'POST',
-        headers: {
-          Authorization: authToken!,
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(deliveryData),
-      }
-    );
+      handling += parseFloat(
+        (parseFloat(order.price_startup) * taxModifier).toFixed(2)
+      );
 
-    if (logging) {
-      this.logger.log(
-        color.blue.bold(
-          `Added delivery data to order ${color.white.bold(orderId)}`
-        )
+      price += parseFloat(
+        (
+          (parseFloat(order.amount) - parseFloat(order.amount_tax_standard)) *
+          taxModifier
+        ).toFixed(2)
+      );
+
+      payment = parseFloat(
+        (parseFloat(delivery.amount) * taxModifier).toFixed(2)
       );
     }
-    // Get final order details
-    const [orderResponse, deliveryResponse] = await Promise.all([
-      fetch(`${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`, {
-        method: 'GET',
-        headers: { Authorization: authToken! },
-      }),
-      fetch(`${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`, {
-        method: 'GET',
-        headers: { Authorization: authToken! },
-      }),
-    ]);
-
-    if (logging) {
-      this.logger.log(
-        color.blue.bold(
-          `Retrieved order & delivery details for order ${color.white.bold(
-            orderId
-          )}`
-        )
-      );
-    }
-
-    const order: any = await orderResponse.json();
-    const delivery: any = await deliveryResponse.json();
-    const taxModifier = 1 + taxRate / 100;
-
-    console.log(111, order);
-    console.log(222, delivery);
 
     const result = {
       success: true,
       data: {
         orderId,
-        total: parseFloat(
-          (
-            (parseFloat(order.amount) + parseFloat(delivery.amount)) *
-            taxModifier
-          ).toFixed(2)
-        ),
-        shipping: parseFloat(
-          (parseFloat(delivery.amount) * taxModifier).toFixed(2)
-        ),
-        handling: parseFloat(
-          (parseFloat(order.price_startup) * taxModifier).toFixed(2)
-        ),
+        total,
+        shipping,
+        handling,
         taxRateShipping: taxRate,
         taxRate,
-        price: parseFloat(
-          (
-            (parseFloat(order.amount) - parseFloat(order.amount_tax_standard)) *
-            taxModifier
-          ).toFixed(2)
-        ),
-        payment: parseFloat(
-          (parseFloat(delivery.amount) * taxModifier).toFixed(2)
-        ),
+        price,
+        payment,
       },
     };
 
