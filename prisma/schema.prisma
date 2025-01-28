@@ -100,6 +100,7 @@ model Payment {
   fullname                String
   email                   String
   address                 String?
+  housenumber             String?
   city                    String?
   zipcode                 String?
   countrycode             String?

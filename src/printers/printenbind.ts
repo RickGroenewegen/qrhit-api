@@ -451,15 +451,15 @@ class PrintEnBind {
   private async processOrderRequest(
     items: any[],
     customerInfo: {
+      fullname?: string;
       email: string;
-      countrycode: string;
-      name?: string;
-      street?: string;
-      city?: string;
-      streetnumber?: string;
+      address?: string;
+      housenumber?: string;
       zipcode?: string;
+      city?: string;
+      countrycode: string;
     },
-    logging: boolean = false,
+    logging: boolean = true,
     cache: boolean = true
   ): Promise<ApiResult> {
     const orderHash = this.generateOrderHash(items, customerInfo.countrycode);
@@ -483,11 +483,9 @@ class PrintEnBind {
     let physicalOrderCreated: boolean = false;
     let orderId = null;
 
-    console.log(1111, items);
-
     // Add remaining articles
     for (let i = 0; i < items.length; i++) {
-      if (items[i].product && !physicalOrderCreated) {
+      if (items[i].type == 'physical' && !physicalOrderCreated) {
         // Create initial order with first article
         const response = await fetch(
           `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
@@ -521,7 +519,7 @@ class PrintEnBind {
             error: 'No order ID received in response',
           };
         }
-      } else if (items[i].product && physicalOrderCreated) {
+      } else if (items[i].type == 'physical' && physicalOrderCreated) {
         const articleResponse = await fetch(
           `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
           {
@@ -581,20 +579,20 @@ class PrintEnBind {
         customerInfo.countrycode === 'NL' ? 'standard' : '';
 
       const deliveryData = {
-        name_contact: customerInfo.name || 'John Doe',
-        street: 'Prinsenhof',
-        city: customerInfo.city || 'Sassenheim',
-        streetnumber: '1',
-        zipcode: customerInfo.zipcode || '2171XZ',
+        name_contact: customerInfo.fullname || 'John Doe',
+        street: customerInfo.address || 'Some lane',
+        city: customerInfo.city || 'Amsterdam',
+        streetnumber: customerInfo.housenumber || '1',
+        zipcode: customerInfo.zipcode || '1234AB',
         country: customerInfo.countrycode,
         delivery_method: deliveryMethod,
         delivery_option:
           customerInfo.countrycode === 'NL' ? 'standard' : undefined,
         blanco: '1',
-        email: customerInfo.email,
+        email: customerInfo.email || 'john@doe.com',
       };
 
-      await fetch(
+      const addDeliveryResult = await fetch(
         `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
         {
           method: 'POST',
@@ -605,6 +603,8 @@ class PrintEnBind {
           body: JSON.stringify(deliveryData),
         }
       );
+
+      const addDelivery = await addDeliveryResult.json();
 
       if (logging) {
         this.logger.log(
@@ -706,6 +706,7 @@ class PrintEnBind {
       return item;
     } else {
       return {
+        type: 'physical',
         product: 'losbladig',
         number: '1',
         copies: numberOfPages.toString(),
@@ -924,18 +925,29 @@ class PrintEnBind {
     const result = await this.processOrderRequest(
       orderItems,
       {
+        fullname: payment.fullname,
         email: payment.email,
-        countrycode: payment.countrycode,
-        name: payment.fullname,
-        street: payment.address,
-        city: payment.city,
-        streetnumber: payment.streetnumber,
+        address: payment.address,
+        housenumber: payment.housenumber,
         zipcode: payment.zipcode,
+        city: payment.city,
+        countrycode: payment.countrycode,
       },
-      true
+      true,
+      false
     );
 
-    const finishResult = await this.finishOrder(result.data.orderId);
+    if (
+      process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') &&
+      process.env['ENVIRONMENT'] === 'production'
+    ) {
+      const finishResult = await this.finishOrder(result.data.orderId);
+      this.logger.log(
+        color.blue.bold(
+          `Finished order ${color.white.bold(result.data.orderId)}`
+        )
+      );
+    }
 
     return {
       request: '',
