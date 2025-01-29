@@ -270,6 +270,8 @@ class PrintEnBind {
           totalProductPriceWithoutVAT += productPriceWithoutVAT;
         }
 
+        console.log(1111, items);
+
         // Create initial order with first article
         const response = await fetch(
           `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
@@ -283,7 +285,7 @@ class PrintEnBind {
           }
         );
 
-        console.log(1111, await response.json());
+        console.log(2222, await response.json());
 
         if (logging) {
           apiCalls.push({

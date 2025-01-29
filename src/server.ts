@@ -984,7 +984,7 @@ class Server {
     );
 
     this.fastify.post('/create_order', async (request: any, _reply) => {
-      return await this.generator.sendToPrinter(request.body.paymentId);
+      return this.generator.sendToPrinter(request.body.paymentId);
     });
 
     if (process.env['ENVIRONMENT'] == 'development') {
