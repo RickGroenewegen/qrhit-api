@@ -461,7 +461,7 @@ class PrintEnBind {
     },
     logging: boolean = true,
     cache: boolean = true
-  ): Promise<ApiResult> {
+  ): Promise<ApiResult & { apiCalls?: Array<{method: string, url: string, body?: any, statusCode: number, responseBody: any}> }> {
     const orderHash = this.generateOrderHash(items, customerInfo.countrycode);
     const cacheKey = `order_request_${orderHash}`;
 
@@ -471,6 +471,7 @@ class PrintEnBind {
     let price = 0;
     let payment = 0;
     let totalProductPriceWithoutVAT = 0;
+    let apiCalls: Array<{method: string, url: string, body?: any, statusCode: number, responseBody: any}> = [];
 
     // Check cache first
     const cachedResult = await this.cache.get(cacheKey);
@@ -498,6 +499,16 @@ class PrintEnBind {
             body: JSON.stringify(items[i]),
           }
         );
+        
+        if (logging) {
+          apiCalls.push({
+            method: 'POST',
+            url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
+            body: items[i],
+            statusCode: response.status,
+            responseBody: await response.clone().json()
+          });
+        }
 
         orderId = response.headers.get('location')?.split('/')[1];
 
@@ -531,6 +542,16 @@ class PrintEnBind {
             body: JSON.stringify(items[i]),
           }
         );
+
+        if (logging) {
+          apiCalls.push({
+            method: 'POST',
+            url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+            body: items[i],
+            statusCode: articleResponse.status,
+            responseBody: await articleResponse.clone().json()
+          });
+        }
 
         if (logging) {
           this.logger.log(
@@ -607,6 +628,16 @@ class PrintEnBind {
       const addDelivery = await addDeliveryResult.json();
 
       if (logging) {
+        apiCalls.push({
+          method: 'POST',
+          url: `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
+          body: deliveryData,
+          statusCode: addDeliveryResult.status,
+          responseBody: addDelivery
+        });
+      }
+
+      if (logging) {
         this.logger.log(
           color.blue.bold(
             `Added delivery data to order ${color.white.bold(orderId)}`
@@ -678,6 +709,7 @@ class PrintEnBind {
         price,
         payment,
       },
+      ...(logging ? { apiCalls } : {})
     };
 
     // Cache the successful result for 1 hour (3600 seconds)
