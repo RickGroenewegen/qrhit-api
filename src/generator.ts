@@ -543,15 +543,26 @@ class Generator {
       );
       const physicalPlaylists: any[] = [];
 
-      console.log(111, playlists);
-
-      // Loop over playlist
+      // Loop over playlists and get physical ones with their filenames
       for (const playlist of playlists) {
-        if (playlist.orderType == 'physical') {
-          // physicalPlaylists.push({
-          //   playlist,
-          //   filename: generatedFilename,
-          // });
+        if (playlist.orderType === 'physical') {
+          const paymentHasPlaylist =
+            await this.prisma.paymentHasPlaylist.findFirst({
+              select: {
+                filename: true,
+              },
+              where: {
+                paymentId: payment.id,
+                playlistId: playlist.id,
+              },
+            });
+
+          if (paymentHasPlaylist?.filename) {
+            physicalPlaylists.push({
+              playlist,
+              filename: paymentHasPlaylist.filename,
+            });
+          }
         }
       }
 
