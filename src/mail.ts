@@ -437,14 +437,14 @@ class Mail {
         mailParams
       );
 
-      const subject = this.translation.translate(
+      const subject = decode(this.translation.translate(
         'mail.finalizedMailSubject',
         locale,
         {
           orderId: payment.orderId,
           playlist: playlist.name,
         }
-      );
+      ));
 
       let attachments: Attachment[] = [
         {
