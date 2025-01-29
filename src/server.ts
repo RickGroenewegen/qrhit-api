@@ -32,6 +32,7 @@ import Push from './push';
 import Review from './review';
 import Trustpilot from './trustpilot';
 import { Music } from './music';
+import Suggestion from './suggestion';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -69,6 +70,7 @@ class Server {
   private review = Review.getInstance();
   private trustpilot = Trustpilot.getInstance();
   private music = new Music();
+  private suggestion = Suggestion.getInstance();
 
   private version: string = '1.0.0';
 
@@ -368,7 +370,7 @@ class Server {
       '/corrections',
       { preHandler: verifyTokenMiddleware },
       async (_request: any, reply) => {
-        const corrections = await this.data.getCorrections();
+        const corrections = await this.suggestion.getCorrections();
         return { success: true, data: corrections };
       }
     );
@@ -377,12 +379,12 @@ class Server {
       '/correction/:paymentId/:userHash/:playlistId',
       { preHandler: verifyTokenMiddleware },
       async (request: any, reply) => {
-        const corrections = await this.data.processCorrections(
+        this.suggestion.processCorrections(
           request.params.paymentId,
           request.params.userHash,
           request.params.playlistId
         );
-        return { success: true, data: corrections };
+        return { success: true };
       }
     );
 
@@ -907,13 +909,12 @@ class Server {
     });
 
     this.fastify.get(
-      '/usersuggestions/:paymentId/:userHash/:playlistId/:digital',
+      '/usersuggestions/:paymentId/:userHash/:playlistId',
       async (request: any, reply) => {
-        const suggestions = await this.data.getUserSuggestions(
+        const suggestions = await this.suggestion.getUserSuggestions(
           request.params.paymentId,
           request.params.userHash,
-          request.params.playlistId,
-          this.utils.parseBoolean(request.params.digital)
+          request.params.playlistId
         );
         return { success: true, data: suggestions };
       }
@@ -938,7 +939,7 @@ class Server {
           return;
         }
 
-        const success = await this.data.saveUserSuggestion(
+        const success = await this.suggestion.saveUserSuggestion(
           request.params.paymentId,
           request.params.userHash,
           request.params.playlistId,
@@ -959,7 +960,7 @@ class Server {
     this.fastify.post(
       '/usersuggestions/:paymentId/:userHash/:playlistId/submit',
       async (request: any, reply) => {
-        const success = await this.data.submitUserSuggestions(
+        const success = await this.suggestion.submitUserSuggestions(
           request.params.paymentId,
           request.params.userHash,
           request.params.playlistId,
@@ -972,7 +973,7 @@ class Server {
     this.fastify.delete(
       '/usersuggestions/:paymentId/:userHash/:playlistId/:trackId',
       async (request: any, reply) => {
-        const success = await this.data.deleteUserSuggestion(
+        const success = await this.suggestion.deleteUserSuggestion(
           request.params.paymentId,
           request.params.userHash,
           request.params.playlistId,
@@ -982,11 +983,11 @@ class Server {
       }
     );
 
-    if (process.env['ENVIRONMENT'] == 'development') {
-      this.fastify.post('/create_order', async (request: any, _reply) => {
-        return await this.generator.sendToPrinter(request.body.paymentId);
-      });
+    this.fastify.post('/create_order', async (request: any, _reply) => {
+      return await this.generator.sendToPrinter(request.body.paymentId);
+    });
 
+    if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.post('/push', async (request: any, reply: any) => {
         const { token, title, message } = request.body;
         await this.push.sendPushNotification(token, title, message);
