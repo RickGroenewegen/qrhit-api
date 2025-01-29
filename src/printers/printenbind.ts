@@ -850,27 +850,11 @@ class PrintEnBind {
           color.blue.bold(
             `Found ${color.white.bold(
               unshippedOrders.length.toString()
-            )} unshipped orders:`
+            )} unshipped orders`
           )
         );
         unshippedOrders.forEach((order) => {
-          this.logger.log(
-            color.blue(`Order ID: ${color.white.bold(order.printApiOrderId)}`)
-          );
-          this.logger.log(
-            color.blue(`Payment ID: ${color.white.bold(order.paymentId)}`)
-          );
-          this.logger.log(
-            color.blue(
-              `Customer: ${color.white.bold(order.fullname)} (${order.email})`
-            )
-          );
-          this.logger.log(
-            color.blue(
-              `Created: ${color.white.bold(order.createdAt.toISOString())}`
-            )
-          );
-          this.logger.log('---');
+          console.log(order);
         });
       } else {
         this.logger.log(color.blue.bold('No unshipped orders found'));
