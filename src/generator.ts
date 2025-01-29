@@ -696,4 +696,4 @@ class Generator {
   }
 }
 
-export default Generator.getInstance();
+export default Generator;
