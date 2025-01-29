@@ -10,6 +10,9 @@ import fs from 'fs/promises';
 import Data from '../data';
 import crypto from 'crypto';
 import Spotify from '../spotify';
+import Utils from '../utils';
+import cluster from 'cluster';
+import { CronJob } from 'cron';
 
 interface PriceResult {
   totalPrice: number;
@@ -25,8 +28,21 @@ class PrintEnBind {
   private mail = Mail.getInstance();
   private data = Data.getInstance();
   private spotify = new Spotify();
+  private utils = new Utils();
 
-  private constructor() {}
+  private constructor() {
+    if (cluster.isPrimary) {
+      this.utils.isMainServer().then(async (isMainServer) => {
+        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+          // Schedule hourly cache refresh
+          const job = new CronJob('15 * * * *', async () => {
+            await this.handleTrackingMails();
+          });
+          job.start();
+        }
+      });
+    }
+  }
 
   public async calculateCardPrice(
     basePrice: number,
@@ -286,8 +302,6 @@ class PrintEnBind {
         );
 
         const firstResponse = await response.clone().json();
-
-        console.log(2222, firstResponse);
 
         if (logging) {
           apiCalls.push({
@@ -758,9 +772,6 @@ class PrintEnBind {
     );
 
     if (trackingLink.length > 0) {
-      const pdfPath = await this.createInvoice(payment);
-      this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
-
       // Update printApiTrackingLink
       await this.prisma.payment.update({
         where: { paymentId: payment.paymentId },
@@ -805,6 +816,117 @@ class PrintEnBind {
   }
 
   public async processPrintApiWebhook(printApiOrderId: string) {}
+
+  private async getOrderStatus(orderId: string): Promise<any> {
+    try {
+      const authToken = await this.getAuthToken();
+      const response = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`,
+        {
+          method: 'GET',
+          headers: { Authorization: authToken! },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to get order status: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error getting order status: ${error}`));
+      return null;
+    }
+  }
+
+  public async handleTrackingMails(): Promise<void> {
+    try {
+      const unshippedOrders = await this.prisma.payment.findMany({
+        where: {
+          printApiStatus: 'Created',
+          printApiShipped: false,
+          printApiOrderId: {
+            notIn: [''],
+          },
+        },
+        select: {
+          id: true,
+          paymentId: true,
+          printApiOrderId: true,
+          fullname: true,
+          email: true,
+          createdAt: true,
+        },
+      });
+
+      if (unshippedOrders.length > 0) {
+        this.logger.log(
+          color.blue.bold(
+            `Found ${color.white.bold(
+              unshippedOrders.length.toString()
+            )} unshipped orders`
+          )
+        );
+
+        for (const order of unshippedOrders) {
+          const payment = await this.prisma.payment.findUnique({
+            where: { paymentId: order.paymentId },
+          });
+
+          if (payment) {
+            const orderStatus = await this.getOrderStatus(
+              order.printApiOrderId
+            );
+
+            if (orderStatus.status == 'Verzonden' || true) {
+              this.logger.log(
+                color.blue.bold(
+                  `Order ${color.white.bold(
+                    order.printApiOrderId
+                  )} has been shipped`
+                )
+              );
+
+              // Update order status
+              await this.prisma.payment.update({
+                where: { id: order.id },
+                data: {
+                  printApiShipped: true,
+                  printApiStatus: 'Shipped',
+                },
+              });
+
+              if (
+                (payment.printApiTrackingLink &&
+                  payment.printApiTrackingLink!.length > 0) ||
+                true
+              ) {
+                const pdfPath = await this.createInvoice(payment);
+                this.mail.sendTrackingEmail(
+                  payment,
+                  payment.printApiTrackingLink!,
+                  pdfPath
+                );
+                this.logger.log(
+                  color.blue.bold(
+                    `Sent tracking email for order ${color.white.bold(
+                      order.printApiOrderId
+                    )} (${color.white.bold(payment.printApiTrackingLink)})`
+                  )
+                );
+              }
+            }
+          }
+        }
+      } else {
+        this.logger.log(color.blue.bold('No unshipped orders found'));
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error retrieving unshipped orders: ${error}`)
+      );
+    }
+  }
 }
 
 export default PrintEnBind;

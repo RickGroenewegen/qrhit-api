@@ -68,7 +68,7 @@ class PDF {
   ): Promise<string> {
     const numberOfTracks = playlist.numberOfTracks;
     let itemsPerPage =
-      template === 'digital' || template === 'digital_double' ? 6 : 6;
+      template === 'digital' || template === 'digital_double' ? 6 : 1;
     const pagesPerTrack = template === 'printer' ? 2 : 1;
     const totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
     const maxPagesPerPDF = 100;
