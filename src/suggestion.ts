@@ -560,6 +560,17 @@ class Suggestion {
           )
         );
 
+        // set userAgreed van paymentByPlaylist op true
+        await this.prisma.paymentHasPlaylist.update({
+          where: {
+            id: suggestions[0].paymentHasPlaylistId,
+          },
+          data: {
+            eligableForPrinter: true,
+            eligableForPrinterAt: new Date(),
+          },
+        });
+
         console.log(111, suggestions[0].playlistType);
 
         let hasPhysicalPlaylists = suggestions.some(
@@ -567,9 +578,14 @@ class Suggestion {
         );
 
         if (hasPhysicalPlaylists) {
-          console.log(123, suggestions[0]);
-
-          //this.generator.sendToPrinter(payment.paymentId);
+          // See if all physical playlists are ready for printing
+          const allPhysicalPlaylistsReady = await this.prisma.$queryRaw<any[]>`
+            SELECT COUNT(*) as count
+            FROM payment_has_playlist
+            WHERE paymentId = ${paymentId}
+            AND type = 'physical'
+            AND eligableForPrinter = true
+          `;
         }
 
         await this.mollie.clearPDFs(paymentId);
