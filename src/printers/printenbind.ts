@@ -820,6 +820,7 @@ class PrintEnBind {
           printApiShipped: false,
           printApiOrderId: {
             not: null,
+            notIn: [''],
           },
         },
         select: {
