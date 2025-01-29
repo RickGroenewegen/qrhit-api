@@ -765,7 +765,7 @@ class PrintEnBind {
 
     if (trackingLink.length > 0) {
       const pdfPath = await this.createInvoice(payment);
-      this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
+      //this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
 
       // Update printApiTrackingLink
       await this.prisma.payment.update({
