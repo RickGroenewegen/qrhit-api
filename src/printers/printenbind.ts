@@ -285,7 +285,9 @@ class PrintEnBind {
           }
         );
 
-        console.log(2222, await response.json());
+        const firstResponse = await response.clone().json();
+
+        console.log(2222, firstResponse);
 
         if (logging) {
           apiCalls.push({
@@ -293,12 +295,8 @@ class PrintEnBind {
             url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
             body: items[i],
             statusCode: response.status,
-            responseBody: await response.clone().json(),
+            responseBody: firstResponse,
           });
-        }
-
-        if (logging) {
-          console.log(111, await response.json());
         }
 
         orderId = response.headers.get('location')?.split('/')[1];
