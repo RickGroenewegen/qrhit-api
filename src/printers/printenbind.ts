@@ -901,9 +901,35 @@ class PrintEnBind {
     return process.env['PRINTENBIND_API_KEY']!;
   }
 
-  public async finishOrder(orderId: string): Promise<ApiResult> {
+  public async finishOrder(
+    orderId: string,
+    apiCalls?: Array<{
+      method: string;
+      url: string;
+      body?: any;
+      statusCode: number;
+      responseBody: any;
+    }>
+  ): Promise<
+    ApiResult & {
+      apiCalls?: Array<{
+        method: string;
+        url: string;
+        body?: any;
+        statusCode: number;
+        responseBody: any;
+      }>;
+    }
+  > {
     try {
       const authToken = await this.getAuthToken();
+      const finishApiCalls: Array<{
+        method: string;
+        url: string;
+        body?: any;
+        statusCode: number;
+        responseBody: any;
+      }> = [];
 
       const response = await fetch(
         `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/finish`,
@@ -915,6 +941,18 @@ class PrintEnBind {
           },
         }
       );
+
+      const responseBody = await response
+        .clone()
+        .json()
+        .catch(() => null);
+
+      finishApiCalls.push({
+        method: 'POST',
+        url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/finish`,
+        statusCode: response.status,
+        responseBody,
+      });
 
       if (!response.ok) {
         throw new Error(`Failed to finish order: ${response.status}`);
@@ -931,6 +969,7 @@ class PrintEnBind {
         data: {
           orderId,
         },
+        apiCalls: [...(apiCalls || []), ...finishApiCalls],
       };
     } catch (error) {
       this.logger.log(
@@ -985,13 +1024,17 @@ class PrintEnBind {
       false
     );
 
-    const apiCalls = result.apiCalls;
+    let finalApiCalls = result.apiCalls || [];
 
     if (
       process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') &&
       process.env['ENVIRONMENT'] === 'production'
     ) {
-      const finishResult = await this.finishOrder(result.data.orderId);
+      const finishResult = await this.finishOrder(
+        result.data.orderId,
+        finalApiCalls
+      );
+      finalApiCalls = finishResult.apiCalls || [];
       this.logger.log(
         color.blue.bold(
           `Finished order ${color.white.bold(result.data.orderId)}`
@@ -1002,7 +1045,7 @@ class PrintEnBind {
     return {
       request: '',
       response: {
-        ...apiCalls,
+        apiCalls: finalApiCalls,
         id: result.data.orderId,
       },
     };
