@@ -149,114 +149,6 @@ class PrintEnBind {
     };
   }
 
-  public async processPrintApiWebhook(printApiOrderId: string) {
-    this.logger.log(
-      color.blue.bold(
-        `Processing Print API webhook for order ${color.white.bold(
-          printApiOrderId
-        )}`
-      )
-    );
-
-    // Get the payment based on the printApiOrderId
-    const whereClause = {
-      printApiOrderId: printApiOrderId,
-      printApiShipped: false,
-    };
-
-    const payment = await this.prisma.payment.findFirst({
-      where: whereClause,
-    });
-
-    if (payment) {
-      // Process the webhook
-      this.logger.log(
-        color.blue.bold(
-          `Retrieving order ${color.white.bold(
-            payment.printApiOrderId
-          )} from PrintAPI`
-        )
-      );
-
-      try {
-        let trackingLink = '';
-        const url = `${process.env['PRINTENBIND_API_URL']}/v2/orders/${payment.printApiOrderId}`;
-        const authToken = await this.getAuthToken();
-
-        const response = await axios({
-          method: 'get',
-          url,
-          headers: {
-            Authorization: `Bearer ${authToken}`,
-            'Content-Type': 'application/json',
-          },
-        });
-
-        if (response.data.status === 'Shipped') {
-          this.logger.log(
-            magenta(
-              `Status of order ${white.bold(
-                payment.printApiOrderId
-              )} is: ${white.bold(response.data.status)}`
-            )
-          );
-
-          if (response.data.trackingUrl?.length > 0) {
-            trackingLink = response.data.trackingUrl;
-            const pdfPath = await this.createInvoice(response.data, payment);
-            this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
-            this.logger.log(
-              magenta(
-                `Sent tracking e-mail for ${white.bold(
-                  payment.printApiOrderId
-                )}`
-              )
-            );
-          }
-
-          // Update the payment with the printApiShipped flag
-          await this.prisma.payment.update({
-            where: {
-              id: payment.id,
-            },
-            data: {
-              printApiShipped: true,
-              printApiStatus: response.data.status,
-              printApiTrackingLink: trackingLink,
-            },
-          });
-        } else {
-          if (response.data.status !== payment.printApiStatus) {
-            await this.prisma.payment.update({
-              where: {
-                id: payment.id,
-              },
-              data: {
-                printApiStatus: response.data.status,
-              },
-            });
-            this.logger.log(
-              magenta(
-                `Status of order ${white.bold(
-                  payment.printApiOrderId
-                )} changed to: ${white.bold(response.data.status)}`
-              )
-            );
-          }
-        }
-      } catch (e) {
-        this.logger.log(
-          color.red.bold(
-            `Error retrieving Print API order status for order: ${color.white.bold(
-              payment.printApiOrderId
-            )}`
-          )
-        );
-        console.log(999, e);
-      }
-    }
-  }
-
   public async getInvoice(invoiceId: string): Promise<string> {
     const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${invoiceId}.pdf`;
 
@@ -954,10 +846,6 @@ class PrintEnBind {
         responseBody,
       });
 
-      if (!response.ok) {
-        throw new Error(`Failed to finish order: ${response.status}`);
-      }
-
       this.logger.log(
         color.green.bold(
           `Print&Bind order ${color.white.bold(orderId)} finished successfully`
@@ -987,6 +875,7 @@ class PrintEnBind {
     playlists: any[],
     productType: string
   ): Promise<any> {
+    const authToken = await this.getAuthToken();
     const orderItems = [];
 
     for (const playlistItem of playlists) {
@@ -995,7 +884,9 @@ class PrintEnBind {
 
       this.logger.log(
         color.blue.bold(
-          `Create Print&Bind playlist: ${color.white(playlist.name)}`
+          `Creating Print&Bind order for playlist: ${color.white(
+            playlist.name
+          )}`
         )
       );
 
@@ -1044,6 +935,41 @@ class PrintEnBind {
       );
     }
 
+    const deliveryResponse = await fetch(
+      `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${result.data.orderId}`,
+      {
+        method: 'GET',
+        headers: { Authorization: authToken! },
+      }
+    );
+
+    const delivery = await deliveryResponse.json();
+
+    console.log(888, delivery);
+
+    const trackingLink = delivery.tracktrace || '';
+
+    this.logger.log(
+      color.blue.bold(
+        `Tracking link for order ${color.white.bold(
+          result.data.orderId
+        )} is: ${color.white.bold(trackingLink)}`
+      )
+    );
+
+    if (trackingLink.length > 0) {
+      const pdfPath = await this.createInvoice(payment);
+      this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
+
+      // Update printApiTrackingLink
+      await this.prisma.payment.update({
+        where: { id: payment.paymentId },
+        data: {
+          printApiTrackingLink: trackingLink,
+        },
+      });
+    }
+
     return {
       request: '',
       response: {
@@ -1053,7 +979,7 @@ class PrintEnBind {
     };
   }
 
-  private async createInvoice(order: any, payment: any): Promise<string> {
+  private async createInvoice(payment: any): Promise<string> {
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     const invoiceUrl = `${process.env['API_URI']}/invoice/${payment.paymentId}`;
