@@ -395,6 +395,8 @@ class PrintEnBind {
     // Add remaining articles
     for (let i = 0; i < items.length; i++) {
       if (items[i].type == 'physical' && !physicalOrderCreated) {
+        console.log(items[i]);
+
         // Create initial order with first article
         const response = await fetch(
           `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
@@ -408,7 +410,7 @@ class PrintEnBind {
           }
         );
 
-        console.log(items[i]);
+        console.log(1111, await response.json());
 
         if (logging) {
           apiCalls.push({
