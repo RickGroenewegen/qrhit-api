@@ -811,6 +811,63 @@ class PrintEnBind {
   }
 
   public async processPrintApiWebhook(printApiOrderId: string) {}
+
+  public async getUnshippedOrders(): Promise<void> {
+    try {
+      const unshippedOrders = await this.prisma.payment.findMany({
+        where: {
+          printApiStatus: 'Created',
+          printApiShipped: false,
+          printApiOrderId: {
+            not: null,
+          },
+        },
+        select: {
+          id: true,
+          paymentId: true,
+          printApiOrderId: true,
+          fullname: true,
+          email: true,
+          createdAt: true,
+        },
+      });
+
+      if (unshippedOrders.length > 0) {
+        this.logger.log(
+          color.blue.bold(
+            `Found ${color.white.bold(
+              unshippedOrders.length.toString()
+            )} unshipped orders:`
+          )
+        );
+        unshippedOrders.forEach((order) => {
+          this.logger.log(
+            color.blue(`Order ID: ${color.white.bold(order.printApiOrderId)}`)
+          );
+          this.logger.log(
+            color.blue(`Payment ID: ${color.white.bold(order.paymentId)}`)
+          );
+          this.logger.log(
+            color.blue(
+              `Customer: ${color.white.bold(order.fullname)} (${order.email})`
+            )
+          );
+          this.logger.log(
+            color.blue(
+              `Created: ${color.white.bold(order.createdAt.toISOString())}`
+            )
+          );
+          this.logger.log('---');
+        });
+      } else {
+        this.logger.log(color.blue.bold('No unshipped orders found'));
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error retrieving unshipped orders: ${error}`)
+      );
+    }
+  }
 }
 
 export default PrintEnBind;
