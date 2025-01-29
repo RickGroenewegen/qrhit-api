@@ -288,18 +288,16 @@ class PrintEnBind {
           }
         );
 
+        const firstResponse = await response.clone().json();
+
         if (logging) {
           apiCalls.push({
             method: 'POST',
             url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
             body: items[i],
             statusCode: response.status,
-            responseBody: await response.clone().json(),
+            responseBody: firstResponse,
           });
-        }
-
-        if (logging) {
-          console.log(111, await response.json());
         }
 
         orderId = response.headers.get('location')?.split('/')[1];
