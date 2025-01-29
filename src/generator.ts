@@ -24,6 +24,7 @@ import { ApiResult } from './interfaces/ApiResult';
 import Cache from './cache';
 
 class Generator {
+  private static instance: Generator;
   private logger = new Logger();
   private utils = new Utils();
   private prisma = PrismaInstance.getInstance();
@@ -38,8 +39,15 @@ class Generator {
   private discount = new Discount();
   private cache = Cache.getInstance();
 
-  constructor() {
+  private constructor() {
     this.setupQRCleanupCron();
+  }
+
+  public static getInstance(): Generator {
+    if (!Generator.instance) {
+      Generator.instance = new Generator();
+    }
+    return Generator.instance;
   }
 
   private setupQRCleanupCron() {
@@ -52,42 +60,6 @@ class Generator {
           console.log(12345);
         }
       });
-    }
-  }
-
-  private async cleanupQRCodes(): Promise<void> {
-    const qrDir = `${process.env['PUBLIC_DIR']}/qr`;
-    const now = Date.now();
-
-    const maxAge =
-      process.env['ENVIRONMENT'] === 'development'
-        ? 24 * 60 * 60 * 1000
-        : 5 * 60 * 1000;
-
-    const cleanedDirs = new Set<string>();
-    try {
-      const subdirs = await fs.readdir(qrDir);
-      for (const subdir of subdirs) {
-        const subdirPath = path.join(qrDir, subdir);
-        const stats = await fs.stat(subdirPath);
-        if (stats.isDirectory() && now - stats.mtimeMs > maxAge) {
-          await fs.rm(subdirPath, { recursive: true, force: true });
-          if (!cleanedDirs.has(subdir)) {
-            this.logger.log(
-              color.blue.bold(
-                `Cleaned up QR code directory: ${color.white.bold(subdir)}`
-              )
-            );
-            cleanedDirs.add(subdir);
-          }
-        }
-      }
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(
-          `Error during QR code cleanup: ${color.white.bold(error)}`
-        )
-      );
     }
   }
 
@@ -724,4 +696,4 @@ class Generator {
   }
 }
 
-export default Generator;
+export default Generator.getInstance();
