@@ -133,8 +133,14 @@ model Payment {
   reviewMailSent          Boolean              @default(false)
   finalizedAt             DateTime?
   suggestionsPending      Boolean              @default(false)
-  DiscountCodedUses       DiscountCodedUses[]
-  Review                  Review[]
+  canBeSentToPrinter      Boolean              @default(false)
+  canBeSentToPrinterNow   Boolean              @default(false)
+  canBeSentToPrinterAt    DateTime?
+  sentToPrinter           Boolean              @default(false)
+  sentToPrinterAt         DateTime?
+
+  DiscountCodedUses DiscountCodedUses[]
+  Review            Review[]
 
   @@index([userId]) // Index for performance on queries
   @@index([paymentId])

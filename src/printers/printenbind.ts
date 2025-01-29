@@ -255,8 +255,6 @@ class PrintEnBind {
       }
     }
 
-    console.log(111, orderType);
-
     return orderType;
   }
 
@@ -815,8 +813,6 @@ class PrintEnBind {
     );
 
     const delivery = await deliveryResponse.json();
-
-    console.log(888, delivery);
 
     const trackingLink = delivery.tracktrace || '';
 

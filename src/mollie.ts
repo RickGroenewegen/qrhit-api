@@ -25,7 +25,7 @@ class Mollie {
   private order = Order.getInstance();
   private translation: Translation = new Translation();
   private utils = new Utils();
-  private generator = new Generator();
+  private generator = Generator.getInstance();
   private openPaymentStatus = ['open', 'pending', 'authorized'];
   private paidPaymentStatus = ['paid'];
   private failedPaymentStatus = ['failed', 'canceled', 'expired'];

@@ -60,10 +60,9 @@ class Server {
   private formatters = new Formatters().getFormatters();
   private translation: Translation = new Translation();
   private cache = Cache.getInstance();
-  private generator = new Generator();
+  private generator = Generator.getInstance();
   private analytics = AnalyticsClient.getInstance();
   private openai = new ChatGPT();
-  private git = GitChecker.getInstance();
   private discount = new Discount();
   private openperplex = new OpenPerplex();
   private push = Push.getInstance();
@@ -983,6 +982,10 @@ class Server {
     );
 
     if (process.env['ENVIRONMENT'] == 'development') {
+      this.fastify.post('/create_order', async (request: any, _reply) => {
+        return await this.generator.sendToPrinter(request.body.paymentId);
+      });
+
       this.fastify.post('/push', async (request: any, reply: any) => {
         const { token, title, message } = request.body;
         await this.push.sendPushNotification(token, title, message);

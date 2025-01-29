@@ -71,7 +71,10 @@ class Generator {
           where: {
             sentToPrinter: false,
             OR: [
-              { canBeSentToPrinterNow: true },
+              {
+                canBeSentToPrinter: true,
+                canBeSentToPrinterNow: true,
+              },
               {
                 canBeSentToPrinter: true,
                 canBeSentToPrinterAt: {
