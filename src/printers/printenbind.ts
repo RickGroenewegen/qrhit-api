@@ -37,7 +37,7 @@ class PrintEnBind {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
           // Schedule hourly cache refresh
-          const job = new CronJob('*/10 * * * * *', async () => {
+          const job = new CronJob('15 * * * *', async () => {
             await this.handleTrackingMails();
           });
           job.start();
