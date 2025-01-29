@@ -401,6 +401,87 @@ class Mail {
     }
   }
 
+  async sendFinalizedMail(
+    payment: Payment,
+    reviewLink: string,
+    playlist: any
+  ): Promise<void> {
+    if (!this.ses) return;
+
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+
+    const mailParams = {
+      payment,
+      playlist,
+      reviewLink,
+      productName: process.env['PRODUCT_NAME'],
+      translations: await this.translation.getTranslationsByPrefix(
+        payment.locale,
+        'mail'
+      ),
+    };
+
+    try {
+      // Read the logo file and convert it to Base64
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+
+      let locale = payment.locale;
+
+      const html = await this.templates.render(
+        `mails/finalized_html`,
+        mailParams
+      );
+      const text = await this.templates.render(
+        `mails/finalized_text`,
+        mailParams
+      );
+
+      const subject = this.translation.translate(
+        'mail.finalizedMailSubject',
+        locale,
+        {
+          orderId: payment.orderId,
+          playlist: playlist.name,
+        }
+      );
+
+      let attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+
+      const rawEmail = await this.renderRaw({
+        from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+        to: payment.email,
+        subject,
+        html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+        text,
+        attachments,
+        unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+        replyTo: process.env['REPLY_TO_EMAIL'],
+      });
+
+      const emailBuffer = Buffer.from(rawEmail);
+
+      // Prepare and send the raw email
+      const command = new SendRawEmailCommand({
+        RawMessage: {
+          Data: emailBuffer,
+        },
+      });
+
+      await this.ses.send(command);
+    } catch (error) {
+      console.error('Error while sending email with attachment', error);
+    }
+  }
+
   public async renderRaw(params: MailParams): Promise<string> {
     let attachmentString = '';
 
