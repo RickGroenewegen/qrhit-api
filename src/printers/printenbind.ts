@@ -1027,8 +1027,10 @@ class PrintEnBind {
     let finalApiCalls = result.apiCalls || [];
 
     if (
-      process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') &&
-      process.env['ENVIRONMENT'] === 'production'
+      (process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') == -1 &&
+        process.env['ENVIRONMENT'] === 'production') ||
+      (process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') > -1 &&
+        process.env['ENVIRONMENT'] === 'development')
     ) {
       const finishResult = await this.finishOrder(
         result.data.orderId,
