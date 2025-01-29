@@ -110,6 +110,7 @@ model Payment {
   marketingEmails         Boolean              @default(false)
   differentInvoiceAddress Boolean              @default(false)
   invoiceAddress          String?
+  invoiceHousenumber      String?
   invoiceCity             String?
   invoiceZipcode          String?
   invoiceCountrycode      String?

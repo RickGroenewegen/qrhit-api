@@ -25,78 +25,13 @@ interface PriceResult {
 class PrintEnBind {
   private static instance: PrintEnBind;
   private prisma = PrismaInstance.getInstance();
-  private APIcacheToken: string = `printapi_auth_token_${process.env['PRINT_API_CLIENTID']}`;
-  private pricingCacheToken: string = `printapi_pricing_token_${process.env['PRINT_API_CLIENTID']}`;
   private cache = Cache.getInstance();
-  private utils = new Utils();
   private logger = new Log();
   private mail = Mail.getInstance();
   private data = Data.getInstance();
   private spotify = new Spotify();
-  private pdf = new PDF();
-  private printApiSizes = [
-    { pages: 1, cost: 1, price: 2 },
-    { pages: 3, cost: 2, price: 4 },
-    { pages: 9, cost: 3, price: 3 },
-    { pages: 13, cost: 5, price: 5 },
-    { pages: 17, cost: 7, price: 14 },
-    { pages: 25, cost: 10, price: 20 },
-    { pages: 34, cost: 15, price: 39 },
-    { pages: 42, cost: 20, price: 40 },
-    { pages: 50, cost: 25, price: 50 },
-    { pages: 59, cost: 30, price: 60 },
-    { pages: 67, cost: 35, price: 70 },
-    { pages: 75, cost: 40, price: 80 },
-    { pages: 84, cost: 50, price: 100 },
-  ];
 
   private constructor() {}
-
-  /**
-   * Calculates the optimal order for printing cards.
-   * @param cards Number of cards to print.
-   * @returns An object containing the products to order and the start and end index of the sheets (double-sided).
-   */
-  public async calculateOptimalPrintOrder(cards: number): Promise<{
-    order: { pages: number; cost: number; price: number }[];
-    sheetRanges: { start: number; end: number }[];
-    totalCost: number;
-    totalPrice: number;
-  }> {
-    const sheetsNeeded = Math.ceil(cards / 6); // Calculate required sheets (6 cards per sheet)
-    const products = [...this.printApiSizes].sort((a, b) => b.pages - a.pages); // Sort products in descending order
-    const order: { pages: number; cost: number; price: number }[] = [];
-    const sheetRanges: { start: number; end: number }[] = [];
-    let totalCost = 0;
-    let totalPrice = 0;
-
-    let remainingSheets = sheetsNeeded;
-    let currentStart = 1;
-
-    for (const product of products) {
-      while (remainingSheets >= product.pages) {
-        order.push(product);
-        const end = currentStart + product.pages * 2 - 1; // Double-sided sheets
-        sheetRanges.push({ start: currentStart, end });
-        currentStart = end + 1;
-        remainingSheets -= product.pages;
-        totalCost += product.cost;
-        totalPrice += product.price;
-      }
-    }
-
-    // If there are still sheets needed and no exact match, order the smallest product
-    if (remainingSheets > 0) {
-      const smallestProduct = products[products.length - 1];
-      order.push(smallestProduct);
-      const end = currentStart + smallestProduct.pages * 2 - 1; // Double-sided sheets
-      sheetRanges.push({ start: currentStart, end });
-      totalCost += smallestProduct.cost;
-      totalPrice += smallestProduct.price;
-    }
-
-    return { order, sheetRanges, totalCost, totalPrice };
-  }
 
   public async calculateCardPrice(
     basePrice: number,
@@ -263,6 +198,7 @@ class PrintEnBind {
       items,
       countrycode,
     };
+
     return crypto
       .createHash('md5')
       .update(JSON.stringify(orderData))
@@ -597,6 +533,7 @@ class PrintEnBind {
     } else {
       return {
         type: 'physical',
+        amount: item.amount,
         product: 'losbladig',
         number: '1',
         copies: numberOfPages.toString(),
