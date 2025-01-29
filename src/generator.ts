@@ -46,17 +46,13 @@ class Generator {
     const isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
     const isPrimary = cluster.isPrimary;
 
-    // if (isMainServer && isPrimary) {
-    //   new CronJob(
-    //     '*/1 * * * *',
-    //     async () => {
-    //       await this.cleanupQRCodes();
-    //     },
-    //     null,
-    //     true,
-    //     'Europe/Amsterdam'
-    //   );
-    // }
+    if (cluster.isPrimary) {
+      this.utils.isMainServer().then(async (isMainServer) => {
+        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+          console.log(12345);
+        }
+      });
+    }
   }
 
   private async cleanupQRCodes(): Promise<void> {
@@ -537,7 +533,10 @@ class Generator {
       },
     });
 
-    if (payment) {
+    if (
+      (payment && payment.canBeSentToPrinter && !payment.sentToPrinter) ||
+      (payment && process.env['ENVIRONMENT'] === 'development')
+    ) {
       const playlists = await this.data.getPlaylistsByPaymentId(
         payment.paymentId
       );
@@ -580,11 +579,18 @@ class Generator {
           id: payment.id,
         },
         data: {
+          sentToPrinter: true,
+          sentToPrinterAt: new Date(),
           printApiOrderId,
           printApiOrderRequest,
           printApiOrderResponse,
         },
       });
+
+      this.logger.log(
+        color.blue.bold(`
+        Order sent to printer for payment: ${white.bold(paymentId)}`)
+      );
     }
   }
 
