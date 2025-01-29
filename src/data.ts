@@ -1476,6 +1476,13 @@ class Data {
         },
       });
 
+      // Count the number of suggestions
+      const suggestionCount = await this.prisma.userSuggestion.count({
+        where: {
+          playlistId,
+        },
+      });
+
       await this.prisma.payment.update({
         where: { id: paymentDbId },
         data: { suggestionsPending: true },
