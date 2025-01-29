@@ -30,8 +30,21 @@ class PrintEnBind {
   private mail = Mail.getInstance();
   private data = Data.getInstance();
   private spotify = new Spotify();
+  private utils = new Utils();
 
-  private constructor() {}
+  private constructor() {
+    if (cluster.isPrimary) {
+      this.utils.isMainServer().then(async (isMainServer) => {
+        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+          // Schedule hourly cache refresh
+          const job = new CronJob('0 * * * *', async () => {
+            await this.handleTrackingMails();
+          });
+          job.start();
+        }
+      });
+    }
+  }
 
   public async calculateCardPrice(
     basePrice: number,
@@ -812,15 +825,14 @@ class PrintEnBind {
 
   public async processPrintApiWebhook(printApiOrderId: string) {}
 
-  public async getUnshippedOrders(): Promise<void> {
+  public async handleTrackingMails(): Promise<void> {
     try {
       const unshippedOrders = await this.prisma.payment.findMany({
         where: {
           printApiStatus: 'Created',
           printApiShipped: false,
           printApiOrderId: {
-            not: null,
-            notIn: [''],
+            not: undefined,
           },
         },
         select: {
