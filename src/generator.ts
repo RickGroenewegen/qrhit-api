@@ -485,32 +485,19 @@ class Generator {
           );
         }
 
-        let printApiOrderId = '';
-        let printApiOrderRequest = '';
-        let printApiOrderResponse = '';
-
         // TODO: Implement API
         if (physicalPlaylists.length > 0) {
-          const orderData = await this.order.createOrder(
-            payment,
-            physicalPlaylists,
-            playlists[0].productType
-          );
-          printApiOrderId = orderData.response.id;
-          printApiOrderRequest = JSON.stringify(orderData.request);
-          printApiOrderResponse = JSON.stringify(orderData.response);
+          let sendToPrinterAt = new Date().setHours(new Date().getHours() + 36);
+          await this.prisma.payment.update({
+            where: {
+              id: payment.id,
+            },
+            data: {
+              canBeSentToPrinter: true,
+              canBeSentToPrinterAt: new Date(sendToPrinterAt),
+            },
+          });
         }
-
-        await this.prisma.payment.update({
-          where: {
-            id: payment.id,
-          },
-          data: {
-            printApiOrderId,
-            printApiOrderRequest,
-            printApiOrderResponse,
-          },
-        });
 
         this.logger.log(
           color.green.bold(
@@ -536,6 +523,57 @@ class Generator {
     } finally {
       // Always release the lock when done
       await this.cache.releaseLock(`finalizeOrder:${paymentId}`);
+    }
+  }
+
+  public async sendToPrinter(paymentId: string) {
+    let printApiOrderId = '';
+    let printApiOrderRequest = '';
+    let printApiOrderResponse = '';
+
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        paymentId,
+      },
+    });
+
+    if (payment) {
+      const playlists = await this.data.getPlaylistsByPaymentId(
+        payment.paymentId
+      );
+      const physicalPlaylists: any[] = [];
+
+      console.log(111, playlists);
+
+      // Loop over playlist
+      for (const playlist of playlists) {
+        if (playlist.orderType == 'physical') {
+          // physicalPlaylists.push({
+          //   playlist,
+          //   filename: generatedFilename,
+          // });
+        }
+      }
+
+      const orderData = await this.order.createOrder(
+        payment,
+        physicalPlaylists,
+        playlists[0].productType
+      );
+      printApiOrderId = orderData.response.id;
+      printApiOrderRequest = JSON.stringify(orderData.request);
+      printApiOrderResponse = JSON.stringify(orderData.response);
+
+      await this.prisma.payment.update({
+        where: {
+          id: payment.id,
+        },
+        data: {
+          printApiOrderId,
+          printApiOrderRequest,
+          printApiOrderResponse,
+        },
+      });
     }
   }
 
