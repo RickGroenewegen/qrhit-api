@@ -73,7 +73,6 @@ class Generator {
             OR: [
               {
                 canBeSentToPrinter: true,
-                canBeSentToPrinterNow: true,
               },
               {
                 canBeSentToPrinter: true,
@@ -527,8 +526,6 @@ class Generator {
             },
           });
 
-          console.log(111, physicalPlaylists);
-
           // Loop over the physical playlists and send them to the printer
           for (const playlistItem of physicalPlaylists) {
             const playlist = playlistItem.playlist;
@@ -538,11 +535,6 @@ class Generator {
               playlist
             );
           }
-
-          // If this is a physical playlist send the review mail
-          // if (physicalPlaylists.length > 0) {
-          //   await this.mail.sendEmail('review', payment, physicalPlaylists);
-          // }
         }
 
         this.logger.log(

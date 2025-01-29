@@ -37,6 +37,7 @@ class Suggestion {
         us.year as suggestedYear,
         us.extraArtistAttribute as suggestedExtraArtistAttribute,
         us.extraNameAttribute as suggestedExtraNameAttribute,
+        php.eligableForPrinter,
         php.suggestionsPending,
         CASE 
           WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id) > 0 
@@ -238,6 +239,16 @@ class Suggestion {
           },
           clientIp
         );
+
+        return true;
+      } else if (paymentHasPlaylist?.type == 'physical') {
+        // Set eligableForPrinter to true
+        await this.prisma.paymentHasPlaylist.update({
+          where: { id: paymentHasPlaylist.id },
+          data: { eligableForPrinter: true, eligableForPrinterAt: new Date() },
+        });
+
+        this.checkIfReadyForPrinter(paymentId);
 
         return true;
       }
@@ -587,28 +598,7 @@ class Suggestion {
         );
 
         if (hasPhysicalPlaylists) {
-          // See if all physical playlists are ready for printing
-          const allPhysicalPlaylistsReady = await this.prisma.$queryRaw<any[]>`
-            SELECT COUNT(*) as count,
-                   (SELECT COUNT(*) 
-                    FROM payment_has_playlist 
-                    WHERE paymentId = ${paymentId} 
-                    AND type = 'physical') as total
-            FROM payment_has_playlist
-            WHERE paymentId = ${paymentId}
-            AND type = 'physical'
-            AND eligableForPrinter = true
-          `;
-
-          if (
-            allPhysicalPlaylistsReady[0].count ===
-            allPhysicalPlaylistsReady[0].total
-          ) {
-            this.logger.log(
-              color.blue.bold('All physical playlists are ready for printing')
-            );
-            this.generator.sendToPrinter(paymentId);
-          }
+          this.checkIfReadyForPrinter(paymentId);
         }
       } else {
         this.logger.log(
@@ -620,6 +610,40 @@ class Suggestion {
     } catch (error) {
       console.error('Error processing corrections:', error);
       return false;
+    }
+  }
+
+  private async checkIfReadyForPrinter(paymentId: string) {
+    // See if all physical playlists are ready for printing
+    const allPhysicalPlaylistsReady = await this.prisma.$queryRaw<any[]>`
+            SELECT COUNT(*) as count,
+                   (SELECT COUNT(*) 
+                    FROM payment_has_playlist 
+                    WHERE paymentId = ${paymentId} 
+                    AND type = 'physical') as total
+            FROM payment_has_playlist
+            WHERE paymentId = ${paymentId}
+            AND type = 'physical'
+            AND eligableForPrinter = true
+          `;
+
+    if (
+      allPhysicalPlaylistsReady[0].count === allPhysicalPlaylistsReady[0].total
+    ) {
+      // Update payment status
+      await this.prisma.payment.update({
+        where: {
+          paymentId,
+        },
+        data: {
+          canBeSentToPrinter: true,
+        },
+      });
+
+      this.logger.log(
+        color.blue.bold('All physical playlists are ready for printing')
+      );
+      this.generator.sendToPrinter(paymentId);
     }
   }
 

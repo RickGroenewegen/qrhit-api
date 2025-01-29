@@ -134,7 +134,6 @@ model Payment {
   reviewMailSent          Boolean              @default(false)
   finalizedAt             DateTime?
   canBeSentToPrinter      Boolean              @default(false)
-  canBeSentToPrinterNow   Boolean              @default(false)
   canBeSentToPrinterAt    DateTime?
   sentToPrinter           Boolean              @default(false)
   sentToPrinterAt         DateTime?
