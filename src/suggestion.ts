@@ -580,12 +580,20 @@ class Suggestion {
         if (hasPhysicalPlaylists) {
           // See if all physical playlists are ready for printing
           const allPhysicalPlaylistsReady = await this.prisma.$queryRaw<any[]>`
-            SELECT COUNT(*) as count
+            SELECT COUNT(*) as count,
+                   (SELECT COUNT(*) 
+                    FROM payment_has_playlist 
+                    WHERE paymentId = ${paymentId} 
+                    AND type = 'physical') as total
             FROM payment_has_playlist
             WHERE paymentId = ${paymentId}
             AND type = 'physical'
             AND eligableForPrinter = true
           `;
+
+          if (allPhysicalPlaylistsReady[0].count === allPhysicalPlaylistsReady[0].total) {
+            this.logger.log(color.green.bold('YEAH!'));
+          }
         }
 
         await this.mollie.clearPDFs(paymentId);
