@@ -1,12 +1,8 @@
 import Log from '../logger';
 import { MAX_CARDS } from '../config/constants';
 import PrismaInstance from '../prisma';
-import axios from 'axios';
 import Cache from '../cache';
 import { ApiResult } from '../interfaces/ApiResult';
-import cluster from 'cluster';
-import Utils from '../utils';
-import { CronJob } from 'cron';
 import { color, blue, white, magenta } from 'console-log-colors';
 import Mail from '../mail';
 import puppeteer from 'puppeteer';
@@ -14,7 +10,6 @@ import fs from 'fs/promises';
 import Data from '../data';
 import crypto from 'crypto';
 import Spotify from '../spotify';
-import PDF from '../pdf';
 
 interface PriceResult {
   totalPrice: number;
@@ -25,86 +20,13 @@ interface PriceResult {
 class PrintEnBind {
   private static instance: PrintEnBind;
   private prisma = PrismaInstance.getInstance();
-  private APIcacheToken: string = `printapi_auth_token_${process.env['PRINT_API_CLIENTID']}`;
-  private pricingCacheToken: string = `printapi_pricing_token_${process.env['PRINT_API_CLIENTID']}`;
   private cache = Cache.getInstance();
-  private utils = new Utils();
   private logger = new Log();
   private mail = Mail.getInstance();
   private data = Data.getInstance();
   private spotify = new Spotify();
-  private pdf = new PDF();
-  private printApiSizes = [
-    { pages: 1, cost: 1, price: 2 },
-    { pages: 3, cost: 2, price: 4 },
-    { pages: 9, cost: 3, price: 3 },
-    { pages: 13, cost: 5, price: 5 },
-    { pages: 17, cost: 7, price: 14 },
-    { pages: 25, cost: 10, price: 20 },
-    { pages: 34, cost: 15, price: 39 },
-    { pages: 42, cost: 20, price: 40 },
-    { pages: 50, cost: 25, price: 50 },
-    { pages: 59, cost: 30, price: 60 },
-    { pages: 67, cost: 35, price: 70 },
-    { pages: 75, cost: 40, price: 80 },
-    { pages: 84, cost: 50, price: 100 },
-  ];
 
-  private constructor() {
-    if (cluster.isPrimary) {
-      this.utils.isMainServer().then(async (isMainServer) => {
-        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-          this.startCron();
-        }
-      });
-    }
-  }
-
-  /**
-   * Calculates the optimal order for printing cards.
-   * @param cards Number of cards to print.
-   * @returns An object containing the products to order and the start and end index of the sheets (double-sided).
-   */
-  public async calculateOptimalPrintOrder(cards: number): Promise<{
-    order: { pages: number; cost: number; price: number }[];
-    sheetRanges: { start: number; end: number }[];
-    totalCost: number;
-    totalPrice: number;
-  }> {
-    const sheetsNeeded = Math.ceil(cards / 6); // Calculate required sheets (6 cards per sheet)
-    const products = [...this.printApiSizes].sort((a, b) => b.pages - a.pages); // Sort products in descending order
-    const order: { pages: number; cost: number; price: number }[] = [];
-    const sheetRanges: { start: number; end: number }[] = [];
-    let totalCost = 0;
-    let totalPrice = 0;
-
-    let remainingSheets = sheetsNeeded;
-    let currentStart = 1;
-
-    for (const product of products) {
-      while (remainingSheets >= product.pages) {
-        order.push(product);
-        const end = currentStart + product.pages * 2 - 1; // Double-sided sheets
-        sheetRanges.push({ start: currentStart, end });
-        currentStart = end + 1;
-        remainingSheets -= product.pages;
-        totalCost += product.cost;
-        totalPrice += product.price;
-      }
-    }
-
-    // If there are still sheets needed and no exact match, order the smallest product
-    if (remainingSheets > 0) {
-      const smallestProduct = products[products.length - 1];
-      order.push(smallestProduct);
-      const end = currentStart + smallestProduct.pages * 2 - 1; // Double-sided sheets
-      sheetRanges.push({ start: currentStart, end });
-      totalCost += smallestProduct.cost;
-      totalPrice += smallestProduct.price;
-    }
-
-    return { order, sheetRanges, totalCost, totalPrice };
-  }
+  private constructor() {}
 
   public async calculateCardPrice(
     basePrice: number,
@@ -161,68 +83,11 @@ class PrintEnBind {
     return pdfPath;
   }
 
-  public async updateFeaturedPlaylists(): Promise<void> {
-    try {
-      // Get all featured playlists
-      const featuredPlaylists = await this.prisma.playlist.findMany({
-        where: { featured: true },
-      });
-
-      for (const playlist of featuredPlaylists) {
-        // Get the order type based on the number of tracks
-        const orderType = await this.getOrderType(playlist.numberOfTracks);
-
-        if (orderType) {
-          // Update the playlist's price with the order type's amount
-          await this.prisma.playlist.update({
-            where: { id: playlist.id },
-            data: { price: orderType.amountWithMargin },
-          });
-
-          this.logger.log(
-            color.magenta(
-              `Updated price for playlist ${white.bold(
-                playlist.name
-              )} to: ${white.bold(orderType.amountWithMargin)}`
-            )
-          );
-        } else {
-          this.logger.log(
-            color.red.bold(
-              `No suitable order type found for playlist ${white.bold(
-                playlist.name
-              )} with ${white.bold(playlist.numberOfTracks)} tracks`
-            )
-          );
-        }
-      }
-
-      this.logger.log(
-        color.magenta('Featured playlists prices updated successfully')
-      );
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(
-          `Error updating featured playlists prices: ${color.white.bold(error)}`
-        )
-      );
-    }
-  }
-
   public static getInstance(): PrintEnBind {
     if (!PrintEnBind.instance) {
       PrintEnBind.instance = new PrintEnBind();
     }
     return PrintEnBind.instance;
-  }
-
-  public startCron(): void {
-    new CronJob('*/10 * * * *', async () => {
-      await this.getAuthToken(true);
-    }).start();
-    new CronJob('0 0 * * *', async () => {
-      await this.updateFeaturedPlaylists();
-    }).start();
   }
 
   public async getOrderTypes(type: string = 'cards') {
@@ -301,9 +166,6 @@ class PrintEnBind {
       this.cache.set(cacheKey, JSON.stringify(orderType));
     }
 
-    orderType.discountPercentage = 0;
-    orderType.pricePerCard = 0;
-
     // If it's digital we calculate the true price
     if (orderType) {
       if (digital) {
@@ -320,9 +182,6 @@ class PrintEnBind {
         orderType.amountWithMargin = price.totalPrice;
         orderType.discountPercentage = price.discountPercentage;
         orderType.pricePerCard = price.pricePerCard;
-      } else {
-        const orderInfo = await this.calculateOptimalPrintOrder(numberOfTracks);
-        orderType.amountWithMargin = orderInfo.totalPrice;
       }
     }
 
@@ -334,6 +193,7 @@ class PrintEnBind {
       items,
       countrycode,
     };
+
     return crypto
       .createHash('md5')
       .update(JSON.stringify(orderData))
@@ -367,6 +227,7 @@ class PrintEnBind {
     const orderHash = this.generateOrderHash(items, customerInfo.countrycode);
     const cacheKey = `order_request_${orderHash}`;
 
+    let supplier = 0;
     let total = 0;
     let shipping = 0;
     let handling = 0;
@@ -395,7 +256,19 @@ class PrintEnBind {
     // Add remaining articles
     for (let i = 0; i < items.length; i++) {
       if (items[i].type == 'physical' && !physicalOrderCreated) {
-        console.log(items[i]);
+        if (items[i].type == 'physical') {
+          const orderType = await this.getOrderType(
+            parseInt(items[i].copies) / 2,
+            false,
+            'cards'
+          );
+
+          const productPriceWithoutVAT = parseFloat(
+            (orderType.amountWithMargin / (1 + (taxRate ?? 0) / 100)).toFixed(2)
+          );
+
+          totalProductPriceWithoutVAT += productPriceWithoutVAT;
+        }
 
         // Create initial order with first article
         const response = await fetch(
@@ -420,6 +293,10 @@ class PrintEnBind {
             statusCode: response.status,
             responseBody: await response.clone().json(),
           });
+        }
+
+        if (logging) {
+          console.log(111, await response.json());
         }
 
         orderId = response.headers.get('location')?.split('/')[1];
@@ -479,7 +356,7 @@ class PrintEnBind {
       } else if (items[i].type == 'digital') {
         const orderType = await this.getOrderType(
           items[i].numberOfTracks,
-          items[i].type === 'digital',
+          true,
           items[i].productType
         );
 
@@ -582,14 +459,13 @@ class PrintEnBind {
       const delivery: any = await deliveryResponse.json();
       const taxModifier = 1 + taxRate / 100;
 
-      console.log(11, order);
-      console.log(22, delivery);
-
-      console.log(33, total);
+      supplier += parseFloat(
+        (parseFloat(order.amount) * taxModifier).toFixed(2)
+      );
 
       total += parseFloat(
         (
-          (parseFloat(order.amount) +
+          (totalProductPriceWithoutVAT +
             parseFloat(delivery.amount) +
             parseFloat(order.price_startup)) *
           taxModifier
@@ -605,14 +481,14 @@ class PrintEnBind {
       );
 
       price += parseFloat(
-        (
-          (parseFloat(order.amount) - parseFloat(order.amount_tax_standard)) *
-          taxModifier
-        ).toFixed(2)
+        (totalProductPriceWithoutVAT * taxModifier).toFixed(2)
       );
 
       payment = parseFloat(
-        (parseFloat(delivery.amount) * taxModifier).toFixed(2)
+        (
+          (parseFloat(delivery.amount) + parseFloat(order.price_startup)) *
+          taxModifier
+        ).toFixed(2)
       );
     }
 
@@ -653,6 +529,7 @@ class PrintEnBind {
     } else {
       return {
         type: 'physical',
+        amount: item.amount,
         product: 'losbladig',
         number: '1',
         copies: numberOfPages.toString(),
@@ -712,87 +589,6 @@ class PrintEnBind {
 
   public async testOrder() {
     const authToken = await this.getAuthToken();
-    const pdfURL = `${process.env.API_URI}/assets/pdf/example_digital.pdf`;
-
-    const body = {
-      email: 'west14@gmail.com',
-      items: [
-        {
-          productId: 'kaarten_enkel_a5_lig_8st_indv',
-          pageCount: 16,
-          quantity: 1,
-        },
-      ],
-      shipping: {
-        address: {
-          name: 'Rick Groenewegen',
-          line1: 'Prinsenhof 1',
-          postCode: '2171XZ',
-          city: 'Sassenheim',
-          country: 'NL',
-        },
-      },
-    };
-
-    console.log(222, JSON.stringify(body, null, 2));
-
-    try {
-      const responseOrder = await axios({
-        method: 'post',
-        url: `${process.env['PRINTENBIND_API_URL']}/v2/orders`,
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          'Content-Type': 'application/json',
-        },
-        data: body,
-      });
-
-      const url1 = responseOrder.data.items[0].files.content.uploadUrl;
-      // const url2 = responseOrder.data.items[1].files.content.uploadUrl;
-      // const url3 = responseOrder.data.items[2].files.content.uploadUrl;
-      // const url4 = responseOrder.data.items[3].files.content.uploadUrl;
-      // const url5 = responseOrder.data.items[4].files.content.uploadUrl;
-
-      console.log(111, url1);
-      // console.log(222, url2);
-      // console.log(333, url3);
-      // console.log(444, url4);
-      // console.log(555, url5);
-
-      // console.log(333, JSON.stringify(responseOrder.data, null, 2));
-      const pdfURL1 = `${process.env.API_URI}/public/pdf/a5.pdf`;
-
-      console.log(222, pdfURL1);
-
-      const pdfFile1 = await axios.get(pdfURL1, {
-        responseType: 'arraybuffer',
-      });
-
-      console.log(333);
-
-      const pdfBuffer1 = Buffer.from(pdfFile1.data, 'binary');
-
-      console.log(444);
-
-      const uploadResult = await axios.post(url1, pdfBuffer1, {
-        headers: {
-          Authorization: `Bearer ${authToken}`,
-          'Content-Type': 'application/pdf',
-        },
-      });
-
-      console.log(555, JSON.stringify(uploadResult.data, null, 2));
-
-      console.log('PDF file uploaded successfully');
-    } catch (e) {
-      if (axios.isAxiosError(e) && e.response) {
-        console.log(e);
-
-        ///console.log(999, JSON.stringify(e.response.data, null, 2));
-      } else {
-        console.error('Error:', e);
-      }
-    }
   }
 
   private async getAuthToken(force: boolean = false): Promise<string | null> {
@@ -929,11 +725,11 @@ class PrintEnBind {
       (process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') > -1 &&
         process.env['ENVIRONMENT'] === 'development')
     ) {
-      const finishResult = await this.finishOrder(
-        result.data.orderId,
-        finalApiCalls
-      );
-      finalApiCalls = finishResult.apiCalls || [];
+      // const finishResult = await this.finishOrder(
+      //   result.data.orderId,
+      //   finalApiCalls
+      // );
+      // finalApiCalls = finishResult.apiCalls || [];
       this.logger.log(
         color.blue.bold(
           `Finished order ${color.white.bold(result.data.orderId)}`

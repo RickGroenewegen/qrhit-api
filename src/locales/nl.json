@@ -1,8 +1,8 @@
 {
   "mail.mailSubject": "We hebben bestelling {{ orderId }} ontvangen!",
-  "mail.greatNews": "We hebben je bestelling ontvangen! De kaarten worden verzonden zodra ze klaar zijn. Je krijgt dan ook een trackinglink.",
+  "mail.greatNews": "We hebben je bestelling ontvangen!",
   "mail.belowAreDetails": "Hieronder staan je bestelgegevens. De kaarten worden naar het volgende adres gestuurd",
-  "mail.weHopeYouHaveFun": "We bevestigen momenteel alle releasedata. Zodra dit is gedaan, ontvang je de gratis digitale versie terwijl je wacht op de echte kaarten die per post komen. Je zou de digitale versie binnen 24 uur per e-mail moeten ontvangen. We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, aarzel dan niet om ons te mailen via het contactformulier op onze website.",
+  "mail.weHopeYouHaveFun": "We zijn momenteel alle releasedata aan het afronden. Zodra dit proces voltooid is, ontvang je een melding dat je PDF klaar is voor printen en verzenden. Vanaf dat moment heb je 36 uur om wijzigingen aan je kaarten aan te brengen of ze direct te laten printen & verzenden.",
   "mail.greetings": "Met vriendelijke groet",
   "mail.orderInformation": "Bestelinformatie",
   "mail.orderNumber": "Ordernummer",
@@ -374,5 +374,11 @@
   "mail.leaveReview": "Laat een recensie achter",
   "mail.unsubscribe": "Afmelden",
   "mail.correctionLink": "Een fout gezien of wil je iets wijzigen? Corrigeer ze hier:",
-  "mail.correctionButton": "Een fout gezien of wil je iets wijzigen? Corrigeer het hier"
+  "mail.correctionButton": "Een fout gezien of wil je iets wijzigen? Corrigeer het hier",
+  "mail.weHopeYouHaveFun2": "We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, mail ons via het contactformulier op onze website.",
+  "mail.housenumber": "Huisnummer",
+  "mail.invoiceHousenumber": "Factuur huisnummer",
+  "mail.finalizedMailSubject": "We nodigen je uit om de afspeellijst '{{ playlist }}' te bekijken",
+  "mail.youCanReview": "Goed nieuws! Je afspeellijst is door ons team beoordeeld en we nodigen je uit om je afspeellijst ook te bekijken. Je bestelling wordt automatisch verwerkt en verzonden na 36 uur. Als je geen wijzigingen wilt aanbrengen, kun je ook vragen om de bestelling direct te laten afdrukken en verzenden.",
+  "mail.reviewOrder": "Bekijk je bestelling"
 }

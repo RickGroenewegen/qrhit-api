@@ -1,7 +1,7 @@
 {
   "mail.mailSubject": "¡Hemos recibido el pedido {{ orderId }}!",
-  "mail.greatNews": "¡Hemos recibido tu pedido! Las cartas se enviarán cuando estén listas. También recibirás un enlace de seguimiento.",
-  "mail.weHopeYouHaveFun": "Actualmente estamos confirmando todos los datos de lanzamiento. Una vez hecho esto, recibirás la versión digital gratuita mientras esperas que las cartas reales lleguen por correo. Deberías recibir la versión digital por correo electrónico en las próximas 24 horas. ¡Esperamos que te diviertas mucho con la música! Si tienes más preguntas, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
+  "mail.greatNews": "¡Hemos recibido tu pedido!",
+  "mail.weHopeYouHaveFun": "Actualmente estamos finalizando todos los datos de lanzamiento. Una vez que este proceso esté completo, recibirás una notificación de que tu PDF está listo para imprimir y enviar. Desde ese momento, tendrás 36 horas para hacer modificaciones a tus cartas o elegir que se impriman y envíen de inmediato.",
   "mail.greatNewsDigital": "¡Buenas noticias! Tus tarjetas QR para tu lista de reproducción se han convertido en un PDF. Puedes descargarlo haciendo clic en el botón de abajo.",
   "mail.weHopeYouHaveFunDigital": "¡Esperamos que te diviertas mucho con la música! Si tienes más preguntas, no dudes en enviarnos un correo a través del formulario de contacto en nuestro sitio web.",
   "mail.greetings": "Saludos cordiales",
@@ -373,5 +373,11 @@
   "mail.leaveReview": "Deja una reseña",
   "mail.unsubscribe": "Darse de baja",
   "mail.correctionLink": "¿Viste un error o quieres cambiar algo? Corrígelos aquí:",
-  "mail.correctionButton": "¿Viste un error o quieres cambiar algo? Corrígelo aquí"
+  "mail.correctionButton": "¿Viste un error o quieres cambiar algo? Corrígelo aquí",
+  "mail.weHopeYouHaveFun2": "¡Esperamos que te diviertas mucho con la música! Si tienes más preguntas, no dudes en escribirnos a través del formulario de contacto en nuestro sitio web.",
+  "mail.housenumber": "Número de casa",
+  "mail.invoiceHousenumber": "Número de casa de factura",
+  "mail.finalizedMailSubject": "Te invitamos a revisar la lista '{{ playlist }}'",
+  "mail.youCanReview": "¡Buenas noticias! Tu lista ha sido revisada por nuestro equipo y nos gustaría invitarte a revisarla también. Tu pedido se procesará y enviará automáticamente después de 36 horas. Si no deseas hacer cambios, también puedes solicitar que se imprima y envíe de inmediato.",
+  "mail.reviewOrder": "Revisa tu pedido"
 }

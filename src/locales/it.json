@@ -1,7 +1,7 @@
 {
   "mail.mailSubject": "Abbiamo ricevuto l'ordine {{ orderId }}!",
-  "mail.greatNews": "Abbiamo ricevuto il tuo ordine! Le carte verranno spedite una volta pronte. Riceverai anche un link di tracciamento.",
-  "mail.weHopeYouHaveFun": "Stiamo attualmente confermando tutti i dati di rilascio. Una volta fatto, riceverai la versione digitale gratuita mentre aspetti che le carte reali arrivino per posta. Dovresti ricevere la versione digitale via e-mail entro le prossime 24 ore. Speriamo che ti diverta un sacco con la musica! Se hai altre domande, non esitare a contattarci tramite il modulo di contatto sul nostro sito.",
+  "mail.greatNews": "Abbiamo ricevuto il tuo ordine!",
+  "mail.weHopeYouHaveFun": "Stiamo attualmente finalizzando tutti i dati di rilascio. Una volta completato questo processo, riceverai una notifica che il tuo PDF è pronto per la stampa e la spedizione. Da quel momento, avrai 36 ore per apportare modifiche alle tue carte o scegliere di stamparle e spedirle immediatamente.",
   "mail.greatNewsDigital": "Ottime notizie! Le tue carte QR per la playlist sono state trasformate in un PDF. Puoi scaricarlo cliccando sul pulsante qui sotto.",
   "mail.weHopeYouHaveFunDigital": "Speriamo che ti diverta molto con la musica! Se hai altre domande, non esitare a scriverci tramite il modulo di contatto sul nostro sito web.",
   "mail.greetings": "Cordiali saluti",
@@ -369,5 +369,11 @@
   "mail.leaveReview": "Lascia una recensione",
   "mail.unsubscribe": "Annulla iscrizione",
   "mail.correctionLink": "Hai visto un errore o vuoi cambiare qualcosa? Correggili qui:",
-  "mail.correctionButton": "Hai visto un errore o vuoi cambiare qualcosa? Correggilo qui"
+  "mail.correctionButton": "Hai visto un errore o vuoi cambiare qualcosa? Correggilo qui",
+  "mail.weHopeYouHaveFun2": "Speriamo che ti diverta con la musica! Se hai altre domande, non esitare a scriverci tramite il modulo di contatto sul nostro sito.",
+  "mail.housenumber": "Numero civico",
+  "mail.invoiceHousenumber": "Numero civico della fattura",
+  "mail.finalizedMailSubject": "Ti invitiamo a rivedere la playlist '{{ playlist }}'",
+  "mail.youCanReview": "Ottime notizie! La tua playlist è stata esaminata dal nostro team e vorremmo invitarti a rivederla anche tu. Il tuo ordine verrà elaborato e spedito automaticamente dopo 36 ore. Se non desideri apportare modifiche, puoi anche richiedere la stampa e la spedizione immediata.",
+  "mail.reviewOrder": "Rivedi il tuo ordine"
 }

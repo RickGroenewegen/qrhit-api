@@ -110,6 +110,7 @@ model Payment {
   marketingEmails         Boolean              @default(false)
   differentInvoiceAddress Boolean              @default(false)
   invoiceAddress          String?
+  invoiceHousenumber      String?
   invoiceCity             String?
   invoiceZipcode          String?
   invoiceCountrycode      String?
@@ -132,9 +133,13 @@ model Payment {
   test                    Boolean              @default(false)
   reviewMailSent          Boolean              @default(false)
   finalizedAt             DateTime?
-  suggestionsPending      Boolean              @default(false)
-  DiscountCodedUses       DiscountCodedUses[]
-  Review                  Review[]
+  canBeSentToPrinter      Boolean              @default(false)
+  canBeSentToPrinterAt    DateTime?
+  sentToPrinter           Boolean              @default(false)
+  sentToPrinterAt         DateTime?
+
+  DiscountCodedUses DiscountCodedUses[]
+  Review            Review[]
 
   @@index([userId]) // Index for performance on queries
   @@index([paymentId])
@@ -311,10 +316,10 @@ model PlaylistHasTrack {
 }
 
 model PaymentHasPlaylist {
-  id                         Int      @id @default(autoincrement())
-  payment                    Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  id                         Int       @id @default(autoincrement())
+  payment                    Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   paymentId                  Int
-  playlist                   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  playlist                   Playlist  @relation(fields: [playlistId], references: [id], onDelete: Cascade)
   playlistId                 Int
   amount                     Int
   numberOfTracks             Int
@@ -323,18 +328,19 @@ model PaymentHasPlaylist {
   filename                   String?
   filenameDigital            String?
   filenameDigitalDoubleSided String?
-  doubleSided                Boolean  @default(false)
-  eco                        Boolean  @default(false)
+  doubleSided                Boolean   @default(false)
+  eco                        Boolean   @default(false)
   price                      Float
   priceWithoutVAT            Float
   priceVAT                   Float
-  printApiPrice              Float    @default(0)
-  printApiUploaded           Boolean  @default(false)
-  printApiUploadResponse     String?  @db.Text
-
-  printerPageCount Int @default(0)
-
-  orderType OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
+  printApiPrice              Float     @default(0)
+  printApiUploaded           Boolean   @default(false)
+  printApiUploadResponse     String?   @db.Text
+  printerPageCount           Int       @default(0)
+  suggestionsPending         Boolean   @default(false)
+  eligableForPrinter         Boolean   @default(false)
+  eligableForPrinterAt       DateTime?
+  orderType                  OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
 
   @@unique([paymentId, playlistId])
   @@map("payment_has_playlist")

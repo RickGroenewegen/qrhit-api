@@ -25,7 +25,7 @@ class Mollie {
   private order = Order.getInstance();
   private translation: Translation = new Translation();
   private utils = new Utils();
-  private generator = new Generator();
+  private generator = Generator.getInstance();
   private openPaymentStatus = ['open', 'pending', 'authorized'];
   private paidPaymentStatus = ['paid'];
   private failedPaymentStatus = ['failed', 'canceled', 'expired'];
@@ -1018,6 +1018,7 @@ class Mollie {
         totalVATPrice: true,
         differentInvoiceAddress: true,
         invoiceAddress: true,
+        invoiceHousenumber: true,
         invoiceCity: true,
         invoiceZipcode: true,
         invoiceCountrycode: true,
@@ -1025,6 +1026,7 @@ class Mollie {
         fullname: true,
         email: true,
         address: true,
+        housenumber: true,
         city: true,
         zipcode: true,
         qrSubDir: true,

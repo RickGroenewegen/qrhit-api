@@ -24,6 +24,7 @@ import { ApiResult } from './interfaces/ApiResult';
 import Cache from './cache';
 
 class Generator {
+  private static instance: Generator;
   private logger = new Logger();
   private utils = new Utils();
   private prisma = PrismaInstance.getInstance();
@@ -38,61 +39,86 @@ class Generator {
   private discount = new Discount();
   private cache = Cache.getInstance();
 
-  constructor() {
-    this.setupQRCleanupCron();
+  private constructor() {
+    this.setCron();
   }
 
-  private setupQRCleanupCron() {
-    const isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
+  public static getInstance(): Generator {
+    if (!Generator.instance) {
+      Generator.instance = new Generator();
+    }
+    return Generator.instance;
+  }
+
+  private setCron() {
     const isPrimary = cluster.isPrimary;
 
-    // if (isMainServer && isPrimary) {
-    //   new CronJob(
-    //     '*/1 * * * *',
-    //     async () => {
-    //       await this.cleanupQRCodes();
-    //     },
-    //     null,
-    //     true,
-    //     'Europe/Amsterdam'
-    //   );
-    // }
+    if (isPrimary) {
+      this.utils.isMainServer().then(async (isMainServer) => {
+        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+          this.setSendToPrinterCron();
+        }
+      });
+    }
   }
 
-  private async cleanupQRCodes(): Promise<void> {
-    const qrDir = `${process.env['PUBLIC_DIR']}/qr`;
-    const now = Date.now();
+  public setSendToPrinterCron() {
+    // Setup printer check cron
+    new CronJob(
+      '0 * * * *',
+      async () => {
+        const payments = await this.prisma.payment.findMany({
+          where: {
+            sentToPrinter: false,
+            OR: [
+              {
+                canBeSentToPrinter: true,
+              },
+              {
+                canBeSentToPrinter: true,
+                canBeSentToPrinterAt: {
+                  lte: new Date(),
+                },
+              },
+            ],
+          },
+        });
 
-    const maxAge =
-      process.env['ENVIRONMENT'] === 'development'
-        ? 24 * 60 * 60 * 1000
-        : 5 * 60 * 1000;
+        if (payments.length > 0) {
+          this.logger.log(
+            blue.bold(
+              `Found ${white.bold(
+                payments.length.toString()
+              )} payments ready to be sent to printer`
+            )
+          );
 
-    const cleanedDirs = new Set<string>();
-    try {
-      const subdirs = await fs.readdir(qrDir);
-      for (const subdir of subdirs) {
-        const subdirPath = path.join(qrDir, subdir);
-        const stats = await fs.stat(subdirPath);
-        if (stats.isDirectory() && now - stats.mtimeMs > maxAge) {
-          await fs.rm(subdirPath, { recursive: true, force: true });
-          if (!cleanedDirs.has(subdir)) {
-            this.logger.log(
-              color.blue.bold(
-                `Cleaned up QR code directory: ${color.white.bold(subdir)}`
-              )
-            );
-            cleanedDirs.add(subdir);
+          for (const payment of payments) {
+            try {
+              await this.sendToPrinter(payment.paymentId);
+              this.logger.log(
+                color.green.bold(
+                  `Successfully sent payment ${white.bold(
+                    payment.paymentId
+                  )} to printer`
+                )
+              );
+            } catch (error) {
+              this.logger.log(
+                color.red.bold(
+                  `Error sending payment ${white.bold(
+                    payment.paymentId
+                  )} to printer: ${error}`
+                )
+              );
+            }
           }
         }
-      }
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(
-          `Error during QR code cleanup: ${color.white.bold(error)}`
-        )
-      );
-    }
+      },
+      null,
+      true,
+      'Europe/Amsterdam'
+    );
   }
 
   public async generate(
@@ -476,41 +502,40 @@ class Generator {
             },
           });
 
-          await this.mail.sendEmail(
-            'digital',
-            payment,
-            [playlist],
-            generatedFilename,
-            generatedFilenameDigital
-          );
+          if (playlist.orderType == 'digital') {
+            await this.mail.sendEmail(
+              'digital',
+              payment,
+              [playlist],
+              generatedFilename,
+              generatedFilenameDigital
+            );
+          }
         }
-
-        let printApiOrderId = '';
-        let printApiOrderRequest = '';
-        let printApiOrderResponse = '';
 
         // TODO: Implement API
         if (physicalPlaylists.length > 0) {
-          const orderData = await this.order.createOrder(
-            payment,
-            physicalPlaylists,
-            playlists[0].productType
-          );
-          printApiOrderId = orderData.response.id;
-          printApiOrderRequest = JSON.stringify(orderData.request);
-          printApiOrderResponse = JSON.stringify(orderData.response);
-        }
+          let sendToPrinterAt = new Date().setHours(new Date().getHours() + 36);
+          await this.prisma.payment.update({
+            where: {
+              id: payment.id,
+            },
+            data: {
+              canBeSentToPrinter: true,
+              canBeSentToPrinterAt: new Date(sendToPrinterAt),
+            },
+          });
 
-        await this.prisma.payment.update({
-          where: {
-            id: payment.id,
-          },
-          data: {
-            printApiOrderId,
-            printApiOrderRequest,
-            printApiOrderResponse,
-          },
-        });
+          // Loop over the physical playlists and send them to the printer
+          for (const playlistItem of physicalPlaylists) {
+            const playlist = playlistItem.playlist;
+            this.mail.sendFinalizedMail(
+              payment,
+              `${process.env['FRONTEND_URI']}/usersuggestions/${payment.paymentId}/${payment.user.hash}/${playlist.playlistId}/0`,
+              playlist
+            );
+          }
+        }
 
         this.logger.log(
           color.green.bold(
@@ -536,6 +561,79 @@ class Generator {
     } finally {
       // Always release the lock when done
       await this.cache.releaseLock(`finalizeOrder:${paymentId}`);
+    }
+  }
+
+  public async sendToPrinter(paymentId: string) {
+    let printApiOrderId = '';
+    let printApiOrderRequest = '';
+    let printApiOrderResponse = '';
+
+    const payment = await this.prisma.payment.findFirst({
+      where: {
+        paymentId,
+      },
+    });
+
+    if (
+      (payment && payment.canBeSentToPrinter && !payment.sentToPrinter) ||
+      (payment && process.env['ENVIRONMENT'] === 'development')
+    ) {
+      const playlists = await this.data.getPlaylistsByPaymentId(
+        payment.paymentId
+      );
+      const physicalPlaylists: any[] = [];
+
+      // Loop over playlists and get physical ones with their filenames
+      for (const playlist of playlists) {
+        if (playlist.orderType === 'physical') {
+          const paymentHasPlaylist =
+            await this.prisma.paymentHasPlaylist.findFirst({
+              select: {
+                filename: true,
+              },
+              where: {
+                paymentId: payment.id,
+                playlistId: playlist.id,
+              },
+            });
+
+          if (paymentHasPlaylist?.filename) {
+            physicalPlaylists.push({
+              playlist,
+              filename: paymentHasPlaylist.filename,
+            });
+          }
+        }
+      }
+
+      const orderData = await this.order.createOrder(
+        payment,
+        physicalPlaylists,
+        playlists[0].productType
+      );
+      printApiOrderId = orderData.response.id;
+      printApiOrderRequest = JSON.stringify(orderData.request);
+      printApiOrderResponse = JSON.stringify(orderData.response);
+
+      await this.prisma.payment.update({
+        where: {
+          id: payment.id,
+        },
+        data: {
+          sentToPrinter: true,
+          sentToPrinterAt: new Date(),
+          printApiOrderId,
+          printApiOrderRequest,
+          printApiOrderResponse,
+        },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Order sent to printer for payment: ${white.bold(paymentId)}`
+        )
+      );
     }
   }
 

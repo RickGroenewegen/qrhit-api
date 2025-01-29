@@ -41,6 +41,7 @@
                                             <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{payment.fullname}},</p>
                                             <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.greatNews }}</p>
                                             <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.weHopeYouHaveFun }}</p>
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.weHopeYouHaveFun2 }}</p>
                                         </td>
                                     </tr>
                                 </table>
@@ -84,6 +85,10 @@
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ address }}</td>
                                     </tr>
                                     <tr>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.housenumber }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ housenumber }}</td>
+                                    </tr>
+                                    <tr>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.city }}</td>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ city }}</td>
                                     </tr>
@@ -100,19 +105,24 @@
                                         <td colspan="2" style="padding: 12px; background-color: #4299e1; color: #ffffff; font-weight: 700; font-size: 16px;">{{ translations.invoiceAddress }}</td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.address }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.invoiceAddress }}</td>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ invoiceAddress }}</td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.city }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.invoiceHousenumber
+                                            }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ invoiceHousenumber }}</td>
+                                    </tr>
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.invoiceCity }}</td>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ invoiceCity }}</td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.zipcode }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.invoiceZipcode }}</td>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ invoiceZipcode }}</td>
                                     </tr>
                                     <tr>
-                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.country }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.invoiceCountry }}</td>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ lookup countries invoiceCountry }}</td>
                                     </tr>
                                     {{/if}}

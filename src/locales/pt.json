@@ -1,7 +1,7 @@
 {
   "mail.mailSubject": "Recebemos o pedido {{ orderId }}!",
-  "mail.greatNews": "Recebemos o teu pedido! As cartas serão enviadas quando estiverem prontas. Também receberás um link de rastreamento.",
-  "mail.weHopeYouHaveFun": "Estamos atualmente confirmando todos os dados de lançamento. Assim que isso for feito, você receberá a versão digital gratuita enquanto aguarda as cartas reais chegarem pelo correio. Você deve receber a versão digital por e-mail nas próximas 24 horas. Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contato em nosso site.",
+  "mail.greatNews": "Recebemos o teu pedido!",
+  "mail.weHopeYouHaveFun": "Estamos atualmente finalizando todos os dados de lançamento. Assim que este processo for concluído, você receberá uma notificação de que seu PDF está pronto para impressão e envio. A partir desse momento, você terá 36 horas para fazer modificações nos seus cartões ou optar por imprimi-los e enviá-los imediatamente.",
   "mail.greatNewsDigital": "Boas notícias! As tuas cartas QR para a playlist foram convertidas num PDF. Podes descarregá-lo clicando no botão abaixo.",
   "mail.weHopeYouHaveFunDigital": "Esperamos que você se divirta muito com a música! Se tiver mais perguntas, não hesite em nos enviar um e-mail através do formulário de contato em nosso site.",
   "mail.greetings": "Atenciosamente",
@@ -369,5 +369,11 @@
   "mail.leaveReview": "Deixa uma avaliação",
   "mail.unsubscribe": "Cancelar inscrição",
   "mail.correctionLink": "Viu um erro ou quer mudar algo? Corrija-os aqui:",
-  "mail.correctionButton": "Viu um erro ou quer mudar algo? Corrija-o aqui"
+  "mail.correctionButton": "Viu um erro ou quer mudar algo? Corrija-o aqui",
+  "mail.weHopeYouHaveFun2": "Esperamos que te divirtas muito com a música! Se tiveres mais perguntas, não hesites em escrever-nos através do formulário de contacto no nosso site.",
+  "mail.housenumber": "Número da casa",
+  "mail.invoiceHousenumber": "Número da casa na fatura",
+  "mail.finalizedMailSubject": "Convidamos você a revisar a playlist '{{ playlist }}'",
+  "mail.youCanReview": "Boas notícias! Sua playlist foi revisada pela nossa equipe e gostaríamos de convidá-lo a revisá-la também. Seu pedido será processado e enviado automaticamente após 36 horas. Se não desejar fazer alterações, você também pode solicitar a impressão e envio imediato.",
+  "mail.reviewOrder": "Revise seu pedido"
 }
