@@ -377,5 +377,8 @@
   "mail.correctionButton": "Een fout gezien of wil je iets wijzigen? Corrigeer het hier",
   "mail.weHopeYouHaveFun2": "We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, mail ons via het contactformulier op onze website.",
   "mail.housenumber": "Huisnummer",
-  "mail.invoiceHousenumber": "Factuur huisnummer"
+  "mail.invoiceHousenumber": "Factuur huisnummer",
+  "mail.finalizedMailSubject": "We nodigen je uit om de afspeellijst '{{ playlist }}' te bekijken",
+  "mail.youCanReview": "Goed nieuws! Je afspeellijst is door ons team beoordeeld en we nodigen je uit om je afspeellijst ook te bekijken. Je bestelling wordt automatisch verwerkt en verzonden na 36 uur. Als je geen wijzigingen wilt aanbrengen, kun je ook vragen om de bestelling direct te laten afdrukken en verzenden.",
+  "mail.reviewOrder": "Bekijk je bestelling"
 }

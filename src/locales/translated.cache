@@ -4474,5 +4474,41 @@
     "hin",
     "jp",
     "cn"
+  ],
+  "mail.finalizedMailSubject": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp",
+    "cn"
+  ],
+  "mail.youCanReview": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp",
+    "cn"
+  ],
+  "mail.reviewOrder": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp",
+    "cn"
   ]
 }

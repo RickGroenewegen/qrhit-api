@@ -372,5 +372,8 @@
   "mail.correctionButton": "Zauważyłeś błąd lub chcesz coś zmienić? Popraw to tutaj",
   "mail.weHopeYouHaveFun2": "Mamy nadzieję, że będziesz się świetnie bawić z muzyką! Jeśli masz dalsze pytania, napisz do nas przez formularz kontaktowy na naszej stronie.",
   "mail.housenumber": "Numer domu",
-  "mail.invoiceHousenumber": "Numer domu na fakturze"
+  "mail.invoiceHousenumber": "Numer domu na fakturze",
+  "mail.finalizedMailSubject": "Zapraszamy do przejrzenia playlisty '{{ playlist }}'",
+  "mail.youCanReview": "Dobre wieści! Twoja playlista została oceniona przez nasz zespół i chcielibyśmy zaprosić cię do jej przeglądu. Twoje zamówienie zostanie automatycznie przetworzone i wysłane po 36 godzinach. Jeśli nie chcesz wprowadzać zmian, możesz również poprosić o natychmiastowy druk i wysyłkę.",
+  "mail.reviewOrder": "Przejrzyj swoje zamówienie"
 }

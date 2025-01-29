@@ -338,7 +338,7 @@ model PaymentHasPlaylist {
   printApiUploadResponse     String?   @db.Text
   printerPageCount           Int       @default(0)
   suggestionsPending         Boolean   @default(false)
-  eligableForPrinter         Boolean   @default(true)
+  eligableForPrinter         Boolean   @default(false)
   eligableForPrinterAt       DateTime?
   orderType                  OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
 

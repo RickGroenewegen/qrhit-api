@@ -368,5 +368,8 @@
   "mail.correctionButton": "間違いを見つけた？変更したい？ここで直してね",
   "mail.weHopeYouHaveFun2": "音楽をたくさん楽しんでくださいね！質問があれば、ウェブサイトのコンタクトフォームからメールしてください。",
   "mail.housenumber": "番地",
-  "mail.invoiceHousenumber": "請求書の番地"
+  "mail.invoiceHousenumber": "請求書の番地",
+  "mail.finalizedMailSubject": "プレイリスト '{{ playlist }}' を確認してください",
+  "mail.youCanReview": "素晴らしいニュース！あなたのプレイリストは私たちのチームによってレビューされ、あなたにもレビューをお願いしたいです。注文は36時間後に自動的に処理され、発送されます。変更を希望しない場合は、すぐに印刷と発送をリクエストすることもできます。",
+  "mail.reviewOrder": "注文を確認する"
 }
