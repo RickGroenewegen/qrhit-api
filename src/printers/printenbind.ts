@@ -408,6 +408,8 @@ class PrintEnBind {
           }
         );
 
+        console.log(items[i]);
+
         if (logging) {
           apiCalls.push({
             method: 'POST',
@@ -578,9 +580,16 @@ class PrintEnBind {
       const delivery: any = await deliveryResponse.json();
       const taxModifier = 1 + taxRate / 100;
 
+      console.log(11, order);
+      console.log(22, delivery);
+
+      console.log(33, total);
+
       total += parseFloat(
         (
-          (parseFloat(order.amount) + parseFloat(delivery.amount)) *
+          (parseFloat(order.amount) +
+            parseFloat(delivery.amount) +
+            parseFloat(order.price_startup)) *
           taxModifier
         ).toFixed(2)
       );
@@ -636,11 +645,6 @@ class PrintEnBind {
       { length: numberOfPages },
       (_, i) => i + 1
     ).filter((page) => page % 2 !== 0);
-
-    // 50 items max
-    if (oddPages.length > 50) {
-      oddPages = oddPages.slice(0, 50);
-    }
 
     if (item.type == 'digital') {
       return item;
@@ -945,9 +949,7 @@ class PrintEnBind {
 
     const delivery = await deliveryResponse.json();
 
-    console.log(888, delivery);
-
-    const trackingLink = delivery.tracktrace || '';
+    const trackingLink = delivery.tracktrace_url || '';
 
     this.logger.log(
       color.blue.bold(
@@ -963,7 +965,7 @@ class PrintEnBind {
 
       // Update printApiTrackingLink
       await this.prisma.payment.update({
-        where: { id: payment.paymentId },
+        where: { paymentId: payment.paymentId },
         data: {
           printApiTrackingLink: trackingLink,
         },
