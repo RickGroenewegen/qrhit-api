@@ -69,11 +69,16 @@ class Generator {
       async () => {
         const payments = await this.prisma.payment.findMany({
           where: {
-            canBeSentToPrinter: true,
             sentToPrinter: false,
-            canBeSentToPrinterAt: {
-              lte: new Date(),
-            },
+            OR: [
+              { canBeSentToPrinterNow: true },
+              {
+                canBeSentToPrinter: true,
+                canBeSentToPrinterAt: {
+                  lte: new Date(),
+                },
+              },
+            ],
           },
         });
 
