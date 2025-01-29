@@ -727,11 +727,11 @@ class PrintEnBind {
       (process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') > -1 &&
         process.env['ENVIRONMENT'] === 'development')
     ) {
-      // const finishResult = await this.finishOrder(
-      //   result.data.orderId,
-      //   finalApiCalls
-      // );
-      // finalApiCalls = finishResult.apiCalls || [];
+      const finishResult = await this.finishOrder(
+        result.data.orderId,
+        finalApiCalls
+      );
+      finalApiCalls = finishResult.apiCalls || [];
       this.logger.log(
         color.blue.bold(
           `Finished order ${color.white.bold(result.data.orderId)}`
