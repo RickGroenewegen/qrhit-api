@@ -577,6 +577,15 @@ class Suggestion {
           (suggestion) => suggestion.playlistType === 'physical'
         );
 
+        await this.mollie.clearPDFs(paymentId);
+        await this.generator.generate(
+          paymentId,
+          '',
+          '',
+          this.mollie,
+          true // Force finalize
+        );
+
         if (hasPhysicalPlaylists) {
           // See if all physical playlists are ready for printing
           const allPhysicalPlaylistsReady = await this.prisma.$queryRaw<any[]>`
@@ -591,19 +600,16 @@ class Suggestion {
             AND eligableForPrinter = true
           `;
 
-          if (allPhysicalPlaylistsReady[0].count === allPhysicalPlaylistsReady[0].total) {
-            this.logger.log(color.green.bold('YEAH!'));
+          if (
+            allPhysicalPlaylistsReady[0].count ===
+            allPhysicalPlaylistsReady[0].total
+          ) {
+            this.logger.log(
+              color.blue.bold('All physical playlists are ready for printing')
+            );
+            this.generator.sendToPrinter(paymentId);
           }
         }
-
-        await this.mollie.clearPDFs(paymentId);
-        await this.generator.generate(
-          paymentId,
-          '',
-          '',
-          this.mollie,
-          true // Force finalize
-        );
       } else {
         this.logger.log(
           color.yellow.bold('No changes detected in suggestions')
