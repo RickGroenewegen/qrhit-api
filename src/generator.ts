@@ -619,8 +619,9 @@ class Generator {
       });
 
       this.logger.log(
-        color.blue.bold(`
-        Order sent to printer for payment: ${white.bold(paymentId)}`)
+        color.blue.bold(
+          `Order sent to printer for payment: ${white.bold(paymentId)}`
+        )
       );
     }
   }
