@@ -459,9 +459,19 @@ class PrintEnBind {
       city?: string;
       countrycode: string;
     },
-    logging: boolean = true,
+    logging: boolean = false,
     cache: boolean = true
-  ): Promise<ApiResult & { apiCalls?: Array<{method: string, url: string, body?: any, statusCode: number, responseBody: any}> }> {
+  ): Promise<
+    ApiResult & {
+      apiCalls?: Array<{
+        method: string;
+        url: string;
+        body?: any;
+        statusCode: number;
+        responseBody: any;
+      }>;
+    }
+  > {
     const orderHash = this.generateOrderHash(items, customerInfo.countrycode);
     const cacheKey = `order_request_${orderHash}`;
 
@@ -471,7 +481,13 @@ class PrintEnBind {
     let price = 0;
     let payment = 0;
     let totalProductPriceWithoutVAT = 0;
-    let apiCalls: Array<{method: string, url: string, body?: any, statusCode: number, responseBody: any}> = [];
+    let apiCalls: Array<{
+      method: string;
+      url: string;
+      body?: any;
+      statusCode: number;
+      responseBody: any;
+    }> = [];
 
     // Check cache first
     const cachedResult = await this.cache.get(cacheKey);
@@ -499,14 +515,14 @@ class PrintEnBind {
             body: JSON.stringify(items[i]),
           }
         );
-        
+
         if (logging) {
           apiCalls.push({
             method: 'POST',
             url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
             body: items[i],
             statusCode: response.status,
-            responseBody: await response.clone().json()
+            responseBody: await response.clone().json(),
           });
         }
 
@@ -549,7 +565,7 @@ class PrintEnBind {
             url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
             body: items[i],
             statusCode: articleResponse.status,
-            responseBody: await articleResponse.clone().json()
+            responseBody: await articleResponse.clone().json(),
           });
         }
 
@@ -633,7 +649,7 @@ class PrintEnBind {
           url: `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
           body: deliveryData,
           statusCode: addDeliveryResult.status,
-          responseBody: addDelivery
+          responseBody: addDelivery,
         });
       }
 
@@ -709,7 +725,7 @@ class PrintEnBind {
         price,
         payment,
       },
-      ...(logging ? { apiCalls } : {})
+      ...(logging ? { apiCalls } : {}),
     };
 
     // Cache the successful result for 1 hour (3600 seconds)
@@ -969,6 +985,8 @@ class PrintEnBind {
       false
     );
 
+    const apiCalls = result.apiCalls;
+
     if (
       process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') &&
       process.env['ENVIRONMENT'] === 'production'
@@ -984,7 +1002,7 @@ class PrintEnBind {
     return {
       request: '',
       response: {
-        ...result,
+        ...apiCalls,
         id: result.data.orderId,
       },
     };
