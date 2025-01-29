@@ -854,7 +854,8 @@ class PrintEnBind {
           printApiStatus: 'Created',
           printApiShipped: false,
           printApiOrderId: {
-            not: undefined,
+            not: null,
+            notIn: ['', undefined],
           },
         },
         select: {
