@@ -236,9 +236,6 @@ class PrintEnBind {
       this.cache.set(cacheKey, JSON.stringify(orderType));
     }
 
-    orderType.discountPercentage = 0;
-    orderType.pricePerCard = 0;
-
     // If it's digital we calculate the true price
     if (orderType) {
       if (digital) {
@@ -255,11 +252,10 @@ class PrintEnBind {
         orderType.amountWithMargin = price.totalPrice;
         orderType.discountPercentage = price.discountPercentage;
         orderType.pricePerCard = price.pricePerCard;
-      } else {
-        const orderInfo = await this.calculateOptimalPrintOrder(numberOfTracks);
-        orderType.amountWithMargin = orderInfo.totalPrice;
       }
     }
+
+    console.log(111, orderType);
 
     return orderType;
   }
@@ -332,8 +328,6 @@ class PrintEnBind {
     for (let i = 0; i < items.length; i++) {
       if (items[i].type == 'physical' && !physicalOrderCreated) {
         if (items[i].type == 'physical') {
-          console.log(111, items[i]);
-
           const orderType = await this.getOrderType(
             parseInt(items[i].copies) / 2,
             false,

@@ -195,72 +195,7 @@ class Order {
     digital: boolean = false,
     type: string = 'cards'
   ) {
-    let orderType = null;
-    let digitalInt = digital ? '1' : '0';
-    if (numberOfTracks > MAX_CARDS) {
-      numberOfTracks = MAX_CARDS;
-    }
-    let cacheKey = `orderType_${numberOfTracks}_${digitalInt}_${type}`;
-    if (digital) {
-      // There is just one digital product
-      cacheKey = `orderType_${digitalInt}_${type}`;
-    }
-
-    const cachedOrderType = await this.cache.get(cacheKey);
-
-    if (cachedOrderType) {
-      orderType = JSON.parse(cachedOrderType);
-    } else {
-      orderType = await this.prisma.orderType.findFirst({
-        where: {
-          type,
-          ...(digital
-            ? {}
-            : {
-                maxCards: {
-                  gte: numberOfTracks,
-                },
-              }),
-          digital: digital,
-        },
-        orderBy: [
-          {
-            maxCards: 'asc',
-          },
-        ],
-      });
-
-      this.cache.set(cacheKey, JSON.stringify(orderType));
-    }
-
-    orderType.discountPercentage = 0;
-    orderType.pricePerCard = 0;
-
-    // If it's digital we calculate the true price
-    if (orderType) {
-      if (digital) {
-        const price = await this.calculateDigitalCardPrice(
-          orderType.amountWithMargin,
-          numberOfTracks
-        );
-
-        orderType = {
-          ...orderType,
-          discountPercentage: price.discountPercentage,
-          pricePerCard: price.pricePerCard,
-        };
-        orderType.amountWithMargin = price.totalPrice;
-        orderType.discountPercentage = price.discountPercentage;
-        orderType.pricePerCard = price.pricePerCard;
-      } else {
-        const orderInfo = await this.printer.calculateOptimalPrintOrder(
-          numberOfTracks
-        );
-        orderType.amountWithMargin = orderInfo.totalPrice;
-      }
-    }
-
-    return orderType;
+    return this.printer.getOrderType(numberOfTracks, digital, type);
   }
 
   public async calculateOrder(params: any): Promise<ApiResult> {
