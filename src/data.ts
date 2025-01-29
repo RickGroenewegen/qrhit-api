@@ -1469,13 +1469,6 @@ class Data {
         return false;
       }
 
-      // Get the payment
-      const payment = await this.prisma.payment.findFirst({
-        where: {
-          paymentId,
-        },
-      });
-
       // Count the number of suggestions
       const suggestionCount = await this.prisma.userSuggestion.count({
         where: {
@@ -1483,21 +1476,33 @@ class Data {
         },
       });
 
-      await this.prisma.payment.update({
-        where: { id: paymentDbId },
-        data: { suggestionsPending: true },
-      });
+      // Only proceed if there are actual suggestions
+      if (suggestionCount > 0) {
+        // Get the payment
+        const payment = await this.prisma.payment.findFirst({
+          where: {
+            paymentId,
+          },
+        });
 
-      this.pushover.sendMessage(
-        {
-          title: `QRSong! Correcties doorgegeven`,
-          message: `Correcties doorgegeven door: ${payment?.fullname}`,
-          sound: 'incoming',
-        },
-        clientIp
-      );
+        await this.prisma.payment.update({
+          where: { id: paymentDbId },
+          data: { suggestionsPending: true },
+        });
 
-      return true;
+        this.pushover.sendMessage(
+          {
+            title: `QRSong! Correcties doorgegeven`,
+            message: `${suggestionCount} correcties doorgegeven door: ${payment?.fullname}`,
+            sound: 'incoming',
+          },
+          clientIp
+        );
+
+        return true;
+      }
+
+      return false;
     } catch (error) {
       console.error('Error submitting user suggestions:', error);
       return false;
