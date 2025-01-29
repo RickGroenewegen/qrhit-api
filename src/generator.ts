@@ -56,58 +56,62 @@ class Generator {
     if (isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-          // Setup printer check cron
-          new CronJob(
-            '0 * * * *',
-            async () => {
-              this.logger.log(blue.bold('Running printer check cron...'));
-
-              const payments = await this.prisma.payment.findMany({
-                where: {
-                  canBeSentToPrinter: true,
-                  sentToPrinter: false,
-                  canBeSentToPrinterAt: {
-                    lte: new Date(),
-                  },
-                },
-              });
-
-              this.logger.log(
-                blue.bold(
-                  `Found ${white.bold(
-                    payments.length.toString()
-                  )} payments ready to be sent to printer`
-                )
-              );
-
-              for (const payment of payments) {
-                try {
-                  await this.sendToPrinter(payment.paymentId);
-                  this.logger.log(
-                    color.green.bold(
-                      `Successfully sent payment ${white.bold(
-                        payment.paymentId
-                      )} to printer`
-                    )
-                  );
-                } catch (error) {
-                  this.logger.log(
-                    color.red.bold(
-                      `Error sending payment ${white.bold(
-                        payment.paymentId
-                      )} to printer: ${error}`
-                    )
-                  );
-                }
-              }
-            },
-            null,
-            true,
-            'Europe/Amsterdam'
-          );
+          this.setSendToPrinterCron();
         }
       });
     }
+  }
+
+  public setSendToPrinterCron() {
+    // Setup printer check cron
+    new CronJob(
+      '0 * * * *',
+      async () => {
+        const payments = await this.prisma.payment.findMany({
+          where: {
+            canBeSentToPrinter: true,
+            sentToPrinter: false,
+            canBeSentToPrinterAt: {
+              lte: new Date(),
+            },
+          },
+        });
+
+        if (payments.length > 0) {
+          this.logger.log(
+            blue.bold(
+              `Found ${white.bold(
+                payments.length.toString()
+              )} payments ready to be sent to printer`
+            )
+          );
+
+          for (const payment of payments) {
+            try {
+              await this.sendToPrinter(payment.paymentId);
+              this.logger.log(
+                color.green.bold(
+                  `Successfully sent payment ${white.bold(
+                    payment.paymentId
+                  )} to printer`
+                )
+              );
+            } catch (error) {
+              this.logger.log(
+                color.red.bold(
+                  `Error sending payment ${white.bold(
+                    payment.paymentId
+                  )} to printer: ${error}`
+                )
+              );
+            }
+          }
+        }
+      },
+      null,
+      true,
+      'Europe/Amsterdam'
+    );
   }
 
   public async generate(
