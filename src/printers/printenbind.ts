@@ -1003,6 +1003,8 @@ class PrintEnBind {
 
     return pdfPath;
   }
+
+  public async processPrintApiWebhook(printApiOrderId: string) {}
 }
 
 export default PrintEnBind;
