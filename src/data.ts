@@ -1298,7 +1298,8 @@ class Data {
   public async getUserSuggestions(
     paymentId: string,
     userHash: string,
-    playlistId: string
+    playlistId: string,
+    digital: boolean = true
   ): Promise<any[]> {
     const tracks = await this.prisma.$queryRaw<any[]>`
       SELECT 

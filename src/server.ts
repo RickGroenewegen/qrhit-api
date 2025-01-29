@@ -907,12 +907,13 @@ class Server {
     });
 
     this.fastify.get(
-      '/usersuggestions/:paymentId/:userHash/:playlistId',
+      '/usersuggestions/:paymentId/:userHash/:playlistId/:digital',
       async (request: any, reply) => {
         const suggestions = await this.data.getUserSuggestions(
           request.params.paymentId,
           request.params.userHash,
-          request.params.playlistId
+          request.params.playlistId,
+          this.utils.parseBoolean(request.params.digital)
         );
         return { success: true, data: suggestions };
       }

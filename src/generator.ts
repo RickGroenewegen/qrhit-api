@@ -534,7 +534,7 @@ class Generator {
             const playlist = playlistItem.playlist;
             this.mail.sendFinalizedMail(
               payment,
-              `${process.env['FRONTEND_URI']}/usersuggestions/${payment.paymentId}/${payment.user.hash}/${playlist.playlistId}`,,
+              `${process.env['FRONTEND_URI']}/usersuggestions/${payment.paymentId}/${payment.user.hash}/${playlist.playlistId}/0`,
               playlist
             );
           }

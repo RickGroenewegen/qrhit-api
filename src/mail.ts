@@ -186,7 +186,7 @@ class Mail {
       invoiceZipcode: payment.invoiceZipcode,
       invoiceCountry: payment.invoiceCountrycode,
       differentInvoiceAddress: payment.differentInvoiceAddress,
-      digitalDownloadCorrectionLink: `${process.env['FRONTEND_URI']}/usersuggestions/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}`,
+      digitalDownloadCorrectionLink: `${process.env['FRONTEND_URI']}/usersuggestions/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}/1`,
       digitalDownloadLink: `${process.env['API_URI']}/download/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}/digital`,
       downloadLink: `${process.env['API_URI']}/download/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}/printer`,
       sendPhysicalLink,
@@ -437,14 +437,12 @@ class Mail {
         mailParams
       );
 
-      const subject = decode(this.translation.translate(
-        'mail.finalizedMailSubject',
-        locale,
-        {
+      const subject = decode(
+        this.translation.translate('mail.finalizedMailSubject', locale, {
           orderId: payment.orderId,
           playlist: playlist.name,
-        }
-      ));
+        })
+      );
 
       let attachments: Attachment[] = [
         {
