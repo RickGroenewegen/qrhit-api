@@ -503,13 +503,15 @@ class Generator {
             },
           });
 
-          await this.mail.sendEmail(
-            'digital',
-            payment,
-            [playlist],
-            generatedFilename,
-            generatedFilenameDigital
-          );
+          if (playlist.orderType == 'digital') {
+            await this.mail.sendEmail(
+              'digital',
+              payment,
+              [playlist],
+              generatedFilename,
+              generatedFilenameDigital
+            );
+          }
         }
 
         // TODO: Implement API

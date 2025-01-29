@@ -1,8 +1,8 @@
 {
   "mail.mailSubject": "Otrzymaliśmy zamówienie {{ orderId }}!",
   "mail.mailSubjectDigital": "Oto Twój PDF dla '{{ playlist }}'!",
-  "mail.greatNews": "Otrzymaliśmy twoje zamówienie! Karty zostaną wysłane, gdy będą gotowe. Otrzymasz wtedy link do śledzenia.",
-  "mail.weHopeYouHaveFun": "Obecnie potwierdzamy wszystkie dane dotyczące wydania. Gdy to zrobimy, otrzymasz darmową wersję cyfrową, czekając na prawdziwe karty, które przyjdą pocztą. Powinieneś otrzymać wersję cyfrową e-mailem w ciągu najbliższych 24 godzin. Mamy nadzieję, że będziesz się świetnie bawić z muzyką! Jeśli masz dalsze pytania, nie wahaj się napisać do nas przez formularz kontaktowy na naszej stronie.",
+  "mail.greatNews": "Otrzymaliśmy twoje zamówienie!",
+  "mail.weHopeYouHaveFun": "Obecnie finalizujemy wszystkie dane dotyczące wydania. Gdy ten proces zostanie zakończony, otrzymasz powiadomienie, że twój PDF jest gotowy do druku i wysyłki. Od tego momentu masz 36 godzin na wprowadzenie zmian w swoich kartach lub wybór ich natychmiastowego druku i wysyłki.",
   "mail.greatNewsMainDigital": "Otrzymaliśmy Twoje zamówienie!",
   "mail.weHopeYouHaveFunMainDigital": "Cyfrowe wersje twoich playlist są właśnie tworzone. Potwierdzamy wszystkie dane dotyczące wydania i powinieneś je otrzymać e-mailem w ciągu najbliższych 24 godzin. Mamy nadzieję, że będziesz się świetnie bawić z muzyką! Jeśli masz dalsze pytania, nie wahaj się napisać do nas przez formularz kontaktowy na naszej stronie.",
   "mail.greatNewsDigital": "Dobre wieści! Twoje karty QR do playlisty zostały przetworzone na PDF. Możesz je pobrać, klikając przycisk poniżej.",
@@ -369,5 +369,8 @@
   "mail.leaveReview": "Zostaw recenzję",
   "mail.unsubscribe": "Wypisz się",
   "mail.correctionLink": "Zauważyłeś błąd lub chcesz coś zmienić? Popraw je tutaj:",
-  "mail.correctionButton": "Zauważyłeś błąd lub chcesz coś zmienić? Popraw to tutaj"
+  "mail.correctionButton": "Zauważyłeś błąd lub chcesz coś zmienić? Popraw to tutaj",
+  "mail.weHopeYouHaveFun2": "Mamy nadzieję, że będziesz się świetnie bawić z muzyką! Jeśli masz dalsze pytania, napisz do nas przez formularz kontaktowy na naszej stronie.",
+  "mail.housenumber": "Numer domu",
+  "mail.invoiceHousenumber": "Numer domu na fakturze"
 }

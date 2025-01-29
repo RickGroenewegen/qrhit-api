@@ -1,8 +1,8 @@
 {
   "mail.mailSubject": "Nous avons reçu la commande {{ orderId }} !",
-  "mail.greatNews": "Nous avons reçu ta commande ! Les cartes seront expédiées une fois prêtes. Tu recevras aussi un lien de suivi.",
+  "mail.greatNews": "Nous avons reçu ta commande !",
   "mail.belowAreDetails": "Ci-dessous, vos détails de commande. Les cartes seront envoyées à l'adresse suivante",
-  "mail.weHopeYouHaveFun": "Nous confirmons actuellement toutes les dates de sortie. Une fois cela fait, tu recevras la version numérique gratuite en attendant que les vraies cartes arrivent par la poste. Tu devrais recevoir la version numérique par e-mail dans les 24 heures. Nous espérons que tu t'amuseras beaucoup avec la musique ! Si tu as d'autres questions, n'hésite pas à nous envoyer un mail via le formulaire de contact sur notre site.",
+  "mail.weHopeYouHaveFun": "Nous finalisons actuellement toutes les données de sortie. Une fois ce processus terminé, tu recevras une notification indiquant que ton PDF est prêt à être imprimé et expédié. À partir de ce moment, tu auras 36 heures pour apporter des modifications à tes cartes ou choisir de les faire imprimer & expédier immédiatement.",
   "mail.greetings": "Cordialement",
   "mail.orderInformation": "Informations de commande",
   "mail.orderNumber": "Numéro de commande",
@@ -374,5 +374,8 @@
   "mail.leaveReview": "Laisse un avis",
   "mail.unsubscribe": "Se désabonner",
   "mail.correctionLink": "Vu une erreur ou envie de changer? Corrige-les ici :",
-  "mail.correctionButton": "Vu une erreur ou envie de changer? Corrige-le ici"
+  "mail.correctionButton": "Vu une erreur ou envie de changer? Corrige-le ici",
+  "mail.weHopeYouHaveFun2": "Nous espérons que tu t'amuses bien avec la musique ! Si tu as d'autres questions, n'hésite pas à nous écrire via le formulaire de contact sur notre site.",
+  "mail.housenumber": "Numéro de maison",
+  "mail.invoiceHousenumber": "Numéro de maison de facturation"
 }

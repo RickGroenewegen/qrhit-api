@@ -3,10 +3,10 @@
   "mail.mailSubjectDigital": "这是你的'{{ playlist }}'的PDF！",
   "mail.mailSubjectVoucher": "这是你的礼品券！",
   "mail.mailSubjectVoucherPhysical": "感谢你订购礼品券！",
-  "mail.greatNews": "我们已收到你的订单！卡片准备好后会寄给你。你也会收到一个追踪链接。",
+  "mail.greatNews": "我们已收到您的订单！",
   "mail.voucherMessage": "感谢你订购礼品券！我们已将券的PDF附在邮件中。你可以打印出来送给幸运的收件人。",
   "mail.voucherMessagePrinter": "感谢你订购礼品券！券会寄到你的地址。我们也附上了电子版PDF，以防实物券没及时到。",
-  "mail.weHopeYouHaveFun": "我们正在确认所有发布数据。完成后你会收到免费的电子版，等实物卡片邮寄到。电子版会在24小时内通过邮件发送。希望你享受音乐！如有问题请通过网站联系表联系我们。",
+  "mail.weHopeYouHaveFun": "我们目前正在完成所有发布数据。一旦这个过程完成，你会收到通知，你的PDF已准备好打印和发货。从那一刻起，你有36小时来修改你的卡片或选择立即打印和发货。",
   "mail.greatNewsMainDigital": "我们已收到你的订单！",
   "mail.weHopeYouHaveFunMainDigital": "你的播放列表的电子版正在制作中。我们正在确认所有发布数据，你将在24小时内通过邮件收到。希望你享受音乐！如有问题请通过网站联系表联系我们。",
   "mail.greatNewsDigital": "好消息！你的播放列表的QR卡已处理成PDF。点击下面的按钮下载。",
@@ -365,5 +365,8 @@
   "mail.leaveReview": "留下评论",
   "mail.unsubscribe": "取消订阅",
   "mail.correctionLink": "发现错误或想更改？在这里更正：",
-  "mail.correctionButton": "发现错误或想更改？在这里更正"
+  "mail.correctionButton": "发现错误或想更改？在这里更正",
+  "mail.weHopeYouHaveFun2": "希望你有很多音乐乐趣！如果你有任何其他问题，请通过我们网站的联系表格给我们发邮件。",
+  "mail.housenumber": "门牌号",
+  "mail.invoiceHousenumber": "发票门牌号"
 }
