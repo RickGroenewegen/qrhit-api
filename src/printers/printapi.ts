@@ -201,11 +201,9 @@ class PrintAPI {
             )
           );
 
-          console.log(111, response.data);
-
           if (response.data.trackingUrl?.length > 0) {
             trackingLink = response.data.trackingUrl;
-            const pdfPath = await this.createInvoice(response.data, payment);
+            const pdfPath = await this.createInvoice(payment);
             this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
             this.logger.log(
               magenta(
@@ -329,9 +327,6 @@ class PrintAPI {
   public startCron(): void {
     new CronJob('*/10 * * * *', async () => {
       await this.getAuthToken(true);
-    }).start();
-    new CronJob('0 0 * * *', async () => {
-      await this.updateFeaturedPlaylists();
     }).start();
   }
 
@@ -871,7 +866,7 @@ class PrintAPI {
     };
   }
 
-  private async createInvoice(order: any, payment: any): Promise<string> {
+  private async createInvoice(payment: any): Promise<string> {
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     const invoiceUrl = `${process.env['API_URI']}/invoice/${payment.paymentId}`;

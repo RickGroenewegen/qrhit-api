@@ -777,9 +777,6 @@ class PrintEnBind {
     );
 
     if (trackingLink.length > 0) {
-      const pdfPath = await this.createInvoice(payment);
-      //this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
-
       // Update printApiTrackingLink
       await this.prisma.payment.update({
         where: { id: payment.paymentId },
@@ -854,8 +851,7 @@ class PrintEnBind {
           printApiStatus: 'Created',
           printApiShipped: false,
           printApiOrderId: {
-            not: null,
-            notIn: ['', undefined],
+            notIn: [''],
           },
         },
         select: {
@@ -878,9 +874,54 @@ class PrintEnBind {
         );
 
         for (const order of unshippedOrders) {
-          const orderStatus = await this.getOrderStatus(order.printApiOrderId);
-          console.log(111, order);
-          console.log(222, orderStatus);
+          const payment = await this.prisma.payment.findUnique({
+            where: { paymentId: order.paymentId },
+          });
+
+          if (payment) {
+            const orderStatus = await this.getOrderStatus(
+              order.printApiOrderId
+            );
+
+            if (orderStatus.status == 'Verzonden' || true) {
+              this.logger.log(
+                color.blue.bold(
+                  `Order ${color.white.bold(
+                    order.printApiOrderId
+                  )} has been shipped`
+                )
+              );
+
+              // Update order status
+              await this.prisma.payment.update({
+                where: { id: order.id },
+                data: {
+                  printApiShipped: true,
+                  printApiStatus: 'Shipped',
+                },
+              });
+
+              if (
+                (payment.printApiTrackingLink &&
+                  payment.printApiTrackingLink!.length > 0) ||
+                true
+              ) {
+                const pdfPath = await this.createInvoice(payment);
+                this.mail.sendTrackingEmail(
+                  payment,
+                  payment.printApiTrackingLink!,
+                  pdfPath
+                );
+                this.logger.log(
+                  color.blue.bold(
+                    `Sent tracking email for order ${color.white.bold(
+                      order.printApiOrderId
+                    )} (${color.white.bold(payment.printApiTrackingLink)})`
+                  )
+                );
+              }
+            }
+          }
         }
       } else {
         this.logger.log(color.blue.bold('No unshipped orders found'));
