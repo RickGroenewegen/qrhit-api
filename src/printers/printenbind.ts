@@ -875,20 +875,11 @@ class PrintEnBind {
             )} unshipped orders`
           )
         );
-        
+
         for (const order of unshippedOrders) {
           const orderStatus = await this.getOrderStatus(order.printApiOrderId);
-          this.logger.log(color.blue(`Order ID: ${color.white.bold(order.printApiOrderId)}`));
-          this.logger.log(color.blue(`Payment ID: ${color.white.bold(order.paymentId)}`));
-          this.logger.log(color.blue(`Customer: ${color.white.bold(order.fullname)} (${order.email})`));
-          this.logger.log(color.blue(`Created: ${color.white.bold(order.createdAt.toISOString())}`));
-          if (orderStatus) {
-            this.logger.log(color.blue(`Status: ${color.white.bold(orderStatus.status)}`));
-            this.logger.log(color.blue(`Amount: ${color.white.bold(orderStatus.amount)}`));
-          } else {
-            this.logger.log(color.red.bold('Failed to fetch order status'));
-          }
-          this.logger.log('---');
+          console.log(111, order);
+          console.log(222, orderStatus);
         }
       } else {
         this.logger.log(color.blue.bold('No unshipped orders found'));
