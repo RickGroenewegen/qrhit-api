@@ -260,7 +260,7 @@ class Suggestion {
           data: { eligableForPrinter: true, eligableForPrinterAt: new Date() },
         });
 
-        this.checkIfReadyForPrinter(paymentId);
+        this.checkIfReadyForPrinter(paymentId, clientIp);
 
         return true;
       }
@@ -358,7 +358,8 @@ class Suggestion {
   public async processCorrections(
     paymentId: string,
     userHash: string,
-    playlistId: string
+    playlistId: string,
+    clientIp: string
   ): Promise<boolean> {
     try {
       // First verify ownership
@@ -594,8 +595,6 @@ class Suggestion {
           },
         });
 
-        console.log(111, suggestions[0].playlistType);
-
         let hasPhysicalPlaylists = suggestions.some(
           (suggestion) => suggestion.playlistType === 'physical'
         );
@@ -606,11 +605,12 @@ class Suggestion {
           '',
           '',
           this.mollie,
-          true // Force finalize
+          true, // Force finalize
+          true // Skip main mail
         );
 
         if (hasPhysicalPlaylists) {
-          this.checkIfReadyForPrinter(paymentId);
+          this.checkIfReadyForPrinter(paymentId, clientIp);
         }
       } else {
         this.logger.log(
@@ -644,8 +644,8 @@ class Suggestion {
         where: { paymentId },
         select: {
           id: true,
-          canBeSentToPrinterAt: true
-        }
+          canBeSentToPrinterAt: true,
+        },
       });
 
       if (!payment) {
@@ -653,13 +653,13 @@ class Suggestion {
       }
 
       // Add 24 hours to canBeSentToPrinterAt
-      const newPrinterDate = payment.canBeSentToPrinterAt 
-        ? new Date(payment.canBeSentToPrinterAt.getTime() + (24 * 60 * 60 * 1000))
-        : new Date(Date.now() + (24 * 60 * 60 * 1000));
+      const newPrinterDate = payment.canBeSentToPrinterAt
+        ? new Date(payment.canBeSentToPrinterAt.getTime() + 24 * 60 * 60 * 1000)
+        : new Date(Date.now() + 24 * 60 * 60 * 1000);
 
       await this.prisma.payment.update({
         where: { id: payment.id },
-        data: { canBeSentToPrinterAt: newPrinterDate }
+        data: { canBeSentToPrinterAt: newPrinterDate },
       });
 
       return true;
@@ -669,7 +669,7 @@ class Suggestion {
     }
   }
 
-  private async checkIfReadyForPrinter(paymentId: string) {
+  private async checkIfReadyForPrinter(paymentId: string, clientIp: string) {
     // See if all physical playlists are ready for printing
     const allPhysicalPlaylistsReady = await this.prisma.$queryRaw<any[]>`
             SELECT COUNT(*) as count,
@@ -699,7 +699,7 @@ class Suggestion {
       this.logger.log(
         color.blue.bold('All physical playlists are ready for printing')
       );
-      this.generator.sendToPrinter(paymentId);
+      this.generator.sendToPrinter(paymentId, clientIp);
     }
   }
 

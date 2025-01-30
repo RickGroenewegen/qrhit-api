@@ -232,7 +232,7 @@ class PrintEnBind {
       city?: string;
       countrycode: string;
     },
-    logging: boolean = false,
+    logging: boolean = true,
     cache: boolean = true
   ): Promise<
     ApiResult & {
@@ -303,14 +303,8 @@ class PrintEnBind {
             body: JSON.stringify(items[i]),
           }
         );
-        
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
 
         const firstResponse = await response.clone().json();
-
-        console.log(111, firstResponse);
 
         if (logging) {
           apiCalls.push({
@@ -324,27 +318,18 @@ class PrintEnBind {
 
         orderId = response.headers.get('location')?.split('/')[1];
 
-        if (!orderId) {
-          throw 'Unable to create initial PrinterAPI order';
-        }
+        if (orderId) {
+          physicalOrderCreated = true;
 
-        physicalOrderCreated = true;
-
-        if (logging) {
-          this.logger.log(
-            color.blue.bold(
-              `Created order: ${color.white.bold(
-                orderId
-              )} and added first article`
-            )
-          );
-        }
-
-        if (!orderId) {
-          return {
-            success: false,
-            error: 'No order ID received in response',
-          };
+          if (logging) {
+            this.logger.log(
+              color.blue.bold(
+                `Created order: ${color.white.bold(
+                  orderId
+                )} and added first article`
+              )
+            );
+          }
         }
       } else if (items[i].type == 'physical' && physicalOrderCreated) {
         const articleResponse = await fetch(
@@ -358,10 +343,6 @@ class PrintEnBind {
             body: JSON.stringify(items[i]),
           }
         );
-
-        if (!articleResponse.ok) {
-          throw new Error(`HTTP error! status: ${articleResponse.status}`);
-        }
 
         if (logging) {
           apiCalls.push({
@@ -445,10 +426,6 @@ class PrintEnBind {
         }
       );
 
-      if (!addDeliveryResult.ok) {
-        throw new Error(`HTTP error! status: ${addDeliveryResult.status}`);
-      }
-
       const addDelivery = await addDeliveryResult.json();
 
       if (logging) {
@@ -527,23 +504,29 @@ class PrintEnBind {
       );
     }
 
-    const result = {
-      success: true,
-      data: {
-        orderId,
-        total,
-        shipping,
-        handling,
-        taxRateShipping: taxRate,
-        taxRate,
-        price,
-        payment,
-      },
+    let result = {
+      success: false,
       ...(logging ? { apiCalls } : {}),
     };
 
-    // Cache the successful result for 1 hour (3600 seconds)
-    await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+    if (physicalOrderCreated) {
+      const result = {
+        success: true,
+        data: {
+          orderId,
+          total,
+          shipping,
+          handling,
+          taxRateShipping: taxRate,
+          taxRate,
+          price,
+          payment,
+        },
+        ...(logging ? { apiCalls } : {}),
+      };
+      // Cache the successful result for 1 hour (3600 seconds)
+      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+    }
 
     return result;
   }
@@ -681,10 +664,6 @@ class PrintEnBind {
         }
       );
 
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-
       const responseBody = await response
         .clone()
         .json()
@@ -769,16 +748,18 @@ class PrintEnBind {
     let finalApiCalls = result.apiCalls || [];
 
     if (
-      (process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') == -1 &&
+      result.success &&
+      ((process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') == -1 &&
         process.env['ENVIRONMENT'] === 'production') ||
-      (process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') > -1 &&
-        process.env['ENVIRONMENT'] === 'development')
+        (process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') > -1 &&
+          process.env['ENVIRONMENT'] === 'development'))
     ) {
       // const finishResult = await this.finishOrder(
       //   result.data.orderId,
       //   finalApiCalls
       // );
       // finalApiCalls = finishResult.apiCalls || [];
+
       this.logger.log(
         color.blue.bold(
           `Finished order ${color.white.bold(result.data.orderId)}`
@@ -786,43 +767,54 @@ class PrintEnBind {
       );
     }
 
-    const deliveryResponse = await fetch(
-      `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${result.data.orderId}`,
-      {
-        method: 'GET',
-        headers: { Authorization: authToken! },
+    if (result.success) {
+      const deliveryResponse = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${result.data.orderId}`,
+        {
+          method: 'GET',
+          headers: { Authorization: authToken! },
+        }
+      );
+
+      const delivery = await deliveryResponse.json();
+
+      const trackingLink = delivery.tracktrace || '';
+
+      this.logger.log(
+        color.blue.bold(
+          `Tracking link for order ${color.white.bold(
+            result.data.orderId
+          )} is: ${color.white.bold(trackingLink)}`
+        )
+      );
+
+      if (trackingLink.length > 0) {
+        // Update printApiTrackingLink
+        await this.prisma.payment.update({
+          where: { id: payment.paymentId },
+          data: {
+            printApiTrackingLink: trackingLink,
+          },
+        });
       }
-    );
 
-    const delivery = await deliveryResponse.json();
-
-    const trackingLink = delivery.tracktrace || '';
-
-    this.logger.log(
-      color.blue.bold(
-        `Tracking link for order ${color.white.bold(
-          result.data.orderId
-        )} is: ${color.white.bold(trackingLink)}`
-      )
-    );
-
-    if (trackingLink.length > 0) {
-      // Update printApiTrackingLink
-      await this.prisma.payment.update({
-        where: { id: payment.paymentId },
-        data: {
-          printApiTrackingLink: trackingLink,
+      return {
+        success: true,
+        request: '',
+        response: {
+          apiCalls: finalApiCalls,
+          id: result.data.orderId,
         },
-      });
+      };
+    } else {
+      return {
+        success: false,
+        request: '',
+        response: {
+          apiCalls: finalApiCalls,
+        },
+      };
     }
-
-    return {
-      request: '',
-      response: {
-        apiCalls: finalApiCalls,
-        id: result.data.orderId,
-      },
-    };
   }
 
   private async createInvoice(payment: any): Promise<string> {

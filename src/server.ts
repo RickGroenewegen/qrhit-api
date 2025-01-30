@@ -382,7 +382,8 @@ class Server {
         this.suggestion.processCorrections(
           request.params.paymentId,
           request.params.userHash,
-          request.params.playlistId
+          request.params.playlistId,
+          request.clientIp
         );
         return { success: true };
       }
@@ -996,7 +997,10 @@ class Server {
     );
 
     this.fastify.post('/create_order', async (request: any, _reply) => {
-      return await this.generator.sendToPrinter(request.body.paymentId);
+      return await this.generator.sendToPrinter(
+        request.body.paymentId,
+        request.clientIp
+      );
     });
 
     if (process.env['ENVIRONMENT'] == 'development') {
