@@ -475,6 +475,10 @@ class PrintEnBind {
       const delivery: any = await deliveryResponse.json();
       const taxModifier = 1 + taxRate / 100;
 
+      console.log(1111, items);
+      console.log(2222, order);
+      console.log(3333, delivery);
+
       supplier += parseFloat(
         (parseFloat(order.amount) * taxModifier).toFixed(2)
       );
@@ -761,11 +765,11 @@ class PrintEnBind {
         (process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') > -1 &&
           process.env['ENVIRONMENT'] === 'development'))
     ) {
-      // const finishResult = await this.finishOrder(
-      //   result.data.orderId,
-      //   finalApiCalls
-      // );
-      // finalApiCalls = finishResult.apiCalls || [];
+      const finishResult = await this.finishOrder(
+        result.data.orderId,
+        finalApiCalls
+      );
+      finalApiCalls = finishResult.apiCalls || [];
 
       this.logger.log(
         color.blue.bold(
