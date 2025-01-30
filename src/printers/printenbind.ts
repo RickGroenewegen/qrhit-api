@@ -291,8 +291,6 @@ class PrintEnBind {
           totalProductPriceWithoutVAT += productPriceWithoutVAT;
         }
 
-        console.log(1111, items);
-
         // Create initial order with first article
         const response = await fetch(
           `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
@@ -388,7 +386,7 @@ class PrintEnBind {
             (itemPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)
           );
 
-          totalProductPriceWithoutVAT += productPriceWithoutVAT;
+          //totalProductPriceWithoutVAT += productPriceWithoutVAT;
           total += itemPrice;
           price += parseFloat(productPriceWithoutVAT.toFixed(2));
 
@@ -474,10 +472,6 @@ class PrintEnBind {
       const order: any = await orderResponse.json();
       const delivery: any = await deliveryResponse.json();
       const taxModifier = 1 + taxRate / 100;
-
-      console.log(1111, items);
-      console.log(2222, order);
-      console.log(3333, delivery);
 
       supplier += parseFloat(
         (parseFloat(order.amount) * taxModifier).toFixed(2)
@@ -602,6 +596,9 @@ class PrintEnBind {
             '',
             item
           );
+          orderItems.push(orderItem);
+        } else if (item.productType == 'giftcard') {
+          const orderItem = await this.createOrderItem(0, '', item);
           orderItems.push(orderItem);
         }
       }

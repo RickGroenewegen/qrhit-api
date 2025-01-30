@@ -274,8 +274,6 @@ class Generator {
       ).toFixed(2)} besteld.`;
     }
 
-    console.log(111, payment);
-
     // Pushover
     this.pushover.sendMessage(
       {
