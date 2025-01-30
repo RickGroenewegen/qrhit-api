@@ -1,5 +1,5 @@
 import Log from '../logger';
-import { MAX_CARDS } from '../config/constants';
+import { MAX_CARDS, MAX_CARDS_PHYSICAL } from '../config/constants';
 import PrismaInstance from '../prisma';
 import Cache from '../cache';
 import { ApiResult } from '../interfaces/ApiResult';
@@ -146,9 +146,12 @@ class PrintEnBind {
   ) {
     let orderType = null;
     let digitalInt = digital ? '1' : '0';
-    if (numberOfTracks > MAX_CARDS) {
-      numberOfTracks = MAX_CARDS;
+    let maxCards = digital ? MAX_CARDS : MAX_CARDS_PHYSICAL;
+
+    if (numberOfTracks > maxCards) {
+      numberOfTracks = maxCards;
     }
+
     let cacheKey = `orderType_${numberOfTracks}_${digitalInt}_${type}`;
     if (digital) {
       // There is just one digital product
@@ -268,6 +271,8 @@ class PrintEnBind {
     const taxRate = (await this.data.getTaxRate(customerInfo.countrycode))!;
     let physicalOrderCreated: boolean = false;
     let orderId = null;
+    let totalItems = items.length;
+    let totalItemsSuccess = 0;
 
     // Add remaining articles
     for (let i = 0; i < items.length; i++) {
@@ -315,23 +320,19 @@ class PrintEnBind {
 
         orderId = response.headers.get('location')?.split('/')[1];
 
-        physicalOrderCreated = true;
+        if (orderId) {
+          physicalOrderCreated = true;
 
-        if (logging) {
-          this.logger.log(
-            color.blue.bold(
-              `Created order: ${color.white.bold(
-                orderId
-              )} and added first article`
-            )
-          );
-        }
-
-        if (!orderId) {
-          return {
-            success: false,
-            error: 'No order ID received in response',
-          };
+          if (logging) {
+            this.logger.log(
+              color.blue.bold(
+                `Created order: ${color.white.bold(
+                  orderId
+                )} and added first article`
+              )
+            );
+          }
+          totalItemsSuccess++;
         }
       } else if (items[i].type == 'physical' && physicalOrderCreated) {
         const articleResponse = await fetch(
@@ -364,9 +365,7 @@ class PrintEnBind {
           );
         }
 
-        if (!articleResponse.ok) {
-          throw new Error(`Failed to add article ${i + 1}`);
-        }
+        totalItemsSuccess++;
       } else if (items[i].type == 'digital') {
         const orderType = await this.getOrderType(
           items[i].numberOfTracks,
@@ -391,6 +390,9 @@ class PrintEnBind {
 
           totalProductPriceWithoutVAT += productPriceWithoutVAT;
           total += itemPrice;
+          price += parseFloat(productPriceWithoutVAT.toFixed(2));
+
+          totalItemsSuccess++;
         }
       }
     }
@@ -473,6 +475,10 @@ class PrintEnBind {
       const delivery: any = await deliveryResponse.json();
       const taxModifier = 1 + taxRate / 100;
 
+      console.log(1111, items);
+      console.log(2222, order);
+      console.log(3333, delivery);
+
       supplier += parseFloat(
         (parseFloat(order.amount) * taxModifier).toFixed(2)
       );
@@ -506,23 +512,30 @@ class PrintEnBind {
       );
     }
 
-    const result = {
-      success: true,
-      data: {
-        orderId,
-        total,
-        shipping,
-        handling,
-        taxRateShipping: taxRate,
-        taxRate,
-        price,
-        payment,
-      },
+    let result = {
+      success: false,
+      data: {},
       ...(logging ? { apiCalls } : {}),
     };
 
-    // Cache the successful result for 1 hour (3600 seconds)
-    await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+    if (totalItemsSuccess == totalItems) {
+      result = {
+        success: true,
+        data: {
+          orderId,
+          total,
+          shipping,
+          handling,
+          taxRateShipping: taxRate,
+          taxRate,
+          price,
+          payment,
+        },
+        ...(logging ? { apiCalls } : {}),
+      };
+      // Cache the successful result for 1 hour (3600 seconds)
+      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+    }
 
     return result;
   }
@@ -532,7 +545,12 @@ class PrintEnBind {
     fileUrl: string = '',
     item: any
   ): Promise<any> {
-    const numberOfPages = numberOfTracks * 2;
+    let numberOfPages = numberOfTracks * 2;
+
+    if (numberOfPages > 2000) {
+      numberOfPages = 2000;
+    }
+
     let oddPages = Array.from(
       { length: numberOfPages },
       (_, i) => i + 1
@@ -588,10 +606,12 @@ class PrintEnBind {
         }
       }
 
-      return await this.processOrderRequest(orderItems, {
+      const result = await this.processOrderRequest(orderItems, {
         email: params.email,
         countrycode: params.countrycode,
       });
+
+      return result;
     } catch (error) {
       this.logger.log(color.red.bold(`Error calculating order: ${error}`));
       return {
@@ -734,10 +754,11 @@ class PrintEnBind {
     let finalApiCalls = result.apiCalls || [];
 
     if (
-      (process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') == -1 &&
+      result.success &&
+      ((process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') == -1 &&
         process.env['ENVIRONMENT'] === 'production') ||
-      (process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') > -1 &&
-        process.env['ENVIRONMENT'] === 'development')
+        (process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') > -1 &&
+          process.env['ENVIRONMENT'] === 'development'))
     ) {
       const finishResult = await this.finishOrder(
         result.data.orderId,
@@ -751,43 +772,54 @@ class PrintEnBind {
       );
     }
 
-    const deliveryResponse = await fetch(
-      `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${result.data.orderId}`,
-      {
-        method: 'GET',
-        headers: { Authorization: authToken! },
+    if (result.success) {
+      const deliveryResponse = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${result.data.orderId}`,
+        {
+          method: 'GET',
+          headers: { Authorization: authToken! },
+        }
+      );
+
+      const delivery = await deliveryResponse.json();
+
+      const trackingLink = delivery.tracktrace || '';
+
+      this.logger.log(
+        color.blue.bold(
+          `Tracking link for order ${color.white.bold(
+            result.data.orderId
+          )} is: ${color.white.bold(trackingLink)}`
+        )
+      );
+
+      if (trackingLink.length > 0) {
+        // Update printApiTrackingLink
+        await this.prisma.payment.update({
+          where: { id: payment.paymentId },
+          data: {
+            printApiTrackingLink: trackingLink,
+          },
+        });
       }
-    );
 
-    const delivery = await deliveryResponse.json();
-
-    const trackingLink = delivery.tracktrace_url || '';
-
-    this.logger.log(
-      color.blue.bold(
-        `Tracking link for order ${color.white.bold(
-          result.data.orderId
-        )} is: ${color.white.bold(trackingLink)}`
-      )
-    );
-
-    if (trackingLink.length > 0) {
-      // Update printApiTrackingLink
-      await this.prisma.payment.update({
-        where: { paymentId: payment.paymentId },
-        data: {
-          printApiTrackingLink: trackingLink,
+      return {
+        success: true,
+        request: '',
+        response: {
+          apiCalls: finalApiCalls,
+          id: result.data.orderId,
         },
-      });
+      };
+    } else {
+      return {
+        success: false,
+        request: '',
+        response: {
+          apiCalls: finalApiCalls,
+        },
+      };
     }
-
-    return {
-      request: '',
-      response: {
-        apiCalls: finalApiCalls,
-        id: result.data.orderId,
-      },
-    };
   }
 
   private async createInvoice(payment: any): Promise<string> {

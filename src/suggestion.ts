@@ -22,7 +22,16 @@ class Suggestion {
     userHash: string,
     playlistId: string,
     digital: boolean = true
-  ): Promise<any[]> {
+  ): Promise<any> {
+    const payment = await this.prisma.payment.findFirst({
+      select: {
+        canBeSentToPrinterAt: true,
+      },
+      where: {
+        paymentId,
+      },
+    });
+
     const tracks = await this.prisma.$queryRaw<any[]>`
       SELECT 
         t.id,
@@ -56,7 +65,10 @@ class Suggestion {
       AND pl.playlistId = ${playlistId}
       AND t.manuallyChecked = true
     `;
-    return tracks;
+    return {
+      suggestions: tracks,
+      metadata: { payment },
+    };
   }
 
   private async verifyPaymentOwnership(
@@ -248,7 +260,7 @@ class Suggestion {
           data: { eligableForPrinter: true, eligableForPrinterAt: new Date() },
         });
 
-        this.checkIfReadyForPrinter(paymentId);
+        this.checkIfReadyForPrinter(paymentId, clientIp);
 
         return true;
       }
@@ -346,7 +358,8 @@ class Suggestion {
   public async processCorrections(
     paymentId: string,
     userHash: string,
-    playlistId: string
+    playlistId: string,
+    clientIp: string
   ): Promise<boolean> {
     try {
       // First verify ownership
@@ -582,8 +595,6 @@ class Suggestion {
           },
         });
 
-        console.log(111, suggestions[0].playlistType);
-
         let hasPhysicalPlaylists = suggestions.some(
           (suggestion) => suggestion.playlistType === 'physical'
         );
@@ -594,11 +605,12 @@ class Suggestion {
           '',
           '',
           this.mollie,
-          true // Force finalize
+          true, // Force finalize
+          true // Skip main mail
         );
 
         if (hasPhysicalPlaylists) {
-          this.checkIfReadyForPrinter(paymentId);
+          this.checkIfReadyForPrinter(paymentId, clientIp);
         }
       } else {
         this.logger.log(
@@ -613,7 +625,51 @@ class Suggestion {
     }
   }
 
-  private async checkIfReadyForPrinter(paymentId: string) {
+  public async extendPrinterDeadline(
+    paymentId: string,
+    userHash: string,
+    playlistId: string
+  ): Promise<boolean> {
+    try {
+      const { verified, paymentDbId } = await this.verifyPaymentOwnership(
+        paymentId,
+        userHash
+      );
+
+      if (!verified) {
+        return false;
+      }
+
+      const payment = await this.prisma.payment.findFirst({
+        where: { paymentId },
+        select: {
+          id: true,
+          canBeSentToPrinterAt: true,
+        },
+      });
+
+      if (!payment) {
+        return false;
+      }
+
+      // Add 24 hours to canBeSentToPrinterAt
+      const newPrinterDate = payment.canBeSentToPrinterAt
+        ? new Date(payment.canBeSentToPrinterAt.getTime() + 24 * 60 * 60 * 1000)
+        : new Date(Date.now() + 24 * 60 * 60 * 1000);
+
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: { canBeSentToPrinterAt: newPrinterDate },
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error extending printer deadline:', error);
+      return false;
+    }
+  }
+
+  private async checkIfReadyForPrinter(paymentId: string, clientIp: string) {
     // See if all physical playlists are ready for printing
     const allPhysicalPlaylistsReady = await this.prisma.$queryRaw<any[]>`
             SELECT COUNT(*) as count,
@@ -643,7 +699,7 @@ class Suggestion {
       this.logger.log(
         color.blue.bold('All physical playlists are ready for printing')
       );
-      this.generator.sendToPrinter(paymentId);
+      this.generator.sendToPrinter(paymentId, clientIp);
     }
   }
 

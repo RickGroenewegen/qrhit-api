@@ -382,7 +382,8 @@ class Server {
         this.suggestion.processCorrections(
           request.params.paymentId,
           request.params.userHash,
-          request.params.playlistId
+          request.params.playlistId,
+          request.clientIp
         );
         return { success: true };
       }
@@ -848,7 +849,8 @@ class Server {
 
     this.fastify.post('/order/calculate', async (request: any, _reply) => {
       try {
-        return await this.order.calculateOrder(request.body);
+        const result = await this.order.calculateOrder(request.body);
+        return result;
       } catch (e) {
         return { success: false };
       }
@@ -970,6 +972,18 @@ class Server {
       }
     );
 
+    this.fastify.post(
+      '/usersuggestions/:paymentId/:userHash/:playlistId/extend',
+      async (request: any, reply) => {
+        const success = await this.suggestion.extendPrinterDeadline(
+          request.params.paymentId,
+          request.params.userHash,
+          request.params.playlistId
+        );
+        return { success };
+      }
+    );
+
     this.fastify.delete(
       '/usersuggestions/:paymentId/:userHash/:playlistId/:trackId',
       async (request: any, reply) => {
@@ -984,7 +998,10 @@ class Server {
     );
 
     this.fastify.post('/create_order', async (request: any, _reply) => {
-      return this.generator.sendToPrinter(request.body.paymentId);
+      return await this.generator.sendToPrinter(
+        request.body.paymentId,
+        request.clientIp
+      );
     });
 
     if (process.env['ENVIRONMENT'] == 'development') {

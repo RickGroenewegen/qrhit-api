@@ -1,6 +1,6 @@
 import { color, blue, white } from 'console-log-colors';
 import Logger from './logger';
-import { MAX_CARDS } from './config/constants';
+import { MAX_CARDS, MAX_CARDS_PHYSICAL } from './config/constants';
 import PrismaInstance from './prisma';
 import Utils from './utils';
 import Mollie from './mollie';
@@ -95,7 +95,7 @@ class Generator {
 
           for (const payment of payments) {
             try {
-              await this.sendToPrinter(payment.paymentId);
+              await this.sendToPrinter(payment.paymentId, '');
               this.logger.log(
                 color.green.bold(
                   `Successfully sent payment ${white.bold(
@@ -126,7 +126,8 @@ class Generator {
     ip: string,
     refreshPlaylists: string,
     mollie: Mollie,
-    forceFinalize: boolean = false
+    forceFinalize: boolean = false,
+    skipMainMail: boolean = false
   ): Promise<void> {
     this.logger.log(
       blue.bold(`Starting generation for payment: ${white.bold(paymentId)}`)
@@ -170,7 +171,7 @@ class Generator {
     }
 
     // Send the main mail for cards
-    if (productType == 'cards') {
+    if (productType == 'cards' && !skipMainMail) {
       await this.mail.sendEmail('main_' + orderType, payment, playlists);
     }
 
@@ -273,6 +274,8 @@ class Generator {
       ).toFixed(2)} besteld.`;
     }
 
+    console.log(111, payment);
+
     // Pushover
     this.pushover.sendMessage(
       {
@@ -318,8 +321,13 @@ class Generator {
     const tracks = response.data.tracks;
 
     // If there are more than 500 remove the last tracks
-    if (tracks.length > MAX_CARDS) {
+    if (playlist.orderType == 'digital' && tracks.length > MAX_CARDS) {
       tracks.splice(MAX_CARDS);
+    } else if (
+      playlist.orderType == 'physical' &&
+      tracks.length > MAX_CARDS_PHYSICAL
+    ) {
+      tracks.splice(MAX_CARDS_PHYSICAL);
     }
 
     this.logger.log(
@@ -564,7 +572,7 @@ class Generator {
     }
   }
 
-  public async sendToPrinter(paymentId: string) {
+  public async sendToPrinter(paymentId: string, clientIp: string) {
     let printApiOrderId = '';
     let printApiOrderRequest = '';
     let printApiOrderResponse = '';
@@ -612,6 +620,7 @@ class Generator {
         physicalPlaylists,
         playlists[0].productType
       );
+
       printApiOrderId = orderData.response.id;
       printApiOrderRequest = JSON.stringify(orderData.request);
       printApiOrderResponse = JSON.stringify(orderData.response);
@@ -629,11 +638,30 @@ class Generator {
         },
       });
 
-      this.logger.log(
-        color.blue.bold(
-          `Order sent to printer for payment: ${white.bold(paymentId)}`
-        )
-      );
+      if (orderData.success) {
+        this.logger.log(
+          color.green.bold(
+            `Order sent to printer for payment: ${white.bold(paymentId)}`
+          )
+        );
+      } else {
+        // Pushover
+        this.pushover.sendMessage(
+          {
+            title: 'Fout tijdens Print&Bind bestelling',
+            message: `Er is een fout opgetreden bi het maken van een Print&Bind bestelling voor betaling: ${paymentId}`,
+            sound: 'incoming',
+          },
+          clientIp
+        );
+        this.logger.log(
+          color.red.bold(
+            `There was an error while sending order ${white.bold(
+              paymentId
+            )} to the printer`
+          )
+        );
+      }
     }
   }
 

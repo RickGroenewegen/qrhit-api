@@ -29,7 +29,7 @@
 	"mail.trackingMailSubject": "Your QRSong! order {{ orderId }} has been shipped!",
 	"mail.finalizedMailSubject": "We invite you to review playlist '{{ playlist }}'",
     "mail.orderShipped": "Great news! Your QRSong order has been shipped. We have attached your invoice to this mail.",
-    "mail.youCanReview": "Great news! Your playlist has been reviewed by our team and would like to invite you to review your playlist as well. Your order will be processed and shipped automatically after 36 hours. If you do not wish to make any changes, you can also request the order to be printed & shipped immediately.",
+    "mail.youCanReview": "Great news! Your playlist has been reviewed by our team. We would like to invite you to review your playlist as well. Your order will be processed and shipped automatically after 36 hours. If you do not wish to make any changes, you can also request the order to be printed & shipped immediately.",
     "mail.reviewOrder": "Review your order",
 	"mail.trackOrder": "Track Your Order",
     "mail.thankYou": "We hope you have lots of musical fun! If you have any further questions do not hesitate to mail us: info@qrsong.io",
