@@ -910,7 +910,7 @@ class PrintEnBind {
               order.printApiOrderId
             );
 
-            if (orderStatus.status == 'Verzonden' || true) {
+            if (orderStatus.status == 'Verzonden') {
               this.logger.log(
                 color.blue.bold(
                   `Order ${color.white.bold(
