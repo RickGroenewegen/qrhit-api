@@ -783,7 +783,7 @@ class PrintEnBind {
 
       const delivery = await deliveryResponse.json();
 
-      const trackingLink = delivery.tracktrace || '';
+      const trackingLink = delivery.tracktrace_url || '';
 
       this.logger.log(
         color.blue.bold(
@@ -796,7 +796,7 @@ class PrintEnBind {
       if (trackingLink.length > 0) {
         // Update printApiTrackingLink
         await this.prisma.payment.update({
-          where: { id: payment.paymentId },
+          where: { paymentId: payment.paymentId },
           data: {
             printApiTrackingLink: trackingLink,
           },
