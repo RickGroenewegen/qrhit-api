@@ -970,6 +970,18 @@ class Server {
       }
     );
 
+    this.fastify.post(
+      '/usersuggestions/:paymentId/:userHash/:playlistId/extend',
+      async (request: any, reply) => {
+        const success = await this.suggestion.extendPrinterDeadline(
+          request.params.paymentId,
+          request.params.userHash,
+          request.params.playlistId
+        );
+        return { success };
+      }
+    );
+
     this.fastify.delete(
       '/usersuggestions/:paymentId/:userHash/:playlistId/:trackId',
       async (request: any, reply) => {

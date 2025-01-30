@@ -1,5 +1,5 @@
 import { format } from 'date-fns';
-import { MAX_CARDS } from './config/constants';
+import { MAX_CARDS, MAX_CARDS_PHYSICAL } from './config/constants';
 import { color, white } from 'console-log-colors';
 import axios, { AxiosRequestConfig } from 'axios';
 import { ApiResult } from './interfaces/ApiResult';
@@ -398,6 +398,7 @@ class Spotify {
       let offset = 0;
       const limit = 100;
       let maxReached = false;
+      let maxReachedPhysical = false;
 
       // if (checkCaptcha) {
       //   // Verify reCAPTCHA token
@@ -588,6 +589,9 @@ class Spotify {
             if (allTracks.length >= MAX_CARDS) {
               maxReached = true;
             }
+            if (allTracks.length >= MAX_CARDS_PHYSICAL) {
+              maxReachedPhysical = true;
+            }
             // Limit the tracks to MAX_CARDS if we have more
             allTracks = allTracks.slice(0, MAX_CARDS);
             break;
@@ -604,6 +608,7 @@ class Spotify {
         success: true,
         data: {
           maxReached,
+          maxReachedPhysical,
           totalTracks: allTracks.length,
           tracks: allTracks,
         },

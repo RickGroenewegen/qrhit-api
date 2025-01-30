@@ -1,6 +1,6 @@
 import { color, blue, white } from 'console-log-colors';
 import Logger from './logger';
-import { MAX_CARDS } from './config/constants';
+import { MAX_CARDS, MAX_CARDS_PHYSICAL } from './config/constants';
 import PrismaInstance from './prisma';
 import Utils from './utils';
 import Mollie from './mollie';
@@ -318,8 +318,13 @@ class Generator {
     const tracks = response.data.tracks;
 
     // If there are more than 500 remove the last tracks
-    if (tracks.length > MAX_CARDS) {
+    if (playlist.orderType == 'digital' && tracks.length > MAX_CARDS) {
       tracks.splice(MAX_CARDS);
+    } else if (
+      playlist.orderType == 'physical' &&
+      tracks.length > MAX_CARDS_PHYSICAL
+    ) {
+      tracks.splice(MAX_CARDS_PHYSICAL);
     }
 
     this.logger.log(

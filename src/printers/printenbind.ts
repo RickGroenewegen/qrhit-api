@@ -1,5 +1,5 @@
 import Log from '../logger';
-import { MAX_CARDS } from '../config/constants';
+import { MAX_CARDS, MAX_CARDS_PHYSICAL } from '../config/constants';
 import PrismaInstance from '../prisma';
 import axios from 'axios';
 import Cache from '../cache';
@@ -148,9 +148,12 @@ class PrintEnBind {
   ) {
     let orderType = null;
     let digitalInt = digital ? '1' : '0';
-    if (numberOfTracks > MAX_CARDS) {
-      numberOfTracks = MAX_CARDS;
+    let maxCards = digital ? MAX_CARDS : MAX_CARDS_PHYSICAL;
+
+    if (numberOfTracks > maxCards) {
+      numberOfTracks = maxCards;
     }
+
     let cacheKey = `orderType_${numberOfTracks}_${digitalInt}_${type}`;
     if (digital) {
       // There is just one digital product
@@ -532,7 +535,12 @@ class PrintEnBind {
     fileUrl: string = '',
     item: any
   ): Promise<any> {
-    const numberOfPages = numberOfTracks * 2;
+    let numberOfPages = numberOfTracks * 2;
+
+    if (numberOfPages > 2000) {
+      numberOfPages = 2000;
+    }
+
     let oddPages = Array.from(
       { length: numberOfPages },
       (_, i) => i + 1

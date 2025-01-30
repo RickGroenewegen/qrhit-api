@@ -22,7 +22,16 @@ class Suggestion {
     userHash: string,
     playlistId: string,
     digital: boolean = true
-  ): Promise<any[]> {
+  ): Promise<any> {
+    const payment = await this.prisma.payment.findFirst({
+      select: {
+        canBeSentToPrinterAt: true,
+      },
+      where: {
+        paymentId,
+      },
+    });
+
     const tracks = await this.prisma.$queryRaw<any[]>`
       SELECT 
         t.id,
@@ -56,7 +65,10 @@ class Suggestion {
       AND pl.playlistId = ${playlistId}
       AND t.manuallyChecked = true
     `;
-    return tracks;
+    return {
+      suggestions: tracks,
+      metadata: { payment },
+    };
   }
 
   private async verifyPaymentOwnership(
@@ -609,6 +621,50 @@ class Suggestion {
       return true;
     } catch (error) {
       console.error('Error processing corrections:', error);
+      return false;
+    }
+  }
+
+  public async extendPrinterDeadline(
+    paymentId: string,
+    userHash: string,
+    playlistId: string
+  ): Promise<boolean> {
+    try {
+      const { verified, paymentDbId } = await this.verifyPaymentOwnership(
+        paymentId,
+        userHash
+      );
+
+      if (!verified) {
+        return false;
+      }
+
+      const payment = await this.prisma.payment.findFirst({
+        where: { paymentId },
+        select: {
+          id: true,
+          canBeSentToPrinterAt: true
+        }
+      });
+
+      if (!payment) {
+        return false;
+      }
+
+      // Add 24 hours to canBeSentToPrinterAt
+      const newPrinterDate = payment.canBeSentToPrinterAt 
+        ? new Date(payment.canBeSentToPrinterAt.getTime() + (24 * 60 * 60 * 1000))
+        : new Date(Date.now() + (24 * 60 * 60 * 1000));
+
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: { canBeSentToPrinterAt: newPrinterDate }
+      });
+
+      return true;
+    } catch (error) {
+      console.error('Error extending printer deadline:', error);
       return false;
     }
   }
