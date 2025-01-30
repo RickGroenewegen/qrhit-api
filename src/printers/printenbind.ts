@@ -306,6 +306,8 @@ class PrintEnBind {
 
         const firstResponse = await response.clone().json();
 
+        console.log(111, firstResponse);
+
         if (logging) {
           apiCalls.push({
             method: 'POST',
@@ -317,6 +319,10 @@ class PrintEnBind {
         }
 
         orderId = response.headers.get('location')?.split('/')[1];
+
+        if (!orderId) {
+          throw 'Unable to create initial PrinterAPI order';
+        }
 
         physicalOrderCreated = true;
 
@@ -557,7 +563,7 @@ class PrintEnBind {
       return {
         type: 'physical',
         amount: item.amount,
-        product: 'losbladig',
+        product: 'losbldadig',
         number: '1',
         copies: numberOfPages.toString(),
         color: 'custom',
