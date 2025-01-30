@@ -232,7 +232,7 @@ class PrintEnBind {
       city?: string;
       countrycode: string;
     },
-    logging: boolean = true,
+    logging: boolean = false,
     cache: boolean = true
   ): Promise<
     ApiResult & {
@@ -273,6 +273,8 @@ class PrintEnBind {
     const taxRate = (await this.data.getTaxRate(customerInfo.countrycode))!;
     let physicalOrderCreated: boolean = false;
     let orderId = null;
+    let totalItems = items.length;
+    let totalItemsSuccess = 0;
 
     // Add remaining articles
     for (let i = 0; i < items.length; i++) {
@@ -330,6 +332,7 @@ class PrintEnBind {
               )
             );
           }
+          totalItemsSuccess++;
         }
       } else if (items[i].type == 'physical' && physicalOrderCreated) {
         const articleResponse = await fetch(
@@ -362,9 +365,7 @@ class PrintEnBind {
           );
         }
 
-        if (!articleResponse.ok) {
-          throw new Error(`Failed to add article ${i + 1}`);
-        }
+        totalItemsSuccess++;
       } else if (items[i].type == 'digital') {
         const orderType = await this.getOrderType(
           items[i].numberOfTracks,
@@ -389,6 +390,9 @@ class PrintEnBind {
 
           totalProductPriceWithoutVAT += productPriceWithoutVAT;
           total += itemPrice;
+          price += parseFloat(productPriceWithoutVAT.toFixed(2));
+
+          totalItemsSuccess++;
         }
       }
     }
@@ -506,11 +510,12 @@ class PrintEnBind {
 
     let result = {
       success: false,
+      data: {},
       ...(logging ? { apiCalls } : {}),
     };
 
-    if (physicalOrderCreated) {
-      const result = {
+    if (totalItemsSuccess == totalItems) {
+      result = {
         success: true,
         data: {
           orderId,
@@ -558,7 +563,7 @@ class PrintEnBind {
       return {
         type: 'physical',
         amount: item.amount,
-        product: 'losbldadig',
+        product: 'losbladig',
         number: '1',
         copies: numberOfPages.toString(),
         color: 'custom',
@@ -602,10 +607,12 @@ class PrintEnBind {
         }
       }
 
-      return await this.processOrderRequest(orderItems, {
+      const result = await this.processOrderRequest(orderItems, {
         email: params.email,
         countrycode: params.countrycode,
       });
+
+      return result;
     } catch (error) {
       this.logger.log(color.red.bold(`Error calculating order: ${error}`));
       return {

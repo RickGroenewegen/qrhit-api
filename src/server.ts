@@ -849,7 +849,8 @@ class Server {
 
     this.fastify.post('/order/calculate', async (request: any, _reply) => {
       try {
-        return await this.order.calculateOrder(request.body);
+        const result = await this.order.calculateOrder(request.body);
+        return result;
       } catch (e) {
         return { success: false };
       }
