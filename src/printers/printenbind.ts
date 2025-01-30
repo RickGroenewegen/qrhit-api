@@ -303,6 +303,10 @@ class PrintEnBind {
             body: JSON.stringify(items[i]),
           }
         );
+        
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`);
+        }
 
         const firstResponse = await response.clone().json();
 
@@ -354,6 +358,10 @@ class PrintEnBind {
             body: JSON.stringify(items[i]),
           }
         );
+
+        if (!articleResponse.ok) {
+          throw new Error(`HTTP error! status: ${articleResponse.status}`);
+        }
 
         if (logging) {
           apiCalls.push({
@@ -436,6 +444,10 @@ class PrintEnBind {
           body: JSON.stringify(deliveryData),
         }
       );
+
+      if (!addDeliveryResult.ok) {
+        throw new Error(`HTTP error! status: ${addDeliveryResult.status}`);
+      }
 
       const addDelivery = await addDeliveryResult.json();
 
@@ -668,6 +680,10 @@ class PrintEnBind {
           },
         }
       );
+
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
 
       const responseBody = await response
         .clone()
