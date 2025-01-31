@@ -1106,16 +1106,29 @@ class PrintEnBind {
     for (const countryCode of countryCodes) {
       for (let amount = 1; amount <= 10; amount++) {
         try {
-          this.logger.log(
-            color.blue.bold(
-              `Processing country: ${color.white.bold(
-                countryCode
-              )} for amount ${color.white.bold(amount)}`
-            )
-          );
+          // Check if record exists and when it was last updated
+          const existingRecord = await this.prisma.shippingCost.findFirst({
+            where: {
+              country: countryCode,
+              amount: amount,
+            },
+          });
 
-          const orderItems = [];
-          // Create items with 2000 pages each
+          const threeWeeksAgo = new Date();
+          threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
+
+          // Only proceed if record doesn't exist or is older than 3 weeks
+          if (!existingRecord || (existingRecord.updatedAt && existingRecord.updatedAt < threeWeeksAgo)) {
+            this.logger.log(
+              color.blue.bold(
+                `Processing country: ${color.white.bold(
+                  countryCode
+                )} for amount ${color.white.bold(amount)}`
+              )
+            );
+
+            const orderItems = [];
+            // Create items with 2000 pages each
           for (let i = 0; i < amount; i++) {
             orderItems.push({
               type: 'physical',
@@ -1158,23 +1171,6 @@ class PrintEnBind {
           );
 
           if (result.success) {
-            // Check if record exists and when it was last updated
-            const existingRecord = await this.prisma.shippingCost.findFirst({
-              where: {
-                country: countryCode,
-                amount: amount,
-              },
-            });
-
-            const threeWeeksAgo = new Date();
-            threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
-
-            // Only proceed if record doesn't exist or is older than 3 weeks
-            if (
-              !existingRecord ||
-              (existingRecord.updatedAt &&
-                existingRecord.updatedAt < threeWeeksAgo)
-            ) {
               if (existingRecord) {
                 await this.prisma.shippingCost.update({
                   where: { id: existingRecord.id },
@@ -1193,9 +1189,15 @@ class PrintEnBind {
                   },
                 });
               }
-            }
-
+          } else {
             this.logger.log(
+              color.blue.bold(
+                `Skipping ${color.white.bold(countryCode)} with ${color.white.bold(amount.toString())} items - record is recent enough`
+              )
+            );
+          }
+
+          this.logger.log(
               color.blue.bold(
                 `Stored shipping costs for ${color.white.bold(
                   countryCode
