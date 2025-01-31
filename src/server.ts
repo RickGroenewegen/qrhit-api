@@ -1024,6 +1024,11 @@ class Server {
         return { success: true };
       });
 
+      this.fastify.get('/calculate_shipping', async (request: any, _reply) => {
+        await this.order.calculateShippingCosts();
+        return { success: true };
+      });
+
       this.fastify.get('/fix_years', async (request: any, _reply) => {
         await this.data.fixYears();
         return { success: true };

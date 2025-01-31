@@ -53,10 +53,16 @@ class PrintEnBind {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
           // Schedule hourly cache refresh
-          const job = new CronJob('15 * * * *', async () => {
+          const trackingJob = new CronJob('15 * * * *', async () => {
             await this.handleTrackingMails();
           });
-          job.start();
+          trackingJob.start();
+
+          // Schedule weekly shipping costs update (Monday 1 AM)
+          const shippingJob = new CronJob('0 1 * * 1', async () => {
+            await this.calculateShippingCosts();
+          });
+          shippingJob.start();
         }
       });
     }
