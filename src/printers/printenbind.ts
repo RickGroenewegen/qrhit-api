@@ -913,15 +913,32 @@ class PrintEnBind {
           );
 
           if (result.success) {
-            // Store shipping costs in database
-            await this.prisma.shippingCost.create({
-              data: {
+            // Store or update shipping costs in database
+            const existingRecord = await this.prisma.shippingCost.findFirst({
+              where: {
                 country: countryCode,
                 amount: amount,
-                shipping: parseFloat(result.data.shipping.toFixed(2)),
-                handling: parseFloat(result.data.handling.toFixed(2)),
               },
             });
+
+            if (existingRecord) {
+              await this.prisma.shippingCost.update({
+                where: { id: existingRecord.id },
+                data: {
+                  shipping: parseFloat(result.data.shipping.toFixed(2)),
+                  handling: parseFloat(result.data.handling.toFixed(2)),
+                },
+              });
+            } else {
+              await this.prisma.shippingCost.create({
+                data: {
+                  country: countryCode,
+                  amount: amount,
+                  shipping: parseFloat(result.data.shipping.toFixed(2)),
+                  handling: parseFloat(result.data.handling.toFixed(2)),
+                },
+              });
+            }
 
             this.logger.log(
               color.blue.bold(
