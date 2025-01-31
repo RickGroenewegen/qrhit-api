@@ -30,22 +30,251 @@ class PrintEnBind {
   private spotify = new Spotify();
   private utils = new Utils();
   private countryCodes: string[] = [
-    'AF', 'AX', 'AL', 'DZ', 'AS', 'AD', 'AO', 'AI', 'AQ', 'AG', 'AR', 'AM', 'AW', 'AU', 'AT', 'AZ',
-    'BS', 'BH', 'BD', 'BB', 'BY', 'BE', 'BZ', 'BJ', 'BM', 'BT', 'BO', 'BQ', 'BA', 'BW', 'BV', 'BR',
-    'IO', 'BN', 'BG', 'BF', 'BI', 'KH', 'CM', 'CA', 'CV', 'KY', 'CF', 'TD', 'CL', 'CN', 'CX', 'CC',
-    'CO', 'KM', 'CG', 'CD', 'CK', 'CR', 'CI', 'HR', 'CW', 'CY', 'CZ', 'DK', 'DJ', 'DM', 'DO', 'EC',
-    'EG', 'SV', 'GQ', 'ER', 'EE', 'ET', 'FK', 'FO', 'FJ', 'FI', 'FR', 'GF', 'PF', 'TF', 'GA', 'GM',
-    'GE', 'DE', 'GH', 'GI', 'GR', 'GL', 'GD', 'GP', 'GU', 'GT', 'GG', 'GN', 'GW', 'GY', 'HT', 'HM',
-    'VA', 'HN', 'HK', 'HU', 'IS', 'IN', 'ID', 'IQ', 'IE', 'IM', 'IL', 'IT', 'JM', 'JP', 'JE', 'JO',
-    'KZ', 'KE', 'KI', 'KR', 'KW', 'KG', 'LA', 'LV', 'LB', 'LS', 'LR', 'LY', 'LI', 'LT', 'LU', 'MO',
-    'MK', 'MG', 'MW', 'MY', 'MV', 'ML', 'MT', 'MH', 'MQ', 'MR', 'MU', 'YT', 'MX', 'FM', 'MD', 'MC',
-    'MN', 'ME', 'MS', 'MA', 'MZ', 'MM', 'NA', 'NR', 'NP', 'NL', 'AN', 'NC', 'NZ', 'NI', 'NE', 'NG',
-    'NU', 'NF', 'MP', 'NO', 'OM', 'PK', 'PW', 'PS', 'PA', 'PG', 'PY', 'PE', 'PH', 'PN', 'PL', 'PT',
-    'PR', 'QA', 'RE', 'RO', 'RU', 'RW', 'BL', 'SH', 'KN', 'LC', 'MF', 'PM', 'VC', 'WS', 'SM', 'ST',
-    'SA', 'SN', 'RS', 'SC', 'SL', 'SG', 'SX', 'SK', 'SI', 'SB', 'SO', 'ZA', 'GS', 'SS', 'ES', 'LK',
-    'SR', 'SJ', 'SZ', 'SE', 'CH', 'TW', 'TJ', 'TZ', 'TH', 'TL', 'TG', 'TK', 'TO', 'TT', 'TN', 'TR',
-    'TM', 'TC', 'TV', 'UG', 'UA', 'AE', 'GB', 'US', 'UM', 'UY', 'UZ', 'VU', 'VE', 'VN', 'VG', 'VI',
-    'WF', 'EH', 'YE', 'ZM', 'ZW'
+    'AF',
+    'AX',
+    'AL',
+    'DZ',
+    'AS',
+    'AD',
+    'AO',
+    'AI',
+    'AQ',
+    'AG',
+    'AR',
+    'AM',
+    'AW',
+    'AU',
+    'AT',
+    'AZ',
+    'BS',
+    'BH',
+    'BD',
+    'BB',
+    'BY',
+    'BE',
+    'BZ',
+    'BJ',
+    'BM',
+    'BT',
+    'BO',
+    'BQ',
+    'BA',
+    'BW',
+    'BV',
+    'BR',
+    'IO',
+    'BN',
+    'BG',
+    'BF',
+    'BI',
+    'KH',
+    'CM',
+    'CA',
+    'CV',
+    'KY',
+    'CF',
+    'TD',
+    'CL',
+    'CN',
+    'CX',
+    'CC',
+    'CO',
+    'KM',
+    'CG',
+    'CD',
+    'CK',
+    'CR',
+    'CI',
+    'HR',
+    'CW',
+    'CY',
+    'CZ',
+    'DK',
+    'DJ',
+    'DM',
+    'DO',
+    'EC',
+    'EG',
+    'SV',
+    'GQ',
+    'ER',
+    'EE',
+    'ET',
+    'FK',
+    'FO',
+    'FJ',
+    'FI',
+    'FR',
+    'GF',
+    'PF',
+    'TF',
+    'GA',
+    'GM',
+    'GE',
+    'DE',
+    'GH',
+    'GI',
+    'GR',
+    'GL',
+    'GD',
+    'GP',
+    'GU',
+    'GT',
+    'GG',
+    'GN',
+    'GW',
+    'GY',
+    'HT',
+    'HM',
+    'VA',
+    'HN',
+    'HK',
+    'HU',
+    'IS',
+    'IN',
+    'ID',
+    'IQ',
+    'IE',
+    'IM',
+    'IL',
+    'IT',
+    'JM',
+    'JP',
+    'JE',
+    'JO',
+    'KZ',
+    'KE',
+    'KI',
+    'KR',
+    'KW',
+    'KG',
+    'LA',
+    'LV',
+    'LB',
+    'LS',
+    'LR',
+    'LY',
+    'LI',
+    'LT',
+    'LU',
+    'MO',
+    'MK',
+    'MG',
+    'MW',
+    'MY',
+    'MV',
+    'ML',
+    'MT',
+    'MH',
+    'MQ',
+    'MR',
+    'MU',
+    'YT',
+    'MX',
+    'FM',
+    'MD',
+    'MC',
+    'MN',
+    'ME',
+    'MS',
+    'MA',
+    'MZ',
+    'MM',
+    'NA',
+    'NR',
+    'NP',
+    'NL',
+    'AN',
+    'NC',
+    'NZ',
+    'NI',
+    'NE',
+    'NG',
+    'NU',
+    'NF',
+    'MP',
+    'NO',
+    'OM',
+    'PK',
+    'PW',
+    'PS',
+    'PA',
+    'PG',
+    'PY',
+    'PE',
+    'PH',
+    'PN',
+    'PL',
+    'PT',
+    'PR',
+    'QA',
+    'RE',
+    'RO',
+    'RU',
+    'RW',
+    'BL',
+    'SH',
+    'KN',
+    'LC',
+    'MF',
+    'PM',
+    'VC',
+    'WS',
+    'SM',
+    'ST',
+    'SA',
+    'SN',
+    'RS',
+    'SC',
+    'SL',
+    'SG',
+    'SX',
+    'SK',
+    'SI',
+    'SB',
+    'SO',
+    'ZA',
+    'GS',
+    'SS',
+    'ES',
+    'LK',
+    'SR',
+    'SJ',
+    'SZ',
+    'SE',
+    'CH',
+    'TW',
+    'TJ',
+    'TZ',
+    'TH',
+    'TL',
+    'TG',
+    'TK',
+    'TO',
+    'TT',
+    'TN',
+    'TR',
+    'TM',
+    'TC',
+    'TV',
+    'UG',
+    'UA',
+    'AE',
+    'GB',
+    'US',
+    'UM',
+    'UY',
+    'UZ',
+    'VU',
+    'VE',
+    'VN',
+    'VG',
+    'VI',
+    'WF',
+    'EH',
+    'YE',
+    'ZM',
+    'ZW',
   ];
 
   private constructor() {
@@ -870,16 +1099,21 @@ class PrintEnBind {
 
   public async processPrintApiWebhook(printApiOrderId: string) {}
 
-
   public async calculateShippingCosts(): Promise<void> {
     const countryCodes = this.countryCodes;
     const authToken = await this.getAuthToken();
 
     for (const countryCode of countryCodes) {
-      this.logger.log(color.blue.bold(`Processing country: ${color.white.bold(countryCode)}`));
-
       for (let amount = 1; amount <= 10; amount++) {
         try {
+          this.logger.log(
+            color.blue.bold(
+              `Processing country: ${color.white.bold(
+                countryCode
+              )} for amount ${color.white.bold(amount)}`
+            )
+          );
+
           const orderItems = [];
           // Create items with 2000 pages each
           for (let i = 0; i < amount; i++) {
@@ -888,9 +1122,12 @@ class PrintEnBind {
               amount: '1',
               product: 'losbladig',
               number: '1',
-              copies: '2000',
+              copies: '100',
               color: 'custom',
-              color_custom_pages: Array.from({ length: 1000 }, (_, i) => i * 2 + 1).join(','),
+              color_custom_pages: Array.from(
+                { length: 50 },
+                (_, i) => i * 2 + 1
+              ).join(','),
               size: 'custom',
               printside: 'double',
               finishing: 'loose',
@@ -899,6 +1136,8 @@ class PrintEnBind {
               size_custom_height: '60',
               check_doc: 'standard',
               delivery_method: 'post',
+              add_file_method: 'url',
+              file_url: '',
             });
           }
 
@@ -948,27 +1187,31 @@ class PrintEnBind {
 
             this.logger.log(
               color.blue.bold(
-                `Stored shipping costs for ${color.white.bold(countryCode)} with ${color.white.bold(
+                `Stored shipping costs for ${color.white.bold(
+                  countryCode
+                )} with ${color.white.bold(
                   amount.toString()
                 )} items: Shipping: ${color.white.bold(
                   result.data.shipping.toFixed(2)
-                )}, Handling: ${color.white.bold(result.data.handling.toFixed(2))}`
+                )}, Handling: ${color.white.bold(
+                  result.data.handling.toFixed(2)
+                )}`
               )
             );
           }
         } catch (error) {
           this.logger.log(
             color.red.bold(
-              `Error processing ${color.white.bold(countryCode)} with ${color.white.bold(
-                amount.toString()
-              )} items: ${error}`
+              `Error processing ${color.white.bold(
+                countryCode
+              )} with ${color.white.bold(amount.toString())} items: ${error}`
             )
           );
           continue;
         }
 
         // Add delay to avoid rate limiting
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        await new Promise((resolve) => setTimeout(resolve, 1000));
       }
     }
   }
