@@ -846,6 +846,101 @@ class PrintEnBind {
 
   public async processPrintApiWebhook(printApiOrderId: string) {}
 
+  private getCountryCodes(): string[] {
+    const countryCodes: string[] = [];
+    for (const key in this.translation.getTranslations('en')) {
+      if (key.startsWith('countries.')) {
+        countryCodes.push(key.replace('countries.', ''));
+      }
+    }
+    return countryCodes;
+  }
+
+  public async calculateShippingCosts(): Promise<void> {
+    const countryCodes = this.getCountryCodes();
+    const authToken = await this.getAuthToken();
+
+    for (const countryCode of countryCodes) {
+      this.logger.log(color.blue.bold(`Processing country: ${color.white.bold(countryCode)}`));
+
+      for (let amount = 1; amount <= 10; amount++) {
+        try {
+          const orderItems = [];
+          // Create items with 2000 pages each
+          for (let i = 0; i < amount; i++) {
+            orderItems.push({
+              type: 'physical',
+              amount: '1',
+              product: 'losbladig',
+              number: '1',
+              copies: '2000',
+              color: 'custom',
+              color_custom_pages: Array.from({ length: 1000 }, (_, i) => i * 2 + 1).join(','),
+              size: 'custom',
+              printside: 'double',
+              finishing: 'loose',
+              papertype: 'card',
+              size_custom_width: '60',
+              size_custom_height: '60',
+              check_doc: 'standard',
+              delivery_method: 'post',
+            });
+          }
+
+          // Process the order request
+          const result = await this.processOrderRequest(
+            orderItems,
+            {
+              fullname: 'Test User',
+              email: 'test@example.com',
+              address: 'Test Street',
+              housenumber: '1',
+              zipcode: '1234AB',
+              city: 'Test City',
+              countrycode: countryCode,
+            },
+            true,
+            false
+          );
+
+          if (result.success) {
+            // Store shipping costs in database
+            await this.prisma.shippingCost.create({
+              data: {
+                country: countryCode,
+                amount: amount,
+                shipping: parseFloat(result.data.shipping.toFixed(2)),
+                handling: parseFloat(result.data.handling.toFixed(2)),
+              },
+            });
+
+            this.logger.log(
+              color.green.bold(
+                `Stored shipping costs for ${color.white.bold(countryCode)} with ${color.white.bold(
+                  amount.toString()
+                )} items: Shipping: ${color.white.bold(
+                  result.data.shipping.toFixed(2)
+                )}, Handling: ${color.white.bold(result.data.handling.toFixed(2))}`
+              )
+            );
+          }
+        } catch (error) {
+          this.logger.log(
+            color.red.bold(
+              `Error processing ${color.white.bold(countryCode)} with ${color.white.bold(
+                amount.toString()
+              )} items: ${error}`
+            )
+          );
+          continue;
+        }
+
+        // Add delay to avoid rate limiting
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+  }
+
   private async getOrderStatus(orderId: string): Promise<any> {
     try {
       const authToken = await this.getAuthToken();
