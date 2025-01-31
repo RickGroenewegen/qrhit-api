@@ -287,8 +287,8 @@ class PrintEnBind {
           });
           trackingJob.start();
 
-          // Schedule weekly shipping costs update (Monday 1 AM)
-          const shippingJob = new CronJob('0 1 * * 1', async () => {
+          // Schedule monthly shipping costs update (1st day of month at 1 AM)
+          const shippingJob = new CronJob('0 1 1 * *', async () => {
             await this.calculateShippingCosts();
           });
           shippingJob.start();
@@ -1158,7 +1158,7 @@ class PrintEnBind {
           );
 
           if (result.success) {
-            // Store or update shipping costs in database
+            // Check if record exists and when it was last updated
             const existingRecord = await this.prisma.shippingCost.findFirst({
               where: {
                 country: countryCode,
@@ -1166,23 +1166,33 @@ class PrintEnBind {
               },
             });
 
-            if (existingRecord) {
-              await this.prisma.shippingCost.update({
-                where: { id: existingRecord.id },
-                data: {
-                  shipping: parseFloat(result.data.shipping.toFixed(2)),
-                  handling: parseFloat(result.data.handling.toFixed(2)),
-                },
-              });
-            } else {
-              await this.prisma.shippingCost.create({
-                data: {
-                  country: countryCode,
-                  amount: amount,
-                  shipping: parseFloat(result.data.shipping.toFixed(2)),
-                  handling: parseFloat(result.data.handling.toFixed(2)),
-                },
-              });
+            const threeWeeksAgo = new Date();
+            threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
+
+            // Only proceed if record doesn't exist or is older than 3 weeks
+            if (
+              !existingRecord ||
+              (existingRecord.updatedAt &&
+                existingRecord.updatedAt < threeWeeksAgo)
+            ) {
+              if (existingRecord) {
+                await this.prisma.shippingCost.update({
+                  where: { id: existingRecord.id },
+                  data: {
+                    shipping: parseFloat(result.data.shipping.toFixed(2)),
+                    handling: parseFloat(result.data.handling.toFixed(2)),
+                  },
+                });
+              } else {
+                await this.prisma.shippingCost.create({
+                  data: {
+                    country: countryCode,
+                    amount: amount,
+                    shipping: parseFloat(result.data.shipping.toFixed(2)),
+                    handling: parseFloat(result.data.handling.toFixed(2)),
+                  },
+                });
+              }
             }
 
             this.logger.log(
