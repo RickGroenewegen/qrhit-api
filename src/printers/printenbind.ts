@@ -611,7 +611,9 @@ class PrintEnBind {
         if (logging) {
           this.logger.log(
             color.blue.bold(
-              `Added article ${i + 1} to order ${color.white.bold(orderId)}`
+              `Added article ${color.white.bold(
+                i + 1
+              )} to order ${color.white.bold(orderId)}`
             )
           );
         }
@@ -1103,6 +1105,14 @@ class PrintEnBind {
     const countryCodes = this.countryCodes;
     const authToken = await this.getAuthToken();
 
+    this.logger.log(
+      color.blue.bold(
+        `Calculating shipping costs for ${color.white.bold(
+          countryCodes.length.toString()
+        )} countries`
+      )
+    );
+
     for (const countryCode of countryCodes) {
       for (let amount = 1; amount <= 10; amount++) {
         try {
@@ -1118,7 +1128,11 @@ class PrintEnBind {
           threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
 
           // Only proceed if record doesn't exist or is older than 3 weeks
-          if (!existingRecord || (existingRecord.updatedAt && existingRecord.updatedAt < threeWeeksAgo)) {
+          if (
+            !existingRecord ||
+            (existingRecord.updatedAt &&
+              existingRecord.updatedAt < threeWeeksAgo)
+          ) {
             this.logger.log(
               color.blue.bold(
                 `Processing country: ${color.white.bold(
@@ -1129,48 +1143,48 @@ class PrintEnBind {
 
             const orderItems = [];
             // Create items with 2000 pages each
-          for (let i = 0; i < amount; i++) {
-            orderItems.push({
-              type: 'physical',
-              amount: '1',
-              product: 'losbladig',
-              number: '1',
-              copies: '100',
-              color: 'custom',
-              color_custom_pages: Array.from(
-                { length: 50 },
-                (_, i) => i * 2 + 1
-              ).join(','),
-              size: 'custom',
-              printside: 'double',
-              finishing: 'loose',
-              papertype: 'card',
-              size_custom_width: '60',
-              size_custom_height: '60',
-              check_doc: 'standard',
-              delivery_method: 'post',
-              add_file_method: 'url',
-              file_url: '',
-            });
-          }
+            for (let i = 0; i < amount; i++) {
+              orderItems.push({
+                type: 'physical',
+                amount: '1',
+                product: 'losbladig',
+                number: '1',
+                copies: '100',
+                color: 'custom',
+                color_custom_pages: Array.from(
+                  { length: 50 },
+                  (_, i) => i * 2 + 1
+                ).join(','),
+                size: 'custom',
+                printside: 'double',
+                finishing: 'loose',
+                papertype: 'card',
+                size_custom_width: '60',
+                size_custom_height: '60',
+                check_doc: 'standard',
+                delivery_method: 'post',
+                add_file_method: 'url',
+                file_url: '',
+              });
+            }
 
-          // Process the order request
-          const result = await this.processOrderRequest(
-            orderItems,
-            {
-              fullname: 'Test User',
-              email: 'test@example.com',
-              address: 'Test Street',
-              housenumber: '1',
-              zipcode: '1234AB',
-              city: 'Test City',
-              countrycode: countryCode,
-            },
-            true,
-            false
-          );
+            // Process the order request
+            const result = await this.processOrderRequest(
+              orderItems,
+              {
+                fullname: 'Test User',
+                email: 'test@example.com',
+                address: 'Test Street',
+                housenumber: '1',
+                zipcode: '1234AB',
+                city: 'Test City',
+                countrycode: countryCode,
+              },
+              true,
+              false
+            );
 
-          if (result.success) {
+            if (result.success) {
               if (existingRecord) {
                 await this.prisma.shippingCost.update({
                   where: { id: existingRecord.id },
@@ -1189,15 +1203,19 @@ class PrintEnBind {
                   },
                 });
               }
-          } else {
-            this.logger.log(
-              color.blue.bold(
-                `Skipping ${color.white.bold(countryCode)} with ${color.white.bold(amount.toString())} items - record is recent enough`
-              )
-            );
-          }
+            } else {
+              this.logger.log(
+                color.blue.bold(
+                  `Skipping ${color.white.bold(
+                    countryCode
+                  )} with ${color.white.bold(
+                    amount.toString()
+                  )} items - record is recent enough`
+                )
+              );
+            }
 
-          this.logger.log(
+            this.logger.log(
               color.blue.bold(
                 `Stored shipping costs for ${color.white.bold(
                   countryCode
