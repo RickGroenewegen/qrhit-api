@@ -867,6 +867,8 @@ class PrintEnBind {
       if (physicalItems > 0 && shippingResult) {
         shipping = shippingResult!.shipping || 0;
         handling = shippingResult!.handling * physicalItems || 0;
+      } else if (physicalItems > 0 && !shippingResult) {
+        totalPrice = 0;
       }
       totalPrice += shipping + handling;
 
