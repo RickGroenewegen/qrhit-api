@@ -1248,6 +1248,41 @@ class PrintEnBind {
     }
   }
 
+  public async getShippingCosts(countryCode: string, amount: number): Promise<{shipping: number, handling: number} | null> {
+    try {
+      // Check cache first
+      const cacheKey = `shipping_costs_${countryCode}_${amount}`;
+      const cachedCosts = await this.cache.get(cacheKey);
+      
+      if (cachedCosts) {
+        return JSON.parse(cachedCosts);
+      }
+
+      // Get from database if not in cache
+      const costs = await this.prisma.shippingCost.findFirst({
+        where: {
+          country: countryCode,
+          amount: amount
+        },
+        select: {
+          shipping: true,
+          handling: true
+        }
+      });
+
+      if (costs) {
+        // Cache the results for 1 day
+        await this.cache.set(cacheKey, JSON.stringify(costs), 86400);
+        return costs;
+      }
+
+      return null;
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error getting shipping costs: ${error}`));
+      return null;
+    }
+  }
+
   private async getOrderStatus(orderId: string): Promise<any> {
     try {
       const authToken = await this.getAuthToken();
