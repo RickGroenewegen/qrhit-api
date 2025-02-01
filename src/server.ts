@@ -1025,7 +1025,7 @@ class Server {
       });
 
       this.fastify.get('/calculate_shipping', async (request: any, _reply) => {
-        await this.order.calculateShippingCosts();
+        this.order.calculateShippingCosts();
         return { success: true };
       });
 

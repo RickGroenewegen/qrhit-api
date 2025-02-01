@@ -206,6 +206,10 @@ class Order {
     return await this.printer.testOrder();
   }
 
+  public async calculateShippingCosts() {
+    return await this.printer.calculateShippingCosts();
+  }
+
   public async createOrder(
     payment: any,
     playlists: any[],

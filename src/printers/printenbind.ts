@@ -835,33 +835,54 @@ class PrintEnBind {
       params.countrycode = 'NL';
     }
 
+    const taxRate = (await this.data.getTaxRate(params.countrycode))!;
+
     try {
       const orderItems = [];
 
       for (const item of params.cart.items) {
         if (item.productType === 'cards') {
-          const numberOfTracks = await this.spotify.getPlaylistTrackCount(
-            item.playlistId,
-            true,
-            item.isSlug
-          );
-
-          const orderItem = await this.createOrderItem(
-            numberOfTracks,
-            '',
-            item
-          );
-          orderItems.push(orderItem);
+          orderItems.push(item);
         } else if (item.productType == 'giftcard') {
           const orderItem = await this.createOrderItem(0, '', item);
           orderItems.push(orderItem);
         }
       }
 
-      const result = await this.processOrderRequest(orderItems, {
-        email: params.email,
-        countrycode: params.countrycode,
-      });
+      const shippingResult = await this.getShippingCosts(params.countrycode, 1);
+
+      // Count the number of physical items
+      let physicalItems = 0;
+      let totalPrice = 0;
+      for (const item of orderItems) {
+        if (item.type == 'physical') {
+          physicalItems += parseInt(item.amount);
+        }
+        totalPrice += item.price;
+      }
+
+      let shipping = 0;
+      let handling = 0;
+
+      if (physicalItems > 0 && shippingResult) {
+        shipping = shippingResult!.shipping || 0;
+        handling = shippingResult!.handling * physicalItems || 0;
+      }
+      totalPrice += shipping + handling;
+
+      const result = {
+        success: true,
+        data: {
+          orderId: '',
+          total: totalPrice,
+          shipping,
+          handling,
+          taxRateShipping: taxRate,
+          taxRate,
+          price: totalPrice,
+          payment: shipping + handling,
+        },
+      };
 
       return result;
     } catch (error) {
@@ -1102,8 +1123,9 @@ class PrintEnBind {
   public async processPrintApiWebhook(printApiOrderId: string) {}
 
   public async calculateShippingCosts(): Promise<void> {
-    const countryCodes = this.countryCodes;
-    const authToken = await this.getAuthToken();
+    let countryCodes = this.countryCodes;
+
+    countryCodes = ['NL'];
 
     this.logger.log(
       color.blue.bold(
@@ -1116,8 +1138,6 @@ class PrintEnBind {
     for (const countryCode of countryCodes) {
       for (const amount of [1]) {
         try {
-          console.log(111, countryCode, amount);
-
           // Check if record exists and when it was last updated
           const existingRecord = await this.prisma.shippingCost.findFirst({
             where: {
@@ -1160,13 +1180,15 @@ class PrintEnBind {
                 size: 'custom',
                 printside: 'double',
                 finishing: 'loose',
+                finishing2: 'none',
                 papertype: 'card',
                 size_custom_width: '60',
                 size_custom_height: '60',
                 check_doc: 'standard',
                 delivery_method: 'post',
                 add_file_method: 'url',
-                file_url: '',
+                file_url:
+                  'https://api.qrsong.io/public/pdf/f6d1ad6be0c3f5a06fc4d0b8b1776b791f5b7f3d46cc9864d5c4c1ef3380016c_printer.pdf',
               });
             }
 
@@ -1174,12 +1196,12 @@ class PrintEnBind {
             const result = await this.processOrderRequest(
               orderItems,
               {
-                fullname: 'Test User',
-                email: 'test@example.com',
-                address: 'Test Street',
+                fullname: 'Rick Groenewegen',
+                email: 'john@doe.com',
+                address: 'Prinsenhof 1',
                 housenumber: '1',
                 zipcode: '1234AB',
-                city: 'Test City',
+                city: 'Sassenheim',
                 countrycode: countryCode,
               },
               true,
@@ -1248,12 +1270,15 @@ class PrintEnBind {
     }
   }
 
-  public async getShippingCosts(countryCode: string, amount: number): Promise<{shipping: number, handling: number} | null> {
+  public async getShippingCosts(
+    countryCode: string,
+    amount: number
+  ): Promise<{ shipping: number; handling: number } | null> {
     try {
       // Check cache first
       const cacheKey = `shipping_costs_${countryCode}_${amount}`;
       const cachedCosts = await this.cache.get(cacheKey);
-      
+
       if (cachedCosts) {
         return JSON.parse(cachedCosts);
       }
@@ -1262,12 +1287,12 @@ class PrintEnBind {
       const costs = await this.prisma.shippingCost.findFirst({
         where: {
           country: countryCode,
-          amount: amount
+          amount: amount,
         },
         select: {
           shipping: true,
-          handling: true
-        }
+          handling: true,
+        },
       });
 
       if (costs) {
