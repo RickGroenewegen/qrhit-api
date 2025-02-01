@@ -1114,8 +1114,10 @@ class PrintEnBind {
     );
 
     for (const countryCode of countryCodes) {
-      for (const amount of [1, 5, 10]) {
+      for (const amount of [1]) {
         try {
+          console.log(111, countryCode, amount);
+
           // Check if record exists and when it was last updated
           const existingRecord = await this.prisma.shippingCost.findFirst({
             where: {
