@@ -581,13 +581,17 @@ class Spotify {
 
           // remove all items that do not have an artist or image
           const filteredTracks = tracks.filter((track) => {
-            const isValid = track.artist && track.image;
+            const hasArtist = !!track.artist;
+            const hasImage = !!track.image;
+            const isValid = hasArtist && hasImage;
+            
             if (!isValid) {
               console.log('Filtered out track:', {
                 id: track.id,
                 name: track.name,
                 artist: track.artist,
-                hasImage: !!track.image
+                hasImage: hasImage,
+                reason: !hasArtist ? 'Missing artist' : !hasImage ? 'Missing image' : 'Unknown reason'
               });
             }
             return isValid;
