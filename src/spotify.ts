@@ -512,6 +512,8 @@ class Spotify {
               )
           );
 
+          console.log(111, response.data.items.length);
+
           const tracks: Track[] = await Promise.all(
             response.data.items
               .filter((item: any) => item.track)
@@ -580,6 +582,8 @@ class Spotify {
               allTracks.push(track);
             }
           });
+
+          console.log(999, allTracks.length);
 
           // Check if there are more tracks to fetch or if we reached the limit of MAX_CARDS tracks
           if (
