@@ -379,6 +379,6 @@
   "mail.housenumber": "Hausnummer",
   "mail.invoiceHousenumber": "Rechnungs-Hausnummer",
   "mail.finalizedMailSubject": "Wir laden dich ein, die Playlist '{{ playlist }}' zu überprüfen",
-  "mail.youCanReview": "Gute Nachrichten! Deine Playlist wurde von unserem Team überprüft und wir möchten dich einladen, deine Playlist ebenfalls zu überprüfen. Deine Bestellung wird automatisch nach 36 Stunden bearbeitet und versendet. Wenn du keine Änderungen vornehmen möchtest, kannst du auch die sofortige Druck- und Versandanforderung stellen.",
+  "mail.youCanReview": "Tolle Neuigkeiten! Deine Playlist wurde von unserem Team überprüft. Wir laden dich ein, deine Playlist ebenfalls zu überprüfen. Deine Bestellung wird automatisch nach 36 Stunden bearbeitet und versendet. Wenn du keine Änderungen vornehmen möchtest, kannst du auch darum bitten, die Bestellung sofort zu drucken und zu versenden.",
   "mail.reviewOrder": "Überprüfe deine Bestellung"
 }

@@ -374,6 +374,6 @@
   "mail.housenumber": "Numer domu",
   "mail.invoiceHousenumber": "Numer domu na fakturze",
   "mail.finalizedMailSubject": "Zapraszamy do przejrzenia playlisty '{{ playlist }}'",
-  "mail.youCanReview": "Dobre wieści! Twoja playlista została oceniona przez nasz zespół i chcielibyśmy zaprosić cię do jej przeglądu. Twoje zamówienie zostanie automatycznie przetworzone i wysłane po 36 godzinach. Jeśli nie chcesz wprowadzać zmian, możesz również poprosić o natychmiastowy druk i wysyłkę.",
+  "mail.youCanReview": "Świetne wieści! Twoja playlista została oceniona przez nasz zespół. Chcielibyśmy zaprosić Cię do jej oceny. Twoje zamówienie zostanie automatycznie przetworzone i wysłane po 36 godzinach. Jeśli nie chcesz wprowadzać zmian, możesz również poprosić o natychmiastowe wydrukowanie i wysłanie zamówienia.",
   "mail.reviewOrder": "Przejrzyj swoje zamówienie"
 }

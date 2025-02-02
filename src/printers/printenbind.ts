@@ -861,6 +861,7 @@ class PrintEnBind {
         totalPrice += item.price;
       }
 
+      let freeShipping: boolean = false;
       let shipping = 0;
       let handling = 0;
 
@@ -870,7 +871,16 @@ class PrintEnBind {
       } else if (physicalItems > 0 && !shippingResult) {
         totalPrice = 0;
       }
-      totalPrice += shipping + handling;
+
+      if (params.countrycode === 'NL') {
+        freeShipping = true;
+      }
+
+      if (!freeShipping) {
+        totalPrice += shipping; // + handling;
+      } else {
+        shipping = 0;
+      }
 
       const result = {
         success: true,
@@ -882,7 +892,7 @@ class PrintEnBind {
           taxRateShipping: taxRate,
           taxRate,
           price: totalPrice,
-          payment: shipping + handling,
+          payment: shipping, // + handling,
         },
       };
 
@@ -1411,8 +1421,6 @@ class PrintEnBind {
             }
           }
         }
-      } else {
-        this.logger.log(color.blue.bold('No unshipped orders found'));
       }
     } catch (error) {
       this.logger.log(

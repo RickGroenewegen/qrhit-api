@@ -512,8 +512,6 @@ class Spotify {
               )
           );
 
-          console.log('Total tracks in response:', response.data.items.length);
-
           const tracks: Track[] = await Promise.all(
             response.data.items
               .filter((item: any) => item.track)
@@ -571,33 +569,10 @@ class Spotify {
               })
           );
 
-          // Log all tracks before filtering
-          console.log('All tracks before filtering:', tracks.map(track => ({
-            id: track.id,
-            name: track.name,
-            artist: track.artist,
-            hasImage: !!track.image
-          })));
-
           // remove all items that do not have an artist or image
-          const filteredTracks = tracks.filter((track) => {
-            const hasArtist = !!track.artist;
-            const hasImage = !!track.image;
-            const isValid = hasArtist && hasImage;
-            
-            if (!isValid) {
-              console.log('Filtered out track:', {
-                id: track.id,
-                name: track.name,
-                artist: track.artist,
-                hasImage: hasImage,
-                reason: !hasArtist ? 'Missing artist' : !hasImage ? 'Missing image' : 'Unknown reason'
-              });
-            }
-            return isValid;
-          });
-
-          console.log('Remaining tracks after filtering:', filteredTracks.length);
+          const filteredTracks = tracks.filter(
+            (track) => track.artist && track.image
+          );
 
           filteredTracks.forEach((track) => {
             if (!uniqueTrackIds.has(track.id)) {
@@ -605,8 +580,6 @@ class Spotify {
               allTracks.push(track);
             }
           });
-
-          console.log(999, allTracks.length);
 
           // Check if there are more tracks to fetch or if we reached the limit of MAX_CARDS tracks
           if (
