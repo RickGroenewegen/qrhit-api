@@ -589,6 +589,9 @@ class Spotify {
             if (allTracks.length > MAX_CARDS) {
               maxReached = true;
             }
+
+            console.log(111, allTracks.length, MAX_CARDS_PHYSICAL);
+
             if (allTracks.length > MAX_CARDS_PHYSICAL) {
               maxReachedPhysical = true;
             }

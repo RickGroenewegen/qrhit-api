@@ -858,7 +858,7 @@ class PrintEnBind {
         if (item.type == 'physical') {
           physicalItems += parseInt(item.amount);
         }
-        totalPrice += item.price;
+        totalPrice += item.price * item.amount;
       }
 
       let freeShipping: boolean = false;
