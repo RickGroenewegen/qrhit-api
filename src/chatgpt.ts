@@ -116,6 +116,40 @@ export class ChatGPT {
     if (result?.choices[0]?.message?.function_call) {
       const funcCall = result.choices[0].message.function_call;
       const completionArguments = JSON.parse(funcCall.arguments as string);
+      
+      // Create user suggestions for each mistake
+      for (const mistake of completionArguments.mistakes) {
+        await this.prisma.$executeRaw`
+          INSERT INTO usersuggestions (
+            name, 
+            artist, 
+            year,
+            trackId,
+            playlistId,
+            userId,
+            createdAt,
+            updatedAt,
+            comment
+          )
+          SELECT 
+            ${mistake.title},
+            ${mistake.artist},
+            ${mistake.suggestedYear},
+            t.id,
+            pht.playlistId,
+            1,
+            NOW(),
+            NOW(),
+            ${mistake.reasoning}
+          FROM tracks t
+          INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId
+          WHERE t.name = ${mistake.title}
+          AND t.artist = ${mistake.artist}
+          AND pht.playlistId = ${playlist[0].id}
+          LIMIT 1
+        `;
+      }
+
       return completionArguments.mistakes;
     }
 
