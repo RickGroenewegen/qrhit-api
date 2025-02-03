@@ -1,3 +1,4 @@
+import PrismaInstance from './prisma';
 import Utils from './utils';
 import OpenAI from 'openai';
 
@@ -51,8 +52,7 @@ export class ChatGPT {
     const prompt = `Please verify the release years for these songs:\n${tracksPrompt}`;
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-3o-mini',
-      temperature: 0,
+      model: 'o3-mini',
       messages: [
         {
           role: 'system',
