@@ -71,8 +71,10 @@ export class ChatGPT {
       this.logger.log(
         color.blue.bold(
           `Processing batch ${
-            color.white.bold(Math.floor(i / batchSize)) + 1
-          } of ${color.white.bold(Math.ceil(tracks.length / batchSize))}`
+            color.white.bold(Math.floor(i / batchSize) + 1)
+          } of ${color.white.bold(Math.ceil(tracks.length / batchSize))} (${
+            color.white.bold(allMistakes.length)
+          } mistakes found so far)`
         )
       );
 
