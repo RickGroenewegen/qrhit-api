@@ -22,28 +22,22 @@ export class ChatGPT {
       reasoning: string;
     }>
   > {
-    const playlist = await this.prisma.playlist.findUnique({
-      where: { playlistId }
-    });
+    // First get the playlist ID from the Spotify playlist ID
+    const playlist = await this.prisma.$queryRaw<any[]>`
+      SELECT id, name 
+      FROM playlists 
+      WHERE playlistId = ${playlistId}`;
 
-    if (!playlist) {
+    if (!playlist || playlist.length === 0) {
       return [];
     }
 
-    const tracks = await this.prisma.track.findMany({
-      where: {
-        playlists: {
-          some: {
-            playlistId: playlist.id
-          }
-        }
-      },
-      select: {
-        name: true,
-        artist: true,
-        year: true
-      }
-    });
+    // Then get all tracks for this playlist
+    const tracks = await this.prisma.$queryRaw<any[]>`
+      SELECT t.name, t.artist, t.year
+      FROM tracks t
+      INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId 
+      WHERE pht.playlistId = ${playlist[0].id}`;
 
     if (!tracks || tracks.length === 0) {
       return [];
