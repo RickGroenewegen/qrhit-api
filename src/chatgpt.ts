@@ -117,37 +117,53 @@ export class ChatGPT {
       const funcCall = result.choices[0].message.function_call;
       const completionArguments = JSON.parse(funcCall.arguments as string);
       
-      // Create user suggestions for each mistake
+      // Create user suggestions for each mistake, checking for duplicates
       for (const mistake of completionArguments.mistakes) {
-        await this.prisma.$executeRaw`
-          INSERT INTO usersuggestions (
-            name, 
-            artist, 
-            year,
-            trackId,
-            playlistId,
-            userId,
-            createdAt,
-            updatedAt,
-            comment
-          )
-          SELECT 
-            ${mistake.title},
-            ${mistake.artist},
-            ${mistake.suggestedYear},
-            t.id,
-            pht.playlistId,
-            1,
-            NOW(),
-            NOW(),
-            ${mistake.reasoning}
-          FROM tracks t
+        // First check if this suggestion already exists
+        const existingSuggestion = await this.prisma.$queryRaw<any[]>`
+          SELECT id 
+          FROM usersuggestions us
+          INNER JOIN tracks t ON t.id = us.trackId
           INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId
           WHERE t.name = ${mistake.title}
           AND t.artist = ${mistake.artist}
           AND pht.playlistId = ${playlist[0].id}
+          AND us.userId = 1
           LIMIT 1
         `;
+
+        // Only create suggestion if it doesn't exist
+        if (existingSuggestion.length === 0) {
+          await this.prisma.$executeRaw`
+            INSERT INTO usersuggestions (
+              name, 
+              artist, 
+              year,
+              trackId,
+              playlistId,
+              userId,
+              createdAt,
+              updatedAt,
+              comment
+            )
+            SELECT 
+              ${mistake.title},
+              ${mistake.artist},
+              ${mistake.suggestedYear},
+              t.id,
+              pht.playlistId,
+              1,
+              NOW(),
+              NOW(),
+              ${mistake.reasoning}
+            FROM tracks t
+            INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId
+            WHERE t.name = ${mistake.title}
+            AND t.artist = ${mistake.artist}
+            AND pht.playlistId = ${playlist[0].id}
+            LIMIT 1
+          `;
+        }
       }
 
       return completionArguments.mistakes;
