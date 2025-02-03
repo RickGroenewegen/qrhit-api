@@ -197,7 +197,7 @@ export class ChatGPT {
         }
       }
 
-      return completionArguments.mistakes;
+      return allMistakes;
     }
 
     this.logger.log(color.blue.bold('Done verifying playlist'));
