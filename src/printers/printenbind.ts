@@ -874,6 +874,8 @@ class PrintEnBind {
 
       if (params.countrycode === 'NL') {
         shipping = 2.99;
+      } else {
+        shipping -= 3;
       }
 
       totalPrice += shipping; // + handling;
