@@ -20,7 +20,6 @@ export class ChatGPT {
       reasoning: string;
     }>
   > {
-    const data = Data.getInstance();
     const playlist = await data.getPlaylist(playlistId);
     if (!playlist) {
       return [];
@@ -32,9 +31,9 @@ export class ChatGPT {
     }
 
     // Format tracks into verification prompt
-    const tracksPrompt = tracks.map(track => 
-      `"${track.name}" by ${track.artist} (${track.year})`
-    ).join('\n');
+    const tracksPrompt = tracks
+      .map((track) => `"${track.name}" by ${track.artist} (${track.year})`)
+      .join('\n');
 
     const prompt = `Please verify the release years for these songs:\n${tracksPrompt}`;
 
