@@ -140,6 +140,16 @@ export class ChatGPT {
           LIMIT 1
         `;
 
+        this.logger.log(
+          color.blue.bold(
+            `Suggestion for "${color.white.bold(
+              mistake.title
+            )}" by ${color.white.bold(mistake.artist)} (${color.white.bold(
+              mistake.oldYear
+            )} -> ${color.white.bold(mistake.suggestedYear)})`
+          )
+        );
+
         // Only create suggestion if it doesn't exist
         if (existingSuggestion.length === 0) {
           await this.prisma.$executeRaw`
@@ -176,6 +186,8 @@ export class ChatGPT {
 
       return completionArguments.mistakes;
     }
+
+    this.logger.log(color.blue.bold('Done verifying playlist'));
 
     return [];
   }
