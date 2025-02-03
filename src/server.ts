@@ -196,7 +196,7 @@ class Server {
       { preHandler: verifyTokenMiddleware },
       async (request: any, _reply) => {
         await this.mollie.clearPDFs(request.params.paymentId);
-        await this.generator.generate(
+        this.generator.generate(
           request.params.paymentId,
           request.clientIp,
           '',
