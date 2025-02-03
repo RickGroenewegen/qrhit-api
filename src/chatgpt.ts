@@ -50,10 +50,14 @@ export class ChatGPT {
 
     // Process tracks in batches of 20
     const batchSize = 20;
-    let allMistakes = [];
+    let allMistakes: any[] = [];
 
     this.logger.log(
-      color.blue.bold(`Verifying playlist: ${color.white.bold(playlistId)} in batches of ${batchSize}`)
+      color.blue.bold(
+        `Verifying playlist: ${color.white.bold(
+          playlistId
+        )} in batches of ${color.white.bold(batchSize)}`
+      )
     );
 
     for (let i = 0; i < tracks.length; i += batchSize) {
@@ -65,80 +69,86 @@ export class ChatGPT {
       const prompt = `Please verify the release years for these songs:\n${tracksPrompt}`;
 
       this.logger.log(
-        color.blue.bold(`Processing batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(tracks.length/batchSize)}`)
+        color.blue.bold(
+          `Processing batch ${
+            color.white.bold(Math.floor(i / batchSize)) + 1
+          } of ${color.white.bold(Math.ceil(tracks.length / batchSize))}`
+        )
       );
 
+      console.log(prompt);
+
       const result = await this.openai.chat.completions.create({
-      model: 'o3-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `You are a helpful assistant that helps verify song release years. I will provide a list of songs with their years. For each song that you believe has an incorrect year, return the correct year with an explanation and sources. Only suggest different years when you are highly confident.`,
-        },
-        {
-          role: 'user',
-          content: prompt,
-        },
-      ],
-      function_call: { name: 'parseYearMistakes' },
-      functions: [
-        {
-          name: 'parseYearMistakes',
-          parameters: {
-            type: 'object',
-            properties: {
-              mistakes: {
-                type: 'array',
-                items: {
-                  type: 'object',
-                  properties: {
-                    artist: {
-                      type: 'string',
-                      description: 'The artist name',
+        model: 'o3-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `You are a helpful assistant that helps verify song release years. I will provide a list of songs with their years. For each song that you believe has an incorrect year, return the correct year with an explanation and sources. Only suggest different years when you are highly confident.`,
+          },
+          {
+            role: 'user',
+            content: prompt,
+          },
+        ],
+        function_call: { name: 'parseYearMistakes' },
+        functions: [
+          {
+            name: 'parseYearMistakes',
+            parameters: {
+              type: 'object',
+              properties: {
+                mistakes: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      artist: {
+                        type: 'string',
+                        description: 'The artist name',
+                      },
+                      title: {
+                        type: 'string',
+                        description: 'The song title',
+                      },
+                      oldYear: {
+                        type: 'number',
+                        description: 'The original year provided',
+                      },
+                      suggestedYear: {
+                        type: 'number',
+                        description: 'The correct release year',
+                      },
+                      reasoning: {
+                        type: 'string',
+                        description:
+                          'Explanation with sources for why this year is correct',
+                      },
                     },
-                    title: {
-                      type: 'string',
-                      description: 'The song title',
-                    },
-                    oldYear: {
-                      type: 'number',
-                      description: 'The original year provided',
-                    },
-                    suggestedYear: {
-                      type: 'number',
-                      description: 'The correct release year',
-                    },
-                    reasoning: {
-                      type: 'string',
-                      description:
-                        'Explanation with sources for why this year is correct',
-                    },
+                    required: [
+                      'artist',
+                      'title',
+                      'oldYear',
+                      'suggestedYear',
+                      'reasoning',
+                    ],
                   },
-                  required: [
-                    'artist',
-                    'title',
-                    'oldYear',
-                    'suggestedYear',
-                    'reasoning',
-                  ],
                 },
               },
+              required: ['mistakes'],
             },
-            required: ['mistakes'],
           },
-        },
-      ],
-    });
+        ],
+      });
 
-    if (result?.choices[0]?.message?.function_call) {
-      const funcCall = result.choices[0].message.function_call;
-      const completionArguments = JSON.parse(funcCall.arguments as string);
-      allMistakes = allMistakes.concat(completionArguments.mistakes);
+      if (result?.choices[0]?.message?.function_call) {
+        const funcCall = result.choices[0].message.function_call;
+        const completionArguments = JSON.parse(funcCall.arguments as string);
+        allMistakes = allMistakes.concat(completionArguments.mistakes);
+      }
     }
-  }
 
-  if (allMistakes.length > 0) {
-    // Create user suggestions for each mistake, checking for duplicates
+    if (allMistakes.length > 0) {
+      // Create user suggestions for each mistake, checking for duplicates
       for (const mistake of allMistakes) {
         // First check if this suggestion already exists
         const existingSuggestion = await this.prisma.$queryRaw<any[]>`
