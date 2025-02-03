@@ -117,6 +117,15 @@ class Server {
       }
     });
 
+    this.fastify.get(
+      '/validate/:playlistId',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply: any) => {
+        const mistakes = await this.openai.verifyList(request.params.playlistId);
+        reply.send({ success: true, data: mistakes });
+      }
+    );
+
     this.fastify.post(
       '/openperplex',
       { preHandler: verifyTokenMiddleware },
