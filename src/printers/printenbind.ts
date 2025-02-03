@@ -873,14 +873,10 @@ class PrintEnBind {
       }
 
       if (params.countrycode === 'NL') {
-        shipping = 3.99;
+        shipping = 2.99;
       }
 
-      if (!freeShipping) {
-        totalPrice += shipping; // + handling;
-      } else {
-        shipping = 0;
-      }
+      totalPrice += shipping; // + handling;
 
       const result = {
         success: true,
