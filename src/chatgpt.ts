@@ -11,6 +11,78 @@ export class ChatGPT {
     return year;
   }
 
+  public async verifyList(prompt: string): Promise<Array<{
+    artist: string,
+    title: string,
+    oldYear: number,
+    suggestedYear: number,
+    reasoning: string
+  }>> {
+    const result = await this.openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a helpful assistant that helps verify song release years. I will provide a list of songs with their years. For each song that you believe has an incorrect year, return the correct year with an explanation and sources. Only suggest different years when you are highly confident.`,
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      function_call: { name: 'parseYearMistakes' },
+      functions: [
+        {
+          name: 'parseYearMistakes',
+          parameters: {
+            type: 'object',
+            properties: {
+              mistakes: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    artist: {
+                      type: 'string',
+                      description: 'The artist name'
+                    },
+                    title: {
+                      type: 'string',
+                      description: 'The song title'
+                    },
+                    oldYear: {
+                      type: 'number',
+                      description: 'The original year provided'
+                    },
+                    suggestedYear: {
+                      type: 'number',
+                      description: 'The correct release year'
+                    },
+                    reasoning: {
+                      type: 'string',
+                      description: 'Explanation with sources for why this year is correct'
+                    }
+                  },
+                  required: ['artist', 'title', 'oldYear', 'suggestedYear', 'reasoning']
+                }
+              }
+            },
+            required: ['mistakes']
+          }
+        }
+      ]
+    });
+
+    if (result?.choices[0]?.message?.function_call) {
+      const funcCall = result.choices[0].message.function_call;
+      const completionArguments = JSON.parse(funcCall.arguments as string);
+      return completionArguments.mistakes;
+    }
+
+    return [];
+  }
+
   public async ask(prompt: string): Promise<any> {
     let answer = undefined;
 
