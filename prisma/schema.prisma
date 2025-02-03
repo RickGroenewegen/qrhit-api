@@ -135,6 +135,8 @@ model Payment {
   finalizedAt             DateTime?
   canBeSentToPrinter      Boolean              @default(false)
   canBeSentToPrinterAt    DateTime?
+  userAgreedToPrinting    Boolean              @default(false)
+  userAgreedToPrintingAt  DateTime?
   sentToPrinter           Boolean              @default(false)
   sentToPrinterAt         DateTime?
 

@@ -73,6 +73,7 @@ class Generator {
             OR: [
               {
                 canBeSentToPrinter: true,
+                userAgreedToPrinting: true,
               },
               {
                 canBeSentToPrinter: true,
@@ -84,38 +85,38 @@ class Generator {
           },
         });
 
-        // console.log(111, payments);
+        console.log(123, payments.length);
 
-        // if (payments.length > 0) {
-        //   this.logger.log(
-        //     blue.bold(
-        //       `Found ${white.bold(
-        //         payments.length.toString()
-        //       )} payments ready to be sent to printer`
-        //     )
-        //   );
+        if (payments.length > 0) {
+          this.logger.log(
+            blue.bold(
+              `Found ${white.bold(
+                payments.length.toString()
+              )} payments ready to be sent to printer`
+            )
+          );
 
-        //   for (const payment of payments) {
-        //     try {
-        //       //await this.sendToPrinter(payment.paymentId, '');
-        //       this.logger.log(
-        //         color.green.bold(
-        //           `Successfully sent payment ${white.bold(
-        //             payment.paymentId
-        //           )} to printer`
-        //         )
-        //       );
-        //     } catch (error) {
-        //       this.logger.log(
-        //         color.red.bold(
-        //           `Error sending payment ${white.bold(
-        //             payment.paymentId
-        //           )} to printer: ${error}`
-        //         )
-        //       );
-        //     }
-        //   }
-        // }
+          for (const payment of payments) {
+            try {
+              //await this.sendToPrinter(payment.paymentId, '');
+              this.logger.log(
+                color.green.bold(
+                  `Successfully sent payment ${white.bold(
+                    payment.paymentId
+                  )} to printer`
+                )
+              );
+            } catch (error) {
+              this.logger.log(
+                color.red.bold(
+                  `Error sending payment ${white.bold(
+                    payment.paymentId
+                  )} to printer: ${error}`
+                )
+              );
+            }
+          }
+        }
       },
       null,
       true,

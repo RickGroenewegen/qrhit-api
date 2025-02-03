@@ -261,6 +261,14 @@ class Suggestion {
           data: { eligableForPrinter: true, eligableForPrinterAt: new Date() },
         });
 
+        this.prisma.payment.update({
+          where: { paymentId },
+          data: {
+            userAgreedToPrinting: true,
+            userAgreedToPrintingAt: new Date(),
+          },
+        });
+
         this.checkIfReadyForPrinter(paymentId, clientIp);
 
         return true;
