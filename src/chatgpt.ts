@@ -48,18 +48,27 @@ export class ChatGPT {
       return [];
     }
 
-    // Format tracks into verification prompt
-    const tracksPrompt = tracks
-      .map((track) => `"${track.name}" by ${track.artist} (${track.year})`)
-      .join('\n');
-
-    const prompt = `Please verify the release years for these songs:\n${tracksPrompt}`;
+    // Process tracks in batches of 20
+    const batchSize = 20;
+    let allMistakes = [];
 
     this.logger.log(
-      color.blue.bold(`Verifying playlist: ${color.white.bold(playlistId)}`)
+      color.blue.bold(`Verifying playlist: ${color.white.bold(playlistId)} in batches of ${batchSize}`)
     );
 
-    const result = await this.openai.chat.completions.create({
+    for (let i = 0; i < tracks.length; i += batchSize) {
+      const batch = tracks.slice(i, i + batchSize);
+      const tracksPrompt = batch
+        .map((track) => `"${track.name}" by ${track.artist} (${track.year})`)
+        .join('\n');
+
+      const prompt = `Please verify the release years for these songs:\n${tracksPrompt}`;
+
+      this.logger.log(
+        color.blue.bold(`Processing batch ${Math.floor(i/batchSize) + 1} of ${Math.ceil(tracks.length/batchSize)}`)
+      );
+
+      const result = await this.openai.chat.completions.create({
       model: 'o3-mini',
       messages: [
         {
@@ -124,9 +133,13 @@ export class ChatGPT {
     if (result?.choices[0]?.message?.function_call) {
       const funcCall = result.choices[0].message.function_call;
       const completionArguments = JSON.parse(funcCall.arguments as string);
+      allMistakes = allMistakes.concat(completionArguments.mistakes);
+    }
+  }
 
-      // Create user suggestions for each mistake, checking for duplicates
-      for (const mistake of completionArguments.mistakes) {
+  if (allMistakes.length > 0) {
+    // Create user suggestions for each mistake, checking for duplicates
+      for (const mistake of allMistakes) {
         // First check if this suggestion already exists
         const existingSuggestion = await this.prisma.$queryRaw<any[]>`
           SELECT us.id 
