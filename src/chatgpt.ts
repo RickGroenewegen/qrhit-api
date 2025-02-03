@@ -121,7 +121,7 @@ export class ChatGPT {
       for (const mistake of completionArguments.mistakes) {
         // First check if this suggestion already exists
         const existingSuggestion = await this.prisma.$queryRaw<any[]>`
-          SELECT id 
+          SELECT us.id 
           FROM usersuggestions us
           INNER JOIN tracks t ON t.id = us.trackId
           INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId
