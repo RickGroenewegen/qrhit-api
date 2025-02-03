@@ -145,7 +145,10 @@ export class ChatGPT {
       if (result?.choices[0]?.message?.function_call) {
         const funcCall = result.choices[0].message.function_call;
         const completionArguments = JSON.parse(funcCall.arguments as string);
-        allMistakes = allMistakes.concat(completionArguments.mistakes);
+        const significantMistakes = completionArguments.mistakes.filter(
+          (mistake: any) => Math.abs(mistake.suggestedYear - mistake.oldYear) > 2
+        );
+        allMistakes = allMistakes.concat(significantMistakes);
       }
     }
 
