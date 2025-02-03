@@ -70,11 +70,11 @@ export class ChatGPT {
 
       this.logger.log(
         color.blue.bold(
-          `Processing batch ${
-            color.white.bold(Math.floor(i / batchSize) + 1)
-          } of ${color.white.bold(Math.ceil(tracks.length / batchSize))} (${
-            color.white.bold(allMistakes.length)
-          } mistakes found so far)`
+          `Processing batch ${color.white.bold(
+            Math.floor(i / batchSize) + 1
+          )} of ${color.white.bold(
+            Math.ceil(tracks.length / batchSize)
+          )} (${color.white.bold(allMistakes.length)} mistakes found so far)`
         )
       );
 
@@ -146,7 +146,8 @@ export class ChatGPT {
         const funcCall = result.choices[0].message.function_call;
         const completionArguments = JSON.parse(funcCall.arguments as string);
         const significantMistakes = completionArguments.mistakes.filter(
-          (mistake: any) => Math.abs(mistake.suggestedYear - mistake.oldYear) > 2
+          (mistake: any) =>
+            Math.abs(mistake.suggestedYear - mistake.oldYear) > 2
         );
         allMistakes = allMistakes.concat(significantMistakes);
       }
