@@ -65,7 +65,7 @@ class Generator {
   public setSendToPrinterCron() {
     // Setup printer check cron
     new CronJob(
-      '*/10 * * * * *',
+      '0 * * * *',
       async () => {
         const payments = await this.prisma.payment.findMany({
           where: {
