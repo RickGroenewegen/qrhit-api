@@ -20,6 +20,24 @@ export class ChatGPT {
       reasoning: string;
     }>
   > {
+    const data = Data.getInstance();
+    const playlist = await data.getPlaylist(playlistId);
+    if (!playlist) {
+      return [];
+    }
+
+    const tracks = await data.getTracks(playlist.id, 0);
+    if (!tracks || tracks.length === 0) {
+      return [];
+    }
+
+    // Format tracks into verification prompt
+    const tracksPrompt = tracks.map(track => 
+      `"${track.name}" by ${track.artist} (${track.year})`
+    ).join('\n');
+
+    const prompt = `Please verify the release years for these songs:\n${tracksPrompt}`;
+
     const result = await this.openai.chat.completions.create({
       model: 'gpt-3o-mini',
       temperature: 0,
