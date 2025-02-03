@@ -148,6 +148,12 @@ export class ChatGPT {
     }
 
     if (allMistakes.length > 0) {
+      // Set suggestionsPending flag for this playlist
+      await this.prisma.$executeRaw`
+        UPDATE payment_has_playlist
+        SET suggestionsPending = 1
+        WHERE playlistId = ${playlist[0].id}`;
+
       // Create user suggestions for each mistake, checking for duplicates
       for (const mistake of allMistakes) {
         // First check if this suggestion already exists
