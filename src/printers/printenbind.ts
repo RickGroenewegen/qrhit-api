@@ -800,10 +800,10 @@ class PrintEnBind {
       numberOfPages = 2000;
     }
 
-    let oddPages = Array.from(
-      { length: numberOfPages },
-      (_, i) => i + 1
-    ).filter((page) => page % 2 !== 0);
+    // let oddPages = Array.from(
+    //   { length: numberOfPages },
+    //   (_, i) => i + 1
+    // ).filter((page) => page % 2 !== 0);
 
     if (item.type == 'digital') {
       return item;
@@ -814,8 +814,8 @@ class PrintEnBind {
         product: 'losbladig',
         number: '1',
         copies: numberOfPages.toString(),
-        color: 'custom',
-        color_custom_pages: oddPages.join(','),
+        color: 'all',
+        //color_custom_pages: oddPages.join(','),
         size: 'custom',
         printside: 'double',
         finishing: 'loose',
