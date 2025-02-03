@@ -60,6 +60,9 @@ class Mollie {
         email: {
           notIn: ignoreEmails,
         },
+        status: {
+          in: ['paid'],
+        },
       },
       _count: {
         _all: true,

@@ -65,7 +65,7 @@ class Generator {
   public setSendToPrinterCron() {
     // Setup printer check cron
     new CronJob(
-      '0 * * * *',
+      '*/10 * * * * *',
       async () => {
         const payments = await this.prisma.payment.findMany({
           where: {
@@ -84,36 +84,38 @@ class Generator {
           },
         });
 
-        if (payments.length > 0) {
-          this.logger.log(
-            blue.bold(
-              `Found ${white.bold(
-                payments.length.toString()
-              )} payments ready to be sent to printer`
-            )
-          );
+        // console.log(111, payments);
 
-          for (const payment of payments) {
-            try {
-              await this.sendToPrinter(payment.paymentId, '');
-              this.logger.log(
-                color.green.bold(
-                  `Successfully sent payment ${white.bold(
-                    payment.paymentId
-                  )} to printer`
-                )
-              );
-            } catch (error) {
-              this.logger.log(
-                color.red.bold(
-                  `Error sending payment ${white.bold(
-                    payment.paymentId
-                  )} to printer: ${error}`
-                )
-              );
-            }
-          }
-        }
+        // if (payments.length > 0) {
+        //   this.logger.log(
+        //     blue.bold(
+        //       `Found ${white.bold(
+        //         payments.length.toString()
+        //       )} payments ready to be sent to printer`
+        //     )
+        //   );
+
+        //   for (const payment of payments) {
+        //     try {
+        //       //await this.sendToPrinter(payment.paymentId, '');
+        //       this.logger.log(
+        //         color.green.bold(
+        //           `Successfully sent payment ${white.bold(
+        //             payment.paymentId
+        //           )} to printer`
+        //         )
+        //       );
+        //     } catch (error) {
+        //       this.logger.log(
+        //         color.red.bold(
+        //           `Error sending payment ${white.bold(
+        //             payment.paymentId
+        //           )} to printer: ${error}`
+        //         )
+        //       );
+        //     }
+        //   }
+        // }
       },
       null,
       true,

@@ -245,6 +245,7 @@ model UserSuggestion {
   year                 Int
   extraNameAttribute   String?
   extraArtistAttribute String?
+  comment              String?  @db.Text
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   track                Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)

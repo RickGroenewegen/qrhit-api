@@ -1,6 +1,8 @@
+import Logger from './logger';
 import PrismaInstance from './prisma';
 import Utils from './utils';
 import OpenAI from 'openai';
+import { color } from 'console-log-colors';
 
 export class ChatGPT {
   private utils = new Utils();
@@ -13,6 +15,8 @@ export class ChatGPT {
   }
 
   private prisma = PrismaInstance.getInstance();
+
+  private logger = new Logger();
 
   public async verifyList(playlistId: string): Promise<
     Array<{
@@ -50,6 +54,10 @@ export class ChatGPT {
       .join('\n');
 
     const prompt = `Please verify the release years for these songs:\n${tracksPrompt}`;
+
+    this.logger.log(
+      color.blue.bold(`Verifying playlist: ${color.white.bold(playlistId)}`)
+    );
 
     const result = await this.openai.chat.completions.create({
       model: 'o3-mini',
@@ -116,7 +124,7 @@ export class ChatGPT {
     if (result?.choices[0]?.message?.function_call) {
       const funcCall = result.choices[0].message.function_call;
       const completionArguments = JSON.parse(funcCall.arguments as string);
-      
+
       // Create user suggestions for each mistake, checking for duplicates
       for (const mistake of completionArguments.mistakes) {
         // First check if this suggestion already exists

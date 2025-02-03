@@ -46,6 +46,7 @@ class Suggestion {
         us.year as suggestedYear,
         us.extraArtistAttribute as suggestedExtraArtistAttribute,
         us.extraNameAttribute as suggestedExtraNameAttribute,
+        us.comment as comment,
         php.eligableForPrinter,
         php.suggestionsPending,
         CASE 
