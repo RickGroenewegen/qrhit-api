@@ -11,7 +11,7 @@ export class ChatGPT {
     return year;
   }
 
-  public async verifyList(prompt: string): Promise<
+  public async verifyList(playlistId: string): Promise<
     Array<{
       artist: string;
       title: string;
