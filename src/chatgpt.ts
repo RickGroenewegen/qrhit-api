@@ -11,6 +11,8 @@ export class ChatGPT {
     return year;
   }
 
+  private prisma = PrismaInstance.getInstance();
+
   public async verifyList(playlistId: string): Promise<
     Array<{
       artist: string;
@@ -20,12 +22,29 @@ export class ChatGPT {
       reasoning: string;
     }>
   > {
-    const playlist = await data.getPlaylist(playlistId);
+    const playlist = await this.prisma.playlist.findUnique({
+      where: { playlistId }
+    });
+
     if (!playlist) {
       return [];
     }
 
-    const tracks = await data.getTracks(playlist.id, 0);
+    const tracks = await this.prisma.track.findMany({
+      where: {
+        playlists: {
+          some: {
+            playlistId: playlist.id
+          }
+        }
+      },
+      select: {
+        name: true,
+        artist: true,
+        year: true
+      }
+    });
+
     if (!tracks || tracks.length === 0) {
       return [];
     }
