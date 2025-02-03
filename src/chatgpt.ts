@@ -11,15 +11,17 @@ export class ChatGPT {
     return year;
   }
 
-  public async verifyList(prompt: string): Promise<Array<{
-    artist: string,
-    title: string,
-    oldYear: number,
-    suggestedYear: number,
-    reasoning: string
-  }>> {
+  public async verifyList(prompt: string): Promise<
+    Array<{
+      artist: string;
+      title: string;
+      oldYear: number;
+      suggestedYear: number;
+      reasoning: string;
+    }>
+  > {
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4o-mini',
+      model: 'gpt-3o-mini',
       temperature: 0,
       messages: [
         {
@@ -45,33 +47,40 @@ export class ChatGPT {
                   properties: {
                     artist: {
                       type: 'string',
-                      description: 'The artist name'
+                      description: 'The artist name',
                     },
                     title: {
                       type: 'string',
-                      description: 'The song title'
+                      description: 'The song title',
                     },
                     oldYear: {
                       type: 'number',
-                      description: 'The original year provided'
+                      description: 'The original year provided',
                     },
                     suggestedYear: {
                       type: 'number',
-                      description: 'The correct release year'
+                      description: 'The correct release year',
                     },
                     reasoning: {
                       type: 'string',
-                      description: 'Explanation with sources for why this year is correct'
-                    }
+                      description:
+                        'Explanation with sources for why this year is correct',
+                    },
                   },
-                  required: ['artist', 'title', 'oldYear', 'suggestedYear', 'reasoning']
-                }
-              }
+                  required: [
+                    'artist',
+                    'title',
+                    'oldYear',
+                    'suggestedYear',
+                    'reasoning',
+                  ],
+                },
+              },
             },
-            required: ['mistakes']
-          }
-        }
-      ]
+            required: ['mistakes'],
+          },
+        },
+      ],
     });
 
     if (result?.choices[0]?.message?.function_call) {
