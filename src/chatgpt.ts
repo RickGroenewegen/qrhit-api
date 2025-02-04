@@ -148,9 +148,13 @@ export class ChatGPT {
         try {
           completionArguments = JSON.parse(funcCall.arguments as string);
         } catch (error) {
-          this.logger.log(color.red.bold(`Error parsing JSON response: ${error}`));
-          this.logger.log(color.red.bold(`Raw response: ${funcCall.arguments}`));
-          return { year: 0, reasoning: '', certainty: 0, source: '' };
+          this.logger.log(
+            color.red.bold(`Error parsing JSON response: ${error}`)
+          );
+          this.logger.log(
+            color.red.bold(`Raw response: ${funcCall.arguments}`)
+          );
+          return [];
         }
         const significantMistakes = completionArguments.mistakes.filter(
           (mistake: any) =>
@@ -317,8 +321,12 @@ export class ChatGPT {
         try {
           completionArguments = JSON.parse(funcCall.arguments as string);
         } catch (error) {
-          this.logger.log(color.red.bold(`Error parsing JSON response: ${error}`));
-          this.logger.log(color.red.bold(`Raw response: ${funcCall.arguments}`));
+          this.logger.log(
+            color.red.bold(`Error parsing JSON response: ${error}`)
+          );
+          this.logger.log(
+            color.red.bold(`Raw response: ${funcCall.arguments}`)
+          );
           return { year: 0, reasoning: '', certainty: 0, source: '' };
         }
         if (functionCallName == 'parseYear') {
