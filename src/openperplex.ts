@@ -70,10 +70,6 @@ export class OpenPerplex {
 
         if (isNaN(year)) {
           // If direct parsing fails, try using ChatGPT to extract the year
-
-          console.log(111, data.llm_response);
-          console.log(222, data.sources);
-
           const chatGptResponse = await this.chatgpt.ask(
             `What is the release year according to this text: "${
               data.llm_response
@@ -82,18 +78,8 @@ export class OpenPerplex {
             `
           );
 
-          console.log(333, chatGptResponse);
-
           if (chatGptResponse && chatGptResponse.year) {
             year = chatGptResponse.year;
-          } else {
-            this.logger.log(
-              color.yellow.bold(
-                'Failed to get year from ChatGPT. Trying again in 5 seconds...'
-              )
-            );
-            await new Promise((resolve) => setTimeout(resolve, 5000));
-            return await this.ask(artist, title);
           }
         }
       } catch (e) {}
