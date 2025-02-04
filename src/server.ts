@@ -681,7 +681,6 @@ class Server {
     this.fastify.get('/qrlink/:trackId', async (request: any, reply) => {
       // Get the reqeust headers
       const headers = request.headers;
-      console.log(1234, headers);
 
       const result = await this.data.getLink(
         request.params.trackId,
