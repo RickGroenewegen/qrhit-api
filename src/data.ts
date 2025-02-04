@@ -546,6 +546,7 @@ class Data {
             giftcardAmount,
             giftcardFrom,
             giftcardMessage,
+            emoji: '', //cartItem.emoji,
           },
         });
         playlistDatabaseId = playlistCreate.id;
