@@ -13,4 +13,5 @@ export interface CartItem {
   doubleSided?: boolean;
   eco?: boolean;
   isSlug?: boolean;
+  emoji?: string;
 }
