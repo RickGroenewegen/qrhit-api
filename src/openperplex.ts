@@ -80,9 +80,13 @@ export class OpenPerplex {
 
           if (chatGptResponse && chatGptResponse.year) {
             year = chatGptResponse.year;
+          } else {
+            year = 0;
           }
         }
-      } catch (e) {}
+      } catch (e) {
+        year = 0;
+      }
 
       return year;
     } catch (error) {
