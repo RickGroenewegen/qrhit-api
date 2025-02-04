@@ -875,14 +875,17 @@ class PrintEnBind {
       if (physicalItems > 0 && shippingResult) {
         shipping = shippingResult!.shipping || 0;
         handling = shippingResult!.handling * physicalItems || 0;
+        if (params.countrycode === 'NL') {
+          if (totalPrice >= 50) {
+            shipping = 0;
+          } else {
+            shipping = 2.99;
+          }
+        } else {
+          shipping -= 3;
+        }
       } else if (physicalItems > 0 && !shippingResult) {
         totalPrice = 0;
-      }
-
-      if (params.countrycode === 'NL') {
-        shipping = 2.99;
-      } else {
-        shipping -= 3;
       }
 
       totalPrice += shipping; // + handling;
