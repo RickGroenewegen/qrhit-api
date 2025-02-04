@@ -1018,6 +1018,26 @@ class Server {
     });
 
     if (process.env['ENVIRONMENT'] == 'development') {
+      this.fastify.get(
+        '/generate_invoice/:paymentId',
+        async (request: any, _reply) => {
+          const payment = await this.mollie.getPayment(
+            request.params.paymentId
+          );
+          if (payment) {
+            const pdfPath = await this.order.createInvoice(payment);
+            this.mail.sendTrackingEmail(
+              payment,
+              payment.printApiTrackingLink!,
+              pdfPath
+            );
+            return { success: true };
+          } else {
+            return { success: false };
+          }
+        }
+      );
+
       this.fastify.post('/push', async (request: any, reply: any) => {
         const { token, title, message } = request.body;
         await this.push.sendPushNotification(token, title, message);

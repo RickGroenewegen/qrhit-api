@@ -218,7 +218,7 @@ class Order {
     return await this.printer.createOrder(payment, playlists, productType);
   }
 
-  private async createInvoice(order: any, payment: any): Promise<string> {
+  public async createInvoice(payment: any): Promise<string> {
     const browser = await puppeteer.launch({ headless: true });
     const page = await browser.newPage();
     const invoiceUrl = `${process.env['API_URI']}/invoice/${payment.paymentId}`;

@@ -854,11 +854,18 @@ class PrintEnBind {
       // Count the number of physical items
       let physicalItems = 0;
       let totalPrice = 0;
+      let totalProductPriceWithoutVAT = 0;
+
       for (const item of orderItems) {
         if (item.type == 'physical') {
           physicalItems += parseInt(item.amount);
         }
         totalPrice += item.price * item.amount;
+        const productPriceWithoutVAT = parseFloat(
+          ((item.price * item.amount) / (1 + (taxRate ?? 0) / 100)).toFixed(2)
+        );
+
+        totalProductPriceWithoutVAT += productPriceWithoutVAT;
       }
 
       let freeShipping: boolean = false;
@@ -889,7 +896,7 @@ class PrintEnBind {
           handling,
           taxRateShipping: taxRate,
           taxRate,
-          price: totalPrice,
+          price: totalProductPriceWithoutVAT,
           payment: shipping, // + handling,
         },
       };
