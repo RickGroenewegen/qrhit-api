@@ -71,6 +71,9 @@ export class OpenPerplex {
         if (isNaN(year)) {
           // If direct parsing fails, try using ChatGPT to extract the year
 
+          console.log(111, data.llm_response);
+          console.log(222, data.sources);
+
           const chatGptResponse = await this.chatgpt.ask(
             `What is the release year according to this text: "${
               data.llm_response
@@ -78,6 +81,8 @@ export class OpenPerplex {
               ${JSON.stringify(data.sources, null, 2)}
             `
           );
+
+          console.log(333, chatGptResponse);
 
           if (chatGptResponse && chatGptResponse.year) {
             year = chatGptResponse.year;
