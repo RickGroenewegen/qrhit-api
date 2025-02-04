@@ -1077,21 +1077,9 @@ class Data {
         spotifyYear
       );
 
-      // If all years except Spotify are 0, use the Spotify year
-      let finalYear = result.year;
-      if (
-        result.sources.discogs === 0 &&
-        result.sources.ai === 0 &&
-        result.sources.mb === 0 &&
-        result.sources.openPerplex === 0 &&
-        result.sources.spotify !== 0
-      ) {
-        finalYear = result.sources.spotify;
-      }
-
       await this.prisma.$executeRaw`
           UPDATE  tracks
-          SET     year = ${finalYear},
+          SET     year = ${result.year},
                   spotifyYear = ${result.sources.spotify},
                   discogsYear = ${result.sources.discogs},
                   aiYear = ${result.sources.ai},

@@ -124,8 +124,7 @@ export class Music {
       }
     }
 
-    const finalYear =
-      totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
+    let finalYear = totalWeight > 0 ? Math.round(weightedSum / totalWeight) : 0;
 
     // Calculate standard deviation for valid years (excluding 0)
     const validYears = Object.values(sources).filter(
@@ -140,6 +139,17 @@ export class Music {
       const avgSquareDiff =
         squareDiffs.reduce((sum, diff) => sum + diff, 0) / squareDiffs.length;
       stdDev = Math.sqrt(avgSquareDiff);
+    }
+
+    // If all years except Spotify are 0, use the Spotify year
+    if (
+      discogsResult.year == 0 &&
+      aiResult.year == 0 &&
+      mbResult.year == 0 &&
+      openPerlexYear == 0 &&
+      spotifyReleaseYear > 0
+    ) {
+      finalYear = spotifyReleaseYear;
     }
 
     const fullResult = {

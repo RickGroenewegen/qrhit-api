@@ -144,7 +144,14 @@ export class ChatGPT {
 
       if (result?.choices[0]?.message?.function_call) {
         const funcCall = result.choices[0].message.function_call;
-        const completionArguments = JSON.parse(funcCall.arguments as string);
+        let completionArguments;
+        try {
+          completionArguments = JSON.parse(funcCall.arguments as string);
+        } catch (error) {
+          this.logger.log(color.red.bold(`Error parsing JSON response: ${error}`));
+          this.logger.log(color.red.bold(`Raw response: ${funcCall.arguments}`));
+          return { year: 0, reasoning: '', certainty: 0, source: '' };
+        }
         const significantMistakes = completionArguments.mistakes.filter(
           (mistake: any) =>
             Math.abs(mistake.suggestedYear - mistake.oldYear) > 2
@@ -236,7 +243,7 @@ export class ChatGPT {
       messages: [
         {
           role: 'system',
-          content: `You are a helpfull assistant that helps me determine the release year of a song based on its title and artist. I am sure the artist and title are provided are correct. So do not talk about other songs or artists. If you are not sure about the release year, please let me know.`,
+          content: `You are a helpful assistant that helps me determine the release year of a song based on its title and artist. I am sure the artist and title provided are correct. So do not talk about other songs or artists. If you are not sure about the release year, please let me know.`,
         },
         {
           role: 'user',
@@ -306,7 +313,14 @@ export class ChatGPT {
 
         const funcCall = result.choices[0].message.function_call;
         const functionCallName = funcCall.name;
-        const completionArguments = JSON.parse(funcCall.arguments as string);
+        let completionArguments;
+        try {
+          completionArguments = JSON.parse(funcCall.arguments as string);
+        } catch (error) {
+          this.logger.log(color.red.bold(`Error parsing JSON response: ${error}`));
+          this.logger.log(color.red.bold(`Raw response: ${funcCall.arguments}`));
+          return { year: 0, reasoning: '', certainty: 0, source: '' };
+        }
         if (functionCallName == 'parseYear') {
           answer = await this.parseYear(completionArguments);
         }
