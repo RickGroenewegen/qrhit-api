@@ -348,7 +348,7 @@ export class Music {
         'https://real-time-web-search.p.rapidapi.com/search',
         {
           params: {
-            q: `"${artist}" - "${title}" (song) release date`,
+            q: `${artist} - ${title} (song) release date`,
             limit: 10,
           },
           headers: {
