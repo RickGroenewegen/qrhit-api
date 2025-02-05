@@ -71,6 +71,12 @@ class Server {
   private trustpilot = Trustpilot.getInstance();
   private music = new Music();
   private suggestion = Suggestion.getInstance();
+  private whiteLabels = [
+    {
+      domain: 'k7.com',
+      template: 'k7',
+    },
+  ];
 
   private version: string = '1.0.0';
 
@@ -722,17 +728,27 @@ class Server {
         const subdir = request.params.subdir;
         tracks = tracks.slice(startIndex, endIndex + 1);
 
-        console.log(111, php);
+        // Extract domain from email and check if it's in the whitelist
+        const emailDomain = payment.email ? payment.email.split('@')[1] : '';
+        const whitelabel = this.whiteLabels.find(
+          (wl) => wl.domain === emailDomain
+        );
 
-        await reply.view(`pdf_${request.params.template}.ejs`, {
-          subdir,
-          playlist,
-          php: php[0],
-          tracks,
-          user,
-          eco,
-          emptyPages,
-        });
+        if (payment.email) {
+          const template = whitelabel
+            ? `${request.params.template}_${whitelabel.template}`
+            : request.params.template;
+
+          await reply.view(`pdf_${template}.ejs`, {
+            subdir,
+            playlist,
+            php: php[0],
+            tracks,
+            user,
+            eco,
+            emptyPages,
+          });
+        }
       }
     );
 
