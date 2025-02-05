@@ -278,6 +278,8 @@ model Track {
   id                Int     @id @default(autoincrement())
   trackId           String  @unique
   name              String
+  album             String?
+  preview           String?
   artist            String
   isrc              String?
   year              Int?

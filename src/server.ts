@@ -828,9 +828,7 @@ class Server {
               maxCards: orderType.maxCards,
               discountPercentage: orderType.discountPercentage,
               pricePerCard: orderType.pricePerCard,
-              available:
-                orderType.digital ||
-                (await this.utils.isTrustedIp(request.clientIp)), // SHould be true once we have the physical cards
+              available: true,
             },
           };
         } else {

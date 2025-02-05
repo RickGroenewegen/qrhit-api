@@ -65,6 +65,9 @@ class Utils {
     // Remove (Remastered) from the title
     str = str.replace(/\(Remastered\)/gi, '').trim();
 
+    // Remove (Re-recorded) from the title
+    str = str.replace(/\(Re-recorded\)/gi, '').trim();
+
     return str;
   }
 

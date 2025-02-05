@@ -341,7 +341,10 @@ class Data {
     return userDatabaseId;
   }
 
-  public async getPlaylistsByPaymentId(paymentId: string, playlistId: string | null = null): Promise<any[]> {
+  public async getPlaylistsByPaymentId(
+    paymentId: string,
+    playlistId: string | null = null
+  ): Promise<any[]> {
     let query = `
       SELECT 
         playlists.id,
@@ -377,7 +380,10 @@ class Data {
       params.push(playlistId);
     }
 
-    const playlists = await this.prisma.$queryRawUnsafe<any[]>(query, ...params);
+    const playlists = await this.prisma.$queryRawUnsafe<any[]>(
+      query,
+      ...params
+    );
 
     return playlists;
   }
@@ -930,6 +936,8 @@ class Data {
         isrc: true,
         artist: true,
         spotifyLink: true,
+        album: true,
+        preview: true,
         manuallyCorrected: true,
       },
     });
@@ -952,10 +960,15 @@ class Data {
     for (const track of tracks) {
       const existingTrack = existingTrackMap.get(track.id);
       if (existingTrack) {
+        console.log(111, existingTrack.album, track.album);
+        console.log(222, existingTrack.preview, track.preview);
+
         // Check if any data has changed
         if (
           existingTrack.name !== this.utils.cleanTrackName(track.name) ||
           existingTrack.isrc !== track.isrc ||
+          existingTrack.album !== this.utils.cleanTrackName(track.album) ||
+          existingTrack.preview !== track.preview ||
           existingTrack.artist !== track.artist ||
           existingTrack.spotifyLink !== track.link
         ) {
@@ -983,6 +996,8 @@ class Data {
           isrc: track.isrc,
           artist: track.artist,
           spotifyLink: track.link,
+          album: this.utils.cleanTrackName(track.album),
+          preview: track.preview,
         })),
         skipDuplicates: true,
       });
@@ -1004,6 +1019,8 @@ class Data {
             isrc: track.isrc,
             artist: track.artist,
             spotifyLink: track.link,
+            album: this.utils.cleanTrackName(track.album),
+            preview: track.preview,
           },
         });
       }

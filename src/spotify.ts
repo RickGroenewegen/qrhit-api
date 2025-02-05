@@ -529,6 +529,7 @@ class Spotify {
                 );
                 if (cachedTrackInfo) {
                   const trackInfo = JSON.parse(cachedTrackInfo);
+
                   trueYear = trackInfo.year;
                   trueName = trackInfo.name;
                   trueArtist = trackInfo.artist;
@@ -551,6 +552,8 @@ class Spotify {
                 return {
                   id: trackId,
                   name: this.utils.cleanTrackName(trueName!),
+                  album: this.utils.cleanTrackName(item.track.album.name || ''),
+                  preview: item.track.preview_url || '',
                   artist: trueArtist,
                   link: item.track.external_urls.spotify,
                   isrc: item.track.external_ids.isrc,
