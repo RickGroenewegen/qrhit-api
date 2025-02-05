@@ -960,9 +960,6 @@ class Data {
     for (const track of tracks) {
       const existingTrack = existingTrackMap.get(track.id);
       if (existingTrack) {
-        console.log(111, existingTrack.album, track.album);
-        console.log(222, existingTrack.preview, track.preview);
-
         // Check if any data has changed
         if (
           existingTrack.name !== this.utils.cleanTrackName(track.name) ||

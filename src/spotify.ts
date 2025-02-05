@@ -552,7 +552,9 @@ class Spotify {
                 return {
                   id: trackId,
                   name: this.utils.cleanTrackName(trueName!),
-                  album: this.utils.cleanTrackName(item.track.album.name || ''),
+                  album: this.utils.cleanTrackName(
+                    item.track.album?.name || ''
+                  ),
                   preview: item.track.preview_url || '',
                   artist: trueArtist,
                   link: item.track.external_urls.spotify,
