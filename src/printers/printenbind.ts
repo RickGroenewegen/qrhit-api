@@ -831,8 +831,12 @@ class PrintEnBind {
   }
 
   public async calculateOrder(params: any): Promise<any> {
+    let countrySelected = false;
+
     if (!params.countrycode) {
       params.countrycode = 'NL';
+    } else {
+      countrySelected = true;
     }
 
     const taxRate = (await this.data.getTaxRate(params.countrycode))!;
@@ -888,7 +892,9 @@ class PrintEnBind {
         totalPrice = 0;
       }
 
-      totalPrice += shipping; // + handling;
+      if (countrySelected) {
+        totalPrice += shipping; // + handling;
+      }
 
       const result = {
         success: true,
