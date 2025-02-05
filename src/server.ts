@@ -73,7 +73,7 @@ class Server {
   private suggestion = Suggestion.getInstance();
   private whiteLabels = [
     {
-      domain: 'gmail.com',
+      domain: 'k7.com',
       template: 'k7',
     },
   ];
