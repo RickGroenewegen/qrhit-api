@@ -341,8 +341,8 @@ class Data {
     return userDatabaseId;
   }
 
-  public async getPlaylistsByPaymentId(paymentId: string): Promise<any[]> {
-    const playlists = await this.prisma.$queryRaw<any[]>`
+  public async getPlaylistsByPaymentId(paymentId: string, playlistId: string | null = null): Promise<any[]> {
+    let query = `
       SELECT 
         playlists.id,
         playlists.playlistId,
@@ -356,6 +356,7 @@ class Data {
         payment_has_playlist.priceWithoutVAT,
         payment_has_playlist.priceVAT,
         payment_has_playlist.amount,
+        payment_has_playlist.emoji,
         payment_has_playlist.doubleSided,
         payment_has_playlist.eco,
         playlists.numberOfTracks,
@@ -367,7 +368,16 @@ class Data {
       INNER JOIN 
         payments ON payment_has_playlist.paymentId = payments.id
       WHERE 
-        payments.paymentId = ${paymentId}`;
+        payments.paymentId = ?`;
+
+    const params: any[] = [paymentId];
+
+    if (playlistId) {
+      query += ` AND playlists.playlistId = ?`;
+      params.push(playlistId);
+    }
+
+    const playlists = await this.prisma.$queryRawUnsafe<any[]>(query, ...params);
 
     return playlists;
   }

@@ -87,7 +87,15 @@
                 <div style="font-size: 12px; color: #666; margin-top: 2mm;"><%= track.extraNameAttribute %></div>
             <% } %>
         </div>
-        <div class="url-bottom"><%= process.env['APP_DOMAIN'] %></div>
+        <div class="url-bottom">
+            <% if (php.emoji && php.emoji.length) { %>
+                <span style="filter: grayscale(100%); font-size: 16px;"><%= php.emoji %></span>
+            <% } %>
+            <%= process.env['APP_DOMAIN'] %>
+            <% if (php.emoji && php.emoji.length) { %>
+                <span style="filter: grayscale(100%); font-size: 16px;"><%= php.emoji %></span>
+            <% } %>
+        </div>
     </div>
     <div style="page-break-after: always;"></div>
 <% }); %>

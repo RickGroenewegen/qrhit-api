@@ -343,6 +343,7 @@ model PaymentHasPlaylist {
   suggestionsPending         Boolean   @default(false)
   eligableForPrinter         Boolean   @default(false)
   eligableForPrinterAt       DateTime?
+  emoji                      String?
   orderType                  OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
 
   @@unique([paymentId, playlistId])

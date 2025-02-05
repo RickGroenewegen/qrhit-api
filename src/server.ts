@@ -708,6 +708,10 @@ class Server {
         const payment = await this.mollie.getPayment(request.params.paymentId);
         const user = await this.data.getUser(payment.userId);
         const playlist = await this.data.getPlaylist(request.params.playlistId);
+        const php = await this.data.getPlaylistsByPaymentId(
+          request.params.paymentId,
+          request.params.playlistId
+        );
         let tracks = await this.data.getTracks(playlist.id, user.id);
 
         // Slice the tracks based on the start and end index which is 0-based
@@ -715,11 +719,15 @@ class Server {
         const endIndex = parseInt(request.params.endIndex);
         const eco = this.utils.parseBoolean(request.params.eco);
         const emptyPages = parseInt(request.params.emptyPages);
+        const subdir = request.params.subdir;
         tracks = tracks.slice(startIndex, endIndex + 1);
 
+        console.log(111, php);
+
         await reply.view(`pdf_${request.params.template}.ejs`, {
-          subdir: request.params.subdir,
+          subdir,
           playlist,
+          php: php[0],
           tracks,
           user,
           eco,
