@@ -73,7 +73,7 @@ class Server {
   private suggestion = Suggestion.getInstance();
   private whiteLabels = [
     {
-      domain: 'k7.com',
+      domain: 'gmail.com',
       template: 'k7',
     },
   ];
@@ -735,9 +735,10 @@ class Server {
         );
 
         if (payment.email) {
-          const template = whitelabel
-            ? `${request.params.template}_${whitelabel.template}`
-            : request.params.template;
+          const template =
+            whitelabel && request.params.template.indexOf('digital_double') > -1
+              ? `${request.params.template}_${whitelabel.template}`
+              : request.params.template;
 
           await reply.view(`pdf_${template}.ejs`, {
             subdir,
