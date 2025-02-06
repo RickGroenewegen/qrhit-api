@@ -3,6 +3,7 @@ import { MAX_CARDS, MAX_CARDS_PHYSICAL } from '../config/constants';
 import PrismaInstance from '../prisma';
 import Cache from '../cache';
 import { ApiResult } from '../interfaces/ApiResult';
+import { SingleItemCalculation } from '../interfaces/SingleItemCalculation';
 import { color, blue, white, magenta } from 'console-log-colors';
 import Mail from '../mail';
 import puppeteer from 'puppeteer';
@@ -830,7 +831,7 @@ class PrintEnBind {
     }
   }
 
-  public async calculateSingleItem(params: any): Promise<any> {
+  public async calculateSingleItem(params: SingleItemCalculation): Promise<{ price: number }> {
     let price = 0;
     let a4price = 0.092;
     let cardprice = 0.052;
