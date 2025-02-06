@@ -830,6 +830,39 @@ class PrintEnBind {
     }
   }
 
+  public async calculateSingleItem(params: any): Promise<any> {
+    let price = 0;
+    let a4price = 0.092;
+    let cardprice = 0.052;
+    let cardsOnA4 = 12;
+    let digitalPrice = 3;
+
+    //{ type: 'digital', format: 'single', colorMode: 'color', quantity: 5 }
+
+    if (params.type == 'physical') {
+      if (params.format == 'a4') {
+        const numberOfA4 = Math.ceil(params.quantity / cardsOnA4);
+        price = numberOfA4 * a4price;
+      } else {
+        price = params.quantity * cardprice;
+        price += 1.8; // Handling
+      }
+      price = price + 10; // Profit
+    } else {
+      price = (await this.calculateCardPrice(13, params.quantity)).totalPrice;
+    }
+
+    if (params.colorMode == 'bw') {
+      price = price * 0.8;
+    }
+
+    console.log(111, params);
+
+    return {
+      price,
+    };
+  }
+
   public async calculateOrder(params: any): Promise<any> {
     let countrySelected = false;
 
