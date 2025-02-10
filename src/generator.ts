@@ -85,8 +85,6 @@ class Generator {
           },
         });
 
-        console.log(123, payments.length);
-
         if (payments.length > 0) {
           this.logger.log(
             blue.bold(
@@ -234,7 +232,12 @@ class Generator {
       productType == 'giftcard' ||
       (productType == 'cards' && allTracksChecked)
     ) {
-      await this.finalizeOrder(payment.paymentId, mollie, forceFinalize);
+      await this.finalizeOrder(
+        payment.paymentId,
+        mollie,
+        forceFinalize,
+        skipMainMail
+      );
     }
 
     let orderName = `${payment.fullname} (${payment.countrycode})`;
@@ -394,7 +397,8 @@ class Generator {
   public async finalizeOrder(
     paymentId: string,
     mollie: Mollie,
-    forceFinalize: boolean = false
+    forceFinalize: boolean = false,
+    skipMail: boolean = false
   ): Promise<ApiResult> {
     // Try to acquire a lock for this payment
     const lockAcquired = await this.cache.acquireLock(
@@ -536,13 +540,15 @@ class Generator {
           });
 
           // Loop over the physical playlists and send them to the printer
-          for (const playlistItem of physicalPlaylists) {
-            const playlist = playlistItem.playlist;
-            this.mail.sendFinalizedMail(
-              payment,
-              `${process.env['FRONTEND_URI']}/usersuggestions/${payment.paymentId}/${payment.user.hash}/${playlist.playlistId}/0`,
-              playlist
-            );
+          if (!skipMail) {
+            for (const playlistItem of physicalPlaylists) {
+              const playlist = playlistItem.playlist;
+              this.mail.sendFinalizedMail(
+                payment,
+                `${process.env['FRONTEND_URI']}/usersuggestions/${payment.paymentId}/${payment.user.hash}/${playlist.playlistId}/0`,
+                playlist
+              );
+            }
           }
         }
 
