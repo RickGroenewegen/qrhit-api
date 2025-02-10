@@ -10,7 +10,7 @@ import puppeteer from 'puppeteer';
 import fs from 'fs/promises';
 import PrintAPI from './printers/printapi';
 import PrintEnBind from './printers/printenbind';
-import axios from 'axios';
+import Spotify from './spotify';
 
 interface PriceResult {
   totalPrice: number;
@@ -23,6 +23,7 @@ class Order {
   private prisma = PrismaInstance.getInstance();
   private cache = Cache.getInstance();
   private utils = new Utils();
+  private spotify = new Spotify();
   private logger = new Log();
   //private printer = PrintAPI.getInstance();
   private printer = PrintEnBind.getInstance();
@@ -105,8 +106,20 @@ class Order {
 
       for (const playlist of featuredPlaylists) {
         // Using axios visit the playlist's URL to get the number of tracks
-        const response = await axios.get(
-          `${process.env['FRONTEND_URI']}/product/${playlist.slug}`
+        await this.spotify.getPlaylist(
+          playlist.playlistId,
+          true,
+          '',
+          false,
+          true,
+          false
+        );
+        await this.spotify.getTracks(
+          playlist.playlistId,
+          true,
+          '',
+          false,
+          false
         );
 
         this.logger.log(
@@ -180,6 +193,10 @@ class Order {
     type: string = 'cards'
   ) {
     return this.printer.getOrderType(numberOfTracks, digital, type);
+  }
+
+  public async calculateSingleItem(params: any) {
+    // return await this.printer.calculateSingleItem(params);
   }
 
   public async calculateOrder(params: any): Promise<ApiResult> {
