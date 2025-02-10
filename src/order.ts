@@ -1,5 +1,4 @@
 import Log from './logger';
-import { MAX_CARDS } from './config/constants';
 import PrismaInstance from './prisma';
 import Cache from './cache';
 import { ApiResult } from './interfaces/ApiResult';
@@ -11,6 +10,7 @@ import puppeteer from 'puppeteer';
 import fs from 'fs/promises';
 import PrintAPI from './printers/printapi';
 import PrintEnBind from './printers/printenbind';
+import axios from 'axios';
 
 interface PriceResult {
   totalPrice: number;
@@ -104,36 +104,20 @@ class Order {
       });
 
       for (const playlist of featuredPlaylists) {
-        // Get the order type based on the number of tracks
-        const orderType = await this.getOrderType(playlist.numberOfTracks);
+        // Using axios visit the playlist's URL to get the number of tracks
+        const response = await axios.get(
+          `${process.env['FRONTEND_URI']}/product/${playlist.slug}`
+        );
 
-        if (orderType) {
-          // Update the playlist's price with the order type's amount
-          await this.prisma.playlist.update({
-            where: { id: playlist.id },
-            data: { price: orderType.amountWithMargin },
-          });
-
-          this.logger.log(
-            color.magenta(
-              `Updated price for playlist ${white.bold(
-                playlist.name
-              )} to: ${white.bold(orderType.amountWithMargin)}`
-            )
-          );
-        } else {
-          this.logger.log(
-            color.red.bold(
-              `No suitable order type found for playlist ${white.bold(
-                playlist.name
-              )} with ${white.bold(playlist.numberOfTracks)} tracks`
-            )
-          );
-        }
+        this.logger.log(
+          color.magenta(
+            `Reloaded playlist ${white.bold(playlist.name)} into cache`
+          )
+        );
       }
 
       this.logger.log(
-        color.magenta('Featured playlists prices updated successfully')
+        color.blue.bold('Featured playlists loaded successfully')
       );
     } catch (error) {
       this.logger.log(
