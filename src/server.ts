@@ -124,10 +124,10 @@ class Server {
     });
 
     this.fastify.get(
-      '/verify/:playlistId',
-      //{ preHandler: verifyTokenMiddleware },
+      '/verify/:paymentId',
+      { preHandler: verifyTokenMiddleware },
       async (request: any, reply: any) => {
-        this.openai.verifyList(request.params.playlistId);
+        this.data.verifyPayment(request.params.paymentId);
         reply.send({ success: true });
       }
     );

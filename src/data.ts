@@ -27,6 +27,8 @@ import { OpenPerplex } from './openperplex';
 import cluster from 'cluster';
 import { Music } from './music';
 import PushoverClient from './pushover';
+import OpenAI from 'openai';
+import { ChatGPT } from './chatgpt';
 
 class Data {
   private static instance: Data;
@@ -36,6 +38,7 @@ class Data {
   private translate = new Translation();
   private utils = new Utils();
   private music = new Music();
+  private openai = new ChatGPT();
   private analytics = AnalyticsClient.getInstance();
   private pushover = new PushoverClient();
 
@@ -83,6 +86,22 @@ class Data {
     this.logger.log(
       color.blue.bold(`Cached ${color.white.bold(cacheCount)} track links`)
     );
+  }
+
+  public async verifyPayment(paymentId: string) {
+    // Get all the playlist IDs (The real spotify one) for the checked payments
+    const playlists = await this.prisma.$queryRaw<any[]>`
+      SELECT pl.playlistId
+      FROM payments p
+      JOIN payment_has_playlist php ON php.paymentId = p.id
+      JOIN playlists pl ON pl.id = php.playlistId
+      WHERE p.paymentId = ${paymentId}
+    `;
+
+    // Loop through all the playlist IDs and verify them
+    for (const playlist of playlists) {
+      await this.openai.verifyList(playlist.playlistId);
+    }
   }
 
   private async createSiteMap(): Promise<void> {
