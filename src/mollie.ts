@@ -380,7 +380,12 @@ class Mollie {
 
     const textSearchClause =
       search.textSearch && search.textSearch.trim() !== ''
-        ? { fullname: { contains: search.textSearch } }
+        ? {
+            OR: [
+              { fullname: { contains: search.textSearch } },
+              { orderId: { contains: search.textSearch } },
+            ],
+          }
         : {};
 
     const finalizedClause =
@@ -416,6 +421,7 @@ class Mollie {
         totalPrice: true,
         createdAt: true,
         updatedAt: true,
+        orderId: true,
         profit: true,
         printApiStatus: true,
         printApiTrackingLink: true,
