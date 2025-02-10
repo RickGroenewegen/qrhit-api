@@ -831,7 +831,10 @@ class PrintEnBind {
     }
   }
 
-  public async calculateSingleItem(params: SingleItemCalculation): Promise<{ price: number }> {
+  public async calculateSingleItem(
+    params: SingleItemCalculation,
+    recurse: boolean = true
+  ): Promise<{ price: number; alternatives: any }> {
     let price = 0;
     let a4price = 0.092;
     let cardprice = 0.052;
@@ -839,7 +842,7 @@ class PrintEnBind {
     let digitalPrice = 3;
 
     //{ type: 'digital', format: 'single', colorMode: 'color', quantity: 5 }
-
+    //format: 'cards' | 'a4' | 'single' | 'double';
     if (params.type == 'physical') {
       if (params.format == 'a4') {
         const numberOfA4 = Math.ceil(params.quantity / cardsOnA4);
@@ -859,8 +862,60 @@ class PrintEnBind {
 
     console.log(111, params);
 
+    let alternatives = {};
+    if (recurse) {
+      const physical: number =
+        (await this.calculateSingleItem({ ...params, type: 'physical' }, false))
+          .price - price;
+
+      const digital: number =
+        (await this.calculateSingleItem({ ...params, type: 'digital' }, false))
+          .price - price;
+
+      const cards: number =
+        (await this.calculateSingleItem({ ...params, format: 'cards' }, false))
+          .price - price;
+
+      const a4: number =
+        (await this.calculateSingleItem({ ...params, format: 'a4' }, false))
+          .price - price;
+
+      const single: number =
+        (await this.calculateSingleItem({ ...params, format: 'single' }, false))
+          .price - price;
+
+      const double: number =
+        (await this.calculateSingleItem({ ...params, format: 'double' }, false))
+          .price - price;
+
+      const color: number =
+        (
+          await this.calculateSingleItem(
+            { ...params, colorMode: 'color' },
+            false
+          )
+        ).price - price;
+
+      const bw: number =
+        (await this.calculateSingleItem({ ...params, colorMode: 'bw' }, false))
+          .price - price;
+
+      alternatives = {
+        type: {
+          physical: parseFloat(physical.toFixed(2)),
+          digital: parseFloat(digital.toFixed(2)),
+          cards: parseFloat(cards.toFixed(2)),
+          a4: parseFloat(a4.toFixed(2)),
+          single: parseFloat(single.toFixed(2)),
+          double: parseFloat(double.toFixed(2)),
+          color: parseFloat(color.toFixed(2)),
+          bw: parseFloat(bw.toFixed(2)),
+        },
+      };
+    }
     return {
       price,
+      alternatives,
     };
   }
 

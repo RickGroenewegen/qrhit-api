@@ -198,6 +198,10 @@ class Order {
     return this.printer.getOrderType(numberOfTracks, digital, type);
   }
 
+  public async calculateSingleItem(params: any) {
+    return await this.printer.calculateSingleItem(params);
+  }
+
   public async calculateOrder(params: any): Promise<ApiResult> {
     return await this.printer.calculateOrder(params);
   }

@@ -882,6 +882,18 @@ class Server {
       }
     );
 
+    this.fastify.post(
+      '/order/calculate_single',
+      async (request: any, _reply) => {
+        try {
+          const result = await this.order.calculateSingleItem(request.body);
+          return result;
+        } catch (e) {
+          return { success: false };
+        }
+      }
+    );
+
     this.fastify.post('/order/calculate', async (request: any, _reply) => {
       try {
         const result = await this.order.calculateOrder(request.body);
