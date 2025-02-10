@@ -91,7 +91,7 @@ class Data {
   public async verifyPayment(paymentId: string) {
     // Get all the playlist IDs (The real spotify one) for the checked payments
     const playlists = await this.prisma.$queryRaw<any[]>`
-      SELECT pl.playlistId
+      SELECT pl.playlistId, p.userId
       FROM payments p
       JOIN payment_has_playlist php ON php.paymentId = p.id
       JOIN playlists pl ON pl.id = php.playlistId
@@ -100,7 +100,7 @@ class Data {
 
     // Loop through all the playlist IDs and verify them
     for (const playlist of playlists) {
-      await this.openai.verifyList(playlist.playlistId);
+      await this.openai.verifyList(playlist.userId, playlist.playlistId);
     }
   }
 

@@ -18,7 +18,10 @@ export class ChatGPT {
 
   private logger = new Logger();
 
-  public async verifyList(playlistId: string): Promise<
+  public async verifyList(
+    userId: number,
+    playlistId: string
+  ): Promise<
     Array<{
       artist: string;
       title: string;
@@ -182,7 +185,7 @@ export class ChatGPT {
           WHERE t.name = ${mistake.title}
           AND t.artist = ${mistake.artist}
           AND pht.playlistId = ${playlist[0].id}
-          AND us.userId = 1
+          AND us.userId = ${userId}
           LIMIT 1
         `;
 
@@ -216,7 +219,7 @@ export class ChatGPT {
               ${mistake.suggestedYear},
               t.id,
               pht.playlistId,
-              1,
+              ${userId},
               NOW(),
               NOW(),
               ${mistake.reasoning}
