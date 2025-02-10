@@ -836,8 +836,8 @@ class PrintEnBind {
     recurse: boolean = true
   ): Promise<{ price: number; alternatives: any }> {
     let price = 0;
-    let a4price = 0.092;
-    let cardprice = 0.052;
+    let a4price = 0.1;
+    let cardprice = 0.05;
     let cardsOnA4 = 12;
     let digitalPrice = 3;
 
@@ -856,11 +856,9 @@ class PrintEnBind {
       price = (await this.calculateCardPrice(13, params.quantity)).totalPrice;
     }
 
-    if (params.colorMode == 'bw') {
+    if (params.type == 'physical' && params.colorMode == 'bw') {
       price = price * 0.8;
     }
-
-    console.log(111, params);
 
     let alternatives = {};
     if (recurse) {
@@ -914,7 +912,7 @@ class PrintEnBind {
       };
     }
     return {
-      price,
+      price: parseFloat(price.toFixed(2)),
       alternatives,
     };
   }
