@@ -625,6 +625,14 @@ class Suggestion {
         this.logger.log(
           color.yellow.bold('No changes detected in suggestions')
         );
+
+        // Set suggestionsPending to false
+        await this.prisma.$executeRaw`
+          UPDATE payment_has_playlist
+          SET suggestionsPending = false
+          WHERE id = ${suggestions[0].paymentHasPlaylistId}
+        `;
+
         if (hasPhysicalPlaylists) {
           this.checkIfReadyForPrinter(paymentId, clientIp);
         }
