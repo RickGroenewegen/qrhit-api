@@ -557,6 +557,10 @@ class Suggestion {
         }
       }
 
+      let hasPhysicalPlaylists = suggestions.some(
+        (suggestion) => suggestion.playlistType === 'physical'
+      );
+
       // Execute all updates if there are any
       if (updateQueries.length > 0) {
         await Promise.all(updateQueries);
@@ -604,10 +608,6 @@ class Suggestion {
           },
         });
 
-        let hasPhysicalPlaylists = suggestions.some(
-          (suggestion) => suggestion.playlistType === 'physical'
-        );
-
         await this.mollie.clearPDFs(paymentId);
         await this.generator.generate(
           paymentId,
@@ -625,6 +625,17 @@ class Suggestion {
         this.logger.log(
           color.yellow.bold('No changes detected in suggestions')
         );
+
+        // Set suggestionsPending to false
+        await this.prisma.$executeRaw`
+          UPDATE payment_has_playlist
+          SET suggestionsPending = false
+          WHERE id = ${suggestions[0].paymentHasPlaylistId}
+        `;
+
+        if (hasPhysicalPlaylists) {
+          this.checkIfReadyForPrinter(paymentId, clientIp);
+        }
       }
 
       return true;
