@@ -892,13 +892,9 @@ class Server {
     });
 
     this.fastify.get('/cache', async (request: any, _reply) => {
-      if (process.env['ENVIRONMENT'] == 'development') {
-        await this.cache.flush();
-        this.order.updateFeaturedPlaylists();
-        return { success: true };
-      } else {
-        return { success: false };
-      }
+      await this.cache.flush();
+      this.order.updateFeaturedPlaylists();
+      return { success: true };
     });
 
     this.fastify.post('/printapi/webhook', async (request: any, _reply) => {
