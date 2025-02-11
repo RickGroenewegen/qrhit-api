@@ -204,33 +204,44 @@ model taxRate {
 }
 
 model Playlist {
-  id                Int                  @id @default(autoincrement())
-  playlistId        String               @unique
-  type              String               @default("cards")
-  name              String
-  slug              String               @default("")
-  description_en    String?              @db.Text
-  description_nl    String?              @db.Text
-  description_de    String?              @db.Text
-  description_fr    String?              @db.Text
-  description_es    String?              @db.Text
-  description_it    String?              @db.Text
-  description_pt    String?              @db.Text
-  description_pl    String?              @db.Text
-  description_hin   String?              @db.Text
-  description_jp    String?              @db.Text
-  description_cn    String?              @db.Text
-  createdAt         DateTime             @default(now())
-  updatedAt         DateTime             @updatedAt
-  featured          Boolean              @default(false)
-  featuredLocale    String?
-  image             String
-  price             Float                @default(0)
-  numberOfTracks    Int                  @default(0)
-  resetCache        Boolean              @default(false)
-  giftcardAmount    Float                @default(0)
-  giftcardFrom      String?              @db.VarChar(100)
-  giftcardMessage   String?              @db.VarChar(255)
+  id                   Int      @id @default(autoincrement())
+  playlistId           String   @unique
+  type                 String   @default("cards")
+  name                 String
+  slug                 String   @default("")
+  description_en       String?  @db.Text
+  description_nl       String?  @db.Text
+  description_de       String?  @db.Text
+  description_fr       String?  @db.Text
+  description_es       String?  @db.Text
+  description_it       String?  @db.Text
+  description_pt       String?  @db.Text
+  description_pl       String?  @db.Text
+  description_hin      String?  @db.Text
+  description_jp       String?  @db.Text
+  description_cn       String?  @db.Text
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
+  featured             Boolean  @default(false)
+  featuredLocale       String?
+  image                String
+  price                Float    @default(0)
+  numberOfTracks       Int      @default(0)
+  resetCache           Boolean  @default(false)
+  giftcardAmount       Float    @default(0)
+  giftcardFrom         String?  @db.VarChar(100)
+  giftcardMessage      String?  @db.VarChar(255)
+  decadePercentage2020 Int      @default(0)
+  decadePercentage2010 Int      @default(0)
+  decadePercentage2000 Int      @default(0)
+  decadePercentage1990 Int      @default(0)
+  decadePercentage1980 Int      @default(0)
+  decadePercentage1970 Int      @default(0)
+  decadePercentage1960 Int      @default(0)
+  decadePercentage1950 Int      @default(0)
+  decadePercentage1900 Int      @default(0)
+  decadePercentage0    Int      @default(0)
+
   tracks            PlaylistHasTrack[]
   Payment           PaymentHasPlaylist[]
   UserSuggestion    UserSuggestion[]
