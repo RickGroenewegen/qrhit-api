@@ -379,5 +379,7 @@
   "mail.invoiceHousenumber": "Número de casa de factura",
   "mail.finalizedMailSubject": "Te invitamos a revisar la lista '{{ playlist }}'",
   "mail.youCanReview": "¡Buenas noticias! Tu lista de reproducción ha sido revisada por nuestro equipo. Nos gustaría invitarte a revisar tu lista también. Tu pedido se procesará y enviará automáticamente después de 36 horas. Si no deseas hacer cambios, también puedes solicitar que el pedido se imprima y envíe de inmediato.",
-  "mail.reviewOrder": "Revisa tu pedido"
+  "mail.reviewOrder": "Revisa tu pedido",
+  "countdown.createYourOwn": "¡Crea tus propias tarjetas QR de música!",
+  "countdown.visit": "Visita nuestro sitio web"
 }

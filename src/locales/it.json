@@ -375,5 +375,7 @@
   "mail.invoiceHousenumber": "Numero civico della fattura",
   "mail.finalizedMailSubject": "Ti invitiamo a rivedere la playlist '{{ playlist }}'",
   "mail.youCanReview": "Ottime notizie! La tua playlist è stata esaminata dal nostro team. Ti invitiamo a rivedere anche la tua playlist. Il tuo ordine sarà elaborato e spedito automaticamente dopo 36 ore. Se non desideri apportare modifiche, puoi anche richiedere che l'ordine venga stampato e spedito immediatamente.",
-  "mail.reviewOrder": "Rivedi il tuo ordine"
+  "mail.reviewOrder": "Rivedi il tuo ordine",
+  "countdown.createYourOwn": "Crea le tue carte musicali QR!",
+  "countdown.visit": "Visita il nostro sito"
 }

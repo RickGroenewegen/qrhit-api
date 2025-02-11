@@ -380,5 +380,7 @@
   "mail.invoiceHousenumber": "Numéro de maison de facturation",
   "mail.finalizedMailSubject": "Nous t'invitons à revoir la playlist '{{ playlist }}'",
   "mail.youCanReview": "Bonne nouvelle ! Votre playlist a été examinée par notre équipe. Nous vous invitons à examiner votre playlist également. Votre commande sera traitée et expédiée automatiquement après 36 heures. Si vous ne souhaitez pas apporter de modifications, vous pouvez également demander à ce que la commande soit imprimée et expédiée immédiatement.",
-  "mail.reviewOrder": "Revois ta commande"
+  "mail.reviewOrder": "Revois ta commande",
+  "countdown.createYourOwn": "Créez vos propres cartes QR Musique!",
+  "countdown.visit": "Visitez notre site"
 }

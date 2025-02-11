@@ -38,9 +38,6 @@ export class OpenPerplex {
         }),
       });
 
-      console.log(111, response.status);
-      console.log(222, response);
-
       if (response.status === 429) {
         this.logger.log(
           color.yellow.bold(

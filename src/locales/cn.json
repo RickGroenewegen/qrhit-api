@@ -371,5 +371,7 @@
   "mail.invoiceHousenumber": "发票门牌号",
   "mail.finalizedMailSubject": "我们邀请你查看播放列表 '{{ playlist }}'",
   "mail.youCanReview": "好消息！您的播放列表已由我们的团队审核。我们也邀请您审核您的播放列表。您的订单将在36小时后自动处理并发货。如果您不想进行任何更改，也可以请求立即打印和发货。",
-  "mail.reviewOrder": "查看您的订单"
+  "mail.reviewOrder": "查看您的订单",
+  "countdown.createYourOwn": "创建你自己的QR音乐卡！",
+  "countdown.visit": "访问我们的网站"
 }

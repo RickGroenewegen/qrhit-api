@@ -115,6 +115,8 @@
 	"voucher.withMusicalGreetings" : "With musical greetings",
 	
 	"countdown.youNeedToInstall" : "Install our app to scan your cards!",
+	"countdown.createYourOwn" : "Create your own QR Music cards!",
+	"countdown.visit" : "Visit our website",
 	"countdown.invalidLink" : "Unrecognized QR code",
 	"countdown.howToInstall" : "How to install",
 	"countdown.onIOS" : "On iOS Safari",

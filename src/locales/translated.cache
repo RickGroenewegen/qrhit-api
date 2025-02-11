@@ -4510,5 +4510,29 @@
     "hin",
     "jp",
     "cn"
+  ],
+  "countdown.createYourOwn": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp",
+    "cn"
+  ],
+  "countdown.visit": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp",
+    "cn"
   ]
 }

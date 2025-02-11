@@ -380,5 +380,7 @@
   "mail.invoiceHousenumber": "Factuur huisnummer",
   "mail.finalizedMailSubject": "We nodigen je uit om de afspeellijst '{{ playlist }}' te bekijken",
   "mail.youCanReview": "Goed nieuws! Je playlist is beoordeeld door ons team. We nodigen je uit om je playlist ook te beoordelen. Je bestelling wordt automatisch verwerkt en verzonden na 36 uur. Als je geen wijzigingen wilt maken, kun je ook vragen om de bestelling direct te laten printen en verzenden.",
-  "mail.reviewOrder": "Bekijk je bestelling"
+  "mail.reviewOrder": "Bekijk je bestelling",
+  "countdown.createYourOwn": "Maak je eigen QR Muziekkaarten!",
+  "countdown.visit": "Bezoek onze website"
 }
