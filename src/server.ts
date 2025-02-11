@@ -904,15 +904,12 @@ class Server {
     });
 
     this.fastify.get('/cache', async (request: any, _reply) => {
-      console.log(222, request.clientIp);
-
       if (
         process.env['ENVIRONMENT'] == 'development' ||
         this.utils.isTrustedIp(request.clientIp)
       ) {
         await this.cache.flush();
-        await this.order.updateFeaturedPlaylists();
-        await this.cache.flush();
+        this.order.updateFeaturedPlaylists();
         return { success: true };
       } else {
         return { success: false };

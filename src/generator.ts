@@ -96,7 +96,7 @@ class Generator {
 
           for (const payment of payments) {
             try {
-              //await this.sendToPrinter(payment.paymentId, '');
+              await this.sendToPrinter(payment.paymentId, '');
               this.logger.log(
                 color.green.bold(
                   `Successfully sent payment ${white.bold(
