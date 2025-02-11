@@ -892,10 +892,7 @@ class Server {
     });
 
     this.fastify.get('/cache', async (request: any, _reply) => {
-      if (
-        process.env['ENVIRONMENT'] == 'development' ||
-        this.utils.isTrustedIp(request.clientIp)
-      ) {
+      if (process.env['ENVIRONMENT'] == 'development') {
         await this.cache.flush();
         this.order.updateFeaturedPlaylists();
         return { success: true };

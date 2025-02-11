@@ -98,6 +98,12 @@ class Order {
   }
 
   public async updateFeaturedPlaylists(): Promise<void> {
+    this.logger.log(
+      color.blue.bold(
+        'Refreshing cache and updating featured playlists with decade percentages'
+      )
+    );
+
     try {
       // Get all featured playlists
       const featuredPlaylists = await this.prisma.playlist.findMany({
