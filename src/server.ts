@@ -681,7 +681,11 @@ class Server {
       if (process.env['ENVIRONMENT'] === 'development') {
         useVersion = new Date().getTime().toString();
       }
-      await reply.view(`countdown.ejs`, { translations, version: useVersion });
+      await reply.view(`countdown.ejs`, {
+        translations,
+        version: useVersion,
+        domain: process.env['FRONTEND_URI'],
+      });
     });
 
     this.fastify.get('/qrlink/:trackId', async (request: any, reply) => {
