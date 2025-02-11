@@ -120,20 +120,14 @@ class Order {
       for (const playlist of featuredPlaylists) {
         // Get fresh data from Spotify
         await this.spotify.getPlaylist(
-          playlist.playlistId,
+          playlist.slug,
           true,
           '',
           false,
           true,
-          false
+          true
         );
-        await this.spotify.getTracks(
-          playlist.playlistId,
-          true,
-          '',
-          false,
-          false
-        );
+        await this.spotify.getTracks(playlist.slug, true, '', false, true);
 
         // Calculate decade percentages
         const tracks = playlist.tracks
