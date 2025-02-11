@@ -136,72 +136,25 @@ class Order {
         const totalTracks = tracks.length;
 
         if (totalTracks > 0) {
-          // Initialize counters for each decade
-          const decadeCounts = {
-            '2020': 0,
-            '2010': 0,
-            '2000': 0,
-            '1990': 0,
-            '1980': 0,
-            '1970': 0,
-            '1960': 0,
-            '1950': 0,
-            '1900': 0,
-            '0': 0,
-          };
+          const decades = [
+            2020, 2010, 2000, 1990, 1980, 1970, 1960, 1950, 1900, 0,
+          ];
+          const decadeCounts = Object.fromEntries(decades.map((d) => [d, 0]));
 
-          // Count tracks in each decade
           tracks.forEach((track) => {
             const year = track.year || 0;
-            if (year >= 2020) decadeCounts['2020']++;
-            else if (year >= 2010) decadeCounts['2010']++;
-            else if (year >= 2000) decadeCounts['2000']++;
-            else if (year >= 1990) decadeCounts['1990']++;
-            else if (year >= 1980) decadeCounts['1980']++;
-            else if (year >= 1970) decadeCounts['1970']++;
-            else if (year >= 1960) decadeCounts['1960']++;
-            else if (year >= 1950) decadeCounts['1950']++;
-            else if (year >= 1900) decadeCounts['1900']++;
-            else decadeCounts['0']++;
+            const decade = decades.find((d) => year >= d) || 0;
+            decadeCounts[decade]++;
           });
 
-          console.log(111, decadeCounts);
-
-          // Update playlist with percentages
           await this.prisma.playlist.update({
             where: { id: playlist.id },
-            data: {
-              decadePercentage2020: Math.round(
-                (decadeCounts['2020'] / totalTracks) * 100
-              ),
-              decadePercentage2010: Math.round(
-                (decadeCounts['2010'] / totalTracks) * 100
-              ),
-              decadePercentage2000: Math.round(
-                (decadeCounts['2000'] / totalTracks) * 100
-              ),
-              decadePercentage1990: Math.round(
-                (decadeCounts['1990'] / totalTracks) * 100
-              ),
-              decadePercentage1980: Math.round(
-                (decadeCounts['1980'] / totalTracks) * 100
-              ),
-              decadePercentage1970: Math.round(
-                (decadeCounts['1970'] / totalTracks) * 100
-              ),
-              decadePercentage1960: Math.round(
-                (decadeCounts['1960'] / totalTracks) * 100
-              ),
-              decadePercentage1950: Math.round(
-                (decadeCounts['1950'] / totalTracks) * 100
-              ),
-              decadePercentage1900: Math.round(
-                (decadeCounts['1900'] / totalTracks) * 100
-              ),
-              decadePercentage0: Math.round(
-                (decadeCounts['0'] / totalTracks) * 100
-              ),
-            },
+            data: Object.fromEntries(
+              decades.map((decade) => [
+                `decadePercentage${decade}`,
+                Math.round((decadeCounts[decade] / totalTracks) * 100),
+              ])
+            ),
           });
         }
 
