@@ -478,7 +478,17 @@ class Data {
         playlists.image,
         playlists.price,
         playlists.numberOfTracks,
-        playlists.featuredLocale
+        playlists.featuredLocale,
+        playlists.decadePercentage2020,
+        playlists.decadePercentage2010,
+        playlists.decadePercentage2000,
+        playlists.decadePercentage1990,
+        playlists.decadePercentage1980,
+        playlists.decadePercentage1970,
+        playlists.decadePercentage1960,
+        playlists.decadePercentage1950,
+        playlists.decadePercentage1900,
+        playlists.decadePercentage0
       FROM 
         playlists
       WHERE 
