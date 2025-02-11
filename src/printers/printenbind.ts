@@ -835,29 +835,76 @@ class PrintEnBind {
     params: SingleItemCalculation,
     recurse: boolean = true
   ): Promise<{ price: number; alternatives: any }> {
+    const taxRate = (await this.data.getTaxRate('NL'))!;
     let price = 0;
     let a4price = 0.1;
-    let cardprice = 0.05;
+    let colorPrice = 0.018;
+    let paperPrice = 0.035;
+    let cardPrice = colorPrice * 2 + paperPrice;
     let cardsOnA4 = 12;
     let digitalPrice = 3;
+    let priceWithProfit = 0;
 
     //{ type: 'digital', format: 'single', colorMode: 'color', quantity: 5 }
     //format: 'cards' | 'a4' | 'single' | 'double';
     if (params.type == 'physical') {
-      if (params.format == 'a4') {
-        const numberOfA4 = Math.ceil(params.quantity / cardsOnA4);
-        price = numberOfA4 * a4price;
-      } else {
-        price = params.quantity * cardprice;
-        price += 1.8; // Handling
-      }
-      price = price + 10; // Profit
+      // if (params.format == 'a4') {
+      //   const numberOfA4 = Math.ceil(params.quantity / cardsOnA4);
+      //   price = numberOfA4 * a4price;
+      // } else {
+      price = params.quantity * cardPrice;
+      price += 1.8; // Handling
+      // }
     } else {
       price = (await this.calculateCardPrice(13, params.quantity)).totalPrice;
     }
 
-    if (params.type == 'physical' && params.colorMode == 'bw') {
-      price = price * 0.8;
+    price = parseFloat(price.toFixed(2));
+
+    if (recurse) {
+      console.log();
+      console.log(111, price);
+    }
+
+    // if (params.type == 'physical' && params.colorMode == 'bw') {
+    //   price = price * 0.8;
+    // }
+
+    if (recurse) {
+      console.log(222, price);
+    }
+
+    if (params.type == 'physical') {
+      //price = price + profitMargin;
+
+      let profitMargin = 1.5;
+      priceWithProfit = price * profitMargin;
+
+      if (recurse) {
+        console.log(223, priceWithProfit);
+      }
+      if (priceWithProfit - price < 15) {
+        priceWithProfit = price + 15;
+        if (recurse) {
+          console.log(224, priceWithProfit);
+        }
+      }
+
+      if (recurse) {
+        console.log(225, priceWithProfit, taxRate);
+      }
+
+      price = priceWithProfit * (1 + taxRate / 100);
+    }
+
+    if (recurse) {
+      console.log(333, price);
+    }
+
+    price = Math.ceil(price);
+
+    if (recurse) {
+      console.log(444, price);
     }
 
     let alternatives = {};
