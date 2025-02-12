@@ -1126,25 +1126,28 @@ class PrintEnBind {
       const playlist = playlistItem.playlist;
       const filename = playlistItem.filename;
 
-      this.logger.log(
-        color.blue.bold(
-          `Adding article to${color.white.bold(
-            'Print&Bind'
-          )} order. Playlist: ${color.white(playlist.name)}`
-        )
-      );
-
-      console.log(111, playlistItem);
-
       const fileUrl = `${process.env['API_URI']}/public/pdf/${filename}`;
 
-      const orderItem = await this.createOrderItem(
-        playlist.numberOfTracks,
-        fileUrl,
-        playlist
-      );
+      // Add the playlist multiple times based on amount property
+      const amount = playlist.amount || 1; // Default to 1 if amount not specified
+      for (let i = 0; i < amount; i++) {
+        const orderItem = await this.createOrderItem(
+          playlist.numberOfTracks,
+          fileUrl,
+          playlist
+        );
 
-      orderItems.push(orderItem);
+        orderItems.push(orderItem);
+        this.logger.log(
+          color.blue.bold(
+            `Adding article to ${color.white.bold(
+              'Print&Bind'
+            )} order. Playlist: ${color.white(
+              playlist.name
+            )} with ${color.white.bold(playlist.numberOfTracks)} tracks`
+          )
+        );
+      }
     }
 
     const result = await this.processOrderRequest(
