@@ -13,6 +13,7 @@ import Spotify from '../spotify';
 import Utils from '../utils';
 import cluster from 'cluster';
 import { CronJob } from 'cron';
+import { SingleItemCalculation } from '../interfaces/SingleItemCalculation';
 
 interface PriceResult {
   totalPrice: number;
@@ -395,20 +396,15 @@ class PrintEnBind {
   public async getOrderType(
     numberOfTracks: number,
     digital: boolean = false,
-    type: string = 'cards'
+    productType: string = 'cards'
   ) {
     let orderType = null;
-    let digitalInt = digital ? '1' : '0';
+    let digitalInt = digital ? 1 : 0;
     let maxCards = digital ? MAX_CARDS : MAX_CARDS_PHYSICAL;
-
-    if (numberOfTracks > maxCards) {
-      numberOfTracks = maxCards;
-    }
-
-    let cacheKey = `orderType_${numberOfTracks}_${digitalInt}_${type}`;
+    let cacheKey = `orderType_${numberOfTracks}_${digitalInt}_${productType}`;
     if (digital) {
       // There is just one digital product
-      cacheKey = `orderType_${digitalInt}_${type}`;
+      cacheKey = `orderType_${digitalInt}_${productType}`;
     }
 
     const cachedOrderType = await this.cache.get(cacheKey);
@@ -418,7 +414,7 @@ class PrintEnBind {
     } else {
       orderType = await this.prisma.orderType.findFirst({
         where: {
-          type,
+          type: productType,
           ...(digital
             ? {}
             : {
@@ -438,23 +434,19 @@ class PrintEnBind {
       this.cache.set(cacheKey, JSON.stringify(orderType));
     }
 
-    // If it's digital we calculate the true price
-    if (orderType) {
-      if (digital) {
-        const price = await this.calculateCardPrice(
-          orderType.amountWithMargin,
-          numberOfTracks
-        );
+    if (numberOfTracks > maxCards) {
+      numberOfTracks = maxCards;
+    }
 
-        orderType = {
-          ...orderType,
-          discountPercentage: price.discountPercentage,
-          pricePerCard: price.pricePerCard,
-        };
-        orderType.amountWithMargin = price.totalPrice;
-        orderType.discountPercentage = price.discountPercentage;
-        orderType.pricePerCard = price.pricePerCard;
-      }
+    if (productType == 'cards') {
+      const singleCalculation = await this.calculateSingleItem({
+        productType: 'cards',
+        type: digital ? 'digital' : 'physical',
+        quantity: numberOfTracks,
+        alternatives: {},
+      });
+      orderType.amount = singleCalculation.price;
+      orderType.alternatives = singleCalculation.alternatives;
     }
 
     return orderType;
@@ -1005,6 +997,123 @@ class PrintEnBind {
     }
   }
 
+  public async calculateSingleItem(
+    params: SingleItemCalculation,
+    recurse: boolean = true
+  ): Promise<{ price: number; alternatives: any }> {
+    const taxRate = (await this.data.getTaxRate('NL'))!;
+    let price = 0;
+    let colorPrice = 0.018;
+    let paperPrice = 0.035;
+    let cardPrice = colorPrice * 2 + paperPrice;
+    let priceWithProfit = 0;
+
+    //{ type: 'digital', format: 'single', colorMode: 'color', quantity: 5 }
+    //format: 'cards' | 'a4' | 'single' | 'double';
+
+    if (params.type == 'physical') {
+      price = params.quantity * cardPrice;
+      price += 1.8; // Handling
+    } else {
+      price = (await this.calculateCardPrice(13, params.quantity)).totalPrice;
+    }
+
+    price = parseFloat(price.toFixed(2));
+
+    if (params.type == 'physical') {
+      // Smart profit scaling function
+      const calculateProfit = (basePrice: number, quantity: number): number => {
+        // Minimum profit we want to make
+        const minProfit = 12;
+
+        // Base margin starts at 50% (1.5)
+        let margin = 1.5;
+
+        // Scale down margin based on quantity
+        if (quantity > 400) {
+          // After 400 items, reduce margin more aggressively
+          margin = 1.5 - (0.3 * (quantity - 400)) / 600;
+          // Don't go below 1.2 (20% margin)
+          margin = Math.max(margin, 1.2);
+        } else if (quantity > 100) {
+          // Between 100-400 items, reduce margin gradually
+          margin = 1.5 - (0.1 * (quantity - 100)) / 300;
+        }
+
+        // Calculate price with margin
+        let priceWithMargin = basePrice * margin;
+
+        // Ensure minimum profit
+        if (priceWithMargin - basePrice < minProfit) {
+          priceWithMargin = basePrice + minProfit;
+        }
+
+        return priceWithMargin;
+      };
+
+      priceWithProfit = calculateProfit(price, params.quantity);
+      price = priceWithProfit * (1 + taxRate / 100);
+    }
+
+    price = Math.ceil(price);
+
+    let alternatives = {};
+    if (recurse) {
+      const physical: number =
+        (await this.calculateSingleItem({ ...params, type: 'physical' }, false))
+          .price - price;
+
+      const digital: number =
+        (await this.calculateSingleItem({ ...params, type: 'digital' }, false))
+          .price - price;
+
+      // const cards: number =
+      //   (await this.calculateSingleItem({ ...params, format: 'cards' }, false))
+      //     .price - price;
+
+      // const a4: number =
+      //   (await this.calculateSingleItem({ ...params, format: 'a4' }, false))
+      //     .price - price;
+
+      // const single: number =
+      //   (await this.calculateSingleItem({ ...params, format: 'single' }, false))
+      //     .price - price;
+
+      // const double: number =
+      //   (await this.calculateSingleItem({ ...params, format: 'double' }, false))
+      //     .price - price;
+
+      // const color: number =
+      //   (
+      //     await this.calculateSingleItem(
+      //       { ...params, colorMode: 'color' },
+      //       false
+      //     )
+      //   ).price - price;
+
+      // const bw: number =
+      //   (await this.calculateSingleItem({ ...params, colorMode: 'bw' }, false))
+      //     .price - price;
+
+      alternatives = {
+        type: {
+          physical: parseFloat(physical.toFixed(2)),
+          digital: parseFloat(digital.toFixed(2)),
+          // cards: parseFloat(cards.toFixed(2)),
+          // a4: parseFloat(a4.toFixed(2)),
+          // single: parseFloat(single.toFixed(2)),
+          // double: parseFloat(double.toFixed(2)),
+          // color: parseFloat(color.toFixed(2)),
+          // bw: parseFloat(bw.toFixed(2)),
+        },
+      };
+    }
+    return {
+      price: parseFloat(price.toFixed(2)),
+      alternatives,
+    };
+  }
+
   public async createOrder(
     payment: any,
     playlists: any[],
@@ -1019,11 +1128,13 @@ class PrintEnBind {
 
       this.logger.log(
         color.blue.bold(
-          `Creating Print&Bind order for playlist: ${color.white(
-            playlist.name
-          )}`
+          `Adding article to${color.white.bold(
+            'Print&Bind'
+          )} order. Playlist: ${color.white(playlist.name)}`
         )
       );
+
+      console.log(111, playlistItem);
 
       const fileUrl = `${process.env['API_URI']}/public/pdf/${filename}`;
 
@@ -1032,6 +1143,7 @@ class PrintEnBind {
         fileUrl,
         playlist
       );
+
       orderItems.push(orderItem);
     }
 
