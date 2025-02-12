@@ -701,7 +701,8 @@ class Mollie {
         params.cart.items.map(async (item: CartItem, index: number) => {
           const orderType = await this.order.getOrderType(
             item.numberOfTracks,
-            item.type === 'digital'
+            item.type === 'digital',
+            item.productType
           );
 
           if (item.isSlug) {
@@ -725,8 +726,8 @@ class Mollie {
 
           return {
             playlistId: playlistDatabaseIds[index],
+            orderTypeId: orderType.id,
             amount: item.amount,
-            orderTypeId: orderType?.id || 0,
             numberOfTracks: item.numberOfTracks,
             type: item.type,
             doubleSided: item.doubleSided,

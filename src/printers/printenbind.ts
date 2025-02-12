@@ -1007,15 +1007,21 @@ class PrintEnBind {
     let paperPrice = 0.035;
     let cardPrice = colorPrice * 2 + paperPrice;
     let priceWithProfit = 0;
+    let minimumCards = 50;
+    let useCardAmount = params.quantity;
+
+    if (useCardAmount < minimumCards) {
+      useCardAmount = minimumCards;
+    }
 
     //{ type: 'digital', format: 'single', colorMode: 'color', quantity: 5 }
     //format: 'cards' | 'a4' | 'single' | 'double';
 
     if (params.type == 'physical') {
-      price = params.quantity * cardPrice;
+      price = useCardAmount * cardPrice;
       price += 1.8; // Handling
     } else {
-      price = (await this.calculateCardPrice(13, params.quantity)).totalPrice;
+      price = (await this.calculateCardPrice(13, useCardAmount)).totalPrice;
     }
 
     price = parseFloat(price.toFixed(2));
@@ -1051,7 +1057,7 @@ class PrintEnBind {
         return priceWithMargin;
       };
 
-      priceWithProfit = calculateProfit(price, params.quantity);
+      priceWithProfit = calculateProfit(price, useCardAmount);
       price = priceWithProfit * (1 + taxRate / 100);
     }
 
@@ -1144,7 +1150,9 @@ class PrintEnBind {
               'Print&Bind'
             )} order. Playlist: ${color.white(
               playlist.name
-            )} with ${color.white.bold(playlist.numberOfTracks)} tracks`
+            )} (${color.white.bold(i + 1)}) with ${color.white.bold(
+              playlist.numberOfTracks
+            )} tracks`
           )
         );
       }

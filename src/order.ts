@@ -230,9 +230,9 @@ class Order {
   public async getOrderType(
     numberOfTracks: number,
     digital: boolean = false,
-    type: string = 'cards'
+    productType: string = 'cards'
   ) {
-    return this.printer.getOrderType(numberOfTracks, digital, type);
+    return this.printer.getOrderType(numberOfTracks, digital, productType);
   }
 
   public async calculateSingleItem(params: any) {

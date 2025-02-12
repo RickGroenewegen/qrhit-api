@@ -827,11 +827,8 @@ class Server {
             success: true,
             data: {
               id: orderType.id,
-              amount: orderType.amountWithMargin,
-              description: orderType.description,
-              maxCards: orderType.maxCards,
-              discountPercentage: orderType.discountPercentage,
-              pricePerCard: orderType.pricePerCard,
+              amount: orderType.amount,
+              alternatives: orderType.alternatives || {},
               available: true,
             },
           };
