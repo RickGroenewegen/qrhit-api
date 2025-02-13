@@ -142,8 +142,9 @@ class Order {
           const decadeCounts = Object.fromEntries(decades.map((d) => [d, 0]));
 
           tracks.forEach((track) => {
-            const year = track.year || 0;
-            const decade = decades.find((d) => year >= d) || 0;
+            // Use track.year instead of spotifyYear
+            const trackYear = track.year || 0;
+            const decade = decades.find((d) => trackYear >= d) || 0;
             decadeCounts[decade]++;
           });
 
