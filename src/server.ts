@@ -391,13 +391,14 @@ class Server {
     );
 
     this.fastify.post(
-      '/correction/:paymentId/:userHash/:playlistId',
+      '/correction/:paymentId/:userHash/:playlistId/:andSend',
       { preHandler: verifyTokenMiddleware },
       async (request: any, reply) => {
         this.suggestion.processCorrections(
           request.params.paymentId,
           request.params.userHash,
           request.params.playlistId,
+          this.utils.parseBoolean(request.params.andSend),
           request.clientIp
         );
         return { success: true };

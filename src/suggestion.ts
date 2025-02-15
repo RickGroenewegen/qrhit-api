@@ -368,6 +368,7 @@ class Suggestion {
     paymentId: string,
     userHash: string,
     playlistId: string,
+    andSend: boolean,
     clientIp: string
   ): Promise<boolean> {
     try {
@@ -597,29 +598,31 @@ class Suggestion {
           )
         );
 
-        // set userAgreed van paymentByPlaylist op true
-        await this.prisma.paymentHasPlaylist.update({
-          where: {
-            id: suggestions[0].paymentHasPlaylistId,
-          },
-          data: {
-            eligableForPrinter: true,
-            eligableForPrinterAt: new Date(),
-          },
-        });
+        if (andSend) {
+          // set userAgreed van paymentByPlaylist op true
+          await this.prisma.paymentHasPlaylist.update({
+            where: {
+              id: suggestions[0].paymentHasPlaylistId,
+            },
+            data: {
+              eligableForPrinter: true,
+              eligableForPrinterAt: new Date(),
+            },
+          });
 
-        await this.mollie.clearPDFs(paymentId);
-        await this.generator.generate(
-          paymentId,
-          '',
-          '',
-          this.mollie,
-          true, // Force finalize
-          true // Skip main mail
-        );
+          await this.mollie.clearPDFs(paymentId);
+          await this.generator.generate(
+            paymentId,
+            '',
+            '',
+            this.mollie,
+            true, // Force finalize
+            true // Skip main mail
+          );
 
-        if (hasPhysicalPlaylists) {
-          this.checkIfReadyForPrinter(paymentId, clientIp);
+          if (hasPhysicalPlaylists) {
+            this.checkIfReadyForPrinter(paymentId, clientIp);
+          }
         }
       } else {
         this.logger.log(

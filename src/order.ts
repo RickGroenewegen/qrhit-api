@@ -121,13 +121,13 @@ class Order {
         // Get fresh data from Spotify
         await this.spotify.getPlaylist(
           playlist.slug,
-          true,
+          false,
           '',
           false,
           true,
           true
         );
-        await this.spotify.getTracks(playlist.slug, true, '', false, true);
+        await this.spotify.getTracks(playlist.slug, false, '', false, true);
 
         // Calculate decade percentages
         const tracks = playlist.tracks
@@ -142,9 +142,8 @@ class Order {
           const decadeCounts = Object.fromEntries(decades.map((d) => [d, 0]));
 
           tracks.forEach((track) => {
-            // Use track.year instead of spotifyYear
-            const trackYear = track.year || 0;
-            const decade = decades.find((d) => trackYear >= d) || 0;
+            const year = track.year || 0;
+            const decade = decades.find((d) => year >= d) || 0;
             decadeCounts[decade]++;
           });
 

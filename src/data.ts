@@ -870,7 +870,7 @@ class Data {
         return { wasUpdated: true, method: 'artistTitle' };
       } else if (existingTracksByMetadata.length > 1) {
         // Check if all matches have the same year
-        const years = new Set(existingTracksByMetadata.map(t => t.year));
+        const years = new Set(existingTracksByMetadata.map((t) => t.year));
         if (years.size === 1) {
           // All matches have the same year, use the first one
           const track = existingTracksByMetadata[0];
