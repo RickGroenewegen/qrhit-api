@@ -826,14 +826,14 @@ class Data {
       return { wasUpdated: true, method: 'isrc' };
     }
 
-    // If no ISRC match, try finding a track with matching artist and title
+    // If no ISRC match, try finding tracks with matching artist and title
     const currentTrack = await this.prisma.track.findUnique({
       where: { id: trackId },
       select: { artist: true, name: true },
     });
 
     if (currentTrack) {
-      const existingTrackByMetadata = await this.prisma.track.findFirst({
+      const existingTracksByMetadata = await this.prisma.track.findMany({
         where: {
           artist: currentTrack.artist,
           name: currentTrack.name,
@@ -854,19 +854,39 @@ class Data {
         },
       });
 
-      if (existingTrackByMetadata) {
+      if (existingTracksByMetadata.length === 1) {
+        // If only one match found, use it
+        const track = existingTracksByMetadata[0];
         await this.prisma.track.update({
           where: { id: trackId },
           data: {
-            year: existingTrackByMetadata.year,
-            yearSource:
-              'otherTrack_metadata_' + existingTrackByMetadata.yearSource,
-            certainty: existingTrackByMetadata.certainty,
-            reasoning: existingTrackByMetadata.reasoning,
+            year: track.year,
+            yearSource: 'otherTrack_metadata_' + track.yearSource,
+            certainty: track.certainty,
+            reasoning: track.reasoning,
             manuallyChecked: true,
           },
         });
         return { wasUpdated: true, method: 'artistTitle' };
+      } else if (existingTracksByMetadata.length > 1) {
+        // Check if all matches have the same year
+        const years = new Set(existingTracksByMetadata.map(t => t.year));
+        if (years.size === 1) {
+          // All matches have the same year, use the first one
+          const track = existingTracksByMetadata[0];
+          await this.prisma.track.update({
+            where: { id: trackId },
+            data: {
+              year: track.year,
+              yearSource: 'otherTrack_metadata_multiple_' + track.yearSource,
+              certainty: track.certainty,
+              reasoning: track.reasoning,
+              manuallyChecked: true,
+            },
+          });
+          return { wasUpdated: true, method: 'artistTitle_multiple' };
+        }
+        // Multiple matches with different years - don't update
       }
     }
 
