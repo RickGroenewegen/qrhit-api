@@ -514,7 +514,7 @@ class Spotify {
 
           const tracks: Track[] = await Promise.all(
             response.data.items
-              .filter((item: any) => item.track)
+              .filter((item: any) => item.track && item.track.track)
               .map(async (item: any) => {
                 const trackId = item.track.id;
                 let trueYear: number | undefined;
@@ -545,7 +545,9 @@ class Spotify {
                     extraArtistAttribute = trackInfo.extraArtistAttribute;
                   } else {
                     trueName = item.track.name;
-                    trueArtist = item.track.artists[0].name;
+                    if (item.track.artists?.length > 0) {
+                      trueArtist = item.track.artists[0].name;
+                    }
                   }
                 }
 
@@ -557,10 +559,10 @@ class Spotify {
                   ),
                   preview: item.track.preview_url || '',
                   artist: trueArtist,
-                  link: item.track.external_urls.spotify,
-                  isrc: item.track.external_ids.isrc,
+                  link: item.track.external_urls?.spotify,
+                  isrc: item.track.external_ids?.isrc,
                   image:
-                    item.track.album.images.length > 0
+                    item.track.album.images?.length > 0
                       ? item.track.album.images[1].url
                       : null,
                   releaseDate: format(
