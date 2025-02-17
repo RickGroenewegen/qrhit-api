@@ -396,7 +396,8 @@ class PrintEnBind {
   public async getOrderType(
     numberOfTracks: number,
     digital: boolean = false,
-    productType: string = 'cards'
+    productType: string = 'cards',
+    playlistId: string
   ) {
     let orderType = null;
     let digitalInt = digital ? 1 : 0;
@@ -526,7 +527,8 @@ class PrintEnBind {
           const orderType = await this.getOrderType(
             parseInt(items[i].copies) / 2,
             false,
-            'cards'
+            'cards',
+            items[i].playlistId
           );
 
           const productPriceWithoutVAT = parseFloat(
@@ -615,7 +617,8 @@ class PrintEnBind {
         const orderType = await this.getOrderType(
           items[i].numberOfTracks,
           true,
-          items[i].productType
+          items[i].productType,
+          items[i].playlistId
         );
 
         if (orderType) {

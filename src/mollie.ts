@@ -702,7 +702,8 @@ class Mollie {
           const orderType = await this.order.getOrderType(
             item.numberOfTracks,
             item.type === 'digital',
-            item.productType
+            item.productType,
+            item.playlistId
           );
 
           if (item.isSlug) {

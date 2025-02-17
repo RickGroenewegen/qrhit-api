@@ -152,7 +152,11 @@ class Discount {
     }
   }
 
-  public async redeemDiscount(code: string, amount: number): Promise<any> {
+  public async redeemDiscount(
+    code: string,
+    amount: number,
+    cart: any
+  ): Promise<any> {
     const cache = Cache.getInstance();
     const lockKey = `lock:discount:${code}`;
     const lockTimeout = 5000; // 5 seconds
@@ -193,7 +197,7 @@ class Discount {
           discount.amount
         );
 
-        if (amountLeft < amount) {
+        if (amountLeft < amount && !discount.general) {
           return {
             success: false,
             message: 'insufficientDiscountAmountLeft',
@@ -202,20 +206,42 @@ class Discount {
           };
         }
 
-        const insertResult = await prisma.discountCodedUses.create({
-          data: {
-            amount: parseFloat(amount.toFixed(2)),
-            discountCodeId: discount.id,
-          },
-        });
-
-        return {
-          success: true,
-          message: 'discountRedeemedSuccessfully',
-          fullAmount: discount.amount,
-          amountLeft: parseFloat((amountLeft - amount).toFixed(2)),
-          discountUseId: insertResult.id,
-        };
+        if (!discount.general) {
+          const insertResult = await prisma.discountCodedUses.create({
+            data: {
+              amount: parseFloat(amount.toFixed(2)),
+              discountCodeId: discount.id,
+            },
+          });
+          return {
+            success: true,
+            message: 'discountRedeemedSuccessfully',
+            fullAmount: discount.amount,
+            amountLeft: parseFloat((amountLeft - amount).toFixed(2)),
+            discountUseId: insertResult.id,
+          };
+        } else {
+          if (
+            cart.items.length == 1 &&
+            cart.items[0].playlistId == discount.playlistId &&
+            cart.items[0].type == 'digital'
+          ) {
+            return {
+              success: true,
+              message: 'discountRedeemedSuccessfully',
+              fullAmount: discount.amount,
+              amountLeft: parseFloat(amount.toFixed(2)),
+              discountUseId: 0,
+            };
+          } else {
+            return {
+              success: false,
+              message: 'notApplicable',
+              fullAmount: discount.amount,
+              amountLeft: parseFloat(amountLeft.toFixed(2)),
+            };
+          }
+        }
       });
     } catch (error) {
       console.log(error);
@@ -279,7 +305,8 @@ class Discount {
         if (usableAmount > 0) {
           const discountResult = await this.redeemDiscount(
             discount.code,
-            usableAmount
+            usableAmount,
+            cart
           );
 
           if (discountResult.success) {

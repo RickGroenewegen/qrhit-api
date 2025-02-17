@@ -39,6 +39,8 @@ model DiscountCode {
   from              String?             @db.VarChar(100)
   startDate         DateTime?
   endDate           DateTime?
+  general           Boolean             @default(false)
+  playlistId        String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
   DiscountCodedUses DiscountCodedUses[]
