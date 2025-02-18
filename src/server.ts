@@ -546,6 +546,12 @@ class Server {
       credentials: true,
     });
 
+    // Add security headers
+    this.fastify.addHook('onSend', (_request, reply, _payload, done) => {
+      reply.header('X-Frame-Options', 'DENY');
+      done();
+    });
+
     await this.fastify.register((instance, opts, done) => {
       instance.register(require('@fastify/static'), {
         root: process.env['PUBLIC_DIR'] as string,
