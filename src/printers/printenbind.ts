@@ -439,7 +439,7 @@ class PrintEnBind {
       numberOfTracks = maxCards;
     }
 
-    if (productType == 'cards') {
+    if (orderType && productType == 'cards') {
       const singleCalculation = await this.calculateSingleItem({
         productType: 'cards',
         type: digital ? 'digital' : 'physical',

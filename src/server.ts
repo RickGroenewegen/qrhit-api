@@ -842,7 +842,15 @@ class Server {
             },
           };
         } else {
-          return { success: false, error: 'Order type not found' };
+          return {
+            success: true,
+            data: {
+              id: 0,
+              amount: 0,
+              alternatives: {},
+              available: false,
+            },
+          };
         }
       }
     );
