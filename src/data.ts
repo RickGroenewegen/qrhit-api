@@ -1125,7 +1125,7 @@ class Data {
         youtubeLink: linkQuery[0].youtubeLink,
       };
 
-      if (data.link) {
+      if (data.link && data.youtubeLink) {
         await this.cache.set(cacheKey, JSON.stringify(data));
         return {
           success: true,
