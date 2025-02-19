@@ -1417,7 +1417,7 @@ class Data {
       JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
       JOIN tracks t ON t.id = pht.trackId
       WHERE p.paymentId = ${paymentId}
-      AND t.manuallyChecked = false
+      AND (t.manuallyChecked = false OR t.spotifyLink IS NULL)
     `;
 
     this.logger.log(
@@ -1561,17 +1561,21 @@ class Data {
   }
   public async searchTracks(
     searchTerm: string,
-    missingSpotifyLink: boolean = false
+    missingYouTubeLink: boolean = false
   ): Promise<any[]> {
     const tracks = await this.prisma.$queryRaw<any[]>`
-      SELECT id, artist, name, year 
+      SELECT id, artist, name, year, youtubeLink, spotifyLink
       FROM tracks 
       WHERE (
         LOWER(artist) LIKE LOWER(${`%${searchTerm}%`})
         OR LOWER(name) LIKE LOWER(${`%${searchTerm}%`})
       )
-      ${missingSpotifyLink ? Prisma.sql`AND (spotifyLink IS NULL OR spotifyLink = '')` : Prisma.sql``}
-      LIMIT 25
+      ${
+        missingYouTubeLink
+          ? Prisma.sql`AND (youtubeLink IS NULL OR youtubeLink = '')`
+          : Prisma.sql``
+      }
+      LIMIT 1000
     `;
     return tracks;
   }
@@ -1580,7 +1584,9 @@ class Data {
     id: number,
     artist: string,
     name: string,
-    year: number
+    year: number,
+    spotifyLink: string,
+    youtubeLink: string
   ): Promise<boolean> {
     try {
       await this.prisma.track.update({
@@ -1589,9 +1595,12 @@ class Data {
           artist,
           name,
           year,
+          spotifyLink,
+          youtubeLink,
           manuallyCorrected: true,
         },
       });
+      await this.checkUnfinalizedPayments();
       return true;
     } catch (error) {
       return false;

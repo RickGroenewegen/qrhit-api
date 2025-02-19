@@ -268,8 +268,11 @@ class Server {
       '/tracks/search',
       { preHandler: verifyTokenMiddleware },
       async (request: any, _reply) => {
-        const { searchTerm = '' } = request.body;
-        const tracks = await this.data.searchTracks(searchTerm);
+        const { searchTerm = '', missingYouTubeLink } = request.body;
+        const tracks = await this.data.searchTracks(
+          searchTerm,
+          this.utils.parseBoolean(missingYouTubeLink)
+        );
         return { success: true, data: tracks };
       }
     );
@@ -278,11 +281,22 @@ class Server {
       '/tracks/update',
       { preHandler: verifyTokenMiddleware },
       async (request: any, _reply) => {
-        const { id, artist, name, year } = request.body;
-        if (!id || !artist || !name || !year) {
+        const { id, artist, name, year, spotifyLink, youtubeLink } =
+          request.body;
+
+        console.log(111, request.body);
+
+        if (!id || !artist || !name || !year || !spotifyLink || !youtubeLink) {
           return { success: false, error: 'Missing required fields' };
         }
-        const success = await this.data.updateTrack(id, artist, name, year);
+        const success = await this.data.updateTrack(
+          id,
+          artist,
+          name,
+          year,
+          spotifyLink,
+          youtubeLink
+        );
         return { success };
       }
     );
