@@ -43,6 +43,25 @@ class Data {
   private analytics = AnalyticsClient.getInstance();
   private pushover = new PushoverClient();
 
+  public async getYouTubeLink(spotifyId: string): Promise<string | null> {
+    try {
+      const converter = await spotifyToYTMusic({
+        clientID: process.env.SPOTIFY_CLIENT_ID!,
+        clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
+        ytMusicUrl: true
+      });
+
+      return await converter(spotifyId);
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error getting YouTube link for Spotify ID ${color.white.bold(spotifyId)}: ${error}`
+        )
+      );
+      return null;
+    }
+  }
+
   public async addSpotifyLinks(): Promise<number> {
     let processed = 0;
 
@@ -81,8 +100,8 @@ class Data {
         const spotifyId = track.spotifyLink!.split('/').pop()!;
         
         // Get YouTube Music URL
-        const ytMusicUrl = await converter(spotifyId);
-
+        const ytMusicUrl = await this.getYouTubeLink(spotifyId);
+        
         if (ytMusicUrl) {
           await this.prisma.track.update({
             where: { id: track.id },
