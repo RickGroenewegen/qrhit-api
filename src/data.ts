@@ -1028,7 +1028,7 @@ class Data {
       };
     } else {
       const linkQuery: any[] = await this.prisma.$queryRaw`
-        SELECT      tracks.spotifyLink,tracks.youtubeLink
+        SELECT      tracks.spotifyLink
         FROM        tracks
         WHERE       tracks.id = ${trackId}`;
 
