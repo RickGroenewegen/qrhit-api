@@ -347,6 +347,15 @@ class Server {
     );
 
     this.fastify.get(
+      '/add_spotify',
+      { preHandler: verifyTokenMiddleware },
+      async (_request: any, reply) => {
+        const result = this.data.addSpotifyLinks();
+        return { success: true, processed: result };
+      }
+    );
+
+    this.fastify.get(
       '/tax_report/:yearMonth',
       { preHandler: verifyTokenMiddleware },
       async (request: any, reply: any) => {
@@ -704,10 +713,12 @@ class Server {
         request.clientIp
       );
       let link = '';
+      let yt = '';
       if (result.success) {
         link = result.data.link;
+        yt = result.data.youtubeLink;
       }
-      return { link };
+      return { link, yt };
     });
 
     this.fastify.get(
@@ -796,11 +807,6 @@ class Server {
           'countries'
         ),
       });
-    });
-
-    this.fastify.get('/add_spotify', async (_request: any, reply) => {
-      const result = await this.data.addSpotifyLinks();
-      return { success: true, processed: result };
     });
 
     this.fastify.get('/test', async (request: any, _reply) => {

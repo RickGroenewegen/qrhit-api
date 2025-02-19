@@ -1020,11 +1020,11 @@ class Data {
 
     const cacheKey = `track_links:${trackId}`;
     const cachedData = await this.cache.get(cacheKey);
-    
+
     if (cachedData) {
       return {
         success: true,
-        data: JSON.parse(cachedData)
+        data: JSON.parse(cachedData),
       };
     }
 
@@ -1036,20 +1036,20 @@ class Data {
     if (linkQuery.length > 0) {
       const data = {
         link: linkQuery[0].spotifyLink,
-        youtubeLink: linkQuery[0].youtubeLink
+        youtubeLink: linkQuery[0].youtubeLink,
       };
 
       if (data.link) {
         await this.cache.set(cacheKey, JSON.stringify(data));
         return {
           success: true,
-          data
+          data,
         };
       }
     }
 
     return {
-      success: false
+      success: false,
     };
   }
 
