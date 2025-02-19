@@ -885,6 +885,11 @@ class Data {
             },
           });
           return { wasUpdated: true, method: 'artistTitle_multiple' };
+        } else {
+          this.logger.log(
+            color.yellow.bold(`Same track with different years found!`)
+          );
+          console.log(existingTracksByMetadata);
         }
         // Multiple matches with different years - don't update
       }
@@ -1141,8 +1146,6 @@ class Data {
         spotifyYear = parseInt(spotifyTrack.releaseDate.split('-')[0]);
       }
 
-      console.log(111, track);
-
       const result = await this.music.getReleaseDate(
         track.id,
         track.isrc ?? '',
@@ -1150,8 +1153,6 @@ class Data {
         track.name,
         spotifyYear
       );
-
-      console.log(222, result);
 
       await this.prisma.$executeRaw`
           UPDATE  tracks

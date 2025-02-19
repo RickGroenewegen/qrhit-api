@@ -37,13 +37,6 @@ export class Music {
     title: string,
     spotifyReleaseYear: number
   ): Promise<any> {
-    // Step 1: Try to find the year from the ISRC, artist, and title
-    const DBYear = await this.findInDB(id, isrc, artist, title);
-
-    if (DBYear.year > 0) {
-      return DBYear.year;
-    }
-
     // Search MusicBrainz
     const [mbResult, discogsResult, openPerlexYear] = await Promise.all([
       this.searchMusicBrainz(isrc, artist, title),
@@ -280,62 +273,6 @@ export class Music {
         retryCount++;
       }
     }
-    return { year: 0, source: '' };
-  }
-
-  private async findInDB(
-    id: number,
-    isrc: string,
-    artist: string,
-    title: string
-  ): Promise<{ year: number; source: string }> {
-    let year: number = 0;
-
-    // First try finding a track with matching ISRC
-    const existingTrackByISRC = await this.prisma.track.findFirst({
-      where: {
-        isrc: isrc,
-        year: {
-          not: null,
-        },
-        manuallyChecked: true,
-      },
-      select: {
-        id: true,
-        year: true,
-      },
-    });
-
-    if (existingTrackByISRC) {
-      return { year: existingTrackByISRC.year!, source: 'isrc' };
-    }
-
-    const existingTrackByISRCByArtistAndTitle =
-      await this.prisma.track.findFirst({
-        where: {
-          artist: artist,
-          name: title,
-          year: {
-            not: null,
-          },
-          manuallyChecked: true,
-          id: {
-            not: id, // Exclude the current track
-          },
-        },
-        select: {
-          id: true,
-          year: true,
-        },
-      });
-
-    if (existingTrackByISRCByArtistAndTitle) {
-      return {
-        year: existingTrackByISRCByArtistAndTitle.year!,
-        source: 'existingArtistAndTitle',
-      };
-    }
-
     return { year: 0, source: '' };
   }
 
