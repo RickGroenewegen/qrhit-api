@@ -45,8 +45,8 @@ class Data {
 
   public async addSpotifyLinks(): Promise<number> {
     let processed = 0;
-    
-    // Initialize spotify-to-yt with credentials
+
+    //Initialize spotify-to-yt with credentials
     spotifyToYT.setCredentials(
       process.env.SPOTIFY_CLIENT_ID!,
       process.env.SPOTIFY_CLIENT_SECRET!
@@ -57,15 +57,15 @@ class Data {
       where: {
         youtubeLink: null,
         spotifyLink: {
-          not: null
-        }
+          not: null,
+        },
       },
       select: {
         id: true,
         artist: true,
         name: true,
-        spotifyLink: true
-      }
+        spotifyLink: true,
+      },
     });
 
     this.logger.log(
@@ -77,31 +77,41 @@ class Data {
     for (const track of tracks) {
       try {
         // Get YouTube URL using spotify-to-yt
-        const result = await spotifyToYT.trackGet(track.spotifyLink);
-        
+        const result = await spotifyToYT.trackGet(track.spotifyLink!);
+
+        console.log(111, result);
+
         if (result && result.url) {
           await this.prisma.track.update({
             where: { id: track.id },
-            data: { youtubeLink: result.url }
+            data: { youtubeLink: result.url },
           });
           processed++;
-          
+
           this.logger.log(
-            color.green.bold(
-              `Added YouTube link for '${color.white.bold(track.artist)} - ${color.white.bold(track.name)}'`
+            color.blue.bold(
+              `Added YouTube link for '${color.white.bold(
+                track.artist
+              )} - ${color.white.bold(track.name)}': ${color.white.bold(
+                result.url
+              )}`
             )
           );
         }
       } catch (error) {
+        console.log(error);
+
         this.logger.log(
           color.red.bold(
-            `Error processing track '${color.white.bold(track.artist)} - ${color.white.bold(track.name)}': ${error}`
+            `Error processing track '${color.white.bold(
+              track.artist
+            )} - ${color.white.bold(track.name)}': ${error}`
           )
         );
       }
 
       // Add a small delay to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
     return processed;
