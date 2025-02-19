@@ -29,7 +29,6 @@ import { Music } from './music';
 import PushoverClient from './pushover';
 import { ChatGPT } from './chatgpt';
 import YTMusic from 'ytmusic-api';
-import { match } from 'assert';
 import axios, { AxiosInstance } from 'axios';
 
 class Data {
@@ -49,8 +48,7 @@ class Data {
 
   public async getYouTubeLink(
     artist: string,
-    name: string,
-    spotifyId: string = ''
+    name: string
   ): Promise<string | null> {
     try {
       const options = {
@@ -66,8 +64,6 @@ class Data {
         },
       };
 
-      console.log(111, artist, name);
-
       const response = await this.axiosInstance.request(options);
 
       if (
@@ -76,13 +72,31 @@ class Data {
         response.data.videos.length > 0
       ) {
         // Find first video where both artist and name appear in the video title
-        const matchingVideo = response.data.videos.find((video: any) => 
-          video.name.toLowerCase().includes(artist.toLowerCase()) &&
-          video.name.toLowerCase().includes(name.toLowerCase())
+        const matchingVideo = response.data.videos.find(
+          (video: any) =>
+            video.name.toLowerCase().includes(artist.toLowerCase()) &&
+            video.name.toLowerCase().includes(name.toLowerCase())
         );
 
         if (matchingVideo) {
-          return `https://music.youtube.com/watch?v=${matchingVideo.id}`;
+          this.logger.log(
+            color.blue.bold(
+              `Found YouTube Music link for '${color.white.bold(
+                artist
+              )} - ${color.white.bold(name)}': ${color.white.bold(
+                'https://music.youtube.com/watch?v=' + matchingVideo.id
+              )}`
+            )
+          );
+          return matchingVideo.id;
+        } else {
+          this.logger.log(
+            color.yellow.bold(
+              `No exact match found for '${color.white.bold(
+                artist
+              )} - ${color.white.bold(name)}'`
+            )
+          );
         }
       }
       return null;
@@ -130,24 +144,14 @@ class Data {
         const spotifyId = track.spotifyLink!.split('/').pop()!;
 
         // Get YouTube Music URL
-        const ytMusicUrl = await this.getYouTubeLink(track.artist, track.name);
+        const youtubeId = await this.getYouTubeLink(track.artist, track.name);
 
-        if (ytMusicUrl) {
+        if (youtubeId) {
           await this.prisma.track.update({
             where: { id: track.id },
-            data: { youtubeLink: ytMusicUrl },
+            data: { youtubeLink: youtubeId },
           });
           processed++;
-
-          this.logger.log(
-            color.blue.bold(
-              `Added YouTube Music link for '${color.white.bold(
-                track.artist
-              )} - ${color.white.bold(track.name)}': ${color.white.bold(
-                ytMusicUrl
-              )}`
-            )
-          );
         }
       } catch (error) {
         this.logger.log(
@@ -1198,11 +1202,11 @@ class Data {
 
       // Then get YouTube links for all new tracks
       for (const track of newTracks) {
-        const ytMusicUrl = await this.getYouTubeLink(track.artist, track.name);
-        if (ytMusicUrl) {
+        const youtubeId = await this.getYouTubeLink(track.artist, track.name);
+        if (youtubeId) {
           await this.prisma.track.update({
             where: { trackId: track.id },
-            data: { youtubeLink: ytMusicUrl },
+            data: { youtubeLink: youtubeId },
           });
         }
       }
