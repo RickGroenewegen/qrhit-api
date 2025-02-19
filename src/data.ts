@@ -49,12 +49,12 @@ class Data {
     name: string
   ): Promise<string | null> {
     try {
-      const searchResults = await this.ytmusic.searchSongs(`${name} ${artist}`);
-
-      console.log(1111, searchResults);
+      const searchResults = await this.ytmusic.searchSongs(
+        `${artist} - ${name}`
+      );
 
       const matchingTrack = searchResults.filter(
-        (song) => song?.artist?.name === artist
+        (song) => song?.artist?.name.indexOf(artist) > -1
       )[0];
 
       if (matchingTrack) {
@@ -106,8 +106,6 @@ class Data {
 
         // Get YouTube Music URL
         const ytMusicUrl = await this.getYouTubeLink(track.artist, track.name);
-
-        console.log(111, track.artist, track.name, ytMusicUrl);
 
         if (ytMusicUrl) {
           await this.prisma.track.update({
