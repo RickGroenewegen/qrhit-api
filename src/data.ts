@@ -45,17 +45,16 @@ class Data {
 
   private ytmusic: YTMusic;
 
-  private constructor() {
-    this.ytmusic = new YTMusic();
-    this.ytmusic.initialize();
-    // ... rest of constructor
-  }
-
-  public async getYouTubeLink(track: { artist: string, name: string }): Promise<string | null> {
+  public async getYouTubeLink(
+    artist: string,
+    name: string
+  ): Promise<string | null> {
     try {
-      const searchResults = await this.ytmusic.searchSongs(`${track.name} ${track.artist}`);
-      const matchingTrack = searchResults.filter(song => song?.artist?.name === track.artist)[0];
-      
+      const searchResults = await this.ytmusic.searchSongs(`${name} ${artist}`);
+      const matchingTrack = searchResults.filter(
+        (song) => song?.artist?.name === artist
+      )[0];
+
       if (matchingTrack) {
         return `https://music.youtube.com/watch?v=${matchingTrack.videoId}`;
       }
@@ -64,8 +63,8 @@ class Data {
       this.logger.log(
         color.red.bold(
           `Error getting YouTube link for track ${color.white.bold(
-            track.artist
-          )} - ${color.white.bold(track.name)}`
+            artist
+          )} - ${color.white.bold(name)}`
         )
       );
       console.log(error);
@@ -104,7 +103,7 @@ class Data {
         const spotifyId = track.spotifyLink!.split('/').pop()!;
 
         // Get YouTube Music URL
-        const ytMusicUrl = await this.getYouTubeLink(spotifyId);
+        const ytMusicUrl = await this.getYouTubeLink(track.artist, track.name);
 
         if (ytMusicUrl) {
           await this.prisma.track.update({
@@ -141,6 +140,9 @@ class Data {
   }
 
   private constructor() {
+    this.ytmusic = new YTMusic();
+    this.ytmusic.initialize();
+    // ... rest of constructor
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
@@ -1168,7 +1170,7 @@ class Data {
 
       // Then get YouTube links for all new tracks
       for (const track of newTracks) {
-        const ytMusicUrl = await this.getYouTubeLink({ artist: track.artist, name: track.name });
+        const ytMusicUrl = await this.getYouTubeLink(track.artist, track.name);
         if (ytMusicUrl) {
           await this.prisma.track.update({
             where: { trackId: track.id },
@@ -1203,7 +1205,10 @@ class Data {
 
         // Only get YouTube link if it doesn't exist yet
         if (!existingTrack?.youtubeLink) {
-          const ytMusicUrl = await this.getYouTubeLink(track.id);
+          const ytMusicUrl = await this.getYouTubeLink(
+            track.artist,
+            track.name
+          );
           if (ytMusicUrl) {
             updateData.youtubeLink = ytMusicUrl;
           }
