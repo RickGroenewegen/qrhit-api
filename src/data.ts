@@ -28,6 +28,7 @@ import { Music } from './music';
 import PushoverClient from './pushover';
 import { ChatGPT } from './chatgpt';
 import YTMusic from 'ytmusic-api';
+import { match } from 'assert';
 
 class Data {
   private static instance: Data;
@@ -49,8 +50,11 @@ class Data {
   ): Promise<string | null> {
     try {
       const searchResults = await this.ytmusic.searchSongs(`${name} ${artist}`);
+
+      console.log(1111, searchResults);
+
       const matchingTrack = searchResults.filter(
-        (song) => song?.artist?.name.indexOf(artist) > -1
+        (song) => song?.artist?.name === artist
       )[0];
 
       if (matchingTrack) {
