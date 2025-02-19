@@ -1015,38 +1015,41 @@ class Data {
   }
 
   public async getLink(trackId: number, clientIp: string): Promise<ApiResult> {
-    let link = '';
-
     this.analytics.increaseCounter('songs', 'played');
     this.logLink(trackId, clientIp);
 
-    const cachedLink = await this.cache.get('link' + trackId);
-    if (cachedLink) {
+    const cacheKey = `track_links:${trackId}`;
+    const cachedData = await this.cache.get(cacheKey);
+    
+    if (cachedData) {
       return {
         success: true,
-        data: { link: cachedLink },
+        data: JSON.parse(cachedData)
       };
-    } else {
-      const linkQuery: any[] = await this.prisma.$queryRaw`
-        SELECT      tracks.spotifyLink
-        FROM        tracks
-        WHERE       tracks.id = ${trackId}`;
+    }
 
-      if (linkQuery.length > 0) {
-        link = linkQuery[0].spotifyLink;
-        this.cache.set('link' + trackId, link);
-      }
+    const linkQuery: any[] = await this.prisma.$queryRaw`
+      SELECT spotifyLink, youtubeLink
+      FROM tracks
+      WHERE id = ${trackId}`;
 
-      if (link.length > 0) {
+    if (linkQuery.length > 0) {
+      const data = {
+        link: linkQuery[0].spotifyLink,
+        youtubeLink: linkQuery[0].youtubeLink
+      };
+
+      if (data.link) {
+        await this.cache.set(cacheKey, JSON.stringify(data));
         return {
           success: true,
-          data: { link: linkQuery[0].spotifyLink },
+          data
         };
       }
     }
 
     return {
-      success: false,
+      success: false
     };
   }
 
