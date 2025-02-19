@@ -9,6 +9,7 @@ import { CronJob } from 'cron';
 import { ApiResult } from './interfaces/ApiResult';
 import { promises as fs } from 'fs';
 import path from 'path';
+import spotifyToYTMusic from 'spotify-to-ytmusic';
 
 interface TrackNeedingYearUpdate {
   id: number;
@@ -46,21 +47,36 @@ class Data {
 
   public async getYouTubeLink(
     artist: string,
-    name: string
+    name: string,
+    spotifyId: string = ''
   ): Promise<string | null> {
     try {
-      const searchResults = await this.ytmusic.searchSongs(
-        `${artist} - ${name}`
-      );
+      console.log(111, artist, name);
 
-      const matchingTrack = searchResults.filter(
-        (song) => song?.artist?.name.indexOf(artist) > -1
-      )[0];
+      // const converter = await spotifyToYTMusic({
+      //   clientID: process.env.SPOTIFY_CLIENT_ID!,
+      //   clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
+      //   ytMusicUrl: true,
+      // });
 
-      if (matchingTrack) {
-        return `https://music.youtube.com/watch?v=${matchingTrack.videoId}`;
-      }
-      return null;
+      // const testje = await converter(spotifyId);
+
+      const testje = await this.ytmusic.searchSongs(`${name} ${artist}`);
+
+      console.log(222, testje);
+
+      // console.log(222, searchResults);
+
+      //   const matchingTrack = searchResults.filter(
+      //     (song) => song?.artist?.name.indexOf(artist) > -1
+      //   )[0];
+
+      //   console.log(222, matchingTrack);
+
+      //   if (matchingTrack) {
+      //     return `https://music.youtube.com/watch?v=${matchingTrack.videoId}`;
+      //   }
+      //   return null;
     } catch (error) {
       this.logger.log(
         color.red.bold(
@@ -70,8 +86,8 @@ class Data {
         )
       );
       console.log(error);
-      return null;
     }
+    return null;
   }
 
   public async addSpotifyLinks(): Promise<number> {
