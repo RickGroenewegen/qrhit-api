@@ -51,7 +51,46 @@ class Data {
     name: string
   ): Promise<string | null> {
     try {
-      const options = {
+      // First try YouTube Music API
+      const ytMusicOptions = {
+        method: 'GET',
+        url: 'https://youtube-music-api-yt.p.rapidapi.com/search-songs',
+        params: {
+          q: `${artist} ${name}`
+        },
+        headers: {
+          'x-rapidapi-key': process.env['RAPID_API_KEY'],
+          'x-rapidapi-host': 'youtube-music-api-yt.p.rapidapi.com'
+        }
+      };
+
+      const ytMusicResponse = await this.axiosInstance.request(ytMusicOptions);
+
+      if (ytMusicResponse.data && ytMusicResponse.data.length > 0) {
+        // Try to find exact match with artist and title
+        const matchingVideo = ytMusicResponse.data.find((video: any) => {
+          const videoArtist = video.artist?.name?.toLowerCase() || '';
+          const videoTitle = video.name?.toLowerCase() || '';
+          return videoArtist.includes(artist.toLowerCase()) && 
+                 videoTitle.includes(name.toLowerCase());
+        });
+
+        if (matchingVideo) {
+          this.logger.log(
+            color.blue.bold(
+              `Found YouTube Music link for '${color.white.bold(
+                artist
+              )} - ${color.white.bold(name)}' using YT Music API: ${color.white.bold(
+                'https://music.youtube.com/watch?v=' + matchingVideo.videoId
+              )}`
+            )
+          );
+          return matchingVideo.videoId;
+        }
+      }
+
+      // Fall back to original search if no match found
+      const searchOptions = {
         method: 'GET',
         url: 'https://yt-search-and-download-mp3.p.rapidapi.com/search',
         params: {
@@ -64,7 +103,7 @@ class Data {
         },
       };
 
-      const response = await this.axiosInstance.request(options);
+      const response = await this.axiosInstance.request(searchOptions);
 
       if (
         response.data &&
