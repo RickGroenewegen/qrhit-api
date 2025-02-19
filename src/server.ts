@@ -577,6 +577,14 @@ class Server {
       done();
     });
 
+    await this.fastify.register((instance, opts, done) => {
+      instance.register(require('@fastify/static'), {
+        root: path.join(process.cwd(), 'app'),
+        prefix: '/app/',
+      });
+      done();
+    });
+
     await this.fastify.setErrorHandler((error, request, reply) => {
       console.error(error);
       reply.status(500).send({ error: 'Internal Server Error' });
