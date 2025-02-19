@@ -741,6 +741,9 @@ class Data {
       this.prisma.track.count({
         where: {
           manuallyChecked: false,
+          year: {
+            gt: 0,
+          },
         },
       }),
     ]);
@@ -847,6 +850,8 @@ class Data {
         },
         select: {
           id: true,
+          artist: true,
+          name: true,
           year: true,
           yearSource: true,
           certainty: true,
@@ -886,12 +891,17 @@ class Data {
           });
           return { wasUpdated: true, method: 'artistTitle_multiple' };
         } else {
+          // Multiple matches with different years - don't update but notify
+          const firstTrack = existingTracksByMetadata[0];
           this.logger.log(
-            color.yellow.bold(`Same track with different years found!`)
+            color.yellow.bold(
+              `Same track with different years found (${color.white.bold(
+                firstTrack.artist
+              )} - ${color.white.bold(firstTrack.name)}).`
+            )
           );
           console.log(existingTracksByMetadata);
         }
-        // Multiple matches with different years - don't update
       }
     }
 
