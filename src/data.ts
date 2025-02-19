@@ -29,7 +29,7 @@ import { Music } from './music';
 import PushoverClient from './pushover';
 import OpenAI from 'openai';
 import { ChatGPT } from './chatgpt';
-import spotifyToYTMusic from 'spotify-to-ytmusic';
+import YTMusic from 'ytmusic-api';
 
 class Data {
   private static instance: Data;
@@ -43,21 +43,29 @@ class Data {
   private analytics = AnalyticsClient.getInstance();
   private pushover = new PushoverClient();
 
-  public async getYouTubeLink(spotifyId: string): Promise<string | null> {
-    try {
-      const converter = await spotifyToYTMusic({
-        clientID: process.env.SPOTIFY_CLIENT_ID!,
-        clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
-        ytMusicUrl: true,
-      });
+  private ytmusic: YTMusic;
 
-      return await converter(spotifyId);
+  private constructor() {
+    this.ytmusic = new YTMusic();
+    this.ytmusic.initialize();
+    // ... rest of constructor
+  }
+
+  public async getYouTubeLink(track: { artist: string, name: string }): Promise<string | null> {
+    try {
+      const searchResults = await this.ytmusic.searchSongs(`${track.name} ${track.artist}`);
+      const matchingTrack = searchResults.filter(song => song?.artist?.name === track.artist)[0];
+      
+      if (matchingTrack) {
+        return `https://music.youtube.com/watch?v=${matchingTrack.videoId}`;
+      }
+      return null;
     } catch (error) {
       this.logger.log(
         color.red.bold(
-          `Error getting YouTube link for Spotify ID ${color.white.bold(
-            spotifyId
-          )}`
+          `Error getting YouTube link for track ${color.white.bold(
+            track.artist
+          )} - ${color.white.bold(track.name)}`
         )
       );
       console.log(error);
@@ -1160,7 +1168,7 @@ class Data {
 
       // Then get YouTube links for all new tracks
       for (const track of newTracks) {
-        const ytMusicUrl = await this.getYouTubeLink(track.id);
+        const ytMusicUrl = await this.getYouTubeLink({ artist: track.artist, name: track.name });
         if (ytMusicUrl) {
           await this.prisma.track.update({
             where: { trackId: track.id },
