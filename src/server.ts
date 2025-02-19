@@ -580,7 +580,7 @@ class Server {
     await this.fastify.register((instance, opts, done) => {
       instance.register(require('@fastify/static'), {
         root: path.join(process.cwd(), 'app'),
-        prefix: '/app/',
+        prefix: '/',
       });
       done();
     });
