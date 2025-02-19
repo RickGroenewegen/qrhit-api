@@ -1559,7 +1559,10 @@ class Data {
       this.logger.log(`Error reading Excel file: ${error}`);
     }
   }
-  public async searchTracks(searchTerm: string): Promise<any[]> {
+  public async searchTracks(
+    searchTerm: string,
+    missingSpotifyLink: boolean = false
+  ): Promise<any[]> {
     const tracks = await this.prisma.$queryRaw<any[]>`
       SELECT id, artist, name, year 
       FROM tracks 
