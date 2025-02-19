@@ -30,6 +30,7 @@ import PushoverClient from './pushover';
 import { ChatGPT } from './chatgpt';
 import YTMusic from 'ytmusic-api';
 import { match } from 'assert';
+import axios, { AxiosInstance } from 'axios';
 
 class Data {
   private static instance: Data;
@@ -42,6 +43,7 @@ class Data {
   private openai = new ChatGPT();
   private analytics = AnalyticsClient.getInstance();
   private pushover = new PushoverClient();
+  private axiosInstance: AxiosInstance;
 
   private ytmusic: YTMusic;
 
@@ -53,22 +55,31 @@ class Data {
     try {
       const options = {
         method: 'GET',
-        url: 'https://yt-search-and-download-mp3.p.rapidapi.com/mp3',
+        url: 'https://yt-search-and-download-mp3.p.rapidapi.com/search',
         params: {
-          q: `${artist} ${name}`
+          q: `${artist} - ${name}`,
+          limit: 10,
         },
         headers: {
-          'x-rapidapi-key': process.env['RAPIDAPI_KEY'],
-          'x-rapidapi-host': 'yt-search-and-download-mp3.p.rapidapi.com'
-        }
+          'x-rapidapi-key': process.env['RAPID_API_KEY'],
+          'x-rapidapi-host': 'yt-search-and-download-mp3.p.rapidapi.com',
+        },
       };
 
-      const response = await axios.request(options);
-      
-      if (response.data && response.data.results && response.data.results.length > 0) {
+      console.log(111, artist, name);
+
+      const response = await this.axiosInstance.request(options);
+
+      if (
+        response.data &&
+        response.data.videos &&
+        response.data.videos.length > 0
+      ) {
+        console.log(222, response.data.videos);
+
         // Get first result's video ID
-        const videoId = response.data.results[0].id;
-        return `https://music.youtube.com/watch?v=${videoId}`;
+        // const videoId = response.data.results[0].id;
+        // return `https://music.youtube.com/watch?v=${videoId}`;
       }
       return null;
     } catch (error) {
@@ -154,6 +165,7 @@ class Data {
   private constructor() {
     this.ytmusic = new YTMusic();
     this.ytmusic.initialize();
+    this.axiosInstance = axios.create();
     // ... rest of constructor
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
