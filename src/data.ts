@@ -1139,6 +1139,7 @@ class Data {
 
     // Step 3: Insert new tracks
     if (newTracks.length > 0) {
+      // First create the tracks
       await this.prisma.track.createMany({
         data: newTracks.map((track) => ({
           trackId: track.id,
@@ -1151,6 +1152,17 @@ class Data {
         })),
         skipDuplicates: true,
       });
+
+      // Then get YouTube links for all new tracks
+      for (const track of newTracks) {
+        const ytMusicUrl = await this.getYouTubeLink(track.id);
+        if (ytMusicUrl) {
+          await this.prisma.track.update({
+            where: { trackId: track.id },
+            data: { youtubeLink: ytMusicUrl },
+          });
+        }
+      }
     }
 
     this.logger.log(
@@ -1162,16 +1174,31 @@ class Data {
     // Update existing tracks
     for (const track of tracksToUpdate) {
       if (!track.manuallyCorrected) {
+        const existingTrack = await this.prisma.track.findUnique({
+          where: { trackId: track.id },
+          select: { youtubeLink: true },
+        });
+
+        const updateData: any = {
+          name: this.utils.cleanTrackName(track.name),
+          isrc: track.isrc,
+          artist: track.artist,
+          spotifyLink: track.link,
+          album: this.utils.cleanTrackName(track.album),
+          preview: track.preview,
+        };
+
+        // Only get YouTube link if it doesn't exist yet
+        if (!existingTrack?.youtubeLink) {
+          const ytMusicUrl = await this.getYouTubeLink(track.id);
+          if (ytMusicUrl) {
+            updateData.youtubeLink = ytMusicUrl;
+          }
+        }
+
         await this.prisma.track.update({
           where: { trackId: track.id },
-          data: {
-            name: this.utils.cleanTrackName(track.name),
-            isrc: track.isrc,
-            artist: track.artist,
-            spotifyLink: track.link,
-            album: this.utils.cleanTrackName(track.album),
-            preview: track.preview,
-          },
+          data: updateData,
         });
       }
     }
