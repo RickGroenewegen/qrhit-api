@@ -1141,6 +1141,8 @@ class Data {
         spotifyYear = parseInt(spotifyTrack.releaseDate.split('-')[0]);
       }
 
+      console.log(111, track);
+
       const result = await this.music.getReleaseDate(
         track.id,
         track.isrc ?? '',
@@ -1148,6 +1150,8 @@ class Data {
         track.name,
         spotifyYear
       );
+
+      console.log(222, result);
 
       await this.prisma.$executeRaw`
           UPDATE  tracks
