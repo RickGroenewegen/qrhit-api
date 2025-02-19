@@ -1087,6 +1087,20 @@ class Server {
         }
       );
 
+      this.fastify.get(
+        '/youtube/:artist/:title',
+        async (request: any, reply: any) => {
+          const result = await this.data.getYouTubeLink(
+            request.params.artist,
+            request.params.title
+          );
+          reply.send({
+            success: true,
+            youtubeLink: result,
+          });
+        }
+      );
+
       this.fastify.post('/push', async (request: any, reply: any) => {
         const { token, title, message } = request.body;
         await this.push.sendPushNotification(token, title, message);

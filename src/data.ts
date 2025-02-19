@@ -56,12 +56,12 @@ class Data {
         method: 'GET',
         url: 'https://youtube-music-api-yt.p.rapidapi.com/search-songs',
         params: {
-          q: `${artist} ${name}`
+          q: `${artist} ${name}`,
         },
         headers: {
           'x-rapidapi-key': process.env['RAPID_API_KEY'],
-          'x-rapidapi-host': 'youtube-music-api-yt.p.rapidapi.com'
-        }
+          'x-rapidapi-host': 'youtube-music-api-yt.p.rapidapi.com',
+        },
       };
 
       const ytMusicResponse = await this.axiosInstance.request(ytMusicOptions);
@@ -71,8 +71,10 @@ class Data {
         const matchingVideo = ytMusicResponse.data.find((video: any) => {
           const videoArtist = video.artist?.name?.toLowerCase() || '';
           const videoTitle = video.name?.toLowerCase() || '';
-          return videoArtist.includes(artist.toLowerCase()) && 
-                 videoTitle.includes(name.toLowerCase());
+          return (
+            videoArtist.includes(artist.toLowerCase()) &&
+            videoTitle.includes(name.toLowerCase())
+          );
         });
 
         if (matchingVideo) {
@@ -80,7 +82,9 @@ class Data {
             color.blue.bold(
               `Found YouTube Music link for '${color.white.bold(
                 artist
-              )} - ${color.white.bold(name)}' using YT Music API: ${color.white.bold(
+              )} - ${color.white.bold(
+                name
+              )}' using YT Music API: ${color.white.bold(
                 'https://music.youtube.com/watch?v=' + matchingVideo.videoId
               )}`
             )
@@ -120,7 +124,7 @@ class Data {
         if (matchingVideo) {
           this.logger.log(
             color.blue.bold(
-              `Found YouTube Music link for '${color.white.bold(
+              `Found YouTube Movie link for '${color.white.bold(
                 artist
               )} - ${color.white.bold(name)}': ${color.white.bold(
                 'https://music.youtube.com/watch?v=' + matchingVideo.id
