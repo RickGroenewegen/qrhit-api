@@ -57,9 +57,10 @@ class Data {
         color.red.bold(
           `Error getting YouTube link for Spotify ID ${color.white.bold(
             spotifyId
-          )}: ${error}`
+          )}`
         )
       );
+      console.log(error);
       return null;
     }
   }
