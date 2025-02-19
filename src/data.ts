@@ -75,11 +75,15 @@ class Data {
         response.data.videos &&
         response.data.videos.length > 0
       ) {
-        console.log(222, response.data.videos);
+        // Find first video where both artist and name appear in the video title
+        const matchingVideo = response.data.videos.find((video: any) => 
+          video.name.toLowerCase().includes(artist.toLowerCase()) &&
+          video.name.toLowerCase().includes(name.toLowerCase())
+        );
 
-        // Get first result's video ID
-        // const videoId = response.data.results[0].id;
-        // return `https://music.youtube.com/watch?v=${videoId}`;
+        if (matchingVideo) {
+          return `https://music.youtube.com/watch?v=${matchingVideo.id}`;
+        }
       }
       return null;
     } catch (error) {
