@@ -798,6 +798,11 @@ class Server {
       });
     });
 
+    this.fastify.get('/add_spotify', async (_request: any, reply) => {
+      const result = await this.data.addSpotifyLinks();
+      return { success: true, processed: result };
+    });
+
     this.fastify.get('/test', async (request: any, _reply) => {
       this.analytics.increaseCounter('testCategory', 'testAction');
 

@@ -309,6 +309,7 @@ model Track {
   reasoning         String? @db.Text
   manuallyChecked   Boolean @default(false)
   manuallyCorrected Boolean @default(false)
+  youtubeLink       String? 
 
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt

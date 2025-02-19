@@ -29,6 +29,7 @@ import { Music } from './music';
 import PushoverClient from './pushover';
 import OpenAI from 'openai';
 import { ChatGPT } from './chatgpt';
+import spotifyToYT from 'spotify-to-yt';
 
 class Data {
   private static instance: Data;
@@ -41,6 +42,70 @@ class Data {
   private openai = new ChatGPT();
   private analytics = AnalyticsClient.getInstance();
   private pushover = new PushoverClient();
+
+  public async addSpotifyLinks(): Promise<number> {
+    let processed = 0;
+    
+    // Initialize spotify-to-yt with credentials
+    spotifyToYT.setCredentials(
+      process.env.SPOTIFY_CLIENT_ID!,
+      process.env.SPOTIFY_CLIENT_SECRET!
+    );
+
+    // Get all tracks without youtube links
+    const tracks = await this.prisma.track.findMany({
+      where: {
+        youtubeLink: null,
+        spotifyLink: {
+          not: null
+        }
+      },
+      select: {
+        id: true,
+        artist: true,
+        name: true,
+        spotifyLink: true
+      }
+    });
+
+    this.logger.log(
+      color.blue.bold(
+        `Found ${color.white.bold(tracks.length)} tracks without YouTube links`
+      )
+    );
+
+    for (const track of tracks) {
+      try {
+        // Get YouTube URL using spotify-to-yt
+        const result = await spotifyToYT.trackGet(track.spotifyLink);
+        
+        if (result && result.url) {
+          await this.prisma.track.update({
+            where: { id: track.id },
+            data: { youtubeLink: result.url }
+          });
+          processed++;
+          
+          this.logger.log(
+            color.green.bold(
+              `Added YouTube link for '${color.white.bold(track.artist)} - ${color.white.bold(track.name)}'`
+            )
+          );
+        }
+      } catch (error) {
+        this.logger.log(
+          color.red.bold(
+            `Error processing track '${color.white.bold(track.artist)} - ${color.white.bold(track.name)}': ${error}`
+          )
+        );
+      }
+
+      // Add a small delay to avoid rate limits
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+
+    return processed;
+  }
 
   private constructor() {
     if (cluster.isPrimary) {
