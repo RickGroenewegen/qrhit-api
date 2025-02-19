@@ -51,32 +51,26 @@ class Data {
     spotifyId: string = ''
   ): Promise<string | null> {
     try {
-      console.log(111, artist, name);
+      const options = {
+        method: 'GET',
+        url: 'https://yt-search-and-download-mp3.p.rapidapi.com/mp3',
+        params: {
+          q: `${artist} ${name}`
+        },
+        headers: {
+          'x-rapidapi-key': process.env['RAPIDAPI_KEY'],
+          'x-rapidapi-host': 'yt-search-and-download-mp3.p.rapidapi.com'
+        }
+      };
 
-      // const converter = await spotifyToYTMusic({
-      //   clientID: process.env.SPOTIFY_CLIENT_ID!,
-      //   clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
-      //   ytMusicUrl: true,
-      // });
-
-      // const testje = await converter(spotifyId);
-
-      const testje = await this.ytmusic.searchSongs(`${name} ${artist}`);
-
-      console.log(222, testje);
-
-      // console.log(222, searchResults);
-
-      //   const matchingTrack = searchResults.filter(
-      //     (song) => song?.artist?.name.indexOf(artist) > -1
-      //   )[0];
-
-      //   console.log(222, matchingTrack);
-
-      //   if (matchingTrack) {
-      //     return `https://music.youtube.com/watch?v=${matchingTrack.videoId}`;
-      //   }
-      //   return null;
+      const response = await axios.request(options);
+      
+      if (response.data && response.data.results && response.data.results.length > 0) {
+        // Get first result's video ID
+        const videoId = response.data.results[0].id;
+        return `https://music.youtube.com/watch?v=${videoId}`;
+      }
+      return null;
     } catch (error) {
       this.logger.log(
         color.red.bold(
