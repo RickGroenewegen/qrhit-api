@@ -103,6 +103,8 @@ class Data {
         // Get YouTube Music URL
         const ytMusicUrl = await this.getYouTubeLink(track.artist, track.name);
 
+        console.log(111, track.artist, track.name, ytMusicUrl);
+
         if (ytMusicUrl) {
           await this.prisma.track.update({
             where: { id: track.id },
