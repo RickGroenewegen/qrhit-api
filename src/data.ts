@@ -1016,6 +1016,7 @@ class Data {
 
   public async getLink(trackId: number, clientIp: string): Promise<ApiResult> {
     let link = '';
+
     this.analytics.increaseCounter('songs', 'played');
     this.logLink(trackId, clientIp);
 
@@ -1027,7 +1028,7 @@ class Data {
       };
     } else {
       const linkQuery: any[] = await this.prisma.$queryRaw`
-        SELECT      tracks.spotifyLink 
+        SELECT      tracks.spotifyLink,tracks.youtubeLink
         FROM        tracks
         WHERE       tracks.id = ${trackId}`;
 
