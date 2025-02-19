@@ -1566,8 +1566,11 @@ class Data {
     const tracks = await this.prisma.$queryRaw<any[]>`
       SELECT id, artist, name, year 
       FROM tracks 
-      WHERE LOWER(artist) LIKE LOWER(${`%${searchTerm}%`})
-      OR LOWER(name) LIKE LOWER(${`%${searchTerm}%`})
+      WHERE (
+        LOWER(artist) LIKE LOWER(${`%${searchTerm}%`})
+        OR LOWER(name) LIKE LOWER(${`%${searchTerm}%`})
+      )
+      ${missingSpotifyLink ? Prisma.sql`AND (spotifyLink IS NULL OR spotifyLink = '')` : Prisma.sql``}
       LIMIT 25
     `;
     return tracks;
