@@ -50,7 +50,7 @@ class Data {
     try {
       const searchResults = await this.ytmusic.searchSongs(`${name} ${artist}`);
       const matchingTrack = searchResults.filter(
-        (song) => song?.artist?.name === artist
+        (song) => song?.artist?.name.indexOf(artist) > -1
       )[0];
 
       if (matchingTrack) {
