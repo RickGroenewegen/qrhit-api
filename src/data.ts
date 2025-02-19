@@ -48,14 +48,16 @@ class Data {
       const converter = await spotifyToYTMusic({
         clientID: process.env.SPOTIFY_CLIENT_ID!,
         clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
-        ytMusicUrl: true
+        ytMusicUrl: true,
       });
 
       return await converter(spotifyId);
     } catch (error) {
       this.logger.log(
         color.red.bold(
-          `Error getting YouTube link for Spotify ID ${color.white.bold(spotifyId)}: ${error}`
+          `Error getting YouTube link for Spotify ID ${color.white.bold(
+            spotifyId
+          )}: ${error}`
         )
       );
       return null;
@@ -64,13 +66,6 @@ class Data {
 
   public async addSpotifyLinks(): Promise<number> {
     let processed = 0;
-
-    // Initialize spotify-to-ytmusic with credentials
-    const converter = await spotifyToYTMusic({
-      clientID: process.env.SPOTIFY_CLIENT_ID!,
-      clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
-      ytMusicUrl: true
-    });
 
     // Get all tracks without youtube links
     const tracks = await this.prisma.track.findMany({
@@ -98,10 +93,10 @@ class Data {
       try {
         // Extract Spotify track ID from link
         const spotifyId = track.spotifyLink!.split('/').pop()!;
-        
+
         // Get YouTube Music URL
         const ytMusicUrl = await this.getYouTubeLink(spotifyId);
-        
+
         if (ytMusicUrl) {
           await this.prisma.track.update({
             where: { id: track.id },
