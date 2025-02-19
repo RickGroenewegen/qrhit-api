@@ -29,7 +29,7 @@ import { Music } from './music';
 import PushoverClient from './pushover';
 import OpenAI from 'openai';
 import { ChatGPT } from './chatgpt';
-import spotifyToYT from 'spotify-to-yt';
+import spotifyToYTMusic from 'spotify-to-ytmusic';
 
 class Data {
   private static instance: Data;
@@ -46,11 +46,12 @@ class Data {
   public async addSpotifyLinks(): Promise<number> {
     let processed = 0;
 
-    //Initialize spotify-to-yt with credentials
-    spotifyToYT.setCredentials(
-      process.env.SPOTIFY_CLIENT_ID!,
-      process.env.SPOTIFY_CLIENT_SECRET!
-    );
+    // Initialize spotify-to-ytmusic with credentials
+    const converter = await spotifyToYTMusic({
+      clientID: process.env.SPOTIFY_CLIENT_ID!,
+      clientSecret: process.env.SPOTIFY_CLIENT_SECRET!,
+      ytMusicUrl: true
+    });
 
     // Get all tracks without youtube links
     const tracks = await this.prisma.track.findMany({
@@ -76,31 +77,30 @@ class Data {
 
     for (const track of tracks) {
       try {
-        // Get YouTube URL using spotify-to-yt
-        const result = await spotifyToYT.trackGet(track.spotifyLink!);
+        // Extract Spotify track ID from link
+        const spotifyId = track.spotifyLink!.split('/').pop()!;
+        
+        // Get YouTube Music URL
+        const ytMusicUrl = await converter(spotifyId);
 
-        console.log(111, result);
-
-        if (result && result.url) {
+        if (ytMusicUrl) {
           await this.prisma.track.update({
             where: { id: track.id },
-            data: { youtubeLink: result.url },
+            data: { youtubeLink: ytMusicUrl },
           });
           processed++;
 
           this.logger.log(
             color.blue.bold(
-              `Added YouTube link for '${color.white.bold(
+              `Added YouTube Music link for '${color.white.bold(
                 track.artist
               )} - ${color.white.bold(track.name)}': ${color.white.bold(
-                result.url
+                ytMusicUrl
               )}`
             )
           );
         }
       } catch (error) {
-        console.log(error);
-
         this.logger.log(
           color.red.bold(
             `Error processing track '${color.white.bold(
