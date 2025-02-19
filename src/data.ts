@@ -1,7 +1,7 @@
 import { Track } from './interfaces/Track';
-import { color, white } from 'console-log-colors';
+import { color } from 'console-log-colors';
 import Logger from './logger';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 import slugify from 'slugify';
 import PrismaInstance from './prisma';
 import crypto from 'crypto';
@@ -23,11 +23,9 @@ import Utils from './utils';
 import { CartItem } from './interfaces/CartItem';
 import AnalyticsClient from './analytics';
 import * as XLSX from 'xlsx';
-import { OpenPerplex } from './openperplex';
 import cluster from 'cluster';
 import { Music } from './music';
 import PushoverClient from './pushover';
-import OpenAI from 'openai';
 import { ChatGPT } from './chatgpt';
 import YTMusic from 'ytmusic-api';
 
