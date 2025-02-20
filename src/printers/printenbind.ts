@@ -858,7 +858,7 @@ class PrintEnBind {
       let totalProductPriceWithoutVAT = 0;
 
       for (const item of orderItems) {
-        if (item.type == 'physical') {
+        if (item.type == 'physical' || item.type == 'sheets') {
           physicalItems += parseInt(item.amount);
         }
         totalPrice += item.price * item.amount;

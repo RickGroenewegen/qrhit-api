@@ -839,6 +839,7 @@ class Data {
                     playlists.numberOfTracks,
                     payment_has_playlist.amount,
                     payment_has_playlist.type,
+                    payment_has_playlist.subType,
                     playlists.name AS playlistName,
                     playlists.type AS productType,
                     playlists.giftcardAmount
