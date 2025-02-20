@@ -242,7 +242,7 @@ class Data {
       select: {
         id: true,
         spotifyLink: true,
-        youtubeLink: true
+        youtubeLink: true,
       },
       where: {
         spotifyLink: {
@@ -256,7 +256,7 @@ class Data {
       if (track.spotifyLink) {
         const data = {
           link: track.spotifyLink,
-          youtubeLink: track.youtubeLink
+          youtubeLink: track.youtubeLink,
         };
         await this.cache.set(`track_links:${track.id}`, JSON.stringify(data));
         cacheCount++;
@@ -1132,11 +1132,11 @@ class Data {
 
       if (data.link && data.youtubeLink) {
         await this.cache.set(cacheKey, JSON.stringify(data));
-        return {
-          success: true,
-          data,
-        };
       }
+      return {
+        success: true,
+        data,
+      };
     }
 
     return {
