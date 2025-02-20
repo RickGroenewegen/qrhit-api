@@ -397,7 +397,8 @@ class PrintEnBind {
     numberOfTracks: number,
     digital: boolean = false,
     productType: string = 'cards',
-    playlistId: string
+    playlistId: string,
+    subType: string = 'none'
   ) {
     let orderType = null;
     let digitalInt = digital ? 1 : 0;
@@ -445,6 +446,7 @@ class PrintEnBind {
         type: digital ? 'digital' : 'physical',
         quantity: numberOfTracks,
         alternatives: {},
+        subType,
       });
       orderType.amount = singleCalculation.price;
       orderType.alternatives = singleCalculation.alternatives;
@@ -1007,21 +1009,29 @@ class PrintEnBind {
     const taxRate = (await this.data.getTaxRate('NL'))!;
     let price = 0;
     let colorPrice = 0.018;
+    let colorPriceA4 = 0.09;
     let paperPrice = 0.035;
+    let paperPriceA4 = 0.104;
     let cardPrice = colorPrice * 2 + paperPrice;
+    let A4Price = colorPriceA4 * 2 + paperPriceA4;
     let priceWithProfit = 0;
     let minimumCards = 50;
     let useCardAmount = params.quantity;
+    let numberOfSheets = 0;
 
     if (useCardAmount < minimumCards) {
       useCardAmount = minimumCards;
     }
 
-    //{ type: 'digital', format: 'single', colorMode: 'color', quantity: 5 }
-    //format: 'cards' | 'a4' | 'single' | 'double';
+    numberOfSheets = Math.ceil(useCardAmount / 12);
 
     if (params.type == 'physical') {
-      price = useCardAmount * cardPrice;
+      if (params.subType == 'sheets') {
+        price = numberOfSheets * A4Price;
+      } else {
+        price = useCardAmount * cardPrice;
+      }
+
       price += 1.8; // Handling
     } else {
       price = (await this.calculateCardPrice(13, useCardAmount)).totalPrice;

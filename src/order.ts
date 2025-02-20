@@ -231,13 +231,15 @@ class Order {
     numberOfTracks: number,
     digital: boolean = false,
     productType: string = 'cards',
-    playlistId: string
+    playlistId: string,
+    subType: string = 'none'
   ) {
     return this.printer.getOrderType(
       numberOfTracks,
       digital,
       productType,
-      playlistId
+      playlistId,
+      subType
     );
   }
 

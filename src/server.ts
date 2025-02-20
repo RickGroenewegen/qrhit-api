@@ -856,13 +856,14 @@ class Server {
     });
 
     this.fastify.get(
-      '/ordertype/:numberOfTracks/:digital/:playlistId',
+      '/ordertype/:numberOfTracks/:digital/:subType/:playlistId',
       async (request: any, _reply) => {
         const orderType = await this.order.getOrderType(
           parseInt(request.params.numberOfTracks),
           this.utils.parseBoolean(request.params.digital),
           'cards',
-          request.params.playlistId
+          request.params.playlistId,
+          request.params.subType
         );
         if (orderType) {
           return {

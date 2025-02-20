@@ -561,6 +561,7 @@ class Data {
         payment_has_playlist.emoji,
         payment_has_playlist.doubleSided,
         payment_has_playlist.eco,
+        payment_has_playlist.subType,
         playlists.numberOfTracks,
         payment_has_playlist.type AS orderType
       FROM 

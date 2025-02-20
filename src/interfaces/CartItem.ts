@@ -1,5 +1,6 @@
 export interface CartItem {
-  type: 'digital' | 'physical';
+  type: 'digital' | 'physical' | 'sheets';
+  subType: 'sheets' | 'none';
   playlistId: string;
   playlistName: string;
   numberOfTracks: number;

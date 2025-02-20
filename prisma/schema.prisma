@@ -309,7 +309,7 @@ model Track {
   reasoning         String? @db.Text
   manuallyChecked   Boolean @default(false)
   manuallyCorrected Boolean @default(false)
-  youtubeLink       String? 
+  youtubeLink       String?
 
   createdAt      DateTime           @default(now())
   updatedAt      DateTime           @updatedAt
@@ -344,6 +344,7 @@ model PaymentHasPlaylist {
   numberOfTracks             Int
   orderTypeId                Int
   type                       String
+  subType                    String?   @default("none")
   filename                   String?
   filenameDigital            String?
   filenameDigitalDoubleSided String?

@@ -516,6 +516,8 @@ class Mollie {
         cart: params.cart,
       });
 
+      console.log(111, params.cart);
+
       const discountResult = await this.discount.calculateDiscounts(
         params.cart,
         calculateResult.data.total
@@ -730,7 +732,8 @@ class Mollie {
             orderTypeId: orderType.id,
             amount: item.amount,
             numberOfTracks: item.numberOfTracks,
-            type: item.type,
+            type: item.type == 'sheets' ? 'physical' : item.type,
+            subType: item.type == 'sheets' ? 'sheets' : 'none',
             doubleSided: item.doubleSided,
             eco: item.eco,
             price: itemPrice,

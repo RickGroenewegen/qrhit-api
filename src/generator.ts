@@ -492,7 +492,7 @@ class Generator {
                     filename,
                     playlist,
                     payment,
-                    'printer',
+                    playlist.subType == 'sheets' ? 'printer_sheets' : 'printer',
                     payment.qrSubDir
                   )
                 : Promise.resolve(''),

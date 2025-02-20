@@ -5,4 +5,5 @@ export interface SingleItemCalculation {
   //colorMode: 'color' | 'bw';
   quantity: number;
   alternatives: any;
+  subType: string;
 }
