@@ -242,6 +242,7 @@ class Data {
       select: {
         id: true,
         spotifyLink: true,
+        youtubeLink: true
       },
       where: {
         spotifyLink: {
@@ -253,7 +254,11 @@ class Data {
     let cacheCount = 0;
     for (const track of tracks) {
       if (track.spotifyLink) {
-        await this.cache.set('link' + track.id, track.spotifyLink);
+        const data = {
+          link: track.spotifyLink,
+          youtubeLink: track.youtubeLink
+        };
+        await this.cache.set(`track_links:${track.id}`, JSON.stringify(data));
         cacheCount++;
       }
     }
