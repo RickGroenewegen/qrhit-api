@@ -100,6 +100,9 @@ class Server {
     const verifyTokenMiddleware = async (request: any, reply: any) => {
       const token = request.headers.authorization?.split(' ')[1];
       const decoded = verifyToken(token || '');
+
+      console.log(111, decoded);
+
       if (!decoded) {
         reply.status(401).send({ error: 'Unauthorized' });
         return false;
@@ -114,8 +117,13 @@ class Server {
       };
       const validUsername = process.env.ENV_ADMIN_USERNAME;
       const validPassword = process.env.ENV_ADMIN_PASSWORD;
+      const validUsername2 = process.env.ENV_ADMIN_USERNAME2;
+      const validPassword2 = process.env.ENV_ADMIN_PASSWORD2;
 
-      if (username === validUsername && password === validPassword) {
+      if (
+        (username === validUsername && password === validPassword) ||
+        (username === validUsername2 && password === validPassword2)
+      ) {
         const token = generateToken(username);
         reply.send({ token });
       } else {
