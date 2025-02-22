@@ -101,7 +101,7 @@ class Server {
       const token = request.headers.authorization?.split(' ')[1];
       const decoded = verifyToken(token || '');
 
-      console.log(111, decoded);
+      console.log(111, decoded, request.url);
 
       if (!decoded) {
         reply.status(401).send({ error: 'Unauthorized' });
