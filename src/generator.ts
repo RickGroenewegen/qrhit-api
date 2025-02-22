@@ -453,7 +453,7 @@ class Generator {
 
           const hash = crypto
             .createHmac('sha256', process.env['PLAYLIST_SECRET']!)
-            .update(playlist.playlistId)
+            .update(playlist.playlistId + '_' + payment.paymentId)
             .digest('hex');
 
           let eco = false;

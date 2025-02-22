@@ -157,6 +157,9 @@ class PDF {
 
         // Add a 3 mm bleed for PrintAPI
         await this.addBleed(finalPath, 3);
+      } else if (template === 'printer_sheets') {
+        // Resize to A4
+        await this.resizePDFPages(finalPath, 210, 297);
       }
     } finally {
       // Clean up temporary files only if they were merged

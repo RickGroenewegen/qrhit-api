@@ -797,22 +797,39 @@ class PrintEnBind {
       numberOfPages = 2000;
     }
 
-    // let oddPages = Array.from(
-    //   { length: numberOfPages },
-    //   (_, i) => i + 1
-    // ).filter((page) => page % 2 !== 0);
+    console.log(1111111, item);
+
+    //     {
+    //   id: 20,
+    //   playlistId: '2CSOo6VaGUgGm8ngmZLz7Y',
+    //   name: 'Metal Top 100',
+    //   productType: 'cards',
+    //   giftcardAmount: 0,
+    //   giftcardFrom: null,
+    //   giftcardMessage: null,
+    //   paymentHasPlaylistId: 782,
+    //   price: 20,
+    //   priceWithoutVAT: 16.53,
+    //   priceVAT: 3.47,
+    //   amount: 1,
+    //   emoji: '',
+    //   doubleSided: 0,
+    //   eco: 0,
+    //   subType: 'sheets',
+    //   numberOfTracks: 100,
+    //   orderType: 'physical'
+    // }
 
     if (item.type == 'digital') {
       return item;
     } else {
-      return {
+      let orderObj: any = {
         type: 'physical',
         amount: item.amount,
         product: 'losbladig',
         number: '1',
         copies: numberOfPages.toString(),
         color: 'all',
-        //color_custom_pages: oddPages.join(','),
         size: 'custom',
         printside: 'double',
         finishing: 'loose',
@@ -824,6 +841,15 @@ class PrintEnBind {
         add_file_method: 'url',
         file_url: fileUrl,
       };
+
+      if (item.subType == 'sheets') {
+        orderObj.copies = (Math.ceil(numberOfTracks / 12) * 2).toString();
+        orderObj.size = 'a4';
+        delete orderObj.size_custom_width;
+        delete orderObj.size_custom_height;
+      }
+
+      return orderObj;
     }
   }
 
@@ -1188,13 +1214,7 @@ class PrintEnBind {
 
     let finalApiCalls = result.apiCalls || [];
 
-    if (
-      result.success &&
-      ((process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') == -1 &&
-        process.env['ENVIRONMENT'] === 'production') ||
-        (process.env['PRINTENBIND_API_URL']!.indexOf('sandbox') > -1 &&
-          process.env['ENVIRONMENT'] === 'development'))
-    ) {
+    if (result.success) {
       const finishResult = await this.finishOrder(
         result.data.orderId,
         finalApiCalls
