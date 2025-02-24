@@ -1582,7 +1582,7 @@ class Data {
           ? Prisma.sql`AND (youtubeLink IS NULL OR youtubeLink = '')`
           : Prisma.sql``
       }
-      LIMIT 1000
+      LIMIT 10000
     `;
     return tracks;
   }

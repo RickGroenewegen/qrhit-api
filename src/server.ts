@@ -106,6 +106,17 @@ class Server {
       if (!decoded) {
         reply.status(401).send({ error: 'Unauthorized' });
         return false;
+      } else {
+        if (
+          decoded.username == 'Sidra' &&
+          request.url != '/tracks/search' &&
+          request.url != '/tracks/update'
+        ) {
+          reply.status(401).send({ error: 'Unauthorized' });
+          console.log('Nee!');
+
+          return false;
+        }
       }
       return true;
     };
