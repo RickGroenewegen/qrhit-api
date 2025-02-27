@@ -389,9 +389,12 @@ class Server {
       '/fix_preview_links',
       { preHandler: verifyTokenMiddleware },
       async (_request: any, _reply) => {
-        const result = this.data.fixPreviewLinks();
+        const result = await this.data.fixPreviewLinks();
         return {
           success: true,
+          processed: result.processed,
+          updated: result.updated,
+          errors: result.errors
         };
       }
     );

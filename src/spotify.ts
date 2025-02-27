@@ -401,9 +401,12 @@ class Spotify {
       const response = await axios.request(options);
 
       if (response.data && response.data.tracks) {
+        // Filter out any null or undefined tracks
+        const validTracks = response.data.tracks.filter((track: any) => track !== null && track !== undefined);
+        
         return {
           success: true,
-          data: response.data.tracks,
+          data: validTracks,
         };
       }
 
