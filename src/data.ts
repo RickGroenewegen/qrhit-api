@@ -1629,11 +1629,7 @@ class Data {
     // Get tracks without preview links
     const tracks = await this.prisma.track.findMany({
       where: {
-        OR: [
-          { preview: null },
-          { preview: '' },
-        ],
-        trackId: { not: null },
+        OR: [{ preview: { equals: null } }, { preview: '' }],
       },
       select: {
         id: true,
@@ -1653,30 +1649,33 @@ class Data {
     // Process in batches of 100
     const batchSize = 100;
     const spotify = new Spotify();
-    
+
     for (let i = 0; i < tracks.length; i += batchSize) {
       const batch = tracks.slice(i, i + batchSize);
-      const trackIds = batch.map(track => track.trackId);
-      
+      const trackIds = batch.map((track) => track.trackId);
+
       try {
         const result = await spotify.getTrackPreviews(trackIds);
-        
+
         if (result.success && result.data) {
           for (const track of result.data) {
             processed++;
-            
+
             if (track.preview_url) {
               // Find the corresponding track in our database
-              const dbTrack = batch.find(t => t.trackId === track.id || 
-                (track.linked_from && t.trackId === track.linked_from.id));
-              
+              const dbTrack = batch.find(
+                (t) =>
+                  t.trackId === track.id ||
+                  (track.linked_from && t.trackId === track.linked_from.id)
+              );
+
               if (dbTrack) {
                 await this.prisma.track.update({
                   where: { id: dbTrack.id },
-                  data: { preview: track.preview_url }
+                  data: { preview: track.preview_url },
                 });
                 updated++;
-                
+
                 this.logger.log(
                   color.green.bold(
                     `Updated preview for track '${color.white.bold(
@@ -1691,19 +1690,23 @@ class Data {
       } catch (error) {
         this.logger.log(
           color.red.bold(
-            `Error processing batch ${i/batchSize + 1}: ${error}`
+            `Error processing batch ${i / batchSize + 1}: ${error}`
           )
         );
         errors++;
       }
-      
+
       // Add a small delay to avoid rate limits
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
 
     this.logger.log(
       color.blue.bold(
-        `Finished fixing preview links. Processed: ${color.white.bold(processed)}, Updated: ${color.white.bold(updated)}, Errors: ${color.white.bold(errors)}`
+        `Finished fixing preview links. Processed: ${color.white.bold(
+          processed
+        )}, Updated: ${color.white.bold(updated)}, Errors: ${color.white.bold(
+          errors
+        )}`
       )
     );
 
