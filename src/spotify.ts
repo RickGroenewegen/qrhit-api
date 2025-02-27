@@ -434,7 +434,7 @@ class Spotify {
       let allTracks: Track[] = [];
       const uniqueTrackIds = new Set<string>();
       let offset = 0;
-      const limit = 250;
+      const limit = 100;
       let maxReached = false;
       let maxReachedPhysical = false;
 
