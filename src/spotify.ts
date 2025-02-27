@@ -382,6 +382,44 @@ class Spotify {
     }
   }
 
+  public async getTrackPreviews(trackIds: string[]): Promise<ApiResult> {
+    try {
+      const options = {
+        method: 'GET',
+        url: 'https://spotify23.p.rapidapi.com/tracks/',
+        params: {
+          ids: trackIds.join(',')
+        },
+        headers: {
+          'x-rapidapi-key': process.env['RAPID_API_KEY'],
+          'x-rapidapi-host': 'spotify23.p.rapidapi.com'
+        }
+      };
+
+      await this.rapidAPIQueue.enqueue(options);
+      await this.rapidAPIQueue.processQueue();
+      const response = await axios.request(options);
+      
+      if (response.data && response.data.tracks) {
+        return {
+          success: true,
+          data: response.data.tracks
+        };
+      }
+      
+      return {
+        success: false,
+        error: 'No tracks found'
+      };
+    } catch (error) {
+      console.error('Error fetching track previews:', error);
+      return {
+        success: false,
+        error: 'Error fetching track previews'
+      };
+    }
+  }
+
   public async getTracks(
     playlistId: string,
     cache: boolean = true,

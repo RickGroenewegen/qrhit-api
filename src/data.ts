@@ -30,6 +30,7 @@ import PushoverClient from './pushover';
 import { ChatGPT } from './chatgpt';
 import YTMusic from 'ytmusic-api';
 import axios, { AxiosInstance } from 'axios';
+import Spotify from './spotify';
 
 class Data {
   private static instance: Data;
@@ -1651,27 +1652,17 @@ class Data {
 
     // Process in batches of 100
     const batchSize = 100;
+    const spotify = new Spotify();
+    
     for (let i = 0; i < tracks.length; i += batchSize) {
       const batch = tracks.slice(i, i + batchSize);
       const trackIds = batch.map(track => track.trackId);
       
       try {
-        const options = {
-          method: 'GET',
-          url: 'https://spotify23.p.rapidapi.com/tracks/',
-          params: {
-            ids: trackIds.join(',')
-          },
-          headers: {
-            'x-rapidapi-key': process.env['RAPID_API_KEY'],
-            'x-rapidapi-host': 'spotify23.p.rapidapi.com'
-          }
-        };
-
-        const response = await this.axiosInstance.request(options);
+        const result = await spotify.getTrackPreviews(trackIds);
         
-        if (response.data && response.data.tracks) {
-          for (const track of response.data.tracks) {
+        if (result.success && result.data) {
+          for (const track of result.data) {
             processed++;
             
             if (track.preview_url) {
