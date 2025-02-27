@@ -1660,7 +1660,8 @@ class Data {
           for (const track of result.data) {
             processed++;
 
-            if (track.preview_url) {
+            // Check if track exists and has a preview_url
+            if (track && track.preview_url) {
               // Find the corresponding track in our database
               const dbTrack = batch.find(
                 (t) =>
@@ -1683,6 +1684,12 @@ class Data {
                   )
                 );
               }
+            } else if (track) {
+              this.logger.log(
+                color.yellow.bold(
+                  `No preview URL for track ID: ${color.white.bold(track.id || 'unknown')}`
+                )
+              );
             }
           }
         }
