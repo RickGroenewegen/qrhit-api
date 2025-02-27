@@ -1637,7 +1637,6 @@ class Data {
         name: true,
         artist: true,
       },
-      take: 10000, // Limit to prevent memory issues
     });
 
     this.logger.log(
