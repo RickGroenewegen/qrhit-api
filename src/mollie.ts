@@ -516,8 +516,6 @@ class Mollie {
         cart: params.cart,
       });
 
-      console.log(111, params.cart);
-
       const discountResult = await this.discount.calculateDiscounts(
         params.cart,
         calculateResult.data.total

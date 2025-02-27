@@ -398,7 +398,7 @@ class PrintEnBind {
     digital: boolean = false,
     productType: string = 'cards',
     playlistId: string,
-    subType: string = 'none'
+    subType: 'sheets' | 'none' = 'none'
   ) {
     let orderType = null;
     let digitalInt = digital ? 1 : 0;
@@ -797,29 +797,6 @@ class PrintEnBind {
       numberOfPages = 2000;
     }
 
-    console.log(1111111, item);
-
-    //     {
-    //   id: 20,
-    //   playlistId: '2CSOo6VaGUgGm8ngmZLz7Y',
-    //   name: 'Metal Top 100',
-    //   productType: 'cards',
-    //   giftcardAmount: 0,
-    //   giftcardFrom: null,
-    //   giftcardMessage: null,
-    //   paymentHasPlaylistId: 782,
-    //   price: 20,
-    //   priceWithoutVAT: 16.53,
-    //   priceVAT: 3.47,
-    //   amount: 1,
-    //   emoji: '',
-    //   doubleSided: 0,
-    //   eco: 0,
-    //   subType: 'sheets',
-    //   numberOfTracks: 100,
-    //   orderType: 'physical'
-    // }
-
     if (item.type == 'digital') {
       return item;
     } else {
@@ -1116,9 +1093,13 @@ class PrintEnBind {
       //   (await this.calculateSingleItem({ ...params, format: 'cards' }, false))
       //     .price - price;
 
-      // const a4: number =
-      //   (await this.calculateSingleItem({ ...params, format: 'a4' }, false))
-      //     .price - price;
+      const sheets: number =
+        (
+          await this.calculateSingleItem(
+            { ...params, type: 'physical', subType: 'sheets' },
+            false
+          )
+        ).price - price;
 
       // const single: number =
       //   (await this.calculateSingleItem({ ...params, format: 'single' }, false))
@@ -1145,7 +1126,7 @@ class PrintEnBind {
           physical: parseFloat(physical.toFixed(2)),
           digital: parseFloat(digital.toFixed(2)),
           // cards: parseFloat(cards.toFixed(2)),
-          // a4: parseFloat(a4.toFixed(2)),
+          sheets: parseFloat(sheets.toFixed(2)),
           // single: parseFloat(single.toFixed(2)),
           // double: parseFloat(double.toFixed(2)),
           // color: parseFloat(color.toFixed(2)),

@@ -232,7 +232,7 @@ class Order {
     digital: boolean = false,
     productType: string = 'cards',
     playlistId: string,
-    subType: string = 'none'
+    subType: 'sheets' | 'none'
   ) {
     return this.printer.getOrderType(
       numberOfTracks,
