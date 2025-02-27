@@ -388,34 +388,34 @@ class Spotify {
         method: 'GET',
         url: 'https://spotify23.p.rapidapi.com/tracks/',
         params: {
-          ids: trackIds.join(',')
+          ids: trackIds.join(','),
         },
         headers: {
           'x-rapidapi-key': process.env['RAPID_API_KEY'],
-          'x-rapidapi-host': 'spotify23.p.rapidapi.com'
-        }
+          'x-rapidapi-host': 'spotify23.p.rapidapi.com',
+        },
       };
 
       await this.rapidAPIQueue.enqueue(options);
       await this.rapidAPIQueue.processQueue();
       const response = await axios.request(options);
-      
+
       if (response.data && response.data.tracks) {
         return {
           success: true,
-          data: response.data.tracks
+          data: response.data.tracks,
         };
       }
-      
+
       return {
         success: false,
-        error: 'No tracks found'
+        error: 'No tracks found',
       };
     } catch (error) {
       console.error('Error fetching track previews:', error);
       return {
         success: false,
-        error: 'Error fetching track previews'
+        error: 'Error fetching track previews',
       };
     }
   }
@@ -434,7 +434,7 @@ class Spotify {
       let allTracks: Track[] = [];
       const uniqueTrackIds = new Set<string>();
       let offset = 0;
-      const limit = 100;
+      const limit = 250;
       let maxReached = false;
       let maxReachedPhysical = false;
 
