@@ -386,6 +386,20 @@ class Server {
     );
 
     this.fastify.get(
+      '/fix_preview_links',
+      { preHandler: verifyTokenMiddleware },
+      async (_request: any, _reply) => {
+        const result = await this.data.fixPreviewLinks();
+        return { 
+          success: true, 
+          processed: result.processed,
+          updated: result.updated,
+          errors: result.errors
+        };
+      }
+    );
+
+    this.fastify.get(
       '/tax_report/:yearMonth',
       { preHandler: verifyTokenMiddleware },
       async (request: any, reply: any) => {
