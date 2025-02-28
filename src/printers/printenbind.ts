@@ -1196,11 +1196,14 @@ class PrintEnBind {
     let finalApiCalls = result.apiCalls || [];
 
     if (result.success) {
-      const finishResult = await this.finishOrder(
-        result.data.orderId,
-        finalApiCalls
-      );
-      finalApiCalls = finishResult.apiCalls || [];
+      if (process.env['ENVIRONMENT'] === 'production') {
+        const finishResult = await this.finishOrder(
+          result.data.orderId,
+          finalApiCalls
+        );
+        finalApiCalls = finishResult.apiCalls || [];
+      }
+
       this.logger.log(
         color.blue.bold(
           `Finished order ${color.white.bold(result.data.orderId)}`

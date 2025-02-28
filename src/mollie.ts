@@ -703,7 +703,8 @@ class Mollie {
             item.numberOfTracks,
             item.type === 'digital',
             item.productType,
-            item.playlistId
+            item.playlistId,
+            item.subType
           );
 
           if (item.isSlug) {
