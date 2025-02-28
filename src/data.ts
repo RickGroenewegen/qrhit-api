@@ -30,6 +30,7 @@ import PushoverClient from './pushover';
 import { ChatGPT } from './chatgpt';
 import YTMusic from 'ytmusic-api';
 import axios, { AxiosInstance } from 'axios';
+import Spotify from './spotify';
 
 class Data {
   private static instance: Data;
@@ -1612,6 +1613,112 @@ class Data {
     } catch (error) {
       return false;
     }
+  }
+
+  public async fixPreviewLinks(): Promise<{
+    processed: number;
+    updated: number;
+    errors: number;
+  }> {
+    this.logger.log(
+      color.blue.bold(`Starting to fix missing preview links for tracks`)
+    );
+
+    let processed = 0;
+    let updated = 0;
+    let errors = 0;
+
+    // Get tracks without preview links
+    const tracks = await this.prisma.track.findMany({
+      where: {
+        OR: [{ preview: { equals: null } }, { preview: '' }],
+      },
+      select: {
+        id: true,
+        trackId: true,
+        name: true,
+        artist: true,
+      },
+    });
+
+    this.logger.log(
+      color.blue.bold(
+        `Found ${color.white.bold(tracks.length)} tracks without preview links`
+      )
+    );
+
+    // Process in batches of 100
+    const batchSize = 100;
+    const spotify = new Spotify();
+
+    for (let i = 0; i < tracks.length; i += batchSize) {
+      const batch = tracks.slice(i, i + batchSize);
+      const trackIds = batch.map((track) => track.trackId);
+
+      try {
+        const result = await spotify.getTrackPreviews(trackIds);
+
+        if (result.success && result.data) {
+          for (const track of result.data) {
+            processed++;
+
+            // Check if track exists and has a preview_url
+            if (track && track.preview_url) {
+              // Find the corresponding track in our database
+              const dbTrack = batch.find(
+                (t) =>
+                  t.trackId === track.id ||
+                  (track.linked_from && t.trackId === track.linked_from.id)
+              );
+
+              if (dbTrack) {
+                await this.prisma.track.update({
+                  where: { id: dbTrack.id },
+                  data: { preview: track.preview_url },
+                });
+                updated++;
+
+                this.logger.log(
+                  color.green.bold(
+                    `Updated preview for track '${color.white.bold(
+                      dbTrack.artist
+                    )} - ${color.white.bold(dbTrack.name)}'`
+                  )
+                );
+              }
+            } else if (track) {
+              this.logger.log(
+                color.yellow.bold(
+                  `No preview URL for track ID: ${color.white.bold(track.id || 'unknown')}`
+                )
+              );
+            }
+          }
+        }
+      } catch (error) {
+        this.logger.log(
+          color.red.bold(
+            `Error processing batch ${i / batchSize + 1}: ${error}`
+          )
+        );
+        errors++;
+      }
+
+      // Add a small delay to avoid rate limits
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+    }
+
+    this.logger.log(
+      color.blue.bold(
+        `Finished fixing preview links. Processed: ${color.white.bold(
+          processed
+        )}, Updated: ${color.white.bold(updated)}, Errors: ${color.white.bold(
+          errors
+        )}`
+      )
+    );
+
+    return { processed, updated, errors };
   }
 
   public static getInstance(): Data {
