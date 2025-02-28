@@ -411,6 +411,10 @@ class PrintEnBind {
 
     const cachedOrderType = await this.cache.get(cacheKey);
 
+    if (numberOfTracks > maxCards) {
+      numberOfTracks = maxCards;
+    }
+
     if (cachedOrderType) {
       orderType = JSON.parse(cachedOrderType);
     } else {
@@ -1492,6 +1496,11 @@ class PrintEnBind {
           amount = marginArray[i];
           break;
         }
+      }
+
+      // If the amount is bigger than 1000, set it to 1000
+      if (amountTracks > 1000) {
+        amount = 1000;
       }
 
       if (subType == 'sheets') {

@@ -393,7 +393,7 @@ class Server {
           success: true,
           processed: result.processed,
           updated: result.updated,
-          errors: result.errors
+          errors: result.errors,
         };
       }
     );
@@ -900,6 +900,7 @@ class Server {
             data: {
               id: orderType.id,
               amount: orderType.amount,
+              maxCards: orderType.digital ? 3000 : 1000,
               alternatives: orderType.alternatives || {},
               available: true,
             },
