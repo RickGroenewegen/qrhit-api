@@ -379,3 +379,15 @@ model ShippingCost {
   @@index([country, amount])
   @@map("shipping_costs")
 }
+
+model ShippingCostNew {
+  id        Int      @id @default(autoincrement())
+  country   String
+  size      Int
+  cost      Float
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([country, size])
+  @@map("shipping_costs_new")
+}

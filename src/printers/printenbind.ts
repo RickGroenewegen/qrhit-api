@@ -832,6 +832,13 @@ class PrintEnBind {
 
   public async calculateOrder(params: any): Promise<any> {
     let countrySelected = false;
+    let totalNumberOfTracks = 0;
+
+    for (const item of params.cart.items) {
+      if (item.productType === 'cards') {
+        totalNumberOfTracks += parseInt(item.numberOfTracks);
+      }
+    }
 
     if (!params.countrycode) {
       params.countrycode = 'NL';
@@ -853,7 +860,10 @@ class PrintEnBind {
         }
       }
 
-      const shippingResult = await this.getShippingCosts(params.countrycode, 1);
+      const shippingResult = await this.getShippingCosts(
+        params.countrycode,
+        totalNumberOfTracks
+      );
 
       // Count the number of physical items
       let physicalItems = 0;
@@ -1292,7 +1302,7 @@ class PrintEnBind {
     const authToken = await this.getAuthToken();
     let countryCodes = this.countryCodes;
 
-    //countryCodes = ['US'];
+    countryCodes = ['IM', 'GB'];
 
     this.logger.log(
       color.blue.bold(
@@ -1306,21 +1316,24 @@ class PrintEnBind {
     const batchSize = 5;
     for (let i = 0; i < countryCodes.length; i += batchSize) {
       const countryBatch = countryCodes.slice(i, i + batchSize);
-      
+
       await Promise.all(
         countryBatch.map(async (countryCode) => {
-          await this.processCountryShippingCosts(countryCode, authToken);
+          await this.processCountryShippingCosts(countryCode, authToken!);
         })
       );
-      
+
       // Add a small delay between batches to avoid overwhelming the API
       await new Promise((resolve) => setTimeout(resolve, 2000));
     }
   }
 
-  private async processCountryShippingCosts(countryCode: string, authToken: string): Promise<void> {
+  private async processCountryShippingCosts(
+    countryCode: string,
+    authToken: string
+  ): Promise<void> {
     const amounts = [80, 405, 1000];
-    
+
     try {
       // Process all amounts in parallel for this country
       await Promise.all(
@@ -1460,9 +1473,20 @@ class PrintEnBind {
 
   public async getShippingCosts(
     countryCode: string,
-    amount: number
+    amountTracks: number
   ): Promise<{ cost: number } | null> {
     try {
+      let amount = 0;
+      const marginArray = [80, 405, 1000];
+
+      // Chech to which number in marginArray the amountTracks belongs. Everything <=80 belongs to 80 etc
+      for (let i = 0; i < marginArray.length; i++) {
+        if (amountTracks <= marginArray[i]) {
+          amount = marginArray[i];
+          break;
+        }
+      }
+
       // Check cache first
       const cacheKey = `shipping_costs_${countryCode}_${amount}`;
       const cachedCosts = await this.cache.get(cacheKey);
@@ -1481,6 +1505,8 @@ class PrintEnBind {
           cost: true,
         },
       });
+
+      console.log(333, costs);
 
       if (costs) {
         // Cache the results for 1 day
