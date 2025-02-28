@@ -860,9 +860,17 @@ class PrintEnBind {
         }
       }
 
+      let subType: 'sheets' | 'none' = 'none';
+
+      // If the params.cart.items only contains items with subType 'sheets', set subType to 'sheets'
+      if (orderItems.every((item) => item.type === 'sheets')) {
+        subType = 'sheets';
+      }
+
       const shippingResult = await this.getShippingCosts(
         params.countrycode,
-        totalNumberOfTracks
+        totalNumberOfTracks,
+        subType
       );
 
       // Count the number of physical items
@@ -1302,8 +1310,6 @@ class PrintEnBind {
     const authToken = await this.getAuthToken();
     let countryCodes = this.countryCodes;
 
-    countryCodes = ['IM', 'GB'];
-
     this.logger.log(
       color.blue.bold(
         `Calculating shipping costs for ${color.white.bold(
@@ -1473,7 +1479,8 @@ class PrintEnBind {
 
   public async getShippingCosts(
     countryCode: string,
-    amountTracks: number
+    amountTracks: number,
+    subType: 'sheets' | 'none' = 'none'
   ): Promise<{ cost: number } | null> {
     try {
       let amount = 0;
@@ -1485,6 +1492,10 @@ class PrintEnBind {
           amount = marginArray[i];
           break;
         }
+      }
+
+      if (subType == 'sheets') {
+        amount = marginArray[0];
       }
 
       // Check cache first
@@ -1505,8 +1516,6 @@ class PrintEnBind {
           cost: true,
         },
       });
-
-      console.log(333, costs);
 
       if (costs) {
         // Cache the results for 1 day
