@@ -877,8 +877,8 @@ class PrintEnBind {
       let handling = 0;
 
       if (physicalItems > 0 && shippingResult) {
-        shipping = shippingResult!.shipping || 0;
-        handling = shippingResult!.handling * physicalItems || 0;
+        shipping = shippingResult!.cost || 0;
+        handling = 0;
         if (params.countrycode === 'NL') {
           if (totalPrice >= 50) {
             shipping = 0;
@@ -1289,9 +1289,10 @@ class PrintEnBind {
   public async processPrintApiWebhook(printApiOrderId: string) {}
 
   public async calculateShippingCosts(): Promise<void> {
+    const authToken = await this.getAuthToken();
     let countryCodes = this.countryCodes;
 
-    countryCodes = ['NL'];
+    //countryCodes = ['US'];
 
     this.logger.log(
       color.blue.bold(
@@ -1302,13 +1303,13 @@ class PrintEnBind {
     );
 
     for (const countryCode of countryCodes) {
-      for (const amount of [1]) {
+      for (const amount of [80, 405, 1000]) {
         try {
           // Check if record exists and when it was last updated
-          const existingRecord = await this.prisma.shippingCost.findFirst({
+          const existingRecord = await this.prisma.shippingCostNew.findFirst({
             where: {
               country: countryCode,
-              amount: amount,
+              size: amount,
             },
           });
 
@@ -1316,109 +1317,109 @@ class PrintEnBind {
           threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
 
           // Only proceed if record doesn't exist or is older than 3 weeks
-          if (
-            !existingRecord ||
-            (existingRecord.updatedAt &&
-              existingRecord.updatedAt < threeWeeksAgo)
-          ) {
-            this.logger.log(
-              color.blue.bold(
-                `Processing country: ${color.white.bold(
-                  countryCode
-                )} for amount ${color.white.bold(amount)}`
-              )
+
+          this.logger.log(
+            color.blue.bold(
+              `Processing country: ${color.white.bold(
+                countryCode
+              )} for amount ${color.white.bold(amount)}`
+            )
+          );
+
+          const orderItems = [];
+          // Create items with 2000 pages each
+
+          orderItems.push({
+            type: 'physical',
+            amount: '1',
+            product: 'losbladig',
+            number: '1',
+            copies: (amount * 2).toString(),
+            color: 'all',
+            size: 'custom',
+            printside: 'double',
+            finishing: 'loose',
+            finishing2: 'none',
+            papertype: 'card',
+            size_custom_width: '60',
+            size_custom_height: '60',
+            check_doc: 'standard',
+            delivery_method: 'post',
+            add_file_method: 'url',
+            file_url:
+              'https://api.qrsong.io/public/pdf/f6d1ad6be0c3f5a06fc4d0b8b1776b791f5b7f3d46cc9864d5c4c1ef3380016c_printer.pdf',
+          });
+
+          // Process the order request
+          const result = await this.processOrderRequest(
+            orderItems,
+            {
+              fullname: 'Rick Groenewegen',
+              email: 'john@doe.com',
+              address: 'Prinsenhof 1',
+              housenumber: '1',
+              zipcode: '1234AB',
+              city: 'Sassenheim',
+              countrycode: countryCode,
+            },
+            true,
+            false
+          );
+
+          if (result.success) {
+            const deliveryResponse = await fetch(
+              `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${result.data.orderId}`,
+              {
+                method: 'GET',
+                headers: { Authorization: authToken! },
+              }
             );
 
-            const orderItems = [];
-            // Create items with 2000 pages each
-            for (let i = 0; i < amount; i++) {
-              orderItems.push({
-                type: 'physical',
-                amount: '1',
-                product: 'losbladig',
-                number: '1',
-                copies: '100',
-                color: 'custom',
-                color_custom_pages: Array.from(
-                  { length: 50 },
-                  (_, i) => i * 2 + 1
-                ).join(','),
-                size: 'custom',
-                printside: 'double',
-                finishing: 'loose',
-                finishing2: 'none',
-                papertype: 'card',
-                size_custom_width: '60',
-                size_custom_height: '60',
-                check_doc: 'standard',
-                delivery_method: 'post',
-                add_file_method: 'url',
-                file_url:
-                  'https://api.qrsong.io/public/pdf/f6d1ad6be0c3f5a06fc4d0b8b1776b791f5b7f3d46cc9864d5c4c1ef3380016c_printer.pdf',
+            const delivery = await deliveryResponse.json();
+
+            const price = delivery.amount / delivery.parcel_count;
+
+            if (existingRecord) {
+              await this.prisma.shippingCostNew.update({
+                where: { id: existingRecord.id },
+                data: {
+                  cost: parseFloat(price.toFixed(2)),
+                },
+              });
+            } else {
+              await this.prisma.shippingCostNew.create({
+                data: {
+                  country: countryCode,
+                  size: amount,
+                  cost: parseFloat(price.toFixed(2)),
+                },
               });
             }
-
-            // Process the order request
-            const result = await this.processOrderRequest(
-              orderItems,
-              {
-                fullname: 'Rick Groenewegen',
-                email: 'john@doe.com',
-                address: 'Prinsenhof 1',
-                housenumber: '1',
-                zipcode: '1234AB',
-                city: 'Sassenheim',
-                countrycode: countryCode,
-              },
-              true,
-              false
-            );
-
-            if (result.success) {
-              if (existingRecord) {
-                await this.prisma.shippingCost.update({
-                  where: { id: existingRecord.id },
-                  data: {
-                    shipping: parseFloat(result.data.shipping.toFixed(2)),
-                    handling: parseFloat(result.data.handling.toFixed(2)),
-                  },
-                });
-              } else {
-                await this.prisma.shippingCost.create({
-                  data: {
-                    country: countryCode,
-                    amount: amount,
-                    shipping: parseFloat(result.data.shipping.toFixed(2)),
-                    handling: parseFloat(result.data.handling.toFixed(2)),
-                  },
-                });
-              }
-            } else {
-              this.logger.log(
-                color.blue.bold(
-                  `Skipping ${color.white.bold(
-                    countryCode
-                  )} with ${color.white.bold(
-                    amount.toString()
-                  )} items - record is recent enough`
-                )
-              );
-            }
-
+          } else {
             this.logger.log(
               color.blue.bold(
-                `Stored shipping costs for ${color.white.bold(
+                `Skipping ${color.white.bold(
                   countryCode
                 )} with ${color.white.bold(
                   amount.toString()
-                )} items: Shipping: ${color.white.bold(
-                  result.data.shipping.toFixed(2)
-                )}, Handling: ${color.white.bold(
-                  result.data.handling.toFixed(2)
-                )}`
+                )} items - record is recent enough`
               )
             );
           }
+
+          this.logger.log(
+            color.blue.bold(
+              `Stored shipping costs for ${color.white.bold(
+                countryCode
+              )} with ${color.white.bold(
+                amount.toString()
+              )} items: Shipping: ${color.white.bold(
+                result.data.shipping.toFixed(2)
+              )}, Handling: ${color.white.bold(
+                result.data.handling.toFixed(2)
+              )}`
+            )
+          );
         } catch (error) {
           this.logger.log(
             color.red.bold(
@@ -1439,7 +1440,7 @@ class PrintEnBind {
   public async getShippingCosts(
     countryCode: string,
     amount: number
-  ): Promise<{ shipping: number; handling: number } | null> {
+  ): Promise<{ cost: number } | null> {
     try {
       // Check cache first
       const cacheKey = `shipping_costs_${countryCode}_${amount}`;
@@ -1450,14 +1451,13 @@ class PrintEnBind {
       }
 
       // Get from database if not in cache
-      const costs = await this.prisma.shippingCost.findFirst({
+      const costs = await this.prisma.shippingCostNew.findFirst({
         where: {
           country: countryCode,
-          amount: amount,
+          size: amount,
         },
         select: {
-          shipping: true,
-          handling: true,
+          cost: true,
         },
       });
 
