@@ -224,11 +224,11 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                         </div>
                         <div class="text" style="margin-top: 5mm;font-size:14px;color:#909090;">
                             <% if (php.emoji && php.emoji.length) { %>
-                                <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
+                                <span style="grayscale(100%);"><%= php.emoji %></span>
                             <% } %>
                             <%= process.env['APP_DOMAIN'] %>
                             <% if (php.emoji && php.emoji.length) { %>
-                                <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
+                                <span style="grayscale(100%);"><%= php.emoji %></span>
                             <% } %>
                         </div>
                     </div>

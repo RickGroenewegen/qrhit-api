@@ -434,6 +434,7 @@ class Mollie {
         address: true,
         city: true,
         zipcode: true,
+        housenumber: true,
         printApiShipped: true,
         countrycode: true,
         PaymentHasPlaylist: {
