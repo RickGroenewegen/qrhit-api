@@ -659,11 +659,11 @@ class PrintEnBind {
         customerInfo.countrycode === 'NL' ? 'standard' : '';
 
       const deliveryData = {
-        name_contact: customerInfo.fullname || 'John Doe',
-        street: customerInfo.address || 'Some lane',
-        city: customerInfo.city || 'Amsterdam',
-        streetnumber: customerInfo.housenumber || '1',
-        zipcode: customerInfo.zipcode || '1234AB',
+        name_contact: customerInfo.fullname?.trim() || 'John Doe',
+        street: customerInfo.address?.trim() || 'Some lane',
+        city: customerInfo.city?.trim() || 'Amsterdam',
+        streetnumber: customerInfo.housenumber?.trim() || '1',
+        zipcode: customerInfo.zipcode?.trim() || '1234AB',
         country: customerInfo.countrycode,
         delivery_method: deliveryMethod,
         delivery_option:
