@@ -191,6 +191,20 @@ class Order {
               languagesToGenerate
             );
 
+            // Log the generated descriptions for each language
+            for (const lang of languagesToGenerate) {
+              const fieldName = `description_${lang}` as keyof typeof descriptions;
+              if (descriptions[fieldName]) {
+                this.logger.log(
+                  color.magenta(
+                    `Generated ${color.white.bold(lang)} description for ${color.white.bold(
+                      playlist.name
+                    )}: ${color.white(descriptions[fieldName] as string)}`
+                  )
+                );
+              }
+            }
+
             // Prepare update data with decade percentages
             const updateData: Record<string, number | string> = {
               ...Object.fromEntries(
