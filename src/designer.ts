@@ -61,7 +61,9 @@ class Designer {
       // Handle both full data URI and raw base64 string
       if (base64Image.includes('base64,')) {
         // Extract the actual base64 data and determine the file type
-        const matches = base64Image.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+        const matches = base64Image.match(
+          /^data:image\/([a-zA-Z]+);base64,(.+)$/
+        );
         if (!matches || matches.length !== 3) {
           return { success: false, error: 'Invalid image data format' };
         }
@@ -75,7 +77,8 @@ class Designer {
       }
 
       // Generate filename if not provided
-      const actualFilename = filename || `background_${Date.now()}.${imageType}`;
+      const actualFilename =
+        filename || `background_${Date.now()}.${imageType}`;
       const filePath = path.join(
         process.env['PUBLIC_DIR'] as string,
         'background',
@@ -86,10 +89,10 @@ class Designer {
       try {
         // Create buffer from base64
         const buffer = Buffer.from(base64Data, 'base64');
-        
+
         // Write the file
         await fs.writeFile(filePath, buffer);
-        
+
         this.logger.log(
           color.green.bold(
             `Background image uploaded successfully: ${white.bold(filePath)}`
@@ -101,17 +104,13 @@ class Designer {
         return { success: true, filePath: relativePath };
       } catch (writeError) {
         this.logger.log(
-          color.red.bold(
-            `Error writing image file: ${white.bold(writeError)}`
-          )
+          color.red.bold(`Error writing image file: ${white.bold(writeError)}`)
         );
         return { success: false, error: `Error writing file: ${writeError}` };
       }
     } catch (error) {
       this.logger.log(
-        color.red.bold(
-          `Error uploading background image: ${white.bold(error)}`
-        )
+        color.red.bold(`Error uploading background image: ${white.bold(error)}`)
       );
       return { success: false, error: String(error) };
     }
