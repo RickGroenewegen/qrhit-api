@@ -188,7 +188,7 @@ class Order {
             );
 
             // Prepare update data with decade percentages
-            const updateData = {
+            const updateData: Record<string, number | string> = {
               ...Object.fromEntries(
                 decades.map((decade) => [
                   `decadePercentage${decade}`,
