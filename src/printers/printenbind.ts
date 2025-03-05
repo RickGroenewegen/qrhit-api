@@ -1600,6 +1600,8 @@ class PrintEnBind {
               order.printApiOrderId
             );
 
+            console.log(111, 'ORDER_STATUS', orderStatus);
+
             if (orderStatus.status == 'Verzonden') {
               this.logger.log(
                 color.blue.bold(
