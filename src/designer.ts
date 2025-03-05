@@ -49,7 +49,12 @@ class Designer {
   public async uploadBackgroundImage(
     base64Image: string,
     filename?: string
-  ): Promise<{ success: boolean; filename?: string; filePath?: string; error?: string }> {
+  ): Promise<{
+    success: boolean;
+    filename?: string;
+    filePath?: string;
+    error?: string;
+  }> {
     try {
       // Validate the base64 string
       if (!base64Image) {
@@ -79,8 +84,8 @@ class Designer {
 
       // Generate unique filename using nanoid
       const uniqueId = nanoid(10); // Generate a 10-character unique ID
-      const actualFilename = filename || `background_${uniqueId}.${imageType}`;
-      
+      const actualFilename = `${uniqueId}.${imageType}`;
+
       const filePath = path.join(
         process.env['PUBLIC_DIR'] as string,
         'background',
@@ -102,10 +107,10 @@ class Designer {
 
         // Return the relative path that would be accessible from the web
         const relativePath = `/public/background/${actualFilename}`;
-        return { 
-          success: true, 
+        return {
+          success: true,
           filename: actualFilename,
-          filePath: relativePath 
+          filePath: relativePath,
         };
       } catch (writeError) {
         this.logger.log(
