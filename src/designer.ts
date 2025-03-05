@@ -43,13 +43,13 @@ class Designer {
   /**
    * Uploads a background image from a base64 string
    * @param base64Image The base64 encoded image string
-   * @param filename Optional filename, if not provided a timestamp will be used
-   * @returns Object with success status and file path
+   * @param filename Optional filename, if not provided a nanoid will be used
+   * @returns Object with success status, filename and file path
    */
   public async uploadBackgroundImage(
     base64Image: string,
     filename?: string
-  ): Promise<{ success: boolean; filePath?: string; error?: string }> {
+  ): Promise<{ success: boolean; filename?: string; filePath?: string; error?: string }> {
     try {
       // Validate the base64 string
       if (!base64Image) {
@@ -77,16 +77,16 @@ class Designer {
         base64Data = base64Image;
       }
 
-      // Generate filename if not provided
-      const actualFilename =
-        filename || `background_${Date.now()}.${imageType}`;
+      // Generate unique filename using nanoid
+      const uniqueId = nanoid(10); // Generate a 10-character unique ID
+      const actualFilename = filename || `background_${uniqueId}.${imageType}`;
+      
       const filePath = path.join(
         process.env['PUBLIC_DIR'] as string,
         'background',
         actualFilename
       );
 
-      // Process in chunks to handle large files
       try {
         // Create buffer from base64
         const buffer = Buffer.from(base64Data, 'base64');
@@ -102,7 +102,11 @@ class Designer {
 
         // Return the relative path that would be accessible from the web
         const relativePath = `/public/background/${actualFilename}`;
-        return { success: true, filePath: relativePath };
+        return { 
+          success: true, 
+          filename: actualFilename,
+          filePath: relativePath 
+        };
       } catch (writeError) {
         this.logger.log(
           color.red.bold(`Error writing image file: ${white.bold(writeError)}`)
