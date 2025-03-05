@@ -245,19 +245,7 @@ export class ChatGPT {
     playlistName: string,
     tracks: Array<{ artist: string; name: string }>,
     languages: string[] = new Translation().allLocales
-  ): Promise<{
-    description_en?: string;
-    description_nl?: string;
-    description_de?: string;
-    description_fr?: string;
-    description_es?: string;
-    description_it?: string;
-    description_pt?: string;
-    description_pl?: string;
-    description_hin?: string;
-    description_jp?: string;
-    description_cn?: string;
-  }> {
+  ): Promise<Record<string, string>> {
     // Limit to 100 random tracks if there are more
     const sampleTracks = this.utils.getRandomSample(tracks, 100);
 
@@ -296,65 +284,16 @@ export class ChatGPT {
           name: 'generateDescriptions',
           parameters: {
             type: 'object',
-            properties: {
-              description_en: {
-                type: 'string',
-                description: 'English description (max 150 words)',
-              },
-              description_nl: {
-                type: 'string',
-                description: 'Dutch description (max 150 words)',
-              },
-              description_de: {
-                type: 'string',
-                description: 'German description (max 150 words)',
-              },
-              description_fr: {
-                type: 'string',
-                description: 'French description (max 150 words)',
-              },
-              description_es: {
-                type: 'string',
-                description: 'Spanish description (max 150 words)',
-              },
-              description_it: {
-                type: 'string',
-                description: 'Italian description (max 150 words)',
-              },
-              description_pt: {
-                type: 'string',
-                description: 'Portuguese description (max 150 words)',
-              },
-              description_pl: {
-                type: 'string',
-                description: 'Polish description (max 150 words)',
-              },
-              description_hin: {
-                type: 'string',
-                description: 'Hindi description (max 150 words)',
-              },
-              description_jp: {
-                type: 'string',
-                description: 'Japanese description (max 150 words)',
-              },
-              description_cn: {
-                type: 'string',
-                description: 'Chinese description (max 150 words)',
-              },
-            },
-            required: [
-              'description_en',
-              'description_nl',
-              'description_de',
-              'description_fr',
-              'description_es',
-              'description_it',
-              'description_pt',
-              'description_pl',
-              'description_hin',
-              'description_jp',
-              'description_cn',
-            ],
+            properties: Object.fromEntries(
+              languages.map((lang) => [
+                `description_${lang}`,
+                {
+                  type: 'string',
+                  description: `${lang} description (max 150 words)`,
+                },
+              ])
+            ),
+            required: languages.map((lang) => `description_${lang}`),
           },
         },
       ],
