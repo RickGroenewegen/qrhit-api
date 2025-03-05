@@ -13,6 +13,7 @@ import PrintEnBind from './printers/printenbind';
 import Spotify from './spotify';
 import { ChatGPT } from './chatgpt';
 import Translation from './translation';
+import { GenreId } from './interfaces/Genre';
 
 interface PriceResult {
   totalPrice: number;

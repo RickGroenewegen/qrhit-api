@@ -4,6 +4,7 @@ import Utils from './utils';
 import OpenAI from 'openai';
 import { color } from 'console-log-colors';
 import Translation from './translation';
+import { GenreId } from './interfaces/Genre';
 export class ChatGPT {
   private utils = new Utils();
   private openai = new OpenAI({
@@ -374,8 +375,9 @@ export class ChatGPT {
             type: 'object',
             properties: {
               genreId: {
-                type: ['number', 'null'],
-                description: 'The ID of the matching genre, or null if no clear match',
+                type: 'integer',
+                enum: [GenreId.NoMatch, ...availableGenres.map(g => g.id)],
+                description: 'The ID of the matching genre, or 0 if no clear match',
               },
               reasoning: {
                 type: 'string',
@@ -408,7 +410,8 @@ export class ChatGPT {
           )
         );
         
-        return genreResult.genreId;
+        // Convert GenreId.NoMatch (0) to null
+        return genreResult.genreId === GenreId.NoMatch ? null : genreResult.genreId;
       } catch (error) {
         this.logger.log(
           color.red.bold(
