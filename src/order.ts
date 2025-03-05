@@ -11,6 +11,7 @@ import fs from 'fs/promises';
 import PrintAPI from './printers/printapi';
 import PrintEnBind from './printers/printenbind';
 import Spotify from './spotify';
+import { ChatGPT } from './chatgpt';
 
 interface PriceResult {
   totalPrice: number;
@@ -100,7 +101,7 @@ class Order {
   public async updateFeaturedPlaylists(): Promise<void> {
     this.logger.log(
       color.blue.bold(
-        'Refreshing cache and updating featured playlists with decade percentages'
+        'Refreshing cache and updating featured playlists with decade percentages and descriptions'
       )
     );
 
@@ -147,14 +148,46 @@ class Order {
             decadeCounts[decade]++;
           });
 
+          // Generate playlist descriptions based on tracks
+          const trackData = playlist.tracks.map(pt => ({
+            artist: pt.track.artist,
+            name: pt.track.name
+          }));
+          
+          this.logger.log(
+            color.blue.bold(
+              `Generating descriptions for playlist: ${color.white.bold(playlist.name)}`
+            )
+          );
+          
+          const openai = new ChatGPT();
+          const descriptions = await openai.generatePlaylistDescription(
+            playlist.name,
+            trackData
+          );
+
+          // Update playlist with decade percentages and descriptions
           await this.prisma.playlist.update({
             where: { id: playlist.id },
-            data: Object.fromEntries(
-              decades.map((decade) => [
-                `decadePercentage${decade}`,
-                Math.round((decadeCounts[decade] / totalTracks) * 100),
-              ])
-            ),
+            data: {
+              ...Object.fromEntries(
+                decades.map((decade) => [
+                  `decadePercentage${decade}`,
+                  Math.round((decadeCounts[decade] / totalTracks) * 100),
+                ])
+              ),
+              description_en: descriptions.description_en,
+              description_nl: descriptions.description_nl,
+              description_de: descriptions.description_de,
+              description_fr: descriptions.description_fr,
+              description_es: descriptions.description_es,
+              description_it: descriptions.description_it,
+              description_pt: descriptions.description_pt,
+              description_pl: descriptions.description_pl,
+              description_hin: descriptions.description_hin,
+              description_jp: descriptions.description_jp,
+              description_cn: descriptions.description_cn
+            },
           });
         }
 
@@ -162,14 +195,14 @@ class Order {
           color.magenta(
             `Reloaded playlist ${white.bold(
               playlist.name
-            )} into cache with decade percentages`
+            )} into cache with decade percentages and descriptions`
           )
         );
       }
 
       this.logger.log(
         color.blue.bold(
-          'Featured playlists updated successfully with decade percentages'
+          'Featured playlists updated successfully with decade percentages and descriptions'
         )
       );
     } catch (error) {

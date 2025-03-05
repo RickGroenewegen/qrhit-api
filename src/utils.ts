@@ -14,6 +14,30 @@ import Cache from './cache';
 class Utils {
   private translation: Translation = new Translation();
 
+  /**
+   * Get a random sample of elements from an array
+   * @param array The array to sample from
+   * @param sampleSize The number of elements to sample
+   * @returns A random sample of the specified size
+   */
+  public getRandomSample<T>(array: T[], sampleSize: number): T[] {
+    if (sampleSize >= array.length) return [...array];
+    
+    const result = new Array<T>(sampleSize);
+    const len = array.length;
+    const taken = new Set<number>();
+    
+    while (result.filter(Boolean).length < sampleSize) {
+      const randomIndex = Math.floor(Math.random() * len);
+      if (!taken.has(randomIndex)) {
+        result[result.filter(Boolean).length] = array[randomIndex];
+        taken.add(randomIndex);
+      }
+    }
+    
+    return result;
+  }
+
   public async isMainServer(): Promise<boolean> {
     const isAWS =
       process.env['AWS_EC2_DESCRIBE_KEY_ID'] &&
