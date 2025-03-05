@@ -3,7 +3,6 @@ import PrismaInstance from './prisma';
 import Utils from './utils';
 import OpenAI from 'openai';
 import { color } from 'console-log-colors';
-
 export class ChatGPT {
   private utils = new Utils();
   private openai = new OpenAI({
@@ -239,6 +238,155 @@ export class ChatGPT {
     this.logger.log(color.blue.bold('Done verifying playlist'));
 
     return [];
+  }
+
+  public async generatePlaylistDescription(
+    playlistName: string,
+    tracks: Array<{ artist: string; name: string }>
+  ): Promise<{
+    description_en: string;
+    description_nl: string;
+    description_de: string;
+    description_fr: string;
+    description_es: string;
+    description_it: string;
+    description_pt: string;
+    description_pl: string;
+    description_hin: string;
+    description_jp: string;
+    description_cn: string;
+  }> {
+    // Limit to 100 random tracks if there are more
+    const sampleTracks = this.utils.getRandomSample(tracks, 100);
+
+    const tracksPrompt = sampleTracks
+      .map((track) => `"${track.name}" by ${track.artist}`)
+      .join('\n');
+
+    const prompt = `Playlist name: "${playlistName}"\n\nSample tracks:\n${tracksPrompt}`;
+
+    this.logger.log(
+      color.blue.bold(
+        `Generating descriptions for playlist: ${color.white.bold(
+          playlistName
+        )}`
+      )
+    );
+
+    const result = await this.openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.7,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a music expert who creates engaging, culturally appropriate playlist descriptions. 
+          Based on the playlist name and sample tracks, create a short, compelling description (max 150 words) that captures the essence, mood, and cultural context of the playlist.
+          Your descriptions should be engaging, informative, and appropriate for each language's cultural context.`,
+        },
+        {
+          role: 'user',
+          content: prompt,
+        },
+      ],
+      function_call: { name: 'generateDescriptions' },
+      functions: [
+        {
+          name: 'generateDescriptions',
+          parameters: {
+            type: 'object',
+            properties: {
+              description_en: {
+                type: 'string',
+                description: 'English description (max 150 words)',
+              },
+              description_nl: {
+                type: 'string',
+                description: 'Dutch description (max 150 words)',
+              },
+              description_de: {
+                type: 'string',
+                description: 'German description (max 150 words)',
+              },
+              description_fr: {
+                type: 'string',
+                description: 'French description (max 150 words)',
+              },
+              description_es: {
+                type: 'string',
+                description: 'Spanish description (max 150 words)',
+              },
+              description_it: {
+                type: 'string',
+                description: 'Italian description (max 150 words)',
+              },
+              description_pt: {
+                type: 'string',
+                description: 'Portuguese description (max 150 words)',
+              },
+              description_pl: {
+                type: 'string',
+                description: 'Polish description (max 150 words)',
+              },
+              description_hin: {
+                type: 'string',
+                description: 'Hindi description (max 150 words)',
+              },
+              description_jp: {
+                type: 'string',
+                description: 'Japanese description (max 150 words)',
+              },
+              description_cn: {
+                type: 'string',
+                description: 'Chinese description (max 150 words)',
+              },
+            },
+            required: [
+              'description_en',
+              'description_nl',
+              'description_de',
+              'description_fr',
+              'description_es',
+              'description_it',
+              'description_pt',
+              'description_pl',
+              'description_hin',
+              'description_jp',
+              'description_cn',
+            ],
+          },
+        },
+      ],
+    });
+
+    if (result?.choices[0]?.message?.function_call) {
+      const funcCall = result.choices[0].message.function_call;
+      try {
+        const descriptions = JSON.parse(funcCall.arguments as string);
+        return descriptions;
+      } catch (error) {
+        this.logger.log(
+          color.red.bold(
+            `Error parsing JSON response for descriptions: ${error}`
+          )
+        );
+        this.logger.log(color.red.bold(`Raw response: ${funcCall.arguments}`));
+      }
+    }
+
+    // Return empty descriptions if something went wrong
+    return {
+      description_en: '',
+      description_nl: '',
+      description_de: '',
+      description_fr: '',
+      description_es: '',
+      description_it: '',
+      description_pt: '',
+      description_pl: '',
+      description_hin: '',
+      description_jp: '',
+      description_cn: '',
+    };
   }
 
   public async ask(prompt: string): Promise<any> {
