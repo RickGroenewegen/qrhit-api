@@ -159,11 +159,7 @@ class Order {
 
           for (const field of descriptionFields) {
             const lang = field.split('_')[1];
-            if (
-              !(playlist as any)[field] ||
-              (playlist as any)[field] === '' ||
-              true
-            ) {
+            if (!(playlist as any)[field] || (playlist as any)[field] === '') {
               languagesToGenerate.push(lang);
             }
           }
