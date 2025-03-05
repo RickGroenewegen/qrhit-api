@@ -325,7 +325,7 @@ export class ChatGPT {
   public async determineGenre(
     playlistName: string,
     tracks: Array<{ artist: string; name: string }>,
-    availableGenres: Array<{ id: number; name: string; slug: string }>
+    availableGenres: Array<{ id: number; slug: string | null }>
   ): Promise<number | null> {
     // Limit to 100 random tracks if there are more
     const sampleTracks = this.utils.getRandomSample(tracks, 100);
@@ -336,7 +336,7 @@ export class ChatGPT {
       .join('\n');
 
     const genreOptions = availableGenres
-      .map((genre) => `${genre.id}: ${genre.name} (${genre.slug})`)
+      .map((genre) => `${genre.id}: (${genre.slug})`)
       .join('\n');
 
     const prompt = `Playlist name: "${playlistName}"\n\nSample tracks (${totalTracks} total):\n${tracksPrompt}`;
@@ -376,13 +376,15 @@ export class ChatGPT {
             properties: {
               genreId: {
                 type: 'integer',
-                enum: [GenreId.NoMatch, ...availableGenres.map(g => g.id)],
-                description: 'The ID of the matching genre, or 0 if no clear match',
+                enum: [GenreId.NoMatch, ...availableGenres.map((g) => g.id)],
+                description:
+                  'The ID of the matching genre, or 0 if no clear match',
               },
               reasoning: {
                 type: 'string',
-                description: 'Explanation of why this genre was chosen or why no genre was assigned',
-              }
+                description:
+                  'Explanation of why this genre was chosen or why no genre was assigned',
+              },
             },
             required: ['genreId', 'reasoning'],
           },
@@ -394,24 +396,24 @@ export class ChatGPT {
       const funcCall = result.choices[0].message.function_call;
       try {
         const genreResult = JSON.parse(funcCall.arguments as string);
-        
+
         this.logger.log(
           color.magenta(
             `Genre determination for ${color.white.bold(playlistName)}: ${
-              genreResult.genreId !== null 
-                ? color.white.bold(`ID: ${genreResult.genreId}`) 
+              genreResult.genreId !== null
+                ? color.white.bold(`ID: ${genreResult.genreId}`)
                 : color.white.bold('No clear genre match')
             }`
           )
         );
         this.logger.log(
-          color.magenta(
-            `Reasoning: ${color.white(genreResult.reasoning)}`
-          )
+          color.magenta(`Reasoning: ${color.white(genreResult.reasoning)}`)
         );
-        
+
         // Convert GenreId.NoMatch (0) to null
-        return genreResult.genreId === GenreId.NoMatch ? null : genreResult.genreId;
+        return genreResult.genreId === GenreId.NoMatch
+          ? null
+          : genreResult.genreId;
       } catch (error) {
         this.logger.log(
           color.red.bold(

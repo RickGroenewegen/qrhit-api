@@ -205,9 +205,31 @@ model taxRate {
   @@map("taxrates")
 }
 
+model genre {
+  id        Int        @id @default(autoincrement())
+  slug      String?    @unique
+  name_en   String
+  name_nl   String
+  name_de   String
+  name_fr   String
+  name_es   String
+  name_it   String
+  name_pt   String
+  name_pl   String
+  name_hin  String
+  name_jp   String
+  name_cn   String
+  createdAt DateTime   @default(now())
+  updatedAt DateTime   @updatedAt
+  Playlist  Playlist[]
+
+  @@map("genres")
+}
+
 model Playlist {
   id                   Int      @id @default(autoincrement())
   playlistId           String   @unique
+  genreId              Int?
   type                 String   @default("cards")
   name                 String
   slug                 String   @default("")
@@ -228,6 +250,8 @@ model Playlist {
   featuredLocale       String?
   image                String
   price                Float    @default(0)
+  priceDigital         Float    @default(0)
+  priceSheets          Float    @default(0)
   numberOfTracks       Int      @default(0)
   resetCache           Boolean  @default(false)
   giftcardAmount       Float    @default(0)
@@ -248,6 +272,7 @@ model Playlist {
   Payment           PaymentHasPlaylist[]
   UserSuggestion    UserSuggestion[]
   PlayListExtraInfo TrackExtraInfo[]
+  genre             genre?               @relation(fields: [genreId], references: [id])
 
   @@index([playlistId])
   @@map("playlists")

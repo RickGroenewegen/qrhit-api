@@ -202,9 +202,7 @@ class Order {
                   color.magenta(
                     `Generated ${color.white.bold(
                       lang
-                    )} description for ${color.white.bold(
-                      playlist.name
-                    )}: ${color.white(descriptions[fieldName] as string)}`
+                    )} description for ${color.white.bold(playlist.name)}`
                   )
                 );
               }
