@@ -3,6 +3,7 @@ import PrismaInstance from './prisma';
 import Utils from './utils';
 import OpenAI from 'openai';
 import { color } from 'console-log-colors';
+import Translation from './translation';
 export class ChatGPT {
   private utils = new Utils();
   private openai = new OpenAI({
