@@ -245,21 +245,39 @@ class Order {
 
             // Calculate prices for different product types
             const numberOfTracks = playlist.tracks.length;
-            
+
             // Get order types for different product variants
-            const cardsOrderType = await this.getOrderType(numberOfTracks, false, 'cards', playlist.id, 'none');
-            const digitalOrderType = await this.getOrderType(numberOfTracks, true, 'cards', playlist.id, 'none');
-            const sheetsOrderType = await this.getOrderType(numberOfTracks, false, 'cards', playlist.id, 'sheets');
-            
+            const cardsOrderType = await this.getOrderType(
+              numberOfTracks,
+              false,
+              'cards',
+              playlist.playlistId,
+              'none'
+            );
+            const digitalOrderType = await this.getOrderType(
+              numberOfTracks,
+              true,
+              'cards',
+              playlist.playlistId,
+              'none'
+            );
+            const sheetsOrderType = await this.getOrderType(
+              numberOfTracks,
+              false,
+              'cards',
+              playlist.playlistId,
+              'sheets'
+            );
+
             // Update prices in the updateData object
             if (cardsOrderType && cardsOrderType.price) {
               updateData.price = cardsOrderType.price;
             }
-            
+
             if (digitalOrderType && digitalOrderType.price) {
               updateData.priceDigital = digitalOrderType.price;
             }
-            
+
             if (sheetsOrderType && sheetsOrderType.price) {
               updateData.priceSheets = sheetsOrderType.price;
             }
@@ -272,12 +290,30 @@ class Order {
           } else {
             // Calculate prices for different product types
             const numberOfTracks = playlist.tracks.length;
-            
+
             // Get order types for different product variants
-            const cardsOrderType = await this.getOrderType(numberOfTracks, false, 'cards', playlist.id, 'none');
-            const digitalOrderType = await this.getOrderType(numberOfTracks, true, 'cards', playlist.id, 'none');
-            const sheetsOrderType = await this.getOrderType(numberOfTracks, false, 'cards', playlist.id, 'sheets');
-            
+            const cardsOrderType = await this.getOrderType(
+              numberOfTracks,
+              false,
+              'cards',
+              playlist.playlistId,
+              'none'
+            );
+            const digitalOrderType = await this.getOrderType(
+              numberOfTracks,
+              true,
+              'cards',
+              playlist.playlistId,
+              'none'
+            );
+            const sheetsOrderType = await this.getOrderType(
+              numberOfTracks,
+              false,
+              'cards',
+              playlist.playlistId,
+              'sheets'
+            );
+
             // Create update data with decade percentages
             const updateData = {
               ...Object.fromEntries(
@@ -287,20 +323,20 @@ class Order {
                 ])
               ),
             };
-            
+
             // Add prices to the update data
-            if (cardsOrderType && cardsOrderType.price) {
-              updateData.price = cardsOrderType.price;
+            if (cardsOrderType && cardsOrderType.amount) {
+              updateData.price = cardsOrderType.amount;
             }
-            
-            if (digitalOrderType && digitalOrderType.price) {
-              updateData.priceDigital = digitalOrderType.price;
+
+            if (digitalOrderType && digitalOrderType.amount) {
+              updateData.priceDigital = digitalOrderType.amount;
             }
-            
-            if (sheetsOrderType && sheetsOrderType.price) {
-              updateData.priceSheets = sheetsOrderType.price;
+
+            if (sheetsOrderType && sheetsOrderType.amount) {
+              updateData.priceSheets = sheetsOrderType.amount;
             }
-            
+
             // Update playlist with decade percentages and prices
             await this.prisma.playlist.update({
               where: { id: playlist.id },
