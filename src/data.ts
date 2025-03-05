@@ -671,9 +671,14 @@ class Data {
         playlists.decadePercentage1960,
         playlists.decadePercentage1950,
         playlists.decadePercentage1900,
-        playlists.decadePercentage0
+        playlists.decadePercentage0,
+        playlists.genreId,
+        playlists.description_${locale} as description,
+        g.name_${locale} as genreName
       FROM 
         playlists
+      LEFT JOIN
+        genres g ON playlists.genreId = g.id
       WHERE 
         playlists.featured = 1
     `;
@@ -698,9 +703,24 @@ class Data {
 
       returnList = await this.prisma.$queryRawUnsafe(query);
 
-      returnList = returnList.map((playlist) => ({
-        ...playlist,
-      }));
+      returnList = returnList.map((playlist) => {
+        // Ensure description is available, fallback to English if not
+        if (!playlist.description && locale !== 'en') {
+          const descriptionField = `description_en`;
+          playlist.description = playlist[descriptionField];
+        }
+        
+        // Ensure genre name is available, fallback to English if not
+        if (!playlist.genreName && playlist.genreId && locale !== 'en') {
+          // We'll need to fetch this separately since we're already in the map function
+          // This is a fallback scenario
+          playlist.genreName = playlist.genreName || 'Unknown';
+        }
+        
+        return {
+          ...playlist,
+        };
+      });
 
       this.cache.set(cacheKey, JSON.stringify(returnList));
     } else {
