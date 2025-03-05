@@ -243,6 +243,8 @@ class Order {
               }
             }
 
+            // TODO: Update price
+
             // Update playlist with decade percentages and new descriptions
             await this.prisma.playlist.update({
               where: { id: playlist.id },
