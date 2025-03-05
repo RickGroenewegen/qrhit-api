@@ -153,12 +153,16 @@ class Order {
           const languagesToGenerate = [];
           const translation = new Translation();
           const descriptionFields = translation.allLocales.map(
-            locale => `description_${locale}`
+            (locale) => `description_${locale}`
           );
 
           for (const field of descriptionFields) {
             const lang = field.split('_')[1];
-            if (!(playlist as any)[field] || (playlist as any)[field] === '') {
+            if (
+              !(playlist as any)[field] ||
+              (playlist as any)[field] === '' ||
+              true
+            ) {
               languagesToGenerate.push(lang);
             }
           }
