@@ -12,6 +12,7 @@ import PrintAPI from './printers/printapi';
 import PrintEnBind from './printers/printenbind';
 import Spotify from './spotify';
 import { ChatGPT } from './chatgpt';
+import Translation from './translation';
 
 interface PriceResult {
   totalPrice: number;
@@ -150,19 +151,10 @@ class Order {
 
           // Determine which languages need descriptions
           const languagesToGenerate = [];
-          const descriptionFields = [
-            'description_en',
-            'description_nl',
-            'description_de',
-            'description_fr',
-            'description_es',
-            'description_it',
-            'description_pt',
-            'description_pl',
-            'description_hin',
-            'description_jp',
-            'description_cn',
-          ];
+          const translation = new Translation();
+          const descriptionFields = translation.allLocales.map(
+            locale => `description_${locale}`
+          );
 
           for (const field of descriptionFields) {
             const lang = field.split('_')[1];
