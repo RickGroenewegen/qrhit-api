@@ -641,13 +641,14 @@ class Data {
   public async getFeaturedPlaylists(locale: string): Promise<any> {
     let returnList: any[] = [];
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    
+    // Check if locale is valid, otherwise default to English
+    if (!this.translate.isValidLocale(locale)) {
+      locale = 'en';
+    }
+    
     const cacheKey = `featuredPlaylists_${today}_${locale}`;
     const cachedPlaylists = await this.cache.get(cacheKey);
-
-    //test
-    if (!this.translate.isValidLocale(locale)) {
-      return [];
-    }
 
     if (!cachedPlaylists) {
       // Base query
