@@ -195,7 +195,7 @@ class Order {
             
             // Add only the generated descriptions to the update data
             for (const lang of languagesToGenerate) {
-              const fieldName = `description_${lang}`;
+              const fieldName = `description_${lang}` as keyof typeof descriptions;
               if (descriptions[fieldName]) {
                 updateData[fieldName] = descriptions[fieldName];
               }
