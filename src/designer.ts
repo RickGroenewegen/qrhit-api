@@ -3,6 +3,7 @@ import path from 'path';
 import Log from './logger';
 import Utils from './utils';
 import { color, white } from 'console-log-colors';
+import { nanoid } from 'nanoid';
 
 class Designer {
   private static instance: Designer;
