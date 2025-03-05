@@ -1620,17 +1620,26 @@ class PrintEnBind {
                 },
               });
 
+              console.log(
+                222,
+                payment.printApiTrackingLink?.length,
+                payment.printApiTrackingLink
+              );
+
               if (
-                (payment.printApiTrackingLink &&
-                  payment.printApiTrackingLink!.length > 0) ||
-                true
+                payment.printApiTrackingLink &&
+                payment.printApiTrackingLink!.length > 0
               ) {
+                console.log(333, 'CREATE_INVOICE');
+
                 const pdfPath = await this.createInvoice(payment);
+                console.log(444, 'SEND_MAIL');
                 this.mail.sendTrackingEmail(
                   payment,
                   payment.printApiTrackingLink!,
                   pdfPath
                 );
+                console.log(555, 'TRACKING_MAIL_DONE');
                 this.logger.log(
                   color.blue.bold(
                     `Sent tracking email for order ${color.white.bold(
