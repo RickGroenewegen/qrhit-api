@@ -33,6 +33,7 @@ import Review from './review';
 import Trustpilot from './trustpilot';
 import { Music } from './music';
 import Suggestion from './suggestion';
+import Designer from './designer';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -71,6 +72,7 @@ class Server {
   private trustpilot = Trustpilot.getInstance();
   private music = new Music();
   private suggestion = Suggestion.getInstance();
+  private designer = Designer.getInstance();
   private whiteLabels = [
     {
       domain: 'k7.com',
@@ -1092,6 +1094,18 @@ class Server {
         return { success };
       }
     );
+
+    this.fastify.post('/designer/upload/background', async (request: any, reply) => {
+      const { image, filename } = request.body;
+      
+      if (!image) {
+        reply.status(400).send({ success: false, error: 'No image provided' });
+        return;
+      }
+      
+      const result = await this.designer.uploadBackgroundImage(image, filename);
+      return result;
+    });
 
     this.fastify.delete(
       '/usersuggestions/:paymentId/:userHash/:playlistId/:trackId',
