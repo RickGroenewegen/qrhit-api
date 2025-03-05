@@ -688,7 +688,8 @@ class Server {
           request.body.captchaToken,
           true,
           this.utils.parseBoolean(request.body.featured),
-          this.utils.parseBoolean(request.body.slug)
+          this.utils.parseBoolean(request.body.slug),
+          request.body.locale
         );
       }
     );
@@ -976,6 +977,7 @@ class Server {
     this.fastify.get('/cache', async (request: any, _reply) => {
       await this.cache.flush();
       this.order.updateFeaturedPlaylists();
+      await this.cache.flush();
       return { success: true };
     });
 

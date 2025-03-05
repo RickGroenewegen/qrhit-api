@@ -12,6 +12,7 @@ import AnalyticsClient from './analytics';
 import Logger from './logger';
 import { Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
+import Translation from './translation';
 
 class RapidAPIQueue {
   private cache: Cache;
@@ -121,6 +122,7 @@ class Spotify {
   private analytics = AnalyticsClient.getInstance();
   private rapidAPIQueue = RapidAPIQueue.getInstance();
   private prisma = PrismaInstance.getInstance();
+  private translate = new Translation();
 
   // create a refresh token method
   public async refreshAccessToken(refreshToken: string): Promise<ApiResult> {
@@ -293,9 +295,14 @@ class Spotify {
     captchaToken: string = '',
     checkCaptcha: boolean,
     featured: boolean = false,
-    isSlug: boolean = false
+    isSlug: boolean = false,
+    locale: string = 'en'
   ): Promise<ApiResult> {
     let playlist: Playlist | null = null;
+
+    if (!this.translate.isValidLocale(locale)) {
+      locale = 'en';
+    }
 
     // if (checkCaptcha) {
     //   // Verify reCAPTCHA token
@@ -307,7 +314,7 @@ class Spotify {
     // }
 
     try {
-      const cacheKey = `playlist_${playlistId}`;
+      const cacheKey = `playlist_${playlistId}_${locale}`;
       const cacheResult = await this.cache.get(cacheKey);
 
       if (!cacheResult || !cache) {
@@ -347,20 +354,26 @@ class Spotify {
         }
 
         let playlistName = response.data.name;
+        let playlistDescription = response.data.description;
 
         if (featured) {
           // Get the name from DB if it's a featured playlist
-          const dbPlaylist = await this.prisma.playlist.findUnique({
-            where: { playlistId },
+          const dbPlaylist = await this.prisma.playlist.findFirst({
+            where: { slug: playlistId },
           });
 
           playlistName = dbPlaylist?.name || playlistName;
+          playlistDescription =
+            (dbPlaylist
+              ? dbPlaylist[`description_${locale}` as keyof typeof dbPlaylist]
+              : null) || playlistDescription;
         }
 
         playlist = {
           id: playlistId,
           playlistId: playlistId,
           name: playlistName,
+          description: playlistDescription,
           numberOfTracks: response.data.tracks.total,
           image,
         };
@@ -402,8 +415,10 @@ class Spotify {
 
       if (response.data && response.data.tracks) {
         // Filter out any null or undefined tracks
-        const validTracks = response.data.tracks.filter((track: any) => track !== null && track !== undefined);
-        
+        const validTracks = response.data.tracks.filter(
+          (track: any) => track !== null && track !== undefined
+        );
+
         return {
           success: true,
           data: validTracks,

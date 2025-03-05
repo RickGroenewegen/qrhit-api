@@ -641,12 +641,12 @@ class Data {
   public async getFeaturedPlaylists(locale: string): Promise<any> {
     let returnList: any[] = [];
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
-    
+
     // Check if locale is valid, otherwise default to English
     if (!this.translate.isValidLocale(locale)) {
       locale = 'en';
     }
-    
+
     const cacheKey = `featuredPlaylists_${today}_${locale}`;
     const cachedPlaylists = await this.cache.get(cacheKey);
 
@@ -660,6 +660,8 @@ class Data {
         playlists.slug,
         playlists.image,
         playlists.price,
+        playlists.priceDigital,
+        playlists.priceSheets,
         playlists.numberOfTracks,
         playlists.featuredLocale,
         playlists.decadePercentage2020,
@@ -709,14 +711,14 @@ class Data {
           const descriptionField = `description_en`;
           playlist.description = playlist[descriptionField];
         }
-        
+
         // Ensure genre name is available, fallback to English if not
         if (!playlist.genreName && playlist.genreId && locale !== 'en') {
           // We'll need to fetch this separately since we're already in the map function
           // This is a fallback scenario
           playlist.genreName = playlist.genreName || 'Unknown';
         }
-        
+
         return {
           ...playlist,
         };
@@ -1710,7 +1712,9 @@ class Data {
             } else if (track) {
               this.logger.log(
                 color.yellow.bold(
-                  `No preview URL for track ID: ${color.white.bold(track.id || 'unknown')}`
+                  `No preview URL for track ID: ${color.white.bold(
+                    track.id || 'unknown'
+                  )}`
                 )
               );
             }
