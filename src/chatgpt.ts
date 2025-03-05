@@ -248,6 +248,7 @@ export class ChatGPT {
   ): Promise<Record<string, string>> {
     // Limit to 100 random tracks if there are more
     const sampleTracks = this.utils.getRandomSample(tracks, 100);
+    const totalTracks = tracks.length;
 
     const tracksPrompt = sampleTracks
       .map((track) => `"${track.name}" by ${track.artist}`)
@@ -255,27 +256,29 @@ export class ChatGPT {
 
     const prompt = `Playlist name: "${playlistName}"\n\nSample tracks:\n${tracksPrompt}`;
 
-    this.logger.log(
-      color.blue.bold(
-        `Generating descriptions for playlist: ${color.white.bold(
-          playlistName
-        )}`
-      )
-    );
-
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0.7,
+      model: 'gpt-4o',
+      temperature: 0.2,
       messages: [
         {
           role: 'system',
-          content: `You are a music expert who creates engaging, culturally appropriate playlist descriptions. 
-          Based on the playlist name and sample tracks, create a short, compelling description (max 150 words) that captures the essence, mood, and cultural context of the playlist.
-          Your descriptions should be engaging, informative, and appropriate for each language's cultural context.`,
+          content: `  You are a music expert who creates engaging, culturally appropriate playlist descriptions.`,
         },
         {
           role: 'user',
-          content: prompt,
+          content: `  Generate a short Spotify playlist description that seamlessly weaves in the playlist’s title and a list of numbers from that playlist. 
+                      Keep it casual, engaging, and free of AI jargon. 
+                      Make it sound like a real human wrote it.
+                      Sometimes mention QRSong! (The name of the service)
+                      Keep it concise (2-3 sentences max). 
+                      Call the tracks 'tracks' only. Do not use any other terms.
+                      Do not mention song titles. You maybe mention artists well known
+                      Do not use fancy words or jargon.
+                      Avoid disclaimers or explanations of how you wrote it. Just deliver the description.
+                      The playlist data is as follows:
+                      
+                      Number of songs: ${totalTracks}
+                      ${prompt}`,
         },
       ],
       function_call: { name: 'generateDescriptions' },
