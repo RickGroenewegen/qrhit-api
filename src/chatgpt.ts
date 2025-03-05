@@ -243,7 +243,7 @@ export class ChatGPT {
   public async generatePlaylistDescription(
     playlistName: string,
     tracks: Array<{ artist: string; name: string }>,
-    languages: string[] = ['en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'hin', 'jp', 'cn']
+    languages: string[] = new Translation().allLocales
   ): Promise<{
     description_en?: string;
     description_nl?: string;
