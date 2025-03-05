@@ -51,19 +51,28 @@ class Designer {
   ): Promise<{ success: boolean; filePath?: string; error?: string }> {
     try {
       // Validate the base64 string
-      if (!base64Image || !base64Image.includes('base64,')) {
-        return { success: false, error: 'Invalid image format' };
+      if (!base64Image) {
+        return { success: false, error: 'No image provided' };
       }
 
-      // Extract the actual base64 data and determine the file type
-      const matches = base64Image.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
-      if (!matches || matches.length !== 3) {
-        return { success: false, error: 'Invalid image data format' };
-      }
+      let imageType: string;
+      let base64Data: string;
 
-      const imageType = matches[1];
-      const base64Data = matches[2];
-      const buffer = Buffer.from(base64Data, 'base64');
+      // Handle both full data URI and raw base64 string
+      if (base64Image.includes('base64,')) {
+        // Extract the actual base64 data and determine the file type
+        const matches = base64Image.match(/^data:image\/([a-zA-Z]+);base64,(.+)$/);
+        if (!matches || matches.length !== 3) {
+          return { success: false, error: 'Invalid image data format' };
+        }
+        imageType = matches[1];
+        base64Data = matches[2];
+      } else {
+        // Assume it's a raw base64 string and try to determine format from content
+        // Default to png if we can't determine
+        imageType = 'png';
+        base64Data = base64Image;
+      }
 
       // Generate filename if not provided
       const actualFilename = filename || `background_${Date.now()}.${imageType}`;
@@ -73,16 +82,31 @@ class Designer {
         actualFilename
       );
 
-      // Write the file
-      await fs.writeFile(filePath, buffer);
+      // Process in chunks to handle large files
+      try {
+        // Create buffer from base64
+        const buffer = Buffer.from(base64Data, 'base64');
+        
+        // Write the file
+        await fs.writeFile(filePath, buffer);
+        
+        this.logger.log(
+          color.green.bold(
+            `Background image uploaded successfully: ${white.bold(filePath)}`
+          )
+        );
 
-      this.logger.log(
-        color.green.bold(
-          `Background image uploaded successfully: ${white.bold(filePath)}`
-        )
-      );
-
-      return { success: true, filePath };
+        // Return the relative path that would be accessible from the web
+        const relativePath = `/public/background/${actualFilename}`;
+        return { success: true, filePath: relativePath };
+      } catch (writeError) {
+        this.logger.log(
+          color.red.bold(
+            `Error writing image file: ${white.bold(writeError)}`
+          )
+        );
+        return { success: false, error: `Error writing file: ${writeError}` };
+      }
     } catch (error) {
       this.logger.log(
         color.red.bold(

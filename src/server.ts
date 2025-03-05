@@ -85,7 +85,7 @@ class Server {
   private constructor() {
     this.fastify = Fastify({
       logger: false,
-      bodyLimit: 1024 * 1024 * 10, // 10 MB, adjust as needed
+      bodyLimit: 1024 * 1024 * 50, // 50 MB, adjust as needed
     });
   }
 
@@ -1095,7 +1095,9 @@ class Server {
       }
     );
 
-    this.fastify.post('/designer/upload/background', async (request: any, reply) => {
+    this.fastify.post('/designer/upload/background', {
+      bodyLimit: 1024 * 1024 * 50, // 50 MB limit specifically for this route
+    }, async (request: any, reply) => {
       const { image, filename } = request.body;
       
       if (!image) {
