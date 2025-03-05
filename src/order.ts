@@ -194,11 +194,14 @@ class Order {
 
             // Log the generated descriptions for each language
             for (const lang of languagesToGenerate) {
-              const fieldName = `description_${lang}` as keyof typeof descriptions;
+              const fieldName =
+                `description_${lang}` as keyof typeof descriptions;
               if (descriptions[fieldName]) {
                 this.logger.log(
                   color.magenta(
-                    `Generated ${color.white.bold(lang)} description for ${color.white.bold(
+                    `Generated ${color.white.bold(
+                      lang
+                    )} description for ${color.white.bold(
                       playlist.name
                     )}: ${color.white(descriptions[fieldName] as string)}`
                   )
@@ -210,16 +213,11 @@ class Order {
             const availableGenres = await this.prisma.genre.findMany({
               select: {
                 id: true,
-                name: true,
                 slug: true,
-              },
-              where: {
-                active: true,
               },
             });
 
             // Determine genre for the playlist
-            const openai = new ChatGPT();
             const genreId = await openai.determineGenre(
               playlist.name,
               trackData,
@@ -235,7 +233,7 @@ class Order {
                 ])
               ),
             };
-            
+
             // Only set genreId if a clear match was found
             if (genreId !== null) {
               updateData.genreId = genreId;
