@@ -151,38 +151,50 @@ class Order {
           // Determine which languages need descriptions
           const languagesToGenerate = [];
           const descriptionFields = [
-            'description_en', 'description_nl', 'description_de', 'description_fr',
-            'description_es', 'description_it', 'description_pt', 'description_pl',
-            'description_hin', 'description_jp', 'description_cn'
+            'description_en',
+            'description_nl',
+            'description_de',
+            'description_fr',
+            'description_es',
+            'description_it',
+            'description_pt',
+            'description_pl',
+            'description_hin',
+            'description_jp',
+            'description_cn',
           ];
-          
+
           for (const field of descriptionFields) {
             const lang = field.split('_')[1];
-            if (!playlist[field] || playlist[field] === '') {
+            if (!(playlist as any)[field] || (playlist as any)[field] === '') {
               languagesToGenerate.push(lang);
             }
           }
-          
+
           // Only generate descriptions if there are missing languages
           if (languagesToGenerate.length > 0) {
-            const trackData = playlist.tracks.map(pt => ({
+            const trackData = playlist.tracks.map((pt) => ({
               artist: pt.track.artist,
-              name: pt.track.name
+              name: pt.track.name,
             }));
-            
+
             this.logger.log(
               color.blue.bold(
-                `Generating descriptions for playlist: ${color.white.bold(playlist.name)} in languages: ${color.white.bold(languagesToGenerate.join(', '))}`
+                `Generating descriptions for playlist: ${color.white.bold(
+                  playlist.name
+                )} in languages: ${color.white.bold(
+                  languagesToGenerate.join(', ')
+                )}`
               )
             );
-            
+
             const openai = new ChatGPT();
             const descriptions = await openai.generatePlaylistDescription(
               playlist.name,
               trackData,
               languagesToGenerate
             );
-            
+
             // Prepare update data with decade percentages
             const updateData = {
               ...Object.fromEntries(
@@ -190,17 +202,18 @@ class Order {
                   `decadePercentage${decade}`,
                   Math.round((decadeCounts[decade] / totalTracks) * 100),
                 ])
-              )
+              ),
             };
-            
+
             // Add only the generated descriptions to the update data
             for (const lang of languagesToGenerate) {
-              const fieldName = `description_${lang}` as keyof typeof descriptions;
+              const fieldName =
+                `description_${lang}` as keyof typeof descriptions;
               if (descriptions[fieldName]) {
                 updateData[fieldName] = descriptions[fieldName];
               }
             }
-            
+
             // Update playlist with decade percentages and new descriptions
             await this.prisma.playlist.update({
               where: { id: playlist.id },
