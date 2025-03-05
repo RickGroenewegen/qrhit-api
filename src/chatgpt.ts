@@ -242,19 +242,20 @@ export class ChatGPT {
 
   public async generatePlaylistDescription(
     playlistName: string,
-    tracks: Array<{ artist: string; name: string }>
+    tracks: Array<{ artist: string; name: string }>,
+    languages: string[] = ['en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'hin', 'jp', 'cn']
   ): Promise<{
-    description_en: string;
-    description_nl: string;
-    description_de: string;
-    description_fr: string;
-    description_es: string;
-    description_it: string;
-    description_pt: string;
-    description_pl: string;
-    description_hin: string;
-    description_jp: string;
-    description_cn: string;
+    description_en?: string;
+    description_nl?: string;
+    description_de?: string;
+    description_fr?: string;
+    description_es?: string;
+    description_it?: string;
+    description_pt?: string;
+    description_pl?: string;
+    description_hin?: string;
+    description_jp?: string;
+    description_cn?: string;
   }> {
     // Limit to 100 random tracks if there are more
     const sampleTracks = this.utils.getRandomSample(tracks, 100);
@@ -373,20 +374,8 @@ export class ChatGPT {
       }
     }
 
-    // Return empty descriptions if something went wrong
-    return {
-      description_en: '',
-      description_nl: '',
-      description_de: '',
-      description_fr: '',
-      description_es: '',
-      description_it: '',
-      description_pt: '',
-      description_pl: '',
-      description_hin: '',
-      description_jp: '',
-      description_cn: '',
-    };
+    // Return empty object if something went wrong
+    return {};
   }
 
   public async ask(prompt: string): Promise<any> {

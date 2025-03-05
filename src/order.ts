@@ -148,47 +148,76 @@ class Order {
             decadeCounts[decade]++;
           });
 
-          // Generate playlist descriptions based on tracks
-          const trackData = playlist.tracks.map(pt => ({
-            artist: pt.track.artist,
-            name: pt.track.name
-          }));
+          // Determine which languages need descriptions
+          const languagesToGenerate = [];
+          const descriptionFields = [
+            'description_en', 'description_nl', 'description_de', 'description_fr',
+            'description_es', 'description_it', 'description_pt', 'description_pl',
+            'description_hin', 'description_jp', 'description_cn'
+          ];
           
-          this.logger.log(
-            color.blue.bold(
-              `Generating descriptions for playlist: ${color.white.bold(playlist.name)}`
-            )
-          );
+          for (const field of descriptionFields) {
+            const lang = field.split('_')[1];
+            if (!playlist[field] || playlist[field] === '') {
+              languagesToGenerate.push(lang);
+            }
+          }
           
-          const openai = new ChatGPT();
-          const descriptions = await openai.generatePlaylistDescription(
-            playlist.name,
-            trackData
-          );
-
-          // Update playlist with decade percentages and descriptions
-          await this.prisma.playlist.update({
-            where: { id: playlist.id },
-            data: {
+          // Only generate descriptions if there are missing languages
+          if (languagesToGenerate.length > 0) {
+            const trackData = playlist.tracks.map(pt => ({
+              artist: pt.track.artist,
+              name: pt.track.name
+            }));
+            
+            this.logger.log(
+              color.blue.bold(
+                `Generating descriptions for playlist: ${color.white.bold(playlist.name)} in languages: ${color.white.bold(languagesToGenerate.join(', '))}`
+              )
+            );
+            
+            const openai = new ChatGPT();
+            const descriptions = await openai.generatePlaylistDescription(
+              playlist.name,
+              trackData,
+              languagesToGenerate
+            );
+            
+            // Prepare update data with decade percentages
+            const updateData = {
               ...Object.fromEntries(
                 decades.map((decade) => [
                   `decadePercentage${decade}`,
                   Math.round((decadeCounts[decade] / totalTracks) * 100),
                 ])
+              )
+            };
+            
+            // Add only the generated descriptions to the update data
+            for (const lang of languagesToGenerate) {
+              const fieldName = `description_${lang}`;
+              if (descriptions[fieldName]) {
+                updateData[fieldName] = descriptions[fieldName];
+              }
+            }
+            
+            // Update playlist with decade percentages and new descriptions
+            await this.prisma.playlist.update({
+              where: { id: playlist.id },
+              data: updateData,
+            });
+          } else {
+            // Just update decade percentages if all descriptions exist
+            await this.prisma.playlist.update({
+              where: { id: playlist.id },
+              data: Object.fromEntries(
+                decades.map((decade) => [
+                  `decadePercentage${decade}`,
+                  Math.round((decadeCounts[decade] / totalTracks) * 100),
+                ])
               ),
-              description_en: descriptions.description_en,
-              description_nl: descriptions.description_nl,
-              description_de: descriptions.description_de,
-              description_fr: descriptions.description_fr,
-              description_es: descriptions.description_es,
-              description_it: descriptions.description_it,
-              description_pt: descriptions.description_pt,
-              description_pl: descriptions.description_pl,
-              description_hin: descriptions.description_hin,
-              description_jp: descriptions.description_jp,
-              description_cn: descriptions.description_cn
-            },
-          });
+            });
+          }
         }
 
         this.logger.log(
