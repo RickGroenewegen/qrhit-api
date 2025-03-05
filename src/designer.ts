@@ -3,7 +3,6 @@ import path from 'path';
 import Log from './logger';
 import Utils from './utils';
 import { color, white } from 'console-log-colors';
-import { nanoid } from 'nanoid';
 
 class Designer {
   private static instance: Designer;
@@ -82,8 +81,8 @@ class Designer {
         base64Data = base64Image;
       }
 
-      // Generate unique filename using nanoid
-      const uniqueId = nanoid(10); // Generate a 10-character unique ID
+      // Generate unique filename using utils.generateRandomString
+      const uniqueId = this.utils.generateRandomString(32); // Generate a 32-character unique ID
       const actualFilename = `${uniqueId}.${imageType}`;
 
       const filePath = path.join(
