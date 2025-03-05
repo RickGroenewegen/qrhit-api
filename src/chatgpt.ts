@@ -321,6 +321,108 @@ export class ChatGPT {
     return {};
   }
 
+  public async determineGenre(
+    playlistName: string,
+    tracks: Array<{ artist: string; name: string }>,
+    availableGenres: Array<{ id: number; name: string; slug: string }>
+  ): Promise<number | null> {
+    // Limit to 100 random tracks if there are more
+    const sampleTracks = this.utils.getRandomSample(tracks, 100);
+    const totalTracks = tracks.length;
+
+    const tracksPrompt = sampleTracks
+      .map((track) => `"${track.name}" by ${track.artist}`)
+      .join('\n');
+
+    const genreOptions = availableGenres
+      .map((genre) => `${genre.id}: ${genre.name} (${genre.slug})`)
+      .join('\n');
+
+    const prompt = `Playlist name: "${playlistName}"\n\nSample tracks (${totalTracks} total):\n${tracksPrompt}`;
+
+    this.logger.log(
+      color.blue.bold(
+        `Determining genre for playlist: ${color.white.bold(playlistName)}`
+      )
+    );
+
+    const result = await this.openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0.2,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a music expert who can accurately categorize playlists into genres.`,
+        },
+        {
+          role: 'user',
+          content: `Analyze this playlist and determine which genre it best fits into from the provided list.
+                    If the playlist spans multiple genres or doesn't clearly fit any of the available genres, respond with null.
+                    Be strict - only assign a genre if there's a clear match.
+                    
+                    Available genres:
+                    ${genreOptions}
+                    
+                    ${prompt}`,
+        },
+      ],
+      function_call: { name: 'determineGenre' },
+      functions: [
+        {
+          name: 'determineGenre',
+          parameters: {
+            type: 'object',
+            properties: {
+              genreId: {
+                type: ['number', 'null'],
+                description: 'The ID of the matching genre, or null if no clear match',
+              },
+              reasoning: {
+                type: 'string',
+                description: 'Explanation of why this genre was chosen or why no genre was assigned',
+              }
+            },
+            required: ['genreId', 'reasoning'],
+          },
+        },
+      ],
+    });
+
+    if (result?.choices[0]?.message?.function_call) {
+      const funcCall = result.choices[0].message.function_call;
+      try {
+        const genreResult = JSON.parse(funcCall.arguments as string);
+        
+        this.logger.log(
+          color.magenta(
+            `Genre determination for ${color.white.bold(playlistName)}: ${
+              genreResult.genreId !== null 
+                ? color.white.bold(`ID: ${genreResult.genreId}`) 
+                : color.white.bold('No clear genre match')
+            }`
+          )
+        );
+        this.logger.log(
+          color.magenta(
+            `Reasoning: ${color.white(genreResult.reasoning)}`
+          )
+        );
+        
+        return genreResult.genreId;
+      } catch (error) {
+        this.logger.log(
+          color.red.bold(
+            `Error parsing JSON response for genre determination: ${error}`
+          )
+        );
+        this.logger.log(color.red.bold(`Raw response: ${funcCall.arguments}`));
+      }
+    }
+
+    // Return null if something went wrong or no clear genre match
+    return null;
+  }
+
   public async ask(prompt: string): Promise<any> {
     let answer = undefined;
 

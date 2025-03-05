@@ -184,6 +184,7 @@ class Order {
               )
             );
 
+            // Reuse the same ChatGPT instance for both operations
             const openai = new ChatGPT();
             const descriptions = await openai.generatePlaylistDescription(
               playlist.name,
@@ -205,7 +206,27 @@ class Order {
               }
             }
 
-            // Prepare update data with decade percentages
+            // Get all available genres
+            const availableGenres = await this.prisma.genre.findMany({
+              select: {
+                id: true,
+                name: true,
+                slug: true,
+              },
+              where: {
+                active: true,
+              },
+            });
+
+            // Determine genre for the playlist
+            const openai = new ChatGPT();
+            const genreId = await openai.determineGenre(
+              playlist.name,
+              trackData,
+              availableGenres
+            );
+
+            // Prepare update data with decade percentages and genre if applicable
             const updateData: Record<string, number | string> = {
               ...Object.fromEntries(
                 decades.map((decade) => [
@@ -214,6 +235,11 @@ class Order {
                 ])
               ),
             };
+            
+            // Only set genreId if a clear match was found
+            if (genreId !== null) {
+              updateData.genreId = genreId;
+            }
 
             // Add only the generated descriptions to the update data
             for (const lang of languagesToGenerate) {
