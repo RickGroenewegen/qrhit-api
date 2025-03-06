@@ -26,6 +26,18 @@
         <% } %>
         background-size: cover;
     }
+    .circle-bg {
+        position: absolute;
+        width: 48mm;
+        height: 48mm;
+        background-color: #fff;
+        border-radius: 50%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2;
+        border: 1px solid #e0e0e0;
+    }
     .card-back {
         background-color: #ffffff; /* or any other color you prefer */
     }
@@ -73,6 +85,7 @@
 <body>
 <% tracks.forEach((track, index) => { %>
     <div class="card-front">
+        <div class="circle-bg"></div>
         <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
         <div class="url"><%= process.env['APP_DOMAIN'] %></div>
     </div>
