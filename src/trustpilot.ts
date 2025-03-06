@@ -253,9 +253,9 @@ class Trustpilot {
       const reviews: TrustpilotReview[] = dbReviews.map((review) => {
         // Get the appropriate locale-specific title and message
         // Default to English if the requested locale isn't available
-        const locale = review.locale?.split('-')[0].toLowerCase() || 'en';
-        const title = review[`title_${locale}` as keyof typeof review];
-        const text = review[`message_${locale}` as keyof typeof review];
+        const requestedLocale = locale.toLowerCase();
+        const title = review[`title_${requestedLocale}` as keyof typeof review] || review.title_en;
+        const text = review[`message_${requestedLocale}` as keyof typeof review] || review.message_en;
 
         return {
           id: review.id.toString(),
