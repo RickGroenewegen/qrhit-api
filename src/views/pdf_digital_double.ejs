@@ -93,6 +93,15 @@
         text-align: center;
         z-index: 2;
     }
+    .logo {
+        position: absolute;
+        top: 5mm;
+        left: 50%;
+        transform: translateX(-50%);
+        max-width: 20mm;
+        max-height: 10mm;
+        z-index: 3;
+    }
     .qr {
         flex: 0 0 80%;
         display: flex;
@@ -174,6 +183,9 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                                     <div class="circle"></div>
                                 <% } %>
                             <% } %>
+                            <% if (php.logo && php.logo.length) { %>
+                                <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo">
+                            <% } %>
                             <div class="qr">
                                 <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 60%; height: auto;">
                             </div>
@@ -212,6 +224,9 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
             rowIndices.forEach(function(i) { %>
                 <% if (i !== null) { %>
                     <div class="card back">
+                        <% if (php.logo && php.logo.length) { %>
+                            <img style="max-width: 20mm; max-height: 10mm; margin-bottom: 5mm;" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo">
+                        <% } %>
                         <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;">
                             <%= tracks[i].artist %>
                             <% if (tracks[i].extraArtistAttribute && tracks[i].extraArtistAttribute.length > 0) { %>

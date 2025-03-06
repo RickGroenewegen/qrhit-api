@@ -77,6 +77,13 @@
         color: #909090;
         z-index: 3;
     }
+    .logo {
+        position: absolute;
+        top: 5mm;
+        max-width: 20mm;
+        max-height: 10mm;
+        z-index: 4;
+    }
     .url-bottom {
         bottom: 5mm;
     }
@@ -86,11 +93,17 @@
 <% tracks.forEach((track, index) => { %>
     <div class="card-front">
         <div class="circle-bg"></div>
+        <% if (php.logo && php.logo.length) { %>
+            <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo">
+        <% } %>
         <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
         <div class="url"><%= process.env['APP_DOMAIN'] %></div>
     </div>
     <div style="page-break-after: always;"></div>
     <div class="card-back">
+        <% if (php.logo && php.logo.length) { %>
+            <img style="max-width: 20mm; max-height: 10mm; margin-bottom: 5mm;" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo">
+        <% } %>
         <div class="text artist">
             <%= track.artist %>
             <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
