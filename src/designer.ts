@@ -83,7 +83,7 @@ class Designer {
 
       // Generate unique filename using utils.generateRandomString
       const uniqueId = this.utils.generateRandomString(32); // Generate a 32-character unique ID
-      const actualFilename = `${uniqueId}.${imageType}`;
+      const actualFilename = `${uniqueId}.${imageType}`.toLowerCase();
 
       const filePath = path.join(
         process.env['PUBLIC_DIR'] as string,
@@ -109,7 +109,6 @@ class Designer {
         return {
           success: true,
           filename: actualFilename,
-          filePath: relativePath,
         };
       } catch (writeError) {
         this.logger.log(
