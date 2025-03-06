@@ -24,16 +24,18 @@ class Designer {
   private async initBackgroundDirectory(): Promise<void> {
     try {
       const backgroundDir = `${process.env['PUBLIC_DIR']}/background`;
+      const logoDir = `${process.env['PUBLIC_DIR']}/logo`;
       await this.utils.createDir(backgroundDir);
+      await this.utils.createDir(logoDir);
       this.logger.log(
         color.blue.bold(
-          `Background directory initialized at: ${white.bold(backgroundDir)}`
+          `Directories initialized at: ${white.bold(backgroundDir)} and ${white.bold(logoDir)}`
         )
       );
     } catch (error) {
       this.logger.log(
         color.red.bold(
-          `Error initializing background directory: ${white.bold(error)}`
+          `Error initializing directories: ${white.bold(error)}`
         )
       );
     }
@@ -119,6 +121,92 @@ class Designer {
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error uploading background image: ${white.bold(error)}`)
+      );
+      return { success: false, error: String(error) };
+    }
+  }
+
+  /**
+   * Uploads a logo image from a base64 string
+   * @param base64Image The base64 encoded image string
+   * @param filename Optional filename, if not provided a random string will be used
+   * @returns Object with success status, filename and file path
+   */
+  public async uploadLogoImage(
+    base64Image: string,
+    filename?: string
+  ): Promise<{
+    success: boolean;
+    filename?: string;
+    filePath?: string;
+    error?: string;
+  }> {
+    try {
+      // Validate the base64 string
+      if (!base64Image) {
+        return { success: false, error: 'No image provided' };
+      }
+
+      let imageType: string;
+      let base64Data: string;
+
+      // Handle both full data URI and raw base64 string
+      if (base64Image.includes('base64,')) {
+        // Extract the actual base64 data and determine the file type
+        const matches = base64Image.match(
+          /^data:image\/([a-zA-Z]+);base64,(.+)$/
+        );
+        if (!matches || matches.length !== 3) {
+          return { success: false, error: 'Invalid image data format' };
+        }
+        imageType = matches[1];
+        base64Data = matches[2];
+      } else {
+        // Assume it's a raw base64 string and try to determine format from content
+        // Default to png if we can't determine
+        imageType = 'png';
+        base64Data = base64Image;
+      }
+
+      // Generate unique filename using utils.generateRandomString
+      const uniqueId = this.utils.generateRandomString(32); // Generate a 32-character unique ID
+      const actualFilename = `${uniqueId}.${imageType}`.toLowerCase();
+
+      const filePath = path.join(
+        process.env['PUBLIC_DIR'] as string,
+        'logo',
+        actualFilename
+      );
+
+      try {
+        // Create buffer from base64
+        const buffer = Buffer.from(base64Data, 'base64');
+
+        // Write the file
+        await fs.writeFile(filePath, buffer);
+
+        this.logger.log(
+          color.green.bold(
+            `Logo image uploaded successfully: ${white.bold(filePath)}`
+          )
+        );
+
+        // Return the relative path that would be accessible from the web
+        const relativePath = `/public/logo/${actualFilename}`;
+        return {
+          success: true,
+          filename: actualFilename,
+          filePath: relativePath
+        };
+      } catch (writeError) {
+        this.logger.log(
+          color.red.bold(`Error writing image file: ${white.bold(writeError)}`)
+        );
+        return { success: false, error: `Error writing file: ${writeError}` };
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error uploading logo image: ${white.bold(error)}`)
       );
       return { success: false, error: String(error) };
     }
