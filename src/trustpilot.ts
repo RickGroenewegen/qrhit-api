@@ -299,7 +299,6 @@ class Trustpilot {
 
       const reviewsToTranslate = await this.prisma.trustPilot.findMany({
         where: {
-          title: { not: '' }, // Has a title
           OR: orConditions,
         },
       });
