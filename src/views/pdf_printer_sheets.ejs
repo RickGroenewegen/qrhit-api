@@ -226,9 +226,6 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
             rowIndices.forEach(function(i) { %>
                 <% if (i !== null) { %>
                     <div class="card back" style="position: relative;">
-                        <% if (php.logo && php.logo.length) { %>
-                            <img style="position: absolute; top: 5mm; left: 50%; transform: translateX(-50%); max-width: 20mm; max-height: 10mm; z-index: 10;" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo">
-                        <% } %>
                         <div class="text" style="margin-top: 0mm;font-size:18px;padding-left:2mm;padding-right:2mm;">
                             <%= tracks[i].artist %>
                             <% if (tracks[i].extraArtistAttribute && tracks[i].extraArtistAttribute.length > 0) { %>
@@ -242,6 +239,9 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                                 <div style="font-size: 12px; color: #666; margin-top: 2mm;"><%= tracks[i].extraNameAttribute %></div>
                             <% } %>
                         </div>
+                        <% if (php.logo && php.logo.length) { %>
+                            <img style="max-width: 20mm; max-height: 10mm; margin-top: 5mm; margin-bottom: 5mm;" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo">
+                        <% } %>
                         <div class="text" style="margin-top: 5mm;font-size:14px;color:#909090;">
                             <% if (php.emoji && php.emoji.length) { %>
                                 <span style="grayscale(100%);"><%= php.emoji %></span>
