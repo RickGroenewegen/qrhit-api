@@ -29,14 +29,14 @@ class Designer {
       await this.utils.createDir(logoDir);
       this.logger.log(
         color.blue.bold(
-          `Directories initialized at: ${white.bold(backgroundDir)} and ${white.bold(logoDir)}`
+          `Directories initialized at: ${white.bold(
+            backgroundDir
+          )} and ${white.bold(logoDir)}`
         )
       );
     } catch (error) {
       this.logger.log(
-        color.red.bold(
-          `Error initializing directories: ${white.bold(error)}`
-        )
+        color.red.bold(`Error initializing directories: ${white.bold(error)}`)
       );
     }
   }
@@ -196,7 +196,7 @@ class Designer {
         return {
           success: true,
           filename: actualFilename,
-          filePath: relativePath
+          filePath: relativePath,
         };
       } catch (writeError) {
         this.logger.log(
