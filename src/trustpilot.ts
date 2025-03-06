@@ -30,7 +30,7 @@ class Trustpilot {
     }
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
-        if (isMainServer || process.env['ENVIRONMENT'] == 'development') {
+        if (isMainServer) {
           // Initial fetch of reviews
           await this.fetchReviewsFromAPI();
 
@@ -125,18 +125,18 @@ class Trustpilot {
               locale: locale,
               updatedAt: new Date(),
             };
-            
+
             // Store the original title and message in the locale-specific fields
             // based on the current locale (en-US -> title_en, nl-NL -> title_nl)
             const langCode = locale.split('-')[0].toLowerCase();
             updateData[`title_${langCode}`] = review.review_title || '';
             updateData[`message_${langCode}`] = review.review_text || '';
-            
+
             await this.prisma.trustPilot.update({
               where: {
                 id: existingReview.id,
               },
-              data: updateData
+              data: updateData,
             });
             newOrUpdatedReviews.push(existingReview.id);
           } else {
@@ -155,7 +155,7 @@ class Trustpilot {
               createData[`title_${lang}`] = '';
               createData[`message_${lang}`] = '';
             }
-            
+
             // Set the values for the current locale
             const langCode = locale.split('-')[0].toLowerCase();
             createData[`title_${langCode}`] = review.review_title || '';
@@ -224,7 +224,10 @@ class Trustpilot {
   /**
    * Gets reviews from the database
    */
-  public async getReviews(cache: boolean = true): Promise<ApiResult> {
+  public async getReviews(
+    cache: boolean = true,
+    amount: number = 0
+  ): Promise<ApiResult> {
     try {
       const today = new Date().toISOString().split('T')[0];
       const cacheKey = `trustpilot_reviews_${today}`;
@@ -246,9 +249,9 @@ class Trustpilot {
         // Get the appropriate locale-specific title and message
         // Default to English if the requested locale isn't available
         const locale = review.locale?.split('-')[0].toLowerCase() || 'en';
-        const title = review[`title_${locale}` as keyof typeof review] || review.title_en;
-        const text = review[`message_${locale}` as keyof typeof review] || review.message_en;
-        
+        const title = review[`title_${locale}` as keyof typeof review];
+        const text = review[`message_${locale}` as keyof typeof review];
+
         return {
           id: review.id.toString(),
           stars: review.rating,
