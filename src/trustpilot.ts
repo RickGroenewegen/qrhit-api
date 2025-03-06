@@ -8,6 +8,7 @@ import Logger from './logger';
 import PrismaInstance from './prisma';
 import axios from 'axios';
 import cluster from 'cluster';
+import { CronJob } from 'cron';
 
 class Trustpilot {
   private cache = Cache.getInstance();
