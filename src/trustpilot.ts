@@ -230,18 +230,19 @@ class Trustpilot {
   ): Promise<ApiResult> {
     try {
       const today = new Date().toISOString().split('T')[0];
-      const cacheKey = `trustpilot_reviews_${today}`;
+      const cacheKey = `trustpilot_reviews_${today}_${amount}`;
       const cacheResult = await this.cache.get(cacheKey);
 
       if (cacheResult && cache) {
         return JSON.parse(cacheResult);
       }
 
-      // Fetch reviews from database
+      // Fetch reviews from database with limit if amount is specified
       const dbReviews = await this.prisma.trustPilot.findMany({
         orderBy: {
           updatedAt: 'desc',
         },
+        ...(amount > 0 ? { take: amount } : {}),
       });
 
       // Map database records to TrustpilotReview format
