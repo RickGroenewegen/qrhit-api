@@ -19,7 +19,11 @@
         position: relative;
     }
     .card-front {
+        <% if (php.background && php.background.length) { %>
+        background-image: url('<%= process.env['API_URI'] %>/public/background/<%= php.background %>');
+        <% } else { %>
         background-image: url('<%= process.env['API_URI'] %>/assets/images/card_background2.png');
+        <% } %>
         background-size: cover;
     }
     .card-back {
