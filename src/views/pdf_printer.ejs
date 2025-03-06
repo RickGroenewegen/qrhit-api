@@ -114,9 +114,6 @@
                 <div style="font-size: 12px; color: #666; margin-top: 2mm;"><%= track.extraNameAttribute %></div>
             <% } %>
         </div>
-        <% if (php.logo && php.logo.length) { %>
-            <img style="max-width: 20mm; max-height: 10mm; margin-top: 5mm; margin-bottom: 5mm;" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo">
-        <% } %>
         <div class="url-bottom">
             <% if (php.emoji && php.emoji.length) { %>
                 <span style="filter: grayscale(100%); font-size: 16px;"><%= php.emoji %></span>
