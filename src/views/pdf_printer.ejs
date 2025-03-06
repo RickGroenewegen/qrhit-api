@@ -100,9 +100,9 @@
         <div class="url"><%= process.env['APP_DOMAIN'] %></div>
     </div>
     <div style="page-break-after: always;"></div>
-    <div class="card-back">
+    <div class="card-back" style="position: relative;">
         <% if (php.logo && php.logo.length) { %>
-            <img style="max-width: 20mm; max-height: 10mm; margin-top: 5mm; margin-bottom: 8mm;" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo">
+            <img style="position: absolute; top: 5mm; left: 50%; transform: translateX(-50%); max-width: 20mm; max-height: 10mm; z-index: 10;" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo">
         <% } %>
         <div class="text artist">
             <%= track.artist %>
