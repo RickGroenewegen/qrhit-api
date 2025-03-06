@@ -10,6 +10,7 @@ import PrismaInstance from './prisma';
 import axios from 'axios';
 import cluster from 'cluster';
 import { CronJob } from 'cron';
+import { color } from 'console-log-colors';
 
 class Trustpilot {
   private cache = Cache.getInstance();
@@ -33,7 +34,9 @@ class Trustpilot {
 
           // Set up cron job to run at 2 AM every day
           const job = new CronJob('0 2 * * *', async () => {
-            this.logger.log('Running scheduled Trustpilot review fetch');
+            this.logger.log(
+              color.blue.bold('Running scheduled Trustpilot review fetch')
+            );
             await this.fetchReviewsFromAPI();
           });
           job.start();
@@ -54,14 +57,22 @@ class Trustpilot {
    */
   private async fetchReviewsFromAPI(): Promise<void> {
     try {
-      this.logger.log('Fetching Trustpilot reviews from API for all supported locales');
-      
+      this.logger.log(
+        color.blue.bold(
+          'Fetching Trustpilot reviews from API for all supported locales'
+        )
+      );
+
       let totalReviews = 0;
-      
+
       // Loop through all supported locales
       for (const locale of this.supportedLocales) {
-        this.logger.log(`Fetching reviews for locale: ${locale}`);
-        
+        this.logger.log(
+          color.blue.bold(
+            `Fetching reviews for locale: ${color.white.bold(locale)}`
+          )
+        );
+
         const options = {
           method: 'GET',
           url: 'https://trustpilot-company-and-reviews-data.p.rapidapi.com/company-reviews',
@@ -82,9 +93,15 @@ class Trustpilot {
         const reviews = response.data.data.reviews;
 
         this.logger.log(
-          `Retrieved ${reviews.length} reviews from Trustpilot API for locale ${locale}`
+          color.blue.bold(
+            `Retrieved ${color.white.bold(
+              reviews.length
+            )} reviews from Trustpilot API for locale ${color.white.bold(
+              locale
+            )}`
+          )
         );
-        
+
         totalReviews += reviews.length;
 
         // Process each review and store in database
@@ -127,15 +144,21 @@ class Trustpilot {
             });
           }
         }
-        
+
         // Add a small delay between requests to avoid rate limiting
-        if (locale !== this.supportedLocales[this.supportedLocales.length - 1]) {
-          await new Promise(resolve => setTimeout(resolve, 1000));
+        if (
+          locale !== this.supportedLocales[this.supportedLocales.length - 1]
+        ) {
+          await new Promise((resolve) => setTimeout(resolve, 1000));
         }
       }
 
       this.logger.log(
-        `Stored a total of ${totalReviews} Trustpilot reviews in database`
+        color.green.bold(
+          `Stored a total of ${color.white.bold(
+            totalReviews
+          )} Trustpilot reviews in database`
+        )
       );
 
       // Clear cache to ensure fresh data is served
@@ -143,7 +166,9 @@ class Trustpilot {
       const cacheKey = `trustpilot_reviews_${today}`;
       await this.cache.del(cacheKey);
     } catch (error: any) {
-      this.logger.log('Error fetching and storing Trustpilot reviews');
+      this.logger.log(
+        color.red.bold('Error fetching and storing Trustpilot reviews')
+      );
       console.log(error);
     }
   }
@@ -192,7 +217,9 @@ class Trustpilot {
 
       return result;
     } catch (error: any) {
-      this.logger.log('Error fetching Trustpilot reviews from database');
+      this.logger.log(
+        color.red.bold('Error fetching Trustpilot reviews from database')
+      );
       console.log(error);
       return {
         success: false,
@@ -243,7 +270,9 @@ class Trustpilot {
 
       return result;
     } catch (error: any) {
-      this.logger.log('Error fetching Trustpilot company details');
+      this.logger.log(
+        color.red.bold('Error fetching Trustpilot company details')
+      );
       console.log(error);
       return {
         success: false,
