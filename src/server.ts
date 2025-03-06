@@ -168,8 +168,9 @@ class Server {
       async (request: any, _reply) => {
         const amount = parseInt(request.params.amount) || 0;
         return await this.trustpilot.getReviews(
-          request.params.locale,
-          amount
+          true,
+          amount,
+          request.params.locale
         );
       }
     );
