@@ -11,6 +11,7 @@ import axios from 'axios';
 import cluster from 'cluster';
 import { CronJob } from 'cron';
 import { color } from 'console-log-colors';
+import Translation from './translation';
 
 class Trustpilot {
   private cache = Cache.getInstance();
@@ -144,15 +145,15 @@ class Trustpilot {
               image: review.consumer_image || '',
               locale: locale,
             };
-            
+
             // Add all locale-specific fields with empty values
             for (const lang of this.translation.allLocales) {
               createData[`title_${lang}`] = '';
               createData[`message_${lang}`] = '';
             }
-            
+
             const newReview = await this.prisma.trustPilot.create({
-              data: createData
+              data: createData,
             });
             newOrUpdatedReviews.push(newReview.id);
           }
@@ -271,29 +272,26 @@ class Trustpilot {
    */
   public async translateExistingReviews(): Promise<void> {
     try {
-      this.logger.log(
-        color.blue.bold('Finding reviews that need translation')
-      );
-      
+      this.logger.log(color.blue.bold('Finding reviews that need translation'));
+
       // Find reviews that need translation
-      const orConditions = this.translation.allLocales.map(lang => ({
-        [`title_${lang}`]: ''
-      }));
-      
+      const orConditions: { [key: string]: string }[] =
+        this.translation.allLocales.map((lang: string) => ({
+          [`title_${lang}`]: '',
+        }));
+
       const reviewsToTranslate = await this.prisma.trustPilot.findMany({
         where: {
           title: { not: '' }, // Has a title
-          OR: orConditions
-        }
+          OR: orConditions,
+        },
       });
-      
+
       if (reviewsToTranslate.length === 0) {
-        this.logger.log(
-          color.green.bold('No reviews need translation')
-        );
+        this.logger.log(color.green.bold('No reviews need translation'));
         return;
       }
-      
+
       this.logger.log(
         color.blue.bold(
           `Found ${color.white.bold(
@@ -301,16 +299,13 @@ class Trustpilot {
           )} reviews that need translation`
         )
       );
-      
+
       // Import ChatGPT and translate reviews
       const { ChatGPT } = await import('./chatgpt');
       const openai = new ChatGPT();
       await openai.translateTrustpilotReviews(reviewsToTranslate);
-      
     } catch (error: any) {
-      this.logger.log(
-        color.red.bold('Error translating existing reviews')
-      );
+      this.logger.log(color.red.bold('Error translating existing reviews'));
       console.log(error);
     }
   }
