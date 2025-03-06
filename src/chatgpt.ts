@@ -467,9 +467,14 @@ export class ChatGPT {
 
       // Create a prompt with all reviews in the batch
       const reviewsPrompt = batch
-        .map((review, index) => 
-          `Review ${index + 1}:\nTitle: ${review.title}\nMessage: ${review.message}`
-        )
+        .map((review, index) => {
+          // Get the locale-specific content or fall back to English
+          const locale = review.locale?.split('-')[0].toLowerCase() || 'en';
+          const title = review[`title_${locale}` as keyof typeof review] || review.title_en;
+          const message = review[`message_${locale}` as keyof typeof review] || review.message_en;
+          
+          return `Review ${index + 1}:\nTitle: ${title}\nMessage: ${message}`;
+        })
         .join('\n\n');
 
       const result = await this.openai.chat.completions.create({
