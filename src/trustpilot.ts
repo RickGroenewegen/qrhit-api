@@ -162,7 +162,7 @@ class Trustpilot {
         authorImage: review.image,
         authorCountry: review.country,
         authorReviewCount: 1, // Default since we don't store this
-        isVerified: true, // Default since we don't store this
+        isVerified: false, // Default since we don't store this
       }));
 
       const result = {
