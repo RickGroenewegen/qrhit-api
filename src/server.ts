@@ -166,9 +166,10 @@ class Server {
     this.fastify.get(
       '/reviews/:locale/:amount',
       async (request: any, _reply) => {
+        const amount = parseInt(request.params.amount) || 0;
         return await this.trustpilot.getReviews(
           request.params.locale,
-          request.params.amount
+          amount
         );
       }
     );

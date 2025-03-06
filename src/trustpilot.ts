@@ -226,11 +226,14 @@ class Trustpilot {
    */
   public async getReviews(
     cache: boolean = true,
-    amount: number = 0
+    amount: number | string = 0
   ): Promise<ApiResult> {
     try {
+      // Convert amount to number if it's a string
+      const amountNum = typeof amount === 'string' ? parseInt(amount) : amount;
+      
       const today = new Date().toISOString().split('T')[0];
-      const cacheKey = `trustpilot_reviews_${today}_${amount}`;
+      const cacheKey = `trustpilot_reviews_${today}_${amountNum}`;
       const cacheResult = await this.cache.get(cacheKey);
 
       if (cacheResult && cache) {
@@ -242,7 +245,7 @@ class Trustpilot {
         orderBy: {
           updatedAt: 'desc',
         },
-        ...(amount > 0 ? { take: amount } : {}),
+        ...(amountNum > 0 ? { take: amountNum } : {}),
       });
 
       // Map database records to TrustpilotReview format
