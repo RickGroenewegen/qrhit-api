@@ -163,9 +163,15 @@ class Server {
       }
     );
 
-    this.fastify.get('/reviews/:locale', async (request: any, _reply) => {
-      return await this.trustpilot.getReviews(request.params.locale);
-    });
+    this.fastify.get(
+      '/reviews/:locale/:amount',
+      async (request: any, _reply) => {
+        return await this.trustpilot.getReviews(
+          request.params.locale,
+          request.params.amount
+        );
+      }
+    );
 
     this.fastify.get('/reviews_details', async (_request: any, _reply) => {
       return await this.trustpilot.getCompanyDetails();
