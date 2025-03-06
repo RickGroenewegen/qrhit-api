@@ -160,7 +160,7 @@
                     <% } %>
                 <% } %>
                 <% if (php.logo && php.logo.length) { %>
-                    <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo">
+                    <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
                 <% } %>
                 <div class="qr">
                     <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 60%; height: auto;">

@@ -94,7 +94,7 @@
     <div class="card-front">
         <div class="circle-bg"></div>
         <% if (php.logo && php.logo.length) { %>
-            <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo">
+            <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
         <% } %>
         <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
         <div class="url"><%= process.env['APP_DOMAIN'] %></div>
