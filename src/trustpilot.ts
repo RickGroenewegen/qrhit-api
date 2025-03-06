@@ -64,6 +64,7 @@ class Trustpilot {
       );
 
       let totalReviews = 0;
+      let newOrUpdatedReviews: any[] = [];
 
       // Loop through all supported locales
       for (const locale of this.supportedLocales) {
@@ -129,9 +130,10 @@ class Trustpilot {
                 updatedAt: new Date(),
               },
             });
+            newOrUpdatedReviews.push(existingReview.id);
           } else {
             // Create new review
-            await this.prisma.trustPilot.create({
+            const newReview = await this.prisma.trustPilot.create({
               data: {
                 name: review.consumer_name,
                 country: review.consumer_country || '',
@@ -142,6 +144,7 @@ class Trustpilot {
                 locale: locale,
               },
             });
+            newOrUpdatedReviews.push(newReview.id);
           }
         }
 
@@ -165,6 +168,31 @@ class Trustpilot {
       const today = new Date().toISOString().split('T')[0];
       const cacheKey = `trustpilot_reviews_${today}`;
       await this.cache.del(cacheKey);
+
+      // Translate reviews if needed
+      if (newOrUpdatedReviews.length > 0) {
+        this.logger.log(
+          color.blue.bold(
+            `Translating ${color.white.bold(
+              newOrUpdatedReviews.length
+            )} new or updated reviews`
+          )
+        );
+        
+        // Get the reviews that need translation
+        const reviewsToTranslate = await this.prisma.trustPilot.findMany({
+          where: {
+            id: {
+              in: newOrUpdatedReviews
+            }
+          }
+        });
+        
+        // Import ChatGPT and translate reviews
+        const { ChatGPT } = await import('./chatgpt');
+        const openai = new ChatGPT();
+        await openai.translateTrustpilotReviews(reviewsToTranslate);
+      }
     } catch (error: any) {
       this.logger.log(
         color.red.bold('Error fetching and storing Trustpilot reviews')
@@ -225,6 +253,54 @@ class Trustpilot {
         success: false,
         error: 'Error fetching Trustpilot reviews from database',
       };
+    }
+  }
+
+  /**
+   * Translates existing reviews that don't have translations
+   */
+  public async translateExistingReviews(): Promise<void> {
+    try {
+      this.logger.log(
+        color.blue.bold('Finding reviews that need translation')
+      );
+      
+      // Find reviews that have empty translations
+      // We'll check for title_en as a proxy for all translations
+      const reviewsToTranslate = await this.prisma.trustPilot.findMany({
+        where: {
+          OR: [
+            { title_en: null },
+            { title_en: '' }
+          ]
+        }
+      });
+      
+      if (reviewsToTranslate.length === 0) {
+        this.logger.log(
+          color.green.bold('No reviews need translation')
+        );
+        return;
+      }
+      
+      this.logger.log(
+        color.blue.bold(
+          `Found ${color.white.bold(
+            reviewsToTranslate.length
+          )} reviews that need translation`
+        )
+      );
+      
+      // Import ChatGPT and translate reviews
+      const { ChatGPT } = await import('./chatgpt');
+      const openai = new ChatGPT();
+      await openai.translateTrustpilotReviews(reviewsToTranslate);
+      
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold('Error translating existing reviews')
+      );
+      console.log(error);
     }
   }
 

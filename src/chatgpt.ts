@@ -5,6 +5,7 @@ import OpenAI from 'openai';
 import { color } from 'console-log-colors';
 import Translation from './translation';
 import { GenreId } from './interfaces/Genre';
+import { TrustPilot } from '@prisma/client';
 export class ChatGPT {
   private utils = new Utils();
   private openai = new OpenAI({
@@ -426,6 +427,173 @@ export class ChatGPT {
 
     // Return null if something went wrong or no clear genre match
     return null;
+  }
+
+  /**
+   * Translates Trustpilot review titles and messages to all supported locales
+   * @param reviews Array of Trustpilot reviews to translate
+   * @param targetLocales Array of locale codes to translate to
+   * @returns Promise<void>
+   */
+  public async translateTrustpilotReviews(
+    reviews: TrustPilot[],
+    targetLocales: string[] = new Translation().allLocales
+  ): Promise<void> {
+    if (reviews.length === 0) {
+      this.logger.log(color.yellow.bold('No reviews to translate'));
+      return;
+    }
+
+    this.logger.log(
+      color.blue.bold(
+        `Translating ${color.white.bold(reviews.length)} Trustpilot reviews to ${color.white.bold(
+          targetLocales.length
+        )} locales`
+      )
+    );
+
+    // Process reviews in batches to avoid token limits
+    const batchSize = 5;
+    for (let i = 0; i < reviews.length; i += batchSize) {
+      const batch = reviews.slice(i, i + batchSize);
+      
+      this.logger.log(
+        color.blue.bold(
+          `Processing batch ${color.white.bold(
+            Math.floor(i / batchSize) + 1
+          )} of ${color.white.bold(Math.ceil(reviews.length / batchSize))}`
+        )
+      );
+
+      // Create a prompt with all reviews in the batch
+      const reviewsPrompt = batch
+        .map((review, index) => 
+          `Review ${index + 1}:\nTitle: ${review.title}\nMessage: ${review.message}`
+        )
+        .join('\n\n');
+
+      const result = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.3,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a professional translator who specializes in translating customer reviews. 
+                      Translate the provided Trustpilot reviews into multiple languages while preserving the 
+                      original meaning, tone, and sentiment. Keep translations natural and culturally appropriate.`
+          },
+          {
+            role: 'user',
+            content: `Translate the following Trustpilot reviews into these languages: ${targetLocales.join(', ')}.
+                      
+                      ${reviewsPrompt}`
+          }
+        ],
+        function_call: { name: 'translateReviews' },
+        functions: [
+          {
+            name: 'translateReviews',
+            parameters: {
+              type: 'object',
+              properties: {
+                translations: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      reviewIndex: {
+                        type: 'integer',
+                        description: 'The index of the review in the batch (starting from 0)'
+                      },
+                      translations: {
+                        type: 'object',
+                        properties: Object.fromEntries(
+                          targetLocales.map(locale => [
+                            locale,
+                            {
+                              type: 'object',
+                              properties: {
+                                title: {
+                                  type: 'string',
+                                  description: `The translated title in ${locale}`
+                                },
+                                message: {
+                                  type: 'string',
+                                  description: `The translated message in ${locale}`
+                                }
+                              },
+                              required: ['title', 'message']
+                            }
+                          ])
+                        ),
+                        required: targetLocales
+                      }
+                    },
+                    required: ['reviewIndex', 'translations']
+                  }
+                }
+              },
+              required: ['translations']
+            }
+          }
+        ]
+      });
+
+      if (result?.choices[0]?.message?.function_call) {
+        const funcCall = result.choices[0].message.function_call;
+        try {
+          const translationResults = JSON.parse(funcCall.arguments as string);
+          
+          // Update each review with translations
+          for (const translationResult of translationResults.translations) {
+            const reviewIndex = translationResult.reviewIndex;
+            const review = batch[reviewIndex];
+            
+            // For each locale, update the database with translations
+            for (const [locale, translation] of Object.entries(translationResult.translations)) {
+              const localeTranslation = translation as { title: string; message: string };
+              
+              // Create column names based on locale
+              const titleColumn = `title_${locale}` as keyof TrustPilot;
+              const messageColumn = `message_${locale}` as keyof TrustPilot;
+              
+              // Only update if the column exists and doesn't already have content
+              if (
+                titleColumn in review && 
+                messageColumn in review && 
+                (!review[titleColumn] || review[titleColumn] === '')
+              ) {
+                // Update the review with translations
+                await this.prisma.trustPilot.update({
+                  where: { id: review.id },
+                  data: {
+                    [titleColumn]: localeTranslation.title,
+                    [messageColumn]: localeTranslation.message,
+                  } as any
+                });
+                
+                this.logger.log(
+                  color.green.bold(
+                    `Updated translations for review ID ${color.white.bold(review.id)} to ${color.white.bold(locale)}`
+                  )
+                );
+              }
+            }
+          }
+        } catch (error) {
+          this.logger.log(color.red.bold(`Error parsing translation results: ${error}`));
+          console.error(error);
+        }
+      }
+      
+      // Add a delay between batches to avoid rate limits
+      if (i + batchSize < reviews.length) {
+        this.logger.log(color.blue.bold('Waiting before processing next batch...'));
+        await new Promise(resolve => setTimeout(resolve, 2000));
+      }
+    }
+    
+    this.logger.log(color.green.bold('Finished translating all Trustpilot reviews'));
   }
 
   public async ask(prompt: string): Promise<any> {
