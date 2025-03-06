@@ -741,6 +741,8 @@ class Mollie {
             priceVAT: itemPriceVAT,
             printApiPrice: printApiItemPrice,
             emoji: item.emoji || '',
+            background: item.background || '',
+            logo: item.logo || '',
           };
         })
       );

@@ -15,4 +15,6 @@ export interface CartItem {
   eco?: boolean;
   isSlug?: boolean;
   emoji?: string;
+  background?: string;
+  logo?: string;
 }

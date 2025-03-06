@@ -386,6 +386,8 @@ model PaymentHasPlaylist {
   eligableForPrinter         Boolean   @default(false)
   eligableForPrinterAt       DateTime?
   emoji                      String?
+  background                 String?
+  logo                       String?
   orderType                  OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
 
   @@unique([paymentId, playlistId])

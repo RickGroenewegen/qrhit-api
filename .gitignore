@@ -7,3 +7,5 @@ spotify_tokens.json
 google-services.json
 AuthKey_DUF574RYH2.p8
 firebase.json
+public/background
+public/logo
