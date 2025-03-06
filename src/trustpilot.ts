@@ -132,7 +132,8 @@ class Trustpilot {
             });
             newOrUpdatedReviews.push(existingReview.id);
           } else {
-            // Create new review
+            // Create new review with all required fields
+            // Include all the locale-specific fields with empty strings
             const newReview = await this.prisma.trustPilot.create({
               data: {
                 name: review.consumer_name,
@@ -142,6 +143,29 @@ class Trustpilot {
                 rating: review.review_rating,
                 image: review.consumer_image || '',
                 locale: locale,
+                // Add all locale-specific fields with empty values
+                title_en: '',
+                title_nl: '',
+                title_de: '',
+                title_fr: '',
+                title_es: '',
+                title_it: '',
+                title_pt: '',
+                title_pl: '',
+                title_hin: '',
+                title_jp: '',
+                title_cn: '',
+                message_en: '',
+                message_nl: '',
+                message_de: '',
+                message_fr: '',
+                message_es: '',
+                message_it: '',
+                message_pt: '',
+                message_pl: '',
+                message_hin: '',
+                message_jp: '',
+                message_cn: '',
               },
             });
             newOrUpdatedReviews.push(newReview.id);
@@ -253,6 +277,63 @@ class Trustpilot {
         success: false,
         error: 'Error fetching Trustpilot reviews from database',
       };
+    }
+  }
+
+  /**
+   * Translates existing reviews that don't have translations
+   */
+  public async translateExistingReviews(): Promise<void> {
+    try {
+      this.logger.log(
+        color.blue.bold('Finding reviews that need translation')
+      );
+      
+      // Find reviews that need translation
+      const reviewsToTranslate = await this.prisma.trustPilot.findMany({
+        where: {
+          title: { not: '' }, // Has a title
+          OR: [
+            { title_en: '' },
+            { title_nl: '' },
+            { title_de: '' },
+            { title_fr: '' },
+            { title_es: '' },
+            { title_it: '' },
+            { title_pt: '' },
+            { title_pl: '' },
+            { title_hin: '' },
+            { title_jp: '' },
+            { title_cn: '' }
+          ]
+        }
+      });
+      
+      if (reviewsToTranslate.length === 0) {
+        this.logger.log(
+          color.green.bold('No reviews need translation')
+        );
+        return;
+      }
+      
+      this.logger.log(
+        color.blue.bold(
+          `Found ${color.white.bold(
+            reviewsToTranslate.length
+          )} reviews that need translation`
+        )
+      );
+      
+      // Import ChatGPT and translate reviews
+      const { ChatGPT } = await import('./chatgpt');
+      const openai = new ChatGPT();
+      await openai.translateTrustpilotReviews(reviewsToTranslate);
+      
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold('Error translating existing reviews')
+      );
+      console.log(error);
     }
   }
 
