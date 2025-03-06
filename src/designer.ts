@@ -115,7 +115,7 @@ class Designer {
           }, {
             input: Buffer.from(
               `<svg width="1000" height="1000">
-                <circle cx="500" cy="500" r="450" fill="white" stroke="white" stroke-width="10"/>
+                <circle cx="500" cy="500" r="425" fill="white" stroke="white" stroke-width="10"/>
               </svg>`
             ),
             blend: 'over'
