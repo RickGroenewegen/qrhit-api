@@ -1095,19 +1095,32 @@ class Server {
       }
     );
 
-    this.fastify.post('/designer/upload/background', {
-      bodyLimit: 1024 * 1024 * 50, // 50 MB limit specifically for this route
-    }, async (request: any, reply) => {
-      const { image, filename } = request.body;
-      
-      if (!image) {
-        reply.status(400).send({ success: false, error: 'No image provided' });
-        return;
+    this.fastify.post(
+      '/designer/upload/:type',
+      {
+        bodyLimit: 1024 * 1024 * 50, // 50 MB limit specifically for this route
+      },
+      async (request: any, reply) => {
+        const { image, filename } = request.body;
+        const { type } = request.params;
+
+        if (!image) {
+          reply
+            .status(400)
+            .send({ success: false, error: 'No image provided' });
+          return;
+        }
+
+        let result = { success: false };
+
+        if (type == 'background') {
+          result = await this.designer.uploadBackgroundImage(image, filename);
+        } else if (type == 'logo') {
+          result = await this.designer.uploadLogoImage(image, filename);
+        }
+        return result;
       }
-      
-      const result = await this.designer.uploadBackgroundImage(image, filename);
-      return result;
-    });
+    );
 
     this.fastify.delete(
       '/usersuggestions/:paymentId/:userHash/:playlistId/:trackId',
