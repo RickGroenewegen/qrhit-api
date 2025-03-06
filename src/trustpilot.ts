@@ -21,6 +21,7 @@ class Trustpilot {
   private static instance: Trustpilot;
   private trustPilot = this.prisma.trustPilot;
   private supportedLocales: string[] = ['en-US', 'nl-NL'];
+  private translation = new Translation();
 
   private constructor() {
     if (!process.env.RAPID_API_KEY) {
@@ -134,39 +135,24 @@ class Trustpilot {
           } else {
             // Create new review with all required fields
             // Include all the locale-specific fields with empty strings
+            const createData: any = {
+              name: review.consumer_name,
+              country: review.consumer_country || '',
+              title: review.review_title || '',
+              message: review.review_text || '',
+              rating: review.review_rating,
+              image: review.consumer_image || '',
+              locale: locale,
+            };
+            
+            // Add all locale-specific fields with empty values
+            for (const lang of this.translation.allLocales) {
+              createData[`title_${lang}`] = '';
+              createData[`message_${lang}`] = '';
+            }
+            
             const newReview = await this.prisma.trustPilot.create({
-              data: {
-                name: review.consumer_name,
-                country: review.consumer_country || '',
-                title: review.review_title || '',
-                message: review.review_text || '',
-                rating: review.review_rating,
-                image: review.consumer_image || '',
-                locale: locale,
-                // Add all locale-specific fields with empty values
-                title_en: '',
-                title_nl: '',
-                title_de: '',
-                title_fr: '',
-                title_es: '',
-                title_it: '',
-                title_pt: '',
-                title_pl: '',
-                title_hin: '',
-                title_jp: '',
-                title_cn: '',
-                message_en: '',
-                message_nl: '',
-                message_de: '',
-                message_fr: '',
-                message_es: '',
-                message_it: '',
-                message_pt: '',
-                message_pl: '',
-                message_hin: '',
-                message_jp: '',
-                message_cn: '',
-              },
+              data: createData
             });
             newOrUpdatedReviews.push(newReview.id);
           }
@@ -290,22 +276,14 @@ class Trustpilot {
       );
       
       // Find reviews that need translation
+      const orConditions = this.translation.allLocales.map(lang => ({
+        [`title_${lang}`]: ''
+      }));
+      
       const reviewsToTranslate = await this.prisma.trustPilot.findMany({
         where: {
           title: { not: '' }, // Has a title
-          OR: [
-            { title_en: '' },
-            { title_nl: '' },
-            { title_de: '' },
-            { title_fr: '' },
-            { title_es: '' },
-            { title_it: '' },
-            { title_pt: '' },
-            { title_pl: '' },
-            { title_hin: '' },
-            { title_jp: '' },
-            { title_cn: '' }
-          ]
+          OR: orConditions
         }
       });
       
