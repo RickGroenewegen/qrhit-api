@@ -9,7 +9,6 @@ import PrismaInstance from './prisma';
 import axios from 'axios';
 import cluster from 'cluster';
 import { CronJob } from 'cron';
-import { TrustPilot as TrustPilotModel } from '@prisma/client';
 
 class Trustpilot {
   private cache = Cache.getInstance();
@@ -26,14 +25,7 @@ class Trustpilot {
     if (cluster.isPrimary) {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] == 'development') {
-          // Initial fetch of reviews
-          await this.fetchAndStoreReviews();
-          
-          // Set up cron job to run at 2 AM every day
-          new CronJob('0 2 * * *', async () => {
-            this.logger.log('Running scheduled Trustpilot review fetch');
-            await this.fetchAndStoreReviews();
-          }, null, true);
+          await this.getReviews();
         }
       });
     }
@@ -46,13 +38,16 @@ class Trustpilot {
     return Trustpilot.instance;
   }
 
-  /**
-   * Fetches reviews from Trustpilot API and stores them in the database
-   */
-  private async fetchAndStoreReviews(): Promise<void> {
+  public async getReviews(cache: boolean = true): Promise<ApiResult> {
     try {
-      this.logger.log('Fetching Trustpilot reviews from API');
-      
+      const today = new Date().toISOString().split('T')[0];
+      const cacheKey = `trustpilot_reviews_${today}`;
+      const cacheResult = await this.cache.get(cacheKey);
+
+      if (cacheResult && cache) {
+        return JSON.parse(cacheResult);
+      }
+
       const options = {
         method: 'GET',
         url: 'https://trustpilot-company-and-reviews-data.p.rapidapi.com/company-reviews',
@@ -70,79 +65,19 @@ class Trustpilot {
       };
 
       const response = await axios.request(options);
-      const reviews = response.data.data.reviews;
-      
-      // Process each review and store in database
-      for (const review of reviews) {
-        await this.prisma.trustPilot.upsert({
-          where: { 
-            name: review.consumer_name 
-          },
-          update: {
-            country: review.consumer_country || '',
-            title: review.review_title || '',
-            message: review.review_text || '',
-            rating: review.review_rating,
-            image: review.consumer_image || '',
-            updatedAt: new Date()
-          },
-          create: {
-            name: review.consumer_name,
-            country: review.consumer_country || '',
-            title: review.review_title || '',
-            message: review.review_text || '',
-            rating: review.review_rating,
-            image: review.consumer_image || '',
-          }
-        });
-      }
-      
-      this.logger.log(`Stored ${reviews.length} Trustpilot reviews in database`);
-      
-      // Clear cache to ensure fresh data is served
-      const today = new Date().toISOString().split('T')[0];
-      const cacheKey = `trustpilot_reviews_${today}`;
-      await this.cache.delete(cacheKey);
-      
-    } catch (error: any) {
-      this.logger.log('Error fetching and storing Trustpilot reviews');
-      console.log(error);
-    }
-  }
 
-  /**
-   * Gets reviews from the database
-   */
-  public async getReviews(cache: boolean = true): Promise<ApiResult> {
-    try {
-      const today = new Date().toISOString().split('T')[0];
-      const cacheKey = `trustpilot_reviews_${today}`;
-      const cacheResult = await this.cache.get(cacheKey);
-
-      if (cacheResult && cache) {
-        return JSON.parse(cacheResult);
-      }
-
-      // Fetch reviews from database
-      const dbReviews = await this.prisma.trustPilot.findMany({
-        orderBy: {
-          updatedAt: 'desc'
-        }
-      });
-
-      // Map database records to TrustpilotReview format
-      const reviews: TrustpilotReview[] = dbReviews.map(
-        (review: TrustPilotModel) => ({
-          id: review.id.toString(),
-          stars: review.rating,
-          title: review.title,
-          text: review.message,
-          author: review.name,
-          date: review.updatedAt.toISOString(),
-          authorImage: review.image,
-          authorCountry: review.country,
-          authorReviewCount: 1, // Default since we don't store this
-          isVerified: true, // Default since we don't store this
+      const reviews: TrustpilotReview[] = response.data.data.reviews.map(
+        (review: any) => ({
+          id: review.review_id,
+          stars: review.review_rating,
+          title: review.review_title,
+          text: review.review_text,
+          author: review.consumer_name,
+          date: review.review_time,
+          authorImage: review.consumer_image,
+          authorCountry: review.consumer_country,
+          authorReviewCount: review.consumer_review_count,
+          isVerified: review.consumer_is_verified,
         })
       );
 
@@ -156,7 +91,7 @@ class Trustpilot {
 
       return result;
     } catch (error: any) {
-      this.logger.log('Error fetching Trustpilot reviews from database');
+      this.logger.log('Error fetching Trustpilot reviews');
       console.log(error);
       return {
         success: false,
