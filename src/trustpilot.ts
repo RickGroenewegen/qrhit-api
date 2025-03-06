@@ -31,7 +31,7 @@ class Trustpilot {
           await this.fetchReviewsFromAPI();
 
           // Set up cron job to run at 2 AM every day
-          const job = new CronJob('10/* * * * * *', async () => {
+          const job = new CronJob('0 2 * * *', async () => {
             this.logger.log('Running scheduled Trustpilot review fetch');
             await this.fetchReviewsFromAPI();
           });
@@ -80,27 +80,41 @@ class Trustpilot {
 
       // Process each review and store in database
       for (const review of reviews) {
-        await this.prisma.trustPilot.upsert({
+        // First check if a review with this name already exists
+        const existingReview = await this.prisma.trustPilot.findFirst({
           where: {
             name: review.consumer_name,
           },
-          update: {
-            country: review.consumer_country || '',
-            title: review.review_title || '',
-            message: review.review_text || '',
-            rating: review.review_rating,
-            image: review.consumer_image || '',
-            updatedAt: new Date(),
-          },
-          create: {
-            name: review.consumer_name,
-            country: review.consumer_country || '',
-            title: review.review_title || '',
-            message: review.review_text || '',
-            rating: review.review_rating,
-            image: review.consumer_image || '',
-          },
         });
+
+        if (existingReview) {
+          // Update existing review
+          await this.prisma.trustPilot.update({
+            where: {
+              id: existingReview.id,
+            },
+            data: {
+              country: review.consumer_country || '',
+              title: review.review_title || '',
+              message: review.review_text || '',
+              rating: review.review_rating,
+              image: review.consumer_image || '',
+              updatedAt: new Date(),
+            },
+          });
+        } else {
+          // Create new review
+          await this.prisma.trustPilot.create({
+            data: {
+              name: review.consumer_name,
+              country: review.consumer_country || '',
+              title: review.review_title || '',
+              message: review.review_text || '',
+              rating: review.review_rating,
+              image: review.consumer_image || '',
+            },
+          });
+        }
       }
 
       this.logger.log(
