@@ -163,8 +163,8 @@ class Server {
       }
     );
 
-    this.fastify.get('/reviews', async (request: any, _reply) => {
-      return await this.trustpilot.getReviews(request.params.paymentId);
+    this.fastify.get('/reviews/:locale', async (request: any, _reply) => {
+      return await this.trustpilot.getReviews(request.params.locale);
     });
 
     this.fastify.get('/reviews_details', async (_request: any, _reply) => {
