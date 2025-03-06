@@ -5,6 +5,7 @@ import Cache from './cache';
 import Utils from './utils';
 import AnalyticsClient from './analytics';
 import Logger from './logger';
+import { Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
 import axios from 'axios';
 import cluster from 'cluster';
@@ -30,7 +31,7 @@ class Trustpilot {
           await this.fetchReviewsFromAPI();
 
           // Set up cron job to run at 2 AM every day
-          const job = new CronJob('0 2 * * *', async () => {
+          const job = new CronJob('10/* * * * * *', async () => {
             this.logger.log('Running scheduled Trustpilot review fetch');
             await this.fetchReviewsFromAPI();
           });
