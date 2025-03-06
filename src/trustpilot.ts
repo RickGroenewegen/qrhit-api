@@ -19,6 +19,7 @@ class Trustpilot {
   private prisma = PrismaInstance.getInstance();
   private static instance: Trustpilot;
   private trustPilot = this.prisma.trustPilot;
+  private supportedLocales: string[] = ['en-US', 'nl-NL'];
 
   private constructor() {
     if (!process.env.RAPID_API_KEY) {
@@ -53,72 +54,88 @@ class Trustpilot {
    */
   private async fetchReviewsFromAPI(): Promise<void> {
     try {
-      this.logger.log('Fetching Trustpilot reviews from API');
-
-      const options = {
-        method: 'GET',
-        url: 'https://trustpilot-company-and-reviews-data.p.rapidapi.com/company-reviews',
-        params: {
-          company_domain: 'qrsong.io',
-          date_posted: 'any',
-          rating: '5',
-          locale: 'en-US',
-        },
-        headers: {
-          'x-rapidapi-key': process.env.RAPID_API_KEY,
-          'x-rapidapi-host':
-            'trustpilot-company-and-reviews-data.p.rapidapi.com',
-        },
-      };
-
-      const response = await axios.request(options);
-      const reviews = response.data.data.reviews;
-
-      this.logger.log(
-        `Retrieved ${reviews.length} reviews from Trustpilot API`
-      );
-
-      // Process each review and store in database
-      for (const review of reviews) {
-        // First check if a review with this name already exists
-        const existingReview = await this.prisma.trustPilot.findFirst({
-          where: {
-            name: review.consumer_name,
+      this.logger.log('Fetching Trustpilot reviews from API for all supported locales');
+      
+      let totalReviews = 0;
+      
+      // Loop through all supported locales
+      for (const locale of this.supportedLocales) {
+        this.logger.log(`Fetching reviews for locale: ${locale}`);
+        
+        const options = {
+          method: 'GET',
+          url: 'https://trustpilot-company-and-reviews-data.p.rapidapi.com/company-reviews',
+          params: {
+            company_domain: 'qrsong.io',
+            date_posted: 'any',
+            rating: '5',
+            locale: locale,
           },
-        });
+          headers: {
+            'x-rapidapi-key': process.env.RAPID_API_KEY,
+            'x-rapidapi-host':
+              'trustpilot-company-and-reviews-data.p.rapidapi.com',
+          },
+        };
 
-        if (existingReview) {
-          // Update existing review
-          await this.prisma.trustPilot.update({
+        const response = await axios.request(options);
+        const reviews = response.data.data.reviews;
+
+        this.logger.log(
+          `Retrieved ${reviews.length} reviews from Trustpilot API for locale ${locale}`
+        );
+        
+        totalReviews += reviews.length;
+
+        // Process each review and store in database
+        for (const review of reviews) {
+          // First check if a review with this name already exists
+          const existingReview = await this.prisma.trustPilot.findFirst({
             where: {
-              id: existingReview.id,
-            },
-            data: {
-              country: review.consumer_country || '',
-              title: review.review_title || '',
-              message: review.review_text || '',
-              rating: review.review_rating,
-              image: review.consumer_image || '',
-              updatedAt: new Date(),
-            },
-          });
-        } else {
-          // Create new review
-          await this.prisma.trustPilot.create({
-            data: {
               name: review.consumer_name,
-              country: review.consumer_country || '',
-              title: review.review_title || '',
-              message: review.review_text || '',
-              rating: review.review_rating,
-              image: review.consumer_image || '',
             },
           });
+
+          if (existingReview) {
+            // Update existing review
+            await this.prisma.trustPilot.update({
+              where: {
+                id: existingReview.id,
+              },
+              data: {
+                country: review.consumer_country || '',
+                title: review.review_title || '',
+                message: review.review_text || '',
+                rating: review.review_rating,
+                image: review.consumer_image || '',
+                locale: locale,
+                updatedAt: new Date(),
+              },
+            });
+          } else {
+            // Create new review
+            await this.prisma.trustPilot.create({
+              data: {
+                name: review.consumer_name,
+                country: review.consumer_country || '',
+                title: review.review_title || '',
+                message: review.review_text || '',
+                rating: review.review_rating,
+                image: review.consumer_image || '',
+                locale: locale,
+              },
+            });
+          }
+        }
+        
+        // Add a small delay between requests to avoid rate limiting
+        if (locale !== this.supportedLocales[this.supportedLocales.length - 1]) {
+          await new Promise(resolve => setTimeout(resolve, 1000));
         }
       }
 
       this.logger.log(
-        `Stored ${reviews.length} Trustpilot reviews in database`
+        `Stored a total of ${totalReviews} Trustpilot reviews in database`
       );
 
       // Clear cache to ensure fresh data is served
