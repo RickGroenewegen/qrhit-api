@@ -118,19 +118,25 @@ class Trustpilot {
 
           if (existingReview) {
             // Update existing review
+            const updateData: any = {
+              country: review.consumer_country || '',
+              rating: review.review_rating,
+              image: review.consumer_image || '',
+              locale: locale,
+              updatedAt: new Date(),
+            };
+            
+            // Store the original title and message in the locale-specific fields
+            // based on the current locale (en-US -> title_en, nl-NL -> title_nl)
+            const langCode = locale.split('-')[0].toLowerCase();
+            updateData[`title_${langCode}`] = review.review_title || '';
+            updateData[`message_${langCode}`] = review.review_text || '';
+            
             await this.prisma.trustPilot.update({
               where: {
                 id: existingReview.id,
               },
-              data: {
-                country: review.consumer_country || '',
-                title: review.review_title || '',
-                message: review.review_text || '',
-                rating: review.review_rating,
-                image: review.consumer_image || '',
-                locale: locale,
-                updatedAt: new Date(),
-              },
+              data: updateData
             });
             newOrUpdatedReviews.push(existingReview.id);
           } else {
@@ -139,8 +145,6 @@ class Trustpilot {
             const createData: any = {
               name: review.consumer_name,
               country: review.consumer_country || '',
-              title: review.review_title || '',
-              message: review.review_text || '',
               rating: review.review_rating,
               image: review.consumer_image || '',
               locale: locale,
@@ -151,6 +155,11 @@ class Trustpilot {
               createData[`title_${lang}`] = '';
               createData[`message_${lang}`] = '';
             }
+            
+            // Set the values for the current locale
+            const langCode = locale.split('-')[0].toLowerCase();
+            createData[`title_${langCode}`] = review.review_title || '';
+            createData[`message_${langCode}`] = review.review_text || '';
 
             const newReview = await this.prisma.trustPilot.create({
               data: createData,
@@ -233,18 +242,26 @@ class Trustpilot {
       });
 
       // Map database records to TrustpilotReview format
-      const reviews: TrustpilotReview[] = dbReviews.map((review) => ({
-        id: review.id.toString(),
-        stars: review.rating,
-        title: review.title,
-        text: review.message,
-        author: review.name,
-        date: review.updatedAt.toISOString(),
-        authorImage: review.image,
-        authorCountry: review.country,
-        authorReviewCount: 1, // Default since we don't store this
-        isVerified: false, // Default since we don't store this
-      }));
+      const reviews: TrustpilotReview[] = dbReviews.map((review) => {
+        // Get the appropriate locale-specific title and message
+        // Default to English if the requested locale isn't available
+        const locale = review.locale?.split('-')[0].toLowerCase() || 'en';
+        const title = review[`title_${locale}` as keyof typeof review] || review.title_en;
+        const text = review[`message_${locale}` as keyof typeof review] || review.message_en;
+        
+        return {
+          id: review.id.toString(),
+          stars: review.rating,
+          title: title as string,
+          text: text as string,
+          author: review.name,
+          date: review.updatedAt.toISOString(),
+          authorImage: review.image,
+          authorCountry: review.country,
+          authorReviewCount: 1, // Default since we don't store this
+          isVerified: false, // Default since we don't store this
+        };
+      });
 
       const result = {
         success: true,
