@@ -177,10 +177,8 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                             <% if (!eco) { %>
                                 <% if (php.background && php.background.length) { %>
                                     <img class="background-image" src="<%= process.env['API_URI'] %>/public/background/<%= php.background %>" alt="Card Background">
-                                    <div class="circle"></div>
                                 <% } else { %>
                                     <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/card_background2.png" alt="Card Background">
-                                    <div class="circle"></div>
                                 <% } %>
                             <% } %>
                             <% if (php.logo && php.logo.length) { %>
