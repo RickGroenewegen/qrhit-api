@@ -3,6 +3,7 @@ import path from 'path';
 import Log from './logger';
 import Utils from './utils';
 import { color, white } from 'console-log-colors';
+import sharp from 'sharp';
 
 class Designer {
   private static instance: Designer;
@@ -96,13 +97,37 @@ class Designer {
       try {
         // Create buffer from base64
         const buffer = Buffer.from(base64Data, 'base64');
+        
+        // Process the image with sharp
+        // Resize to 1000x1000 and draw a white circle
+        const processedBuffer = await sharp(buffer)
+          .resize(1000, 1000, { fit: 'cover' })
+          .composite([{
+            input: {
+              create: {
+                width: 1000,
+                height: 1000,
+                channels: 4,
+                background: { r: 0, g: 0, b: 0, alpha: 0 }
+              }
+            },
+            blend: 'dest-over'
+          }, {
+            input: Buffer.from(
+              `<svg width="1000" height="1000">
+                <circle cx="500" cy="500" r="450" fill="none" stroke="white" stroke-width="10"/>
+              </svg>`
+            ),
+            blend: 'over'
+          }])
+          .toBuffer();
 
-        // Write the file
-        await fs.writeFile(filePath, buffer);
+        // Write the processed file
+        await fs.writeFile(filePath, processedBuffer);
 
         this.logger.log(
           color.green.bold(
-            `Background image uploaded successfully: ${white.bold(filePath)}`
+            `Background image processed and uploaded successfully: ${white.bold(filePath)}`
           )
         );
 
