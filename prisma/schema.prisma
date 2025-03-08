@@ -219,6 +219,7 @@ model genre {
   name_hin  String
   name_jp   String
   name_cn   String
+  name_ru   String
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   Playlist  Playlist[]
@@ -244,6 +245,7 @@ model Playlist {
   description_hin      String?  @db.Text
   description_jp       String?  @db.Text
   description_cn       String?  @db.Text
+  description_ru       String?  @db.Text
   createdAt            DateTime @default(now())
   updatedAt            DateTime @updatedAt
   featured             Boolean  @default(false)
@@ -434,6 +436,7 @@ model TrustPilot {
   title_hin   String
   title_jp    String
   title_cn    String
+  title_ru    String
   message_en  String   @db.Text
   message_nl  String   @db.Text
   message_de  String   @db.Text
@@ -445,6 +448,7 @@ model TrustPilot {
   message_hin String   @db.Text
   message_jp  String   @db.Text
   message_cn  String   @db.Text
+  message_ru  String   @db.Text
   rating      Float
   image       String
   locale      String?
