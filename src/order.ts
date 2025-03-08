@@ -472,11 +472,13 @@ class Order {
       const options = {
         File: invoiceUrl,
         PageSize: 'a4',
-        MarginTop: 10,
-        MarginRight: 10,
-        MarginBottom: 10,
-        MarginLeft: 10,
+        RespectViewport: 'false',
+        MarginTop: 0,
+        MarginRight: 0,
+        MarginBottom: 0,
+        MarginLeft: 0,
         ConversionDelay: 3,
+        CompressPDF: 'true',
       };
 
       // Create the directory if it doesn't exist
@@ -491,7 +493,10 @@ class Order {
       const convertapi = pdfManager['convertapi']; // Access the convertapi instance from PDF class
       const result = await convertapi.convert('pdf', options, 'htm');
       await result.saveFiles(pdfPath);
-
+      
+      // Ensure the PDF is properly sized
+      await pdfManager.resizePDFPages(pdfPath, 210, 297); // A4 size in mm
+      
       this.logger.log(blue.bold(`Invoice created at: ${white.bold(pdfPath)}`));
     }
 
