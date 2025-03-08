@@ -143,7 +143,7 @@
 						<table>
 							<tr>
 								<td class="title">
-									<img src="/assets/images/logo.png" alt="Company logo" style="width: 100%; max-width: 300px" />
+									<img src="<%= process.env['API_URI'] %>/assets/images/logo.png" alt="Company logo" style="width: 100%; max-width: 300px" />
 								</td>
 								<td>
 									<%= translations.invoiceNumber %>: <%= payment.orderId %><br />
