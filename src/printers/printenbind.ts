@@ -5,9 +5,9 @@ import Cache from '../cache';
 import { ApiResult } from '../interfaces/ApiResult';
 import { color, blue, white, magenta } from 'console-log-colors';
 import Mail from '../mail';
-import puppeteer from 'puppeteer';
 import fs from 'fs/promises';
 import Data from '../data';
+import PDF from '../pdf';
 import crypto from 'crypto';
 import Spotify from '../spotify';
 import Utils from '../utils';
@@ -1284,26 +1284,48 @@ class PrintEnBind {
   }
 
   private async createInvoice(payment: any): Promise<string> {
-    const browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
     const invoiceUrl = `${process.env['API_URI']}/invoice/${payment.paymentId}`;
+    const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${payment.paymentId}.pdf`;
 
     this.logger.log(blue.bold(`Invoice URL: ${white.bold(invoiceUrl)}`));
-
-    await page.goto(invoiceUrl, { waitUntil: 'networkidle0' });
-
-    const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${payment.paymentId}.pdf`;
 
     try {
       // Check if the file exists
       await fs.access(pdfPath);
+      this.logger.log(blue.bold(`Invoice already exists at: ${white.bold(pdfPath)}`));
     } catch (error) {
-      // If the file doesn't exist, create it
-      await page.pdf({ path: pdfPath, format: 'A4' });
-    }
-    await browser.close();
+      // If the file doesn't exist, create it using ConvertAPI
+      const pdfManager = new PDF();
+      const options = {
+        File: invoiceUrl,
+        PageSize: 'a4',
+        RespectViewport: 'false',
+        MarginTop: 0,
+        MarginRight: 0,
+        MarginBottom: 0,
+        MarginLeft: 0,
+        ConversionDelay: 3,
+        CompressPDF: 'true',
+      };
 
-    this.logger.log(blue.bold(`Invoice created at: ${white.bold(pdfPath)}`));
+      // Create the directory if it doesn't exist
+      const dir = `${process.env['PRIVATE_DIR']}/invoice`;
+      try {
+        await fs.access(dir);
+      } catch (error) {
+        await fs.mkdir(dir, { recursive: true });
+      }
+
+      // Use the ConvertAPI to generate the PDF
+      const convertapi = pdfManager['convertapi']; // Access the convertapi instance from PDF class
+      const result = await convertapi.convert('pdf', options, 'htm');
+      await result.saveFiles(pdfPath);
+      
+      // Ensure the PDF is properly sized
+      await pdfManager.resizePDFPages(pdfPath, 210, 297); // A4 size in mm
+      
+      this.logger.log(blue.bold(`Invoice created at: ${white.bold(pdfPath)}`));
+    }
 
     return pdfPath;
   }
