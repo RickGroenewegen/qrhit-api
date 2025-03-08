@@ -6,7 +6,6 @@ import cluster from 'cluster';
 import Utils from './utils';
 import { CronJob } from 'cron';
 import { color, blue, white } from 'console-log-colors';
-import puppeteer from 'puppeteer';
 import fs from 'fs/promises';
 import PrintAPI from './printers/printapi';
 import PrintEnBind from './printers/printenbind';
@@ -14,6 +13,7 @@ import Spotify from './spotify';
 import { ChatGPT } from './chatgpt';
 import Translation from './translation';
 import { GenreId } from './interfaces/Genre';
+import PDF from './pdf';
 
 interface PriceResult {
   totalPrice: number;
@@ -455,26 +455,45 @@ class Order {
   }
 
   public async createInvoice(payment: any): Promise<string> {
-    const browser = await puppeteer.launch({ headless: true });
-    const page = await browser.newPage();
     const invoiceUrl = `${process.env['API_URI']}/invoice/${payment.paymentId}`;
+    const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${payment.paymentId}.pdf`;
 
     this.logger.log(blue.bold(`Invoice URL: ${white.bold(invoiceUrl)}`));
-
-    await page.goto(invoiceUrl, { waitUntil: 'networkidle0' });
-
-    const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${payment.paymentId}.pdf`;
 
     try {
       // Check if the file exists
       await fs.access(pdfPath);
+      this.logger.log(
+        blue.bold(`Invoice already exists at: ${white.bold(pdfPath)}`)
+      );
     } catch (error) {
-      // If the file doesn't exist, create it
-      await page.pdf({ path: pdfPath, format: 'A4' });
-    }
-    await browser.close();
+      // If the file doesn't exist, create it using ConvertAPI
+      const pdfManager = new PDF();
+      const options = {
+        File: invoiceUrl,
+        PageSize: 'a4',
+        MarginTop: 10,
+        MarginRight: 10,
+        MarginBottom: 10,
+        MarginLeft: 10,
+        ConversionDelay: 3,
+      };
 
-    this.logger.log(blue.bold(`Invoice created at: ${white.bold(pdfPath)}`));
+      // Create the directory if it doesn't exist
+      const dir = `${process.env['PRIVATE_DIR']}/invoice`;
+      try {
+        await fs.access(dir);
+      } catch (error) {
+        await fs.mkdir(dir, { recursive: true });
+      }
+
+      // Use the ConvertAPI to generate the PDF
+      const convertapi = pdfManager['convertapi']; // Access the convertapi instance from PDF class
+      const result = await convertapi.convert('pdf', options, 'htm');
+      await result.saveFiles(pdfPath);
+
+      this.logger.log(blue.bold(`Invoice created at: ${white.bold(pdfPath)}`));
+    }
 
     return pdfPath;
   }
