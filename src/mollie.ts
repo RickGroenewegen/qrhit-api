@@ -384,6 +384,7 @@ class Mollie {
             OR: [
               { fullname: { contains: search.textSearch } },
               { orderId: { contains: search.textSearch } },
+              { printApiOrderId: { contains: search.textSearch } },
             ],
           }
         : {};
