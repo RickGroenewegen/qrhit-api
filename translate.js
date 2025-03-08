@@ -8,7 +8,19 @@ require('dotenv').config();
 const baseDirPath = path.join(__dirname, '/src/locales');
 const inputFile = path.join(baseDirPath, 'en.json');
 const cacheFile = path.join(baseDirPath, 'translated.cache');
-const languages = ['nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'hin', 'jp', 'cn'];
+const languages = [
+  'nl',
+  'de',
+  'fr',
+  'es',
+  'it',
+  'pt',
+  'pl',
+  'hin',
+  'jp',
+  'cn',
+  'ru',
+];
 const languagesFull = [
   'Dutch',
   'German',
@@ -20,6 +32,7 @@ const languagesFull = [
   'Hindi',
   'Japanese',
   'Chinese', // (Simplified)
+  'Russian',
 ];
 
 // Initialize rate limiter with desired limits
