@@ -99,7 +99,7 @@ class Designer {
         const buffer = Buffer.from(base64Data, 'base64');
         
         // Process the image with sharp
-        // Resize to 1000x1000, draw a white circle, and convert to PNG with compression
+        // Resize to 1000x1000, draw a white circle, add a 32px white border, and convert to PNG with compression
         const processedBuffer = await sharp(buffer)
           .resize(1000, 1000, { fit: 'cover' })
           .composite([{
@@ -120,6 +120,13 @@ class Designer {
             ),
             blend: 'over'
           }])
+          .extend({
+            top: 32,
+            bottom: 32,
+            left: 32,
+            right: 32,
+            background: { r: 255, g: 255, b: 255, alpha: 1 }
+          }) // Add 32px white border to make it 1064x1064
           .png({ compressionLevel: 9, quality: 90 }) // Convert to PNG with high compression
           .toBuffer();
 
