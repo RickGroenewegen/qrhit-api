@@ -85,7 +85,7 @@ class Server {
   private constructor() {
     this.fastify = Fastify({
       logger: false,
-      bodyLimit: 1024 * 1024 * 50, // 50 MB, adjust as needed
+      bodyLimit: 1024 * 1024 * 100, // 100 MB, adjust as needed
     });
   }
 
@@ -596,7 +596,11 @@ class Server {
   }
 
   public async registerPlugins() {
-    await this.fastify.register(require('@fastify/multipart'));
+    await this.fastify.register(require('@fastify/multipart'), {
+      limits: {
+        fileSize: 100 * 1024 * 1024, // 100MB limit for file uploads
+      }
+    });
     await this.fastify.register(require('@fastify/formbody'));
     await this.fastify.register(ipPlugin);
     await this.fastify.register(replyFrom);
