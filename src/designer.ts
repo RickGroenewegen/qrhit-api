@@ -86,7 +86,7 @@ class Designer {
 
       // Generate unique filename using utils.generateRandomString
       const uniqueId = this.utils.generateRandomString(32); // Generate a 32-character unique ID
-      const actualFilename = `${uniqueId}.${imageType}`.toLowerCase();
+      const actualFilename = `${uniqueId}.png`.toLowerCase(); // Always use PNG format
 
       const filePath = path.join(
         process.env['PUBLIC_DIR'] as string,
@@ -99,7 +99,7 @@ class Designer {
         const buffer = Buffer.from(base64Data, 'base64');
         
         // Process the image with sharp
-        // Resize to 1000x1000 and draw a white circle
+        // Resize to 1000x1000, draw a white circle, and convert to PNG with compression
         const processedBuffer = await sharp(buffer)
           .resize(1000, 1000, { fit: 'cover' })
           .composite([{
@@ -120,6 +120,7 @@ class Designer {
             ),
             blend: 'over'
           }])
+          .png({ compressionLevel: 9, quality: 90 }) // Convert to PNG with high compression
           .toBuffer();
 
         // Write the processed file
