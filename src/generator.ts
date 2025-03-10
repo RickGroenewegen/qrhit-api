@@ -668,7 +668,7 @@ class Generator {
             )} to the printer`
           )
         );
-        console.log(111, orderData);
+        console.log(111, orderData.response.apiCalls);
       }
     }
   }
