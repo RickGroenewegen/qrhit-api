@@ -693,12 +693,6 @@ class Mollie {
         (productVATPrice + shippingVATPrice).toFixed(2)
       );
 
-      let totalPrintApiPrice = 0;
-
-      if (useOrderType == 'physical') {
-        totalPrintApiPrice += shippingPriceWithoutTax;
-      }
-
       const playlists = await Promise.all(
         params.cart.items.map(async (item: CartItem, index: number) => {
           const orderType = await this.order.getOrderType(
@@ -716,8 +710,6 @@ class Mollie {
           }
 
           const printApiItemPrice = orderType.amount * item.amount;
-
-          totalPrintApiPrice += printApiItemPrice;
 
           const itemPrice = item.price * item.amount;
 
@@ -749,11 +741,7 @@ class Mollie {
       );
 
       let totalProfit = parseFloat(
-        (
-          productPriceWithoutTax +
-          shippingPriceWithoutTax -
-          totalPrintApiPrice
-        ).toFixed(2)
+        (productPriceWithoutTax + shippingPriceWithoutTax).toFixed(2)
       );
 
       if (params.cart.items[0].productType == 'giftcard') {
@@ -790,7 +778,7 @@ class Mollie {
           clientIp,
           test: mollieTest,
           profit: totalProfit,
-          printApiPrice: totalPrintApiPrice,
+          printApiPrice: 0,
           discount: discountAmount,
           PaymentHasPlaylist: { create: playlists },
           ...params.extraOrderData,

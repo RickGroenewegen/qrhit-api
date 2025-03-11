@@ -1231,9 +1231,7 @@ class PrintEnBind {
           `Finished order ${color.white.bold(result.data.orderId)}`
         )
       );
-    }
 
-    if (result.success) {
       const deliveryResponse = await fetch(
         `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${result.data.orderId}`,
         {
@@ -1264,6 +1262,44 @@ class PrintEnBind {
         });
       }
 
+      let printApiPrice = 0;
+      let totalProfit = 0;
+
+      try {
+        const orderResponse = await fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${result.data.orderId}`,
+          {
+            method: 'GET',
+            headers: { Authorization: authToken! },
+          }
+        );
+
+        const order = await orderResponse.json();
+
+        printApiPrice = parseFloat(order.amount);
+
+        const newProfit = payment.productPriceWithoutTax - printApiPrice;
+
+        await this.prisma.payment.update({
+          where: { paymentId: payment.paymentId },
+          data: {
+            printApiPrice,
+            profit: newProfit,
+          },
+        });
+
+        this.logger.log(
+          color.blue.bold(
+            `Retrieved order amount from Print&Bind for order ${color.white.bold(
+              result.data.orderId
+            )}: ${color.white.bold(printApiPrice)}`
+          )
+        );
+      } catch (e) {
+        console.log(123, e);
+        // Nothing
+      }
+
       return {
         success: true,
         request: '',
@@ -1292,7 +1328,9 @@ class PrintEnBind {
     try {
       // Check if the file exists
       await fs.access(pdfPath);
-      this.logger.log(blue.bold(`Invoice already exists at: ${white.bold(pdfPath)}`));
+      this.logger.log(
+        blue.bold(`Invoice already exists at: ${white.bold(pdfPath)}`)
+      );
     } catch (error) {
       // If the file doesn't exist, create it using ConvertAPI
       const pdfManager = new PDF();
@@ -1320,10 +1358,10 @@ class PrintEnBind {
       const convertapi = pdfManager['convertapi']; // Access the convertapi instance from PDF class
       const result = await convertapi.convert('pdf', options, 'htm');
       await result.saveFiles(pdfPath);
-      
+
       // Ensure the PDF is properly sized
       await pdfManager.resizePDFPages(pdfPath, 210, 297); // A4 size in mm
-      
+
       this.logger.log(blue.bold(`Invoice created at: ${white.bold(pdfPath)}`));
     }
 
@@ -1621,8 +1659,6 @@ class PrintEnBind {
             const orderStatus = await this.getOrderStatus(
               order.printApiOrderId
             );
-
-            console.log(111, 'ORDER_STATUS', orderStatus);
 
             if (orderStatus.status == 'Verzonden') {
               this.logger.log(
