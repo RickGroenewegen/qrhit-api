@@ -1258,6 +1258,7 @@ class PrintEnBind {
           where: { paymentId: payment.paymentId },
           data: {
             printApiTrackingLink: trackingLink,
+            printApiStatus: 'Submitted',
           },
         });
       }
@@ -1625,7 +1626,7 @@ class PrintEnBind {
     try {
       const unshippedOrders = await this.prisma.payment.findMany({
         where: {
-          printApiStatus: 'Created',
+          printApiStatus: 'Submitted',
           printApiShipped: false,
           printApiOrderId: {
             notIn: [''],
