@@ -394,12 +394,24 @@ class Mollie {
         ? { finalized: search.finalized }
         : {};
 
+    // Physical filter - if true, only include payments with physical items
+    const physicalClause = search.physical
+      ? {
+          PaymentHasPlaylist: {
+            some: {
+              type: 'physical',
+            },
+          },
+        }
+      : {};
+
     const totalItems = await this.prisma.payment.count({
       where: {
         test: showTestPayments,
         ...whereClause,
         ...textSearchClause,
         ...finalizedClause,
+        ...physicalClause,
       },
     });
 
@@ -409,6 +421,7 @@ class Mollie {
         ...whereClause,
         ...textSearchClause,
         ...finalizedClause,
+        ...physicalClause,
       },
       skip: (search.page - 1) * search.itemsPerPage,
       take: search.itemsPerPage,
