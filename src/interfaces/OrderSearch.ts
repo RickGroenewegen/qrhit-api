@@ -4,4 +4,5 @@ export interface OrderSearch {
   page: number;
   itemsPerPage: number;
   textSearch: string;
+  physical: boolean;
 }

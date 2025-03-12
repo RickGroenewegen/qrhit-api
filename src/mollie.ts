@@ -442,6 +442,8 @@ class Mollie {
         printApiOrderRequest: true,
         printApiOrderResponse: true,
         printApiOrderId: true,
+        sentToPrinterAt: true,
+        sentToPrinter: true,
         email: true,
         fullname: true,
         locale: true,
