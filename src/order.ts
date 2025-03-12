@@ -38,6 +38,37 @@ class Order {
     }
   }
 
+  /**
+   * Calculate Wilson score with time decay for a playlist
+   * @param downloads Number of downloads
+   * @param createdAt Date when the playlist was created
+   * @returns Wilson score adjusted with time decay
+   */
+  private calculateWilsonScore(downloads: number, createdAt: Date): number {
+    // Wilson score calculation parameters
+    const z = 1.96; // 95% confidence
+    const n = Math.max(downloads, 1); // Total number of downloads (minimum 1 to avoid division by zero)
+    
+    // Calculate time decay factor (1 year = ~365.25 days)
+    const daysSinceCreation = Math.max(
+      1,
+      (new Date().getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const yearsElapsed = daysSinceCreation / 365.25;
+    const decayFactor = Math.exp(-0.5 * yearsElapsed); // Exponential decay with half-life of 1 year
+    
+    // Wilson score calculation
+    const phat = n / n; // For downloads, we consider all as positive (proportion = 1)
+    const numerator = phat + (z * z) / (2 * n) - z * Math.sqrt((phat * (1 - phat) + (z * z) / (4 * n)) / n);
+    const denominator = 1 + (z * z) / n;
+    const wilsonScore = numerator / denominator;
+    
+    // Apply time decay to the Wilson score
+    const adjustedScore = wilsonScore * decayFactor * 100; // Scale to 0-100 range
+    
+    return Math.round(adjustedScore);
+  }
+
   public async calculateDigitalCardPrice(
     basePrice: number,
     quantity: number
@@ -279,7 +310,14 @@ class Order {
               updateData.priceSheets = sheetsOrderType.price;
             }
 
-            // Update playlist with decade percentages, new descriptions, and prices
+            // Calculate Wilson score
+            const wilsonScore = this.calculateWilsonScore(
+              playlist.downloads,
+              playlist.createdAt
+            );
+            updateData.score = wilsonScore;
+
+            // Update playlist with decade percentages, new descriptions, prices, and Wilson score
             await this.prisma.playlist.update({
               where: { id: playlist.id },
               data: updateData,
@@ -334,7 +372,14 @@ class Order {
               updateData.priceSheets = sheetsOrderType.amount;
             }
 
-            // Update playlist with decade percentages and prices
+            // Calculate Wilson score
+            const wilsonScore = this.calculateWilsonScore(
+              playlist.downloads,
+              playlist.createdAt
+            );
+            updateData.score = wilsonScore;
+
+            // Update playlist with decade percentages, prices, and Wilson score
             await this.prisma.playlist.update({
               where: { id: playlist.id },
               data: updateData,
