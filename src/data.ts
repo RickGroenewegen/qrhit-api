@@ -661,6 +661,7 @@ class Data {
         playlists.name,
         playlists.slug,
         playlists.image,
+        playlists.score,
         playlists.price,
         playlists.priceDigital,
         playlists.priceSheets,
@@ -697,11 +698,7 @@ class Data {
       // Add ordering if locale is provided
       if (locale) {
         query += `
-        ORDER BY 
-          CASE 
-            WHEN FIND_IN_SET('${locale}', playlists.featuredLocale) > 0 THEN 0 
-            ELSE 1 
-          END
+        ORDER BY score DESC
       `;
       }
 
