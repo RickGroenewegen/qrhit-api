@@ -7,12 +7,10 @@ import Utils from './utils';
 import { CronJob } from 'cron';
 import { color, blue, white } from 'console-log-colors';
 import fs from 'fs/promises';
-import PrintAPI from './printers/printapi';
 import PrintEnBind from './printers/printenbind';
 import Spotify from './spotify';
 import { ChatGPT } from './chatgpt';
 import Translation from './translation';
-import { GenreId } from './interfaces/Genre';
 import PDF from './pdf';
 
 interface PriceResult {
@@ -28,7 +26,6 @@ class Order {
   private utils = new Utils();
   private spotify = new Spotify();
   private logger = new Log();
-  //private printer = PrintAPI.getInstance();
   private printer = PrintEnBind.getInstance();
 
   private constructor() {
@@ -493,10 +490,10 @@ class Order {
       const convertapi = pdfManager['convertapi']; // Access the convertapi instance from PDF class
       const result = await convertapi.convert('pdf', options, 'htm');
       await result.saveFiles(pdfPath);
-      
+
       // Ensure the PDF is properly sized
       await pdfManager.resizePDFPages(pdfPath, 210, 297); // A4 size in mm
-      
+
       this.logger.log(blue.bold(`Invoice created at: ${white.bold(pdfPath)}`));
     }
 
