@@ -234,7 +234,8 @@ class Server {
           request.clientIp,
           '',
           this.mollie,
-          true // Force finalize
+          true, // Force finalize
+          true // Skip main mail
         );
         return { success: true };
       }
@@ -599,7 +600,7 @@ class Server {
     await this.fastify.register(require('@fastify/multipart'), {
       limits: {
         fileSize: 100 * 1024 * 1024, // 100MB limit for file uploads
-      }
+      },
     });
     await this.fastify.register(require('@fastify/formbody'));
     await this.fastify.register(ipPlugin);
