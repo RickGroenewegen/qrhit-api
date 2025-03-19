@@ -1288,17 +1288,17 @@ class Server {
       return await this.hitlist.getCompanyListBySlug(request.params.slug);
     });
 
-    this.fastify.post('/hitlist/search/:searchString', async (request: any, _reply) => {
-      return await this.hitlist.searchTracks(request.params.searchString);
+    this.fastify.post('/hitlist/search', async (request: any, _reply) => {
+      return await this.hitlist.searchTracks(request.body.searchString);
     });
 
     this.fastify.post('/hitlist/track', async (request: any, _reply) => {
       const { trackId, companyListId, hash, position } = request.body;
-      
+
       if (!trackId || !companyListId || !hash || position === undefined) {
         return { success: false, error: 'Missing required fields' };
       }
-      
+
       return await this.hitlist.submitTrack(
         trackId,
         parseInt(companyListId),
@@ -1309,11 +1309,11 @@ class Server {
 
     this.fastify.post('/hitlist/submit', async (request: any, _reply) => {
       const { companyListSubmissionId, hash } = request.body;
-      
+
       if (!companyListSubmissionId || !hash) {
         return { success: false, error: 'Missing required fields' };
       }
-      
+
       return await this.hitlist.submitList(
         parseInt(companyListSubmissionId),
         hash

@@ -23,8 +23,8 @@ class Hitlist {
       const companyList = await this.prisma.companyList.findFirst({
         where: { slug },
         include: {
-          Company: true
-        }
+          Company: true,
+        },
       });
 
       if (!companyList) {
@@ -38,8 +38,8 @@ class Hitlist {
           name: companyList.name,
           description: companyList.description,
           numberOfTracks: companyList.numberOfTracks,
-          companyName: companyList.Company.name
-        }
+          companyName: companyList.Company.name,
+        },
       };
     } catch (error) {
       this.logger.log(color.red.bold(`Error getting company list: ${error}`));
@@ -58,29 +58,22 @@ class Hitlist {
         where: {
           OR: [
             { name: { contains: searchString } },
-            { artist: { contains: searchString } }
-          ]
+            { artist: { contains: searchString } },
+          ],
         },
         select: {
           id: true,
           trackId: true,
           name: true,
           artist: true,
-          album: true,
-          year: true,
-          preview: true,
-          spotifyLink: true,
-          image: true
         },
         take: 10,
-        orderBy: [
-          { name: 'asc' }
-        ]
+        orderBy: [{ name: 'asc' }],
       });
 
       return {
         success: true,
-        data: tracks
+        data: tracks,
       };
     } catch (error) {
       this.logger.log(color.red.bold(`Error searching tracks: ${error}`));
@@ -88,11 +81,16 @@ class Hitlist {
     }
   }
 
-  public async submitTrack(trackId: string, companyListId: number, hash: string, position: number) {
+  public async submitTrack(
+    trackId: string,
+    companyListId: number,
+    hash: string,
+    position: number
+  ) {
     try {
       // Find the track by trackId
       const track = await this.prisma.track.findUnique({
-        where: { trackId }
+        where: { trackId },
       });
 
       if (!track) {
@@ -101,7 +99,7 @@ class Hitlist {
 
       // Check if the company list exists
       const companyList = await this.prisma.companyList.findUnique({
-        where: { id: companyListId }
+        where: { id: companyListId },
       });
 
       if (!companyList) {
@@ -110,7 +108,7 @@ class Hitlist {
 
       // Find or create a submission for this hash
       let submission = await this.prisma.companyListSubmission.findUnique({
-        where: { hash }
+        where: { hash },
       });
 
       if (!submission) {
@@ -118,24 +116,25 @@ class Hitlist {
           data: {
             companyListId,
             hash,
-            status: 'open'
-          }
+            status: 'open',
+          },
         });
       }
 
       // Check if this track is already in the submission
-      const existingTrack = await this.prisma.companyListSubmissionTrack.findFirst({
-        where: {
-          companyListSubmissionId: submission.id,
-          trackId: track.id
-        }
-      });
+      const existingTrack =
+        await this.prisma.companyListSubmissionTrack.findFirst({
+          where: {
+            companyListSubmissionId: submission.id,
+            trackId: track.id,
+          },
+        });
 
       if (existingTrack) {
         // Update the position if the track already exists
         await this.prisma.companyListSubmissionTrack.update({
           where: { id: existingTrack.id },
-          data: { position }
+          data: { position },
         });
       } else {
         // Create a new submission track
@@ -143,8 +142,8 @@ class Hitlist {
           data: {
             companyListSubmissionId: submission.id,
             trackId: track.id,
-            position
-          }
+            position,
+          },
         });
       }
 
@@ -161,18 +160,21 @@ class Hitlist {
       const submission = await this.prisma.companyListSubmission.findFirst({
         where: {
           id: companyListSubmissionId,
-          hash
-        }
+          hash,
+        },
       });
 
       if (!submission) {
-        return { success: false, error: 'Submission not found or hash does not match' };
+        return {
+          success: false,
+          error: 'Submission not found or hash does not match',
+        };
       }
 
       // Update the submission status to 'submitted'
       await this.prisma.companyListSubmission.update({
         where: { id: companyListSubmissionId },
-        data: { status: 'submitted' }
+        data: { status: 'submitted' },
       });
 
       return { success: true };
