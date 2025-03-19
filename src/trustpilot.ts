@@ -3,9 +3,7 @@ import { TrustpilotReview } from './interfaces/TrustpilotReview';
 import { TrustpilotCompany } from './interfaces/TrustpilotCompany';
 import Cache from './cache';
 import Utils from './utils';
-import AnalyticsClient from './analytics';
 import Logger from './logger';
-import { Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
 import axios from 'axios';
 import cluster from 'cluster';
@@ -17,11 +15,9 @@ class Trustpilot {
   private cache = Cache.getInstance();
   private utils = new Utils();
   private logger = new Logger();
-  private analytics = AnalyticsClient.getInstance();
   private prisma = PrismaInstance.getInstance();
   private static instance: Trustpilot;
-  private trustPilot = this.prisma.trustPilot;
-  private supportedLocales: string[] = ['en-US', 'nl-NL'];
+  private supportedLocales: string[] = ['en-US', 'nl-NL', 'es-ES'];
   private translation = new Translation();
 
   private constructor() {

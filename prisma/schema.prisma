@@ -317,34 +317,35 @@ model TrackExtraInfo {
 }
 
 model Track {
-  id                  Int                @id @default(autoincrement())
-  trackId             String             @unique
-  name                String
-  album               String?
-  preview             String?
-  artist              String
-  isrc                String?
-  year                Int?
-  spotifyYear         Int?
-  discogsYear         Int?
-  aiYear              Int?
-  musicBrainzYear     Int?
-  openPerplexYear     Int?
-  googleResults       String?            @db.Text
-  standardDeviation   Float              @default(0)
-  yearSource          String?
-  spotifyLink         String?
-  certainty           Int                @default(0)
-  reasoning           String?            @db.Text
-  manuallyChecked     Boolean            @default(false)
-  manuallyCorrected   Boolean            @default(false)
-  youtubeLink         String?
-  youtubeLinkNotFound Boolean            @default(false)
-  createdAt           DateTime           @default(now())
-  updatedAt           DateTime           @updatedAt
-  playlists           PlaylistHasTrack[]
-  UserSuggestion      UserSuggestion[]
-  TrackExtraInfo      TrackExtraInfo[]
+  id                         Int                          @id @default(autoincrement())
+  trackId                    String                       @unique
+  name                       String
+  album                      String?
+  preview                    String?
+  artist                     String
+  isrc                       String?
+  year                       Int?
+  spotifyYear                Int?
+  discogsYear                Int?
+  aiYear                     Int?
+  musicBrainzYear            Int?
+  openPerplexYear            Int?
+  googleResults              String?                      @db.Text
+  standardDeviation          Float                        @default(0)
+  yearSource                 String?
+  spotifyLink                String?
+  certainty                  Int                          @default(0)
+  reasoning                  String?                      @db.Text
+  manuallyChecked            Boolean                      @default(false)
+  manuallyCorrected          Boolean                      @default(false)
+  youtubeLink                String?
+  youtubeLinkNotFound        Boolean                      @default(false)
+  createdAt                  DateTime                     @default(now())
+  updatedAt                  DateTime                     @updatedAt
+  playlists                  PlaylistHasTrack[]
+  UserSuggestion             UserSuggestion[]
+  TrackExtraInfo             TrackExtraInfo[]
+  CompanyListSubmissionTrack CompanyListSubmissionTrack[]
 
   @@index([trackId])
   @@index([isrc])
@@ -458,4 +459,63 @@ model TrustPilot {
   updatedAt   DateTime @updatedAt
 
   @@map("trustpilot")
+}
+
+model Company {
+  id          Int           @id @default(autoincrement())
+  name        String
+  slug        String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  CompanyList CompanyList[]
+
+  @@map("companies")
+}
+
+model CompanyList {
+  id             Int      @id @default(autoincrement())
+  companyId      Int
+  name           String
+  description    String
+  slug           String
+  numberOfTracks Int
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  Company               Company                 @relation(fields: [companyId], references: [id])
+  CompanyListSubmission CompanyListSubmission[]
+
+  @@map("company_lists")
+}
+
+model CompanyListSubmission {
+  id            Int       @id @default(autoincrement())
+  companyListId Int
+  hash          String    @unique
+  name          String?
+  email         String?
+  status        String    @default("open")
+  verified      Boolean   @default(false)
+  verifiedAt    DateTime?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  CompanyList                CompanyList                  @relation(fields: [companyListId], references: [id])
+  CompanyListSubmissionTrack CompanyListSubmissionTrack[]
+
+  @@map("company_list_submissions")
+}
+
+model CompanyListSubmissionTrack {
+  id                      Int      @id @default(autoincrement())
+  companyListSubmissionId Int
+  trackId                 Int
+  position                Int
+  createdAt               DateTime @default(now())
+  updatedAt               DateTime @updatedAt
+
+  CompanyListSubmission CompanyListSubmission @relation(fields: [companyListSubmissionId], references: [id])
+  Track                 Track                 @relation(fields: [trackId], references: [id])
+
+  @@map("company_list_submission_has_tracks")
 }

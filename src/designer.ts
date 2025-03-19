@@ -28,13 +28,6 @@ class Designer {
       const logoDir = `${process.env['PUBLIC_DIR']}/logo`;
       await this.utils.createDir(backgroundDir);
       await this.utils.createDir(logoDir);
-      this.logger.log(
-        color.blue.bold(
-          `Directories initialized at: ${white.bold(
-            backgroundDir
-          )} and ${white.bold(logoDir)}`
-        )
-      );
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error initializing directories: ${white.bold(error)}`)
@@ -97,35 +90,38 @@ class Designer {
       try {
         // Create buffer from base64
         const buffer = Buffer.from(base64Data, 'base64');
-        
+
         // Process the image with sharp
         // Resize to 1000x1000, draw a white circle, add a 32px white border, and convert to PNG with compression
         const processedBuffer = await sharp(buffer)
           .resize(1000, 1000, { fit: 'cover' })
-          .composite([{
-            input: {
-              create: {
-                width: 1000,
-                height: 1000,
-                channels: 4,
-                background: { r: 0, g: 0, b: 0, alpha: 0 }
-              }
+          .composite([
+            {
+              input: {
+                create: {
+                  width: 1000,
+                  height: 1000,
+                  channels: 4,
+                  background: { r: 0, g: 0, b: 0, alpha: 0 },
+                },
+              },
+              blend: 'dest-over',
             },
-            blend: 'dest-over'
-          }, {
-            input: Buffer.from(
-              `<svg width="1000" height="1000">
+            {
+              input: Buffer.from(
+                `<svg width="1000" height="1000">
                 <circle cx="500" cy="500" r="400" fill="white" stroke="white" stroke-width="10"/>
               </svg>`
-            ),
-            blend: 'over'
-          }])
+              ),
+              blend: 'over',
+            },
+          ])
           .extend({
             top: 32,
             bottom: 32,
             left: 32,
             right: 32,
-            background: { r: 255, g: 255, b: 255, alpha: 1 }
+            background: { r: 255, g: 255, b: 255, alpha: 1 },
           }) // Add 32px white border to make it 1064x1064
           .png({ compressionLevel: 9, quality: 90 }) // Convert to PNG with high compression
           .toBuffer();
@@ -135,7 +131,9 @@ class Designer {
 
         this.logger.log(
           color.green.bold(
-            `Background image processed and uploaded successfully: ${white.bold(filePath)}`
+            `Background image processed and uploaded successfully: ${white.bold(
+              filePath
+            )}`
           )
         );
 
