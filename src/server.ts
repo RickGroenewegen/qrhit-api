@@ -34,6 +34,7 @@ import Trustpilot from './trustpilot';
 import { Music } from './music';
 import Suggestion from './suggestion';
 import Designer from './designer';
+import Hitlist from './hitlist';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -73,6 +74,7 @@ class Server {
   private music = new Music();
   private suggestion = Suggestion.getInstance();
   private designer = Designer.getInstance();
+  private hitlist = Hitlist.getInstance();
   private whiteLabels = [
     {
       domain: 'k7.com',
@@ -1280,6 +1282,43 @@ class Server {
         }
       }
     );
+
+    // Hitlist routes
+    this.fastify.get('/hitlist/:slug', async (request: any, _reply) => {
+      return await this.hitlist.getCompanyListBySlug(request.params.slug);
+    });
+
+    this.fastify.post('/hitlist/search/:searchString', async (request: any, _reply) => {
+      return await this.hitlist.searchTracks(request.params.searchString);
+    });
+
+    this.fastify.post('/hitlist/track', async (request: any, _reply) => {
+      const { trackId, companyListId, hash, position } = request.body;
+      
+      if (!trackId || !companyListId || !hash || position === undefined) {
+        return { success: false, error: 'Missing required fields' };
+      }
+      
+      return await this.hitlist.submitTrack(
+        trackId,
+        parseInt(companyListId),
+        hash,
+        parseInt(position)
+      );
+    });
+
+    this.fastify.post('/hitlist/submit', async (request: any, _reply) => {
+      const { companyListSubmissionId, hash } = request.body;
+      
+      if (!companyListSubmissionId || !hash) {
+        return { success: false, error: 'Missing required fields' };
+      }
+      
+      return await this.hitlist.submitList(
+        parseInt(companyListSubmissionId),
+        hash
+      );
+    });
   }
 }
 
