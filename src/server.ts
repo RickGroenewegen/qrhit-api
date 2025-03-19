@@ -1323,6 +1323,17 @@ class Server {
     this.fastify.get('/hitlist/tracks/:hash', async (request: any, _reply) => {
       return await this.hitlist.getTracks(request.params.hash);
     });
+
+    this.fastify.delete('/hitlist/track/:trackId/:hash', async (request: any, _reply) => {
+      const trackId = parseInt(request.params.trackId);
+      const { hash } = request.params;
+      
+      if (isNaN(trackId) || !hash) {
+        return { success: false, error: 'Invalid parameters' };
+      }
+      
+      return await this.hitlist.removeTrack(trackId, hash);
+    });
   }
 }
 

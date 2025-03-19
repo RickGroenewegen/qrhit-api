@@ -256,6 +256,49 @@ class Hitlist {
       return { success: false, error: 'Error getting tracks' };
     }
   }
+
+  public async removeTrack(trackId: number, hash: string) {
+    try {
+      // Find the submission by hash
+      const submission = await this.prisma.companyListSubmission.findUnique({
+        where: { hash },
+      });
+
+      if (!submission) {
+        return { success: false, error: 'Submission not found' };
+      }
+
+      // Check if the submission is still open
+      if (submission.status !== 'open') {
+        return { 
+          success: false, 
+          error: 'Cannot modify a submission that has already been submitted' 
+        };
+      }
+
+      // Find the track in the submission
+      const submissionTrack = await this.prisma.companyListSubmissionTrack.findFirst({
+        where: {
+          companyListSubmissionId: submission.id,
+          trackId,
+        },
+      });
+
+      if (!submissionTrack) {
+        return { success: false, error: 'Track not found in this submission' };
+      }
+
+      // Delete the track from the submission
+      await this.prisma.companyListSubmissionTrack.delete({
+        where: { id: submissionTrack.id },
+      });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error removing track: ${error}`));
+      return { success: false, error: 'Error removing track' };
+    }
+  }
 }
 
 export default Hitlist;
