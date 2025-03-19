@@ -1288,8 +1288,8 @@ class Server {
       return await this.hitlist.getCompanyListBySlug(request.params.slug);
     });
 
-    this.fastify.post('/hitlist/search', async (request: any, _reply) => {
-      return await this.hitlist.searchTracks(request.body.searchString);
+    this.fastify.post('/hitlist/search/:searchString', async (request: any, _reply) => {
+      return await this.hitlist.searchTracks(request.params.searchString);
     });
 
     this.fastify.post('/hitlist/track', async (request: any, _reply) => {

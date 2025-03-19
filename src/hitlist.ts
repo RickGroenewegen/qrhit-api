@@ -121,7 +121,23 @@ class Hitlist {
         });
       }
 
-      // Check if this track is already in the submission
+      // Check if any track already exists at this position
+      const existingPositionTrack =
+        await this.prisma.companyListSubmissionTrack.findFirst({
+          where: {
+            companyListSubmissionId: submission.id,
+            position,
+          },
+        });
+
+      // If a track exists at this position, delete it
+      if (existingPositionTrack) {
+        await this.prisma.companyListSubmissionTrack.delete({
+          where: { id: existingPositionTrack.id },
+        });
+      }
+
+      // Check if this specific track is already in the submission (at a different position)
       const existingTrack =
         await this.prisma.companyListSubmissionTrack.findFirst({
           where: {
@@ -131,7 +147,7 @@ class Hitlist {
         });
 
       if (existingTrack) {
-        // Update the position if the track already exists
+        // Update the position if the track exists
         await this.prisma.companyListSubmissionTrack.update({
           where: { id: existingTrack.id },
           data: { position },
