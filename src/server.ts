@@ -1319,6 +1319,10 @@ class Server {
         hash
       );
     });
+
+    this.fastify.get('/hitlist/tracks/:hash', async (request: any, _reply) => {
+      return await this.hitlist.getTracks(request.params.hash);
+    });
   }
 }
 

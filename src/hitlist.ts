@@ -199,6 +199,63 @@ class Hitlist {
       return { success: false, error: 'Error submitting list' };
     }
   }
+
+  public async getTracks(hash: string) {
+    try {
+      // Find the submission by hash
+      const submission = await this.prisma.companyListSubmission.findUnique({
+        where: { hash },
+        include: {
+          CompanyList: true,
+        },
+      });
+
+      if (!submission) {
+        return { success: false, error: 'Submission not found' };
+      }
+
+      // Get all tracks for this submission
+      const submissionTracks = await this.prisma.companyListSubmissionTrack.findMany({
+        where: {
+          companyListSubmissionId: submission.id,
+        },
+        include: {
+          Track: true,
+        },
+        orderBy: {
+          position: 'asc',
+        },
+      });
+
+      // Format the tracks for the response
+      const tracks = submissionTracks.map(st => ({
+        id: st.Track.id,
+        trackId: st.Track.trackId,
+        name: st.Track.name,
+        artist: st.Track.artist,
+        position: st.position,
+      }));
+
+      return {
+        success: true,
+        data: {
+          companyList: {
+            id: submission.CompanyList.id,
+            name: submission.CompanyList.name,
+            description: submission.CompanyList.description,
+          },
+          submission: {
+            id: submission.id,
+            status: submission.status,
+          },
+          tracks,
+        },
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error getting tracks: ${error}`));
+      return { success: false, error: 'Error getting tracks' };
+    }
+  }
 }
 
 export default Hitlist;
