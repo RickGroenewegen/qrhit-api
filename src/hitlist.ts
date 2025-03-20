@@ -55,16 +55,23 @@ class Hitlist {
       if (tracksResult.success && tracksResult.data) {
         // Array to store newly created track IDs
         const newTrackIds: string[] = [];
-        const createdDbTrackIds: number[] = [];
+
+        this.logger.log(
+          color.blue.bold(
+            `Received hitlist with ${color.white.bold(hitlist.length)} tracks`
+          )
+        );
 
         // Store tracks in the database
         for (const trackData of tracksResult.data) {
           // Check if track already exists in the database
           let track = await this.prisma.track.findUnique({
-            where: { trackId: trackData.trackId }
+            where: { trackId: trackData.trackId },
           });
 
-          const spotifyYear = trackData.releaseDate ? parseInt(trackData.releaseDate.substring(0, 4)) : null;
+          const spotifyYear = trackData.releaseDate
+            ? parseInt(trackData.releaseDate.substring(0, 4))
+            : null;
 
           if (!track) {
             // Create new track if it doesn't exist
@@ -79,35 +86,44 @@ class Hitlist {
                 spotifyYear: spotifyYear,
                 spotifyLink: trackData.link,
                 youtubeLink: '',
-                manuallyChecked: false
-              }
+                manuallyChecked: false,
+              },
             });
-            
-            this.logger.log(color.green.bold(`Created new track: ${trackData.artist} - ${trackData.name}`));
-            
+
             // Add to the list of newly created tracks
             newTrackIds.push(trackData.trackId);
-            createdDbTrackIds.push(track.id);
           }
         }
 
+        this.logger.log(
+          color.blue.bold(
+            `Hitlist has ${color.white.bold(newTrackIds.length)} new tracks`
+          )
+        );
+
         // If we have new tracks, update their years
         if (newTrackIds.length > 0) {
-          this.logger.log(color.blue.bold(`Updating years for ${newTrackIds.length} new tracks`));
+          this.logger.log(
+            color.blue.bold(
+              `Updating years for ${newTrackIds.length} new tracks`
+            )
+          );
           await data.updateTrackYear(newTrackIds, tracksResult.data);
         }
 
         // Combine the detailed track info with the position information
         const enrichedTracks = hitlist.map((track: any) => {
-          const detailedTrack = tracksResult.data.find((t: any) => t.trackId === track.trackId);
+          const detailedTrack = tracksResult.data.find(
+            (t: any) => t.trackId === track.trackId
+          );
           return {
             ...track,
             ...detailedTrack,
             // Ensure position is preserved from the original hitlist
-            position: track.position
+            position: track.position,
           };
         });
-        
+
         return { success: true, data: enrichedTracks };
       }
 
