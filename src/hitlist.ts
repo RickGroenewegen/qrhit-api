@@ -138,7 +138,8 @@ class Hitlist {
           email,
           fullname || email.split('@')[0],
           companyList.Company.name,
-          submission.verificationHash
+          submission.verificationHash,
+          companyList.domain
         );
       }
 

@@ -698,12 +698,15 @@ ${params.html}
     email: string,
     fullname: string,
     companyName: string,
-    verificationHash: string
+    verificationHash: string,
+    domain?: string
   ): Promise<void> {
     if (!this.ses) return;
 
     const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
-    const verificationLink = `${process.env['FRONTEND_URI']}/hitlist/verify/${verificationHash}`;
+    // Use the company domain if provided, otherwise fall back to FRONTEND_URI
+    const baseUrl = domain ? `https://${domain}` : process.env['FRONTEND_URI'];
+    const verificationLink = `${baseUrl}/hitlist/verify/${verificationHash}`;
 
     const translations = await this.translation.getTranslationsByPrefix(
       'en', // Default to English for now
