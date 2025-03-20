@@ -1284,8 +1284,8 @@ class Server {
     );
 
     // Hitlist routes
-    this.fastify.get('/hitlist/:slug', async (request: any, _reply) => {
-      return await this.hitlist.getCompanyListBySlug(request.params.slug);
+    this.fastify.post('/hitlist', async (request: any, _reply) => {
+      return await this.hitlist.getCompanyListByDomain(request.body.domain);
     });
 
     this.fastify.post('/hitlist/search', async (request: any, _reply) => {
@@ -1324,16 +1324,19 @@ class Server {
       return await this.hitlist.getTracks(request.params.hash);
     });
 
-    this.fastify.delete('/hitlist/track/:trackId/:hash', async (request: any, _reply) => {
-      const trackId = parseInt(request.params.trackId);
-      const { hash } = request.params;
-      
-      if (isNaN(trackId) || !hash) {
-        return { success: false, error: 'Invalid parameters' };
+    this.fastify.delete(
+      '/hitlist/track/:trackId/:hash',
+      async (request: any, _reply) => {
+        const trackId = parseInt(request.params.trackId);
+        const { hash } = request.params;
+
+        if (isNaN(trackId) || !hash) {
+          return { success: false, error: 'Invalid parameters' };
+        }
+
+        return await this.hitlist.removeTrack(trackId, hash);
       }
-      
-      return await this.hitlist.removeTrack(trackId, hash);
-    });
+    );
   }
 }
 
