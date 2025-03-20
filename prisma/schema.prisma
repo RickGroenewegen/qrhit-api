@@ -505,7 +505,7 @@ model CompanyListSubmission {
   updatedAt        DateTime  @updatedAt
 
   CompanyList                CompanyList                  @relation(fields: [companyListId], references: [id], onDelete: Cascade)
-  CompanyListSubmissionTrack CompanyListSubmissionTrack[]
+  CompanyListSubmissionTrack CompanyListSubmissionTrack[] @relation("SubmissionToTracks")
 
   @@index([companyListId])
   @@map("company_list_submissions")
@@ -519,7 +519,7 @@ model CompanyListSubmissionTrack {
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
-  CompanyListSubmission CompanyListSubmission @relation(fields: [companyListSubmissionId], references: [id], onDelete: Cascade)
+  CompanyListSubmission CompanyListSubmission @relation("SubmissionToTracks", fields: [companyListSubmissionId], references: [id], onDelete: Cascade)
   Track                 Track                 @relation(fields: [trackId], references: [id], onDelete: Cascade)
 
   @@index([companyListSubmissionId])
