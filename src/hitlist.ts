@@ -345,45 +345,48 @@ class Hitlist {
 
       // Get all verified submissions for this company list
       const submissions = await this.prisma.companyListSubmission.findMany({
-        where: { 
+        where: {
           companyListId: companyListId,
           verified: true,
-          status: 'submitted'
+          status: 'submitted',
         },
         orderBy: { createdAt: 'asc' },
         include: {
           CompanyListSubmissionTrack: {
             include: {
-              Track: true
+              Track: true,
             },
-            orderBy: { position: 'asc' }
-          }
-        }
+            orderBy: { position: 'asc' },
+          },
+        },
       });
 
       if (submissions.length === 0) {
-        return { 
-          success: false, 
-          error: 'No verified submissions found for this company list' 
+        return {
+          success: false,
+          error: 'No verified submissions found for this company list',
         };
       }
 
       // Create a map to count votes by artist + title combination
-      const voteMap = new Map<string, { 
-        count: number, 
-        trackId: number, 
-        spotifyTrackId: string,
-        artist: string, 
-        title: string,
-        firstSubmissionDate: Date
-      }>();
+      const voteMap = new Map<
+        string,
+        {
+          count: number;
+          trackId: number;
+          spotifyTrackId: string;
+          artist: string;
+          title: string;
+          firstSubmissionDate: Date;
+        }
+      >();
 
       // Loop through all submissions and count votes
       for (const submission of submissions) {
         for (const submissionTrack of submission.CompanyListSubmissionTrack) {
           const track = submissionTrack.Track;
           const key = `${track.artist.toLowerCase()}|${track.name.toLowerCase()}`;
-          
+
           if (voteMap.has(key)) {
             // Increment the count for this track
             const trackData = voteMap.get(key)!;
@@ -396,7 +399,7 @@ class Hitlist {
               spotifyTrackId: track.trackId,
               artist: track.artist,
               title: track.name,
-              firstSubmissionDate: submission.createdAt
+              firstSubmissionDate: submission.createdAt,
             });
           }
         }
@@ -404,21 +407,27 @@ class Hitlist {
 
       // Convert the map to an array and sort by vote count (descending)
       // and then by submission date (ascending) for ties
-      const sortedTracks = Array.from(voteMap.values())
-        .sort((a, b) => {
-          if (b.count !== a.count) {
-            return b.count - a.count; // Sort by count descending
-          }
-          // If counts are equal, sort by submission date (earlier first)
-          return a.firstSubmissionDate.getTime() - b.firstSubmissionDate.getTime();
-        });
+      const sortedTracks = Array.from(voteMap.values()).sort((a, b) => {
+        if (b.count !== a.count) {
+          return b.count - a.count; // Sort by count descending
+        }
+        // If counts are equal, sort by submission date (earlier first)
+        return (
+          a.firstSubmissionDate.getTime() - b.firstSubmissionDate.getTime()
+        );
+      });
 
       // Take the top 10 (or less if there aren't enough)
-      const topTracks = sortedTracks.slice(0, Math.min(10, sortedTracks.length));
+      const topTracks = sortedTracks.slice(
+        0,
+        Math.min(10, sortedTracks.length)
+      );
 
       this.logger.log(
         color.green.bold(
-          `Finalized list for company ${color.white.bold(companyList.Company.name)} with ${color.white.bold(topTracks.length)} tracks`
+          `Finalized list for company ${color.white.bold(
+            companyList.Company.name
+          )} with ${color.white.bold(topTracks.length)} tracks`
         )
       );
 
@@ -426,7 +435,7 @@ class Hitlist {
       const playlistResult = await this.createPlaylist(
         companyList.Company.name,
         companyList.name,
-        topTracks.map(track => track.spotifyTrackId)
+        topTracks.map((track) => track.spotifyTrackId)
       );
 
       return {
@@ -441,10 +450,10 @@ class Hitlist {
             spotifyTrackId: track.spotifyTrackId,
             artist: track.artist,
             title: track.title,
-            votes: track.count
+            votes: track.count,
           })),
-          playlist: playlistResult.success ? playlistResult.data : null
-        }
+          playlist: playlistResult.success ? playlistResult.data : null,
+        },
       };
     } catch (error) {
       this.logger.log(color.red.bold(`Error finalizing list: ${error}`));
@@ -533,9 +542,11 @@ class Hitlist {
         url: 'https://accounts.spotify.com/api/token',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64')
+          Authorization:
+            'Basic ' +
+            Buffer.from(clientId + ':' + clientSecret).toString('base64'),
         },
-        data: 'grant_type=client_credentials'
+        data: 'grant_type=client_credentials',
       });
 
       const accessToken = tokenResponse.data.access_token;
@@ -551,7 +562,7 @@ class Hitlist {
 
       // Get the user ID from environment variable or use a default
       const userId = process.env['SPOTIFY_USER_ID'];
-      
+
       if (!userId) {
         this.logger.log(color.red.bold('Missing Spotify user ID'));
         return { success: false, error: 'Missing Spotify user ID' };
@@ -562,14 +573,14 @@ class Hitlist {
         method: 'post',
         url: `https://api.spotify.com/v1/users/${userId}/playlists`,
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
         data: JSON.stringify({
           name: playlistName,
           description: playlistDescription,
-          public: true
-        })
+          public: true,
+        }),
       });
 
       const playlistId = createPlaylistResponse.data.id;
@@ -581,29 +592,31 @@ class Hitlist {
       }
 
       // Add tracks to the playlist (maximum 100 tracks per request)
-      const trackUris = trackIds.map(id => `spotify:track:${id}`);
-      
+      const trackUris = trackIds.map((id) => `spotify:track:${id}`);
+
       // Split into chunks of 100 if needed
       const chunkSize = 100;
       for (let i = 0; i < trackUris.length; i += chunkSize) {
         const chunk = trackUris.slice(i, i + chunkSize);
-        
+
         await axios({
           method: 'post',
           url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
           },
           data: JSON.stringify({
-            uris: chunk
-          })
+            uris: chunk,
+          }),
         });
       }
 
       this.logger.log(
         color.green.bold(
-          `Created Spotify playlist "${color.white.bold(playlistName)}" with ${color.white.bold(trackIds.length)} tracks`
+          `Created Spotify playlist "${color.white.bold(
+            playlistName
+          )}" with ${color.white.bold(trackIds.length)} tracks`
         )
       );
 
@@ -612,11 +625,13 @@ class Hitlist {
         data: {
           playlistId,
           playlistUrl,
-          playlistName
-        }
+          playlistName,
+        },
       };
     } catch (error) {
-      this.logger.log(color.red.bold(`Error creating Spotify playlist: ${error}`));
+      this.logger.log(
+        color.red.bold(`Error creating Spotify playlist: ${error}`)
+      );
       return { success: false, error: 'Error creating Spotify playlist' };
     }
   }
