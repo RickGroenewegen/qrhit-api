@@ -1292,6 +1292,11 @@ class Server {
       return await this.hitlist.searchTracks(request.body.searchString);
     });
 
+    this.fastify.post('/spotify/search', async (request: any, _reply) => {
+      const { searchTerm, limit = 10, offset = 0 } = request.body;
+      return await this.spotify.searchTracks(searchTerm, limit, offset);
+    });
+
     this.fastify.post('/hitlist/track', async (request: any, _reply) => {
       const { trackId, companyListId, hash, position } = request.body;
 
