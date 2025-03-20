@@ -490,29 +490,31 @@ class Spotify {
         .filter((item: any) => item && item.data) // Filter out any null or undefined items
         .map((item: any) => {
           const track = item.data;
-          
-          // Add null checks for all properties
-          const artist = track.artists && track.artists.items && track.artists.items.length > 0
-            ? track.artists.items[0].profile?.name || ''
-            : '';
-            
-          const imageUrl = track.albumOfTrack && track.albumOfTrack.coverArt && 
-                          track.albumOfTrack.coverArt.sources && 
-                          track.albumOfTrack.coverArt.sources.length > 0
-            ? track.albumOfTrack.coverArt.sources[0].url
-            : '';
 
-        return {
-          id: track.id || '',
-          trackId: track.id || '',
-          name: this.utils.cleanTrackName(track.name || ''),
-          artist: artist,
-          album: track.albumOfTrack?.name || '',
-          image: imageUrl,
-          link: track.uri || '',
-          explicit: track.contentRating?.label === 'EXPLICIT',
-        };
-      });
+          // Add null checks for all properties
+          const artist =
+            track.artists &&
+            track.artists.items &&
+            track.artists.items.length > 0
+              ? track.artists.items[0].profile?.name || ''
+              : '';
+
+          const imageUrl =
+            track.albumOfTrack &&
+            track.albumOfTrack.coverArt &&
+            track.albumOfTrack.coverArt.sources &&
+            track.albumOfTrack.coverArt.sources.length > 0
+              ? track.albumOfTrack.coverArt.sources[0].url
+              : '';
+
+          return {
+            id: track.id || '',
+            trackId: track.id || '',
+            name: this.utils.cleanTrackName(track.name || ''),
+            artist: artist,
+            image: imageUrl,
+          };
+        });
 
       const result = {
         success: true,
