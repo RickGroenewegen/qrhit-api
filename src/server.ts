@@ -1285,7 +1285,10 @@ class Server {
 
     // Hitlist routes
     this.fastify.post('/hitlist', async (request: any, _reply) => {
-      return await this.hitlist.getCompanyListByDomain(request.body.domain);
+      return await this.hitlist.getCompanyListByDomain(
+        request.body.domain,
+        request.body.hash
+      );
     });
 
     this.fastify.post('/hitlist/search', async (request: any, _reply) => {
@@ -1297,26 +1300,28 @@ class Server {
 
     this.fastify.post('/hitlist/tracks', async (request: any, _reply) => {
       const { trackIds } = request.body;
-      
+
       if (!trackIds || !Array.isArray(trackIds) || trackIds.length === 0) {
         return { success: false, error: 'Invalid track IDs' };
       }
-      
+
       return await this.spotify.getTracksByIds(trackIds);
     });
 
     this.fastify.post('/hitlist/submit', async (request: any, _reply) => {
       const { hitlist, companyListId, submissionHash } = request.body;
-      
+
       // Add companyListId and submissionHash to each track
       const enrichedHitlist = hitlist.map((track: any) => ({
         ...track,
         companyListId,
-        submissionHash
+        submissionHash,
       }));
-      
-      const result = await this.hitlist.submit(enrichedHitlist);
-      return result;
+
+      this.hitlist.submit(enrichedHitlist);
+      return {
+        success: true,
+      };
     });
   }
 }
