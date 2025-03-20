@@ -1295,51 +1295,9 @@ class Server {
       return await this.spotify.searchTracks(searchString);
     });
 
-    this.fastify.post('/hitlist/track', async (request: any, _reply) => {
-      const { trackId, companyListId, hash, position } = request.body;
 
-      if (!trackId || !companyListId || !hash || position === undefined) {
-        return { success: false, error: 'Missing required fields' };
-      }
 
-      return await this.hitlist.submitTrack(
-        trackId,
-        parseInt(companyListId),
-        hash,
-        parseInt(position)
-      );
-    });
 
-    this.fastify.post('/hitlist/submit', async (request: any, _reply) => {
-      const { companyListSubmissionId, hash } = request.body;
-
-      if (!companyListSubmissionId || !hash) {
-        return { success: false, error: 'Missing required fields' };
-      }
-
-      return await this.hitlist.submitList(
-        parseInt(companyListSubmissionId),
-        hash
-      );
-    });
-
-    this.fastify.get('/hitlist/tracks/:hash', async (request: any, _reply) => {
-      return await this.hitlist.getTracks(request.params.hash);
-    });
-
-    this.fastify.delete(
-      '/hitlist/track/:trackId/:hash',
-      async (request: any, _reply) => {
-        const trackId = parseInt(request.params.trackId);
-        const { hash } = request.params;
-
-        if (isNaN(trackId) || !hash) {
-          return { success: false, error: 'Invalid parameters' };
-        }
-
-        return await this.hitlist.removeTrack(trackId, hash);
-      }
-    );
   }
 }
 
