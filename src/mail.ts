@@ -694,6 +694,73 @@ ${params.html}
     }
   }
 
+  public async sendVerificationEmail(
+    email: string,
+    fullname: string,
+    companyName: string,
+    submissionHash: string
+  ): Promise<void> {
+    if (!this.ses) return;
+
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const verificationLink = `${process.env['FRONTEND_URI']}/verify-submission/${submissionHash}`;
+
+    const mailParams = {
+      fullname: fullname || email.split('@')[0],
+      companyName,
+      verificationLink,
+      productName: process.env['PRODUCT_NAME'],
+      currentYear: new Date().getFullYear(),
+    };
+
+    try {
+      // Read the logo file and convert it to Base64
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+
+      const html = await this.templates.render('mails/verification_html', mailParams);
+      const text = await this.templates.render('mails/verification_text', mailParams);
+
+      const subject = `Verify Your Playlist Submission - ${process.env['PRODUCT_NAME']}`;
+
+      const attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+
+      const rawEmail = await this.renderRaw({
+        from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+        to: email,
+        subject,
+        html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+        text,
+        attachments,
+        unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+        replyTo: process.env['REPLY_TO_EMAIL'],
+      });
+
+      const emailBuffer = Buffer.from(rawEmail);
+
+      // Prepare and send the raw email
+      const command = new SendRawEmailCommand({
+        RawMessage: {
+          Data: emailBuffer,
+        },
+      });
+
+      await this.ses.send(command);
+      this.logger.log(color.green.bold(`Verification email sent to ${white.bold(email)}`));
+    } catch (error) {
+      console.error('Error while sending verification email:', error);
+      this.logger.log(color.red.bold(`Failed to send verification email to ${white.bold(email)}: ${error}`));
+    }
+  }
+
   public async uploadContacts(): Promise<void> {
     try {
       this.logger.log(

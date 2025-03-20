@@ -76,6 +76,19 @@ class Hitlist {
         }
       }
 
+      // Get company information for the email
+      const companyList = await this.prisma.companyList.findUnique({
+        where: { id: parseInt(companyListId) },
+        include: { Company: true }
+      });
+
+      if (!companyList) {
+        return {
+          success: false,
+          error: 'Company list not found',
+        };
+      }
+
       // Find or create the company list submission
       let submission = await this.prisma.companyListSubmission.findUnique({
         where: { hash: submissionHash },
@@ -86,7 +99,7 @@ class Hitlist {
           data: {
             companyListId: parseInt(companyListId),
             hash: submissionHash,
-            status: 'submitted',
+            status: 'pending_verification', // Changed from 'submitted' to 'pending_verification'
             name: fullname || null,
             email: email || null,
           },
@@ -104,11 +117,22 @@ class Hitlist {
         submission = await this.prisma.companyListSubmission.update({
           where: { id: submission.id },
           data: {
-            status: 'submitted',
+            status: 'pending_verification', // Changed from 'submitted' to 'pending_verification'
             name: fullname || submission.name,
             email: email || submission.email,
           },
         });
+      }
+
+      // Send verification email if we have an email address
+      if (email) {
+        const mail = Mail.getInstance();
+        await mail.sendVerificationEmail(
+          email,
+          fullname || email.split('@')[0],
+          companyList.Company.name,
+          submissionHash
+        );
       }
 
       // Extract track IDs from the hitlist
@@ -229,6 +253,39 @@ class Hitlist {
     } catch (error) {
       this.logger.log(color.red.bold(`Error submitting hitlist: ${error}`));
       return { success: false, error: 'Error submitting hitlist' };
+    }
+  }
+
+  public async verifySubmission(submissionHash: string): Promise<boolean> {
+    try {
+      const submission = await this.prisma.companyListSubmission.findUnique({
+        where: { hash: submissionHash },
+      });
+
+      if (!submission) {
+        this.logger.log(color.red.bold(`Submission with hash ${color.white.bold(submissionHash)} not found`));
+        return false;
+      }
+
+      // Update the submission status to verified
+      await this.prisma.companyListSubmission.update({
+        where: { id: submission.id },
+        data: {
+          status: 'submitted', // Change from pending_verification to submitted
+          verified: true,
+          verifiedAt: new Date(),
+        },
+      });
+
+      this.logger.log(
+        color.green.bold(
+          `Verified submission with hash ${color.white.bold(submissionHash)}`
+        )
+      );
+      return true;
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error verifying submission: ${error}`));
+      return false;
     }
   }
 
