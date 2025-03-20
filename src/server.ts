@@ -1295,9 +1295,9 @@ class Server {
       return await this.spotify.searchTracks(searchString);
     });
 
-
-
-
+    this.fastify.post('/hitlist/submit', async (request: any, _reply) => {
+      await this.hitlist.submit(request.body.hitlist);
+    });
   }
 }
 

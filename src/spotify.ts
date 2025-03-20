@@ -517,7 +517,9 @@ class Spotify {
             image: imageUrl,
           };
         })
-        .filter((track: any) => track.name && track.artist); // Filter out tracks with empty name or artist
+        .filter(
+          (track: any) => track.name?.length > 0 && track.artist?.length > 0
+        ); // Filter out tracks with empty name or artist
 
       const result = {
         success: true,
