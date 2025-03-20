@@ -1309,13 +1309,15 @@ class Server {
     });
 
     this.fastify.post('/hitlist/submit', async (request: any, _reply) => {
-      const { hitlist, companyListId, submissionHash } = request.body;
+      const { hitlist, companyListId, submissionHash, fullname, email } = request.body;
 
-      // Add companyListId and submissionHash to each track
+      // Add companyListId, submissionHash, fullname and email to each track
       const enrichedHitlist = hitlist.map((track: any) => ({
         ...track,
         companyListId,
         submissionHash,
+        fullname,
+        email,
       }));
 
       this.hitlist.submit(enrichedHitlist);

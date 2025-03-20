@@ -46,6 +46,8 @@ class Hitlist {
       // Check if we have a company list submission hash in the first track
       const submissionHash = hitlist[0]?.submissionHash;
       const companyListId = hitlist[0]?.companyListId;
+      const fullname = hitlist[0]?.fullname;
+      const email = hitlist[0]?.email;
 
       if (!submissionHash || !companyListId) {
         return {
@@ -65,6 +67,8 @@ class Hitlist {
             companyListId: parseInt(companyListId),
             hash: submissionHash,
             status: 'submitted',
+            name: fullname || null,
+            email: email || null,
           },
         });
 
@@ -75,6 +79,16 @@ class Hitlist {
             )}`
           )
         );
+      } else {
+        // Update the existing submission with the new status and user info
+        submission = await this.prisma.companyListSubmission.update({
+          where: { id: submission.id },
+          data: {
+            status: 'submitted',
+            name: fullname || submission.name,
+            email: email || submission.email,
+          },
+        });
       }
 
       // Extract track IDs from the hitlist
