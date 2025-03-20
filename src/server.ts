@@ -1291,9 +1291,8 @@ class Server {
     this.fastify.post('/hitlist/search', async (request: any, _reply) => {
       const { searchString, limit = 10, offset = 0 } = request.body;
 
-      console.log(111, searchString, limit, offset);
-
-      return await this.spotify.searchTracks(searchString, limit, offset);
+      // Use the hitlist search method instead of directly calling spotify
+      return await this.hitlist.searchTracks(searchString);
     });
 
     this.fastify.post('/hitlist/track', async (request: any, _reply) => {
