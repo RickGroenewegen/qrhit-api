@@ -478,29 +478,33 @@ model CompanyList {
   name           String
   description    String
   slug           String
+  domain         String?
+  background     String?
+  logo           String?
   numberOfTracks Int
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 
-  Company               Company                 @relation(fields: [companyId], references: [id])
+  Company               Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
   CompanyListSubmission CompanyListSubmission[]
 
   @@map("company_lists")
 }
 
 model CompanyListSubmission {
-  id            Int       @id @default(autoincrement())
-  companyListId Int
-  hash          String    @unique
-  name          String?
-  email         String?
-  status        String    @default("open")
-  verified      Boolean   @default(false)
-  verifiedAt    DateTime?
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id               Int       @id @default(autoincrement())
+  companyListId    Int
+  hash             String    @unique
+  verificationHash String?   @unique
+  name             String?
+  email            String?
+  status           String    @default("open")
+  verified         Boolean   @default(false)
+  verifiedAt       DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
-  CompanyList                CompanyList                  @relation(fields: [companyListId], references: [id])
+  CompanyList                CompanyList                  @relation(fields: [companyListId], references: [id], onDelete: Cascade)
   CompanyListSubmissionTrack CompanyListSubmissionTrack[]
 
   @@map("company_list_submissions")
@@ -514,8 +518,8 @@ model CompanyListSubmissionTrack {
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 
-  CompanyListSubmission CompanyListSubmission @relation(fields: [companyListSubmissionId], references: [id])
-  Track                 Track                 @relation(fields: [trackId], references: [id])
+  CompanyListSubmission CompanyListSubmission @relation(fields: [companyListSubmissionId], references: [id], onDelete: Cascade)
+  Track                 Track                 @relation(fields: [trackId], references: [id], onDelete: Cascade)
 
   @@map("company_list_submission_has_tracks")
 }
