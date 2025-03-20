@@ -1306,7 +1306,8 @@ class Server {
     });
 
     this.fastify.post('/hitlist/submit', async (request: any, _reply) => {
-      return await this.hitlist.submit(request.body.hitlist);
+      const result = await this.hitlist.submit(request.body.hitlist);
+      return result;
     });
   }
 }

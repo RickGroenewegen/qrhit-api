@@ -47,7 +47,50 @@ class Hitlist {
       const spotify = new Spotify();
       const tracksResult = await spotify.getTracksByIds(trackIds);
 
-      console.log(222, tracksResult);
+      if (tracksResult.success && tracksResult.data) {
+        // Store tracks in the database
+        for (const trackData of tracksResult.data) {
+          // Check if track already exists in the database
+          let track = await this.prisma.track.findUnique({
+            where: { trackId: trackData.trackId }
+          });
+
+          if (!track) {
+            // Create new track if it doesn't exist
+            track = await this.prisma.track.create({
+              data: {
+                trackId: trackData.trackId,
+                name: trackData.name,
+                artist: trackData.artist,
+                album: trackData.album,
+                preview: trackData.preview,
+                isrc: trackData.isrc,
+                spotifyYear: trackData.releaseDate ? parseInt(trackData.releaseDate.substring(0, 4)) : null,
+                spotifyLink: trackData.link,
+                youtubeLink: '',
+                manuallyChecked: false
+              }
+            });
+            
+            this.logger.log(color.green.bold(`Created new track: ${trackData.artist} - ${trackData.name}`));
+          }
+        }
+
+        // Combine the detailed track info with the position information
+        const enrichedTracks = hitlist.map((track: any) => {
+          const detailedTrack = tracksResult.data.find((t: any) => t.trackId === track.trackId);
+          return {
+            ...track,
+            ...detailedTrack,
+            // Ensure position is preserved from the original hitlist
+            position: track.position
+          };
+        });
+        
+        return { success: true, data: enrichedTracks };
+      }
+
+      return { success: false, error: 'Failed to get track details' };
     } catch (error) {
       this.logger.log(color.red.bold(`Error submitting hitlist: ${error}`));
       return { success: false, error: 'Error submitting hitlist' };
