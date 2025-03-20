@@ -96,10 +96,11 @@ class Hitlist {
         where: { hash: submissionHash },
       });
 
+      const verificationHash = this.utils.generateRandomString(32);
+
       if (!submission) {
         // Generate a unique verification hash
-        const verificationHash = this.utils.generateRandomString(32);
-        
+
         submission = await this.prisma.companyListSubmission.create({
           data: {
             companyListId: parseInt(companyListId),
@@ -126,6 +127,7 @@ class Hitlist {
             status: 'pending_verification', // Changed from 'submitted' to 'pending_verification'
             name: fullname || submission.name,
             email: email || submission.email,
+            verificationHash: verificationHash,
           },
         });
       }
@@ -270,7 +272,9 @@ class Hitlist {
       if (!submission) {
         this.logger.log(
           color.red.bold(
-            `Submission with verification hash ${color.white.bold(verificationHash)} not found`
+            `Submission with verification hash ${color.white.bold(
+              verificationHash
+            )} not found`
           )
         );
         return false;
@@ -288,7 +292,9 @@ class Hitlist {
 
       this.logger.log(
         color.green.bold(
-          `Verified submission with hash ${color.white.bold(submission.hash)} using verification hash ${color.white.bold(verificationHash)}`
+          `Verified submission with hash ${color.white.bold(
+            submission.hash
+          )} using verification hash ${color.white.bold(verificationHash)}`
         )
       );
       return true;

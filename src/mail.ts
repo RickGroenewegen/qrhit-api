@@ -703,7 +703,7 @@ ${params.html}
     if (!this.ses) return;
 
     const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
-    const verificationLink = `${process.env['FRONTEND_URI']}/verify-submission/${verificationHash}`;
+    const verificationLink = `${process.env['FRONTEND_URI']}/hitlist/verify/${verificationHash}`;
 
     const translations = await this.translation.getTranslationsByPrefix(
       'en', // Default to English for now
@@ -717,7 +717,7 @@ ${params.html}
       productName: process.env['PRODUCT_NAME'],
       currentYear: new Date().getFullYear(),
       translations: {
-        verification: translations
+        verification: translations,
       },
     };
 
@@ -726,10 +726,19 @@ ${params.html}
       const logoBuffer = await fs.readFile(logoPath);
       const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
 
-      const html = await this.templates.render('mails/verification_html', mailParams);
-      const text = await this.templates.render('mails/verification_text', mailParams);
+      const html = await this.templates.render(
+        'mails/verification_html',
+        mailParams
+      );
+      const text = await this.templates.render(
+        'mails/verification_text',
+        mailParams
+      );
 
-      const subject = `${this.translation.translate('verification.subject', 'en')} - ${process.env['PRODUCT_NAME']}`;
+      const subject = `${this.translation.translate(
+        'verification.subject',
+        'en'
+      )} - ${process.env['PRODUCT_NAME']}`;
 
       const attachments: Attachment[] = [
         {
@@ -762,10 +771,16 @@ ${params.html}
       });
 
       await this.ses.send(command);
-      this.logger.log(color.green.bold(`Verification email sent to ${white.bold(email)}`));
+      this.logger.log(
+        color.green.bold(`Verification email sent to ${white.bold(email)}`)
+      );
     } catch (error) {
       console.error('Error while sending verification email:', error);
-      this.logger.log(color.red.bold(`Failed to send verification email to ${white.bold(email)}: ${error}`));
+      this.logger.log(
+        color.red.bold(
+          `Failed to send verification email to ${white.bold(email)}: ${error}`
+        )
+      );
     }
   }
 
