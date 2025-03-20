@@ -1349,6 +1349,22 @@ class Server {
         reply.redirect(`${process.env['FRONTEND_URI']}/verification-failed`);
       }
     });
+    
+    // API endpoint for verifying submissions via POST request
+    this.fastify.post('/hitlist/verify', async (request: any, reply) => {
+      const { hash } = request.body;
+      
+      if (!hash) {
+        return { success: false, error: 'Missing verification hash' };
+      }
+
+      const success = await this.hitlist.verifySubmission(hash);
+      
+      return { 
+        success: success,
+        message: success ? 'Submission verified successfully' : 'Verification failed'
+      };
+    });
   }
 }
 
