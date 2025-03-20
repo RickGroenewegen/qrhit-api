@@ -330,6 +330,119 @@ class Hitlist {
     }
   }
 
+  public async finalizeList(companyListId: number): Promise<any> {
+    try {
+      // Get the company list
+      const companyList = await this.prisma.companyList.findUnique({
+        where: { id: companyListId },
+        include: { Company: true },
+      });
+
+      if (!companyList) {
+        return { success: false, error: 'Company list not found' };
+      }
+
+      // Get all verified submissions for this company list
+      const submissions = await this.prisma.companyListSubmission.findMany({
+        where: { 
+          companyListId: companyListId,
+          verified: true,
+          status: 'submitted'
+        },
+        orderBy: { createdAt: 'asc' },
+        include: {
+          CompanyListSubmissionTrack: {
+            include: {
+              Track: true
+            },
+            orderBy: { position: 'asc' }
+          }
+        }
+      });
+
+      if (submissions.length === 0) {
+        return { 
+          success: false, 
+          error: 'No verified submissions found for this company list' 
+        };
+      }
+
+      // Create a map to count votes by artist + title combination
+      const voteMap = new Map<string, { 
+        count: number, 
+        trackId: number, 
+        spotifyTrackId: string,
+        artist: string, 
+        title: string,
+        firstSubmissionDate: Date
+      }>();
+
+      // Loop through all submissions and count votes
+      for (const submission of submissions) {
+        for (const submissionTrack of submission.CompanyListSubmissionTrack) {
+          const track = submissionTrack.Track;
+          const key = `${track.artist.toLowerCase()}|${track.name.toLowerCase()}`;
+          
+          if (voteMap.has(key)) {
+            // Increment the count for this track
+            const trackData = voteMap.get(key)!;
+            trackData.count += 1;
+          } else {
+            // First vote for this track
+            voteMap.set(key, {
+              count: 1,
+              trackId: track.id,
+              spotifyTrackId: track.trackId,
+              artist: track.artist,
+              title: track.name,
+              firstSubmissionDate: submission.createdAt
+            });
+          }
+        }
+      }
+
+      // Convert the map to an array and sort by vote count (descending)
+      // and then by submission date (ascending) for ties
+      const sortedTracks = Array.from(voteMap.values())
+        .sort((a, b) => {
+          if (b.count !== a.count) {
+            return b.count - a.count; // Sort by count descending
+          }
+          // If counts are equal, sort by submission date (earlier first)
+          return a.firstSubmissionDate.getTime() - b.firstSubmissionDate.getTime();
+        });
+
+      // Take the top 10 (or less if there aren't enough)
+      const topTracks = sortedTracks.slice(0, Math.min(10, sortedTracks.length));
+
+      this.logger.log(
+        color.green.bold(
+          `Finalized list for company ${color.white.bold(companyList.Company.name)} with ${color.white.bold(topTracks.length)} tracks`
+        )
+      );
+
+      return {
+        success: true,
+        data: {
+          companyName: companyList.Company.name,
+          companyListName: companyList.name,
+          totalSubmissions: submissions.length,
+          tracks: topTracks.map((track, index) => ({
+            position: index + 1,
+            trackId: track.trackId,
+            spotifyTrackId: track.spotifyTrackId,
+            artist: track.artist,
+            title: track.title,
+            votes: track.count
+          }))
+        }
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error finalizing list: ${error}`));
+      return { success: false, error: 'Error finalizing list' };
+    }
+  }
+
   public async getCompanyListByDomain(
     domain: string,
     hash: string,

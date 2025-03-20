@@ -1352,6 +1352,17 @@ class Server {
           : 'Verification failed',
       };
     });
+
+    // API endpoint for finalizing a company list (creating a top 10)
+    this.fastify.get('/hitlist/finalize/:companyListId', async (request: any, reply) => {
+      const { companyListId } = request.params;
+      
+      if (!companyListId) {
+        return { success: false, error: 'Missing company list ID' };
+      }
+
+      return await this.hitlist.finalizeList(parseInt(companyListId));
+    });
   }
 }
 
