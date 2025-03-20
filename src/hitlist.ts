@@ -6,6 +6,7 @@ import Utils from './utils';
 import Spotify from './spotify';
 import { Music } from './music';
 import Data from './data';
+import Mail from './mail';
 
 class Hitlist {
   private static instance: Hitlist;
@@ -13,12 +14,12 @@ class Hitlist {
   private logger = new Logger();
   private cache = Cache.getInstance();
   private utils = new Utils();
-  private music: Music;
+  private music: Music = new Music();
   private data = Data.getInstance();
+  private mail = Mail.getInstance();
 
   private constructor() {
     this.initDir();
-    this.music = new Music();
   }
 
   public static getInstance(): Hitlist {
@@ -58,15 +59,16 @@ class Hitlist {
 
       // Check if there's already a submission with this email for this company list
       if (email) {
-        const existingSubmission = await this.prisma.companyListSubmission.findFirst({
-          where: {
-            companyListId: parseInt(companyListId),
-            email: email,
-            NOT: {
-              hash: submissionHash // Exclude the current submission
-            }
-          }
-        });
+        const existingSubmission =
+          await this.prisma.companyListSubmission.findFirst({
+            where: {
+              companyListId: parseInt(companyListId),
+              email: email,
+              NOT: {
+                hash: submissionHash, // Exclude the current submission
+              },
+            },
+          });
 
         if (existingSubmission) {
           return {
@@ -79,7 +81,7 @@ class Hitlist {
       // Get company information for the email
       const companyList = await this.prisma.companyList.findUnique({
         where: { id: parseInt(companyListId) },
-        include: { Company: true }
+        include: { Company: true },
       });
 
       if (!companyList) {
@@ -126,8 +128,7 @@ class Hitlist {
 
       // Send verification email if we have an email address
       if (email) {
-        const mail = Mail.getInstance();
-        await mail.sendVerificationEmail(
+        await this.mail.sendVerificationEmail(
           email,
           fullname || email.split('@')[0],
           companyList.Company.name,
@@ -263,7 +264,11 @@ class Hitlist {
       });
 
       if (!submission) {
-        this.logger.log(color.red.bold(`Submission with hash ${color.white.bold(submissionHash)} not found`));
+        this.logger.log(
+          color.red.bold(
+            `Submission with hash ${color.white.bold(submissionHash)} not found`
+          )
+        );
         return false;
       }
 
@@ -303,13 +308,13 @@ class Hitlist {
       }
 
       let submissionStatus = 'open';
-      
+
       if (hash && hash.length > 0) {
         // Find the submission with this hash
         const submission = await this.prisma.companyListSubmission.findUnique({
           where: { hash },
         });
-        
+
         if (submission) {
           submissionStatus = submission.status;
         }
