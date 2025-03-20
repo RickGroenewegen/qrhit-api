@@ -39,32 +39,15 @@ class Hitlist {
   public async submit(hitlist: any) {
     try {
       console.log(111, hitlist);
-      
+
       // Extract track IDs from the hitlist
       const trackIds = hitlist.map((track: any) => track.trackId);
-      
+
       // Use the new getTracksByIds method to get detailed track information
       const spotify = new Spotify();
       const tracksResult = await spotify.getTracksByIds(trackIds);
-      
-      if (tracksResult.success) {
-        // Combine the detailed track info with the position information
-        const enrichedTracks = hitlist.map((track: any) => {
-          const detailedTrack = tracksResult.data.find((t: any) => t.trackId === track.trackId);
-          return {
-            ...track,
-            ...detailedTrack,
-            // Ensure position is preserved from the original hitlist
-            position: track.position
-          };
-        });
-        
-        console.log("Enriched tracks with detailed information:", enrichedTracks);
-        return { success: true, data: enrichedTracks };
-      } else {
-        console.log("Failed to get track details:", tracksResult.error);
-        return { success: false, error: tracksResult.error };
-      }
+
+      console.log(222, tracksResult);
     } catch (error) {
       this.logger.log(color.red.bold(`Error submitting hitlist: ${error}`));
       return { success: false, error: 'Error submitting hitlist' };
