@@ -290,10 +290,34 @@ class Hitlist {
         return { success: false, error: 'Track not found in this submission' };
       }
 
+      // Get the position of the track to be removed
+      const removedPosition = submissionTrack.position;
+
       // Delete the track from the submission
       await this.prisma.companyListSubmissionTrack.delete({
         where: { id: submissionTrack.id },
       });
+
+      // Find all tracks with higher positions and decrement their positions
+      const tracksToUpdate = await this.prisma.companyListSubmissionTrack.findMany({
+        where: {
+          companyListSubmissionId: submission.id,
+          position: {
+            gt: removedPosition
+          }
+        },
+        orderBy: {
+          position: 'asc'
+        }
+      });
+
+      // Update the positions of all subsequent tracks
+      for (const track of tracksToUpdate) {
+        await this.prisma.companyListSubmissionTrack.update({
+          where: { id: track.id },
+          data: { position: track.position - 1 }
+        });
+      }
 
       return { success: true };
     } catch (error) {
