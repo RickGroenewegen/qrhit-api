@@ -73,7 +73,7 @@ class Hitlist {
         if (existingSubmission) {
           return {
             success: false,
-            error: 'You have already submitted a playlist for this company',
+            error: 'playlistAlreadySubmitted',
           };
         }
       }
