@@ -14,6 +14,7 @@ class Hitlist {
   private cache = Cache.getInstance();
   private utils = new Utils();
   private music: Music;
+  private data = Data.getInstance();
 
   private constructor() {
     this.initDir();
@@ -42,8 +43,6 @@ class Hitlist {
 
   public async submit(hitlist: any) {
     try {
-      console.log(111, hitlist);
-
       // Check if we have a company list submission hash in the first track
       const submissionHash = hitlist[0]?.submissionHash;
       const companyListId = hitlist[0]?.companyListId;
@@ -65,7 +64,7 @@ class Hitlist {
           data: {
             companyListId: parseInt(companyListId),
             hash: submissionHash,
-            status: 'open',
+            status: 'submitted',
           },
         });
 
@@ -125,6 +124,17 @@ class Hitlist {
               },
             });
 
+            const youtubeId = await this.data.getYouTubeLink(
+              track.artist,
+              track.name
+            );
+            if (youtubeId) {
+              await this.prisma.track.update({
+                where: { trackId: track.trackId },
+                data: { youtubeLink: youtubeId },
+              });
+            }
+
             // Add to the list of newly created tracks
             newTrackIds.push(trackData.trackId);
           }
@@ -141,12 +151,7 @@ class Hitlist {
 
         // If we have new tracks, update their years
         if (newTrackIds.length > 0) {
-          this.logger.log(
-            color.blue.bold(
-              `Updating years for ${newTrackIds.length} new tracks`
-            )
-          );
-          await data.updateTrackYear(newTrackIds, tracksResult.data);
+          await this.data.updateTrackYear(newTrackIds, tracksResult.data);
         }
 
         // Delete any existing tracks for this submission
@@ -181,29 +186,8 @@ class Hitlist {
           )
         );
 
-        // Combine the detailed track info with the position information
-        const enrichedTracks = hitlist.map((track: any) => {
-          const detailedTrack = tracksResult.data.find(
-            (t: any) => t.trackId === track.trackId
-          );
-          return {
-            ...track,
-            ...detailedTrack,
-            // Ensure position is preserved from the original hitlist
-            position: track.position,
-          };
-        });
-
         return {
           success: true,
-          data: {
-            tracks: enrichedTracks,
-            submission: {
-              id: submission.id,
-              hash: submission.hash,
-              status: submission.status,
-            },
-          },
         };
       }
 
@@ -214,7 +198,7 @@ class Hitlist {
     }
   }
 
-  public async getCompanyListByDomain(domain: string) {
+  public async getCompanyListByDomain(domain: string, hash: string) {
     try {
       const companyList = await this.prisma.companyList.findFirst({
         where: { domain },
