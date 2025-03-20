@@ -507,6 +507,7 @@ model CompanyListSubmission {
   CompanyList                CompanyList                  @relation(fields: [companyListId], references: [id], onDelete: Cascade)
   CompanyListSubmissionTrack CompanyListSubmissionTrack[]
 
+  @@index([companyListId])
   @@map("company_list_submissions")
 }
 
@@ -521,5 +522,7 @@ model CompanyListSubmissionTrack {
   CompanyListSubmission CompanyListSubmission @relation(fields: [companyListSubmissionId], references: [id], onDelete: Cascade)
   Track                 Track                 @relation(fields: [trackId], references: [id], onDelete: Cascade)
 
+  @@index([companyListSubmissionId])
+  @@index([trackId])
   @@map("company_list_submission_has_tracks")
 }
