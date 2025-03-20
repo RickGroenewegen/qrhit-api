@@ -548,9 +548,8 @@ class Hitlist {
       const state = this.utils.generateRandomString(16);
       
       // Generate the authorization URL
-      // Make sure we have a valid backend URI
-      const backendUri = process.env['BACKEND_URI'] || 'http://localhost:3004';
-      const redirectUri = `${backendUri}/hitlist/spotify-callback`;
+      // Use the exact redirect URI that was registered with Spotify
+      const redirectUri = process.env['SPOTIFY_REDIRECT_URI'] || 'http://localhost:3004/hitlist/spotify-callback';
       const scope = 'playlist-modify-public';
       const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${state}`;
       
@@ -577,9 +576,8 @@ class Hitlist {
       // Get the client ID and secret
       const clientId = process.env['SPOTIFY_CLIENT_ID'];
       const clientSecret = process.env['SPOTIFY_CLIENT_SECRET'];
-      // Make sure we have a valid backend URI
-      const backendUri = process.env['BACKEND_URI'] || 'http://localhost:3004';
-      const redirectUri = `${backendUri}/hitlist/spotify-callback`;
+      // Use the exact redirect URI that was registered with Spotify
+      const redirectUri = process.env['SPOTIFY_REDIRECT_URI'] || 'http://localhost:3004/hitlist/spotify-callback';
 
       if (!clientId || !clientSecret) {
         this.logger.log(color.red.bold('Missing Spotify API credentials'));
