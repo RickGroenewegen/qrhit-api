@@ -56,6 +56,26 @@ class Hitlist {
         };
       }
 
+      // Check if there's already a submission with this email for this company list
+      if (email) {
+        const existingSubmission = await this.prisma.companyListSubmission.findFirst({
+          where: {
+            companyListId: parseInt(companyListId),
+            email: email,
+            NOT: {
+              hash: submissionHash // Exclude the current submission
+            }
+          }
+        });
+
+        if (existingSubmission) {
+          return {
+            success: false,
+            error: 'You have already submitted a playlist for this company',
+          };
+        }
+      }
+
       // Find or create the company list submission
       let submission = await this.prisma.companyListSubmission.findUnique({
         where: { hash: submissionHash },

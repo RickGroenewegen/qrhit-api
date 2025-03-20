@@ -1308,7 +1308,7 @@ class Server {
       return await this.spotify.getTracksByIds(trackIds);
     });
 
-    this.fastify.post('/hitlist/submit', async (request: any, _reply) => {
+    this.fastify.post('/hitlist/submit', async (request: any, reply) => {
       const { hitlist, companyListId, submissionHash, fullname, email } = request.body;
 
       // Add companyListId, submissionHash, fullname and email to each track
@@ -1320,7 +1320,11 @@ class Server {
         email,
       }));
 
-      this.hitlist.submit(enrichedHitlist);
+      const result = await this.hitlist.submit(enrichedHitlist);
+      if (!result.success) {
+        return result; // Return error if submission failed
+      }
+      
       return {
         success: true,
       };
