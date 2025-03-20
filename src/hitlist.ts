@@ -150,12 +150,16 @@ class Hitlist {
       return {
         success: true,
       };
-
-      return { success: false, error: 'Failed to get track details' };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error submitting hitlist: ${error}`));
+      return { success: false, error: 'Error submitting hitlist' };
     }
   }
 
-  private async processSubmissionAsync(hitlist: any[], submissionId: number): Promise<void> {
+  private async processSubmissionAsync(
+    hitlist: any[],
+    submissionId: number
+  ): Promise<void> {
     try {
       // Extract track IDs from the hitlist
       const trackIds = hitlist.map((track: any) => track.trackId);
@@ -268,19 +272,20 @@ class Hitlist {
       } else {
         this.logger.log(
           color.red.bold(
-            `Failed to get track details for submission ${color.white.bold(submissionId)}`
+            `Failed to get track details for submission ${color.white.bold(
+              submissionId
+            )}`
           )
         );
       }
     } catch (error) {
       this.logger.log(
         color.red.bold(
-          `Error processing submission ${color.white.bold(submissionId)} asynchronously: ${error}`
+          `Error processing submission ${color.white.bold(
+            submissionId
+          )} asynchronously: ${error}`
         )
       );
-    } catch (error) {
-      this.logger.log(color.red.bold(`Error submitting hitlist: ${error}`));
-      return { success: false, error: 'Error submitting hitlist' };
     }
   }
 
