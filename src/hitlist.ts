@@ -560,18 +560,10 @@ class Hitlist {
       const playlistName = `${companyName} - ${listName} Top Tracks`;
       const playlistDescription = `Top tracks for ${companyName} - ${listName}. Created automatically.`;
 
-      // Get the user ID from environment variable or use a default
-      const userId = process.env['SPOTIFY_USER_ID'];
-
-      if (!userId) {
-        this.logger.log(color.red.bold('Missing Spotify user ID'));
-        return { success: false, error: 'Missing Spotify user ID' };
-      }
-
       // Create the playlist
       const createPlaylistResponse = await axios({
         method: 'post',
-        url: `https://api.spotify.com/v1/users/${userId}/playlists`,
+        url: `https://api.spotify.com/v1/users/rickman9/playlists`,
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
