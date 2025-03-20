@@ -5,6 +5,7 @@ import Cache from './cache';
 import Utils from './utils';
 import Spotify from './spotify';
 import { Music } from './music';
+import Data from './data';
 
 class Hitlist {
   private static instance: Hitlist;
@@ -48,16 +49,66 @@ class Hitlist {
 
       // Use the new getTracksByIds method to get detailed track information
       const spotify = new Spotify();
-      const music = new Music();
+      const data = Data.getInstance();
       const tracksResult = await spotify.getTracksByIds(trackIds);
 
       if (tracksResult.success && tracksResult.data) {
+        // Array to store newly created track IDs
+        const newTrackIds: string[] = [];
+        const createdDbTrackIds: number[] = [];
+
         // Store tracks in the database
-        for (const track of tracksResult.data) {
-          console.log(112, track);
+        for (const trackData of tracksResult.data) {
+          // Check if track already exists in the database
+          let track = await this.prisma.track.findUnique({
+            where: { trackId: trackData.trackId }
+          });
+
+          const spotifyYear = trackData.releaseDate ? parseInt(trackData.releaseDate.substring(0, 4)) : null;
+
+          if (!track) {
+            // Create new track if it doesn't exist
+            track = await this.prisma.track.create({
+              data: {
+                trackId: trackData.trackId,
+                name: trackData.name,
+                artist: trackData.artist,
+                album: trackData.album,
+                preview: trackData.preview,
+                isrc: trackData.isrc,
+                spotifyYear: spotifyYear,
+                spotifyLink: trackData.link,
+                youtubeLink: '',
+                manuallyChecked: false
+              }
+            });
+            
+            this.logger.log(color.green.bold(`Created new track: ${trackData.artist} - ${trackData.name}`));
+            
+            // Add to the list of newly created tracks
+            newTrackIds.push(trackData.trackId);
+            createdDbTrackIds.push(track.id);
+          }
         }
 
-        return { success: true };
+        // If we have new tracks, update their years
+        if (newTrackIds.length > 0) {
+          this.logger.log(color.blue.bold(`Updating years for ${newTrackIds.length} new tracks`));
+          await data.updateTrackYear(newTrackIds, tracksResult.data);
+        }
+
+        // Combine the detailed track info with the position information
+        const enrichedTracks = hitlist.map((track: any) => {
+          const detailedTrack = tracksResult.data.find((t: any) => t.trackId === track.trackId);
+          return {
+            ...track,
+            ...detailedTrack,
+            // Ensure position is preserved from the original hitlist
+            position: track.position
+          };
+        });
+        
+        return { success: true, data: enrichedTracks };
       }
 
       return { success: false, error: 'Failed to get track details' };
