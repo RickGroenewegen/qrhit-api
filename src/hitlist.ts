@@ -2,20 +2,37 @@ import PrismaInstance from './prisma';
 import Logger from './logger';
 import { color } from 'console-log-colors';
 import Cache from './cache';
+import Utils from './utils';
 
 class Hitlist {
   private static instance: Hitlist;
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private cache = Cache.getInstance();
+  private utils = new Utils();
 
-  private constructor() {}
+  private constructor() {
+    this.initDir();
+  }
 
   public static getInstance(): Hitlist {
     if (!Hitlist.instance) {
       Hitlist.instance = new Hitlist();
     }
     return Hitlist.instance;
+  }
+
+  private async initDir(): Promise<void> {
+    try {
+      const backgroundDir = `${process.env['PUBLIC_DIR']}/companydata`;
+      await this.utils.createDir(backgroundDir);
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error initializing company data dir: ${color.white.bold(error)}`
+        )
+      );
+    }
   }
 
   public async getCompanyListByDomain(domain: string) {
@@ -39,6 +56,8 @@ class Hitlist {
           description: companyList.description,
           numberOfTracks: companyList.numberOfTracks,
           companyName: companyList.Company.name,
+          background: companyList.background,
+          logo: companyList.logo,
         },
       };
     } catch (error) {
@@ -277,6 +296,8 @@ class Hitlist {
         };
       }
 
+      console.log(111, submission.id, trackId);
+
       // Find the track in the submission
       const submissionTrack =
         await this.prisma.companyListSubmissionTrack.findFirst({
@@ -299,23 +320,24 @@ class Hitlist {
       });
 
       // Find all tracks with higher positions and decrement their positions
-      const tracksToUpdate = await this.prisma.companyListSubmissionTrack.findMany({
-        where: {
-          companyListSubmissionId: submission.id,
-          position: {
-            gt: removedPosition
-          }
-        },
-        orderBy: {
-          position: 'asc'
-        }
-      });
+      const tracksToUpdate =
+        await this.prisma.companyListSubmissionTrack.findMany({
+          where: {
+            companyListSubmissionId: submission.id,
+            position: {
+              gt: removedPosition,
+            },
+          },
+          orderBy: {
+            position: 'asc',
+          },
+        });
 
       // Update the positions of all subsequent tracks
       for (const track of tracksToUpdate) {
         await this.prisma.companyListSubmissionTrack.update({
           where: { id: track.id },
-          data: { position: track.position - 1 }
+          data: { position: track.position - 1 },
         });
       }
 
