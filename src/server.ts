@@ -1382,22 +1382,44 @@ class Server {
     this.fastify.get('/spotify_callback', async (request: any, reply) => {
       const { code, state } = request.query;
 
-      await this.hitlist.completeSpotifyAuth(code);
-
-      // This endpoint is just for receiving the redirect from Spotify
-      // Display a simple page with the code to copy
-      // reply.type('text/html').send(`
-      //   <html>
-      //     <head><title>Spotify Authorization Complete</title></head>
-      //     <body>
-      //       <h1>Authorization Complete</h1>
-      //       <p>Please copy the following code and use it with the /hitlist/spotify-auth-complete endpoint:</p>
-      //       <textarea rows="5" cols="50" onclick="this.select()">${code}</textarea>
-      //       <p>Example curl command:</p>
-      //       <pre>curl -X POST -H "Content-Type: application/json" -d '{"code":"${code}"}' http://localhost:3004/hitlist/spotify-auth-complete</pre>
-      //     </body>
-      //   </html>
-      // `);
+      if (!code) {
+        reply.type('text/html').send(`
+          <html>
+            <head><title>Spotify Authorization Failed</title></head>
+            <body>
+              <h1>Authorization Failed</h1>
+              <p>No authorization code was received from Spotify.</p>
+            </body>
+          </html>
+        `);
+        return;
+      }
+      
+      // Automatically process the authorization
+      const result = await this.hitlist.completeSpotifyAuth(code);
+      
+      if (result.success) {
+        reply.type('text/html').send(`
+          <html>
+            <head><title>Spotify Authorization Complete</title></head>
+            <body>
+              <h1>Authorization Complete</h1>
+              <p>The Spotify playlist has been created successfully!</p>
+              <p><a href="${result.data.playlistUrl}" target="_blank">View your playlist</a></p>
+            </body>
+          </html>
+        `);
+      } else {
+        reply.type('text/html').send(`
+          <html>
+            <head><title>Spotify Authorization Error</title></head>
+            <body>
+              <h1>Authorization Error</h1>
+              <p>There was an error creating the Spotify playlist: ${result.error}</p>
+            </body>
+          </html>
+        `);
+      }
     });
   }
 }

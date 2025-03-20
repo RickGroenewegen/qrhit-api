@@ -544,24 +544,71 @@ class Hitlist {
       };
       await this.cache.set('pending_playlist_info', JSON.stringify(playlistInfo), 3600);
 
+      // Check if we already have a valid access token
+      const cachedToken = await this.cache.get('spotify_access_token');
+      if (cachedToken) {
+        this.logger.log(color.green.bold('Using cached Spotify access token'));
+        return this.createPlaylistWithToken(cachedToken);
+      }
+
+      // Check if we have a refresh token
+      const refreshToken = await this.cache.get('spotify_refresh_token');
+      if (refreshToken) {
+        try {
+          // Try to get a new access token using the refresh token
+          const refreshResponse = await axios({
+            method: 'post',
+            url: 'https://accounts.spotify.com/api/token',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64')
+            },
+            data: new URLSearchParams({
+              grant_type: 'refresh_token',
+              refresh_token: refreshToken
+            }).toString()
+          });
+
+          if (refreshResponse.data.access_token) {
+            const newAccessToken = refreshResponse.data.access_token;
+            // Store the new access token with expiration (default 1 hour)
+            const expiresIn = refreshResponse.data.expires_in || 3600;
+            await this.cache.set('spotify_access_token', newAccessToken, expiresIn - 60); // Subtract 60 seconds for safety
+            
+            // If a new refresh token was provided, store it too
+            if (refreshResponse.data.refresh_token) {
+              await this.cache.set('spotify_refresh_token', refreshResponse.data.refresh_token);
+            }
+            
+            this.logger.log(color.green.bold('Refreshed Spotify access token'));
+            return this.createPlaylistWithToken(newAccessToken);
+          }
+        } catch (error) {
+          this.logger.log(color.yellow.bold(`Error refreshing token: ${error}`));
+          // Continue with the authorization flow if refresh token failed
+        }
+      }
+
+      // If we don't have a valid token or refresh failed, we need to authorize
       // Generate a random state for security
       const state = this.utils.generateRandomString(16);
       
       // Generate the authorization URL
       // Use the exact redirect URI that was registered with Spotify
-      const redirectUri = process.env['SPOTIFY_REDIRECT_URI'] || 'http://localhost:3004/hitlist/spotify-callback';
+      const redirectUri = process.env['SPOTIFY_REDIRECT_URI'] || 'http://localhost:3004/spotify_callback';
       const scope = 'playlist-modify-public';
       const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${state}`;
       
       // Log the URL to the console so the user can visit it
       this.logger.log(color.yellow.bold('Please visit the following URL to authorize Spotify playlist creation:'));
       this.logger.log(color.white.bold(authUrl));
-      this.logger.log(color.yellow.bold('After authorization, you will be redirected to a callback URL. Copy the "code" parameter from the URL and use it with the /hitlist/spotify-auth-complete endpoint.'));
+      this.logger.log(color.yellow.bold('After authorization, you will be redirected to a callback URL where the process will complete automatically.'));
 
       return {
         success: false,
         error: 'Authorization required',
-        message: 'Please check the server logs for the authorization URL'
+        message: 'Please check the server logs for the authorization URL',
+        authUrl: authUrl
       };
     } catch (error) {
       this.logger.log(
@@ -584,6 +631,57 @@ class Hitlist {
         return { success: false, error: 'Missing Spotify API credentials' };
       }
 
+      // Check if we already have a valid access token
+      const cachedToken = await this.cache.get('spotify_access_token');
+      if (cachedToken) {
+        this.logger.log(color.green.bold('Using cached Spotify access token'));
+        return this.createPlaylistWithToken(cachedToken);
+      }
+
+      // Check if we have a refresh token
+      const refreshToken = await this.cache.get('spotify_refresh_token');
+      if (refreshToken) {
+        try {
+          // Try to get a new access token using the refresh token
+          const refreshResponse = await axios({
+            method: 'post',
+            url: 'https://accounts.spotify.com/api/token',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+              'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64')
+            },
+            data: new URLSearchParams({
+              grant_type: 'refresh_token',
+              refresh_token: refreshToken
+            }).toString()
+          });
+
+          if (refreshResponse.data.access_token) {
+            const newAccessToken = refreshResponse.data.access_token;
+            // Store the new access token with expiration (default 1 hour)
+            const expiresIn = refreshResponse.data.expires_in || 3600;
+            await this.cache.set('spotify_access_token', newAccessToken, expiresIn - 60); // Subtract 60 seconds for safety
+            
+            // If a new refresh token was provided, store it too
+            if (refreshResponse.data.refresh_token) {
+              await this.cache.set('spotify_refresh_token', refreshResponse.data.refresh_token);
+            }
+            
+            this.logger.log(color.green.bold('Refreshed Spotify access token'));
+            return this.createPlaylistWithToken(newAccessToken);
+          }
+        } catch (error) {
+          this.logger.log(color.yellow.bold(`Error refreshing token, will try with auth code: ${error}`));
+          // Continue with the auth code flow if refresh token failed
+        }
+      }
+
+      // If we don't have a valid token or refresh failed, use the auth code
+      if (!authCode) {
+        this.logger.log(color.red.bold('No auth code provided and no valid tokens available'));
+        return { success: false, error: 'Authorization required' };
+      }
+
       // Exchange the authorization code for an access token
       const tokenResponse = await axios({
         method: 'post',
@@ -600,12 +698,34 @@ class Hitlist {
       });
 
       const accessToken = tokenResponse.data.access_token;
+      const newRefreshToken = tokenResponse.data.refresh_token;
+      const expiresIn = tokenResponse.data.expires_in || 3600;
       
       if (!accessToken) {
         this.logger.log(color.red.bold('Failed to get Spotify access token'));
         return { success: false, error: 'Failed to get Spotify access token' };
       }
 
+      // Store the tokens
+      await this.cache.set('spotify_access_token', accessToken, expiresIn - 60); // Subtract 60 seconds for safety
+      if (newRefreshToken) {
+        await this.cache.set('spotify_refresh_token', newRefreshToken);
+      }
+
+      return this.createPlaylistWithToken(accessToken);
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error completing Spotify authorization: ${error}`));
+      return { success: false, error: 'Error completing Spotify authorization' };
+    }
+  }
+
+  /**
+   * Creates a playlist using an existing access token
+   * @param accessToken Spotify access token
+   * @returns Object with success status and playlist data
+   */
+  private async createPlaylistWithToken(accessToken: string): Promise<any> {
+    try {
       // Get the pending playlist info from cache
       const pendingPlaylistInfoStr = await this.cache.get('pending_playlist_info');
       if (!pendingPlaylistInfoStr) {
