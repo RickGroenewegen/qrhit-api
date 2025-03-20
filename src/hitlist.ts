@@ -18,10 +18,10 @@ class Hitlist {
     return Hitlist.instance;
   }
 
-  public async getCompanyListBySlug(slug: string) {
+  public async getCompanyListByDomain(domain: string) {
     try {
       const companyList = await this.prisma.companyList.findFirst({
-        where: { slug },
+        where: { domain },
         include: {
           Company: true,
         },
@@ -215,20 +215,21 @@ class Hitlist {
       }
 
       // Get all tracks for this submission
-      const submissionTracks = await this.prisma.companyListSubmissionTrack.findMany({
-        where: {
-          companyListSubmissionId: submission.id,
-        },
-        include: {
-          Track: true,
-        },
-        orderBy: {
-          position: 'asc',
-        },
-      });
+      const submissionTracks =
+        await this.prisma.companyListSubmissionTrack.findMany({
+          where: {
+            companyListSubmissionId: submission.id,
+          },
+          include: {
+            Track: true,
+          },
+          orderBy: {
+            position: 'asc',
+          },
+        });
 
       // Format the tracks for the response
-      const tracks = submissionTracks.map(st => ({
+      const tracks = submissionTracks.map((st) => ({
         id: st.Track.id,
         trackId: st.Track.trackId,
         name: st.Track.name,
@@ -270,19 +271,20 @@ class Hitlist {
 
       // Check if the submission is still open
       if (submission.status !== 'open') {
-        return { 
-          success: false, 
-          error: 'Cannot modify a submission that has already been submitted' 
+        return {
+          success: false,
+          error: 'Cannot modify a submission that has already been submitted',
         };
       }
 
       // Find the track in the submission
-      const submissionTrack = await this.prisma.companyListSubmissionTrack.findFirst({
-        where: {
-          companyListSubmissionId: submission.id,
-          trackId,
-        },
-      });
+      const submissionTrack =
+        await this.prisma.companyListSubmissionTrack.findFirst({
+          where: {
+            companyListSubmissionId: submission.id,
+            trackId,
+          },
+        });
 
       if (!submissionTrack) {
         return { success: false, error: 'Track not found in this submission' };
