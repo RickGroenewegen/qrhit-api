@@ -1306,7 +1306,16 @@ class Server {
     });
 
     this.fastify.post('/hitlist/submit', async (request: any, _reply) => {
-      const result = await this.hitlist.submit(request.body.hitlist);
+      const { hitlist, companyListId, submissionHash } = request.body;
+      
+      // Add companyListId and submissionHash to each track
+      const enrichedHitlist = hitlist.map((track: any) => ({
+        ...track,
+        companyListId,
+        submissionHash
+      }));
+      
+      const result = await this.hitlist.submit(enrichedHitlist);
       return result;
     });
   }

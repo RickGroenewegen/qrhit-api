@@ -44,6 +44,40 @@ class Hitlist {
     try {
       console.log(111, hitlist);
 
+      // Check if we have a company list submission hash in the first track
+      const submissionHash = hitlist[0]?.submissionHash;
+      const companyListId = hitlist[0]?.companyListId;
+
+      if (!submissionHash || !companyListId) {
+        return {
+          success: false,
+          error: 'Missing submission hash or company list ID',
+        };
+      }
+
+      // Find or create the company list submission
+      let submission = await this.prisma.companyListSubmission.findUnique({
+        where: { hash: submissionHash },
+      });
+
+      if (!submission) {
+        submission = await this.prisma.companyListSubmission.create({
+          data: {
+            companyListId: parseInt(companyListId),
+            hash: submissionHash,
+            status: 'open',
+          },
+        });
+
+        this.logger.log(
+          color.green.bold(
+            `Created new company list submission with hash ${color.white.bold(
+              submissionHash
+            )}`
+          )
+        );
+      }
+
       // Extract track IDs from the hitlist
       const trackIds = hitlist.map((track: any) => track.trackId);
 
@@ -55,6 +89,7 @@ class Hitlist {
       if (tracksResult.success && tracksResult.data) {
         // Array to store newly created track IDs
         const newTrackIds: string[] = [];
+        const trackDbIds: Map<string, number> = new Map(); // Map to store trackId -> DB id
 
         this.logger.log(
           color.blue.bold(
@@ -93,6 +128,9 @@ class Hitlist {
             // Add to the list of newly created tracks
             newTrackIds.push(trackData.trackId);
           }
+
+          // Store the DB id for this track
+          trackDbIds.set(trackData.trackId, track.id);
         }
 
         this.logger.log(
@@ -111,6 +149,38 @@ class Hitlist {
           await data.updateTrackYear(newTrackIds, tracksResult.data);
         }
 
+        // Delete any existing tracks for this submission
+        await this.prisma.companyListSubmissionTrack.deleteMany({
+          where: {
+            companyListSubmissionId: submission.id,
+          },
+        });
+
+        // Create CompanyListSubmissionTrack entries for each track
+        for (const track of hitlist) {
+          const trackDbId = trackDbIds.get(track.trackId);
+
+          if (trackDbId) {
+            await this.prisma.companyListSubmissionTrack.create({
+              data: {
+                companyListSubmissionId: submission.id,
+                trackId: trackDbId,
+                position: track.position,
+              },
+            });
+          }
+        }
+
+        this.logger.log(
+          color.green.bold(
+            `Created ${color.white.bold(
+              hitlist.length
+            )} submission tracks for submission ${color.white.bold(
+              submission.id
+            )}`
+          )
+        );
+
         // Combine the detailed track info with the position information
         const enrichedTracks = hitlist.map((track: any) => {
           const detailedTrack = tracksResult.data.find(
@@ -124,7 +194,17 @@ class Hitlist {
           };
         });
 
-        return { success: true, data: enrichedTracks };
+        return {
+          success: true,
+          data: {
+            tracks: enrichedTracks,
+            submission: {
+              id: submission.id,
+              hash: submission.hash,
+              status: submission.status,
+            },
+          },
+        };
       }
 
       return { success: false, error: 'Failed to get track details' };
