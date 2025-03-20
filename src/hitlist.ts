@@ -3,6 +3,7 @@ import Logger from './logger';
 import { color } from 'console-log-colors';
 import Cache from './cache';
 import Utils from './utils';
+import Spotify from './spotify';
 
 class Hitlist {
   private static instance: Hitlist;
@@ -72,23 +73,21 @@ class Hitlist {
         return { success: false, error: 'Search string too short' };
       }
 
-      // Search for tracks that match the search string in name or artist
-      const tracks = await this.prisma.track.findMany({
-        where: {
-          OR: [
-            { name: { contains: searchString } },
-            { artist: { contains: searchString } },
-          ],
-        },
-        select: {
-          id: true,
-          trackId: true,
-          name: true,
-          artist: true,
-        },
-        take: 10,
-        orderBy: [{ name: 'asc' }],
-      });
+      // Use Spotify search instead of database search
+      const spotify = new Spotify();
+      const spotifyResult = await spotify.searchTracks(searchString);
+      
+      if (!spotifyResult.success) {
+        return spotifyResult;
+      }
+      
+      // Transform the Spotify search results to match the expected format
+      const tracks = spotifyResult.data.tracks.map((track: any) => ({
+        id: track.id,
+        trackId: track.trackId,
+        name: track.name,
+        artist: track.artist
+      }));
 
       return {
         success: true,

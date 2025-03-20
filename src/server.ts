@@ -1289,12 +1289,11 @@ class Server {
     });
 
     this.fastify.post('/hitlist/search', async (request: any, _reply) => {
-      return await this.hitlist.searchTracks(request.body.searchString);
-    });
+      const { searchString, limit = 10, offset = 0 } = request.body;
 
-    this.fastify.post('/spotify/search', async (request: any, _reply) => {
-      const { searchTerm, limit = 10, offset = 0 } = request.body;
-      return await this.spotify.searchTracks(searchTerm, limit, offset);
+      console.log(111, searchString, limit, offset);
+
+      return await this.spotify.searchTracks(searchString, limit, offset);
     });
 
     this.fastify.post('/hitlist/track', async (request: any, _reply) => {
