@@ -83,19 +83,21 @@ class Hitlist {
       
       // Transform the Spotify search results to match the expected format
       // Based on the JSON structure from the error, we need to extract data differently
-      const tracks = spotifyResult.data.tracks.items
-        .filter((item: any) => item.data && item.data.id) // Filter out any empty data items
-        .map((item: any) => {
-          const track = item.data;
-          const artistName = track.artists?.items?.[0]?.profile?.name || 'Unknown Artist';
-          
-          return {
-            id: track.id,
-            trackId: track.id, // Use the Spotify track ID
-            name: track.name,
-            artist: artistName
-          };
-        });
+      const tracks = spotifyResult.data?.tracks?.items
+        ? spotifyResult.data.tracks.items
+            .filter((item: any) => item && item.data && item.data.id) // Filter out any empty data items
+            .map((item: any) => {
+              const track = item.data;
+              const artistName = track.artists?.items?.[0]?.profile?.name || 'Unknown Artist';
+              
+              return {
+                id: track.id,
+                trackId: track.id, // Use the Spotify track ID
+                name: track.name || 'Unknown Track',
+                artist: artistName
+              };
+            })
+        : [];
 
       return {
         success: true,
