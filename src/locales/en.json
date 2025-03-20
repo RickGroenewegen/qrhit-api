@@ -114,6 +114,17 @@
 	"voucher.dearMusicLover" : "Dear music lover",
 	"voucher.withMusicalGreetings" : "With musical greetings",
 	
+	"verification.subject" : "Verify Your Playlist Submission",
+	"verification.title" : "Verify Your Playlist Submission",
+	"verification.hello" : "Hello",
+	"verification.thankYou" : "Thank you for submitting your playlist to",
+	"verification.toComplete" : "To complete your submission, please verify your email address by clicking the button below:",
+	"verification.buttonText" : "Verify My Submission",
+	"verification.ignoreMessage" : "If you did not submit this playlist, you can safely ignore this email.",
+	"verification.buttonFallback" : "If the button above doesn't work, you can also copy and paste the following link into your browser:",
+	"verification.thanks" : "Thank you",
+	"verification.team" : "Team",
+	
 	"countdown.youNeedToInstall" : "Install our app to scan your cards!",
 	"countdown.createYourOwn" : "Create your own QR Music cards!",
 	"countdown.visit" : "Visit our website",

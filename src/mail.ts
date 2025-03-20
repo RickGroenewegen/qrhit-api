@@ -705,12 +705,20 @@ ${params.html}
     const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
     const verificationLink = `${process.env['FRONTEND_URI']}/verify-submission/${submissionHash}`;
 
+    const translations = await this.translation.getTranslationsByPrefix(
+      'en', // Default to English for now
+      'verification'
+    );
+
     const mailParams = {
       fullname: fullname || email.split('@')[0],
       companyName,
       verificationLink,
       productName: process.env['PRODUCT_NAME'],
       currentYear: new Date().getFullYear(),
+      translations: {
+        verification: translations
+      },
     };
 
     try {
@@ -721,7 +729,7 @@ ${params.html}
       const html = await this.templates.render('mails/verification_html', mailParams);
       const text = await this.templates.render('mails/verification_text', mailParams);
 
-      const subject = `Verify Your Playlist Submission - ${process.env['PRODUCT_NAME']}`;
+      const subject = `${this.translation.translate('verification.subject', 'en')} - ${process.env['PRODUCT_NAME']}`;
 
       const attachments: Attachment[] = [
         {
