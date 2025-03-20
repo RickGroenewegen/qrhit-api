@@ -1342,20 +1342,27 @@ class Data {
       WHERE trackId IN (${Prisma.join(providedTrackIds)})
     `;
 
+    this.logger.log(
+      color.blue.bold(
+        `Updating years for playlist ${color.white.bold(playlistId)}`
+      )
+    );
+
+    await this.updateTrackYear(providedTrackIds, tracks);
+  }
+
+  public async updateTrackYear(
+    trackIds: string[],
+    tracks: Track[]
+  ): Promise<void> {
     // Fetch tracks that need year update
     const tracksNeedingYearUpdate = await this.prisma.$queryRaw<
       TrackNeedingYearUpdate[]
     >`
       SELECT id, isrc, trackId, name, artist
       FROM tracks
-      WHERE year IS NULL AND trackId IN (${Prisma.join(providedTrackIds)})
+      WHERE year IS NULL AND trackId IN (${Prisma.join(trackIds)})
     `;
-
-    this.logger.log(
-      color.blue.bold(
-        `Updating years for playlist ${color.white.bold(playlistId)}`
-      )
-    );
 
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {

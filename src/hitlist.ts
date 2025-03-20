@@ -139,7 +139,7 @@ class Hitlist {
           fullname || email.split('@')[0],
           companyList.Company.name,
           submission.verificationHash,
-          companyList.domain
+          companyList.domain!
         );
       }
 

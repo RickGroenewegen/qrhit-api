@@ -1309,7 +1309,8 @@ class Server {
     });
 
     this.fastify.post('/hitlist/submit', async (request: any, reply) => {
-      const { hitlist, companyListId, submissionHash, fullname, email } = request.body;
+      const { hitlist, companyListId, submissionHash, fullname, email } =
+        request.body;
 
       // Add companyListId, submissionHash, fullname and email to each track
       const enrichedHitlist = hitlist.map((track: any) => ({
@@ -1324,45 +1325,30 @@ class Server {
       if (!result.success) {
         return result; // Return error if submission failed
       }
-      
+
       return {
         success: true,
-        message: email ? 'Please check your email to verify your submission' : 'Submission received',
+        message: email
+          ? 'Please check your email to verify your submission'
+          : 'Submission received',
       };
     });
 
-    this.fastify.get('/verify-submission/:hash', async (request: any, reply) => {
-      const { hash } = request.params;
-      
-      if (!hash) {
-        reply.status(400).send({ success: false, error: 'Missing verification hash' });
-        return;
-      }
-
-      const success = await this.hitlist.verifySubmission(hash);
-      
-      if (success) {
-        // Redirect to a success page
-        reply.redirect(`${process.env['FRONTEND_URI']}/submission-verified`);
-      } else {
-        // Redirect to an error page
-        reply.redirect(`${process.env['FRONTEND_URI']}/verification-failed`);
-      }
-    });
-    
     // API endpoint for verifying submissions via POST request
     this.fastify.post('/hitlist/verify', async (request: any, reply) => {
       const { hash } = request.body;
-      
+
       if (!hash) {
         return { success: false, error: 'Missing verification hash' };
       }
 
       const success = await this.hitlist.verifySubmission(hash);
-      
-      return { 
+
+      return {
         success: success,
-        message: success ? 'Submission verified successfully' : 'Verification failed'
+        message: success
+          ? 'Submission verified successfully'
+          : 'Verification failed',
       };
     });
   }
