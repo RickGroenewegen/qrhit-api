@@ -536,43 +536,112 @@ class Hitlist {
         return { success: false, error: 'Missing Spotify API credentials' };
       }
 
-      // Get access token using client credentials flow
+      // Store the playlist info in cache for later use
+      const playlistInfo = {
+        companyName,
+        listName,
+        trackIds
+      };
+      await this.cache.set('pending_playlist_info', JSON.stringify(playlistInfo), 3600);
+
+      // Generate a random state for security
+      const state = this.utils.generateRandomString(16);
+      
+      // Generate the authorization URL
+      const redirectUri = `${process.env['BACKEND_URI']}/hitlist/spotify-callback`;
+      const scope = 'playlist-modify-public';
+      const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${state}`;
+      
+      // Log the URL to the console so the user can visit it
+      this.logger.log(color.yellow.bold('Please visit the following URL to authorize Spotify playlist creation:'));
+      this.logger.log(color.white.bold(authUrl));
+      this.logger.log(color.yellow.bold('After authorization, you will be redirected to a callback URL. Copy the "code" parameter from the URL and use it with the /hitlist/spotify-auth-complete endpoint.'));
+
+      return {
+        success: false,
+        error: 'Authorization required',
+        message: 'Please check the server logs for the authorization URL'
+      };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error creating Spotify playlist: ${error}`)
+      );
+      return { success: false, error: 'Error creating Spotify playlist' };
+    }
+  }
+
+  public async completeSpotifyAuth(authCode: string): Promise<any> {
+    try {
+      // Get the client ID and secret
+      const clientId = process.env['SPOTIFY_CLIENT_ID'];
+      const clientSecret = process.env['SPOTIFY_CLIENT_SECRET'];
+      const redirectUri = `${process.env['BACKEND_URI']}/hitlist/spotify-callback`;
+
+      if (!clientId || !clientSecret) {
+        this.logger.log(color.red.bold('Missing Spotify API credentials'));
+        return { success: false, error: 'Missing Spotify API credentials' };
+      }
+
+      // Exchange the authorization code for an access token
       const tokenResponse = await axios({
         method: 'post',
         url: 'https://accounts.spotify.com/api/token',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization:
-            'Basic ' +
-            Buffer.from(clientId + ':' + clientSecret).toString('base64'),
+          'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64')
         },
-        data: 'grant_type=client_credentials',
+        data: new URLSearchParams({
+          grant_type: 'authorization_code',
+          code: authCode,
+          redirect_uri: redirectUri
+        }).toString()
       });
 
       const accessToken = tokenResponse.data.access_token;
-
+      
       if (!accessToken) {
         this.logger.log(color.red.bold('Failed to get Spotify access token'));
         return { success: false, error: 'Failed to get Spotify access token' };
       }
 
+      // Get the pending playlist info from cache
+      const pendingPlaylistInfoStr = await this.cache.get('pending_playlist_info');
+      if (!pendingPlaylistInfoStr) {
+        this.logger.log(color.red.bold('No pending playlist information found'));
+        return { success: false, error: 'No pending playlist information found' };
+      }
+
+      const pendingPlaylistInfo = JSON.parse(pendingPlaylistInfoStr);
+      const { companyName, listName, trackIds } = pendingPlaylistInfo;
+
       // Create a new playlist
       const playlistName = `${companyName} - ${listName} Top Tracks`;
       const playlistDescription = `Top tracks for ${companyName} - ${listName}. Created automatically.`;
 
+      // Get the user profile to get the user ID
+      const profileResponse = await axios({
+        method: 'get',
+        url: 'https://api.spotify.com/v1/me',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`
+        }
+      });
+
+      const userId = profileResponse.data.id;
+
       // Create the playlist
       const createPlaylistResponse = await axios({
         method: 'post',
-        url: `https://api.spotify.com/v1/users/rickman9/playlists`,
+        url: `https://api.spotify.com/v1/users/${userId}/playlists`,
         headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
         },
         data: JSON.stringify({
           name: playlistName,
           description: playlistDescription,
-          public: true,
-        }),
+          public: true
+        })
       });
 
       const playlistId = createPlaylistResponse.data.id;
@@ -584,7 +653,7 @@ class Hitlist {
       }
 
       // Add tracks to the playlist (maximum 100 tracks per request)
-      const trackUris = trackIds.map((id) => `spotify:track:${id}`);
+      const trackUris = trackIds.map((id: string) => `spotify:track:${id}`);
 
       // Split into chunks of 100 if needed
       const chunkSize = 100;
@@ -595,36 +664,35 @@ class Hitlist {
           method: 'post',
           url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
           headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
           },
           data: JSON.stringify({
-            uris: chunk,
-          }),
+            uris: chunk
+          })
         });
       }
 
       this.logger.log(
         color.green.bold(
-          `Created Spotify playlist "${color.white.bold(
-            playlistName
-          )}" with ${color.white.bold(trackIds.length)} tracks`
+          `Created Spotify playlist "${color.white.bold(playlistName)}" with ${color.white.bold(trackIds.length)} tracks`
         )
       );
+
+      // Clear the pending playlist info
+      await this.cache.del('pending_playlist_info');
 
       return {
         success: true,
         data: {
           playlistId,
           playlistUrl,
-          playlistName,
-        },
+          playlistName
+        }
       };
     } catch (error) {
-      this.logger.log(
-        color.red.bold(`Error creating Spotify playlist: ${error}`)
-      );
-      return { success: false, error: 'Error creating Spotify playlist' };
+      this.logger.log(color.red.bold(`Error completing Spotify authorization: ${error}`));
+      return { success: false, error: 'Error completing Spotify authorization' };
     }
   }
 
