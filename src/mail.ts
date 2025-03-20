@@ -698,12 +698,12 @@ ${params.html}
     email: string,
     fullname: string,
     companyName: string,
-    submissionHash: string
+    verificationHash: string
   ): Promise<void> {
     if (!this.ses) return;
 
     const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
-    const verificationLink = `${process.env['FRONTEND_URI']}/verify-submission/${submissionHash}`;
+    const verificationLink = `${process.env['FRONTEND_URI']}/verify-submission/${verificationHash}`;
 
     const translations = await this.translation.getTranslationsByPrefix(
       'en', // Default to English for now

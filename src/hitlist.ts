@@ -97,10 +97,14 @@ class Hitlist {
       });
 
       if (!submission) {
+        // Generate a unique verification hash
+        const verificationHash = this.utils.generateRandomString(32);
+        
         submission = await this.prisma.companyListSubmission.create({
           data: {
             companyListId: parseInt(companyListId),
             hash: submissionHash,
+            verificationHash: verificationHash,
             status: 'pending_verification', // Changed from 'submitted' to 'pending_verification'
             name: fullname || null,
             email: email || null,
@@ -111,7 +115,7 @@ class Hitlist {
           color.green.bold(
             `Created new company list submission with hash ${color.white.bold(
               submissionHash
-            )}`
+            )} and verification hash ${color.white.bold(verificationHash)}`
           )
         );
       } else {
@@ -127,12 +131,12 @@ class Hitlist {
       }
 
       // Send verification email if we have an email address
-      if (email) {
+      if (email && submission.verificationHash) {
         await this.mail.sendVerificationEmail(
           email,
           fullname || email.split('@')[0],
           companyList.Company.name,
-          submissionHash
+          submission.verificationHash
         );
       }
 
@@ -257,16 +261,16 @@ class Hitlist {
     }
   }
 
-  public async verifySubmission(submissionHash: string): Promise<boolean> {
+  public async verifySubmission(verificationHash: string): Promise<boolean> {
     try {
       const submission = await this.prisma.companyListSubmission.findUnique({
-        where: { hash: submissionHash },
+        where: { verificationHash: verificationHash },
       });
 
       if (!submission) {
         this.logger.log(
           color.red.bold(
-            `Submission with hash ${color.white.bold(submissionHash)} not found`
+            `Submission with verification hash ${color.white.bold(verificationHash)} not found`
           )
         );
         return false;
@@ -284,7 +288,7 @@ class Hitlist {
 
       this.logger.log(
         color.green.bold(
-          `Verified submission with hash ${color.white.bold(submissionHash)}`
+          `Verified submission with hash ${color.white.bold(submission.hash)} using verification hash ${color.white.bold(verificationHash)}`
         )
       );
       return true;
