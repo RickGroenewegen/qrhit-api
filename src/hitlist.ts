@@ -144,6 +144,19 @@ class Hitlist {
         );
       }
 
+      // Process the rest of the submission asynchronously
+      this.processSubmissionAsync(hitlist, submission.id);
+
+      return {
+        success: true,
+      };
+
+      return { success: false, error: 'Failed to get track details' };
+    }
+  }
+
+  private async processSubmissionAsync(hitlist: any[], submissionId: number): Promise<void> {
+    try {
       // Extract track IDs from the hitlist
       const trackIds = hitlist.map((track: any) => track.trackId);
 
@@ -224,7 +237,7 @@ class Hitlist {
         // Delete any existing tracks for this submission
         await this.prisma.companyListSubmissionTrack.deleteMany({
           where: {
-            companyListSubmissionId: submission.id,
+            companyListSubmissionId: submissionId,
           },
         });
 
@@ -235,7 +248,7 @@ class Hitlist {
           if (trackDbId) {
             await this.prisma.companyListSubmissionTrack.create({
               data: {
-                companyListSubmissionId: submission.id,
+                companyListSubmissionId: submissionId,
                 trackId: trackDbId,
                 position: track.position,
               },
@@ -248,17 +261,23 @@ class Hitlist {
             `Created ${color.white.bold(
               hitlist.length
             )} submission tracks for submission ${color.white.bold(
-              submission.id
+              submissionId
             )}`
           )
         );
-
-        return {
-          success: true,
-        };
+      } else {
+        this.logger.log(
+          color.red.bold(
+            `Failed to get track details for submission ${color.white.bold(submissionId)}`
+          )
+        );
       }
-
-      return { success: false, error: 'Failed to get track details' };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error processing submission ${color.white.bold(submissionId)} asynchronously: ${error}`
+        )
+      );
     } catch (error) {
       this.logger.log(color.red.bold(`Error submitting hitlist: ${error}`));
       return { success: false, error: 'Error submitting hitlist' };
