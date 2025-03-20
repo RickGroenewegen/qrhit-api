@@ -211,6 +211,19 @@ class Hitlist {
         return { success: false, error: 'Company list not found' };
       }
 
+      let submissionStatus = 'open';
+      
+      if (hash && hash.length > 0) {
+        // Find the submission with this hash
+        const submission = await this.prisma.companyListSubmission.findUnique({
+          where: { hash },
+        });
+        
+        if (submission) {
+          submissionStatus = submission.status;
+        }
+      }
+
       return {
         success: true,
         data: {
@@ -221,6 +234,7 @@ class Hitlist {
           companyName: companyList.Company.name,
           background: companyList.background,
           logo: companyList.logo,
+          submissionStatus: submissionStatus,
         },
       };
     } catch (error) {
