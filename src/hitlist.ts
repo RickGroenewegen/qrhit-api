@@ -88,15 +88,17 @@ class Hitlist {
             .filter((item: any) => item && item.data && item.data.id) // Filter out any empty data items
             .map((item: any) => {
               const track = item.data;
-              const artistName = track.artists?.items?.[0]?.profile?.name || 'Unknown Artist';
+              const artistName = track.artists?.items?.[0]?.profile?.name || '';
+              const trackName = track.name || '';
               
               return {
                 id: track.id,
                 trackId: track.id, // Use the Spotify track ID
-                name: track.name || 'Unknown Track',
+                name: trackName,
                 artist: artistName
               };
             })
+            .filter((track: any) => track.name && track.artist) // Filter out tracks with empty name or artist
         : [];
 
       return {

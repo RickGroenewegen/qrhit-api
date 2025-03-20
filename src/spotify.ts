@@ -507,14 +507,17 @@ class Spotify {
               ? track.albumOfTrack.coverArt.sources[0].url
               : '';
 
+          const trackName = this.utils.cleanTrackName(track.name || '');
+
           return {
             id: track.id || '',
             trackId: track.id || '',
-            name: this.utils.cleanTrackName(track.name || ''),
+            name: trackName,
             artist: artist,
             image: imageUrl,
           };
-        });
+        })
+        .filter((track: any) => track.name && track.artist); // Filter out tracks with empty name or artist
 
       const result = {
         success: true,
@@ -736,9 +739,9 @@ class Spotify {
               })
           );
 
-          // remove all items that do not have an artist or image
+          // remove all items that do not have an artist, name, or image
           const filteredTracks = tracks.filter(
-            (track) => track.artist && track.image
+            (track) => track.artist && track.name && track.image
           );
 
           filteredTracks.forEach((track) => {
