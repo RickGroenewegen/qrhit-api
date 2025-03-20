@@ -1354,9 +1354,9 @@ class Server {
     });
 
     // API endpoint for finalizing a company list (creating a top 10)
-    this.fastify.get('/hitlist/finalize/:companyListId', async (request: any, reply) => {
-      const { companyListId } = request.params;
-      
+    this.fastify.post('/hitlist/finalize', async (request: any, reply) => {
+      const { companyListId } = request.body;
+
       if (!companyListId) {
         return { success: false, error: 'Missing company list ID' };
       }
