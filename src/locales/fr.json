@@ -382,5 +382,15 @@
   "mail.youCanReview": "Bonne nouvelle ! Votre playlist a été examinée par notre équipe. Nous vous invitons à examiner votre playlist également. Votre commande sera traitée et expédiée automatiquement après 36 heures. Si vous ne souhaitez pas apporter de modifications, vous pouvez également demander à ce que la commande soit imprimée et expédiée immédiatement.",
   "mail.reviewOrder": "Revois ta commande",
   "countdown.createYourOwn": "Créez vos propres cartes QR Musique!",
-  "countdown.visit": "Visitez notre site"
+  "countdown.visit": "Visitez notre site",
+  "verification.subject": "Vérifie ta soumission de playlist",
+  "verification.title": "Vérifie ta soumission de playlist",
+  "verification.hello": "Salut",
+  "verification.thankYou": "Merci d'avoir soumis ta playlist à",
+  "verification.toComplete": "Pour compléter ta soumission, vérifie ton adresse e-mail en cliquant sur le bouton ci-dessous :",
+  "verification.buttonText": "Vérifie ma soumission",
+  "verification.ignoreMessage": "Si tu n'as pas soumis cette playlist, ignore cet e-mail.",
+  "verification.buttonFallback": "Si le bouton ci-dessus ne fonctionne pas, copie et colle le lien suivant dans ton navigateur :",
+  "verification.thanks": "Merci",
+  "verification.team": "Équipe"
 }

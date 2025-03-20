@@ -373,5 +373,15 @@
   "countries.EH": "Западная Сахара",
   "countries.YE": "Йемен",
   "countries.ZM": "Замбия",
-  "countries.ZW": "Зимбабве"
+  "countries.ZW": "Зимбабве",
+  "verification.subject": "Подтвердите отправку плейлиста",
+  "verification.title": "Подтвердите отправку плейлиста",
+  "verification.hello": "Привет",
+  "verification.thankYou": "Спасибо за отправку плейлиста в",
+  "verification.toComplete": "Чтобы завершить отправку, подтвердите свой адрес электронной почты, нажав кнопку ниже:",
+  "verification.buttonText": "Подтвердить отправку",
+  "verification.ignoreMessage": "Если вы не отправляли этот плейлист, просто игнорируйте это письмо.",
+  "verification.buttonFallback": "Если кнопка выше не работает, скопируйте и вставьте следующую ссылку в ваш браузер:",
+  "verification.thanks": "Спасибо",
+  "verification.team": "Команда"
 }

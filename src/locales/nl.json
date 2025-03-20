@@ -382,5 +382,15 @@
   "mail.youCanReview": "Goed nieuws! Je playlist is beoordeeld door ons team. We nodigen je uit om je playlist ook te beoordelen. Je bestelling wordt automatisch verwerkt en verzonden na 36 uur. Als je geen wijzigingen wilt maken, kun je ook vragen om de bestelling direct te laten printen en verzenden.",
   "mail.reviewOrder": "Bekijk je bestelling",
   "countdown.createYourOwn": "Maak je eigen QR Muziekkaarten!",
-  "countdown.visit": "Bezoek onze website"
+  "countdown.visit": "Bezoek onze website",
+  "verification.subject": "Verifieer je playlistinzending",
+  "verification.title": "Verifieer je playlistinzending",
+  "verification.hello": "Hallo",
+  "verification.thankYou": "Bedankt voor het indienen van je playlist bij",
+  "verification.toComplete": "Om je inzending te voltooien, verifieer je e-mailadres door op de knop hieronder te klikken:",
+  "verification.buttonText": "Verifieer mijn inzending",
+  "verification.ignoreMessage": "Als je deze playlist niet hebt ingediend, kun je deze e-mail negeren.",
+  "verification.buttonFallback": "Als de knop hierboven niet werkt, kun je ook de volgende link kopiëren en in je browser plakken:",
+  "verification.thanks": "Dank je",
+  "verification.team": "Team"
 }

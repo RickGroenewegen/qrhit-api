@@ -373,5 +373,15 @@
   "mail.youCanReview": "素晴らしいニュース！あなたのプレイリストは私たちのチームによってレビューされました。あなたにもプレイリストをレビューしていただきたいです。注文は36時間後に自動的に処理され、発送されます。変更を希望しない場合は、注文をすぐに印刷して発送するようにリクエストすることもできます。",
   "mail.reviewOrder": "注文を確認する",
   "countdown.createYourOwn": "自分のQR音楽カードを作ろう！",
-  "countdown.visit": "私たちのウェブサイトを訪問して"
+  "countdown.visit": "私たちのウェブサイトを訪問して",
+  "verification.subject": "プレイリストの提出を確認",
+  "verification.title": "プレイリストの提出を確認",
+  "verification.hello": "こんにちは",
+  "verification.thankYou": "プレイリストを送ってくれてありがとう",
+  "verification.toComplete": "提出を完了するには、下のボタンをクリックしてメールアドレスを確認してください:",
+  "verification.buttonText": "提出を確認",
+  "verification.ignoreMessage": "このプレイリストを提出していない場合は、このメールを無視してください。",
+  "verification.buttonFallback": "上のボタンが機能しない場合は、以下のリンクをコピーしてブラウザに貼り付けてください：",
+  "verification.thanks": "ありがとう",
+  "verification.team": "チーム"
 }

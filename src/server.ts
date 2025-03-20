@@ -1287,7 +1287,8 @@ class Server {
     this.fastify.post('/hitlist', async (request: any, _reply) => {
       return await this.hitlist.getCompanyListByDomain(
         request.body.domain,
-        request.body.hash
+        request.body.hash,
+        request.body.slug
       );
     });
 

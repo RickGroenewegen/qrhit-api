@@ -381,5 +381,15 @@
   "mail.youCanReview": "¡Buenas noticias! Tu lista de reproducción ha sido revisada por nuestro equipo. Nos gustaría invitarte a revisar tu lista también. Tu pedido se procesará y enviará automáticamente después de 36 horas. Si no deseas hacer cambios, también puedes solicitar que el pedido se imprima y envíe de inmediato.",
   "mail.reviewOrder": "Revisa tu pedido",
   "countdown.createYourOwn": "¡Crea tus propias tarjetas QR de música!",
-  "countdown.visit": "Visita nuestro sitio web"
+  "countdown.visit": "Visita nuestro sitio web",
+  "verification.subject": "Verifica tu envío de lista",
+  "verification.title": "Verifica tu envío de lista",
+  "verification.hello": "Hola",
+  "verification.thankYou": "Gracias por enviar tu lista a",
+  "verification.toComplete": "Para completar tu envío, verifica tu correo haciendo clic en el botón de abajo:",
+  "verification.buttonText": "Verifica mi envío",
+  "verification.ignoreMessage": "Si no enviaste esta lista, ignora este correo.",
+  "verification.buttonFallback": "Si el botón de arriba no funciona, copia y pega el siguiente enlace en tu navegador:",
+  "verification.thanks": "Gracias",
+  "verification.team": "Equipo"
 }

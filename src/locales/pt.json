@@ -377,5 +377,15 @@
   "mail.youCanReview": "Ótima notícia! Sua playlist foi revisada pela nossa equipe. Gostaríamos de convidá-lo a revisar sua playlist também. Seu pedido será processado e enviado automaticamente após 36 horas. Se você não deseja fazer alterações, também pode solicitar que o pedido seja impresso e enviado imediatamente.",
   "mail.reviewOrder": "Revise seu pedido",
   "countdown.createYourOwn": "Crie seus próprios cartões QR de música!",
-  "countdown.visit": "Visite nosso site"
+  "countdown.visit": "Visite nosso site",
+  "verification.subject": "Verifica tua playlist",
+  "verification.title": "Verifica tua playlist",
+  "verification.hello": "Olá",
+  "verification.thankYou": "Obrigado por enviar sua playlist para",
+  "verification.toComplete": "Para completar sua submissão, verifique seu e-mail clicando no botão abaixo:",
+  "verification.buttonText": "Verifica minha submissão",
+  "verification.ignoreMessage": "Se você não enviou esta playlist, ignore este e-mail.",
+  "verification.buttonFallback": "Se o botão acima não funcionar, copie e cole o link abaixo no seu navegador:",
+  "verification.thanks": "Obrigado",
+  "verification.team": "Equipe"
 }

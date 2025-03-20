@@ -699,14 +699,14 @@ ${params.html}
     fullname: string,
     companyName: string,
     verificationHash: string,
-    domain?: string
+    domain?: string,
+    slug?: string
   ): Promise<void> {
     if (!this.ses) return;
 
     const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
     // Use the company domain if provided, otherwise fall back to FRONTEND_URI
-    const baseUrl = domain ? `https://${domain}` : process.env['FRONTEND_URI'];
-    const verificationLink = `${baseUrl}/hitlist/verify/${verificationHash}`;
+    const verificationLink = `${process.env['FRONTEND_URI']}/hitlist/${slug}/verify/${verificationHash}`;
 
     const translations = await this.translation.getTranslationsByPrefix(
       'en', // Default to English for now
@@ -775,7 +775,7 @@ ${params.html}
 
       await this.ses.send(command);
       this.logger.log(
-        color.green.bold(`Verification email sent to ${white.bold(email)}`)
+        color.blue.bold(`Verification email sent to ${white.bold(email)}`)
       );
     } catch (error) {
       console.error('Error while sending verification email:', error);

@@ -113,7 +113,7 @@ class Hitlist {
         });
 
         this.logger.log(
-          color.green.bold(
+          color.blue.bold(
             `Created new company list submission with hash ${color.white.bold(
               submissionHash
             )} and verification hash ${color.white.bold(verificationHash)}`
@@ -139,7 +139,8 @@ class Hitlist {
           fullname || email.split('@')[0],
           companyList.Company.name,
           submission.verificationHash,
-          companyList.domain!
+          companyList.domain!,
+          companyList.slug!
         );
       }
 
@@ -305,10 +306,14 @@ class Hitlist {
     }
   }
 
-  public async getCompanyListByDomain(domain: string, hash: string) {
+  public async getCompanyListByDomain(
+    domain: string,
+    hash: string,
+    slug: string
+  ) {
     try {
       const companyList = await this.prisma.companyList.findFirst({
-        where: { domain },
+        where: { slug },
         include: {
           Company: true,
         },

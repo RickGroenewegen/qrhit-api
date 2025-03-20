@@ -373,5 +373,15 @@
   "mail.youCanReview": "好消息！您的播放列表已由我们的团队审核。我们也邀请您审核您的播放列表。您的订单将在36小时后自动处理并发货。如果您不想进行任何更改，也可以请求立即打印和发货。",
   "mail.reviewOrder": "查看您的订单",
   "countdown.createYourOwn": "创建你自己的QR音乐卡！",
-  "countdown.visit": "访问我们的网站"
+  "countdown.visit": "访问我们的网站",
+  "verification.subject": "验证您的播放列表提交",
+  "verification.title": "验证您的播放列表提交",
+  "verification.hello": "你好",
+  "verification.thankYou": "感谢您提交播放列表到",
+  "verification.toComplete": "要完成提交，请点击下面的按钮验证您的电子邮件地址：",
+  "verification.buttonText": "验证我的提交",
+  "verification.ignoreMessage": "如果您没有提交此播放列表，可以忽略此电子邮件。",
+  "verification.buttonFallback": "如果上面的按钮不起作用，您也可以将以下链接复制并粘贴到浏览器中：",
+  "verification.thanks": "谢谢",
+  "verification.team": "团队"
 }

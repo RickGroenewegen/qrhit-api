@@ -377,5 +377,15 @@
   "mail.youCanReview": "Świetne wieści! Twoja playlista została oceniona przez nasz zespół. Chcielibyśmy zaprosić Cię do jej oceny. Twoje zamówienie zostanie automatycznie przetworzone i wysłane po 36 godzinach. Jeśli nie chcesz wprowadzać zmian, możesz również poprosić o natychmiastowe wydrukowanie i wysłanie zamówienia.",
   "mail.reviewOrder": "Przejrzyj swoje zamówienie",
   "countdown.createYourOwn": "Stwórz własne karty muzyczne QR!",
-  "countdown.visit": "Odwiedź naszą stronę"
+  "countdown.visit": "Odwiedź naszą stronę",
+  "verification.subject": "Zweryfikuj swoją playlistę",
+  "verification.title": "Zweryfikuj swoją playlistę",
+  "verification.hello": "Cześć",
+  "verification.thankYou": "Dzięki za przesłanie playlisty do",
+  "verification.toComplete": "Aby zakończyć zgłoszenie, zweryfikuj swój e-mail, klikając przycisk poniżej:",
+  "verification.buttonText": "Zweryfikuj moje zgłoszenie",
+  "verification.ignoreMessage": "Jeśli nie przesłałeś tej playlisty, zignoruj ten e-mail.",
+  "verification.buttonFallback": "Jeśli powyższy przycisk nie działa, skopiuj i wklej poniższy link do przeglądarki:",
+  "verification.thanks": "Dzięki",
+  "verification.team": "Zespół"
 }

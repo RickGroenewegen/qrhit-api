@@ -382,5 +382,15 @@
   "mail.youCanReview": "Tolle Neuigkeiten! Deine Playlist wurde von unserem Team überprüft. Wir laden dich ein, deine Playlist ebenfalls zu überprüfen. Deine Bestellung wird automatisch nach 36 Stunden bearbeitet und versendet. Wenn du keine Änderungen vornehmen möchtest, kannst du auch darum bitten, die Bestellung sofort zu drucken und zu versenden.",
   "mail.reviewOrder": "Überprüfe deine Bestellung",
   "countdown.createYourOwn": "Erstelle deine eigenen QR-Musikkarten!",
-  "countdown.visit": "Besuche unsere Website"
+  "countdown.visit": "Besuche unsere Website",
+  "verification.subject": "Bestätige deine Playlist-Einreichung",
+  "verification.title": "Bestätige deine Playlist-Einreichung",
+  "verification.hello": "Hallo",
+  "verification.thankYou": "Danke für deine Playlist-Einreichung bei",
+  "verification.toComplete": "Um deine Einreichung abzuschließen, bestätige deine E-Mail-Adresse, indem du auf den Button unten klickst:",
+  "verification.buttonText": "Bestätige meine Einreichung",
+  "verification.ignoreMessage": "Wenn du diese Playlist nicht eingereicht hast, kannst du diese E-Mail ignorieren.",
+  "verification.buttonFallback": "Wenn der obige Button nicht funktioniert, kannst du auch den folgenden Link kopieren und in deinen Browser einfügen:",
+  "verification.thanks": "Danke",
+  "verification.team": "Team"
 }
