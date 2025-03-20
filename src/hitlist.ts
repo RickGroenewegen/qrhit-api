@@ -76,11 +76,11 @@ class Hitlist {
       // Use Spotify search instead of database search
       const spotify = new Spotify();
       const spotifyResult = await spotify.searchTracks(searchString);
-      
+
       if (!spotifyResult.success) {
         return spotifyResult;
       }
-      
+
       // Transform the Spotify search results to match the expected format
       // Based on the JSON structure from the error, we need to extract data differently
       const tracks = spotifyResult.data?.tracks?.items
@@ -90,12 +90,12 @@ class Hitlist {
               const track = item.data;
               const artistName = track.artists?.items?.[0]?.profile?.name || '';
               const trackName = track.name || '';
-              
+
               return {
                 id: track.id,
                 trackId: track.id, // Use the Spotify track ID
                 name: trackName,
-                artist: artistName
+                artist: artistName,
               };
             })
             .filter((track: any) => track.name && track.artist) // Filter out tracks with empty name or artist
@@ -117,6 +117,8 @@ class Hitlist {
     hash: string,
     position: number
   ) {
+    console.log(1111, trackId, companyListId, hash, position);
+
     try {
       // Find the track by trackId
       const track = await this.prisma.track.findUnique({
@@ -306,9 +308,6 @@ class Hitlist {
           error: 'Cannot modify a submission that has already been submitted',
         };
       }
-
-      console.log(111, submission.id, trackId);
-
       // Find the track in the submission
       const submissionTrack =
         await this.prisma.companyListSubmissionTrack.findFirst({
