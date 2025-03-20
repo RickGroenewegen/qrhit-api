@@ -463,7 +463,7 @@ class Spotify {
           type: 'tracks',
           offset: offset.toString(),
           limit: limit.toString(),
-          numberOfTopResults: '5'
+          numberOfTopResults: '5',
         },
         headers: {
           'x-rapidapi-key': process.env['RAPID_API_KEY'],
@@ -477,18 +477,26 @@ class Spotify {
 
       this.analytics.increaseCounter('spotify', 'search', 1);
 
-      if (!response.data || !response.data.tracks || !response.data.tracks.items) {
+      if (
+        !response.data ||
+        !response.data.tracks ||
+        !response.data.tracks.items
+      ) {
         return { success: false, error: 'No tracks found' };
       }
 
       // Transform the response to a more usable format
       const tracks = response.data.tracks.items.map((item: any) => {
         const track = item.data;
-        const artist = track.artists.items.length > 0 ? track.artists.items[0].profile.name : '';
-        const imageUrl = track.albumOfTrack.coverArt.sources.length > 0 
-          ? track.albumOfTrack.coverArt.sources[0].url 
-          : '';
-          
+        const artist =
+          track.artists.items.length > 0
+            ? track.artists.items[0].profile.name
+            : '';
+        const imageUrl =
+          track.albumOfTrack.coverArt.sources.length > 0
+            ? track.albumOfTrack.coverArt.sources[0].url
+            : '';
+
         return {
           id: track.id,
           trackId: track.id,
@@ -496,9 +504,8 @@ class Spotify {
           artist: artist,
           album: track.albumOfTrack.name,
           image: imageUrl,
-          duration: track.duration.totalMilliseconds,
           link: track.uri,
-          explicit: track.contentRating.label === 'EXPLICIT'
+          explicit: track.contentRating.label === 'EXPLICIT',
         };
       });
 
@@ -509,8 +516,10 @@ class Spotify {
           totalCount: response.data.tracks.totalCount,
           offset: offset,
           limit: limit,
-          hasMore: response.data.tracks.pagingInfo && offset + limit < response.data.tracks.totalCount
-        }
+          hasMore:
+            response.data.tracks.pagingInfo &&
+            offset + limit < response.data.tracks.totalCount,
+        },
       };
 
       // Cache the result for 1 hour
@@ -521,7 +530,7 @@ class Spotify {
       console.error('Error searching tracks:', error);
       return {
         success: false,
-        error: 'Error searching tracks'
+        error: 'Error searching tracks',
       };
     }
   }
