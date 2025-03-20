@@ -36,6 +36,10 @@ class Hitlist {
     }
   }
 
+  public async submit(hitlist: any) {
+    console.log(111, hitlist);
+  }
+
   public async getCompanyListByDomain(domain: string) {
     try {
       const companyList = await this.prisma.companyList.findFirst({
@@ -110,10 +114,6 @@ class Hitlist {
       return { success: false, error: 'Error searching tracks' };
     }
   }
-
-
-
-
 }
 
 export default Hitlist;
