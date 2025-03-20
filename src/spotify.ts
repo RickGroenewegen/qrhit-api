@@ -438,6 +438,95 @@ class Spotify {
     }
   }
 
+  /**
+   * Get detailed information for multiple tracks by their Spotify IDs
+   * @param trackIds Array of Spotify track IDs
+   * @returns ApiResult containing track information
+   */
+  public async getTracksByIds(trackIds: string[]): Promise<ApiResult> {
+    try {
+      if (!trackIds || trackIds.length === 0) {
+        return { success: false, error: 'No track IDs provided' };
+      }
+
+      // Check if we have the tracks in cache
+      const cacheKey = `tracks_by_ids_${trackIds.sort().join('_')}`;
+      const cacheResult = await this.cache.get(cacheKey);
+
+      if (cacheResult) {
+        return JSON.parse(cacheResult);
+      }
+
+      const options = {
+        method: 'GET',
+        url: 'https://spotify23.p.rapidapi.com/tracks/',
+        params: {
+          ids: trackIds.join(','),
+        },
+        headers: {
+          'x-rapidapi-key': process.env['RAPID_API_KEY'],
+          'x-rapidapi-host': 'spotify23.p.rapidapi.com',
+        },
+      };
+
+      await this.rapidAPIQueue.enqueue(options);
+      await this.rapidAPIQueue.processQueue();
+      const response = await axios.request(options);
+
+      this.analytics.increaseCounter('spotify', 'tracks_by_ids', 1);
+
+      if (!response.data || !response.data.tracks) {
+        return { success: false, error: 'No tracks found' };
+      }
+
+      // Filter out any null or undefined tracks
+      const validTracks = response.data.tracks
+        .filter((track: any) => track !== null && track !== undefined)
+        .map((track: any) => {
+          const artist =
+            track.artists && track.artists.length > 0
+              ? track.artists[0].name
+              : '';
+
+          const imageUrl =
+            track.album && track.album.images && track.album.images.length > 0
+              ? track.album.images[0].url
+              : '';
+
+          return {
+            id: track.id,
+            trackId: track.id,
+            name: this.utils.cleanTrackName(track.name || ''),
+            artist: artist,
+            album: track.album?.name || '',
+            image: imageUrl,
+            preview: track.preview_url || '',
+            link: track.external_urls?.spotify || '',
+            isrc: track.external_ids?.isrc || '',
+            releaseDate: track.album?.release_date || '',
+            explicit: track.explicit || false,
+          };
+        })
+        .filter((track: any) => track.name && track.artist); // Filter out tracks with empty name or artist
+
+      const result = {
+        success: true,
+        data: validTracks,
+      };
+
+      // Cache the result for 1 hour
+      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+
+      return result;
+    } catch (error) {
+      console.error('Error fetching tracks by IDs:', error);
+      return {
+        success: false,
+        error: 'Error fetching tracks by IDs',
+      };
+    }
+  }
+
   public async searchTracks(
     searchTerm: string,
     limit: number = 10,
