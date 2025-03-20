@@ -1363,6 +1363,37 @@ class Server {
 
       return await this.hitlist.finalizeList(parseInt(companyListId));
     });
+
+    // API endpoint for completing Spotify authorization with the code
+    this.fastify.post('/hitlist/spotify-auth-complete', async (request: any, reply) => {
+      const { code } = request.body;
+
+      if (!code) {
+        return { success: false, error: 'Missing authorization code' };
+      }
+
+      return await this.hitlist.completeSpotifyAuth(code);
+    });
+
+    // API endpoint for handling Spotify authorization callback (this will be hit by the browser)
+    this.fastify.get('/hitlist/spotify-callback', async (request: any, reply) => {
+      const { code, state } = request.query;
+      
+      // This endpoint is just for receiving the redirect from Spotify
+      // Display a simple page with the code to copy
+      reply.type('text/html').send(`
+        <html>
+          <head><title>Spotify Authorization Complete</title></head>
+          <body>
+            <h1>Authorization Complete</h1>
+            <p>Please copy the following code and use it with the /hitlist/spotify-auth-complete endpoint:</p>
+            <textarea rows="5" cols="50" onclick="this.select()">${code}</textarea>
+            <p>Example curl command:</p>
+            <pre>curl -X POST -H "Content-Type: application/json" -d '{"code":"${code}"}' http://localhost:3004/hitlist/spotify-auth-complete</pre>
+          </body>
+        </html>
+      `);
+    });
   }
 }
 
