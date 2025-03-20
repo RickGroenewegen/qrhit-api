@@ -53,87 +53,11 @@ class Hitlist {
 
       if (tracksResult.success && tracksResult.data) {
         // Store tracks in the database
-        for (const trackData of tracksResult.data) {
-          // Check if track already exists in the database
-          let track = await this.prisma.track.findUnique({
-            where: { trackId: trackData.trackId }
-          });
-
-          const spotifyYear = trackData.releaseDate ? parseInt(trackData.releaseDate.substring(0, 4)) : null;
-
-          if (!track) {
-            // Create new track if it doesn't exist
-            track = await this.prisma.track.create({
-              data: {
-                trackId: trackData.trackId,
-                name: trackData.name,
-                artist: trackData.artist,
-                album: trackData.album,
-                preview: trackData.preview,
-                isrc: trackData.isrc,
-                spotifyYear: spotifyYear,
-                spotifyLink: trackData.link,
-                youtubeLink: '',
-                manuallyChecked: false
-              }
-            });
-            
-            this.logger.log(color.green.bold(`Created new track: ${trackData.artist} - ${trackData.name}`));
-            
-            // Get release date information for the track
-            const result = await music.getReleaseDate(
-              track.id,
-              track.isrc ?? '',
-              track.artist,
-              track.name,
-              spotifyYear || 0
-            );
-
-            // Update the track with the release date information
-            await this.prisma.$executeRaw`
-              UPDATE  tracks
-              SET     year = ${result.year},
-                      spotifyYear = ${result.sources.spotify},
-                      discogsYear = ${result.sources.discogs},
-                      aiYear = ${result.sources.ai},
-                      musicBrainzYear = ${result.sources.mb},
-                      openPerplexYear = ${result.sources.openPerplex},
-                      googleResults = ${result.googleResults},
-                      standardDeviation = ${result.standardDeviation}
-              WHERE   id = ${track.id}`;
-              
-            if (result.standardDeviation <= 1) {
-              // If standard deviation is low, mark as manually checked
-              await this.prisma.$executeRaw`
-                UPDATE  tracks
-                SET     manuallyChecked = true
-                WHERE   id = ${track.id}`;
-                
-              this.logger.log(
-                color.green.bold(
-                  `Determined final year for '${color.white.bold(
-                    track.artist
-                  )} - ${color.white.bold(track.name)}' with year ${color.white.bold(
-                    result.year
-                  )}`
-                )
-              );
-            }
-          }
+        for (const track of tracksResult.data) {
+          console.log(112, track);
         }
 
-        // Combine the detailed track info with the position information
-        const enrichedTracks = hitlist.map((track: any) => {
-          const detailedTrack = tracksResult.data.find((t: any) => t.trackId === track.trackId);
-          return {
-            ...track,
-            ...detailedTrack,
-            // Ensure position is preserved from the original hitlist
-            position: track.position
-          };
-        });
-        
-        return { success: true, data: enrichedTracks };
+        return { success: true };
       }
 
       return { success: false, error: 'Failed to get track details' };
