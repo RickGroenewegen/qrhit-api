@@ -1363,6 +1363,17 @@ class Server {
 
       return await this.hitlist.finalizeList(parseInt(companyListId));
     });
+
+    // API endpoint for creating a Spotify playlist from a finalized list
+    this.fastify.post('/hitlist/create-playlist', async (request: any, reply) => {
+      const { companyName, listName, trackIds } = request.body;
+
+      if (!companyName || !listName || !trackIds || !Array.isArray(trackIds)) {
+        return { success: false, error: 'Missing required parameters' };
+      }
+
+      return await this.hitlist.createPlaylist(companyName, listName, trackIds);
+    });
   }
 }
 

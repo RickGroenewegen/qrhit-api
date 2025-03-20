@@ -7,6 +7,7 @@ import Spotify from './spotify';
 import { Music } from './music';
 import Data from './data';
 import Mail from './mail';
+import axios from 'axios';
 
 class Hitlist {
   private static instance: Hitlist;
@@ -421,6 +422,13 @@ class Hitlist {
         )
       );
 
+      // Create a Spotify playlist with the top tracks
+      const playlistResult = await this.createPlaylist(
+        companyList.Company.name,
+        companyList.name,
+        topTracks.map(track => track.spotifyTrackId)
+      );
+
       return {
         success: true,
         data: {
@@ -434,7 +442,8 @@ class Hitlist {
             artist: track.artist,
             title: track.title,
             votes: track.count
-          }))
+          })),
+          playlist: playlistResult.success ? playlistResult.data : null
         }
       };
     } catch (error) {
@@ -489,6 +498,126 @@ class Hitlist {
     } catch (error) {
       this.logger.log(color.red.bold(`Error getting company list: ${error}`));
       return { success: false, error: 'Error getting company list' };
+    }
+  }
+
+  /**
+   * Creates a Spotify playlist with the given tracks
+   * @param companyName The name of the company
+   * @param listName The name of the list
+   * @param trackIds Array of Spotify track IDs to add to the playlist
+   * @returns Object with success status and playlist data
+   */
+  public async createPlaylist(
+    companyName: string,
+    listName: string,
+    trackIds: string[]
+  ): Promise<any> {
+    try {
+      if (!trackIds || trackIds.length === 0) {
+        return { success: false, error: 'No tracks provided' };
+      }
+
+      // Get Spotify API credentials from environment variables
+      const clientId = process.env['SPOTIFY_CLIENT_ID'];
+      const clientSecret = process.env['SPOTIFY_CLIENT_SECRET'];
+
+      if (!clientId || !clientSecret) {
+        this.logger.log(color.red.bold('Missing Spotify API credentials'));
+        return { success: false, error: 'Missing Spotify API credentials' };
+      }
+
+      // Get access token using client credentials flow
+      const tokenResponse = await axios({
+        method: 'post',
+        url: 'https://accounts.spotify.com/api/token',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+          'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64')
+        },
+        data: 'grant_type=client_credentials'
+      });
+
+      const accessToken = tokenResponse.data.access_token;
+
+      if (!accessToken) {
+        this.logger.log(color.red.bold('Failed to get Spotify access token'));
+        return { success: false, error: 'Failed to get Spotify access token' };
+      }
+
+      // Create a new playlist
+      const playlistName = `${companyName} - ${listName} Top Tracks`;
+      const playlistDescription = `Top tracks for ${companyName} - ${listName}. Created automatically.`;
+
+      // Get the user ID from environment variable or use a default
+      const userId = process.env['SPOTIFY_USER_ID'];
+      
+      if (!userId) {
+        this.logger.log(color.red.bold('Missing Spotify user ID'));
+        return { success: false, error: 'Missing Spotify user ID' };
+      }
+
+      // Create the playlist
+      const createPlaylistResponse = await axios({
+        method: 'post',
+        url: `https://api.spotify.com/v1/users/${userId}/playlists`,
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json'
+        },
+        data: JSON.stringify({
+          name: playlistName,
+          description: playlistDescription,
+          public: true
+        })
+      });
+
+      const playlistId = createPlaylistResponse.data.id;
+      const playlistUrl = createPlaylistResponse.data.external_urls.spotify;
+
+      if (!playlistId) {
+        this.logger.log(color.red.bold('Failed to create Spotify playlist'));
+        return { success: false, error: 'Failed to create Spotify playlist' };
+      }
+
+      // Add tracks to the playlist (maximum 100 tracks per request)
+      const trackUris = trackIds.map(id => `spotify:track:${id}`);
+      
+      // Split into chunks of 100 if needed
+      const chunkSize = 100;
+      for (let i = 0; i < trackUris.length; i += chunkSize) {
+        const chunk = trackUris.slice(i, i + chunkSize);
+        
+        await axios({
+          method: 'post',
+          url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Content-Type': 'application/json'
+          },
+          data: JSON.stringify({
+            uris: chunk
+          })
+        });
+      }
+
+      this.logger.log(
+        color.green.bold(
+          `Created Spotify playlist "${color.white.bold(playlistName)}" with ${color.white.bold(trackIds.length)} tracks`
+        )
+      );
+
+      return {
+        success: true,
+        data: {
+          playlistId,
+          playlistUrl,
+          playlistName
+        }
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error creating Spotify playlist: ${error}`));
+      return { success: false, error: 'Error creating Spotify playlist' };
     }
   }
 
