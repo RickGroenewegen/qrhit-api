@@ -453,6 +453,11 @@ class Mollie {
         housenumber: true,
         printApiShipped: true,
         countrycode: true,
+        user: {
+          select: {
+            hash: true,
+          },
+        },
         PaymentHasPlaylist: {
           select: {
             amount: true,
