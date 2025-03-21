@@ -417,17 +417,20 @@ class Hitlist {
         );
       });
 
-      // Take the top 10 (or less if there aren't enough)
+      // Use numberOfCards from companyList if it's set, otherwise default to 10
+      const maxTracks = companyList.numberOfCards > 0 ? companyList.numberOfCards : 10;
+      
+      // Take the top tracks based on numberOfCards (or less if there aren't enough)
       const topTracks = sortedTracks.slice(
         0,
-        Math.min(10, sortedTracks.length)
+        Math.min(maxTracks, sortedTracks.length)
       );
 
       this.logger.log(
         color.blue.bold(
           `Finalized list for company ${color.white.bold(
             companyList.Company.name
-          )} with ${color.white.bold(topTracks.length)} tracks`
+          )} with ${color.white.bold(topTracks.length)} tracks (max: ${color.white.bold(maxTracks)})`
         )
       );
 
@@ -498,6 +501,7 @@ class Hitlist {
           name: companyList.name,
           description: companyList.description,
           numberOfTracks: companyList.numberOfTracks,
+          numberOfCards: companyList.numberOfCards,
           companyName: companyList.Company.name,
           background: companyList.background,
           logo: companyList.logo,
