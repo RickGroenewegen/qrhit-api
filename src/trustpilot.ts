@@ -373,9 +373,8 @@ class Trustpilot {
       return result;
     } catch (error: any) {
       this.logger.log(
-        color.red.bold('Error fetching Trustpilot company details')
+        color.yellow.bold('Error fetching Trustpilot company details')
       );
-      console.log(error);
       return {
         success: false,
         error: 'Error fetching Trustpilot company details',
