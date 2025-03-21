@@ -424,7 +424,7 @@ class Hitlist {
       );
 
       this.logger.log(
-        color.green.bold(
+        color.blue.bold(
           `Finalized list for company ${color.white.bold(
             companyList.Company.name
           )} with ${color.white.bold(topTracks.length)} tracks`
@@ -540,14 +540,18 @@ class Hitlist {
       const playlistInfo = {
         companyName,
         listName,
-        trackIds
+        trackIds,
       };
-      await this.cache.set('pending_playlist_info', JSON.stringify(playlistInfo), 3600);
+      await this.cache.set(
+        'pending_playlist_info',
+        JSON.stringify(playlistInfo),
+        3600
+      );
 
       // Check if we already have a valid access token
       const cachedToken = await this.cache.get('spotify_access_token');
       if (cachedToken) {
-        this.logger.log(color.green.bold('Using cached Spotify access token'));
+        this.logger.log(color.blue.bold('Using cached Spotify access token'));
         return this.createPlaylistWithToken(cachedToken);
       }
 
@@ -561,30 +565,41 @@ class Hitlist {
             url: 'https://accounts.spotify.com/api/token',
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
-              'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64')
+              Authorization:
+                'Basic ' +
+                Buffer.from(clientId + ':' + clientSecret).toString('base64'),
             },
             data: new URLSearchParams({
               grant_type: 'refresh_token',
-              refresh_token: refreshToken
-            }).toString()
+              refresh_token: refreshToken,
+            }).toString(),
           });
 
           if (refreshResponse.data.access_token) {
             const newAccessToken = refreshResponse.data.access_token;
             // Store the new access token with expiration (default 1 hour)
             const expiresIn = refreshResponse.data.expires_in || 3600;
-            await this.cache.set('spotify_access_token', newAccessToken, expiresIn - 60); // Subtract 60 seconds for safety
-            
+            await this.cache.set(
+              'spotify_access_token',
+              newAccessToken,
+              expiresIn - 60
+            ); // Subtract 60 seconds for safety
+
             // If a new refresh token was provided, store it too
             if (refreshResponse.data.refresh_token) {
-              await this.cache.set('spotify_refresh_token', refreshResponse.data.refresh_token);
+              await this.cache.set(
+                'spotify_refresh_token',
+                refreshResponse.data.refresh_token
+              );
             }
-            
+
             this.logger.log(color.green.bold('Refreshed Spotify access token'));
             return this.createPlaylistWithToken(newAccessToken);
           }
         } catch (error) {
-          this.logger.log(color.yellow.bold(`Error refreshing token: ${error}`));
+          this.logger.log(
+            color.yellow.bold(`Error refreshing token: ${error}`)
+          );
           // Continue with the authorization flow if refresh token failed
         }
       }
@@ -592,23 +607,35 @@ class Hitlist {
       // If we don't have a valid token or refresh failed, we need to authorize
       // Generate a random state for security
       const state = this.utils.generateRandomString(16);
-      
+
       // Generate the authorization URL
       // Use the exact redirect URI that was registered with Spotify
-      const redirectUri = process.env['SPOTIFY_REDIRECT_URI'] || 'http://localhost:3004/spotify_callback';
+      const redirectUri =
+        process.env['SPOTIFY_REDIRECT_URI'] ||
+        'http://localhost:3004/spotify_callback';
       const scope = 'playlist-modify-public';
-      const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(redirectUri)}&scope=${encodeURIComponent(scope)}&state=${state}`;
-      
+      const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(
+        redirectUri
+      )}&scope=${encodeURIComponent(scope)}&state=${state}`;
+
       // Log the URL to the console so the user can visit it
-      this.logger.log(color.yellow.bold('Please visit the following URL to authorize Spotify playlist creation:'));
+      this.logger.log(
+        color.yellow.bold(
+          'Please visit the following URL to authorize Spotify playlist creation:'
+        )
+      );
       this.logger.log(color.white.bold(authUrl));
-      this.logger.log(color.yellow.bold('After authorization, you will be redirected to a callback URL where the process will complete automatically.'));
+      this.logger.log(
+        color.yellow.bold(
+          'After authorization, you will be redirected to a callback URL where the process will complete automatically.'
+        )
+      );
 
       return {
         success: false,
         error: 'Authorization required',
         message: 'Please check the server logs for the authorization URL',
-        authUrl: authUrl
+        authUrl: authUrl,
       };
     } catch (error) {
       this.logger.log(
@@ -624,7 +651,9 @@ class Hitlist {
       const clientId = process.env['SPOTIFY_CLIENT_ID'];
       const clientSecret = process.env['SPOTIFY_CLIENT_SECRET'];
       // Use the exact redirect URI that was registered with Spotify
-      const redirectUri = process.env['SPOTIFY_REDIRECT_URI'] || 'http://localhost:3004/hitlist/spotify-callback';
+      const redirectUri =
+        process.env['SPOTIFY_REDIRECT_URI'] ||
+        'http://localhost:3004/hitlist/spotify-callback';
 
       if (!clientId || !clientSecret) {
         this.logger.log(color.red.bold('Missing Spotify API credentials'));
@@ -634,7 +663,7 @@ class Hitlist {
       // Check if we already have a valid access token
       const cachedToken = await this.cache.get('spotify_access_token');
       if (cachedToken) {
-        this.logger.log(color.green.bold('Using cached Spotify access token'));
+        this.logger.log(color.blue.bold('Using cached Spotify access token'));
         return this.createPlaylistWithToken(cachedToken);
       }
 
@@ -648,37 +677,52 @@ class Hitlist {
             url: 'https://accounts.spotify.com/api/token',
             headers: {
               'Content-Type': 'application/x-www-form-urlencoded',
-              'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64')
+              Authorization:
+                'Basic ' +
+                Buffer.from(clientId + ':' + clientSecret).toString('base64'),
             },
             data: new URLSearchParams({
               grant_type: 'refresh_token',
-              refresh_token: refreshToken
-            }).toString()
+              refresh_token: refreshToken,
+            }).toString(),
           });
 
           if (refreshResponse.data.access_token) {
             const newAccessToken = refreshResponse.data.access_token;
             // Store the new access token with expiration (default 1 hour)
             const expiresIn = refreshResponse.data.expires_in || 3600;
-            await this.cache.set('spotify_access_token', newAccessToken, expiresIn - 60); // Subtract 60 seconds for safety
-            
+            await this.cache.set(
+              'spotify_access_token',
+              newAccessToken,
+              expiresIn - 60
+            ); // Subtract 60 seconds for safety
+
             // If a new refresh token was provided, store it too
             if (refreshResponse.data.refresh_token) {
-              await this.cache.set('spotify_refresh_token', refreshResponse.data.refresh_token);
+              await this.cache.set(
+                'spotify_refresh_token',
+                refreshResponse.data.refresh_token
+              );
             }
-            
-            this.logger.log(color.green.bold('Refreshed Spotify access token'));
+
+            this.logger.log(color.blue.bold('Refreshed Spotify access token'));
             return this.createPlaylistWithToken(newAccessToken);
           }
         } catch (error) {
-          this.logger.log(color.yellow.bold(`Error refreshing token, will try with auth code: ${error}`));
+          this.logger.log(
+            color.yellow.bold(
+              `Error refreshing token, will try with auth code: ${error}`
+            )
+          );
           // Continue with the auth code flow if refresh token failed
         }
       }
 
       // If we don't have a valid token or refresh failed, use the auth code
       if (!authCode) {
-        this.logger.log(color.red.bold('No auth code provided and no valid tokens available'));
+        this.logger.log(
+          color.red.bold('No auth code provided and no valid tokens available')
+        );
         return { success: false, error: 'Authorization required' };
       }
 
@@ -688,19 +732,21 @@ class Hitlist {
         url: 'https://accounts.spotify.com/api/token',
         headers: {
           'Content-Type': 'application/x-www-form-urlencoded',
-          'Authorization': 'Basic ' + Buffer.from(clientId + ':' + clientSecret).toString('base64')
+          Authorization:
+            'Basic ' +
+            Buffer.from(clientId + ':' + clientSecret).toString('base64'),
         },
         data: new URLSearchParams({
           grant_type: 'authorization_code',
           code: authCode,
-          redirect_uri: redirectUri
-        }).toString()
+          redirect_uri: redirectUri,
+        }).toString(),
       });
 
       const accessToken = tokenResponse.data.access_token;
       const newRefreshToken = tokenResponse.data.refresh_token;
       const expiresIn = tokenResponse.data.expires_in || 3600;
-      
+
       if (!accessToken) {
         this.logger.log(color.red.bold('Failed to get Spotify access token'));
         return { success: false, error: 'Failed to get Spotify access token' };
@@ -714,8 +760,13 @@ class Hitlist {
 
       return this.createPlaylistWithToken(accessToken);
     } catch (error) {
-      this.logger.log(color.red.bold(`Error completing Spotify authorization: ${error}`));
-      return { success: false, error: 'Error completing Spotify authorization' };
+      this.logger.log(
+        color.red.bold(`Error completing Spotify authorization: ${error}`)
+      );
+      return {
+        success: false,
+        error: 'Error completing Spotify authorization',
+      };
     }
   }
 
@@ -727,10 +778,17 @@ class Hitlist {
   private async createPlaylistWithToken(accessToken: string): Promise<any> {
     try {
       // Get the pending playlist info from cache
-      const pendingPlaylistInfoStr = await this.cache.get('pending_playlist_info');
+      const pendingPlaylistInfoStr = await this.cache.get(
+        'pending_playlist_info'
+      );
       if (!pendingPlaylistInfoStr) {
-        this.logger.log(color.red.bold('No pending playlist information found'));
-        return { success: false, error: 'No pending playlist information found' };
+        this.logger.log(
+          color.red.bold('No pending playlist information found')
+        );
+        return {
+          success: false,
+          error: 'No pending playlist information found',
+        };
       }
 
       const pendingPlaylistInfo = JSON.parse(pendingPlaylistInfoStr);
@@ -745,8 +803,8 @@ class Hitlist {
         method: 'get',
         url: 'https://api.spotify.com/v1/me',
         headers: {
-          'Authorization': `Bearer ${accessToken}`
-        }
+          Authorization: `Bearer ${accessToken}`,
+        },
       });
 
       const userId = profileResponse.data.id;
@@ -756,14 +814,14 @@ class Hitlist {
         method: 'post',
         url: `https://api.spotify.com/v1/users/${userId}/playlists`,
         headers: {
-          'Authorization': `Bearer ${accessToken}`,
-          'Content-Type': 'application/json'
+          Authorization: `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
         },
         data: JSON.stringify({
           name: playlistName,
           description: playlistDescription,
-          public: true
-        })
+          public: true,
+        }),
       });
 
       const playlistId = createPlaylistResponse.data.id;
@@ -786,18 +844,20 @@ class Hitlist {
           method: 'post',
           url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
           headers: {
-            'Authorization': `Bearer ${accessToken}`,
-            'Content-Type': 'application/json'
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
           },
           data: JSON.stringify({
-            uris: chunk
-          })
+            uris: chunk,
+          }),
         });
       }
 
       this.logger.log(
         color.green.bold(
-          `Created Spotify playlist "${color.white.bold(playlistName)}" with ${color.white.bold(trackIds.length)} tracks`
+          `Created Spotify playlist "${color.white.bold(
+            playlistName
+          )}" with ${color.white.bold(trackIds.length)} tracks`
         )
       );
 
@@ -809,12 +869,17 @@ class Hitlist {
         data: {
           playlistId,
           playlistUrl,
-          playlistName
-        }
+          playlistName,
+        },
       };
     } catch (error) {
-      this.logger.log(color.red.bold(`Error completing Spotify authorization: ${error}`));
-      return { success: false, error: 'Error completing Spotify authorization' };
+      this.logger.log(
+        color.red.bold(`Error completing Spotify authorization: ${error}`)
+      );
+      return {
+        success: false,
+        error: 'Error completing Spotify authorization',
+      };
     }
   }
 
