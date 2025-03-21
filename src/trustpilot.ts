@@ -211,9 +211,8 @@ class Trustpilot {
       }
     } catch (error: any) {
       this.logger.log(
-        color.red.bold('Error fetching and storing Trustpilot reviews')
+        color.yellow.bold('Error fetching and storing Trustpilot reviews')
       );
-      console.log(error);
     }
   }
 
