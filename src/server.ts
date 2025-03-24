@@ -123,6 +123,17 @@ class Server {
       return true;
     };
 
+    this.fastify.post(
+      '/create_order',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, _reply) => {
+        return await this.generator.sendToPrinter(
+          request.body.paymentId,
+          request.clientIp
+        );
+      }
+    );
+
     this.fastify.post('/validate', async (request: any, reply: any) => {
       const { username, password } = request.body as {
         username: string;
@@ -227,7 +238,7 @@ class Server {
     );
 
     this.fastify.get(
-      '/regenerate/:paymentId',
+      '/regenerate/:paymentId/:email',
       { preHandler: verifyTokenMiddleware },
       async (request: any, _reply) => {
         await this.mollie.clearPDFs(request.params.paymentId);
@@ -237,7 +248,7 @@ class Server {
           '',
           this.mollie,
           true, // Force finalize
-          true // Skip main mail
+          !this.utils.parseBoolean(request.params.email) // Skip main mail
         );
         return { success: true };
       }
@@ -1142,13 +1153,6 @@ class Server {
       }
     );
 
-    this.fastify.post('/create_order', async (request: any, _reply) => {
-      return await this.generator.sendToPrinter(
-        request.body.paymentId,
-        request.clientIp
-      );
-    });
-
     if (process.env['ENVIRONMENT'] == 'development') {
       this.fastify.get(
         '/generate_invoice/:paymentId',
@@ -1394,10 +1398,10 @@ class Server {
         `);
         return;
       }
-      
+
       // Automatically process the authorization
       const result = await this.hitlist.completeSpotifyAuth(code);
-      
+
       if (result.success) {
         reply.type('text/html').send(`
           <html>
