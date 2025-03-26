@@ -83,18 +83,30 @@ class Generator {
               },
             ],
           },
+          include: {
+            PaymentHasPlaylist: {
+              select: {
+                suggestionsPending: true
+              }
+            }
+          }
         });
+        
+        // Filter payments to only include those where all PaymentHasPlaylist records have suggestionsPending = false
+        const eligiblePayments = payments.filter(payment => 
+          payment.PaymentHasPlaylist.every(php => php.suggestionsPending === false)
+        );
 
-        if (payments.length > 0) {
+        if (eligiblePayments.length > 0) {
           this.logger.log(
             blue.bold(
               `Found ${white.bold(
-                payments.length.toString()
+                eligiblePayments.length.toString()
               )} payments ready to be sent to printer`
             )
           );
 
-          for (const payment of payments) {
+          for (const payment of eligiblePayments) {
             try {
               await this.sendToPrinter(payment.paymentId, '');
               this.logger.log(
