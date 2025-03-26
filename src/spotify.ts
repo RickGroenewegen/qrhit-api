@@ -316,18 +316,25 @@ class Spotify {
     try {
       const cacheKey = `playlist_${playlistId}_${locale}`;
       const cacheResult = await this.cache.get(cacheKey);
+      const dbCacheKey = `playlistdb_${playlistId}`;
+      const dbCacheResult = await this.cache.get(dbCacheKey);
 
       if (!cacheResult || !cache) {
         let checkPlaylistId = playlistId;
 
         if (isSlug) {
-          const dbPlaylist = await this.prisma.playlist.findFirst({
-            where: { slug: playlistId },
-          });
-          if (!dbPlaylist) {
-            return { success: false, error: 'playlistNotFound' };
+          if (!dbCacheResult || !cache) {
+            const dbPlaylist = await this.prisma.playlist.findFirst({
+              where: { slug: playlistId },
+            });
+            if (!dbPlaylist) {
+              return { success: false, error: 'playlistNotFound' };
+            }
+            checkPlaylistId = dbPlaylist.playlistId;
+            this.cache.set(dbCacheKey, checkPlaylistId);
+          } else {
+            checkPlaylistId = dbCacheResult;
           }
-          checkPlaylistId = dbPlaylist.playlistId;
         }
 
         const options = {
@@ -646,6 +653,7 @@ class Spotify {
     try {
       let cacheKey = `tracks_${playlistId}`;
       let cacheKeyCount = `trackcount_${playlistId}`;
+      let dbCacheKey = `tracksdb_${playlistId}`;
       let allTracks: Track[] = [];
       const uniqueTrackIds = new Set<string>();
       let offset = 0;
@@ -667,15 +675,12 @@ class Spotify {
         false,
         '',
         false,
+        isSlug,
         isSlug
       );
 
-      console.log(111, playlist);
-
       cacheKey = `tracks_${playlistId}_${playlist.data.numberOfTracks}`;
       cacheKeyCount = `trackcount_${playlistId}_${playlist.data.numberOfTracks}`;
-
-      console.log(222, cacheKey);
 
       const cacheResult = await this.cache.get(cacheKey);
 
@@ -691,8 +696,6 @@ class Spotify {
           }
           checkPlaylistId = dbPlaylist.playlistId;
         }
-
-        console.log(222, playlist);
 
         while (true) {
           const options = {
