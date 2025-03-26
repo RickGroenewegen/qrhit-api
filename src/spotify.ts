@@ -646,7 +646,6 @@ class Spotify {
     try {
       let cacheKey = `tracks_${playlistId}`;
       let cacheKeyCount = `trackcount_${playlistId}`;
-      const cacheResult = await this.cache.get(cacheKey);
       let allTracks: Track[] = [];
       const uniqueTrackIds = new Set<string>();
       let offset = 0;
@@ -663,6 +662,23 @@ class Spotify {
       //   }
       // }
 
+      const playlist = await this.getPlaylist(
+        playlistId,
+        false,
+        '',
+        false,
+        isSlug
+      );
+
+      console.log(111, playlist);
+
+      cacheKey = `tracks_${playlistId}_${playlist.data.numberOfTracks}`;
+      cacheKeyCount = `trackcount_${playlistId}_${playlist.data.numberOfTracks}`;
+
+      console.log(222, cacheKey);
+
+      const cacheResult = await this.cache.get(cacheKey);
+
       if (!cacheResult || !cache) {
         let checkPlaylistId = playlistId;
 
@@ -675,6 +691,8 @@ class Spotify {
           }
           checkPlaylistId = dbPlaylist.playlistId;
         }
+
+        console.log(222, playlist);
 
         while (true) {
           const options = {
@@ -875,6 +893,9 @@ class Spotify {
           tracks: allTracks,
         },
       };
+
+      this.cache.del(`tracks_${playlistId}*`);
+      this.cache.del(`trackcount_${playlistId}*`);
 
       this.cache.set(cacheKeyCount, allTracks.length.toString());
       this.cache.set(cacheKey, JSON.stringify(result));
