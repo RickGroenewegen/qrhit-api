@@ -755,6 +755,18 @@ class Spotify {
             `;
           }
 
+          console.log(trackIds.join(','));
+
+          console.log(`
+              SELECT t.trackId, t.year, t.artist, t.name, t.year, tei.extraNameAttribute, tei.extraArtistAttribute
+              FROM tracks t
+              LEFT JOIN trackextrainfo tei ON t.id = tei.trackId
+              LEFT JOIN playlist_has_tracks pht ON t.id = pht.trackId
+              LEFT JOIN playlists p ON pht.playlistId = p.id AND p.playlistId = ${checkPlaylistId}
+              WHERE t.trackId IN (${Prisma.join(trackIds)})
+              AND t.manuallyChecked = 1
+            `);
+
           // Create a map of trackId to year for quick lookup
           const trackMap = new Map(
             yearResults.map((r) => [
