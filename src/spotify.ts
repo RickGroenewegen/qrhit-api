@@ -894,8 +894,8 @@ class Spotify {
         },
       };
 
-      this.cache.del(`tracks_${playlistId}*`);
-      this.cache.del(`trackcount_${playlistId}*`);
+      this.cache.delPattern(`tracks_${playlistId}*`);
+      this.cache.delPattern(`trackcount_${playlistId}*`);
 
       this.cache.set(cacheKeyCount, allTracks.length.toString());
       this.cache.set(cacheKey, JSON.stringify(result));

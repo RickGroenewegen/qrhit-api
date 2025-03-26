@@ -95,6 +95,14 @@ class Cache {
     await this.executeCommand('del', cacheKey);
   }
 
+  async delPattern(pattern: string): Promise<void> {
+    let cachePattern = `${this.version}:${pattern}`;
+    const keys = await this.executeCommand('keys', cachePattern);
+    if (keys && keys.length > 0) {
+      await this.executeCommand('del', ...keys);
+    }
+  }
+
   async setArray(key: string, values: string[]): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
     await this.executeCommand('del', cacheKey); // Ensure the key is empty before setting new values
