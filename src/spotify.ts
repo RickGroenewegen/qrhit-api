@@ -733,39 +733,72 @@ class Spotify {
             extraArtistAttribute?: string;
           }[] = [];
           if (trackIds.length > 0) {
-            yearResults = await this.prisma.$queryRaw<
-              {
-                trackId: string;
-                year: number;
-                name: string;
-                artist: string;
-                originalName: string;
-                originalArtist: string;
-                extraNameAttribute?: string;
-                extraArtistAttribute?: string;
-              }[]
-            >`
-              SELECT t.trackId, t.year, t.artist, t.name, t.year, tei.extraNameAttribute, tei.extraArtistAttribute
-              FROM tracks t
-              LEFT JOIN trackextrainfo tei ON t.id = tei.trackId
-              LEFT JOIN playlist_has_tracks pht ON t.id = pht.trackId
-              LEFT JOIN playlists p ON pht.playlistId = p.id AND p.playlistId = ${checkPlaylistId}
-              WHERE t.trackId IN (${Prisma.join(trackIds)})
-              AND t.manuallyChecked = 1
-            `;
+            // First, get the playlist ID from the database
+            const dbPlaylist = await this.prisma.playlist.findFirst({
+              where: { playlistId: checkPlaylistId },
+              select: { id: true }
+            });
+            
+            if (dbPlaylist) {
+              yearResults = await this.prisma.$queryRaw<
+                {
+                  trackId: string;
+                  year: number;
+                  name: string;
+                  artist: string;
+                  originalName: string;
+                  originalArtist: string;
+                  extraNameAttribute?: string;
+                  extraArtistAttribute?: string;
+                }[]
+              >`
+                SELECT 
+                  t.trackId, 
+                  t.year, 
+                  t.artist, 
+                  t.name,
+                  tei.extraNameAttribute, 
+                  tei.extraArtistAttribute
+                FROM 
+                  tracks t
+                LEFT JOIN 
+                  (SELECT * FROM trackextrainfo WHERE playlistId = ${dbPlaylist.id}) tei 
+                  ON t.id = tei.trackId
+                WHERE 
+                  t.trackId IN (${Prisma.join(trackIds)})
+                  AND t.manuallyChecked = 1
+              `;
+            } else {
+              // If playlist not found in DB, just get the track info without extras
+              yearResults = await this.prisma.$queryRaw<
+                {
+                  trackId: string;
+                  year: number;
+                  name: string;
+                  artist: string;
+                  originalName: string;
+                  originalArtist: string;
+                  extraNameAttribute?: string;
+                  extraArtistAttribute?: string;
+                }[]
+              >`
+                SELECT 
+                  t.trackId, 
+                  t.year, 
+                  t.artist, 
+                  t.name,
+                  NULL as extraNameAttribute, 
+                  NULL as extraArtistAttribute
+                FROM 
+                  tracks t
+                WHERE 
+                  t.trackId IN (${Prisma.join(trackIds)})
+                  AND t.manuallyChecked = 1
+              `;
+            }
           }
 
-          console.log(trackIds.join(','));
-
-          console.log(`
-              SELECT t.trackId, t.year, t.artist, t.name, t.year, tei.extraNameAttribute, tei.extraArtistAttribute
-              FROM tracks t
-              LEFT JOIN trackextrainfo tei ON t.id = tei.trackId
-              LEFT JOIN playlist_has_tracks pht ON t.id = pht.trackId
-              LEFT JOIN playlists p ON pht.playlistId = p.id AND p.playlistId = ${checkPlaylistId}
-              WHERE t.trackId IN (${Prisma.join(trackIds)})
-              AND t.manuallyChecked = 1
-            `);
+          // Debug logging removed
 
           // Create a map of trackId to year for quick lookup
           const trackMap = new Map(
