@@ -736,9 +736,9 @@ class Spotify {
             // First, get the playlist ID from the database
             const dbPlaylist = await this.prisma.playlist.findFirst({
               where: { playlistId: checkPlaylistId },
-              select: { id: true }
+              select: { id: true },
             });
-            
+
             if (dbPlaylist) {
               yearResults = await this.prisma.$queryRaw<
                 {
@@ -762,7 +762,9 @@ class Spotify {
                 FROM 
                   tracks t
                 LEFT JOIN 
-                  (SELECT * FROM trackextrainfo WHERE playlistId = ${dbPlaylist.id}) tei 
+                  (SELECT * FROM trackextrainfo WHERE playlistId = ${
+                    dbPlaylist.id
+                  }) tei 
                   ON t.id = tei.trackId
                 WHERE 
                   t.trackId IN (${Prisma.join(trackIds)})
@@ -866,6 +868,8 @@ class Spotify {
                   } else {
                     trueName = item.track.name;
                     if (item.track.artists?.length > 0) {
+                      console.log(111, item.track.artists);
+
                       trueArtist = item.track.artists[0].name;
                     }
                   }
