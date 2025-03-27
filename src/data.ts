@@ -1138,6 +1138,8 @@ class Data {
     const cachedData = await this.cache.get(cacheKey);
 
     if (cachedData) {
+      console.log(222, JSON.parse(cachedData));
+
       return {
         success: true,
         data: JSON.parse(cachedData),
