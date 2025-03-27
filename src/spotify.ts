@@ -859,22 +859,27 @@ class Spotify {
                   extraArtistAttribute = trackInfo.extraArtistAttribute;
                 } else {
                   const trackInfo = trackMap.get(trackId);
-                  if (trackInfo) {
-                    trueYear = trackInfo.year;
-                    trueName = trackInfo.name;
-                    trueArtist = trackInfo.artist;
-                    extraNameAttribute = trackInfo.extraNameAttribute;
-                    extraArtistAttribute = trackInfo.extraArtistAttribute;
+                  if (false && trackInfo) {
+                    // trueYear = trackInfo.year;
+                    // trueName = trackInfo.name;
+                    // trueArtist = trackInfo.artist;
+                    // extraNameAttribute = trackInfo.extraNameAttribute;
+                    // extraArtistAttribute = trackInfo.extraArtistAttribute;
                   } else {
                     trueName = item.track.name;
                     if (item.track.artists?.length > 0) {
+                      console.log(111, item.track.artists);
+
                       // Format multiple artists as "Artist 1, Artist 2 & Artist 3"
                       if (item.track.artists.length === 1) {
                         trueArtist = item.track.artists[0].name;
                       } else {
-                        const artistNames = item.track.artists.map(artist:any => artist.name);
+                        const artistNames = item.track.artists.map(
+                          (artist: { name: string }) => artist.name
+                        );
                         const lastArtist = artistNames.pop();
-                        trueArtist = artistNames.join(', ') + ' & ' + lastArtist;
+                        trueArtist =
+                          artistNames.join(', ') + ' & ' + lastArtist;
                       }
                     }
                   }
