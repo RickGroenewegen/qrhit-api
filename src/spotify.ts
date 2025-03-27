@@ -868,9 +868,14 @@ class Spotify {
                   } else {
                     trueName = item.track.name;
                     if (item.track.artists?.length > 0) {
-                      console.log(111, item.track.artists);
-
-                      trueArtist = item.track.artists[0].name;
+                      // Format multiple artists as "Artist 1, Artist 2 & Artist 3"
+                      if (item.track.artists.length === 1) {
+                        trueArtist = item.track.artists[0].name;
+                      } else {
+                        const artistNames = item.track.artists.map(artist:any => artist.name);
+                        const lastArtist = artistNames.pop();
+                        trueArtist = artistNames.join(', ') + ' & ' + lastArtist;
+                      }
                     }
                   }
                 }
