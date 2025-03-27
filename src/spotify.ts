@@ -859,21 +859,21 @@ class Spotify {
                   extraArtistAttribute = trackInfo.extraArtistAttribute;
                 } else {
                   const trackInfo = trackMap.get(trackId);
-                  if (false && trackInfo) {
-                    // trueYear = trackInfo.year;
-                    // trueName = trackInfo.name;
-                    // trueArtist = trackInfo.artist;
-                    // extraNameAttribute = trackInfo.extraNameAttribute;
-                    // extraArtistAttribute = trackInfo.extraArtistAttribute;
+                  if (trackInfo) {
+                    trueYear = trackInfo.year;
+                    trueName = trackInfo.name;
+                    trueArtist = trackInfo.artist;
+                    extraNameAttribute = trackInfo.extraNameAttribute;
+                    extraArtistAttribute = trackInfo.extraArtistAttribute;
                   } else {
                     trueName = item.track.name;
                     if (item.track.artists?.length > 0) {
-                      // Format multiple artists as "Artist 1, Artist 2 & Artist 3" with max 5 artists
+                      // Format multiple artists as "Artist 1, Artist 2 & Artist 3"
                       if (item.track.artists.length === 1) {
                         trueArtist = item.track.artists[0].name;
                       } else {
-                        // Limit to maximum 5 artists
-                        const limitedArtists = item.track.artists.slice(0, 5);
+                        // Max. 3 artist for now
+                        const limitedArtists = item.track.artists.slice(0, 3);
                         const artistNames = limitedArtists.map(
                           (artist: { name: string }) => artist.name
                         );
