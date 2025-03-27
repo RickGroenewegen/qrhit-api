@@ -1158,6 +1158,9 @@ class Data {
       if (data.link && data.youtubeLink) {
         await this.cache.set(cacheKey, JSON.stringify(data));
       }
+
+      console.log(111, data);
+
       return {
         success: true,
         data,
