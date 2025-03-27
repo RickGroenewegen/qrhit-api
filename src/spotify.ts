@@ -868,13 +868,13 @@ class Spotify {
                   } else {
                     trueName = item.track.name;
                     if (item.track.artists?.length > 0) {
-                      console.log(111, item.track.artists);
-
-                      // Format multiple artists as "Artist 1, Artist 2 & Artist 3"
+                      // Format multiple artists as "Artist 1, Artist 2 & Artist 3" with max 5 artists
                       if (item.track.artists.length === 1) {
                         trueArtist = item.track.artists[0].name;
                       } else {
-                        const artistNames = item.track.artists.map(
+                        // Limit to maximum 5 artists
+                        const limitedArtists = item.track.artists.slice(0, 5);
+                        const artistNames = limitedArtists.map(
                           (artist: { name: string }) => artist.name
                         );
                         const lastArtist = artistNames.pop();
