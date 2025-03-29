@@ -609,7 +609,7 @@ class Mollie {
         molliePaymentId = `free_${this.utils.generateRandomString(10)}`;
         molliePaymentAmount = 0;
         molliePaymentStatus = 'paid';
-        mollieCheckoutUrl = `${process.env['FRONTEND_URI']}/generate/progress`;
+        mollieCheckoutUrl = `${process.env['FRONTEND_URI']}/${params.locale}/generate/progress`;
         triggerDirectGeneration = true;
       } else {
         if (calculateResult.data.total <= 3) {

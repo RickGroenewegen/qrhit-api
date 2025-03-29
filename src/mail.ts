@@ -186,7 +186,7 @@ class Mail {
       invoiceZipcode: payment.invoiceZipcode,
       invoiceCountry: payment.invoiceCountrycode,
       differentInvoiceAddress: payment.differentInvoiceAddress,
-      digitalDownloadCorrectionLink: `${process.env['FRONTEND_URI']}/usersuggestions/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}/1`,
+      digitalDownloadCorrectionLink: `${process.env['FRONTEND_URI']}/${payment.locale}/usersuggestions/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}/1`,
       digitalDownloadLink: `${process.env['API_URI']}/download/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}/digital`,
       downloadLink: `${process.env['API_URI']}/download/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}/printer`,
       sendPhysicalLink,
@@ -537,7 +537,7 @@ ${params.html}
 
     const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
 
-    const reviewLink = `${process.env['FRONTEND_URI']}/review/${payment.paymentId}`;
+    const reviewLink = `${process.env['FRONTEND_URI']}/${payment.locale}/review/${payment.paymentId}`;
     const reviewLinkTrustPilot =
       'https://www.trustpilot.com/evaluate/qrsong.io';
     // Get the payment user
@@ -545,7 +545,7 @@ ${params.html}
       where: { id: payment.userId },
     });
 
-    const unsubscribeLink = `${process.env['FRONTEND_URI']}/unsubscribe/${user?.hash}`;
+    const unsubscribeLink = `${process.env['FRONTEND_URI']}/${payment.locale}/unsubscribe/${user?.hash}`;
 
     const mailParams = {
       payment,

@@ -86,15 +86,17 @@ class Generator {
           include: {
             PaymentHasPlaylist: {
               select: {
-                suggestionsPending: true
-              }
-            }
-          }
+                suggestionsPending: true,
+              },
+            },
+          },
         });
-        
+
         // Filter payments to only include those where all PaymentHasPlaylist records have suggestionsPending = false
-        const eligiblePayments = payments.filter(payment => 
-          payment.PaymentHasPlaylist.every(php => php.suggestionsPending === false)
+        const eligiblePayments = payments.filter((payment) =>
+          payment.PaymentHasPlaylist.every(
+            (php) => php.suggestionsPending === false
+          )
         );
 
         if (eligiblePayments.length > 0) {
@@ -557,7 +559,7 @@ class Generator {
               const playlist = playlistItem.playlist;
               this.mail.sendFinalizedMail(
                 payment,
-                `${process.env['FRONTEND_URI']}/usersuggestions/${payment.paymentId}/${payment.user.hash}/${playlist.playlistId}/0`,
+                `${process.env['FRONTEND_URI']}/${payment.locale}/usersuggestions/${payment.paymentId}/${payment.user.hash}/${playlist.playlistId}/0`,
                 playlist
               );
             }
