@@ -657,7 +657,7 @@ class Mollie {
           },
           method: paymentMethods,
           description: description,
-          redirectUrl: `${process.env['FRONTEND_URI']}/generate/check_payment`,
+          redirectUrl: `${process.env['FRONTEND_URI']}/${params.locale}/generate/check_payment`,
           webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
           locale: localeData.locale,
         });
