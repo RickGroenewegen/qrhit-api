@@ -302,7 +302,6 @@ class Data {
 
     // Define standard paths with default values
     const standardPaths = [
-      '/',
       '/faq',
       '/pricing',
       '/reviews',
@@ -317,33 +316,55 @@ class Data {
 
     // Get current date in YYYY-MM-DD format for lastmod
     const currentDate = new Date().toISOString().split('T')[0];
-      
-    // Create paths with default properties
-    const paths = [
-      // Homepage has special properties
-      { 
-        loc: '/', 
-        lastmod: currentDate, 
-        changefreq: 'daily', 
-        priority: '1.0' 
-      },
-      // Standard pages with common properties
-      ...standardPaths.slice(1).map(path => ({
-        loc: path,
-        lastmod: currentDate,
-        changefreq: 'monthly',
-        priority: '0.8',
-      })),
-      // Add product pages for featured playlists
-      ...featuredPlaylists.map((playlist) => ({
-        loc: `/product/${playlist.slug}`,
-        lastmod: playlist.updatedAt.toISOString().split('T')[0],
-        changefreq: 'daily',
-        priority: '0.9',
-      })),
-    ];
+    
+    // Get all available locales from Translation class
+    const locales = this.translate.allLocales;
+    
+    // Create sitemap index file that references language-specific sitemaps
+    const sitemapIndexContent = `<?xml version="1.0" encoding="UTF-8"?>
+<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+  ${locales.map(locale => `
+  <sitemap>
+    <loc>${process.env['FRONTEND_URI']}/sitemap_${locale}.xml</loc>
+    <lastmod>${currentDate}</lastmod>
+  </sitemap>`).join('')}
+</sitemapindex>`;
 
-    const sitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
+    const sitemapIndexPath = path.join(
+      process.env['FRONTEND_ROOT']!,
+      '/sitemap.xml'
+    );
+
+    await fs.writeFile(sitemapIndexPath, sitemapIndexContent, 'utf8');
+    
+    // Create language-specific sitemaps
+    for (const locale of locales) {
+      // Create paths with default properties for this locale
+      const paths = [
+        // Homepage has special properties
+        { 
+          loc: `/${locale}`, 
+          lastmod: currentDate, 
+          changefreq: 'daily', 
+          priority: '1.0' 
+        },
+        // Standard pages with common properties
+        ...standardPaths.map(pagePath => ({
+          loc: `/${locale}${pagePath}`,
+          lastmod: currentDate,
+          changefreq: 'monthly',
+          priority: '0.8',
+        })),
+        // Add product pages for featured playlists
+        ...featuredPlaylists.map((playlist) => ({
+          loc: `/${locale}/product/${playlist.slug}`,
+          lastmod: playlist.updatedAt.toISOString().split('T')[0],
+          changefreq: 'daily',
+          priority: '0.9',
+        })),
+      ];
+
+      const localeSitemapContent = `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   ${paths
     .map(
@@ -358,12 +379,25 @@ class Data {
     .join('')}
 </urlset>`;
 
-    const sitemapPath = path.join(
-      process.env['FRONTEND_ROOT']!,
-      '/sitemap.xml'
-    );
+      const localeSitemapPath = path.join(
+        process.env['FRONTEND_ROOT']!,
+        `/sitemap_${locale}.xml`
+      );
 
-    await fs.writeFile(sitemapPath, sitemapContent, 'utf8');
+      await fs.writeFile(localeSitemapPath, localeSitemapContent, 'utf8');
+      
+      this.logger.log(
+        color.blue.bold(
+          `Generated sitemap for locale ${color.white.bold(locale)}`
+        )
+      );
+    }
+    
+    this.logger.log(
+      color.green.bold(
+        `Generated sitemap index with ${color.white.bold(locales.length)} language-specific sitemaps`
+      )
+    );
   }
 
   public async getPDFFilepath(
