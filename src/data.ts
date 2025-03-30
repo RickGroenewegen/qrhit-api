@@ -315,19 +315,22 @@ class Data {
       '/playlists',
     ];
 
+    // Get current date in YYYY-MM-DD format for lastmod
+    const currentDate = new Date().toISOString().split('T')[0];
+      
     // Create paths with default properties
     const paths = [
       // Homepage has special properties
       { 
         loc: '/', 
-        lastmod: '2024-09-16', 
+        lastmod: currentDate, 
         changefreq: 'daily', 
         priority: '1.0' 
       },
       // Standard pages with common properties
       ...standardPaths.slice(1).map(path => ({
         loc: path,
-        lastmod: '2024-09-15',
+        lastmod: currentDate,
         changefreq: 'monthly',
         priority: '0.8',
       })),
