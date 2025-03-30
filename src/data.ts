@@ -300,68 +300,37 @@ class Data {
       },
     });
 
+    // Define standard paths with default values
+    const standardPaths = [
+      '/',
+      '/faq',
+      '/pricing',
+      '/reviews',
+      '/giftcard',
+      '/examples',
+      '/generate/playlist',
+      '/contact',
+      '/privacy-policy',
+      '/terms-and-conditions',
+      '/playlists',
+    ];
+
+    // Create paths with default properties
     const paths = [
-      { loc: '/', lastmod: '2024-09-16', changefreq: 'daily', priority: '1.0' },
-      {
-        loc: '/faq',
+      // Homepage has special properties
+      { 
+        loc: '/', 
+        lastmod: '2024-09-16', 
+        changefreq: 'daily', 
+        priority: '1.0' 
+      },
+      // Standard pages with common properties
+      ...standardPaths.slice(1).map(path => ({
+        loc: path,
         lastmod: '2024-09-15',
         changefreq: 'monthly',
         priority: '0.8',
-      },
-      {
-        loc: '/pricing',
-        lastmod: '2024-09-15',
-        changefreq: 'monthly',
-        priority: '0.8',
-      },
-      {
-        loc: '/reviews',
-        lastmod: '2024-09-15',
-        changefreq: 'monthly',
-        priority: '0.8',
-      },
-      {
-        loc: '/giftcard',
-        lastmod: '2024-09-15',
-        changefreq: 'monthly',
-        priority: '0.8',
-      },
-      {
-        loc: '/examples',
-        lastmod: '2024-09-15',
-        changefreq: 'monthly',
-        priority: '0.8',
-      },
-      {
-        loc: '/generate/playlist',
-        lastmod: '2024-09-15',
-        changefreq: 'monthly',
-        priority: '0.8',
-      },
-      {
-        loc: '/contact',
-        lastmod: '2024-09-15',
-        changefreq: 'monthly',
-        priority: '0.8',
-      },
-      {
-        loc: '/privacy-policy',
-        lastmod: '2024-09-15',
-        changefreq: 'monthly',
-        priority: '0.8',
-      },
-      {
-        loc: '/terms-and-conditions',
-        lastmod: '2024-09-15',
-        changefreq: 'monthly',
-        priority: '0.8',
-      },
-      {
-        loc: '/playlists',
-        lastmod: '2024-09-15',
-        changefreq: 'monthly',
-        priority: '0.8',
-      },
+      })),
       // Add product pages for featured playlists
       ...featuredPlaylists.map((playlist) => ({
         loc: `/product/${playlist.slug}`,
