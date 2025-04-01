@@ -1232,17 +1232,8 @@ class PrintEnBind {
         )
       );
 
-      const deliveryResponse = await fetch(
-        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${result.data.orderId}`,
-        {
-          method: 'GET',
-          headers: { Authorization: authToken! },
-        }
-      );
-
-      const delivery = await deliveryResponse.json();
-
-      const trackingLink = delivery.tracktrace_url || '';
+      const delivery = await this.getDeliveryInfo(result.data.orderId);
+      const trackingLink = delivery?.tracktrace_url || '';
 
       this.logger.log(
         color.blue.bold(
@@ -1622,6 +1613,28 @@ class PrintEnBind {
     }
   }
 
+  private async getDeliveryInfo(orderId: string): Promise<any> {
+    try {
+      const authToken = await this.getAuthToken();
+      const response = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
+        {
+          method: 'GET',
+          headers: { Authorization: authToken! },
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(`Failed to get delivery info: ${response.statusText}`);
+      }
+
+      return await response.json();
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error getting delivery info: ${error}`));
+      return null;
+    }
+  }
+
   public async handleTrackingMails(): Promise<void> {
     try {
       const unshippedOrders = await this.prisma.payment.findMany({
@@ -1670,32 +1683,34 @@ class PrintEnBind {
                 )
               );
 
-              // Update order status
+              // Get the latest delivery info to ensure we have the most up-to-date tracking link
+              const deliveryInfo = await this.getDeliveryInfo(order.printApiOrderId);
+              const trackingLink = deliveryInfo?.tracktrace_url || payment.printApiTrackingLink || '';
+
+              // Update order status and tracking link
               await this.prisma.payment.update({
                 where: { id: order.id },
                 data: {
                   printApiShipped: true,
                   printApiStatus: 'Shipped',
+                  printApiTrackingLink: trackingLink,
                 },
               });
 
               console.log(
                 222,
-                payment.printApiTrackingLink?.length,
-                payment.printApiTrackingLink
+                trackingLink?.length,
+                trackingLink
               );
 
-              if (
-                payment.printApiTrackingLink &&
-                payment.printApiTrackingLink!.length > 0
-              ) {
+              if (trackingLink && trackingLink.length > 0) {
                 console.log(333, 'CREATE_INVOICE');
 
                 const pdfPath = await this.createInvoice(payment);
                 console.log(444, 'SEND_MAIL');
                 this.mail.sendTrackingEmail(
                   payment,
-                  payment.printApiTrackingLink!,
+                  trackingLink,
                   pdfPath
                 );
                 console.log(555, 'TRACKING_MAIL_DONE');
