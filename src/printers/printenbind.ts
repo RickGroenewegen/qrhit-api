@@ -1684,8 +1684,13 @@ class PrintEnBind {
               );
 
               // Get the latest delivery info to ensure we have the most up-to-date tracking link
-              const deliveryInfo = await this.getDeliveryInfo(order.printApiOrderId);
-              const trackingLink = deliveryInfo?.tracktrace_url || payment.printApiTrackingLink || '';
+              const deliveryInfo = await this.getDeliveryInfo(
+                order.printApiOrderId
+              );
+              const trackingLink =
+                deliveryInfo?.tracktrace_url ||
+                payment.printApiTrackingLink ||
+                '';
 
               // Update order status and tracking link
               await this.prisma.payment.update({
@@ -1697,23 +1702,9 @@ class PrintEnBind {
                 },
               });
 
-              console.log(
-                222,
-                trackingLink?.length,
-                trackingLink
-              );
-
               if (trackingLink && trackingLink.length > 0) {
-                console.log(333, 'CREATE_INVOICE');
-
                 const pdfPath = await this.createInvoice(payment);
-                console.log(444, 'SEND_MAIL');
-                this.mail.sendTrackingEmail(
-                  payment,
-                  trackingLink,
-                  pdfPath
-                );
-                console.log(555, 'TRACKING_MAIL_DONE');
+                this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
                 this.logger.log(
                   color.blue.bold(
                     `Sent tracking email for order ${color.white.bold(
