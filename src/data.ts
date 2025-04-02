@@ -316,18 +316,22 @@ class Data {
 
     // Get current date in YYYY-MM-DD format for lastmod
     const currentDate = new Date().toISOString().split('T')[0];
-    
+
     // Get all available locales from Translation class
     const locales = this.translate.allLocales;
-    
+
     // Create sitemap index file that references language-specific sitemaps
     const sitemapIndexContent = `<?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  ${locales.map(locale => `
+  ${locales
+    .map(
+      (locale) => `
   <sitemap>
     <loc>${process.env['FRONTEND_URI']}/sitemap_${locale}.xml</loc>
     <lastmod>${currentDate}</lastmod>
-  </sitemap>`).join('')}
+  </sitemap>`
+    )
+    .join('')}
 </sitemapindex>`;
 
     const sitemapIndexPath = path.join(
@@ -336,20 +340,20 @@ class Data {
     );
 
     await fs.writeFile(sitemapIndexPath, sitemapIndexContent, 'utf8');
-    
+
     // Create language-specific sitemaps
     for (const locale of locales) {
       // Create paths with default properties for this locale
       const paths = [
         // Homepage has special properties
-        { 
-          loc: `/${locale}`, 
-          lastmod: currentDate, 
-          changefreq: 'daily', 
-          priority: '1.0' 
+        {
+          loc: `/${locale}`,
+          lastmod: currentDate,
+          changefreq: 'daily',
+          priority: '1.0',
         },
         // Standard pages with common properties
-        ...standardPaths.map(pagePath => ({
+        ...standardPaths.map((pagePath) => ({
           loc: `/${locale}${pagePath}`,
           lastmod: currentDate,
           changefreq: 'monthly',
@@ -385,17 +389,19 @@ class Data {
       );
 
       await fs.writeFile(localeSitemapPath, localeSitemapContent, 'utf8');
-      
+
       this.logger.log(
         color.blue.bold(
           `Generated sitemap for locale ${color.white.bold(locale)}`
         )
       );
     }
-    
+
     this.logger.log(
       color.green.bold(
-        `Generated sitemap index with ${color.white.bold(locales.length)} language-specific sitemaps`
+        `Generated sitemap index with ${color.white.bold(
+          locales.length
+        )} language-specific sitemaps`
       )
     );
   }
@@ -1180,8 +1186,6 @@ class Data {
     const cachedData = await this.cache.get(cacheKey);
 
     if (cachedData) {
-      console.log(222, JSON.parse(cachedData));
-
       return {
         success: true,
         data: JSON.parse(cachedData),
