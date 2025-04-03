@@ -80,6 +80,7 @@ class Server {
   private suggestion = Suggestion.getInstance();
   private designer = Designer.getInstance();
   private hitlist = Hitlist.getInstance();
+  private prisma = new PrismaClient();
   private whiteLabels = [
     {
       domain: 'k7.com',
@@ -614,6 +615,44 @@ class Server {
       async (request: any, reply: any) => {
         this.generator.finalizeOrder(request.body.paymentId, this.mollie);
         reply.send({ success: true });
+      }
+    );
+
+    this.fastify.get(
+      '/vibe/state',
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
+      },
+      async (request: any, reply: any) => {
+        try {
+          // Get the token from the request
+          const token = request.headers.authorization?.split(' ')[1];
+          const decoded = verifyToken(token || '');
+          
+          if (!decoded || !decoded.companyId) {
+            reply.status(400).send({ error: 'No company associated with this user' });
+            return;
+          }
+          
+          // Get company information
+          const company = await this.prisma.company.findUnique({
+            where: { id: decoded.companyId }
+          });
+          
+          if (!company) {
+            reply.status(404).send({ error: 'Company not found' });
+            return;
+          }
+          
+          // Return the state object with company info
+          reply.send({
+            company
+          });
+        } catch (error) {
+          console.error('Error retrieving company state:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
       }
     );
 
