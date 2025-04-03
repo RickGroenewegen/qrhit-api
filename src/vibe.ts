@@ -107,6 +107,46 @@ class Vibe {
       return { success: false, error: 'Error updating company' };
     }
   }
+
+  /**
+   * Get all company lists for a specific company
+   * @param companyId The company ID to get lists for
+   * @returns Object containing company lists
+   */
+  public async getCompanyLists(companyId: number): Promise<any> {
+    try {
+      if (!companyId) {
+        return { success: false, error: 'No company ID provided' };
+      }
+
+      // Check if company exists
+      const existingCompany = await this.prisma.company.findUnique({
+        where: { id: companyId }
+      });
+      
+      if (!existingCompany) {
+        return { success: false, error: 'Company not found' };
+      }
+
+      // Get all company lists for this company
+      const companyLists = await this.prisma.companyList.findMany({
+        where: { companyId },
+        orderBy: { createdAt: 'desc' }
+      });
+      
+      this.logger.log(color.blue.bold(`Retrieved ${color.white.bold(companyLists.length)} lists for company ${color.white.bold(existingCompany.name)}`));
+      
+      return {
+        success: true,
+        data: {
+          companyLists
+        }
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error getting company lists: ${error}`));
+      return { success: false, error: 'Error retrieving company lists' };
+    }
+  }
 }
 
 export default Vibe;

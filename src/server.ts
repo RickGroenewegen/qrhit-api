@@ -692,6 +692,42 @@ class Server {
     );
 
     this.fastify.get(
+      '/vibe/company/lists',
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
+      },
+      async (request: any, reply: any) => {
+        try {
+          // Get the token from the request
+          const token = request.headers.authorization?.split(' ')[1];
+          const decoded = verifyToken(token || '');
+
+          if (!decoded || !decoded.companyId) {
+            reply
+              .status(400)
+              .send({ error: 'No company associated with this user' });
+            return;
+          }
+
+          // Use the Vibe class to get company lists
+          const result = await this.vibe.getCompanyLists(decoded.companyId);
+
+          if (!result.success) {
+            reply.status(404).send({ error: result.error });
+            return;
+          }
+
+          // Return the company lists
+          reply.send(result.data);
+        } catch (error) {
+          console.error('Error retrieving company lists:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
+      }
+    );
+
+    this.fastify.get(
       '/download_invoice/:invoiceId',
       {
         preHandler: (request: any, reply: any) =>
