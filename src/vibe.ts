@@ -557,6 +557,132 @@ class Vibe {
       return { success: false, error: 'Error upserting list questions' };
     }
   }
+
+  /**
+   * Update box design settings for a company list
+   * @param listId The company list ID to update
+   * @param companyId The company ID to verify ownership
+   * @param ownBoxDesign Boolean indicating if company has own box design
+   * @param designFile Optional file upload for custom box design
+   * @returns Object with success status and updated company list
+   */
+  public async updateBoxDesign(
+    listId: number,
+    companyId: number,
+    ownBoxDesign: boolean,
+    designFile?: any
+  ): Promise<any> {
+    try {
+      if (!listId) {
+        return { success: false, error: 'No list ID provided' };
+      }
+
+      // Check if company list exists and belongs to the company
+      const companyList = await this.prisma.companyList.findUnique({
+        where: { id: listId },
+        include: {
+          Company: true,
+        },
+      });
+
+      if (!companyList) {
+        return { success: false, error: 'Company list not found' };
+      }
+
+      // Verify that the list belongs to the company
+      if (companyList.companyId !== companyId) {
+        return {
+          success: false,
+          error: 'Company list does not belong to this company',
+        };
+      }
+
+      // Prepare update data
+      const updateData: any = {
+        ownBoxDesign: ownBoxDesign
+      };
+
+      // Handle file upload if ownBoxDesign is true and a file was provided
+      if (ownBoxDesign && designFile) {
+        try {
+          // Create directory if it doesn't exist
+          const backgroundDir = `${process.env['PUBLIC_DIR']}/companydata`;
+          const fs = require('fs');
+          const util = require('util');
+          const mkdir = util.promisify(fs.mkdir);
+          const writeFile = util.promisify(fs.writeFile);
+          
+          try {
+            await mkdir(backgroundDir, { recursive: true });
+          } catch (error) {
+            this.logger.log(
+              color.red.bold(
+                `Error creating company data directory: ${color.white.bold(error)}`
+              )
+            );
+          }
+
+          // Generate a unique filename
+          const fileExtension = designFile.filename.split('.').pop();
+          const uniqueFilename = `box_design_${listId}_${Date.now()}.${fileExtension}`;
+          const filePath = `${backgroundDir}/${uniqueFilename}`;
+
+          // Save the file
+          const buffer = await designFile.toBuffer();
+          await writeFile(filePath, buffer);
+
+          // Update the filename in the database
+          updateData.ownBoxDesignFilename = uniqueFilename;
+
+          this.logger.log(
+            color.green.bold(
+              `Saved box design file ${color.white.bold(uniqueFilename)} for list ${color.white.bold(companyList.name)}`
+            )
+          );
+        } catch (error) {
+          this.logger.log(
+            color.red.bold(
+              `Error saving box design file: ${color.white.bold(error)}`
+            )
+          );
+          return { success: false, error: 'Error saving box design file' };
+        }
+      }
+
+      // Update the list status to 'box' if it's in an earlier state
+      const updatedStatus = this.getUpdatedStatus(companyList.status, 'box');
+      if (updatedStatus !== companyList.status) {
+        updateData.status = updatedStatus;
+      }
+
+      // Update the company list
+      const updatedCompanyList = await this.prisma.companyList.update({
+        where: { id: listId },
+        data: updateData,
+        include: {
+          Company: true,
+        },
+      });
+
+      this.logger.log(
+        color.green.bold(
+          `Updated box design for list ${color.white.bold(updatedCompanyList.name)}`
+        )
+      );
+
+      return {
+        success: true,
+        data: {
+          companyList: updatedCompanyList,
+        },
+      };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error updating box design: ${error}`)
+      );
+      return { success: false, error: 'Error updating box design' };
+    }
+  }
 }
 
 export default Vibe;

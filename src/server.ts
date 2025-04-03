@@ -783,6 +783,64 @@ class Server {
       }
     );
 
+    this.fastify.post(
+      '/vibe/:listId/box',
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
+      },
+      async (request: any, reply: any) => {
+        try {
+          // Get the token from the request
+          const token = request.headers.authorization?.split(' ')[1];
+          const decoded = verifyToken(token || '');
+          
+          // Get the list ID from the request parameters
+          const listId = parseInt(request.params.listId);
+          
+          if (isNaN(listId)) {
+            reply.status(400).send({ error: 'Invalid list ID' });
+            return;
+          }
+
+          if (!decoded || !decoded.companyId) {
+            reply
+              .status(400)
+              .send({ error: 'No company associated with this user' });
+            return;
+          }
+
+          // Get the multipart form data
+          const data = await request.file();
+          
+          // Extract ownBoxDesign value
+          const ownBoxDesign = request.body && 
+            (request.body.ownBoxDesign === true || 
+             request.body.ownBoxDesign === 'true' || 
+             request.body.ownBoxDesign === '1');
+          
+          // Use the Vibe class to update box design
+          const result = await this.vibe.updateBoxDesign(
+            listId,
+            decoded.companyId,
+            ownBoxDesign,
+            data
+          );
+
+          if (!result.success) {
+            reply.status(404).send({ error: result.error });
+            return;
+          }
+
+          // Return the updated company list
+          reply.send(result.data);
+        } catch (error) {
+          console.error('Error updating box design:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
+      }
+    );
+
     this.fastify.get(
       '/download_invoice/:invoiceId',
       {
