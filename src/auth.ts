@@ -67,17 +67,17 @@ export function verifyToken(token: string): any {
  */
 export async function authenticateUser(email: string, password: string): Promise<{ token: string, userId: string } | null> {
   try {
+    // First get the full user record
     const user = await prisma.user.findUnique({
-      where: { email },
-      select: {
-        userId: true,
-        password: true,
-        salt: true,
-        isAdmin: true
-      }
+      where: { email }
     });
 
-    if (!user || !user.password || !user.salt) {
+    if (!user) {
+      return null;
+    }
+
+    // Check if user has password and salt fields
+    if (!user.password || !user.salt) {
       return null;
     }
 
@@ -86,7 +86,7 @@ export async function authenticateUser(email: string, password: string): Promise
       return null;
     }
 
-    const token = generateToken(user.userId, user.isAdmin);
+    const token = generateToken(user.userId, user.isAdmin || false);
     return { token, userId: user.userId };
   } catch (error) {
     console.error('Authentication error:', error);
@@ -114,28 +114,44 @@ export async function createOrUpdateAdminUser(email: string, password: string, d
     });
 
     if (existingUser) {
-      // Update existing user
-      return await prisma.user.update({
-        where: { email },
-        data: {
-          password: hashedPassword,
-          salt: salt,
-          isAdmin: true,
-          displayName
-        }
+      // Update existing user using raw SQL to bypass Prisma type checking
+      // This is a temporary solution until Prisma client is regenerated
+      await prisma.$executeRaw`
+        UPDATE users 
+        SET password = ${hashedPassword}, 
+            salt = ${salt}, 
+            isAdmin = 1, 
+            displayName = ${displayName} 
+        WHERE email = ${email}
+      `;
+      
+      // Fetch the updated user
+      return await prisma.user.findUnique({
+        where: { email }
       });
     } else {
-      // Create new user
-      return await prisma.user.create({
-        data: {
-          userId,
-          email,
-          displayName,
-          hash: userHash,
-          password: hashedPassword,
-          salt: salt,
-          isAdmin: true
-        }
+      // Create new user using raw SQL to bypass Prisma type checking
+      // This is a temporary solution until Prisma client is regenerated
+      await prisma.$executeRaw`
+        INSERT INTO users (userId, email, displayName, hash, password, salt, isAdmin, marketingEmails, sync, createdAt, updatedAt)
+        VALUES (
+          ${userId}, 
+          ${email}, 
+          ${displayName}, 
+          ${userHash}, 
+          ${hashedPassword}, 
+          ${salt}, 
+          1, 
+          0, 
+          0, 
+          NOW(), 
+          NOW()
+        )
+      `;
+      
+      // Fetch the created user
+      return await prisma.user.findUnique({
+        where: { email }
       });
     }
   } catch (error) {
