@@ -39,11 +39,17 @@ export function verifyPassword(password: string, hash: string, salt: string): bo
  * @param userId The user ID to include in the token
  * @param isAdmin Whether the user is an admin
  * @param userGroups Optional array of user group names
+ * @param companyId Optional company ID the user belongs to
  * @returns A JWT token
  */
-export function generateToken(userId: string, isAdmin: boolean = false, userGroups: string[] = []): string {
+export function generateToken(
+  userId: string, 
+  isAdmin: boolean = false, 
+  userGroups: string[] = [], 
+  companyId?: number
+): string {
   const secret = process.env.JWT_SECRET!;
-  return jwt.sign({ userId, isAdmin, userGroups }, secret, { expiresIn: '1y' });
+  return jwt.sign({ userId, isAdmin, userGroups, companyId }, secret, { expiresIn: '1y' });
 }
 
 /**
@@ -97,7 +103,12 @@ export async function authenticateUser(email: string, password: string): Promise
     // Extract user group names
     const userGroups = user.UserGroupUser.map(ugu => ugu.UserGroup.name);
     
-    const token = generateToken(user.userId, user.isAdmin || false, userGroups);
+    const token = generateToken(
+      user.userId, 
+      user.isAdmin || false, 
+      userGroups,
+      user.companyId || undefined
+    );
     return { token, userId: user.userId };
   } catch (error) {
     console.error('Authentication error:', error);
