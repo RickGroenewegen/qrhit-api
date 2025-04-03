@@ -706,6 +706,14 @@ class Suggestion {
             AND eligableForPrinter = true
           `;
 
+    console.log(
+      111,
+      paymentId,
+      allPhysicalPlaylistsReady[0].count,
+      allPhysicalPlaylistsReady[0].total,
+      allPhysicalPlaylistsReady[0].count === allPhysicalPlaylistsReady[0].total
+    );
+
     if (
       allPhysicalPlaylistsReady[0].count === allPhysicalPlaylistsReady[0].total
     ) {
@@ -722,7 +730,7 @@ class Suggestion {
       this.logger.log(
         color.blue.bold('All physical playlists are ready for printing')
       );
-      this.generator.sendToPrinter(paymentId, clientIp);
+      //this.generator.sendToPrinter(paymentId, clientIp);
     }
   }
 
