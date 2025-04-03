@@ -307,6 +307,9 @@ class Vibe {
       // Get existing questions for this list
       const existingQuestions = await this.prisma.companyListQuestion.findMany({
         where: { companyListId: listId },
+        include: {
+          CompanyListQuestionOptions: true
+        }
       });
 
       // Create a map of existing question IDs
@@ -319,13 +322,27 @@ class Vibe {
       for (const question of questions) {
         if (question.id === 0) {
           // Create new question
-          await this.prisma.companyListQuestion.create({
+          const newQuestion = await this.prisma.companyListQuestion.create({
             data: {
               companyListId: listId,
               question: question.question,
               type: question.type,
             },
           });
+          
+          // Add options if they exist
+          if (question.options && Array.isArray(question.options)) {
+            for (const option of question.options) {
+              await this.prisma.companyListQuestionOptions.create({
+                data: {
+                  questionId: newQuestion.id,
+                  name: option.name,
+                  value: option.value
+                }
+              });
+            }
+          }
+          
           this.logger.log(
             color.green.bold(
               `Created new question "${color.white.bold(
@@ -343,6 +360,60 @@ class Vibe {
                 type: question.type,
               },
             });
+            
+            // Handle options for existing question
+            if (question.options && Array.isArray(question.options)) {
+              // Get existing options
+              const existingOptions = existingQuestions
+                .find(q => q.id === question.id)?.CompanyListQuestionOptions || [];
+              
+              // Create a map of existing option IDs
+              const existingOptionIds = new Set(existingOptions.map(o => o.id));
+              
+              // Track which option IDs are being updated
+              const updatedOptionIds = new Set<number>();
+              
+              // Process each option
+              for (const option of question.options) {
+                if (!option.id || option.id === 0) {
+                  // Create new option
+                  await this.prisma.companyListQuestionOptions.create({
+                    data: {
+                      questionId: question.id,
+                      name: option.name,
+                      value: option.value
+                    }
+                  });
+                } else {
+                  // Update existing option
+                  if (existingOptionIds.has(option.id)) {
+                    await this.prisma.companyListQuestionOptions.update({
+                      where: { id: option.id },
+                      data: {
+                        name: option.name,
+                        value: option.value
+                      }
+                    });
+                    updatedOptionIds.add(option.id);
+                  }
+                }
+              }
+              
+              // Delete options that are no longer present
+              const optionsToDelete = Array.from(existingOptionIds)
+                .filter(id => !updatedOptionIds.has(id));
+              
+              if (optionsToDelete.length > 0) {
+                await this.prisma.companyListQuestionOptions.deleteMany({
+                  where: {
+                    id: {
+                      in: optionsToDelete
+                    }
+                  }
+                });
+              }
+            }
+            
             updatedQuestionIds.add(question.id);
             this.logger.log(
               color.blue.bold(
