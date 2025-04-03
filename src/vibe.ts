@@ -52,13 +52,20 @@ class Vibe {
 
         if (companyList && companyList.companyId === companyId) {
           // Get all questions for this list with their options
-          questions = await this.prisma.companyListQuestion.findMany({
+          const questionsWithOptions = await this.prisma.companyListQuestion.findMany({
             where: { companyListId: listId },
             orderBy: { createdAt: 'asc' },
             include: {
               CompanyListQuestionOptions: true
             }
           });
+          
+          // Transform the questions to rename CompanyListQuestionOptions to options
+          questions = questionsWithOptions.map(q => ({
+            ...q,
+            options: q.CompanyListQuestionOptions,
+            CompanyListQuestionOptions: undefined
+          }));
 
           this.logger.log(
             color.blue.bold(
@@ -220,13 +227,20 @@ class Vibe {
       }
 
       // Get all questions for this list with their options
-      const questions = await this.prisma.companyListQuestion.findMany({
+      const questionsWithOptions = await this.prisma.companyListQuestion.findMany({
         where: { companyListId: listId },
         orderBy: { createdAt: 'asc' },
         include: {
           CompanyListQuestionOptions: true
         }
       });
+      
+      // Transform the questions to rename CompanyListQuestionOptions to options
+      const questions = questionsWithOptions.map(q => ({
+        ...q,
+        options: q.CompanyListQuestionOptions,
+        CompanyListQuestionOptions: undefined
+      }));
 
       this.logger.log(
         color.blue.bold(
@@ -372,13 +386,20 @@ class Vibe {
       }
 
       // Get the updated list of questions with their options
-      const updatedQuestions = await this.prisma.companyListQuestion.findMany({
+      const updatedQuestionsWithOptions = await this.prisma.companyListQuestion.findMany({
         where: { companyListId: listId },
         orderBy: { createdAt: 'asc' },
         include: {
           CompanyListQuestionOptions: true
         }
       });
+      
+      // Transform the questions to rename CompanyListQuestionOptions to options
+      const updatedQuestions = updatedQuestionsWithOptions.map(q => ({
+        ...q,
+        options: q.CompanyListQuestionOptions,
+        CompanyListQuestionOptions: undefined
+      }));
 
       return {
         success: true,
