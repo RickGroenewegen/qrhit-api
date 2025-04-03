@@ -728,38 +728,6 @@ class Server {
       }
     );
 
-    this.fastify.get(
-      '/vibe/:listId/questions',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
-      },
-      async (request: any, reply: any) => {
-        try {
-          // Get the list ID from the request parameters
-          const listId = parseInt(request.params.listId);
-          
-          if (isNaN(listId)) {
-            reply.status(400).send({ error: 'Invalid list ID' });
-            return;
-          }
-
-          // Use the Vibe class to get list questions
-          const result = await this.vibe.getListQuestions(listId);
-
-          if (!result.success) {
-            reply.status(404).send({ error: result.error });
-            return;
-          }
-
-          // Return the list questions
-          reply.send(result.data);
-        } catch (error) {
-          console.error('Error retrieving list questions:', error);
-          reply.status(500).send({ error: 'Internal server error' });
-        }
-      }
-    );
 
     this.fastify.post(
       '/vibe/:listId/questions',

@@ -20,7 +20,7 @@ class Vibe {
    * Get the state for a company
    * @param companyId The company ID to get state for
    * @param listId Optional company list ID to get specific list info
-   * @returns Object containing company information
+   * @returns Object containing company information and list questions
    */
   public async getState(companyId: number, listId?: number): Promise<any> {
     try {
@@ -37,12 +37,37 @@ class Vibe {
         return { success: false, error: 'Company not found' };
       }
       
-      // Return the state object with company info
+      // Get questions for the list if listId is provided
+      let questions = [];
+      let companyList = null;
+      
+      if (listId) {
+        // Check if company list exists and belongs to the company
+        companyList = await this.prisma.companyList.findUnique({
+          where: { id: listId },
+          include: {
+            Company: true
+          }
+        });
+        
+        if (companyList && companyList.companyId === companyId) {
+          // Get all questions for this list
+          questions = await this.prisma.companyListQuestion.findMany({
+            where: { companyListId: listId },
+            orderBy: { createdAt: 'asc' }
+          });
+          
+          this.logger.log(color.blue.bold(`Retrieved ${color.white.bold(questions.length)} questions for list ${color.white.bold(companyList.name)}`));
+        }
+      }
+      
+      // Return the state object with company info and questions
       return {
         success: true,
         data: {
           company,
-          listId // Include the listId for future implementation
+          companyList,
+          questions
         }
       };
     } catch (error) {
