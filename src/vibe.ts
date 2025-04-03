@@ -83,7 +83,7 @@ class Vibe {
         data: {
           company,
           questions,
-          companyList,
+          list: companyList,
         },
       };
     } catch (error) {
