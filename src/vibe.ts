@@ -51,10 +51,13 @@ class Vibe {
         });
 
         if (companyList && companyList.companyId === companyId) {
-          // Get all questions for this list
+          // Get all questions for this list with their options
           questions = await this.prisma.companyListQuestion.findMany({
             where: { companyListId: listId },
             orderBy: { createdAt: 'asc' },
+            include: {
+              CompanyListQuestionOptions: true
+            }
           });
 
           this.logger.log(
@@ -216,10 +219,13 @@ class Vibe {
         return { success: false, error: 'Company list not found' };
       }
 
-      // Get all questions for this list
+      // Get all questions for this list with their options
       const questions = await this.prisma.companyListQuestion.findMany({
         where: { companyListId: listId },
         orderBy: { createdAt: 'asc' },
+        include: {
+          CompanyListQuestionOptions: true
+        }
       });
 
       this.logger.log(
@@ -365,10 +371,13 @@ class Vibe {
         );
       }
 
-      // Get the updated list of questions
+      // Get the updated list of questions with their options
       const updatedQuestions = await this.prisma.companyListQuestion.findMany({
         where: { companyListId: listId },
         orderBy: { createdAt: 'asc' },
+        include: {
+          CompanyListQuestionOptions: true
+        }
       });
 
       return {
