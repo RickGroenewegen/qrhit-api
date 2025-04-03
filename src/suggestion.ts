@@ -693,15 +693,25 @@ class Suggestion {
   }
 
   private async checkIfReadyForPrinter(paymentId: string, clientIp: string) {
+    // First get the internal payment ID
+    const payment = await this.prisma.payment.findUnique({
+      where: { paymentId },
+      select: { id: true },
+    });
+
+    if (!payment) return;
+
+    const internalPaymentId = payment.id;
+
     // See if all physical playlists are ready for printing
     const allPhysicalPlaylistsReady = await this.prisma.$queryRaw<any[]>`
             SELECT COUNT(*) as count,
                    (SELECT COUNT(*) 
                     FROM payment_has_playlist 
-                    WHERE paymentId = ${paymentId} 
+                    WHERE paymentId = ${internalPaymentId} 
                     AND type = 'physical') as total
             FROM payment_has_playlist
-            WHERE paymentId = ${paymentId}
+            WHERE paymentId = ${internalPaymentId}
             AND type = 'physical'
             AND eligableForPrinter = true
           `;
