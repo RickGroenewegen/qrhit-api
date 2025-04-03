@@ -82,7 +82,6 @@ class Server {
   private designer = Designer.getInstance();
   private hitlist = Hitlist.getInstance();
   private vibe = Vibe.getInstance();
-  private prisma = new PrismaClient();
   private whiteLabels = [
     {
       domain: 'k7.com',
@@ -631,20 +630,22 @@ class Server {
           // Get the token from the request
           const token = request.headers.authorization?.split(' ')[1];
           const decoded = verifyToken(token || '');
-          
+
           if (!decoded || !decoded.companyId) {
-            reply.status(400).send({ error: 'No company associated with this user' });
+            reply
+              .status(400)
+              .send({ error: 'No company associated with this user' });
             return;
           }
-          
+
           // Use the Vibe class to get the state
           const result = await this.vibe.getState(decoded.companyId);
-          
+
           if (!result.success) {
             reply.status(404).send({ error: result.error });
             return;
           }
-          
+
           // Return the state object
           reply.send(result.data);
         } catch (error) {
