@@ -1,5 +1,5 @@
 import { FastifyInstance } from 'fastify/types/instance';
-import { generateToken, verifyToken } from './auth';
+import { generateToken, verifyToken, authenticateUser, createOrUpdateAdminUser } from './auth';
 import Fastify from 'fastify';
 import replyFrom from '@fastify/reply-from';
 import { OrderSearch } from './interfaces/OrderSearch';
@@ -108,18 +108,26 @@ class Server {
       if (!decoded) {
         reply.status(401).send({ error: 'Unauthorized' });
         return false;
-      } else {
-        if (
-          decoded.username == 'Sidra' &&
-          request.url != '/tracks/search' &&
-          request.url != '/tracks/update'
-        ) {
-          reply.status(401).send({ error: 'Unauthorized' });
-          console.log('Nee!');
-
-          return false;
-        }
+      } 
+      
+      // Check if this is an admin-only route
+      const adminOnlyRoutes = ['/admin/create'];
+      if (adminOnlyRoutes.includes(request.url) && !decoded.isAdmin) {
+        reply.status(403).send({ error: 'Forbidden: Admin access required' });
+        return false;
       }
+      
+      // Legacy check for specific user restrictions
+      if (
+        decoded.userId == 'Sidra' &&
+        request.url != '/tracks/search' &&
+        request.url != '/tracks/update'
+      ) {
+        reply.status(401).send({ error: 'Unauthorized' });
+        console.log('Nee!');
+        return false;
+      }
+      
       return true;
     };
 
@@ -135,20 +143,34 @@ class Server {
     );
 
     this.fastify.post('/validate', async (request: any, reply: any) => {
-      const { username, password } = request.body as {
-        username: string;
+      const { email, password } = request.body as {
+        email: string;
         password: string;
       };
+      
+      // For backward compatibility, check if using old username field
+      const username = request.body.username;
+      const loginEmail = email || username;
+      
+      // First try DB authentication
+      const authResult = await authenticateUser(loginEmail, password);
+      
+      if (authResult) {
+        reply.send({ token: authResult.token, userId: authResult.userId });
+        return;
+      }
+      
+      // Fallback to environment variables for backward compatibility
       const validUsername = process.env.ENV_ADMIN_USERNAME;
       const validPassword = process.env.ENV_ADMIN_PASSWORD;
       const validUsername2 = process.env.ENV_ADMIN_USERNAME2;
       const validPassword2 = process.env.ENV_ADMIN_PASSWORD2;
 
       if (
-        (username === validUsername && password === validPassword) ||
-        (username === validUsername2 && password === validPassword2)
+        (loginEmail === validUsername && password === validPassword) ||
+        (loginEmail === validUsername2 && password === validPassword2)
       ) {
-        const token = generateToken(username);
+        const token = generateToken(loginEmail, true);
         reply.send({ token });
       } else {
         reply.status(401).send({ error: 'Invalid credentials' });
@@ -1042,6 +1064,31 @@ class Server {
           .send({ success: false, message: 'Invalid unsubscribe link' });
       }
     });
+    
+    this.fastify.post(
+      '/admin/create',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply: any) => {
+        const { email, password, displayName } = request.body;
+        
+        if (!email || !password || !displayName) {
+          reply.status(400).send({ error: 'Missing required fields' });
+          return;
+        }
+        
+        try {
+          const user = await createOrUpdateAdminUser(email, password, displayName);
+          reply.send({ 
+            success: true, 
+            message: 'Admin user created/updated successfully',
+            userId: user.userId
+          });
+        } catch (error) {
+          console.error('Error creating admin user:', error);
+          reply.status(500).send({ error: 'Failed to create admin user' });
+        }
+      }
+    );
 
     this.fastify.get('/unsent_reviews', async (request: any, _reply) => {
       return await this.review.processReviewEmails();
