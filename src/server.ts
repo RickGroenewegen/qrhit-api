@@ -40,6 +40,7 @@ import { Music } from './music';
 import Suggestion from './suggestion';
 import Designer from './designer';
 import Hitlist from './hitlist';
+import Vibe from './vibe';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -80,6 +81,7 @@ class Server {
   private suggestion = Suggestion.getInstance();
   private designer = Designer.getInstance();
   private hitlist = Hitlist.getInstance();
+  private vibe = Vibe.getInstance();
   private prisma = new PrismaClient();
   private whiteLabels = [
     {
@@ -635,20 +637,16 @@ class Server {
             return;
           }
           
-          // Get company information
-          const company = await this.prisma.company.findUnique({
-            where: { id: decoded.companyId }
-          });
+          // Use the Vibe class to get the state
+          const result = await this.vibe.getState(decoded.companyId);
           
-          if (!company) {
-            reply.status(404).send({ error: 'Company not found' });
+          if (!result.success) {
+            reply.status(404).send({ error: result.error });
             return;
           }
           
-          // Return the state object with company info
-          reply.send({
-            company
-          });
+          // Return the state object
+          reply.send(result.data);
         } catch (error) {
           console.error('Error retrieving company state:', error);
           reply.status(500).send({ error: 'Internal server error' });
