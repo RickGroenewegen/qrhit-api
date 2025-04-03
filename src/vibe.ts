@@ -77,12 +77,13 @@ class Vibe {
         }
       }
 
-      // Return the state object with company info and questions
+      // Return the state object with company info, list info and questions
       return {
         success: true,
         data: {
           company,
           questions,
+          companyList,
         },
       };
     } catch (error) {
