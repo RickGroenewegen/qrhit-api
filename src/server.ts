@@ -147,6 +147,35 @@ class Server {
       }
     );
 
+    this.fastify.post(
+      '/admin/create',
+      { preHandler: verifyTokenMiddleware },
+      async (request: any, reply: any) => {
+        const { email, password, displayName } = request.body;
+
+        if (!email || !password || !displayName) {
+          reply.status(400).send({ error: 'Missing required fields' });
+          return;
+        }
+
+        try {
+          const user = await createOrUpdateAdminUser(
+            email,
+            password,
+            displayName
+          );
+          reply.send({
+            success: true,
+            message: 'User created/updated successfully',
+            userId: user.userId,
+          });
+        } catch (error) {
+          console.error('Error creating admin user:', error);
+          reply.status(500).send({ error: 'Failed to create admin user' });
+        }
+      }
+    );
+
     this.fastify.post('/validate', async (request: any, reply: any) => {
       const { email, password } = request.body as {
         email: string;
@@ -1181,31 +1210,6 @@ class Server {
     );
 
     if (process.env['ENVIRONMENT'] == 'development') {
-      this.fastify.post('/admin/create', async (request: any, reply: any) => {
-        const { email, password, displayName } = request.body;
-
-        if (!email || !password || !displayName) {
-          reply.status(400).send({ error: 'Missing required fields' });
-          return;
-        }
-
-        try {
-          const user = await createOrUpdateAdminUser(
-            email,
-            password,
-            displayName
-          );
-          reply.send({
-            success: true,
-            message: 'Admin user created/updated successfully',
-            userId: user.userId,
-          });
-        } catch (error) {
-          console.error('Error creating admin user:', error);
-          reply.status(500).send({ error: 'Failed to create admin user' });
-        }
-      });
-
       this.fastify.get(
         '/generate_invoice/:paymentId',
         async (request: any, _reply) => {
