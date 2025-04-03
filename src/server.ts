@@ -655,6 +655,42 @@ class Server {
       }
     );
 
+    this.fastify.post(
+      '/vibe/company',
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
+      },
+      async (request: any, reply: any) => {
+        try {
+          // Get the token from the request
+          const token = request.headers.authorization?.split(' ')[1];
+          const decoded = verifyToken(token || '');
+
+          if (!decoded || !decoded.companyId) {
+            reply
+              .status(400)
+              .send({ error: 'No company associated with this user' });
+            return;
+          }
+
+          // Use the Vibe class to update the company
+          const result = await this.vibe.updateCompany(decoded.companyId, request.body);
+
+          if (!result.success) {
+            reply.status(404).send({ error: result.error });
+            return;
+          }
+
+          // Return the updated company data
+          reply.send(result.data);
+        } catch (error) {
+          console.error('Error updating company:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
+      }
+    );
+
     this.fastify.get(
       '/download_invoice/:invoiceId',
       {
