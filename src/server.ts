@@ -761,6 +761,60 @@ class Server {
       }
     );
 
+    this.fastify.post(
+      '/vibe/:listId/questions',
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
+      },
+      async (request: any, reply: any) => {
+        try {
+          // Get the token from the request
+          const token = request.headers.authorization?.split(' ')[1];
+          const decoded = verifyToken(token || '');
+          
+          // Get the list ID from the request parameters
+          const listId = parseInt(request.params.listId);
+          
+          if (isNaN(listId)) {
+            reply.status(400).send({ error: 'Invalid list ID' });
+            return;
+          }
+
+          if (!decoded || !decoded.companyId) {
+            reply
+              .status(400)
+              .send({ error: 'No company associated with this user' });
+            return;
+          }
+
+          // Validate the request body
+          if (!request.body || !request.body.questions || !Array.isArray(request.body.questions)) {
+            reply.status(400).send({ error: 'Invalid request body' });
+            return;
+          }
+
+          // Use the Vibe class to upsert list questions
+          const result = await this.vibe.upsertListQuestions(
+            listId,
+            decoded.companyId,
+            request.body.questions
+          );
+
+          if (!result.success) {
+            reply.status(404).send({ error: result.error });
+            return;
+          }
+
+          // Return the updated list questions
+          reply.send(result.data);
+        } catch (error) {
+          console.error('Error upserting list questions:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
+      }
+    );
+
     this.fastify.get(
       '/download_invoice/:invoiceId',
       {

@@ -193,6 +193,114 @@ class Vibe {
       return { success: false, error: 'Error retrieving company lists' };
     }
   }
+
+  /**
+   * Upsert questions for a specific company list
+   * @param listId The company list ID to update questions for
+   * @param companyId The company ID to verify ownership
+   * @param questions Array of question objects to upsert
+   * @returns Object with success status and updated questions
+   */
+  public async upsertListQuestions(listId: number, companyId: number, questions: any[]): Promise<any> {
+    try {
+      if (!listId) {
+        return { success: false, error: 'No list ID provided' };
+      }
+
+      if (!questions || !Array.isArray(questions)) {
+        return { success: false, error: 'Invalid questions data' };
+      }
+
+      // Check if company list exists and belongs to the company
+      const companyList = await this.prisma.companyList.findUnique({
+        where: { id: listId },
+        include: {
+          Company: true
+        }
+      });
+      
+      if (!companyList) {
+        return { success: false, error: 'Company list not found' };
+      }
+
+      // Verify that the list belongs to the company
+      if (companyList.companyId !== companyId) {
+        return { success: false, error: 'Company list does not belong to this company' };
+      }
+
+      // Get existing questions for this list
+      const existingQuestions = await this.prisma.companyListQuestion.findMany({
+        where: { companyListId: listId }
+      });
+
+      // Create a map of existing question IDs
+      const existingQuestionIds = new Set(existingQuestions.map(q => q.id));
+      
+      // Track which question IDs are being updated
+      const updatedQuestionIds = new Set<number>();
+
+      // Process each question
+      for (const question of questions) {
+        if (question.id === 0) {
+          // Create new question
+          await this.prisma.companyListQuestion.create({
+            data: {
+              companyListId: listId,
+              question: question.question,
+              type: question.type
+            }
+          });
+          this.logger.log(color.green.bold(`Created new question "${color.white.bold(question.question)}" for list ${color.white.bold(companyList.name)}`));
+        } else {
+          // Update existing question
+          if (existingQuestionIds.has(question.id)) {
+            await this.prisma.companyListQuestion.update({
+              where: { id: question.id },
+              data: {
+                question: question.question,
+                type: question.type
+              }
+            });
+            updatedQuestionIds.add(question.id);
+            this.logger.log(color.blue.bold(`Updated question ${color.white.bold(question.id)} for list ${color.white.bold(companyList.name)}`));
+          } else {
+            this.logger.log(color.yellow.bold(`Question ID ${color.white.bold(question.id)} not found for list ${color.white.bold(companyList.name)}`));
+          }
+        }
+      }
+
+      // Delete questions that are no longer present
+      const questionsToDelete = Array.from(existingQuestionIds).filter(id => !updatedQuestionIds.has(id));
+      
+      if (questionsToDelete.length > 0) {
+        await this.prisma.companyListQuestion.deleteMany({
+          where: {
+            id: {
+              in: questionsToDelete
+            }
+          }
+        });
+        this.logger.log(color.red.bold(`Deleted ${color.white.bold(questionsToDelete.length)} questions for list ${color.white.bold(companyList.name)}`));
+      }
+
+      // Get the updated list of questions
+      const updatedQuestions = await this.prisma.companyListQuestion.findMany({
+        where: { companyListId: listId },
+        orderBy: { createdAt: 'asc' }
+      });
+      
+      return {
+        success: true,
+        data: {
+          companyList,
+          questions: updatedQuestions
+        }
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error upserting list questions: ${error}`));
+      return { success: false, error: 'Error upserting list questions' };
+    }
+  }
 }
 
 export default Vibe;
