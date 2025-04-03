@@ -163,9 +163,33 @@ model User {
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   UserSuggestion  UserSuggestion[]
+  UserGroupUser   UserInGroup[]
 
   @@index([hash])
   @@map("users")
+}
+
+model UserGroup {
+  id            Int           @id @default(autoincrement())
+  name          String        @unique
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now())
+  UserGroupUser UserInGroup[]
+
+  @@map("user_groups")
+}
+
+model UserInGroup {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  groupId   Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  UserGroup UserGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  User      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_in_groups")
 }
 
 model PushMessage {
