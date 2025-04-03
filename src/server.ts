@@ -106,7 +106,11 @@ class Server {
 
   private addAuthRoutes = async () => {
     // Middleware for token verification
-    const verifyTokenMiddleware = async (request: any, reply: any, allowedGroups: string[] = []) => {
+    const verifyTokenMiddleware = async (
+      request: any,
+      reply: any,
+      allowedGroups: string[] = []
+    ) => {
       const token = request.headers.authorization?.split(' ')[1];
       const decoded = verifyToken(token || '');
 
@@ -118,24 +122,17 @@ class Server {
       // Check if user has any of the allowed groups
       if (allowedGroups.length > 0) {
         const userGroups = decoded.userGroups || [];
-        const hasAllowedGroup = userGroups.some(group => allowedGroups.includes(group));
+        const hasAllowedGroup = userGroups.some((group: string) =>
+          allowedGroups.includes(group)
+        );
         const isAdmin = decoded.isAdmin || false;
-        
+
         if (!hasAllowedGroup && !isAdmin) {
-          reply.status(403).send({ error: 'Forbidden: Insufficient permissions' });
+          reply
+            .status(403)
+            .send({ error: 'Forbidden: Insufficient permissions' });
           return false;
         }
-      }
-
-      // Legacy check for specific user restrictions
-      if (
-        decoded.userId == 'Sidra' &&
-        request.url != '/tracks/search' &&
-        request.url != '/tracks/update'
-      ) {
-        reply.status(401).send({ error: 'Unauthorized' });
-        console.log('Nee!');
-        return false;
       }
 
       return true;
@@ -143,9 +140,9 @@ class Server {
 
     this.fastify.post(
       '/create_order',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, _reply) => {
         return await this.generator.sendToPrinter(
@@ -157,9 +154,9 @@ class Server {
 
     this.fastify.post(
       '/admin/create',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         const { email, password, displayName } = request.body;
@@ -215,7 +212,7 @@ class Server {
         (loginEmail === validUsername && password === validPassword) ||
         (loginEmail === validUsername2 && password === validPassword2)
       ) {
-        const token = generateToken(loginEmail, true, ['Administrators']);
+        const token = generateToken(loginEmail, true, ['admin']);
         reply.send({ token });
       } else {
         reply.status(401).send({ error: 'Invalid credentials' });
@@ -224,9 +221,9 @@ class Server {
 
     this.fastify.get(
       '/verify/:paymentId',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         this.data.verifyPayment(request.params.paymentId);
@@ -236,9 +233,9 @@ class Server {
 
     this.fastify.post(
       '/openperplex',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, _reply) => {
         const year = await this.openperplex.ask(
@@ -280,9 +277,9 @@ class Server {
 
     this.fastify.get(
       '/lastplays',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (_request: any, reply: any) => {
         const lastPlays = await this.data.getLastPlays();
@@ -292,9 +289,9 @@ class Server {
 
     this.fastify.post(
       '/push/broadcast',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         const { title, message, test, dry } = request.body;
@@ -310,9 +307,9 @@ class Server {
 
     this.fastify.get(
       '/push/messages',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         return await this.push.getMessages();
@@ -321,9 +318,9 @@ class Server {
 
     this.fastify.get(
       '/regenerate/:paymentId/:email',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, _reply) => {
         await this.mollie.clearPDFs(request.params.paymentId);
@@ -341,9 +338,9 @@ class Server {
 
     this.fastify.post(
       '/orders',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         const search = {
@@ -386,9 +383,9 @@ class Server {
 
     this.fastify.get(
       '/analytics',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         const analytics = await this.analytics.getAllCounters();
@@ -398,9 +395,9 @@ class Server {
 
     this.fastify.post(
       '/tracks/search',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, _reply) => {
         const { searchTerm = '', missingYouTubeLink } = request.body;
@@ -414,9 +411,9 @@ class Server {
 
     this.fastify.post(
       '/tracks/update',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, _reply) => {
         const { id, artist, name, year, spotifyLink, youtubeLink } =
@@ -439,9 +436,9 @@ class Server {
 
     this.fastify.get(
       '/yearcheck',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         const result = await this.data.getFirstUncheckedTrack();
@@ -455,9 +452,9 @@ class Server {
 
     this.fastify.post(
       '/yearcheck',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         const result = await this.data.updateTrackCheck(
@@ -475,9 +472,9 @@ class Server {
 
     this.fastify.get(
       '/check_unfinalized',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         this.data.checkUnfinalizedPayments();
@@ -487,9 +484,9 @@ class Server {
 
     this.fastify.get(
       '/month_report/:yearMonth',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         const { yearMonth } = request.params;
@@ -510,9 +507,9 @@ class Server {
 
     this.fastify.get(
       '/add_spotify',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (_request: any, reply) => {
         const result = this.data.addSpotifyLinks();
@@ -522,9 +519,9 @@ class Server {
 
     this.fastify.get(
       '/fix_preview_links',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (_request: any, _reply) => {
         const result = await this.data.fixPreviewLinks();
@@ -539,9 +536,9 @@ class Server {
 
     this.fastify.get(
       '/tax_report/:yearMonth',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         const { yearMonth } = request.params;
@@ -565,9 +562,9 @@ class Server {
 
     this.fastify.get(
       '/day_report',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (_request: any, reply: any) => {
         const report = await this.mollie.getPaymentsByDay();
@@ -580,9 +577,9 @@ class Server {
 
     this.fastify.get(
       '/corrections',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (_request: any, reply) => {
         const corrections = await this.suggestion.getCorrections();
@@ -592,9 +589,9 @@ class Server {
 
     this.fastify.post(
       '/correction/:paymentId/:userHash/:playlistId/:andSend',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply) => {
         this.suggestion.processCorrections(
@@ -610,9 +607,9 @@ class Server {
 
     this.fastify.post(
       '/finalize',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         this.generator.finalizeOrder(request.body.paymentId, this.mollie);
@@ -622,9 +619,9 @@ class Server {
 
     this.fastify.get(
       '/download_invoice/:invoiceId',
-      { 
-        preHandler: (request: any, reply: any) => 
-          verifyTokenMiddleware(request, reply, ['Administrators']) 
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         const { invoiceId } = request.params;
