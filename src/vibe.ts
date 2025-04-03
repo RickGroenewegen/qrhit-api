@@ -19,9 +19,10 @@ class Vibe {
   /**
    * Get the state for a company
    * @param companyId The company ID to get state for
+   * @param listId Optional company list ID to get specific list info
    * @returns Object containing company information
    */
-  public async getState(companyId: number): Promise<any> {
+  public async getState(companyId: number, listId?: number): Promise<any> {
     try {
       if (!companyId) {
         return { success: false, error: 'No company ID provided' };
@@ -40,7 +41,8 @@ class Vibe {
       return {
         success: true,
         data: {
-          company
+          company,
+          listId // Include the listId for future implementation
         }
       };
     } catch (error) {

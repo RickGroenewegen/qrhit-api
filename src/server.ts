@@ -620,7 +620,7 @@ class Server {
     );
 
     this.fastify.get(
-      '/vibe/state',
+      '/vibe/state/:listId',
       {
         preHandler: (request: any, reply: any) =>
           verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
@@ -630,6 +630,7 @@ class Server {
           // Get the token from the request
           const token = request.headers.authorization?.split(' ')[1];
           const decoded = verifyToken(token || '');
+          const listId = parseInt(request.params.listId);
 
           if (!decoded || !decoded.companyId) {
             reply
@@ -639,7 +640,7 @@ class Server {
           }
 
           // Use the Vibe class to get the state
-          const result = await this.vibe.getState(decoded.companyId);
+          const result = await this.vibe.getState(decoded.companyId, listId);
 
           if (!result.success) {
             reply.status(404).send({ error: result.error });
