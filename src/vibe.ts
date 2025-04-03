@@ -93,6 +93,35 @@ class Vibe {
   }
 
   /**
+   * Get the list status progression order
+   * @returns Array of status values in correct progression order
+   */
+  private getStatusProgression(): string[] {
+    return ['new', 'company', 'questions', 'box', 'card', 'playlist', 'personalize'];
+  }
+
+  /**
+   * Update the list status based on progression
+   * @param currentStatus Current status of the list
+   * @param newStatus Desired new status
+   * @returns The appropriate status to set
+   */
+  private getUpdatedStatus(currentStatus: string, newStatus: string): string {
+    const progression = this.getStatusProgression();
+    const currentIndex = progression.indexOf(currentStatus);
+    const newIndex = progression.indexOf(newStatus);
+    
+    // If current status is not in progression, default to new status
+    if (currentIndex === -1) return newStatus;
+    
+    // If new status is not in progression, keep current status
+    if (newIndex === -1) return currentStatus;
+    
+    // Only move forward in progression, never backward
+    return newIndex > currentIndex ? newStatus : currentStatus;
+  }
+
+  /**
    * Update company information
    * @param companyId The company ID to update
    * @param companyData The updated company data
@@ -138,6 +167,17 @@ class Vibe {
       const updatedCompany = await this.prisma.company.update({
         where: { id: companyId },
         data: validData,
+      });
+
+      // Update all company lists to 'company' status if they're in 'new' status
+      await this.prisma.companyList.updateMany({
+        where: { 
+          companyId: companyId,
+          status: 'new'
+        },
+        data: {
+          status: 'company'
+        }
       });
 
       this.logger.log(
@@ -472,6 +512,36 @@ class Vibe {
         options: q.CompanyListQuestionOptions,
         CompanyListQuestionOptions: undefined
       }));
+
+      // Update the list status to 'questions' if it's in an earlier state
+      const updatedStatus = this.getUpdatedStatus(companyList.status, 'questions');
+      if (updatedStatus !== companyList.status) {
+        await this.prisma.companyList.update({
+          where: { id: listId },
+          data: { status: updatedStatus }
+        });
+        
+        // Refresh the company list data
+        const updatedCompanyList = await this.prisma.companyList.findUnique({
+          where: { id: listId },
+          include: { Company: true }
+        });
+        
+        if (updatedCompanyList) {
+          this.logger.log(
+            color.green.bold(
+              `Updated list status to ${color.white.bold(updatedStatus)} for list ${color.white.bold(updatedCompanyList.name)}`
+            )
+          );
+          return {
+            success: true,
+            data: {
+              companyList: updatedCompanyList,
+              questions: updatedQuestions,
+            },
+          };
+        }
+      }
 
       return {
         success: true,
