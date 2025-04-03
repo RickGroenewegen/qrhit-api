@@ -149,6 +149,50 @@ class Vibe {
       return { success: false, error: 'Error retrieving company lists' };
     }
   }
+
+  /**
+   * Get questions for a specific company list
+   * @param listId The company list ID to get questions for
+   * @returns Object containing list questions
+   */
+  public async getListQuestions(listId: number): Promise<any> {
+    try {
+      if (!listId) {
+        return { success: false, error: 'No list ID provided' };
+      }
+
+      // Check if company list exists
+      const companyList = await this.prisma.companyList.findUnique({
+        where: { id: listId },
+        include: {
+          Company: true
+        }
+      });
+      
+      if (!companyList) {
+        return { success: false, error: 'Company list not found' };
+      }
+
+      // Get all questions for this list
+      const questions = await this.prisma.companyListQuestion.findMany({
+        where: { companyListId: listId },
+        orderBy: { createdAt: 'asc' }
+      });
+      
+      this.logger.log(color.blue.bold(`Retrieved ${color.white.bold(questions.length)} questions for list ${color.white.bold(companyList.name)}`));
+      
+      return {
+        success: true,
+        data: {
+          companyList,
+          questions
+        }
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error getting company lists: ${error}`));
+      return { success: false, error: 'Error retrieving company lists' };
+    }
+  }
 }
 
 export default Vibe;
