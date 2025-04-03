@@ -38,11 +38,12 @@ export function verifyPassword(password: string, hash: string, salt: string): bo
  * Generates a JWT token for a user
  * @param userId The user ID to include in the token
  * @param isAdmin Whether the user is an admin
+ * @param userGroups Optional array of user group names
  * @returns A JWT token
  */
-export function generateToken(userId: string, isAdmin: boolean = false): string {
+export function generateToken(userId: string, isAdmin: boolean = false, userGroups: string[] = []): string {
   const secret = process.env.JWT_SECRET!;
-  return jwt.sign({ userId, isAdmin }, secret, { expiresIn: '1y' });
+  return jwt.sign({ userId, isAdmin, userGroups }, secret, { expiresIn: '1y' });
 }
 
 /**
@@ -69,7 +70,14 @@ export async function authenticateUser(email: string, password: string): Promise
   try {
     // First get the full user record
     const user = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      include: {
+        UserGroupUser: {
+          include: {
+            UserGroup: true
+          }
+        }
+      }
     });
 
     if (!user) {
@@ -86,7 +94,10 @@ export async function authenticateUser(email: string, password: string): Promise
       return null;
     }
 
-    const token = generateToken(user.userId, user.isAdmin || false);
+    // Extract user group names
+    const userGroups = user.UserGroupUser.map(ugu => ugu.UserGroup.name);
+    
+    const token = generateToken(user.userId, user.isAdmin || false, userGroups);
     return { token, userId: user.userId };
   } catch (error) {
     console.error('Authentication error:', error);
@@ -101,6 +112,35 @@ export async function authenticateUser(email: string, password: string): Promise
  * @param displayName The admin's display name
  * @returns The created or updated user
  */
+/**
+ * Gets all user groups for a specific user
+ * @param userId The user's ID
+ * @returns Array of user group names
+ */
+export async function getUserGroups(userId: string): Promise<string[]> {
+  try {
+    const user = await prisma.user.findUnique({
+      where: { userId },
+      include: {
+        UserGroupUser: {
+          include: {
+            UserGroup: true
+          }
+        }
+      }
+    });
+
+    if (!user) {
+      return [];
+    }
+
+    return user.UserGroupUser.map(ugu => ugu.UserGroup.name);
+  } catch (error) {
+    console.error('Error getting user groups:', error);
+    return [];
+  }
+}
+
 export async function createOrUpdateAdminUser(email: string, password: string, displayName: string): Promise<any> {
   const salt = generateSalt();
   const hashedPassword = hashPassword(password, salt);
@@ -110,7 +150,14 @@ export async function createOrUpdateAdminUser(email: string, password: string, d
   try {
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
-      where: { email }
+      where: { email },
+      include: {
+        UserGroupUser: {
+          include: {
+            UserGroup: true
+          }
+        }
+      }
     });
 
     if (existingUser) {
@@ -127,7 +174,14 @@ export async function createOrUpdateAdminUser(email: string, password: string, d
       
       // Fetch the updated user
       return await prisma.user.findUnique({
-        where: { email }
+        where: { email },
+        include: {
+          UserGroupUser: {
+            include: {
+              UserGroup: true
+            }
+          }
+        }
       });
     } else {
       // Create new user using raw SQL to bypass Prisma type checking
@@ -151,7 +205,14 @@ export async function createOrUpdateAdminUser(email: string, password: string, d
       
       // Fetch the created user
       return await prisma.user.findUnique({
-        where: { email }
+        where: { email },
+        include: {
+          UserGroupUser: {
+            include: {
+              UserGroup: true
+            }
+          }
+        }
       });
     }
   } catch (error) {

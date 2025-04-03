@@ -175,7 +175,7 @@ class Server {
         (loginEmail === validUsername && password === validPassword) ||
         (loginEmail === validUsername2 && password === validPassword2)
       ) {
-        const token = generateToken(loginEmail, true);
+        const token = generateToken(loginEmail, true, ['Administrators']);
         reply.send({ token });
       } else {
         reply.status(401).send({ error: 'Invalid credentials' });
