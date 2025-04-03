@@ -30,45 +30,50 @@ class Vibe {
 
       // Get company information
       const company = await this.prisma.company.findUnique({
-        where: { id: companyId }
+        where: { id: companyId },
       });
-      
+
       if (!company) {
         return { success: false, error: 'Company not found' };
       }
-      
+
       // Get questions for the list if listId is provided
-      let questions = [];
+      let questions: any[] = [];
       let companyList = null;
-      
+
       if (listId) {
         // Check if company list exists and belongs to the company
         companyList = await this.prisma.companyList.findUnique({
           where: { id: listId },
           include: {
-            Company: true
-          }
+            Company: true,
+          },
         });
-        
+
         if (companyList && companyList.companyId === companyId) {
           // Get all questions for this list
           questions = await this.prisma.companyListQuestion.findMany({
             where: { companyListId: listId },
-            orderBy: { createdAt: 'asc' }
+            orderBy: { createdAt: 'asc' },
           });
-          
-          this.logger.log(color.blue.bold(`Retrieved ${color.white.bold(questions.length)} questions for list ${color.white.bold(companyList.name)}`));
+
+          this.logger.log(
+            color.blue.bold(
+              `Retrieved ${color.white.bold(
+                questions.length
+              )} questions for list ${color.white.bold(companyList.name)}`
+            )
+          );
         }
       }
-      
+
       // Return the state object with company info and questions
       return {
         success: true,
         data: {
           company,
-          companyList,
-          questions
-        }
+          questions,
+        },
       };
     } catch (error) {
       this.logger.log(color.red.bold(`Error getting vibe state: ${error}`));
@@ -82,7 +87,10 @@ class Vibe {
    * @param companyData The updated company data
    * @returns Object with success status and updated company data
    */
-  public async updateCompany(companyId: number, companyData: any): Promise<any> {
+  public async updateCompany(
+    companyId: number,
+    companyData: any
+  ): Promise<any> {
     try {
       if (!companyId) {
         return { success: false, error: 'No company ID provided' };
@@ -90,23 +98,23 @@ class Vibe {
 
       // Check if company exists
       const existingCompany = await this.prisma.company.findUnique({
-        where: { id: companyId }
+        where: { id: companyId },
       });
-      
+
       if (!existingCompany) {
         return { success: false, error: 'Company not found' };
       }
 
       // Validate the data
       const validFields = [
-        'name', 
-        'address', 
-        'zipcode', 
-        'city', 
-        'contactphone', 
-        'contactemail'
+        'name',
+        'address',
+        'zipcode',
+        'city',
+        'contactphone',
+        'contactemail',
       ];
-      
+
       // Filter out invalid fields
       const validData: any = {};
       for (const key of Object.keys(companyData)) {
@@ -114,20 +122,24 @@ class Vibe {
           validData[key] = companyData[key];
         }
       }
-      
+
       // Update the company
       const updatedCompany = await this.prisma.company.update({
         where: { id: companyId },
-        data: validData
+        data: validData,
       });
-      
-      this.logger.log(color.green.bold(`Updated company ${color.white.bold(updatedCompany.name)}`));
-      
+
+      this.logger.log(
+        color.green.bold(
+          `Updated company ${color.white.bold(updatedCompany.name)}`
+        )
+      );
+
       return {
         success: true,
         data: {
-          company: updatedCompany
-        }
+          company: updatedCompany,
+        },
       };
     } catch (error) {
       this.logger.log(color.red.bold(`Error updating company: ${error}`));
@@ -148,9 +160,9 @@ class Vibe {
 
       // Check if company exists
       const existingCompany = await this.prisma.company.findUnique({
-        where: { id: companyId }
+        where: { id: companyId },
       });
-      
+
       if (!existingCompany) {
         return { success: false, error: 'Company not found' };
       }
@@ -158,16 +170,22 @@ class Vibe {
       // Get all company lists for this company
       const companyLists = await this.prisma.companyList.findMany({
         where: { companyId },
-        orderBy: { createdAt: 'desc' }
+        orderBy: { createdAt: 'desc' },
       });
-      
-      this.logger.log(color.blue.bold(`Retrieved ${color.white.bold(companyLists.length)} lists for company ${color.white.bold(existingCompany.name)}`));
-      
+
+      this.logger.log(
+        color.blue.bold(
+          `Retrieved ${color.white.bold(
+            companyLists.length
+          )} lists for company ${color.white.bold(existingCompany.name)}`
+        )
+      );
+
       return {
         success: true,
         data: {
-          companyLists
-        }
+          companyLists,
+        },
       };
     } catch (error) {
       this.logger.log(color.red.bold(`Error getting company lists: ${error}`));
@@ -190,10 +208,10 @@ class Vibe {
       const companyList = await this.prisma.companyList.findUnique({
         where: { id: listId },
         include: {
-          Company: true
-        }
+          Company: true,
+        },
       });
-      
+
       if (!companyList) {
         return { success: false, error: 'Company list not found' };
       }
@@ -201,17 +219,23 @@ class Vibe {
       // Get all questions for this list
       const questions = await this.prisma.companyListQuestion.findMany({
         where: { companyListId: listId },
-        orderBy: { createdAt: 'asc' }
+        orderBy: { createdAt: 'asc' },
       });
-      
-      this.logger.log(color.blue.bold(`Retrieved ${color.white.bold(questions.length)} questions for list ${color.white.bold(companyList.name)}`));
-      
+
+      this.logger.log(
+        color.blue.bold(
+          `Retrieved ${color.white.bold(
+            questions.length
+          )} questions for list ${color.white.bold(companyList.name)}`
+        )
+      );
+
       return {
         success: true,
         data: {
           companyList,
-          questions
-        }
+          questions,
+        },
       };
     } catch (error) {
       this.logger.log(color.red.bold(`Error getting company lists: ${error}`));
@@ -226,7 +250,11 @@ class Vibe {
    * @param questions Array of question objects to upsert
    * @returns Object with success status and updated questions
    */
-  public async upsertListQuestions(listId: number, companyId: number, questions: any[]): Promise<any> {
+  public async upsertListQuestions(
+    listId: number,
+    companyId: number,
+    questions: any[]
+  ): Promise<any> {
     try {
       if (!listId) {
         return { success: false, error: 'No list ID provided' };
@@ -240,27 +268,30 @@ class Vibe {
       const companyList = await this.prisma.companyList.findUnique({
         where: { id: listId },
         include: {
-          Company: true
-        }
+          Company: true,
+        },
       });
-      
+
       if (!companyList) {
         return { success: false, error: 'Company list not found' };
       }
 
       // Verify that the list belongs to the company
       if (companyList.companyId !== companyId) {
-        return { success: false, error: 'Company list does not belong to this company' };
+        return {
+          success: false,
+          error: 'Company list does not belong to this company',
+        };
       }
 
       // Get existing questions for this list
       const existingQuestions = await this.prisma.companyListQuestion.findMany({
-        where: { companyListId: listId }
+        where: { companyListId: listId },
       });
 
       // Create a map of existing question IDs
-      const existingQuestionIds = new Set(existingQuestions.map(q => q.id));
-      
+      const existingQuestionIds = new Set(existingQuestions.map((q) => q.id));
+
       // Track which question IDs are being updated
       const updatedQuestionIds = new Set<number>();
 
@@ -272,10 +303,16 @@ class Vibe {
             data: {
               companyListId: listId,
               question: question.question,
-              type: question.type
-            }
+              type: question.type,
+            },
           });
-          this.logger.log(color.green.bold(`Created new question "${color.white.bold(question.question)}" for list ${color.white.bold(companyList.name)}`));
+          this.logger.log(
+            color.green.bold(
+              `Created new question "${color.white.bold(
+                question.question
+              )}" for list ${color.white.bold(companyList.name)}`
+            )
+          );
         } else {
           // Update existing question
           if (existingQuestionIds.has(question.id)) {
@@ -283,46 +320,68 @@ class Vibe {
               where: { id: question.id },
               data: {
                 question: question.question,
-                type: question.type
-              }
+                type: question.type,
+              },
             });
             updatedQuestionIds.add(question.id);
-            this.logger.log(color.blue.bold(`Updated question ${color.white.bold(question.id)} for list ${color.white.bold(companyList.name)}`));
+            this.logger.log(
+              color.blue.bold(
+                `Updated question ${color.white.bold(
+                  question.id
+                )} for list ${color.white.bold(companyList.name)}`
+              )
+            );
           } else {
-            this.logger.log(color.yellow.bold(`Question ID ${color.white.bold(question.id)} not found for list ${color.white.bold(companyList.name)}`));
+            this.logger.log(
+              color.yellow.bold(
+                `Question ID ${color.white.bold(
+                  question.id
+                )} not found for list ${color.white.bold(companyList.name)}`
+              )
+            );
           }
         }
       }
 
       // Delete questions that are no longer present
-      const questionsToDelete = Array.from(existingQuestionIds).filter(id => !updatedQuestionIds.has(id));
-      
+      const questionsToDelete = Array.from(existingQuestionIds).filter(
+        (id) => !updatedQuestionIds.has(id)
+      );
+
       if (questionsToDelete.length > 0) {
         await this.prisma.companyListQuestion.deleteMany({
           where: {
             id: {
-              in: questionsToDelete
-            }
-          }
+              in: questionsToDelete,
+            },
+          },
         });
-        this.logger.log(color.red.bold(`Deleted ${color.white.bold(questionsToDelete.length)} questions for list ${color.white.bold(companyList.name)}`));
+        this.logger.log(
+          color.red.bold(
+            `Deleted ${color.white.bold(
+              questionsToDelete.length
+            )} questions for list ${color.white.bold(companyList.name)}`
+          )
+        );
       }
 
       // Get the updated list of questions
       const updatedQuestions = await this.prisma.companyListQuestion.findMany({
         where: { companyListId: listId },
-        orderBy: { createdAt: 'asc' }
+        orderBy: { createdAt: 'asc' },
       });
-      
+
       return {
         success: true,
         data: {
           companyList,
-          questions: updatedQuestions
-        }
+          questions: updatedQuestions,
+        },
       };
     } catch (error) {
-      this.logger.log(color.red.bold(`Error upserting list questions: ${error}`));
+      this.logger.log(
+        color.red.bold(`Error upserting list questions: ${error}`)
+      );
       return { success: false, error: 'Error upserting list questions' };
     }
   }
