@@ -117,10 +117,10 @@ class Designer {
             },
           ])
           .extend({
-            top: 32,
-            bottom: 32,
-            left: 32,
-            right: 32,
+            top: 40,
+            bottom: 40,
+            left: 40,
+            right: 40,
             background: { r: 255, g: 255, b: 255, alpha: 1 },
           }) // Add 32px white border to make it 1064x1064
           .png({ compressionLevel: 9, quality: 90 }) // Convert to PNG with high compression
