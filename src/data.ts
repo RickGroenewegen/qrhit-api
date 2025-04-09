@@ -389,16 +389,10 @@ class Data {
       );
 
       await fs.writeFile(localeSitemapPath, localeSitemapContent, 'utf8');
-
-      this.logger.log(
-        color.blue.bold(
-          `Generated sitemap for locale ${color.white.bold(locale)}`
-        )
-      );
     }
 
     this.logger.log(
-      color.green.bold(
+      color.blue.bold(
         `Generated sitemap index with ${color.white.bold(
           locales.length
         )} language-specific sitemaps`
