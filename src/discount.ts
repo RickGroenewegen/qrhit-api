@@ -223,8 +223,7 @@ class Discount {
         } else {
           if (
             cart.items.length == 1 &&
-            cart.items[0].playlistId == discount.playlistId &&
-            cart.items[0].type == 'digital'
+            cart.items[0].playlistId == discount.playlistId
           ) {
             return {
               success: true,
