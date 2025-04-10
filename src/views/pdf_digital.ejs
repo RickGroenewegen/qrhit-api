@@ -165,9 +165,7 @@
                 </div>
                 <!-- <div class="title" style="padding-left:2mm;padding-right:2mm;"><%= playlist.name %></div> -->
                 <div class="domain">
-                    <% if (!playlist.hideDomain) { %>
-                        <%= process.env['APP_DOMAIN'] %>
-                    <% } %>
+                   <%= process.env['APP_DOMAIN'] %>
                 </div>
             </div>
             <div class="card back" style="position: relative;">

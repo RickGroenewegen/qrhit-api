@@ -187,10 +187,8 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                             <div class="qr">
                                 <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 60%; height: auto;">
                             </div>
-                            <div class="domain">
-                                <% if (!playlist.hideDomain) { %>
-                                    <%= process.env['APP_DOMAIN'] %>
-                                <% } %>
+                            <div class="domain">                              
+                                <%= process.env['APP_DOMAIN'] %>                                
                             </div>
                         </div>
                     <% } else { %>
