@@ -40,6 +40,7 @@ model DiscountCode {
   startDate         DateTime?
   endDate           DateTime?
   general           Boolean             @default(false)
+  digital           Boolean             @default(false)
   playlistId        String?
   createdAt         DateTime            @default(now())
   updatedAt         DateTime            @updatedAt
@@ -157,15 +158,44 @@ model User {
   email           String           @unique
   displayName     String
   hash            String           @unique
+  password        String?
+  salt            String?
+  companyId       Int?
+  isAdmin         Boolean          @default(false)
   marketingEmails Boolean          @default(false)
   sync            Boolean          @default(false)
   payments        Payment[] // One-to-many relation to payments
   createdAt       DateTime         @default(now())
   updatedAt       DateTime         @updatedAt
   UserSuggestion  UserSuggestion[]
+  UserGroupUser   UserInGroup[]
+  Company         Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([hash])
   @@map("users")
+}
+
+model UserGroup {
+  id            Int           @id @default(autoincrement())
+  name          String        @unique
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @default(now())
+  UserGroupUser UserInGroup[]
+
+  @@map("user_groups")
+}
+
+model UserInGroup {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  groupId   Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @default(now())
+
+  UserGroup UserGroup @relation(fields: [groupId], references: [id], onDelete: Cascade)
+  User      User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("user_in_groups")
 }
 
 model PushMessage {
@@ -462,12 +492,18 @@ model TrustPilot {
 }
 
 model Company {
-  id          Int           @id @default(autoincrement())
-  name        String
-  slug        String
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  CompanyList CompanyList[]
+  id           Int           @id @default(autoincrement())
+  name         String
+  address      String?
+  zipcode      String?
+  city         String?
+  contactphone String?
+  contactemail String?
+  slug         String
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  CompanyList  CompanyList[]
+  User         User[]
 
   @@map("companies")
 }
@@ -481,6 +517,7 @@ model CompanyList {
   domain         String?
   background     String?
   logo           String?
+  status         String   @default("new")
   numberOfTracks Int
   numberOfCards  Int      @default(0)
   createdAt      DateTime @default(now())
@@ -488,8 +525,37 @@ model CompanyList {
 
   Company               Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
   CompanyListSubmission CompanyListSubmission[]
+  CompanyListQuestion   CompanyListQuestion[]
 
   @@map("company_lists")
+}
+
+model CompanyListQuestion {
+  id            Int      @id @default(autoincrement())
+  companyListId Int
+  question      String
+  type          String
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  CompanyList                CompanyList                  @relation(fields: [companyListId], references: [id], onDelete: Cascade)
+  CompanyListAnswer          CompanyListAnswer[]
+  CompanyListQuestionOptions CompanyListQuestionOptions[]
+
+  @@map("company_list_questions")
+}
+
+model CompanyListQuestionOptions {
+  id         Int      @id @default(autoincrement())
+  questionId Int
+  name       String
+  value      String
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  CompanyListQuestion CompanyListQuestion @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  @@map("company_list_question_options")
 }
 
 model CompanyListSubmission {
@@ -507,9 +573,25 @@ model CompanyListSubmission {
 
   CompanyList                CompanyList                  @relation(fields: [companyListId], references: [id], onDelete: Cascade)
   CompanyListSubmissionTrack CompanyListSubmissionTrack[] @relation("SubmissionToTracks")
+  CompanyListAnswer          CompanyListAnswer[]
 
   @@index([companyListId])
   @@map("company_list_submissions")
+}
+
+model CompanyListAnswer {
+  id           Int      @id @default(autoincrement())
+  submissionId Int
+  questionId   Int
+  answer       String   @db.Text
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  CompanyListSubmission        CompanyListSubmission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  CompanyListQuestion          CompanyListQuestion   @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  companyListQuestionOptionsId Int?
+
+  @@map("company_list_answers")
 }
 
 model CompanyListSubmissionTrack {

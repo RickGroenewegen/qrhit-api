@@ -277,13 +277,17 @@ class Server {
       }
     );
 
-    this.fastify.post('/discount/:code', async (request: any, reply: any) => {
-      const result = await this.discount.checkDiscount(
-        request.params.code,
-        request.body.token
-      );
-      reply.send(result);
-    });
+    this.fastify.post(
+      '/discount/:code/:digital',
+      async (request: any, reply: any) => {
+        const result = await this.discount.checkDiscount(
+          request.params.code,
+          request.body.token,
+          this.utils.parseBoolean(request.params.digital)
+        );
+        reply.send(result);
+      }
+    );
 
     this.fastify.post('/push/register', async (request: any, reply: any) => {
       const { token, type } = request.body;
