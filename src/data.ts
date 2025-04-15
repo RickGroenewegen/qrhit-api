@@ -1506,7 +1506,7 @@ class Data {
       color.blue.bold(
         `Payment ${color.white.bold(paymentId)} has ${color.white.bold(
           result[0].uncheckedCount
-        )} unchecked tracks`
+        )} unchecked tracks left`
       )
     );
 
@@ -1528,14 +1528,6 @@ class Data {
       },
     });
 
-    this.logger.log(
-      color.blue.bold(
-        `Found ${color.white.bold(
-          unfinalizedPayments.length
-        )} unfinalized payments`
-      )
-    );
-
     const checkedPaymentIds: string[] = [];
 
     for (const payment of unfinalizedPayments) {
@@ -1554,14 +1546,6 @@ class Data {
         );
       }
     }
-
-    this.logger.log(
-      color.blue.bold(
-        `Found ${color.white.bold(
-          checkedPaymentIds.length
-        )} payments with all tracks checked`
-      )
-    );
 
     // Get all the playlist IDs (The real spotify one) for the checked payments
     const playlistIds = await this.prisma.$queryRaw<string[]>`
