@@ -151,10 +151,10 @@ export class Music {
 
       // Rule 2: If all sources have a valid year, and the Spotify one is the lowest, use the Spotify year
       if (
-        discogsResult.year > 0 &&
-        aiResult.year > 0 &&
-        mbResult.year > 0 &&
-        openPerplexYear > 0 &&
+        (discogsResult.year > 0 ||
+          aiResult.year > 0 ||
+          mbResult.year > 0 ||
+          openPerplexYear > 0) &&
         spotifyReleaseYear > 0 &&
         spotifyReleaseYear <
           Math.min(
