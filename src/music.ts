@@ -149,20 +149,27 @@ export class Music {
         standardDeviation = 0;
       }
 
-      // Rule 2: If all sources have a valid year, and the Spotify one is the lowest, use the Spotify year
+      // Rule 2: If besides Spotify at least 2 other sources have a valid year (>0),
+      // and the Spotify year is the smallest of all valid years (>0), use the Spotify year.
+      const nonSpotifyYears = [
+        mbResult.year,
+        discogsResult.year,
+        openPerplexYear,
+        aiResult.year,
+      ];
+      const validNonSpotifyYears = nonSpotifyYears.filter(
+        (year) => year && year > 0 && year <= new Date().getFullYear()
+      );
+      const allYears = [spotifyReleaseYear, ...nonSpotifyYears];
+      const allValidYears = allYears.filter(
+        (year) => year && year > 0 && year <= new Date().getFullYear()
+      );
+
       if (
-        (discogsResult.year > 0 ||
-          aiResult.year > 0 ||
-          mbResult.year > 0 ||
-          openPerplexYear > 0) &&
+        validNonSpotifyYears.length >= 2 &&
         spotifyReleaseYear > 0 &&
-        spotifyReleaseYear <
-          Math.min(
-            discogsResult.year,
-            aiResult.year,
-            mbResult.year,
-            openPerplexYear
-          )
+        allValidYears.length > 0 && // Ensure there are valid years to compare
+        spotifyReleaseYear === Math.min(...allValidYears)
       ) {
         finalYear = spotifyReleaseYear;
         standardDeviation = 0;
