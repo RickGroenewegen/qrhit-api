@@ -56,6 +56,7 @@
         margin-left: 3mm;
         margin-right: 3mm;
         font-size: 18px;
+        word-break: break-all; /* Add this line */
     }
     .text.year {
         font-size: 40px;
@@ -66,6 +67,7 @@
         margin-right: 3mm;
         font-size: 16px;
         font-style: italic;
+        word-break: break-all; /* Use break-all instead */
     }
     .url, .url-bottom {
         font-size: 12px;
@@ -117,9 +119,11 @@
             <% if (php.emoji && php.emoji.length) { %>
                 <span style="<%= eco ? 'filter: grayscale(100%);' : '' %> font-size: 16px;"><%= php.emoji %></span>
             <% } %>
-
-            <%= process.env['APP_DOMAIN'] %>
-
+ 
+            <% if (!playlist.hideDomain) { %>
+                <%= process.env['APP_DOMAIN'] %>
+            <% } %>
+ 
             <% if (php.emoji && php.emoji.length) { %>
                 <span style="<%= eco ? 'filter: grayscale(100%);' : '' %> font-size: 16px;"><%= php.emoji %></span>
             <% } %>

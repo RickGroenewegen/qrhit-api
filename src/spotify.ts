@@ -397,7 +397,6 @@ class Spotify {
       if (e.response && e.response.status === 404) {
         return { success: false, error: 'playlistNotFound' };
       }
-      console.log(123, e);
       return { success: false, error: 'Error getting playlist' };
     }
   }
@@ -437,7 +436,6 @@ class Spotify {
         error: 'No tracks found',
       };
     } catch (error) {
-      console.error('Error fetching track previews:', error);
       return {
         success: false,
         error: 'Error fetching track previews',
@@ -526,7 +524,6 @@ class Spotify {
 
       return result;
     } catch (error) {
-      console.error('Error fetching tracks by IDs:', error);
       return {
         success: false,
         error: 'Error fetching tracks by IDs',
@@ -966,7 +963,6 @@ class Spotify {
       if (e.response && e.response.status === 404) {
         return { success: false, error: 'playlistNotFound' };
       }
-      console.log(111, e);
       return { success: false, error: 'Error getting tracks' };
     }
   }

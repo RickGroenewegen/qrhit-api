@@ -186,7 +186,9 @@
                     <% if (php.emoji && php.emoji.length) { %>
                         <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
                     <% } %>
-                    <%= process.env['APP_DOMAIN'] %>
+                    <% if (!playlist.hideDomain) { %>
+                        <%= process.env['APP_DOMAIN'] %>
+                    <% } %>
                     <% if (php.emoji && php.emoji.length) { %>
                         <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
                     <% } %>

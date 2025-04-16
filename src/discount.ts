@@ -103,7 +103,11 @@ class Discount {
     }
   }
 
-  public async checkDiscount(code: string, token: string): Promise<any> {
+  public async checkDiscount(
+    code: string,
+    token: string,
+    digital: boolean
+  ): Promise<any> {
     // Verify reCAPTCHA token
     const isHuman = await this.utils.verifyRecaptcha(token);
 
@@ -118,6 +122,10 @@ class Discount {
 
       if (!discount) {
         return { success: false, message: 'discountCodeNotFound' };
+      }
+
+      if (!digital && discount.digital) {
+        return { success: false, message: 'notApplicableForRealOrders' };
       }
 
       const now = new Date();
@@ -221,25 +229,35 @@ class Discount {
             discountUseId: insertResult.id,
           };
         } else {
-          if (
-            cart.items.length == 1 &&
-            cart.items[0].playlistId == discount.playlistId &&
-            cart.items[0].type == 'digital'
-          ) {
-            return {
-              success: true,
-              message: 'discountRedeemedSuccessfully',
-              fullAmount: discount.amount,
-              amountLeft: parseFloat(amount.toFixed(2)),
-              discountUseId: 0,
-            };
-          } else {
-            return {
-              success: false,
-              message: 'notApplicable',
-              fullAmount: discount.amount,
-              amountLeft: parseFloat(amountLeft.toFixed(2)),
-            };
+          if (cart.items.length == 1) {
+            let usePlaylistId = cart.items[0].playlistId;
+            const dbPlaylist = await this.prisma.playlist.findFirst({
+              where: { slug: cart.items[0].playlistId },
+            });
+            if (dbPlaylist) {
+              usePlaylistId = dbPlaylist.playlistId;
+            }
+
+            if (
+              usePlaylistId == discount.playlistId &&
+              ((cart.items[0].type == 'digital' && discount.digital) ||
+                (cart.items[0].type == 'physical' && !discount.digital))
+            ) {
+              return {
+                success: true,
+                message: 'discountRedeemedSuccessfully',
+                fullAmount: discount.amount,
+                amountLeft: parseFloat(amount.toFixed(2)),
+                discountUseId: 0,
+              };
+            } else {
+              return {
+                success: false,
+                message: 'notApplicable',
+                fullAmount: discount.amount,
+                amountLeft: parseFloat(amountLeft.toFixed(2)),
+              };
+            }
           }
         }
       });

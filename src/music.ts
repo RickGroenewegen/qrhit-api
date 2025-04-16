@@ -38,7 +38,7 @@ export class Music {
     spotifyReleaseYear: number
   ): Promise<any> {
     // Search MusicBrainz
-    const [mbResult, discogsResult, openPerlexYear] = await Promise.all([
+    const [mbResult, discogsResult, openPerplexYear] = await Promise.all([
       this.searchMusicBrainz(isrc, artist, title),
       this.searchDiscogs(artist, title),
       this.openperplex.ask(artist, title),
@@ -85,7 +85,7 @@ export class Music {
 
                     MusicBrainz thinks the release year is ${mbResult.year}
                     Discogs thinks the release year is ${discogsResult.year}
-                    OpenPerlex (AI scraping) thinks the release year is ${openPerlexYear}
+                    OpenPerlex (AI scraping) thinks the release year is ${openPerplexYear}
 
                     What is the release you think of this song based on the information above? Also explain on which information you based your answer on.
                     `;
@@ -101,7 +101,7 @@ export class Music {
 
     const sources = {
       ai: aiResult.year,
-      openPerplex: openPerlexYear,
+      openPerplex: openPerplexYear,
       mb: mbResult.year,
       discogs: discogsResult.year,
     };
@@ -134,26 +134,67 @@ export class Music {
       stdDev = Math.sqrt(avgSquareDiff);
     }
 
-    // If all years except Spotify are 0, use the Spotify year
-    if (
-      discogsResult.year == 0 &&
-      aiResult.year == 0 &&
-      mbResult.year == 0 &&
-      openPerlexYear == 0 &&
-      spotifyReleaseYear > 0
-    ) {
-      finalYear = spotifyReleaseYear;
+    let standardDeviation = Math.round(stdDev * 100) / 100; // Round to 2 decimal places
+
+    if (standardDeviation > 1) {
+      if (
+        discogsResult.year == 0 &&
+        aiResult.year == 0 &&
+        mbResult.year == 0 &&
+        openPerplexYear == 0 &&
+        spotifyReleaseYear > 0
+      ) {
+        // Rule 1: If all years except Spotify are 0, use the Spotify year
+        finalYear = spotifyReleaseYear;
+        standardDeviation = 0;
+      }
+
+      // Rule 2: If besides Spotify at least 2 other sources have a valid year (>0),
+      // and the Spotify year is the smallest of all valid years (>0), use the Spotify year.
+      const nonSpotifyYears = [
+        mbResult.year,
+        discogsResult.year,
+        openPerplexYear,
+        aiResult.year,
+      ];
+      const validNonSpotifyYears = nonSpotifyYears.filter(
+        (year) => year && year > 0 && year <= new Date().getFullYear()
+      );
+      const allYears = [spotifyReleaseYear, ...nonSpotifyYears];
+      const allValidYears = allYears.filter(
+        (year) => year && year > 0 && year <= new Date().getFullYear()
+      );
+
+      if (
+        validNonSpotifyYears.length >= 2 &&
+        spotifyReleaseYear > 0 &&
+        allValidYears.length > 0 && // Ensure there are valid years to compare
+        spotifyReleaseYear === Math.min(...allValidYears)
+      ) {
+        finalYear = spotifyReleaseYear;
+        standardDeviation = 0;
+      }
+
+      // Rule 3: If Spotify year is equal to both AI and OpenPerplex years, use Spotify year
+      if (
+        spotifyReleaseYear > 0 &&
+        spotifyReleaseYear == aiResult.year &&
+        spotifyReleaseYear == openPerplexYear
+      ) {
+        finalYear = spotifyReleaseYear;
+        standardDeviation = 0;
+      }
     }
 
     const fullResult = {
       year: finalYear,
-      standardDeviation: Math.round(stdDev * 100) / 100, // Round to 2 decimal places
+      standardDeviation,
       googleResults: JSON.stringify(googleResults),
       sources: {
         spotify: spotifyReleaseYear,
         mb: mbResult.year,
         ai: aiResult.year,
-        openPerplex: openPerlexYear,
+        openPerplex: openPerplexYear,
         discogs: discogsResult.year,
       },
     };
@@ -164,7 +205,7 @@ export class Music {
           mbResult.year
         )}] [DC: ${color.white.bold(
           discogsResult.year
-        )}] [OP: ${color.white.bold(openPerlexYear)}] [AI: ${color.white.bold(
+        )}] [OP: ${color.white.bold(openPerplexYear)}] [AI: ${color.white.bold(
           aiResult.year
         )}] for track ${color.white.bold(artist)} - ${color.white.bold(
           title
