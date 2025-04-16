@@ -157,8 +157,12 @@ class Server {
     this.fastify.post(
       '/admin/create',
       {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
+        // Conditionally apply preHandler based on environment
+        preHandler:
+          process.env['ENVIRONMENT'] === 'development'
+            ? undefined // Skip preHandler in development
+            : (request: any, reply: any) =>
+                verifyTokenMiddleware(request, reply, ['admin']),
       },
       async (request: any, reply: any) => {
         const { email, password, displayName } = request.body;
