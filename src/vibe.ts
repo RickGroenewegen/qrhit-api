@@ -93,6 +93,65 @@ class Vibe {
   }
 
   /**
+   * Processes and saves an uploaded image file.
+   * @param fileData The file data object from Fastify multipart.
+   * @param listId The ID of the company list.
+   * @param type The type of image ('background' or 'background2').
+   * @returns The generated filename or null if an error occurred or no file provided.
+   */
+  private async processAndSaveImage(
+    fileData: any,
+    listId: number,
+    type: 'background' | 'background2'
+  ): Promise<string | null> {
+    if (!fileData || !fileData.filename) {
+      this.logger.log(color.yellow.bold(`No file provided for ${type}`));
+      return null; // No file uploaded for this field
+    }
+
+    try {
+      const backgroundsDir = path.join(
+        process.env['PUBLIC_DIR'] as string,
+        'companydata',
+        'backgrounds'
+      );
+      await fs.mkdir(backgroundsDir, { recursive: true }); // Ensure directory exists
+
+      // Generate unique filename using utils.generateRandomString
+      const uniqueId = this.utils.generateRandomString(32);
+      const fileExtension = path.extname(fileData.filename).toLowerCase() || '.png'; // Default to png if no extension
+      // Ensure filename includes listId and type for clarity, though uniqueId should suffice
+      const actualFilename = `card_${type}_${listId}_${uniqueId}${fileExtension}`;
+      const filePath = path.join(backgroundsDir, actualFilename);
+
+      // Get file buffer
+      const buffer = await fileData.toBuffer();
+
+      // Write the file (simple save, like designer.ts logo upload)
+      await fs.writeFile(filePath, buffer);
+
+      this.logger.log(
+        color.green.bold(
+          `Card image saved successfully: ${color.white.bold(filePath)}`
+        )
+      );
+
+      // Return the relative path for storage in DB
+      return `/public/companydata/backgrounds/${actualFilename}`;
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error processing/saving card image ${type} for list ${listId}: ${color.white.bold(
+            error
+          )}`
+        )
+      );
+      return null; // Indicate error
+    }
+  }
+
+
+  /**
    * Get the list status progression order
    * @returns Array of status values in correct progression order
    */
@@ -681,6 +740,116 @@ class Vibe {
         color.red.bold(`Error updating box design: ${error}`)
       );
       return { success: false, error: 'Error updating box design' };
+    }
+  }
+
+  /**
+   * Update card design settings for a company list
+   * @param listId The company list ID to update
+   * @param companyId The company ID to verify ownership
+   * @param files Object containing file uploads for background and background2
+   * @param colors Object containing qrColor and textColor
+   * @returns Object with success status and updated company list
+   */
+  public async updateCardDesign(
+    listId: number,
+    companyId: number,
+    files: { background?: any; background2?: any },
+    colors: { qrColor?: string; textColor?: string }
+  ): Promise<any> {
+    try {
+      if (!listId) {
+        return { success: false, error: 'No list ID provided' };
+      }
+
+      // Check if company list exists and belongs to the company
+      const companyList = await this.prisma.companyList.findUnique({
+        where: { id: listId },
+      });
+
+      if (!companyList) {
+        return { success: false, error: 'Company list not found' };
+      }
+
+      // Verify that the list belongs to the company
+      if (companyList.companyId !== companyId) {
+        return {
+          success: false,
+          error: 'Company list does not belong to this company',
+        };
+      }
+
+      // Process and save images
+      const backgroundFilename = await this.processAndSaveImage(
+        files.background,
+        listId,
+        'background'
+      );
+      const background2Filename = await this.processAndSaveImage(
+        files.background2,
+        listId,
+        'background2'
+      );
+
+      // Prepare update data - only include fields that were successfully processed or provided
+      const updateData: Partial<CompanyList> = {};
+      if (backgroundFilename !== null) {
+        updateData.background = backgroundFilename;
+      }
+      if (background2Filename !== null) {
+        updateData.background2 = background2Filename;
+      }
+      if (colors.qrColor) {
+        updateData.qrColor = colors.qrColor;
+      }
+      if (colors.textColor) {
+        updateData.textColor = colors.textColor;
+      }
+
+      // Update the list status to 'card' if it's in an earlier state
+      const updatedStatus = this.getUpdatedStatus(companyList.status, 'card');
+      if (updatedStatus !== companyList.status) {
+        updateData.status = updatedStatus;
+      }
+
+      // Only update if there's something to change
+      if (Object.keys(updateData).length === 0) {
+         this.logger.log(
+           color.yellow.bold(
+             `No card design data provided or processed for list ${color.white.bold(companyList.name)}`
+           )
+         );
+         // Return current list data if nothing changed
+         return {
+           success: true,
+           data: { companyList }
+         };
+      }
+
+      // Update the company list
+      const updatedCompanyList = await this.prisma.companyList.update({
+        where: { id: listId },
+        data: updateData,
+        include: {
+          Company: true, // Include company details if needed
+        },
+      });
+
+      this.logger.log(
+        color.green.bold(
+          `Updated card design for list ${color.white.bold(updatedCompanyList.name)}`
+        )
+      );
+
+      return {
+        success: true,
+        data: {
+          companyList: updatedCompanyList,
+        },
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error updating card design: ${error}`));
+      return { success: false, error: 'Error updating card design' };
     }
   }
 }
