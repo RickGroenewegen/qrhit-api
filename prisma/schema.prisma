@@ -520,9 +520,11 @@ model CompanyList {
   qrColor        String   @default("#000000")
   textColor      String   @default("#000000")
   logo           String?
-  status         String   @default("new")
+  status         String   @default("new") // Progression: new -> company -> questions -> box -> card -> playlist -> personalize
   numberOfTracks Int
   numberOfCards  Int      @default(0)
+  ownBoxDesign   Boolean  @default(false) // Added for box design step
+  ownBoxDesignFilename String? // Added for box design step
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
 

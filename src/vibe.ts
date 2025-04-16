@@ -1,6 +1,9 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, CompanyList } from '@prisma/client'; // Added CompanyList
 import Logger from './logger';
 import { color } from 'console-log-colors';
+import fs from 'fs/promises'; // Added fs
+import path from 'path'; // Added path
+import Utils from './utils'; // Added Utils
 
 class Vibe {
   private static instance: Vibe;
