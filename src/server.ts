@@ -684,7 +684,10 @@ class Server {
           }
 
           // Use the Vibe class to update the company
-          const result = await this.vibe.updateCompany(decoded.companyId, request.body);
+          const result = await this.vibe.updateCompany(
+            decoded.companyId,
+            request.body
+          );
 
           if (!result.success) {
             reply.status(404).send({ error: result.error });
@@ -736,7 +739,6 @@ class Server {
       }
     );
 
-
     this.fastify.post(
       '/vibe/:listId/questions',
       {
@@ -748,10 +750,10 @@ class Server {
           // Get the token from the request
           const token = request.headers.authorization?.split(' ')[1];
           const decoded = verifyToken(token || '');
-          
+
           // Get the list ID from the request parameters
           const listId = parseInt(request.params.listId);
-          
+
           if (isNaN(listId)) {
             reply.status(400).send({ error: 'Invalid list ID' });
             return;
@@ -765,7 +767,11 @@ class Server {
           }
 
           // Validate the request body
-          if (!request.body || !request.body.questions || !Array.isArray(request.body.questions)) {
+          if (
+            !request.body ||
+            !request.body.questions ||
+            !Array.isArray(request.body.questions)
+          ) {
             reply.status(400).send({ error: 'Invalid request body' });
             return;
           }
@@ -802,10 +808,10 @@ class Server {
           // Get the token from the request
           const token = request.headers.authorization?.split(' ')[1];
           const decoded = verifyToken(token || '');
-          
+
           // Get the list ID from the request parameters
           const listId = parseInt(request.params.listId);
-          
+
           if (isNaN(listId)) {
             reply.status(400).send({ error: 'Invalid list ID' });
             return;
@@ -820,13 +826,14 @@ class Server {
 
           // Get the multipart form data
           const data = await request.file();
-          
+
           // Extract ownBoxDesign value
-          const ownBoxDesign = request.body && 
-            (request.body.ownBoxDesign === true || 
-             request.body.ownBoxDesign === 'true' || 
-             request.body.ownBoxDesign === '1');
-          
+          const ownBoxDesign =
+            request.body &&
+            (request.body.ownBoxDesign === true ||
+              request.body.ownBoxDesign === 'true' ||
+              request.body.ownBoxDesign === '1');
+
           // Use the Vibe class to update box design
           const result = await this.vibe.updateBoxDesign(
             listId,

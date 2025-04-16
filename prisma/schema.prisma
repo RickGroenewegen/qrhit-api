@@ -516,6 +516,9 @@ model CompanyList {
   slug           String
   domain         String?
   background     String?
+  background2    String?
+  qrColor        String   @default("#000000")
+  textColor      String   @default("#000000")
   logo           String?
   status         String   @default("new")
   numberOfTracks Int
