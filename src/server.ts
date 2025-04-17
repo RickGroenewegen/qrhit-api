@@ -211,7 +211,7 @@ class Server {
                 await part.toBuffer();
               }
             } else {
-              // Handle fields (name, description, playlistSource, numberOfCards, numberOfTracks)
+              // Handle fields (name, description, playlistSource, playlistUrl, numberOfCards, numberOfTracks)
               listData[part.fieldname] = part.value;
             }
           }

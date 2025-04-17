@@ -1167,6 +1167,7 @@ class Vibe {
       name?: string;
       description?: string;
       playlistSource?: string;
+      playlistUrl?: string; // Added playlistUrl
       numberOfCards?: number;
       numberOfTracks?: number;
     },
@@ -1198,6 +1199,7 @@ class Vibe {
       if (listData.name !== undefined) updateData.name = listData.name;
       if (listData.description !== undefined) updateData.description = listData.description;
       if (listData.playlistSource !== undefined) updateData.playlistSource = listData.playlistSource;
+      if (listData.playlistUrl !== undefined) updateData.playlistUrl = listData.playlistUrl; // Added playlistUrl
       if (listData.numberOfCards !== undefined) {
         const numCards = Number(listData.numberOfCards);
         if (!isNaN(numCards) && numCards >= 0) {
