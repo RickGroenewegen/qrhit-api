@@ -49,8 +49,24 @@ class Vibe {
         // Check if company list exists and belongs to the company
         companyList = await this.prisma.companyList.findUnique({
           where: { id: listId },
-          include: {
-            Company: true,
+          select: { // Explicitly select fields including the requested ones
+            id: true,
+            companyId: true,
+            name: true,
+            description: true,
+            slug: true,
+            background: true,
+            background2: true,
+            playlistSource: true, // Ensure playlistSource is selected
+            playlistUrl: true,    // Ensure playlistUrl is selected
+            qrColor: true,
+            textColor: true,
+            status: true,
+            numberOfTracks: true,
+            numberOfCards: true,
+            createdAt: true,
+            updatedAt: true,
+            Company: true, // Keep including Company details
           },
         });
 
