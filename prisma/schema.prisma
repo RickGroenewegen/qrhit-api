@@ -492,41 +492,35 @@ model TrustPilot {
 }
 
 model Company {
-  id           Int           @id @default(autoincrement())
-  name         String
-  address      String?
-  zipcode      String?
-  city         String?
-  contactphone String?
-  contactemail String?
-  slug         String
-  createdAt    DateTime      @default(now())
-  updatedAt    DateTime      @updatedAt
-  CompanyList  CompanyList[]
-  User         User[]
+  id          Int           @id @default(autoincrement())
+  name        String
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+  CompanyList CompanyList[]
+  User        User[]
 
   @@map("companies")
 }
 
 model CompanyList {
-  id             Int      @id @default(autoincrement())
-  companyId      Int
-  name           String
-  description    String
-  slug           String
-  domain         String?
-  background     String?
-  background2    String?
-  qrColor        String   @default("#000000")
-  textColor      String   @default("#000000")
-  logo           String?
-  status         String   @default("new") // Progression: new -> company -> questions -> box -> card -> playlist -> personalize
-  numberOfTracks Int
-  numberOfCards  Int      @default(0)
-  ownBoxDesign   Boolean  @default(false) // Added for box design step
+  id                   Int      @id @default(autoincrement())
+  companyId            Int
+  name                 String
+  description          String
+  slug                 String
+  domain               String?
+  background           String?
+  background2          String?
+  qrColor              String   @default("#000000")
+  textColor            String   @default("#000000")
+  logo                 String?
+  status               String   @default("new") // Progression: new -> company -> questions -> box -> card -> playlist -> personalize
+  numberOfTracks       Int
+  numberOfCards        Int      @default(0)
+  ownBoxDesign         Boolean  @default(false) // Added for box design step
   ownBoxDesignFilename String? // Added for box design step
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
+  createdAt            DateTime @default(now())
+  updatedAt            DateTime @updatedAt
 
   Company               Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
   CompanyListSubmission CompanyListSubmission[]

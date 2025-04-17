@@ -22,11 +22,11 @@ class Utils {
    */
   public getRandomSample<T>(array: T[], sampleSize: number): T[] {
     if (sampleSize >= array.length) return [...array];
-    
+
     const result = new Array<T>(sampleSize);
     const len = array.length;
     const taken = new Set<number>();
-    
+
     while (result.filter(Boolean).length < sampleSize) {
       const randomIndex = Math.floor(Math.random() * len);
       if (!taken.has(randomIndex)) {
@@ -34,7 +34,7 @@ class Utils {
         taken.add(randomIndex);
       }
     }
-    
+
     return result;
   }
 
