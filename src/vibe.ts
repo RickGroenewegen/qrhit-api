@@ -1049,9 +1049,11 @@ class Vibe {
     slug: string;
     numberOfCards: number;
     numberOfTracks: number;
+    playlistSource?: string; // Added optional playlistSource
+    playlistUrl?: string;    // Added optional playlistUrl
   }): Promise<any> {
     try {
-      const { name, description, slug, numberOfCards, numberOfTracks } = listData;
+      const { name, description, slug, numberOfCards, numberOfTracks, playlistSource, playlistUrl } = listData;
 
       // Basic validation
       if (!companyId || isNaN(companyId)) {
@@ -1092,6 +1094,8 @@ class Vibe {
           slug: slug,
           numberOfCards: numberOfCards,
           numberOfTracks: numberOfTracks,
+          playlistSource: playlistSource || 'voting', // Default to 'voting' if not provided
+          playlistUrl: playlistUrl || null,          // Set to null if not provided
           status: 'new', // Start with 'new' status
         },
       });

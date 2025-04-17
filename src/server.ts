@@ -303,7 +303,8 @@ class Server {
       async (request: any, reply: any) => {
         try {
           const companyId = parseInt(request.params.companyId);
-          const { name, description, slug, numberOfCards, numberOfTracks } = request.body;
+          // Extract all expected fields from the body
+          const { name, description, slug, numberOfCards, numberOfTracks, playlistSource, playlistUrl } = request.body;
 
           if (isNaN(companyId)) {
             reply.status(400).send({ error: 'Invalid company ID' });
@@ -322,6 +323,8 @@ class Server {
             slug,
             numberOfCards: parseInt(numberOfCards), // Ensure numbers are parsed
             numberOfTracks: parseInt(numberOfTracks),
+            playlistSource, // Pass playlistSource
+            playlistUrl,    // Pass playlistUrl
           };
 
           // Use the Vibe class to create the list
