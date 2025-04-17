@@ -49,7 +49,8 @@ class Vibe {
         // Check if company list exists and belongs to the company
         companyList = await this.prisma.companyList.findUnique({
           where: { id: listId },
-          select: { // Explicitly select fields including the requested ones
+          select: {
+            // Explicitly select fields including the requested ones
             id: true,
             companyId: true,
             name: true,
@@ -58,7 +59,7 @@ class Vibe {
             background: true,
             background2: true,
             playlistSource: true, // Ensure playlistSource is selected
-            playlistUrl: true,    // Ensure playlistUrl is selected
+            playlistUrl: true, // Ensure playlistUrl is selected
             qrColor: true,
             textColor: true,
             status: true,
@@ -924,7 +925,6 @@ class Vibe {
         _count: undefined, // Remove the internal _count object
       }));
 
-
       this.logger.log(
         color.blue.bold(
           `Retrieved ${color.white.bold(companies.length)} companies`
@@ -960,7 +960,10 @@ class Vibe {
       });
 
       if (existingCompany) {
-        return { success: false, error: 'Company with this name already exists' };
+        return {
+          success: false,
+          error: 'Company with this name already exists',
+        };
       }
 
       const newCompany = await this.prisma.company.create({
@@ -971,7 +974,9 @@ class Vibe {
 
       this.logger.log(
         color.green.bold(
-          `Created new company: ${color.white.bold(newCompany.name)} (ID: ${newCompany.id})`
+          `Created new company: ${color.white.bold(newCompany.name)} (ID: ${
+            newCompany.id
+          })`
         )
       );
 
@@ -1026,7 +1031,9 @@ class Vibe {
 
       this.logger.log(
         color.red.bold(
-          `Deleted company: ${color.white.bold(company.name)} (ID: ${companyId})`
+          `Deleted company: ${color.white.bold(
+            company.name
+          )} (ID: ${companyId})`
         )
       );
 
@@ -1043,26 +1050,51 @@ class Vibe {
    * @param listData Object containing name, description, slug, numberOfCards, numberOfTracks
    * @returns Object with success status and the newly created list
    */
-  public async createCompanyList(companyId: number, listData: {
-    name: string;
-    description: string;
-    slug: string;
-    numberOfCards: number;
-    numberOfTracks: number;
-    playlistSource?: string; // Added optional playlistSource
-    playlistUrl?: string;    // Added optional playlistUrl
-  }): Promise<any> {
+  public async createCompanyList(
+    companyId: number,
+    listData: {
+      name: string;
+      description: string;
+      slug: string;
+      numberOfCards: number;
+      numberOfTracks: number;
+      playlistSource?: string; // Added optional playlistSource
+      playlistUrl?: string; // Added optional playlistUrl
+    }
+  ): Promise<any> {
     try {
-      const { name, description, slug, numberOfCards, numberOfTracks, playlistSource, playlistUrl } = listData;
+      const {
+        name,
+        description,
+        slug,
+        numberOfCards,
+        numberOfTracks,
+        playlistSource,
+        playlistUrl,
+      } = listData;
 
       // Basic validation
       if (!companyId || isNaN(companyId)) {
         return { success: false, error: 'Invalid company ID provided' };
       }
-      if (!name || !description || !slug || numberOfCards === undefined || numberOfTracks === undefined) {
-        return { success: false, error: 'Missing required fields for company list' };
+      if (
+        !name ||
+        !description ||
+        !slug ||
+        numberOfCards === undefined ||
+        numberOfTracks === undefined
+      ) {
+        return {
+          success: false,
+          error: 'Missing required fields for company list',
+        };
       }
-      if (isNaN(numberOfCards) || isNaN(numberOfTracks) || numberOfCards < 0 || numberOfTracks < 0) {
+      if (
+        isNaN(numberOfCards) ||
+        isNaN(numberOfTracks) ||
+        numberOfCards < 0 ||
+        numberOfTracks < 0
+      ) {
         return { success: false, error: 'Invalid number for cards or tracks' };
       }
 
@@ -1082,7 +1114,10 @@ class Vibe {
         },
       });
       if (existingListWithSlug) {
-        return { success: false, error: 'Slug already exists for this company' };
+        return {
+          success: false,
+          error: 'Slug already exists for this company',
+        };
       }
 
       // Create the new company list
@@ -1095,14 +1130,16 @@ class Vibe {
           numberOfCards: numberOfCards,
           numberOfTracks: numberOfTracks,
           playlistSource: playlistSource || 'voting', // Default to 'voting' if not provided
-          playlistUrl: playlistUrl || null,          // Set to null if not provided
+          playlistUrl: playlistUrl || null, // Set to null if not provided
           status: 'new', // Start with 'new' status
         },
       });
 
       this.logger.log(
         color.green.bold(
-          `Created new list "${color.white.bold(newList.name)}" for company ${color.white.bold(company.name)}`
+          `Created new list "${color.white.bold(
+            newList.name
+          )}" for company ${color.white.bold(company.name)}`
         )
       );
 
@@ -1115,8 +1152,14 @@ class Vibe {
     } catch (error) {
       this.logger.log(color.red.bold(`Error creating company list: ${error}`));
       // Check for specific Prisma errors if needed, e.g., unique constraint violation
-      if ((error as any).code === 'P2002' && (error as any).meta?.target?.includes('slug')) {
-         return { success: false, error: 'Slug already exists for this company' };
+      if (
+        (error as any).code === 'P2002' &&
+        (error as any).meta?.target?.includes('slug')
+      ) {
+        return {
+          success: false,
+          error: 'Slug already exists for this company',
+        };
       }
       return { success: false, error: 'Error creating company list' };
     }
@@ -1128,7 +1171,10 @@ class Vibe {
    * @param listId The ID of the list to delete
    * @returns Object with success status
    */
-  public async deleteCompanyList(companyId: number, listId: number): Promise<any> {
+  public async deleteCompanyList(
+    companyId: number,
+    listId: number
+  ): Promise<any> {
     try {
       if (!companyId || isNaN(companyId) || !listId || isNaN(listId)) {
         return { success: false, error: 'Invalid company or list ID provided' };
@@ -1144,7 +1190,10 @@ class Vibe {
       }
 
       if (list.companyId !== companyId) {
-        return { success: false, error: 'List does not belong to this company' };
+        return {
+          success: false,
+          error: 'List does not belong to this company',
+        };
       }
 
       if (list.status !== 'new') {
@@ -1161,7 +1210,9 @@ class Vibe {
 
       this.logger.log(
         color.red.bold(
-          `Deleted list "${color.white.bold(list.name)}" (ID: ${listId}) for company ID ${companyId}`
+          `Deleted list "${color.white.bold(
+            list.name
+          )}" (ID: ${listId}) for company ID ${companyId}`
         )
       );
 
@@ -1209,34 +1260,49 @@ class Vibe {
       }
 
       if (list.companyId !== companyId) {
-        return { success: false, error: 'List does not belong to this company' };
+        return {
+          success: false,
+          error: 'List does not belong to this company',
+        };
       }
 
       // Prepare update data object
       const updateData: Partial<CompanyList> = {};
 
+      console.log(111, listData);
+
       // Add text fields if they are provided and valid
       if (listData.name !== undefined) updateData.name = listData.name;
-      if (listData.description !== undefined) updateData.description = listData.description;
-      if (listData.playlistSource !== undefined) updateData.playlistSource = listData.playlistSource;
-      if (listData.playlistUrl !== undefined) updateData.playlistUrl = listData.playlistUrl; // Added playlistUrl
+      if (listData.description !== undefined)
+        updateData.description = listData.description;
+      if (listData.playlistSource !== undefined)
+        updateData.playlistSource = listData.playlistSource;
+      if (listData.playlistUrl !== undefined)
+        updateData.playlistUrl = listData.playlistUrl; // Added playlistUrl
       if (listData.numberOfCards !== undefined) {
         const numCards = Number(listData.numberOfCards);
         if (!isNaN(numCards) && numCards >= 0) {
           updateData.numberOfCards = numCards;
         } else {
-           this.logger.log(color.yellow.bold(`Invalid numberOfCards value provided: ${listData.numberOfCards}`));
+          this.logger.log(
+            color.yellow.bold(
+              `Invalid numberOfCards value provided: ${listData.numberOfCards}`
+            )
+          );
         }
       }
       if (listData.numberOfTracks !== undefined) {
-         const numTracks = Number(listData.numberOfTracks);
-         if (!isNaN(numTracks) && numTracks >= 0) {
-           updateData.numberOfTracks = numTracks;
-         } else {
-            this.logger.log(color.yellow.bold(`Invalid numberOfTracks value provided: ${listData.numberOfTracks}`));
-         }
+        const numTracks = Number(listData.numberOfTracks);
+        if (!isNaN(numTracks) && numTracks >= 0) {
+          updateData.numberOfTracks = numTracks;
+        } else {
+          this.logger.log(
+            color.yellow.bold(
+              `Invalid numberOfTracks value provided: ${listData.numberOfTracks}`
+            )
+          );
+        }
       }
-
 
       // Process and save images if provided
       const backgroundFilename = await this.processAndSaveImage(
@@ -1261,7 +1327,9 @@ class Vibe {
       if (Object.keys(updateData).length === 0) {
         this.logger.log(
           color.yellow.bold(
-            `No update data provided or processed for list ${color.white.bold(list.name)}`
+            `No update data provided or processed for list ${color.white.bold(
+              list.name
+            )}`
           )
         );
         // Return current list data if nothing changed
@@ -1279,7 +1347,9 @@ class Vibe {
 
       this.logger.log(
         color.green.bold(
-          `Updated list "${color.white.bold(updatedList.name)}" (ID: ${listId}) for company ID ${companyId}`
+          `Updated list "${color.white.bold(
+            updatedList.name
+          )}" (ID: ${listId}) for company ID ${companyId}`
         )
       );
 
