@@ -884,6 +884,34 @@ class Vibe {
       return { success: false, error: 'Error updating card design' };
     }
   }
+
+  /**
+   * Get all companies
+   * @returns Object with success status and array of companies
+   */
+  public async getAllCompanies(): Promise<any> {
+    try {
+      const companies = await this.prisma.company.findMany({
+        orderBy: { name: 'asc' },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Retrieved ${color.white.bold(companies.length)} companies`
+        )
+      );
+
+      return {
+        success: true,
+        data: {
+          companies,
+        },
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error getting all companies: ${error}`));
+      return { success: false, error: 'Error retrieving companies' };
+    }
+  }
 }
 
 export default Vibe;

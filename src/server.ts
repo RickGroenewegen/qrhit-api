@@ -154,6 +154,31 @@ class Server {
       }
     );
 
+    this.fastify.get(
+      '/vibe/companies',
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']), // Only allow admins
+      },
+      async (request: any, reply: any) => {
+        try {
+          // Use the Vibe class to get all companies
+          const result = await this.vibe.getAllCompanies();
+
+          if (!result.success) {
+            reply.status(500).send({ error: result.error });
+            return;
+          }
+
+          // Return the list of companies
+          reply.send(result.data);
+        } catch (error) {
+          console.error('Error retrieving all companies:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
+      }
+    );
+
     this.fastify.post(
       '/admin/create',
       {
