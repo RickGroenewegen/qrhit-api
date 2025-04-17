@@ -140,7 +140,7 @@ class Hitlist {
           fullname || email.split('@')[0],
           companyList.Company.name,
           submission.verificationHash,
-          companyList.domain!,
+          // companyList.domain!, // Removed domain as it doesn't exist on CompanyList
           companyList.slug!
         );
       }
@@ -504,7 +504,7 @@ class Hitlist {
           numberOfCards: companyList.numberOfCards,
           companyName: companyList.Company.name,
           background: companyList.background,
-          logo: companyList.logo,
+          // logo: companyList.logo, // Removed logo as it doesn't exist on CompanyList
           submissionStatus: submissionStatus,
         },
       };
