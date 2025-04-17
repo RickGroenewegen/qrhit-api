@@ -195,12 +195,17 @@ class Server {
             return;
           }
 
+          console.log(222, request.params);
+
           // Process multipart data
           const parts = request.parts();
           const files: { background?: any; background2?: any } = {};
           const listData: { [key: string]: any } = {};
 
+          console.log(333, parts.length);
+
           for await (const part of parts) {
+            console.log(334, part);
             if (part.type === 'file') {
               if (part.fieldname === 'background') {
                 files.background = part;
@@ -216,14 +221,15 @@ class Server {
             }
           }
 
+          console.log(444);
+
           // Convert number fields explicitly
           if (listData.numberOfCards !== undefined) {
-             listData.numberOfCards = Number(listData.numberOfCards);
+            listData.numberOfCards = Number(listData.numberOfCards);
           }
           if (listData.numberOfTracks !== undefined) {
-             listData.numberOfTracks = Number(listData.numberOfTracks);
+            listData.numberOfTracks = Number(listData.numberOfTracks);
           }
-
 
           // Use the Vibe class to update the list
           const result = await this.vibe.updateCompanyList(
@@ -237,7 +243,9 @@ class Server {
             let statusCode = 500;
             if (result.error === 'Company list not found') {
               statusCode = 404;
-            } else if (result.error === 'List does not belong to this company') {
+            } else if (
+              result.error === 'List does not belong to this company'
+            ) {
               statusCode = 403; // Forbidden
             }
             reply.status(statusCode).send({ error: result.error });
@@ -304,7 +312,15 @@ class Server {
         try {
           const companyId = parseInt(request.params.companyId);
           // Extract all expected fields from the body
-          const { name, description, slug, numberOfCards, numberOfTracks, playlistSource, playlistUrl } = request.body;
+          const {
+            name,
+            description,
+            slug,
+            numberOfCards,
+            numberOfTracks,
+            playlistSource,
+            playlistUrl,
+          } = request.body;
 
           if (isNaN(companyId)) {
             reply.status(400).send({ error: 'Invalid company ID' });
@@ -312,9 +328,18 @@ class Server {
           }
 
           // Basic body validation
-          if (!name || !description || !slug || numberOfCards === undefined || numberOfTracks === undefined) {
-             reply.status(400).send({ error: 'Missing required fields: name, description, slug, numberOfCards, numberOfTracks' });
-             return;
+          if (
+            !name ||
+            !description ||
+            !slug ||
+            numberOfCards === undefined ||
+            numberOfTracks === undefined
+          ) {
+            reply.status(400).send({
+              error:
+                'Missing required fields: name, description, slug, numberOfCards, numberOfTracks',
+            });
+            return;
           }
 
           const listData = {
@@ -324,7 +349,7 @@ class Server {
             numberOfCards: parseInt(numberOfCards), // Ensure numbers are parsed
             numberOfTracks: parseInt(numberOfTracks),
             playlistSource, // Pass playlistSource
-            playlistUrl,    // Pass playlistUrl
+            playlistUrl, // Pass playlistUrl
           };
 
           // Use the Vibe class to create the list
@@ -334,9 +359,14 @@ class Server {
             let statusCode = 500;
             if (result.error === 'Company not found') {
               statusCode = 404;
-            } else if (result.error === 'Slug already exists for this company') {
+            } else if (
+              result.error === 'Slug already exists for this company'
+            ) {
               statusCode = 409; // Conflict
-            } else if (result.error.includes('Missing required fields') || result.error.includes('Invalid number')) {
+            } else if (
+              result.error.includes('Missing required fields') ||
+              result.error.includes('Invalid number')
+            ) {
               statusCode = 400; // Bad Request
             }
             reply.status(statusCode).send({ error: result.error });
@@ -375,7 +405,9 @@ class Server {
             let statusCode = 500;
             if (result.error === 'Company list not found') {
               statusCode = 404;
-            } else if (result.error === 'List does not belong to this company') {
+            } else if (
+              result.error === 'List does not belong to this company'
+            ) {
               statusCode = 403; // Forbidden
             } else if (result.error.includes('status is not "new"')) {
               statusCode = 409; // Conflict
@@ -413,7 +445,10 @@ class Server {
 
           if (!result.success) {
             // Use 409 Conflict if company already exists, otherwise 500
-            const statusCode = result.error === 'Company with this name already exists' ? 409 : 500;
+            const statusCode =
+              result.error === 'Company with this name already exists'
+                ? 409
+                : 500;
             reply.status(statusCode).send({ error: result.error });
             return;
           }
