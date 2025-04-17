@@ -970,6 +970,56 @@ class Vibe {
       return { success: false, error: 'Error creating company' };
     }
   }
+
+  /**
+   * Delete a company if it has no associated lists
+   * @param companyId The ID of the company to delete
+   * @returns Object with success status
+   */
+  public async deleteCompany(companyId: number): Promise<any> {
+    try {
+      if (!companyId || isNaN(companyId)) {
+        return { success: false, error: 'Invalid company ID provided' };
+      }
+
+      // Check if company exists and if it has any lists
+      const company = await this.prisma.company.findUnique({
+        where: { id: companyId },
+        include: {
+          _count: {
+            select: { CompanyList: true },
+          },
+        },
+      });
+
+      if (!company) {
+        return { success: false, error: 'Company not found' };
+      }
+
+      if (company._count.CompanyList > 0) {
+        return {
+          success: false,
+          error: 'Company cannot be deleted because it has associated lists',
+        };
+      }
+
+      // Delete the company
+      await this.prisma.company.delete({
+        where: { id: companyId },
+      });
+
+      this.logger.log(
+        color.red.bold(
+          `Deleted company: ${color.white.bold(company.name)} (ID: ${companyId})`
+        )
+      );
+
+      return { success: true };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error deleting company: ${error}`));
+      return { success: false, error: 'Error deleting company' };
+    }
+  }
 }
 
 export default Vibe;
