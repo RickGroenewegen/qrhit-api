@@ -9,6 +9,7 @@ class Vibe {
   private static instance: Vibe;
   private prisma = new PrismaClient();
   private logger = new Logger();
+  private utils = new Utils();
 
   private constructor() {}
 
@@ -55,19 +56,20 @@ class Vibe {
 
         if (companyList && companyList.companyId === companyId) {
           // Get all questions for this list with their options
-          const questionsWithOptions = await this.prisma.companyListQuestion.findMany({
-            where: { companyListId: listId },
-            orderBy: { createdAt: 'asc' },
-            include: {
-              CompanyListQuestionOptions: true
-            }
-          });
-          
+          const questionsWithOptions =
+            await this.prisma.companyListQuestion.findMany({
+              where: { companyListId: listId },
+              orderBy: { createdAt: 'asc' },
+              include: {
+                CompanyListQuestionOptions: true,
+              },
+            });
+
           // Transform the questions to rename CompanyListQuestionOptions to options
-          questions = questionsWithOptions.map(q => ({
+          questions = questionsWithOptions.map((q) => ({
             ...q,
             options: q.CompanyListQuestionOptions,
-            CompanyListQuestionOptions: undefined
+            CompanyListQuestionOptions: undefined,
           }));
 
           this.logger.log(
@@ -122,7 +124,8 @@ class Vibe {
 
       // Generate unique filename using utils.generateRandomString
       const uniqueId = this.utils.generateRandomString(32);
-      const fileExtension = path.extname(fileData.filename).toLowerCase() || '.png'; // Default to png if no extension
+      const fileExtension =
+        path.extname(fileData.filename).toLowerCase() || '.png'; // Default to png if no extension
       // Ensure filename includes listId and type for clarity, though uniqueId should suffice
       const actualFilename = `card_${type}_${listId}_${uniqueId}${fileExtension}`;
       const filePath = path.join(backgroundsDir, actualFilename);
@@ -153,13 +156,20 @@ class Vibe {
     }
   }
 
-
   /**
    * Get the list status progression order
    * @returns Array of status values in correct progression order
    */
   private getStatusProgression(): string[] {
-    return ['new', 'company', 'questions', 'box', 'card', 'playlist', 'personalize'];
+    return [
+      'new',
+      'company',
+      'questions',
+      'box',
+      'card',
+      'playlist',
+      'personalize',
+    ];
   }
 
   /**
@@ -172,13 +182,13 @@ class Vibe {
     const progression = this.getStatusProgression();
     const currentIndex = progression.indexOf(currentStatus);
     const newIndex = progression.indexOf(newStatus);
-    
+
     // If current status is not in progression, default to new status
     if (currentIndex === -1) return newStatus;
-    
+
     // If new status is not in progression, keep current status
     if (newIndex === -1) return currentStatus;
-    
+
     // Only move forward in progression, never backward
     return newIndex > currentIndex ? newStatus : currentStatus;
   }
@@ -233,13 +243,13 @@ class Vibe {
 
       // Update all company lists to 'company' status if they're in 'new' status
       await this.prisma.companyList.updateMany({
-        where: { 
+        where: {
           companyId: companyId,
-          status: 'new'
+          status: 'new',
         },
         data: {
-          status: 'company'
-        }
+          status: 'company',
+        },
       });
 
       this.logger.log(
@@ -330,19 +340,20 @@ class Vibe {
       }
 
       // Get all questions for this list with their options
-      const questionsWithOptions = await this.prisma.companyListQuestion.findMany({
-        where: { companyListId: listId },
-        orderBy: { createdAt: 'asc' },
-        include: {
-          CompanyListQuestionOptions: true
-        }
-      });
-      
+      const questionsWithOptions =
+        await this.prisma.companyListQuestion.findMany({
+          where: { companyListId: listId },
+          orderBy: { createdAt: 'asc' },
+          include: {
+            CompanyListQuestionOptions: true,
+          },
+        });
+
       // Transform the questions to rename CompanyListQuestionOptions to options
-      const questions = questionsWithOptions.map(q => ({
+      const questions = questionsWithOptions.map((q) => ({
         ...q,
         options: q.CompanyListQuestionOptions,
-        CompanyListQuestionOptions: undefined
+        CompanyListQuestionOptions: undefined,
       }));
 
       this.logger.log(
@@ -411,8 +422,8 @@ class Vibe {
       const existingQuestions = await this.prisma.companyListQuestion.findMany({
         where: { companyListId: listId },
         include: {
-          CompanyListQuestionOptions: true
-        }
+          CompanyListQuestionOptions: true,
+        },
       });
 
       // Create a map of existing question IDs
@@ -432,7 +443,7 @@ class Vibe {
               type: question.type,
             },
           });
-          
+
           // Add options if they exist
           if (question.options && Array.isArray(question.options)) {
             for (const option of question.options) {
@@ -440,12 +451,12 @@ class Vibe {
                 data: {
                   questionId: newQuestion.id,
                   name: option.name,
-                  value: option.value
-                }
+                  value: option.value,
+                },
               });
             }
           }
-          
+
           this.logger.log(
             color.green.bold(
               `Created new question "${color.white.bold(
@@ -463,19 +474,22 @@ class Vibe {
                 type: question.type,
               },
             });
-            
+
             // Handle options for existing question
             if (question.options && Array.isArray(question.options)) {
               // Get existing options
-              const existingOptions = existingQuestions
-                .find(q => q.id === question.id)?.CompanyListQuestionOptions || [];
-              
+              const existingOptions =
+                existingQuestions.find((q) => q.id === question.id)
+                  ?.CompanyListQuestionOptions || [];
+
               // Create a map of existing option IDs
-              const existingOptionIds = new Set(existingOptions.map(o => o.id));
-              
+              const existingOptionIds = new Set(
+                existingOptions.map((o) => o.id)
+              );
+
               // Track which option IDs are being updated
               const updatedOptionIds = new Set<number>();
-              
+
               // Process each option
               for (const option of question.options) {
                 if (!option.id || option.id === 0) {
@@ -484,8 +498,8 @@ class Vibe {
                     data: {
                       questionId: question.id,
                       name: option.name,
-                      value: option.value
-                    }
+                      value: option.value,
+                    },
                   });
                 } else {
                   // Update existing option
@@ -494,29 +508,30 @@ class Vibe {
                       where: { id: option.id },
                       data: {
                         name: option.name,
-                        value: option.value
-                      }
+                        value: option.value,
+                      },
                     });
                     updatedOptionIds.add(option.id);
                   }
                 }
               }
-              
+
               // Delete options that are no longer present
-              const optionsToDelete = Array.from(existingOptionIds)
-                .filter(id => !updatedOptionIds.has(id));
-              
+              const optionsToDelete = Array.from(existingOptionIds).filter(
+                (id) => !updatedOptionIds.has(id)
+              );
+
               if (optionsToDelete.length > 0) {
                 await this.prisma.companyListQuestionOptions.deleteMany({
                   where: {
                     id: {
-                      in: optionsToDelete
-                    }
-                  }
+                      in: optionsToDelete,
+                    },
+                  },
                 });
               }
             }
-            
+
             updatedQuestionIds.add(question.id);
             this.logger.log(
               color.blue.bold(
@@ -560,39 +575,45 @@ class Vibe {
       }
 
       // Get the updated list of questions with their options
-      const updatedQuestionsWithOptions = await this.prisma.companyListQuestion.findMany({
-        where: { companyListId: listId },
-        orderBy: { createdAt: 'asc' },
-        include: {
-          CompanyListQuestionOptions: true
-        }
-      });
-      
+      const updatedQuestionsWithOptions =
+        await this.prisma.companyListQuestion.findMany({
+          where: { companyListId: listId },
+          orderBy: { createdAt: 'asc' },
+          include: {
+            CompanyListQuestionOptions: true,
+          },
+        });
+
       // Transform the questions to rename CompanyListQuestionOptions to options
-      const updatedQuestions = updatedQuestionsWithOptions.map(q => ({
+      const updatedQuestions = updatedQuestionsWithOptions.map((q) => ({
         ...q,
         options: q.CompanyListQuestionOptions,
-        CompanyListQuestionOptions: undefined
+        CompanyListQuestionOptions: undefined,
       }));
 
       // Update the list status to 'questions' if it's in an earlier state
-      const updatedStatus = this.getUpdatedStatus(companyList.status, 'questions');
+      const updatedStatus = this.getUpdatedStatus(
+        companyList.status,
+        'questions'
+      );
       if (updatedStatus !== companyList.status) {
         await this.prisma.companyList.update({
           where: { id: listId },
-          data: { status: updatedStatus }
+          data: { status: updatedStatus },
         });
-        
+
         // Refresh the company list data
         const updatedCompanyList = await this.prisma.companyList.findUnique({
           where: { id: listId },
-          include: { Company: true }
+          include: { Company: true },
         });
-        
+
         if (updatedCompanyList) {
           this.logger.log(
             color.green.bold(
-              `Updated list status to ${color.white.bold(updatedStatus)} for list ${color.white.bold(updatedCompanyList.name)}`
+              `Updated list status to ${color.white.bold(
+                updatedStatus
+              )} for list ${color.white.bold(updatedCompanyList.name)}`
             )
           );
           return {
@@ -661,7 +682,7 @@ class Vibe {
 
       // Prepare update data
       const updateData: any = {
-        ownBoxDesign: ownBoxDesign
+        ownBoxDesign: ownBoxDesign,
       };
 
       // Handle file upload if ownBoxDesign is true and a file was provided
@@ -673,13 +694,15 @@ class Vibe {
           const util = require('util');
           const mkdir = util.promisify(fs.mkdir);
           const writeFile = util.promisify(fs.writeFile);
-          
+
           try {
             await mkdir(backgroundDir, { recursive: true });
           } catch (error) {
             this.logger.log(
               color.red.bold(
-                `Error creating company data directory: ${color.white.bold(error)}`
+                `Error creating company data directory: ${color.white.bold(
+                  error
+                )}`
               )
             );
           }
@@ -698,7 +721,9 @@ class Vibe {
 
           this.logger.log(
             color.green.bold(
-              `Saved box design file ${color.white.bold(uniqueFilename)} for list ${color.white.bold(companyList.name)}`
+              `Saved box design file ${color.white.bold(
+                uniqueFilename
+              )} for list ${color.white.bold(companyList.name)}`
             )
           );
         } catch (error) {
@@ -728,7 +753,9 @@ class Vibe {
 
       this.logger.log(
         color.green.bold(
-          `Updated box design for list ${color.white.bold(updatedCompanyList.name)}`
+          `Updated box design for list ${color.white.bold(
+            updatedCompanyList.name
+          )}`
         )
       );
 
@@ -739,9 +766,7 @@ class Vibe {
         },
       };
     } catch (error) {
-      this.logger.log(
-        color.red.bold(`Error updating box design: ${error}`)
-      );
+      this.logger.log(color.red.bold(`Error updating box design: ${error}`));
       return { success: false, error: 'Error updating box design' };
     }
   }
@@ -817,16 +842,18 @@ class Vibe {
 
       // Only update if there's something to change
       if (Object.keys(updateData).length === 0) {
-         this.logger.log(
-           color.yellow.bold(
-             `No card design data provided or processed for list ${color.white.bold(companyList.name)}`
-           )
-         );
-         // Return current list data if nothing changed
-         return {
-           success: true,
-           data: { companyList }
-         };
+        this.logger.log(
+          color.yellow.bold(
+            `No card design data provided or processed for list ${color.white.bold(
+              companyList.name
+            )}`
+          )
+        );
+        // Return current list data if nothing changed
+        return {
+          success: true,
+          data: { companyList },
+        };
       }
 
       // Update the company list
@@ -840,7 +867,9 @@ class Vibe {
 
       this.logger.log(
         color.green.bold(
-          `Updated card design for list ${color.white.bold(updatedCompanyList.name)}`
+          `Updated card design for list ${color.white.bold(
+            updatedCompanyList.name
+          )}`
         )
       );
 
