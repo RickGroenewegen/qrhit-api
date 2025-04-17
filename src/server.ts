@@ -729,7 +729,7 @@ class Server {
                 files.background2 = part;
               } else {
                 // Drain unexpected files
-                 await part.toBuffer();
+                await part.toBuffer();
               }
             } else {
               // Handle fields
@@ -762,7 +762,6 @@ class Server {
         }
       }
     );
-
 
     this.fastify.post(
       '/vibe/company',
@@ -804,7 +803,7 @@ class Server {
     );
 
     this.fastify.get(
-      '/vibe/company/lists',
+      '/vibe/company/:companyId',
       {
         preHandler: (request: any, reply: any) =>
           verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
@@ -823,7 +822,9 @@ class Server {
           }
 
           // Use the Vibe class to get company lists
-          const result = await this.vibe.getCompanyLists(decoded.companyId);
+          const result = await this.vibe.getCompanyLists(
+            parseInt(request.params.companyId)
+          );
 
           if (!result.success) {
             reply.status(404).send({ error: result.error });
