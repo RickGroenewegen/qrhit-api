@@ -1227,22 +1227,13 @@ class Vibe {
    * Update an existing company list
    * @param companyId The ID of the company the list belongs to
    * @param listId The ID of the list to update
-   * @param listData Object containing fields to update (name, description, playlistSource, numberOfCards, numberOfTracks)
-   * @param files Object containing optional file uploads for background and background2
+   * @param request The Fastify request object containing multipart data
    * @returns Object with success status and the updated list
    */
   public async updateCompanyList(
     companyId: number,
     listId: number,
-    listData: {
-      name?: string;
-      description?: string;
-      playlistSource?: string;
-      playlistUrl?: string; // Added playlistUrl
-      numberOfCards?: number;
-      numberOfTracks?: number;
-    },
-    files: { background?: any; background2?: any }
+    request: any // Changed parameters to accept the request object
   ): Promise<any> {
     try {
       // Basic validation
@@ -1266,10 +1257,29 @@ class Vibe {
         };
       }
 
+      // Process multipart data from the request
+      const parts = request.parts();
+      const files: { background?: any; background2?: any } = {};
+      const listData: { [key: string]: any } = {};
+
+      for await (const part of parts) {
+        if (part.type === 'file') {
+          if (part.fieldname === 'background') {
+            files.background = part;
+          } else if (part.fieldname === 'background2') {
+            files.background2 = part;
+          } else {
+            // Drain unexpected files to prevent hanging
+            await part.toBuffer();
+          }
+        } else {
+          // Handle fields
+          listData[part.fieldname] = part.value;
+        }
+      }
+
       // Prepare update data object
       const updateData: Partial<CompanyList> = {};
-
-      console.log(111, listData);
 
       // Add text fields if they are provided and valid
       if (listData.name !== undefined) updateData.name = listData.name;
@@ -1278,7 +1288,7 @@ class Vibe {
       if (listData.playlistSource !== undefined)
         updateData.playlistSource = listData.playlistSource;
       if (listData.playlistUrl !== undefined)
-        updateData.playlistUrl = listData.playlistUrl; // Added playlistUrl
+        updateData.playlistUrl = listData.playlistUrl;
       if (listData.numberOfCards !== undefined) {
         const numCards = Number(listData.numberOfCards);
         if (!isNaN(numCards) && numCards >= 0) {

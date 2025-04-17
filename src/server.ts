@@ -195,51 +195,14 @@ class Server {
             return;
           }
 
-          console.log(222, request.params);
-
-          // Process multipart data
-          const parts = request.parts();
-          const files: { background?: any; background2?: any } = {};
-          const listData: { [key: string]: any } = {};
-
-          console.log(333, parts.length);
-
-          for await (const part of parts) {
-            console.log(334, part);
-            if (part.type === 'file') {
-              if (part.fieldname === 'background') {
-                files.background = part;
-              } else if (part.fieldname === 'background2') {
-                files.background2 = part;
-              } else {
-                // Drain unexpected files
-                await part.toBuffer();
-              }
-            } else {
-              // Handle fields (name, description, playlistSource, playlistUrl, numberOfCards, numberOfTracks)
-              listData[part.fieldname] = part.value;
-            }
-          }
-
-          console.log(444);
-
-          // Convert number fields explicitly
-          if (listData.numberOfCards !== undefined) {
-            listData.numberOfCards = Number(listData.numberOfCards);
-          }
-          if (listData.numberOfTracks !== undefined) {
-            listData.numberOfTracks = Number(listData.numberOfTracks);
-          }
-
-          // Use the Vibe class to update the list
+          // Pass the request object to the Vibe class to handle multipart data
           const result = await this.vibe.updateCompanyList(
             companyId,
             listId,
-            listData,
-            files
+            request // Pass the full request object
           );
 
-          if (!result.success) {
+          if (!result || !result.success) {
             let statusCode = 500;
             if (result.error === 'Company list not found') {
               statusCode = 404;
