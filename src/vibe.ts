@@ -891,9 +891,23 @@ class Vibe {
    */
   public async getAllCompanies(): Promise<any> {
     try {
-      const companies = await this.prisma.company.findMany({
+      // Fetch companies and include a count of their lists
+      const companiesWithListCount = await this.prisma.company.findMany({
         orderBy: { name: 'asc' },
+        include: {
+          _count: {
+            select: { CompanyList: true },
+          },
+        },
       });
+
+      // Map the result to add the hasLists property
+      const companies = companiesWithListCount.map((company) => ({
+        ...company,
+        hasLists: company._count.CompanyList > 0 ? 1 : 0,
+        _count: undefined, // Remove the internal _count object
+      }));
+
 
       this.logger.log(
         color.blue.bold(
