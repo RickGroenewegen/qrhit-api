@@ -180,6 +180,40 @@ class Server {
     );
 
     this.fastify.post(
+      '/vibe/companies',
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin']), // Only allow admins
+      },
+      async (request: any, reply: any) => {
+        try {
+          const { name } = request.body;
+
+          if (!name) {
+            reply.status(400).send({ error: 'Missing required field: name' });
+            return;
+          }
+
+          // Use the Vibe class to create the company
+          const result = await this.vibe.createCompany(name);
+
+          if (!result.success) {
+            // Use 409 Conflict if company already exists, otherwise 500
+            const statusCode = result.error === 'Company with this name already exists' ? 409 : 500;
+            reply.status(statusCode).send({ error: result.error });
+            return;
+          }
+
+          // Return the newly created company with 201 Created status
+          reply.status(201).send(result.data);
+        } catch (error) {
+          console.error('Error creating company:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
+      }
+    );
+
+    this.fastify.post(
       '/admin/create',
       {
         // Conditionally apply preHandler based on environment

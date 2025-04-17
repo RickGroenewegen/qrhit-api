@@ -912,6 +912,50 @@ class Vibe {
       return { success: false, error: 'Error retrieving companies' };
     }
   }
+
+  /**
+   * Create a new company
+   * @param name The name of the company to create
+   * @returns Object with success status and the newly created company
+   */
+  public async createCompany(name: string): Promise<any> {
+    try {
+      if (!name || name.trim() === '') {
+        return { success: false, error: 'Company name cannot be empty' };
+      }
+
+      // Check if company with the same name already exists (case-insensitive check might be useful depending on requirements)
+      const existingCompany = await this.prisma.company.findFirst({
+        where: { name: { equals: name, mode: 'insensitive' } }, // Case-insensitive check
+      });
+
+      if (existingCompany) {
+        return { success: false, error: 'Company with this name already exists' };
+      }
+
+      const newCompany = await this.prisma.company.create({
+        data: {
+          name: name.trim(), // Trim whitespace
+        },
+      });
+
+      this.logger.log(
+        color.green.bold(
+          `Created new company: ${color.white.bold(newCompany.name)} (ID: ${newCompany.id})`
+        )
+      );
+
+      return {
+        success: true,
+        data: {
+          company: newCompany,
+        },
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error creating company: ${error}`));
+      return { success: false, error: 'Error creating company' };
+    }
+  }
 }
 
 export default Vibe;
