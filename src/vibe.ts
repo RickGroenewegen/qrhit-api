@@ -1151,6 +1151,127 @@ class Vibe {
       return { success: false, error: 'Error deleting company list' };
     }
   }
+
+  /**
+   * Update an existing company list
+   * @param companyId The ID of the company the list belongs to
+   * @param listId The ID of the list to update
+   * @param listData Object containing fields to update (name, description, playlistSource, numberOfCards, numberOfTracks)
+   * @param files Object containing optional file uploads for background and background2
+   * @returns Object with success status and the updated list
+   */
+  public async updateCompanyList(
+    companyId: number,
+    listId: number,
+    listData: {
+      name?: string;
+      description?: string;
+      playlistSource?: string;
+      numberOfCards?: number;
+      numberOfTracks?: number;
+    },
+    files: { background?: any; background2?: any }
+  ): Promise<any> {
+    try {
+      // Basic validation
+      if (!companyId || isNaN(companyId) || !listId || isNaN(listId)) {
+        return { success: false, error: 'Invalid company or list ID provided' };
+      }
+
+      // Find the list to ensure it exists and belongs to the company
+      const list = await this.prisma.companyList.findUnique({
+        where: { id: listId },
+      });
+
+      if (!list) {
+        return { success: false, error: 'Company list not found' };
+      }
+
+      if (list.companyId !== companyId) {
+        return { success: false, error: 'List does not belong to this company' };
+      }
+
+      // Prepare update data object
+      const updateData: Partial<CompanyList> = {};
+
+      // Add text fields if they are provided and valid
+      if (listData.name !== undefined) updateData.name = listData.name;
+      if (listData.description !== undefined) updateData.description = listData.description;
+      if (listData.playlistSource !== undefined) updateData.playlistSource = listData.playlistSource;
+      if (listData.numberOfCards !== undefined) {
+        const numCards = Number(listData.numberOfCards);
+        if (!isNaN(numCards) && numCards >= 0) {
+          updateData.numberOfCards = numCards;
+        } else {
+           this.logger.log(color.yellow.bold(`Invalid numberOfCards value provided: ${listData.numberOfCards}`));
+        }
+      }
+      if (listData.numberOfTracks !== undefined) {
+         const numTracks = Number(listData.numberOfTracks);
+         if (!isNaN(numTracks) && numTracks >= 0) {
+           updateData.numberOfTracks = numTracks;
+         } else {
+            this.logger.log(color.yellow.bold(`Invalid numberOfTracks value provided: ${listData.numberOfTracks}`));
+         }
+      }
+
+
+      // Process and save images if provided
+      const backgroundFilename = await this.processAndSaveImage(
+        files.background,
+        listId,
+        'background'
+      );
+      const background2Filename = await this.processAndSaveImage(
+        files.background2,
+        listId,
+        'background2'
+      );
+
+      if (backgroundFilename !== null) {
+        updateData.background = backgroundFilename;
+      }
+      if (background2Filename !== null) {
+        updateData.background2 = background2Filename;
+      }
+
+      // Only update if there's something to change
+      if (Object.keys(updateData).length === 0) {
+        this.logger.log(
+          color.yellow.bold(
+            `No update data provided or processed for list ${color.white.bold(list.name)}`
+          )
+        );
+        // Return current list data if nothing changed
+        return {
+          success: true,
+          data: { list },
+        };
+      }
+
+      // Update the company list
+      const updatedList = await this.prisma.companyList.update({
+        where: { id: listId },
+        data: updateData,
+      });
+
+      this.logger.log(
+        color.green.bold(
+          `Updated list "${color.white.bold(updatedList.name)}" (ID: ${listId}) for company ID ${companyId}`
+        )
+      );
+
+      return {
+        success: true,
+        data: {
+          list: updatedList,
+        },
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error updating company list: ${error}`));
+      return { success: false, error: 'Error updating company list' };
+    }
+  }
 }
 
 export default Vibe;

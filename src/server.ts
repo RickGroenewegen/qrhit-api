@@ -179,6 +179,80 @@ class Server {
       }
     );
 
+    this.fastify.put(
+      '/vibe/companies/:companyId/lists/:listId',
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']), // Allow admins and vibe admins
+      },
+      async (request: any, reply: any) => {
+        try {
+          const companyId = parseInt(request.params.companyId);
+          const listId = parseInt(request.params.listId);
+
+          if (isNaN(companyId) || isNaN(listId)) {
+            reply.status(400).send({ error: 'Invalid company or list ID' });
+            return;
+          }
+
+          // Process multipart data
+          const parts = request.parts();
+          const files: { background?: any; background2?: any } = {};
+          const listData: { [key: string]: any } = {};
+
+          for await (const part of parts) {
+            if (part.type === 'file') {
+              if (part.fieldname === 'background') {
+                files.background = part;
+              } else if (part.fieldname === 'background2') {
+                files.background2 = part;
+              } else {
+                // Drain unexpected files
+                await part.toBuffer();
+              }
+            } else {
+              // Handle fields (name, description, playlistSource, numberOfCards, numberOfTracks)
+              listData[part.fieldname] = part.value;
+            }
+          }
+
+          // Convert number fields explicitly
+          if (listData.numberOfCards !== undefined) {
+             listData.numberOfCards = Number(listData.numberOfCards);
+          }
+          if (listData.numberOfTracks !== undefined) {
+             listData.numberOfTracks = Number(listData.numberOfTracks);
+          }
+
+
+          // Use the Vibe class to update the list
+          const result = await this.vibe.updateCompanyList(
+            companyId,
+            listId,
+            listData,
+            files
+          );
+
+          if (!result.success) {
+            let statusCode = 500;
+            if (result.error === 'Company list not found') {
+              statusCode = 404;
+            } else if (result.error === 'List does not belong to this company') {
+              statusCode = 403; // Forbidden
+            }
+            reply.status(statusCode).send({ error: result.error });
+            return;
+          }
+
+          // Return the updated list
+          reply.send(result.data);
+        } catch (error) {
+          console.error('Error updating company list:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
+      }
+    );
+
     this.fastify.delete(
       '/vibe/companies/:companyId',
       {
