@@ -221,6 +221,62 @@ class Server {
     );
 
     this.fastify.post(
+      '/vibe/companies/:companyId/lists',
+      {
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']), // Allow admins and vibe admins
+      },
+      async (request: any, reply: any) => {
+        try {
+          const companyId = parseInt(request.params.companyId);
+          const { name, description, slug, numberOfCards, numberOfTracks } = request.body;
+
+          if (isNaN(companyId)) {
+            reply.status(400).send({ error: 'Invalid company ID' });
+            return;
+          }
+
+          // Basic body validation
+          if (!name || !description || !slug || numberOfCards === undefined || numberOfTracks === undefined) {
+             reply.status(400).send({ error: 'Missing required fields: name, description, slug, numberOfCards, numberOfTracks' });
+             return;
+          }
+
+          const listData = {
+            name,
+            description,
+            slug,
+            numberOfCards: parseInt(numberOfCards), // Ensure numbers are parsed
+            numberOfTracks: parseInt(numberOfTracks),
+          };
+
+          // Use the Vibe class to create the list
+          const result = await this.vibe.createCompanyList(companyId, listData);
+
+          if (!result.success) {
+            let statusCode = 500;
+            if (result.error === 'Company not found') {
+              statusCode = 404;
+            } else if (result.error === 'Slug already exists for this company') {
+              statusCode = 409; // Conflict
+            } else if (result.error.includes('Missing required fields') || result.error.includes('Invalid number')) {
+              statusCode = 400; // Bad Request
+            }
+            reply.status(statusCode).send({ error: result.error });
+            return;
+          }
+
+          // Return the newly created list with 201 Created status
+          reply.status(201).send(result.data);
+        } catch (error) {
+          console.error('Error creating company list:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
+      }
+    );
+
+
+    this.fastify.post(
       '/vibe/companies',
       {
         preHandler: (request: any, reply: any) =>

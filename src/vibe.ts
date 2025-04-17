@@ -1020,6 +1020,87 @@ class Vibe {
       return { success: false, error: 'Error deleting company' };
     }
   }
+
+  /**
+   * Create a new company list for a specific company
+   * @param companyId The ID of the company to associate the list with
+   * @param listData Object containing name, description, slug, numberOfCards, numberOfTracks
+   * @returns Object with success status and the newly created list
+   */
+  public async createCompanyList(companyId: number, listData: {
+    name: string;
+    description: string;
+    slug: string;
+    numberOfCards: number;
+    numberOfTracks: number;
+  }): Promise<any> {
+    try {
+      const { name, description, slug, numberOfCards, numberOfTracks } = listData;
+
+      // Basic validation
+      if (!companyId || isNaN(companyId)) {
+        return { success: false, error: 'Invalid company ID provided' };
+      }
+      if (!name || !description || !slug || numberOfCards === undefined || numberOfTracks === undefined) {
+        return { success: false, error: 'Missing required fields for company list' };
+      }
+      if (isNaN(numberOfCards) || isNaN(numberOfTracks) || numberOfCards < 0 || numberOfTracks < 0) {
+        return { success: false, error: 'Invalid number for cards or tracks' };
+      }
+
+      // Check if company exists
+      const company = await this.prisma.company.findUnique({
+        where: { id: companyId },
+      });
+      if (!company) {
+        return { success: false, error: 'Company not found' };
+      }
+
+      // Check if slug is unique for this company (optional, but good practice)
+      const existingListWithSlug = await this.prisma.companyList.findFirst({
+        where: {
+          companyId: companyId,
+          slug: slug,
+        },
+      });
+      if (existingListWithSlug) {
+        return { success: false, error: 'Slug already exists for this company' };
+      }
+
+      // Create the new company list
+      const newList = await this.prisma.companyList.create({
+        data: {
+          companyId: companyId,
+          name: name,
+          description: description,
+          slug: slug,
+          numberOfCards: numberOfCards,
+          numberOfTracks: numberOfTracks,
+          status: 'new', // Start with 'new' status
+        },
+      });
+
+      this.logger.log(
+        color.green.bold(
+          `Created new list "${color.white.bold(newList.name)}" for company ${color.white.bold(company.name)}`
+        )
+      );
+
+      return {
+        success: true,
+        data: {
+          list: newList,
+        },
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error creating company list: ${error}`));
+      // Check for specific Prisma errors if needed, e.g., unique constraint violation
+      if ((error as any).code === 'P2002' && (error as any).meta?.target?.includes('slug')) {
+         return { success: false, error: 'Slug already exists for this company' };
+      }
+      return { success: false, error: 'Error creating company list' };
+    }
+  }
 }
 
 export default Vibe;
