@@ -901,10 +901,10 @@ class Vibe {
         },
       });
 
-      // Map the result to add the hasLists property
+      // Map the result to add the numberOfLists property
       const companies = companiesWithListCount.map((company) => ({
         ...company,
-        hasLists: company._count.CompanyList > 0 ? 1 : 0,
+        numberOfLists: company._count.CompanyList, // Use the actual count
         _count: undefined, // Remove the internal _count object
       }));
 
