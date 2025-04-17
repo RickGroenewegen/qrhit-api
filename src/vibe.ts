@@ -1101,6 +1101,56 @@ class Vibe {
       return { success: false, error: 'Error creating company list' };
     }
   }
+
+  /**
+   * Delete a specific company list if its status is 'new'
+   * @param companyId The ID of the company the list belongs to
+   * @param listId The ID of the list to delete
+   * @returns Object with success status
+   */
+  public async deleteCompanyList(companyId: number, listId: number): Promise<any> {
+    try {
+      if (!companyId || isNaN(companyId) || !listId || isNaN(listId)) {
+        return { success: false, error: 'Invalid company or list ID provided' };
+      }
+
+      // Find the list to ensure it exists, belongs to the company, and has the correct status
+      const list = await this.prisma.companyList.findUnique({
+        where: { id: listId },
+      });
+
+      if (!list) {
+        return { success: false, error: 'Company list not found' };
+      }
+
+      if (list.companyId !== companyId) {
+        return { success: false, error: 'List does not belong to this company' };
+      }
+
+      if (list.status !== 'new') {
+        return {
+          success: false,
+          error: 'List cannot be deleted because its status is not "new"',
+        };
+      }
+
+      // Delete the list
+      await this.prisma.companyList.delete({
+        where: { id: listId },
+      });
+
+      this.logger.log(
+        color.red.bold(
+          `Deleted list "${color.white.bold(list.name)}" (ID: ${listId}) for company ID ${companyId}`
+        )
+      );
+
+      return { success: true };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error deleting company list: ${error}`));
+      return { success: false, error: 'Error deleting company list' };
+    }
+  }
 }
 
 export default Vibe;
