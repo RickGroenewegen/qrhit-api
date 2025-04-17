@@ -924,9 +924,9 @@ class Vibe {
         return { success: false, error: 'Company name cannot be empty' };
       }
 
-      // Check if company with the same name already exists (case-insensitive check might be useful depending on requirements)
+      // Check if company with the same name already exists (case-sensitive check is default for MySQL unless collation is CI)
       const existingCompany = await this.prisma.company.findFirst({
-        where: { name: { equals: name, mode: 'insensitive' } }, // Case-insensitive check
+        where: { name: { equals: name.trim() } }, // Removed mode: 'insensitive', added trim()
       });
 
       if (existingCompany) {
