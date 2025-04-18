@@ -1262,50 +1262,74 @@ class Vibe {
         };
       }
 
+      // Prepare update data object
+      const updateData: Partial<CompanyList> = {};
+      const fields: { [key: string]: any } = {}; // Store non-file fields
+
       // Process multipart data from the request
       const parts = request.parts();
-      const files: { background?: any; background2?: any } = {};
-      const fields: { [key: string]: any } = {};
 
-      console.log(11, parts);
+      console.log('Starting multipart processing...');
 
       for await (const part of parts) {
-        console.log(222, part.type, part.fieldname);
+        console.log(`Processing part: type=${part.type}, fieldname=${part.fieldname}`);
 
         if (part.type === 'file') {
+          // Process expected image files immediately
           if (part.fieldname === 'background') {
-            console.log('ja');
-
-            files.background = part;
+            console.log('Processing background file...');
+            const backgroundFilename = await this.processAndSaveImage(
+              part, // Pass the file part object directly
+              listId,
+              'background'
+            );
+            if (backgroundFilename !== null) {
+              updateData.background = backgroundFilename;
+              console.log(`Stored background filename: ${backgroundFilename}`);
+            } else {
+               console.log('Background file processing returned null.');
+            }
           } else if (part.fieldname === 'background2') {
-            files.background2 = part;
+             console.log('Processing background2 file...');
+            const background2Filename = await this.processAndSaveImage(
+              part, // Pass the file part object directly
+              listId,
+              'background2'
+            );
+            if (background2Filename !== null) {
+              updateData.background2 = background2Filename;
+              console.log(`Stored background2 filename: ${background2Filename}`);
+            } else {
+               console.log('Background2 file processing returned null.');
+            }
           } else {
-            // Drain unexpected files to prevent hanging
+            // Drain any other unexpected file streams to prevent hanging
             this.logger.log(
               color.yellow.bold(
-                `Ignoring unexpected file field in updateCompanyList: ${part.fieldname}`
+                `Ignoring and draining unexpected file field: ${part.fieldname}`
               )
             );
-
-            console.log(223);
-
-            await part.toBuffer();
-            console.log(224);
+             console.log(`Draining unexpected file: ${part.fieldname}`);
+            try {
+               await part.toBuffer(); // Consume the stream fully
+               console.log(`Drained unexpected file: ${part.fieldname}`);
+            } catch (drainError) {
+               this.logger.log(color.red.bold(`Error draining file ${part.fieldname}: ${drainError}`));
+               console.error(`Error draining file ${part.fieldname}:`, drainError);
+               // Decide if we should abort or continue
+               // For now, we log and continue
+            }
           }
-
-          console.log(333);
         } else {
-          // Handle fields
+          // Handle regular fields - store them for later processing
           fields[part.fieldname] = part.value;
+           console.log(`Stored field: ${part.fieldname} = ${part.value}`);
         }
       }
 
-      console.log(999);
+       console.log('Finished multipart processing loop.');
 
-      // Prepare update data object
-      const updateData: Partial<CompanyList> = {};
-
-      // Add text fields if they are provided and valid
+      // Add text and numeric fields from the collected 'fields' object
       if (fields.name !== undefined) updateData.name = String(fields.name);
       if (fields.description !== undefined)
         updateData.description = String(fields.description);
@@ -1318,7 +1342,6 @@ class Vibe {
       if (fields.textColor !== undefined)
         updateData.textColor = String(fields.textColor);
 
-      // Handle numeric fields with validation
       if (fields.numberOfCards !== undefined) {
         const numCards = Number(fields.numberOfCards);
         if (!isNaN(numCards) && numCards >= 0) {
@@ -1344,29 +1367,9 @@ class Vibe {
         }
       }
 
-      // Process and save images if provided as files
-      const backgroundFilename = await this.processAndSaveImage(
-        files.background, // Pass the file part object
-        listId,
-        'background'
-      );
-      const background2Filename = await this.processAndSaveImage(
-        files.background2, // Pass the file part object
-        listId,
-        'background2'
-      );
-
-      if (backgroundFilename !== null) {
-        updateData.background = backgroundFilename;
-      }
-      if (background2Filename !== null) {
-        updateData.background2 = background2Filename;
-      }
-
-      // Update status if provided and valid (optional, depends on workflow)
+      // Update status if provided
       if (fields.status !== undefined) {
-        // You might want validation here if status updates are allowed via this endpoint
-        // updateData.status = String(fields.status);
+        // updateData.status = String(fields.status); // Add status update logic if needed
       }
 
       // Only update if there's something to change
