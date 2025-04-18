@@ -1343,6 +1343,19 @@ class Vibe {
 
       // Only update if there's something to change
       if (Object.keys(updateData).length === 0) {
+        // Add an explicit check for list before accessing its properties
+        if (!list) {
+          // This case should theoretically not be reachable due to earlier checks
+          this.logger.log(
+            color.red.bold(
+              `Error: list object became null/undefined unexpectedly before logging in updateCompanyList for listId: ${listId}`
+            )
+          );
+          return {
+            success: false,
+            error: 'Internal error: List data became unavailable unexpectedly.',
+          };
+        }
         this.logger.log(
           color.yellow.bold(
             `No update data provided or processed for list ${color.white.bold(
