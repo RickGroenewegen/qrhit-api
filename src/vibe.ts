@@ -1379,6 +1379,7 @@ class Vibe {
       };
     } catch (error) {
       this.logger.log(color.red.bold(`Error updating company list: ${error}`));
+      console.log(error);
       return { success: false, error: 'Error updating company list' };
     }
   }
