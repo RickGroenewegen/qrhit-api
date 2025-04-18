@@ -1242,13 +1242,13 @@ class Vibe {
    * Update an existing company list
    * @param companyId The ID of the company the list belongs to
    * @param listId The ID of the list to update
-   * @param request The Fastify request object containing multipart data
+   * @param listData Object containing the update data, including optional base64 images
    * @returns Object with success status and the updated list
    */
   public async updateCompanyList(
     companyId: number,
     listId: number,
-    request: any // Changed parameters back to accept the request object
+    listData: { [key: string]: any } // Changed parameter to accept parsed JSON data object
   ): Promise<any> {
     try {
       // Basic validation
@@ -1272,121 +1272,56 @@ class Vibe {
         };
       }
 
-      // Process multipart data from the request
-      const parts = request.parts();
-      const files: { background?: any; background2?: any } = {};
-      const fields: { [key: string]: any } = {};
-
-      for await (const part of parts) {
-        // Treat background and background2 specifically as fields containing base64 strings
-        if (
-          part.type === 'field' ||
-          (part.type === 'file' &&
-            (part.fieldname === 'background' ||
-              part.fieldname === 'background2'))
-        ) {
-          // If it's a file part but named 'background'/'background2',
-          // assume the value is the base64 string passed incorrectly as a file.
-          // Read the value directly. If it's a field, part.value is already the string.
-          // Note: Fastify might handle base64 strings sent as files differently.
-          // This assumes `part.value` will contain the base64 string if sent as a field,
-          // or we might need `(await part.toBuffer()).toString()` if sent as a file part.
-          // Let's assume it comes as a field for now based on the user description.
-          if (part.type === 'field') {
-            fields[part.fieldname] = part.value;
-          } else {
-            // If it somehow arrived as a file part, try accessing part.value directly first.
-            this.logger.log(
-              color.yellow.bold(
-                `Field ${part.fieldname} received as file part, attempting to access part.value directly.`
-              )
-            );
-            // According to fastify-multipart docs, non-file fields might have part.value populated
-            if (part.value !== undefined) {
-               this.logger.log(color.green.bold(`Successfully accessed part.value for file part ${part.fieldname}. Length: ${part.value?.length}`));
-               fields[part.fieldname] = part.value;
-            } else {
-              // If part.value is undefined, log an error as this case is unexpected for base64 strings
-               this.logger.log(
-                 color.red.bold(
-                   `part.value is undefined for file part ${part.fieldname}. Cannot read base64 string.`
-                 )
-               );
-               fields[part.fieldname] = null; // Mark as failed
-              // Avoid falling back to toBuffer() as it might be the source of truncation
-              // try {
-              //   const buffer = await part.toBuffer();
-              //   fields[part.fieldname] = buffer.toString('utf-8');
-              // } catch (e) {
-              //   this.logger.log(color.red.bold(`Error reading file part buffer ${part.fieldname} as string: ${e}`));
-              //   fields[part.fieldname] = null; // Mark as failed
-              // }
-            }
-          }
-        } else if (part.type === 'file') {
-          // Handle other potential file uploads (if any) or drain them
-          this.logger.log(
-            color.yellow.bold(
-              `Ignoring unexpected file field in updateCompanyList: ${part.fieldname}`
-            )
-          );
-          await part.toBuffer(); // Drain unexpected files
-        } else {
-          // Handle other regular fields
-          fields[part.fieldname] = part.value;
-        }
-      }
-
-      // Prepare update data object
+      // Prepare update data object directly from listData (JSON body)
       const updateData: Partial<CompanyList> = {};
 
       // Add text fields if they are provided and valid
-      if (fields.name !== undefined) updateData.name = String(fields.name);
-      if (fields.description !== undefined)
-        updateData.description = String(fields.description);
-      if (fields.playlistSource !== undefined)
-        updateData.playlistSource = String(fields.playlistSource);
-      if (fields.playlistUrl !== undefined)
-        updateData.playlistUrl = String(fields.playlistUrl);
-      if (fields.qrColor !== undefined)
-        updateData.qrColor = String(fields.qrColor);
-      if (fields.textColor !== undefined)
-        updateData.textColor = String(fields.textColor);
+      if (listData.name !== undefined) updateData.name = String(listData.name);
+      if (listData.description !== undefined)
+        updateData.description = String(listData.description);
+      if (listData.playlistSource !== undefined)
+        updateData.playlistSource = String(listData.playlistSource);
+      if (listData.playlistUrl !== undefined)
+        updateData.playlistUrl = String(listData.playlistUrl);
+      if (listData.qrColor !== undefined)
+        updateData.qrColor = String(listData.qrColor);
+      if (listData.textColor !== undefined)
+        updateData.textColor = String(listData.textColor);
 
       // Handle numeric fields with validation
-      if (fields.numberOfCards !== undefined) {
-        const numCards = Number(fields.numberOfCards);
+      if (listData.numberOfCards !== undefined) {
+        const numCards = Number(listData.numberOfCards);
         if (!isNaN(numCards) && numCards >= 0) {
           updateData.numberOfCards = numCards;
         } else {
           this.logger.log(
             color.yellow.bold(
-              `Invalid numberOfCards value provided: ${fields.numberOfCards}`
+              `Invalid numberOfCards value provided: ${listData.numberOfCards}`
             )
           );
         }
       }
-      if (fields.numberOfTracks !== undefined) {
-        const numTracks = Number(fields.numberOfTracks);
+      if (listData.numberOfTracks !== undefined) {
+        const numTracks = Number(listData.numberOfTracks);
         if (!isNaN(numTracks) && numTracks >= 0) {
           updateData.numberOfTracks = numTracks;
         } else {
           this.logger.log(
             color.yellow.bold(
-              `Invalid numberOfTracks value provided: ${fields.numberOfTracks}`
+              `Invalid numberOfTracks value provided: ${listData.numberOfTracks}`
             )
           );
         }
       }
 
-      // Process and save images if provided as base64 strings in the fields
+      // Process and save images if provided as base64 strings in listData
       const backgroundFilename = await this.processAndSaveImage(
-        fields.background as string | undefined, // Get base64 from fields
+        listData.background as string | undefined, // Get base64 from listData
         listId,
         'background'
       );
       const background2Filename = await this.processAndSaveImage(
-        fields.background2 as string | undefined, // Get base64 from fields
+        listData.background2 as string | undefined, // Get base64 from listData
         listId,
         'background2'
       );
@@ -1399,9 +1334,9 @@ class Vibe {
       }
 
       // Update status if provided and valid (optional, depends on workflow)
-      if (fields.status !== undefined) {
+      if (listData.status !== undefined) {
         // You might want validation here if status updates are allowed via this endpoint
-        // updateData.status = String(fields.status);
+        // updateData.status = String(listData.status);
       }
 
       // Only update if there's something to change
