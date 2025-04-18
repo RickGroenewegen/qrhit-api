@@ -866,6 +866,8 @@ class Vibe {
         updateData.textColor = colors.textColor;
       }
 
+      console.log(222);
+
       // Update the list status to 'card' if it's in an earlier state
       const updatedStatus = this.getUpdatedStatus(companyList.status, 'card');
       if (updatedStatus !== companyList.status) {
@@ -1251,6 +1253,8 @@ class Vibe {
     listData: { [key: string]: any } // Changed parameter to accept parsed data object
   ): Promise<any> {
     try {
+      console.log(1);
+
       // Basic validation
       if (!companyId || isNaN(companyId) || !listId || isNaN(listId)) {
         return { success: false, error: 'Invalid company or list ID provided' };
@@ -1272,6 +1276,8 @@ class Vibe {
         };
       }
 
+      console.log(2, listData);
+
       // Prepare update data object from listData
       const updateData: Partial<CompanyList> = {};
 
@@ -1287,6 +1293,8 @@ class Vibe {
         updateData.qrColor = String(listData.qrColor);
       if (listData.textColor !== undefined)
         updateData.textColor = String(listData.textColor);
+
+      console.log(3);
 
       // Handle numeric fields with validation
       if (listData.numberOfCards !== undefined) {
@@ -1315,6 +1323,8 @@ class Vibe {
           // Optionally return an error or ignore the field
         }
       }
+
+      console.log(4);
 
       // Process and save images if provided as base64 strings
       const backgroundFilename = await this.processAndSaveImage(
