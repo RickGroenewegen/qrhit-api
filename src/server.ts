@@ -197,6 +197,22 @@ class Server {
 
           console.log(444444);
 
+          // Check if the body was parsed correctly (expecting JSON)
+          if (!request.body || typeof request.body !== 'object') {
+            this.logger.log(
+              color.red.bold(
+                `Error: Request body is missing or not an object for PUT /vibe/companies/${companyId}/lists/${listId}. Ensure Content-Type is application/json.`
+              )
+            );
+            reply
+              .status(400)
+              .send({
+                error:
+                  'Invalid request body. Expected JSON payload with Content-Type: application/json.',
+              });
+            return;
+          }
+
           // Pass the parsed request body to the Vibe class
           const result = await this.vibe.updateCompanyList(
             companyId,
