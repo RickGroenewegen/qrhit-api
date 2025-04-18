@@ -1295,24 +1295,20 @@ class Vibe {
           if (part.type === 'field') {
             fields[part.fieldname] = part.value;
           } else {
-            // If it somehow arrived as a file part, read the stream chunk by chunk
+            // If it somehow arrived as a file part, read the buffer assuming it contains the base64 string
             this.logger.log(
               color.yellow.bold(
-                `Field ${part.fieldname} received as file part, attempting to read stream as base64 string.`
+                `Field ${part.fieldname} received as file part, attempting to read buffer as base64 string.`
               )
             );
             try {
-              let fileContent = '';
-              // part.file is an async iterator over the chunks of the file stream
-              for await (const chunk of part.file) {
-                // Assuming the content of the file stream IS the base64 string, decode chunks as UTF-8
-                fileContent += chunk.toString('utf-8');
-              }
-              fields[part.fieldname] = fileContent; // Assign the concatenated base64 string
+              const buffer = await part.toBuffer();
+              // Assume the buffer contains the base64 string encoded in UTF-8
+              fields[part.fieldname] = buffer.toString('utf-8');
             } catch (e) {
               this.logger.log(
                 color.red.bold(
-                  `Error reading file part stream ${part.fieldname} as string: ${e}`
+                  `Error reading file part buffer ${part.fieldname} as string: ${e}`
                 )
               );
               fields[part.fieldname] = null; // Mark as failed
