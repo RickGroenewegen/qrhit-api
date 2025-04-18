@@ -1282,23 +1282,45 @@ class Vibe {
       const fields: { [key: string]: any } = {};
 
       for await (const part of parts) {
-        if (part.type === 'file') {
-          if (part.fieldname === 'background') {
-            files.background = part;
-          } else if (part.fieldname === 'background2') {
-            files.background2 = part;
+        // Treat background and background2 specifically as fields containing base64 strings
+        if (
+          part.type === 'field' ||
+          (part.type === 'file' &&
+            (part.fieldname === 'background' ||
+              part.fieldname === 'background2'))
+        ) {
+          // If it's a file part but named 'background'/'background2',
+          // assume the value is the base64 string passed incorrectly as a file.
+          // Read the value directly. If it's a field, part.value is already the string.
+          // Note: Fastify might handle base64 strings sent as files differently.
+          // This assumes `part.value` will contain the base64 string if sent as a field,
+          // or we might need `(await part.toBuffer()).toString()` if sent as a file part.
+          // Let's assume it comes as a field for now based on the user description.
+          if (part.type === 'field') {
+             fields[part.fieldname] = part.value;
           } else {
-            // Drain unexpected files to prevent hanging
-            this.logger.log(
-              color.yellow.bold(
-                `Ignoring unexpected file field in updateCompanyList: ${part.fieldname}`
-              )
-            );
-            await part.toBuffer();
+             // If it somehow arrived as a file part, log a warning and try to read buffer as string
+             this.logger.log(color.yellow.bold(`Field ${part.fieldname} received as file part, attempting to read as base64 string.`));
+             try {
+                const buffer = await part.toBuffer();
+                fields[part.fieldname] = buffer.toString('utf-8'); // Assuming base64 is utf-8 encoded string
+             } catch (e) {
+                this.logger.log(color.red.bold(`Error reading file part ${part.fieldname} as string: ${e}`));
+                fields[part.fieldname] = null; // Mark as failed
+             }
           }
+
+        } else if (part.type === 'file') {
+          // Handle other potential file uploads (if any) or drain them
+          this.logger.log(
+            color.yellow.bold(
+              `Ignoring unexpected file field in updateCompanyList: ${part.fieldname}`
+            )
+          );
+          await part.toBuffer(); // Drain unexpected files
         } else {
-          // Handle fields
-          fields[part.fieldname] = part.value;
+           // Handle other regular fields
+           fields[part.fieldname] = part.value;
         }
       }
 
@@ -1353,46 +1375,17 @@ class Vibe {
 
       console.log(4);
 
-      // Process and save images if provided as files
-      // NOTE: processAndSaveImage now expects base64, so we need to adapt it or revert it too.
-      // For now, let's assume processAndSaveImage still works with file parts (we might need to adjust it later if it was fully converted)
-      // We need to read the file buffer here before passing it.
-
-      let backgroundFilename: string | null = null;
-      if (files.background) {
-        try {
-          const buffer = await files.background.toBuffer();
-          const base64String = buffer.toString('base64');
-          // Prepend data URI prefix if needed, or modify processAndSaveImage to handle raw base64
-          // Assuming processAndSaveImage handles raw base64 for now based on previous changes
-          backgroundFilename = await this.processAndSaveImage(
-            base64String, // Pass base64 string
-            listId,
-            'background'
-          );
-        } catch (e) {
-          this.logger.log(
-            color.red.bold(`Error reading background file buffer: ${e}`)
-          );
-        }
-      }
-
-      let background2Filename: string | null = null;
-      if (files.background2) {
-        try {
-          const buffer = await files.background2.toBuffer();
-          const base64String = buffer.toString('base64');
-          background2Filename = await this.processAndSaveImage(
-            base64String, // Pass base64 string
-            listId,
-            'background2'
-          );
-        } catch (e) {
-          this.logger.log(
-            color.red.bold(`Error reading background2 file buffer: ${e}`)
-          );
-        }
-      }
+      // Process and save images if provided as base64 strings in the fields
+      const backgroundFilename = await this.processAndSaveImage(
+        fields.background as string | undefined, // Get base64 from fields
+        listId,
+        'background'
+      );
+      const background2Filename = await this.processAndSaveImage(
+        fields.background2 as string | undefined, // Get base64 from fields
+        listId,
+        'background2'
+      );
 
       if (backgroundFilename !== null) {
         updateData.background = backgroundFilename;
