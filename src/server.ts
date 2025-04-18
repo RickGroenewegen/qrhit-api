@@ -195,8 +195,6 @@ class Server {
             return;
           }
 
-          console.log(444444);
-
           // Pass the request object to the Vibe class to handle multipart data
           const result = await this.vibe.updateCompanyList(
             companyId,
