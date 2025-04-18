@@ -1244,13 +1244,13 @@ class Vibe {
    * Update an existing company list
    * @param companyId The ID of the company the list belongs to
    * @param listId The ID of the list to update
-   * @param listData Object containing the update data, including optional base64 images
+   * @param request The Fastify request object containing multipart data
    * @returns Object with success status and the updated list
    */
   public async updateCompanyList(
     companyId: number,
     listId: number,
-    listData: { [key: string]: any } // Changed parameter to accept parsed data object
+    request: any // Changed parameters back to accept the request object
   ): Promise<any> {
     try {
       console.log(1);
@@ -1276,67 +1276,123 @@ class Vibe {
         };
       }
 
-      console.log(2, listData);
+      // Process multipart data from the request
+      const parts = request.parts();
+      const files: { background?: any; background2?: any } = {};
+      const fields: { [key: string]: any } = {};
 
-      // Prepare update data object from listData
+      for await (const part of parts) {
+        if (part.type === 'file') {
+          if (part.fieldname === 'background') {
+            files.background = part;
+          } else if (part.fieldname === 'background2') {
+            files.background2 = part;
+          } else {
+            // Drain unexpected files to prevent hanging
+            this.logger.log(
+              color.yellow.bold(
+                `Ignoring unexpected file field in updateCompanyList: ${part.fieldname}`
+              )
+            );
+            await part.toBuffer();
+          }
+        } else {
+          // Handle fields
+          fields[part.fieldname] = part.value;
+        }
+      }
+
+      console.log(2, 'Fields:', fields, 'Files:', {
+        background: !!files.background,
+        background2: !!files.background2,
+      });
+
+      // Prepare update data object
       const updateData: Partial<CompanyList> = {};
 
       // Add text fields if they are provided and valid
-      if (listData.name !== undefined) updateData.name = String(listData.name);
-      if (listData.description !== undefined)
-        updateData.description = String(listData.description);
-      if (listData.playlistSource !== undefined)
-        updateData.playlistSource = String(listData.playlistSource);
-      if (listData.playlistUrl !== undefined)
-        updateData.playlistUrl = String(listData.playlistUrl);
-      if (listData.qrColor !== undefined)
-        updateData.qrColor = String(listData.qrColor);
-      if (listData.textColor !== undefined)
-        updateData.textColor = String(listData.textColor);
+      if (fields.name !== undefined) updateData.name = String(fields.name);
+      if (fields.description !== undefined)
+        updateData.description = String(fields.description);
+      if (fields.playlistSource !== undefined)
+        updateData.playlistSource = String(fields.playlistSource);
+      if (fields.playlistUrl !== undefined)
+        updateData.playlistUrl = String(fields.playlistUrl);
+      if (fields.qrColor !== undefined)
+        updateData.qrColor = String(fields.qrColor);
+      if (fields.textColor !== undefined)
+        updateData.textColor = String(fields.textColor);
 
       console.log(3);
 
       // Handle numeric fields with validation
-      if (listData.numberOfCards !== undefined) {
-        const numCards = Number(listData.numberOfCards);
+      if (fields.numberOfCards !== undefined) {
+        const numCards = Number(fields.numberOfCards);
         if (!isNaN(numCards) && numCards >= 0) {
           updateData.numberOfCards = numCards;
         } else {
           this.logger.log(
             color.yellow.bold(
-              `Invalid numberOfCards value provided: ${listData.numberOfCards}`
+              `Invalid numberOfCards value provided: ${fields.numberOfCards}`
             )
           );
-          // Optionally return an error or ignore the field
         }
       }
-      if (listData.numberOfTracks !== undefined) {
-        const numTracks = Number(listData.numberOfTracks);
+      if (fields.numberOfTracks !== undefined) {
+        const numTracks = Number(fields.numberOfTracks);
         if (!isNaN(numTracks) && numTracks >= 0) {
           updateData.numberOfTracks = numTracks;
         } else {
           this.logger.log(
             color.yellow.bold(
-              `Invalid numberOfTracks value provided: ${listData.numberOfTracks}`
+              `Invalid numberOfTracks value provided: ${fields.numberOfTracks}`
             )
           );
-          // Optionally return an error or ignore the field
         }
       }
 
       console.log(4);
 
-      // Process and save images if provided as base64 strings
-      const backgroundFilename = await this.processAndSaveImage(
-        listData.background as string | undefined, // Cast as string or undefined
-        listId,
-        'background'
-      );
-      const background2Filename = await this.processAndSaveImage(
-        listData.background2 as string | undefined, // Cast as string or undefined
-        listId,
-        'background2'
-      );
+      // Process and save images if provided as files
+      // NOTE: processAndSaveImage now expects base64, so we need to adapt it or revert it too.
+      // For now, let's assume processAndSaveImage still works with file parts (we might need to adjust it later if it was fully converted)
+      // We need to read the file buffer here before passing it.
+
+      let backgroundFilename: string | null = null;
+      if (files.background) {
+        try {
+          const buffer = await files.background.toBuffer();
+          const base64String = buffer.toString('base64');
+          // Prepend data URI prefix if needed, or modify processAndSaveImage to handle raw base64
+          // Assuming processAndSaveImage handles raw base64 for now based on previous changes
+          backgroundFilename = await this.processAndSaveImage(
+            base64String, // Pass base64 string
+            listId,
+            'background'
+          );
+        } catch (e) {
+          this.logger.log(
+            color.red.bold(`Error reading background file buffer: ${e}`)
+          );
+        }
+      }
+
+      let background2Filename: string | null = null;
+      if (files.background2) {
+        try {
+          const buffer = await files.background2.toBuffer();
+          const base64String = buffer.toString('base64');
+          background2Filename = await this.processAndSaveImage(
+            base64String, // Pass base64 string
+            listId,
+            'background2'
+          );
+        } catch (e) {
+          this.logger.log(
+            color.red.bold(`Error reading background2 file buffer: ${e}`)
+          );
+        }
+      }
 
       if (backgroundFilename !== null) {
         updateData.background = backgroundFilename;
@@ -1346,9 +1402,9 @@ class Vibe {
       }
 
       // Update status if provided and valid (optional, depends on workflow)
-      if (listData.status !== undefined) {
+      if (fields.status !== undefined) {
         // You might want validation here if status updates are allowed via this endpoint
-        // updateData.status = String(listData.status);
+        // updateData.status = String(fields.status);
       }
 
       // Only update if there's something to change
