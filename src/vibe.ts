@@ -866,8 +866,6 @@ class Vibe {
         updateData.textColor = colors.textColor;
       }
 
-      console.log(222);
-
       // Update the list status to 'card' if it's in an earlier state
       const updatedStatus = this.getUpdatedStatus(companyList.status, 'card');
       if (updatedStatus !== companyList.status) {
@@ -1253,8 +1251,6 @@ class Vibe {
     request: any // Changed parameters back to accept the request object
   ): Promise<any> {
     try {
-      console.log(1);
-
       // Basic validation
       if (!companyId || isNaN(companyId) || !listId || isNaN(listId)) {
         return { success: false, error: 'Invalid company or list ID provided' };
@@ -1297,19 +1293,26 @@ class Vibe {
           // or we might need `(await part.toBuffer()).toString()` if sent as a file part.
           // Let's assume it comes as a field for now based on the user description.
           if (part.type === 'field') {
-             fields[part.fieldname] = part.value;
+            fields[part.fieldname] = part.value;
           } else {
-             // If it somehow arrived as a file part, log a warning and try to read buffer as string
-             this.logger.log(color.yellow.bold(`Field ${part.fieldname} received as file part, attempting to read as base64 string.`));
-             try {
-                const buffer = await part.toBuffer();
-                fields[part.fieldname] = buffer.toString('utf-8'); // Assuming base64 is utf-8 encoded string
-             } catch (e) {
-                this.logger.log(color.red.bold(`Error reading file part ${part.fieldname} as string: ${e}`));
-                fields[part.fieldname] = null; // Mark as failed
-             }
+            // If it somehow arrived as a file part, log a warning and try to read buffer as string
+            this.logger.log(
+              color.yellow.bold(
+                `Field ${part.fieldname} received as file part, attempting to read as base64 string.`
+              )
+            );
+            try {
+              const buffer = await part.toBuffer();
+              fields[part.fieldname] = buffer.toString('utf-8'); // Assuming base64 is utf-8 encoded string
+            } catch (e) {
+              this.logger.log(
+                color.red.bold(
+                  `Error reading file part ${part.fieldname} as string: ${e}`
+                )
+              );
+              fields[part.fieldname] = null; // Mark as failed
+            }
           }
-
         } else if (part.type === 'file') {
           // Handle other potential file uploads (if any) or drain them
           this.logger.log(
@@ -1319,15 +1322,10 @@ class Vibe {
           );
           await part.toBuffer(); // Drain unexpected files
         } else {
-           // Handle other regular fields
-           fields[part.fieldname] = part.value;
+          // Handle other regular fields
+          fields[part.fieldname] = part.value;
         }
       }
-
-      console.log(2, 'Fields:', fields, 'Files:', {
-        background: !!files.background,
-        background2: !!files.background2,
-      });
 
       // Prepare update data object
       const updateData: Partial<CompanyList> = {};
@@ -1344,8 +1342,6 @@ class Vibe {
         updateData.qrColor = String(fields.qrColor);
       if (fields.textColor !== undefined)
         updateData.textColor = String(fields.textColor);
-
-      console.log(3);
 
       // Handle numeric fields with validation
       if (fields.numberOfCards !== undefined) {
@@ -1372,8 +1368,6 @@ class Vibe {
           );
         }
       }
-
-      console.log(4);
 
       // Process and save images if provided as base64 strings in the fields
       const backgroundFilename = await this.processAndSaveImage(
