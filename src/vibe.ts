@@ -1278,29 +1278,33 @@ class Vibe {
           // Process expected image files immediately
           if (part.fieldname === 'background') {
             console.log('Processing background file...');
-            const backgroundFilename = await this.processAndSaveImage(
+            // Store the result of processing the image
+            const savedBackgroundFilename = await this.processAndSaveImage(
               part, // Pass the file part object directly
               listId,
               'background'
             );
-            if (backgroundFilename !== null) {
-              updateData.background = backgroundFilename;
-              console.log(`Stored background filename: ${backgroundFilename}`);
+            // Add to updateData only if successfully processed
+            if (savedBackgroundFilename !== null) {
+              updateData.background = savedBackgroundFilename;
+              console.log(`Stored background filename: ${savedBackgroundFilename}`);
             } else {
-               console.log('Background file processing returned null.');
+              console.log('Background file processing returned null.');
             }
           } else if (part.fieldname === 'background2') {
-             console.log('Processing background2 file...');
-            const background2Filename = await this.processAndSaveImage(
+            console.log('Processing background2 file...');
+            // Store the result of processing the image
+            const savedBackground2Filename = await this.processAndSaveImage(
               part, // Pass the file part object directly
               listId,
               'background2'
             );
-            if (background2Filename !== null) {
-              updateData.background2 = background2Filename;
-              console.log(`Stored background2 filename: ${background2Filename}`);
+            // Add to updateData only if successfully processed
+            if (savedBackground2Filename !== null) {
+              updateData.background2 = savedBackground2Filename;
+              console.log(`Stored background2 filename: ${savedBackground2Filename}`);
             } else {
-               console.log('Background2 file processing returned null.');
+              console.log('Background2 file processing returned null.');
             }
           } else {
             // Drain any other unexpected file streams to prevent hanging
@@ -1394,10 +1398,15 @@ class Vibe {
             )}`
           )
         );
-        // Return current list data if nothing changed
+        // Return current list data if nothing changed, but include any filenames processed
+        // Note: updateData.background/background2 will only be set if processing was successful
         return {
           success: true,
-          data: { list },
+          data: {
+            list,
+            backgroundFilename: updateData.background || null, // Return processed filename or null
+            background2Filename: updateData.background2 || null, // Return processed filename or null
+          },
         };
       }
 
@@ -1415,10 +1424,13 @@ class Vibe {
         )
       );
 
+      // Return the updated list and explicitly include the processed filenames
       return {
         success: true,
         data: {
           list: updatedList,
+          backgroundFilename: updateData.background || null, // Filename saved or null
+          background2Filename: updateData.background2 || null, // Filename saved or null
         },
       };
     } catch (error) {
