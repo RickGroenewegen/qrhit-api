@@ -1295,23 +1295,32 @@ class Vibe {
           if (part.type === 'field') {
             fields[part.fieldname] = part.value;
           } else {
-            // If it somehow arrived as a file part, read the buffer assuming it contains the base64 string
+            // If it somehow arrived as a file part, try accessing part.value directly first.
             this.logger.log(
               color.yellow.bold(
-                `Field ${part.fieldname} received as file part, attempting to read buffer as base64 string.`
+                `Field ${part.fieldname} received as file part, attempting to access part.value directly.`
               )
             );
-            try {
-              const buffer = await part.toBuffer();
-              // Assume the buffer contains the base64 string encoded in UTF-8
-              fields[part.fieldname] = buffer.toString('utf-8');
-            } catch (e) {
-              this.logger.log(
-                color.red.bold(
-                  `Error reading file part buffer ${part.fieldname} as string: ${e}`
-                )
-              );
-              fields[part.fieldname] = null; // Mark as failed
+            // According to fastify-multipart docs, non-file fields might have part.value populated
+            if (part.value !== undefined) {
+               this.logger.log(color.green.bold(`Successfully accessed part.value for file part ${part.fieldname}. Length: ${part.value?.length}`));
+               fields[part.fieldname] = part.value;
+            } else {
+              // If part.value is undefined, log an error as this case is unexpected for base64 strings
+               this.logger.log(
+                 color.red.bold(
+                   `part.value is undefined for file part ${part.fieldname}. Cannot read base64 string.`
+                 )
+               );
+               fields[part.fieldname] = null; // Mark as failed
+              // Avoid falling back to toBuffer() as it might be the source of truncation
+              // try {
+              //   const buffer = await part.toBuffer();
+              //   fields[part.fieldname] = buffer.toString('utf-8');
+              // } catch (e) {
+              //   this.logger.log(color.red.bold(`Error reading file part buffer ${part.fieldname} as string: ${e}`));
+              //   fields[part.fieldname] = null; // Mark as failed
+              // }
             }
           }
         } else if (part.type === 'file') {
