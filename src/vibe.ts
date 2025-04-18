@@ -174,8 +174,8 @@ class Vibe {
         )
       );
 
-      // Return the relative path for storage in DB
-      return `/public/companydata/backgrounds/${actualFilename}`;
+      // Return only the filename for storage in DB
+      return actualFilename;
     } catch (error) {
       this.logger.log(
         color.red.bold(
