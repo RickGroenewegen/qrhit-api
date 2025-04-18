@@ -56,7 +56,7 @@
         margin-left: 3mm;
         margin-right: 3mm;
         font-size: 18px;
-        word-break: break-all; /* Add this line */
+        overflow-wrap: break-word; /* Prevent breaking mid-word */
     }
     .text.year {
         font-size: 40px;
@@ -67,7 +67,7 @@
         margin-right: 3mm;
         font-size: 16px;
         font-style: italic;
-        word-break: break-all; /* Use break-all instead */
+        overflow-wrap: break-word; /* Prevent breaking mid-word */
     }
     .url, .url-bottom {
         font-size: 12px;
