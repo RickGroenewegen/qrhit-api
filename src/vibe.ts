@@ -115,20 +115,20 @@ class Vibe {
   }
 
   /**
-   * Processes and saves an uploaded image file.
-   * @param fileData The file data object from Fastify multipart.
+   * Processes and saves a base64 encoded image string.
+   * @param base64Image The base64 encoded image string (potentially with data URI prefix).
    * @param listId The ID of the company list.
    * @param type The type of image ('background' or 'background2').
-   * @returns The generated filename or null if an error occurred or no file provided.
+   * @returns The generated filename or null if an error occurred or no image provided.
    */
   private async processAndSaveImage(
-    fileData: any,
+    base64Image: string | undefined | null,
     listId: number,
     type: 'background' | 'background2'
   ): Promise<string | null> {
-    if (!fileData || !fileData.filename) {
-      this.logger.log(color.yellow.bold(`No file provided for ${type}`));
-      return null; // No file uploaded for this field
+    if (!base64Image) {
+      this.logger.log(color.yellow.bold(`No image data provided for ${type}`));
+      return null; // No image data provided
     }
 
     try {
@@ -139,18 +139,33 @@ class Vibe {
       );
       await fs.mkdir(backgroundsDir, { recursive: true }); // Ensure directory exists
 
+      // Extract image data and determine extension from base64 string
+      let imageData = base64Image;
+      let fileExtension = '.png'; // Default extension
+      const match = base64Image.match(/^data:image\/([a-zA-Z]+);base64,(.*)$/);
+
+      if (match && match[1] && match[2]) {
+        fileExtension = `.${match[1].toLowerCase()}`;
+        imageData = match[2]; // Get the actual base64 data part
+      } else {
+        this.logger.log(
+          color.yellow.bold(
+            `Base64 string for ${type} does not have a standard data URI prefix. Assuming PNG format.`
+          )
+        );
+        // Assume it's just the base64 data, proceed with default extension
+      }
+
       // Generate unique filename using utils.generateRandomString
       const uniqueId = this.utils.generateRandomString(32);
-      const fileExtension =
-        path.extname(fileData.filename).toLowerCase() || '.png'; // Default to png if no extension
-      // Ensure filename includes listId and type for clarity, though uniqueId should suffice
+      // Ensure filename includes listId and type for clarity
       const actualFilename = `card_${type}_${listId}_${uniqueId}${fileExtension}`;
       const filePath = path.join(backgroundsDir, actualFilename);
 
-      // Get file buffer
-      const buffer = await fileData.toBuffer();
+      // Decode base64 string to buffer
+      const buffer = Buffer.from(imageData, 'base64');
 
-      // Write the file (simple save, like designer.ts logo upload)
+      // Write the file
       await fs.writeFile(filePath, buffer);
 
       this.logger.log(
@@ -792,14 +807,14 @@ class Vibe {
    * Update card design settings for a company list
    * @param listId The company list ID to update
    * @param companyId The company ID to verify ownership
-   * @param files Object containing file uploads for background and background2
+   * @param images Object containing base64 strings for background and background2
    * @param colors Object containing qrColor and textColor
    * @returns Object with success status and updated company list
    */
   public async updateCardDesign(
     listId: number,
     companyId: number,
-    files: { background?: any; background2?: any },
+    images: { background?: string; background2?: string },
     colors: { qrColor?: string; textColor?: string }
   ): Promise<any> {
     try {
@@ -824,14 +839,14 @@ class Vibe {
         };
       }
 
-      // Process and save images
+      // Process and save images from base64 strings
       const backgroundFilename = await this.processAndSaveImage(
-        files.background,
+        images.background,
         listId,
         'background'
       );
       const background2Filename = await this.processAndSaveImage(
-        files.background2,
+        images.background2,
         listId,
         'background2'
       );
@@ -1227,13 +1242,13 @@ class Vibe {
    * Update an existing company list
    * @param companyId The ID of the company the list belongs to
    * @param listId The ID of the list to update
-   * @param request The Fastify request object containing multipart data
+   * @param listData Object containing the update data, including optional base64 images
    * @returns Object with success status and the updated list
    */
   public async updateCompanyList(
     companyId: number,
     listId: number,
-    request: any // Changed parameters to accept the request object
+    listData: { [key: string]: any } // Changed parameter to accept parsed data object
   ): Promise<any> {
     try {
       // Basic validation
@@ -1257,38 +1272,23 @@ class Vibe {
         };
       }
 
-      // Process multipart data from the request
-      const parts = request.parts();
-      const files: { background?: any; background2?: any } = {};
-      const listData: { [key: string]: any } = {};
-
-      for await (const part of parts) {
-        if (part.type === 'file') {
-          if (part.fieldname === 'background') {
-            files.background = part;
-          } else if (part.fieldname === 'background2') {
-            files.background2 = part;
-          } else {
-            // Drain unexpected files to prevent hanging
-            await part.toBuffer();
-          }
-        } else {
-          // Handle fields
-          listData[part.fieldname] = part.value;
-        }
-      }
-
-      // Prepare update data object
+      // Prepare update data object from listData
       const updateData: Partial<CompanyList> = {};
 
       // Add text fields if they are provided and valid
-      if (listData.name !== undefined) updateData.name = listData.name;
+      if (listData.name !== undefined) updateData.name = String(listData.name);
       if (listData.description !== undefined)
-        updateData.description = listData.description;
+        updateData.description = String(listData.description);
       if (listData.playlistSource !== undefined)
-        updateData.playlistSource = listData.playlistSource;
+        updateData.playlistSource = String(listData.playlistSource);
       if (listData.playlistUrl !== undefined)
-        updateData.playlistUrl = listData.playlistUrl;
+        updateData.playlistUrl = String(listData.playlistUrl);
+      if (listData.qrColor !== undefined)
+        updateData.qrColor = String(listData.qrColor);
+      if (listData.textColor !== undefined)
+        updateData.textColor = String(listData.textColor);
+
+      // Handle numeric fields with validation
       if (listData.numberOfCards !== undefined) {
         const numCards = Number(listData.numberOfCards);
         if (!isNaN(numCards) && numCards >= 0) {
@@ -1299,6 +1299,7 @@ class Vibe {
               `Invalid numberOfCards value provided: ${listData.numberOfCards}`
             )
           );
+          // Optionally return an error or ignore the field
         }
       }
       if (listData.numberOfTracks !== undefined) {
@@ -1311,17 +1312,18 @@ class Vibe {
               `Invalid numberOfTracks value provided: ${listData.numberOfTracks}`
             )
           );
+          // Optionally return an error or ignore the field
         }
       }
 
-      // Process and save images if provided
+      // Process and save images if provided as base64 strings
       const backgroundFilename = await this.processAndSaveImage(
-        files.background,
+        listData.background as string | undefined, // Cast as string or undefined
         listId,
         'background'
       );
       const background2Filename = await this.processAndSaveImage(
-        files.background2,
+        listData.background2 as string | undefined, // Cast as string or undefined
         listId,
         'background2'
       );
@@ -1331,6 +1333,12 @@ class Vibe {
       }
       if (background2Filename !== null) {
         updateData.background2 = background2Filename;
+      }
+
+      // Update status if provided and valid (optional, depends on workflow)
+      if (listData.status !== undefined) {
+        // You might want validation here if status updates are allowed via this endpoint
+        // updateData.status = String(listData.status);
       }
 
       // Only update if there's something to change
