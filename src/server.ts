@@ -195,11 +195,13 @@ class Server {
             return;
           }
 
-          // Pass the parsed request body to the Vibe class
+          console.log(444444);
+
+          // Pass the request object to the Vibe class to handle multipart data
           const result = await this.vibe.updateCompanyList(
             companyId,
             listId,
-            request.body // Pass the parsed JSON body
+            request // Pass the full request object
           );
 
           if (!result || !result.success) {
@@ -962,23 +964,36 @@ class Server {
             return;
           }
 
-          // Extract data from request body (assuming JSON payload)
-          const { background, background2, qrColor, textColor } = request.body;
+          // Process multipart data
+          const parts = request.parts();
+          const files: { background?: any; background2?: any } = {};
+          const colors: { qrColor?: string; textColor?: string } = {};
 
-          const images = {
-            background: background as string | undefined,
-            background2: background2 as string | undefined,
-          };
-          const colors = {
-            qrColor: qrColor as string | undefined,
-            textColor: textColor as string | undefined,
-          };
+          for await (const part of parts) {
+            if (part.type === 'file') {
+              if (part.fieldname === 'background') {
+                files.background = part;
+              } else if (part.fieldname === 'background2') {
+                files.background2 = part;
+              } else {
+                // Drain unexpected files
+                await part.toBuffer();
+              }
+            } else {
+              // Handle fields
+              if (part.fieldname === 'qrColor') {
+                colors.qrColor = part.value as string;
+              } else if (part.fieldname === 'textColor') {
+                colors.textColor = part.value as string;
+              }
+            }
+          }
 
           // Use the Vibe class to update card design
           const result = await this.vibe.updateCardDesign(
             listId,
             decoded.companyId,
-            images, // Pass base64 strings
+            files,
             colors
           );
 
