@@ -132,6 +132,8 @@ class Vibe {
       return null; // No file uploaded for this field
     }
 
+    console.log(111, listId, type);
+
     try {
       const backgroundsDir = path.join(
         process.env['PUBLIC_DIR'] as string,
@@ -1265,9 +1267,15 @@ class Vibe {
       const files: { background?: any; background2?: any } = {};
       const fields: { [key: string]: any } = {};
 
+      console.log(11, parts);
+
       for await (const part of parts) {
+        console.log(222, part.type, part.fieldname);
+
         if (part.type === 'file') {
           if (part.fieldname === 'background') {
+            console.log('ja');
+
             files.background = part;
           } else if (part.fieldname === 'background2') {
             files.background2 = part;
@@ -1278,13 +1286,21 @@ class Vibe {
                 `Ignoring unexpected file field in updateCompanyList: ${part.fieldname}`
               )
             );
+
+            console.log(223);
+
             await part.toBuffer();
+            console.log(224);
           }
+
+          console.log(333);
         } else {
           // Handle fields
           fields[part.fieldname] = part.value;
         }
       }
+
+      console.log(999);
 
       // Prepare update data object
       const updateData: Partial<CompanyList> = {};
