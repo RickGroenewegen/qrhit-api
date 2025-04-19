@@ -140,7 +140,7 @@ class Hitlist {
           fullname || email.split('@')[0],
           companyList.Company.name,
           submission.verificationHash,
-          companyList.domain!,
+          '',
           companyList.slug!
         );
       }
@@ -418,8 +418,9 @@ class Hitlist {
       });
 
       // Use numberOfCards from companyList if it's set, otherwise default to 10
-      const maxTracks = companyList.numberOfCards > 0 ? companyList.numberOfCards : 10;
-      
+      const maxTracks =
+        companyList.numberOfCards > 0 ? companyList.numberOfCards : 10;
+
       // Take the top tracks based on numberOfCards (or less if there aren't enough)
       const topTracks = sortedTracks.slice(
         0,
@@ -430,7 +431,9 @@ class Hitlist {
         color.blue.bold(
           `Finalized list for company ${color.white.bold(
             companyList.Company.name
-          )} with ${color.white.bold(topTracks.length)} tracks (max: ${color.white.bold(maxTracks)})`
+          )} with ${color.white.bold(
+            topTracks.length
+          )} tracks (max: ${color.white.bold(maxTracks)})`
         )
       );
 
@@ -504,7 +507,6 @@ class Hitlist {
           numberOfCards: companyList.numberOfCards,
           companyName: companyList.Company.name,
           background: companyList.background,
-          logo: companyList.logo,
           submissionStatus: submissionStatus,
         },
       };
