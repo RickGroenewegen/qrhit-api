@@ -472,9 +472,9 @@ class Generator {
             '_' +
             playlist.id +
             '_' +
-            playlist.name
+            playlist.name.replace(/ /g, '_')
           )
-            .replace(/[^a-zA-Z0-9]/g, '')
+            .replace(/[^a-zA-Z0-9_]/g, '') // Keep underscores
             .toLowerCase();
 
           let eco = false;
