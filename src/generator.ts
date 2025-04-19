@@ -469,7 +469,7 @@ class Generator {
 
           const hash = sanitizeFilename(
             payment.payentId + '_' + playlist.id + '_' + playlist.name
-          );
+          ).replace(/[^a-zA-Z0-9]/g, '');
 
           let eco = false;
           let ecoString = '';
