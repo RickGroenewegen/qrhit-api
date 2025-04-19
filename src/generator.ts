@@ -467,9 +467,15 @@ class Generator {
             continue;
           }
 
-          const hash = sanitizeFilename(
-            payment.payentId + '_' + playlist.id + '_' + playlist.name
-          ).replace(/[^a-zA-Z0-9]/g, '');
+          const hash = (
+            payment.paymentId +
+            '_' +
+            playlist.id +
+            '_' +
+            playlist.name
+          )
+            .replace(/[^a-zA-Z0-9]/g, '')
+            .toLowerCase();
 
           let eco = false;
           let ecoString = '';
