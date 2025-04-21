@@ -67,6 +67,8 @@ class Vibe {
             numberOfCards: true,
             startAt: true,
             endAt: true,
+            votingBackground: true, // Added votingBackground
+            votingLogo: true, // Added votingLogo
             Company: true, // Keep including Company details
           },
         });
@@ -118,13 +120,13 @@ class Vibe {
    * Processes and saves an uploaded image file from a multipart request.
    * @param fileData The file data object from Fastify multipart (`request.parts()`).
    * @param listId The ID of the company list.
-   * @param type The type of image ('background' or 'background2').
+   * @param type The type of image ('background', 'background2', 'votingBackground', 'votingLogo').
    * @returns The generated filename or null if an error occurred or no file provided.
    */
   private async processAndSaveImage(
     fileData: any, // Expecting a file part object
     listId: number,
-    type: 'background' | 'background2'
+    type: 'background' | 'background2' | 'votingBackground' | 'votingLogo'
   ): Promise<string | null> {
     // Check if fileData exists and has a filename (indicating a file was uploaded)
     if (!fileData || !fileData.filename) {
@@ -1297,20 +1299,36 @@ class Vibe {
             }
           } else if (part.fieldname === 'background2') {
             console.log('Processing background2 file...');
-            // Store the result of processing the image
             const savedBackground2Filename = await this.processAndSaveImage(
-              part, // Pass the file part object directly
-              listId,
-              'background2'
+              part, listId, 'background2'
             );
-            // Add to updateData only if successfully processed
             if (savedBackground2Filename !== null) {
               updateData.background2 = savedBackground2Filename;
-              console.log(
-                `Stored background2 filename: ${savedBackground2Filename}`
-              );
+              console.log(`Stored background2 filename: ${savedBackground2Filename}`);
             } else {
               console.log('Background2 file processing returned null.');
+            }
+          } else if (part.fieldname === 'votingBackground') {
+            console.log('Processing votingBackground file...');
+            const savedVotingBackgroundFilename = await this.processAndSaveImage(
+              part, listId, 'votingBackground'
+            );
+            if (savedVotingBackgroundFilename !== null) {
+              updateData.votingBackground = savedVotingBackgroundFilename;
+              console.log(`Stored votingBackground filename: ${savedVotingBackgroundFilename}`);
+            } else {
+              console.log('VotingBackground file processing returned null.');
+            }
+          } else if (part.fieldname === 'votingLogo') {
+            console.log('Processing votingLogo file...');
+            const savedVotingLogoFilename = await this.processAndSaveImage(
+              part, listId, 'votingLogo'
+            );
+            if (savedVotingLogoFilename !== null) {
+              updateData.votingLogo = savedVotingLogoFilename;
+              console.log(`Stored votingLogo filename: ${savedVotingLogoFilename}`);
+            } else {
+              console.log('VotingLogo file processing returned null.');
             }
           } else {
             // Drain any other unexpected file streams to prevent hanging
@@ -1486,9 +1504,11 @@ class Vibe {
         return {
           success: true,
           data: {
-            list,
-            backgroundFilename: updateData.background || null, // Return processed filename or null
-            background2Filename: updateData.background2 || null, // Return processed filename or null
+            list, // Return the original list data
+            backgroundFilename: updateData.background || list.background || null,
+            background2Filename: updateData.background2 || list.background2 || null,
+            votingBackgroundFilename: updateData.votingBackground || list.votingBackground || null,
+            votingLogoFilename: updateData.votingLogo || list.votingLogo || null,
           },
         };
       }
@@ -1512,8 +1532,10 @@ class Vibe {
         success: true,
         data: {
           list: updatedList,
-          backgroundFilename: updateData.background || null, // Filename saved or null
-          background2Filename: updateData.background2 || null, // Filename saved or null
+          backgroundFilename: updateData.background || null,
+          background2Filename: updateData.background2 || null,
+          votingBackgroundFilename: updateData.votingBackground || null,
+          votingLogoFilename: updateData.votingLogo || null,
         },
       };
     } catch (error) {
