@@ -1386,8 +1386,78 @@ class Vibe {
 
       // Update status if provided
       if (fields.status !== undefined) {
-        // updateData.status = String(fields.status); // Add status update logic if needed
+        // updateData.status = String(fields.status); // Status update logic might be handled elsewhere or based on progression
       }
+
+      // Parse and validate startAt and endAt dates from fields
+      if (fields.startAt !== undefined) {
+        const startDateString = String(fields.startAt); // Ensure it's a string
+        // Handle empty string or the literal string "null" as null
+        if (
+          startDateString === '' ||
+          startDateString.toLowerCase() === 'null'
+        ) {
+          updateData.startAt = null;
+          this.logger.log(
+            color.blue(
+              `Parsed startAt: Received empty or 'null' string, setting to null`
+            )
+          );
+        } else {
+          const startDate = new Date(startDateString);
+          // Check if Date object is valid (getTime() returns NaN for invalid dates)
+          if (!isNaN(startDate.getTime())) {
+            updateData.startAt = startDate;
+            this.logger.log(
+              color.blue(
+                `Parsed startAt: ${startDateString} -> ${updateData.startAt?.toISOString()}`
+              )
+            );
+          } else {
+            // If parsing fails, set to null and log a warning
+            updateData.startAt = null;
+            this.logger.log(
+              color.yellow(
+                `Invalid startAt date provided: "${startDateString}", setting to null`
+              )
+            );
+          }
+        }
+      }
+      // If startAt was not provided at all (undefined), it won't be added to updateData, preserving existing value or DB default
+
+      if (fields.endAt !== undefined) {
+        const endDateString = String(fields.endAt); // Ensure it's a string
+        // Handle empty string or the literal string "null" as null
+        if (endDateString === '' || endDateString.toLowerCase() === 'null') {
+          updateData.endAt = null;
+          this.logger.log(
+            color.blue(
+              `Parsed endAt: Received empty or 'null' string, setting to null`
+            )
+          );
+        } else {
+          const endDate = new Date(endDateString);
+          // Check if Date object is valid
+          if (!isNaN(endDate.getTime())) {
+            updateData.endAt = endDate;
+            this.logger.log(
+              color.blue(
+                `Parsed endAt: ${endDateString} -> ${updateData.endAt?.toISOString()}`
+              )
+            );
+          } else {
+            // If parsing fails, set to null and log a warning
+            updateData.endAt = null;
+            this.logger.log(
+              color.yellow(
+                `Invalid endAt date provided: "${endDateString}", setting to null`
+              )
+            );
+          }
+        }
+      }
+      // If endAt was not provided at all (undefined), it won't be added to updateData
 
       // Only update if there's something to change
       if (Object.keys(updateData).length === 0) {
