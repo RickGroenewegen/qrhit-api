@@ -65,8 +65,8 @@ class Vibe {
             status: true,
             numberOfTracks: true,
             numberOfCards: true,
-            createdAt: true,
-            updatedAt: true,
+            startAt: true,
+            endAt: true,
             Company: true, // Keep including Company details
           },
         });
@@ -1272,7 +1272,9 @@ class Vibe {
       console.log('Starting multipart processing...');
 
       for await (const part of parts) {
-        console.log(`Processing part: type=${part.type}, fieldname=${part.fieldname}`);
+        console.log(
+          `Processing part: type=${part.type}, fieldname=${part.fieldname}`
+        );
 
         if (part.type === 'file') {
           // Process expected image files immediately
@@ -1287,7 +1289,9 @@ class Vibe {
             // Add to updateData only if successfully processed
             if (savedBackgroundFilename !== null) {
               updateData.background = savedBackgroundFilename;
-              console.log(`Stored background filename: ${savedBackgroundFilename}`);
+              console.log(
+                `Stored background filename: ${savedBackgroundFilename}`
+              );
             } else {
               console.log('Background file processing returned null.');
             }
@@ -1302,7 +1306,9 @@ class Vibe {
             // Add to updateData only if successfully processed
             if (savedBackground2Filename !== null) {
               updateData.background2 = savedBackground2Filename;
-              console.log(`Stored background2 filename: ${savedBackground2Filename}`);
+              console.log(
+                `Stored background2 filename: ${savedBackground2Filename}`
+              );
             } else {
               console.log('Background2 file processing returned null.');
             }
@@ -1313,25 +1319,32 @@ class Vibe {
                 `Ignoring and draining unexpected file field: ${part.fieldname}`
               )
             );
-             console.log(`Draining unexpected file: ${part.fieldname}`);
+            console.log(`Draining unexpected file: ${part.fieldname}`);
             try {
-               await part.toBuffer(); // Consume the stream fully
-               console.log(`Drained unexpected file: ${part.fieldname}`);
+              await part.toBuffer(); // Consume the stream fully
+              console.log(`Drained unexpected file: ${part.fieldname}`);
             } catch (drainError) {
-               this.logger.log(color.red.bold(`Error draining file ${part.fieldname}: ${drainError}`));
-               console.error(`Error draining file ${part.fieldname}:`, drainError);
-               // Decide if we should abort or continue
-               // For now, we log and continue
+              this.logger.log(
+                color.red.bold(
+                  `Error draining file ${part.fieldname}: ${drainError}`
+                )
+              );
+              console.error(
+                `Error draining file ${part.fieldname}:`,
+                drainError
+              );
+              // Decide if we should abort or continue
+              // For now, we log and continue
             }
           }
         } else {
           // Handle regular fields - store them for later processing
           fields[part.fieldname] = part.value;
-           console.log(`Stored field: ${part.fieldname} = ${part.value}`);
+          console.log(`Stored field: ${part.fieldname} = ${part.value}`);
         }
       }
 
-       console.log('Finished multipart processing loop.');
+      console.log('Finished multipart processing loop.');
 
       // Add text and numeric fields from the collected 'fields' object
       if (fields.name !== undefined) updateData.name = String(fields.name);
