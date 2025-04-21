@@ -467,10 +467,15 @@ class Generator {
             continue;
           }
 
-          const hash = crypto
-            .createHmac('sha256', process.env['PLAYLIST_SECRET']!)
-            .update(playlist.playlistId + '_' + payment.paymentId)
-            .digest('hex');
+          const hash = (
+            payment.paymentId +
+            '_' +
+            playlist.id +
+            '_' +
+            playlist.name.replace(/ /g, '_')
+          )
+            .replace(/[^a-zA-Z0-9_]/g, '') // Keep underscores
+            .toLowerCase();
 
           let eco = false;
           let ecoString = '';
