@@ -140,12 +140,20 @@ class Server {
       return true;
     };
 
+    const getAuthHandler = (allowedGroups: string[]) => {
+      return {
+        // Conditionally apply preHandler based on environment
+        preHandler:
+          process.env['ENVIRONMENT'] === 'development'
+            ? undefined // Skip preHandler in development
+            : (request: any, reply: any) =>
+                verifyTokenMiddleware(request, reply, allowedGroups),
+      };
+    };
+
     this.fastify.post(
       '/create_order',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, _reply) => {
         return await this.generator.sendToPrinter(
           request.body.paymentId,
@@ -156,10 +164,7 @@ class Server {
 
     this.fastify.get(
       '/vibe/companies',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']), // Only allow admins
-      },
+      getAuthHandler(['admin', 'vibeadmin']),
       async (request: any, reply: any) => {
         try {
           // Use the Vibe class to get all companies
@@ -181,10 +186,7 @@ class Server {
 
     this.fastify.put(
       '/vibe/companies/:companyId/lists/:listId',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']), // Allow admins and vibe admins
-      },
+      getAuthHandler(['admin', 'vibeadmin']),
       async (request: any, reply: any) => {
         try {
           const companyId = parseInt(request.params.companyId);
@@ -226,10 +228,7 @@ class Server {
 
     this.fastify.delete(
       '/vibe/companies/:companyId',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']), // Only allow admins
-      },
+      getAuthHandler(['admin', 'vibeadmin']),
       async (request: any, reply: any) => {
         try {
           const companyId = parseInt(request.params.companyId);
@@ -267,10 +266,7 @@ class Server {
 
     this.fastify.post(
       '/vibe/companies/:companyId/lists',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']), // Allow admins and vibe admins
-      },
+      getAuthHandler(['admin', 'vibeadmin']),
       async (request: any, reply: any) => {
         try {
           const companyId = parseInt(request.params.companyId);
@@ -347,10 +343,7 @@ class Server {
 
     this.fastify.delete(
       '/vibe/companies/:companyId/lists/:listId',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']), // Allow admins and vibe admins
-      },
+      getAuthHandler(['admin', 'vibeadmin']),
       async (request: any, reply: any) => {
         try {
           const companyId = parseInt(request.params.companyId);
@@ -390,10 +383,7 @@ class Server {
 
     this.fastify.post(
       '/vibe/companies',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']), // Only allow admins
-      },
+      getAuthHandler(['admin', 'vibeadmin']),
       async (request: any, reply: any) => {
         try {
           const { name } = request.body;
@@ -427,14 +417,7 @@ class Server {
 
     this.fastify.post(
       '/admin/create',
-      {
-        // Conditionally apply preHandler based on environment
-        preHandler:
-          process.env['ENVIRONMENT'] === 'development'
-            ? undefined // Skip preHandler in development
-            : (request: any, reply: any) =>
-                verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply: any) => {
         const { email, password, displayName } = request.body;
 
@@ -498,10 +481,7 @@ class Server {
 
     this.fastify.get(
       '/verify/:paymentId',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply: any) => {
         this.data.verifyPayment(request.params.paymentId);
         reply.send({ success: true });
@@ -510,10 +490,7 @@ class Server {
 
     this.fastify.post(
       '/openperplex',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, _reply) => {
         const year = await this.openperplex.ask(
           request.body.artist,
@@ -554,10 +531,7 @@ class Server {
 
     this.fastify.get(
       '/lastplays',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (_request: any, reply: any) => {
         const lastPlays = await this.data.getLastPlays();
         reply.send({ success: true, data: lastPlays });
@@ -566,10 +540,7 @@ class Server {
 
     this.fastify.post(
       '/push/broadcast',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply: any) => {
         const { title, message, test, dry } = request.body;
         await this.push.broadcastNotification(
@@ -584,10 +555,7 @@ class Server {
 
     this.fastify.get(
       '/push/messages',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply: any) => {
         return await this.push.getMessages();
       }
@@ -595,10 +563,7 @@ class Server {
 
     this.fastify.get(
       '/regenerate/:paymentId/:email',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, _reply) => {
         await this.mollie.clearPDFs(request.params.paymentId);
         this.generator.generate(
@@ -615,10 +580,7 @@ class Server {
 
     this.fastify.post(
       '/orders',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply: any) => {
         const search = {
           ...request.body,
@@ -664,10 +626,7 @@ class Server {
 
     this.fastify.get(
       '/analytics',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply: any) => {
         const analytics = await this.analytics.getAllCounters();
         reply.send({ success: true, data: analytics });
@@ -676,10 +635,7 @@ class Server {
 
     this.fastify.post(
       '/tracks/search',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, _reply) => {
         const { searchTerm = '', missingYouTubeLink } = request.body;
         const tracks = await this.data.searchTracks(
@@ -692,10 +648,7 @@ class Server {
 
     this.fastify.post(
       '/tracks/update',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, _reply) => {
         const { id, artist, name, year, spotifyLink, youtubeLink } =
           request.body;
@@ -717,10 +670,7 @@ class Server {
 
     this.fastify.get(
       '/yearcheck',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply: any) => {
         const result = await this.data.getFirstUncheckedTrack();
         reply.send({
@@ -733,10 +683,7 @@ class Server {
 
     this.fastify.post(
       '/yearcheck',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply: any) => {
         const result = await this.data.updateTrackCheck(
           request.body.trackId,
@@ -753,10 +700,7 @@ class Server {
 
     this.fastify.get(
       '/check_unfinalized',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply: any) => {
         this.data.checkUnfinalizedPayments();
         reply.send({ success: true });
@@ -765,10 +709,7 @@ class Server {
 
     this.fastify.get(
       '/month_report/:yearMonth',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply: any) => {
         const { yearMonth } = request.params;
         const year = parseInt(yearMonth.substring(0, 4));
@@ -788,10 +729,7 @@ class Server {
 
     this.fastify.get(
       '/add_spotify',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (_request: any, reply) => {
         const result = this.data.addSpotifyLinks();
         return { success: true, processed: result };
@@ -800,10 +738,7 @@ class Server {
 
     this.fastify.get(
       '/fix_preview_links',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (_request: any, _reply) => {
         const result = await this.data.fixPreviewLinks();
         return {
@@ -817,10 +752,7 @@ class Server {
 
     this.fastify.get(
       '/tax_report/:yearMonth',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply: any) => {
         const { yearMonth } = request.params;
         const year = parseInt(yearMonth.substring(0, 4));
@@ -843,10 +775,7 @@ class Server {
 
     this.fastify.get(
       '/day_report',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (_request: any, reply: any) => {
         const report = await this.mollie.getPaymentsByDay();
         reply.send({
@@ -858,10 +787,7 @@ class Server {
 
     this.fastify.get(
       '/corrections',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (_request: any, reply) => {
         const corrections = await this.suggestion.getCorrections();
         return { success: true, data: corrections };
@@ -870,10 +796,7 @@ class Server {
 
     this.fastify.post(
       '/correction/:paymentId/:userHash/:playlistId/:andSend',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply) => {
         this.suggestion.processCorrections(
           request.params.paymentId,
@@ -888,10 +811,7 @@ class Server {
 
     this.fastify.post(
       '/finalize',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply: any) => {
         this.generator.finalizeOrder(request.body.paymentId, this.mollie);
         reply.send({ success: true });
@@ -900,10 +820,7 @@ class Server {
 
     this.fastify.get(
       '/vibe/state/:listId',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
-      },
+      getAuthHandler(['admin', 'vibeadmin']),
       async (request: any, reply: any) => {
         try {
           // Get the token from the request
@@ -930,10 +847,7 @@ class Server {
 
     this.fastify.get(
       '/vibe/company/:companyId',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
-      },
+      getAuthHandler(['admin', 'vibeadmin']),
       async (request: any, reply: any) => {
         try {
           // Use the Vibe class to get company lists
@@ -957,10 +871,7 @@ class Server {
 
     this.fastify.get(
       '/download_invoice/:invoiceId',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin']),
-      },
+      getAuthHandler(['admin']),
       async (request: any, reply: any) => {
         const { invoiceId } = request.params;
         const orderInstance = this.order;
@@ -1846,7 +1757,7 @@ class Server {
           return { success: false, error: 'Missing authorization code' };
         }
 
-        return await this.hitlist.completeSpotifyAuth(code);
+        return await this.hitlist.completeSpotifyAuth(code, '');
       }
     );
 
@@ -1868,7 +1779,7 @@ class Server {
       }
 
       // Automatically process the authorization
-      const result = await this.hitlist.completeSpotifyAuth(code);
+      const result = await this.hitlist.completeSpotifyAuth(code, '');
 
       if (result.success) {
         reply.type('text/html').send(`

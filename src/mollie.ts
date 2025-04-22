@@ -518,6 +518,9 @@ class Mollie {
     params: any,
     clientIp: string
   ): Promise<ApiResult> {
+    console.log(111, params);
+    console.log(222, params.cart);
+    console.log(333, params.cart.items);
     try {
       let useOrderType = 'digital';
       let description = '';

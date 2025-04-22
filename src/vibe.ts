@@ -1493,6 +1493,56 @@ class Vibe {
     }
   }
 
+  public async generatePDF(listId: number): Promise<any> {
+    const items = [
+      {
+        productType: 'cards',
+        playlistId: 'metal-top-100',
+        playlistName: 'Metal Top 100',
+        numberOfTracks: 100,
+        amount: 1,
+        price: 26,
+        type: 'physical',
+        image:
+          'https://mosaic.scdn.co/640/ab67616d00001e0206eef0d54c83cc429770d182ab67616d00001e021530f31c8d4197777b70ee5dab67616d00001e02668e3aca3167e6e569a9aa20ab67616d00001e027eefd1a87710bf84a7688a2c',
+        doubleSided: false,
+        eco: false,
+        isSlug: true,
+      },
+    ];
+
+    const paymentParams = {
+      user: { userId: null, email: null, displayName: null },
+      locale: 'en',
+      refreshPlaylists: [],
+      cart: { items, discounts: [] },
+      extraOrderData: {
+        fullname: 'OnzeVibe',
+        email: 'info@onzevibe.nl',
+        address: 'Prinsenhof',
+        housenumber: '1',
+        city: 'Sassenheim',
+        zipcode: '2171XZ',
+        countrycode: 'NL',
+        price: 0,
+        shipping: 0,
+        total: 0,
+        taxRate: 21,
+        taxRateShipping: 21,
+        agreeNoRefund: true,
+        agreeTerms: true,
+        marketingEmails: false,
+        differentInvoiceAddress: false,
+        invoiceAddress: '',
+        invoiceHousenumber: '',
+        invoiceCity: '',
+        invoiceZipcode: '',
+        invoiceCountrycode: '',
+        orderType: 'physical',
+      },
+    };
+  }
+
   /**
    * Calculate the ranking for a company list based on verified submissions.
    * @param listId The ID of the company list to rank.
@@ -1530,8 +1580,8 @@ class Vibe {
       }
 
       // 2. Get all verified submissions for this list
-      const verifiedSubmissions = await this.prisma.companyListSubmission.findMany(
-        {
+      const verifiedSubmissions =
+        await this.prisma.companyListSubmission.findMany({
           where: {
             companyListId: listId,
             verified: true, // Only consider verified submissions
@@ -1547,8 +1597,7 @@ class Vibe {
               },
             },
           },
-        }
-      );
+        });
 
       if (verifiedSubmissions.length === 0) {
         this.logger.log(
