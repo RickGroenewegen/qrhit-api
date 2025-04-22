@@ -1534,11 +1534,15 @@ class Vibe {
         return { success: true, data: { list: companyList, ranking: [] } }; // Return empty ranking
       }
 
-      // 3. Calculate points for each track
+      // 3. Calculate points and count votes for each track
       const trackScores: { [trackId: number]: number } = {};
+      const trackVoteCounts: { [trackId: number]: number } = {}; // To store vote counts
 
       for (const submission of verifiedSubmissions) {
         for (const submissionTrack of submission.CompanyListSubmissionTrack) {
+          // Increment vote count for this track
+          trackVoteCounts[submissionTrack.trackId] =
+            (trackVoteCounts[submissionTrack.trackId] || 0) + 1;
           // Points = maxPoints - position + 1
           // Example: maxPoints=5 -> pos 1 gets 5, pos 2 gets 4, ..., pos 5 gets 1
           const points = maxPoints - submissionTrack.position + 1;
@@ -1571,7 +1575,8 @@ class Vibe {
       const rankedTracks = tracks
         .map((track) => ({
           ...track,
-          score: trackScores[track.id],
+          score: trackScores[track.id] || 0, // Default score to 0 if somehow missing
+          voteCount: trackVoteCounts[track.id] || 0, // Add vote count, default to 0
         }))
         .sort((a, b) => b.score - a.score) // Sort descending by score
         .slice(0, companyList.numberOfCards); // Limit results to numberOfCards
