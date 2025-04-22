@@ -202,8 +202,71 @@ class Hitlist {
     submissionId: number
   ): Promise<void> {
     try {
-      // Extract track IDs from the hitlist
-      const trackIds = hitlist.map((track: any) => track.trackId);
+      if (!hitlist || hitlist.length === 0) {
+        this.logger.log(color.yellow.bold(`Empty hitlist received for submission ${submissionId}`));
+        return;
+      }
+
+      // --- Start: Filter hitlist based on ranking within the submission ---
+      const companyListId = hitlist[0]?.companyListId;
+      if (!companyListId) {
+         this.logger.log(color.red.bold(`Missing companyListId in hitlist for submission ${submissionId}`));
+         return;
+      }
+
+      // 1. Get Company List details
+      const companyList = await this.prisma.companyList.findUnique({
+        where: { id: parseInt(companyListId) },
+        select: { numberOfTracks: true, numberOfCards: true, name: true },
+      });
+
+      if (!companyList) {
+        this.logger.log(color.red.bold(`Company list ${companyListId} not found for submission ${submissionId}`));
+        return;
+      }
+
+      const maxPoints = companyList.numberOfTracks;
+      const maxTracksToKeep = companyList.numberOfCards;
+
+      if (maxPoints <= 0 || maxTracksToKeep <= 0) {
+        this.logger.log(
+          color.yellow.bold(
+            `List ${companyList.name} (ID: ${companyListId}) has invalid numberOfTracks (${maxPoints}) or numberOfCards (${maxTracksToKeep}). Processing all submitted tracks.`
+          )
+        );
+        // If limits are invalid, proceed without filtering (or decide on alternative behavior)
+      }
+
+      // 2. Calculate score for each track in the submission
+      const scoredHitlist = hitlist.map((track) => ({
+        ...track,
+        score: maxPoints > 0 ? Math.max(0, maxPoints - track.position + 1) : 1, // Ensure score is non-negative, default to 1 if maxPoints is invalid
+      }));
+
+      // 3. Sort by score descending
+      scoredHitlist.sort((a, b) => b.score - a.score);
+
+      // 4. Filter to keep only top tracks within the limit
+      const filteredHitlist = scoredHitlist.slice(0, maxTracksToKeep);
+
+      this.logger.log(
+        color.blue.bold(
+          `Submission ${submissionId}: Original ${hitlist.length} tracks, filtered to top ${filteredHitlist.length} based on list limits (max ${maxTracksToKeep}).`
+        )
+      );
+
+      if (filteredHitlist.length === 0) {
+        this.logger.log(color.yellow.bold(`No tracks left after filtering for submission ${submissionId}`));
+        // Update submission status to indicate it's processed but empty? Or handle as needed.
+        // For now, just return. Consider updating status later if required.
+        // await this.prisma.companyListSubmission.update({ where: { id: submissionId }, data: { status: 'processed_empty' } });
+        return;
+      }
+      // --- End: Filter hitlist ---
+
+
+      // Extract Spotify track IDs from the *filtered* hitlist
+      const trackIds = filteredHitlist.map((track: any) => track.trackId);
 
       // Use the new getTracksByIds method to get detailed track information
       const spotify = new Spotify();
@@ -217,11 +280,11 @@ class Hitlist {
 
         this.logger.log(
           color.blue.bold(
-            `Received hitlist with ${color.white.bold(hitlist.length)} tracks`
+            `Processing ${color.white.bold(filteredHitlist.length)} filtered tracks for submission ${submissionId}`
           )
         );
 
-        // Store tracks in the database
+        // Store tracks in the database (using data from Spotify response)
         for (const trackData of tracksResult.data) {
           // Check if track already exists in the database
           let track = await this.prisma.track.findUnique({
@@ -286,25 +349,32 @@ class Hitlist {
           },
         });
 
-        // Create CompanyListSubmissionTrack entries for each track
-        for (const track of hitlist) {
-          const trackDbId = trackDbIds.get(track.trackId);
+        // Create CompanyListSubmissionTrack entries for each *filtered* track
+        // Use the original position from the filteredHitlist object
+        for (const filteredTrack of filteredHitlist) {
+          const trackDbId = trackDbIds.get(filteredTrack.trackId); // Get DB ID using Spotify ID
 
           if (trackDbId) {
             await this.prisma.companyListSubmissionTrack.create({
               data: {
                 companyListSubmissionId: submissionId,
-                trackId: trackDbId,
-                position: track.position,
+                trackId: trackDbId, // The DB ID of the track
+                position: filteredTrack.position, // The original position from the submission
               },
             });
+          } else {
+             this.logger.log(
+               color.yellow.bold(
+                 `Could not find DB ID for Spotify track ${filteredTrack.trackId} while saving submission tracks for ${submissionId}`
+               )
+             );
           }
         }
 
         this.logger.log(
           color.green.bold(
             `Created ${color.white.bold(
-              hitlist.length
+              filteredHitlist.length // Log the count of tracks actually saved
             )} submission tracks for submission ${color.white.bold(
               submissionId
             )}`
