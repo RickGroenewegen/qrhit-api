@@ -134,8 +134,6 @@ class Vibe {
       return null; // No file uploaded for this field
     }
 
-    console.log(111, listId, type);
-
     try {
       const backgroundsDir = path.join(
         process.env['PUBLIC_DIR'] as string,
@@ -1271,17 +1269,10 @@ class Vibe {
       // Process multipart data from the request
       const parts = request.parts();
 
-      console.log('Starting multipart processing...');
-
       for await (const part of parts) {
-        console.log(
-          `Processing part: type=${part.type}, fieldname=${part.fieldname}`
-        );
-
         if (part.type === 'file') {
           // Process expected image files immediately
           if (part.fieldname === 'background') {
-            console.log('Processing background file...');
             // Store the result of processing the image
             const savedBackgroundFilename = await this.processAndSaveImage(
               part, // Pass the file part object directly
@@ -1291,66 +1282,37 @@ class Vibe {
             // Add to updateData only if successfully processed
             if (savedBackgroundFilename !== null) {
               updateData.background = savedBackgroundFilename;
-              console.log(
-                `Stored background filename: ${savedBackgroundFilename}`
-              );
-            } else {
-              console.log('Background file processing returned null.');
             }
           } else if (part.fieldname === 'background2') {
-            console.log('Processing background2 file...');
             const savedBackground2Filename = await this.processAndSaveImage(
-              part, listId, 'background2'
+              part,
+              listId,
+              'background2'
             );
             if (savedBackground2Filename !== null) {
               updateData.background2 = savedBackground2Filename;
-              console.log(`Stored background2 filename: ${savedBackground2Filename}`);
-            } else {
-              console.log('Background2 file processing returned null.');
             }
           } else if (part.fieldname === 'votingBackground') {
-            console.log('Processing votingBackground file...');
-            const savedVotingBackgroundFilename = await this.processAndSaveImage(
-              part, listId, 'votingBackground'
-            );
+            const savedVotingBackgroundFilename =
+              await this.processAndSaveImage(part, listId, 'votingBackground');
             if (savedVotingBackgroundFilename !== null) {
               updateData.votingBackground = savedVotingBackgroundFilename;
-              console.log(`Stored votingBackground filename: ${savedVotingBackgroundFilename}`);
-            } else {
-              console.log('VotingBackground file processing returned null.');
             }
           } else if (part.fieldname === 'votingLogo') {
-            console.log('Processing votingLogo file...');
             const savedVotingLogoFilename = await this.processAndSaveImage(
-              part, listId, 'votingLogo'
+              part,
+              listId,
+              'votingLogo'
             );
             if (savedVotingLogoFilename !== null) {
               updateData.votingLogo = savedVotingLogoFilename;
-              console.log(`Stored votingLogo filename: ${savedVotingLogoFilename}`);
-            } else {
-              console.log('VotingLogo file processing returned null.');
             }
           } else {
             // Drain any other unexpected file streams to prevent hanging
-            this.logger.log(
-              color.yellow.bold(
-                `Ignoring and draining unexpected file field: ${part.fieldname}`
-              )
-            );
-            console.log(`Draining unexpected file: ${part.fieldname}`);
+
             try {
               await part.toBuffer(); // Consume the stream fully
-              console.log(`Drained unexpected file: ${part.fieldname}`);
             } catch (drainError) {
-              this.logger.log(
-                color.red.bold(
-                  `Error draining file ${part.fieldname}: ${drainError}`
-                )
-              );
-              console.error(
-                `Error draining file ${part.fieldname}:`,
-                drainError
-              );
               // Decide if we should abort or continue
               // For now, we log and continue
             }
@@ -1358,11 +1320,8 @@ class Vibe {
         } else {
           // Handle regular fields - store them for later processing
           fields[part.fieldname] = part.value;
-          console.log(`Stored field: ${part.fieldname} = ${part.value}`);
         }
       }
-
-      console.log('Finished multipart processing loop.');
 
       // Add text and numeric fields from the collected 'fields' object
       if (fields.name !== undefined) updateData.name = String(fields.name);
@@ -1416,29 +1375,14 @@ class Vibe {
           startDateString.toLowerCase() === 'null'
         ) {
           updateData.startAt = null;
-          this.logger.log(
-            color.blue(
-              `Parsed startAt: Received empty or 'null' string, setting to null`
-            )
-          );
         } else {
           const startDate = new Date(startDateString);
           // Check if Date object is valid (getTime() returns NaN for invalid dates)
           if (!isNaN(startDate.getTime())) {
             updateData.startAt = startDate;
-            this.logger.log(
-              color.blue(
-                `Parsed startAt: ${startDateString} -> ${updateData.startAt?.toISOString()}`
-              )
-            );
           } else {
             // If parsing fails, set to null and log a warning
             updateData.startAt = null;
-            this.logger.log(
-              color.yellow(
-                `Invalid startAt date provided: "${startDateString}", setting to null`
-              )
-            );
           }
         }
       }
@@ -1449,29 +1393,14 @@ class Vibe {
         // Handle empty string or the literal string "null" as null
         if (endDateString === '' || endDateString.toLowerCase() === 'null') {
           updateData.endAt = null;
-          this.logger.log(
-            color.blue(
-              `Parsed endAt: Received empty or 'null' string, setting to null`
-            )
-          );
         } else {
           const endDate = new Date(endDateString);
           // Check if Date object is valid
           if (!isNaN(endDate.getTime())) {
             updateData.endAt = endDate;
-            this.logger.log(
-              color.blue(
-                `Parsed endAt: ${endDateString} -> ${updateData.endAt?.toISOString()}`
-              )
-            );
           } else {
             // If parsing fails, set to null and log a warning
             updateData.endAt = null;
-            this.logger.log(
-              color.yellow(
-                `Invalid endAt date provided: "${endDateString}", setting to null`
-              )
-            );
           }
         }
       }
@@ -1505,10 +1434,14 @@ class Vibe {
           success: true,
           data: {
             list, // Return the original list data
-            backgroundFilename: updateData.background || list.background || null,
-            background2Filename: updateData.background2 || list.background2 || null,
-            votingBackgroundFilename: updateData.votingBackground || list.votingBackground || null,
-            votingLogoFilename: updateData.votingLogo || list.votingLogo || null,
+            backgroundFilename:
+              updateData.background || list.background || null,
+            background2Filename:
+              updateData.background2 || list.background2 || null,
+            votingBackgroundFilename:
+              updateData.votingBackground || list.votingBackground || null,
+            votingLogoFilename:
+              updateData.votingLogo || list.votingLogo || null,
           },
         };
       }
@@ -1520,10 +1453,12 @@ class Vibe {
       });
 
       this.logger.log(
-        color.green.bold(
+        color.blue.bold(
           `Updated list "${color.white.bold(
             updatedList.name
-          )}" (ID: ${listId}) for company ID ${companyId}`
+          )}" (ID: ${color.white.bold(
+            listId
+          )}) for company ID ${color.white.bold(companyId)}`
         )
       );
 
