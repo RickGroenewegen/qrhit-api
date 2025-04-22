@@ -78,11 +78,24 @@ class Hitlist {
           };
         }
       }
-
-      // Get company information for the email
+ 
+      // Get company list information, including dates and company details
       const companyList = await this.prisma.companyList.findUnique({
         where: { id: parseInt(companyListId) },
-        include: { Company: true },
+        include: { Company: true }, // Include company for email context
+        // Select necessary fields including dates
+        select: {
+          id: true,
+          name: true,
+          startAt: true,
+          endAt: true,
+          Company: {
+            select: {
+              name: true,
+            },
+          },
+          // Add other fields if needed later
+        },
       });
 
       if (!companyList) {
@@ -91,7 +104,35 @@ class Hitlist {
           error: 'Company list not found',
         };
       }
-
+ 
+      // Check if voting is open based on startAt and endAt dates
+      const now = new Date();
+      const startAt = companyList.startAt;
+      const endAt = companyList.endAt;
+      let votingOpen = true; // Default to true
+ 
+      if (startAt && endAt) {
+        votingOpen = now >= startAt && now <= endAt;
+      } else if (startAt && !endAt) {
+        votingOpen = now >= startAt;
+      } else if (!startAt && endAt) {
+        votingOpen = now <= endAt;
+      }
+ 
+      if (!votingOpen) {
+        this.logger.log(
+          color.yellow.bold(
+            `Submission attempt outside voting period for list ${color.white.bold(
+              companyList.name
+            )} (ID: ${companyList.id})`
+          )
+        );
+        return {
+          success: false,
+          error: 'votingClosed', // Specific error key for frontend
+        };
+      }
+ 
       // Find or create the company list submission
       let submission = await this.prisma.companyListSubmission.findUnique({
         where: { hash: submissionHash },
