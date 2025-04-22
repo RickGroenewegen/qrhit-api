@@ -1479,10 +1479,15 @@ class Vibe {
         return { success: false, error: 'Invalid list ID provided' };
       }
 
-      // 1. Get the Company List details, especially numberOfTracks
+      // 1. Get the Company List details, including numberOfTracks and numberOfCards
       const companyList = await this.prisma.companyList.findUnique({
         where: { id: listId },
-        select: { id: true, name: true, numberOfTracks: true },
+        select: {
+          id: true,
+          name: true,
+          numberOfTracks: true,
+          numberOfCards: true, // Fetch numberOfCards
+        },
       });
 
       if (!companyList) {
@@ -1568,15 +1573,16 @@ class Vibe {
           ...track,
           score: trackScores[track.id],
         }))
-        .sort((a, b) => b.score - a.score); // Sort descending by score
+        .sort((a, b) => b.score - a.score) // Sort descending by score
+        .slice(0, companyList.numberOfCards); // Limit results to numberOfCards
 
       this.logger.log(
         color.green.bold(
           `Calculated ranking for list ${color.white.bold(
             companyList.name
-          )} (ID: ${listId}) with ${color.white.bold(
+          )} (ID: ${listId}), returning top ${color.white.bold(
             rankedTracks.length
-          )} tracks.`
+          )} tracks (capped at ${companyList.numberOfCards}).`
         )
       );
 
