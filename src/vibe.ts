@@ -1465,6 +1465,133 @@ class Vibe {
       return { success: false, error: 'Error updating company list' };
     }
   }
+
+  /**
+   * Calculate the ranking for a company list based on verified submissions.
+   * @param listId The ID of the company list to rank.
+   * @returns Object with success status and the ranked list of tracks.
+   */
+  public async getRanking(
+    listId: number
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      if (!listId || isNaN(listId)) {
+        return { success: false, error: 'Invalid list ID provided' };
+      }
+
+      // 1. Get the Company List details, especially numberOfTracks
+      const companyList = await this.prisma.companyList.findUnique({
+        where: { id: listId },
+        select: { id: true, name: true, numberOfTracks: true },
+      });
+
+      if (!companyList) {
+        return { success: false, error: 'Company list not found' };
+      }
+
+      const maxPoints = companyList.numberOfTracks;
+      if (maxPoints <= 0) {
+        return {
+          success: false,
+          error: 'List has zero or negative numberOfTracks, cannot rank.',
+        };
+      }
+
+      // 2. Get all verified submissions for this list
+      const verifiedSubmissions = await this.prisma.companyListSubmission.findMany(
+        {
+          where: {
+            companyListId: listId,
+            verified: true, // Only consider verified submissions
+          },
+          select: {
+            id: true,
+            CompanyListSubmissionTrack: {
+              // Fetch associated tracks ordered by position
+              orderBy: { position: 'asc' },
+              select: {
+                trackId: true,
+                position: true,
+              },
+            },
+          },
+        }
+      );
+
+      if (verifiedSubmissions.length === 0) {
+        this.logger.log(
+          color.yellow.bold(
+            `No verified submissions found for list ${color.white.bold(
+              companyList.name
+            )} (ID: ${listId})`
+          )
+        );
+        return { success: true, data: { list: companyList, ranking: [] } }; // Return empty ranking
+      }
+
+      // 3. Calculate points for each track
+      const trackScores: { [trackId: number]: number } = {};
+
+      for (const submission of verifiedSubmissions) {
+        for (const submissionTrack of submission.CompanyListSubmissionTrack) {
+          // Points = maxPoints - position + 1
+          // Example: maxPoints=5 -> pos 1 gets 5, pos 2 gets 4, ..., pos 5 gets 1
+          const points = maxPoints - submissionTrack.position + 1;
+
+          if (points > 0) {
+            // Ensure only valid positions contribute points
+            trackScores[submissionTrack.trackId] =
+              (trackScores[submissionTrack.trackId] || 0) + points;
+          }
+        }
+      }
+
+      // 4. Get track details for the ranked tracks
+      const trackIds = Object.keys(trackScores).map(Number);
+      const tracks = await this.prisma.track.findMany({
+        where: {
+          id: { in: trackIds },
+        },
+        select: {
+          id: true,
+          name: true,
+          artist: true,
+          year: true,
+          spotifyLink: true,
+          youtubeLink: true,
+        },
+      });
+
+      // 5. Combine track details with scores and sort
+      const rankedTracks = tracks
+        .map((track) => ({
+          ...track,
+          score: trackScores[track.id],
+        }))
+        .sort((a, b) => b.score - a.score); // Sort descending by score
+
+      this.logger.log(
+        color.green.bold(
+          `Calculated ranking for list ${color.white.bold(
+            companyList.name
+          )} (ID: ${listId}) with ${color.white.bold(
+            rankedTracks.length
+          )} tracks.`
+        )
+      );
+
+      return {
+        success: true,
+        data: {
+          list: companyList,
+          ranking: rankedTracks,
+        },
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error calculating ranking: ${error}`));
+      return { success: false, error: 'Error calculating list ranking' };
+    }
+  }
 }
 
 export default Vibe;
