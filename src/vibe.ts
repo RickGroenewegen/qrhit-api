@@ -28,12 +28,13 @@ class Vibe {
    */
   public async getState(listId?: number): Promise<any> {
     try {
-      // Get questions for the list if listId is provided
+      // Get questions and ranking for the list if listId is provided
       let questions: any[] = [];
       let companyList = null;
+      let ranking: any[] = []; // Initialize ranking array
 
       if (listId) {
-        // Check if company list exists and belongs to the company
+        // Check if company list exists
         companyList = await this.prisma.companyList.findUnique({
           where: { id: listId },
           select: {
