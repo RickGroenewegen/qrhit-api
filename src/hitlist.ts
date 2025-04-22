@@ -78,12 +78,11 @@ class Hitlist {
           };
         }
       }
- 
+
       // Get company list information, including dates and company details
       const companyList = await this.prisma.companyList.findUnique({
         where: { id: parseInt(companyListId) },
-        include: { Company: true }, // Include company for email context
-        // Select necessary fields including dates
+        // Select necessary fields including dates and nested Company fields
         select: {
           id: true,
           name: true,
@@ -91,9 +90,10 @@ class Hitlist {
           endAt: true,
           Company: {
             select: {
-              name: true,
+              name: true, // Select company name for email context
             },
           },
+          slug: true, // Select slug for verification email link
           // Add other fields if needed later
         },
       });
@@ -104,13 +104,13 @@ class Hitlist {
           error: 'Company list not found',
         };
       }
- 
+
       // Check if voting is open based on startAt and endAt dates
       const now = new Date();
       const startAt = companyList.startAt;
       const endAt = companyList.endAt;
       let votingOpen = true; // Default to true
- 
+
       if (startAt && endAt) {
         votingOpen = now >= startAt && now <= endAt;
       } else if (startAt && !endAt) {
@@ -118,7 +118,7 @@ class Hitlist {
       } else if (!startAt && endAt) {
         votingOpen = now <= endAt;
       }
- 
+
       if (!votingOpen) {
         this.logger.log(
           color.yellow.bold(
@@ -132,7 +132,7 @@ class Hitlist {
           error: 'votingClosed', // Specific error key for frontend
         };
       }
- 
+
       // Find or create the company list submission
       let submission = await this.prisma.companyListSubmission.findUnique({
         where: { hash: submissionHash },
@@ -527,7 +527,8 @@ class Hitlist {
           votingLogo: true,
           startAt: true, // Added startAt
           endAt: true, // Added endAt
-          Company: { // Keep selecting company name
+          Company: {
+            // Keep selecting company name
             select: {
               name: true, // Select only the company name
             },
@@ -552,13 +553,13 @@ class Hitlist {
           submissionStatus = submission.status;
         }
       }
- 
+
       // Calculate votingOpen status
       const now = new Date();
       const startAt = companyList.startAt;
       const endAt = companyList.endAt;
       let votingOpen = true; // Default to true
- 
+
       if (startAt && endAt) {
         // Both dates are set
         votingOpen = now >= startAt && now <= endAt;
@@ -570,7 +571,7 @@ class Hitlist {
         votingOpen = now <= endAt;
       }
       // If both are null, votingOpen remains true
- 
+
       return {
         success: true,
         data: {
