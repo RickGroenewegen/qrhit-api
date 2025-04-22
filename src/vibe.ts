@@ -4,12 +4,15 @@ import { color } from 'console-log-colors';
 import fs from 'fs/promises'; // Added fs
 import path from 'path'; // Added path
 import Utils from './utils'; // Added Utils
+import Mollie from './mollie';
+import Discount from './discount';
 
 class Vibe {
   private static instance: Vibe;
   private prisma = new PrismaClient();
   private logger = new Logger();
   private utils = new Utils();
+  private discount = new Discount();
 
   private constructor() {}
 
@@ -1493,29 +1496,60 @@ class Vibe {
     }
   }
 
-  public async generatePDF(listId: number): Promise<any> {
+  public async generatePDF(
+    listId: number,
+    mollie: Mollie,
+    clientIp: string
+  ): Promise<any> {
+    const price = 100;
+
+    // Get the company list details
+    const companyList = await this.prisma.companyList.findUnique({
+      where: { id: listId },
+      include: {
+        Company: true,
+      },
+    });
+
+    if (!companyList) {
+      return { success: false, error: 'Company list not found' };
+    }
+
+    // playlist ID the the last part of the companyList.playlistUrl
+    const playlistId = companyList.playlistUrl!.split('/').pop();
+
+    const discount = await this.discount.createDiscountCode(price, '', '');
+
+    console.log(1, discount);
+    console.log(111, companyList);
+
     const items = [
       {
         productType: 'cards',
-        playlistId: 'metal-top-100',
-        playlistName: 'Metal Top 100',
-        numberOfTracks: 100,
+        playlistId: playlistId,
+        playlistName: companyList.name,
+        numberOfTracks: companyList.numberOfCards,
         amount: 1,
-        price: 26,
+        price: price,
         type: 'physical',
-        image:
-          'https://mosaic.scdn.co/640/ab67616d00001e0206eef0d54c83cc429770d182ab67616d00001e021530f31c8d4197777b70ee5dab67616d00001e02668e3aca3167e6e569a9aa20ab67616d00001e027eefd1a87710bf84a7688a2c',
+        subType: 'none',
+        image: '',
         doubleSided: false,
         eco: false,
-        isSlug: true,
+        isSlug: false,
       },
+    ];
+
+    const discounts = [
+      { code: discount.code, amountLeft: price, fullAmount: price },
     ];
 
     const paymentParams = {
       user: { userId: null, email: null, displayName: null },
       locale: 'en',
       refreshPlaylists: [],
-      cart: { items, discounts: [] },
+      onzevibe: true,
+      cart: { items, discounts },
       extraOrderData: {
         fullname: 'OnzeVibe',
         email: 'info@onzevibe.nl',
@@ -1541,6 +1575,19 @@ class Vibe {
         orderType: 'physical',
       },
     };
+
+    // Console.log the object in full
+    //console.log(JSON.stringify(paymentParams, null, 2));
+
+    const result = await mollie.getPaymentUri(paymentParams, clientIp);
+
+    this.logger.log(
+      color.blue.bold(
+        `Started PDF generation for list ${color.white.bold(
+          companyList.name
+        )} (ID: ${color.white.bold(listId)})`
+      )
+    );
   }
 
   /**

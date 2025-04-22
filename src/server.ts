@@ -884,15 +884,23 @@ class Server {
           // Call the generatePDF method from the Vibe instance
           // Note: The current generatePDF method in vibe.ts doesn't seem to do much yet.
           // We'll call it and return a success message for now.
-          const result = await this.vibe.generatePDF(listId);
+          const result = await this.vibe.generatePDF(
+            listId,
+            this.mollie,
+            request.clientIp
+          );
 
           // Assuming generatePDF will eventually return success/failure or data
           // For now, just send a success response if no error occurs
-          reply.send({ success: true, message: 'PDF generation initiated (placeholder)' });
-
+          reply.send({
+            success: true,
+            message: 'PDF generation initiated (placeholder)',
+          });
         } catch (error) {
           console.error('Error calling generatePDF:', error);
-          reply.status(500).send({ error: 'Internal server error during PDF generation' });
+          reply
+            .status(500)
+            .send({ error: 'Internal server error during PDF generation' });
         }
       }
     );
