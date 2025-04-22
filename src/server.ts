@@ -869,6 +869,34 @@ class Server {
       }
     );
 
+    this.fastify.post(
+      '/vibe/generate/:listId',
+      getAuthHandler(['admin', 'vibeadmin']),
+      async (request: any, reply: any) => {
+        try {
+          const listId = parseInt(request.params.listId);
+
+          if (isNaN(listId)) {
+            reply.status(400).send({ error: 'Invalid list ID' });
+            return;
+          }
+
+          // Call the generatePDF method from the Vibe instance
+          // Note: The current generatePDF method in vibe.ts doesn't seem to do much yet.
+          // We'll call it and return a success message for now.
+          const result = await this.vibe.generatePDF(listId);
+
+          // Assuming generatePDF will eventually return success/failure or data
+          // For now, just send a success response if no error occurs
+          reply.send({ success: true, message: 'PDF generation initiated (placeholder)' });
+
+        } catch (error) {
+          console.error('Error calling generatePDF:', error);
+          reply.status(500).send({ error: 'Internal server error during PDF generation' });
+        }
+      }
+    );
+
     this.fastify.get(
       '/download_invoice/:invoiceId',
       getAuthHandler(['admin']),
