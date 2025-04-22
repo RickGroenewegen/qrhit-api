@@ -699,12 +699,11 @@ ${params.html}
     fullname: string,
     companyName: string,
     verificationHash: string,
-    domain?: string,
     slug?: string
   ): Promise<void> {
     if (!this.ses) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+    const logoPath = `${process.env['ASSETS_DIR']}/images/onzevibe_logo.png`;
     // Use the company domain if provided, otherwise fall back to FRONTEND_URI
     const verificationLink = `${process.env['FRONTEND_URI']}/hitlist/${slug}/verify/${verificationHash}`;
 
@@ -746,10 +745,10 @@ ${params.html}
       const attachments: Attachment[] = [
         {
           contentType: 'image/png',
-          filename: 'logo.png',
+          filename: 'onzevibe_logo.png',
           data: logoBase64,
           isInline: true,
-          cid: 'logo',
+          cid: 'onzevibe_logo',
         },
       ];
 

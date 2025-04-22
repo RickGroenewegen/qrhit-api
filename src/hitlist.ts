@@ -181,7 +181,6 @@ class Hitlist {
           fullname || email.split('@')[0],
           companyList.Company.name,
           submission.verificationHash,
-          // companyList.domain!, // Removed domain as it doesn't exist on CompanyList
           companyList.slug!
         );
       }
