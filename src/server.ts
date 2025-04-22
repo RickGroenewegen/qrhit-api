@@ -911,15 +911,8 @@ class Server {
           const decoded = verifyToken(token || '');
           const listId = parseInt(request.params.listId);
 
-          if (!decoded || !decoded.companyId) {
-            reply
-              .status(400)
-              .send({ error: 'No company associated with this user' });
-            return;
-          }
-
           // Use the Vibe class to get the state
-          const result = await this.vibe.getState(decoded.companyId, listId);
+          const result = await this.vibe.getState(listId);
 
           if (!result.success) {
             reply.status(404).send({ error: result.error });
@@ -935,119 +928,6 @@ class Server {
       }
     );
 
-    this.fastify.post(
-      '/vibe/:listId/cards',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
-      },
-      async (request: any, reply: any) => {
-        try {
-          // Get the token from the request
-          const token = request.headers.authorization?.split(' ')[1];
-          const decoded = verifyToken(token || '');
-
-          // Get the list ID from the request parameters
-          const listId = parseInt(request.params.listId);
-
-          if (isNaN(listId)) {
-            reply.status(400).send({ error: 'Invalid list ID' });
-            return;
-          }
-
-          if (!decoded || !decoded.companyId) {
-            reply
-              .status(400)
-              .send({ error: 'No company associated with this user' });
-            return;
-          }
-
-          // Process multipart data
-          const parts = request.parts();
-          const files: { background?: any; background2?: any } = {};
-          const colors: { qrColor?: string; textColor?: string } = {};
-
-          for await (const part of parts) {
-            if (part.type === 'file') {
-              if (part.fieldname === 'background') {
-                files.background = part;
-              } else if (part.fieldname === 'background2') {
-                files.background2 = part;
-              } else {
-                // Drain unexpected files
-                await part.toBuffer();
-              }
-            } else {
-              // Handle fields
-              if (part.fieldname === 'qrColor') {
-                colors.qrColor = part.value as string;
-              } else if (part.fieldname === 'textColor') {
-                colors.textColor = part.value as string;
-              }
-            }
-          }
-
-          // Use the Vibe class to update card design
-          const result = await this.vibe.updateCardDesign(
-            listId,
-            decoded.companyId,
-            files,
-            colors
-          );
-
-          if (!result.success) {
-            reply.status(404).send({ error: result.error });
-            return;
-          }
-
-          // Return the updated company list
-          reply.send(result.data);
-        } catch (error) {
-          console.error('Error updating card design:', error);
-          reply.status(500).send({ error: 'Internal server error' });
-        }
-      }
-    );
-
-    this.fastify.post(
-      '/vibe/company',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
-      },
-      async (request: any, reply: any) => {
-        try {
-          // Get the token from the request
-          const token = request.headers.authorization?.split(' ')[1];
-          const decoded = verifyToken(token || '');
-
-          if (!decoded || !decoded.companyId) {
-            reply
-              .status(400)
-              .send({ error: 'No company associated with this user' });
-            return;
-          }
-
-          // Use the Vibe class to update the company
-          const result = await this.vibe.updateCompany(
-            decoded.companyId,
-            request.body
-          );
-
-          if (!result.success) {
-            reply.status(404).send({ error: result.error });
-            return;
-          }
-
-          // Return the updated company data
-          reply.send(result.data);
-        } catch (error) {
-          console.error('Error updating company:', error);
-          reply.status(500).send({ error: 'Internal server error' });
-        }
-      }
-    );
-
     this.fastify.get(
       '/vibe/company/:companyId',
       {
@@ -1056,17 +936,6 @@ class Server {
       },
       async (request: any, reply: any) => {
         try {
-          // Get the token from the request
-          const token = request.headers.authorization?.split(' ')[1];
-          const decoded = verifyToken(token || '');
-
-          if (!decoded || !decoded.companyId) {
-            reply
-              .status(400)
-              .send({ error: 'No company associated with this user' });
-            return;
-          }
-
           // Use the Vibe class to get company lists
           const result = await this.vibe.getCompanyLists(
             parseInt(request.params.companyId)
@@ -1081,123 +950,6 @@ class Server {
           reply.send(result.data);
         } catch (error) {
           console.error('Error retrieving company lists:', error);
-          reply.status(500).send({ error: 'Internal server error' });
-        }
-      }
-    );
-
-    this.fastify.post(
-      '/vibe/:listId/questions',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
-      },
-      async (request: any, reply: any) => {
-        try {
-          // Get the token from the request
-          const token = request.headers.authorization?.split(' ')[1];
-          const decoded = verifyToken(token || '');
-
-          // Get the list ID from the request parameters
-          const listId = parseInt(request.params.listId);
-
-          if (isNaN(listId)) {
-            reply.status(400).send({ error: 'Invalid list ID' });
-            return;
-          }
-
-          if (!decoded || !decoded.companyId) {
-            reply
-              .status(400)
-              .send({ error: 'No company associated with this user' });
-            return;
-          }
-
-          // Validate the request body
-          if (
-            !request.body ||
-            !request.body.questions ||
-            !Array.isArray(request.body.questions)
-          ) {
-            reply.status(400).send({ error: 'Invalid request body' });
-            return;
-          }
-
-          // Use the Vibe class to upsert list questions
-          const result = await this.vibe.upsertListQuestions(
-            listId,
-            decoded.companyId,
-            request.body.questions
-          );
-
-          if (!result.success) {
-            reply.status(404).send({ error: result.error });
-            return;
-          }
-
-          // Return the updated list questions
-          reply.send(result.data);
-        } catch (error) {
-          console.error('Error upserting list questions:', error);
-          reply.status(500).send({ error: 'Internal server error' });
-        }
-      }
-    );
-
-    this.fastify.post(
-      '/vibe/:listId/box',
-      {
-        preHandler: (request: any, reply: any) =>
-          verifyTokenMiddleware(request, reply, ['admin', 'vibeadmin']),
-      },
-      async (request: any, reply: any) => {
-        try {
-          // Get the token from the request
-          const token = request.headers.authorization?.split(' ')[1];
-          const decoded = verifyToken(token || '');
-
-          // Get the list ID from the request parameters
-          const listId = parseInt(request.params.listId);
-
-          if (isNaN(listId)) {
-            reply.status(400).send({ error: 'Invalid list ID' });
-            return;
-          }
-
-          if (!decoded || !decoded.companyId) {
-            reply
-              .status(400)
-              .send({ error: 'No company associated with this user' });
-            return;
-          }
-
-          // Get the multipart form data
-          const data = await request.file();
-
-          // Extract ownBoxDesign value
-          const ownBoxDesign =
-            request.body &&
-            (request.body.ownBoxDesign === true ||
-              request.body.ownBoxDesign === 'true' ||
-              request.body.ownBoxDesign === '1');
-
-          // Use the Vibe class to update box design
-          const result = await this.vibe.updateBoxDesign(
-            listId,
-            decoded.companyId,
-            ownBoxDesign,
-            data
-          );
-
-          if (!result.success) {
-            reply.status(404).send({ error: result.error });
-            return;
-          }
-
-          // Return the updated company list
-          reply.send(result.data);
-        } catch (error) {
-          console.error('Error updating box design:', error);
           reply.status(500).send({ error: 'Internal server error' });
         }
       }

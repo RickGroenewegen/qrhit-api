@@ -26,21 +26,8 @@ class Vibe {
    * @param listId Optional company list ID to get specific list info
    * @returns Object containing company information and list questions
    */
-  public async getState(companyId: number, listId?: number): Promise<any> {
+  public async getState(listId?: number): Promise<any> {
     try {
-      if (!companyId) {
-        return { success: false, error: 'No company ID provided' };
-      }
-
-      // Get company information
-      const company = await this.prisma.company.findUnique({
-        where: { id: companyId },
-      });
-
-      if (!company) {
-        return { success: false, error: 'Company not found' };
-      }
-
       // Get questions for the list if listId is provided
       let questions: any[] = [];
       let companyList = null;
@@ -73,7 +60,7 @@ class Vibe {
           },
         });
 
-        if (companyList && companyList.companyId === companyId) {
+        if (companyList) {
           // Get all questions for this list with their options
           const questionsWithOptions =
             await this.prisma.companyListQuestion.findMany({
@@ -105,7 +92,6 @@ class Vibe {
       return {
         success: true,
         data: {
-          company,
           questions,
           list: companyList,
         },
