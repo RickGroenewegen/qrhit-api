@@ -475,10 +475,7 @@ class Hitlist {
     try {
       const companyList = await this.prisma.companyList.findFirst({
         where: { slug },
-        include: {
-          Company: true, // Include company details
-        },
-        // Select specific fields including the new date fields
+        // Select specific fields including the new date fields and nested Company fields
         select: {
           id: true,
           name: true,
@@ -491,10 +488,9 @@ class Hitlist {
           endAt: true, // Added endAt
           Company: { // Keep selecting company name
             select: {
-              name: true,
+              name: true, // Select only the company name
             },
           },
-          // Include other necessary fields if needed, like slug for verification?
           slug: true, // Keep slug if needed elsewhere
         },
       });
