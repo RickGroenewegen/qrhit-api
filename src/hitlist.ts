@@ -203,15 +203,23 @@ class Hitlist {
   ): Promise<void> {
     try {
       if (!hitlist || hitlist.length === 0) {
-        this.logger.log(color.yellow.bold(`Empty hitlist received for submission ${submissionId}`));
+        this.logger.log(
+          color.yellow.bold(
+            `Empty hitlist received for submission ${submissionId}`
+          )
+        );
         return;
       }
 
       // --- Start: Filter hitlist based on ranking within the submission ---
       const companyListId = hitlist[0]?.companyListId;
       if (!companyListId) {
-         this.logger.log(color.red.bold(`Missing companyListId in hitlist for submission ${submissionId}`));
-         return;
+        this.logger.log(
+          color.red.bold(
+            `Missing companyListId in hitlist for submission ${submissionId}`
+          )
+        );
+        return;
       }
 
       // 1. Get Company List details
@@ -221,7 +229,11 @@ class Hitlist {
       });
 
       if (!companyList) {
-        this.logger.log(color.red.bold(`Company list ${companyListId} not found for submission ${submissionId}`));
+        this.logger.log(
+          color.red.bold(
+            `Company list ${companyListId} not found for submission ${submissionId}`
+          )
+        );
         return;
       }
 
@@ -256,14 +268,17 @@ class Hitlist {
       );
 
       if (filteredHitlist.length === 0) {
-        this.logger.log(color.yellow.bold(`No tracks left after filtering for submission ${submissionId}`));
+        this.logger.log(
+          color.yellow.bold(
+            `No tracks left after filtering for submission ${submissionId}`
+          )
+        );
         // Update submission status to indicate it's processed but empty? Or handle as needed.
         // For now, just return. Consider updating status later if required.
         // await this.prisma.companyListSubmission.update({ where: { id: submissionId }, data: { status: 'processed_empty' } });
         return;
       }
       // --- End: Filter hitlist ---
-
 
       // Extract Spotify track IDs from the *filtered* hitlist
       const trackIds = filteredHitlist.map((track: any) => track.trackId);
@@ -280,7 +295,9 @@ class Hitlist {
 
         this.logger.log(
           color.blue.bold(
-            `Processing ${color.white.bold(filteredHitlist.length)} filtered tracks for submission ${submissionId}`
+            `Processing ${color.white.bold(
+              filteredHitlist.length
+            )} filtered tracks for submission ${submissionId}`
           )
         );
 
@@ -363,11 +380,11 @@ class Hitlist {
               },
             });
           } else {
-             this.logger.log(
-               color.yellow.bold(
-                 `Could not find DB ID for Spotify track ${filteredTrack.trackId} while saving submission tracks for ${submissionId}`
-               )
-             );
+            this.logger.log(
+              color.yellow.bold(
+                `Could not find DB ID for Spotify track ${filteredTrack.trackId} while saving submission tracks for ${submissionId}`
+              )
+            );
           }
         }
 
@@ -706,9 +723,10 @@ class Hitlist {
         3600 // Store for 1 hour
       );
       this.logger.log(
-        color.blue.bold(`Stored pending playlist info under key: ${playlistInfoKey}`)
+        color.blue.bold(
+          `Stored pending playlist info under key: ${playlistInfoKey}`
+        )
       );
-
 
       // Check if we already have a valid access token
       const cachedToken = await this.cache.get('spotify_access_token');
@@ -776,9 +794,10 @@ class Hitlist {
       const stateToJobIdKey = `oauth_state_to_job_id:${state}`;
       await this.cache.set(stateToJobIdKey, playlistJobId, 600); // Store for 10 minutes
       this.logger.log(
-        color.blue.bold(`Stored state-to-jobId mapping under key: ${stateToJobIdKey}`)
+        color.blue.bold(
+          `Stored state-to-jobId mapping under key: ${stateToJobIdKey}`
+        )
       );
-
 
       // Generate the authorization URL
       // Use the exact redirect URI that was registered with Spotify
@@ -818,7 +837,10 @@ class Hitlist {
   }
 
   // Modified to accept state from the callback
-  public async completeSpotifyAuth(authCode: string, state: string): Promise<any> {
+  public async completeSpotifyAuth(
+    authCode: string,
+    state: string
+  ): Promise<any> {
     try {
       // Retrieve the playlistJobId using the state
       const stateToJobIdKey = `oauth_state_to_job_id:${state}`;
@@ -828,16 +850,19 @@ class Hitlist {
         this.logger.log(
           color.red.bold(`Invalid or expired state received: ${state}`)
         );
-        return { success: false, error: 'Invalid or expired authorization state' };
+        return {
+          success: false,
+          error: 'Invalid or expired authorization state',
+        };
       }
       this.logger.log(
-        color.blue.bold(`Retrieved playlistJobId ${playlistJobId} for state ${state}`)
+        color.blue.bold(
+          `Retrieved playlistJobId ${playlistJobId} for state ${state}`
+        )
       );
-
 
       // Clean up the state mapping key
       await this.cache.del(stateToJobIdKey);
-
 
       // Get the client ID and secret
       const clientId = process.env['SPOTIFY_CLIENT_ID'];
@@ -861,7 +886,11 @@ class Hitlist {
       // Check if we already have a valid access token
       const cachedToken = await this.cache.get('spotify_access_token');
       if (cachedToken) {
-        this.logger.log(color.blue.bold('Using cached Spotify access token (from completeSpotifyAuth)'));
+        this.logger.log(
+          color.blue.bold(
+            'Using cached Spotify access token (from completeSpotifyAuth)'
+          )
+        );
         // Pass the retrieved playlistJobId
         return this.createPlaylistWithToken(cachedToken, playlistJobId);
       }
@@ -904,8 +933,12 @@ class Hitlist {
               );
             }
 
-            this.logger.log(color.blue.bold('Refreshed Spotify access token (from completeSpotifyAuth)'));
-             // Pass the retrieved playlistJobId
+            this.logger.log(
+              color.blue.bold(
+                'Refreshed Spotify access token (from completeSpotifyAuth)'
+              )
+            );
+            // Pass the retrieved playlistJobId
             return this.createPlaylistWithToken(newAccessToken, playlistJobId);
           }
         } catch (error) {
@@ -978,14 +1011,19 @@ class Hitlist {
    * @param playlistJobId The unique ID for this playlist creation job
    * @returns Object with success status and playlist data
    */
-  private async createPlaylistWithToken(accessToken: string, playlistJobId: string): Promise<any> {
+  private async createPlaylistWithToken(
+    accessToken: string,
+    playlistJobId: string
+  ): Promise<any> {
     const playlistInfoKey = `pending_playlist_info:${playlistJobId}`;
     try {
       // Get the pending playlist info from cache using the job ID
       const pendingPlaylistInfoStr = await this.cache.get(playlistInfoKey);
       if (!pendingPlaylistInfoStr) {
         this.logger.log(
-          color.red.bold(`No pending playlist information found for key: ${playlistInfoKey}`)
+          color.red.bold(
+            `No pending playlist information found for key: ${playlistInfoKey}`
+          )
         );
         return {
           success: false,
@@ -997,7 +1035,7 @@ class Hitlist {
       const { companyName, listName, trackIds } = pendingPlaylistInfo;
 
       // Create a new playlist
-      const playlistName = `${companyName} - ${listName} Top Tracks`;
+      const playlistName = `${companyName} - ${listName}`;
       const playlistDescription = `Top tracks for ${companyName} - ${listName}. Created automatically.`;
 
       // Get the user profile to get the user ID
@@ -1069,7 +1107,6 @@ class Hitlist {
         color.blue.bold(`Deleted pending playlist info key: ${playlistInfoKey}`)
       );
 
-
       return {
         success: true,
         data: {
@@ -1079,17 +1116,22 @@ class Hitlist {
         },
       };
     } catch (error) {
-       // Ensure the cache key is deleted even if playlist creation fails mid-way
-       await this.cache.del(playlistInfoKey);
-       this.logger.log(
-         color.red.bold(`Error creating playlist with token for job ${playlistJobId}: ${error}`)
-       );
-       // Check if the error is from Spotify API (e.g., invalid token)
-       if (axios.isAxiosError(error) && error.response?.status === 401) {
-         // Clear potentially invalid token
-         await this.cache.del('spotify_access_token');
-         return { success: false, error: 'Invalid Spotify token, please re-authorize.' };
-       }
+      // Ensure the cache key is deleted even if playlist creation fails mid-way
+      await this.cache.del(playlistInfoKey);
+      this.logger.log(
+        color.red.bold(
+          `Error creating playlist with token for job ${playlistJobId}: ${error}`
+        )
+      );
+      // Check if the error is from Spotify API (e.g., invalid token)
+      if (axios.isAxiosError(error) && error.response?.status === 401) {
+        // Clear potentially invalid token
+        await this.cache.del('spotify_access_token');
+        return {
+          success: false,
+          error: 'Invalid Spotify token, please re-authorize.',
+        };
+      }
       return {
         success: false,
         error: 'Error creating Spotify playlist with token',
