@@ -1606,15 +1606,19 @@ class Vibe {
           voteCount: trackVoteCounts[track.id] || 0, // Add vote count, default to 0
         }))
         .sort((a, b) => b.score - a.score) // Sort descending by score
-        .slice(0, companyList.numberOfCards); // Limit results to numberOfCards
+        // Add the 'withinLimit' property based on the index and numberOfCards
+        .map((track, index) => ({
+          ...track,
+          withinLimit: index < companyList.numberOfCards,
+        }));
 
       this.logger.log(
         color.green.bold(
           `Calculated ranking for list ${color.white.bold(
             companyList.name
-          )} (ID: ${listId}), returning top ${color.white.bold(
+          )} (ID: ${listId}), returning ${color.white.bold(
             rankedTracks.length
-          )} tracks (capped at ${companyList.numberOfCards}).`
+          )} tracks. Top ${companyList.numberOfCards} marked as 'withinLimit'.`
         )
       );
 
