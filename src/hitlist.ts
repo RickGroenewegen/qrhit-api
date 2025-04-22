@@ -476,7 +476,26 @@ class Hitlist {
       const companyList = await this.prisma.companyList.findFirst({
         where: { slug },
         include: {
-          Company: true,
+          Company: true, // Include company details
+        },
+        // Select specific fields including the new date fields
+        select: {
+          id: true,
+          name: true,
+          description: true,
+          numberOfTracks: true,
+          numberOfCards: true,
+          votingBackground: true,
+          votingLogo: true,
+          startAt: true, // Added startAt
+          endAt: true, // Added endAt
+          Company: { // Keep selecting company name
+            select: {
+              name: true,
+            },
+          },
+          // Include other necessary fields if needed, like slug for verification?
+          slug: true, // Keep slug if needed elsewhere
         },
       });
 
@@ -496,7 +515,25 @@ class Hitlist {
           submissionStatus = submission.status;
         }
       }
-
+ 
+      // Calculate votingOpen status
+      const now = new Date();
+      const startAt = companyList.startAt;
+      const endAt = companyList.endAt;
+      let votingOpen = true; // Default to true
+ 
+      if (startAt && endAt) {
+        // Both dates are set
+        votingOpen = now >= startAt && now <= endAt;
+      } else if (startAt && !endAt) {
+        // Only start date is set (open indefinitely after start)
+        votingOpen = now >= startAt;
+      } else if (!startAt && endAt) {
+        // Only end date is set (open indefinitely until end)
+        votingOpen = now <= endAt;
+      }
+      // If both are null, votingOpen remains true
+ 
       return {
         success: true,
         data: {
@@ -508,7 +545,9 @@ class Hitlist {
           companyName: companyList.Company.name,
           votingBackground: companyList.votingBackground,
           votingLogo: companyList.votingLogo,
-          // logo: companyList.logo, // Removed logo as it doesn't exist on CompanyList
+          startAt: companyList.startAt, // Added startAt
+          endAt: companyList.endAt, // Added endAt
+          votingOpen: votingOpen, // Added calculated votingOpen
           submissionStatus: submissionStatus,
         },
       };
