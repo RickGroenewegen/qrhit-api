@@ -620,23 +620,32 @@ class Hitlist {
         return { success: false, error: 'Missing Spotify API credentials' };
       }
 
-      // Store the playlist info in cache for later use
+      // Generate a unique ID for this playlist creation job
+      const playlistJobId = this.utils.generateRandomString(32);
+
+      // Store the playlist info in cache using the unique job ID
       const playlistInfo = {
         companyName,
         listName,
         trackIds,
       };
+      const playlistInfoKey = `pending_playlist_info:${playlistJobId}`;
       await this.cache.set(
-        'pending_playlist_info',
+        playlistInfoKey,
         JSON.stringify(playlistInfo),
-        3600
+        3600 // Store for 1 hour
       );
+      this.logger.log(
+        color.blue.bold(`Stored pending playlist info under key: ${playlistInfoKey}`)
+      );
+
 
       // Check if we already have a valid access token
       const cachedToken = await this.cache.get('spotify_access_token');
       if (cachedToken) {
         this.logger.log(color.blue.bold('Using cached Spotify access token'));
-        return this.createPlaylistWithToken(cachedToken);
+        // Pass the playlistJobId directly
+        return this.createPlaylistWithToken(cachedToken, playlistJobId);
       }
 
       // Check if we have a refresh token
@@ -678,7 +687,8 @@ class Hitlist {
             }
 
             this.logger.log(color.green.bold('Refreshed Spotify access token'));
-            return this.createPlaylistWithToken(newAccessToken);
+            // Pass the playlistJobId directly
+            return this.createPlaylistWithToken(newAccessToken, playlistJobId);
           }
         } catch (error) {
           this.logger.log(
@@ -729,8 +739,28 @@ class Hitlist {
     }
   }
 
-  public async completeSpotifyAuth(authCode: string): Promise<any> {
+  // Modified to accept state from the callback
+  public async completeSpotifyAuth(authCode: string, state: string): Promise<any> {
     try {
+      // Retrieve the playlistJobId using the state
+      const stateToJobIdKey = `oauth_state_to_job_id:${state}`;
+      const playlistJobId = await this.cache.get(stateToJobIdKey);
+
+      if (!playlistJobId) {
+        this.logger.log(
+          color.red.bold(`Invalid or expired state received: ${state}`)
+        );
+        return { success: false, error: 'Invalid or expired authorization state' };
+      }
+      this.logger.log(
+        color.blue.bold(`Retrieved playlistJobId ${playlistJobId} for state ${state}`)
+      );
+
+
+      // Clean up the state mapping key
+      await this.cache.del(stateToJobIdKey);
+
+
       // Get the client ID and secret
       const clientId = process.env['SPOTIFY_CLIENT_ID'];
       const clientSecret = process.env['SPOTIFY_CLIENT_SECRET'];
@@ -744,11 +774,18 @@ class Hitlist {
         return { success: false, error: 'Missing Spotify API credentials' };
       }
 
+      // NOTE: The logic below attempts to reuse existing tokens if available.
+      // This might be unexpected if the user explicitly went through the auth flow again.
+      // However, it avoids unnecessary token exchanges if a valid token exists.
+      // Consider if this behavior is desired. If not, remove the checks below
+      // and always proceed with the authCode exchange.
+
       // Check if we already have a valid access token
       const cachedToken = await this.cache.get('spotify_access_token');
       if (cachedToken) {
-        this.logger.log(color.blue.bold('Using cached Spotify access token'));
-        return this.createPlaylistWithToken(cachedToken);
+        this.logger.log(color.blue.bold('Using cached Spotify access token (from completeSpotifyAuth)'));
+        // Pass the retrieved playlistJobId
+        return this.createPlaylistWithToken(cachedToken, playlistJobId);
       }
 
       // Check if we have a refresh token
@@ -789,8 +826,9 @@ class Hitlist {
               );
             }
 
-            this.logger.log(color.blue.bold('Refreshed Spotify access token'));
-            return this.createPlaylistWithToken(newAccessToken);
+            this.logger.log(color.blue.bold('Refreshed Spotify access token (from completeSpotifyAuth)'));
+             // Pass the retrieved playlistJobId
+            return this.createPlaylistWithToken(newAccessToken, playlistJobId);
           }
         } catch (error) {
           this.logger.log(
@@ -842,7 +880,8 @@ class Hitlist {
         await this.cache.set('spotify_refresh_token', newRefreshToken);
       }
 
-      return this.createPlaylistWithToken(accessToken);
+      // Pass the retrieved playlistJobId
+      return this.createPlaylistWithToken(accessToken, playlistJobId);
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error completing Spotify authorization: ${error}`)
@@ -856,18 +895,19 @@ class Hitlist {
 
   /**
    * Creates a playlist using an existing access token
+   * Creates a playlist using an existing access token and a specific job ID
    * @param accessToken Spotify access token
+   * @param playlistJobId The unique ID for this playlist creation job
    * @returns Object with success status and playlist data
    */
-  private async createPlaylistWithToken(accessToken: string): Promise<any> {
+  private async createPlaylistWithToken(accessToken: string, playlistJobId: string): Promise<any> {
+    const playlistInfoKey = `pending_playlist_info:${playlistJobId}`;
     try {
-      // Get the pending playlist info from cache
-      const pendingPlaylistInfoStr = await this.cache.get(
-        'pending_playlist_info'
-      );
+      // Get the pending playlist info from cache using the job ID
+      const pendingPlaylistInfoStr = await this.cache.get(playlistInfoKey);
       if (!pendingPlaylistInfoStr) {
         this.logger.log(
-          color.red.bold('No pending playlist information found')
+          color.red.bold(`No pending playlist information found for key: ${playlistInfoKey}`)
         );
         return {
           success: false,
@@ -957,12 +997,20 @@ class Hitlist {
         },
       };
     } catch (error) {
-      this.logger.log(
-        color.red.bold(`Error completing Spotify authorization: ${error}`)
-      );
+       // Ensure the cache key is deleted even if playlist creation fails mid-way
+       await this.cache.del(playlistInfoKey);
+       this.logger.log(
+         color.red.bold(`Error creating playlist with token for job ${playlistJobId}: ${error}`)
+       );
+       // Check if the error is from Spotify API (e.g., invalid token)
+       if (axios.isAxiosError(error) && error.response?.status === 401) {
+         // Clear potentially invalid token
+         await this.cache.del('spotify_access_token');
+         return { success: false, error: 'Invalid Spotify token, please re-authorize.' };
+       }
       return {
         success: false,
-        error: 'Error completing Spotify authorization',
+        error: 'Error creating Spotify playlist with token',
       };
     }
   }
