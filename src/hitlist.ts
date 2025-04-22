@@ -506,7 +506,8 @@ class Hitlist {
           numberOfTracks: companyList.numberOfTracks,
           numberOfCards: companyList.numberOfCards,
           companyName: companyList.Company.name,
-          background: companyList.background,
+          votingBackground: companyList.votingBackground,
+          votingLogo: companyList.votingLogo,
           // logo: companyList.logo, // Removed logo as it doesn't exist on CompanyList
           submissionStatus: submissionStatus,
         },
