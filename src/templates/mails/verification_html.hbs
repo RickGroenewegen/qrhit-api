@@ -6,7 +6,7 @@
     <meta http-equiv="x-ua-compatible" content="ie=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
-    <title>{{ productName }} - Verify Your Submission</title>
+    <title>OnzeVibe - Verify Your Submission</title>
     <!--[if mso]>
     <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
     <style>
@@ -14,23 +14,24 @@
     </style>
     <![endif]-->
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap');
+      /* Caros Soft is likely not web-safe, define fallbacks */
+      body, table, td, a, p, h1, h2, h3, h4, h5, h6 { font-family: 'Caros Soft', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
     </style>
 </head>
-<body style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #f8fafc;">
-    <div style="display: none;">Please verify your playlist submission - {{ productName }}</div>
-    <div role="article" aria-roledescription="email" aria-label="{{ productName }} Verification" lang="en" style="font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc;">
-        <table style="width: 100%; font-family: 'Lato', sans-serif;" cellpadding="0" cellspacing="0" role="presentation">
+<body style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #FFFBF5;"> /* Echo */
+    <div style="display: none;">Please verify your playlist submission - OnzeVibe</div>
+    <div role="article" aria-roledescription="email" aria-label="OnzeVibe Verification" lang="en" style="font-family: 'Caros Soft', 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #FFFBF5;"> /* Echo */
+        <table style="width: 100%; font-family: 'Caros Soft', 'Helvetica Neue', Helvetica, Arial, sans-serif;" cellpadding="0" cellspacing="0" role="presentation">
             <tr>
                 <td align="center" style="padding: 24px;">
-                    <table class="container" style="width: 100%; max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" cellpadding="0" cellspacing="0" role="presentation">
+                    <table class="container" style="width: 100%; max-width: 600px; background-color: #FAF6F3; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);" cellpadding="0" cellspacing="0" role="presentation"> /* Piano */
                         <tr>
-                            <td style="padding: 24px;">
+                            <td style="padding: 32px;"> /* Increased padding */
                                 <!-- Logo -->
                                 <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
                                     <tr>
-                                        <td align="center" style="padding-bottom: 24px;">
-                                            <img src="cid:logo" alt="{{ productName }} Logo" style="max-width: 200px; height: auto;">
+                                        <td align="center" style="padding-bottom: 32px;"> /* Increased padding */
+                                            <img src="cid:logo" alt="OnzeVibe Logo" style="max-width: 220px; height: auto;"> /* Updated alt text and size */
                                         </td>
                                     </tr>
                                 </table>
@@ -38,38 +39,39 @@
                                 <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
                                     <tr>
                                         <td>
-                                            <h1 style="margin: 0 0 16px; font-size: 24px; line-height: 32px; color: #1a202c; text-align: center;">{{ translations.verification.title }}</h1>
-                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.verification.hello }} {{ fullname }},</p>
-                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.verification.thankYou }} {{ companyName }}. {{ translations.verification.toComplete }}</p>
-                                            
+                                            <h1 style="margin: 0 0 20px; font-size: 24px; line-height: 1.1; color: #18565E; text-align: center; font-weight: 500;">{{ translations.verification.title }}</h1> /* Disco color, updated line-height, margin */
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.5; color: #333333;">{{ translations.verification.hello }} {{ fullname }},</p> /* Darker grey, updated line-height */
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.5; color: #333333;">{{ translations.verification.thankYou }} {{ companyName }}. {{ translations.verification.toComplete }}</p> /* Darker grey, updated line-height */
+
                                             <!-- Verification Button -->
                                             <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation" style="margin-top: 24px; margin-bottom: 24px;">
                                                 <tr>
                                                     <td align="center">
                                                         <table border="0" cellspacing="0" cellpadding="0" role="presentation">
                                                             <tr>
-                                                                <td align="center" style="border-radius: 4px;" bgcolor="#4299e1">
-                                                                    <a href="{{ verificationLink }}" target="_blank" style="font-size: 16px; font-family: Helvetica, Arial, sans-serif; color: #ffffff; text-decoration: none; border-radius: 4px; padding: 12px 24px; border: 1px solid #4299e1; display: inline-block; font-weight: bold;">{{ translations.verification.buttonText }}</a>
+                                                                <td align="center" style="border-radius: 4px;" bgcolor="#18565E"> /* Disco background */
+                                                                    <a href="{{ verificationLink }}" target="_blank" style="font-size: 16px; font-family: 'Caros Soft', 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #ffffff; text-decoration: none; text-transform: uppercase; border-radius: 4px; padding: 12px 24px; border: 1px solid #18565E; display: inline-block; font-weight: bold; letter-spacing: 0.5px;">{{ translations.verification.buttonText }}</a> /* White text, uppercase, Disco border, letter-spacing */
                                                                 </td>
                                                             </tr>
                                                         </table>
                                                     </td>
                                                 </tr>
                                             </table>
-                                            
-                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.verification.ignoreMessage }}</p>
-                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.verification.buttonFallback }}</p>
-                                            <p style="margin: 0 0 24px; font-size: 14px; line-height: 22px; color: #718096; word-break: break-all;">{{ verificationLink }}</p>
+
+                                            <p style="margin: 24px 0; font-size: 16px; line-height: 1.5; color: #333333;">{{ translations.verification.ignoreMessage }}</p> /* Darker grey, updated line-height */
+                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.5; color: #333333;">{{ translations.verification.buttonFallback }}</p> /* Darker grey, updated line-height */
+                                            <p style="margin: 0 0 24px; font-size: 14px; line-height: 1.5; color: #718096; word-break: break-all;">{{ verificationLink }}</p> /* Lighter grey, updated line-height */
                                         </td>
                                     </tr>
                                 </table>
                                 <!-- Closing -->
+                                <!-- Closing -->
                                 <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
                                     <tr>
                                         <td style="padding-top: 32px;">
-                                            <p style="margin: 0; font-size: 16px; line-height: 24px; color: #4a5568;">
+                                            <p style="margin: 0; font-size: 16px; line-height: 1.5; color: #333333;"> /* Darker grey, updated line-height */
                                                 {{ translations.verification.thanks }},<br>
-                                                {{ productName }} {{ translations.verification.team }}
+                                                OnzeVibe {{ translations.verification.team }}
                                             </p>
                                         </td>
                                     </tr>
@@ -78,10 +80,11 @@
                         </tr>
                     </table>
                     <!-- Footer -->
+                    <!-- Footer -->
                     <table style="width: 100%; max-width: 600px;" cellpadding="0" cellspacing="0" role="presentation">
                         <tr>
                             <td style="padding: 24px; text-align: center; font-size: 12px; color: #718096;">
-                                <p style="margin: 0;">&copy; {{ currentYear }} {{ productName }}. All rights reserved.</p>
+                                <p style="margin: 0;">&copy; {{ currentYear }} OnzeVibe. All rights reserved.</p>
                             </td>
                         </tr>
                     </table>
