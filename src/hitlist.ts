@@ -699,8 +699,16 @@ class Hitlist {
       }
 
       // If we don't have a valid token or refresh failed, we need to authorize
-      // Generate a random state for security
+      // Generate a random state for OAuth security
       const state = this.utils.generateRandomString(16);
+
+      // Store the mapping from state to playlistJobId in cache
+      const stateToJobIdKey = `oauth_state_to_job_id:${state}`;
+      await this.cache.set(stateToJobIdKey, playlistJobId, 600); // Store for 10 minutes
+      this.logger.log(
+        color.blue.bold(`Stored state-to-jobId mapping under key: ${stateToJobIdKey}`)
+      );
+
 
       // Generate the authorization URL
       // Use the exact redirect URI that was registered with Spotify
@@ -985,8 +993,12 @@ class Hitlist {
         )
       );
 
-      // Clear the pending playlist info
-      await this.cache.del('pending_playlist_info');
+      // Clear the pending playlist info using the specific key
+      await this.cache.del(playlistInfoKey);
+      this.logger.log(
+        color.blue.bold(`Deleted pending playlist info key: ${playlistInfoKey}`)
+      );
+
 
       return {
         success: true,
