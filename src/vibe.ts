@@ -85,15 +85,41 @@ class Vibe {
               )} questions for list ${color.white.bold(companyList.name)}`
             )
           );
+
+          // Get the ranking for this list
+          const rankingResult = await this.getRanking(listId);
+          if (rankingResult.success && rankingResult.data) {
+            ranking = rankingResult.data.ranking; // Extract the ranking array
+            this.logger.log(
+              color.blue.bold(
+                `Retrieved ranking with ${color.white.bold(
+                  ranking.length
+                )} tracks for list ${color.white.bold(companyList.name)}`
+              )
+            );
+          } else {
+            this.logger.log(
+              color.yellow.bold(
+                `Could not retrieve ranking for list ${color.white.bold(
+                  companyList.name
+                )}: ${rankingResult.error || 'No ranking data found'}`
+              )
+            );
+            // Keep ranking as empty array if retrieval fails
+          }
+        } else {
+          // If companyList is not found, return error early
+          return { success: false, error: 'Company list not found' };
         }
       }
 
-      // Return the state object with company info, list info and questions
+      // Return the state object with list info, questions, and ranking
       return {
         success: true,
         data: {
           questions,
           list: companyList,
+          ranking, // Add the ranking array here
         },
       };
     } catch (error) {
