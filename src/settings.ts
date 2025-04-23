@@ -35,7 +35,11 @@ class Settings {
       return setting?.value ?? null;
     } catch (error) {
       this.logger.log(
-        color.red.bold(`Error reading setting (${key}) from DB: ${error}`)
+        color.red.bold(
+          `Error reading setting (${color.white.bold(
+            key
+          )}) from DB: ${color.white.bold(error)}`
+        )
       );
       return null;
     }
@@ -54,11 +58,17 @@ class Settings {
         create: { key: key, value: value },
       });
       this.logger.log(
-        color.dim(`Setting '${key}' updated in the database.`)
+        color.blue.bold(
+          `Setting '${color.white.bold(key)}' updated in the database.`
+        )
       );
     } catch (error) {
       this.logger.log(
-        color.red.bold(`Error writing setting (${key}) to DB: ${error}`)
+        color.red.bold(
+          `Error writing setting (${color.white.bold(
+            key
+          )}) to DB: ${color.white.bold(error)}`
+        )
       );
     }
   }
@@ -73,12 +83,18 @@ class Settings {
         where: { key: key },
       });
       this.logger.log(
-        color.dim(`Setting '${key}' deleted from the database.`)
+        color.blue.bold(
+          `Setting '${color.white.bold(key)}' deleted from the database.`
+        )
       );
     } catch (error) {
       // Log error but don't throw, maybe it didn't exist
       this.logger.log(
-        color.yellow.bold(`Error deleting setting (${key}) from DB: ${error}`)
+        color.yellow.bold(
+          `Error deleting setting (${color.white.bold(
+            key
+          )}) from DB: ${color.white.bold(error)}`
+        )
       );
     }
   }

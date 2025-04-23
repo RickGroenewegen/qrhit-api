@@ -19,6 +19,7 @@ class Hitlist {
   private utils = new Utils();
   private music: Music = new Music();
   private data = Data.getInstance();
+  private spotify = new Spotify();
   private mail = Mail.getInstance();
   private settings = Settings.getInstance(); // Instantiate Settings
   private vibe = Vibe.getInstance(); // Instantiate Vibe
@@ -282,9 +283,8 @@ class Hitlist {
       const trackIds = filteredHitlist.map((track: any) => track.trackId);
 
       // Use the new getTracksByIds method to get detailed track information
-      const spotify = new Spotify();
       const data = Data.getInstance();
-      const tracksResult = await spotify.getTracksByIds(trackIds);
+      const tracksResult = await this.spotify.getTracksByIds(trackIds);
 
       if (tracksResult.success && tracksResult.data) {
         // Array to store newly created track IDs
@@ -810,7 +810,7 @@ class Hitlist {
       // If access token is invalid/expired, try using the refresh token
       if (refreshToken) {
         this.logger.log(
-          color.blue(
+          color.blue.bold(
             'Spotify access token expired or invalid, attempting refresh...'
           )
         );

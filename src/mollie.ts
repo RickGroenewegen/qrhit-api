@@ -517,7 +517,8 @@ class Mollie {
   public async getPaymentUri(
     params: any,
     clientIp: string,
-    waitForDirectGeneration: boolean = false
+    waitForDirectGeneration: boolean = false,
+    skipGenerationMail: boolean = false
   ): Promise<ApiResult> {
     try {
       let useOrderType = 'digital';
@@ -843,7 +844,9 @@ class Mollie {
             molliePaymentId,
             clientIp,
             params.refreshPlaylists.join(','),
-            this
+            this,
+            false,
+            skipGenerationMail
           );
         } else {
           this.generator.generate(
