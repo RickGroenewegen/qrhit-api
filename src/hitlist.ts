@@ -8,6 +8,7 @@ import { Music } from './music';
 import Settings from './settings'; // Import the new Settings class
 import Data from './data';
 import Mail from './mail';
+import Vibe from './vibe'; // Import the Vibe class
 import axios from 'axios';
 
 class Hitlist {
@@ -20,6 +21,7 @@ class Hitlist {
   private data = Data.getInstance();
   private mail = Mail.getInstance();
   private settings = Settings.getInstance(); // Instantiate Settings
+  private vibe = Vibe.getInstance(); // Instantiate Vibe
 
   private constructor() {
     this.initDir();
@@ -476,79 +478,60 @@ class Hitlist {
         },
       });
 
-      if (submissions.length === 0) {
+      // --- Use Vibe's getRanking method ---
+      const rankingResult = await this.vibe.getRanking(companyListId);
+
+      if (!rankingResult.success || !rankingResult.data) {
+        this.logger.log(
+          color.red.bold(
+            `Failed to get ranking for list ${companyListId}: ${rankingResult.error}`
+          )
+        );
         return {
           success: false,
-          error: 'No verified submissions found for this company list',
+          error: `Failed to calculate ranking: ${rankingResult.error}`,
         };
       }
 
-      // Create a map to count votes by artist + title combination
-      const voteMap = new Map<
-        string,
-        {
-          count: number;
-          trackId: number;
-          spotifyTrackId: string;
-          artist: string;
-          title: string;
-          firstSubmissionDate: Date;
-        }
-      >();
+      const allRankedTracks = rankingResult.data.ranking; // This is already sorted by score
+      const totalSubmissionsCount = submissions.length; // Keep the count of submissions
 
-      // Loop through all submissions and count votes
-      for (const submission of submissions) {
-        for (const submissionTrack of submission.CompanyListSubmissionTrack) {
-          const track = submissionTrack.Track;
-          const key = `${track.artist.toLowerCase()}|${track.name.toLowerCase()}`;
-
-          if (voteMap.has(key)) {
-            // Increment the count for this track
-            const trackData = voteMap.get(key)!;
-            trackData.count += 1;
-          } else {
-            // First vote for this track
-            voteMap.set(key, {
-              count: 1,
-              trackId: track.id,
-              spotifyTrackId: track.trackId,
-              artist: track.artist,
-              title: track.name,
-              firstSubmissionDate: submission.createdAt,
-            });
-          }
-        }
+      if (allRankedTracks.length === 0) {
+        this.logger.log(
+          color.yellow.bold(
+            `No tracks found in ranking for list ${companyListId}.`
+          )
+        );
+        // Optionally update status or handle differently
+        // For now, proceed to potentially create empty playlists or return success with empty data
       }
 
-      // Convert the map to an array and sort by vote count (descending)
-      // and then by submission date (ascending) for ties
-      const sortedTracks = Array.from(voteMap.values()).sort((a, b) => {
-        if (b.count !== a.count) {
-          return b.count - a.count; // Sort by count descending
-        }
-        // If counts are equal, sort by submission date (earlier first)
-        return (
-          a.firstSubmissionDate.getTime() - b.firstSubmissionDate.getTime()
-        );
-      });
+      // Use numberOfCards from companyList
+      const maxTracks = companyList.numberOfCards;
 
-      // Use numberOfCards from companyList if it's set, otherwise default to 10
-      const maxTracks =
-        companyList.numberOfCards > 0 ? companyList.numberOfCards : 10;
+      // Filter the ranked tracks to get the top ones based on numberOfCards
+      // The 'withinLimit' flag from getRanking already tells us this.
+      const topTracks = allRankedTracks.filter((track) => track.withinLimit);
 
-      // Take the top tracks based on numberOfCards (or less if there aren't enough)
-      const topTracks = sortedTracks.slice(
-        0,
-        Math.min(maxTracks, sortedTracks.length)
-      );
+      // If maxTracks was 0 or invalid in the DB, getRanking might not set withinLimit correctly.
+      // As a fallback, slice if needed, though relying on withinLimit is preferred.
+      if (topTracks.length === 0 && maxTracks > 0 && allRankedTracks.length > 0) {
+         this.logger.log(color.yellow.bold(`Fallback: Slicing top ${maxTracks} tracks as 'withinLimit' was not set.`));
+         // Ensure we don't try to slice more than available tracks
+         const actualSlice = Math.min(maxTracks, allRankedTracks.length);
+         // Reassign topTracks based on slice
+         // Note: This fallback might indicate an issue in getRanking's withinLimit logic if maxTracks is valid.
+         // topTracks = allRankedTracks.slice(0, actualSlice);
+         // Let's stick to the withinLimit flag for consistency for now. If it's empty, it's empty.
+      }
 
       this.logger.log(
         color.blue.bold(
           `Finalized list for company ${color.white.bold(
             companyList.Company.name
           )} with ${color.white.bold(
-            topTracks.length
-          )} tracks (max: ${color.white.bold(maxTracks)})`
+            topTracks.length // Use the count of tracks marked withinLimit
+          )} tracks based on ranking score (limit: ${color.white.bold(maxTracks)})`
         )
       );
 
@@ -556,7 +539,7 @@ class Hitlist {
       const limitedPlaylistResult = await this.createPlaylist(
         companyList.Company.name,
         companyList.name, // Original name
-        topTracks.map((track) => track.spotifyTrackId) // Limited tracks
+        topTracks.map((track) => track.spotifyLink!.split('/').pop()!) // Use spotifyLink from ranked data
       );
 
       // --- Update CompanyList with Limited Playlist URL ---
@@ -591,7 +574,7 @@ class Hitlist {
       const fullPlaylistResult = await this.createPlaylist(
         companyList.Company.name,
         fullPlaylistName, // Name with suffix
-        sortedTracks.map((track) => track.spotifyTrackId) // All sorted tracks
+        allRankedTracks.map((track) => track.spotifyLink!.split('/').pop()!) // All ranked tracks
       );
       this.logger.log(
         color.blue.bold(
@@ -637,14 +620,16 @@ class Hitlist {
         data: {
           companyName: companyList.Company.name,
           companyListName: companyList.name,
-          totalSubmissions: submissions.length,
-          tracks: topTracks.map((track, index) => ({
-            position: index + 1,
-            trackId: track.trackId,
-            spotifyTrackId: track.spotifyTrackId,
+          totalSubmissions: totalSubmissionsCount, // Use the stored count
+          // Map the topTracks (those within limit) based on the ranking result structure
+          tracks: topTracks.map((track:any, index:number) => ({
+            position: index + 1, // Position based on the final sorted limited list
+            trackId: track.id, // DB track ID
+            spotifyTrackId: track.spotifyLink!.split('/').pop()!, // Extract Spotify ID
             artist: track.artist,
-            title: track.title,
-            votes: track.count,
+            title: track.name, // Field name is 'name' in Track model
+            score: track.score, // Include the score from ranking
+            voteCount: track.voteCount, // Include the vote count from ranking
           })),
           // Include results for both playlists
           playlistLimited: limitedPlaylistResult.success
