@@ -607,7 +607,13 @@ class Hitlist {
             title: track.title,
             votes: track.count,
           })),
-          playlist: playlistResult.success ? playlistResult.data : null,
+          // Include results for both playlists
+          playlistLimited: limitedPlaylistResult.success
+            ? limitedPlaylistResult.data
+            : { error: limitedPlaylistResult.error }, // Include error if failed
+          playlistFull: fullPlaylistResult.success
+            ? fullPlaylistResult.data
+            : { error: fullPlaylistResult.error }, // Include error if failed
         },
       };
     } catch (error) {
