@@ -37,6 +37,7 @@ class Vibe {
       let questions: any[] = [];
       let companyList = null;
       let ranking: any[] = []; // Initialize ranking array
+      let numberOfUncheckedTracks = 0; // Initialize count
 
       if (listId) {
         // Check if company list exists
@@ -110,12 +111,13 @@ class Vibe {
       // Return the state object with list info, questions, and ranking
       return {
         success: true,
-        data: {
-          questions,
-          list: companyList,
-          ranking, // Add the ranking array here
-        },
-      };
+       data: {
+         questions,
+         list: companyList,
+         ranking, // Add the ranking array here
+         numberOfUncheckedTracks, // Add the count of unchecked tracks
+       },
+     };
     } catch (error) {
       this.logger.log(color.red.bold(`Error getting vibe state: ${error}`));
       return { success: false, error: 'Error retrieving company state' };
