@@ -593,6 +593,35 @@ class Hitlist {
        )
      );
 
+     // --- Update CompanyList with Full Playlist URL ---
+     if (fullPlaylistResult.success && fullPlaylistResult.data?.playlistUrl) {
+       try {
+         await this.prisma.companyList.update({
+           where: { id: companyListId },
+           data: { playlistUrlFull: fullPlaylistResult.data.playlistUrl },
+         });
+         this.logger.log(
+           color.green.bold(
+             `Updated playlistUrlFull for CompanyList ID ${companyListId}`
+           )
+         );
+       } catch (dbError) {
+         this.logger.log(
+           color.red.bold(
+             `Failed to update playlistUrlFull for CompanyList ID ${companyListId}: ${dbError}`
+           )
+         );
+         // Decide if this should be a critical error or just logged
+       }
+     } else {
+       this.logger.log(
+         color.yellow.bold(
+           `Skipping update of playlistUrlFull for CompanyList ID ${companyListId} due to playlist creation/update failure.`
+         )
+       );
+     }
+     // --- End Update ---
+
      return {
        success: true,
         data: {
