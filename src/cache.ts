@@ -16,7 +16,9 @@ class Cache {
       throw new Error('REDIS_URL environment variable is not defined');
     }
 
-    this.client = new Redis(redisUrl, { db: 0 });
+    // ioredis defaults to db 0 if not specified.
+    // The executeCommand method now handles selecting the correct DB per command.
+    this.client = new Redis(redisUrl);
 
     // Handle connection errors
     this.client.on('error', (error) => {
@@ -58,7 +60,11 @@ class Cache {
   }
 
   // Updated executeCommand to handle DB selection
-  public async executeCommand(command: string, db: number = 0, ...args: any[]): Promise<any> {
+  public async executeCommand(
+    command: string,
+    db: number = 0,
+    ...args: any[]
+  ): Promise<any> {
     const originalDb = 0; // Assuming the default connection is always DB 0
     let selectedDb = false;
 
@@ -74,7 +80,11 @@ class Cache {
       const result = await this.client[command](...args);
       return result;
     } catch (error) {
-      this.logManager.log(`Redis command error (DB ${db}, Command ${command}): ${(error as Error).message}`);
+      this.logManager.log(
+        `Redis command error (DB ${db}, Command ${command}): ${
+          (error as Error).message
+        }`
+      );
       throw error; // Re-throwing so that specific call sites can also handle if needed
     } finally {
       // Ensure we switch back to the original database if we switched away
@@ -92,13 +102,24 @@ class Cache {
   ): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
     if (expireInSeconds) {
-      await this.executeCommand('set', db, cacheKey, value, 'EX', expireInSeconds);
+      await this.executeCommand(
+        'set',
+        db,
+        cacheKey,
+        value,
+        'EX',
+        expireInSeconds
+      );
     } else {
       await this.executeCommand('set', db, cacheKey, value);
     }
   }
 
-  async get(key: string, never: boolean = true, db: number = 0): Promise<string | null> {
+  async get(
+    key: string,
+    never: boolean = true,
+    db: number = 0
+  ): Promise<string | null> {
     let cacheKey = `${this.version}:${key}`;
     if (process.env['ENVIRONMENT'] === 'development' && never) {
       // Optional: Add dev prefix logic if needed, consider if it should include db
@@ -139,18 +160,30 @@ class Cache {
     return await this.executeCommand('smembers', db, cacheKey);
   }
 
-  async valueExistsInArray(key: string, value: string, db: number = 0): Promise<boolean> {
+  async valueExistsInArray(
+    key: string,
+    value: string,
+    db: number = 0
+  ): Promise<boolean> {
     let cacheKey = `${this.version}:${key}`;
     const exists = await this.executeCommand('sismember', db, cacheKey, value);
     return exists === 1;
   }
 
-  async addValueToArray(key: string, value: string, db: number = 0): Promise<void> {
+  async addValueToArray(
+    key: string,
+    value: string,
+    db: number = 0
+  ): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
     await this.executeCommand('sadd', db, cacheKey, value);
   }
 
-  async addValuesToArray(key: string, values: string[], db: number = 0): Promise<void> {
+  async addValuesToArray(
+    key: string,
+    values: string[],
+    db: number = 0
+  ): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
     await this.executeCommand('sadd', db, cacheKey, ...values);
   }
@@ -160,7 +193,11 @@ class Cache {
     await this.client.quit();
   }
 
-  async acquireLock(key: string, ttlSeconds: number = 300, db: number = 0): Promise<boolean> {
+  async acquireLock(
+    key: string,
+    ttlSeconds: number = 300,
+    db: number = 0
+  ): Promise<boolean> {
     const lockKey = `lock:${key}`; // Lock key doesn't need version prefix usually
     const result = await this.executeCommand(
       'set',
