@@ -1136,14 +1136,14 @@ class Hitlist {
         const createPlaylistResponse = await axios({
           method: 'post',
           url: `https://api.spotify.com/v1/users/${userId}/playlists`,
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-          'Content-Type': 'application/json',
-        },
-        data: JSON.stringify({
-          name: playlistName,
-          description: playlistDescription,
-          public: true,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+            'Content-Type': 'application/json',
+          },
+          data: JSON.stringify({
+            name: playlistName,
+            description: playlistDescription,
+            public: true,
           }),
         });
 
@@ -1211,15 +1211,13 @@ class Hitlist {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         // Clear potentially invalid token
         await this.cache.del('spotify_access_token');
-        }; // Added missing parenthesis
+        return {
+          success: false,
+          error: 'Error creating/updating Spotify playlist with token',
+        };
       }
-      // Add a general return for other errors within the catch block
-      return {
-        success: false,
-        error: 'Error creating/updating Spotify playlist with token',
-      };
-    } // Added missing closing brace for catch block
-  } // Closing brace for the method
+    }
+  }
 
   public async searchTracks(searchString: string) {
     try {
