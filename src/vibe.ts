@@ -776,8 +776,6 @@ class Vibe {
         }
       }
 
-      console.log(111, fields);
-
       // Add text and numeric fields from the collected 'fields' object
       if (fields.name !== undefined) updateData.name = String(fields.name);
       if (fields.description !== undefined)
@@ -789,18 +787,18 @@ class Vibe {
       if (fields.qrColor !== undefined)
         updateData.qrColor = String(fields.qrColor);
       if (fields.textColor !== undefined)
-       updateData.textColor = String(fields.textColor);
+        updateData.textColor = String(fields.textColor);
 
-     // Explicitly handle empty string values for background fields to set them to null
-     if (fields.background === '') {
-       updateData.background = null;
-     }
-     if (fields.background2 === '') {
-       updateData.background2 = null;
-     }
+      // Explicitly handle empty string values for background fields to set them to null
+      if (fields.background === '') {
+        updateData.background = null;
+      }
+      if (fields.background2 === '') {
+        updateData.background2 = null;
+      }
 
-     if (fields.numberOfCards !== undefined) {
-       const numCards = Number(fields.numberOfCards);
+      if (fields.numberOfCards !== undefined) {
+        const numCards = Number(fields.numberOfCards);
         if (!isNaN(numCards) && numCards >= 0) {
           updateData.numberOfCards = numCards;
         } else {
@@ -893,17 +891,29 @@ class Vibe {
         );
         // Return current list data if nothing changed, but include any filenames processed
         // Note: updateData.background/background2 will only be set if processing was successful
-       // If nothing changed, return the original list data, reflecting potential nulls if '' was sent
-       return {
-         success: true,
-         data: {
-           list, // Return the original list data
-           backgroundFilename: 'background' in updateData ? updateData.background : list.background,
-           background2Filename: 'background2' in updateData ? updateData.background2 : list.background2,
-           votingBackgroundFilename: 'votingBackground' in updateData ? updateData.votingBackground : list.votingBackground,
-           votingLogoFilename: 'votingLogo' in updateData ? updateData.votingLogo : list.votingLogo,
-         },
-       };
+        // If nothing changed, return the original list data, reflecting potential nulls if '' was sent
+        return {
+          success: true,
+          data: {
+            list, // Return the original list data
+            backgroundFilename:
+              'background' in updateData
+                ? updateData.background
+                : list.background,
+            background2Filename:
+              'background2' in updateData
+                ? updateData.background2
+                : list.background2,
+            votingBackgroundFilename:
+              'votingBackground' in updateData
+                ? updateData.votingBackground
+                : list.votingBackground,
+            votingLogoFilename:
+              'votingLogo' in updateData
+                ? updateData.votingLogo
+                : list.votingLogo,
+          },
+        };
       }
 
       // Update the company list
@@ -925,14 +935,26 @@ class Vibe {
       // Return the updated list and explicitly include the processed filenames
       return {
         success: true,
-       data: {
-         list: updatedList,
-         // Reflect the final state, prioritizing updateData which might be null
-         backgroundFilename: 'background' in updateData ? updateData.background : updatedList.background,
-         background2Filename: 'background2' in updateData ? updateData.background2 : updatedList.background2,
-         votingBackgroundFilename: 'votingBackground' in updateData ? updateData.votingBackground : updatedList.votingBackground,
-         votingLogoFilename: 'votingLogo' in updateData ? updateData.votingLogo : updatedList.votingLogo,
-       },
+        data: {
+          list: updatedList,
+          // Reflect the final state, prioritizing updateData which might be null
+          backgroundFilename:
+            'background' in updateData
+              ? updateData.background
+              : updatedList.background,
+          background2Filename:
+            'background2' in updateData
+              ? updateData.background2
+              : updatedList.background2,
+          votingBackgroundFilename:
+            'votingBackground' in updateData
+              ? updateData.votingBackground
+              : updatedList.votingBackground,
+          votingLogoFilename:
+            'votingLogo' in updateData
+              ? updateData.votingLogo
+              : updatedList.votingLogo,
+        },
       };
     } catch (error) {
       this.logger.log(color.red.bold(`Error updating company list: ${error}`));
