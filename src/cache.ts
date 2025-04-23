@@ -62,30 +62,40 @@ class Cache {
     } catch (error) {
       this.logManager.log('Redis command error:' + (error as Error).message);
       throw error; // Re-throwing so that specific call sites can also handle if needed
+    } finally {
+      // Switch back to DB 0 if we switched away
+      if (needsSwitch) {
+        await this.client.select(0);
+      }
     }
   }
 
   async set(
     key: string,
     value: string,
-    expireInSeconds?: number
+    expireInSeconds?: number,
+    db: number = 0 // Add optional db parameter
   ): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
     if (expireInSeconds) {
-      await this.executeCommand('set', cacheKey, value, 'EX', expireInSeconds);
+      // Pass db parameter to executeCommand
+      await this.executeCommand('set', db, cacheKey, value, 'EX', expireInSeconds);
     } else {
-      await this.executeCommand('set', cacheKey, value);
+      // Pass db parameter to executeCommand
+      await this.executeCommand('set', db, cacheKey, value);
     }
   }
 
-  async get(key: string, never: boolean = true): Promise<string | null> {
+  async get(key: string, never: boolean = true, db: number = 0): Promise<string | null> { // Add optional db parameter
     let cacheKey = `${this.version}:${key}`;
     if (process.env['ENVIRONMENT'] === 'development' && never) {
       // cacheKey = `dev_${new Date().getTime()}:${cacheKey}`;
     }
-    return await this.executeCommand('get', cacheKey);
+    // Pass db parameter to executeCommand
+    return await this.executeCommand('get', db, cacheKey);
   }
 
+  // --- Other methods remain unchanged and will use executeCommand's default db (0) ---
   async flush(): Promise<void> {
     await this.executeCommand('flushdb');
   }
@@ -136,8 +146,10 @@ class Cache {
 
   async acquireLock(key: string, ttlSeconds: number = 300): Promise<boolean> {
     const lockKey = `lock:${key}`;
+    // Calls executeCommand without db param, defaults to 0
     const result = await this.executeCommand(
       'set',
+      0, // Explicitly use default DB 0 for locks
       lockKey,
       '1',
       'NX',
@@ -149,7 +161,8 @@ class Cache {
 
   async releaseLock(key: string): Promise<void> {
     const lockKey = `lock:${key}`;
-    await this.executeCommand('del', lockKey);
+    // Calls executeCommand without db param, defaults to 0
+    await this.executeCommand('del', 0, lockKey);
   }
 }
 
