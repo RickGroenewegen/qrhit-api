@@ -511,18 +511,28 @@ class Hitlist {
 
       // Filter the ranked tracks to get the top ones based on numberOfCards
       // The 'withinLimit' flag from getRanking already tells us this.
-      const topTracks = allRankedTracks.filter((track) => track.withinLimit);
+      const topTracks = allRankedTracks.filter(
+        (track: any) => track.withinLimit
+      );
 
       // If maxTracks was 0 or invalid in the DB, getRanking might not set withinLimit correctly.
       // As a fallback, slice if needed, though relying on withinLimit is preferred.
-      if (topTracks.length === 0 && maxTracks > 0 && allRankedTracks.length > 0) {
-         this.logger.log(color.yellow.bold(`Fallback: Slicing top ${maxTracks} tracks as 'withinLimit' was not set.`));
-         // Ensure we don't try to slice more than available tracks
-         const actualSlice = Math.min(maxTracks, allRankedTracks.length);
-         // Reassign topTracks based on slice
-         // Note: This fallback might indicate an issue in getRanking's withinLimit logic if maxTracks is valid.
-         // topTracks = allRankedTracks.slice(0, actualSlice);
-         // Let's stick to the withinLimit flag for consistency for now. If it's empty, it's empty.
+      if (
+        topTracks.length === 0 &&
+        maxTracks > 0 &&
+        allRankedTracks.length > 0
+      ) {
+        this.logger.log(
+          color.yellow.bold(
+            `Fallback: Slicing top ${maxTracks} tracks as 'withinLimit' was not set.`
+          )
+        );
+        // Ensure we don't try to slice more than available tracks
+        const actualSlice = Math.min(maxTracks, allRankedTracks.length);
+        // Reassign topTracks based on slice
+        // Note: This fallback might indicate an issue in getRanking's withinLimit logic if maxTracks is valid.
+        // topTracks = allRankedTracks.slice(0, actualSlice);
+        // Let's stick to the withinLimit flag for consistency for now. If it's empty, it's empty.
       }
 
       this.logger.log(
@@ -531,7 +541,9 @@ class Hitlist {
             companyList.Company.name
           )} with ${color.white.bold(
             topTracks.length // Use the count of tracks marked withinLimit
-          )} tracks based on ranking score (limit: ${color.white.bold(maxTracks)})`
+          )} tracks based on ranking score (limit: ${color.white.bold(
+            maxTracks
+          )})`
         )
       );
 
@@ -539,7 +551,7 @@ class Hitlist {
       const limitedPlaylistResult = await this.createPlaylist(
         companyList.Company.name,
         companyList.name, // Original name
-        topTracks.map((track) => track.spotifyLink!.split('/').pop()!) // Use spotifyLink from ranked data
+        topTracks.map((track: any) => track.spotifyLink!.split('/').pop()!) // Use spotifyLink from ranked data
       );
 
       // --- Update CompanyList with Limited Playlist URL ---
@@ -574,7 +586,9 @@ class Hitlist {
       const fullPlaylistResult = await this.createPlaylist(
         companyList.Company.name,
         fullPlaylistName, // Name with suffix
-        allRankedTracks.map((track) => track.spotifyLink!.split('/').pop()!) // All ranked tracks
+        allRankedTracks.map(
+          (track: any) => track.spotifyLink!.split('/').pop()!
+        ) // All ranked tracks
       );
       this.logger.log(
         color.blue.bold(
@@ -622,7 +636,7 @@ class Hitlist {
           companyListName: companyList.name,
           totalSubmissions: totalSubmissionsCount, // Use the stored count
           // Map the topTracks (those within limit) based on the ranking result structure
-          tracks: topTracks.map((track:any, index:number) => ({
+          tracks: topTracks.map((track: any, index: number) => ({
             position: index + 1, // Position based on the final sorted limited list
             trackId: track.id, // DB track ID
             spotifyTrackId: track.spotifyLink!.split('/').pop()!, // Extract Spotify ID
