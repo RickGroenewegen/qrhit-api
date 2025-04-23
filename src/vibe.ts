@@ -106,6 +106,22 @@ class Vibe {
           // If companyList is not found, return error early
           return { success: false, error: 'Company list not found' };
         }
+
+        // Count unchecked tracks associated with this list
+        numberOfUncheckedTracks = await this.prisma.track.count({
+          where: {
+            year: { gt: 0 },
+            manuallyChecked: false,
+            // Check if the track is linked to *any* submission for this specific listId
+            CompanyListSubmissionTrack: {
+              some: {
+                CompanyListSubmission: {
+                  companyListId: listId,
+                },
+              },
+            },
+          },
+        });
       }
 
       // Return the state object with list info, questions, and ranking
