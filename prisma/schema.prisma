@@ -613,3 +613,12 @@ model CompanyListSubmissionTrack {
   @@index([trackId])
   @@map("company_list_submission_has_tracks")
 }
+
+// Model for storing application-wide settings
+model AppSetting {
+  key       String   @id @unique // Unique key for the setting (e.g., "spotify_access_token")
+  value     String   @db.Text // Value of the setting (use Text for potentially long tokens)
+  updatedAt DateTime @updatedAt // Automatically track when the setting was last updated
+
+  @@map("app_settings") // Optional: Define the table name explicitly
+}
