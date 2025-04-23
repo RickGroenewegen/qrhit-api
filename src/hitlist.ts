@@ -263,12 +263,6 @@ class Hitlist {
       // 4. Filter to keep only top tracks within the limit
       const filteredHitlist = scoredHitlist.slice(0, maxTracksToKeep);
 
-      this.logger.log(
-        color.blue.bold(
-          `Submission ${submissionId}: Original ${hitlist.length} tracks, filtered to top ${filteredHitlist.length} based on list limits (max ${maxTracksToKeep}).`
-        )
-      );
-
       if (filteredHitlist.length === 0) {
         this.logger.log(
           color.yellow.bold(
@@ -294,14 +288,6 @@ class Hitlist {
         // Array to store newly created track IDs
         const newTrackIds: string[] = [];
         const trackDbIds: Map<string, number> = new Map(); // Map to store trackId -> DB id
-
-        this.logger.log(
-          color.blue.bold(
-            `Processing ${color.white.bold(
-              filteredHitlist.length
-            )} filtered tracks for submission ${submissionId}`
-          )
-        );
 
         // Store tracks in the database (using data from Spotify response)
         for (const trackData of tracksResult.data) {
