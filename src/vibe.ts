@@ -1572,7 +1572,12 @@ class Vibe {
       )
     );
 
-    const result = await mollie.getPaymentUri(paymentParams, clientIp, true);
+    const result = await mollie.getPaymentUri(
+      paymentParams,
+      clientIp,
+      true,
+      true
+    );
 
     const userId = result.data.userId;
     // Get the user from db
@@ -1693,6 +1698,7 @@ class Vibe {
       const tracks = await this.prisma.track.findMany({
         where: {
           id: { in: trackIds },
+          manuallyChecked: true,
         },
         select: {
           id: true,
