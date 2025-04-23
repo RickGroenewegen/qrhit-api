@@ -16,9 +16,7 @@ class Cache {
       throw new Error('REDIS_URL environment variable is not defined');
     }
 
-    // ioredis defaults to db 0 if not specified.
-    // The executeCommand method now handles selecting the correct DB per command.
-    this.client = new Redis(redisUrl);
+    this.client = new Redis(redisUrl, { db: 0 });
 
     // Handle connection errors
     this.client.on('error', (error) => {
@@ -29,9 +27,8 @@ class Cache {
     });
   }
 
-  async rateLimit(key: string, delay: number, db: number = 0): Promise<void> {
-    // Rate limiting inherently uses get/set, so pass the db parameter
-    const lastRequestTime = await this.get(key, false, db);
+  async rateLimit(key: string, delay: number): Promise<void> {
+    const lastRequestTime = await this.get(key, false);
     const currentTime = Date.now();
     if (lastRequestTime) {
       const elapsedTime = currentTime - parseInt(lastRequestTime, 10);
@@ -41,8 +38,7 @@ class Cache {
         );
       }
     }
-    // Ensure the timestamp is set in the correct db
-    await this.set(key, currentTime.toString(), undefined, db);
+    await this.set(key, currentTime.toString());
   }
 
   public static getInstance(): Cache {
@@ -59,149 +55,89 @@ class Cache {
     ).version;
   }
 
-  // Updated executeCommand to handle DB selection
-  public async executeCommand(
-    command: string,
-    db: number = 0,
-    ...args: any[]
-  ): Promise<any> {
-    const originalDb = 0; // Assuming the default connection is always DB 0
-    let selectedDb = false;
-
+  public async executeCommand(command: string, ...args: any[]): Promise<any> {
     try {
-      // Select the target database if it's not the default
-      if (db !== originalDb) {
-        await this.client.select(db);
-        selectedDb = true;
-      }
-
-      // Execute the actual command
       // @ts-ignore: Dynamic command execution
-      const result = await this.client[command](...args);
-      return result;
+      return await this.client[command](...args);
     } catch (error) {
-      this.logManager.log(
-        `Redis command error (DB ${db}, Command ${command}): ${
-          (error as Error).message
-        }`
-      );
+      this.logManager.log('Redis command error:' + (error as Error).message);
       throw error; // Re-throwing so that specific call sites can also handle if needed
-    } finally {
-      // Ensure we switch back to the original database if we switched away
-      if (selectedDb) {
-        await this.client.select(originalDb);
-      }
     }
   }
 
   async set(
     key: string,
     value: string,
-    expireInSeconds?: number,
-    db: number = 0
+    expireInSeconds?: number
   ): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
     if (expireInSeconds) {
-      await this.executeCommand(
-        'set',
-        db,
-        cacheKey,
-        value,
-        'EX',
-        expireInSeconds
-      );
+      await this.executeCommand('set', cacheKey, value, 'EX', expireInSeconds);
     } else {
-      await this.executeCommand('set', db, cacheKey, value);
+      await this.executeCommand('set', cacheKey, value);
     }
   }
 
-  async get(
-    key: string,
-    never: boolean = true,
-    db: number = 0
-  ): Promise<string | null> {
+  async get(key: string, never: boolean = true): Promise<string | null> {
     let cacheKey = `${this.version}:${key}`;
     if (process.env['ENVIRONMENT'] === 'development' && never) {
-      // Optional: Add dev prefix logic if needed, consider if it should include db
-      // cacheKey = `dev_${db}_${new Date().getTime()}:${cacheKey}`;
+      // cacheKey = `dev_${new Date().getTime()}:${cacheKey}`;
     }
-    return await this.executeCommand('get', db, cacheKey);
+    return await this.executeCommand('get', cacheKey);
   }
 
-  async flush(db: number = 0): Promise<void> {
-    // FLUSHDB flushes the currently selected DB
-    await this.executeCommand('flushdb', db);
+  async flush(): Promise<void> {
+    await this.executeCommand('flushdb');
   }
 
-  async del(key: string, db: number = 0): Promise<void> {
+  async del(key: string): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
-    await this.executeCommand('del', db, cacheKey);
+    await this.executeCommand('del', cacheKey);
   }
 
-  async delPattern(pattern: string, db: number = 0): Promise<void> {
+  async delPattern(pattern: string): Promise<void> {
     let cachePattern = `${this.version}:${pattern}`;
-    // 'keys' command needs to run on the target db
-    const keys = await this.executeCommand('keys', db, cachePattern);
+    const keys = await this.executeCommand('keys', cachePattern);
     if (keys && keys.length > 0) {
-      // 'del' command also needs to run on the target db
-      await this.executeCommand('del', db, ...keys);
+      await this.executeCommand('del', ...keys);
     }
   }
 
-  async setArray(key: string, values: string[], db: number = 0): Promise<void> {
+  async setArray(key: string, values: string[]): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
-    // Ensure the key is deleted and values are added in the correct db
-    await this.executeCommand('del', db, cacheKey);
-    await this.executeCommand('sadd', db, cacheKey, ...values);
+    await this.executeCommand('del', cacheKey); // Ensure the key is empty before setting new values
+    await this.executeCommand('sadd', cacheKey, ...values);
   }
 
-  async getArray(key: string, db: number = 0): Promise<string[]> {
+  async getArray(key: string): Promise<string[]> {
     let cacheKey = `${this.version}:${key}`;
-    return await this.executeCommand('smembers', db, cacheKey);
+    return await this.executeCommand('smembers', cacheKey);
   }
 
-  async valueExistsInArray(
-    key: string,
-    value: string,
-    db: number = 0
-  ): Promise<boolean> {
+  async valueExistsInArray(key: string, value: string): Promise<boolean> {
     let cacheKey = `${this.version}:${key}`;
-    const exists = await this.executeCommand('sismember', db, cacheKey, value);
+    const exists = await this.executeCommand('sismember', cacheKey, value);
     return exists === 1;
   }
 
-  async addValueToArray(
-    key: string,
-    value: string,
-    db: number = 0
-  ): Promise<void> {
+  async addValueToArray(key: string, value: string): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
-    await this.executeCommand('sadd', db, cacheKey, value);
+    await this.executeCommand('sadd', cacheKey, value);
   }
 
-  async addValuesToArray(
-    key: string,
-    values: string[],
-    db: number = 0
-  ): Promise<void> {
+  async addValuesToArray(key: string, values: string[]): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
-    await this.executeCommand('sadd', db, cacheKey, ...values);
+    await this.executeCommand('sadd', cacheKey, ...values);
   }
 
   async close(): Promise<void> {
-    // Close doesn't target a specific DB, it closes the connection
     await this.client.quit();
   }
 
-  async acquireLock(
-    key: string,
-    ttlSeconds: number = 300,
-    db: number = 0
-  ): Promise<boolean> {
-    const lockKey = `lock:${key}`; // Lock key doesn't need version prefix usually
+  async acquireLock(key: string, ttlSeconds: number = 300): Promise<boolean> {
+    const lockKey = `lock:${key}`;
     const result = await this.executeCommand(
       'set',
-      db,
       lockKey,
       '1',
       'NX',
@@ -211,9 +147,9 @@ class Cache {
     return result === 'OK';
   }
 
-  async releaseLock(key: string, db: number = 0): Promise<void> {
+  async releaseLock(key: string): Promise<void> {
     const lockKey = `lock:${key}`;
-    await this.executeCommand('del', db, lockKey);
+    await this.executeCommand('del', lockKey);
   }
 }
 
