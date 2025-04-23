@@ -1211,12 +1211,15 @@ class Hitlist {
       if (axios.isAxiosError(error) && error.response?.status === 401) {
         // Clear potentially invalid token
         await this.cache.del('spotify_access_token');
-        return {
-          success: false,
-          error: 'Error creating/updating Spotify playlist with token',
+        }; // Added missing parenthesis
+      }
+      // Add a general return for other errors within the catch block
+      return {
+        success: false,
+        error: 'Error creating/updating Spotify playlist with token',
       };
-    }
-  }
+    } // Added missing closing brace for catch block
+  } // Closing brace for the method
 
   public async searchTracks(searchString: string) {
     try {
