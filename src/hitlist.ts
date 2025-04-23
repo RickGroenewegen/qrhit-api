@@ -561,69 +561,57 @@ class Hitlist {
           )} with ${color.white.bold(
             topTracks.length
           )} tracks (max: ${color.white.bold(maxTracks)})`
-       )
-     );
+        )
+      );
 
-     // --- Create/Update Limited Playlist ---
-     const limitedPlaylistResult = await this.createPlaylist(
-       companyList.Company.name,
-       companyList.name, // Original name
-       topTracks.map((track) => track.spotifyTrackId) // Limited tracks
-     );
-     this.logger.log(
-       color.blue.bold(
-         `Initiated creation/update for limited playlist: ${color.white.bold(
-           companyList.name
-         )}`
-       )
-     );
+      // --- Create/Update Limited Playlist ---
+      const limitedPlaylistResult = await this.createPlaylist(
+        companyList.Company.name,
+        companyList.name, // Original name
+        topTracks.map((track) => track.spotifyTrackId) // Limited tracks
+      );
 
-     // --- Create/Update Full Playlist ---
-     const fullPlaylistName = `${companyList.name} (FULL)`;
-     const fullPlaylistResult = await this.createPlaylist(
-       companyList.Company.name,
-       fullPlaylistName, // Name with suffix
-       sortedTracks.map((track) => track.spotifyTrackId) // All sorted tracks
-     );
-     this.logger.log(
-       color.blue.bold(
-         `Initiated creation/update for full playlist: ${color.white.bold(
-           fullPlaylistName
-         )}`
-       )
-     );
+      // --- Create/Update Full Playlist ---
+      const fullPlaylistName = `${companyList.name} (FULL)`;
+      const fullPlaylistResult = await this.createPlaylist(
+        companyList.Company.name,
+        fullPlaylistName, // Name with suffix
+        sortedTracks.map((track) => track.spotifyTrackId) // All sorted tracks
+      );
+      this.logger.log(
+        color.blue.bold(
+          `Initiated creation/update for full playlist: ${color.white.bold(
+            fullPlaylistName
+          )}`
+        )
+      );
 
-     // --- Update CompanyList with Full Playlist URL ---
-     if (fullPlaylistResult.success && fullPlaylistResult.data?.playlistUrl) {
-       try {
-         await this.prisma.companyList.update({
-           where: { id: companyListId },
-           data: { playlistUrlFull: fullPlaylistResult.data.playlistUrl },
-         });
-         this.logger.log(
-           color.green.bold(
-             `Updated playlistUrlFull for CompanyList ID ${companyListId}`
-           )
-         );
-       } catch (dbError) {
-         this.logger.log(
-           color.red.bold(
-             `Failed to update playlistUrlFull for CompanyList ID ${companyListId}: ${dbError}`
-           )
-         );
-         // Decide if this should be a critical error or just logged
-       }
-     } else {
-       this.logger.log(
-         color.yellow.bold(
-           `Skipping update of playlistUrlFull for CompanyList ID ${companyListId} due to playlist creation/update failure.`
-         )
-       );
-     }
-     // --- End Update ---
+      // --- Update CompanyList with Full Playlist URL ---
+      if (fullPlaylistResult.success && fullPlaylistResult.data?.playlistUrl) {
+        try {
+          await this.prisma.companyList.update({
+            where: { id: companyListId },
+            data: { playlistUrlFull: fullPlaylistResult.data.playlistUrl },
+          });
+        } catch (dbError) {
+          this.logger.log(
+            color.red.bold(
+              `Failed to update playlistUrlFull for CompanyList ID ${companyListId}: ${dbError}`
+            )
+          );
+          // Decide if this should be a critical error or just logged
+        }
+      } else {
+        this.logger.log(
+          color.yellow.bold(
+            `Skipping update of playlistUrlFull for CompanyList ID ${companyListId} due to playlist creation/update failure.`
+          )
+        );
+      }
+      // --- End Update ---
 
-     return {
-       success: true,
+      return {
+        success: true,
         data: {
           companyName: companyList.Company.name,
           companyListName: companyList.name,
@@ -779,24 +767,16 @@ class Hitlist {
         JSON.stringify(playlistInfo),
         3600 // Store for 1 hour
       );
-      this.logger.log(
-        color.blue.bold(
-          `Stored pending playlist info under key: ${playlistInfoKey}`
-        )
-      );
 
       // Check if we already have a valid access token
       const cachedToken = await this.cache.get('spotify_access_token');
       if (cachedToken) {
-        this.logger.log(color.blue.bold('Using cached Spotify access token'));
         // Pass the playlistJobId directly
         return this.createPlaylistWithToken(cachedToken, playlistJobId);
       }
 
       // Check if we have a refresh token
       const refreshToken = await this.cache.get('spotify_refresh_token');
-
-      console.log(111, refreshToken);
 
       if (refreshToken) {
         try {
@@ -834,7 +814,6 @@ class Hitlist {
               );
             }
 
-            this.logger.log(color.green.bold('Refreshed Spotify access token'));
             // Pass the playlistJobId directly
             return this.createPlaylistWithToken(newAccessToken, playlistJobId);
           }
@@ -850,11 +829,6 @@ class Hitlist {
       // Store the playlistJobId under a fixed key to retrieve it in the callback
       const latestJobIdKey = 'latest_spotify_playlist_job_id';
       await this.cache.set(latestJobIdKey, playlistJobId, 600); // Store for 10 minutes
-      this.logger.log(
-        color.blue.bold(
-          `Stored latest playlistJobId ${playlistJobId} under key: ${latestJobIdKey}`
-        )
-      );
 
       // Generate the authorization URL
       // Use the exact redirect URI that was registered with Spotify
@@ -874,11 +848,6 @@ class Hitlist {
         )
       );
       this.logger.log(color.white.bold(authUrl));
-      this.logger.log(
-        color.yellow.bold(
-          'After authorization, you will be redirected to a callback URL where the process will complete automatically.'
-        )
-      );
 
       return {
         success: false,
@@ -912,11 +881,6 @@ class Hitlist {
           error: 'Could not find pending playlist job ID. Please try again.',
         };
       }
-      this.logger.log(
-        color.blue.bold(
-          `Retrieved latest playlistJobId ${playlistJobId} from key ${latestJobIdKey}`
-        )
-      );
 
       // Clean up the fixed job ID key
       await this.cache.del(latestJobIdKey);
@@ -943,11 +907,6 @@ class Hitlist {
       // Check if we already have a valid access token
       const cachedToken = await this.cache.get('spotify_access_token');
       if (cachedToken) {
-        this.logger.log(
-          color.blue.bold(
-            'Using cached Spotify access token (from completeSpotifyAuth)'
-          )
-        );
         // Pass the retrieved playlistJobId
         return this.createPlaylistWithToken(cachedToken, playlistJobId);
       }
@@ -989,12 +948,6 @@ class Hitlist {
                 refreshResponse.data.refresh_token
               );
             }
-
-            this.logger.log(
-              color.blue.bold(
-                'Refreshed Spotify access token (from completeSpotifyAuth)'
-              )
-            );
             // Pass the retrieved playlistJobId
             return this.createPlaylistWithToken(newAccessToken, playlistJobId);
           }
@@ -1244,9 +1197,6 @@ class Hitlist {
 
       // Clear the pending playlist info using the specific key
       await this.cache.del(playlistInfoKey);
-      this.logger.log(
-        color.blue.bold(`Deleted pending playlist info key: ${playlistInfoKey}`)
-      );
 
       return {
         success: true,

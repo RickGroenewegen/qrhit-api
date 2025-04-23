@@ -516,7 +516,8 @@ class Mollie {
 
   public async getPaymentUri(
     params: any,
-    clientIp: string
+    clientIp: string,
+    waitForDirectGeneration: boolean = false
   ): Promise<ApiResult> {
     try {
       let useOrderType = 'digital';
@@ -837,12 +838,21 @@ class Mollie {
       });
 
       if (triggerDirectGeneration) {
-        this.generator.generate(
-          molliePaymentId,
-          clientIp,
-          params.refreshPlaylists.join(','),
-          this
-        );
+        if (waitForDirectGeneration) {
+          await this.generator.generate(
+            molliePaymentId,
+            clientIp,
+            params.refreshPlaylists.join(','),
+            this
+          );
+        } else {
+          this.generator.generate(
+            molliePaymentId,
+            clientIp,
+            params.refreshPlaylists.join(','),
+            this
+          );
+        }
       }
 
       return {
@@ -850,6 +860,7 @@ class Mollie {
         data: {
           paymentId: molliePaymentId,
           paymentUri: mollieCheckoutUrl,
+          userId: userDatabaseId,
         },
       };
     } catch (e) {

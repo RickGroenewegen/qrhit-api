@@ -512,6 +512,7 @@ model CompanyList {
   background2      String?
   playlistSource   String    @default("voting")
   playlistUrl      String?
+  playlistUrlFull  String?
   qrColor          String    @default("#000000")
   textColor        String    @default("#000000")
   status           String    @default("new") // Progression: new -> company -> questions -> box -> card -> playlist -> personalize
@@ -521,6 +522,8 @@ model CompanyList {
   endAt            DateTime?
   votingBackground String?
   votingLogo       String?
+  downloadLink     String?
+  reviewLink       String?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 

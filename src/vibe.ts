@@ -6,6 +6,7 @@ import path from 'path'; // Added path
 import Utils from './utils'; // Added Utils
 import Mollie from './mollie';
 import Discount from './discount';
+import Data from './data';
 
 class Vibe {
   private static instance: Vibe;
@@ -13,6 +14,7 @@ class Vibe {
   private logger = new Logger();
   private utils = new Utils();
   private discount = new Discount();
+  private data = Data.getInstance();
 
   private constructor() {}
 
@@ -49,8 +51,9 @@ class Vibe {
             slug: true,
             background: true,
             background2: true,
-            playlistSource: true, // Ensure playlistSource is selected
-            playlistUrl: true, // Ensure playlistUrl is selected
+            playlistSource: true,
+            playlistUrl: true,
+            playlistUrlFull: true,
             qrColor: true,
             textColor: true,
             status: true,
@@ -58,9 +61,11 @@ class Vibe {
             numberOfCards: true,
             startAt: true,
             endAt: true,
-            votingBackground: true, // Added votingBackground
-            votingLogo: true, // Added votingLogo
-            Company: true, // Keep including Company details
+            votingBackground: true,
+            votingLogo: true,
+            Company: true,
+            downloadLink: true,
+            reviewLink: true,
           },
         });
 
@@ -82,25 +87,10 @@ class Vibe {
             CompanyListQuestionOptions: undefined,
           }));
 
-          this.logger.log(
-            color.blue.bold(
-              `Retrieved ${color.white.bold(
-                questions.length
-              )} questions for list ${color.white.bold(companyList.name)}`
-            )
-          );
-
           // Get the ranking for this list
           const rankingResult = await this.getRanking(listId);
           if (rankingResult.success && rankingResult.data) {
             ranking = rankingResult.data.ranking; // Extract the ranking array
-            this.logger.log(
-              color.blue.bold(
-                `Retrieved ranking with ${color.white.bold(
-                  ranking.length
-                )} tracks for list ${color.white.bold(companyList.name)}`
-              )
-            );
           } else {
             this.logger.log(
               color.yellow.bold(
@@ -393,14 +383,6 @@ class Vibe {
         options: q.CompanyListQuestionOptions,
         CompanyListQuestionOptions: undefined,
       }));
-
-      this.logger.log(
-        color.blue.bold(
-          `Retrieved ${color.white.bold(
-            questions.length
-          )} questions for list ${color.white.bold(companyList.name)}`
-        )
-      );
 
       return {
         success: true,
@@ -1511,6 +1493,12 @@ class Vibe {
       },
     });
 
+    // Update the list status to 'generating_pdf' using prisma
+    await this.prisma.companyList.update({
+      where: { id: listId },
+      data: { status: 'generating_pdf' },
+    });
+
     if (!companyList) {
       return { success: false, error: 'Company list not found' };
     }
@@ -1519,9 +1507,6 @@ class Vibe {
     const playlistId = companyList.playlistUrl!.split('/').pop();
 
     const discount = await this.discount.createDiscountCode(price, '', '');
-
-    console.log(1, discount);
-    console.log(111, companyList);
 
     const items = [
       {
@@ -1579,8 +1564,6 @@ class Vibe {
     // Console.log the object in full
     //console.log(JSON.stringify(paymentParams, null, 2));
 
-    const result = await mollie.getPaymentUri(paymentParams, clientIp);
-
     this.logger.log(
       color.blue.bold(
         `Started PDF generation for list ${color.white.bold(
@@ -1588,6 +1571,33 @@ class Vibe {
         )} (ID: ${color.white.bold(listId)})`
       )
     );
+
+    const result = await mollie.getPaymentUri(paymentParams, clientIp, true);
+
+    const userId = result.data.userId;
+    // Get the user from db
+    const user = await this.prisma.user.findUnique({
+      where: { id: userId },
+    });
+
+    if (user) {
+      const downloadLink = `${process.env['API_URI']}/download/${result.data.paymentId}/${user.hash}/${playlistId}/printer`;
+      const reviewLink = `${process.env['FRONTEND_URI']}/suggestions/${result.data.paymentId}/${user.hash}/${playlistId}/0`;
+
+      // Update the list status to 'generating_pdf' using prisma
+      await this.prisma.companyList.update({
+        where: { id: listId },
+        data: { status: 'pdf_complete', downloadLink, reviewLink },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `PDF generation complete for list ${color.white.bold(
+            companyList.name
+          )} (ID: ${color.white.bold(listId)})`
+        )
+      );
+    }
   }
 
   /**
@@ -1707,16 +1717,6 @@ class Vibe {
           ...track,
           withinLimit: index < companyList.numberOfCards,
         }));
-
-      this.logger.log(
-        color.green.bold(
-          `Calculated ranking for list ${color.white.bold(
-            companyList.name
-          )} (ID: ${listId}), returning ${color.white.bold(
-            rankedTracks.length
-          )} tracks. Top ${companyList.numberOfCards} marked as 'withinLimit'.`
-        )
-      );
 
       return {
         success: true,
