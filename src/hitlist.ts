@@ -784,9 +784,6 @@ class Hitlist {
 
       // Check if access token is valid and not expired
       if (accessToken && Date.now() < expiresAt) {
-        this.logger.log(
-          color.blue('Using existing valid Spotify access token from DB.')
-        );
         // Pass the playlistJobId directly
         return this.createPlaylistWithToken(accessToken, playlistJobId);
       }
@@ -1037,9 +1034,7 @@ class Hitlist {
       }
 
       // If refresh failed or no refresh token, use the auth code provided
-      this.logger.log(
-        color.blue('Using authorization code to get new Spotify tokens...')
-      );
+
       if (!authCode) {
         this.logger.log(
           color.red.bold(
@@ -1097,9 +1092,6 @@ class Hitlist {
           'spotify_refresh_token',
           newRefreshToken
         );
-        this.logger.log(
-          color.blue('Stored new Spotify refresh token from auth code.')
-        );
       } else {
         this.logger.log(
           color.yellow('No refresh token received from auth code grant.')
@@ -1109,7 +1101,9 @@ class Hitlist {
       }
 
       this.logger.log(
-        color.green('Successfully obtained Spotify tokens using auth code.')
+        color.green.bold(
+          'Successfully obtained Spotify tokens using auth code.'
+        )
       );
       // Pass the retrieved playlistJobId and the newly obtained token
       return this.createPlaylistWithToken(
