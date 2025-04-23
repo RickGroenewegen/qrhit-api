@@ -559,6 +559,36 @@ class Hitlist {
         topTracks.map((track) => track.spotifyTrackId) // Limited tracks
       );
 
+      // --- Update CompanyList with Limited Playlist URL ---
+      if (limitedPlaylistResult.success && limitedPlaylistResult.data?.playlistUrl) {
+        try {
+          await this.prisma.companyList.update({
+            where: { id: companyListId },
+            data: { playlistUrl: limitedPlaylistResult.data.playlistUrl }, // Update the standard playlistUrl field
+          });
+          this.logger.log(
+            color.blue.bold(
+              `Updated playlistUrl for CompanyList ID ${companyListId}`
+            )
+          );
+        } catch (dbError) {
+          this.logger.log(
+            color.red.bold(
+              `Failed to update playlistUrl for CompanyList ID ${companyListId}: ${dbError}`
+            )
+          );
+          // Decide if this should be a critical error or just logged
+        }
+      } else {
+        this.logger.log(
+          color.yellow.bold(
+            `Skipping update of playlistUrl for CompanyList ID ${companyListId} due to limited playlist creation/update failure.`
+          )
+        );
+      }
+      // --- End Update ---
+
+
       // --- Create/Update Full Playlist ---
       const fullPlaylistName = `${companyList.name} (FULL)`;
       const fullPlaylistResult = await this.createPlaylist(
