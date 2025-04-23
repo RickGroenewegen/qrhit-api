@@ -1787,15 +1787,13 @@ class Server {
     this.fastify.post(
       '/hitlist/spotify-auth-complete',
       async (request: any, reply) => {
-        console.log(999, request.body);
-
         const { code } = request.body;
 
         if (!code) {
           return { success: false, error: 'Missing authorization code' };
         }
 
-        return await this.hitlist.completeSpotifyAuth(code, '');
+        return await this.hitlist.completeSpotifyAuth(code);
       }
     );
 
