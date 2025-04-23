@@ -33,13 +33,14 @@ class Vibe {
    */
   public async getState(listId?: number): Promise<any> {
     try {
-     // Get questions and ranking for the list if listId is provided
-     let questions: any[] = [];
-     let companyList: any = null; // Use 'any' or a more specific type if defined
-     let ranking: any[] = []; // Initialize ranking array
+      // Get questions and ranking for the list if listId is provided
+      let questions: any[] = [];
+      let companyList = null;
+      let ranking: any[] = []; // Initialize ranking array
+      let numberOfUncheckedTracks = 0; // Initialize count
 
-     if (listId) {
-       // Check if company list exists
+      if (listId) {
+        // Check if company list exists
         companyList = await this.prisma.companyList.findUnique({
           where: { id: listId },
           select: {
@@ -99,44 +100,15 @@ class Vibe {
                 )}: ${rankingResult.error || 'No ranking data found'}`
               )
             );
-           // Keep ranking as empty array if retrieval fails
-         }
+            // Keep ranking as empty array if retrieval fails
+          }
+        } else {
+          // If companyList is not found, return error early
+          return { success: false, error: 'Company list not found' };
+        }
 
-         // Count unchecked tracks associated with this list and add to the list object
-         companyList.numberOfUncheckedTracks = await this.prisma.track.count({
-           where: {
-             year: { gt: 0 },
-             manuallyChecked: false,
-             // Check if the track is linked to *any* submission for this specific listId
-             CompanyListSubmissionTrack: {
-               some: {
-                 CompanyListSubmission: {
-                   companyListId: listId,
-                 },
-               },
-             },
-           },
-         });
-       } else {
-         // If companyList is not found, return error early
-         return { success: false, error: 'Company list not found' };
-       }
-     }
-
-     // Return the state object with list info, questions, and ranking
-     return {
-       success: true,
-      data: {
-        questions,
-        list: companyList, // companyList now includes numberOfUncheckedTracks
-        ranking, // Add the ranking array here
-      },
-    };
-   } catch (error) {
-     this.logger.log(color.red.bold(`Error getting vibe state: ${error}`));
-     return { success: false, error: 'Error retrieving company state' };
-   }
- }
+        // Count unchecked tracks associated with this list
+        numberOfUncheckedTracks = await this.prisma.track.count({
           where: {
             year: { gt: 0 },
             manuallyChecked: false,
@@ -155,13 +127,13 @@ class Vibe {
       // Return the state object with list info, questions, and ranking
       return {
         success: true,
-       data: {
-         questions,
-         list: companyList,
-         ranking, // Add the ranking array here
-         numberOfUncheckedTracks, // Add the count of unchecked tracks
-       },
-     };
+        data: {
+          questions,
+          list: companyList,
+          ranking, // Add the ranking array here
+          numberOfUncheckedTracks, // Add the count of unchecked tracks
+        },
+      };
     } catch (error) {
       this.logger.log(color.red.bold(`Error getting vibe state: ${error}`));
       return { success: false, error: 'Error retrieving company state' };
