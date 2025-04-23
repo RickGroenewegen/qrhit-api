@@ -55,13 +55,24 @@ class Cache {
     ).version;
   }
 
-  public async executeCommand(command: string, ...args: any[]): Promise<any> {
+  // Add optional db parameter, defaulting to 0
+  public async executeCommand(command: string, db: number = 0, ...args: any[]): Promise<any> {
+    const needsSwitch = db !== 0; // Determine if DB switch is needed
     try {
+      if (needsSwitch) {
+        await this.client.select(db); // Switch to the specified DB
+      }
       // @ts-ignore: Dynamic command execution
-      return await this.client[command](...args);
+      const result = await this.client[command](...args); // Execute the command
+      return result;
     } catch (error) {
       this.logManager.log('Redis command error:' + (error as Error).message);
       throw error; // Re-throwing so that specific call sites can also handle if needed
+    } finally {
+      // Switch back to DB 0 if we switched away
+      if (needsSwitch) {
+        await this.client.select(0); // Ensure we switch back to the default DB
+      }
     }
   }
 
