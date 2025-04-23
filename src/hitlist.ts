@@ -1020,8 +1020,8 @@ class Hitlist {
       }
 
       this.logger.log(color.green('Successfully obtained Spotify tokens using auth code.'));
-      // Pass the retrieved playlistJobId
-      return this.createPlaylistWithToken(accessToken, playlistJobId);
+      // Pass the retrieved playlistJobId and the newly obtained token
+      return this.createPlaylistWithToken(accessTokenFromAuthCode, playlistJobId);
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error completing Spotify authorization: ${error}`)
