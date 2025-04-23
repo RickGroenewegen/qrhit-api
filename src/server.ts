@@ -1801,7 +1801,8 @@ class Server {
 
     // API endpoint for handling Spotify authorization callback (this will be hit by the browser)
     this.fastify.get('/spotify_callback', async (request: any, reply) => {
-      const { code, state } = request.query;
+      // Removed state from query parameters
+      const { code } = request.query;
 
       if (!code) {
         reply.type('text/html').send(`
@@ -1816,12 +1817,12 @@ class Server {
         return;
       }
 
-      console.log(111, code);
+      console.log(111, 'Received Spotify auth code:', code);
 
-      // Automatically process the authorization
-      const result = await this.hitlist.completeSpotifyAuth(code, '');
+      // Automatically process the authorization - removed state parameter
+      const result = await this.hitlist.completeSpotifyAuth(code);
 
-      console.log(222, result);
+      console.log(222, 'Playlist creation result:', result);
 
       if (result.success) {
         reply.type('text/html').send(`

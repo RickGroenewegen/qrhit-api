@@ -790,22 +790,12 @@ class Hitlist {
       }
 
       // If we don't have a valid token or refresh failed, we need to authorize
-      // Generate a random state for OAuth security
-      const state = this.utils.generateRandomString(16);
-
-      console.log(
-        1,
-        'setting',
-        `oauth_state_to_job_id:${state}`,
-        playlistJobId
-      );
-
-      // Store the mapping from state to playlistJobId in cache
-      const stateToJobIdKey = `oauth_state_to_job_id:${state}`;
-      await this.cache.set(stateToJobIdKey, playlistJobId, 600); // Store for 10 minutes
+      // Store the playlistJobId under a fixed key to retrieve it in the callback
+      const latestJobIdKey = 'latest_spotify_playlist_job_id';
+      await this.cache.set(latestJobIdKey, playlistJobId, 600); // Store for 10 minutes
       this.logger.log(
         color.blue.bold(
-          `Stored state-to-jobId mapping under key: ${stateToJobIdKey}`
+          `Stored latest playlistJobId ${playlistJobId} under key: ${latestJobIdKey}`
         )
       );
 
@@ -815,9 +805,10 @@ class Hitlist {
         process.env['SPOTIFY_REDIRECT_URI'] ||
         'http://localhost:3004/spotify_callback';
       const scope = 'playlist-modify-public';
+      // Removed state from the authUrl
       const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(
         redirectUri
-      )}&scope=${encodeURIComponent(scope)}&state=${state}`;
+      )}&scope=${encodeURIComponent(scope)}`;
 
       // Log the URL to the console so the user can visit it
       this.logger.log(
@@ -846,38 +837,32 @@ class Hitlist {
     }
   }
 
-  // Modified to accept state from the callback
-  public async completeSpotifyAuth(
-    authCode: string,
-    state: string
-  ): Promise<any> {
+  // Modified to remove state parameter
+  public async completeSpotifyAuth(authCode: string): Promise<any> {
     try {
-      // Retrieve the playlistJobId using the state
-
-      console.log(1, 'getting', `oauth_state_to_job_id:${state}`);
-
-      const stateToJobIdKey = `oauth_state_to_job_id:${state}`;
-      const playlistJobId = await this.cache.get(stateToJobIdKey);
-
-      console.log(333, playlistJobId);
+      // Retrieve the playlistJobId from the fixed cache key
+      const latestJobIdKey = 'latest_spotify_playlist_job_id';
+      const playlistJobId = await this.cache.get(latestJobIdKey);
 
       if (!playlistJobId) {
         this.logger.log(
-          color.red.bold(`Invalid or expired state received: ${state}`)
+          color.red.bold(
+            `Could not retrieve latest playlistJobId from key: ${latestJobIdKey}`
+          )
         );
         return {
           success: false,
-          error: 'Invalid or expired authorization state',
+          error: 'Could not find pending playlist job ID. Please try again.',
         };
       }
       this.logger.log(
         color.blue.bold(
-          `Retrieved playlistJobId ${playlistJobId} for state ${state}`
+          `Retrieved latest playlistJobId ${playlistJobId} from key ${latestJobIdKey}`
         )
       );
 
-      // Clean up the state mapping key
-      await this.cache.del(stateToJobIdKey);
+      // Clean up the fixed job ID key
+      await this.cache.del(latestJobIdKey);
 
       // Get the client ID and secret
       const clientId = process.env['SPOTIFY_CLIENT_ID'];
