@@ -771,21 +771,33 @@ class Hitlist {
       );
 
       // --- Use Settings class for tokens ---
-      const accessToken = await this.settings.getSetting('spotify_access_token');
-      const refreshToken = await this.settings.getSetting('spotify_refresh_token');
-      const expiresAtStr = await this.settings.getSetting('spotify_token_expires_at');
+      const accessToken = await this.settings.getSetting(
+        'spotify_access_token'
+      );
+      const refreshToken = await this.settings.getSetting(
+        'spotify_refresh_token'
+      );
+      const expiresAtStr = await this.settings.getSetting(
+        'spotify_token_expires_at'
+      );
       const expiresAt = expiresAtStr ? parseInt(expiresAtStr, 10) : 0;
 
       // Check if access token is valid and not expired
       if (accessToken && Date.now() < expiresAt) {
-        this.logger.log(color.blue('Using existing valid Spotify access token from DB.'));
+        this.logger.log(
+          color.blue('Using existing valid Spotify access token from DB.')
+        );
         // Pass the playlistJobId directly
         return this.createPlaylistWithToken(accessToken, playlistJobId);
       }
 
       // If access token is invalid/expired, try using the refresh token
       if (refreshToken) {
-        this.logger.log(color.blue('Spotify access token expired or invalid, attempting refresh...'));
+        this.logger.log(
+          color.blue(
+            'Spotify access token expired or invalid, attempting refresh...'
+          )
+        );
         try {
           // Try to get a new access token using the refresh token
           const refreshResponse = await axios({
@@ -810,17 +822,30 @@ class Hitlist {
             const newExpiresAt = Date.now() + (expiresIn - 60) * 1000; // Calculate expiry in ms
 
             // Store the new tokens and expiry time in the database
-            await this.settings.setSetting('spotify_access_token', newAccessToken);
-            await this.settings.setSetting('spotify_token_expires_at', newExpiresAt.toString());
+            await this.settings.setSetting(
+              'spotify_access_token',
+              newAccessToken
+            );
+            await this.settings.setSetting(
+              'spotify_token_expires_at',
+              newExpiresAt.toString()
+            );
             if (newRefreshToken) {
-              await this.settings.setSetting('spotify_refresh_token', newRefreshToken);
+              await this.settings.setSetting(
+                'spotify_refresh_token',
+                newRefreshToken
+              );
               this.logger.log(color.blue('Stored new Spotify refresh token.'));
             } else {
               // Keep the old refresh token if a new one wasn't provided
-              this.logger.log(color.blue('Re-using existing Spotify refresh token.'));
+              this.logger.log(
+                color.blue('Re-using existing Spotify refresh token.')
+              );
             }
 
-            this.logger.log(color.green('Successfully refreshed Spotify token.'));
+            this.logger.log(
+              color.green('Successfully refreshed Spotify token.')
+            );
             // Pass the playlistJobId directly
             return this.createPlaylistWithToken(newAccessToken, playlistJobId);
           }
@@ -833,7 +858,11 @@ class Hitlist {
       }
 
       // If refresh failed or no refresh token, proceed to authorization
-      this.logger.log(color.yellow('Spotify refresh failed or no refresh token available. Authorization required.'));
+      this.logger.log(
+        color.yellow(
+          'Spotify refresh failed or no refresh token available. Authorization required.'
+        )
+      );
 
       // Store the playlistJobId temporarily in cache under a fixed key to retrieve it in the callback
       const latestJobIdKey = 'latest_spotify_playlist_job_id';
@@ -910,21 +939,35 @@ class Hitlist {
       // NOTE: The logic below attempts to reuse existing tokens if available.
       // This might be unexpected if the user explicitly went through the auth flow again.
       // --- Use Settings class for tokens ---
-      const accessToken = await this.settings.getSetting('spotify_access_token');
-      const refreshToken = await this.settings.getSetting('spotify_refresh_token');
-      const expiresAtStr = await this.settings.getSetting('spotify_token_expires_at');
+      const accessToken = await this.settings.getSetting(
+        'spotify_access_token'
+      );
+      const refreshToken = await this.settings.getSetting(
+        'spotify_refresh_token'
+      );
+      const expiresAtStr = await this.settings.getSetting(
+        'spotify_token_expires_at'
+      );
       const expiresAt = expiresAtStr ? parseInt(expiresAtStr, 10) : 0;
 
       // Check if access token is valid and not expired
       if (accessToken && Date.now() < expiresAt) {
-         this.logger.log(color.blue('Using existing valid Spotify access token from DB during callback.'));
+        this.logger.log(
+          color.blue(
+            'Using existing valid Spotify access token from DB during callback.'
+          )
+        );
         // Pass the retrieved playlistJobId
         return this.createPlaylistWithToken(accessToken, playlistJobId);
       }
 
       // If access token is invalid/expired, try using the refresh token
       if (refreshToken) {
-        this.logger.log(color.blue('Spotify access token expired or invalid during callback, attempting refresh...'));
+        this.logger.log(
+          color.blue(
+            'Spotify access token expired or invalid during callback, attempting refresh...'
+          )
+        );
         try {
           // Try to get a new access token using the refresh token
           const refreshResponse = await axios({
@@ -949,16 +992,37 @@ class Hitlist {
             const newExpiresAt = Date.now() + (expiresIn - 60) * 1000; // Calculate expiry in ms
 
             // Store the new tokens and expiry time in the database
-            await this.settings.setSetting('spotify_access_token', newAccessToken);
-            await this.settings.setSetting('spotify_token_expires_at', newExpiresAt.toString());
+            await this.settings.setSetting(
+              'spotify_access_token',
+              newAccessToken
+            );
+            await this.settings.setSetting(
+              'spotify_token_expires_at',
+              newExpiresAt.toString()
+            );
             if (newRefreshToken) {
-              await this.settings.setSetting('spotify_refresh_token', newRefreshToken);
-              this.logger.log(color.blue('Stored new Spotify refresh token during callback refresh.'));
+              await this.settings.setSetting(
+                'spotify_refresh_token',
+                newRefreshToken
+              );
+              this.logger.log(
+                color.blue(
+                  'Stored new Spotify refresh token during callback refresh.'
+                )
+              );
             } else {
-              this.logger.log(color.blue('Re-using existing Spotify refresh token during callback refresh.'));
+              this.logger.log(
+                color.blue(
+                  'Re-using existing Spotify refresh token during callback refresh.'
+                )
+              );
             }
 
-            this.logger.log(color.green('Successfully refreshed Spotify token during callback.'));
+            this.logger.log(
+              color.green(
+                'Successfully refreshed Spotify token during callback.'
+              )
+            );
             // Pass the retrieved playlistJobId
             return this.createPlaylistWithToken(newAccessToken, playlistJobId);
           }
@@ -973,10 +1037,14 @@ class Hitlist {
       }
 
       // If refresh failed or no refresh token, use the auth code provided
-      this.logger.log(color.blue('Using authorization code to get new Spotify tokens...'));
+      this.logger.log(
+        color.blue('Using authorization code to get new Spotify tokens...')
+      );
       if (!authCode) {
         this.logger.log(
-          color.red.bold('No auth code provided and refresh failed/unavailable.')
+          color.red.bold(
+            'No auth code provided and refresh failed/unavailable.'
+          )
         );
         return { success: false, error: 'Authorization code missing' };
       }
@@ -998,30 +1066,56 @@ class Hitlist {
         }).toString(),
       });
 
-      const accessToken = tokenResponse.data.access_token;
+      // Rename this variable to avoid conflict
+      const accessTokenFromAuthCode = tokenResponse.data.access_token;
       const newRefreshToken = tokenResponse.data.refresh_token;
       const expiresIn = tokenResponse.data.expires_in || 3600;
+      // Calculate expiry time based on expiresIn
+      const receivedExpiresAt = Date.now() + (expiresIn - 60) * 1000;
 
-      if (!accessToken) {
-        this.logger.log(color.red.bold('Failed to get Spotify access token'));
-        return { success: false, error: 'Failed to get Spotify access token' };
+      if (!accessTokenFromAuthCode) {
+        this.logger.log(
+          color.red.bold('Failed to get Spotify access token from auth code')
+        );
+        return {
+          success: false,
+          error: 'Failed to get Spotify access token from auth code',
+        };
       }
 
       // Store the new tokens and expiry time in the database
-      await this.settings.setSetting('spotify_access_token', accessToken);
-      await this.settings.setSetting('spotify_token_expires_at', receivedExpiresAt.toString());
+      await this.settings.setSetting(
+        'spotify_access_token',
+        accessTokenFromAuthCode
+      );
+      await this.settings.setSetting(
+        'spotify_token_expires_at',
+        receivedExpiresAt.toString()
+      );
       if (newRefreshToken) {
-        await this.settings.setSetting('spotify_refresh_token', newRefreshToken);
-        this.logger.log(color.blue('Stored new Spotify refresh token from auth code.'));
+        await this.settings.setSetting(
+          'spotify_refresh_token',
+          newRefreshToken
+        );
+        this.logger.log(
+          color.blue('Stored new Spotify refresh token from auth code.')
+        );
       } else {
-         this.logger.log(color.yellow('No refresh token received from auth code grant.'));
-         // Consider deleting the old refresh token if one existed? Or keep it?
-         // await this.settings.deleteSetting('spotify_refresh_token');
+        this.logger.log(
+          color.yellow('No refresh token received from auth code grant.')
+        );
+        // Consider deleting the old refresh token if one existed? Or keep it?
+        // await this.settings.deleteSetting('spotify_refresh_token');
       }
 
-      this.logger.log(color.green('Successfully obtained Spotify tokens using auth code.'));
+      this.logger.log(
+        color.green('Successfully obtained Spotify tokens using auth code.')
+      );
       // Pass the retrieved playlistJobId and the newly obtained token
-      return this.createPlaylistWithToken(accessTokenFromAuthCode, playlistJobId);
+      return this.createPlaylistWithToken(
+        accessTokenFromAuthCode,
+        playlistJobId
+      );
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error completing Spotify authorization: ${error}`)
@@ -1235,7 +1329,11 @@ class Hitlist {
       );
       // Check if the error is from Spotify API (e.g., invalid token - 401 Unauthorized)
       if (axios.isAxiosError(error) && error.response?.status === 401) {
-        this.logger.log(color.yellow('Spotify API returned 401 Unauthorized. Clearing potentially invalid access token from DB.'));
+        this.logger.log(
+          color.yellow(
+            'Spotify API returned 401 Unauthorized. Clearing potentially invalid access token from DB.'
+          )
+        );
         // Clear potentially invalid access token and its expiry from DB
         await this.settings.deleteSetting('spotify_access_token');
         await this.settings.deleteSetting('spotify_token_expires_at');
@@ -1250,7 +1348,7 @@ class Hitlist {
       return {
         success: false,
         error: 'Error creating/updating Spotify playlist with token',
-      }
+      };
     }
   }
 
