@@ -63,12 +63,12 @@ class Vibe {
             endAt: true,
             votingBackground: true,
             votingLogo: true,
-            Company: true,
-            downloadLink: true,
-            reviewLink: true,
-          },
-        });
-
+           Company: true,
+           downloadLink: true,
+           reviewLink: true,
+           hideCircle: true, // Add hideCircle here
+         },
+       });
         if (companyList) {
           // Get all questions for this list with their options
           const questionsWithOptions =
@@ -787,11 +787,16 @@ class Vibe {
       if (fields.qrColor !== undefined)
         updateData.qrColor = String(fields.qrColor);
       if (fields.textColor !== undefined)
-        updateData.textColor = String(fields.textColor);
+       updateData.textColor = String(fields.textColor);
 
-      // Explicitly handle empty string values for background fields to set them to null
-      if (fields.background === '') {
-        updateData.background = null;
+     // Handle hideCircle boolean field
+     if (fields.hideCircle !== undefined) {
+       updateData.hideCircle = this.utils.parseBoolean(fields.hideCircle);
+     }
+
+     // Explicitly handle empty string values for background fields to set them to null
+     if (fields.background === '') {
+       updateData.background = null;
       }
       if (fields.background2 === '') {
         updateData.background2 = null;
