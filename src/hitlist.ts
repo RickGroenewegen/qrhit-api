@@ -560,17 +560,15 @@ class Hitlist {
       );
 
       // --- Update CompanyList with Limited Playlist URL ---
-      if (limitedPlaylistResult.success && limitedPlaylistResult.data?.playlistUrl) {
+      if (
+        limitedPlaylistResult.success &&
+        limitedPlaylistResult.data?.playlistUrl
+      ) {
         try {
           await this.prisma.companyList.update({
             where: { id: companyListId },
             data: { playlistUrl: limitedPlaylistResult.data.playlistUrl }, // Update the standard playlistUrl field
           });
-          this.logger.log(
-            color.blue.bold(
-              `Updated playlistUrl for CompanyList ID ${companyListId}`
-            )
-          );
         } catch (dbError) {
           this.logger.log(
             color.red.bold(
@@ -587,7 +585,6 @@ class Hitlist {
         );
       }
       // --- End Update ---
-
 
       // --- Create/Update Full Playlist ---
       const fullPlaylistName = `${companyList.name} (FULL)`;
@@ -626,6 +623,13 @@ class Hitlist {
           )
         );
       }
+
+      // Update the list status to:  spotify_list_generated
+      await this.prisma.companyList.update({
+        where: { id: companyListId },
+        data: { status: 'spotify_list_generated' },
+      });
+
       // --- End Update ---
 
       return {
