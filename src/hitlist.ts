@@ -1049,10 +1049,93 @@ class Hitlist {
 
       const userId = profileResponse.data.id;
 
-      // Create the playlist
-      const createPlaylistResponse = await axios({
-        method: 'post',
-        url: `https://api.spotify.com/v1/users/${userId}/playlists`,
+      // --- Check for existing playlist ---
+      let existingPlaylistId: string | null = null;
+      let playlistUrl: string | null = null;
+      const maxPlaylistsToCheck = 50; // Spotify API limit per request
+
+      try {
+        const userPlaylistsResponse = await axios({
+          method: 'get',
+          url: `https://api.spotify.com/v1/users/${userId}/playlists?limit=${maxPlaylistsToCheck}`,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        const userPlaylists = userPlaylistsResponse.data.items;
+        const foundPlaylist = userPlaylists.find(
+          (p: any) => p.name === playlistName && p.owner.id === userId // Ensure correct owner
+        );
+
+        if (foundPlaylist) {
+          existingPlaylistId = foundPlaylist.id;
+          playlistUrl = foundPlaylist.external_urls.spotify;
+          this.logger.log(
+            color.blue.bold(
+              `Found existing playlist "${color.white.bold(
+                playlistName
+              )}" with ID ${color.white.bold(
+                existingPlaylistId
+              )}. Will update tracks.`
+            )
+          );
+        }
+      } catch (playlistFetchError) {
+        this.logger.log(
+          color.yellow.bold(
+            `Could not fetch user playlists to check for existing one: ${playlistFetchError}`
+          )
+        );
+        // Continue to create a new playlist if fetching fails
+      }
+      // --- End Check for existing playlist ---
+
+      let playlistId: string;
+
+      if (existingPlaylistId) {
+        playlistId = existingPlaylistId;
+        // Replace tracks in the existing playlist
+        const trackUris = trackIds.map((id: string) => `spotify:track:${id}`);
+
+        // Spotify API for replacing tracks handles pagination internally if needed,
+        // but it's better to chunk if trackIds > 100 for the PUT request body.
+        const chunkSize = 100;
+        for (let i = 0; i < trackUris.length; i += chunkSize) {
+          const chunk = trackUris.slice(i, i + chunkSize);
+          const method = i === 0 ? 'put' : 'post'; // First chunk replaces, subsequent chunks add
+
+          await axios({
+            method: method,
+            url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            data: JSON.stringify({
+              uris: chunk,
+            }),
+          });
+        }
+        this.logger.log(
+          color.green.bold(
+            `Updated tracks in existing Spotify playlist "${color.white.bold(
+              playlistName
+            )}"`
+          )
+        );
+      } else {
+        // Create a new playlist if none found
+        this.logger.log(
+          color.blue.bold(
+            `No existing playlist found named "${color.white.bold(
+              playlistName
+            )}". Creating new playlist.`
+          )
+        );
+        const createPlaylistResponse = await axios({
+          method: 'post',
+          url: `https://api.spotify.com/v1/users/${userId}/playlists`,
         headers: {
           Authorization: `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
@@ -1061,45 +1144,46 @@ class Hitlist {
           name: playlistName,
           description: playlistDescription,
           public: true,
-        }),
-      });
-
-      const playlistId = createPlaylistResponse.data.id;
-      const playlistUrl = createPlaylistResponse.data.external_urls.spotify;
-
-      if (!playlistId) {
-        this.logger.log(color.red.bold('Failed to create Spotify playlist'));
-        return { success: false, error: 'Failed to create Spotify playlist' };
-      }
-
-      // Add tracks to the playlist (maximum 100 tracks per request)
-      const trackUris = trackIds.map((id: string) => `spotify:track:${id}`);
-
-      // Split into chunks of 100 if needed
-      const chunkSize = 100;
-      for (let i = 0; i < trackUris.length; i += chunkSize) {
-        const chunk = trackUris.slice(i, i + chunkSize);
-
-        await axios({
-          method: 'post',
-          url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-            'Content-Type': 'application/json',
-          },
-          data: JSON.stringify({
-            uris: chunk,
           }),
         });
-      }
 
-      this.logger.log(
-        color.green.bold(
-          `Created Spotify playlist "${color.white.bold(
-            playlistName
-          )}" with ${color.white.bold(trackIds.length)} tracks`
-        )
-      );
+        playlistId = createPlaylistResponse.data.id;
+        playlistUrl = createPlaylistResponse.data.external_urls.spotify;
+
+        if (!playlistId) {
+          this.logger.log(color.red.bold('Failed to create Spotify playlist'));
+          // Ensure cache key is deleted even if creation fails here
+          await this.cache.del(playlistInfoKey);
+          return { success: false, error: 'Failed to create Spotify playlist' };
+        }
+
+        // Add tracks to the newly created playlist (maximum 100 tracks per request)
+        const trackUris = trackIds.map((id: string) => `spotify:track:${id}`);
+        const chunkSize = 100;
+        for (let i = 0; i < trackUris.length; i += chunkSize) {
+          const chunk = trackUris.slice(i, i + chunkSize);
+
+          await axios({
+            method: 'post',
+            url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+            headers: {
+              Authorization: `Bearer ${accessToken}`,
+              'Content-Type': 'application/json',
+            },
+            data: JSON.stringify({
+              uris: chunk,
+            }),
+          });
+        }
+
+        this.logger.log(
+          color.green.bold(
+            `Created new Spotify playlist "${color.white.bold(
+              playlistName
+            )}" with ${color.white.bold(trackIds.length)} tracks`
+          )
+        );
+      }
 
       // Clear the pending playlist info using the specific key
       await this.cache.del(playlistInfoKey);
@@ -1116,11 +1200,11 @@ class Hitlist {
         },
       };
     } catch (error) {
-      // Ensure the cache key is deleted even if playlist creation fails mid-way
+      // Ensure the cache key is deleted even if playlist creation/update fails mid-way
       await this.cache.del(playlistInfoKey);
       this.logger.log(
         color.red.bold(
-          `Error creating playlist with token for job ${playlistJobId}: ${error}`
+          `Error creating/updating playlist with token for job ${playlistJobId}: ${error}`
         )
       );
       // Check if the error is from Spotify API (e.g., invalid token)
@@ -1129,12 +1213,7 @@ class Hitlist {
         await this.cache.del('spotify_access_token');
         return {
           success: false,
-          error: 'Invalid Spotify token, please re-authorize.',
-        };
-      }
-      return {
-        success: false,
-        error: 'Error creating Spotify playlist with token',
+          error: 'Error creating/updating Spotify playlist with token',
       };
     }
   }
