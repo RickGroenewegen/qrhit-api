@@ -55,65 +55,37 @@ class Cache {
     ).version;
   }
 
-  // Add optional db parameter, defaulting to 0
-  public async executeCommand(command: string, db: number = 0, ...args: any[]): Promise<any> {
-    const needsSwitch = db !== 0; // Determine if DB switch is needed
+  public async executeCommand(command: string, ...args: any[]): Promise<any> {
     try {
-      if (needsSwitch) {
-        await this.client.select(db); // Switch to the specified DB
-      }
       // @ts-ignore: Dynamic command execution
-      const result = await this.client[command](...args); // Execute the command
-      return result;
+      return await this.client[command](...args);
     } catch (error) {
       this.logManager.log('Redis command error:' + (error as Error).message);
       throw error; // Re-throwing so that specific call sites can also handle if needed
-    } finally {
-      // Switch back to DB 0 if we switched away
-      if (needsSwitch) {
-        await this.client.select(0); // Ensure we switch back to the default DB
-      }
     }
   }
 
   async set(
     key: string,
     value: string,
-    expireInSeconds?: number,
-    db: number = 0 // Add optional db parameter
+    expireInSeconds?: number
   ): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
     if (expireInSeconds) {
-      // Pass db parameter to executeCommand
-      await this.executeCommand(
-        'set',
-        db,
-        cacheKey,
-        value,
-        'EX',
-        expireInSeconds
-      );
+      await this.executeCommand('set', cacheKey, value, 'EX', expireInSeconds);
     } else {
-      // Pass db parameter to executeCommand
-      await this.executeCommand('set', db, cacheKey, value);
+      await this.executeCommand('set', cacheKey, value);
     }
   }
 
-  async get(
-    key: string,
-    never: boolean = true,
-    db: number = 0
-  ): Promise<string | null> {
-    // Add optional db parameter
+  async get(key: string, never: boolean = true): Promise<string | null> {
     let cacheKey = `${this.version}:${key}`;
     if (process.env['ENVIRONMENT'] === 'development' && never) {
       // cacheKey = `dev_${new Date().getTime()}:${cacheKey}`;
     }
-    // Pass db parameter to executeCommand
-    return await this.executeCommand('get', db, cacheKey);
+    return await this.executeCommand('get', cacheKey);
   }
 
-  // --- Other methods remain unchanged and will use executeCommand's default db (0) ---
   async flush(): Promise<void> {
     await this.executeCommand('flushdb');
   }
@@ -164,10 +136,8 @@ class Cache {
 
   async acquireLock(key: string, ttlSeconds: number = 300): Promise<boolean> {
     const lockKey = `lock:${key}`;
-    // Calls executeCommand without db param, defaults to 0
     const result = await this.executeCommand(
       'set',
-      0, // Explicitly use default DB 0 for locks
       lockKey,
       '1',
       'NX',
@@ -179,8 +149,7 @@ class Cache {
 
   async releaseLock(key: string): Promise<void> {
     const lockKey = `lock:${key}`;
-    // Calls executeCommand without db param, defaults to 0
-    await this.executeCommand('del', 0, lockKey);
+    await this.executeCommand('del', lockKey);
   }
 }
 
