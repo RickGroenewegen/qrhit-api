@@ -27,9 +27,8 @@ class Cache {
     });
   }
 
-  // Updated rateLimit to accept and pass db parameter
-  async rateLimit(key: string, delay: number, db: number = 0): Promise<void> {
-    const lastRequestTime = await this.get(key, false, db); // Pass db to get
+  async rateLimit(key: string, delay: number): Promise<void> {
+    const lastRequestTime = await this.get(key, false);
     const currentTime = Date.now();
     if (lastRequestTime) {
       const elapsedTime = currentTime - parseInt(lastRequestTime, 10);
@@ -39,7 +38,7 @@ class Cache {
         );
       }
     }
-    await this.set(key, currentTime.toString(), undefined, db); // Pass db to set
+    await this.set(key, currentTime.toString());
   }
 
   public static getInstance(): Cache {
@@ -56,66 +55,38 @@ class Cache {
     ).version;
   }
 
-  // Updated executeCommand to handle DB selection
-  public async executeCommand(command: string, db: number = 0, ...args: any[]): Promise<any> {
-    const originalDb = 0; // Assuming the default connection is always DB 0
-    let selectedDb = false;
-
+  public async executeCommand(command: string, ...args: any[]): Promise<any> {
     try {
-      // Select the target database if it's not the default
-      if (db !== originalDb) {
-        // Use the client's select method directly
-        await this.client.select(db);
-        selectedDb = true;
-      }
-
-      // Execute the actual command
       // @ts-ignore: Dynamic command execution
-      const result = await this.client[command](...args);
-      return result;
+      return await this.client[command](...args);
     } catch (error) {
-      this.logManager.log(`Redis command error (DB ${db}, Command ${command}): ${(error as Error).message}`);
+      this.logManager.log('Redis command error:' + (error as Error).message);
       throw error; // Re-throwing so that specific call sites can also handle if needed
-    } finally {
-      // Ensure we switch back to the original database if we switched away
-      if (selectedDb) {
-        // Use the client's select method directly
-        await this.client.select(originalDb);
-      }
     }
   }
 
-  // Updated set method with optional db parameter
   async set(
     key: string,
     value: string,
-    expireInSeconds?: number,
-    db: number = 0 // Added db parameter
+    expireInSeconds?: number
   ): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
     if (expireInSeconds) {
-      // Pass db to executeCommand
-      await this.executeCommand('set', db, cacheKey, value, 'EX', expireInSeconds);
+      await this.executeCommand('set', cacheKey, value, 'EX', expireInSeconds);
     } else {
-      // Pass db to executeCommand
-      await this.executeCommand('set', db, cacheKey, value);
+      await this.executeCommand('set', cacheKey, value);
     }
   }
 
-  // Updated get method with optional db parameter
-  async get(key: string, never: boolean = true, db: number = 0): Promise<string | null> {
+  async get(key: string, never: boolean = true): Promise<string | null> {
     let cacheKey = `${this.version}:${key}`;
     if (process.env['ENVIRONMENT'] === 'development' && never) {
-      // Optional: Consider if dev prefix needs db info
-      // cacheKey = `dev_${db}_${new Date().getTime()}:${cacheKey}`;
+      // cacheKey = `dev_${new Date().getTime()}:${cacheKey}`;
     }
-    // Pass db to executeCommand
-    return await this.executeCommand('get', db, cacheKey);
+    return await this.executeCommand('get', cacheKey);
   }
 
   async flush(): Promise<void> {
-    // Note: flush still uses executeCommand without db, so it will use default db 0
-    // If flush needs db parameter, it should be added here too.
     await this.executeCommand('flushdb');
   }
 
