@@ -738,6 +738,9 @@ class Hitlist {
 
       // Check if we have a refresh token
       const refreshToken = await this.cache.get('spotify_refresh_token');
+
+      console.log(111, refreshToken);
+
       if (refreshToken) {
         try {
           // Try to get a new access token using the refresh token
@@ -789,6 +792,13 @@ class Hitlist {
       // If we don't have a valid token or refresh failed, we need to authorize
       // Generate a random state for OAuth security
       const state = this.utils.generateRandomString(16);
+
+      console.log(
+        1,
+        'setting',
+        `oauth_state_to_job_id:${state}`,
+        playlistJobId
+      );
 
       // Store the mapping from state to playlistJobId in cache
       const stateToJobIdKey = `oauth_state_to_job_id:${state}`;
@@ -843,8 +853,13 @@ class Hitlist {
   ): Promise<any> {
     try {
       // Retrieve the playlistJobId using the state
+
+      console.log(1, 'getting', `oauth_state_to_job_id:${state}`);
+
       const stateToJobIdKey = `oauth_state_to_job_id:${state}`;
       const playlistJobId = await this.cache.get(stateToJobIdKey);
+
+      console.log(333, playlistJobId);
 
       if (!playlistJobId) {
         this.logger.log(

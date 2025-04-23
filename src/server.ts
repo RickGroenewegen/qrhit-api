@@ -1787,6 +1787,8 @@ class Server {
     this.fastify.post(
       '/hitlist/spotify-auth-complete',
       async (request: any, reply) => {
+        console.log(999, request.body);
+
         const { code } = request.body;
 
         if (!code) {
@@ -1814,8 +1816,12 @@ class Server {
         return;
       }
 
+      console.log(111, code);
+
       // Automatically process the authorization
       const result = await this.hitlist.completeSpotifyAuth(code, '');
+
+      console.log(222, result);
 
       if (result.success) {
         reply.type('text/html').send(`
