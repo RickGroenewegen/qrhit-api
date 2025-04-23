@@ -561,18 +561,40 @@ class Hitlist {
           )} with ${color.white.bold(
             topTracks.length
           )} tracks (max: ${color.white.bold(maxTracks)})`
-        )
-      );
+       )
+     );
 
-      // Create a Spotify playlist with the top tracks
-      const playlistResult = await this.createPlaylist(
-        companyList.Company.name,
-        companyList.name,
-        topTracks.map((track) => track.spotifyTrackId)
-      );
+     // --- Create/Update Limited Playlist ---
+     const limitedPlaylistResult = await this.createPlaylist(
+       companyList.Company.name,
+       companyList.name, // Original name
+       topTracks.map((track) => track.spotifyTrackId) // Limited tracks
+     );
+     this.logger.log(
+       color.blue.bold(
+         `Initiated creation/update for limited playlist: ${color.white.bold(
+           companyList.name
+         )}`
+       )
+     );
 
-      return {
-        success: true,
+     // --- Create/Update Full Playlist ---
+     const fullPlaylistName = `${companyList.name} (FULL)`;
+     const fullPlaylistResult = await this.createPlaylist(
+       companyList.Company.name,
+       fullPlaylistName, // Name with suffix
+       sortedTracks.map((track) => track.spotifyTrackId) // All sorted tracks
+     );
+     this.logger.log(
+       color.blue.bold(
+         `Initiated creation/update for full playlist: ${color.white.bold(
+           fullPlaylistName
+         )}`
+       )
+     );
+
+     return {
+       success: true,
         data: {
           companyName: companyList.Company.name,
           companyListName: companyList.name,
