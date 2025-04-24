@@ -25,8 +25,6 @@ class Qr {
       qrColor: qrColor || '#000000',
     };
 
-    console.log(444, params);
-
     const command = new InvokeCommand({
       FunctionName: 'arn:aws:lambda:eu-west-1:071455255929:function:qrLambda',
       Payload: new TextEncoder().encode(JSON.stringify(params)),
