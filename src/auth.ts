@@ -166,7 +166,7 @@ export async function createOrUpdateAdminUser(
 ): Promise<any> {
   const salt = generateSalt();
   const hashedPassword = hashPassword(password, salt);
-  const userId = crypto.randomUUID();
+  const userId = email;
   const userHash = crypto.randomBytes(16).toString('hex');
 
   try {
