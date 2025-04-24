@@ -1147,7 +1147,7 @@ class Vibe {
 
     if (user) {
       const downloadLink = `${process.env['API_URI']}/download/${result.data.paymentId}/${user.hash}/${playlistId}/printer`;
-      const reviewLink = `${process.env['FRONTEND_URI']}/suggestions/${result.data.paymentId}/${user.hash}/${playlistId}/0`;
+      const reviewLink = `${process.env['FRONTEND_URI']}/usersuggestions/${result.data.paymentId}/${user.hash}/${playlistId}/0`;
 
       // Update the list status to 'generating_pdf' using prisma
       await this.prisma.companyList.update({

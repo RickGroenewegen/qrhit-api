@@ -330,18 +330,18 @@ class Server {
             }
             reply.status(statusCode).send({ error: result.error });
             return;
-         }
+          }
 
-         // Return the newly created list with 201 Created status
-         // Construct response data including the listId and the list object
-         const responseData = {
-           listId: result.data.list.id, // Extract the ID
-           list: result.data.list,      // Include the full list object
-         };
-         reply.status(201).send(responseData);
-       } catch (error) {
-         console.error('Error creating company list:', error);
-         reply.status(500).send({ error: 'Internal server error' });
+          // Return the newly created list with 201 Created status
+          // Construct response data including the listId and the list object
+          const responseData = {
+            listId: result.data.list.id, // Extract the ID
+            list: result.data.list, // Include the full list object
+          };
+          reply.status(201).send(responseData);
+        } catch (error) {
+          console.error('Error creating company list:', error);
+          reply.status(500).send({ error: 'Internal server error' });
         }
       }
     );
@@ -1820,12 +1820,8 @@ class Server {
         return;
       }
 
-      console.log(111, 'Received Spotify auth code:', code);
-
       // Automatically process the authorization - removed state parameter
       const result = await this.hitlist.completeSpotifyAuth(code);
-
-      console.log(222, 'Playlist creation result:', result);
 
       if (result.success) {
         reply.type('text/html').send(`
