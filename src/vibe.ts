@@ -376,12 +376,6 @@ class Vibe {
         _count: undefined, // Remove the internal _count object
       }));
 
-      this.logger.log(
-        color.blue.bold(
-          `Retrieved ${color.white.bold(companies.length)} companies`
-        )
-      );
-
       return {
         success: true,
         data: {
