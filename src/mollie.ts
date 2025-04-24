@@ -50,6 +50,7 @@ class Mollie {
     const report = await this.prisma.payment.groupBy({
       by: ['createdAt'],
       where: {
+        vibe: false,
         AND: [
           {
             createdAt: {
@@ -111,6 +112,7 @@ class Mollie {
     const report = await this.prisma.payment.groupBy({
       by: ['countrycode'],
       where: {
+        vibe: false,
         AND: [
           {
             createdAt: {
@@ -193,6 +195,7 @@ class Mollie {
     const report = await this.prisma.payment.groupBy({
       by: ['taxRate'],
       where: {
+        vibe: false,
         AND: [
           {
             createdAt: {
@@ -407,6 +410,7 @@ class Mollie {
 
     const totalItems = await this.prisma.payment.count({
       where: {
+        vibe: false,
         test: showTestPayments,
         ...whereClause,
         ...textSearchClause,
@@ -417,6 +421,7 @@ class Mollie {
 
     const payments = await this.prisma.payment.findMany({
       where: {
+        vibe: false,
         test: showTestPayments,
         ...whereClause,
         ...textSearchClause,
