@@ -70,6 +70,7 @@ class Generator {
         const payments = await this.prisma.payment.findMany({
           where: {
             sentToPrinter: false,
+            vibe: false,
             OR: [
               {
                 canBeSentToPrinter: true,

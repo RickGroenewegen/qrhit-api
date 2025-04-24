@@ -533,7 +533,11 @@ class Mollie {
       let discountUseIds: number[] = [];
       let discountUsed = false;
       let triggerDirectGeneration: boolean = false;
+      let vibe: boolean = false;
 
+      if (params.extraOrderData.vibe) {
+        vibe = params.extraOrderData.vibe;
+      }
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
         countrycode: params.extraOrderData.countrycode,
@@ -787,6 +791,7 @@ class Mollie {
       const insertResult = await this.prisma.payment.create({
         data: {
           paymentId: molliePaymentId,
+          vibe,
           user: {
             connect: { id: userDatabaseId },
           },

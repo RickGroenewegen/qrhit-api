@@ -134,6 +134,7 @@ model Payment {
   OrderType               OrderType?           @relation(fields: [orderTypeId], references: [id])
   orderTypeId             Int?
   test                    Boolean              @default(false)
+  vibe                    Boolean              @default(false)
   reviewMailSent          Boolean              @default(false)
   finalizedAt             DateTime?
   canBeSentToPrinter      Boolean              @default(false)

@@ -1120,6 +1120,7 @@ class Vibe {
         invoiceZipcode: '',
         invoiceCountrycode: '',
         orderType: 'physical',
+        vibe: true,
       },
     };
 
