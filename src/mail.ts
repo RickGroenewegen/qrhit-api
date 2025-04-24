@@ -705,7 +705,7 @@ ${params.html}
 
     const logoPath = `${process.env['ASSETS_DIR']}/images/onzevibe_logo.png`;
     // Use the company domain if provided, otherwise fall back to FRONTEND_URI
-    const verificationLink = `${process.env['FRONTEND_URI']}/hitlist/${slug}/verify/${verificationHash}`;
+    const verificationLink = `${process.env['FRONTEND_VOTING_URI']}/hitlist/${slug}/verify/${verificationHash}`;
 
     const translations = await this.translation.getTranslationsByPrefix(
       'en', // Default to English for now

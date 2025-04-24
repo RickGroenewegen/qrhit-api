@@ -1767,8 +1767,8 @@ class Server {
       return {
         success: success,
         message: success
-          ? 'Submission verified successfully'
-          : 'Verification failed',
+          ? 'Verificatie succesvol. Je wordt nu terug gestuurd naar je lijst ...'
+          : 'Verificatie mislukt',
       };
     });
 

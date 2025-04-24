@@ -855,12 +855,12 @@ class Hitlist {
             } else {
               // Keep the old refresh token if a new one wasn't provided
               this.logger.log(
-                color.blue('Re-using existing Spotify refresh token.')
+                color.blue.bold('Re-using existing Spotify refresh token.')
               );
             }
 
             this.logger.log(
-              color.green('Successfully refreshed Spotify token.')
+              color.green.bold('Successfully refreshed Spotify token.')
             );
             // Pass the playlistJobId directly
             return this.createPlaylistWithToken(newAccessToken, playlistJobId);
