@@ -537,13 +537,9 @@ class Hitlist {
 
       this.logger.log(
         color.blue.bold(
-          `Finalized list for company ${color.white.bold(
+          `Creating playlist for company ${color.white.bold(
             companyList.Company.name
-          )} with ${color.white.bold(
-            topTracks.length // Use the count of tracks marked withinLimit
-          )} tracks based on ranking score (limit: ${color.white.bold(
-            maxTracks
-          )})`
+          )} with ${color.white.bold(topTracks.length)}`
         )
       );
 
@@ -589,13 +585,6 @@ class Hitlist {
         allRankedTracks.map(
           (track: any) => track.spotifyLink!.split('/').pop()!
         ) // All ranked tracks
-      );
-      this.logger.log(
-        color.blue.bold(
-          `Initiated creation/update for full playlist: ${color.white.bold(
-            fullPlaylistName
-          )}`
-        )
       );
 
       // --- Update CompanyList with Full Playlist URL ---
