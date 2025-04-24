@@ -1071,9 +1071,6 @@ class Vibe {
       },
     };
 
-    // Console.log the object in full
-    //console.log(JSON.stringify(paymentParams, null, 2));
-
     this.logger.log(
       color.blue.bold(
         `Started PDF generation for list ${color.white.bold(
