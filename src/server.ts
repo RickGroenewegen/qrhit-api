@@ -121,6 +121,9 @@ class Server {
         return false;
       }
 
+      console.log(111, decoded);
+      console.log(222, allowedGroups);
+
       // Check if user has any of the allowed groups
       if (allowedGroups.length > 0) {
         const userGroups = decoded.userGroups || [];
@@ -128,6 +131,8 @@ class Server {
           allowedGroups.includes(group)
         );
         const isAdmin = decoded.isAdmin || false;
+
+        console.log(hasAllowedGroup, isAdmin);
 
         if (!hasAllowedGroup && !isAdmin) {
           reply
@@ -144,7 +149,7 @@ class Server {
       return {
         // Conditionally apply preHandler based on environment
         preHandler:
-          process.env['ENVIRONMENT'] === 'development'
+          process.env['ENVIRONMENT'] === 'develdopment'
             ? undefined // Skip preHandler in development
             : (request: any, reply: any) =>
                 verifyTokenMiddleware(request, reply, allowedGroups),
