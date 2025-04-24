@@ -29,7 +29,11 @@ export function hashPassword(password: string, salt: string): string {
  * @param salt The stored salt
  * @returns True if the password is correct, false otherwise
  */
-export function verifyPassword(password: string, hash: string, salt: string): boolean {
+export function verifyPassword(
+  password: string,
+  hash: string,
+  salt: string
+): boolean {
   const hashedPassword = hashPassword(password, salt);
   return hashedPassword === hash;
 }
@@ -37,19 +41,19 @@ export function verifyPassword(password: string, hash: string, salt: string): bo
 /**
  * Generates a JWT token for a user
  * @param userId The user ID to include in the token
- * @param isAdmin Whether the user is an admin
  * @param userGroups Optional array of user group names
  * @param companyId Optional company ID the user belongs to
  * @returns A JWT token
  */
 export function generateToken(
-  userId: string, 
-  isAdmin: boolean = false, 
-  userGroups: string[] = [], 
+  userId: string,
+  userGroups: string[] = [],
   companyId?: number
 ): string {
   const secret = process.env.JWT_SECRET!;
-  return jwt.sign({ userId, isAdmin, userGroups, companyId }, secret, { expiresIn: '1y' });
+  return jwt.sign({ userId, userGroups, companyId }, secret, {
+    expiresIn: '1y',
+  });
 }
 
 /**
@@ -72,7 +76,10 @@ export function verifyToken(token: string): any {
  * @param password The user's password
  * @returns A token if authentication is successful, null otherwise
  */
-export async function authenticateUser(email: string, password: string): Promise<{ token: string, userId: string } | null> {
+export async function authenticateUser(
+  email: string,
+  password: string
+): Promise<{ token: string; userId: string } | null> {
   try {
     // First get the full user record
     const user = await prisma.user.findUnique({
@@ -80,10 +87,10 @@ export async function authenticateUser(email: string, password: string): Promise
       include: {
         UserGroupUser: {
           include: {
-            UserGroup: true
-          }
-        }
-      }
+            UserGroup: true,
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -101,14 +108,14 @@ export async function authenticateUser(email: string, password: string): Promise
     }
 
     // Extract user group names
-    const userGroups = user.UserGroupUser.map(ugu => ugu.UserGroup.name);
-    
+    const userGroups = user.UserGroupUser.map((ugu) => ugu.UserGroup.name);
+
     const token = generateToken(
-      user.userId, 
-      user.isAdmin || false, 
+      user.userId,
       userGroups,
       user.companyId || undefined
     );
+
     return { token, userId: user.userId };
   } catch (error) {
     console.error('Authentication error:', error);
@@ -135,24 +142,28 @@ export async function getUserGroups(userId: string): Promise<string[]> {
       include: {
         UserGroupUser: {
           include: {
-            UserGroup: true
-          }
-        }
-      }
+            UserGroup: true,
+          },
+        },
+      },
     });
 
     if (!user) {
       return [];
     }
 
-    return user.UserGroupUser.map(ugu => ugu.UserGroup.name);
+    return user.UserGroupUser.map((ugu) => ugu.UserGroup.name);
   } catch (error) {
     console.error('Error getting user groups:', error);
     return [];
   }
 }
 
-export async function createOrUpdateAdminUser(email: string, password: string, displayName: string): Promise<any> {
+export async function createOrUpdateAdminUser(
+  email: string,
+  password: string,
+  displayName: string
+): Promise<any> {
   const salt = generateSalt();
   const hashedPassword = hashPassword(password, salt);
   const userId = crypto.randomUUID();
@@ -165,10 +176,10 @@ export async function createOrUpdateAdminUser(email: string, password: string, d
       include: {
         UserGroupUser: {
           include: {
-            UserGroup: true
-          }
-        }
-      }
+            UserGroup: true,
+          },
+        },
+      },
     });
 
     if (existingUser) {
@@ -178,27 +189,26 @@ export async function createOrUpdateAdminUser(email: string, password: string, d
         UPDATE users 
         SET password = ${hashedPassword}, 
             salt = ${salt}, 
-            isAdmin = 1, 
             displayName = ${displayName} 
         WHERE email = ${email}
       `;
-      
+
       // Fetch the updated user
       return await prisma.user.findUnique({
         where: { email },
         include: {
           UserGroupUser: {
             include: {
-              UserGroup: true
-            }
-          }
-        }
+              UserGroup: true,
+            },
+          },
+        },
       });
     } else {
       // Create new user using raw SQL to bypass Prisma type checking
       // This is a temporary solution until Prisma client is regenerated
       await prisma.$executeRaw`
-        INSERT INTO users (userId, email, displayName, hash, password, salt, isAdmin, marketingEmails, sync, createdAt, updatedAt)
+        INSERT INTO users (userId, email, displayName, hash, password, salt, marketingEmails, sync, createdAt, updatedAt)
         VALUES (
           ${userId}, 
           ${email}, 
@@ -206,24 +216,23 @@ export async function createOrUpdateAdminUser(email: string, password: string, d
           ${userHash}, 
           ${hashedPassword}, 
           ${salt}, 
-          1, 
           0, 
           0, 
           NOW(), 
           NOW()
         )
       `;
-      
+
       // Fetch the created user
       return await prisma.user.findUnique({
         where: { email },
         include: {
           UserGroupUser: {
             include: {
-              UserGroup: true
-            }
-          }
-        }
+              UserGroup: true,
+            },
+          },
+        },
       });
     }
   } catch (error) {

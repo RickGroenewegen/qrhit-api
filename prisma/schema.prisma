@@ -162,7 +162,6 @@ model User {
   password        String?
   salt            String?
   companyId       Int?
-  isAdmin         Boolean          @default(false)
   marketingEmails Boolean          @default(false)
   sync            Boolean          @default(false)
   payments        Payment[] // One-to-many relation to payments

@@ -121,20 +121,14 @@ class Server {
         return false;
       }
 
-      console.log(111, decoded);
-      console.log(222, allowedGroups);
-
       // Check if user has any of the allowed groups
       if (allowedGroups.length > 0) {
         const userGroups = decoded.userGroups || [];
         const hasAllowedGroup = userGroups.some((group: string) =>
           allowedGroups.includes(group)
         );
-        const isAdmin = decoded.isAdmin || false;
 
-        console.log(hasAllowedGroup, isAdmin);
-
-        if (!hasAllowedGroup && !isAdmin) {
+        if (!hasAllowedGroup) {
           reply
             .status(403)
             .send({ error: 'Forbidden: Insufficient permissions' });
@@ -470,20 +464,6 @@ class Server {
       if (authResult) {
         reply.send({ token: authResult.token, userId: authResult.userId });
         return;
-      }
-
-      // Fallback to environment variables for backward compatibility
-      const validUsername = process.env.ENV_ADMIN_USERNAME;
-      const validPassword = process.env.ENV_ADMIN_PASSWORD;
-      const validUsername2 = process.env.ENV_ADMIN_USERNAME2;
-      const validPassword2 = process.env.ENV_ADMIN_PASSWORD2;
-
-      if (
-        (loginEmail === validUsername && password === validPassword) ||
-        (loginEmail === validUsername2 && password === validPassword2)
-      ) {
-        const token = generateToken(loginEmail, true, ['admin'], undefined);
-        reply.send({ token });
       } else {
         reply.status(401).send({ error: 'Invalid credentials' });
       }
