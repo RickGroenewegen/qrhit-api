@@ -98,7 +98,11 @@
             <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
         <% } %>
         <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
-        <div class="url"><%= process.env['APP_DOMAIN'] %></div>
+        <div class="url">
+            <% if (!php.hideDomain) { %>
+                <%= process.env['APP_DOMAIN'] %>
+            <% } %>
+        </div>
     </div>
     <div style="page-break-after: always;"></div>
     <div class="card-back" style="position: relative;">
@@ -120,7 +124,7 @@
                 <span style="<%= eco ? 'filter: grayscale(100%);' : '' %> font-size: 16px;"><%= php.emoji %></span>
             <% } %>
  
-            <% if (!playlist.hideDomain) { %>
+            <% if (!playlist.hideDomain && !php.hideDomain) { %>
                 <%= process.env['APP_DOMAIN'] %>
             <% } %>
  

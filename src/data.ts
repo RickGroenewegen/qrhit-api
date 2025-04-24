@@ -608,6 +608,7 @@ class Data {
         payment_has_playlist.eco,
         payment_has_playlist.qrColor,
         payment_has_playlist.hideCircle,
+        payment_has_playlist.hideDomain,
         payment_has_playlist.subType,
         playlists.numberOfTracks,
         payment_has_playlist.type AS orderType

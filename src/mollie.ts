@@ -753,6 +753,7 @@ class Mollie {
             eco: item.eco,
             qrColor: item.qrColor || '#000000',
             hideCircle: item.hideCircle,
+            hideDomain: item.hideDomain,
             price: itemPrice,
             priceWithoutVAT: itemPriceWithoutVAT,
             priceVAT: itemPriceVAT,

@@ -165,7 +165,9 @@
                 </div>
                 <!-- <div class="title" style="padding-left:2mm;padding-right:2mm;"><%= playlist.name %></div> -->
                 <div class="domain">
-                   <%= process.env['APP_DOMAIN'] %>
+                    <% if (!php.hideDomain) { %>
+                        <%= process.env['APP_DOMAIN'] %>
+                    <% } %>
                 </div>
             </div>
             <div class="card back" style="position: relative;">
@@ -186,7 +188,7 @@
                     <% if (php.emoji && php.emoji.length) { %>
                         <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
                     <% } %>
-                    <% if (!playlist.hideDomain) { %>
+                    <% if (!playlist.hideDomain && !php.hideDomain) { %>
                         <%= process.env['APP_DOMAIN'] %>
                     <% } %>
                     <% if (php.emoji && php.emoji.length) { %>

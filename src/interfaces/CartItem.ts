@@ -14,6 +14,7 @@ export interface CartItem {
   doubleSided?: boolean;
   qrColor?: string;
   hideCircle?: boolean;
+  hideDomain?: boolean;
   eco?: boolean;
   isSlug?: boolean;
   emoji?: string;

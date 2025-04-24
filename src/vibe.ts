@@ -67,7 +67,7 @@ class Vibe {
             Company: true,
             downloadLink: true,
             reviewLink: true,
-            hideCircle: true, // Add hideCircle here
+            hideCircle: true,
           },
         });
         if (companyList) {
@@ -1073,6 +1073,7 @@ class Vibe {
         playlistName: companyList.name,
         numberOfTracks: companyList.numberOfCards,
         hideCircle: companyList.hideCircle,
+        hideDomain: true,
         qrColor: companyList.qrColor,
         amount: 1,
         price: price,

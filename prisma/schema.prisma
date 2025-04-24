@@ -412,6 +412,7 @@ model PaymentHasPlaylist {
   eco                        Boolean   @default(false)
   hideCircle                 Boolean   @default(false)
   qrColor                    String    @default("#000000")
+  hideDomain                 Boolean   @default(false)
   price                      Float
   priceWithoutVAT            Float
   priceVAT                   Float
