@@ -23,7 +23,6 @@ import Translation from './translation';
 import Utils from './utils';
 import { CartItem } from './interfaces/CartItem';
 import AnalyticsClient from './analytics';
-import * as XLSX from 'xlsx';
 import cluster from 'cluster';
 import { Music } from './music';
 import PushoverClient from './pushover';
@@ -1561,66 +1560,6 @@ class Data {
     return checkedPaymentIds;
   }
 
-  public async fixYears(): Promise<void> {
-    try {
-      const workbook = XLSX.readFile(
-        `${process.env['APP_ROOT']}/../docs/tracks_to_check.xlsx`
-      );
-      const worksheet = workbook.Sheets[workbook.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json<string[]>(worksheet, { header: 1 });
-
-      // Start from row 2 (index 1) to skip header
-      for (let i = 1; i < rows.length; i++) {
-        const row = rows[i] as string[];
-        // Check if column E (index 4) has data
-        if (row && row[4]) {
-          const trackId = parseInt(row[0]);
-          const newYear = parseInt(row[4]);
-
-          if (!isNaN(trackId) && !isNaN(newYear)) {
-            // First get the track to find its ISRC
-            const track = await this.prisma.track.findUnique({
-              where: { id: trackId },
-              select: { isrc: true },
-            });
-
-            // // Update the original track
-            await this.prisma.track.update({
-              where: { id: trackId },
-              data: {
-                year: newYear,
-                yearSource: 'manual',
-                manuallyChecked: true,
-              },
-            });
-
-            // Update all other tracks with matching ISRC
-            await this.prisma.track.updateMany({
-              where: {
-                isrc: track!.isrc,
-                id: { not: trackId }, // Exclude the original track
-              },
-              data: {
-                year: newYear,
-                yearSource: 'manual_other',
-                manuallyChecked: true,
-              },
-            });
-
-            // Get count of updated tracks
-            const updatedCount = await this.prisma.track.count({
-              where: {
-                isrc: track!.isrc,
-                id: { not: trackId },
-              },
-            });
-          }
-        }
-      }
-    } catch (error) {
-      this.logger.log(`Error reading Excel file: ${error}`);
-    }
-  }
   public async searchTracks(
     searchTerm: string,
     missingYouTubeLink: boolean = false
