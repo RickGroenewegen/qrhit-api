@@ -1656,14 +1656,6 @@ class PrintEnBind {
       });
 
       if (unshippedOrders.length > 0) {
-        this.logger.log(
-          color.blue.bold(
-            `Found ${color.white.bold(
-              unshippedOrders.length.toString()
-            )} unshipped orders`
-          )
-        );
-
         for (const order of unshippedOrders) {
           const payment = await this.prisma.payment.findUnique({
             where: { paymentId: order.paymentId },

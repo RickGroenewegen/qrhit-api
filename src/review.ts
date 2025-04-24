@@ -141,8 +141,6 @@ class Review {
   }
 
   public async processReviewEmails() {
-    this.logger.log(color.blue.bold('Getting list of unsent review emails'));
-
     const timeAgoHours = 240;
     const timeAgo = new Date(Date.now() - timeAgoHours * 60 * 60 * 1000);
 

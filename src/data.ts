@@ -227,9 +227,6 @@ class Data {
 
           // Schedule hourly cache refresh
           const job = new CronJob('0 * * * *', async () => {
-            this.logger.log(
-              color.blue.bold('Running scheduled link cache refresh')
-            );
             await this.prefillLinkCache();
           });
           job.start();
@@ -263,10 +260,6 @@ class Data {
         cacheCount++;
       }
     }
-
-    this.logger.log(
-      color.blue.bold(`Cached ${color.white.bold(cacheCount)} track links`)
-    );
   }
 
   public async verifyPayment(paymentId: string) {
