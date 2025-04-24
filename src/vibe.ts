@@ -914,16 +914,6 @@ class Vibe {
         data: updateData,
       });
 
-      this.logger.log(
-        color.blue.bold(
-          `Updated list "${color.white.bold(
-            updatedList.name
-          )}" (ID: ${color.white.bold(
-            listId
-          )}) for company ID ${color.white.bold(companyId)}`
-        )
-      );
-
       // Return the updated list and explicitly include the processed filenames
       return {
         success: true,
