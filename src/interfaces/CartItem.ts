@@ -12,6 +12,8 @@ export interface CartItem {
   fromName?: string;
   personalMessage?: string;
   doubleSided?: boolean;
+  qrColor?: string;
+  hideCircle?: boolean;
   eco?: boolean;
   isSlug?: boolean;
   emoji?: string;

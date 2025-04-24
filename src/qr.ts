@@ -5,7 +5,11 @@ import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 
 class Qr {
   private logger = new Logger();
-  public async generateQRLambda(link: string, outputPath: string) {
+  public async generateQRLambda(
+    link: string,
+    outputPath: string,
+    qrColor: string
+  ) {
     const lambdaClient = new LambdaClient({
       region: 'eu-west-1',
       credentials: {
@@ -14,7 +18,14 @@ class Qr {
       },
     });
 
-    const params = { action: 'qr', url: link, outputPath: outputPath };
+    const params = {
+      action: 'qr',
+      url: link,
+      outputPath: outputPath,
+      qrColor: qrColor || '#000000',
+    };
+
+    console.log(444, params);
 
     const command = new InvokeCommand({
       FunctionName: 'arn:aws:lambda:eu-west-1:071455255929:function:qrLambda',
@@ -42,12 +53,16 @@ class Qr {
     }
   }
 
-  public async generateQR(link: string, outputPath: string) {
+  public async generateQR(
+    link: string,
+    outputPath: string,
+    qrColor: string = '#000000'
+  ) {
     await QRCode.toFile(outputPath, link, {
       type: 'png',
       width: 600,
       color: {
-        dark: '#000000',
+        dark: qrColor,
         light: '#0000',
       },
       errorCorrectionLevel: 'H',

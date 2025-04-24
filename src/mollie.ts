@@ -540,8 +540,6 @@ class Mollie {
         cart: params.cart,
       });
 
-      console.log(111, params.cart.items);
-
       const discountResult = await this.discount.calculateDiscounts(
         params.cart,
         calculateResult.data.total
@@ -753,6 +751,8 @@ class Mollie {
             subType: item.type == 'sheets' ? 'sheets' : 'none',
             doubleSided: item.doubleSided,
             eco: item.eco,
+            qrColor: item.qrColor || '#000000',
+            hideCircle: item.hideCircle,
             price: itemPrice,
             priceWithoutVAT: itemPriceWithoutVAT,
             priceVAT: itemPriceVAT,
