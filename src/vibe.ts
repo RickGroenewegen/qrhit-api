@@ -341,14 +341,6 @@ class Vibe {
         orderBy: { createdAt: 'desc' },
       });
 
-      this.logger.log(
-        color.blue.bold(
-          `Retrieved ${color.white.bold(
-            companyLists.length
-          )} lists for company ${color.white.bold(existingCompany.name)}`
-        )
-      );
-
       return {
         success: true,
         data: {
