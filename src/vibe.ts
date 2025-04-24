@@ -1005,18 +1005,64 @@ class Vibe {
     if (
       companyList &&
       companyList.background &&
-      companyList.background.length > 0
-    ) {
-      const companyDataBackgroundPath = `${process.env['PUBLIC_DIR']}/companydata/backgrounds/${companyList.background}`;
-      const backgroundTargetDir = `${process.env['PUBLIC_DIR']}/background/${companyList.background}`;
+     companyList.background.length > 0
+   ) {
+     const companyDataBackgroundPath = `${process.env['PUBLIC_DIR']}/companydata/backgrounds/${companyList.background}`;
+     // Target directory is now public/background
+     const backgroundTargetDir = `${process.env['PUBLIC_DIR']}/background/${companyList.background}`;
 
-      // Copy the background file to the target directory
-      await fs.copyFile(companyDataBackgroundPath, backgroundTargetDir);
+     try {
+       // Copy the background file to the target directory
+       await fs.copyFile(companyDataBackgroundPath, backgroundTargetDir);
 
-      // Get the filename from companyDataBackgroundPath
-      background = companyList.background;
-    }
-    const items = [
+       // --- Start Image Processing ---
+       // Read the copied file
+       const buffer = await fs.readFile(backgroundTargetDir);
+
+       // Define the base sharp operation
+       let sharpInstance = sharp(buffer).resize(1000, 1000, {
+         fit: 'cover',
+       });
+
+       // Conditionally add the circle composite layer
+       if (!companyList.hideCircle) {
+         const circleSvg = `<svg width="1000" height="1000"><circle cx="500" cy="500" r="400" fill="white" stroke="white" stroke-width="10"/></svg>`;
+         sharpInstance = sharpInstance.composite([
+           {
+             input: Buffer.from(circleSvg),
+             blend: 'over', // Or appropriate blend mode if needed
+           },
+         ]);
+       }
+
+       // Convert to PNG and get the processed buffer
+       const processedBuffer = await sharpInstance
+         .png({ compressionLevel: 9, quality: 90 })
+         .toBuffer();
+
+       // Overwrite the file in the target directory with the processed image
+       await fs.writeFile(backgroundTargetDir, processedBuffer);
+
+       this.logger.log(
+         color.blue.bold(
+           `Processed background image for list ${listId}: ${backgroundTargetDir}`
+         )
+       );
+       // --- End Image Processing ---
+
+       // Get the filename (already correct)
+       background = companyList.background;
+     } catch (error) {
+       this.logger.log(
+         color.red.bold(
+           `Error copying or processing background for list ${listId}: ${error}`
+         )
+       );
+       // Decide how to handle the error - maybe proceed without background?
+       background = null; // Set background to null if processing fails
+     }
+   }
+   const items = [
       {
         productType: 'cards',
         playlistId: playlistId,
