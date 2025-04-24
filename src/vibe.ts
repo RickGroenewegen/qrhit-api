@@ -7,6 +7,7 @@ import Utils from './utils'; // Added Utils
 import Mollie from './mollie';
 import Discount from './discount';
 import Data from './data';
+import sharp from 'sharp'; // Import sharp
 
 class Vibe {
   private static instance: Vibe;
