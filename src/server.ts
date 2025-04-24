@@ -330,13 +330,18 @@ class Server {
             }
             reply.status(statusCode).send({ error: result.error });
             return;
-          }
+         }
 
-          // Return the newly created list with 201 Created status
-          reply.status(201).send(result.data);
-        } catch (error) {
-          console.error('Error creating company list:', error);
-          reply.status(500).send({ error: 'Internal server error' });
+         // Return the newly created list with 201 Created status
+         // Construct response data including the listId and the list object
+         const responseData = {
+           listId: result.data.list.id, // Extract the ID
+           list: result.data.list,      // Include the full list object
+         };
+         reply.status(201).send(responseData);
+       } catch (error) {
+         console.error('Error creating company list:', error);
+         reply.status(500).send({ error: 'Internal server error' });
         }
       }
     );
