@@ -1357,11 +1357,36 @@ class Hitlist {
 
   /**
    * Retrieves playlist information from the Spotify API.
-   * @param playlistId The Spotify ID of the playlist.
+   * Retrieves playlist information from the Spotify API. Matches signature of spotify.ts getPlaylist.
+   * NOTE: cache, captcha, featured, isSlug, locale parameters are ignored in this implementation.
+   * @param playlistId The Spotify ID or potentially slug (though slug lookup is not implemented here).
+   * @param cache Ignored.
+   * @param captchaToken Ignored.
+   * @param checkCaptcha Ignored.
+   * @param featured Ignored.
+   * @param isSlug Ignored (assumes playlistId is Spotify ID).
+   * @param locale Ignored.
    * @returns Object with success status and playlist data or error.
    */
-  public async getSpotifyPlaylistInfo(playlistId: string): Promise<any> {
+  public async getPlaylist(
+    playlistId: string,
+    cache: boolean = true, // Ignored
+    captchaToken: string = '', // Ignored
+    checkCaptcha: boolean = false, // Ignored
+    featured: boolean = false, // Ignored
+    isSlug: boolean = false, // Ignored
+    locale: string = 'en' // Ignored
+  ): Promise<any> {
     try {
+      // Log if unsupported parameters are used with non-default values
+      if (cache !== true) this.logger.log(color.yellow('getPlaylist: cache parameter is ignored.'));
+      if (captchaToken) this.logger.log(color.yellow('getPlaylist: captchaToken parameter is ignored.'));
+      if (checkCaptcha) this.logger.log(color.yellow('getPlaylist: checkCaptcha parameter is ignored.'));
+      if (featured) this.logger.log(color.yellow('getPlaylist: featured parameter is ignored.'));
+      if (isSlug) this.logger.log(color.yellow('getPlaylist: isSlug parameter is ignored (assuming playlistId is Spotify ID).'));
+      if (locale !== 'en') this.logger.log(color.yellow('getPlaylist: locale parameter is ignored.'));
+
+
       if (!playlistId) {
         return { success: false, error: 'Playlist ID is required' };
       }
@@ -1539,12 +1564,29 @@ class Hitlist {
   }
 
   /**
-   * Retrieves all tracks from a specific Spotify playlist, handling pagination.
-   * @param playlistId The Spotify ID of the playlist.
+   * Retrieves all tracks from a specific Spotify playlist, handling pagination. Matches signature of spotify.ts getTracks.
+   * NOTE: cache, captcha, isSlug parameters are ignored in this implementation.
+   * @param playlistId The Spotify ID or potentially slug (though slug lookup is not implemented here).
+   * @param cache Ignored.
+   * @param captchaToken Ignored.
+   * @param checkCaptcha Ignored.
+   * @param isSlug Ignored (assumes playlistId is Spotify ID).
    * @returns Object with success status and an array of all tracks or error.
    */
-  public async getSpotifyPlaylistTracks(playlistId: string): Promise<any> {
+  public async getTracks(
+    playlistId: string,
+    cache: boolean = true, // Ignored
+    captchaToken: string = '', // Ignored
+    checkCaptcha: boolean = false, // Ignored
+    isSlug: boolean = false // Ignored
+  ): Promise<any> {
     try {
+      // Log if unsupported parameters are used with non-default values
+      if (cache !== true) this.logger.log(color.yellow('getTracks: cache parameter is ignored.'));
+      if (captchaToken) this.logger.log(color.yellow('getTracks: captchaToken parameter is ignored.'));
+      if (checkCaptcha) this.logger.log(color.yellow('getTracks: checkCaptcha parameter is ignored.'));
+      if (isSlug) this.logger.log(color.yellow('getTracks: isSlug parameter is ignored (assuming playlistId is Spotify ID).'));
+
       if (!playlistId) {
         return { success: false, error: 'Playlist ID is required' };
       }
