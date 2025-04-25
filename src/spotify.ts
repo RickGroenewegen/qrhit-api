@@ -733,7 +733,7 @@ class Spotify {
   ): Promise<ApiResult> {
     // Delegate to the currently selected API implementation
     // Note: SpotifyRapidApi's implementation might return an error if not supported.
-    return this.api.createOrUpdatePlaylist(playlistName, trackIds);
+    return this.spotifyApi.createOrUpdatePlaylist(playlistName, trackIds);
   }
 }
 
