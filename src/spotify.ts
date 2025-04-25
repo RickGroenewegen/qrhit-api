@@ -99,7 +99,14 @@ class Spotify {
 
         const playlistData = result.data;
 
+        // Add check to ensure playlistData exists before accessing its properties
+        if (!playlistData) {
+          this.logger.log(color.red.bold(`Playlist data missing from API response for ${checkPlaylistId}`));
+          return { success: false, error: 'Error getting playlist data from API' };
+        }
+
         let image = '';
+        // Now it's safe to access playlistData properties
         if (playlistData.images && playlistData.images.length > 0) {
           image = playlistData.images[0].url;
         }
