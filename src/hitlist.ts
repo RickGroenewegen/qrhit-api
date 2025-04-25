@@ -9,6 +9,7 @@ import Settings from './settings'; // Import the new Settings class
 import Data from './data';
 import Mail from './mail';
 import Vibe from './vibe'; // Import the Vibe class
+import Translation from './translation'; // Import Translation
 import axios, { AxiosResponse } from 'axios'; // Import AxiosResponse
 import { format } from 'date-fns'; // Add date-fns format import
 
@@ -1358,14 +1359,14 @@ class Hitlist {
   /**
    * Retrieves playlist information from the Spotify API.
    * Retrieves playlist information from the Spotify API. Matches signature of spotify.ts getPlaylist.
-   * NOTE: cache, captcha, featured, isSlug, locale parameters are ignored in this implementation.
-   * @param playlistId The Spotify ID or potentially slug (though slug lookup is not implemented here).
+   * NOTE: cache, captcha parameters are ignored in this implementation.
+   * @param playlistId The Spotify ID or slug.
    * @param cache Ignored.
    * @param captchaToken Ignored.
    * @param checkCaptcha Ignored.
-   * @param featured Ignored.
-   * @param isSlug Ignored (assumes playlistId is Spotify ID).
-   * @param locale Ignored.
+   * @param featured If true, attempts to fetch name/description override from the database based on locale.
+   * @param isSlug If true, treats playlistId as a slug for database lookup.
+   * @param locale The locale to use for featured playlist name/description overrides (e.g., 'en', 'nl'). Defaults to 'en'.
    * @returns Object with success status and playlist data or error.
    */
   public async getPlaylist(
@@ -1373,11 +1374,16 @@ class Hitlist {
     cache: boolean = true, // Ignored
     captchaToken: string = '', // Ignored
     checkCaptcha: boolean = false, // Ignored
-    featured: boolean = false, // Ignored
-    isSlug: boolean = false, // Ignored
-    locale: string = 'en' // Ignored
+    featured: boolean = false, // Now used
+    isSlug: boolean = false, // Now used
+    locale: string = 'en' // Now used
   ): Promise<any> {
     try {
+      // Validate locale
+      if (!this.translation.isValidLocale(locale)) {
+        locale = 'en'; // Default to 'en' if invalid
+      }
+
       if (!playlistId) {
         return { success: false, error: 'Playlist ID is required' };
       }
@@ -1502,12 +1508,49 @@ class Hitlist {
           },
         });
 
+        let playlistName = response.data.name;
+        let playlistDescription = response.data.description;
+
+        // If featured, try to get name/description override from DB
+        if (featured) {
+          // Use the original playlistId if it was a slug, or checkPlaylistId if it wasn't
+          const idToQuery = isSlug ? playlistId : checkPlaylistId;
+          const dbPlaylist = await this.prisma.playlist.findFirst({
+            where: {
+              // Query by slug if isSlug is true, otherwise by playlistId
+              ...(isSlug
+                ? { slug: idToQuery }
+                : { playlistId: idToQuery }),
+            },
+            // Select the base name and the localized description
+            select: {
+              name: true,
+              [`description_${locale}`]: true, // Dynamically select based on locale
+            },
+          });
+
+          if (dbPlaylist) {
+            playlistName = dbPlaylist.name || playlistName; // Override name if found in DB
+            // Override description if localized description exists in DB
+            const localizedDescription = (dbPlaylist as any)[
+              `description_${locale}`
+            ];
+            playlistDescription = localizedDescription || playlistDescription;
+          } else {
+            this.logger.log(
+              color.yellow(
+                `Featured playlist with ID/Slug "${idToQuery}" not found in DB for override.`
+              )
+            );
+          }
+        }
+
         // Return data matching spotify.ts getPlaylist structure
         const playlistData = {
           id: checkPlaylistId, // Use the potentially translated ID
           playlistId: response.data.id, // Store the actual Spotify ID here
-          name: response.data.name,
-          description: response.data.description,
+          name: playlistName, // Use potentially overridden name
+          description: playlistDescription, // Use potentially overridden description
           numberOfTracks: response.data.tracks.total,
           image: response.data.images?.[0]?.url || '', // Match 'image' field name
         };
