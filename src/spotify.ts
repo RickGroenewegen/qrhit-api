@@ -23,6 +23,7 @@ class Spotify {
   private analytics = AnalyticsClient.getInstance();
   private prisma = PrismaInstance.getInstance();
   private translate = new Translation();
+  private logger = new Logger(); // Add logger instance
   private spotifyApi = new SpotifyApi(); // Instantiate SpotifyApi
   private spotifyRapidApi = new SpotifyRapidApi(); // Instantiate SpotifyRapidApi
 
@@ -421,7 +422,7 @@ class Spotify {
               image: imageUrl,
               releaseDate: trackData.album?.release_date
                 ? format(new Date(trackData.album.release_date), 'yyyy-MM-dd')
-                : undefined, // Handle potentially invalid date
+                : '', // Default to empty string if date is missing
               trueYear,
               extraNameAttribute,
               extraArtistAttribute,
