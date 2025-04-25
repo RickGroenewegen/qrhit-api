@@ -237,7 +237,7 @@ class SpotifyApi {
           success: false,
           error: 'Spotify authorization error (token likely expired/invalid)',
           needsReAuth: true,
-          authUrl: this.getAuthorizationUrl(), // Include auth URL on 401
+          authUrl: this.getAuthorizationUrl() ?? undefined, // Convert null to undefined
         };
       } else if (status === 404) {
         return {
@@ -292,7 +292,7 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
-        authUrl: this.getAuthorizationUrl(), // Add authUrl
+        authUrl: this.getAuthorizationUrl() ?? undefined, // Convert null to undefined
       };
     }
 
@@ -324,7 +324,7 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
-        authUrl: this.getAuthorizationUrl(), // Add authUrl
+        authUrl: this.getAuthorizationUrl() ?? undefined, // Convert null to undefined
       };
     }
 
@@ -382,7 +382,7 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
-        authUrl: this.getAuthorizationUrl(), // Add authUrl
+        authUrl: this.getAuthorizationUrl() ?? undefined, // Convert null to undefined
       };
     }
 
@@ -466,7 +466,7 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
-        authUrl: this.getAuthorizationUrl(), // Add authUrl
+        authUrl: this.getAuthorizationUrl() ?? undefined, // Convert null to undefined
       };
     }
 
@@ -513,7 +513,7 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
-        authUrl: this.getAuthorizationUrl(), // Add authUrl
+        authUrl: this.getAuthorizationUrl() ?? undefined, // Convert null to undefined
       };
     }
 
