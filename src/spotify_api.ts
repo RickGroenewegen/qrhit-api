@@ -40,7 +40,9 @@ class SpotifyApi {
     }
 
     let accessToken = await this.settings.getSetting('spotify_access_token');
-    const refreshToken = await this.settings.getSetting('spotify_refresh_token');
+    const refreshToken = await this.settings.getSetting(
+      'spotify_refresh_token'
+    );
     const expiresAtStr = await this.settings.getSetting(
       'spotify_token_expires_at'
     );
@@ -110,8 +112,11 @@ class SpotifyApi {
         }
       );
 
-      const { access_token, expires_in, refresh_token: newRefreshToken } =
-        response.data;
+      const {
+        access_token,
+        expires_in,
+        refresh_token: newRefreshToken,
+      } = response.data;
       const newExpiresAt = Date.now() + (expires_in - 60) * 1000; // Store with a 60s buffer
 
       await this.settings.setSetting('spotify_access_token', access_token);
@@ -120,7 +125,10 @@ class SpotifyApi {
         newExpiresAt.toString()
       );
       if (newRefreshToken) {
-        await this.settings.setSetting('spotify_refresh_token', newRefreshToken);
+        await this.settings.setSetting(
+          'spotify_refresh_token',
+          newRefreshToken
+        );
         this.logger.log(color.blue('Stored new Spotify refresh token.'));
       }
 
@@ -129,7 +137,9 @@ class SpotifyApi {
       );
       return access_token;
     } catch (error) {
-      this.logger.log(color.red.bold(`Error refreshing Spotify token: ${error}`));
+      this.logger.log(
+        color.red.bold(`Error refreshing Spotify token: ${error}`)
+      );
       // Optionally clear tokens if refresh fails permanently (e.g., invalid refresh token)
       // await this.settings.deleteSetting('spotify_refresh_token');
       // await this.settings.deleteSetting('spotify_access_token');
@@ -216,9 +226,7 @@ class SpotifyApi {
         axiosError.response?.data?.error?.message || axiosError.message;
 
       this.logger.log(
-        color.red.bold(
-          `Spotify API error ${context}: ${status} - ${message}`
-        )
+        color.red.bold(`Spotify API error ${context}: ${status} - ${message}`)
       );
 
       if (status === 401) {
@@ -278,10 +286,9 @@ class SpotifyApi {
     accessToken: string
   ): Promise<ApiResult> {
     let allItems: any[] = [];
-    let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`; // Max limit is 100 for this endpoint
-import axios, { AxiosError, AxiosResponse } from 'axios'; // Import AxiosResponse
-
-// ... other code ...
+    let nextUrl:
+      | string
+      | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`; // Max limit is 100 for this endpoint
 
     try {
       while (nextUrl) {
@@ -296,7 +303,10 @@ import axios, { AxiosError, AxiosResponse } from 'axios'; // Import AxiosRespons
       // We return the combined 'items' array directly.
       return { success: true, data: { items: allItems } };
     } catch (error) {
-      return this.handleApiError(error, `fetching tracks for playlist ${playlistId}`);
+      return this.handleApiError(
+        error,
+        `fetching tracks for playlist ${playlistId}`
+      );
     }
   }
 
@@ -373,24 +383,6 @@ import axios, { AxiosError, AxiosResponse } from 'axios'; // Import AxiosRespons
   }
 
   /**
-   * Fetches the current user's profile information.
-   * @param accessToken A valid Spotify access token.
-   * @returns {Promise<ApiResult>} Contains user profile data or error info.
-   */
-  public async getUserProfile(accessToken: string): Promise<ApiResult> {
-     try {
-      const response = await axios.get('https://api.spotify.com/v1/me', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-      return { success: true, data: response.data };
-    } catch (error) {
-      return this.handleApiError(error, 'fetching user profile');
-    }
-  }
-
-   /**
    * Creates or updates a playlist for the user.
    * @param userId The Spotify user ID.
    * @param accessToken A valid Spotify access token.
@@ -437,8 +429,9 @@ import axios, { AxiosError, AxiosResponse } from 'axios'; // Import AxiosRespons
         }
         // We need to fetch the playlist URL again if we only had the ID
         const playlistDetails = await this.getPlaylist(playlistId, accessToken);
-        playlistUrl = playlistDetails.success ? playlistDetails.data.external_urls.spotify : '';
-
+        playlistUrl = playlistDetails.success
+          ? playlistDetails.data.external_urls.spotify
+          : '';
       } else {
         this.logger.log(
           color.blue.bold(
@@ -489,11 +482,14 @@ import axios, { AxiosError, AxiosResponse } from 'axios'; // Import AxiosRespons
         },
       };
     } catch (error) {
-      return this.handleApiError(error, `creating/updating playlist "${playlistName}"`);
+      return this.handleApiError(
+        error,
+        `creating/updating playlist "${playlistName}"`
+      );
     }
   }
 
-   /**
+  /**
    * Fetches the current user's playlists.
    * @param accessToken A valid Spotify access token.
    * @param limit Max number of playlists per request (default 20, max 50).
@@ -509,13 +505,16 @@ import axios, { AxiosError, AxiosResponse } from 'axios'; // Import AxiosRespons
 
     try {
       // Note: This only gets the first page. A full implementation would paginate.
-      const response = await axios.get(`https://api.spotify.com/v1/me/playlists`, {
-        params: {
-          limit: limit,
-          offset: offset,
-        },
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      const response = await axios.get(
+        `https://api.spotify.com/v1/me/playlists`,
+        {
+          params: {
+            limit: limit,
+            offset: offset,
+          },
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
       return { success: true, data: response.data };
     } catch (error) {
       return this.handleApiError(error, `fetching user playlists`);

@@ -727,20 +727,6 @@ class Server {
     );
 
     this.fastify.get(
-      '/fix_preview_links',
-      getAuthHandler(['admin']),
-      async (_request: any, _reply) => {
-        const result = await this.data.fixPreviewLinks();
-        return {
-          success: true,
-          processed: result.processed,
-          updated: result.updated,
-          errors: result.errors,
-        };
-      }
-    );
-
-    this.fastify.get(
       '/tax_report/:yearMonth',
       getAuthHandler(['admin']),
       async (request: any, reply: any) => {
@@ -1134,14 +1120,6 @@ class Server {
         );
       }
     );
-
-    this.fastify.get('/spotify/playlists', async (request: any, _reply) => {
-      return await this.spotify.getPlaylists(request.headers);
-    });
-
-    this.fastify.post('/spotify/callback', async (request: any, _reply) => {
-      return await this.spotify.getTokens(request.body.code);
-    });
 
     this.fastify.post('/mollie/check', async (request: any, _reply) => {
       return await this.mollie.checkPaymentStatus(request.body.paymentId);
