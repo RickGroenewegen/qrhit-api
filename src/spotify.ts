@@ -28,28 +28,6 @@ class Spotify {
 
   private api = this.spotifyApi; // Default to SpotifyApi
 
-  public async getPlaylistTrackCount(
-    playlistId: string,
-    cache: boolean = true,
-    isSlug: boolean = false
-  ): Promise<number> {
-    let cacheKeyCount = `trackcount_${playlistId}`;
-
-    const cacheResult = await this.cache.get(cacheKeyCount);
-
-    if (cacheResult) {
-      return parseInt(cacheResult);
-    }
-
-    const tracks = await this.getTracks(playlistId, cache, '', false, isSlug);
-
-    if (!tracks.success) {
-      throw new Error('Error getting playlist track count');
-    }
-
-    return tracks.data.totalTracks;
-  }
-
   public async getPlaylist(
     playlistId: string,
     cache: boolean = true,
@@ -680,6 +658,28 @@ class Spotify {
         error: 'Error searching tracks',
       };
     }
+  }
+
+  public async getPlaylistTrackCount(
+    playlistId: string,
+    cache: boolean = true,
+    isSlug: boolean = false
+  ): Promise<number> {
+    let cacheKeyCount = `trackcount_${playlistId}`;
+
+    const cacheResult = await this.cache.get(cacheKeyCount);
+
+    if (cacheResult) {
+      return parseInt(cacheResult);
+    }
+
+    const tracks = await this.getTracks(playlistId, cache, '', false, isSlug);
+
+    if (!tracks.success) {
+      throw new Error('Error getting playlist track count');
+    }
+
+    return tracks.data.totalTracks;
   }
 }
 
