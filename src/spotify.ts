@@ -128,148 +128,7 @@ class Spotify {
   private spotifyApi = new SpotifyApi(); // Instantiate SpotifyApi
   private spotifyRapidApi = new SpotifyRapidApi(); // Instantiate SpotifyRapidApi
 
-  // create a refresh token method
-  public async refreshAccessToken(refreshToken: string): Promise<ApiResult> {
-    try {
-      const response = await axios({
-        method: 'post',
-        url: 'https://accounts.spotify.com/api/token',
-        data: new URLSearchParams({
-          grant_type: 'refresh_token',
-          refresh_token: refreshToken,
-        }).toString(),
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${Buffer.from(
-            `${process.env['SPOTIFY_CLIENT_ID']}:${process.env['SPOTIFY_CLIENT_SECRET']}`
-          ).toString('base64')}`,
-        },
-      });
-
-      return {
-        success: true,
-        data: {
-          accessToken: response.data.access_token,
-          expiresIn: response.data.expires_in,
-        },
-      };
-    } catch (e) {}
-
-    return {
-      success: false,
-      error: 'Error refreshing access token',
-    };
-  }
-
-  public async getTokens(code: string): Promise<ApiResult> {
-    try {
-      const response = await axios({
-        method: 'post',
-        url: 'https://accounts.spotify.com/api/token',
-        data: new URLSearchParams({
-          code: code,
-          redirect_uri: process.env['SPOTIFY_REDIRECT_URI']!,
-          grant_type: 'authorization_code',
-        }).toString(),
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-          Authorization: `Basic ${Buffer.from(
-            `${process.env['SPOTIFY_CLIENT_ID']}:${process.env['SPOTIFY_CLIENT_SECRET']}`
-          ).toString('base64')}`,
-        },
-      });
-
-      // outout status
-      const profile = await this.getUserProfile(response.data.access_token);
-
-      this.cache.set(
-        `refreshtoken_${response.data.access_token}`,
-        response.data.refresh_token
-      );
-
-      return {
-        success: true,
-        data: {
-          userId: profile.data.userId,
-          email: profile.data.email,
-          displayName: profile.data.displayName,
-          accessToken: response.data.access_token,
-          //refreshToken: response.data.refresh_token,
-          expiresIn: response.data.expires_in,
-        },
-      };
-    } catch (e) {}
-
-    return {
-      success: false,
-      error: 'Error getting tokens',
-    };
-  }
-
-  public async getUserProfile(accessToken: string): Promise<ApiResult> {
-    try {
-      const response = await axios.get('https://api.spotify.com/v1/me', {
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
-
-      // Assuming the ApiResult and User interface are set to handle this:
-      return {
-        success: true,
-        data: {
-          userId: response.data.id,
-          email: response.data.email,
-          displayName: response.data.display_name,
-        },
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: 'Failed to retrieve user profile',
-      };
-    }
-  }
-
-  public async getPlaylists(headers: any): Promise<ApiResult> {
-    try {
-      const response = await axios.get(
-        'https://api.spotify.com/v1/me/playlists',
-        {
-          headers: {
-            Authorization: `Bearer ${headers.authorization}`,
-          },
-        }
-      );
-
-      const playlists: Playlist[] = response.data.items.map((playlist: any) => {
-        return {
-          id: playlist.id,
-          name: playlist.name,
-          numberOfTracks: playlist.tracks.total,
-        };
-      });
-
-      return {
-        success: true,
-        data: playlists,
-      };
-    } catch (e: any) {
-      // check for 401 error
-      const result = this.checkRefreshToken(e, headers);
-
-      return { success: false, error: 'Error getting playlists' };
-    }
-  }
-
-  private async checkRefreshToken(e: any, headers: any) {
-    if (e.response.status === 401) {
-      const refreshToken = await this.cache.get(
-        `refreshtoken_${headers.authorization}`
-      );
-      const tokens = await this.refreshAccessToken(refreshToken!);
-    }
-  }
+  private api = this.spotifyApi; // Default to SpotifyApi
 
   public async getPlaylistTrackCount(
     playlistId: string,
@@ -402,245 +261,6 @@ class Spotify {
         return { success: false, error: 'playlistNotFound' };
       }
       return { success: false, error: 'Error getting playlist' };
-    }
-  }
-
-  public async getTrackPreviews(trackIds: string[]): Promise<ApiResult> {
-    try {
-      const options = {
-        method: 'GET',
-        url: 'https://spotify23.p.rapidapi.com/tracks/',
-        params: {
-          ids: trackIds.join(','),
-        },
-        headers: {
-          'x-rapidapi-key': process.env['RAPID_API_KEY'],
-          'x-rapidapi-host': 'spotify23.p.rapidapi.com',
-        },
-      };
-
-      await this.rapidAPIQueue.enqueue(options);
-      await this.rapidAPIQueue.processQueue();
-      const response = await axios.request(options);
-
-      if (response.data && response.data.tracks) {
-        // Filter out any null or undefined tracks
-        const validTracks = response.data.tracks.filter(
-          (track: any) => track !== null && track !== undefined
-        );
-
-        return {
-          success: true,
-          data: validTracks,
-        };
-      }
-
-      return {
-        success: false,
-        error: 'No tracks found',
-      };
-    } catch (error) {
-      return {
-        success: false,
-        error: 'Error fetching track previews',
-      };
-    }
-  }
-
-  /**
-   * Get detailed information for multiple tracks by their Spotify IDs
-   * @param trackIds Array of Spotify track IDs
-   * @returns ApiResult containing track information
-   */
-  public async getTracksByIds(trackIds: string[]): Promise<ApiResult> {
-    try {
-      if (!trackIds || trackIds.length === 0) {
-        return { success: false, error: 'No track IDs provided' };
-      }
-
-      // Check if we have the tracks in cache
-      const cacheKey = `tracks_by_ids_${trackIds.sort().join('_')}`;
-      const cacheResult = await this.cache.get(cacheKey);
-
-      if (cacheResult) {
-        return JSON.parse(cacheResult);
-      }
-
-      const options = {
-        method: 'GET',
-        url: 'https://spotify23.p.rapidapi.com/tracks/',
-        params: {
-          ids: trackIds.join(','),
-        },
-        headers: {
-          'x-rapidapi-key': process.env['RAPID_API_KEY'],
-          'x-rapidapi-host': 'spotify23.p.rapidapi.com',
-        },
-      };
-
-      await this.rapidAPIQueue.enqueue(options);
-      await this.rapidAPIQueue.processQueue();
-      const response = await axios.request(options);
-
-      this.analytics.increaseCounter('spotify', 'tracks_by_ids', 1);
-
-      if (!response.data || !response.data.tracks) {
-        return { success: false, error: 'No tracks found' };
-      }
-
-      // Filter out any null or undefined tracks
-      const validTracks = response.data.tracks
-        .filter((track: any) => track !== null && track !== undefined)
-        .map((track: any) => {
-          const artist =
-            track.artists && track.artists.length > 0
-              ? track.artists[0].name
-              : '';
-
-          const imageUrl =
-            track.album && track.album.images && track.album.images.length > 0
-              ? track.album.images[0].url
-              : '';
-
-          return {
-            id: track.id,
-            trackId: track.id,
-            name: this.utils.cleanTrackName(track.name || ''),
-            artist: artist,
-            album: track.album?.name || '',
-            image: imageUrl,
-            preview: track.preview_url || '',
-            link: track.external_urls?.spotify || '',
-            isrc: track.external_ids?.isrc || '',
-            releaseDate: track.album?.release_date || '',
-            explicit: track.explicit || false,
-          };
-        })
-        .filter((track: any) => track.name && track.artist); // Filter out tracks with empty name or artist
-
-      const result = {
-        success: true,
-        data: validTracks,
-      };
-
-      // Cache the result for 1 hour
-      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
-
-      return result;
-    } catch (error) {
-      return {
-        success: false,
-        error: 'Error fetching tracks by IDs',
-      };
-    }
-  }
-
-  public async searchTracks(
-    searchTerm: string,
-    limit: number = 10,
-    offset: number = 0
-  ): Promise<ApiResult> {
-    try {
-      if (!searchTerm || searchTerm.length < 2) {
-        return { success: false, error: 'Search term too short' };
-      }
-
-      const cacheKey = `search_${searchTerm}_${limit}_${offset}`;
-      const cacheResult = await this.cache.get(cacheKey);
-
-      if (cacheResult) {
-        return JSON.parse(cacheResult);
-      }
-
-      const options = {
-        method: 'GET',
-        url: 'https://spotify23.p.rapidapi.com/search/',
-        params: {
-          q: searchTerm,
-          type: 'tracks',
-          offset: offset.toString(),
-          limit: limit.toString(),
-          numberOfTopResults: '5',
-        },
-        headers: {
-          'x-rapidapi-key': process.env['RAPID_API_KEY'],
-          'x-rapidapi-host': 'spotify23.p.rapidapi.com',
-        },
-      };
-
-      await this.rapidAPIQueue.enqueue(options);
-      await this.rapidAPIQueue.processQueue();
-      const response = await axios.request(options);
-
-      this.analytics.increaseCounter('spotify', 'search', 1);
-
-      if (
-        !response.data ||
-        !response.data.tracks ||
-        !response.data.tracks.items
-      ) {
-        return { success: false, error: 'No tracks found' };
-      }
-
-      // Transform the response to a more usable format
-      const tracks = response.data.tracks.items
-        .filter((item: any) => item && item.data) // Filter out any null or undefined items
-        .map((item: any) => {
-          const track = item.data;
-
-          // Add null checks for all properties
-          const artist =
-            track.artists &&
-            track.artists.items &&
-            track.artists.items.length > 0
-              ? track.artists.items[0].profile?.name || ''
-              : '';
-
-          const imageUrl =
-            track.albumOfTrack &&
-            track.albumOfTrack.coverArt &&
-            track.albumOfTrack.coverArt.sources &&
-            track.albumOfTrack.coverArt.sources.length > 0
-              ? track.albumOfTrack.coverArt.sources[0].url
-              : '';
-
-          const trackName = this.utils.cleanTrackName(track.name || '');
-
-          return {
-            id: track.id || '',
-            trackId: track.id || '',
-            name: trackName,
-            artist: artist,
-            image: imageUrl,
-          };
-        })
-        .filter(
-          (track: any) => track.name?.length > 0 && track.artist?.length > 0
-        ); // Filter out tracks with empty name or artist
-
-      const result = {
-        success: true,
-        data: {
-          tracks,
-          totalCount: response.data.tracks.totalCount,
-          offset: offset,
-          limit: limit,
-          hasMore:
-            response.data.tracks.pagingInfo &&
-            offset + limit < response.data.tracks.totalCount,
-        },
-      };
-
-      // Cache the result for 1 hour
-      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
-
-      return result;
-    } catch (error) {
-      console.error('Error searching tracks:', error);
-      return {
-        success: false,
-        error: 'Error searching tracks',
-      };
     }
   }
 
@@ -968,6 +588,203 @@ class Spotify {
         return { success: false, error: 'playlistNotFound' };
       }
       return { success: false, error: 'Error getting tracks' };
+    }
+  }
+
+  /**
+   * Get detailed information for multiple tracks by their Spotify IDs
+   * @param trackIds Array of Spotify track IDs
+   * @returns ApiResult containing track information
+   */
+  public async getTracksByIds(trackIds: string[]): Promise<ApiResult> {
+    try {
+      if (!trackIds || trackIds.length === 0) {
+        return { success: false, error: 'No track IDs provided' };
+      }
+
+      // Check if we have the tracks in cache
+      const cacheKey = `tracks_by_ids_${trackIds.sort().join('_')}`;
+      const cacheResult = await this.cache.get(cacheKey);
+
+      if (cacheResult) {
+        return JSON.parse(cacheResult);
+      }
+
+      const options = {
+        method: 'GET',
+        url: 'https://spotify23.p.rapidapi.com/tracks/',
+        params: {
+          ids: trackIds.join(','),
+        },
+        headers: {
+          'x-rapidapi-key': process.env['RAPID_API_KEY'],
+          'x-rapidapi-host': 'spotify23.p.rapidapi.com',
+        },
+      };
+
+      await this.rapidAPIQueue.enqueue(options);
+      await this.rapidAPIQueue.processQueue();
+      const response = await axios.request(options);
+
+      this.analytics.increaseCounter('spotify', 'tracks_by_ids', 1);
+
+      if (!response.data || !response.data.tracks) {
+        return { success: false, error: 'No tracks found' };
+      }
+
+      // Filter out any null or undefined tracks
+      const validTracks = response.data.tracks
+        .filter((track: any) => track !== null && track !== undefined)
+        .map((track: any) => {
+          const artist =
+            track.artists && track.artists.length > 0
+              ? track.artists[0].name
+              : '';
+
+          const imageUrl =
+            track.album && track.album.images && track.album.images.length > 0
+              ? track.album.images[0].url
+              : '';
+
+          return {
+            id: track.id,
+            trackId: track.id,
+            name: this.utils.cleanTrackName(track.name || ''),
+            artist: artist,
+            album: track.album?.name || '',
+            image: imageUrl,
+            preview: track.preview_url || '',
+            link: track.external_urls?.spotify || '',
+            isrc: track.external_ids?.isrc || '',
+            releaseDate: track.album?.release_date || '',
+            explicit: track.explicit || false,
+          };
+        })
+        .filter((track: any) => track.name && track.artist); // Filter out tracks with empty name or artist
+
+      const result = {
+        success: true,
+        data: validTracks,
+      };
+
+      // Cache the result for 1 hour
+      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+
+      return result;
+    } catch (error) {
+      return {
+        success: false,
+        error: 'Error fetching tracks by IDs',
+      };
+    }
+  }
+
+  public async searchTracks(
+    searchTerm: string,
+    limit: number = 10,
+    offset: number = 0
+  ): Promise<ApiResult> {
+    try {
+      if (!searchTerm || searchTerm.length < 2) {
+        return { success: false, error: 'Search term too short' };
+      }
+
+      const cacheKey = `search_${searchTerm}_${limit}_${offset}`;
+      const cacheResult = await this.cache.get(cacheKey);
+
+      if (cacheResult) {
+        return JSON.parse(cacheResult);
+      }
+
+      const options = {
+        method: 'GET',
+        url: 'https://spotify23.p.rapidapi.com/search/',
+        params: {
+          q: searchTerm,
+          type: 'tracks',
+          offset: offset.toString(),
+          limit: limit.toString(),
+          numberOfTopResults: '5',
+        },
+        headers: {
+          'x-rapidapi-key': process.env['RAPID_API_KEY'],
+          'x-rapidapi-host': 'spotify23.p.rapidapi.com',
+        },
+      };
+
+      await this.rapidAPIQueue.enqueue(options);
+      await this.rapidAPIQueue.processQueue();
+      const response = await axios.request(options);
+
+      this.analytics.increaseCounter('spotify', 'search', 1);
+
+      if (
+        !response.data ||
+        !response.data.tracks ||
+        !response.data.tracks.items
+      ) {
+        return { success: false, error: 'No tracks found' };
+      }
+
+      // Transform the response to a more usable format
+      const tracks = response.data.tracks.items
+        .filter((item: any) => item && item.data) // Filter out any null or undefined items
+        .map((item: any) => {
+          const track = item.data;
+
+          // Add null checks for all properties
+          const artist =
+            track.artists &&
+            track.artists.items &&
+            track.artists.items.length > 0
+              ? track.artists.items[0].profile?.name || ''
+              : '';
+
+          const imageUrl =
+            track.albumOfTrack &&
+            track.albumOfTrack.coverArt &&
+            track.albumOfTrack.coverArt.sources &&
+            track.albumOfTrack.coverArt.sources.length > 0
+              ? track.albumOfTrack.coverArt.sources[0].url
+              : '';
+
+          const trackName = this.utils.cleanTrackName(track.name || '');
+
+          return {
+            id: track.id || '',
+            trackId: track.id || '',
+            name: trackName,
+            artist: artist,
+            image: imageUrl,
+          };
+        })
+        .filter(
+          (track: any) => track.name?.length > 0 && track.artist?.length > 0
+        ); // Filter out tracks with empty name or artist
+
+      const result = {
+        success: true,
+        data: {
+          tracks,
+          totalCount: response.data.tracks.totalCount,
+          offset: offset,
+          limit: limit,
+          hasMore:
+            response.data.tracks.pagingInfo &&
+            offset + limit < response.data.tracks.totalCount,
+        },
+      };
+
+      // Cache the result for 1 hour
+      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+
+      return result;
+    } catch (error) {
+      console.error('Error searching tracks:', error);
+      return {
+        success: false,
+        error: 'Error searching tracks',
+      };
     }
   }
 }
