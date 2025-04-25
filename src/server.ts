@@ -1557,54 +1557,6 @@ class Server {
         }
       );
 
-      // API endpoint for getting Spotify playlist info (DEV ONLY)
-      this.fastify.get(
-        '/hitlist/spotify-playlist/:playlistId',
-        async (request: any, reply) => {
-          const { playlistId } = request.params;
-
-          if (!playlistId) {
-            reply.status(400).send({ error: 'Missing playlist ID' });
-            return;
-          }
-
-          // Call the renamed getPlaylist method, passing default values for ignored params
-          const result = await this.hitlist.getPlaylist(
-            playlistId,
-            true, // cache (ignored)
-            '', // captchaToken (ignored)
-            false, // checkCaptcha (ignored)
-            false, // featured (ignored)
-            false, // isSlug (ignored)
-            'en' // locale (ignored)
-          );
-          reply.send(result);
-        }
-      );
-
-      // API endpoint for getting all tracks from a Spotify playlist (DEV ONLY)
-      this.fastify.get(
-        '/hitlist/spotify-playlist/:playlistId/tracks',
-        async (request: any, reply) => {
-          const { playlistId } = request.params;
-
-          if (!playlistId) {
-            reply.status(400).send({ error: 'Missing playlist ID' });
-            return;
-          }
-
-          // Call the renamed getTracks method, passing default values for ignored params
-          const result = await this.hitlist.getTracks(
-            playlistId,
-            true, // cache (ignored)
-            '', // captchaToken (ignored)
-            false, // checkCaptcha (ignored)
-            false // isSlug (ignored)
-          );
-          reply.send(result);
-        }
-      );
-
       this.fastify.get(
         '/youtube/:artist/:title',
         async (request: any, reply: any) => {
@@ -1814,10 +1766,18 @@ class Server {
             )
           );
           // Playlist creation is handled separately. Return success.
-          return { success: true, message: 'Spotify authorization successful.' };
+          return {
+            success: true,
+            message: 'Spotify authorization successful.',
+          };
         } else {
-           this.logger.log(color.red.bold('Failed to exchange Spotify auth code via POST.'));
-           return { success: false, error: 'Failed to complete Spotify authorization.' };
+          this.logger.log(
+            color.red.bold('Failed to exchange Spotify auth code via POST.')
+          );
+          return {
+            success: false,
+            error: 'Failed to complete Spotify authorization.',
+          };
         }
       }
     );
@@ -1843,7 +1803,8 @@ class Server {
       // Exchange the code for tokens using the public method on the Spotify instance
       const tokenResult = await this.spotify.getTokensFromAuthCode(code);
 
-      if (tokenResult) { // Check if token exchange was successful (returned new access token)
+      if (tokenResult) {
+        // Check if token exchange was successful (returned new access token)
         this.logger.log(
           color.green.bold(
             'Spotify authorization successful via callback. Token stored.'
@@ -1862,7 +1823,11 @@ class Server {
           </html>
         `);
       } else {
-        this.logger.log(color.red.bold('Failed to exchange Spotify auth code during callback.'));
+        this.logger.log(
+          color.red.bold(
+            'Failed to exchange Spotify auth code during callback.'
+          )
+        );
         reply.type('text/html').send(`
           <html>
             <head><title>Spotify Authorization Error</title></head>

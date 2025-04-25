@@ -773,27 +773,8 @@ class Hitlist {
           success: true,
           data: result.data, // Contains playlistId, playlistUrl, playlistName
         };
-      } else {
-        // Handle errors returned by createOrUpdatePlaylist
-        // The result object now directly contains error, needsReAuth, and authUrl if applicable
-        this.logger.log(
-          color.red.bold(
-            `Error creating/updating Spotify playlist: ${result.error} ${
-              result.needsReAuth ? '(Needs ReAuth)' : ''
-            }`
-          )
-        );
-        if (result.needsReAuth && result.authUrl) {
-           this.logger.log(
-             color.yellow.bold(
-               'Spotify authorization required. Please visit the following URL:'
-             )
-           );
-           this.logger.log(color.white.bold(result.authUrl));
-        }
-        // Return the ApiResult directly, it contains all necessary info (error, needsReAuth, authUrl)
-        return result;
       }
+      return result;
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error creating Spotify playlist: ${error}`)
