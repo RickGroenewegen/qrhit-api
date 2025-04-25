@@ -21,7 +21,6 @@ class Spotify {
   private data = Data.getInstance(); // Keep Data instance if needed elsewhere
   private utils = new Utils();
   private analytics = AnalyticsClient.getInstance();
-  private rapidAPIQueue = RapidAPIQueue.getInstance();
   private prisma = PrismaInstance.getInstance();
   private translate = new Translation();
   private spotifyApi = new SpotifyApi(); // Instantiate SpotifyApi
