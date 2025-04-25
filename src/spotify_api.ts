@@ -371,19 +371,21 @@ class SpotifyApi {
 
     try {
       // Define the fields needed by spotify.ts getTracksByIds
-      const fields = 'items(id,name,artists(name),album(name,images(url),release_date),external_urls,external_ids,preview_url)'; // Note: API returns 'tracks' not 'items' for this endpoint
-      const trackFields = 'id,name,artists(name),album(name,images(url),release_date),external_urls,external_ids,preview_url'; // Fields for each track object
+      const fields =
+        'items(id,name,artists(name),album(name,images(url),release_date),external_urls,external_ids,preview_url)'; // Note: API returns 'tracks' not 'items' for this endpoint
+      const trackFields =
+        'id,name,artists(name),album(name,images(url),release_date),external_urls,external_ids,preview_url'; // Fields for each track object
 
       for (let i = 0; i < trackIds.length; i += chunkSize) {
         const chunk = trackIds.slice(i, i + chunkSize);
         const response = await axios.get(`https://api.spotify.com/v1/tracks`, {
           params: {
-             ids: chunk.join(','),
-             // Note: The /v1/tracks endpoint doesn't directly support a 'fields' param for the top-level response in the same way as others.
-             // It returns an object { tracks: [...] }. We request all fields for the track objects within the array.
-             // If specific fields were needed *within* each track, that's handled by the API structure itself.
-             // We are already getting the necessary fields based on the default response.
-             // If optimization was needed *within* track objects, it would require a different approach if the API supported it.
+            ids: chunk.join(','),
+            // Note: The /v1/tracks endpoint doesn't directly support a 'fields' param for the top-level response in the same way as others.
+            // It returns an object { tracks: [...] }. We request all fields for the track objects within the array.
+            // If specific fields were needed *within* each track, that's handled by the API structure itself.
+            // We are already getting the necessary fields based on the default response.
+            // If optimization was needed *within* track objects, it would require a different approach if the API supported it.
           },
           headers: { Authorization: `Bearer ${accessToken}` },
         });
@@ -448,7 +450,8 @@ class SpotifyApi {
 
     try {
       // Request only the fields needed by spotify.ts: tracks(items(id, name, artists(name), album(images(url))), total)
-      const fields = 'tracks(items(id,name,artists(name),album(images(url))),total)';
+      const fields =
+        'tracks(items(id,name,artists(name),album(images(url))),total)';
       const response = await axios.get(`https://api.spotify.com/v1/search`, {
         params: {
           q: searchTerm,
@@ -459,9 +462,6 @@ class SpotifyApi {
         },
         headers: { Authorization: `Bearer ${accessToken}` },
       });
-
-      // Output response.data in full. No [object Object] here.
-      console.log(JSON.stringify(response.data, null, 2));
 
       // The response contains a 'tracks' object with items, total, etc.
       return { success: true, data: response.data };

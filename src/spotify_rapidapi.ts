@@ -182,13 +182,6 @@ class SpotifyRapidApi {
    * @returns {Promise<ApiResult>} Contains playlist data or error info.
    */
   public async getPlaylist(playlistId: string): Promise<ApiResult> {
-    this.logger.log(
-      color.blue.bold(
-        `Fetching playlist in ${color.white.bold(
-          'RapidAPI'
-        )} for ID ${color.white.bold(playlistId)}`
-      )
-    );
     try {
       const options = this.createOptions('/playlist', { id: playlistId });
       // Make the request directly
@@ -201,7 +194,8 @@ class SpotifyRapidApi {
 
       // Check if the response contains the expected data structure
       // Adjust this check based on the actual structure returned by RapidAPI for playlists
-      if (!response.data) { // A basic check, might need to be more specific (e.g., response.data.name)
+      if (!response.data) {
+        // A basic check, might need to be more specific (e.g., response.data.name)
         this.logger.log(
           color.yellow(
             `RapidAPI getPlaylist for ${playlistId} returned unexpected data.`
@@ -213,7 +207,6 @@ class SpotifyRapidApi {
       // Return the playlist data directly
       // The structure might differ from Spotify API, ensure the calling code handles it
       return { success: true, data: response.data };
-
     } catch (error) {
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
@@ -401,6 +394,17 @@ class SpotifyRapidApi {
     if (!searchTerm) {
       return { success: false, error: 'Search term is required' };
     }
+
+    this.logger.log(
+      color.blue.bold(
+        `Searching ${color.white.bold(
+          'RapidAPI'
+        )} for tracks matching "${color.white.bold(
+          searchTerm
+        )}" with limit ${color.white.bold(limit)}`
+      )
+    );
+
     try {
       // Note: RapidAPI search endpoint might have different parameter names or structure. Adjust as needed.
       const options = this.createOptions('/search/', {
@@ -412,6 +416,7 @@ class SpotifyRapidApi {
       });
       // Make the request directly
       const response = await axios.request(options);
+
       this.analytics.increaseCounter(
         'spotify_rapidapi',
         'searchTracks_called',
