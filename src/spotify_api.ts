@@ -657,6 +657,26 @@ class SpotifyApi {
   }
 
   /**
+   * Generates the Spotify authorization URL.
+   * @returns {string | null} The authorization URL or null if configuration is missing.
+   */
+  public getAuthorizationUrl(): string | null {
+    if (!this.clientId) {
+      this.logger.log(
+        color.red.bold('Missing Spotify Client ID for generating auth URL.')
+      );
+      return null;
+    }
+    const scope = 'playlist-modify-public'; // Define the required scope
+    const authUrl = `https://accounts.spotify.com/authorize?client_id=${
+      this.clientId
+    }&response_type=code&redirect_uri=${encodeURIComponent(
+      this.redirectUri
+    )}&scope=${encodeURIComponent(scope)}`;
+    return authUrl;
+  }
+
+  /**
    * Fetches the current user's playlists.
    * @param accessToken A valid Spotify access token.
    * @param limit Max number of playlists per request (default 20, max 50).

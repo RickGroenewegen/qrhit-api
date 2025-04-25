@@ -774,24 +774,21 @@ class Hitlist {
           data: result.data, // Contains playlistId, playlistUrl, playlistName
         };
       } else if (result.needsReAuth) {
-        // If re-authentication is needed, construct the auth URL
-        const clientId = process.env['SPOTIFY_CLIENT_ID'];
-        if (!clientId) {
+        // If re-authentication is needed, get the auth URL from the Spotify service
+        const authUrl = this.spotify.getAuthorizationUrl();
+
+        if (!authUrl) {
+          // Handle case where Spotify service couldn't generate the URL (e.g., missing config)
           this.logger.log(
-            color.red.bold('Missing Spotify Client ID for generating auth URL.')
+            color.red.bold(
+              'Failed to generate Spotify authorization URL. Check Spotify module configuration.'
+            )
           );
           return {
             success: false,
-            error: 'Configuration error: Missing Spotify Client ID',
+            error: 'Failed to generate Spotify authorization URL',
           };
         }
-        const redirectUri =
-          process.env['SPOTIFY_REDIRECT_URI'] ||
-          'http://localhost:3004/spotify_callback'; // Use the same default
-        const scope = 'playlist-modify-public';
-        const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(
-          redirectUri
-        )}&scope=${encodeURIComponent(scope)}`;
 
         this.logger.log(
           color.yellow.bold(

@@ -747,6 +747,16 @@ class Spotify {
     // Delegate to the SpotifyApi instance
     return this.spotifyApi.getTokensFromAuthCode(authCode);
   }
+
+  /**
+   * Public method to get the Spotify authorization URL.
+   * Delegates to the SpotifyApi instance.
+   * @returns {string | null} The authorization URL or null.
+   */
+  public getAuthorizationUrl(): string | null {
+    // Delegate to the SpotifyApi instance
+    return this.spotifyApi.getAuthorizationUrl();
+  }
 }
 
 export default Spotify;
