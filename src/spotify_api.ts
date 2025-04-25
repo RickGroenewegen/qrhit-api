@@ -386,16 +386,14 @@ class SpotifyApi {
   }
 
   /**
-   * Searches for tracks on Spotify.
+   * Searches for tracks on Spotify, handling token internally.
    * @param searchTerm The search query.
-   * @param accessToken A valid Spotify access token.
    * @param limit Max number of results (default 20, max 50).
    * @param offset Offset for pagination (default 0).
    * @returns {Promise<ApiResult>} Contains search results or error info.
    */
   public async searchTracks(
     searchTerm: string,
-    accessToken: string,
     limit: number = 20,
     offset: number = 0
   ): Promise<ApiResult> {
@@ -403,6 +401,15 @@ class SpotifyApi {
       return { success: false, error: 'Search term is required' };
     }
     limit = Math.min(limit, 50); // Enforce Spotify API limit
+
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) {
+      return {
+        success: false,
+        error: 'Spotify authentication required',
+        needsReAuth: true,
+      };
+    }
 
     try {
       const response = await axios.get(`https://api.spotify.com/v1/search`, {

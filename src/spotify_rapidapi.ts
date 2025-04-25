@@ -300,7 +300,7 @@ class SpotifyRapidApi {
    * @param searchTerm The search query.
    * @param limit Max number of results.
    * @param offset Offset for pagination.
-   * @returns {Promise<ApiResult>} Indicates success/failure of *enqueueing*.
+   * @returns {Promise<ApiResult>} Contains search results or error info.
    */
   public async searchTracks(searchTerm: string, limit: number = 10, offset: number = 0): Promise<ApiResult> {
      if (!searchTerm) {
@@ -315,13 +315,28 @@ class SpotifyRapidApi {
         limit: limit.toString(),
         numberOfTopResults: '5', // Example parameter, adjust based on API
       });
-      await this.rapidAPIQueue.enqueue(options);
-      this.analytics.increaseCounter('spotify_rapidapi', 'searchTracks_enqueued', 1);
-      // Removed 'message' property
-      return { success: true };
+      // Make the request directly
+      const response = await axios.request(options);
+      this.analytics.increaseCounter('spotify_rapidapi', 'searchTracks_called', 1);
+
+      // Check and return the response data
+      if (!response.data) {
+         this.logger.log(color.yellow(`RapidAPI searchTracks returned no data.`));
+         return { success: false, error: 'No results from RapidAPI' };
+      }
+
+      // Assuming the structure is { tracks: { items: [], totalCount: number } }
+      // Adapt this based on the actual RapidAPI response structure
+      return { success: true, data: response.data };
+
     } catch (error) {
-        this.logger.log(color.red.bold(`Error enqueueing searchTracks request: ${error}`));
-        return { success: false, error: 'Failed to enqueue request' };
+      const axiosError = error as AxiosError;
+      const status = axiosError.response?.status;
+      const message = axiosError.message;
+      this.logger.log(color.red.bold(`Error searching RapidAPI tracks: ${status} - ${message}`));
+
+      // Return a generic error for search issues
+      return { success: false, error: `RapidAPI error searching tracks: ${status || message}` };
     }
   }
 

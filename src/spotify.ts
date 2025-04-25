@@ -599,93 +599,81 @@ class Spotify {
         return JSON.parse(cacheResult);
       }
 
-      const options = {
-        method: 'GET',
-        url: 'https://spotify23.p.rapidapi.com/search/',
-        params: {
-          q: searchTerm,
-          type: 'tracks',
-          offset: offset.toString(),
-          limit: limit.toString(),
-          numberOfTopResults: '5',
-        },
-        headers: {
-          'x-rapidapi-key': process.env['RAPID_API_KEY'],
-          'x-rapidapi-host': 'spotify23.p.rapidapi.com',
-        },
-      };
+      // Call the abstracted API method
+      const result = await this.api.searchTracks(searchTerm, limit, offset);
 
-      // Directly make the request instead of using the queue
-      const response = await axios.request(options);
-
-      this.analytics.increaseCounter('spotify', 'search', 1); // Keep analytics
-
-      if (
-        !response.data ||
-        !response.data.tracks ||
-        !response.data.tracks.items
-      ) {
-        return { success: false, error: 'No tracks found' };
+      if (!result.success) {
+        // Handle errors, including potential re-authentication needs
+        if (result.needsReAuth) {
+          return { success: false, error: result.error, needsReAuth: true };
+        }
+        return {
+          success: false,
+          error: result.error || 'Error searching tracks from API',
+        };
       }
 
-      // Transform the response to a more usable format
-      const tracks = response.data.tracks.items
-        .filter((item: any) => item && item.data) // Filter out any null or undefined items
-        .map((item: any) => {
-          const track = item.data;
+      // API call successful, process the items
+      // Assuming the API implementation returns search results in result.data
+      const searchData = result.data;
+      const rawItems = searchData?.tracks?.items || []; // Adjust based on actual API response structure
+      const totalCount = searchData?.tracks?.total || 0;
 
-          // Add null checks for all properties
+      this.analytics.increaseCounter('spotify', 'search_api', 1); // Keep analytics
+
+      // Transform the response to the format expected by the frontend/caller
+      const formattedTracks = rawItems
+        .filter((item: any) => item) // Filter out null items
+        .map((track: any) => {
+          // Adapt formatting based on the structure returned by SpotifyApi/SpotifyRapidApi searchTracks
+          // This example assumes a structure similar to the official Spotify API search response
           const artist =
-            track.artists &&
-            track.artists.items &&
-            track.artists.items.length > 0
-              ? track.artists.items[0].profile?.name || ''
+            track.artists && track.artists.length > 0
+              ? track.artists[0].name // Assuming first artist
               : '';
 
           const imageUrl =
-            track.albumOfTrack &&
-            track.albumOfTrack.coverArt &&
-            track.albumOfTrack.coverArt.sources &&
-            track.albumOfTrack.coverArt.sources.length > 0
-              ? track.albumOfTrack.coverArt.sources[0].url
+            track.album && track.album.images && track.album.images.length > 0
+              ? track.album.images[0].url // Assuming first image
               : '';
 
           const trackName = this.utils.cleanTrackName(track.name || '');
 
+          // Return a simplified structure matching the previous RapidAPI format
           return {
             id: track.id || '',
-            trackId: track.id || '',
+            trackId: track.id || '', // Keep for compatibility if needed
             name: trackName,
             artist: artist,
             image: imageUrl,
+            // Add other fields if needed and available from the API response
+            // e.g., preview_url, external_urls.spotify
           };
         })
         .filter(
           (track: any) => track.name?.length > 0 && track.artist?.length > 0
         ); // Filter out tracks with empty name or artist
 
-      const result = {
+      const finalResult = {
         success: true,
         data: {
-          tracks,
-          totalCount: response.data.tracks.totalCount,
+          tracks: formattedTracks,
+          totalCount: totalCount,
           offset: offset,
           limit: limit,
-          hasMore:
-            response.data.tracks.pagingInfo &&
-            offset + limit < response.data.tracks.totalCount,
+          hasMore: offset + limit < totalCount,
         },
       };
 
-      // Cache the result for 1 hour
-      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+      // Cache the final processed result for 1 hour
+      await this.cache.set(cacheKey, JSON.stringify(finalResult), 3600);
 
-      return result;
-    } catch (error) {
-      console.error('Error searching tracks:', error);
+      return finalResult;
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`Error in searchTracks: ${error.message}`));
       return {
         success: false,
-        error: 'Error searching tracks',
+        error: 'Internal error searching tracks',
       };
     }
   }
