@@ -10,6 +10,7 @@ import Data from './data';
 import Mail from './mail';
 import Vibe from './vibe'; // Import the Vibe class
 import Translation from './translation'; // Import Translation
+import { Prisma } from '@prisma/client'; // Import Prisma for raw query join
 import axios, { AxiosResponse } from 'axios'; // Import AxiosResponse
 import { format } from 'date-fns'; // Add date-fns format import
 
@@ -1762,12 +1763,212 @@ class Hitlist {
           });
 
           const items = response.data.items || [];
-          const mappedTracks = items
-            .filter((item: any) => item.track && item.track.id) // Ensure track data exists
-            .map((item: any) => {
-              const track = item.track;
-              let trueArtist: string | undefined;
-              if (track.artists?.length > 0) {
+
+          // --- Start DB Lookup for Overrides (like spotify.ts) ---
+          const trackIds = items
+            .filter((item: any) => item.track?.id)
+            .map((item: any) => item.track.id);
+
+          let yearResults: {
+            trackId: string;
+            year: number;
+            name: string;
+            artist: string;
+            extraNameAttribute?: string;
+            extraArtistAttribute?: string;
+          }[] = [];
+
+          if (trackIds.length > 0) {
+            // Get the internal DB ID for the playlist (needed for trackextrainfo join)
+            const dbPlaylist = await this.prisma.playlist.findFirst({
+              where: { playlistId: checkPlaylistId }, // Use the potentially slug-translated ID
+              select: { id: true },
+            });
+
+            if (dbPlaylist) {
+              // Query similar to spotify.ts
+              yearResults = await this.prisma.$queryRaw<
+                {
+                  trackId: string;
+                  year: number;
+                  name: string;
+                  artist: string;
+                  extraNameAttribute?: string;
+                  extraArtistAttribute?: string;
+                }[]
+              >`
+                SELECT
+                  t.trackId,
+                  t.year,
+                  t.artist,
+                  t.name,
+                  tei.extraNameAttribute,
+                  tei.extraArtistAttribute
+                FROM
+                  tracks t
+                LEFT JOIN
+                  (SELECT * FROM trackextrainfo WHERE playlistId = ${dbPlaylist.id}) tei
+                  ON t.id = tei.trackId
+                WHERE
+                  t.trackId IN (${Prisma.join(trackIds)})
+                  AND t.manuallyChecked = 1
+              `;
+            } else {
+              // Fallback if playlist not in DB (less likely here but good practice)
+              yearResults = await this.prisma.$queryRaw<
+                {
+                  trackId: string;
+                  year: number;
+                  name: string;
+                  artist: string;
+                  extraNameAttribute?: string;
+                  extraArtistAttribute?: string;
+                }[]
+              >`
+                SELECT
+                  t.trackId,
+                  t.year,
+                  t.artist,
+                  t.name,
+                  NULL as extraNameAttribute,
+                  NULL as extraArtistAttribute
+                FROM
+                  tracks t
+                WHERE
+                  t.trackId IN (${Prisma.join(trackIds)})
+                  AND t.manuallyChecked = 1
+              `;
+            }
+          }
+
+          // Create a map for quick lookup
+          const trackMap = new Map(
+            yearResults.map((r) => [
+              r.trackId,
+              {
+                year: r.year,
+                name: r.name,
+                artist: r.artist,
+                extraNameAttribute: r.extraNameAttribute,
+                extraArtistAttribute: r.extraArtistAttribute,
+              },
+            ])
+          );
+
+          // Cache results like in spotify.ts
+          await Promise.all(
+            yearResults
+              .filter((r) => r.year !== null)
+              .map((r) =>
+                this.cache.set(
+                  `trackInfo2_${r.trackId}`,
+                  JSON.stringify({
+                    year: r.year,
+                    name: r.name,
+                    artist: r.artist,
+                    extraNameAttribute: r.extraNameAttribute,
+                    extraArtistAttribute: r.extraArtistAttribute,
+                  })
+                  // Consider adding a TTL (e.g., 3600 for 1 hour) if desired
+                  // this.cache.set(`trackInfo2_${r.trackId}`, JSON.stringify({...}), 3600);
+                )
+              )
+          );
+          // --- End DB Lookup ---
+
+          // --- Map Tracks with Overrides ---
+          const mappedTracks = await Promise.all(
+            items
+              .filter((item: any) => item.track && item.track.id) // Ensure track data exists
+              .map(async (item: any) => {
+                const track = item.track;
+                const trackId = track.id;
+                let trueYear: number | undefined;
+                let extraNameAttribute: string | undefined;
+                let extraArtistAttribute: string | undefined;
+                let trueName: string | undefined;
+                let trueArtist: string | undefined;
+
+                // Check cache first
+                const cachedTrackInfo = await this.cache.get(
+                  `trackInfo2_${trackId}`
+                );
+                if (cachedTrackInfo) {
+                  const trackInfo = JSON.parse(cachedTrackInfo);
+                  trueYear = trackInfo.year;
+                  trueName = trackInfo.name;
+                  trueArtist = trackInfo.artist;
+                  extraNameAttribute = trackInfo.extraNameAttribute;
+                  extraArtistAttribute = trackInfo.extraArtistAttribute;
+                } else {
+                  // Check DB results map if not cached
+                  const trackInfo = trackMap.get(trackId);
+                  if (trackInfo) {
+                    trueYear = trackInfo.year;
+                    trueName = trackInfo.name;
+                    trueArtist = trackInfo.artist;
+                    extraNameAttribute = trackInfo.extraNameAttribute;
+                    extraArtistAttribute = trackInfo.extraArtistAttribute;
+                  }
+                }
+
+                // Fallback to API data if no override found
+                if (trueName === undefined) {
+                  trueName = track.name;
+                }
+                if (trueArtist === undefined) {
+                  if (track.artists?.length > 0) {
+                    if (track.artists.length === 1) {
+                      trueArtist = track.artists[0].name;
+                    } else {
+                      // Max. 3 artists like in spotify.ts
+                      const limitedArtists = track.artists.slice(0, 3);
+                      const artistNames = limitedArtists.map(
+                        (artist: { name: string }) => artist.name
+                      );
+                      const lastArtist = artistNames.pop();
+                      trueArtist = artistNames.join(', ') + ' & ' + lastArtist;
+                    }
+                  }
+                }
+
+                // Format release date similar to spotify.ts
+                let formattedReleaseDate = '';
+                if (track.album?.release_date) {
+                  try {
+                    // Handle potential invalid date strings
+                    const releaseDate = new Date(track.album.release_date);
+                    if (!isNaN(releaseDate.getTime())) {
+                      formattedReleaseDate = format(releaseDate, 'yyyy-MM-dd');
+                    }
+                  } catch (e) {
+                    // Ignore date formatting errors
+                  }
+                }
+
+                return {
+                  id: trackId,
+                  name: this.utils.cleanTrackName(trueName || ''), // Use potentially overridden name
+                  album: this.utils.cleanTrackName(track.album?.name || ''),
+                  preview: track.preview_url || '',
+                  artist: trueArtist, // Use potentially overridden artist
+                  link: track.external_urls?.spotify,
+                  isrc: track.external_ids?.isrc,
+                  image: track.album?.images?.[1]?.url || null, // Use index 1 like spotify.ts
+                  releaseDate: formattedReleaseDate,
+                  trueYear, // Use year from DB if available
+                  extraNameAttribute, // Use from DB if available
+                  extraArtistAttribute, // Use from DB if available
+                };
+              })
+          );
+          // --- End Map Tracks ---
+
+          const filteredTracks = mappedTracks.filter(
+            (track: any) => track.artist && track.name && track.image // Filter like spotify.ts
+          );
+
+          allTracks = allTracks.concat(filteredTracks);
                 if (track.artists.length === 1) {
                   trueArtist = track.artists[0].name;
                 } else {
@@ -1777,11 +1978,8 @@ class Hitlist {
                     (artist: { name: string }) => artist.name
                   );
                   const lastArtist = artistNames.pop();
-                  trueArtist = artistNames.join(', ') + ' & ' + lastArtist;
-                }
-              }
-
-              // Format release date similar to spotify.ts
+              // This mapping logic is now inside the Promise.all block above
+              /*
               let formattedReleaseDate = '';
               if (track.album?.release_date) {
                 try {
@@ -1794,7 +1992,9 @@ class Hitlist {
                   // Ignore date formatting errors
                 }
               }
-
+              */
+              // The return object is now created inside the Promise.all block above
+              /*
               return {
                 id: track.id,
                 name: this.utils.cleanTrackName(track.name || ''),
@@ -1805,17 +2005,20 @@ class Hitlist {
                 isrc: track.external_ids?.isrc,
                 image: track.album?.images?.[1]?.url || null, // Use index 1 like spotify.ts
                 releaseDate: formattedReleaseDate,
-                // These fields are not available from this endpoint but are in spotify.ts structure
-                trueYear: undefined,
-                extraNameAttribute: undefined,
-                extraArtistAttribute: undefined,
+                trueYear: undefined, // Now populated from DB/cache
+                extraNameAttribute: undefined, // Now populated from DB/cache
+                extraArtistAttribute: undefined, // Now populated from DB/cache
               };
-            })
+              */
+            // The filter is now applied after the Promise.all resolves
+            /*
             .filter(
               (track: any) => track.artist && track.name && track.image // Filter like spotify.ts
             );
+            */
 
-          allTracks = allTracks.concat(mappedTracks);
+          // Concatenation happens after Promise.all resolves and filtering
+          // allTracks = allTracks.concat(mappedTracks);
 
           nextUrl = response.data.next; // Get the URL for the next page
         } catch (apiError) {
