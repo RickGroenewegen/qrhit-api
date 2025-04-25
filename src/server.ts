@@ -1804,7 +1804,21 @@ class Server {
           return { success: false, error: 'Missing authorization code' };
         }
 
-        return await this.hitlist.completeSpotifyAuth(code);
+        // Exchange the code for tokens using the public method on the Spotify instance
+        const token = await this.spotify.getTokensFromAuthCode(code);
+
+        if (token) {
+          this.logger.log(
+            color.green.bold(
+              'Spotify authorization successful via POST. Token stored.'
+            )
+          );
+          // Playlist creation is handled separately. Return success.
+          return { success: true, message: 'Spotify authorization successful.' };
+        } else {
+           this.logger.log(color.red.bold('Failed to exchange Spotify auth code via POST.'));
+           return { success: false, error: 'Failed to complete Spotify authorization.' };
+        }
       }
     );
 
@@ -1826,27 +1840,35 @@ class Server {
         return;
       }
 
-      // Automatically process the authorization - removed state parameter
-      const result = await this.hitlist.completeSpotifyAuth(code);
+      // Exchange the code for tokens using the public method on the Spotify instance
+      const tokenResult = await this.spotify.getTokensFromAuthCode(code);
 
-      if (result.success) {
+      if (tokenResult) { // Check if token exchange was successful (returned new access token)
+        this.logger.log(
+          color.green.bold(
+            'Spotify authorization successful via callback. Token stored.'
+          )
+        );
+        // Playlist creation is handled separately now (e.g., by finalizeList)
+        // Just show a success message.
         reply.type('text/html').send(`
           <html>
             <head><title>Spotify Authorization Complete</title></head>
             <body>
               <h1>Authorization Complete</h1>
-              <p>The Spotify playlist has been created successfully!</p>
-              <p><a href="${result.data.playlistUrl}" target="_blank">View your playlist</a></p>
+              <p>Your Spotify account has been successfully linked.</p>
+              <!-- Optionally redirect or provide further instructions -->
             </body>
           </html>
         `);
       } else {
+        this.logger.log(color.red.bold('Failed to exchange Spotify auth code during callback.'));
         reply.type('text/html').send(`
           <html>
             <head><title>Spotify Authorization Error</title></head>
             <body>
               <h1>Authorization Error</h1>
-              <p>There was an error creating the Spotify playlist: ${result.error}</p>
+              <p>There was an error completing the Spotify authorization. Please try again.</p>
             </body>
           </html>
         `);
