@@ -9,7 +9,7 @@ import Settings from './settings'; // Import the new Settings class
 import Data from './data';
 import Mail from './mail';
 import Vibe from './vibe'; // Import the Vibe class
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios'; // Import AxiosResponse
 import { format } from 'date-fns'; // Add date-fns format import
 
 class Hitlist {
@@ -1690,11 +1690,12 @@ class Hitlist {
 
       while (nextUrl) {
         try {
-          const response = await axios({
+          // Add type annotation and non-null assertion
+          const response: AxiosResponse<any> = await axios({
             method: 'get',
             url: nextUrl,
             headers: {
-              Authorization: `Bearer ${accessToken}`, // No need for ! here as we checked above
+              Authorization: `Bearer ${accessToken!}`, // Re-added non-null assertion
             },
           });
 
