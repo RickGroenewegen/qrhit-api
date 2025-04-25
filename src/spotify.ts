@@ -143,334 +143,8 @@ class Spotify {
     }
   }
 
-  public async getTracks(
-    playlistId: string,
-    cache: boolean = true,
-    captchaToken: string = '',
-    checkCaptcha: boolean,
-    isSlug: boolean = false
-  ): Promise<ApiResult> {
-    try {
-      let cacheKey = `tracks_${playlistId}`;
-      let cacheKeyCount = `trackcount_${playlistId}`;
-      let dbCacheKey = `tracksdb_${playlistId}`;
-      let allTracks: Track[] = [];
-      const uniqueTrackIds = new Set<string>();
-      let offset = 0;
-      const limit = 100;
-      let maxReached = false;
-      let maxReachedPhysical = false;
-
-      // if (checkCaptcha) {
-      //   // Verify reCAPTCHA token
-      //   const isHuman = await this.utils.verifyRecaptcha(captchaToken);
-
-      //   if (!isHuman) {
-      //     throw new Error('reCAPTCHA verification failed');
-      //   }
-      // }
-
-      const playlist = await this.getPlaylist(
-        playlistId,
-        true,
-        '',
-        false,
-        isSlug,
-        isSlug
-      );
-
-      cacheKey = `tracks_${playlistId}_${playlist.data.numberOfTracks}`;
-      cacheKeyCount = `trackcount_${playlistId}_${playlist.data.numberOfTracks}`;
-
-      const cacheResult = await this.cache.get(cacheKey);
-
-      if (!cacheResult || !cache) {
-        let checkPlaylistId = playlistId;
-
-        if (isSlug) {
-          const dbPlaylist = await this.prisma.playlist.findFirst({
-            where: { slug: playlistId },
-          });
-          if (!dbPlaylist) {
-            return { success: false, error: 'playlistNotFound' };
-          }
-          checkPlaylistId = dbPlaylist.playlistId;
-        }
-
-        while (true) {
-          const options = {
-            method: 'GET',
-            url: 'https://spotify23.p.rapidapi.com/playlist_tracks',
-            params: {
-              id: checkPlaylistId,
-              limit,
-              offset,
-            },
-            headers: {
-              'x-rapidapi-key': process.env['RAPID_API_KEY'],
-              'x-rapidapi-host': 'spotify23.p.rapidapi.com',
-            },
-          };
-
-          // Directly make the request instead of using the queue
-          const response = await axios.request(options);
-
-          this.analytics.increaseCounter('spotify', 'tracks', 1); // Keep analytics
-
-          // Get all track IDs from this batch
-          const trackIds = response.data.items
-            .filter((item: any) => item.track)
-            .map((item: any) => item.track.id);
-
-          // Get years for all tracks in one query
-          let yearResults: {
-            trackId: string;
-            year: number;
-            name: string;
-            artist: string;
-            extraNameAttribute?: string;
-            extraArtistAttribute?: string;
-          }[] = [];
-          if (trackIds.length > 0) {
-            // First, get the playlist ID from the database
-            const dbPlaylist = await this.prisma.playlist.findFirst({
-              where: { playlistId: checkPlaylistId },
-              select: { id: true },
-            });
-
-            if (dbPlaylist) {
-              yearResults = await this.prisma.$queryRaw<
-                {
-                  trackId: string;
-                  year: number;
-                  name: string;
-                  artist: string;
-                  originalName: string;
-                  originalArtist: string;
-                  extraNameAttribute?: string;
-                  extraArtistAttribute?: string;
-                }[]
-              >`
-                SELECT 
-                  t.trackId, 
-                  t.year, 
-                  t.artist, 
-                  t.name,
-                  tei.extraNameAttribute, 
-                  tei.extraArtistAttribute
-                FROM 
-                  tracks t
-                LEFT JOIN 
-                  (SELECT * FROM trackextrainfo WHERE playlistId = ${
-                    dbPlaylist.id
-                  }) tei 
-                  ON t.id = tei.trackId
-                WHERE 
-                  t.trackId IN (${Prisma.join(trackIds)})
-                  AND t.manuallyChecked = 1
-              `;
-            } else {
-              // If playlist not found in DB, just get the track info without extras
-              yearResults = await this.prisma.$queryRaw<
-                {
-                  trackId: string;
-                  year: number;
-                  name: string;
-                  artist: string;
-                  originalName: string;
-                  originalArtist: string;
-                  extraNameAttribute?: string;
-                  extraArtistAttribute?: string;
-                }[]
-              >`
-                SELECT 
-                  t.trackId, 
-                  t.year, 
-                  t.artist, 
-                  t.name,
-                  NULL as extraNameAttribute, 
-                  NULL as extraArtistAttribute
-                FROM 
-                  tracks t
-                WHERE 
-                  t.trackId IN (${Prisma.join(trackIds)})
-                  AND t.manuallyChecked = 1
-              `;
-            }
-          }
-
-          // Debug logging removed
-
-          // Create a map of trackId to year for quick lookup
-          const trackMap = new Map(
-            yearResults.map((r) => [
-              r.trackId,
-              {
-                year: r.year,
-                name: r.name,
-                artist: r.artist,
-                extraNameAttribute: r.extraNameAttribute,
-                extraArtistAttribute: r.extraArtistAttribute,
-              },
-            ])
-          );
-
-          // Cache all track info at once
-          await Promise.all(
-            yearResults
-              .filter((r) => r.year !== null)
-              .map((r) =>
-                this.cache.set(
-                  `trackInfo2_${r.trackId}`,
-                  JSON.stringify({
-                    year: r.year,
-                    name: r.name,
-                    artist: r.artist,
-                    extraNameAttribute: r.extraNameAttribute,
-                    extraArtistAttribute: r.extraArtistAttribute,
-                  })
-                )
-              )
-          );
-
-          const tracks: Track[] = await Promise.all(
-            response.data.items
-              .filter((item: any) => item.track && item.track.track)
-              .map(async (item: any) => {
-                const trackId = item.track.id;
-                let trueYear: number | undefined;
-                let extraNameAttribute: string | undefined;
-                let extraArtistAttribute: string | undefined;
-                let trueName: string | undefined;
-                let trueArtist: string | undefined;
-
-                // Check cache first
-                const cachedTrackInfo = await this.cache.get(
-                  `trackInfo2_${trackId}`
-                );
-                if (cachedTrackInfo) {
-                  const trackInfo = JSON.parse(cachedTrackInfo);
-
-                  trueYear = trackInfo.year;
-                  trueName = trackInfo.name;
-                  trueArtist = trackInfo.artist;
-                  extraNameAttribute = trackInfo.extraNameAttribute;
-                  extraArtistAttribute = trackInfo.extraArtistAttribute;
-                } else {
-                  const trackInfo = trackMap.get(trackId);
-                  if (trackInfo) {
-                    trueYear = trackInfo.year;
-                    trueName = trackInfo.name;
-                    trueArtist = trackInfo.artist;
-                    extraNameAttribute = trackInfo.extraNameAttribute;
-                    extraArtistAttribute = trackInfo.extraArtistAttribute;
-                  } else {
-                    trueName = item.track.name;
-                    if (item.track.artists?.length > 0) {
-                      // Format multiple artists as "Artist 1, Artist 2 & Artist 3"
-                      if (item.track.artists.length === 1) {
-                        trueArtist = item.track.artists[0].name;
-                      } else {
-                        // Max. 3 artist for now
-                        const limitedArtists = item.track.artists.slice(0, 3);
-                        const artistNames = limitedArtists.map(
-                          (artist: { name: string }) => artist.name
-                        );
-                        const lastArtist = artistNames.pop();
-                        trueArtist =
-                          artistNames.join(', ') + ' & ' + lastArtist;
-                      }
-                    }
-                  }
-                }
-
-                return {
-                  id: trackId,
-                  name: this.utils.cleanTrackName(trueName!),
-                  album: this.utils.cleanTrackName(
-                    item.track.album?.name || ''
-                  ),
-                  preview: item.track.preview_url || '',
-                  artist: trueArtist,
-                  link: item.track.external_urls?.spotify,
-                  isrc: item.track.external_ids?.isrc,
-                  image:
-                    item.track.album.images?.length > 0
-                      ? item.track.album.images[1].url
-                      : null,
-                  releaseDate: format(
-                    new Date(item.track.album.release_date),
-                    'yyyy-MM-dd'
-                  ),
-                  trueYear,
-                  extraNameAttribute,
-                  extraArtistAttribute,
-                };
-              })
-          );
-
-          // remove all items that do not have an artist, name, or image
-          const filteredTracks = tracks.filter(
-            (track) => track.artist && track.name && track.image
-          );
-
-          filteredTracks.forEach((track) => {
-            if (!uniqueTrackIds.has(track.id)) {
-              uniqueTrackIds.add(track.id);
-              allTracks.push(track);
-            }
-          });
-
-          // Check if there are more tracks to fetch or if we reached the limit of MAX_CARDS tracks
-          if (
-            response.data.items.length < limit ||
-            allTracks.length >= MAX_CARDS
-          ) {
-            if (allTracks.length > MAX_CARDS) {
-              maxReached = true;
-            }
-
-            if (allTracks.length > MAX_CARDS_PHYSICAL) {
-              maxReachedPhysical = true;
-            }
-            // Limit the tracks to MAX_CARDS if we have more
-            allTracks = allTracks.slice(0, MAX_CARDS);
-            break;
-          }
-
-          offset += limit;
-        }
-      } else {
-        const cachedResult = JSON.parse(cacheResult);
-        return cachedResult;
-      }
-
-      const result = {
-        success: true,
-        data: {
-          maxReached,
-          maxReachedPhysical,
-          totalTracks: allTracks.length,
-          tracks: allTracks,
-        },
-      };
-
-      this.cache.delPattern(`tracks_${playlistId}*`);
-      this.cache.delPattern(`trackcount_${playlistId}*`);
-
-      this.cache.set(cacheKeyCount, allTracks.length.toString());
-      this.cache.set(cacheKey, JSON.stringify(result));
-      return result;
-    } catch (e: any) {
-      if (e.response && e.response.status === 404) {
-        return { success: false, error: 'playlistNotFound' };
-      }
-      return { success: false, error: 'Error getting tracks' };
-    }
-  }
-
   // New function using this.api.getTracks
-  public async getTracks2(
+  public async getTracks(
     playlistId: string,
     cache: boolean = true,
     captchaToken: string = '',
@@ -493,15 +167,18 @@ class Spotify {
       const playlistResult = await this.getPlaylist(
         playlistId,
         true, // Use cache for playlist info
-        '',   // Captcha token (not used here)
+        '', // Captcha token (not used here)
         false, // Check captcha (not used here)
         isSlug, // Pass featured flag (derived from isSlug for simplicity here, adjust if needed)
         isSlug, // Pass isSlug flag
-        'en'    // Default locale, adjust if needed
+        'en' // Default locale, adjust if needed
       );
 
       if (!playlistResult.success || !playlistResult.data) {
-        return { success: false, error: playlistResult.error || 'Failed to get playlist details' };
+        return {
+          success: false,
+          error: playlistResult.error || 'Failed to get playlist details',
+        };
       }
       const playlistData = playlistResult.data;
       const checkPlaylistId = playlistData.playlistId; // Use the actual Spotify ID
@@ -535,7 +212,11 @@ class Spotify {
 
         // API call successful, process the items
         const trackItems = result.data?.items || [];
-        this.analytics.increaseCounter('spotify', 'tracks_fetched_api', trackItems.length); // Analytics for raw items fetched
+        this.analytics.increaseCounter(
+          'spotify',
+          'tracks_fetched_api',
+          trackItems.length
+        ); // Analytics for raw items fetched
 
         // Get all track IDs from the result
         const trackIds = trackItems
@@ -655,11 +336,16 @@ class Spotify {
         // --- Format Tracks ---
         const formattedTracksPromises = trackItems
           .filter((item: any) => item?.track?.id) // Filter out items without a track or id
-          .map(async (item: any): Promise<Track | null> => { // Return Track or null
+          .map(async (item: any): Promise<Track | null> => {
+            // Return Track or null
             const trackData = item.track; // Simplify access
             const trackId = trackData.id;
 
-            if (!trackData.name || !trackData.artists || trackData.artists.length === 0) {
+            if (
+              !trackData.name ||
+              !trackData.artists ||
+              trackData.artists.length === 0
+            ) {
               // Skip tracks with missing essential info from Spotify
               return null;
             }
@@ -709,18 +395,19 @@ class Spotify {
 
             // Ensure essential fields are present after enrichment attempt
             if (!trueName || !trueArtist) {
-                return null; // Skip if name or artist couldn't be determined
+              return null; // Skip if name or artist couldn't be determined
             }
 
-            const imageUrl = trackData.album?.images?.length > 1
-              ? trackData.album.images[1].url // Prefer second image if available
-              : trackData.album?.images?.length > 0
-              ? trackData.album.images[0].url // Fallback to first image
-              : null;
+            const imageUrl =
+              trackData.album?.images?.length > 1
+                ? trackData.album.images[1].url // Prefer second image if available
+                : trackData.album?.images?.length > 0
+                ? trackData.album.images[0].url // Fallback to first image
+                : null;
 
             // Skip if no image is found
             if (!imageUrl) {
-                return null;
+              return null;
             }
 
             return {
@@ -742,8 +429,12 @@ class Spotify {
           });
 
         // Wait for all formatting promises and filter out nulls
-        const formattedTracksNullable = await Promise.all(formattedTracksPromises);
-        const validFormattedTracks = formattedTracksNullable.filter((track): track is Track => track !== null);
+        const formattedTracksNullable = await Promise.all(
+          formattedTracksPromises
+        );
+        const validFormattedTracks = formattedTracksNullable.filter(
+          (track): track is Track => track !== null
+        );
 
         // Remove duplicates based on ID and add to the final list
         validFormattedTracks.forEach((track) => {
@@ -763,7 +454,6 @@ class Spotify {
 
         // Limit the tracks to MAX_CARDS if we have more
         allFormattedTracks = allFormattedTracks.slice(0, MAX_CARDS);
-
       } else {
         // Use cached result
         const cachedResult = JSON.parse(cacheResult);
@@ -790,17 +480,17 @@ class Spotify {
       this.cache.set(cacheKey, JSON.stringify(finalResult)); // Cache the final processed result
 
       return finalResult; // Return the processed result
-
     } catch (e: any) {
       // Keep existing generic error handling
       if (e.response && e.response.status === 404) {
         return { success: false, error: 'playlistNotFound' };
       }
-      this.logger.log(color.red.bold(`Error in getTracks2 for ${playlistId}: ${e.message}`));
+      this.logger.log(
+        color.red.bold(`Error in getTracks2 for ${playlistId}: ${e.message}`)
+      );
       return { success: false, error: 'Error getting tracks' };
     }
   }
-
 
   /**
    * Get detailed information for multiple tracks by their Spotify IDs
