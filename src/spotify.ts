@@ -13,6 +13,8 @@ import Logger from './logger';
 import { Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
 import Translation from './translation';
+import SpotifyApi from './spotify_api'; // Import the new class
+import SpotifyRapidApi from './spotify_rapidapi'; // Import the new class
 
 class RapidAPIQueue {
   private cache: Cache;
@@ -123,6 +125,8 @@ class Spotify {
   private rapidAPIQueue = RapidAPIQueue.getInstance();
   private prisma = PrismaInstance.getInstance();
   private translate = new Translation();
+  private spotifyApi = new SpotifyApi(); // Instantiate SpotifyApi
+  private spotifyRapidApi = new SpotifyRapidApi(); // Instantiate SpotifyRapidApi
 
   // create a refresh token method
   public async refreshAccessToken(refreshToken: string): Promise<ApiResult> {
