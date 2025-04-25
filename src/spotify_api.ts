@@ -305,6 +305,14 @@ class SpotifyApi {
       };
     }
 
+    this.logger.log(
+      color.blue.bold(
+        `Fetching tracks in ${color.white.bold(
+          'SpotifyAPI'
+        )} for playlist ${color.white.bold(playlistId)}`
+      )
+    );
+
     let allItems: any[] = [];
     // Use the fields parameter to potentially reduce response size if needed
     let nextUrl:
@@ -366,7 +374,9 @@ class SpotifyApi {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         // Filter out null tracks from the chunk response before concatenating
-        const validTracksInChunk = response.data.tracks.filter((track: any) => track !== null);
+        const validTracksInChunk = response.data.tracks.filter(
+          (track: any) => track !== null
+        );
         allTracks = allTracks.concat(validTracksInChunk);
         // Optional: Add a small delay between chunks if needed
         // await new Promise(resolve => setTimeout(resolve, 50));
@@ -377,7 +387,7 @@ class SpotifyApi {
       const errorResult = this.handleApiError(error, `fetching tracks by IDs`);
       // If any chunk failed with a re-auth error, propagate it
       if (errorResult.needsReAuth) {
-          needsReAuth = true;
+        needsReAuth = true;
       }
       // Return the error from the first chunk that failed
       // A more sophisticated approach might try to return partial data

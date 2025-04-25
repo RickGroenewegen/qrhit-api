@@ -1087,15 +1087,7 @@ class Server {
     this.fastify.post(
       '/spotify/playlists/tracks',
       async (request: any, _reply) => {
-        this.logger.log(
-          color.blue.bold(
-            `Fetching tracks for playlist ${color.white.bold(
-              request.body.playlistId
-            )}`
-          )
-        );
-
-        return await this.hitlist.getTracks(
+        return await this.spotify.getTracks(
           request.body.playlistId,
           this.utils.parseBoolean(request.body.cache),
           request.body.captchaToken,
@@ -1109,7 +1101,7 @@ class Server {
       '/spotify/playlists',
 
       async (request: any, _reply) => {
-        return await this.hitlist.getPlaylist(
+        return await this.spotify.getPlaylist(
           request.body.playlistId,
           this.utils.parseBoolean(request.body.cache),
           request.body.captchaToken,
