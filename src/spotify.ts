@@ -155,19 +155,15 @@ class Spotify {
     try {
       let cacheKey = `tracks2_${playlistId}`; // Use different prefix for cache key
       let cacheKeyCount = `trackcount2_${playlistId}`;
-      // dbCacheKey is handled by getPlaylist
       let allFormattedTracks: Track[] = []; // Renamed for clarity
       const uniqueTrackIds = new Set<string>();
-      // offset and limit are handled by the API implementation now
       let maxReached = false;
       let maxReachedPhysical = false;
-
-      // if (checkCaptcha) { ... } // Keep captcha logic if needed
 
       // Get playlist details first (handles slug, gets track count for cache key)
       const playlistResult = await this.getPlaylist(
         playlistId,
-        true, // Use cache for playlist info
+        false, // Use cache for playlist info
         '', // Captcha token (not used here)
         false, // Check captcha (not used here)
         isSlug, // Pass featured flag (derived from isSlug for simplicity here, adjust if needed)
@@ -182,7 +178,7 @@ class Spotify {
         };
       }
       const playlistData = playlistResult.data;
-      const checkPlaylistId = playlistData.playlistId; // Use the actual Spotify ID
+      const checkPlaylistId = playlistData.playlistId;
 
       // Update cache keys with actual ID and track count
       cacheKey = `tracks2_${checkPlaylistId}_${playlistData.numberOfTracks}`;

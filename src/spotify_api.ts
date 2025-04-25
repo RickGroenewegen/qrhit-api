@@ -239,7 +239,11 @@ class SpotifyApi {
           needsReAuth: true, // Signal that re-authentication is needed
         };
       } else if (status === 404) {
-        return { success: false, error: 'Spotify resource not found', needsReAuth: false }; // 404 doesn't imply re-auth needed
+        return {
+          success: false,
+          error: 'Spotify resource not found',
+          needsReAuth: false,
+        }; // 404 doesn't imply re-auth needed
       } else {
         return {
           success: false,
@@ -249,7 +253,11 @@ class SpotifyApi {
       }
     } else {
       this.logger.log(color.red.bold(`Non-API error ${context}: ${error}`));
-      return { success: false, error: `Internal error ${context}`, needsReAuth: false };
+      return {
+        success: false,
+        error: `Internal error ${context}`,
+        needsReAuth: false,
+      };
     }
   }
 
@@ -262,7 +270,11 @@ class SpotifyApi {
     const accessToken = await this.getAccessToken();
     if (!accessToken) {
       // If no token could be obtained (e.g., refresh failed, needs initial auth)
-      return { success: false, error: 'Spotify authentication required', needsReAuth: true };
+      return {
+        success: false,
+        error: 'Spotify authentication required',
+        needsReAuth: true,
+      };
     }
 
     try {
@@ -286,12 +298,18 @@ class SpotifyApi {
   public async getTracks(playlistId: string): Promise<ApiResult> {
     const accessToken = await this.getAccessToken();
     if (!accessToken) {
-      return { success: false, error: 'Spotify authentication required', needsReAuth: true };
+      return {
+        success: false,
+        error: 'Spotify authentication required',
+        needsReAuth: true,
+      };
     }
 
     let allItems: any[] = [];
     // Use the fields parameter to potentially reduce response size if needed
-    let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&fields=items(track(id,name,artists(name),album(name,images,release_date),external_urls,external_ids,preview_url)),next`; // Max limit is 50 for this endpoint with fields
+    let nextUrl:
+      | string
+      | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&fields=items(track(id,name,artists(name),album(name,images,release_date),external_urls,external_ids,preview_url)),next`; // Max limit is 50 for this endpoint with fields
 
     try {
       while (nextUrl) {
@@ -299,7 +317,9 @@ class SpotifyApi {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         // Filter out null tracks which can sometimes occur
-        const validItems = response.data.items.filter((item: any) => item && item.track);
+        const validItems = response.data.items.filter(
+          (item: any) => item && item.track
+        );
         allItems = allItems.concat(validItems);
         nextUrl = response.data.next;
       }
@@ -432,7 +452,7 @@ class SpotifyApi {
           });
         }
         // We need to fetch the playlist URL again if we only had the ID
-        const playlistDetails = await this.getPlaylist(playlistId, accessToken);
+        const playlistDetails = await this.getPlaylist(playlistId);
         playlistUrl = playlistDetails.success
           ? playlistDetails.data.external_urls.spotify
           : '';
