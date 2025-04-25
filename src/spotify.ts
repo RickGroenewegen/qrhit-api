@@ -501,78 +501,83 @@ class Spotify {
         return { success: false, error: 'No track IDs provided' };
       }
 
-      // Check if we have the tracks in cache
-      const cacheKey = `tracks_by_ids_${trackIds.sort().join('_')}`;
+      // Use a consistent cache key format
+      const cacheKey = `tracksbyids_${trackIds.sort().join('_')}`;
       const cacheResult = await this.cache.get(cacheKey);
 
       if (cacheResult) {
         return JSON.parse(cacheResult);
       }
 
-      const options = {
-        method: 'GET',
-        url: 'https://spotify23.p.rapidapi.com/tracks/',
-        params: {
-          ids: trackIds.join(','),
-        },
-        headers: {
-          'x-rapidapi-key': process.env['RAPID_API_KEY'],
-          'x-rapidapi-host': 'spotify23.p.rapidapi.com',
-        },
-      };
+      // Call the abstracted API method
+      const result = await this.api.getTracksByIds(trackIds);
 
-      // Directly make the request instead of using the queue
-      const response = await axios.request(options);
-
-      this.analytics.increaseCounter('spotify', 'tracks_by_ids', 1); // Keep analytics
-
-      if (!response.data || !response.data.tracks) {
-        return { success: false, error: 'No tracks found' };
+      if (!result.success) {
+        // Handle errors, including potential re-authentication needs
+        if (result.needsReAuth) {
+          return { success: false, error: result.error, needsReAuth: true };
+        }
+        return {
+          success: false,
+          error: result.error || 'Error getting tracks by IDs from API',
+        };
       }
 
-      // Filter out any null or undefined tracks
-      const validTracks = response.data.tracks
+      // API call successful, process the items
+      // Assuming the API implementation returns tracks in result.data.tracks
+      const rawTracks = result.data?.tracks || [];
+      this.analytics.increaseCounter('spotify', 'tracks_by_ids_fetched_api', rawTracks.length);
+
+      // Filter out any null or undefined tracks and format them
+      const validFormattedTracks = rawTracks
         .filter((track: any) => track !== null && track !== undefined)
         .map((track: any) => {
+          // Basic formatting, adjust if API returns different structure
           const artist =
             track.artists && track.artists.length > 0
-              ? track.artists[0].name
+              ? track.artists[0].name // Assuming first artist is primary
               : '';
 
           const imageUrl =
             track.album && track.album.images && track.album.images.length > 0
-              ? track.album.images[0].url
+              ? track.album.images[0].url // Assuming first image is suitable
               : '';
 
+          // Note: This formatting might differ slightly from getTracks formatting.
+          // Consider creating a shared track formatting utility if consistency is critical.
           return {
-            id: track.id,
-            trackId: track.id,
+            id: track.id || '',
+            trackId: track.id || '', // Keep for potential compatibility
             name: this.utils.cleanTrackName(track.name || ''),
             artist: artist,
             album: track.album?.name || '',
             image: imageUrl,
             preview: track.preview_url || '',
             link: track.external_urls?.spotify || '',
+            spotifyLink: track.external_urls?.spotify || '', // Ensure required field is present
             isrc: track.external_ids?.isrc || '',
             releaseDate: track.album?.release_date || '',
-            explicit: track.explicit || false,
+            // Add other fields from Track interface if available and needed
+            // trueYear: undefined, // Needs enrichment if required
+            // explicit: track.explicit || false, // Example if API provides it
           };
         })
         .filter((track: any) => track.name && track.artist); // Filter out tracks with empty name or artist
 
-      const result = {
+      const finalResult = {
         success: true,
-        data: validTracks,
+        data: validFormattedTracks, // Return the formatted tracks
       };
 
-      // Cache the result for 1 hour
-      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+      // Cache the final processed result for 1 hour
+      await this.cache.set(cacheKey, JSON.stringify(finalResult), 3600);
 
-      return result;
-    } catch (error) {
+      return finalResult;
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`Error in getTracksByIds: ${error.message}`));
       return {
         success: false,
-        error: 'Error fetching tracks by IDs',
+        error: 'Internal error fetching tracks by IDs',
       };
     }
   }

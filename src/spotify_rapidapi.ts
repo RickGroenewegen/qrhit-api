@@ -254,23 +254,44 @@ class SpotifyRapidApi {
   /**
    * Enqueues a request to fetch details for multiple tracks by ID from RapidAPI.
    * @param trackIds Array of Spotify track IDs.
-   * @returns {Promise<ApiResult>} Indicates success/failure of *enqueueing*.
+   * Fetches details for multiple tracks by ID from RapidAPI.
+   * @param trackIds Array of Spotify track IDs.
+   * @returns {Promise<ApiResult>} Contains track data or error info.
    */
   public async getTracksByIds(trackIds: string[]): Promise<ApiResult> {
     if (!trackIds || trackIds.length === 0) {
-        return { success: false, error: 'No track IDs provided' };
+      return { success: false, error: 'No track IDs provided' };
     }
     // Note: Check RapidAPI documentation for limits on number of IDs per request.
-    // This implementation doesn't chunk requests.
+    // This implementation assumes the API handles the comma-separated list correctly
+    // and doesn't require chunking like the official Spotify API. Adjust if needed.
     try {
       const options = this.createOptions('/tracks/', { ids: trackIds.join(',') });
-      await this.rapidAPIQueue.enqueue(options);
-      this.analytics.increaseCounter('spotify_rapidapi', 'getTracksByIds_enqueued', 1);
-      // Removed 'message' property
-      return { success: true };
+      // Make the request directly
+      const response = await axios.request(options);
+      this.analytics.increaseCounter('spotify_rapidapi', 'getTracksByIds_called', 1);
+
+      if (!response.data || !response.data.tracks) {
+         this.logger.log(color.yellow(`RapidAPI getTracksByIds returned unexpected data.`));
+         return { success: false, error: 'Unexpected response from RapidAPI' };
+      }
+
+      // Return the tracks array directly under the 'tracks' key in data
+      return { success: true, data: { tracks: response.data.tracks } };
+
     } catch (error) {
-        this.logger.log(color.red.bold(`Error enqueueing getTracksByIds request: ${error}`));
-        return { success: false, error: 'Failed to enqueue request' };
+      const axiosError = error as AxiosError;
+      const status = axiosError.response?.status;
+      const message = axiosError.message;
+      this.logger.log(color.red.bold(`Error fetching RapidAPI tracks by IDs: ${status} - ${message}`));
+
+      if (status === 404) {
+        // RapidAPI might return 404 if *any* ID is invalid, or only if *all* are.
+        // Returning a generic error might be safer unless the behavior is known.
+        return { success: false, error: 'RapidAPI resource not found (one or more track IDs might be invalid)' };
+      }
+      // Return a generic error for other issues
+      return { success: false, error: `RapidAPI error fetching tracks by IDs: ${status || message}` };
     }
   }
 

@@ -336,37 +336,52 @@ class SpotifyApi {
 
   /**
    * Fetches details for multiple tracks by their Spotify IDs.
-   * @param trackIds An array of Spotify track IDs (max 50 per request).
-   * @param accessToken A valid Spotify access token.
+   * Fetches details for multiple tracks by their Spotify IDs, handling token and chunking.
+   * @param trackIds An array of Spotify track IDs.
    * @returns {Promise<ApiResult>} Contains track data or error info.
    */
-  public async getTracksByIds(
-    trackIds: string[],
-    accessToken: string
-  ): Promise<ApiResult> {
+  public async getTracksByIds(trackIds: string[]): Promise<ApiResult> {
     if (!trackIds || trackIds.length === 0) {
       return { success: false, error: 'No track IDs provided' };
     }
-    if (trackIds.length > 50) {
-      // Note: This basic implementation doesn't handle > 50 IDs.
-      // A more robust version would chunk the requests.
-      this.logger.log(
-        color.yellow(
-          'Warning: getTracksByIds called with > 50 IDs. Only fetching first 50.'
-        )
-      );
-      trackIds = trackIds.slice(0, 50);
+
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) {
+      return {
+        success: false,
+        error: 'Spotify authentication required',
+        needsReAuth: true,
+      };
     }
 
+    const chunkSize = 50; // Spotify API limit
+    let allTracks: any[] = [];
+    let needsReAuth = false; // Flag to track if any chunk requires re-auth
+
     try {
-      const response = await axios.get(`https://api.spotify.com/v1/tracks`, {
-        params: { ids: trackIds.join(',') },
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      // The response contains a 'tracks' array.
-      return { success: true, data: response.data };
+      for (let i = 0; i < trackIds.length; i += chunkSize) {
+        const chunk = trackIds.slice(i, i + chunkSize);
+        const response = await axios.get(`https://api.spotify.com/v1/tracks`, {
+          params: { ids: chunk.join(',') },
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        // Filter out null tracks from the chunk response before concatenating
+        const validTracksInChunk = response.data.tracks.filter((track: any) => track !== null);
+        allTracks = allTracks.concat(validTracksInChunk);
+        // Optional: Add a small delay between chunks if needed
+        // await new Promise(resolve => setTimeout(resolve, 50));
+      }
+      // Return the combined tracks array under the 'tracks' key in data
+      return { success: true, data: { tracks: allTracks } };
     } catch (error) {
-      return this.handleApiError(error, `fetching tracks by IDs`);
+      const errorResult = this.handleApiError(error, `fetching tracks by IDs`);
+      // If any chunk failed with a re-auth error, propagate it
+      if (errorResult.needsReAuth) {
+          needsReAuth = true;
+      }
+      // Return the error from the first chunk that failed
+      // A more sophisticated approach might try to return partial data
+      return { ...errorResult, needsReAuth };
     }
   }
 
