@@ -13,6 +13,7 @@ import Translation from './translation'; // Import Translation
 import { Prisma } from '@prisma/client'; // Import Prisma for raw query join
 import axios, { AxiosResponse } from 'axios'; // Import AxiosResponse
 import { format } from 'date-fns'; // Add date-fns format import
+import SpotifyApi from './spotify_api'; // Import the new class
 
 class Hitlist {
   private static instance: Hitlist;
@@ -27,6 +28,7 @@ class Hitlist {
   private settings = Settings.getInstance(); // Instantiate Settings
   private vibe = Vibe.getInstance(); // Instantiate Vibe
   private translation = new Translation(); // Instantiate Translation
+  private api = new SpotifyApi(); // Instantiate SpotifyApi
 
   private constructor() {
     this.initDir();
