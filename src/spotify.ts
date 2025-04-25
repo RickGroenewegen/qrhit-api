@@ -76,18 +76,14 @@ class Spotify {
           }
         }
 
-        const accessToken = await this.spotifyApi.getAccessToken();
-        if (!accessToken) {
-          return {
-            success: false,
-            error: 'Could not obtain valid Spotify token',
-            needsReAuth: true,
-          };
-        }
-
-        const result = await this.api.getPlaylist(checkPlaylistId, accessToken);
+        // Access token handling is now done within the specific API implementation (e.g., SpotifyApi)
+        const result = await this.api.getPlaylist(checkPlaylistId);
 
         if (!result.success) {
+          // Check if the error indicates a need for re-authentication
+          if (result.needsReAuth) {
+             return { success: false, error: result.error, needsReAuth: true };
+          }
           if (
             result.error === 'Spotify resource not found' ||
             result.error === 'playlistNotFound'

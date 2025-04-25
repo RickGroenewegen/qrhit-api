@@ -236,32 +236,35 @@ class SpotifyApi {
         return {
           success: false,
           error: 'Spotify authorization error (token likely expired/invalid)',
-          // needsReAuth: true, // Removed as it's not in ApiResult interface
+          needsReAuth: true, // Signal that re-authentication is needed
         };
       } else if (status === 404) {
-        return { success: false, error: 'Spotify resource not found' };
+        return { success: false, error: 'Spotify resource not found', needsReAuth: false }; // 404 doesn't imply re-auth needed
       } else {
         return {
           success: false,
           error: `Spotify API error: ${status || 'Unknown'}`,
+          needsReAuth: false, // Assume other errors don't require re-auth unless specified
         };
       }
     } else {
       this.logger.log(color.red.bold(`Non-API error ${context}: ${error}`));
-      return { success: false, error: `Internal error ${context}` };
+      return { success: false, error: `Internal error ${context}`, needsReAuth: false };
     }
   }
 
   /**
    * Fetches playlist details from the Spotify API.
    * @param playlistId The Spotify ID of the playlist.
-   * @param accessToken A valid Spotify access token.
    * @returns {Promise<ApiResult>} Contains playlist data or error info.
    */
-  public async getPlaylist(
-    playlistId: string,
-    accessToken: string
-  ): Promise<ApiResult> {
+  public async getPlaylist(playlistId: string): Promise<ApiResult> {
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) {
+      // If no token could be obtained (e.g., refresh failed, needs initial auth)
+      return { success: false, error: 'Spotify authentication required', needsReAuth: true };
+    }
+
     try {
       const response = await axios.get(
         `https://api.spotify.com/v1/playlists/${playlistId}`,
