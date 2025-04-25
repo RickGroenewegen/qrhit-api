@@ -417,7 +417,8 @@ class Spotify {
               album: this.utils.cleanTrackName(trackData.album?.name || ''),
               preview: trackData.preview_url || '',
               artist: trueArtist,
-              link: trackData.external_urls?.spotify,
+              link: trackData.external_urls?.spotify || '', // Ensure string
+              spotifyLink: trackData.external_urls?.spotify || '', // Add missing required property
               isrc: trackData.external_ids?.isrc,
               image: imageUrl,
               releaseDate: trackData.album?.release_date
