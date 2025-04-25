@@ -759,9 +759,9 @@ class Hitlist {
       // Construct the playlist name
       const playlistName = `${companyName} - ${listName}`;
 
-      // Call the new method in SpotifyApi via this.spotify.api
+      // Call the public method on the Spotify instance
       // This method now handles token acquisition and API calls internally.
-      const result = await this.spotify.api.createOrUpdatePlaylist(
+      const result = await this.spotify.createOrUpdatePlaylist(
         playlistName,
         trackIds
       );

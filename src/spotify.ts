@@ -719,6 +719,22 @@ class Spotify {
 
     return tracks.data.totalTracks;
   }
+
+  /**
+   * Public method to create or update a Spotify playlist.
+   * Delegates to the appropriate API implementation (SpotifyApi or SpotifyRapidApi).
+   * @param playlistName The desired name of the playlist.
+   * @param trackIds An array of Spotify track IDs.
+   * @returns {Promise<ApiResult>} Contains the playlist data or error info.
+   */
+  public async createOrUpdatePlaylist(
+    playlistName: string,
+    trackIds: string[]
+  ): Promise<ApiResult> {
+    // Delegate to the currently selected API implementation
+    // Note: SpotifyRapidApi's implementation might return an error if not supported.
+    return this.api.createOrUpdatePlaylist(playlistName, trackIds);
+  }
 }
 
 export default Spotify;

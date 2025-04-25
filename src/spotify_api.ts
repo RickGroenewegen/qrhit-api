@@ -476,31 +476,88 @@ class SpotifyApi {
    * @param accessToken A valid Spotify access token.
    * @param playlistName The desired name of the playlist.
    * @param trackIds An array of Spotify track IDs to include.
-   * @param existingPlaylistId Optional. If provided, updates this playlist instead of creating a new one.
-   * @returns {Promise<ApiResult>} Contains the created/updated playlist data or error info.
+   * Handles token acquisition internally.
+   * @param playlistName The desired name of the playlist.
+   * @param trackIds An array of Spotify track IDs.
+   * @returns {Promise<ApiResult>} Contains the playlist data or error info.
    */
   public async createOrUpdatePlaylist(
-    userId: string,
-    accessToken: string,
     playlistName: string,
-    trackIds: string[],
-    existingPlaylistId?: string | null
+    trackIds: string[]
   ): Promise<ApiResult> {
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) {
+      return {
+        success: false,
+        error: 'Spotify authentication required',
+        needsReAuth: true,
+      };
+    }
+
+    // Fetch User ID internally
+    const userId = await this.getUserId(accessToken);
+    if (!userId) {
+      return this.handleApiError(
+        new Error('Failed to fetch user ID'),
+        'fetching user ID for playlist creation'
+      );
+    }
+
     const trackUris = trackIds.map((id) => `spotify:track:${id}`);
     const playlistDescription = `Created automatically.`; // Simple description
 
     try {
-      let playlistId: string;
-      let playlistUrl: string;
+      // --- Check for existing playlist ---
+      let existingPlaylistId: string | null = null;
+      let playlistUrl: string | null = null;
+      const maxPlaylistsToCheck = 50; // Spotify API limit per request
 
-      if (existingPlaylistId) {
-        playlistId = existingPlaylistId;
+      try {
+        // Fetch user's playlists to check if one with the same name already exists
+        // Request only needed fields: items(id, name, owner(id), external_urls)
+        const playlistCheckFields = 'items(id,name,owner(id),external_urls)';
+        const userPlaylistsResponse = await axios.get(
+          `https://api.spotify.com/v1/me/playlists`,
+          {
+             params: { limit: maxPlaylistsToCheck, fields: playlistCheckFields }, // Add fields
+             headers: { Authorization: `Bearer ${accessToken}` }
+          }
+        );
+
+        const userPlaylists = userPlaylistsResponse.data.items || []; // Ensure it's an array
+        const foundPlaylist = userPlaylists.find(
+          (p: any) => p.name === playlistName && p.owner.id === userId
+        );
+
+        if (foundPlaylist) {
+          existingPlaylistId = foundPlaylist.id;
+          playlistUrl = foundPlaylist.external_urls.spotify;
+          this.logger.log(
+            color.blue.bold(
+              `Found existing playlist "${color.white.bold(
+                playlistName
+              )}" with ID ${color.white.bold(
+                existingPlaylistId
+              )}. Will update tracks.`
+            )
+          );
+        }
+      } catch (playlistFetchError) {
         this.logger.log(
-          color.blue.bold(
-            `Updating existing playlist ID ${playlistId} with ${trackUris.length} tracks.`
+          color.yellow.bold(
+            `Could not fetch user playlists to check for existing one: ${playlistFetchError}`
           )
         );
-        // Replace tracks (max 100 per request)
+        // Continue to create a new playlist if fetching fails
+      }
+      // --- End Check for existing playlist ---
+
+
+      let playlistId: string;
+      // Use the existingPlaylistId found above
+      if (existingPlaylistId) {
+        playlistId = existingPlaylistId;
+        // Replace tracks in the existing playlist
         const chunkSize = 100;
         for (let i = 0; i < trackUris.length; i += chunkSize) {
           const chunk = trackUris.slice(i, i + chunkSize);
@@ -515,18 +572,21 @@ class SpotifyApi {
             data: JSON.stringify({ uris: chunk }),
           });
         }
-        // We need to fetch the playlist URL again if we only had the ID
-        const playlistDetails = await this.getPlaylist(playlistId);
-        playlistUrl = playlistDetails.success
-          ? playlistDetails.data.external_urls.spotify
-          : '';
+        // Ensure playlistUrl is set if we found an existing playlist
+        if (!playlistUrl) {
+           // Fetch details if URL wasn't included in the initial check (e.g., due to fields param)
+           const playlistDetails = await this.getPlaylist(playlistId); // Use internal getPlaylist
+           playlistUrl = playlistDetails.success ? playlistDetails.data?.external_urls?.spotify || '' : '';
+        }
       } else {
+        // Create a new playlist if none found
         this.logger.log(
           color.blue.bold(
-            `Creating new playlist "${playlistName}" for user ${userId}.`
+            `No existing playlist found named "${color.white.bold(
+              playlistName
+            )}". Creating new playlist for user ${userId}.`
           )
         );
-        // Create new playlist
         const createResponse = await axios.post(
           `https://api.spotify.com/v1/users/${userId}/playlists`,
           JSON.stringify({
@@ -561,12 +621,13 @@ class SpotifyApi {
         }
       }
 
+      // Return the essential playlist info
       return {
         success: true,
         data: {
-          id: playlistId,
-          external_urls: { spotify: playlistUrl },
-          name: playlistName,
+          playlistId: playlistId, // Use consistent naming
+          playlistUrl: playlistUrl,
+          playlistName: playlistName,
         },
       };
     } catch (error) {
