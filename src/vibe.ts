@@ -8,6 +8,7 @@ import Mollie from './mollie';
 import Discount from './discount';
 import Data from './data';
 import sharp from 'sharp'; // Import sharp
+import Spotify from './spotify';
 
 class Vibe {
   private static instance: Vibe;
@@ -16,6 +17,7 @@ class Vibe {
   private utils = new Utils();
   private discount = new Discount();
   private data = Data.getInstance();
+  private spotify = new Spotify();
 
   private constructor() {}
 
@@ -1270,6 +1272,251 @@ class Vibe {
     } catch (error) {
       this.logger.log(color.red.bold(`Error calculating ranking: ${error}`));
       return { success: false, error: 'Error calculating list ranking' };
+    }
+  }
+
+  public async finalizeList(companyListId: number): Promise<any> {
+    try {
+      // Get the company list
+      const companyList = await this.prisma.companyList.findUnique({
+        where: { id: companyListId },
+        include: { Company: true },
+      });
+
+      if (!companyList) {
+        return { success: false, error: 'Company list not found' };
+      }
+
+      // Get all verified submissions for this company list
+      const submissions = await this.prisma.companyListSubmission.findMany({
+        where: {
+          companyListId: companyListId,
+          verified: true,
+          status: 'submitted',
+        },
+        orderBy: { createdAt: 'asc' },
+        include: {
+          CompanyListSubmissionTrack: {
+            include: {
+              Track: true,
+            },
+            orderBy: { position: 'asc' },
+          },
+        },
+      });
+
+      // --- Use Vibe's getRanking method ---
+      const rankingResult = await this.getRanking(companyListId);
+
+      if (!rankingResult.success || !rankingResult.data) {
+        this.logger.log(
+          color.red.bold(
+            `Failed to get ranking for list ${companyListId}: ${rankingResult.error}`
+          )
+        );
+        return {
+          success: false,
+          error: `Failed to calculate ranking: ${rankingResult.error}`,
+        };
+      }
+
+      const allRankedTracks = rankingResult.data.ranking; // This is already sorted by score
+      const totalSubmissionsCount = submissions.length; // Keep the count of submissions
+
+      if (allRankedTracks.length === 0) {
+        this.logger.log(
+          color.yellow.bold(
+            `No tracks found in ranking for list ${companyListId}.`
+          )
+        );
+        // Optionally update status or handle differently
+        // For now, proceed to potentially create empty playlists or return success with empty data
+      }
+
+      // Use numberOfCards from companyList
+      const maxTracks = companyList.numberOfCards;
+
+      // Filter the ranked tracks to get the top ones based on numberOfCards
+      // The 'withinLimit' flag from getRanking already tells us this.
+      const topTracks = allRankedTracks.filter(
+        (track: any) => track.withinLimit
+      );
+
+      // If maxTracks was 0 or invalid in the DB, getRanking might not set withinLimit correctly.
+      // As a fallback, slice if needed, though relying on withinLimit is preferred.
+      if (
+        topTracks.length === 0 &&
+        maxTracks > 0 &&
+        allRankedTracks.length > 0
+      ) {
+        this.logger.log(
+          color.yellow.bold(
+            `Fallback: Slicing top ${maxTracks} tracks as 'withinLimit' was not set.`
+          )
+        );
+        // Ensure we don't try to slice more than available tracks
+        const actualSlice = Math.min(maxTracks, allRankedTracks.length);
+        // Reassign topTracks based on slice
+        // Note: This fallback might indicate an issue in getRanking's withinLimit logic if maxTracks is valid.
+        // topTracks = allRankedTracks.slice(0, actualSlice);
+        // Let's stick to the withinLimit flag for consistency for now. If it's empty, it's empty.
+      }
+
+      this.logger.log(
+        color.blue.bold(
+          `Creating playlist for company ${color.white.bold(
+            companyList.Company.name
+          )} with ${color.white.bold(topTracks.length)}`
+        )
+      );
+
+      // --- Create/Update Limited Playlist ---
+      const limitedPlaylistResult = await this.createPlaylist(
+        companyList.Company.name,
+        companyList.name, // Original name
+        topTracks.map((track: any) => track.spotifyLink!.split('/').pop()!) // Use spotifyLink from ranked data
+      );
+
+      // --- Update CompanyList with Limited Playlist URL ---
+      if (
+        limitedPlaylistResult.success &&
+        limitedPlaylistResult.data?.playlistUrl
+      ) {
+        try {
+          await this.prisma.companyList.update({
+            where: { id: companyListId },
+            data: { playlistUrl: limitedPlaylistResult.data.playlistUrl }, // Update the standard playlistUrl field
+          });
+        } catch (dbError) {
+          this.logger.log(
+            color.red.bold(
+              `Failed to update playlistUrl for CompanyList ID ${companyListId}: ${dbError}`
+            )
+          );
+          // Decide if this should be a critical error or just logged
+        }
+      } else {
+        this.logger.log(
+          color.yellow.bold(
+            `Skipping update of playlistUrl for CompanyList ID ${companyListId} due to limited playlist creation/update failure.`
+          )
+        );
+      }
+      // --- End Update ---
+
+      // --- Create/Update Full Playlist ---
+      const fullPlaylistName = `${companyList.name} (FULL)`;
+      const fullPlaylistResult = await this.createPlaylist(
+        companyList.Company.name,
+        fullPlaylistName, // Name with suffix
+        allRankedTracks.map(
+          (track: any) => track.spotifyLink!.split('/').pop()!
+        ) // All ranked tracks
+      );
+
+      // --- Update CompanyList with Full Playlist URL ---
+      if (fullPlaylistResult.success && fullPlaylistResult.data?.playlistUrl) {
+        try {
+          await this.prisma.companyList.update({
+            where: { id: companyListId },
+            data: { playlistUrlFull: fullPlaylistResult.data.playlistUrl },
+          });
+        } catch (dbError) {
+          this.logger.log(
+            color.red.bold(
+              `Failed to update playlistUrlFull for CompanyList ID ${companyListId}: ${dbError}`
+            )
+          );
+          // Decide if this should be a critical error or just logged
+        }
+      } else {
+        this.logger.log(
+          color.yellow.bold(
+            `Skipping update of playlistUrlFull for CompanyList ID ${companyListId} due to playlist creation/update failure.`
+          )
+        );
+      }
+
+      // Update the list status to:  spotify_list_generated
+      await this.prisma.companyList.update({
+        where: { id: companyListId },
+        data: { status: 'spotify_list_generated' },
+      });
+
+      // --- End Update ---
+
+      return {
+        success: true,
+        data: {
+          companyName: companyList.Company.name,
+          companyListName: companyList.name,
+          totalSubmissions: totalSubmissionsCount, // Use the stored count
+          // Map the topTracks (those within limit) based on the ranking result structure
+          tracks: topTracks.map((track: any, index: number) => ({
+            position: index + 1, // Position based on the final sorted limited list
+            trackId: track.id, // DB track ID
+            spotifyTrackId: track.spotifyLink!.split('/').pop()!, // Extract Spotify ID
+            artist: track.artist,
+            title: track.name, // Field name is 'name' in Track model
+            score: track.score, // Include the score from ranking
+            voteCount: track.voteCount, // Include the vote count from ranking
+          })),
+          // Include results for both playlists
+          playlistLimited: limitedPlaylistResult.success
+            ? limitedPlaylistResult.data
+            : { error: limitedPlaylistResult.error }, // Include error if failed
+          playlistFull: fullPlaylistResult.success
+            ? fullPlaylistResult.data
+            : { error: fullPlaylistResult.error }, // Include error if failed
+        },
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error finalizing list: ${error}`));
+      return { success: false, error: 'Error finalizing list' };
+    }
+  }
+
+  /**
+   * Creates a Spotify playlist with the given tracks
+   * @param companyName The name of the company
+   * @param listName The name of the list
+   * @param trackIds Array of Spotify track IDs to add to the playlist
+   * @returns Object with success status and playlist data
+   */
+  public async createPlaylist(
+    companyName: string,
+    listName: string,
+    trackIds: string[]
+  ): Promise<any> {
+    try {
+      if (!trackIds || trackIds.length === 0) {
+        return { success: false, error: 'No tracks provided' };
+      }
+
+      // Construct the playlist name
+      const playlistName = `${companyName} - ${listName}`;
+
+      // Call the public method on the Spotify instance
+      // This method now handles token acquisition and API calls internally.
+      const result = await this.spotify.createOrUpdatePlaylist(
+        playlistName,
+        trackIds
+      );
+
+      // Handle the result
+      if (result.success) {
+        // Return the success data directly
+        return {
+          success: true,
+          data: result.data, // Contains playlistId, playlistUrl, playlistName
+        };
+      }
+      return result;
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error creating Spotify playlist: ${error}`)
+      );
+      return { success: false, error: 'Error creating Spotify playlist' };
     }
   }
 }

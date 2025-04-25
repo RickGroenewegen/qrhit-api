@@ -419,6 +419,21 @@ class Server {
       }
     );
 
+    // API endpoint for finalizing a company list (creating a top 10)
+    this.fastify.post(
+      '/vibe/finalize',
+      getAuthHandler(['admin', 'vibeadmin']),
+      async (request: any, reply) => {
+        const { companyListId } = request.body;
+
+        if (!companyListId) {
+          return { success: false, error: 'Missing company list ID' };
+        }
+
+        return await this.vibe.finalizeList(parseInt(companyListId));
+      }
+    );
+
     this.fastify.post(
       '/admin/create',
       getAuthHandler(['admin']),
@@ -1733,17 +1748,6 @@ class Server {
           ? 'Verificatie succesvol. Je wordt nu terug gestuurd naar je lijst ...'
           : 'Verificatie mislukt',
       };
-    });
-
-    // API endpoint for finalizing a company list (creating a top 10)
-    this.fastify.post('/hitlist/finalize', async (request: any, reply) => {
-      const { companyListId } = request.body;
-
-      if (!companyListId) {
-        return { success: false, error: 'Missing company list ID' };
-      }
-
-      return await this.hitlist.finalizeList(parseInt(companyListId));
     });
 
     // API endpoint for completing Spotify authorization with the code
