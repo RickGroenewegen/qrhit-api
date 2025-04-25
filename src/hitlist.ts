@@ -1169,7 +1169,7 @@ class Hitlist {
         method: 'get',
         url: 'https://api.spotify.com/v1/me',
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          Authorization: `Bearer ${accessToken!}`, // Added non-null assertion
         },
       });
 
