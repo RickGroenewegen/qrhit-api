@@ -279,27 +279,28 @@ class SpotifyApi {
   }
 
   /**
-   * Fetches all tracks from a Spotify playlist, handling pagination.
+   * Fetches all tracks from a Spotify playlist, handling pagination internally.
    * @param playlistId The Spotify ID of the playlist.
-   * @param accessToken A valid Spotify access token.
    * @returns {Promise<ApiResult>} Contains an array of track items or error info.
    */
-  public async getTracks(
-    playlistId: string,
-    accessToken: string
-  ): Promise<ApiResult> {
+  public async getTracks(playlistId: string): Promise<ApiResult> {
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) {
+      return { success: false, error: 'Spotify authentication required', needsReAuth: true };
+    }
+
     let allItems: any[] = [];
-    let nextUrl:
-      | string
-      | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`; // Max limit is 100 for this endpoint
+    // Use the fields parameter to potentially reduce response size if needed
+    let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&fields=items(track(id,name,artists(name),album(name,images,release_date),external_urls,external_ids,preview_url)),next`; // Max limit is 50 for this endpoint with fields
 
     try {
       while (nextUrl) {
-        // Add explicit type annotation
         const response: AxiosResponse<any> = await axios.get(nextUrl, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
-        allItems = allItems.concat(response.data.items);
+        // Filter out null tracks which can sometimes occur
+        const validItems = response.data.items.filter((item: any) => item && item.track);
+        allItems = allItems.concat(validItems);
         nextUrl = response.data.next;
       }
       // Note: The response structure here is slightly different than getPlaylist.

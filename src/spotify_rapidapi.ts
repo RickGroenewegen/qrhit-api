@@ -192,27 +192,62 @@ class SpotifyRapidApi {
    * The queue processor needs to handle fetching subsequent pages if the API doesn't return all tracks at once.
    * @param playlistId The Spotify ID of the playlist.
    * @param limit Number of tracks per page (RapidAPI default/max might vary).
-   * @param offset Starting offset.
-   * @returns {Promise<ApiResult>} Indicates success/failure of *enqueueing*.
+   * Fetches all tracks for a playlist from RapidAPI, handling pagination.
+   * @param playlistId The Spotify ID of the playlist.
+   * @returns {Promise<ApiResult>} Contains an array of track items or error info.
    */
-  public async getTracks(playlistId: string, limit: number = 50, offset: number = 0): Promise<ApiResult> {
-     // Note: The RapidAPI endpoint might handle pagination differently or return all tracks.
-     // This basic implementation just enqueues the initial request.
-     // A more robust version might need logic here or in the queue processor
-     // to handle potential pagination based on the RapidAPI response structure.
+  public async getTracks(playlistId: string): Promise<ApiResult> {
+    let allItems: any[] = [];
+    let offset = 0;
+    const limit = 100; // RapidAPI endpoint seems to support 100
+
     try {
-      const options = this.createOptions('/playlist_tracks', {
-        id: playlistId,
-        limit: limit,
-        offset: offset,
-      });
-      await this.rapidAPIQueue.enqueue(options);
-      this.analytics.increaseCounter('spotify_rapidapi', 'getTracks_enqueued', 1);
-      // Removed 'message' property
-      return { success: true };
+      while (true) {
+        const options = this.createOptions('/playlist_tracks', {
+          id: playlistId,
+          limit: limit,
+          offset: offset,
+        });
+
+        // Make the request directly, bypassing the queue for now
+        const response = await axios.request(options);
+        this.analytics.increaseCounter('spotify_rapidapi', 'getTracks_called', 1);
+
+        if (!response.data || !response.data.items) {
+          // Stop if response format is unexpected or items are missing
+          this.logger.log(color.yellow(`RapidAPI getTracks for ${playlistId} returned unexpected data at offset ${offset}.`));
+          break;
+        }
+
+        // Filter out null tracks if necessary (depends on API behavior)
+        const validItems = response.data.items.filter((item: any) => item && item.track);
+        allItems = allItems.concat(validItems);
+
+        // Check if the number of items returned is less than the limit, indicating the last page
+        if (response.data.items.length < limit) {
+          break;
+        }
+
+        // Prepare for the next page
+        offset += limit;
+
+        // Optional: Add a small delay to respect potential implicit rate limits
+        await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay
+      }
+
+      return { success: true, data: { items: allItems } };
+
     } catch (error) {
-        this.logger.log(color.red.bold(`Error enqueueing getTracks request: ${error}`));
-        return { success: false, error: 'Failed to enqueue request' };
+      const axiosError = error as AxiosError;
+      const status = axiosError.response?.status;
+      const message = axiosError.message;
+      this.logger.log(color.red.bold(`Error fetching RapidAPI tracks for ${playlistId}: ${status} - ${message}`));
+
+      if (status === 404) {
+        return { success: false, error: 'playlistNotFound' }; // Map 404
+      }
+      // Return a generic error for other issues
+      return { success: false, error: `RapidAPI error fetching tracks: ${status || message}` };
     }
   }
 
