@@ -452,28 +452,6 @@ class SpotifyRapidApi {
     }
   }
 
-  /**
-   * Placeholder for creating/updating playlists via RapidAPI.
-   * Currently returns an error as this functionality is typically not supported or differs significantly.
-   * @param playlistName The desired name of the playlist.
-   * @param trackIds An array of Spotify track IDs.
-   * @returns {Promise<ApiResult>} Always returns a failure result.
-   */
-  public async createOrUpdatePlaylist(
-    playlistName: string,
-    trackIds: string[]
-  ): Promise<ApiResult> {
-    this.logger.log(
-      color.yellow(
-        `Playlist creation/update called for "${playlistName}" via RapidAPI, which is not supported.`
-      )
-    );
-    return {
-      success: false,
-      error: 'Playlist creation/update not supported via this API endpoint',
-    };
-  }
-
   // Method to explicitly trigger queue processing (might be called from a cron job or specific event)
   public async processApiQueue(): Promise<void> {
     this.logger.log(color.blue('Starting RapidAPI queue processing...'));

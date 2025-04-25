@@ -778,9 +778,7 @@ class Hitlist {
         const clientId = process.env['SPOTIFY_CLIENT_ID'];
         if (!clientId) {
           this.logger.log(
-            color.red.bold(
-              'Missing Spotify Client ID for generating auth URL.'
-            )
+            color.red.bold('Missing Spotify Client ID for generating auth URL.')
           );
           return {
             success: false,
@@ -825,7 +823,10 @@ class Hitlist {
         color.red.bold(`Error creating Spotify playlist: ${error}`)
       );
       return { success: false, error: 'Error creating Spotify playlist' };
-   * Retrieves playlist information from the Spotify API. Matches signature of spotify.ts getPlaylist.
+    }
+  }
+
+  /* Retrieves playlist information from the Spotify API. Matches signature of spotify.ts getPlaylist.
    * NOTE: cache, captcha parameters are ignored in this implementation.
    * @param playlistId The Spotify ID or slug.
    * @param cache Ignored.
