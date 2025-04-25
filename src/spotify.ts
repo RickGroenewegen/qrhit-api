@@ -366,8 +366,12 @@ class Spotify {
         console.log('GET PLAYLIST - 777');
 
         await this.rapidAPIQueue.enqueue(options);
+        console.log('GET PLAYLIST - 777a');
         await this.rapidAPIQueue.processQueue();
+        console.log('GET PLAYLIST - 777b');
         const response = await axios.request(options);
+
+        console.log('GET PLAYLIST - 777c');
 
         this.analytics.increaseCounter('spotify', 'playlist', 1);
 
