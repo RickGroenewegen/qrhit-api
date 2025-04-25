@@ -667,6 +667,8 @@ class Spotify {
       //   }
       // }
 
+      console.log('GET TRACKS - getPlaylist:');
+
       const playlist = await this.getPlaylist(
         playlistId,
         false,
