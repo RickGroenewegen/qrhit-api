@@ -27,7 +27,7 @@ class Spotify {
   private spotifyApi = new SpotifyApi(); // Instantiate SpotifyApi
   private spotifyRapidApi = new SpotifyRapidApi(); // Instantiate SpotifyRapidApi
 
-  private api = this.spotifyApi; // Default to SpotifyApi
+  private api = this.spotifyRapidApi; // Default to SpotifyApi
 
   public async getPlaylist(
     playlistId: string,
@@ -137,6 +137,7 @@ class Spotify {
         data: playlist,
       };
     } catch (e: any) {
+      console.log(e);
       if (e.response && e.response.status === 404) {
         return { success: false, error: 'playlistNotFound' };
       }
@@ -160,6 +161,8 @@ class Spotify {
       let maxReached = false;
       let maxReachedPhysical = false;
 
+      console.log(111);
+
       // Get playlist details first (handles slug, gets track count for cache key)
       const playlistResult = await this.getPlaylist(
         playlistId,
@@ -170,6 +173,8 @@ class Spotify {
         isSlug, // Pass isSlug flag
         'en' // Default locale, adjust if needed
       );
+
+      console.log(222, playlistResult);
 
       if (!playlistResult.success || !playlistResult.data) {
         return {
@@ -526,7 +531,11 @@ class Spotify {
       // API call successful, process the items
       // Assuming the API implementation returns tracks in result.data.tracks
       const rawTracks = result.data?.tracks || [];
-      this.analytics.increaseCounter('spotify', 'tracks_by_ids_fetched_api', rawTracks.length);
+      this.analytics.increaseCounter(
+        'spotify',
+        'tracks_by_ids_fetched_api',
+        rawTracks.length
+      );
 
       // Filter out any null or undefined tracks and format them
       const validFormattedTracks = rawTracks
@@ -574,7 +583,9 @@ class Spotify {
 
       return finalResult;
     } catch (error: any) {
-      this.logger.log(color.red.bold(`Error in getTracksByIds: ${error.message}`));
+      this.logger.log(
+        color.red.bold(`Error in getTracksByIds: ${error.message}`)
+      );
       return {
         success: false,
         error: 'Internal error fetching tracks by IDs',
@@ -670,7 +681,9 @@ class Spotify {
 
       return finalResult;
     } catch (error: any) {
-      this.logger.log(color.red.bold(`Error in searchTracks: ${error.message}`));
+      this.logger.log(
+        color.red.bold(`Error in searchTracks: ${error.message}`)
+      );
       return {
         success: false,
         error: 'Internal error searching tracks',
