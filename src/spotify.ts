@@ -300,6 +300,8 @@ class Spotify {
   ): Promise<ApiResult> {
     let playlist: Playlist | null = null;
 
+    console.log('GET PLAYLIST - Start');
+
     if (!this.translate.isValidLocale(locale)) {
       locale = 'en';
     }
@@ -314,16 +316,24 @@ class Spotify {
     // }
 
     try {
+      console.log('GET PLAYLIST - 111');
+
       const cacheKey = `playlist_${playlistId}_${locale}`;
       const cacheResult = await this.cache.get(cacheKey);
       const dbCacheKey = `playlistdb_${playlistId}`;
       const dbCacheResult = await this.cache.get(dbCacheKey);
 
+      console.log('GET PLAYLIST - 222');
+
       if (!cacheResult || !cache) {
         let checkPlaylistId = playlistId;
 
+        console.log('GET PLAYLIST - 333', isSlug);
+
         if (isSlug) {
           if (!dbCacheResult || !cache) {
+            console.log('GET PLAYLIST - 444');
+
             const dbPlaylist = await this.prisma.playlist.findFirst({
               where: { slug: playlistId },
             });
@@ -332,10 +342,14 @@ class Spotify {
             }
             checkPlaylistId = dbPlaylist.playlistId;
             this.cache.set(dbCacheKey, checkPlaylistId);
+
+            console.log('GET PLAYLIST - 555');
           } else {
             checkPlaylistId = dbCacheResult;
           }
         }
+
+        console.log('GET PLAYLIST - 666');
 
         const options = {
           method: 'GET',
@@ -349,11 +363,15 @@ class Spotify {
           },
         };
 
+        console.log('GET PLAYLIST - 777');
+
         await this.rapidAPIQueue.enqueue(options);
         await this.rapidAPIQueue.processQueue();
         const response = await axios.request(options);
 
         this.analytics.increaseCounter('spotify', 'playlist', 1);
+
+        console.log('GET PLAYLIST - 888');
 
         let image = '';
         if (response.data.images.length > 0) {
@@ -362,6 +380,8 @@ class Spotify {
 
         let playlistName = response.data.name;
         let playlistDescription = response.data.description;
+
+        console.log('GET PLAYLIST - 999');
 
         if (featured) {
           // Get the name from DB if it's a featured playlist
@@ -376,6 +396,8 @@ class Spotify {
               : null) || playlistDescription;
         }
 
+        console.log('GET PLAYLIST - 10');
+
         playlist = {
           id: playlistId,
           playlistId: playlistId,
@@ -389,6 +411,9 @@ class Spotify {
       } else {
         playlist = JSON.parse(cacheResult);
       }
+
+      console.log('GET PLAYLIST - 11');
+
       return {
         success: true,
         data: playlist,
@@ -667,7 +692,7 @@ class Spotify {
       //   }
       // }
 
-      console.log('GET TRACKS - getPlaylist:');
+      console.log('GET TRACKS - getPlaylist');
 
       const playlist = await this.getPlaylist(
         playlistId,
