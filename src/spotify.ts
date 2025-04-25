@@ -193,7 +193,7 @@ class Spotify {
         };
       }
       const playlistData = playlistResult.data;
-      const checkPlaylistId = playlistData.playlistId;
+      let checkPlaylistId = playlistData.playlistId;
 
       // Update cache keys with actual ID and track count
       cacheKey = `tracks2_${checkPlaylistId}_${playlistData.numberOfTracks}`;
@@ -202,6 +202,16 @@ class Spotify {
       const cacheResult = await this.cache.get(cacheKey);
 
       if (!cacheResult || !cache) {
+        if (isSlug) {
+          const dbPlaylist = await this.prisma.playlist.findFirst({
+            where: { slug: playlistId },
+          });
+          if (!dbPlaylist) {
+            return { success: false, error: 'playlistNotFound' };
+          }
+          checkPlaylistId = dbPlaylist.playlistId;
+        }
+
         // Fetch all track items using the appropriate API implementation
         const result = await this.api.getTracks(checkPlaylistId);
 
