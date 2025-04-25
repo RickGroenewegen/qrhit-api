@@ -733,7 +733,19 @@ class Spotify {
   ): Promise<ApiResult> {
     // Delegate to the currently selected API implementation
     // Note: SpotifyRapidApi's implementation might return an error if not supported.
+    // Use the specific implementation instance directly
     return this.spotifyApi.createOrUpdatePlaylist(playlistName, trackIds);
+  }
+
+  /**
+   * Public method to exchange an authorization code for tokens.
+   * Delegates to the SpotifyApi instance.
+   * @param authCode The authorization code from Spotify callback.
+   * @returns {Promise<string | null>} The access token or null.
+   */
+  public async getTokensFromAuthCode(authCode: string): Promise<string | null> {
+    // Delegate to the SpotifyApi instance
+    return this.spotifyApi.getTokensFromAuthCode(authCode);
   }
 }
 
