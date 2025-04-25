@@ -637,28 +637,28 @@ class Spotify {
       // API call successful, process the items
       // Assuming the API implementation returns search results in result.data
       const searchData = result.data;
-      const rawItems = searchData?.tracks?.items || []; // Adjust based on actual API response structure
-      const totalCount = searchData?.tracks?.total || 0;
+      // Access items correctly based on RapidAPI structure { tracks: { items: [...] } }
+      const rawItems = searchData?.tracks?.items || [];
+      // Access totalCount correctly based on RapidAPI structure { tracks: { totalCount: ... } }
+      const totalCount = searchData?.tracks?.totalCount || 0;
 
       this.analytics.increaseCounter('spotify', 'search_api', 1); // Keep analytics
 
       // Transform the response to the format expected by the frontend/caller
       const formattedTracks = rawItems
-        .filter((item: any) => item) // Filter out null items
-        .map((track: any) => {
-          // Adapt formatting based on the structure returned by SpotifyApi/SpotifyRapidApi searchTracks
-          // This example assumes a structure similar to the official Spotify API search response
+        .filter((item: any) => item && item.data) // Filter out null items AND items without data (RapidAPI structure)
+        .map((item: any) => {
+          // Access the actual track data nested within item.data for RapidAPI
+          const track = item.data;
+
+          // Adapt formatting based on the structure returned by SpotifyRapidApi searchTracks
           const artist =
-            track.artists && track.artists.length > 0
-              ? track.artists[0].name // Assuming first artist
-              : '';
+            track.artists?.items?.[0]?.profile?.name || ''; // Access nested artist name
 
           const imageUrl =
-            track.album && track.album.images && track.album.images.length > 0
-              ? track.album.images[0].url // Assuming first image
-              : '';
+            track.albumOfTrack?.coverArt?.sources?.[0]?.url || ''; // Access nested image URL
 
-          const trackName = this.utils.cleanTrackName(track.name || '');
+          const trackName = this.utils.cleanTrackName(track.name || ''); // Access track name
 
           // Return a simplified structure matching the previous RapidAPI format
           return {
