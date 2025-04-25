@@ -207,7 +207,8 @@ class SpotifyRapidApi {
       });
       await this.rapidAPIQueue.enqueue(options);
       this.analytics.increaseCounter('spotify_rapidapi', 'getTracks_enqueued', 1);
-      return { success: true, message: 'Request enqueued' };
+      // Removed 'message' property
+      return { success: true };
     } catch (error) {
         this.logger.log(color.red.bold(`Error enqueueing getTracks request: ${error}`));
         return { success: false, error: 'Failed to enqueue request' };
@@ -229,7 +230,8 @@ class SpotifyRapidApi {
       const options = this.createOptions('/tracks/', { ids: trackIds.join(',') });
       await this.rapidAPIQueue.enqueue(options);
       this.analytics.increaseCounter('spotify_rapidapi', 'getTracksByIds_enqueued', 1);
-      return { success: true, message: 'Request enqueued' };
+      // Removed 'message' property
+      return { success: true };
     } catch (error) {
         this.logger.log(color.red.bold(`Error enqueueing getTracksByIds request: ${error}`));
         return { success: false, error: 'Failed to enqueue request' };
@@ -258,7 +260,8 @@ class SpotifyRapidApi {
       });
       await this.rapidAPIQueue.enqueue(options);
       this.analytics.increaseCounter('spotify_rapidapi', 'searchTracks_enqueued', 1);
-      return { success: true, message: 'Request enqueued' };
+      // Removed 'message' property
+      return { success: true };
     } catch (error) {
         this.logger.log(color.red.bold(`Error enqueueing searchTracks request: ${error}`));
         return { success: false, error: 'Failed to enqueue request' };

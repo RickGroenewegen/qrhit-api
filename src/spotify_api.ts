@@ -1,4 +1,4 @@
-import axios, { AxiosError } from 'axios';
+import axios, { AxiosError, AxiosResponse } from 'axios'; // Import AxiosResponse
 import Logger from './logger';
 import Settings from './settings';
 import { color } from 'console-log-colors';
@@ -228,7 +228,7 @@ class SpotifyApi {
         return {
           success: false,
           error: 'Spotify authorization error (token likely expired/invalid)',
-          needsReAuth: true,
+          // needsReAuth: true, // Removed as it's not in ApiResult interface
         };
       } else if (status === 404) {
         return { success: false, error: 'Spotify resource not found' };
@@ -279,10 +279,14 @@ class SpotifyApi {
   ): Promise<ApiResult> {
     let allItems: any[] = [];
     let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`; // Max limit is 100 for this endpoint
+import axios, { AxiosError, AxiosResponse } from 'axios'; // Import AxiosResponse
+
+// ... other code ...
 
     try {
       while (nextUrl) {
-        const response = await axios.get(nextUrl, {
+        // Add explicit type annotation
+        const response: AxiosResponse<any> = await axios.get(nextUrl, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         allItems = allItems.concat(response.data.items);
