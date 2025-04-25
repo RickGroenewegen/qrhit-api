@@ -27,7 +27,7 @@ class Spotify {
   private spotifyApi = new SpotifyApi(); // Instantiate SpotifyApi
   private spotifyRapidApi = new SpotifyRapidApi(); // Instantiate SpotifyRapidApi
 
-  private api = this.spotifyRapidApi; // Default to SpotifyApi
+  private api = this.spotifyApi; // Default to SpotifyApi
 
   public async getPlaylist(
     playlistId: string,
@@ -652,8 +652,7 @@ class Spotify {
           const track = item.data;
 
           // Adapt formatting based on the structure returned by SpotifyRapidApi searchTracks
-          const artist =
-            track.artists?.items?.[0]?.profile?.name || ''; // Access nested artist name
+          const artist = track.artists?.items?.[0]?.profile?.name || ''; // Access nested artist name
 
           const imageUrl =
             track.albumOfTrack?.coverArt?.sources?.[0]?.url || ''; // Access nested image URL
