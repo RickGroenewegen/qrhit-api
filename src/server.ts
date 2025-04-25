@@ -1101,7 +1101,7 @@ class Server {
     this.fastify.post(
       '/spotify/playlists/tracks',
       async (request: any, _reply) => {
-        return await this.spotify.getTracks(
+        return await this.hitlist.getTracks(
           request.body.playlistId,
           this.utils.parseBoolean(request.body.cache),
           request.body.captchaToken,
@@ -1115,7 +1115,7 @@ class Server {
       '/spotify/playlists',
 
       async (request: any, _reply) => {
-        return await this.spotify.getPlaylist(
+        return await this.hitlist.getPlaylist(
           request.body.playlistId,
           this.utils.parseBoolean(request.body.cache),
           request.body.captchaToken,
@@ -1590,7 +1590,16 @@ class Server {
             return;
           }
 
-          const result = await this.hitlist.getSpotifyPlaylistInfo(playlistId);
+          // Call the renamed getPlaylist method, passing default values for ignored params
+          const result = await this.hitlist.getPlaylist(
+            playlistId,
+            true, // cache (ignored)
+            '', // captchaToken (ignored)
+            false, // checkCaptcha (ignored)
+            false, // featured (ignored)
+            false, // isSlug (ignored)
+            'en' // locale (ignored)
+          );
           reply.send(result);
         }
       );
@@ -1606,8 +1615,13 @@ class Server {
             return;
           }
 
-          const result = await this.hitlist.getSpotifyPlaylistTracks(
-            playlistId
+          // Call the renamed getTracks method, passing default values for ignored params
+          const result = await this.hitlist.getTracks(
+            playlistId,
+            true, // cache (ignored)
+            '', // captchaToken (ignored)
+            false, // checkCaptcha (ignored)
+            false // isSlug (ignored)
           );
           reply.send(result);
         }

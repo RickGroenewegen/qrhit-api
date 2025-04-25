@@ -1377,47 +1377,7 @@ class Hitlist {
     isSlug: boolean = false, // Ignored
     locale: string = 'en' // Ignored
   ): Promise<any> {
-    console.log(
-      111,
-      playlistId,
-      cache,
-      captchaToken,
-      checkCaptcha,
-      featured,
-      isSlug,
-      locale
-    );
-
     try {
-      // Log if unsupported parameters are used with non-default values
-      if (cache !== true)
-        this.logger.log(
-          color.yellow('getPlaylist: cache parameter is ignored.')
-        );
-      if (captchaToken)
-        this.logger.log(
-          color.yellow('getPlaylist: captchaToken parameter is ignored.')
-        );
-      if (checkCaptcha)
-        this.logger.log(
-          color.yellow('getPlaylist: checkCaptcha parameter is ignored.')
-        );
-      if (featured)
-        this.logger.log(
-          color.yellow('getPlaylist: featured parameter is ignored.')
-        );
-      if (isSlug)
-        this.logger.log(
-          color.yellow(
-            // 'getPlaylist: isSlug parameter is ignored (assuming playlistId is Spotify ID).'
-            // Removed the log as isSlug is now handled.
-          )
-        );
-      if (locale !== 'en')
-        this.logger.log(
-          color.yellow('getPlaylist: locale parameter is ignored.')
-        );
-
       if (!playlistId) {
         return { success: false, error: 'Playlist ID is required' };
       }
@@ -1433,12 +1393,8 @@ class Hitlist {
           return { success: false, error: 'playlistNotFound' };
         }
         checkPlaylistId = dbPlaylist.playlistId;
-        this.logger.log(
-          color.blue(`Translated slug "${playlistId}" to ID "${checkPlaylistId}"`)
-        );
       }
       // --- End Handle Slug ---
-
 
       // --- Get Spotify Token ---
       // Reusing token logic similar to createPlaylist
@@ -1629,24 +1585,6 @@ class Hitlist {
     isSlug: boolean = false // Ignored
   ): Promise<any> {
     try {
-      // Log if unsupported parameters are used with non-default values
-      if (cache !== true)
-        this.logger.log(color.yellow('getTracks: cache parameter is ignored.'));
-      if (captchaToken)
-        this.logger.log(
-          color.yellow('getTracks: captchaToken parameter is ignored.')
-        );
-      if (checkCaptcha)
-        this.logger.log(
-          color.yellow('getTracks: checkCaptcha parameter is ignored.')
-        );
-      if (isSlug)
-        this.logger.log(
-            // 'getTracks: isSlug parameter is ignored (assuming playlistId is Spotify ID).'
-            // Removed the log as isSlug is now handled.
-          )
-        );
-
       if (!playlistId) {
         return { success: false, error: 'Playlist ID is required' };
       }
@@ -1663,9 +1601,6 @@ class Hitlist {
           return { success: false, error: 'playlistNotFound' };
         }
         checkPlaylistId = dbPlaylist.playlistId;
-         this.logger.log(
-          color.blue(`Translated slug "${playlistId}" to ID "${checkPlaylistId}" for getTracks`)
-        );
       }
       // --- End Handle Slug ---
 
