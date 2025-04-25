@@ -410,6 +410,17 @@ class SpotifyApi {
     if (!searchTerm) {
       return { success: false, error: 'Search term is required' };
     }
+
+    this.logger.log(
+      color.blue.bold(
+        `Searching ${color.white.bold(
+          'SpotifyAPI'
+        )} for tracks matching "${color.white.bold(
+          searchTerm
+        )}" with limit ${color.white.bold(limit)}`
+      )
+    );
+
     limit = Math.min(limit, 50); // Enforce Spotify API limit
 
     const accessToken = await this.getAccessToken();
@@ -431,6 +442,10 @@ class SpotifyApi {
         },
         headers: { Authorization: `Bearer ${accessToken}` },
       });
+
+      // Output response.data in full. No [object Object] here.
+      console.log(JSON.stringify(response.data, null, 2));
+
       // The response contains a 'tracks' object with items, total, etc.
       return { success: true, data: response.data };
     } catch (error) {
