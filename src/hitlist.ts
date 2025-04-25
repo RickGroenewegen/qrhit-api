@@ -25,6 +25,7 @@ class Hitlist {
   private mail = Mail.getInstance();
   private settings = Settings.getInstance(); // Instantiate Settings
   private vibe = Vibe.getInstance(); // Instantiate Vibe
+  private translation = new Translation(); // Instantiate Translation
 
   private constructor() {
     this.initDir();
