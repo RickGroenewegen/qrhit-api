@@ -1595,6 +1595,22 @@ class Server {
         }
       );
 
+      // API endpoint for getting all tracks from a Spotify playlist (DEV ONLY)
+      this.fastify.get(
+        '/hitlist/spotify-playlist/:playlistId/tracks',
+        async (request: any, reply) => {
+          const { playlistId } = request.params;
+
+          if (!playlistId) {
+            reply.status(400).send({ error: 'Missing playlist ID' });
+            return;
+          }
+
+          const result = await this.hitlist.getSpotifyPlaylistTracks(playlistId);
+          reply.send(result);
+        }
+      );
+
       this.fastify.get(
         '/youtube/:artist/:title',
         async (request: any, reply: any) => {

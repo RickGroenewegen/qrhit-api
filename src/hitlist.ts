@@ -1539,6 +1539,199 @@ class Hitlist {
     }
   }
 
+  /**
+   * Retrieves all tracks from a specific Spotify playlist, handling pagination.
+   * @param playlistId The Spotify ID of the playlist.
+   * @returns Object with success status and an array of all tracks or error.
+   */
+  public async getSpotifyPlaylistTracks(playlistId: string): Promise<any> {
+    try {
+      if (!playlistId) {
+        return { success: false, error: 'Playlist ID is required' };
+      }
+
+      // --- Get Spotify Token (Reused Logic) ---
+      const clientId = process.env['SPOTIFY_CLIENT_ID'];
+      const clientSecret = process.env['SPOTIFY_CLIENT_SECRET'];
+      if (!clientId || !clientSecret) {
+        this.logger.log(color.red.bold('Missing Spotify API credentials'));
+        return { success: false, error: 'Missing Spotify API credentials' };
+      }
+
+      let accessToken = await this.settings.getSetting('spotify_access_token');
+      const refreshToken = await this.settings.getSetting(
+        'spotify_refresh_token'
+      );
+      const expiresAtStr = await this.settings.getSetting(
+        'spotify_token_expires_at'
+      );
+      const expiresAt = expiresAtStr ? parseInt(expiresAtStr, 10) : 0;
+
+      if (!accessToken || Date.now() >= expiresAt) {
+        if (refreshToken) {
+          this.logger.log(
+            color.blue.bold(
+              'Spotify access token expired/invalid for tracks, attempting refresh...'
+            )
+          );
+          try {
+            const refreshResponse = await axios({
+              method: 'post',
+              url: 'https://accounts.spotify.com/api/token',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                Authorization:
+                  'Basic ' +
+                  Buffer.from(clientId + ':' + clientSecret).toString(
+                    'base64'
+                  ),
+              },
+              data: new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: refreshToken,
+              }).toString(),
+            });
+
+            if (refreshResponse.data.access_token) {
+              accessToken = refreshResponse.data.access_token;
+              const newRefreshToken = refreshResponse.data.refresh_token;
+              const expiresIn = refreshResponse.data.expires_in || 3600;
+              const newExpiresAt = Date.now() + (expiresIn - 60) * 1000;
+
+              await this.settings.setSetting(
+                'spotify_access_token',
+                accessToken
+              );
+              await this.settings.setSetting(
+                'spotify_token_expires_at',
+                newExpiresAt.toString()
+              );
+              if (newRefreshToken) {
+                await this.settings.setSetting(
+                  'spotify_refresh_token',
+                  newRefreshToken
+                );
+              }
+              this.logger.log(
+                color.green.bold('Successfully refreshed Spotify token for tracks.')
+              );
+            } else {
+              accessToken = null;
+            }
+          } catch (refreshError) {
+            this.logger.log(
+              color.yellow.bold(`Error refreshing token for tracks: ${refreshError}`)
+            );
+            accessToken = null;
+          }
+        } else {
+          accessToken = null;
+        }
+      }
+
+      if (!accessToken) {
+        this.logger.log(
+          color.red.bold(
+            'Could not obtain valid Spotify token for tracks. Authorization might be required.'
+          )
+        );
+        return {
+          success: false,
+          error: 'Could not obtain valid Spotify token',
+          needsReAuth: true,
+        };
+      }
+      // --- End Get Spotify Token ---
+
+      // --- Call Spotify API with Pagination ---
+      let allTracks: any[] = [];
+      let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`; // Start with limit 100
+
+      while (nextUrl) {
+        try {
+          const response = await axios({
+            method: 'get',
+            url: nextUrl,
+            headers: {
+              Authorization: `Bearer ${accessToken}`, // No need for ! here as we checked above
+            },
+          });
+
+          const items = response.data.items || [];
+          items.forEach((item: any) => {
+            if (item.track && item.track.id) { // Ensure track data exists and has an ID
+              allTracks.push({
+                id: item.track.id,
+                name: item.track.name,
+                artist: item.track.artists?.map((a: any) => a.name).join(', ') || 'Unknown Artist',
+                album: item.track.album?.name || 'Unknown Album',
+                durationMs: item.track.duration_ms,
+                spotifyUrl: item.track.external_urls?.spotify,
+                previewUrl: item.track.preview_url,
+                imageUrl: item.track.album?.images?.[0]?.url || null, // Get album image
+                releaseDate: item.track.album?.release_date,
+                isrc: item.track.external_ids?.isrc,
+              });
+            }
+          });
+
+          nextUrl = response.data.next; // Get the URL for the next page
+        } catch (apiError) {
+          if (axios.isAxiosError(apiError) && apiError.response) {
+            if (apiError.response.status === 401) {
+              this.logger.log(
+                color.yellow(
+                  'Spotify API returned 401 Unauthorized when fetching tracks. Clearing token.'
+                )
+              );
+              await this.settings.deleteSetting('spotify_access_token');
+              await this.settings.deleteSetting('spotify_token_expires_at');
+              return {
+                success: false,
+                error: 'Spotify authorization error (token likely expired)',
+                needsReAuth: true,
+              };
+            } else if (apiError.response.status === 404) {
+              return { success: false, error: 'Playlist not found when fetching tracks' };
+            } else {
+              this.logger.log(
+                color.red.bold(
+                  `Spotify API error fetching tracks for ${playlistId}: ${apiError.response.status} - ${apiError.message}`
+                )
+              );
+              return {
+                success: false,
+                error: `Spotify API error: ${apiError.response.status}`,
+              };
+            }
+          } else {
+            this.logger.log(
+              color.red.bold(
+                `Error fetching tracks for ${playlistId} from Spotify: ${apiError}`
+              )
+            );
+            throw apiError; // Re-throw unexpected errors
+          }
+        }
+      }
+      // --- End Call Spotify API ---
+
+      return {
+        success: true,
+        data: allTracks,
+      };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error getting Spotify playlist tracks: ${error}`)
+      );
+      return {
+        success: false,
+        error: 'Internal server error getting playlist tracks',
+      };
+    }
+  }
+
+
   public async searchTracks(searchString: string) {
     try {
       if (!searchString || searchString.length < 2) {
