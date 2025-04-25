@@ -7,6 +7,9 @@ export interface Track {
   image: string;
   album: string;
   preview: string;
-  spotifyLink: string;
+  link: string; // Add the missing link property
+  spotifyLink: string; // Keep existing spotifyLink if it's used elsewhere, otherwise consider removing/renaming
   trueYear?: number;
+  extraNameAttribute?: string; // Add missing optional properties
+  extraArtistAttribute?: string; // Add missing optional properties
 }
