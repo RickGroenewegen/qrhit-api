@@ -1377,6 +1377,17 @@ class Hitlist {
     isSlug: boolean = false, // Ignored
     locale: string = 'en' // Ignored
   ): Promise<any> {
+    console.log(
+      111,
+      playlistId,
+      cache,
+      captchaToken,
+      checkCaptcha,
+      featured,
+      isSlug,
+      locale
+    );
+
     try {
       // Log if unsupported parameters are used with non-default values
       if (cache !== true)
