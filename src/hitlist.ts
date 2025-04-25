@@ -1969,56 +1969,6 @@ class Hitlist {
           );
 
           allTracks = allTracks.concat(filteredTracks);
-                if (track.artists.length === 1) {
-                  trueArtist = track.artists[0].name;
-                } else {
-                  // Max. 3 artists like in spotify.ts
-                  const limitedArtists = track.artists.slice(0, 3);
-                  const artistNames = limitedArtists.map(
-                    (artist: { name: string }) => artist.name
-                  );
-                  const lastArtist = artistNames.pop();
-              // This mapping logic is now inside the Promise.all block above
-              /*
-              let formattedReleaseDate = '';
-              if (track.album?.release_date) {
-                try {
-                  // Handle potential invalid date strings
-                  const releaseDate = new Date(track.album.release_date);
-                  if (!isNaN(releaseDate.getTime())) {
-                    formattedReleaseDate = format(releaseDate, 'yyyy-MM-dd');
-                  }
-                } catch (e) {
-                  // Ignore date formatting errors
-                }
-              }
-              */
-              // The return object is now created inside the Promise.all block above
-              /*
-              return {
-                id: track.id,
-                name: this.utils.cleanTrackName(track.name || ''),
-                album: this.utils.cleanTrackName(track.album?.name || ''),
-                preview: track.preview_url || '',
-                artist: trueArtist,
-                link: track.external_urls?.spotify,
-                isrc: track.external_ids?.isrc,
-                image: track.album?.images?.[1]?.url || null, // Use index 1 like spotify.ts
-                releaseDate: formattedReleaseDate,
-                trueYear: undefined, // Now populated from DB/cache
-                extraNameAttribute: undefined, // Now populated from DB/cache
-                extraArtistAttribute: undefined, // Now populated from DB/cache
-              };
-              */
-            // The filter is now applied after the Promise.all resolves
-            /*
-            .filter(
-              (track: any) => track.artist && track.name && track.image // Filter like spotify.ts
-            );
-            */
-
-          // Concatenation happens after Promise.all resolves and filtering
-          // allTracks = allTracks.concat(mappedTracks);
 
           nextUrl = response.data.next; // Get the URL for the next page
         } catch (apiError) {
