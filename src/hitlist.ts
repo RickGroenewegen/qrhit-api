@@ -773,47 +773,26 @@ class Hitlist {
           success: true,
           data: result.data, // Contains playlistId, playlistUrl, playlistName
         };
-      } else if (result.needsReAuth) {
-        // If re-authentication is needed, get the auth URL from the Spotify service
-        const authUrl = this.spotify.getAuthorizationUrl();
-
-        if (!authUrl) {
-          // Handle case where Spotify service couldn't generate the URL (e.g., missing config)
-          this.logger.log(
-            color.red.bold(
-              'Failed to generate Spotify authorization URL. Check Spotify module configuration.'
-            )
-          );
-          return {
-            success: false,
-            error: 'Failed to generate Spotify authorization URL',
-          };
-        }
-
-        this.logger.log(
-          color.yellow.bold(
-            'Spotify authorization required. Please visit the following URL:'
-          )
-        );
-        this.logger.log(color.white.bold(authUrl));
-
-        return {
-          success: false,
-          error: 'Authorization required',
-          message: 'Please check the server logs for the authorization URL',
-          authUrl: authUrl, // Provide the auth URL to the caller
-        };
       } else {
-        // Handle other errors returned by createOrUpdatePlaylist
+        // Handle errors returned by createOrUpdatePlaylist
+        // The result object now directly contains error, needsReAuth, and authUrl if applicable
         this.logger.log(
           color.red.bold(
-            `Error creating/updating Spotify playlist: ${result.error}`
+            `Error creating/updating Spotify playlist: ${result.error} ${
+              result.needsReAuth ? '(Needs ReAuth)' : ''
+            }`
           )
         );
-        return {
-          success: false,
-          error: result.error || 'Failed to create/update Spotify playlist',
-        };
+        if (result.needsReAuth && result.authUrl) {
+           this.logger.log(
+             color.yellow.bold(
+               'Spotify authorization required. Please visit the following URL:'
+             )
+           );
+           this.logger.log(color.white.bold(result.authUrl));
+        }
+        // Return the ApiResult directly, it contains all necessary info (error, needsReAuth, authUrl)
+        return result;
       }
     } catch (error) {
       this.logger.log(

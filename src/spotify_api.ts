@@ -236,7 +236,8 @@ class SpotifyApi {
         return {
           success: false,
           error: 'Spotify authorization error (token likely expired/invalid)',
-          needsReAuth: true, // Signal that re-authentication is needed
+          needsReAuth: true,
+          authUrl: this.getAuthorizationUrl(), // Include auth URL on 401
         };
       } else if (status === 404) {
         return {
@@ -287,11 +288,11 @@ class SpotifyApi {
   public async getPlaylist(playlistId: string): Promise<ApiResult> {
     const accessToken = await this.getAccessToken();
     if (!accessToken) {
-      // If no token could be obtained (e.g., refresh failed, needs initial auth)
       return {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
+        authUrl: this.getAuthorizationUrl(), // Add authUrl
       };
     }
 
@@ -323,6 +324,7 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
+        authUrl: this.getAuthorizationUrl(), // Add authUrl
       };
     }
 
@@ -380,6 +382,7 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
+        authUrl: this.getAuthorizationUrl(), // Add authUrl
       };
     }
 
@@ -463,6 +466,7 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
+        authUrl: this.getAuthorizationUrl(), // Add authUrl
       };
     }
 
@@ -509,6 +513,7 @@ class SpotifyApi {
         success: false,
         error: 'Spotify authentication required',
         needsReAuth: true,
+        authUrl: this.getAuthorizationUrl(), // Add authUrl
       };
     }
 
