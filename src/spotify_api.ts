@@ -262,6 +262,24 @@ class SpotifyApi {
   }
 
   /**
+   * Fetches the Spotify User ID for the authenticated user.
+   * @param accessToken A valid Spotify access token.
+   * @returns {Promise<string | null>} The user ID or null if an error occurs.
+   */
+  private async getUserId(accessToken: string): Promise<string | null> {
+    try {
+      const response = await axios.get('https://api.spotify.com/v1/me', {
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      return response.data.id;
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error fetching Spotify user ID: ${error}`));
+      // We don't use handleApiError here as the caller (createOrUpdatePlaylist) will handle it.
+      return null;
+    }
+  }
+
+  /**
    * Fetches playlist details from the Spotify API.
    * @param playlistId The Spotify ID of the playlist.
    * @returns {Promise<ApiResult>} Contains playlist data or error info.
