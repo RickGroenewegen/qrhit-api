@@ -13,8 +13,6 @@ import Translation from './translation'; // Import Translation
 import { Prisma } from '@prisma/client'; // Import Prisma for raw query join
 import axios, { AxiosResponse } from 'axios'; // Import AxiosResponse
 import { format } from 'date-fns'; // Add date-fns format import
-import SpotifyApi from './spotify_api'; // Import the new class
-
 class Hitlist {
   private static instance: Hitlist;
   private prisma = PrismaInstance.getInstance();
@@ -28,7 +26,6 @@ class Hitlist {
   private settings = Settings.getInstance(); // Instantiate Settings
   private vibe = Vibe.getInstance(); // Instantiate Vibe
   private translation = new Translation(); // Instantiate Translation
-  private api = new SpotifyApi(); // Instantiate SpotifyApi
 
   private constructor() {
     this.initDir();
@@ -1522,9 +1519,7 @@ class Hitlist {
           const dbPlaylist = await this.prisma.playlist.findFirst({
             where: {
               // Query by slug if isSlug is true, otherwise by playlistId
-              ...(isSlug
-                ? { slug: idToQuery }
-                : { playlistId: idToQuery }),
+              ...(isSlug ? { slug: idToQuery } : { playlistId: idToQuery }),
             },
             // Select the base name and the localized description
             select: {
@@ -1809,7 +1804,9 @@ class Hitlist {
                 FROM
                   tracks t
                 LEFT JOIN
-                  (SELECT * FROM trackextrainfo WHERE playlistId = ${dbPlaylist.id}) tei
+                  (SELECT * FROM trackextrainfo WHERE playlistId = ${
+                    dbPlaylist.id
+                  }) tei
                   ON t.id = tei.trackId
                 WHERE
                   t.trackId IN (${Prisma.join(trackIds)})
@@ -2047,9 +2044,11 @@ class Hitlist {
         return { success: false, error: 'Search string too short' };
       }
 
+      console.log(111);
+
       // Use Spotify search instead of database search
       const spotify = new Spotify();
-      const spotifyResult = await spotify.searchTracks(searchString);
+      const spotifyResult = await this.spotify.searchTracks(searchString);
 
       if (!spotifyResult.success) {
         return spotifyResult;
