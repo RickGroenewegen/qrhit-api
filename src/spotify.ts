@@ -101,8 +101,15 @@ class Spotify {
 
         // Add check to ensure playlistData exists before accessing its properties
         if (!playlistData) {
-          this.logger.log(color.red.bold(`Playlist data missing from API response for ${checkPlaylistId}`));
-          return { success: false, error: 'Error getting playlist data from API' };
+          this.logger.log(
+            color.red.bold(
+              `Playlist data missing from API response for ${checkPlaylistId}`
+            )
+          );
+          return {
+            success: false,
+            error: 'Error getting playlist data from API',
+          };
         }
 
         let image = '';
@@ -168,8 +175,6 @@ class Spotify {
       let maxReached = false;
       let maxReachedPhysical = false;
 
-      console.log(111);
-
       // Get playlist details first (handles slug, gets track count for cache key)
       const playlistResult = await this.getPlaylist(
         playlistId,
@@ -180,8 +185,6 @@ class Spotify {
         isSlug, // Pass isSlug flag
         'en' // Default locale, adjust if needed
       );
-
-      console.log(222, playlistResult);
 
       if (!playlistResult.success || !playlistResult.data) {
         return {
