@@ -178,7 +178,8 @@ class SpotifyRapidApi {
       // We don't await processQueue here, assuming it runs elsewhere or is triggered.
       // The return value indicates enqueue success, not API call success.
       this.analytics.increaseCounter('spotify_rapidapi', 'getPlaylist_enqueued', 1);
-      return { success: true, message: 'Request enqueued' };
+      // Removed 'message' property
+      return { success: true };
     } catch (error) {
         this.logger.log(color.red.bold(`Error enqueueing getPlaylist request: ${error}`));
         return { success: false, error: 'Failed to enqueue request' };
