@@ -1409,7 +1409,8 @@ class Hitlist {
       if (isSlug)
         this.logger.log(
           color.yellow(
-            'getPlaylist: isSlug parameter is ignored (assuming playlistId is Spotify ID).'
+            // 'getPlaylist: isSlug parameter is ignored (assuming playlistId is Spotify ID).'
+            // Removed the log as isSlug is now handled.
           )
         );
       if (locale !== 'en')
@@ -1420,6 +1421,24 @@ class Hitlist {
       if (!playlistId) {
         return { success: false, error: 'Playlist ID is required' };
       }
+
+      // --- Handle Slug ---
+      let checkPlaylistId = playlistId;
+      if (isSlug) {
+        const dbPlaylist = await this.prisma.playlist.findFirst({
+          where: { slug: playlistId },
+          select: { playlistId: true }, // Only select the ID we need
+        });
+        if (!dbPlaylist || !dbPlaylist.playlistId) {
+          return { success: false, error: 'playlistNotFound' };
+        }
+        checkPlaylistId = dbPlaylist.playlistId;
+        this.logger.log(
+          color.blue(`Translated slug "${playlistId}" to ID "${checkPlaylistId}"`)
+        );
+      }
+      // --- End Handle Slug ---
+
 
       // --- Get Spotify Token ---
       // Reusing token logic similar to createPlaylist
@@ -1520,7 +1539,8 @@ class Hitlist {
       try {
         const response = await axios({
           method: 'get',
-          url: `https://api.spotify.com/v1/playlists/${playlistId}`,
+          // Use checkPlaylistId which contains either the original ID or the one found via slug
+          url: `https://api.spotify.com/v1/playlists/${checkPlaylistId}`,
           headers: {
             Authorization: `Bearer ${accessToken!}`, // Re-added non-null assertion
           },
@@ -1528,7 +1548,7 @@ class Hitlist {
 
         // Return data matching spotify.ts getPlaylist structure
         const playlistData = {
-          id: playlistId, // Use the input playlistId as the primary ID like in spotify.ts
+          id: checkPlaylistId, // Use the potentially translated ID
           playlistId: response.data.id, // Store the actual Spotify ID here
           name: response.data.name,
           description: response.data.description,
@@ -1622,14 +1642,32 @@ class Hitlist {
         );
       if (isSlug)
         this.logger.log(
-          color.yellow(
-            'getTracks: isSlug parameter is ignored (assuming playlistId is Spotify ID).'
+            // 'getTracks: isSlug parameter is ignored (assuming playlistId is Spotify ID).'
+            // Removed the log as isSlug is now handled.
           )
         );
 
       if (!playlistId) {
         return { success: false, error: 'Playlist ID is required' };
       }
+
+      // --- Handle Slug ---
+      let checkPlaylistId = playlistId;
+      if (isSlug) {
+        const dbPlaylist = await this.prisma.playlist.findFirst({
+          where: { slug: playlistId },
+          select: { playlistId: true }, // Only select the ID we need
+        });
+        if (!dbPlaylist || !dbPlaylist.playlistId) {
+          // Match error message from spotify.ts
+          return { success: false, error: 'playlistNotFound' };
+        }
+        checkPlaylistId = dbPlaylist.playlistId;
+         this.logger.log(
+          color.blue(`Translated slug "${playlistId}" to ID "${checkPlaylistId}" for getTracks`)
+        );
+      }
+      // --- End Handle Slug ---
 
       // --- Get Spotify Token (Reused Logic) ---
       const clientId = process.env['SPOTIFY_CLIENT_ID'];
@@ -1730,7 +1768,8 @@ class Hitlist {
       let allTracks: any[] = [];
       let nextUrl:
         | string
-        | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`; // Start with limit 100
+        // Use checkPlaylistId which contains either the original ID or the one found via slug
+        | null = `https://api.spotify.com/v1/playlists/${checkPlaylistId}/tracks?limit=100`; // Start with limit 100
 
       while (nextUrl) {
         try {
@@ -1818,12 +1857,13 @@ class Hitlist {
             } else if (apiError.response.status === 404) {
               return {
                 success: false,
+                // Use checkPlaylistId in error message for consistency
                 error: 'Playlist not found when fetching tracks',
               };
             } else {
               this.logger.log(
                 color.red.bold(
-                  `Spotify API error fetching tracks for ${playlistId}: ${apiError.response.status} - ${apiError.message}`
+                  `Spotify API error fetching tracks for ${checkPlaylistId}: ${apiError.response.status} - ${apiError.message}`
                 )
               );
               return {
@@ -1834,7 +1874,8 @@ class Hitlist {
           } else {
             this.logger.log(
               color.red.bold(
-                `Error fetching tracks for ${playlistId} from Spotify: ${apiError}`
+                // Use checkPlaylistId in error message for consistency
+                `Error fetching tracks for ${checkPlaylistId} from Spotify: ${apiError}`
               )
             );
             throw apiError; // Re-throw unexpected errors
