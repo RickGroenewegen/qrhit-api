@@ -10,6 +10,7 @@ import Data from './data';
 import Mail from './mail';
 import Vibe from './vibe'; // Import the Vibe class
 import axios from 'axios';
+import { format } from 'date-fns'; // Add date-fns format import
 
 class Hitlist {
   private static instance: Hitlist;
@@ -1472,21 +1473,19 @@ class Hitlist {
           },
         });
 
-        // Return relevant playlist data
+        // Return data matching spotify.ts getPlaylist structure
+        const playlistData = {
+          id: playlistId, // Use the input playlistId as the primary ID like in spotify.ts
+          playlistId: response.data.id, // Store the actual Spotify ID here
+          name: response.data.name,
+          description: response.data.description,
+          numberOfTracks: response.data.tracks.total,
+          image: response.data.images?.[0]?.url || '', // Match 'image' field name
+        };
+
         return {
           success: true,
-          data: {
-            id: response.data.id,
-            name: response.data.name,
-            description: response.data.description,
-            owner: {
-              id: response.data.owner.id,
-              displayName: response.data.owner.display_name,
-            },
-            url: response.data.external_urls.spotify,
-            imageUrl: response.data.images?.[0]?.url || null, // Get the first image URL
-            trackCount: response.data.tracks.total,
-          },
+          data: playlistData,
         };
       } catch (apiError) {
         if (axios.isAxiosError(apiError) && apiError.response) {
@@ -1658,22 +1657,60 @@ class Hitlist {
           });
 
           const items = response.data.items || [];
-          items.forEach((item: any) => {
-            if (item.track && item.track.id) { // Ensure track data exists and has an ID
-              allTracks.push({
-                id: item.track.id,
-                name: item.track.name,
-                artist: item.track.artists?.map((a: any) => a.name).join(', ') || 'Unknown Artist',
-                album: item.track.album?.name || 'Unknown Album',
-                durationMs: item.track.duration_ms,
-                spotifyUrl: item.track.external_urls?.spotify,
-                previewUrl: item.track.preview_url,
-                imageUrl: item.track.album?.images?.[0]?.url || null, // Get album image
-                releaseDate: item.track.album?.release_date,
-                isrc: item.track.external_ids?.isrc,
-              });
-            }
-          });
+          const mappedTracks = items
+            .filter((item: any) => item.track && item.track.id) // Ensure track data exists
+            .map((item: any) => {
+              const track = item.track;
+              let trueArtist: string | undefined;
+              if (track.artists?.length > 0) {
+                if (track.artists.length === 1) {
+                  trueArtist = track.artists[0].name;
+                } else {
+                  // Max. 3 artists like in spotify.ts
+                  const limitedArtists = track.artists.slice(0, 3);
+                  const artistNames = limitedArtists.map(
+                    (artist: { name: string }) => artist.name
+                  );
+                  const lastArtist = artistNames.pop();
+                  trueArtist = artistNames.join(', ') + ' & ' + lastArtist;
+                }
+              }
+
+              // Format release date similar to spotify.ts
+              let formattedReleaseDate = '';
+              if (track.album?.release_date) {
+                try {
+                  // Handle potential invalid date strings
+                  const releaseDate = new Date(track.album.release_date);
+                  if (!isNaN(releaseDate.getTime())) {
+                    formattedReleaseDate = format(releaseDate, 'yyyy-MM-dd');
+                  }
+                } catch (e) {
+                  // Ignore date formatting errors
+                }
+              }
+
+              return {
+                id: track.id,
+                name: this.utils.cleanTrackName(track.name || ''),
+                album: this.utils.cleanTrackName(track.album?.name || ''),
+                preview: track.preview_url || '',
+                artist: trueArtist,
+                link: track.external_urls?.spotify,
+                isrc: track.external_ids?.isrc,
+                image: track.album?.images?.[1]?.url || null, // Use index 1 like spotify.ts
+                releaseDate: formattedReleaseDate,
+                // These fields are not available from this endpoint but are in spotify.ts structure
+                trueYear: undefined,
+                extraNameAttribute: undefined,
+                extraArtistAttribute: undefined,
+              };
+            })
+            .filter(
+              (track: any) => track.artist && track.name && track.image // Filter like spotify.ts
+            );
+
+          allTracks = allTracks.concat(mappedTracks);
 
           nextUrl = response.data.next; // Get the URL for the next page
         } catch (apiError) {
@@ -1716,9 +1753,17 @@ class Hitlist {
       }
       // --- End Call Spotify API ---
 
+      // Structure the return data like spotify.ts getTracks
+      const resultData = {
+        maxReached: false, // This implementation fetches all tracks, so never reached
+        maxReachedPhysical: false, // Same as above
+        totalTracks: allTracks.length,
+        tracks: allTracks,
+      };
+
       return {
         success: true,
-        data: allTracks,
+        data: resultData,
       };
     } catch (error) {
       this.logger.log(
