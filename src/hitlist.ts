@@ -1185,7 +1185,7 @@ class Hitlist {
           method: 'get',
           url: `https://api.spotify.com/v1/users/${userId}/playlists?limit=${maxPlaylistsToCheck}`,
           headers: {
-            Authorization: `Bearer ${accessToken}`,
+            Authorization: `Bearer ${accessToken!}`, // Added non-null assertion
           },
         });
 
