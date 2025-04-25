@@ -179,26 +179,59 @@ class SpotifyRapidApi {
    * Enqueues a request to fetch playlist details from RapidAPI.
    * Note: This returns immediately after enqueueing. The result processing happens in the queue.
    * @param playlistId The Spotify ID of the playlist.
-   * @returns {Promise<ApiResult>} Indicates success/failure of *enqueueing*.
+   * @returns {Promise<ApiResult>} Contains playlist data or error info.
    */
   public async getPlaylist(playlistId: string): Promise<ApiResult> {
+    this.logger.log(
+      color.blue.bold(
+        `Fetching playlist in ${color.white.bold(
+          'RapidAPI'
+        )} for ID ${color.white.bold(playlistId)}`
+      )
+    );
     try {
       const options = this.createOptions('/playlist', { id: playlistId });
-      await this.rapidAPIQueue.enqueue(options);
-      // We don't await processQueue here, assuming it runs elsewhere or is triggered.
-      // The return value indicates enqueue success, not API call success.
+      // Make the request directly
+      const response = await axios.request(options);
       this.analytics.increaseCounter(
         'spotify_rapidapi',
-        'getPlaylist_enqueued',
+        'getPlaylist_called',
         1
       );
-      // Removed 'message' property
-      return { success: true };
+
+      // Check if the response contains the expected data structure
+      // Adjust this check based on the actual structure returned by RapidAPI for playlists
+      if (!response.data) { // A basic check, might need to be more specific (e.g., response.data.name)
+        this.logger.log(
+          color.yellow(
+            `RapidAPI getPlaylist for ${playlistId} returned unexpected data.`
+          )
+        );
+        return { success: false, error: 'Unexpected response from RapidAPI' };
+      }
+
+      // Return the playlist data directly
+      // The structure might differ from Spotify API, ensure the calling code handles it
+      return { success: true, data: response.data };
+
     } catch (error) {
+      const axiosError = error as AxiosError;
+      const status = axiosError.response?.status;
+      const message = axiosError.message;
       this.logger.log(
-        color.red.bold(`Error enqueueing getPlaylist request: ${error}`)
+        color.red.bold(
+          `Error fetching RapidAPI playlist ${playlistId}: ${status} - ${message}`
+        )
       );
-      return { success: false, error: 'Failed to enqueue request' };
+
+      if (status === 404) {
+        return { success: false, error: 'playlistNotFound' }; // Map 404
+      }
+      // Return a generic error for other issues
+      return {
+        success: false,
+        error: `RapidAPI error fetching playlist: ${status || message}`,
+      };
     }
   }
 
