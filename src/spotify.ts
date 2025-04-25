@@ -679,9 +679,14 @@ class Spotify {
       cacheKey = `tracks_${playlistId}_${playlist.data.numberOfTracks}`;
       cacheKeyCount = `trackcount_${playlistId}_${playlist.data.numberOfTracks}`;
 
+      console.log('GET TRACKS - cacheKey:', cache, cacheKey);
+      console.log('GET TRACKS - cacheKeyCount:', cache, cacheKeyCount);
+
       const cacheResult = await this.cache.get(cacheKey);
 
       if (!cacheResult || !cache) {
+        console.log('GET TRACKS - NO CACHE!');
+
         let checkPlaylistId = playlistId;
 
         if (isSlug) {
@@ -695,6 +700,8 @@ class Spotify {
         }
 
         while (true) {
+          console.log('GET TRACKS - GETTING', checkPlaylistId, limit, offset);
+
           const options = {
             method: 'GET',
             url: 'https://spotify23.p.rapidapi.com/playlist_tracks',
@@ -952,6 +959,8 @@ class Spotify {
           tracks: allTracks,
         },
       };
+
+      console.log('GET TRACKS - RESULT', result);
 
       this.cache.delPattern(`tracks_${playlistId}*`);
       this.cache.delPattern(`trackcount_${playlistId}*`);
