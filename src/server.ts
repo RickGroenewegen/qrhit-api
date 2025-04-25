@@ -1606,7 +1606,9 @@ class Server {
             return;
           }
 
-          const result = await this.hitlist.getSpotifyPlaylistTracks(playlistId);
+          const result = await this.hitlist.getSpotifyPlaylistTracks(
+            playlistId
+          );
           reply.send(result);
         }
       );
