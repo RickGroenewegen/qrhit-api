@@ -1354,6 +1354,191 @@ class Hitlist {
     }
   }
 
+  /**
+   * Retrieves playlist information from the Spotify API.
+   * @param playlistId The Spotify ID of the playlist.
+   * @returns Object with success status and playlist data or error.
+   */
+  public async getSpotifyPlaylistInfo(playlistId: string): Promise<any> {
+    try {
+      if (!playlistId) {
+        return { success: false, error: 'Playlist ID is required' };
+      }
+
+      // --- Get Spotify Token ---
+      // Reusing token logic similar to createPlaylist
+      const clientId = process.env['SPOTIFY_CLIENT_ID'];
+      const clientSecret = process.env['SPOTIFY_CLIENT_SECRET'];
+      if (!clientId || !clientSecret) {
+        this.logger.log(color.red.bold('Missing Spotify API credentials'));
+        return { success: false, error: 'Missing Spotify API credentials' };
+      }
+
+      let accessToken = await this.settings.getSetting('spotify_access_token');
+      const refreshToken = await this.settings.getSetting(
+        'spotify_refresh_token'
+      );
+      const expiresAtStr = await this.settings.getSetting(
+        'spotify_token_expires_at'
+      );
+      const expiresAt = expiresAtStr ? parseInt(expiresAtStr, 10) : 0;
+
+      // Check if access token is valid and not expired
+      if (!accessToken || Date.now() >= expiresAt) {
+        if (refreshToken) {
+          this.logger.log(
+            color.blue.bold(
+              'Spotify access token expired or invalid, attempting refresh...'
+            )
+          );
+          try {
+            const refreshResponse = await axios({
+              method: 'post',
+              url: 'https://accounts.spotify.com/api/token',
+              headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                Authorization:
+                  'Basic ' +
+                  Buffer.from(clientId + ':' + clientSecret).toString(
+                    'base64'
+                  ),
+              },
+              data: new URLSearchParams({
+                grant_type: 'refresh_token',
+                refresh_token: refreshToken,
+              }).toString(),
+            });
+
+            if (refreshResponse.data.access_token) {
+              accessToken = refreshResponse.data.access_token;
+              const newRefreshToken = refreshResponse.data.refresh_token;
+              const expiresIn = refreshResponse.data.expires_in || 3600;
+              const newExpiresAt = Date.now() + (expiresIn - 60) * 1000;
+
+              await this.settings.setSetting(
+                'spotify_access_token',
+                accessToken
+              );
+              await this.settings.setSetting(
+                'spotify_token_expires_at',
+                newExpiresAt.toString()
+              );
+              if (newRefreshToken) {
+                await this.settings.setSetting(
+                  'spotify_refresh_token',
+                  newRefreshToken
+                );
+              }
+              this.logger.log(
+                color.green.bold('Successfully refreshed Spotify token.')
+              );
+            } else {
+              // Refresh failed, need authorization
+              accessToken = null; // Ensure token is null
+            }
+          } catch (refreshError) {
+            this.logger.log(
+              color.yellow.bold(`Error refreshing token: ${refreshError}`)
+            );
+            accessToken = null; // Ensure token is null
+          }
+        } else {
+          // No refresh token available
+          accessToken = null;
+        }
+      }
+
+      if (!accessToken) {
+        this.logger.log(
+          color.red.bold(
+            'Could not obtain a valid Spotify access token. Authorization might be required.'
+          )
+        );
+        return {
+          success: false,
+          error: 'Could not obtain valid Spotify token',
+          needsReAuth: true,
+        };
+      }
+      // --- End Get Spotify Token ---
+
+      // --- Call Spotify API ---
+      try {
+        const response = await axios({
+          method: 'get',
+          url: `https://api.spotify.com/v1/playlists/${playlistId}`,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        });
+
+        // Return relevant playlist data
+        return {
+          success: true,
+          data: {
+            id: response.data.id,
+            name: response.data.name,
+            description: response.data.description,
+            owner: {
+              id: response.data.owner.id,
+              displayName: response.data.owner.display_name,
+            },
+            url: response.data.external_urls.spotify,
+            imageUrl: response.data.images?.[0]?.url || null, // Get the first image URL
+            trackCount: response.data.tracks.total,
+          },
+        };
+      } catch (apiError) {
+        if (axios.isAxiosError(apiError) && apiError.response) {
+          if (apiError.response.status === 401) {
+            // Token might have just expired or become invalid
+            this.logger.log(
+              color.yellow(
+                'Spotify API returned 401 Unauthorized when fetching playlist. Clearing token.'
+              )
+            );
+            await this.settings.deleteSetting('spotify_access_token');
+            await this.settings.deleteSetting('spotify_token_expires_at');
+            return {
+              success: false,
+              error: 'Spotify authorization error (token likely expired)',
+              needsReAuth: true,
+            };
+          } else if (apiError.response.status === 404) {
+            return { success: false, error: 'Playlist not found' };
+          } else {
+            this.logger.log(
+              color.red.bold(
+                `Spotify API error fetching playlist ${playlistId}: ${apiError.response.status} - ${apiError.message}`
+              )
+            );
+            return {
+              success: false,
+              error: `Spotify API error: ${apiError.response.status}`,
+            };
+          }
+        } else {
+          // Network or other errors
+          this.logger.log(
+            color.red.bold(
+              `Error fetching playlist ${playlistId} from Spotify: ${apiError}`
+            )
+          );
+          throw apiError; // Re-throw unexpected errors
+        }
+      }
+      // --- End Call Spotify API ---
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error getting Spotify playlist info: ${error}`)
+      );
+      return {
+        success: false,
+        error: 'Internal server error getting playlist info',
+      };
+    }
+  }
+
   public async searchTracks(searchString: string) {
     try {
       if (!searchString || searchString.length < 2) {
