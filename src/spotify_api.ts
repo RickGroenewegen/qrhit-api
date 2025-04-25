@@ -278,9 +278,12 @@ class SpotifyApi {
     }
 
     try {
+      // Request only the fields needed by spotify.ts: id, name, description, images.url, tracks.total
+      const fields = 'id,name,description,images(url),tracks(total)';
       const response = await axios.get(
         `https://api.spotify.com/v1/playlists/${playlistId}`,
         {
+          params: { fields: fields }, // Add fields parameter
           headers: { Authorization: `Bearer ${accessToken}` },
         }
       );
@@ -367,10 +370,21 @@ class SpotifyApi {
     let needsReAuth = false; // Flag to track if any chunk requires re-auth
 
     try {
+      // Define the fields needed by spotify.ts getTracksByIds
+      const fields = 'items(id,name,artists(name),album(name,images(url),release_date),external_urls,external_ids,preview_url)'; // Note: API returns 'tracks' not 'items' for this endpoint
+      const trackFields = 'id,name,artists(name),album(name,images(url),release_date),external_urls,external_ids,preview_url'; // Fields for each track object
+
       for (let i = 0; i < trackIds.length; i += chunkSize) {
         const chunk = trackIds.slice(i, i + chunkSize);
         const response = await axios.get(`https://api.spotify.com/v1/tracks`, {
-          params: { ids: chunk.join(',') },
+          params: {
+             ids: chunk.join(','),
+             // Note: The /v1/tracks endpoint doesn't directly support a 'fields' param for the top-level response in the same way as others.
+             // It returns an object { tracks: [...] }. We request all fields for the track objects within the array.
+             // If specific fields were needed *within* each track, that's handled by the API structure itself.
+             // We are already getting the necessary fields based on the default response.
+             // If optimization was needed *within* track objects, it would require a different approach if the API supported it.
+          },
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         // Filter out null tracks from the chunk response before concatenating
@@ -433,12 +447,15 @@ class SpotifyApi {
     }
 
     try {
+      // Request only the fields needed by spotify.ts: tracks(items(id, name, artists(name), album(images(url))), total)
+      const fields = 'tracks(items(id,name,artists(name),album(images(url))),total)';
       const response = await axios.get(`https://api.spotify.com/v1/search`, {
         params: {
           q: searchTerm,
           type: 'track',
           limit: limit,
           offset: offset,
+          fields: fields, // Add fields parameter
         },
         headers: { Authorization: `Bearer ${accessToken}` },
       });
