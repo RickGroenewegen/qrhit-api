@@ -1757,6 +1757,23 @@ class Server {
       };
     });
 
+    // API endpoint for getting Spotify playlist info
+    this.fastify.get(
+      '/hitlist/spotify-playlist/:playlistId',
+      getAuthHandler(['admin', 'vibeadmin']), // Add appropriate auth
+      async (request: any, reply) => {
+        const { playlistId } = request.params;
+
+        if (!playlistId) {
+          reply.status(400).send({ error: 'Missing playlist ID' });
+          return;
+        }
+
+        const result = await this.hitlist.getSpotifyPlaylistInfo(playlistId);
+        reply.send(result);
+      }
+    );
+
     // API endpoint for finalizing a company list (creating a top 10)
     this.fastify.post('/hitlist/finalize', async (request: any, reply) => {
       const { companyListId } = request.body;
