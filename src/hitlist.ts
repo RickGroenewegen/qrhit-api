@@ -1460,7 +1460,7 @@ class Hitlist {
 
               await this.settings.setSetting(
                 'spotify_access_token',
-                accessToken!
+                accessToken! // Added non-null assertion
               );
               await this.settings.setSetting(
                 'spotify_token_expires_at',
@@ -1668,7 +1668,7 @@ class Hitlist {
 
               await this.settings.setSetting(
                 'spotify_access_token',
-                accessToken!
+                accessToken! // Added non-null assertion
               );
               await this.settings.setSetting(
                 'spotify_token_expires_at',
