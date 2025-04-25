@@ -1101,6 +1101,14 @@ class Server {
     this.fastify.post(
       '/spotify/playlists/tracks',
       async (request: any, _reply) => {
+        this.logger.log(
+          color.blue.bold(
+            `Fetching tracks for playlist ${color.white.bold(
+              request.body.playlistId
+            )}`
+          )
+        );
+
         return await this.hitlist.getTracks(
           request.body.playlistId,
           this.utils.parseBoolean(request.body.cache),
