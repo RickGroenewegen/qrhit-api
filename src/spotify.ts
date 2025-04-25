@@ -948,6 +948,7 @@ class Spotify {
           offset += limit;
         }
       } else {
+        console.log('GET TRACKS - RETURNING CACHE');
         const cachedResult = JSON.parse(cacheResult);
         return cachedResult;
       }
