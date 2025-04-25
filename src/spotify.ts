@@ -46,7 +46,7 @@ class Spotify {
     // if (checkCaptcha) {
     //   // Verify reCAPTCHA token
     //   const isHuman = await this.utils.verifyRecaptcha(captchaToken);
-
+    //
     //   if (!isHuman) {
     //     throw new Error('reCAPTCHA verification failed');
     //   }
@@ -76,42 +76,34 @@ class Spotify {
           }
         }
 
-        // Get access token (required by SpotifyApi, potentially ignored by RapidApi)
         const accessToken = await this.spotifyApi.getAccessToken();
         if (!accessToken) {
-          // Handle case where token cannot be obtained (e.g., needs re-auth)
-          // This might depend on which API is active (this.api)
-          // For now, return an error consistent with token issues
-           return { success: false, error: 'Could not obtain valid Spotify token', needsReAuth: true };
+          return {
+            success: false,
+            error: 'Could not obtain valid Spotify token',
+            needsReAuth: true,
+          };
         }
 
-
-        // Use the appropriate API implementation (SpotifyApi or SpotifyRapidApi)
-        // Pass accessToken - SpotifyApi needs it, RapidApi might ignore it
         const result = await this.api.getPlaylist(checkPlaylistId, accessToken);
 
-
         if (!result.success) {
-          // Handle errors returned by the API call (e.g., not found, auth error)
-          // Map RapidAPI 404 specifically if needed, otherwise use the error from result
-          if (result.error === 'Spotify resource not found' || result.error === 'playlistNotFound') { // Check for specific errors
-             return { success: false, error: 'playlistNotFound' };
+          if (
+            result.error === 'Spotify resource not found' ||
+            result.error === 'playlistNotFound'
+          ) {
+            return { success: false, error: 'playlistNotFound' };
           }
-          // Return the error from the ApiResult
-          return { success: false, error: result.error || 'Error getting playlist from API' };
+          return {
+            success: false,
+            error: result.error || 'Error getting playlist from API',
+          };
         }
 
-        // Assuming result.data contains the playlist details in a compatible format
         const playlistData = result.data;
 
-        // Increment analytics counter (consider moving this inside the API implementations?)
-        // this.analytics.increaseCounter('spotify', 'playlist', 1); // Keep analytics - Moved for now
-
         let image = '';
-        // Adjust access based on the actual structure returned by getPlaylist implementations
         if (playlistData.images && playlistData.images.length > 0) {
-           // Use the first image, assuming standard Spotify API structure
-           // If RapidAPI structure differs, this needs adjustment in SpotifyRapidApi.getPlaylist
           image = playlistData.images[0].url;
         }
 
@@ -119,7 +111,6 @@ class Spotify {
         let playlistDescription = playlistData.description;
 
         if (featured) {
-          // Get the name from DB if it's a featured playlist
           const dbPlaylist = await this.prisma.playlist.findFirst({
             where: { slug: playlistId },
           });
@@ -136,8 +127,7 @@ class Spotify {
           playlistId: playlistId,
           name: playlistName,
           description: playlistDescription,
-          // Adjust access based on the actual structure returned by getPlaylist implementations
-          numberOfTracks: playlistData.tracks?.total || 0, // Handle potential differences
+          numberOfTracks: playlistData.tracks?.total || 0,
           image,
         };
 
