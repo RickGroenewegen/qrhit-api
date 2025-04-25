@@ -29,7 +29,8 @@ class RapidAPIQueue {
       method: request.method,
       url: request.url,
       params: request.params,
-      headers: { // Only include necessary headers
+      headers: {
+        // Only include necessary headers
         'x-rapidapi-key': request.headers?.['x-rapidapi-key'],
         'x-rapidapi-host': request.headers?.['x-rapidapi-host'],
       },
@@ -79,12 +80,18 @@ class RapidAPIQueue {
             // This simple queue doesn't handle that directly.
             // For now, we just log success. A more complex system (e.g., using Promises or callbacks)
             // would be needed to return data asynchronously.
-            this.logger.log(color.green(`RapidAPI request for ${functionName} successful.`));
+            this.logger.log(
+              color.green(`RapidAPI request for ${functionName} successful.`)
+            );
             break; // Exit loop if request is successful
           } catch (error: any) {
             const axiosError = error as AxiosError;
             if (axiosError.response && axiosError.response.status === 404) {
-              this.logger.log(color.yellow(`RapidAPI request for ${functionName} resulted in 404.`));
+              this.logger.log(
+                color.yellow(
+                  `RapidAPI request for ${functionName} resulted in 404.`
+                )
+              );
               break; // Don't retry 404s
             } else {
               attempt++;
@@ -96,8 +103,12 @@ class RapidAPIQueue {
               if (attempt < maxAttempts) {
                 await new Promise((resolve) => setTimeout(resolve, 1000));
               } else {
-                 this.logger.log(color.red.bold(`RapidAPI request for ${functionName} failed after ${maxAttempts} attempts.`));
-                 // How to signal failure back to the caller? Again, needs a more complex mechanism.
+                this.logger.log(
+                  color.red.bold(
+                    `RapidAPI request for ${functionName} failed after ${maxAttempts} attempts.`
+                  )
+                );
+                // How to signal failure back to the caller? Again, needs a more complex mechanism.
               }
             }
           }
@@ -136,7 +147,6 @@ class RapidAPIQueue {
 }
 // --- End RapidAPI Queue ---
 
-
 class SpotifyRapidApi {
   private logger = new Logger();
   private analytics = AnalyticsClient.getInstance();
@@ -151,7 +161,7 @@ class SpotifyRapidApi {
    * @returns AxiosRequestConfig
    */
   private createOptions(endpoint: string, params: any): AxiosRequestConfig {
-     if (!this.rapidApiKey) {
+    if (!this.rapidApiKey) {
       throw new Error('RAPID_API_KEY environment variable is not defined');
     }
     return {
@@ -177,16 +187,22 @@ class SpotifyRapidApi {
       await this.rapidAPIQueue.enqueue(options);
       // We don't await processQueue here, assuming it runs elsewhere or is triggered.
       // The return value indicates enqueue success, not API call success.
-      this.analytics.increaseCounter('spotify_rapidapi', 'getPlaylist_enqueued', 1);
+      this.analytics.increaseCounter(
+        'spotify_rapidapi',
+        'getPlaylist_enqueued',
+        1
+      );
       // Removed 'message' property
       return { success: true };
     } catch (error) {
-        this.logger.log(color.red.bold(`Error enqueueing getPlaylist request: ${error}`));
-        return { success: false, error: 'Failed to enqueue request' };
+      this.logger.log(
+        color.red.bold(`Error enqueueing getPlaylist request: ${error}`)
+      );
+      return { success: false, error: 'Failed to enqueue request' };
     }
   }
 
- /**
+  /**
    * Enqueues requests to fetch all tracks for a playlist from RapidAPI, handling pagination.
    * Note: This returns immediately after enqueueing the *first* request.
    * The queue processor needs to handle fetching subsequent pages if the API doesn't return all tracks at once.
@@ -201,6 +217,14 @@ class SpotifyRapidApi {
     let offset = 0;
     const limit = 100; // RapidAPI endpoint seems to support 100
 
+    this.logger.log(
+      color.blue.bold(
+        `Fetching tracks in ${color.white.bold(
+          'RapidAPI'
+        )} for playlist ${color.white.bold(playlistId)}`
+      )
+    );
+
     try {
       while (true) {
         const options = this.createOptions('/playlist_tracks', {
@@ -211,16 +235,26 @@ class SpotifyRapidApi {
 
         // Make the request directly, bypassing the queue for now
         const response = await axios.request(options);
-        this.analytics.increaseCounter('spotify_rapidapi', 'getTracks_called', 1);
+        this.analytics.increaseCounter(
+          'spotify_rapidapi',
+          'getTracks_called',
+          1
+        );
 
         if (!response.data || !response.data.items) {
           // Stop if response format is unexpected or items are missing
-          this.logger.log(color.yellow(`RapidAPI getTracks for ${playlistId} returned unexpected data at offset ${offset}.`));
+          this.logger.log(
+            color.yellow(
+              `RapidAPI getTracks for ${playlistId} returned unexpected data at offset ${offset}.`
+            )
+          );
           break;
         }
 
         // Filter out null tracks if necessary (depends on API behavior)
-        const validItems = response.data.items.filter((item: any) => item && item.track);
+        const validItems = response.data.items.filter(
+          (item: any) => item && item.track
+        );
         allItems = allItems.concat(validItems);
 
         // Check if the number of items returned is less than the limit, indicating the last page
@@ -232,22 +266,28 @@ class SpotifyRapidApi {
         offset += limit;
 
         // Optional: Add a small delay to respect potential implicit rate limits
-        await new Promise(resolve => setTimeout(resolve, 50)); // 50ms delay
+        await new Promise((resolve) => setTimeout(resolve, 50)); // 50ms delay
       }
 
       return { success: true, data: { items: allItems } };
-
     } catch (error) {
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
       const message = axiosError.message;
-      this.logger.log(color.red.bold(`Error fetching RapidAPI tracks for ${playlistId}: ${status} - ${message}`));
+      this.logger.log(
+        color.red.bold(
+          `Error fetching RapidAPI tracks for ${playlistId}: ${status} - ${message}`
+        )
+      );
 
       if (status === 404) {
         return { success: false, error: 'playlistNotFound' }; // Map 404
       }
       // Return a generic error for other issues
-      return { success: false, error: `RapidAPI error fetching tracks: ${status || message}` };
+      return {
+        success: false,
+        error: `RapidAPI error fetching tracks: ${status || message}`,
+      };
     }
   }
 
@@ -266,32 +306,50 @@ class SpotifyRapidApi {
     // This implementation assumes the API handles the comma-separated list correctly
     // and doesn't require chunking like the official Spotify API. Adjust if needed.
     try {
-      const options = this.createOptions('/tracks/', { ids: trackIds.join(',') });
+      const options = this.createOptions('/tracks/', {
+        ids: trackIds.join(','),
+      });
       // Make the request directly
       const response = await axios.request(options);
-      this.analytics.increaseCounter('spotify_rapidapi', 'getTracksByIds_called', 1);
+      this.analytics.increaseCounter(
+        'spotify_rapidapi',
+        'getTracksByIds_called',
+        1
+      );
 
       if (!response.data || !response.data.tracks) {
-         this.logger.log(color.yellow(`RapidAPI getTracksByIds returned unexpected data.`));
-         return { success: false, error: 'Unexpected response from RapidAPI' };
+        this.logger.log(
+          color.yellow(`RapidAPI getTracksByIds returned unexpected data.`)
+        );
+        return { success: false, error: 'Unexpected response from RapidAPI' };
       }
 
       // Return the tracks array directly under the 'tracks' key in data
       return { success: true, data: { tracks: response.data.tracks } };
-
     } catch (error) {
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
       const message = axiosError.message;
-      this.logger.log(color.red.bold(`Error fetching RapidAPI tracks by IDs: ${status} - ${message}`));
+      this.logger.log(
+        color.red.bold(
+          `Error fetching RapidAPI tracks by IDs: ${status} - ${message}`
+        )
+      );
 
       if (status === 404) {
         // RapidAPI might return 404 if *any* ID is invalid, or only if *all* are.
         // Returning a generic error might be safer unless the behavior is known.
-        return { success: false, error: 'RapidAPI resource not found (one or more track IDs might be invalid)' };
+        return {
+          success: false,
+          error:
+            'RapidAPI resource not found (one or more track IDs might be invalid)',
+        };
       }
       // Return a generic error for other issues
-      return { success: false, error: `RapidAPI error fetching tracks by IDs: ${status || message}` };
+      return {
+        success: false,
+        error: `RapidAPI error fetching tracks by IDs: ${status || message}`,
+      };
     }
   }
 
@@ -302,8 +360,12 @@ class SpotifyRapidApi {
    * @param offset Offset for pagination.
    * @returns {Promise<ApiResult>} Contains search results or error info.
    */
-  public async searchTracks(searchTerm: string, limit: number = 10, offset: number = 0): Promise<ApiResult> {
-     if (!searchTerm) {
+  public async searchTracks(
+    searchTerm: string,
+    limit: number = 10,
+    offset: number = 0
+  ): Promise<ApiResult> {
+    if (!searchTerm) {
       return { success: false, error: 'Search term is required' };
     }
     try {
@@ -317,34 +379,46 @@ class SpotifyRapidApi {
       });
       // Make the request directly
       const response = await axios.request(options);
-      this.analytics.increaseCounter('spotify_rapidapi', 'searchTracks_called', 1);
+      this.analytics.increaseCounter(
+        'spotify_rapidapi',
+        'searchTracks_called',
+        1
+      );
 
       // Check and return the response data
       if (!response.data) {
-         this.logger.log(color.yellow(`RapidAPI searchTracks returned no data.`));
-         return { success: false, error: 'No results from RapidAPI' };
+        this.logger.log(
+          color.yellow(`RapidAPI searchTracks returned no data.`)
+        );
+        return { success: false, error: 'No results from RapidAPI' };
       }
 
       // Assuming the structure is { tracks: { items: [], totalCount: number } }
       // Adapt this based on the actual RapidAPI response structure
       return { success: true, data: response.data };
-
     } catch (error) {
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
       const message = axiosError.message;
-      this.logger.log(color.red.bold(`Error searching RapidAPI tracks: ${status} - ${message}`));
+      this.logger.log(
+        color.red.bold(
+          `Error searching RapidAPI tracks: ${status} - ${message}`
+        )
+      );
 
       // Return a generic error for search issues
-      return { success: false, error: `RapidAPI error searching tracks: ${status || message}` };
+      return {
+        success: false,
+        error: `RapidAPI error searching tracks: ${status || message}`,
+      };
     }
   }
 
   // Method to explicitly trigger queue processing (might be called from a cron job or specific event)
   public async processApiQueue(): Promise<void> {
-      this.logger.log(color.blue('Starting RapidAPI queue processing...'));
-      await this.rapidAPIQueue.processQueue();
-      this.logger.log(color.blue('RapidAPI queue processing finished.'));
+    this.logger.log(color.blue('Starting RapidAPI queue processing...'));
+    await this.rapidAPIQueue.processQueue();
+    this.logger.log(color.blue('RapidAPI queue processing finished.'));
   }
 }
 
