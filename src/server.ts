@@ -1101,8 +1101,6 @@ class Server {
     this.fastify.post(
       '/spotify/playlists/tracks',
       async (request: any, _reply) => {
-        console.log('GET TRACKS - START!');
-
         return await this.spotify.getTracks(
           request.body.playlistId,
           this.utils.parseBoolean(request.body.cache),
