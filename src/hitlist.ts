@@ -1379,13 +1379,32 @@ class Hitlist {
   ): Promise<any> {
     try {
       // Log if unsupported parameters are used with non-default values
-      if (cache !== true) this.logger.log(color.yellow('getPlaylist: cache parameter is ignored.'));
-      if (captchaToken) this.logger.log(color.yellow('getPlaylist: captchaToken parameter is ignored.'));
-      if (checkCaptcha) this.logger.log(color.yellow('getPlaylist: checkCaptcha parameter is ignored.'));
-      if (featured) this.logger.log(color.yellow('getPlaylist: featured parameter is ignored.'));
-      if (isSlug) this.logger.log(color.yellow('getPlaylist: isSlug parameter is ignored (assuming playlistId is Spotify ID).'));
-      if (locale !== 'en') this.logger.log(color.yellow('getPlaylist: locale parameter is ignored.'));
-
+      if (cache !== true)
+        this.logger.log(
+          color.yellow('getPlaylist: cache parameter is ignored.')
+        );
+      if (captchaToken)
+        this.logger.log(
+          color.yellow('getPlaylist: captchaToken parameter is ignored.')
+        );
+      if (checkCaptcha)
+        this.logger.log(
+          color.yellow('getPlaylist: checkCaptcha parameter is ignored.')
+        );
+      if (featured)
+        this.logger.log(
+          color.yellow('getPlaylist: featured parameter is ignored.')
+        );
+      if (isSlug)
+        this.logger.log(
+          color.yellow(
+            'getPlaylist: isSlug parameter is ignored (assuming playlistId is Spotify ID).'
+          )
+        );
+      if (locale !== 'en')
+        this.logger.log(
+          color.yellow('getPlaylist: locale parameter is ignored.')
+        );
 
       if (!playlistId) {
         return { success: false, error: 'Playlist ID is required' };
@@ -1425,9 +1444,7 @@ class Hitlist {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 Authorization:
                   'Basic ' +
-                  Buffer.from(clientId + ':' + clientSecret).toString(
-                    'base64'
-                  ),
+                  Buffer.from(clientId + ':' + clientSecret).toString('base64'),
               },
               data: new URLSearchParams({
                 grant_type: 'refresh_token',
@@ -1443,7 +1460,7 @@ class Hitlist {
 
               await this.settings.setSetting(
                 'spotify_access_token',
-                accessToken
+                accessToken!
               );
               await this.settings.setSetting(
                 'spotify_token_expires_at',
@@ -1494,7 +1511,7 @@ class Hitlist {
           method: 'get',
           url: `https://api.spotify.com/v1/playlists/${playlistId}`,
           headers: {
-            Authorization: `Bearer ${accessToken!}`, // Added non-null assertion
+            Authorization: `Bearer ${accessToken!}`, // Re-added non-null assertion
           },
         });
 
@@ -1582,10 +1599,22 @@ class Hitlist {
   ): Promise<any> {
     try {
       // Log if unsupported parameters are used with non-default values
-      if (cache !== true) this.logger.log(color.yellow('getTracks: cache parameter is ignored.'));
-      if (captchaToken) this.logger.log(color.yellow('getTracks: captchaToken parameter is ignored.'));
-      if (checkCaptcha) this.logger.log(color.yellow('getTracks: checkCaptcha parameter is ignored.'));
-      if (isSlug) this.logger.log(color.yellow('getTracks: isSlug parameter is ignored (assuming playlistId is Spotify ID).'));
+      if (cache !== true)
+        this.logger.log(color.yellow('getTracks: cache parameter is ignored.'));
+      if (captchaToken)
+        this.logger.log(
+          color.yellow('getTracks: captchaToken parameter is ignored.')
+        );
+      if (checkCaptcha)
+        this.logger.log(
+          color.yellow('getTracks: checkCaptcha parameter is ignored.')
+        );
+      if (isSlug)
+        this.logger.log(
+          color.yellow(
+            'getTracks: isSlug parameter is ignored (assuming playlistId is Spotify ID).'
+          )
+        );
 
       if (!playlistId) {
         return { success: false, error: 'Playlist ID is required' };
@@ -1623,9 +1652,7 @@ class Hitlist {
                 'Content-Type': 'application/x-www-form-urlencoded',
                 Authorization:
                   'Basic ' +
-                  Buffer.from(clientId + ':' + clientSecret).toString(
-                    'base64'
-                  ),
+                  Buffer.from(clientId + ':' + clientSecret).toString('base64'),
               },
               data: new URLSearchParams({
                 grant_type: 'refresh_token',
@@ -1641,7 +1668,7 @@ class Hitlist {
 
               await this.settings.setSetting(
                 'spotify_access_token',
-                accessToken
+                accessToken!
               );
               await this.settings.setSetting(
                 'spotify_token_expires_at',
@@ -1654,14 +1681,18 @@ class Hitlist {
                 );
               }
               this.logger.log(
-                color.green.bold('Successfully refreshed Spotify token for tracks.')
+                color.green.bold(
+                  'Successfully refreshed Spotify token for tracks.'
+                )
               );
             } else {
               accessToken = null;
             }
           } catch (refreshError) {
             this.logger.log(
-              color.yellow.bold(`Error refreshing token for tracks: ${refreshError}`)
+              color.yellow.bold(
+                `Error refreshing token for tracks: ${refreshError}`
+              )
             );
             accessToken = null;
           }
@@ -1686,7 +1717,9 @@ class Hitlist {
 
       // --- Call Spotify API with Pagination ---
       let allTracks: any[] = [];
-      let nextUrl: string | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`; // Start with limit 100
+      let nextUrl:
+        | string
+        | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=100`; // Start with limit 100
 
       while (nextUrl) {
         try {
@@ -1772,7 +1805,10 @@ class Hitlist {
                 needsReAuth: true,
               };
             } else if (apiError.response.status === 404) {
-              return { success: false, error: 'Playlist not found when fetching tracks' };
+              return {
+                success: false,
+                error: 'Playlist not found when fetching tracks',
+              };
             } else {
               this.logger.log(
                 color.red.bold(
@@ -1818,7 +1854,6 @@ class Hitlist {
       };
     }
   }
-
 
   public async searchTracks(searchString: string) {
     try {
