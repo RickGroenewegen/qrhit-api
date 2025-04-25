@@ -16,110 +16,9 @@ import Translation from './translation';
 import SpotifyApi from './spotify_api'; // Import the new class
 import SpotifyRapidApi from './spotify_rapidapi'; // Import the new class
 
-class RapidAPIQueue {
-  private cache: Cache;
-  private static instance: RapidAPIQueue;
-  private logger = new Logger();
-  private prisma = PrismaInstance.getInstance();
-
-  private constructor() {
-    this.cache = Cache.getInstance();
-  }
-
-  public static getInstance(): RapidAPIQueue {
-    if (!RapidAPIQueue.instance) {
-      RapidAPIQueue.instance = new RapidAPIQueue();
-    }
-    return RapidAPIQueue.instance;
-  }
-
-  public async enqueue(request: AxiosRequestConfig): Promise<void> {
-    await this.enqueueRapidAPIRequest(JSON.stringify(request));
-  }
-
-  public async processQueue(): Promise<void> {
-    while (true) {
-      const queueLength = await this.getRapidAPIQueueLength();
-      if (queueLength === 0) {
-        break;
-      }
-
-      const lastRequestTime = await this.getLastRequestTimestamp();
-      const now = Date.now();
-      const timeSinceLastRequest = now - lastRequestTime;
-
-      if (timeSinceLastRequest < 250) {
-        // 250ms = 4 requests per second
-        await new Promise((resolve) =>
-          setTimeout(resolve, 250 - timeSinceLastRequest)
-        );
-      }
-
-      const request = await this.dequeueRapidAPIRequest();
-      if (request) {
-        const requestConfig = JSON.parse(request);
-        let attempt = 0;
-        const maxAttempts = 3;
-        const functionName = requestConfig.url.includes('playlist_tracks')
-          ? 'getTracks'
-          : 'getPlaylist';
-        while (attempt < maxAttempts) {
-          try {
-            await axios(requestConfig);
-            await this.setLastRequestTimestamp(Date.now());
-            break; // Exit loop if request is successful
-          } catch (error: any) {
-            if (error.response && error.response.status === 404) {
-              break;
-            } else {
-              attempt++;
-              this.logger.log(
-                color.red.bold(
-                  `Error in ${functionName}, attempt ${attempt} / ${maxAttempts}. Retrying in 1 second...`
-                )
-              );
-              if (attempt < maxAttempts) {
-                await new Promise((resolve) => setTimeout(resolve, 1000));
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-
-  private async enqueueRapidAPIRequest(request: string): Promise<void> {
-    await this.cache.executeCommand('rpush', 'rapidapi_queue', request);
-  }
-
-  private async dequeueRapidAPIRequest(): Promise<string | null> {
-    return await this.cache.executeCommand('lpop', 'rapidapi_queue');
-  }
-
-  private async getRapidAPIQueueLength(): Promise<number> {
-    return await this.cache.executeCommand('llen', 'rapidapi_queue');
-  }
-
-  private async setLastRequestTimestamp(timestamp: number): Promise<void> {
-    await this.cache.executeCommand(
-      'set',
-      'last_rapidapi_request',
-      timestamp.toString()
-    );
-  }
-
-  private async getLastRequestTimestamp(): Promise<number> {
-    const timestamp = await this.cache.executeCommand(
-      'get',
-      'last_rapidapi_request'
-    );
-    return timestamp ? parseInt(timestamp, 10) : 0;
-  }
-}
-
 class Spotify {
   private cache = Cache.getInstance();
-  private data = Data.getInstance();
+  private data = Data.getInstance(); // Keep Data instance if needed elsewhere
   private utils = new Utils();
   private analytics = AnalyticsClient.getInstance();
   private rapidAPIQueue = RapidAPIQueue.getInstance();
@@ -212,11 +111,10 @@ class Spotify {
           },
         };
 
-        await this.rapidAPIQueue.enqueue(options);
-        await this.rapidAPIQueue.processQueue();
+        // Directly make the request instead of using the queue
         const response = await axios.request(options);
 
-        this.analytics.increaseCounter('spotify', 'playlist', 1);
+        this.analytics.increaseCounter('spotify', 'playlist', 1); // Keep analytics
 
         let image = '';
         if (response.data.images.length > 0) {
@@ -333,11 +231,10 @@ class Spotify {
             },
           };
 
-          await this.rapidAPIQueue.enqueue(options);
-          await this.rapidAPIQueue.processQueue();
+          // Directly make the request instead of using the queue
           const response = await axios.request(options);
 
-          this.analytics.increaseCounter('spotify', 'tracks', 1);
+          this.analytics.increaseCounter('spotify', 'tracks', 1); // Keep analytics
 
           // Get all track IDs from this batch
           const trackIds = response.data.items
@@ -622,11 +519,10 @@ class Spotify {
         },
       };
 
-      await this.rapidAPIQueue.enqueue(options);
-      await this.rapidAPIQueue.processQueue();
+      // Directly make the request instead of using the queue
       const response = await axios.request(options);
 
-      this.analytics.increaseCounter('spotify', 'tracks_by_ids', 1);
+      this.analytics.increaseCounter('spotify', 'tracks_by_ids', 1); // Keep analytics
 
       if (!response.data || !response.data.tracks) {
         return { success: false, error: 'No tracks found' };
@@ -712,11 +608,10 @@ class Spotify {
         },
       };
 
-      await this.rapidAPIQueue.enqueue(options);
-      await this.rapidAPIQueue.processQueue();
+      // Directly make the request instead of using the queue
       const response = await axios.request(options);
 
-      this.analytics.increaseCounter('spotify', 'search', 1);
+      this.analytics.increaseCounter('spotify', 'search', 1); // Keep analytics
 
       if (
         !response.data ||
