@@ -756,151 +756,70 @@ class Hitlist {
         return { success: false, error: 'No tracks provided' };
       }
 
-      // Get Spotify API credentials from environment variables
-      const clientId = process.env['SPOTIFY_CLIENT_ID'];
-      const clientSecret = process.env['SPOTIFY_CLIENT_SECRET'];
+      // Construct the playlist name
+      const playlistName = `${companyName} - ${listName}`;
 
-      if (!clientId || !clientSecret) {
-        this.logger.log(color.red.bold('Missing Spotify API credentials'));
-        return { success: false, error: 'Missing Spotify API credentials' };
-      }
-
-      // Generate a unique ID for this playlist creation job
-      const playlistJobId = this.utils.generateRandomString(32);
-
-      // Store the playlist info in cache using the unique job ID
-      const playlistInfo = {
-        companyName,
-        listName,
-        trackIds,
-      };
-      const playlistInfoKey = `pending_playlist_info:${playlistJobId}`;
-      await this.cache.set(
-        playlistInfoKey,
-        JSON.stringify(playlistInfo),
-        3600 // Store playlist info temporarily in cache for 1 hour
+      // Call the new method in SpotifyApi via this.spotify.api
+      // This method now handles token acquisition and API calls internally.
+      const result = await this.spotify.api.createOrUpdatePlaylist(
+        playlistName,
+        trackIds
       );
 
-      // --- Use Settings class for tokens ---
-      const accessToken = await this.settings.getSetting(
-        'spotify_access_token'
-      );
-      const refreshToken = await this.settings.getSetting(
-        'spotify_refresh_token'
-      );
-      const expiresAtStr = await this.settings.getSetting(
-        'spotify_token_expires_at'
-      );
-      const expiresAt = expiresAtStr ? parseInt(expiresAtStr, 10) : 0;
+      // Handle the result
+      if (result.success) {
+        // Return the success data directly
+        return {
+          success: true,
+          data: result.data, // Contains playlistId, playlistUrl, playlistName
+        };
+      } else if (result.needsReAuth) {
+        // If re-authentication is needed, construct the auth URL
+        const clientId = process.env['SPOTIFY_CLIENT_ID'];
+        if (!clientId) {
+          this.logger.log(
+            color.red.bold(
+              'Missing Spotify Client ID for generating auth URL.'
+            )
+          );
+          return {
+            success: false,
+            error: 'Configuration error: Missing Spotify Client ID',
+          };
+        }
+        const redirectUri =
+          process.env['SPOTIFY_REDIRECT_URI'] ||
+          'http://localhost:3004/spotify_callback'; // Use the same default
+        const scope = 'playlist-modify-public';
+        const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(
+          redirectUri
+        )}&scope=${encodeURIComponent(scope)}`;
 
-      // Check if access token is valid and not expired
-      if (accessToken && Date.now() < expiresAt) {
-        // Pass the playlistJobId directly
-        return this.createPlaylistWithToken(accessToken, playlistJobId);
-      }
-
-      // If access token is invalid/expired, try using the refresh token
-      if (refreshToken) {
         this.logger.log(
-          color.blue.bold(
-            'Spotify access token expired or invalid, attempting refresh...'
+          color.yellow.bold(
+            'Spotify authorization required. Please visit the following URL:'
           )
         );
-        try {
-          // Try to get a new access token using the refresh token
-          const refreshResponse = await axios({
-            method: 'post',
-            url: 'https://accounts.spotify.com/api/token',
-            headers: {
-              'Content-Type': 'application/x-www-form-urlencoded',
-              Authorization:
-                'Basic ' +
-                Buffer.from(clientId + ':' + clientSecret).toString('base64'),
-            },
-            data: new URLSearchParams({
-              grant_type: 'refresh_token',
-              refresh_token: refreshToken,
-            }).toString(),
-          });
+        this.logger.log(color.white.bold(authUrl));
 
-          if (refreshResponse.data.access_token) {
-            const newAccessToken = refreshResponse.data.access_token;
-            const newRefreshToken = refreshResponse.data.refresh_token; // Spotify might return a new refresh token
-            const expiresIn = refreshResponse.data.expires_in || 3600;
-            const newExpiresAt = Date.now() + (expiresIn - 60) * 1000; // Calculate expiry in ms
-
-            // Store the new tokens and expiry time in the database
-            await this.settings.setSetting(
-              'spotify_access_token',
-              newAccessToken
-            );
-            await this.settings.setSetting(
-              'spotify_token_expires_at',
-              newExpiresAt.toString()
-            );
-            if (newRefreshToken) {
-              await this.settings.setSetting(
-                'spotify_refresh_token',
-                newRefreshToken
-              );
-              this.logger.log(color.blue('Stored new Spotify refresh token.'));
-            } else {
-              // Keep the old refresh token if a new one wasn't provided
-              this.logger.log(
-                color.blue.bold('Re-using existing Spotify refresh token.')
-              );
-            }
-
-            this.logger.log(
-              color.green.bold('Successfully refreshed Spotify token.')
-            );
-            // Pass the playlistJobId directly
-            return this.createPlaylistWithToken(newAccessToken, playlistJobId);
-          }
-        } catch (error) {
-          this.logger.log(
-            color.yellow.bold(`Error refreshing token: ${error}`)
-          );
-          // Continue with the authorization flow if refresh token failed
-        }
+        return {
+          success: false,
+          error: 'Authorization required',
+          message: 'Please check the server logs for the authorization URL',
+          authUrl: authUrl, // Provide the auth URL to the caller
+        };
+      } else {
+        // Handle other errors returned by createOrUpdatePlaylist
+        this.logger.log(
+          color.red.bold(
+            `Error creating/updating Spotify playlist: ${result.error}`
+          )
+        );
+        return {
+          success: false,
+          error: result.error || 'Failed to create/update Spotify playlist',
+        };
       }
-
-      // If refresh failed or no refresh token, proceed to authorization
-      this.logger.log(
-        color.yellow(
-          'Spotify refresh failed or no refresh token available. Authorization required.'
-        )
-      );
-
-      // Store the playlistJobId temporarily in cache under a fixed key to retrieve it in the callback
-      const latestJobIdKey = 'latest_spotify_playlist_job_id';
-      await this.cache.set(latestJobIdKey, playlistJobId, 600); // Store for 10 minutes
-
-      // Generate the authorization URL
-      // Use the exact redirect URI registered with Spotify
-      const redirectUri =
-        process.env['SPOTIFY_REDIRECT_URI'] ||
-        'http://localhost:3004/spotify_callback';
-      const scope = 'playlist-modify-public';
-      // Removed state from the authUrl
-      const authUrl = `https://accounts.spotify.com/authorize?client_id=${clientId}&response_type=code&redirect_uri=${encodeURIComponent(
-        redirectUri
-      )}&scope=${encodeURIComponent(scope)}`;
-
-      // Log the URL to the console so the user can visit it
-      this.logger.log(
-        color.yellow.bold(
-          'Please visit the following URL to authorize Spotify playlist creation:'
-        )
-      );
-      this.logger.log(color.white.bold(authUrl));
-
-      return {
-        success: false,
-        error: 'Authorization required',
-        message: 'Please check the server logs for the authorization URL',
-        authUrl: authUrl,
-      };
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error creating Spotify playlist: ${error}`)
