@@ -2,12 +2,13 @@ import fs from 'fs/promises'; // Use promises API for async operations
 import path from 'path';
 import OpenAI from 'openai';
 import Logger from './logger';
-import { nanoid } from 'nanoid'; // Import nanoid for random filenames
+import Utils from './utils'; // Import Utils
 
 class AudioClient {
   private static instance: AudioClient;
   private openai: OpenAI;
   private logger = new Logger(); // Instantiate logger
+  private utils = new Utils(); // Instantiate Utils
 
   private constructor() {
     // Ensure the OpenAI API key is configured
@@ -39,7 +40,8 @@ class AudioClient {
   ): Promise<string> {
     const voice = 'coral'; // Hardcoded voice
     const model = 'gpt-4o-mini-tts'; // Hardcoded model
-    const outputFilename = `${nanoid()}.mp3`; // Generate random filename
+    const randomString = this.utils.generateRandomString(); // Generate random string using Utils
+    const outputFilename = `${randomString}.mp3`; // Use random string for filename
 
     // Construct the output directory path using PRIVATE_DIR
     const privateDir = process.env['PRIVATE_DIR'];
