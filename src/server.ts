@@ -1557,12 +1557,13 @@ class Server {
       // Add a test route for audio generation
       this.fastify.get('/test_audio', async (request: any, reply: any) => {
         try {
-          const text = request.query.text || 'This is a test audio generation from the server.';
-          const filename = request.query.filename || `test_audio_${Date.now()}.mp3`;
-          const voice = request.query.voice || 'coral'; // Allow specifying voice via query param
-          const model = request.query.model || 'gpt-4o-mini-tts'; // Allow specifying model via query param
+         const text: string = (request.query as any).text || 'This is a test audio generation from the server.';
+         const filename: string = (request.query as any).filename || `test_audio_${Date.now()}.mp3`;
+         const voice: string = (request.query as any).voice || 'coral'; // Ensure voice is treated as string
+         const model: string = (request.query as any).model || 'gpt-4o-mini-tts'; // Ensure model is treated as string
 
-          const filePath = await this.audio.generateAudio(text, voice, model, undefined, filename);
+         // Pass undefined for instructions if not provided
+         const filePath = await this.audio.generateAudio(text, voice, model, undefined, filename);
           reply.send({ success: true, message: `Audio generated successfully at ${filePath}` });
         } catch (error) {
           this.logger.log(`Error in /test_audio route: ${(error as Error).message}`, 'error');
