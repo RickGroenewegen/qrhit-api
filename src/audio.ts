@@ -1,5 +1,7 @@
 import fs from 'fs/promises'; // Use promises API for async operations
 import path from 'path';
+import fs from 'fs/promises'; // Use promises API for async operations
+import path from 'path';
 import OpenAI from 'openai';
 import Logger from './logger';
 import { nanoid } from 'nanoid'; // Import nanoid for random filenames
@@ -29,9 +31,7 @@ class AudioClient {
    * Generates audio from text using OpenAI's TTS model.
    * @param inputText The text to convert to speech.
    * @param voice The voice to use (e.g., 'alloy', 'echo', 'fable', 'onyx', 'nova', 'shimmer', 'coral').
-   * @param model The TTS model to use (e.g., 'tts-1', 'tts-1-hd', 'gpt-4o-mini-tts').
-   * @param instructions Optional instructions for the speech generation.
-   * @param outputDirectory The directory to save the generated speech file. Defaults to './'.
+   * @param inputText The text to convert to speech.
    * @param instructions Optional instructions for the speech generation.
    * @returns The full path to the generated speech file.
    */
