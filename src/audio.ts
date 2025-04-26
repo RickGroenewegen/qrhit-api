@@ -70,10 +70,7 @@ class AudioClient {
       this.logger.log(`Audio file saved successfully to: ${speechFile}`);
       return speechFile;
     } catch (error) {
-      this.logger.log(
-        `Error generating audio: ${(error as Error).message}`,
-        'error'
-      );
+      this.logger.log(`Error generating audio: ${(error as Error).message}`);
       if (error instanceof OpenAI.APIError) {
         this.logger.log(`OpenAI API Error Status: ${error.status}`);
         this.logger.log(`OpenAI API Error Message: ${error.message}`);
