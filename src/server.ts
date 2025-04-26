@@ -41,6 +41,7 @@ import Suggestion from './suggestion';
 import Designer from './designer';
 import Hitlist from './hitlist';
 import Vibe from './vibe';
+import AudioClient from './audio'; // Import AudioClient
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -82,6 +83,7 @@ class Server {
   private designer = Designer.getInstance();
   private hitlist = Hitlist.getInstance();
   private vibe = Vibe.getInstance();
+  private audio = AudioClient.getInstance(); // Instantiate AudioClient
   private whiteLabels = [
     {
       domain: 'k7.com',
@@ -1552,6 +1554,22 @@ class Server {
     );
 
     if (process.env['ENVIRONMENT'] == 'development') {
+      // Add a test route for audio generation
+      this.fastify.get('/test_audio', async (request: any, reply: any) => {
+        try {
+          const text = request.query.text || 'This is a test audio generation from the server.';
+          const filename = request.query.filename || `test_audio_${Date.now()}.mp3`;
+          const voice = request.query.voice || 'coral'; // Allow specifying voice via query param
+          const model = request.query.model || 'gpt-4o-mini-tts'; // Allow specifying model via query param
+
+          const filePath = await this.audio.generateAudio(text, voice, model, undefined, filename);
+          reply.send({ success: true, message: `Audio generated successfully at ${filePath}` });
+        } catch (error) {
+          this.logger.log(`Error in /test_audio route: ${(error as Error).message}`, 'error');
+          reply.status(500).send({ success: false, error: 'Failed to generate audio' });
+        }
+      });
+
       this.fastify.get(
         '/generate_invoice/:paymentId',
         async (request: any, _reply) => {

@@ -11,7 +11,10 @@ class AudioClient {
   private constructor() {
     // Ensure the OpenAI API key is configured
     if (!process.env.OPENAI_API_KEY) {
-      this.logger.log('OPENAI_API_KEY environment variable is not defined', 'error');
+      this.logger.log(
+        'OPENAI_API_KEY environment variable is not defined',
+        'error'
+      );
       throw new Error('OPENAI_API_KEY environment variable is not defined');
     }
     this.openai = new OpenAI(); // Initializes with API key from env automatically
@@ -35,17 +38,25 @@ class AudioClient {
    * @returns The full path to the generated speech file.
    */
   public async generateAudio(
-    inputText: string = "Today is a wonderful day to build something people love!",
-    voice: OpenAI.Audio.Speech.Voice = "coral",
-    model: string = "gpt-4o-mini-tts", // Use a valid model identifier
+    inputText: string = 'Today is a wonderful day to build something people love!',
+    voice: OpenAI.Audio.Speech.Voice = 'coral',
+    model: string = 'gpt-4o-mini-tts', // Use a valid model identifier
     instructions?: string,
-    outputDirectory: string = './',
-    outputFilename: string = 'speech.mp3'
+    outputFilename: string = 'speech.mp3' // Default filename
   ): Promise<string> {
+    // Construct the output directory path using PRIVATE_DIR
+    const privateDir = process.env['PRIVATE_DIR'];
+    if (!privateDir) {
+      this.logger.log('PRIVATE_DIR environment variable is not defined');
+      throw new Error('PRIVATE_DIR environment variable is not defined');
+    }
+    const outputDirectory = path.resolve(privateDir, 'audio');
     const speechFile = path.resolve(outputDirectory, outputFilename);
 
     try {
-      this.logger.log(`Generating audio for text: "${inputText}" using voice: ${voice}, model: ${model}`);
+      this.logger.log(
+        `Generating audio for text: "${inputText}" using voice: ${voice}, model: ${model}, saving to: ${speechFile}`
+      );
       const mp3 = await this.openai.audio.speech.create({
         model: model,
         voice: voice,
@@ -62,7 +73,10 @@ class AudioClient {
       this.logger.log(`Audio file saved successfully to: ${speechFile}`);
       return speechFile;
     } catch (error) {
-      this.logger.log(`Error generating audio: ${(error as Error).message}`, 'error');
+      this.logger.log(
+        `Error generating audio: ${(error as Error).message}`,
+        'error'
+      );
       if (error instanceof OpenAI.APIError) {
         this.logger.log(`OpenAI API Error Status: ${error.status}`, 'error');
         this.logger.log(`OpenAI API Error Message: ${error.message}`, 'error');
