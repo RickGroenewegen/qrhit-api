@@ -11,10 +11,7 @@ class AudioClient {
   private constructor() {
     // Ensure the OpenAI API key is configured
     if (!process.env.OPENAI_API_KEY) {
-      this.logger.log(
-        'OPENAI_API_KEY environment variable is not defined',
-        'error'
-      );
+      this.logger.log('OPENAI_API_KEY environment variable is not defined');
       throw new Error('OPENAI_API_KEY environment variable is not defined');
     }
     this.openai = new OpenAI(); // Initializes with API key from env automatically
@@ -78,10 +75,10 @@ class AudioClient {
         'error'
       );
       if (error instanceof OpenAI.APIError) {
-        this.logger.log(`OpenAI API Error Status: ${error.status}`, 'error');
-        this.logger.log(`OpenAI API Error Message: ${error.message}`, 'error');
-        this.logger.log(`OpenAI API Error Code: ${error.code}`, 'error');
-        this.logger.log(`OpenAI API Error Type: ${error.type}`, 'error');
+        this.logger.log(`OpenAI API Error Status: ${error.status}`);
+        this.logger.log(`OpenAI API Error Message: ${error.message}`);
+        this.logger.log(`OpenAI API Error Code: ${error.code}`);
+        this.logger.log(`OpenAI API Error Type: ${error.type}`);
       }
       throw error; // Re-throw the error after logging
     }
