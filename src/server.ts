@@ -1557,19 +1557,34 @@ class Server {
       // Add a test route for audio generation (POST)
       this.fastify.post('/test_audio', async (request: any, reply: any) => {
         try {
-          const { prompt, instructions } = request.body as { prompt?: string; instructions?: string };
+          const { prompt, instructions } = request.body as {
+            prompt?: string;
+            instructions?: string;
+          };
 
           if (!prompt) {
-            reply.status(400).send({ success: false, error: 'Missing required field: prompt' });
+            reply
+              .status(400)
+              .send({
+                success: false,
+                error: 'Missing required field: prompt',
+              });
             return;
           }
 
           // Call generateAudio with only prompt and optional instructions
           const filePath = await this.audio.generateAudio(prompt, instructions);
-          reply.send({ success: true, message: `Audio generated successfully at ${filePath}` });
+          reply.send({
+            success: true,
+            message: `Audio generated successfully at ${filePath}`,
+          });
         } catch (error) {
-          this.logger.log(`Error in /test_audio route: ${(error as Error).message}`, 'error');
-          reply.status(500).send({ success: false, error: 'Failed to generate audio' });
+          this.logger.log(
+            `Error in /test_audio route: ${(error as Error).message}`
+          );
+          reply
+            .status(500)
+            .send({ success: false, error: 'Failed to generate audio' });
         }
       });
 
