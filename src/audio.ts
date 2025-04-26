@@ -60,6 +60,7 @@ class AudioClient {
         model: model, // Use hardcoded model
         voice: voice, // Use hardcoded voice
         input: inputText,
+        language: 'nl', // Explicitly set language to Dutch
         ...(instructions && { instructions }), // Conditionally add instructions
       });
 
