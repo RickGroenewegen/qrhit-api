@@ -1,7 +1,8 @@
-import fs from 'fs';
+import fs from 'fs/promises'; // Use promises API for async operations
 import path from 'path';
 import OpenAI from 'openai';
-import Logger from './logger'; // Assuming you have a logger like in other classes
+import Logger from './logger';
+import { nanoid } from 'nanoid'; // Import nanoid for random filenames
 
 class AudioClient {
   private static instance: AudioClient;
@@ -31,16 +32,17 @@ class AudioClient {
    * @param model The TTS model to use (e.g., 'tts-1', 'tts-1-hd', 'gpt-4o-mini-tts').
    * @param instructions Optional instructions for the speech generation.
    * @param outputDirectory The directory to save the generated speech file. Defaults to './'.
-   * @param outputFilename The name for the output MP3 file. Defaults to 'speech.mp3'.
+   * @param instructions Optional instructions for the speech generation.
    * @returns The full path to the generated speech file.
    */
   public async generateAudio(
-    inputText: string = 'Today is a wonderful day to build something people love!',
-    voice: string = 'coral', // Changed type to string
-    model: string = 'gpt-4o-mini-tts', // Use a valid model identifier
-    instructions?: string,
-    outputFilename: string = 'speech.mp3' // Default filename
+    inputText: string, // Make inputText required
+    instructions?: string
   ): Promise<string> {
+    const voice = 'coral'; // Hardcoded voice
+    const model = 'gpt-4o-mini-tts'; // Hardcoded model
+    const outputFilename = `${nanoid()}.mp3`; // Generate random filename
+
     // Construct the output directory path using PRIVATE_DIR
     const privateDir = process.env['PRIVATE_DIR'];
     if (!privateDir) {
@@ -55,8 +57,8 @@ class AudioClient {
         `Generating audio for text: "${inputText}" using voice: ${voice}, model: ${model}, saving to: ${speechFile}`
       );
       const mp3 = await this.openai.audio.speech.create({
-        model: model,
-        voice: voice,
+        model: model, // Use hardcoded model
+        voice: voice, // Use hardcoded voice
         input: inputText,
         ...(instructions && { instructions }), // Conditionally add instructions
       });
@@ -64,9 +66,9 @@ class AudioClient {
       const buffer = Buffer.from(await mp3.arrayBuffer());
 
       // Ensure the output directory exists
-      await fs.promises.mkdir(outputDirectory, { recursive: true });
+      await fs.mkdir(outputDirectory, { recursive: true });
 
-      await fs.promises.writeFile(speechFile, buffer);
+      await fs.writeFile(speechFile, buffer);
       this.logger.log(`Audio file saved successfully to: ${speechFile}`);
       return speechFile;
     } catch (error) {
