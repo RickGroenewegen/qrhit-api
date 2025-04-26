@@ -36,7 +36,7 @@ class AudioClient {
    */
   public async generateAudio(
     inputText: string = 'Today is a wonderful day to build something people love!',
-    voice: OpenAI.Audio.Speech.Voice = 'coral',
+    voice: string = 'coral', // Changed type to string
     model: string = 'gpt-4o-mini-tts', // Use a valid model identifier
     instructions?: string,
     outputFilename: string = 'speech.mp3' // Default filename
