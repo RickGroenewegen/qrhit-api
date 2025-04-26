@@ -1,7 +1,5 @@
 import fs from 'fs/promises'; // Use promises API for async operations
 import path from 'path';
-import fs from 'fs/promises'; // Use promises API for async operations
-import path from 'path';
 import OpenAI from 'openai';
 import Logger from './logger';
 import { nanoid } from 'nanoid'; // Import nanoid for random filenames
