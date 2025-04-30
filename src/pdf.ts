@@ -78,6 +78,17 @@ class PDF {
     const totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
     const maxPagesPerPDF = 100;
 
+    console.log(
+      1111,
+      itemsPerPage,
+      pagesPerTrack,
+      numberOfTracks,
+      totalPages,
+      maxPagesPerPDF
+    );
+
+    // 1111 6 1 167 100
+
     let ecoInt = eco ? 1 : 0;
     let emptyPages = 0;
 

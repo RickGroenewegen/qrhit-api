@@ -38,7 +38,7 @@ class AudioClient {
     inputText: string, // Make inputText required
     instructions?: string
   ): Promise<string> {
-    const voice = 'coral'; // Hardcoded voice
+    const voice = 'ash'; // Hardcoded voice
     const model = 'gpt-4o-mini-tts'; // Hardcoded model
     const randomString = this.utils.generateRandomString(); // Generate random string using Utils
     const outputFilename = `${randomString}.mp3`; // Use random string for filename
@@ -60,8 +60,7 @@ class AudioClient {
         model: model, // Use hardcoded model
         voice: voice, // Use hardcoded voice
         input: inputText,
-        language: 'nl', // Explicitly set language to Dutch
-        ...(instructions && { instructions }), // Conditionally add instructions
+        instructions: instructions || '',
       });
 
       const buffer = Buffer.from(await mp3.arrayBuffer());
