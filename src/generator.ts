@@ -351,8 +351,6 @@ class Generator {
       tracks.splice(MAX_CARDS_PHYSICAL);
     }
 
-    console.log(222, tracks.length);
-
     this.logger.log(
       blue.bold(
         `Storing ${white.bold(tracks.length)} tracks for playlist: ${white.bold(

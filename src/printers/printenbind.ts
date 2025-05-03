@@ -820,7 +820,10 @@ class PrintEnBind {
         check_doc: 'standard',
         delivery_method: 'post',
         add_file_method: 'url',
+        file_overwrite: true,
         file_url: fileUrl,
+        comment:
+          'BELANGRIJKE OPMERKING VOOR PRODUCTIE: Als je meerdere QRSong! orders van verschillende klanten in een keer verwerkt: Zorg dat dat de stapeltjes kaarten bij de juiste order worden ingepakt! Het is de afgelopen tijd regelmatig voorgekomen dat stapeltjes werden verwisseld en bij de verkeerde klanten terecht kwamen. Let hier a.u.b. op!',
       };
 
       if (item.subType == 'sheets') {
