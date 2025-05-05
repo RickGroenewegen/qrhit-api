@@ -669,7 +669,8 @@ class Server {
           name,
           year,
           spotifyLink,
-          youtubeLink
+          youtubeLink,
+          request.clientIp
         );
         return { success };
       }
@@ -1563,12 +1564,10 @@ class Server {
           };
 
           if (!prompt) {
-            reply
-              .status(400)
-              .send({
-                success: false,
-                error: 'Missing required field: prompt',
-              });
+            reply.status(400).send({
+              success: false,
+              error: 'Missing required field: prompt',
+            });
             return;
           }
 

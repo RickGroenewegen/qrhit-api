@@ -1167,14 +1167,18 @@ class Data {
     await this.cache.executeCommand('ltrim', ipInfoListKey, 0, 999); // Keep only the last 100 entries
   }
 
-  public async getLink(trackId: number, clientIp: string): Promise<ApiResult> {
+  public async getLink(
+    trackId: number,
+    clientIp: string,
+    useCache: boolean = true
+  ): Promise<ApiResult> {
     this.analytics.increaseCounter('songs', 'played');
     this.logLink(trackId, clientIp);
 
     const cacheKey = `track_links:${trackId}`;
     const cachedData = await this.cache.get(cacheKey);
 
-    if (cachedData) {
+    if (cachedData && useCache) {
       return {
         success: true,
         data: JSON.parse(cachedData),
@@ -1196,7 +1200,15 @@ class Data {
         await this.cache.set(cacheKey, JSON.stringify(data));
       }
 
-      console.log(111, data);
+      if (!useCache) {
+        this.logger.log(
+          color.blue.bold(
+            `Refreshed cache for track ${color.white.bold(
+              trackId
+            )}: ${color.white.bold(data.link)}`
+          )
+        );
+      }
 
       return {
         success: true,
@@ -1587,7 +1599,8 @@ class Data {
     name: string,
     year: number,
     spotifyLink: string,
-    youtubeLink: string
+    youtubeLink: string,
+    clientIp: string
   ): Promise<boolean> {
     try {
       await this.prisma.track.update({
@@ -1601,6 +1614,8 @@ class Data {
           manuallyCorrected: true,
         },
       });
+      // Get the link again, but without the cache
+      await this.getLink(id, clientIp, false);
       await this.checkUnfinalizedPayments();
       return true;
     } catch (error) {
