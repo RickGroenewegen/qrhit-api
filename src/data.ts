@@ -1644,10 +1644,8 @@ class Data {
         },
       });
       this.logger.log(
-        color.green.bold(
-          `Updated PaymentHasPlaylist ${color.white.bold(
-            paymentHasPlaylistId
-          )}: eco=${eco}, doubleSided=${doubleSided}`
+        color.blue.bold(
+          `Updated playlist data for ${color.white.bold(paymentHasPlaylistId)}`
         )
       );
       return { success: true };

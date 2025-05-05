@@ -465,8 +465,11 @@ class Mollie {
         },
         PaymentHasPlaylist: {
           select: {
+            id: true,
             amount: true,
             filename: true,
+            eco: true,
+            doubleSided: true,
             orderType: {
               select: {
                 name: true,
