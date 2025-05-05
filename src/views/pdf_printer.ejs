@@ -124,7 +124,7 @@
                 <span style="<%= eco ? 'filter: grayscale(100%);' : '' %> font-size: 16px;"><%= php.emoji %></span>
             <% } %>
  
-            <% if (!playlist.hideDomain && !php.hideDomain) { %>
+            <% if (true || !playlist.hideDomain && !php.hideDomain) { %>
                 <%= process.env['APP_DOMAIN'] %>
             <% } %>
  
