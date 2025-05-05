@@ -822,8 +822,7 @@ class PrintEnBind {
         add_file_method: 'url',
         file_overwrite: true,
         file_url: fileUrl,
-        comment:
-          'Om verwisseling van stapeltjes tussen orders te voorkomen, is er op elk kaartje een uniek batch nummer toegevoegd. Je vindt dit nummer rechtsonder op de kant met titel, artiest en jaar. Dit nummer helpt bij het onderscheid maken tussen verschillende orders. Graag hier extra op letten tijdens de productie en verpakking en zorgen dat de stapeltjes apart blijven en in de juiste order terecht komen. Alvast bedankt voor de zorgvuldigheid!',
+        comment: `Om verwisseling van stapeltjes tussen orders te voorkomen, is er op elk kaartje het unieke batch nummer \'#${item.id}\' toegevoegd. Je vindt dit nummer rechtsonder op de kant met titel, artiest en jaar. Dit nummer helpt bij het onderscheid maken tussen verschillende orders. Graag hier extra op letten tijdens de productie en verpakking en zorgen dat de stapeltjes apart blijven en in de juiste order terecht komen. Alvast bedankt voor de zorgvuldigheid!`,
       };
 
       if (item.subType == 'sheets') {
