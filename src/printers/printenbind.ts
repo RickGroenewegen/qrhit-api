@@ -823,7 +823,7 @@ class PrintEnBind {
         file_overwrite: true,
         file_url: fileUrl,
         comment:
-          'BELANGRIJKE OPMERKING VOOR PRODUCTIE: Als je meerdere QRSong! orders van verschillende klanten in een keer verwerkt: Zorg dat dat de stapeltjes kaarten bij de juiste order worden ingepakt! Het is de afgelopen tijd regelmatig voorgekomen dat stapeltjes werden verwisseld en bij de verkeerde klanten terecht kwamen. Let hier a.u.b. op!',
+          'Om verwisseling van stapeltjes tussen orders te voorkomen, is er op elk stapeltje een uniek nummer toegevoegd. Je vindt dit nummer rechtsonder op de kant met titel, artiest en jaar. Dit nummer helpt bij het onderscheid maken tussen verschillende orders. Graag hier extra op letten tijdens de productie en verpakking en zorgen dat deze apart blijven en in de juiste order terecht komen. Alvast bedankt voor de zorgvuldigheid!',
       };
 
       if (item.subType == 'sheets') {
