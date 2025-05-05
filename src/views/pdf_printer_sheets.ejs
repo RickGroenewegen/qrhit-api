@@ -250,6 +250,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                             <% if (php.emoji && php.emoji.length) { %>
                                 <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
                             <% } %>
+                            <div style="font-size: 10px; margin-top: 1mm;">#<%= playlist.id %></div>
                         </div>
                     </div>
                 <% } else { %>
