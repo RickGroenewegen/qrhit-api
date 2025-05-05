@@ -936,6 +936,56 @@ class Server {
         }
       }
     );
+
+    this.fastify.post(
+      '/php/:paymentHasPlaylistId',
+      getAuthHandler(['admin']),
+      async (request: any, reply: any) => {
+        try {
+          const paymentHasPlaylistId = parseInt(
+            request.params.paymentHasPlaylistId
+          );
+          const { eco, doubleSided } = request.body;
+
+          if (isNaN(paymentHasPlaylistId)) {
+            reply
+              .status(400)
+              .send({ success: false, error: 'Invalid paymentHasPlaylistId' });
+            return;
+          }
+
+          if (typeof eco !== 'boolean' || typeof doubleSided !== 'boolean') {
+            reply.status(400).send({
+              success: false,
+              error: 'Invalid eco or doubleSided value. Must be boolean.',
+            });
+            return;
+          }
+
+          const result = await this.data.updatePaymentHasPlaylist(
+            paymentHasPlaylistId,
+            eco,
+            doubleSided
+          );
+
+          if (!result.success) {
+            reply.status(500).send(result);
+            return;
+          }
+
+          reply.send({ success: true });
+        } catch (error) {
+          this.logger.log(
+            `Error in /php/:paymentHasPlaylistId route: ${
+              (error as Error).message
+            }`
+          );
+          reply
+            .status(500)
+            .send({ success: false, error: 'Internal server error' });
+        }
+      }
+    );
   };
 
   public init = async () => {

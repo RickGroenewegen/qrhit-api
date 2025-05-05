@@ -1629,6 +1629,39 @@ class Data {
     }
     return Data.instance;
   }
+
+  public async updatePaymentHasPlaylist(
+    paymentHasPlaylistId: number,
+    eco: boolean,
+    doubleSided: boolean
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      await this.prisma.paymentHasPlaylist.update({
+        where: { id: paymentHasPlaylistId },
+        data: {
+          eco: eco,
+          doubleSided: doubleSided,
+        },
+      });
+      this.logger.log(
+        color.green.bold(
+          `Updated PaymentHasPlaylist ${color.white.bold(
+            paymentHasPlaylistId
+          )}: eco=${eco}, doubleSided=${doubleSided}`
+        )
+      );
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating PaymentHasPlaylist ${color.white.bold(
+            paymentHasPlaylistId
+          )}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
 }
 
 export default Data;
