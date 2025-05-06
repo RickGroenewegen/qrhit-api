@@ -4,4 +4,5 @@ export interface ApiResult {
   data?: any;
   needsReAuth?: boolean;
   authUrl?: string; // Add optional property for authorization URL
+  retryAfter?: number; // Add optional property for Retry-After header value
 }
