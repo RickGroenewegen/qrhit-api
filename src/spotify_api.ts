@@ -225,9 +225,7 @@ class SpotifyApi {
       const message =
         axiosError.response?.data?.error?.message || axiosError.message;
 
-      this.logger.log(
-        color.red.bold(`Spotify API error ${context}: ${status} - ${message}`)
-      );
+      // Removed: this.logger.log(color.red.bold(`Spotify API error ${context}: ${status} - ${message}`));
 
       if (status === 401) {
         // Clear potentially invalid token for next attempt
@@ -252,7 +250,7 @@ class SpotifyApi {
             ? `Retry after: ${retryAfter} seconds.`
             : 'No Retry-After header.'
         }`;
-        this.logger.log(color.red.bold(errorMessage));
+        // Removed: this.logger.log(color.red.bold(errorMessage));
         return {
           success: false,
           error: errorMessage,
