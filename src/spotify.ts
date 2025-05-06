@@ -639,39 +639,35 @@ class Spotify {
         return JSON.parse(cacheResult);
       }
 
-      // Primary attempt with this.api (SpotifyApi)
-      this.logger.log(
-        color.blue.bold(
-          `Attempting search with SpotifyApi for: "${searchTerm}" (limit: ${limit}, offset: ${offset})`
-        )
-      );
       let result = await this.api.searchTracks(searchTerm, limit, offset);
 
       // If the primary API call (this.api which is SpotifyApi) fails due to rate limiting (429)
       // after its internal retries, then attempt fallback to SpotifyRapidApi.
       // SpotifyApi.searchTracks internally handles retries and its handleApiError
       // sets result.retryAfter and includes '429' in result.error for these cases.
-      if (!result.success && (result.error?.includes('429') || result.retryAfter !== undefined)) {
-        this.logger.log(
-          color.yellow.bold(
-            `SpotifyApi search failed due to rate limit (429). Error: ${result.error}. Attempting fallback to SpotifyRapidApi for: "${searchTerm}"`
-          )
-        );
+      if (
+        !result.success &&
+        (result.error?.includes('429') || result.retryAfter !== undefined)
+      ) {
         // Attempt fallback to SpotifyRapidApi
-        result = await this.spotifyRapidApi.searchTracks(searchTerm, limit, offset);
-        
+        result = await this.spotifyRapidApi.searchTracks(
+          searchTerm,
+          limit,
+          offset
+        );
+
         if (!result.success) {
-            this.logger.log(
-                color.red.bold(
-                    `SpotifyRapidApi search fallback also failed for "${searchTerm}": ${result.error}`
-                )
-            );
+          this.logger.log(
+            color.red.bold(
+              `SpotifyRapidApi search fallback also failed for "${searchTerm}": ${result.error}`
+            )
+          );
         } else {
-            this.logger.log(
-                color.green.bold(
-                    `SpotifyRapidApi search fallback successful for "${searchTerm}"`
-                )
-            );
+          this.logger.log(
+            color.green.bold(
+              `SpotifyRapidApi search fallback successful for "${searchTerm}"`
+            )
+          );
         }
       }
 
@@ -683,8 +679,8 @@ class Spotify {
         return {
           success: false,
           error: result.error || 'Error searching tracks from API',
-          needsReAuth: result.needsReAuth, 
-          retryAfter: result.retryAfter, 
+          needsReAuth: result.needsReAuth,
+          retryAfter: result.retryAfter,
         };
       }
 
