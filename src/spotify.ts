@@ -639,8 +639,41 @@ class Spotify {
         return JSON.parse(cacheResult);
       }
 
-      // Call the abstracted API method
-      const result = await this.spotifyRapidApi.searchTracks(
+      // Determine which API to use based on the counter for 75%/25% distribution
+      const searchCounterKey = 'search_api_distribution_counter';
+      let currentSearchCount = 0;
+      const cachedCount = await this.cache.get(searchCounterKey);
+
+      if (cachedCount) {
+        currentSearchCount = parseInt(cachedCount, 10);
+        if (isNaN(currentSearchCount)) { // Handle potential NaN from parseInt
+            currentSearchCount = 0;
+        }
+      }
+
+      currentSearchCount++; // Increment for the current request
+
+      let selectedApi;
+      // Route 25% (1 out of 4) to spotifyRapidApi
+      if (currentSearchCount % 4 === 0) { 
+        selectedApi = this.spotifyRapidApi;
+        this.logger.log(
+          color.blue('Routing search to SpotifyRapidApi (25% path - search count: ' + currentSearchCount + ')')
+        );
+      } else {
+        // Route 75% (3 out of 4) to this.api (SpotifyApi)
+        selectedApi = this.api; 
+        this.logger.log(
+          color.blue('Routing search to SpotifyApi (75% path - search count: ' + currentSearchCount + ')')
+        );
+      }
+
+      // Store the updated counter back in cache.
+      // No expiry, so it persists. Resets if Redis is flushed or key is deleted.
+      await this.cache.set(searchCounterKey, currentSearchCount.toString());
+
+      // Call the selected API method
+      const result = await selectedApi.searchTracks(
         searchTerm,
         limit,
         offset
