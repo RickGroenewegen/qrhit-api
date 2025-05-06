@@ -646,15 +646,17 @@ class Suggestion {
 
         if (andSend) {
           // set userAgreed van paymentByPlaylist op true
-          await this.prisma.paymentHasPlaylist.update({
-            where: {
-              id: suggestions[0].paymentHasPlaylistId,
-            },
-            data: {
-              eligableForPrinter: true,
-              eligableForPrinterAt: new Date(),
-            },
-          });
+          if (hasPhysicalPlaylists) {
+            await this.prisma.paymentHasPlaylist.update({
+              where: {
+                id: suggestions[0].paymentHasPlaylistId,
+              },
+              data: {
+                eligableForPrinter: true,
+                eligableForPrinterAt: new Date(),
+              },
+            });
+          }
 
           await this.mollie.clearPDFs(paymentId);
           await this.generator.generate(
