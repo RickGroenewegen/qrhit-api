@@ -1236,11 +1236,11 @@ class Vibe {
       const tracks = await this.prisma.track.findMany({
         where: {
           id: { in: trackIds },
-          manuallyChecked: true,
         },
         select: {
           id: true,
           name: true,
+          manuallyChecked: true,
           artist: true,
           year: true,
           spotifyLink: true,

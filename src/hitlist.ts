@@ -296,10 +296,31 @@ class Hitlist {
 
         // Store tracks in the database (using data from Spotify response)
         for (const trackData of tracksResult.data) {
-          // Check if track already exists in the database
-          let track = await this.prisma.track.findUnique({
-            where: { trackId: trackData.trackId },
+          let track = null;
+
+          // First try to get the track with an exact match on artist and title
+          const trackWithExactMatch = await this.prisma.track.findFirst({
+            where: {
+              artist: trackData.artist,
+              name: trackData.name,
+            },
           });
+
+          if (trackWithExactMatch) {
+            track = trackWithExactMatch;
+            this.logger.log(
+              color.blue.bold(
+                `Found existing track with exact match: ${color.white.bold(
+                  trackData.artist
+                )} - ${color.white.bold(trackData.name)}`
+              )
+            );
+          } else {
+            // If no exact match, try to find a track with the same Spotify ID
+            track = await this.prisma.track.findUnique({
+              where: { trackId: trackData.trackId },
+            });
+          }
 
           const spotifyYear = trackData.releaseDate
             ? parseInt(trackData.releaseDate.substring(0, 4))
