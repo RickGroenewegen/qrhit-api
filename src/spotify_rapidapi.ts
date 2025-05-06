@@ -433,6 +433,9 @@ class SpotifyRapidApi {
 
       // Assuming the structure is { tracks: { items: [], totalCount: number } }
       // Adapt this based on the actual RapidAPI response structure
+
+      console.log(999, response.data.tracks.items);
+
       return { success: true, data: response.data };
     } catch (error) {
       const axiosError = error as AxiosError;
