@@ -431,12 +431,75 @@ class SpotifyRapidApi {
         return { success: false, error: 'No results from RapidAPI' };
       }
 
-      // Assuming the structure is { tracks: { items: [], totalCount: number } }
-      // Adapt this based on the actual RapidAPI response structure
+      // Adapt this based on the actual RapidAPI response structure.
+      // The RapidAPI search result has items nested under item.data,
+      // and the structure of artists/album differs from the direct Spotify API.
+      // We need to transform it to match the expected Spotify API structure
+      // so that spotify.ts can process it correctly.
 
-      console.log(999, response.data.tracks.items);
+      if (response.data && response.data.tracks && Array.isArray(response.data.tracks.items)) {
+        const transformedItems = response.data.tracks.items.map((apiItem: any) => {
+          const trackDetails = apiItem.data;
+          // Ensure trackDetails and its id exist, otherwise skip this item
+          if (!trackDetails || !trackDetails.id) {
+            return null;
+          }
 
-      return { success: true, data: response.data };
+          // Artists: Map from RapidAPI structure (e.g., { items: [{ profile: { name: ... } }] }) to { name: string }[]
+          const artists = trackDetails.artists?.items?.map((artistItem: any) => ({
+            name: artistItem.profile?.name,
+          })).filter((artist: any) => artist.name) || []; // Filter out artists without names
+
+          // Album: Map from RapidAPI structure (e.g., { coverArt: { sources: [...] }, name: ... })
+          // to { images: { url: string }[], name: string }
+          const albumImages = trackDetails.albumOfTrack?.coverArt?.sources?.map((source: any) => ({
+            url: source.url,
+          })).filter((image: any) => image.url) || []; // Filter out images without URLs
+          
+          const album = {
+            name: trackDetails.albumOfTrack?.name || 'Unknown Album',
+            images: albumImages,
+          };
+
+          return {
+            id: trackDetails.id,
+            name: trackDetails.name,
+            // Ensure artists array is not empty for compatibility with spotify.ts mapping (item.artists[0])
+            artists: artists.length > 0 ? artists : [{ name: 'Unknown Artist' }],
+            album: album, // Ensure album object with images array for spotify.ts mapping (item.album.images[0])
+            // Other fields like external_urls, preview_url can be added if needed by spotify.ts
+            // For example:
+            // external_urls: { spotify: trackDetails.uri },
+            // preview_url: trackDetails.playability?.playable ? trackDetails.uri : null, // Example, check actual structure
+          };
+        }).filter(track => track !== null); // Filter out any nulls resulting from invalid items
+
+        // Ensure total is a number, fallback to items length if not present or not a number
+        const total = typeof response.data.tracks.totalCount === 'number' 
+          ? response.data.tracks.totalCount 
+          : transformedItems.length;
+
+        return {
+          success: true,
+          data: {
+            tracks: {
+              items: transformedItems,
+              total: total, // spotify.ts expects 'total'
+            },
+          },
+        };
+      } else {
+        // Handle cases where the structure is not as expected
+        this.logger.log(
+          color.yellow(
+            `RapidAPI searchTracks returned no items or an unexpected data structure.`
+          )
+        );
+        return {
+          success: false,
+          error: 'No items or unexpected data structure from RapidAPI search',
+        };
+      }
     } catch (error) {
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
