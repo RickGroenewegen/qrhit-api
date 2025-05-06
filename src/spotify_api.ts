@@ -275,6 +275,15 @@ class SpotifyApi {
   }
 
   /**
+   * Helper function to introduce a delay.
+   * @param ms The number of milliseconds to wait.
+   * @returns A promise that resolves after the specified delay.
+   */
+  private delay(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms));
+  }
+
+  /**
    * Fetches the Spotify User ID for the authenticated user.
    * @param accessToken A valid Spotify access token.
    * @returns {Promise<string | null>} The user ID or null if an error occurs.
@@ -474,38 +483,85 @@ class SpotifyApi {
 
     limit = Math.min(limit, 50); // Enforce Spotify API limit
 
-    const accessToken = await this.getAccessToken();
+    let retries = 0;
+    const maxRetries = 3;
+    let lastErrorResult: ApiResult | null = null;
+
+    // Initial access token fetch
+    let accessToken = await this.getAccessToken();
     if (!accessToken) {
       return {
         success: false,
-        error: 'Spotify authentication required',
+        error: 'Spotify authentication required (initial attempt)',
         needsReAuth: true,
-        authUrl: this.getAuthorizationUrl() ?? undefined, // Convert null to undefined
+        authUrl: this.getAuthorizationUrl() ?? undefined,
       };
     }
 
-    try {
-      // Request only the fields needed by spotify.ts: tracks(items(id, name, artists(name), album(images(url))), total)
-      const fields =
-        'tracks(items(id,name,artists(name),album(images(url))),total)';
-      const response = await axios.get(`https://api.spotify.com/v1/search`, {
-        params: {
-          q: searchTerm,
-          type: 'track',
-          limit: limit,
-          offset: offset,
-          fields: fields, // Add fields parameter
-        },
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
+    while (retries < maxRetries) {
+      try {
+        // Request only the fields needed by spotify.ts: tracks(items(id, name, artists(name), album(images(url))), total)
+        const fields =
+          'tracks(items(id,name,artists(name),album(images(url))),total)';
+        const response = await axios.get(`https://api.spotify.com/v1/search`, {
+          params: {
+            q: searchTerm,
+            type: 'track',
+            limit: limit,
+            offset: offset,
+            fields: fields, // Add fields parameter
+          },
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
 
-      console.log(111, response.data.tracks.items.length);
+        console.log(111, response.data.tracks.items.length);
 
-      // The response contains a 'tracks' object with items, total, etc.
-      return { success: true, data: response.data };
-    } catch (error) {
-      return this.handleApiError(error, `searching tracks for "${searchTerm}"`);
+        // The response contains a 'tracks' object with items, total, etc.
+        return { success: true, data: response.data };
+      } catch (error) {
+        lastErrorResult = this.handleApiError(error, `searching tracks for "${searchTerm}" (attempt ${retries + 1}/${maxRetries})`);
+
+        // Check if it's a 429 error and if we have more retries left (don't retry on the last attempt)
+        if (lastErrorResult.error?.includes('429') && retries < maxRetries - 1) {
+          const retryAfterSeconds = lastErrorResult.retryAfter;
+          // Default backoff: 1s for 1st retry (retries=0 -> (0+1)*1000), 2s for 2nd retry (retries=1 -> (1+1)*1000)
+          // For the third retry (retries=2), it would be 3s.
+          let waitTimeMs = (retries + 1) * 1000; // Default incremental backoff
+
+          if (retryAfterSeconds) {
+            waitTimeMs = retryAfterSeconds * 1000;
+            this.logger.log(color.yellow.bold(`Spotify API rate limit (429). Retrying after ${retryAfterSeconds} seconds...`));
+          } else {
+            this.logger.log(color.yellow.bold(`Spotify API rate limit (429). No Retry-After header. Retrying in ${waitTimeMs / 1000} seconds...`));
+          }
+          
+          await this.delay(waitTimeMs);
+          retries++;
+
+          // Re-fetch access token before next attempt
+          this.logger.log(color.blue.bold(`Attempting to re-fetch access token for retry ${retries}...`));
+          accessToken = await this.getAccessToken();
+          if (!accessToken) {
+            this.logger.log(color.red.bold('Failed to get access token for retry. Aborting search.'));
+            return {
+              success: false,
+              error: 'Spotify authentication required during retry attempt',
+              needsReAuth: true, // Signal re-auth might be needed
+              authUrl: this.getAuthorizationUrl() ?? undefined,
+            };
+          }
+          this.logger.log(color.green.bold(`Successfully re-fetched access token for retry ${retries}.`));
+          // Continue to the next iteration of the while loop for the next attempt
+        } else {
+          // Not a 429 error, or it was a 429 on the last attempt (retries === maxRetries -1), or some other error.
+          // No more retries for this error type or retries exhausted.
+          return lastErrorResult;
+        }
+      }
     }
+    // This line should ideally not be reached if the logic correctly returns from within the loop.
+    // It acts as a fallback if all retries are exhausted and the loop finishes.
+    return lastErrorResult || { success: false, error: `Max retries (${maxRetries}) reached for searchTracks.`, needsReAuth: false };
   }
 
   /**
