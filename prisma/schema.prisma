@@ -307,6 +307,7 @@ model Playlist {
   UserSuggestion       UserSuggestion[]
   PlayListExtraInfo    TrackExtraInfo[]
   genre                genre?               @relation(fields: [genreId], references: [id])
+  CompanyList          CompanyList[]
 
   @@index([playlistId])
   @@map("playlists")
@@ -509,34 +510,37 @@ model Company {
 }
 
 model CompanyList {
-  id               Int       @id @default(autoincrement())
-  companyId        Int
-  name             String
-  description      String
-  slug             String
-  background       String?
-  background2      String?
-  playlistSource   String    @default("voting")
-  playlistUrl      String?
-  playlistUrlFull  String?
-  qrColor          String    @default("#000000")
-  textColor        String    @default("#000000")
-  status           String    @default("new") // Progression: new -> company -> questions -> box -> card -> playlist -> personalize
-  numberOfTracks   Int
-  numberOfCards    Int       @default(0)
-  startAt          DateTime?
-  endAt            DateTime?
-  votingBackground String?
-  votingLogo       String?
-  downloadLink     String?
-  reviewLink       String?
-  hideCircle       Boolean   @default(false)
-  createdAt        DateTime  @default(now())
-  updatedAt        DateTime  @updatedAt
+  id                      Int       @id @default(autoincrement())
+  companyId               Int
+  playlistId              Int?
+  name                    String
+  description             String
+  slug                    String
+  background              String?
+  background2             String?
+  playlistSource          String    @default("voting")
+  playlistUrl             String?
+  playlistUrlFull         String?
+  qrColor                 String    @default("#000000")
+  textColor               String    @default("#000000")
+  status                  String    @default("new") // Progression: new -> company -> questions -> box -> card -> playlist -> personalize
+  numberOfTracks          Int
+  numberOfCards           Int       @default(0)
+  startAt                 DateTime?
+  endAt                   DateTime?
+  votingBackground        String?
+  votingLogo              String?
+  downloadLink            String?
+  reviewLink              String?
+  numberOfUncheckedTracks Int       @default(0)
+  hideCircle              Boolean   @default(false)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
 
   Company               Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
   CompanyListSubmission CompanyListSubmission[]
   CompanyListQuestion   CompanyListQuestion[]
+  Playlist              Playlist?               @relation(fields: [playlistId], references: [id], onDelete: Cascade)
 
   @@map("company_lists")
 }

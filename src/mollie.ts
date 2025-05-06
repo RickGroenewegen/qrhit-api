@@ -1087,6 +1087,7 @@ class Mollie {
         zipcode: true,
         qrSubDir: true,
         countrycode: true,
+        vibe: true,
         user: {
           select: {
             email: true,

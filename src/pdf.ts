@@ -156,10 +156,13 @@ class PDF {
         );
       }
       if (template === 'printer') {
-        // Resize them to exactly 60x60 mm because convertAPI is slightly off
-        await this.resizePDFPages(finalPath, 60, 60);
-        //await this.resizePDFPages(finalPath, 210, 148);
-
+        if (payment.vibe) {
+          // Happibox wants a 3% increase in size for the printer
+          await this.resizePDFPages(finalPath, 61.8, 61.8);
+        } else {
+          // Resize them to exactly 60x60 mm because convertAPI is slightly off
+          await this.resizePDFPages(finalPath, 60, 60);
+        }
         // Add a 3 mm bleed for PrintAPI
         await this.addBleed(finalPath, 3);
       } else if (template === 'printer_sheets') {

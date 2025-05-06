@@ -55,6 +55,7 @@ class Vibe {
             background: true,
             background2: true,
             playlistSource: true,
+            numberOfUncheckedTracks: true,
             playlistUrl: true,
             playlistUrlFull: true,
             qrColor: true,
@@ -105,21 +106,7 @@ class Vibe {
             // Keep ranking as empty array if retrieval fails
           }
 
-          // Count unchecked tracks associated with this list and add to the list object
-          companyList.numberOfUncheckedTracks = await this.prisma.track.count({
-            where: {
-              year: { gt: 0 },
-              manuallyChecked: false,
-              // Check if the track is linked to *any* submission for this specific listId
-              CompanyListSubmissionTrack: {
-                some: {
-                  CompanyListSubmission: {
-                    companyListId: listId,
-                  },
-                },
-              },
-            },
-          });
+          
         } else {
           // If companyList is not found, return error early
           return { success: false, error: 'Company list not found' };
