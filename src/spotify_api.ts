@@ -274,7 +274,9 @@ class SpotifyApi {
       });
       return response.data.id;
     } catch (error) {
-      this.logger.log(color.red.bold(`Error fetching Spotify user ID: ${error}`));
+      this.logger.log(
+        color.red.bold(`Error fetching Spotify user ID: ${error}`)
+      );
       // We don't use handleApiError here as the caller (createOrUpdatePlaylist) will handle it.
       return null;
     }
@@ -485,6 +487,8 @@ class SpotifyApi {
         headers: { Authorization: `Bearer ${accessToken}` },
       });
 
+      console.log(111, response.data.tracks.items.length);
+
       // The response contains a 'tracks' object with items, total, etc.
       return { success: true, data: response.data };
     } catch (error) {
@@ -542,8 +546,8 @@ class SpotifyApi {
         const userPlaylistsResponse = await axios.get(
           `https://api.spotify.com/v1/me/playlists`,
           {
-             params: { limit: maxPlaylistsToCheck, fields: playlistCheckFields }, // Add fields
-             headers: { Authorization: `Bearer ${accessToken}` }
+            params: { limit: maxPlaylistsToCheck, fields: playlistCheckFields }, // Add fields
+            headers: { Authorization: `Bearer ${accessToken}` },
           }
         );
 
@@ -575,7 +579,6 @@ class SpotifyApi {
       }
       // --- End Check for existing playlist ---
 
-
       let playlistId: string;
       // Use the existingPlaylistId found above
       if (existingPlaylistId) {
@@ -597,9 +600,11 @@ class SpotifyApi {
         }
         // Ensure playlistUrl is set if we found an existing playlist
         if (!playlistUrl) {
-           // Fetch details if URL wasn't included in the initial check (e.g., due to fields param)
-           const playlistDetails = await this.getPlaylist(playlistId); // Use internal getPlaylist
-           playlistUrl = playlistDetails.success ? playlistDetails.data?.external_urls?.spotify || '' : '';
+          // Fetch details if URL wasn't included in the initial check (e.g., due to fields param)
+          const playlistDetails = await this.getPlaylist(playlistId); // Use internal getPlaylist
+          playlistUrl = playlistDetails.success
+            ? playlistDetails.data?.external_urls?.spotify || ''
+            : '';
         }
       } else {
         // Create a new playlist if none found
