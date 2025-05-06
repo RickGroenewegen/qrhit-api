@@ -248,7 +248,9 @@ class SpotifyApi {
       } else if (status === 429) {
         const retryAfter = axiosError.response?.headers?.['retry-after'];
         const errorMessage = `Spotify API error: 429 Too Many Requests. ${
-          retryAfter ? `Retry after: ${retryAfter} seconds.` : 'No Retry-After header.'
+          retryAfter
+            ? `Retry after: ${retryAfter} seconds.`
+            : 'No Retry-After header.'
         }`;
         this.logger.log(color.red.bold(errorMessage));
         return {
@@ -280,7 +282,7 @@ class SpotifyApi {
    * @returns A promise that resolves after the specified delay.
    */
   private delay(ms: number): Promise<void> {
-    return new Promise(resolve => setTimeout(resolve, ms));
+    return new Promise((resolve) => setTimeout(resolve, ms));
   }
 
   /**
@@ -514,35 +516,54 @@ class SpotifyApi {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
 
-        console.log(111, response.data.tracks.items.length);
-
         // The response contains a 'tracks' object with items, total, etc.
         return { success: true, data: response.data };
       } catch (error) {
-        lastErrorResult = this.handleApiError(error, `searching tracks for "${searchTerm}" (attempt ${retries + 1}/${maxRetries})`);
+        lastErrorResult = this.handleApiError(
+          error,
+          `searching tracks for "${searchTerm}" (attempt ${
+            retries + 1
+          }/${maxRetries})`
+        );
 
         // Check if it's a 429 error and if we have more retries left (don't retry on the last attempt)
-        if (lastErrorResult.error?.includes('429') && retries < maxRetries - 1) {
+        if (
+          lastErrorResult.error?.includes('429') &&
+          retries < maxRetries - 1
+        ) {
           const retryAfterSeconds = lastErrorResult.retryAfter;
           // Default backoff: 1s for 1st retry (retries=0 -> (0+1)*1000), 2s for 2nd retry (retries=1 -> (1+1)*1000)
           // For the third retry (retries=2), it would be 3s.
           let waitTimeMs = (retries + 1) * 1000; // Default incremental backoff
 
           if (retryAfterSeconds) {
-            waitTimeMs = retryAfterSeconds * 1000;
-            this.logger.log(color.yellow.bold(`Spotify API rate limit (429). Retrying after ${retryAfterSeconds} seconds...`));
+            waitTimeMs = retryAfterSeconds * 1000 + 500;
+            this.logger.log(
+              color.yellow.bold(
+                `Spotify API rate limit (429). Retrying after ${retryAfterSeconds} seconds...`
+              )
+            );
           } else {
-            this.logger.log(color.yellow.bold(`Spotify API rate limit (429). No Retry-After header. Retrying in ${waitTimeMs / 1000} seconds...`));
+            this.logger.log(
+              color.yellow.bold(
+                `Spotify API rate limit (429). No Retry-After header. Retrying in ${
+                  waitTimeMs / 1000
+                } seconds...`
+              )
+            );
           }
-          
+
           await this.delay(waitTimeMs);
           retries++;
 
           // Re-fetch access token before next attempt
-          this.logger.log(color.blue.bold(`Attempting to re-fetch access token for retry ${retries}...`));
           accessToken = await this.getAccessToken();
           if (!accessToken) {
-            this.logger.log(color.red.bold('Failed to get access token for retry. Aborting search.'));
+            this.logger.log(
+              color.red.bold(
+                'Failed to get access token for retry. Aborting search.'
+              )
+            );
             return {
               success: false,
               error: 'Spotify authentication required during retry attempt',
@@ -550,7 +571,6 @@ class SpotifyApi {
               authUrl: this.getAuthorizationUrl() ?? undefined,
             };
           }
-          this.logger.log(color.green.bold(`Successfully re-fetched access token for retry ${retries}.`));
           // Continue to the next iteration of the while loop for the next attempt
         } else {
           // Not a 429 error, or it was a 429 on the last attempt (retries === maxRetries -1), or some other error.
@@ -561,7 +581,13 @@ class SpotifyApi {
     }
     // This line should ideally not be reached if the logic correctly returns from within the loop.
     // It acts as a fallback if all retries are exhausted and the loop finishes.
-    return lastErrorResult || { success: false, error: `Max retries (${maxRetries}) reached for searchTracks.`, needsReAuth: false };
+    return (
+      lastErrorResult || {
+        success: false,
+        error: `Max retries (${maxRetries}) reached for searchTracks.`,
+        needsReAuth: false,
+      }
+    );
   }
 
   /**

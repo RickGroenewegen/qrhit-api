@@ -632,7 +632,7 @@ class Spotify {
         return { success: false, error: 'Search term too short' };
       }
 
-      const cacheKey = `search_${searchTerm}_${limit}_${offset}`;
+      const cacheKey = `search2_${searchTerm}_${limit}_${offset}`;
       const cacheResult = await this.cache.get(cacheKey);
 
       if (cacheResult) {
@@ -646,8 +646,9 @@ class Spotify {
 
       if (cachedCount) {
         currentSearchCount = parseInt(cachedCount, 10);
-        if (isNaN(currentSearchCount)) { // Handle potential NaN from parseInt
-            currentSearchCount = 0;
+        if (isNaN(currentSearchCount)) {
+          // Handle potential NaN from parseInt
+          currentSearchCount = 0;
         }
       }
 
@@ -655,17 +656,11 @@ class Spotify {
 
       let selectedApi;
       // Route 25% (1 out of 4) to spotifyRapidApi
-      if (currentSearchCount % 4 === 0) { 
+      if (currentSearchCount % 4 === 0) {
         selectedApi = this.spotifyRapidApi;
-        this.logger.log(
-          color.blue('Routing search to SpotifyRapidApi (25% path - search count: ' + currentSearchCount + ')')
-        );
       } else {
         // Route 75% (3 out of 4) to this.api (SpotifyApi)
-        selectedApi = this.api; 
-        this.logger.log(
-          color.blue('Routing search to SpotifyApi (75% path - search count: ' + currentSearchCount + ')')
-        );
+        selectedApi = this.api;
       }
 
       // Store the updated counter back in cache.
@@ -673,11 +668,7 @@ class Spotify {
       await this.cache.set(searchCounterKey, currentSearchCount.toString());
 
       // Call the selected API method
-      const result = await selectedApi.searchTracks(
-        searchTerm,
-        limit,
-        offset
-      );
+      const result = await selectedApi.searchTracks(searchTerm, limit, offset);
 
       if (!result.success) {
         // Handle errors, including potential re-authentication needs and retry-after information.
