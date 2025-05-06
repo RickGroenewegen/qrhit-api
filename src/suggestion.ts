@@ -35,11 +35,11 @@ class Suggestion {
     const tracks = await this.prisma.$queryRaw<any[]>`
       SELECT 
         t.id,
-        t.name,
-        t.artist,
-        t.year,
-        '' AS extraArtistAttribute,
-        '' AS extraNameAttribute,
+        COALESCE(NULLIF(tei.name, ''), t.name) as name,
+        COALESCE(NULLIF(tei.artist, ''), t.artist) as artist,
+        COALESCE(tei.year, t.year) as year,
+        tei.extraArtistAttribute,
+        tei.extraNameAttribute,
         us.id as suggestionId,
         us.name as suggestedName,
         us.artist as suggestedArtist,
@@ -50,7 +50,7 @@ class Suggestion {
         php.eligableForPrinter,
         php.suggestionsPending,
         CASE 
-          WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id) > 0 
+          WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id AND userId = u.id) > 0 
           THEN 'true' 
           ELSE 'false' 
         END as hasSuggestion
@@ -60,7 +60,8 @@ class Suggestion {
       JOIN playlists pl ON pl.id = php.playlistId
       JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
       JOIN tracks t ON t.id = pht.trackId
-      LEFT JOIN usersuggestions us ON us.trackId = t.id
+      LEFT JOIN usersuggestions us ON us.trackId = t.id AND us.userId = u.id AND us.playlistId = pl.id
+      LEFT JOIN trackextrainfo tei ON tei.trackId = t.id AND tei.playlistId = pl.id
       WHERE p.paymentId = ${paymentId}
       AND u.hash = ${userHash}
       AND pl.playlistId = ${playlistId}
