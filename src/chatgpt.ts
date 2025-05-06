@@ -5,7 +5,8 @@ import OpenAI from 'openai';
 import { color } from 'console-log-colors';
 import Translation from './translation';
 import { GenreId } from './interfaces/Genre';
-import { TrustPilot } from '@prisma/client';
+import { TrustPilot, genre as GenrePrismaModel } from '@prisma/client';
+
 export class ChatGPT {
   private utils = new Utils();
   private openai = new OpenAI({
@@ -599,6 +600,109 @@ export class ChatGPT {
     }
     
     this.logger.log(color.green.bold('Finished translating all Trustpilot reviews'));
+  }
+
+  public async translateGenreNames(
+    genreNameEn: string,
+    targetLocales: string[]
+  ): Promise<Record<string, string>> {
+    if (targetLocales.length === 0) {
+      this.logger.log(
+        color.yellow.bold(
+          `No target locales specified for translating genre "${genreNameEn}".`
+        )
+      );
+      return {};
+    }
+
+    this.logger.log(
+      color.blue.bold(
+        `Translating genre "${color.white.bold(
+          genreNameEn
+        )}" to ${color.white.bold(targetLocales.join(', '))}`
+      )
+    );
+
+    try {
+      const result = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.3,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a professional translator. Translate the provided music genre name accurately into the specified languages. Provide only the translated name for each language.`,
+          },
+          {
+            role: 'user',
+            content: `Translate the music genre name "${genreNameEn}" into the following languages: ${targetLocales.join(
+              ', '
+            )}.`,
+          },
+        ],
+        function_call: { name: 'getGenreTranslations' },
+        functions: [
+          {
+            name: 'getGenreTranslations',
+            parameters: {
+              type: 'object',
+              properties: Object.fromEntries(
+                targetLocales.map((locale) => [
+                  locale,
+                  {
+                    type: 'string',
+                    description: `The translated genre name in ${locale}`,
+                  },
+                ])
+              ),
+              required: targetLocales,
+            },
+          },
+        ],
+      });
+
+      if (result?.choices[0]?.message?.function_call) {
+        const funcCall = result.choices[0].message.function_call;
+        try {
+          const translations = JSON.parse(
+            funcCall.arguments as string
+          ) as Record<string, string>;
+          this.logger.log(
+            color.green.bold(
+              `Successfully translated genre "${color.white.bold(genreNameEn)}".`
+            )
+          );
+          return translations;
+        } catch (error) {
+          this.logger.log(
+            color.red.bold(
+              `Error parsing translation results for genre "${genreNameEn}": ${
+                (error as Error).message
+              }`
+            )
+          );
+          this.logger.log(
+            color.red.bold(`Raw response: ${funcCall.arguments}`)
+          );
+        }
+      } else {
+        this.logger.log(
+          color.yellow.bold(
+            `No translation received from OpenAI for genre "${genreNameEn}". Response: ${JSON.stringify(
+              result
+            )}`
+          )
+        );
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `API call failed for translating genre "${genreNameEn}": ${
+            (error as Error).message
+          }`
+        )
+      );
+    }
+    return {};
   }
 
   public async ask(prompt: string): Promise<any> {

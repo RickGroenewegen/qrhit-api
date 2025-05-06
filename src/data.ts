@@ -1663,6 +1663,124 @@ class Data {
       return { success: false, error: error.message };
     }
   }
+
+  public async translateGenres(): Promise<{
+    processed: number;
+    updated: number;
+    errors: number;
+  }> {
+    this.logger.log(color.blue.bold('Starting genre translation process...'));
+    const allLocales = new Translation().allLocales;
+    const genres = await this.prisma.genre.findMany();
+
+    let processedCount = 0;
+    let updatedCount = 0;
+    let errorCount = 0;
+
+    for (const genre of genres) {
+      processedCount++;
+      if (!genre.name_en || genre.name_en.trim() === '') {
+        this.logger.log(
+          color.yellow(
+            `Skipping genre ID ${genre.id} (${
+              genre.slug || 'no-slug'
+            }) as English name (name_en) is missing.`
+          )
+        );
+        continue;
+      }
+
+      const localesToTranslate: string[] = [];
+      const updateData: Prisma.genreUpdateInput = {};
+
+      for (const locale of allLocales) {
+        if (locale === 'en') continue; // Skip English itself
+
+        const localeFieldName = `name_${locale}` as keyof GenrePrismaModel;
+        // Check if the property exists on the genre object and if it's null or empty
+        if (
+          !(localeFieldName in genre) || // Property might not exist if schema changed
+          genre[localeFieldName] === null ||
+          (genre[localeFieldName] as string)?.trim() === ''
+        ) {
+          localesToTranslate.push(locale);
+        }
+      }
+
+      if (localesToTranslate.length > 0) {
+        this.logger.log(
+          `Genre ID ${genre.id} ("${
+            genre.name_en
+          }") needs translation for: ${localesToTranslate.join(', ')}`
+        );
+        try {
+          const translations = await this.openai.translateGenreNames(
+            genre.name_en,
+            localesToTranslate
+          );
+
+          let translationsFound = false;
+          for (const locale of localesToTranslate) {
+            if (translations[locale] && translations[locale].trim() !== '') {
+              const localeFieldName =
+                `name_${locale}` as keyof Prisma.genreUpdateInput;
+              (updateData as any)[localeFieldName] = translations[locale];
+              translationsFound = true;
+            } else {
+              this.logger.log(
+                color.yellow(
+                  `No valid translation received for genre ID ${genre.id} ("${genre.name_en}") in locale ${locale}.`
+                )
+              );
+            }
+          }
+
+          if (translationsFound) {
+            await this.prisma.genre.update({
+              where: { id: genre.id },
+              data: updateData,
+            });
+            updatedCount++;
+            this.logger.log(
+              color.green(
+                `Successfully updated translations for genre ID ${genre.id} ("${genre.name_en}").`
+              )
+            );
+          }
+        } catch (error) {
+          errorCount++;
+          this.logger.log(
+            color.red(
+              `Error translating genre ID ${genre.id} ("${genre.name_en}"): ${
+                (error as Error).message
+              }`
+            )
+          );
+          console.error(error);
+        }
+        // Add a small delay to avoid overwhelming the API
+        this.logger.log(
+          color.gray('Waiting for 1 second before next API call...')
+        );
+        await new Promise((resolve) => setTimeout(resolve, 1000));
+      } else {
+        this.logger.log(
+          `Genre ID ${genre.id} ("${genre.name_en}") is already fully translated.`
+        );
+      }
+    }
+
+    this.logger.log(
+      color.blue.bold(
+        `Genre translation process finished. Processed: ${processedCount}, Updated: ${updatedCount}, Errors: ${errorCount}`
+      )
+    );
+    return {
+      processed: processedCount,
+      updated: updatedCount,
+      errors: errorCount,
+    };
+  }
 }
 
 export default Data;
