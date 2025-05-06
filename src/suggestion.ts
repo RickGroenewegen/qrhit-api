@@ -503,7 +503,6 @@ class Suggestion {
             titleOnlyForMe
           ) {
             extraInfoModifications.name = suggestion.suggestedName;
-            extraInfoModifications.titleOnlyForMe = true;
             requiresExtraInfoUpdate = true;
           }
           if (
@@ -518,7 +517,6 @@ class Suggestion {
             yearOnlyForMe
           ) {
             extraInfoModifications.year = suggestion.suggestedYear;
-            extraInfoModifications.yearOnlyForMe = true;
             requiresExtraInfoUpdate = true;
           }
           if (suggestion.suggestedExtraNameAttribute) {
