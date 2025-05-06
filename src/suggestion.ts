@@ -503,6 +503,7 @@ class Suggestion {
             titleOnlyForMe
           ) {
             extraInfoModifications.name = suggestion.suggestedName;
+            extraInfoModifications.titleOnlyForMe = true;
             requiresExtraInfoUpdate = true;
           }
           if (
@@ -517,6 +518,7 @@ class Suggestion {
             yearOnlyForMe
           ) {
             extraInfoModifications.year = suggestion.suggestedYear;
+            extraInfoModifications.yearOnlyForMe = true;
             requiresExtraInfoUpdate = true;
           }
           if (suggestion.suggestedExtraNameAttribute) {
@@ -568,7 +570,14 @@ class Suggestion {
                 const createData: Prisma.TrackExtraInfoCreateInput = {
                   track: { connect: { id: suggestion.trackId } },
                   playlist: { connect: { id: playlist.id } },
-                  ...extraInfoModifications,
+                  // Conditionally spread properties, casting to simple types expected by CreateInput
+                  ...(extraInfoModifications.name !== undefined && { name: extraInfoModifications.name as string | null }),
+                  ...(extraInfoModifications.artist !== undefined && { artist: extraInfoModifications.artist as string | null }),
+                  ...(extraInfoModifications.year !== undefined && { year: extraInfoModifications.year as number | null }),
+                  ...(extraInfoModifications.extraNameAttribute !== undefined && { extraNameAttribute: extraInfoModifications.extraNameAttribute as string | null }),
+                  ...(extraInfoModifications.extraArtistAttribute !== undefined && { extraArtistAttribute: extraInfoModifications.extraArtistAttribute as string | null }),
+                  ...(extraInfoModifications.titleOnlyForMe === true && { titleOnlyForMe: true }),
+                  ...(extraInfoModifications.yearOnlyForMe === true && { yearOnlyForMe: true }),
                 };
                 updateQueries.push(
                   this.prisma.trackExtraInfo.create({
