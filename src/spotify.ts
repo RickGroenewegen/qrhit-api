@@ -639,51 +639,56 @@ class Spotify {
         return JSON.parse(cacheResult);
       }
 
-      // Determine which API to use based on the counter for 75%/25% distribution
-      const searchCounterKey = 'search_api_distribution_counter';
-      let currentSearchCount = 0;
-      const cachedCount = await this.cache.get(searchCounterKey);
+      // Primary attempt with this.api (SpotifyApi)
+      this.logger.log(
+        color.blue.bold(
+          `Attempting search with SpotifyApi for: "${searchTerm}" (limit: ${limit}, offset: ${offset})`
+        )
+      );
+      let result = await this.api.searchTracks(searchTerm, limit, offset);
 
-      if (cachedCount) {
-        currentSearchCount = parseInt(cachedCount, 10);
-        if (isNaN(currentSearchCount)) {
-          // Handle potential NaN from parseInt
-          currentSearchCount = 0;
+      // If the primary API call (this.api which is SpotifyApi) fails due to rate limiting (429)
+      // after its internal retries, then attempt fallback to SpotifyRapidApi.
+      // SpotifyApi.searchTracks internally handles retries and its handleApiError
+      // sets result.retryAfter and includes '429' in result.error for these cases.
+      if (!result.success && (result.error?.includes('429') || result.retryAfter !== undefined)) {
+        this.logger.log(
+          color.yellow.bold(
+            `SpotifyApi search failed due to rate limit (429). Error: ${result.error}. Attempting fallback to SpotifyRapidApi for: "${searchTerm}"`
+          )
+        );
+        // Attempt fallback to SpotifyRapidApi
+        result = await this.spotifyRapidApi.searchTracks(searchTerm, limit, offset);
+        
+        if (!result.success) {
+            this.logger.log(
+                color.red.bold(
+                    `SpotifyRapidApi search fallback also failed for "${searchTerm}": ${result.error}`
+                )
+            );
+        } else {
+            this.logger.log(
+                color.green.bold(
+                    `SpotifyRapidApi search fallback successful for "${searchTerm}"`
+                )
+            );
         }
       }
 
-      currentSearchCount++; // Increment for the current request
-
-      let selectedApi;
-      // Route 25% (1 out of 4) to spotifyRapidApi
-      if (currentSearchCount % 4 === 0) {
-        selectedApi = this.spotifyRapidApi;
-      } else {
-        // Route 75% (3 out of 4) to this.api (SpotifyApi)
-        selectedApi = this.api;
-      }
-
-      // Store the updated counter back in cache.
-      // No expiry, so it persists. Resets if Redis is flushed or key is deleted.
-      await this.cache.set(searchCounterKey, currentSearchCount.toString());
-
-      // Call the selected API method
-      const result = await selectedApi.searchTracks(searchTerm, limit, offset);
-
+      // Process the result (either from this.api or from spotifyRapidApi fallback)
       if (!result.success) {
-        // Handle errors, including potential re-authentication needs and retry-after information.
-        // The underlying api call (this.api.searchTracks) now handles retries for 429s.
-        // This block will be hit if the call ultimately fails.
+        // This block handles errors from:
+        // 1. The primary SpotifyApi attempt (if not a 429, or if it was 429 and RapidAPI fallback was not triggered/successful).
+        // 2. The fallback SpotifyRapidApi attempt if it also failed.
         return {
           success: false,
           error: result.error || 'Error searching tracks from API',
-          needsReAuth: result.needsReAuth, // Propagate needsReAuth status
-          retryAfter: result.retryAfter, // Propagate retryAfter value if present
+          needsReAuth: result.needsReAuth, 
+          retryAfter: result.retryAfter, 
         };
       }
 
-      // API call successful, process the items
-      // Assuming the API implementation returns search results in result.data
+      // API call successful (either primary or fallback), process the items
       const searchData = result.data;
       // Access items correctly based on Spotify API structure { tracks: { items: [...] } }
       const rawItems = searchData?.tracks?.items || [];
