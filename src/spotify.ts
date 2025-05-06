@@ -643,13 +643,14 @@ class Spotify {
       const result = await this.api.searchTracks(searchTerm, limit, offset);
 
       if (!result.success) {
-        // Handle errors, including potential re-authentication needs
-        if (result.needsReAuth) {
-          return { success: false, error: result.error, needsReAuth: true };
-        }
+        // Handle errors, including potential re-authentication needs and retry-after information.
+        // The underlying api call (this.api.searchTracks) now handles retries for 429s.
+        // This block will be hit if the call ultimately fails.
         return {
           success: false,
           error: result.error || 'Error searching tracks from API',
+          needsReAuth: result.needsReAuth, // Propagate needsReAuth status
+          retryAfter: result.retryAfter,   // Propagate retryAfter value if present
         };
       }
 
