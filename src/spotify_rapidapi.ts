@@ -472,7 +472,7 @@ class SpotifyRapidApi {
             // external_urls: { spotify: trackDetails.uri },
             // preview_url: trackDetails.playability?.playable ? trackDetails.uri : null, // Example, check actual structure
           };
-        }).filter(track => track !== null); // Filter out any nulls resulting from invalid items
+        }).filter((track: any) => track !== null); // Filter out any nulls resulting from invalid items
 
         // Ensure total is a number, fallback to items length if not present or not a number
         const total = typeof response.data.tracks.totalCount === 'number' 
