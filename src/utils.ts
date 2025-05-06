@@ -1,9 +1,4 @@
 import sanitizeHtml from 'sanitize-html';
-
-let L: any;
-if (typeof window !== 'undefined') {
-  L = require('leaflet');
-}
 import { promises as fs } from 'fs';
 import { EC2Client, DescribeInstancesCommand } from '@aws-sdk/client-ec2';
 import axios from 'axios';
