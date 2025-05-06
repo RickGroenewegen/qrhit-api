@@ -422,7 +422,8 @@ class Suggestion {
           changes.push(
             `Name changed from '${color.white.bold(
               suggestion.originalName
-            )}' to '${color.white.bold(suggestion.suggestedName)}'`
+            )}' to '${color.white.bold(suggestion.suggestedName)}'` +
+              (titleOnlyForMe ? ' (only for this playlist)' : '')
           );
           hasChanges = true;
         }
@@ -430,7 +431,8 @@ class Suggestion {
           changes.push(
             `Artist changed from '${color.white.bold(
               suggestion.originalArtist
-            )}' to '${color.white.bold(suggestion.suggestedArtist)}'`
+            )}' to '${color.white.bold(suggestion.suggestedArtist)}'` +
+              (artistOnlyForMe ? ' (only for this playlist)' : '')
           );
           hasChanges = true;
         }
@@ -438,7 +440,8 @@ class Suggestion {
           changes.push(
             `Year changed from ${color.white.bold(
               suggestion.originalYear
-            )} to ${color.white.bold(suggestion.suggestedYear)}`
+            )} to ${color.white.bold(suggestion.suggestedYear)}` +
+              (yearOnlyForMe ? ' (only for this playlist)' : '')
           );
           hasChanges = true;
         }
@@ -470,31 +473,79 @@ class Suggestion {
             this.logger.log(color.blue.bold(`  ${change}`));
           });
 
-          // Build update query with only changed columns
-          const setClauses = [];
-          if (suggestion.originalName !== suggestion.suggestedName) {
-            setClauses.push(`name = '${suggestion.suggestedName}'`);
+          const trackModifications: Prisma.TrackUpdateInput = {};
+          const extraInfoModifications: Prisma.TrackExtraInfoUpdateInput = {};
+          let requiresExtraInfoUpdate = false;
+
+          // Determine modifications for Track
+          if (
+            suggestion.originalName !== suggestion.suggestedName &&
+            !titleOnlyForMe
+          ) {
+            trackModifications.name = suggestion.suggestedName;
           }
-          if (suggestion.originalArtist !== suggestion.suggestedArtist) {
-            setClauses.push(`artist = '${suggestion.suggestedArtist}'`);
+          if (
+            suggestion.originalArtist !== suggestion.suggestedArtist &&
+            !artistOnlyForMe
+          ) {
+            trackModifications.artist = suggestion.suggestedArtist;
           }
-          if (suggestion.originalYear !== suggestion.suggestedYear) {
-            setClauses.push(`year = ${suggestion.suggestedYear}`);
+          if (
+            suggestion.originalYear !== suggestion.suggestedYear &&
+            !yearOnlyForMe
+          ) {
+            trackModifications.year = suggestion.suggestedYear;
           }
 
-          // Handle extra attributes in TrackExtraInfo
+          // Determine modifications for TrackExtraInfo
           if (
-            suggestion.suggestedExtraNameAttribute ||
-            suggestion.suggestedExtraArtistAttribute
+            suggestion.originalName !== suggestion.suggestedName &&
+            titleOnlyForMe
           ) {
-            // Get playlist database ID
+            extraInfoModifications.name = suggestion.suggestedName;
+            requiresExtraInfoUpdate = true;
+          }
+          if (
+            suggestion.originalArtist !== suggestion.suggestedArtist &&
+            artistOnlyForMe
+          ) {
+            extraInfoModifications.artist = suggestion.suggestedArtist;
+            requiresExtraInfoUpdate = true;
+          }
+          if (
+            suggestion.originalYear !== suggestion.suggestedYear &&
+            yearOnlyForMe
+          ) {
+            extraInfoModifications.year = suggestion.suggestedYear;
+            requiresExtraInfoUpdate = true;
+          }
+          if (suggestion.suggestedExtraNameAttribute) {
+            extraInfoModifications.extraNameAttribute =
+              suggestion.suggestedExtraNameAttribute;
+            requiresExtraInfoUpdate = true;
+          }
+          if (suggestion.suggestedExtraArtistAttribute) {
+            extraInfoModifications.extraArtistAttribute =
+              suggestion.suggestedExtraArtistAttribute;
+            requiresExtraInfoUpdate = true;
+          }
+
+          // If any change occurred, mark track as manually corrected
+          trackModifications.manuallyCorrected = true;
+
+          // Add Track update to queries
+          updateQueries.push(
+            this.prisma.track.update({
+              where: { id: suggestion.trackId },
+              data: trackModifications,
+            })
+          );
+
+          // Add TrackExtraInfo update/create to queries if needed
+          if (requiresExtraInfoUpdate) {
             const playlist = await this.prisma.playlist.findFirst({
-              where: {
-                playlistId: playlistId,
-              },
-              select: {
-                id: true,
-              },
+              where: { playlistId: playlistId },
+              select: { id: true },
             });
 
             if (playlist) {
@@ -507,57 +558,26 @@ class Suggestion {
                 });
 
               if (existingExtraInfo) {
-                // Update existing record
                 updateQueries.push(
                   this.prisma.trackExtraInfo.update({
                     where: { id: existingExtraInfo.id },
-                    data: {
-                      extraNameAttribute:
-                        suggestion.suggestedExtraNameAttribute || null,
-                      extraArtistAttribute:
-                        suggestion.suggestedExtraArtistAttribute || null,
-                    },
+                    data: extraInfoModifications,
                   })
                 );
               } else {
-                // Create new record
+                const createData: Prisma.TrackExtraInfoCreateInput = {
+                  track: { connect: { id: suggestion.trackId } },
+                  playlist: { connect: { id: playlist.id } },
+                  ...extraInfoModifications,
+                };
                 updateQueries.push(
                   this.prisma.trackExtraInfo.create({
-                    data: {
-                      trackId: suggestion.trackId,
-                      playlistId: playlist.id,
-                      extraNameAttribute:
-                        suggestion.suggestedExtraNameAttribute || null,
-                      extraArtistAttribute:
-                        suggestion.suggestedExtraArtistAttribute || null,
-                    },
+                    data: createData,
                   })
                 );
               }
             }
           }
-
-          setClauses.push('manuallyCorrected = true');
-
-          // Use parameterized query instead of raw SQL
-          updateQueries.push(
-            this.prisma.track.update({
-              where: { id: suggestion.trackId },
-              data: {
-                ...(suggestion.originalName !== suggestion.suggestedName && {
-                  name: suggestion.suggestedName,
-                }),
-                ...(suggestion.originalArtist !==
-                  suggestion.suggestedArtist && {
-                  artist: suggestion.suggestedArtist,
-                }),
-                ...(suggestion.originalYear !== suggestion.suggestedYear && {
-                  year: suggestion.suggestedYear,
-                }),
-                manuallyCorrected: true,
-              },
-            })
-          );
         }
       }
 
