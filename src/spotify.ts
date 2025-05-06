@@ -253,6 +253,9 @@ class Spotify {
           artist: string;
           extraNameAttribute?: string;
           extraArtistAttribute?: string;
+          overwriteYear?: number;
+          overwriteName?: string;
+          overwriteArtist?: string;
         }[] = [];
 
         if (trackIds.length > 0) {
@@ -281,7 +284,10 @@ class Spotify {
                 t.artist,
                 t.name,
                 tei.extraNameAttribute,
-                tei.extraArtistAttribute
+                tei.extraArtistAttribute,
+                tei.artist AS overwriteArtist,
+                tei.name AS overwriteName,
+                tei.year AS overwriteYear
               FROM
                 tracks t
               LEFT JOIN
@@ -313,7 +319,10 @@ class Spotify {
                 t.artist,
                 t.name,
                 NULL as extraNameAttribute,
-                NULL as extraArtistAttribute
+                NULL as extraArtistAttribute,
+                NULL as overwriteArtist,
+                NULL as overwriteName,
+                NULL as overwriteYear
               FROM
                 tracks t
               WHERE
@@ -328,9 +337,9 @@ class Spotify {
           yearResults.map((r) => [
             r.trackId,
             {
-              year: r.year,
-              name: r.name,
-              artist: r.artist,
+              year: r.overwriteYear || r.year,
+              name: r.overwriteName || r.name,
+              artist: r.overwriteArtist || r.artist,
               extraNameAttribute: r.extraNameAttribute,
               extraArtistAttribute: r.extraArtistAttribute,
             },
@@ -343,7 +352,7 @@ class Spotify {
             .filter((r) => r.year !== null)
             .map((r) =>
               this.cache.set(
-                `trackInfo2_${r.trackId}`, // Use consistent trackInfo cache key
+                `trackInfo_${r.trackId}`, // Use consistent trackInfo cache key
                 JSON.stringify({
                   year: r.year,
                   name: r.name,
@@ -380,7 +389,7 @@ class Spotify {
 
             // Check cache first
             const cachedTrackInfo = await this.cache.get(
-              `trackInfo2_${trackId}` // Use consistent trackInfo cache key
+              `trackInfo_${trackId}` // Use consistent trackInfo cache key
             );
             if (cachedTrackInfo) {
               const trackInfo = JSON.parse(cachedTrackInfo);

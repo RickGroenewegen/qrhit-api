@@ -792,10 +792,14 @@ class Server {
       '/correction/:paymentId/:userHash/:playlistId/:andSend',
       getAuthHandler(['admin']),
       async (request: any, reply) => {
+        const { artistOnlyForMe, titleOnlyForMe, yearOnlyForMe } = request.body;
         this.suggestion.processCorrections(
           request.params.paymentId,
           request.params.userHash,
           request.params.playlistId,
+          artistOnlyForMe,
+          titleOnlyForMe,
+          yearOnlyForMe,
           this.utils.parseBoolean(request.params.andSend),
           request.clientIp
         );
