@@ -650,7 +650,7 @@ class Spotify {
           success: false,
           error: result.error || 'Error searching tracks from API',
           needsReAuth: result.needsReAuth, // Propagate needsReAuth status
-          retryAfter: result.retryAfter,   // Propagate retryAfter value if present
+          retryAfter: result.retryAfter, // Propagate retryAfter value if present
         };
       }
 
