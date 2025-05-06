@@ -922,18 +922,21 @@ class Data {
   }
 
   public async getTracks(playlistId: number, userId: number): Promise<any> {
+    // Note: COALESCE(NULLIF(tei.column, ''), tracks.column) is used for string fields
+    // to handle cases where extra info might be an empty string instead of NULL.
+    // For numeric fields like year, COALESCE(tei.year, tracks.year) is sufficient.
     const tracks = await this.prisma.$queryRaw`
         SELECT      tracks.id, 
-                   tracks.trackId, 
-                   tracks.artist, 
-                   tracks.year, 
-                   tracks.name,
-                   tei.extraNameAttribute,
-                   tei.extraArtistAttribute
-        FROM       tracks
-        INNER JOIN playlist_has_tracks ON tracks.id = playlist_has_tracks.trackId
-        LEFT JOIN  trackextrainfo tei ON tei.trackId = tracks.id AND tei.playlistId = ${playlistId}
-        WHERE      playlist_has_tracks.playlistId = ${playlistId}`;
+                    tracks.trackId, 
+                    COALESCE(NULLIF(tei.artist, ''), tracks.artist) as artist, 
+                    COALESCE(tei.year, tracks.year) as year, 
+                    COALESCE(NULLIF(tei.name, ''), tracks.name) as name,
+                    tei.extraNameAttribute,
+                    tei.extraArtistAttribute
+        FROM        tracks
+        INNER JOIN  playlist_has_tracks ON tracks.id = playlist_has_tracks.trackId
+        LEFT JOIN   trackextrainfo tei ON tei.trackId = tracks.id AND tei.playlistId = ${playlistId}
+        WHERE       playlist_has_tracks.playlistId = ${playlistId}`;
 
     return tracks;
   }
