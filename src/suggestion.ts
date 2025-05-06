@@ -592,12 +592,6 @@ class Suggestion {
                         | string
                         | null,
                   }),
-                  ...(extraInfoModifications.titleOnlyForMe === true && {
-                    titleOnlyForMe: true,
-                  }),
-                  ...(extraInfoModifications.yearOnlyForMe === true && {
-                    yearOnlyForMe: true,
-                  }),
                 };
                 updateQueries.push(
                   this.prisma.trackExtraInfo.create({
