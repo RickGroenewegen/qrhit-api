@@ -478,7 +478,7 @@ class Order {
   }
 
   public startCron(): void {
-    new CronJob('0 0 * * *', async () => {
+    new CronJob('0 2 * * *', async () => {
       await this.updateFeaturedPlaylists();
     }).start();
   }

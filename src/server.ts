@@ -1743,19 +1743,27 @@ class Server {
         }
       );
 
-      this.fastify.get('/dev/translate_genres', async (_request: any, reply: any) => {
-        try {
-          const result = await this.data.translateGenres();
-          reply.send({ success: true, message: 'Genre translation process finished.', details: result });
-        } catch (error) {
-          this.logger.log(
-            `Error in /dev/translate_genres route: ${(error as Error).message}`
-          );
-          reply
-            .status(500)
-            .send({ success: false, error: 'Failed to translate genres' });
+      this.fastify.get(
+        '/dev/translate_genres',
+        async (_request: any, reply: any) => {
+          try {
+            this.data.translateGenres();
+            reply.send({
+              success: true,
+              message: 'Genre translation process started.',
+            });
+          } catch (error) {
+            this.logger.log(
+              `Error in /dev/translate_genres route: ${
+                (error as Error).message
+              }`
+            );
+            reply
+              .status(500)
+              .send({ success: false, error: 'Failed to translate genres' });
+          }
         }
-      });
+      );
     }
 
     this.fastify.get(

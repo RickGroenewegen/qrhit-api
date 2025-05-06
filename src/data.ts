@@ -223,12 +223,15 @@ class Data {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
           this.createSiteMap();
           await this.prefillLinkCache();
-
           // Schedule hourly cache refresh
           const job = new CronJob('0 * * * *', async () => {
             await this.prefillLinkCache();
           });
+          const genreJob = new CronJob('30 1 * * *', async () => {
+            await this.translateGenres();
+          });
           job.start();
+          genreJob.start();
         }
       });
     }
@@ -1681,10 +1684,10 @@ class Data {
       processedCount++;
       if (!genre.name_en || genre.name_en.trim() === '') {
         this.logger.log(
-          color.yellow(
-            `Skipping genre ID ${genre.id} (${
+          color.yellow.bold(
+            `Skipping genre ID ${genre.id} (${color.white.bold(
               genre.slug || 'no-slug'
-            }) as English name (name_en) is missing.`
+            )}) as English name (name_en) is missing.`
           )
         );
         continue;
@@ -1709,9 +1712,13 @@ class Data {
 
       if (localesToTranslate.length > 0) {
         this.logger.log(
-          `Genre ID ${genre.id} ("${
-            genre.name_en
-          }") needs translation for: ${localesToTranslate.join(', ')}`
+          color.blue.bold(
+            `Genre ID ${color.white.bold(genre.id)} ("${color.white.bold(
+              genre.name_en
+            )}") needs translation for: ${color.white.bold(
+              localesToTranslate.join(', ')
+            )}`
+          )
         );
         try {
           const translations = await this.openai.translateGenreNames(
@@ -1728,8 +1735,12 @@ class Data {
               translationsFound = true;
             } else {
               this.logger.log(
-                color.yellow(
-                  `No valid translation received for genre ID ${genre.id} ("${genre.name_en}") in locale ${locale}.`
+                color.yellow.bold(
+                  `No valid translation received for genre ID ${color.white.bold(
+                    genre.id
+                  )} ("${color.white.bold(
+                    genre.name_en
+                  )}") in locale ${color.white.bold(locale)}.`
                 )
               );
             }
@@ -1742,30 +1753,35 @@ class Data {
             });
             updatedCount++;
             this.logger.log(
-              color.green(
-                `Successfully updated translations for genre ID ${genre.id} ("${genre.name_en}").`
+              color.blue.bold(
+                `Successfully updated translations for genre ID ${color.white.bold(
+                  genre.id
+                )} ("${color.white.bold(genre.name_en)}").`
               )
             );
           }
         } catch (error) {
           errorCount++;
           this.logger.log(
-            color.red(
-              `Error translating genre ID ${genre.id} ("${genre.name_en}"): ${
+            color.red.bold(
+              `Error translating genre ID ${color.white.bold(
+                genre.id
+              )} ("${color.white.bold(genre.name_en)}"): ${
                 (error as Error).message
               }`
             )
           );
           console.error(error);
         }
-        // Add a small delay to avoid overwhelming the API
-        this.logger.log(
-          color.gray('Waiting for 1 second before next API call...')
-        );
+
         await new Promise((resolve) => setTimeout(resolve, 1000));
       } else {
         this.logger.log(
-          `Genre ID ${genre.id} ("${genre.name_en}") is already fully translated.`
+          color.blue.bold(
+            `Genre ID ${color.white.bold(genre.id)} ("${color.white.bold(
+              genre.name_en
+            )}") is already fully translated.`
+          )
         );
       }
     }
