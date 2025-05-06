@@ -1133,14 +1133,17 @@ class Vibe {
       const trackCount = await this.prisma.playlistHasTrack.count({
         where: {
           playlistId: playlist.id,
-          manuallyChecked: false,
+          track: {
+            year: { gt: 0 },
+            manuallyChecked: false,
+          },
         },
       });
 
       // Update the company list with the playlistId
       await this.prisma.companyList.update({
         where: { id: listId },
-        data: { playlistId: playlist.id },
+        data: { playlistId: playlist.id, numberOfUncheckedTracks: trackCount },
       });
     }
 
