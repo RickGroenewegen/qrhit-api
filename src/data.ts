@@ -1,7 +1,7 @@
 import { Track } from './interfaces/Track';
 import { color } from 'console-log-colors';
 import Logger from './logger';
-import { Prisma } from '@prisma/client';
+import { Prisma, genre as GenrePrismaModel } from '@prisma/client';
 import slugify from 'slugify';
 import PrismaInstance from './prisma';
 import crypto from 'crypto';
@@ -1700,8 +1700,8 @@ class Data {
         // Check if the property exists on the genre object and if it's null or empty
         if (
           !(localeFieldName in genre) || // Property might not exist if schema changed
-          genre[localeFieldName] === null ||
-          (genre[localeFieldName] as string)?.trim() === ''
+          (genre as any)[localeFieldName] === null ||
+          ((genre as any)[localeFieldName] as string)?.trim() === ''
         ) {
           localesToTranslate.push(locale);
         }
