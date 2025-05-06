@@ -640,36 +640,41 @@ class Spotify {
       }
 
       let result = await this.api.searchTracks(searchTerm, limit, offset);
+      let apiUsed = 'SpotifyAPI'; // Assume primary API is used initially
 
       // If the primary API call (this.api which is SpotifyApi) fails due to rate limiting (429)
       // after its internal retries, then attempt fallback to SpotifyRapidApi.
-      // SpotifyApi.searchTracks internally handles retries and its handleApiError
-      // sets result.retryAfter and includes '429' in result.error for these cases.
       if (
         !result.success &&
         (result.error?.includes('429') || result.retryAfter !== undefined)
       ) {
-        // Attempt fallback to SpotifyRapidApi
+        apiUsed = 'RapidAPI'; // Mark that fallback API is being attempted
         result = await this.spotifyRapidApi.searchTracks(
           searchTerm,
           limit,
           offset
         );
-
-        if (!result.success) {
-          this.logger.log(
-            color.red.bold(
-              `SpotifyRapidApi search fallback also failed for "${searchTerm}": ${result.error}`
-            )
-          );
-        } else {
-          this.logger.log(
-            color.green.bold(
-              `SpotifyRapidApi search fallback successful for "${searchTerm}"`
-            )
-          );
-        }
+        // No specific logs here for fallback success/failure, main log will cover it
       }
+
+      // Determine items found for logging
+      let itemsFoundForLog: number;
+      if (result.success) {
+        // Use total from the result if available, otherwise count items
+        itemsFoundForLog = result.data?.tracks?.total !== undefined 
+          ? result.data.tracks.total 
+          : result.data?.tracks?.items?.length || 0;
+      } else {
+        itemsFoundForLog = -1;
+      }
+
+      this.logger.log(
+        color.blue.bold(
+          `Searching ${color.white.bold(apiUsed)} for tracks matching "${color.white.bold(
+            searchTerm
+          )}" with limit ${color.white.bold(limit)}. Found ${color.white.bold(itemsFoundForLog)} items.`
+        )
+      );
 
       // Process the result (either from this.api or from spotifyRapidApi fallback)
       if (!result.success) {

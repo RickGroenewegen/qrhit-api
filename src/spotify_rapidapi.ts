@@ -395,15 +395,7 @@ class SpotifyRapidApi {
       return { success: false, error: 'Search term is required' };
     }
 
-    this.logger.log(
-      color.blue.bold(
-        `Searching ${color.white.bold(
-          'RapidAPI'
-        )} for tracks matching "${color.white.bold(
-          searchTerm
-        )}" with limit ${color.white.bold(limit)}`
-      )
-    );
+    // Removed logger call: Searching RapidAPI for tracks...
 
     try {
       // Note: RapidAPI search endpoint might have different parameter names or structure. Adjust as needed.
@@ -425,9 +417,7 @@ class SpotifyRapidApi {
 
       // Check and return the response data
       if (!response.data) {
-        this.logger.log(
-          color.yellow(`RapidAPI searchTracks returned no data.`)
-        );
+        // Removed logger call: RapidAPI searchTracks returned no data.
         return { success: false, error: 'No results from RapidAPI' };
       }
 
@@ -504,11 +494,7 @@ class SpotifyRapidApi {
         };
       } else {
         // Handle cases where the structure is not as expected
-        this.logger.log(
-          color.yellow(
-            `RapidAPI searchTracks returned no items or an unexpected data structure.`
-          )
-        );
+        // Removed logger call: RapidAPI searchTracks returned no items or an unexpected data structure.
         return {
           success: false,
           error: 'No items or unexpected data structure from RapidAPI search',
@@ -518,11 +504,7 @@ class SpotifyRapidApi {
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
       const message = axiosError.message;
-      this.logger.log(
-        color.red.bold(
-          `Error searching RapidAPI tracks: ${status} - ${message}`
-        )
-      );
+      // Removed logger call: Error searching RapidAPI tracks...
 
       // Return a generic error for search issues
       return {

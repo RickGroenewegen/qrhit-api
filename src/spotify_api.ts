@@ -471,15 +471,7 @@ class SpotifyApi {
       return { success: false, error: 'Search term is required' };
     }
 
-    this.logger.log(
-      color.blue.bold(
-        `Searching ${color.white.bold(
-          'SpotifyAPI'
-        )} for tracks matching "${color.white.bold(
-          searchTerm
-        )}" with limit ${color.white.bold(limit)}`
-      )
-    );
+    // Removed logger call: Searching SpotifyAPI for tracks...
 
     limit = Math.min(limit, 50); // Enforce Spotify API limit
 
@@ -536,19 +528,9 @@ class SpotifyApi {
 
           if (retryAfterSeconds) {
             waitTimeMs = retryAfterSeconds * 1000 + 500;
-            this.logger.log(
-              color.yellow.bold(
-                `Spotify API rate limit (429). Retrying after ${retryAfterSeconds} seconds...`
-              )
-            );
+            // Removed logger call: Spotify API rate limit (429). Retrying after...
           } else {
-            this.logger.log(
-              color.yellow.bold(
-                `Spotify API rate limit (429). No Retry-After header. Retrying in ${
-                  waitTimeMs / 1000
-                } seconds...`
-              )
-            );
+            // Removed logger call: Spotify API rate limit (429). No Retry-After header...
           }
 
           await this.delay(waitTimeMs);
@@ -557,11 +539,7 @@ class SpotifyApi {
           // Re-fetch access token before next attempt
           accessToken = await this.getAccessToken();
           if (!accessToken) {
-            this.logger.log(
-              color.red.bold(
-                'Failed to get access token for retry. Aborting search.'
-              )
-            );
+            // Removed logger call: Failed to get access token for retry...
             return {
               success: false,
               error: 'Spotify authentication required during retry attempt',
