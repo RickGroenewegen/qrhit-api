@@ -1123,6 +1123,27 @@ class Vibe {
       where: { id: userId },
     });
 
+    // Get the playlist using the playlistId
+    const playlist = await this.prisma.playlist.findUnique({
+      where: { playlistId },
+    });
+
+    if (playlist) {
+      // Count the number of tracks in the playlist with manuallyChecked = false
+      const trackCount = await this.prisma.playlistHasTrack.count({
+        where: {
+          playlistId: playlist.id,
+          manuallyChecked: false,
+        },
+      });
+
+      // Update the company list with the playlistId
+      await this.prisma.companyList.update({
+        where: { id: listId },
+        data: { playlistId: playlist.id },
+      });
+    }
+
     if (user) {
       const downloadLink = `${process.env['API_URI']}/download/${result.data.paymentId}/${user.hash}/${playlistId}/printer`;
       const reviewLink = `${process.env['FRONTEND_URI']}/usersuggestions/${result.data.paymentId}/${user.hash}/${playlistId}/0`;
