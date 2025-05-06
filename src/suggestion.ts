@@ -368,6 +368,9 @@ class Suggestion {
     paymentId: string,
     userHash: string,
     playlistId: string,
+    artistOnlyForMe: boolean,
+    titleOnlyForMe: boolean,
+    yearOnlyForMe: boolean,
     andSend: boolean,
     clientIp: string
   ): Promise<boolean> {
