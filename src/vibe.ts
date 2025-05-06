@@ -55,6 +55,7 @@ class Vibe {
             background: true,
             background2: true,
             playlistSource: true,
+            totalSpotifyTracks: true,
             numberOfUncheckedTracks: true,
             playlistUrl: true,
             playlistUrlFull: true,
@@ -105,8 +106,6 @@ class Vibe {
             );
             // Keep ranking as empty array if retrieval fails
           }
-
-          
         } else {
           // If companyList is not found, return error early
           return { success: false, error: 'Company list not found' };
@@ -1116,8 +1115,14 @@ class Vibe {
     });
 
     if (playlist) {
+      const trackCountFull = await this.prisma.playlistHasTrack.count({
+        where: {
+          playlistId: playlist.id,
+        },
+      });
+
       // Count the number of tracks in the playlist with manuallyChecked = false
-      const trackCount = await this.prisma.playlistHasTrack.count({
+      const trackCountUnchecked = await this.prisma.playlistHasTrack.count({
         where: {
           playlistId: playlist.id,
           track: {
@@ -1130,7 +1135,11 @@ class Vibe {
       // Update the company list with the playlistId
       await this.prisma.companyList.update({
         where: { id: listId },
-        data: { playlistId: playlist.id, numberOfUncheckedTracks: trackCount },
+        data: {
+          playlistId: playlist.id,
+          numberOfUncheckedTracks: trackCountUnchecked,
+          totalSpotifyTracks: trackCountFull,
+        },
       });
     }
 

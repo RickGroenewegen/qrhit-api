@@ -533,6 +533,7 @@ model CompanyList {
   downloadLink            String?
   reviewLink              String?
   numberOfUncheckedTracks Int       @default(0)
+  totalSpotifyTracks      Int       @default(0)
   hideCircle              Boolean   @default(false)
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
