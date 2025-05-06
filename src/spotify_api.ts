@@ -245,6 +245,18 @@ class SpotifyApi {
           error: 'Spotify resource not found',
           needsReAuth: false,
         }; // 404 doesn't imply re-auth needed
+      } else if (status === 429) {
+        const retryAfter = axiosError.response?.headers?.['retry-after'];
+        const errorMessage = `Spotify API error: 429 Too Many Requests. ${
+          retryAfter ? `Retry after: ${retryAfter} seconds.` : 'No Retry-After header.'
+        }`;
+        this.logger.log(color.red.bold(errorMessage));
+        return {
+          success: false,
+          error: errorMessage,
+          needsReAuth: false,
+          retryAfter: retryAfter ? parseInt(retryAfter, 10) : undefined,
+        };
       } else {
         return {
           success: false,
