@@ -52,6 +52,7 @@ class Vibe {
             name: true,
             description: true,
             slug: true,
+            showNames: true,
             background: true,
             background2: true,
             playlistSource: true,
