@@ -539,17 +539,16 @@ class Vibe {
         return { success: false, error: 'Company not found' };
       }
 
-      // Check if slug is unique for this company (optional, but good practice)
+      // Check if slug is unique across all company lists
       const existingListWithSlug = await this.prisma.companyList.findFirst({
         where: {
-          companyId: companyId,
-          slug: slug,
+          slug: slug, // Check slug globally
         },
       });
       if (existingListWithSlug) {
         return {
           success: false,
-          error: 'Slug already exists for this company',
+          error: 'Slug already exists. Please choose a unique slug.', // Updated error message
         };
       }
 
@@ -589,9 +588,12 @@ class Vibe {
         (error as any).code === 'P2002' &&
         (error as any).meta?.target?.includes('slug')
       ) {
+        // This specific Prisma error for unique constraint violation might still occur
+        // if the database schema has a unique constraint on (companyId, slug) or just slug.
+        // The check above should catch it, but this is a fallback.
         return {
           success: false,
-          error: 'Slug already exists for this company',
+          error: 'Slug already exists. Please choose a unique slug.', // Consistent error message
         };
       }
       return { success: false, error: 'Error creating company list' };

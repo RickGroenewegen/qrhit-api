@@ -320,7 +320,7 @@ class Server {
             if (result.error === 'Company not found') {
               statusCode = 404;
             } else if (
-              result.error === 'Slug already exists for this company'
+              result.error === 'Slug already exists. Please choose a unique slug.'
             ) {
               statusCode = 409; // Conflict
             } else if (
