@@ -1180,6 +1180,95 @@ class Vibe {
             },
           });
         // You can now use submissionsWithNameToUse
+        if (submissionsWithNameToUse && submissionsWithNameToUse.length > 0) {
+          // 1. Aggregate submissions by trackId
+          const trackSubmissionsMap: Map<number, { firstname: string | null; lastname: string | null }[]> = new Map();
+          for (const submission of submissionsWithNameToUse) {
+            const trackId = submission.trackId;
+            if (!trackSubmissionsMap.has(trackId)) {
+              trackSubmissionsMap.set(trackId, []);
+            }
+            // Ensure CompanyListSubmission is not null before accessing its properties
+            if (submission.CompanyListSubmission) {
+              trackSubmissionsMap.get(trackId)!.push({
+                firstname: submission.CompanyListSubmission.firstname,
+                lastname: submission.CompanyListSubmission.lastname,
+              });
+            }
+          }
+
+          const trackExtraInfoCreations = [];
+
+          // 2. Iterate through aggregated map to prepare TrackExtraInfo data
+          for (const [trackId, voters] of trackSubmissionsMap.entries()) {
+            if (voters.length === 0) continue; // Should not happen if map populated correctly
+
+            const nameCounts: Record<string, number> = {};
+            const processedNames: string[] = [];
+
+            // Count firstname occurrences for this track
+            for (const voter of voters) {
+              const fn = voter.firstname || 'Anonymous'; // Default to 'Anonymous' if firstname is null
+              nameCounts[fn] = (nameCounts[fn] || 0) + 1;
+            }
+
+            // Process names for display
+            for (const voter of voters) {
+              let displayName = voter.firstname || 'Anonymous';
+              const fn = voter.firstname || 'Anonymous'; // Use the same default for comparison
+
+              if (nameCounts[fn] > 1) { // If firstname is duplicated for this track
+                if (voter.lastname && voter.lastname.length > 0) {
+                  displayName = `${fn} ${voter.lastname.charAt(0)}.`;
+                }
+                // If lastname is null/empty, displayName remains the (potentially 'Anonymous') firstname
+              }
+              processedNames.push(displayName);
+            }
+
+            // Format the list of names: "Name1, Name2 & Name3"
+            let extraNameAttributeValue = '';
+            if (processedNames.length > 0) {
+              if (processedNames.length === 1) {
+                extraNameAttributeValue = processedNames[0];
+              } else {
+                const allButLast = processedNames.slice(0, -1);
+                const last = processedNames.slice(-1)[0];
+                extraNameAttributeValue = `${allButLast.join(', ')} & ${last}`;
+              }
+            }
+
+            trackExtraInfoCreations.push(
+              this.prisma.trackExtraInfo.create({
+                data: {
+                  playlistId: playlist.id, // playlist variable is in scope
+                  trackId: trackId,
+                  extraNameAttribute: extraNameAttributeValue,
+                  extraArtistAttribute: null, // As per requirement
+                },
+              })
+            );
+          }
+
+          // 3. Create TrackExtraInfo records
+          if (trackExtraInfoCreations.length > 0) {
+            try {
+              await Promise.all(trackExtraInfoCreations);
+              this.logger.log(
+                color.green.bold(
+                  `Successfully created ${trackExtraInfoCreations.length} TrackExtraInfo records for unique tracks in playlist ${playlist.id}.`
+                )
+              );
+            } catch (error) {
+              this.logger.log(
+                color.red.bold(
+                  `Error creating TrackExtraInfo records for playlist ${playlist.id}: ${error}`
+                )
+              );
+              // Decide if this error should halt further execution or just be logged
+            }
+          }
+        }
         console.log(222, submissionsWithNameToUse);
       }
 
