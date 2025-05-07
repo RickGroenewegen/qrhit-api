@@ -56,8 +56,18 @@ class Hitlist {
       // Check if we have a company list submission hash in the first track
       const submissionHash = hitlist[0]?.submissionHash;
       const companyListId = hitlist[0]?.companyListId;
-      const fullname = hitlist[0]?.fullname;
+      const firstname = hitlist[0]?.firstname;
+      const lastname = hitlist[0]?.lastname;
       const email = hitlist[0]?.email;
+
+      let constructedFullname: string | null = (
+        (firstname || '') +
+        ' ' +
+        (lastname || '')
+      ).trim();
+      if (constructedFullname === '') {
+        constructedFullname = null;
+      }
 
       if (!submissionHash || !companyListId) {
         return {
@@ -157,7 +167,9 @@ class Hitlist {
             hash: submissionHash,
             verificationHash: verificationHash,
             status: 'pending_verification', // Changed from 'submitted' to 'pending_verification'
-            name: fullname || null,
+            name: constructedFullname,
+            firstname: firstname || null,
+            lastname: lastname || null,
             email: email || null,
           },
         });
@@ -175,7 +187,9 @@ class Hitlist {
           where: { id: submission.id },
           data: {
             status: 'pending_verification', // Changed from 'submitted' to 'pending_verification'
-            name: fullname || submission.name,
+            name: constructedFullname || submission.name,
+            firstname: firstname || submission.firstname,
+            lastname: lastname || submission.lastname,
             email: email || submission.email,
             verificationHash: verificationHash,
           },
@@ -186,7 +200,7 @@ class Hitlist {
       if (email && submission.verificationHash) {
         await this.mail.sendVerificationEmail(
           email,
-          fullname || email.split('@')[0],
+          constructedFullname || email.split('@')[0],
           companyList.Company.name,
           submission.verificationHash,
           companyList.slug!
