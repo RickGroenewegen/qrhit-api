@@ -9,6 +9,7 @@ import Discount from './discount';
 import Data from './data';
 import sharp from 'sharp'; // Import sharp
 import Spotify from './spotify';
+import Generator from './generator';
 
 class Vibe {
   private static instance: Vibe;
@@ -18,6 +19,8 @@ class Vibe {
   private discount = new Discount();
   private data = Data.getInstance();
   private spotify = new Spotify();
+  private mollie = new Mollie();
+  private generator = Generator.getInstance();
 
   private constructor() {}
 
@@ -975,7 +978,7 @@ class Vibe {
    * @param playlistId The ID of the playlist.
    * @private
    */
-  private async _addTrackExtraInfo(
+  private async addTrackExtraInfo(
     listId: number,
     playlistId: number
   ): Promise<void> {
@@ -1001,7 +1004,10 @@ class Vibe {
 
       if (submissionsWithNameToUse && submissionsWithNameToUse.length > 0) {
         // 1. Aggregate submissions by trackId
-        const trackSubmissionsMap: Map<number, { firstname: string | null; lastname: string | null }[]> = new Map();
+        const trackSubmissionsMap: Map<
+          number,
+          { firstname: string | null; lastname: string | null }[]
+        > = new Map();
         for (const submission of submissionsWithNameToUse) {
           const trackId = submission.trackId;
           if (!trackSubmissionsMap.has(trackId)) {
@@ -1068,8 +1074,12 @@ class Vibe {
         if (trackExtraInfoCreations.length > 0) {
           await Promise.all(trackExtraInfoCreations);
           this.logger.log(
-            color.green.bold(
-              `Successfully created ${trackExtraInfoCreations.length} TrackExtraInfo records for unique tracks in playlist ${playlistId}.`
+            color.blue.bold(
+              `Successfully created ${color.white.bold(
+                trackExtraInfoCreations.length
+              )} extra track info records fo tracks in playlist ${color.white.bold(
+                playlistId
+              )}.`
             )
           );
         }
@@ -1077,7 +1087,11 @@ class Vibe {
     } catch (error) {
       this.logger.log(
         color.red.bold(
-          `Error adding TrackExtraInfo for list ${listId}, playlist ${playlistId}: ${error}`
+          `Error adding extra track info for list ${color.white.bold(
+            listId
+          )} and playlist ${color.white.bold(playlistId)}: ${color.white.bold(
+            error
+          )}`
         )
       );
       // Depending on requirements, you might want to re-throw the error
@@ -1257,6 +1271,7 @@ class Vibe {
     );
 
     const userId = result.data.userId;
+
     // Get the user from db
     const user = await this.prisma.user.findUnique({
       where: { id: userId },
@@ -1278,10 +1293,17 @@ class Vibe {
           )
         );
 
-        console.log(111, playlist.id); // This console.log can be removed if no longer needed for debugging
-        await this._addTrackExtraInfo(listId, playlist.id);
-        // The console.log(222, submissionsWithNameToUse) was part of the moved block and is no longer here.
-        // If you need to log submissionsWithNameToUse, it should be done within _addTrackExtraInfo or by returning it.
+        await this.addTrackExtraInfo(listId, playlist.id);
+
+        await this.mollie.clearPDFs(result.data.paymentId);
+        this.generator.generate(
+          result.data.paymentId,
+          clientIp,
+          '',
+          this.mollie,
+          true, // Force finalize
+          true
+        );
       }
 
       const trackCountFull = await this.prisma.playlistHasTrack.count({

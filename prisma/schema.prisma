@@ -582,9 +582,12 @@ model CompanyListSubmission {
   hash             String    @unique
   verificationHash String?   @unique
   name             String?
+  firstname        String?
+  lastname         String?
   email            String?
   status           String    @default("open")
   verified         Boolean   @default(false)
+  agreeToUseName   Boolean   @default(false)
   verifiedAt       DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt

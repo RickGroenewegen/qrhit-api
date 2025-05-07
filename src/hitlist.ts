@@ -169,10 +169,11 @@ class Hitlist {
             companyListId: parseInt(companyListId),
             hash: submissionHash,
             verificationHash: verificationHash,
-            status: 'pending_verification', // Changed from 'submitted' to 'pending_verification'
+            status: 'pending_verification',
             firstname: firstname || null,
             lastname: lastname || null,
             email: email || null,
+            agreeToUseName: agreeToUseName, 
           },
         });
 
