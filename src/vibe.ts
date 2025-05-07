@@ -1064,6 +1064,7 @@ class Vibe {
         background = null; // Set background to null if processing fails
       }
     }
+
     const items = [
       {
         productType: 'cards',
@@ -1149,6 +1150,11 @@ class Vibe {
     });
 
     if (playlist) {
+      // If companyList has showNames set to true, we will add the names to the cards
+      if (companyList.showNames) {
+        console.log(111, playlist.id);
+      }
+
       const trackCountFull = await this.prisma.playlistHasTrack.count({
         where: {
           playlistId: playlist.id,
