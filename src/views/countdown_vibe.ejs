@@ -20,29 +20,29 @@
             <img src="/assets/images/onzevibe_logo.png?v=<%= version %>" style="max-width:300px;"/>
         </div>
         <div id="countdown-container">
-            <div class="message-top"><%= translations.yourSongWillStart %> ...</div>
+            <div class="message-top"><%= translations.onzevibe.yourSongWillStart %> ...</div>
             <div id="countdown" class="countdown"><%= process.env['COUNTDOWN'] %></div>
-            <div class="message-bottom"><%= translations.getReady %></div>
+            <div class="message-bottom"><%= translations.onzevibe.getReady %></div>
         </div>
         <div id="qr-icon" class="qr-icon">
             <i class="fas fa-camera"></i> <!-- Style via CSS -->
-            <div><%= translations.tapTheCamera %></div>
+            <div><%= translations.onzevibe.tapTheCamera %></div>
         </div>
     </div>
-    <div class="footer">&copy; <%= translations.onzevibeFooterName %> <%= new Date().getFullYear() %>. <%= translations.allRightsReserved %>.</div>
+    <div class="footer">&copy; <%= translations.onzevibe.footerName %> <%= new Date().getFullYear() %>. <%= translations.onzevibe.allRightsReserved %>.</div>
 
     <div id="onboarding-overlay"> <!-- style attribute removed -->
         <div class="onboarding-content">
             <div class="title"> <!-- Recheck this title class usage, might conflict -->
-                <img src="/assets/images/onzevibe_logo.png" alt="<%= translations.onzevibeLogoOnboardingAlt %>" class="logo-image"/>
-                <div style="color: #FFFBF5; font-size: 16px; font-style: italic; margin-top: 8px;">"<%= translations.onzevibeCreateYourOwnQuotation %>"</div>
-                <button onclick="window.open('<%= domain %>', '_blank');" class="device-button download-button"><i class="fas fa-globe"></i><%= translations.onzevibeVisitWebsiteButton %></button>
+                <img src="/assets/images/onzevibe_logo.png" alt="<%= translations.onzevibe.logoOnboardingAlt %>" class="logo-image"/>
+                <div style="color: #FFFBF5; font-size: 16px; font-style: italic; margin-top: 8px;">"<%= translations.onzevibe.createYourOwnQuotation %>"</div>
+                <button onclick="window.open('<%= domain %>', '_blank');" class="device-button download-button"><i class="fas fa-globe"></i><%= translations.onzevibe.visitWebsiteButton %></button>
             </div>
-            <h2 class="onboarding-heading"><%= translations.onzevibeInstallPrompt %></h2>
+            <h2 class="onboarding-heading"><%= translations.onzevibe.installPrompt %></h2>
             <div class="device-selector">
                 <!-- App store links point to QRSong, update if OnzeVibe has its own apps -->
-                <button id="app-store" onclick="location.href='https://apps.apple.com/app/qrsong/id6727011939';" class="device-button download-button"><i class="fab fa-apple"></i> <%= translations.appStore %></button>
-                <button id="google-play" onclick="location.href='https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong';" class="device-button download-button"><i class="fab fa-google-play"></i> <%= translations.googlePlay %></button>
+                <button id="app-store" onclick="location.href='https://apps.apple.com/app/qrsong/id6727011939';" class="device-button download-button"><i class="fab fa-apple"></i> <%= translations.onzevibe.appStoreButtonText %></button>
+                <button id="google-play" onclick="location.href='https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong';" class="device-button download-button"><i class="fab fa-google-play"></i> <%= translations.onzevibe.googlePlayButtonText %></button>
                 <!-- <button id="pwa" class="device-button active"><i class="fas fa-download"></i> <%= translations.other %></button> -->
             </div>
             
@@ -50,7 +50,7 @@
                 <div class="step">
                     <div class="step-number">1</div>
                     <div class="step-content">
-                        <p><%= translations.pwaInstallStep1Share %></p>
+                        <p><%= translations.onzevibe.pwaInstallStep1Share %></p>
                         <div class="animation-container">
                             <svg class="ios-share-icon animated-icon" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
@@ -63,7 +63,7 @@
                 <div class="step">
                     <div class="step-number">2</div>
                     <div class="step-content">
-                        <p><%= translations.pwaInstallStep2Scroll %></p>
+                        <p><%= translations.onzevibe.pwaInstallStep2Scroll %></p>
                         <div class="animation-container">
                             <i class="fas fa-arrow-down animated-icon"></i>
                         </div>
@@ -72,7 +72,7 @@
                 <div class="step">
                     <div class="step-number">3</div>
                     <div class="step-content">
-                        <p><%= translations.pwaInstallStep3AddToHome %></p>
+                        <p><%= translations.onzevibe.pwaInstallStep3AddToHome %></p>
                         <div class="animation-container">
                             <i class="fas fa-plus-square animated-icon"></i>
                         </div>
@@ -85,7 +85,7 @@
     <div id="qr-reader-container">
         <div id="qr-reader"></div>
         <div class="loading-spinner"></div>
-        <button id="close-scanner" onclick="stopScanning()">X <%= translations.scannerCloseButtonText %></button>
+        <button id="close-scanner" onclick="stopScanning()">X <%= translations.onzevibe.scannerCloseButtonText %></button>
         <button id="switch-camera" style="display: none;">Switch Camera</button> <!-- Text for "Switch Camera" can be translated too if needed -->
     </div>
 

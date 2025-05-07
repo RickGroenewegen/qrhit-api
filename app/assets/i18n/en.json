@@ -1,9 +1,5 @@
 {
-    "tapTheCamera": "Tap the camera to start!",
-    "allRightsReserved": "All rights reserved",
-    "yourSongWillStart": "Your song will open in Spotify in ... ",
     "scanYourCard": "Scan your OnzeVibe card!",
-    "getReady": "Flip your phone. Get ready!",
     "language": "Language",
     "english": "English",
     "spanish": "Spanish",
@@ -59,15 +55,23 @@
         },
         "imagination": "Let your imagination run wild and create your own unique music games with OnzeVibe cards."
     },
-    "onzevibeFooterName": "OnzeVibe",
-    "onzevibeLogoOnboardingAlt": "OnzeVibe Logo",
-    "onzevibeCreateYourOwnQuotation": "Create your own vibe!",
-    "onzevibeVisitWebsiteButton": "Visit Website",
-    "onzevibeInstallPrompt": "To get the full experience, please install the OnzeVibe app or add it to your homescreen:",
-    "pwaInstallStep1Share": "Tap the 'Share' button in your browser.",
-    "pwaInstallStep2Scroll": "Scroll down in the share menu.",
-    "pwaInstallStep3AddToHome": "Tap 'Add to Home Screen'.",
-    "scannerCloseButtonText": "Close",
+    "onzevibe": {
+        "yourSongWillStart": "Your song will open in Spotify in ... ",
+        "getReady": "Flip your phone. Get ready!",
+        "tapTheCamera": "Tap the camera to start!",
+        "footerName": "OnzeVibe",
+        "allRightsReserved": "All rights reserved",
+        "logoOnboardingAlt": "OnzeVibe Logo",
+        "createYourOwnQuotation": "Create your own vibe!",
+        "visitWebsiteButton": "Visit Website",
+        "installPrompt": "To get the full experience, please install the OnzeVibe app or add it to your homescreen:",
+        "appStoreButtonText": "App Store",
+        "googlePlayButtonText": "Google Play",
+        "pwaInstallStep1Share": "Tap the 'Share' button in your browser.",
+        "pwaInstallStep2Scroll": "Scroll down in the share menu.",
+        "pwaInstallStep3AddToHome": "Tap 'Add to Home Screen'.",
+        "scannerCloseButtonText": "Close"
+    },
     "appStore": "App Store",
     "googlePlay": "Google Play"
 }
