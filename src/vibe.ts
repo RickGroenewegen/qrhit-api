@@ -1153,6 +1153,17 @@ class Vibe {
       // If companyList has showNames set to true, we will add the names to the cards
       if (companyList.showNames) {
         console.log(111, playlist.id);
+        const submissionsWithNameToUse = await this.prisma.companyListSubmissionTrack.findMany({
+          where: {
+            CompanyListSubmission: {
+              companyListId: listId,
+              agreeToUseName: true,
+            },
+          },
+          // You might want to include Track or CompanyListSubmission details here if needed later
+          // include: { Track: true, CompanyListSubmission: true }
+        });
+        // You can now use submissionsWithNameToUse
       }
 
       const trackCountFull = await this.prisma.playlistHasTrack.count({
