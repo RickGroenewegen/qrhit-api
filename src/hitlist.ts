@@ -59,6 +59,9 @@ class Hitlist {
       const firstname = hitlist[0]?.firstname;
       const lastname = hitlist[0]?.lastname;
       const email = hitlist[0]?.email;
+      const agreeToUseName = this.utils.parseBoolean(
+        hitlist[0]?.agreeToUseName
+      ); // Added agreeToUseName
 
       let constructedFullname: string | null = (
         (firstname || '') +
@@ -191,6 +194,7 @@ class Hitlist {
             lastname: lastname || submission.lastname,
             email: email || submission.email,
             verificationHash: verificationHash,
+            agreeToUseName: agreeToUseName, // Added agreeToUseName
           },
         });
       }

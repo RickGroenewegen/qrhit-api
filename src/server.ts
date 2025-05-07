@@ -1846,9 +1846,10 @@ class Server {
         firstname,
         lastname,
         email,
+        agreeToUseName, // Added agreeToUseName
       } = request.body;
 
-      // Add companyListId, submissionHash, firstname, lastname and email to each track
+      // Add companyListId, submissionHash, firstname, lastname, email and agreeToUseName to each track
       const enrichedHitlist = hitlist.map((track: any) => ({
         ...track,
         companyListId,
@@ -1856,6 +1857,7 @@ class Server {
         firstname,
         lastname,
         email,
+        agreeToUseName, // Added agreeToUseName
       }));
 
       const result = await this.hitlist.submit(enrichedHitlist);
