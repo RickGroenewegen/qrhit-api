@@ -154,13 +154,15 @@ body {
 
 .device-selector {
     display: flex;
-    flex-direction: column; /* Stack buttons for better mobile view */
+    flex-direction: row; /* Align buttons side-by-side */
+    justify-content: center; /* Center buttons in the row */
     align-items: center;
     margin-bottom: 1.5rem;
+    flex-wrap: wrap; /* Allow buttons to wrap on smaller screens if necessary */
 }
 
 .device-button { /* Re-uses .download-button styles, specific overrides if any */
-    margin: 0.5rem 0; /* Spacing for stacked buttons */
+    margin: 0.5rem; /* Spacing for buttons next to each other */
 }
 
 /* .device-button.active - if PWA button is re-enabled, style accordingly */
