@@ -1042,7 +1042,7 @@ class Vibe {
 
             if (nameCounts[fn] > 1) {
               if (voter.lastname && voter.lastname.length > 0) {
-                displayName = `${fn} ${voter.lastname.charAt(0)}.`;
+                displayName = `${fn}&nbsp;${voter.lastname.charAt(0)}`;
               }
             }
             processedNames.push(displayName);
