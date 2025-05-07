@@ -1179,40 +1179,6 @@ class Vibe {
               },
             },
           });
-
-        if (submissionsWithNameToUse && submissionsWithNameToUse.length > 0) {
-          const trackExtraInfoCreations = submissionsWithNameToUse.map(
-            (submission) => {
-              const firstname =
-                submission.CompanyListSubmission?.firstname ?? '';
-              const lastname = submission.CompanyListSubmission?.lastname ?? '';
-              return this.prisma.trackExtraInfo.create({
-                data: {
-                  playlistId: playlist.id,
-                  trackId: submission.trackId,
-                  extraNameAttribute: firstname,
-                  extraArtistAttribute: lastname,
-                },
-              });
-            }
-          );
-
-          try {
-            await Promise.all(trackExtraInfoCreations);
-            this.logger.log(
-              color.green.bold(
-                `Successfully created ${trackExtraInfoCreations.length} TrackExtraInfo records for playlist ${playlist.id}.`
-              )
-            );
-          } catch (error) {
-            this.logger.log(
-              color.red.bold(
-                `Error creating TrackExtraInfo records for playlist ${playlist.id}: ${error}`
-              )
-            );
-            // Decide if this error should halt further execution or just be logged
-          }
-        }
         // You can now use submissionsWithNameToUse
         console.log(222, submissionsWithNameToUse);
       }
