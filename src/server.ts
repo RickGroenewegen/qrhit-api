@@ -325,7 +325,8 @@ class Server {
               statusCode = 409; // Conflict
             } else if (
               result.error === 'Ongeldig bedrijfs-ID opgegeven' ||
-              result.error === 'Verplichte velden voor de bedrijfslijst ontbreken' ||
+              result.error ===
+                'Verplichte velden voor de bedrijfslijst ontbreken' ||
               result.error === 'Ongeldig aantal voor kaarten of nummers'
             ) {
               statusCode = 400; // Bad Request
@@ -1290,6 +1291,7 @@ class Server {
         }
 
         const payment = await this.mollie.getPayment(request.params.paymentId);
+
         const user = await this.data.getUser(payment.userId);
         const playlist = await this.data.getPlaylist(request.params.playlistId);
         const php = await this.data.getPlaylistsByPaymentId(
@@ -1320,6 +1322,7 @@ class Server {
 
           await reply.view(`pdf_${template}.ejs`, {
             subdir,
+            payment,
             playlist,
             php: php[0],
             tracks,

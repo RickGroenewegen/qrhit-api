@@ -132,7 +132,9 @@
                 <span style="<%= eco ? 'filter: grayscale(100%);' : '' %> font-size: 16px;"><%= php.emoji %></span>
             <% } %>
         </div>
-        <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 10px; color: #909090;">#<%= php.paymentHasPlaylistId %></div>
+        <% if (!payment.vibe) { %>
+            <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 10px; color: #909090;">#<%= php.paymentHasPlaylistId %></div>
+        <% } %>
     </div>
     <div style="page-break-after: always;"></div>
 <% }); %>
