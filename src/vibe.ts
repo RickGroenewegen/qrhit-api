@@ -1169,8 +1169,15 @@ class Vibe {
                 agreeToUseName: true,
               },
             },
-            // You might want to include Track or CompanyListSubmission details here if needed later
-            // include: { Track: true, CompanyListSubmission: true }
+            select: {
+              trackId: true,
+              CompanyListSubmission: {
+                select: {
+                  firstname: true,
+                  lastname: true,
+                },
+              },
+            },
           });
         // You can now use submissionsWithNameToUse
         console.log(222, submissionsWithNameToUse);
