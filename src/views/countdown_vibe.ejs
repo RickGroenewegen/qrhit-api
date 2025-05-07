@@ -3,20 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="theme-color" content="#0077be">
+    <meta name="theme-color" content="#18565E"> <!-- OnzeVibe DISCO -->
     <link rel="manifest" href="/assets/manifest.json?v=<%= version %>">
-    <link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
-    <link rel="apple-touch-icon" href="/assets/images/icon-192x192.png">
-    <title>QRSong!</title>
+    <link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico"> <!-- Consider an OnzeVibe favicon -->
+    <link rel="apple-touch-icon" href="/assets/images/icon-192x192.png"> <!-- Consider an OnzeVibe app icon -->
+    <title>OnzeVibe</title>
     <script src="https://unpkg.com/html5-qrcode" type="text/javascript"></script>
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="/assets/css/countdown.css?v=<%= version %>">
+    <!-- <link rel="stylesheet" href="/assets/css/countdown.css?v=<%= version %>"> --> <!-- Commented out old CSS -->
+    <link rel="stylesheet" href="/assets/css/onzevibe.css?v=<%= version %>"> <!-- Added new OnzeVibe CSS -->
 </head>
 <body>
     <div class="container" id="main-container">
         <div class="title">
-            <img src="/assets/images/logo_white.png?v=<%= version %>" style="max-width:300px;"/>
+            <img src="/assets/images/onzevibe_logo.png?v=<%= version %>" style="max-width:300px;"/>
         </div>
         <div id="countdown-container">
             <div class="message-top"><%= translations.yourSongWillStart %> ...</div>
@@ -24,31 +25,32 @@
             <div class="message-bottom"><%= translations.getReady %></div>
         </div>
         <div id="qr-icon" class="qr-icon">
-            <i class="fas fa-camera" style="font-size: 100px;margin-bottom:25px;"></i>
+            <i class="fas fa-camera"></i> <!-- Style via CSS -->
             <div><%= translations.tapTheCamera %></div>
         </div>
     </div>
-    <div class="footer">&copy; QRSong! <%= new Date().getFullYear() %>. <%= translations.allRightsReserved %>.</div>
+    <div class="footer">&copy; <%= translations.onzevibeFooterName %> <%= new Date().getFullYear() %>. <%= translations.allRightsReserved %>.</div>
 
-    <div id="onboarding-overlay" style="display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 1000; background-color: rgba(0, 0, 0, 0.9);">
+    <div id="onboarding-overlay"> <!-- style attribute removed -->
         <div class="onboarding-content">
-            <div class="title">
-                <img src="/assets/images/logo_white.png" alt="QRSong! Logo" class="logo-image"/>
-                <div style="color: white; font-size: 16px; font-style: italic; margin-top: 8px;">"<%= translations.createYourOwn %>"</div>
-                <button onclick="window.open('<%= domain %>', '_blank');" class="device-button download-button" style="margin-top: 20px;"><i class="fas fa-globe"></i><%= translations.visit %></button>
+            <div class="title"> <!-- Recheck this title class usage, might conflict -->
+                <img src="/assets/images/onzevibe_logo.png" alt="<%= translations.onzevibeLogoOnboardingAlt %>" class="logo-image"/>
+                <div style="color: #FFFBF5; font-size: 16px; font-style: italic; margin-top: 8px;">"<%= translations.onzevibeCreateYourOwnQuotation %>"</div>
+                <button onclick="window.open('<%= domain %>', '_blank');" class="device-button download-button"><i class="fas fa-globe"></i><%= translations.onzevibeVisitWebsiteButton %></button>
             </div>
-            <h2 class="onboarding-heading"><%= translations.youNeedToInstall %></h2>
+            <h2 class="onboarding-heading"><%= translations.onzevibeInstallPrompt %></h2>
             <div class="device-selector">
+                <!-- App store links point to QRSong, update if OnzeVibe has its own apps -->
                 <button id="app-store" onclick="location.href='https://apps.apple.com/app/qrsong/id6727011939';" class="device-button download-button"><i class="fab fa-apple"></i> <%= translations.appStore %></button>
                 <button id="google-play" onclick="location.href='https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong';" class="device-button download-button"><i class="fab fa-google-play"></i> <%= translations.googlePlay %></button>
                 <!-- <button id="pwa" class="device-button active"><i class="fas fa-download"></i> <%= translations.other %></button> -->
             </div>
             
-            <div id="pwa-instructions" class="install-instructions active">
+            <div id="pwa-instructions" class="install-instructions active"> <!-- 'active' class shows PWA by default, adjust if needed -->
                 <div class="step">
                     <div class="step-number">1</div>
                     <div class="step-content">
-                        <p><%= translations.tapShare %></p>
+                        <p><%= translations.pwaInstallStep1Share %></p>
                         <div class="animation-container">
                             <svg class="ios-share-icon animated-icon" xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
                                 <path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8"></path>
@@ -61,7 +63,7 @@
                 <div class="step">
                     <div class="step-number">2</div>
                     <div class="step-content">
-                        <p><%= translations.scrollDown %></p>
+                        <p><%= translations.pwaInstallStep2Scroll %></p>
                         <div class="animation-container">
                             <i class="fas fa-arrow-down animated-icon"></i>
                         </div>
@@ -70,7 +72,7 @@
                 <div class="step">
                     <div class="step-number">3</div>
                     <div class="step-content">
-                        <p><%= translations.tapAddToHomeScreen %></p>
+                        <p><%= translations.pwaInstallStep3AddToHome %></p>
                         <div class="animation-container">
                             <i class="fas fa-plus-square animated-icon"></i>
                         </div>
@@ -83,8 +85,8 @@
     <div id="qr-reader-container">
         <div id="qr-reader"></div>
         <div class="loading-spinner"></div>
-        <button id="close-scanner" onclick="stopScanning()">X <%= translations.closeScanner %></button>
-        <button id="switch-camera" style="display: none;">Switch Camera</button>
+        <button id="close-scanner" onclick="stopScanning()">X <%= translations.scannerCloseButtonText %></button>
+        <button id="switch-camera" style="display: none;">Switch Camera</button> <!-- Text for "Switch Camera" can be translated too if needed -->
     </div>
 
     <script>

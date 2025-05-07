@@ -1,0 +1,341 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+body {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+    background-color: #FAF6F3; /* PIANO */
+    color: #18565E; /* DISCO */
+    font-family: 'Caros Soft', 'Roboto', sans-serif;
+}
+
+.download-button { /* Also used by .device-button in the EJS */
+    width: 200px;
+    height: 50px;
+    font-size: 18px;
+    margin: 10px;
+    background-color: #79D1C3; /* HIPHOP ACCENT */
+    color: #FFFBF5; /* ECHO - White text on accent button */
+    border: none; /* Cleaner look, or 1px solid #18565E */
+    border-radius: 25px; /* Consistent with .cta-button */
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+}
+.download-button:hover {
+    opacity: 0.9;
+}
+.download-button i {
+    margin-right: 8px;
+}
+
+.ios-share-icon { /* SVG icon */
+    width: 30px;
+    height: 30px;
+    color: #79D1C3; /* HIPHOP ACCENT */
+}
+
+.animated-icon.ios-share-icon {
+    animation: pulse 2s infinite;
+}
+
+/* Pulse animation might be too much with new branding, consider toning down or removing if needed */
+@keyframes pulse {
+    0% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.1); /* Reduced from 1.2 or 1.1 */
+    }
+    100% {
+        transform: scale(1);
+    }
+}
+
+.container {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+    text-align: center;
+}
+
+.title {
+    font-size: 3rem; /* Base size, image will dictate visual */
+    font-weight: bold;
+    margin-bottom: 2rem;
+}
+
+.message-top {
+    font-size: 1.2rem;
+    text-align: center;
+    max-width: 100%;
+    margin-bottom: 1rem;
+}
+
+.countdown {
+    font-size: 8rem;
+    font-weight: bold;
+    color: #18565E; /* DISCO */
+    transition: transform 0.3s ease-in-out;
+}
+
+.zoom {
+    transform: scale(1.2);
+}
+
+.message-bottom {
+    font-size: 1.2rem;
+    text-align: center;
+    max-width: 100%;
+    margin-top: 2rem;
+}
+
+.footer {
+    position: fixed;
+    bottom: 2rem;
+    font-size: 0.9rem;
+    color: #18565E; /* DISCO */
+    opacity: 0.8;
+}
+
+#onboarding-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(24, 86, 94, 0.95); /* DISCO with opacity */
+    display: none; /* Managed by JS */
+    justify-content: center;
+    align-items: center;
+    z-index: 1000;
+    color: #FFFBF5; /* ECHO - Default text color for overlay children */
+}
+
+.onboarding-content {
+    text-align: center;
+    max-width: 80%;
+    width: 400px;
+    background-color: rgba(24, 86, 94, 0.85); /* Slightly different from overlay for depth, or transparent */
+    border-radius: 20px;
+    padding: 2rem;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    margin: 0 auto;
+}
+
+@media (max-width: 480px) {
+    .onboarding-content {
+        width: 90%;
+    }
+}
+
+.onboarding-content .logo-image {
+    max-width: 200px;
+    margin-bottom: 1rem;
+    filter: brightness(0) invert(1); /* Makes dark logo white on dark background */
+}
+
+.onboarding-heading {
+    font-size: 1.5rem;
+    margin-bottom: 1.5rem;
+    color: #FFFBF5; /* ECHO */
+}
+
+.device-selector {
+    display: flex;
+    flex-direction: column; /* Stack buttons for better mobile view */
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.device-button { /* Re-uses .download-button styles, specific overrides if any */
+    margin: 0.5rem 0; /* Spacing for stacked buttons */
+}
+
+/* .device-button.active - if PWA button is re-enabled, style accordingly */
+/* For now, PWA button is commented out in EJS */
+
+.install-instructions {
+    display: none; /* JS controlled */
+}
+.install-instructions.active {
+    display: block;
+}
+.install-instructions a { /* For any links inside install instructions */
+    color: #79D1C3; /* HIPHOP ACCENT */
+    text-decoration: underline;
+}
+
+
+.step {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.step-number {
+    background-color: #79D1C3; /* HIPHOP ACCENT */
+    color: #18565E; /* DISCO text on accent */
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: bold;
+    margin-right: 1rem;
+    flex-shrink: 0;
+}
+
+.step-content {
+    flex: 1;
+}
+.step-content p {
+    margin: 0 0 0.5rem 0;
+    color: #FFFBF5; /* ECHO */
+}
+
+.animation-container {
+    margin-top: 0.5rem;
+}
+
+.animated-icon { /* For FontAwesome icons in PWA steps */
+    font-size: 2rem;
+    color: #79D1C3; /* HIPHOP ACCENT */
+    animation: pulse 2s infinite;
+}
+
+.cta-button { /* General Call To Action button, if used elsewhere */
+    margin-top: 2rem;
+    padding: 0.75rem 2rem;
+    background-color: #79D1C3; /* HIPHOP ACCENT */
+    color: #FFFBF5; /* ECHO */
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    font-size: 1.2rem;
+    font-weight: bold;
+    transition: all 0.3s ease;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+.cta-button:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 8px rgba(0, 0, 0, 0.2);
+}
+
+.qr-icon {
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    font-size: 1.2rem;
+    color: #18565E; /* DISCO */
+}
+.qr-icon i { /* The camera icon */
+    font-size: 100px; /* Increased from 3rem for prominence */
+    margin-bottom: 25px; /* Increased from 1rem */
+    color: #18565E; /* DISCO */
+}
+
+#qr-reader-container {
+    display: none; /* JS controlled */
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.5); /* Standard semi-transparent black for scanner overlay */
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+}
+
+.loading-spinner {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80px;
+    height: 80px;
+    display: none; /* JS controlled */
+}
+.loading-spinner:after {
+    content: " ";
+    display: block;
+    width: 64px;
+    height: 64px;
+    margin: 8px;
+    border-radius: 50%;
+    border: 6px solid #FFFBF5; /* ECHO - spinner on dark overlay */
+    border-color: #FFFBF5 transparent #FFFBF5 transparent; /* ECHO */
+    animation: loading-spinner 1.2s linear infinite;
+}
+
+@keyframes loading-spinner {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+#qr-reader {
+    width: 100%;
+    max-width: 500px;
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+/* QR Reader specific minor style adjustments - keep as is */
+#qr-reader__scan_region {}
+#qr-reader__dashboard_section_swaplink { display: none !important; } /* Ensure it's hidden */
+#qr-reader__dashboard_section_csr span button { /* Style "Scan an image file" button if needed */
+    /* background-color: #79D1C3; */
+    /* color: #FFFBF5; */
+}
+
+
+#countdown-container {
+    display: none; /* JS controlled */
+    text-align: center;
+    color: #18565E; /* DISCO */
+}
+
+#close-scanner, #switch-camera {
+    position: absolute;
+    padding: 10px 20px;
+    background-color: #79D1C3; /* HIPHOP ACCENT */
+    color: #18565E; /* DISCO text on accent */
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 1rem; /* Adjusted from 1.2rem */
+    font-weight: bold;
+    z-index: 1002;
+}
+#close-scanner:hover, #switch-camera:hover {
+    opacity: 0.9;
+}
+
+#close-scanner {
+    top: 20px;
+    right: 20px;
+}
+
+#switch-camera {
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+}
