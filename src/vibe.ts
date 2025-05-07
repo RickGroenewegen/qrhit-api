@@ -1152,18 +1152,28 @@ class Vibe {
     if (playlist) {
       // If companyList has showNames set to true, we will add the names to the cards
       if (companyList.showNames) {
+        this.logger.log(
+          color.blue.bold(
+            `Company list ${color.white.bold(
+              companyList.name
+            )} has shows the names on the cards. Retrieving names...`
+          )
+        );
+
         console.log(111, playlist.id);
-        const submissionsWithNameToUse = await this.prisma.companyListSubmissionTrack.findMany({
-          where: {
-            CompanyListSubmission: {
-              companyListId: listId,
-              agreeToUseName: true,
+        const submissionsWithNameToUse =
+          await this.prisma.companyListSubmissionTrack.findMany({
+            where: {
+              CompanyListSubmission: {
+                companyListId: listId,
+                agreeToUseName: true,
+              },
             },
-          },
-          // You might want to include Track or CompanyListSubmission details here if needed later
-          // include: { Track: true, CompanyListSubmission: true }
-        });
+            // You might want to include Track or CompanyListSubmission details here if needed later
+            // include: { Track: true, CompanyListSubmission: true }
+          });
         // You can now use submissionsWithNameToUse
+        console.log(222, submissionsWithNameToUse);
       }
 
       const trackCountFull = await this.prisma.playlistHasTrack.count({
