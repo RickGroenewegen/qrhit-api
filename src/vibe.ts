@@ -811,6 +811,19 @@ class Vibe {
         }
       }
 
+      if (fields.minimumNumberOfTracks !== undefined) {
+        const minNumTracks = Number(fields.minimumNumberOfTracks);
+        if (!isNaN(minNumTracks) && minNumTracks >= 0) {
+          updateData.minimumNumberOfTracks = minNumTracks;
+        } else {
+          this.logger.log(
+            color.yellow.bold(
+              `Invalid minimumNumberOfTracks value provided: ${fields.minimumNumberOfTracks}`
+            )
+          );
+        }
+      }
+
       // Update status if provided
       if (fields.status !== undefined) {
         // updateData.status = String(fields.status); // Status update logic might be handled elsewhere or based on progression
