@@ -15,7 +15,7 @@ body {
 /* Note: POP color is visually #F48B70, as PDF hex is incorrect. */
 
 .download-button { /* Also used by .device-button in the EJS */
-    width: 200px;
+    width: 180px; /* Reduced from 200px to fit side-by-side in .device-selector */
     height: 50px;
     font-size: 18px;
     margin: 10px;
