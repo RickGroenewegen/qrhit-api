@@ -46,9 +46,6 @@ class Settings {
     // 1. Try to get from cache (pass `false` for `never` to enable caching in dev)
     let cachedValue = await this.cache.get(cacheKey, false);
     if (cachedValue !== null) {
-      this.logger.log(
-        color.green.bold(`Setting '${color.white.bold(key)}' found in cache.`)
-      );
       return cachedValue;
     }
 
@@ -60,24 +57,10 @@ class Settings {
     );
 
     if (lockAcquired) {
-      this.logger.log(
-        color.blue.bold(
-          `Acquired lock for setting '${color.white.bold(
-            key
-          )}'. Fetching from DB.`
-        )
-      );
       try {
         // Re-check cache: another instance might have populated it just before we acquired lock.
         cachedValue = await this.cache.get(cacheKey, false);
         if (cachedValue !== null) {
-          this.logger.log(
-            color.green.bold(
-              `Setting '${color.white.bold(
-                key
-              )}' found in cache after acquiring lock.`
-            )
-          );
           return cachedValue;
         }
 
@@ -88,19 +71,6 @@ class Settings {
 
         if (valueFromDb !== null) {
           await this.cache.set(cacheKey, valueFromDb, this.CACHE_TTL_SECONDS);
-          this.logger.log(
-            color.blue.bold(
-              `Setting '${color.white.bold(
-                key
-              )}' fetched from DB and cached.`
-            )
-          );
-        } else {
-          this.logger.log(
-            color.yellow.bold(
-              `Setting '${color.white.bold(key)}' not found in DB.`
-            )
-          );
         }
         return valueFromDb;
       } catch (error) {
@@ -114,41 +84,20 @@ class Settings {
         return null;
       } finally {
         await this.cache.releaseLock(lockKey);
-        this.logger.log(
-          color.blue.bold(`Released lock for setting '${color.white.bold(key)}'.`)
-        );
       }
     } else {
       // Lock not acquired, another instance is fetching. Wait and retry from cache.
-      this.logger.log(
-        color.yellow.bold(
-          `Could not acquire lock for setting '${color.white.bold(
-            key
-          )}'. Waiting for cache.`
-        )
-      );
+
       for (let i = 0; i < this.LOCK_MAX_RETRIES; i++) {
         await new Promise((resolve) =>
           setTimeout(resolve, this.LOCK_RETRY_DELAY_MS)
         );
         cachedValue = await this.cache.get(cacheKey, false);
         if (cachedValue !== null) {
-          this.logger.log(
-            color.green.bold(
-              `Setting '${color.white.bold(key)}' found in cache after waiting (attempt ${i + 1}).`
-            )
-          );
           return cachedValue;
         }
       }
 
-      this.logger.log(
-        color.red.bold(
-          `Setting '${color.white.bold(
-            key
-          )}' not found in cache after waiting. Fetching from DB as fallback.`
-        )
-      );
       // Fallback: directly read from DB.
       try {
         const setting = await this.prisma.appSetting.findUnique({
@@ -189,7 +138,9 @@ class Settings {
       const cacheKey = this.getCacheKey(key);
       await this.cache.del(cacheKey);
       this.logger.log(
-        color.blue.bold(`Cache for setting '${color.white.bold(key)}' invalidated.`)
+        color.blue.bold(
+          `Cache for setting '${color.white.bold(key)}' invalidated.`
+        )
       );
     } catch (error) {
       this.logger.log(
@@ -219,7 +170,9 @@ class Settings {
       );
       await this.cache.del(cacheKey);
       this.logger.log(
-        color.blue.bold(`Cache for setting '${color.white.bold(key)}' invalidated.`)
+        color.blue.bold(
+          `Cache for setting '${color.white.bold(key)}' invalidated.`
+        )
       );
     } catch (error) {
       // Log error but don't throw, maybe it didn't exist
@@ -234,7 +187,9 @@ class Settings {
       await this.cache.del(cacheKey);
       this.logger.log(
         color.yellow.bold(
-          `Attempted cache invalidation for setting '${color.white.bold(key)}' after delete error/key not found.`
+          `Attempted cache invalidation for setting '${color.white.bold(
+            key
+          )}' after delete error/key not found.`
         )
       );
     }
