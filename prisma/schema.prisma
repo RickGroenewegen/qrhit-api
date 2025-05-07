@@ -525,6 +525,7 @@ model CompanyList {
   textColor               String    @default("#000000")
   status                  String    @default("new") // Progression: new -> company -> questions -> box -> card -> playlist -> personalize
   numberOfTracks          Int
+  minimumNumberOfTracks   Int?
   numberOfCards           Int       @default(0)
   startAt                 DateTime?
   endAt                   DateTime?
