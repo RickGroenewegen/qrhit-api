@@ -1242,6 +1242,8 @@ class Vibe {
           },
           select: {
             id: true,
+            firstname: true, // Added firstname
+            lastname: true, // Added lastname
             CompanyListSubmissionTrack: {
               // Fetch associated tracks ordered by position
               orderBy: { position: 'asc' },
@@ -1264,15 +1266,30 @@ class Vibe {
         return { success: true, data: { list: companyList, ranking: [] } }; // Return empty ranking
       }
 
-      // 3. Calculate points and count votes for each track
+      // 3. Calculate points, count votes, and collect voter names for each track
       const trackScores: { [trackId: number]: number } = {};
       const trackVoteCounts: { [trackId: number]: number } = {}; // To store vote counts
+      const trackVotersMap: { [trackId: number]: string[] } = {}; // To store voter names
 
       for (const submission of verifiedSubmissions) {
+        const voterName = `${submission.firstname || ''} ${
+          submission.lastname || ''
+        }`.trim(); // Construct full name, trim whitespace
+
         for (const submissionTrack of submission.CompanyListSubmissionTrack) {
           // Increment vote count for this track
           trackVoteCounts[submissionTrack.trackId] =
             (trackVoteCounts[submissionTrack.trackId] || 0) + 1;
+
+          // Add voter name
+          if (!trackVotersMap[submissionTrack.trackId]) {
+            trackVotersMap[submissionTrack.trackId] = [];
+          }
+          // Add name only if it's not an empty string (e.g. if both firstname and lastname were null/empty)
+          if (voterName) {
+            trackVotersMap[submissionTrack.trackId].push(voterName);
+          }
+
           // Points = maxPoints - position + 1
           // Example: maxPoints=5 -> pos 1 gets 5, pos 2 gets 4, ..., pos 5 gets 1
           const points = maxPoints - submissionTrack.position + 1;
@@ -1308,6 +1325,7 @@ class Vibe {
           ...track,
           score: trackScores[track.id] || 0, // Default score to 0 if somehow missing
           voteCount: trackVoteCounts[track.id] || 0, // Add vote count, default to 0
+          voters: trackVotersMap[track.id] || [], // Add voters array, default to empty
         }))
         .sort((a, b) => b.score - a.score) // Sort descending by score
         // Add the 'withinLimit' property based on the index and numberOfCards
