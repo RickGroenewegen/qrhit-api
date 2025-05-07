@@ -822,7 +822,7 @@ class PrintEnBind {
         add_file_method: 'url',
         file_overwrite: true,
         file_url: fileUrl,
-        comment: `Batch nummer (rechts onderin op kant met titel/artiest/jaar) moet #${item.paymentHasPlaylistId} zijn`,
+        comment: `Batch nummer op de kaartjes (rechts onderin op kant met titel/artiest/jaar) moet #${item.paymentHasPlaylistId} zijn`,
       };
 
       if (item.subType == 'sheets') {
@@ -830,6 +830,9 @@ class PrintEnBind {
         orderObj.size = 'a4';
         delete orderObj.size_custom_width;
         delete orderObj.size_custom_height;
+        orderObj.comment =
+          orderObj.comment +
+          '. Deze bestelling is een A4 die door de klant zelf uitgeknipt zal gaan worden.';
       }
 
       return orderObj;
