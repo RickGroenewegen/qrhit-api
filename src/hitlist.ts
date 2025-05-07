@@ -487,6 +487,7 @@ class Hitlist {
           description: true,
           numberOfTracks: true,
           minimumNumberOfTracks: true,
+          showNames: true,
           numberOfCards: true,
           votingBackground: true,
           votingLogo: true,
