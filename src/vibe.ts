@@ -508,7 +508,7 @@ class Vibe {
 
       // Basic validation
       if (!companyId || isNaN(companyId)) {
-        return { success: false, error: 'Invalid company ID provided' };
+        return { success: false, error: 'Ongeldig bedrijfs-ID opgegeven' };
       }
       if (
         !name ||
@@ -519,7 +519,7 @@ class Vibe {
       ) {
         return {
           success: false,
-          error: 'Missing required fields for company list',
+          error: 'Verplichte velden voor de bedrijfslijst ontbreken',
         };
       }
       if (
@@ -528,7 +528,7 @@ class Vibe {
         numberOfCards < 0 ||
         numberOfTracks < 0
       ) {
-        return { success: false, error: 'Invalid number for cards or tracks' };
+        return { success: false, error: 'Ongeldig aantal voor kaarten of nummers' };
       }
 
       // Check if company exists
@@ -536,7 +536,7 @@ class Vibe {
         where: { id: companyId },
       });
       if (!company) {
-        return { success: false, error: 'Company not found' };
+        return { success: false, error: 'Bedrijf niet gevonden' };
       }
 
       // Check if slug is unique across all company lists
@@ -548,7 +548,7 @@ class Vibe {
       if (existingListWithSlug) {
         return {
           success: false,
-          error: 'Slug already exists. Please choose a unique slug.', // Updated error message
+          error: 'Slug bestaat al. Kies een unieke slug.', // Updated error message
         };
       }
 
@@ -593,10 +593,10 @@ class Vibe {
         // The check above should catch it, but this is a fallback.
         return {
           success: false,
-          error: 'Slug already exists. Please choose a unique slug.', // Consistent error message
+          error: 'Slug bestaat al. Kies een unieke slug.', // Consistent error message
         };
       }
-      return { success: false, error: 'Error creating company list' };
+      return { success: false, error: 'Fout bij het aanmaken van de bedrijfslijst' };
     }
   }
 

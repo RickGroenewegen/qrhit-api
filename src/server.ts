@@ -317,15 +317,16 @@ class Server {
 
           if (!result.success) {
             let statusCode = 500;
-            if (result.error === 'Company not found') {
+            if (result.error === 'Bedrijf niet gevonden') {
               statusCode = 404;
             } else if (
-              result.error === 'Slug already exists for this company'
+              result.error === 'Slug bestaat al. Kies een unieke slug.'
             ) {
               statusCode = 409; // Conflict
             } else if (
-              result.error.includes('Missing required fields') ||
-              result.error.includes('Invalid number')
+              result.error === 'Ongeldig bedrijfs-ID opgegeven' ||
+              result.error === 'Verplichte velden voor de bedrijfslijst ontbreken' ||
+              result.error === 'Ongeldig aantal voor kaarten of nummers'
             ) {
               statusCode = 400; // Bad Request
             }
