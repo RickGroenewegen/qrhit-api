@@ -63,6 +63,7 @@ class Vibe {
             textColor: true,
             status: true,
             numberOfTracks: true,
+            minimumNumberOfTracks: true,
             numberOfCards: true,
             startAt: true,
             endAt: true,
@@ -528,7 +529,10 @@ class Vibe {
         numberOfCards < 0 ||
         numberOfTracks < 0
       ) {
-        return { success: false, error: 'Ongeldig aantal voor kaarten of nummers' };
+        return {
+          success: false,
+          error: 'Ongeldig aantal voor kaarten of nummers',
+        };
       }
 
       // Check if company exists
@@ -596,7 +600,10 @@ class Vibe {
           error: 'Slug bestaat al. Kies een unieke slug.', // Consistent error message
         };
       }
-      return { success: false, error: 'Fout bij het aanmaken van de bedrijfslijst' };
+      return {
+        success: false,
+        error: 'Fout bij het aanmaken van de bedrijfslijst',
+      };
     }
   }
 
