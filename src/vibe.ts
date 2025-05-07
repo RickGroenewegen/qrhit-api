@@ -812,15 +812,21 @@ class Vibe {
       }
 
       if (fields.minimumNumberOfTracks !== undefined) {
-        const minNumTracks = Number(fields.minimumNumberOfTracks);
-        if (!isNaN(minNumTracks) && minNumTracks >= 0) {
-          updateData.minimumNumberOfTracks = minNumTracks;
+        if (String(fields.minimumNumberOfTracks).trim() === '') {
+          updateData.minimumNumberOfTracks = null;
         } else {
-          this.logger.log(
-            color.yellow.bold(
-              `Invalid minimumNumberOfTracks value provided: ${fields.minimumNumberOfTracks}`
-            )
-          );
+          const minNumTracks = Number(fields.minimumNumberOfTracks);
+          if (!isNaN(minNumTracks) && minNumTracks >= 0) {
+            updateData.minimumNumberOfTracks = minNumTracks;
+          } else {
+            this.logger.log(
+              color.yellow.bold(
+                `Invalid minimumNumberOfTracks value provided: ${fields.minimumNumberOfTracks}`
+              )
+            );
+            // Optionally, decide if an invalid non-empty string should also be null or ignored
+            // For now, it's just logged and not added to updateData if invalid
+          }
         }
       }
 
