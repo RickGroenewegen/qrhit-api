@@ -2,7 +2,7 @@ config:
   target: 'http://localhost:3004'
   phases:
     - duration: 60
-      arrivalRate: 10
+      arrivalRate: 15
   payload:
     path: 'bands.csv'
     fields:

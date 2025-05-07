@@ -632,7 +632,7 @@ class Spotify {
         return { success: false, error: 'Search term too short' };
       }
 
-      const cacheKey = `search2_${searchTerm}_${limit}_${offset}`;
+      const cacheKey = `search_${searchTerm}_${limit}_${offset}`;
       const cacheResult = await this.cache.get(cacheKey);
 
       if (cacheResult) {
@@ -661,18 +661,23 @@ class Spotify {
       let itemsFoundForLog: number;
       if (result.success) {
         // Use total from the result if available, otherwise count items
-        itemsFoundForLog = result.data?.tracks?.total !== undefined 
-          ? result.data.tracks.total 
-          : result.data?.tracks?.items?.length || 0;
+        itemsFoundForLog =
+          result.data?.tracks?.total !== undefined
+            ? result.data.tracks.total
+            : result.data?.tracks?.items?.length || 0;
       } else {
         itemsFoundForLog = -1;
       }
 
       this.logger.log(
         color.blue.bold(
-          `Searching ${color.white.bold(apiUsed)} for tracks matching "${color.white.bold(
+          `Searching ${color.white.bold(
+            apiUsed
+          )} for tracks matching "${color.white.bold(
             searchTerm
-          )}" with limit ${color.white.bold(limit)}. Found ${color.white.bold(itemsFoundForLog)} items.`
+          )}" with limit ${color.white.bold(limit)}. Found ${color.white.bold(
+            itemsFoundForLog
+          )} items.`
         )
       );
 
