@@ -822,7 +822,7 @@ class PrintEnBind {
         add_file_method: 'url',
         file_overwrite: true,
         file_url: fileUrl,
-        comment: `Batch nummer (rechts onderin) #${item.paymentHasPlaylistId}`,
+        comment: `Batch nummer (rechts onderin op kant met titel/artiest/jaar) moet #${item.paymentHasPlaylistId} zijn`,
       };
 
       if (item.subType == 'sheets') {
