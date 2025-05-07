@@ -167,7 +167,6 @@ class Hitlist {
             hash: submissionHash,
             verificationHash: verificationHash,
             status: 'pending_verification', // Changed from 'submitted' to 'pending_verification'
-            name: constructedFullname,
             firstname: firstname || null,
             lastname: lastname || null,
             email: email || null,
