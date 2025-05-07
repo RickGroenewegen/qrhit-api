@@ -822,7 +822,7 @@ class PrintEnBind {
         add_file_method: 'url',
         file_overwrite: true,
         file_url: fileUrl,
-        comment: `Om verwisseling van stapeltjes tussen deze order en andere QRSong! orders te voorkomen, is er op elk kaartje het unieke batch nummer \'#${item.paymentHasPlaylistId}\' toegevoegd. Je vindt dit nummer rechtsonder op de kant met titel, artiest en jaar. Dit nummer helpt bij het onderscheid maken tussen verschillende orders. Graag hier extra op letten tijdens de productie en verpakking en zorgen dat de stapeltjes met hetzelfde batch nummer in de dezelfde order terecht komen en er geen stapels van verschillende orders door elkaar gaan. Alvast bedankt voor de zorgvuldigheid!`,
+        comment: `Batch nummer (rechts onderin) #${item.paymentHasPlaylistId}`,
       };
 
       if (item.subType == 'sheets') {
