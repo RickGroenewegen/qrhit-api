@@ -779,6 +779,11 @@ class Vibe {
         updateData.hideCircle = this.utils.parseBoolean(fields.hideCircle);
       }
 
+      // Handle showNames boolean field
+      if (fields.showNames !== undefined) {
+        updateData.showNames = this.utils.parseBoolean(fields.showNames);
+      }
+
       // Explicitly handle empty string values for background fields to set them to null
       if (fields.background === '') {
         updateData.background = null;
