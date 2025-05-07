@@ -1239,6 +1239,26 @@ class Server {
       });
     });
 
+    this.fastify.get('/qrvibe/:trackId', async (request: any, reply) => {
+      // Get the 'Accept-Language' header from the request
+      const locale = this.utils.parseAcceptLanguage(
+        request.headers['accept-language']
+      );
+      const translations = await this.translation.getTranslationsByPrefix(
+        locale,
+        'countdown_onzevibe'
+      );
+      let useVersion = this.version;
+      if (process.env['ENVIRONMENT'] === 'development') {
+        useVersion = new Date().getTime().toString();
+      }
+      await reply.view(`countdown_vibe.ejs`, {
+        translations,
+        version: useVersion,
+        domain: process.env['FRONTEND_URI'],
+      });
+    });
+
     this.fastify.get('/qrlink/:trackId', async (request: any, reply) => {
       // Get the reqeust headers
       const headers = request.headers;
