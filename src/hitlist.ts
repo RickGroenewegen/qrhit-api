@@ -550,6 +550,7 @@ class Hitlist {
           companyName: companyList.Company.name,
           votingBackground: companyList.votingBackground,
           votingLogo: companyList.votingLogo,
+          showNames: companyList.showNames,
           startAt: companyList.startAt, // Added startAt
           endAt: companyList.endAt, // Added endAt
           votingOpen: votingOpen, // Added calculated votingOpen
