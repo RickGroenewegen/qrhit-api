@@ -146,6 +146,7 @@ model Payment {
 
   DiscountCodedUses DiscountCodedUses[]
   Review            Review[]
+  CompanyList       CompanyList[]
 
   @@index([userId]) // Index for performance on queries
   @@index([paymentId])
@@ -513,6 +514,7 @@ model CompanyList {
   id                      Int       @id @default(autoincrement())
   companyId               Int
   playlistId              Int?
+  paymentId               Int?
   name                    String
   description             String
   slug                    String
@@ -544,6 +546,7 @@ model CompanyList {
   CompanyListSubmission CompanyListSubmission[]
   CompanyListQuestion   CompanyListQuestion[]
   Playlist              Playlist?               @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  Payment               Payment?                @relation(fields: [paymentId], references: [id], onDelete: Cascade)
 
   @@map("company_lists")
 }
