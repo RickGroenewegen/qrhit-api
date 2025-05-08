@@ -195,8 +195,30 @@ class SpotifyScraper {
           'getPlaylist_called',
           1
         );
-        // Return the playlist data directly from the scraper API
-        return { success: true, data: response.data };
+
+        // Transform the scraper API response to match the expected format
+        const apiData = response.data;
+        const playlistImage =
+          apiData.images &&
+          apiData.images.length > 0 &&
+          apiData.images[0] &&
+          apiData.images[0].length > 0
+            ? apiData.images[0][0].url
+            : '';
+
+        const transformedData = {
+          id: apiData.id,
+          playlistId: apiData.id, // Assuming scraper's id is the playlistId
+          name: apiData.name,
+          description: apiData.description || '',
+          numberOfTracks: apiData.trackCount || 0,
+          image: playlistImage,
+          // Add other fields from spotify_api.ts if they are available in apiData and needed
+          // For example, if spotify.ts expects playlistData.tracks.total, ensure it's mapped.
+          // Here, numberOfTracks covers that.
+          tracks: { total: apiData.trackCount || 0 }, // To match spotify_api structure if spotify.ts uses it
+        };
+        return { success: true, data: transformedData };
       } else {
         // Scraper API indicated an error or returned unexpected data
         const errorMessage =
