@@ -301,6 +301,7 @@ class SpotifyScraper {
             (scraperTrack: any) => ({ track: scraperTrack })
           );
           // Return data structured similarly to spotify_api.ts, with an 'items' key
+
           return {
             success: true,
             data: {
