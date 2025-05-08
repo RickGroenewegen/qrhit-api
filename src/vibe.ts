@@ -1051,11 +1051,11 @@ class Vibe {
           let extraNameAttributeValue = '';
           if (processedNames.length > 0) {
             if (processedNames.length === 1) {
-              extraNameAttributeValue = `${processedNames[0]} ♡`;
+              extraNameAttributeValue = `♡ ${processedNames[0]}`;
             } else {
               const allButLast = processedNames.slice(0, -1);
               const last = processedNames.slice(-1)[0];
-              extraNameAttributeValue = `${allButLast.join(', ')} & ${last} ♡`;
+              extraNameAttributeValue = `♡ ${allButLast.join(', ')} & ${last}`;
             }
           }
 
