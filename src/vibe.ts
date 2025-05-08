@@ -1028,22 +1028,12 @@ class Vibe {
         for (const [trackId, voters] of trackSubmissionsMap.entries()) {
           if (voters.length === 0) continue;
 
-          const nameCounts: Record<string, number> = {};
           const processedNames: string[] = [];
 
           for (const voter of voters) {
-            const fn = voter.firstname || 'Anonymous';
-            nameCounts[fn] = (nameCounts[fn] || 0) + 1;
-          }
-
-          for (const voter of voters) {
             let displayName = voter.firstname || 'Anonymous';
-            const fn = voter.firstname || 'Anonymous';
-
-            if (nameCounts[fn] > 1) {
-              if (voter.lastname && voter.lastname.length > 0) {
-                displayName = `${fn}&nbsp;${voter.lastname.charAt(0)}`;
-              }
+            if (voter.lastname && voter.lastname.length > 0) {
+              displayName = `${displayName}&nbsp;${voter.lastname.charAt(0)}`;
             }
             processedNames.push(displayName);
           }
