@@ -242,80 +242,70 @@ class SpotifyRapidApi {
    * @returns {Promise<ApiResult>} Contains an array of track items or error info.
    */
   public async getTracks(playlistId: string): Promise<ApiResult> {
-    let allItems: any[] = [];
-    let offset = 0;
-    const limit = 100; // RapidAPI endpoint seems to support 100
-
     this.logger.log(
       color.blue.bold(
         `Fetching tracks in ${color.white.bold(
-          'RapidAPI'
+          'Scraper API' // Updated to reflect the new API
         )} for playlist ${color.white.bold(playlistId)}`
       )
     );
 
     try {
-      while (true) {
-        const options = this.createOptions('/playlist_tracks', {
-          id: playlistId,
-          limit: limit,
-          offset: offset,
-        });
+      const options = this.createOptions('/v1/playlist/contents', {
+        playlistId: playlistId,
+      });
 
-        // Make the request directly, bypassing the queue for now
-        const response = await axios.request(options);
-        this.analytics.increaseCounter(
-          'spotify_rapidapi',
-          'getTracks_called',
-          1
-        );
+      // Make the request directly
+      const response = await axios.request(options);
+      this.analytics.increaseCounter(
+        'spotify_rapidapi', // Keeping this counter name for now
+        'getTracks_called',
+        1
+      );
 
-        if (!response.data || !response.data.items) {
-          // Stop if response format is unexpected or items are missing
+      if (response.data && response.data.status === true) {
+        if (response.data.contents && Array.isArray(response.data.contents.items)) {
+          // The new API returns all items directly under contents.items
+          // and contents also includes totalCount.
+          return { success: true, data: response.data.contents };
+        } else {
           this.logger.log(
             color.yellow(
-              `RapidAPI getTracks for ${playlistId} returned unexpected data at offset ${offset}.`
+              `Scraper API getTracks for ${playlistId} returned unexpected data structure.`
             )
           );
-          break;
+          return { success: false, error: 'Unexpected data structure from Scraper API' };
         }
-
-        // Filter out null tracks if necessary (depends on API behavior)
-        const validItems = response.data.items.filter(
-          (item: any) => item && item.track
+      } else {
+        // Scraper API indicated an error
+        const errorMessage = response.data?.errorId || 'Unknown error from Scraper API';
+        this.logger.log(
+          color.yellow(
+            `Scraper API getTracks for ${playlistId} failed: ${errorMessage}`
+          )
         );
-        allItems = allItems.concat(validItems);
-
-        // Check if the number of items returned is less than the limit, indicating the last page
-        if (response.data.items.length < limit) {
-          break;
+        if (errorMessage.toLowerCase().includes('not found') || errorMessage.toLowerCase().includes('invalid playlistid')) {
+          return { success: false, error: 'playlistNotFound' };
         }
-
-        // Prepare for the next page
-        offset += limit;
-
-        // Optional: Add a small delay to respect potential implicit rate limits
-        await new Promise((resolve) => setTimeout(resolve, 50)); // 50ms delay
+        return { success: false, error: `Scraper API error: ${errorMessage}` };
       }
-
-      return { success: true, data: { items: allItems } };
     } catch (error) {
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
       const message = axiosError.message;
       this.logger.log(
         color.red.bold(
-          `Error fetching RapidAPI tracks for ${playlistId}: ${status} - ${message}`
+          `Error fetching Scraper API tracks for ${playlistId}: ${status} - ${message}`
         )
       );
 
-      if (status === 404) {
-        return { success: false, error: 'playlistNotFound' }; // Map 404
+      if (status === 404) { // HTTP 404
+        return { success: false, error: 'playlistNotFound' };
       }
       // Return a generic error for other issues
       return {
         success: false,
-        error: `RapidAPI error fetching tracks: ${status || message}`,
+        error: `Scraper API error fetching tracks: ${status || message}`,
       };
     }
   }
