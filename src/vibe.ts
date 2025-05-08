@@ -1033,7 +1033,7 @@ class Vibe {
           for (const voter of voters) {
             let displayName = voter.firstname || 'Anonymous';
             if (voter.lastname && voter.lastname.length > 0) {
-              displayName = `${displayName}&nbsp;${voter.lastname.charAt(0)}`;
+              displayName = `${displayName}&nbsp;${voter.lastname.charAt(0)}.`;
             }
             processedNames.push(displayName);
           }
@@ -1045,7 +1045,7 @@ class Vibe {
             } else {
               const allButLast = processedNames.slice(0, -1);
               const last = processedNames.slice(-1)[0];
-              extraNameAttributeValue = `♡ ${allButLast.join(', ')} & ${last}`;
+              extraNameAttributeValue = `♡ ${allButLast.join(' • ')} & ${last}`;
             }
           }
 
