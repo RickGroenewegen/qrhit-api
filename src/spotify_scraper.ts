@@ -291,6 +291,8 @@ class SpotifyScraper {
         1
       );
 
+      console.log(123, response.data);
+
       if (response.data && response.data.status === true) {
         if (
           response.data.contents &&
