@@ -545,8 +545,8 @@ model CompanyList {
   Company               Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
   CompanyListSubmission CompanyListSubmission[]
   CompanyListQuestion   CompanyListQuestion[]
-  Playlist              Playlist?               @relation(fields: [playlistId], references: [id], onDelete: Cascade)
-  Payment               Payment?                @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  Playlist              Playlist?               @relation(fields: [playlistId], references: [id], onDelete: SetNull)
+  Payment               Payment?                @relation(fields: [paymentId], references: [id], onDelete: SetNull)
 
   @@map("company_lists")
 }
