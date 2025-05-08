@@ -198,6 +198,7 @@ class SpotifyScraper {
 
         // Transform the scraper API response to match the expected format
         const apiData = response.data;
+
         const playlistImage =
           apiData.images &&
           apiData.images.length > 0 &&
@@ -213,11 +214,11 @@ class SpotifyScraper {
           description: apiData.description || '',
           numberOfTracks: apiData.trackCount || 0,
           image: playlistImage,
-          // Add other fields from spotify_api.ts if they are available in apiData and needed
-          // For example, if spotify.ts expects playlistData.tracks.total, ensure it's mapped.
-          // Here, numberOfTracks covers that.
           tracks: { total: apiData.trackCount || 0 }, // To match spotify_api structure if spotify.ts uses it
         };
+
+        console.log(333, transformedData);
+
         return { success: true, data: transformedData };
       } else {
         // Scraper API indicated an error or returned unexpected data
@@ -447,10 +448,7 @@ class SpotifyScraper {
       );
 
       if (response.data && response.data.status === true) {
-        if (
-          response.data.tracks &&
-          Array.isArray(response.data.tracks.items)
-        ) {
+        if (response.data.tracks && Array.isArray(response.data.tracks.items)) {
           const transformedItems = response.data.tracks.items
             .map((apiItem: any) => {
               if (!apiItem || !apiItem.id) {
@@ -486,9 +484,7 @@ class SpotifyScraper {
                 apiItem.album.cover.length > 0
               ) {
                 albumImagesList = apiItem.album.cover
-                  .map((image: any) =>
-                    image.url ? { url: image.url } : null
-                  )
+                  .map((image: any) => (image.url ? { url: image.url } : null))
                   .filter((image: any) => image !== null);
               }
               const albumName = apiItem.album?.name || 'Unknown Album';
