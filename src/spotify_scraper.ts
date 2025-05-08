@@ -213,11 +213,9 @@ class SpotifyScraper {
           name: apiData.name,
           description: apiData.description || '',
           numberOfTracks: apiData.trackCount || 0,
-          image: playlistImage,
+          images: playlistImage ? [{ url: playlistImage }] : [],
           tracks: { total: apiData.trackCount || 0 }, // To match spotify_api structure if spotify.ts uses it
         };
-
-        console.log(333, transformedData);
 
         return { success: true, data: transformedData };
       } else {
