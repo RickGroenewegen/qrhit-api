@@ -753,7 +753,7 @@ ${params.html}
       ];
 
       const rawEmail = await this.renderRaw({
-        from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+        from: `OnzeVibe <${process.env['FROM_EMAIL']}>`,
         to: email,
         subject,
         html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
