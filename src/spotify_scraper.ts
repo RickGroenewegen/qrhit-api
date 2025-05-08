@@ -291,16 +291,25 @@ class SpotifyScraper {
         1
       );
 
-      console.log(123, response.data);
-
       if (response.data && response.data.status === true) {
         if (
           response.data.contents &&
           Array.isArray(response.data.contents.items)
         ) {
-          // The new API returns all items directly under contents.items
-          // and contents also includes totalCount.
-          return { success: true, data: response.data.contents };
+          // Transform scraper items to match the { track: ... } structure expected by spotify.ts
+          const transformedItems = response.data.contents.items.map(
+            (scraperTrack: any) => ({ track: scraperTrack })
+          );
+          // Return data structured similarly to spotify_api.ts, with an 'items' key
+          return {
+            success: true,
+            data: {
+              items: transformedItems,
+              // totalCount from scraper's response.data.contents.totalCount can be included if needed
+              // For now, matching spotify_api.ts which doesn't explicitly return total here.
+              // spotify.ts calculates its own totalTracks after processing.
+            },
+          };
         } else {
           this.logger.log(
             color.yellow(
