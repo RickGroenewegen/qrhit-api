@@ -29,7 +29,7 @@ class Spotify {
   private spotifyRapidApi = new SpotifyRapidApi(); // Instantiate SpotifyRapidApi
   private spotifyScraper = new SpotifyScraper(); // Instantiate SpotifyScraper if needed
 
-  private api = this.spotifyScraper; // Default to SpotifyApi
+  private api = this.spotifyScraper; // Default to SpotifyScraper
 
   public async getPlaylist(
     playlistId: string,
@@ -642,9 +642,9 @@ class Spotify {
       }
 
       let result = await this.api.searchTracks(searchTerm, limit, offset);
-      let apiUsed = 'SpotifyAPI'; // Assume primary API is used initially
+      let apiUsed = 'ScraperAPI'; // Primary API is now the SpotifyScraper
 
-      // If the primary API call (this.api which is SpotifyApi) fails due to rate limiting (429)
+      // If the primary API call (this.api which is SpotifyScraper) fails due to rate limiting (429)
       // after its internal retries, then attempt fallback to SpotifyRapidApi.
       if (
         !result.success &&
