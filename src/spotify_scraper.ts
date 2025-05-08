@@ -152,7 +152,7 @@ class SpotifyRapidApi {
   private analytics = AnalyticsClient.getInstance();
   private rapidAPIQueue = RapidAPIQueue.getInstance();
   private rapidApiKey = process.env['RAPID_API_KEY'];
-  private rapidApiHost = 'spotify23.p.rapidapi.com';
+  private rapidApiHost = 'spotify-scraper.p.rapidapi.com';
 
   /**
    * Helper to create standard RapidAPI request options.
@@ -183,47 +183,50 @@ class SpotifyRapidApi {
    */
   public async getPlaylist(playlistId: string): Promise<ApiResult> {
     try {
-      const options = this.createOptions('/playlist', { id: playlistId });
+      const options = this.createOptions('/v1/playlist/metadata', { playlistId: playlistId });
       // Make the request directly
       const response = await axios.request(options);
-      this.analytics.increaseCounter(
-        'spotify_rapidapi',
-        'getPlaylist_called',
-        1
-      );
 
-      // Check if the response contains the expected data structure
-      // Adjust this check based on the actual structure returned by RapidAPI for playlists
-      if (!response.data) {
-        // A basic check, might need to be more specific (e.g., response.data.name)
+      if (response.data && response.data.status === true) {
+        this.analytics.increaseCounter(
+          'spotify_rapidapi',
+          'getPlaylist_called',
+          1
+        );
+        // Return the playlist data directly from the scraper API
+        return { success: true, data: response.data };
+      } else {
+        // Scraper API indicated an error or returned unexpected data
+        const errorMessage = response.data?.errorId || 'Unexpected response from Scraper API';
         this.logger.log(
           color.yellow(
-            `RapidAPI getPlaylist for ${playlistId} returned unexpected data.`
+            `Scraper API getPlaylist for ${playlistId} failed: ${errorMessage}`
           )
         );
-        return { success: false, error: 'Unexpected response from RapidAPI' };
+        // Assuming 'PlaylistProcessError' or similar might be a specific errorId for not found
+        // Adjust if specific errorIds for "not found" are known
+        if (errorMessage.toLowerCase().includes('not found') || errorMessage.toLowerCase().includes('invalid playlistid')) {
+            return { success: false, error: 'playlistNotFound' };
+        }
+        return { success: false, error: `Scraper API error: ${errorMessage}` };
       }
-
-      // Return the playlist data directly
-      // The structure might differ from Spotify API, ensure the calling code handles it
-      return { success: true, data: response.data };
     } catch (error) {
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
       const message = axiosError.message;
       this.logger.log(
         color.red.bold(
-          `Error fetching RapidAPI playlist ${playlistId}: ${status} - ${message}`
+          `Error fetching Scraper API playlist ${playlistId}: ${status} - ${message}`
         )
       );
 
-      if (status === 404) {
-        return { success: false, error: 'playlistNotFound' }; // Map 404
+      if (status === 404) { // HTTP 404
+        return { success: false, error: 'playlistNotFound' };
       }
       // Return a generic error for other issues
       return {
         success: false,
-        error: `RapidAPI error fetching playlist: ${status || message}`,
+        error: `Scraper API error fetching playlist: ${status || message}`,
       };
     }
   }
