@@ -581,7 +581,6 @@ model CompanyListSubmission {
   companyListId    Int
   hash             String    @unique
   verificationHash String?   @unique
-  name             String?
   firstname        String?
   lastname         String?
   email            String?

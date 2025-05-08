@@ -29,7 +29,7 @@ class Spotify {
   private spotifyRapidApi = new SpotifyRapidApi(); // Instantiate SpotifyRapidApi
   private spotifyScraper = new SpotifyScraper(); // Instantiate SpotifyScraper if needed
 
-  private api = this.spotifyScraper; // Default to SpotifyScraper
+  private api = this.spotifyApi; // Default to SpotifyScraper
 
   public async getPlaylist(
     playlistId: string,

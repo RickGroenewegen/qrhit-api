@@ -173,7 +173,7 @@ class Hitlist {
             firstname: firstname || null,
             lastname: lastname || null,
             email: email || null,
-            agreeToUseName: agreeToUseName, 
+            agreeToUseName: agreeToUseName,
           },
         });
 
@@ -190,7 +190,6 @@ class Hitlist {
           where: { id: submission.id },
           data: {
             status: 'pending_verification', // Changed from 'submitted' to 'pending_verification'
-            name: constructedFullname || submission.name,
             firstname: firstname || submission.firstname,
             lastname: lastname || submission.lastname,
             email: email || submission.email,
@@ -204,7 +203,7 @@ class Hitlist {
       if (email && submission.verificationHash) {
         await this.mail.sendVerificationEmail(
           email,
-          constructedFullname || email.split('@')[0],
+          constructedFullname!,
           companyList.Company.name,
           submission.verificationHash,
           companyList.slug!
