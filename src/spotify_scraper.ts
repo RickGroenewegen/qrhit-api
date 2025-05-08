@@ -298,16 +298,41 @@ class SpotifyScraper {
         ) {
           // Transform scraper items to match the { track: ... } structure expected by spotify.ts
           const transformedItems = response.data.contents.items.map(
-            (scraperTrack: any) => ({ track: scraperTrack })
+            (scraperItem: any) => {
+              const trackDetails = {
+                id: scraperItem.id,
+                name: scraperItem.name,
+                artists:
+                  scraperItem.artists?.map((artist: any) => ({
+                    name: artist.name,
+                  })) || [],
+                album: {
+                  name: scraperItem.album?.name || '',
+                  images:
+                    scraperItem.album?.cover?.map((image: any) => ({
+                      url: image.url,
+                    })) || [],
+                  // release_date is not directly available in scraper's playlist track item.
+                  // spotify.ts will handle its absence.
+                },
+                external_urls: { spotify: scraperItem.shareUrl || '' },
+                // external_ids (isrc) is not directly available. spotify.ts will handle.
+                // preview_url is not directly available. Set to null; spotify.ts will handle.
+                preview_url: null,
+                // Include other fields if they are available in scraperItem and expected by spotify.ts
+                // For example, if scraperItem had external_ids: { isrc: '...' }
+                // external_ids: scraperItem.external_ids,
+              };
+              return { track: trackDetails };
+            }
           );
-          // Return data structured similarly to spotify_api.ts, with an 'items' key
 
+          // Return data structured similarly to spotify_api.ts, with an 'items' key
           return {
             success: true,
             data: {
               items: transformedItems,
               // totalCount from scraper's response.data.contents.totalCount can be included if needed
-              // For now, matching spotify_api.ts which doesn't explicitly return total here.
               // spotify.ts calculates its own totalTracks after processing.
             },
           };
