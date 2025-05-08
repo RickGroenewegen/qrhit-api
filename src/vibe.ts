@@ -1040,7 +1040,7 @@ class Vibe {
 
           let extraNameAttributeValue = '';
           if (processedNames.length > 0) {
-            extraNameAttributeValue = `♡ ${processedNames.join(' • ')}`;
+            extraNameAttributeValue = `${processedNames.join(' • ')}`; //♡
           }
 
           trackExtraInfoCreations.push(
@@ -1091,12 +1091,33 @@ class Vibe {
     const price = 100;
 
     // Get the company list details
-    const companyList = await this.prisma.companyList.findUnique({
+    let companyList = await this.prisma.companyList.findUnique({
       where: { id: listId },
       include: {
         Company: true,
       },
     });
+
+    companyList = await this.prisma.companyList.findUnique({
+      where: { id: listId },
+      include: {
+        Company: true,
+      },
+    });
+
+    if (companyList) {
+      // Remove the playlist and payment using the paymentId and playlistId on the companyList
+      if (companyList.playlistId) {
+        await this.prisma.playlist.delete({
+          where: { id: companyList.playlistId },
+        });
+      }
+      if (companyList.paymentId) {
+        await this.prisma.payment.delete({
+          where: { id: companyList.paymentId },
+        });
+      }
+    }
 
     // Update the list status to 'generating_pdf' using prisma
     await this.prisma.companyList.update({
@@ -1290,6 +1311,8 @@ class Vibe {
         );
       }
 
+      const payment = await this.mollie.getPayment(result.data.paymentId);
+
       const trackCountFull = await this.prisma.playlistHasTrack.count({
         where: {
           playlistId: playlist.id,
@@ -1312,13 +1335,14 @@ class Vibe {
         where: { id: listId },
         data: {
           playlistId: playlist.id,
+          paymentId: payment.id,
           numberOfUncheckedTracks: trackCountUnchecked,
           totalSpotifyTracks: trackCountFull,
         },
       });
     }
 
-    if (user) {
+    if (user && companyList) {
       const downloadLink = `${process.env['API_URI']}/download/${result.data.paymentId}/${user.hash}/${playlistId}/printer`;
       const reviewLink = `${process.env['FRONTEND_URI']}/usersuggestions/${result.data.paymentId}/${user.hash}/${playlistId}/0`;
 
