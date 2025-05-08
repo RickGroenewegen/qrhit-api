@@ -147,7 +147,7 @@ class RapidAPIQueue {
 }
 // --- End RapidAPI Queue ---
 
-class SpotifyRapidApi {
+class SpotifyScraper {
   private logger = new Logger();
   private analytics = AnalyticsClient.getInstance();
   private rapidAPIQueue = RapidAPIQueue.getInstance();
@@ -183,7 +183,9 @@ class SpotifyRapidApi {
    */
   public async getPlaylist(playlistId: string): Promise<ApiResult> {
     try {
-      const options = this.createOptions('/v1/playlist/metadata', { playlistId: playlistId });
+      const options = this.createOptions('/v1/playlist/metadata', {
+        playlistId: playlistId,
+      });
       // Make the request directly
       const response = await axios.request(options);
 
@@ -197,7 +199,8 @@ class SpotifyRapidApi {
         return { success: true, data: response.data };
       } else {
         // Scraper API indicated an error or returned unexpected data
-        const errorMessage = response.data?.errorId || 'Unexpected response from Scraper API';
+        const errorMessage =
+          response.data?.errorId || 'Unexpected response from Scraper API';
         this.logger.log(
           color.yellow(
             `Scraper API getPlaylist for ${playlistId} failed: ${errorMessage}`
@@ -205,8 +208,11 @@ class SpotifyRapidApi {
         );
         // Assuming 'PlaylistProcessError' or similar might be a specific errorId for not found
         // Adjust if specific errorIds for "not found" are known
-        if (errorMessage.toLowerCase().includes('not found') || errorMessage.toLowerCase().includes('invalid playlistid')) {
-            return { success: false, error: 'playlistNotFound' };
+        if (
+          errorMessage.toLowerCase().includes('not found') ||
+          errorMessage.toLowerCase().includes('invalid playlistid')
+        ) {
+          return { success: false, error: 'playlistNotFound' };
         }
         return { success: false, error: `Scraper API error: ${errorMessage}` };
       }
@@ -220,7 +226,8 @@ class SpotifyRapidApi {
         )
       );
 
-      if (status === 404) { // HTTP 404
+      if (status === 404) {
+        // HTTP 404
         return { success: false, error: 'playlistNotFound' };
       }
       // Return a generic error for other issues
@@ -264,7 +271,10 @@ class SpotifyRapidApi {
       );
 
       if (response.data && response.data.status === true) {
-        if (response.data.contents && Array.isArray(response.data.contents.items)) {
+        if (
+          response.data.contents &&
+          Array.isArray(response.data.contents.items)
+        ) {
           // The new API returns all items directly under contents.items
           // and contents also includes totalCount.
           return { success: true, data: response.data.contents };
@@ -274,17 +284,24 @@ class SpotifyRapidApi {
               `Scraper API getTracks for ${playlistId} returned unexpected data structure.`
             )
           );
-          return { success: false, error: 'Unexpected data structure from Scraper API' };
+          return {
+            success: false,
+            error: 'Unexpected data structure from Scraper API',
+          };
         }
       } else {
         // Scraper API indicated an error
-        const errorMessage = response.data?.errorId || 'Unknown error from Scraper API';
+        const errorMessage =
+          response.data?.errorId || 'Unknown error from Scraper API';
         this.logger.log(
           color.yellow(
             `Scraper API getTracks for ${playlistId} failed: ${errorMessage}`
           )
         );
-        if (errorMessage.toLowerCase().includes('not found') || errorMessage.toLowerCase().includes('invalid playlistid')) {
+        if (
+          errorMessage.toLowerCase().includes('not found') ||
+          errorMessage.toLowerCase().includes('invalid playlistid')
+        ) {
           return { success: false, error: 'playlistNotFound' };
         }
         return { success: false, error: `Scraper API error: ${errorMessage}` };
@@ -299,7 +316,8 @@ class SpotifyRapidApi {
         )
       );
 
-      if (status === 404) { // HTTP 404
+      if (status === 404) {
+        // HTTP 404
         return { success: false, error: 'playlistNotFound' };
       }
       // Return a generic error for other issues
@@ -399,8 +417,13 @@ class SpotifyRapidApi {
         limit: limit.toString(),
         numberOfTopResults: '5', // Example parameter, adjust based on API
       });
+
+      console.log(111, options);
+
       // Make the request directly
       const response = await axios.request(options);
+
+      console.log(222, response.data);
 
       this.analytics.increaseCounter(
         'spotify_rapidapi',
@@ -515,4 +538,4 @@ class SpotifyRapidApi {
   }
 }
 
-export default SpotifyRapidApi;
+export default SpotifyScraper;
