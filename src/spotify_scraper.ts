@@ -406,126 +406,137 @@ class SpotifyScraper {
       return { success: false, error: 'Search term is required' };
     }
 
-    // Removed logger call: Searching RapidAPI for tracks...
+    // Logger call for searching tracks is intentionally omitted as per previous version.
 
     try {
-      // Note: RapidAPI search endpoint might have different parameter names or structure. Adjust as needed.
-      const options = this.createOptions('/search/', {
-        q: searchTerm,
-        type: 'tracks', // Assuming 'tracks' type parameter
-        offset: offset.toString(),
-        limit: limit.toString(),
-        numberOfTopResults: '5', // Example parameter, adjust based on API
+      const options = this.createOptions('/v1/search', {
+        term: searchTerm,
+        type: 'track', // API expects 'track' (singular)
+        // limit and offset are not supported by this Scraper API endpoint
       });
-
-      console.log(111, options);
 
       // Make the request directly
       const response = await axios.request(options);
 
-      console.log(222, response.data);
-
       this.analytics.increaseCounter(
-        'spotify_rapidapi',
+        'spotify_rapidapi', // Consider changing to 'spotify_scraper' for clarity
         'searchTracks_called',
         1
       );
 
-      // Check and return the response data
-      if (!response.data) {
-        // Removed logger call: RapidAPI searchTracks returned no data.
-        return { success: false, error: 'No results from RapidAPI' };
-      }
+      if (response.data && response.data.status === true) {
+        if (
+          response.data.tracks &&
+          Array.isArray(response.data.tracks.items)
+        ) {
+          const transformedItems = response.data.tracks.items
+            .map((apiItem: any) => {
+              if (!apiItem || !apiItem.id) {
+                this.logger.log(
+                  color.yellow(
+                    'Scraper API search returned an item without an ID. Skipping.'
+                  )
+                );
+                return null;
+              }
 
-      // Adapt this based on the actual RapidAPI response structure.
-      // The RapidAPI search result has items nested under item.data,
-      // and the structure of artists/album differs from the direct Spotify API.
-      // We need to transform it to match the expected Spotify API structure
-      // so that spotify.ts can process it correctly.
+              let artistsList = [{ name: 'Unknown Artist' }];
+              if (
+                apiItem.artists &&
+                Array.isArray(apiItem.artists) &&
+                apiItem.artists.length > 0
+              ) {
+                const mappedArtists = apiItem.artists
+                  .map((artist: any) =>
+                    artist.name ? { name: artist.name } : null
+                  )
+                  .filter((artist: any) => artist !== null);
+                if (mappedArtists.length > 0) {
+                  artistsList = mappedArtists;
+                }
+              }
 
-      if (
-        response.data &&
-        response.data.tracks &&
-        Array.isArray(response.data.tracks.items)
-      ) {
-        const transformedItems = response.data.tracks.items
-          .map((apiItem: any) => {
-            const trackDetails = apiItem.data;
-            // Ensure trackDetails and its id exist, otherwise skip this item
-            if (!trackDetails || !trackDetails.id) {
-              return null;
-            }
+              let albumImagesList: { url: string }[] = [];
+              if (
+                apiItem.album &&
+                apiItem.album.cover &&
+                Array.isArray(apiItem.album.cover) &&
+                apiItem.album.cover.length > 0
+              ) {
+                albumImagesList = apiItem.album.cover
+                  .map((image: any) =>
+                    image.url ? { url: image.url } : null
+                  )
+                  .filter((image: any) => image !== null);
+              }
+              const albumName = apiItem.album?.name || 'Unknown Album';
 
-            // Artists: Map from RapidAPI structure (e.g., { items: [{ profile: { name: ... } }] }) to { name: string }[]
-            const artists =
-              trackDetails.artists?.items
-                ?.map((artistItem: any) => ({
-                  name: artistItem.profile?.name,
-                }))
-                .filter((artist: any) => artist.name) || []; // Filter out artists without names
+              return {
+                id: apiItem.id,
+                name: apiItem.name || 'Unknown Track',
+                artists: artistsList,
+                album: {
+                  name: albumName,
+                  images: albumImagesList,
+                },
+                // Add other fields if spotify.ts expects them, e.g., external_urls, preview_url
+                // external_urls: { spotify: apiItem.shareUrl }, // Example based on new API structure
+                // preview_url: null, // New API doesn't seem to provide preview_url directly in search
+              };
+            })
+            .filter((track: any) => track !== null);
 
-            // Album: Map from RapidAPI structure (e.g., { coverArt: { sources: [...] }, name: ... })
-            // to { images: { url: string }[], name: string }
-            const albumImages =
-              trackDetails.albumOfTrack?.coverArt?.sources
-                ?.map((source: any) => ({
-                  url: source.url,
-                }))
-                .filter((image: any) => image.url) || []; // Filter out images without URLs
+          const total =
+            typeof response.data.tracks.totalCount === 'number'
+              ? response.data.tracks.totalCount
+              : transformedItems.length;
 
-            const album = {
-              name: trackDetails.albumOfTrack?.name || 'Unknown Album',
-              images: albumImages,
-            };
-
-            return {
-              id: trackDetails.id,
-              name: trackDetails.name,
-              // Ensure artists array is not empty for compatibility with spotify.ts mapping (item.artists[0])
-              artists:
-                artists.length > 0 ? artists : [{ name: 'Unknown Artist' }],
-              album: album, // Ensure album object with images array for spotify.ts mapping (item.album.images[0])
-              // Other fields like external_urls, preview_url can be added if needed by spotify.ts
-              // For example:
-              // external_urls: { spotify: trackDetails.uri },
-              // preview_url: trackDetails.playability?.playable ? trackDetails.uri : null, // Example, check actual structure
-            };
-          })
-          .filter((track: any) => track !== null); // Filter out any nulls resulting from invalid items
-
-        // Ensure total is a number, fallback to items length if not present or not a number
-        const total =
-          typeof response.data.tracks.totalCount === 'number'
-            ? response.data.tracks.totalCount
-            : transformedItems.length;
-
-        return {
-          success: true,
-          data: {
-            tracks: {
-              items: transformedItems,
-              total: total, // spotify.ts expects 'total'
+          return {
+            success: true,
+            data: {
+              tracks: {
+                items: transformedItems,
+                total: total,
+              },
             },
-          },
-        };
+          };
+        } else {
+          this.logger.log(
+            color.yellow(
+              `Scraper API searchTracks for "${searchTerm}" returned no items or an unexpected data structure.`
+            )
+          );
+          return {
+            success: false,
+            error:
+              'No items or unexpected data structure from Scraper API search',
+          };
+        }
       } else {
-        // Handle cases where the structure is not as expected
-        // Removed logger call: RapidAPI searchTracks returned no items or an unexpected data structure.
-        return {
-          success: false,
-          error: 'No items or unexpected data structure from RapidAPI search',
-        };
+        // Scraper API indicated an error
+        const errorMessage =
+          response.data?.errorId || 'Unknown error from Scraper API';
+        this.logger.log(
+          color.yellow(
+            `Scraper API searchTracks for "${searchTerm}" failed: ${errorMessage}`
+          )
+        );
+        return { success: false, error: `Scraper API error: ${errorMessage}` };
       }
     } catch (error) {
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
       const message = axiosError.message;
-      // Removed logger call: Error searching RapidAPI tracks...
+      this.logger.log(
+        color.red.bold(
+          `Error searching Scraper API tracks for "${searchTerm}": ${status} - ${message}`
+        )
+      );
 
       // Return a generic error for search issues
       return {
         success: false,
-        error: `RapidAPI error searching tracks: ${status || message}`,
+        error: `Scraper API error searching tracks: ${status || message}`,
       };
     }
   }
