@@ -13,8 +13,9 @@ import Logger from './logger';
 import { Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
 import Translation from './translation';
-import SpotifyApi from './spotify_api'; // Import the new class
-import SpotifyRapidApi from './spotify_rapidapi'; // Import the new class
+import SpotifyApi from './spotify_api';
+import SpotifyRapidApi from './spotify_rapidapi';
+import SpotifyScraper from './spotify_scraper';
 
 class Spotify {
   private cache = Cache.getInstance();
@@ -26,8 +27,9 @@ class Spotify {
   private logger = new Logger(); // Add logger instance
   private spotifyApi = new SpotifyApi(); // Instantiate SpotifyApi
   private spotifyRapidApi = new SpotifyRapidApi(); // Instantiate SpotifyRapidApi
+  private spotifyScraper = new SpotifyScraper(); // Instantiate SpotifyScraper if needed
 
-  private api = this.spotifyApi; // Default to SpotifyApi
+  private api = this.spotifyScraper; // Default to SpotifyApi
 
   public async getPlaylist(
     playlistId: string,
