@@ -624,6 +624,9 @@ class Spotify {
     }
   }
 
+  // Track which API was used last for round-robin fallback
+  private lastSearchApi: 'scraper' | 'rapidapi' = 'scraper';
+
   public async searchTracks(
     searchTerm: string,
     limit: number = 10,
@@ -644,19 +647,53 @@ class Spotify {
       let result = await this.api.searchTracks(searchTerm, limit, offset);
       let apiUsed = 'ScraperAPI'; // Primary API is now the SpotifyScraper
 
-      // If the primary API call (this.api which is SpotifyScraper) fails due to rate limiting (429)
-      // after its internal retries, then attempt fallback to SpotifyRapidApi.
+      // If the primary API call fails due to rate limiting (429)
+      // use round-robin between SpotifyScraper and SpotifyRapidApi
       if (
         !result.success &&
         (result.error?.includes('429') || result.retryAfter !== undefined)
       ) {
-        apiUsed = 'RapidAPI'; // Mark that fallback API is being attempted
-        result = await this.spotifyRapidApi.searchTracks(
-          searchTerm,
-          limit,
-          offset
-        );
-        // No specific logs here for fallback success/failure, main log will cover it
+        // Toggle between APIs for round-robin load balancing
+        this.lastSearchApi = this.lastSearchApi === 'scraper' ? 'rapidapi' : 'scraper';
+        
+        if (this.lastSearchApi === 'rapidapi') {
+          apiUsed = 'RapidAPI';
+          result = await this.spotifyRapidApi.searchTracks(
+            searchTerm,
+            limit,
+            offset
+          );
+        } else {
+          apiUsed = 'ScraperAPI (fallback)';
+          result = await this.spotifyScraper.searchTracks(
+            searchTerm,
+            limit,
+            offset
+          );
+        }
+        
+        // If the first fallback also fails with 429, try the other API as a last resort
+        if (
+          !result.success &&
+          (result.error?.includes('429') || result.retryAfter !== undefined)
+        ) {
+          // Use the API we didn't just try
+          if (this.lastSearchApi === 'rapidapi') {
+            apiUsed = 'ScraperAPI (last resort)';
+            result = await this.spotifyScraper.searchTracks(
+              searchTerm,
+              limit,
+              offset
+            );
+          } else {
+            apiUsed = 'RapidAPI (last resort)';
+            result = await this.spotifyRapidApi.searchTracks(
+              searchTerm,
+              limit,
+              offset
+            );
+          }
+        }
       }
 
       // Determine items found for logging
