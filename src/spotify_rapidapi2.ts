@@ -347,22 +347,27 @@ class SpotifyRapidApi2 {
         throw new Error('RAPID_API_KEY environment variable is not defined');
       }
 
-      // Prepare form data as a plain object for axios to encode as application/x-www-form-urlencoded
-      const formData = new URLSearchParams();
+      // Prepare form data as multipart/form-data using FormData
+      // Note: 'type' should be 'track' (not 'tracks') per your working request
+      // and limit can be set to 30 for parity with your example
+      const FormData = require('form-data');
+      const formData = new FormData();
       formData.append('query', searchTerm);
-      formData.append('type', 'tracks');
+      formData.append('type', 'track');
       formData.append('limit', limit.toString());
 
-      const response = await axios({
-        method: 'POST',
-        url: 'https://spotify-scraper2.p.rapidapi.com/search_all',
-        data: formData.toString(),
-        headers: {
-          'content-type': 'application/x-www-form-urlencoded',
-          'x-rapidapi-key': this.rapidApiKey,
-          'x-rapidapi-host': 'spotify-scraper2.p.rapidapi.com',
-        },
-      });
+      const response = await axios.post(
+        'https://spotify-scraper2.p.rapidapi.com/search_all',
+        formData,
+        {
+          headers: {
+            ...formData.getHeaders(),
+            'x-rapidapi-key': this.rapidApiKey,
+            'x-rapidapi-host': 'spotify-scraper2.p.rapidapi.com',
+            'accept': 'application/json',
+          },
+        }
+      );
 
       this.analytics.increaseCounter(
         'spotify_rapidapi2',
