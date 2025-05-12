@@ -16,6 +16,7 @@ import Translation from './translation';
 import SpotifyApi from './spotify_api';
 import SpotifyRapidApi from './spotify_rapidapi';
 import SpotifyScraper from './spotify_scraper';
+import SpotifyRapidApi2 from './spotify_rapidapi2';
 
 class Spotify {
   private cache = Cache.getInstance();
@@ -28,8 +29,9 @@ class Spotify {
   private spotifyApi = new SpotifyApi(); // Instantiate SpotifyApi
   private spotifyRapidApi = new SpotifyRapidApi(); // Instantiate SpotifyRapidApi
   private spotifyScraper = new SpotifyScraper(); // Instantiate SpotifyScraper if needed
+  private SpotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
 
-  private api = this.spotifyApi; // Default to SpotifyScraper
+  private api = this.SpotifyRapidApi2; // Default to SpotifyScraper
 
   public async getPlaylist(
     playlistId: string,

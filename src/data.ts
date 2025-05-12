@@ -1422,6 +1422,8 @@ class Data {
       WHERE year IS NULL AND trackId IN (${Prisma.join(trackIds)})
     `;
 
+    let updateCounter = 1;
+
     // Update years for tracks
     for (const track of tracksNeedingYearUpdate) {
       // Check for existing track with same ISRC and update if found
@@ -1437,7 +1439,9 @@ class Data {
                 track.artist
               )} - ${color.white.bold(
                 track.name
-              )}' using data from another track with matching ISRC`
+              )}' using data from another track with matching ISRC (${updateCounter} / ${
+                tracksNeedingYearUpdate.length
+              })`
             )
           );
         } else {
@@ -1447,7 +1451,9 @@ class Data {
                 track.artist
               )} - ${color.white.bold(
                 track.name
-              )}' using data from another track with matching artist and title`
+              )}' using data from another track with matching artist and title (${updateCounter} / ${
+                tracksNeedingYearUpdate.length
+              })`
             )
           );
         }
@@ -1494,11 +1500,22 @@ class Data {
               track.artist
             )} - ${color.white.bold(track.name)}' with year ${color.white.bold(
               result.year
-            )}`
+            )} (${updateCounter} / ${tracksNeedingYearUpdate.length})`
+          )
+        );
+      } else {
+        this.logger.log(
+          color.yellow.bold(
+            `Could not determine final year for named '${color.white.bold(
+              track.artist
+            )} - ${color.white.bold(track.name)}' with year ${color.white.bold(
+              result.year
+            )} (${updateCounter} / ${tracksNeedingYearUpdate.length})`
           )
         );
       }
     }
+    updateCounter++;
   }
 
   public async areAllTracksManuallyChecked(
