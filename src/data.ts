@@ -1439,9 +1439,9 @@ class Data {
                 track.artist
               )} - ${color.white.bold(
                 track.name
-              )}' using data from another track with matching ISRC (${updateCounter} / ${
-                tracksNeedingYearUpdate.length
-              })`
+              )}' using data from another track with matching ISRC (${color.white.bold(
+                updateCounter
+              )} / ${color.white.bold(tracksNeedingYearUpdate.length)})`
             )
           );
         } else {
@@ -1451,9 +1451,9 @@ class Data {
                 track.artist
               )} - ${color.white.bold(
                 track.name
-              )}' using data from another track with matching artist and title (${updateCounter} / ${
-                tracksNeedingYearUpdate.length
-              })`
+              )}' using data from another track with matching artist and title (${color.white.bold(
+                updateCounter
+              )} / ${color.white.bold(tracksNeedingYearUpdate.length)})`
             )
           );
         }
@@ -1500,7 +1500,9 @@ class Data {
               track.artist
             )} - ${color.white.bold(track.name)}' with year ${color.white.bold(
               result.year
-            )} (${updateCounter} / ${tracksNeedingYearUpdate.length})`
+            )} (${color.white.bold(updateCounter)} / ${color.white.bold(
+              tracksNeedingYearUpdate.length
+            )})`
           )
         );
       } else {
@@ -1510,12 +1512,14 @@ class Data {
               track.artist
             )} - ${color.white.bold(track.name)}' with year ${color.white.bold(
               result.year
-            )} (${updateCounter} / ${tracksNeedingYearUpdate.length})`
+            )} (${color.white.bold(updateCounter)} / ${color.white.bold(
+              tracksNeedingYearUpdate.length
+            )})`
           )
         );
       }
+      updateCounter++;
     }
-    updateCounter++;
   }
 
   public async areAllTracksManuallyChecked(
