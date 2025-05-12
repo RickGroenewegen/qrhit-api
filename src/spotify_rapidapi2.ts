@@ -410,6 +410,8 @@ class SpotifyRapidApi2 {
         },
       };
     } catch (error) {
+      console.log(error);
+
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
       const message = axiosError.message;
