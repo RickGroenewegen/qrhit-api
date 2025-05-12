@@ -347,27 +347,22 @@ class SpotifyRapidApi2 {
         throw new Error('RAPID_API_KEY environment variable is not defined');
       }
 
-      // Prepare form data
+      // Prepare form data as a plain object for axios to encode as application/x-www-form-urlencoded
       const formData = new URLSearchParams();
       formData.append('query', searchTerm);
       formData.append('type', 'tracks');
       formData.append('limit', limit.toString());
 
-      console.log(111, formData);
-
-      const response = await axios.post(
-        'https://spotify-scraper2.p.rapidapi.com/search_all',
-        formData,
-        {
-          headers: {
-            'content-type': 'application/x-www-form-urlencoded',
-            'x-rapidapi-key': this.rapidApiKey,
-            'x-rapidapi-host': 'spotify-scraper2.p.rapidapi.com',
-          },
-        }
-      );
-
-      console.log(222, response.data);
+      const response = await axios({
+        method: 'POST',
+        url: 'https://spotify-scraper2.p.rapidapi.com/search_all',
+        data: formData.toString(),
+        headers: {
+          'content-type': 'application/x-www-form-urlencoded',
+          'x-rapidapi-key': this.rapidApiKey,
+          'x-rapidapi-host': 'spotify-scraper2.p.rapidapi.com',
+        },
+      });
 
       this.analytics.increaseCounter(
         'spotify_rapidapi2',
@@ -390,7 +385,6 @@ class SpotifyRapidApi2 {
       // The structure is: { tracks: { items: [...] } }
       // Each item is a track object with album, artists, etc.
       const transformedItems = response.data.tracks.items.map((item: any) => {
-        // Defensive: ensure required fields exist
         return {
           id: item.id,
           name: item.track_name || item.name,
