@@ -654,8 +654,9 @@ class Spotify {
         (result.error?.includes('429') || result.retryAfter !== undefined)
       ) {
         // Toggle between APIs for round-robin load balancing
-        this.lastSearchApi = this.lastSearchApi === 'scraper' ? 'rapidapi' : 'scraper';
-        
+        this.lastSearchApi =
+          this.lastSearchApi === 'scraper' ? 'rapidapi' : 'scraper';
+
         if (this.lastSearchApi === 'rapidapi') {
           apiUsed = 'RapidAPI';
           result = await this.spotifyRapidApi.searchTracks(
@@ -671,7 +672,7 @@ class Spotify {
             offset
           );
         }
-        
+
         // If the first fallback also fails with 429, try the other API as a last resort
         if (
           !result.success &&
