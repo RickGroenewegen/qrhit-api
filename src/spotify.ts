@@ -645,7 +645,7 @@ class Spotify {
       }
 
       let result = await this.api.searchTracks(searchTerm, limit, offset);
-      let apiUsed = 'ScraperAPI'; // Primary API is now the SpotifyScraper
+      let apiUsed = 'SpotifyAPI';
 
       // If the primary API call fails due to rate limiting (429)
       // use round-robin between SpotifyScraper and SpotifyRapidApi
@@ -665,7 +665,7 @@ class Spotify {
             offset
           );
         } else {
-          apiUsed = 'ScraperAPI (fallback)';
+          apiUsed = 'ScraperAPI';
           result = await this.spotifyScraper.searchTracks(
             searchTerm,
             limit,
