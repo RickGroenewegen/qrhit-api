@@ -470,6 +470,7 @@ class Mollie {
             filename: true,
             eco: true,
             doubleSided: true,
+            background: true,
             orderType: {
               select: {
                 name: true,
