@@ -471,6 +471,7 @@ class Mollie {
             eco: true,
             doubleSided: true,
             background: true,
+            logo: true,
             orderType: {
               select: {
                 name: true,
