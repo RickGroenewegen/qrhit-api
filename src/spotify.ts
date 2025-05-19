@@ -31,7 +31,7 @@ class Spotify {
   private spotifyScraper = new SpotifyScraper(); // Instantiate SpotifyScraper if needed
   private SpotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
 
-  private api = this.spotifyRapidApi; // Default to SpotifyScraper
+  private api = this.spotifyApi; // Default to SpotifyScraper
 
   public async getPlaylist(
     playlistId: string,
