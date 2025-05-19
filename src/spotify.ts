@@ -31,7 +31,7 @@ class Spotify {
   private spotifyScraper = new SpotifyScraper(); // Instantiate SpotifyScraper if needed
   private SpotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
 
-  private api = this.spotifyApi; // Default to SpotifyScraper
+  private api = this.spotifyRapidApi; // Default to SpotifyScraper
 
   public async getPlaylist(
     playlistId: string,
@@ -406,9 +406,9 @@ class Spotify {
               // Check DB map
               const trackInfo = trackMap.get(trackId);
               if (trackInfo) {
-                // trueYear = trackInfo.year;
-                // trueName = trackInfo.name;
-                // trueArtist = trackInfo.artist;
+                trueYear = trackInfo.year;
+                trueName = trackInfo.name;
+                trueArtist = trackInfo.artist;
                 extraNameAttribute = trackInfo.extraNameAttribute;
                 extraArtistAttribute = trackInfo.extraArtistAttribute;
               } else {
