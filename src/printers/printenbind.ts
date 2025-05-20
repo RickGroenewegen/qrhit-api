@@ -1254,7 +1254,6 @@ class PrintEnBind {
           where: { paymentId: payment.paymentId },
           data: {
             printApiTrackingLink: trackingLink,
-            printApiStatus: 'Submitted',
           },
         });
       }
@@ -1282,6 +1281,7 @@ class PrintEnBind {
           data: {
             printApiPrice,
             profit: newProfit,
+            printApiStatus: 'Submitted',
           },
         });
 
