@@ -708,7 +708,7 @@ ${params.html}
     const verificationLink = `${process.env['FRONTEND_VOTING_URI']}/hitlist/${slug}/verify/${verificationHash}`;
 
     const translations = await this.translation.getTranslationsByPrefix(
-      'en', // Default to English for now
+      'nl', // Default to Dutch for now
       'verification'
     );
 
@@ -739,8 +739,8 @@ ${params.html}
 
       const subject = `${this.translation.translate(
         'verification.subject',
-        'en'
-      )} - ${process.env['PRODUCT_NAME']}`;
+        'nl'
+      )} - OnzeVibe`;
 
       const attachments: Attachment[] = [
         {
