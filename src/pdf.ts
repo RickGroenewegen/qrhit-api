@@ -158,7 +158,7 @@ class PDF {
       if (template === 'printer') {
         if (payment.vibe) {
           // Happibox wants a 3% increase in size for the printer
-          await this.resizePDFPages(finalPath, 61.8, 61.8);
+          await this.resizePDFPages(finalPath, 59.74, 59.74);
         } else {
           // Resize them to exactly 60x60 mm because convertAPI is slightly off
           await this.resizePDFPages(finalPath, 60, 60);
