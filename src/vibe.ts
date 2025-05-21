@@ -43,7 +43,6 @@ class Vibe {
       let questions: any[] = [];
       let companyList: any = null; // Use 'any' or a more specific type if defined
       let ranking: any[] = []; // Initialize ranking array
-      let languages: string[] | undefined = undefined;
 
       // Import Translation here to avoid circular dependencies
       // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -119,12 +118,14 @@ class Vibe {
             // Keep ranking as empty array if retrieval fails
           }
 
-          // Set languages property if present
+          // Parse languages property into array if present
           if (companyList.languages) {
-            languages = companyList.languages
+            companyList.languages = companyList.languages
               .split(',')
               .map((lang: string) => lang.trim())
               .filter((lang: string) => !!lang);
+          } else {
+            companyList.languages = [];
           }
         } else {
           // If companyList is not found, return error early
@@ -132,14 +133,13 @@ class Vibe {
         }
       }
 
-      // Return the state object with list info, questions, ranking, languages, and availableLocales
+      // Return the state object with list info, questions, ranking, and availableLocales
       return {
         success: true,
         data: {
           questions,
-          list: companyList, // companyList now includes numberOfUncheckedTracks
+          list: companyList, // companyList now includes numberOfUncheckedTracks and languages as array
           ranking, // Add the ranking array here
-          languages: languages || [], // Add languages property (array)
           availableLocales: translationInstance.allLocales, // Add availableLocales property
         },
       };
