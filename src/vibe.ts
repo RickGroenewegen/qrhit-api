@@ -50,52 +50,47 @@ class Vibe {
       const translationInstance = new Translation();
 
       if (listId) {
+        // Get all available locales from translationInstance
+        const availableLocales = translationInstance.allLocales;
+        // Build the select object dynamically to include all description fields
+        const selectObj: Record<string, boolean | object> = {
+          id: true,
+          companyId: true,
+          name: true,
+          slug: true,
+          showNames: true,
+          background: true,
+          background2: true,
+          playlistSource: true,
+          totalSpotifyTracks: true,
+          numberOfUncheckedTracks: true,
+          playlistUrl: true,
+          playlistUrlFull: true,
+          qrColor: true,
+          textColor: true,
+          status: true,
+          numberOfTracks: true,
+          minimumNumberOfTracks: true,
+          numberOfCards: true,
+          startAt: true,
+          endAt: true,
+          votingBackground: true,
+          votingLogo: true,
+          Company: true,
+          downloadLink: true,
+          reviewLink: true,
+          hideCircle: true,
+          languages: true,
+        };
+        // Add all description fields for each locale
+        for (const locale of availableLocales) {
+          selectObj[`description_${locale}`] = true;
+        }
+
         // Check if company list exists
         companyList = await this.prisma.companyList.findUnique({
           where: { id: listId },
-          select: {
-            // Explicitly select fields including the requested ones
-            id: true,
-            companyId: true,
-            name: true,
-            // description: true, // REMOVED
-            slug: true,
-            showNames: true,
-            background: true,
-            background2: true,
-            playlistSource: true,
-            totalSpotifyTracks: true,
-            numberOfUncheckedTracks: true,
-            playlistUrl: true,
-            playlistUrlFull: true,
-            qrColor: true,
-            textColor: true,
-            status: true,
-            numberOfTracks: true,
-            minimumNumberOfTracks: true,
-            numberOfCards: true,
-            startAt: true,
-            endAt: true,
-            votingBackground: true,
-            votingLogo: true,
-            Company: true,
-            downloadLink: true,
-            reviewLink: true,
-            hideCircle: true,
-            languages: true, // Add languages property
-            description_en: true,
-            description_nl: true,
-            description_de: true,
-            description_fr: true,
-            description_es: true,
-            description_it: true,
-            description_pt: true,
-            description_pl: true,
-            description_hin: true,
-            description_jp: true,
-            description_cn: true,
-            description_ru: true,
-          },
+          select: selectObj,
         });
         if (companyList) {
           // Get all questions for this list with their options
@@ -543,23 +538,12 @@ class Vibe {
     try {
       const {
         name,
-        description_nl,
-        description_en,
-        description_de,
-        description_fr,
-        description_es,
-        description_it,
-        description_pt,
-        description_pl,
-        description_hin,
-        description_jp,
-        description_cn,
-        description_ru,
         slug,
         numberOfCards,
         numberOfTracks,
         playlistSource,
         playlistUrl,
+        // Remove hardcoded descriptions, will handle below
       } = listData;
 
       // Basic validation
@@ -610,23 +594,22 @@ class Vibe {
         };
       }
 
+      // Build descriptions for all available locales
+      const translationInstance = new (await import('./translation')).default();
+      const descriptions: Record<string, string | undefined> = {};
+      for (const locale of translationInstance.allLocales) {
+        const descKey = `description_${locale}`;
+        if (listData[descKey] !== undefined) {
+          descriptions[descKey] = listData[descKey];
+        }
+      }
+
       // Create the new company list
       const newList = await this.prisma.companyList.create({
         data: {
           companyId: companyId,
           name: name,
-          description_nl: description_nl,
-          description_en: description_en,
-          description_de: description_de,
-          description_fr: description_fr,
-          description_es: description_es,
-          description_it: description_it,
-          description_pt: description_pt,
-          description_pl: description_pl,
-          description_hin: description_hin,
-          description_jp: description_jp,
-          description_cn: description_cn,
-          description_ru: description_ru,
+          ...descriptions,
           slug: slug,
           numberOfCards: numberOfCards,
           numberOfTracks: numberOfTracks,
@@ -827,30 +810,15 @@ class Vibe {
 
       // Add text and numeric fields from the collected 'fields' object
       if (fields.name !== undefined) updateData.name = String(fields.name);
-      if (fields.description_nl !== undefined)
-        updateData.description_nl = String(fields.description_nl);
-      if (fields.description_en !== undefined)
-        updateData.description_en = String(fields.description_en);
-      if (fields.description_de !== undefined)
-        updateData.description_de = String(fields.description_de);
-      if (fields.description_fr !== undefined)
-        updateData.description_fr = String(fields.description_fr);
-      if (fields.description_es !== undefined)
-        updateData.description_es = String(fields.description_es);
-      if (fields.description_it !== undefined)
-        updateData.description_it = String(fields.description_it);
-      if (fields.description_pt !== undefined)
-        updateData.description_pt = String(fields.description_pt);
-      if (fields.description_pl !== undefined)
-        updateData.description_pl = String(fields.description_pl);
-      if (fields.description_hin !== undefined)
-        updateData.description_hin = String(fields.description_hin);
-      if (fields.description_jp !== undefined)
-        updateData.description_jp = String(fields.description_jp);
-      if (fields.description_cn !== undefined)
-        updateData.description_cn = String(fields.description_cn);
-      if (fields.description_ru !== undefined)
-        updateData.description_ru = String(fields.description_ru);
+
+      // Dynamically update all description fields for available locales
+      const translationInstance = new (await import('./translation')).default();
+      for (const locale of translationInstance.allLocales) {
+        const descKey = `description_${locale}`;
+        if (fields[descKey] !== undefined) {
+          updateData[descKey] = String(fields[descKey]);
+        }
+      }
 
       if (fields.playlistSource !== undefined)
         updateData.playlistSource = String(fields.playlistSource);
