@@ -579,20 +579,22 @@ class Hitlist {
         usedLocale = process.env.HITLIST_LOCALE;
       }
 
-      // Pick the right description field
-      const descKey = `description_${usedLocale}`;
-      const description =
-        (companyList as Record<string, any>)[descKey] ||
-        (companyList as Record<string, any>)['description_nl'] ||
-        (companyList as Record<string, any>)['description_en'] ||
-        '';
+      // Collect all description_[code] fields dynamically
+      const allDescriptions: Record<string, string> = {};
+      const translation = this.translation;
+      for (const locale of translation.allLocales) {
+        const key = `description_${locale}`;
+        if ((companyList as Record<string, any>)[key] !== undefined) {
+          allDescriptions[key] = (companyList as Record<string, any>)[key];
+        }
+      }
 
       return {
         success: true,
         data: {
           id: companyList.id,
           name: companyList.name,
-          description: description,
+          ...allDescriptions,
           numberOfTracks: companyList.numberOfTracks,
           minimumNumberOfTracks: companyList.minimumNumberOfTracks,
           numberOfCards: companyList.numberOfCards,
