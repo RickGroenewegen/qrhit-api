@@ -45,6 +45,7 @@ class Vibe {
       let questions: any[] = [];
       let companyList: any = null; // Use 'any' or a more specific type if defined
       let ranking: any[] = []; // Initialize ranking array
+      let submissions: any[] = []; // New: submissions array
 
       // Import Translation here to avoid circular dependencies
       // eslint-disable-next-line @typescript-eslint/no-var-requires
@@ -136,13 +137,30 @@ class Vibe {
           } else {
             companyList.languages = [];
           }
+
+          // New: Get submissions for this list
+          submissions = await this.prisma.companyListSubmission.findMany({
+            where: { companyListId: listId },
+            select: {
+              id: true,
+              firstname: true,
+              lastname: true,
+              email: true,
+              status: true,
+              verified: true,
+              verifiedAt: true,
+              locale: true,
+              agreeToUseName: true,
+            },
+            orderBy: { createdAt: 'asc' },
+          });
         } else {
           // If companyList is not found, return error early
           return { success: false, error: 'Company list not found' };
         }
       }
 
-      // Return the state object with list info, questions, ranking, and availableLocales
+      // Return the state object with list info, questions, ranking, availableLocales, and submissions
       return {
         success: true,
         data: {
@@ -150,6 +168,7 @@ class Vibe {
           list: companyList, // companyList now includes numberOfUncheckedTracks and languages as array and all description_* fields
           ranking, // Add the ranking array here
           availableLocales: translationInstance.allLocales, // Add availableLocales property
+          submissions, // New: submissions array
         },
       };
     } catch (error) {
