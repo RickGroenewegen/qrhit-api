@@ -997,6 +997,12 @@ class Vibe {
         data: updateData,
       });
 
+      // Invalidate cache for this list (by slug)
+      if (updatedList.slug) {
+        const cacheKey = `companyListByDomain:${updatedList.slug}`;
+        await this.cache.del(cacheKey);
+      }
+
       // Return the updated list and explicitly include the processed filenames
       return {
         success: true,

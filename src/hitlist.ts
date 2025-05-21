@@ -495,6 +495,24 @@ class Hitlist {
     slug: string
   ) {
     try {
+      // Try to get from cache first
+      const cacheKey = `companyListByDomain:${slug}`;
+      const cached = await this.cache.get(cacheKey);
+      if (cached) {
+        const cachedData = JSON.parse(cached);
+        // If a hash is provided, update submissionStatus if needed
+        if (hash && hash.length > 0) {
+          // Find the submission with this hash
+          const submission = await this.prisma.companyListSubmission.findUnique({
+            where: { hash },
+          });
+          if (submission) {
+            cachedData.data.submissionStatus = submission.status;
+          }
+        }
+        return cachedData;
+      }
+
       const companyList = await this.prisma.companyList.findFirst({
         where: { slug },
         // Select specific fields including the new date fields and nested Company fields
@@ -589,7 +607,7 @@ class Hitlist {
         }
       }
 
-      return {
+      const result = {
         success: true,
         data: {
           id: companyList.id,
@@ -609,6 +627,11 @@ class Hitlist {
           submissionStatus: submissionStatus,
         },
       };
+
+      // Cache the result for 24 hours (86400 seconds)
+      await this.cache.set(cacheKey, JSON.stringify(result), 86400);
+
+      return result;
     } catch (error) {
       this.logger.log(color.red.bold(`Error getting company list: ${error}`));
       return { success: false, error: 'Error getting company list' };
