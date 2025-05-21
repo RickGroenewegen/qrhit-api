@@ -521,7 +521,18 @@ class Vibe {
     companyId: number,
     listData: {
       name: string;
-      description: string;
+      description_nl?: string;
+      description_en?: string;
+      description_de?: string;
+      description_fr?: string;
+      description_es?: string;
+      description_it?: string;
+      description_pt?: string;
+      description_pl?: string;
+      description_hin?: string;
+      description_jp?: string;
+      description_cn?: string;
+      description_ru?: string;
       slug: string;
       numberOfCards: number;
       numberOfTracks: number;
@@ -532,7 +543,18 @@ class Vibe {
     try {
       const {
         name,
-        description,
+        description_nl,
+        description_en,
+        description_de,
+        description_fr,
+        description_es,
+        description_it,
+        description_pt,
+        description_pl,
+        description_hin,
+        description_jp,
+        description_cn,
+        description_ru,
         slug,
         numberOfCards,
         numberOfTracks,
@@ -546,7 +568,6 @@ class Vibe {
       }
       if (
         !name ||
-        !description ||
         !slug ||
         numberOfCards === undefined ||
         numberOfTracks === undefined
@@ -594,7 +615,18 @@ class Vibe {
         data: {
           companyId: companyId,
           name: name,
-          description: description,
+          description_nl: description_nl,
+          description_en: description_en,
+          description_de: description_de,
+          description_fr: description_fr,
+          description_es: description_es,
+          description_it: description_it,
+          description_pt: description_pt,
+          description_pl: description_pl,
+          description_hin: description_hin,
+          description_jp: description_jp,
+          description_cn: description_cn,
+          description_ru: description_ru,
           slug: slug,
           numberOfCards: numberOfCards,
           numberOfTracks: numberOfTracks,
@@ -795,8 +827,31 @@ class Vibe {
 
       // Add text and numeric fields from the collected 'fields' object
       if (fields.name !== undefined) updateData.name = String(fields.name);
-      if (fields.description !== undefined)
-        updateData.description = String(fields.description);
+      if (fields.description_nl !== undefined)
+        updateData.description_nl = String(fields.description_nl);
+      if (fields.description_en !== undefined)
+        updateData.description_en = String(fields.description_en);
+      if (fields.description_de !== undefined)
+        updateData.description_de = String(fields.description_de);
+      if (fields.description_fr !== undefined)
+        updateData.description_fr = String(fields.description_fr);
+      if (fields.description_es !== undefined)
+        updateData.description_es = String(fields.description_es);
+      if (fields.description_it !== undefined)
+        updateData.description_it = String(fields.description_it);
+      if (fields.description_pt !== undefined)
+        updateData.description_pt = String(fields.description_pt);
+      if (fields.description_pl !== undefined)
+        updateData.description_pl = String(fields.description_pl);
+      if (fields.description_hin !== undefined)
+        updateData.description_hin = String(fields.description_hin);
+      if (fields.description_jp !== undefined)
+        updateData.description_jp = String(fields.description_jp);
+      if (fields.description_cn !== undefined)
+        updateData.description_cn = String(fields.description_cn);
+      if (fields.description_ru !== undefined)
+        updateData.description_ru = String(fields.description_ru);
+
       if (fields.playlistSource !== undefined)
         updateData.playlistSource = String(fields.playlistSource);
       if (fields.playlistUrl !== undefined)
