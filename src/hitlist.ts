@@ -512,7 +512,6 @@ class Hitlist {
             cachedData.data.submissionStatus = submission.status;
           }
         }
-        console.log(111, 'CACHE HITLIST');
         return cachedData;
       }
 
