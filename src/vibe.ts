@@ -794,6 +794,12 @@ class Vibe {
       if (fields.textColor !== undefined)
         updateData.textColor = String(fields.textColor);
 
+      // Handle languages field (comma separated string)
+      if (fields.languages !== undefined) {
+        // Store as a comma-separated string in the DB
+        updateData.languages = String(fields.languages);
+      }
+
       // Handle hideCircle boolean field
       if (fields.hideCircle !== undefined) {
         updateData.hideCircle = this.utils.parseBoolean(fields.hideCircle);
