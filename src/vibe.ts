@@ -21,7 +21,9 @@ class Vibe {
    * @param submissionId The ID of the submission to delete.
    * @returns Object with success status and optional error.
    */
-  public async deleteSubmission(submissionId: number): Promise<{ success: boolean; error?: string }> {
+  public async deleteSubmission(
+    submissionId: number
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       if (!submissionId || isNaN(submissionId)) {
         return { success: false, error: 'Invalid submission ID provided' };
@@ -42,9 +44,7 @@ class Vibe {
       });
 
       this.logger.log(
-        color.red.bold(
-          `Deleted submission: ${color.white.bold(submissionId)}`
-        )
+        color.blue.bold(`Deleted submission: ${color.white.bold(submissionId)}`)
       );
 
       return { success: true };
