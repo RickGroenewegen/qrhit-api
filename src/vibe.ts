@@ -43,6 +43,12 @@ class Vibe {
       let questions: any[] = [];
       let companyList: any = null; // Use 'any' or a more specific type if defined
       let ranking: any[] = []; // Initialize ranking array
+      let languages: string[] | undefined = undefined;
+
+      // Import Translation here to avoid circular dependencies
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
+      const Translation = (await import('./translation')).default;
+      const translationInstance = new Translation();
 
       if (listId) {
         // Check if company list exists
@@ -77,6 +83,7 @@ class Vibe {
             downloadLink: true,
             reviewLink: true,
             hideCircle: true,
+            languages: true, // Add languages property
           },
         });
         if (companyList) {
@@ -111,19 +118,29 @@ class Vibe {
             );
             // Keep ranking as empty array if retrieval fails
           }
+
+          // Set languages property if present
+          if (companyList.languages) {
+            languages = companyList.languages
+              .split(',')
+              .map((lang: string) => lang.trim())
+              .filter((lang: string) => !!lang);
+          }
         } else {
           // If companyList is not found, return error early
           return { success: false, error: 'Company list not found' };
         }
       }
 
-      // Return the state object with list info, questions, and ranking
+      // Return the state object with list info, questions, ranking, languages, and availableLocales
       return {
         success: true,
         data: {
           questions,
           list: companyList, // companyList now includes numberOfUncheckedTracks
           ranking, // Add the ranking array here
+          languages: languages || [], // Add languages property (array)
+          availableLocales: translationInstance.allLocales, // Add availableLocales property
         },
       };
     } catch (error) {
