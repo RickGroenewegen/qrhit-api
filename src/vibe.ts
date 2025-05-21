@@ -152,7 +152,7 @@ class Vibe {
               locale: true,
               agreeToUseName: true,
             },
-            orderBy: { createdAt: 'asc' },
+            orderBy: { createdAt: 'desc' },
           });
         } else {
           // If companyList is not found, return error early
