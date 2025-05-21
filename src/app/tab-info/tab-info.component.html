@@ -9,11 +9,12 @@
     }
   and availableLocales is an array of language codes.
 -->
-<div *ngFor="let lang of availableLocales">
-  <label [for]="'desc-' + lang">Description ({{ lang }})</label>
-  <input
-    [id]="'desc-' + lang"
-    [formControlName]="lang"
-    *ngIf="listForm.get('descriptions')?.get(lang)"
-  />
+<div [formGroup]="listForm.get('descriptions')">
+  <div *ngFor="let lang of availableLocales">
+    <label [for]="'desc-' + lang">Description ({{ lang }})</label>
+    <input
+      [id]="'desc-' + lang"
+      [formControlName]="lang"
+    />
+  </div>
 </div>
