@@ -501,7 +501,7 @@ class Hitlist {
         select: {
           id: true,
           name: true,
-          description: true,
+          // description: true, // REMOVED
           numberOfTracks: true,
           minimumNumberOfTracks: true,
           languages: true,
@@ -518,6 +518,18 @@ class Hitlist {
             },
           },
           slug: true, // Keep slug if needed elsewhere
+          description_en: true,
+          description_nl: true,
+          description_de: true,
+          description_fr: true,
+          description_es: true,
+          description_it: true,
+          description_pt: true,
+          description_pl: true,
+          description_hin: true,
+          description_jp: true,
+          description_cn: true,
+          description_ru: true,
         },
       });
 
@@ -556,12 +568,38 @@ class Hitlist {
       }
       // If both are null, votingOpen remains true
 
+      // Determine locale for description
+      let usedLocale = 'nl';
+      if (
+        typeof global !== 'undefined' &&
+        global['__hitlist_locale'] &&
+        typeof global['__hitlist_locale'] === 'string'
+      ) {
+        usedLocale = global['__hitlist_locale'];
+      }
+      // Fallback: try to get from process.env if set
+      if (
+        typeof process !== 'undefined' &&
+        process.env.HITLIST_LOCALE &&
+        typeof process.env.HITLIST_LOCALE === 'string'
+      ) {
+        usedLocale = process.env.HITLIST_LOCALE;
+      }
+
+      // Pick the right description field
+      const descKey = `description_${usedLocale}`;
+      const description =
+        companyList[descKey] ||
+        companyList['description_nl'] ||
+        companyList['description_en'] ||
+        '';
+
       return {
         success: true,
         data: {
           id: companyList.id,
           name: companyList.name,
-          description: companyList.description,
+          description: description,
           numberOfTracks: companyList.numberOfTracks,
           minimumNumberOfTracks: companyList.minimumNumberOfTracks,
           numberOfCards: companyList.numberOfCards,
