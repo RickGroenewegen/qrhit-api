@@ -10,6 +10,7 @@ import Data from './data';
 import sharp from 'sharp'; // Import sharp
 import Spotify from './spotify';
 import Generator from './generator';
+import Cache from './cache';
 
 class Vibe {
   private static instance: Vibe;
@@ -21,6 +22,7 @@ class Vibe {
   private spotify = new Spotify();
   private mollie = new Mollie();
   private generator = Generator.getInstance();
+  private cache = Cache.getInstance();
 
   private constructor() {}
 
@@ -816,7 +818,9 @@ class Vibe {
       for (const locale of translationInstance.allLocales) {
         const descKey = `description_${locale}`;
         if ((fields as Record<string, any>)[descKey] !== undefined) {
-          (updateData as Record<string, any>)[descKey] = String((fields as Record<string, any>)[descKey]);
+          (updateData as Record<string, any>)[descKey] = String(
+            (fields as Record<string, any>)[descKey]
+          );
         }
       }
 

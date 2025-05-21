@@ -503,13 +503,16 @@ class Hitlist {
         // If a hash is provided, update submissionStatus if needed
         if (hash && hash.length > 0) {
           // Find the submission with this hash
-          const submission = await this.prisma.companyListSubmission.findUnique({
-            where: { hash },
-          });
+          const submission = await this.prisma.companyListSubmission.findUnique(
+            {
+              where: { hash },
+            }
+          );
           if (submission) {
             cachedData.data.submissionStatus = submission.status;
           }
         }
+        console.log(111, 'CACHE HITLIST');
         return cachedData;
       }
 
