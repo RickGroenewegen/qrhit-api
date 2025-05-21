@@ -151,6 +151,7 @@ class Vibe {
               verifiedAt: true,
               locale: true,
               agreeToUseName: true,
+              createdAt: true,
             },
             orderBy: { createdAt: 'desc' },
           });
