@@ -699,6 +699,7 @@ ${params.html}
     fullname: string,
     companyName: string,
     verificationHash: string,
+    locale: string,
     slug?: string
   ): Promise<void> {
     if (!this.ses) return;
@@ -708,7 +709,7 @@ ${params.html}
     const verificationLink = `${process.env['FRONTEND_VOTING_URI']}/hitlist/${slug}/verify/${verificationHash}`;
 
     const translations = await this.translation.getTranslationsByPrefix(
-      'nl', // Default to Dutch for now
+      locale,
       'verification'
     );
 
@@ -718,9 +719,7 @@ ${params.html}
       verificationLink,
       productName: process.env['PRODUCT_NAME'],
       currentYear: new Date().getFullYear(),
-      translations: {
-        verification: translations,
-      },
+      translations,
     };
 
     try {
@@ -739,7 +738,7 @@ ${params.html}
 
       const subject = `${this.translation.translate(
         'verification.subject',
-        'nl'
+        locale
       )} - OnzeVibe`;
 
       const attachments: Attachment[] = [

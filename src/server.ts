@@ -1848,6 +1848,7 @@ class Server {
         submissionHash,
         firstname,
         lastname,
+        locale,
         email,
         agreeToUseName, // Added agreeToUseName
       } = request.body;
@@ -1860,6 +1861,7 @@ class Server {
         firstname,
         lastname,
         email,
+        locale,
         agreeToUseName, // Added agreeToUseName
       }));
 

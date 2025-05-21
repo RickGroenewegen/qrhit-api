@@ -59,6 +59,7 @@ class Hitlist {
       const firstname = hitlist[0]?.firstname;
       const lastname = hitlist[0]?.lastname;
       const email = hitlist[0]?.email;
+      const locale = hitlist[0]?.locale;
       const agreeToUseName = this.utils.parseBoolean(
         hitlist[0]?.agreeToUseName
       ); // Added agreeToUseName
@@ -174,6 +175,7 @@ class Hitlist {
             lastname: lastname || null,
             email: email || null,
             agreeToUseName: agreeToUseName,
+            locale: locale,
           },
         });
 
@@ -206,6 +208,7 @@ class Hitlist {
           constructedFullname!,
           companyList.Company.name,
           submission.verificationHash,
+          submission.locale || 'nl', // Use the provided locale or default to 'nl'
           companyList.slug!
         );
       }

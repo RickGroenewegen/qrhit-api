@@ -603,6 +603,7 @@ model CompanyListSubmission {
   verified         Boolean   @default(false)
   agreeToUseName   Boolean   @default(false)
   verifiedAt       DateTime?
+  locale           String    @default("en")
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
