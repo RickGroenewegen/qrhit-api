@@ -1,0 +1,19 @@
+<!--
+  To avoid Angular's type error, do NOT bind [formControl] directly to a possibly null/undefined value.
+  Instead, use [formControlName] with a dynamic name, which is always a string.
+  This assumes your FormGroup is structured as:
+    listForm: FormGroup {
+      descriptions: FormGroup {
+        [lang]: FormControl
+      }
+    }
+  and availableLocales is an array of language codes.
+-->
+<div *ngFor="let lang of availableLocales">
+  <label [for]="'desc-' + lang">Description ({{ lang }})</label>
+  <input
+    [id]="'desc-' + lang"
+    [formControlName]="lang"
+    *ngIf="listForm.get('descriptions')?.get(lang)"
+  />
+</div>
