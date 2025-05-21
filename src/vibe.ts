@@ -15,6 +15,44 @@ import Cache from './cache';
 class Vibe {
   private static instance: Vibe;
   private prisma = new PrismaClient();
+
+  /**
+   * Delete a submission by its ID.
+   * @param submissionId The ID of the submission to delete.
+   * @returns Object with success status and optional error.
+   */
+  public async deleteSubmission(submissionId: number): Promise<{ success: boolean; error?: string }> {
+    try {
+      if (!submissionId || isNaN(submissionId)) {
+        return { success: false, error: 'Invalid submission ID provided' };
+      }
+
+      // Check if submission exists
+      const submission = await this.prisma.companyListSubmission.findUnique({
+        where: { id: submissionId },
+      });
+
+      if (!submission) {
+        return { success: false, error: 'Submission not found' };
+      }
+
+      // Delete the submission
+      await this.prisma.companyListSubmission.delete({
+        where: { id: submissionId },
+      });
+
+      this.logger.log(
+        color.red.bold(
+          `Deleted submission: ${color.white.bold(submissionId)}`
+        )
+      );
+
+      return { success: true };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error deleting submission: ${error}`));
+      return { success: false, error: 'Error deleting submission' };
+    }
+  }
   private logger = new Logger();
   private utils = new Utils();
   private discount = new Discount();

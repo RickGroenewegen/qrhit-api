@@ -265,6 +265,38 @@ class Server {
       }
     );
 
+    // Route to delete a submission by its ID
+    this.fastify.delete(
+      '/vibe/submissions/:submissionId',
+      getAuthHandler(['admin', 'vibeadmin']),
+      async (request: any, reply: any) => {
+        try {
+          const submissionId = parseInt(request.params.submissionId);
+
+          if (isNaN(submissionId)) {
+            reply.status(400).send({ error: 'Invalid submission ID' });
+            return;
+          }
+
+          const result = await this.vibe.deleteSubmission(submissionId);
+
+          if (!result.success) {
+            let statusCode = 500;
+            if (result.error === 'Submission not found') {
+              statusCode = 404;
+            }
+            reply.status(statusCode).send({ error: result.error });
+            return;
+          }
+
+          reply.send({ success: true });
+        } catch (error) {
+          console.error('Error deleting submission:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
+      }
+    );
+
     this.fastify.post(
       '/vibe/companies/:companyId/lists',
       getAuthHandler(['admin', 'vibeadmin']),
