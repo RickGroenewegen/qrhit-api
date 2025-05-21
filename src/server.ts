@@ -265,6 +265,45 @@ class Server {
       }
     );
 
+    // Route to replace trackId in CompanyListSubmissionTrack for a given list
+    this.fastify.post(
+      '/vibe/lists/:listId/replace-track',
+      getAuthHandler(['admin', 'vibeadmin']),
+      async (request: any, reply: any) => {
+        try {
+          const listId = parseInt(request.params.listId);
+          const { sourceTrackId, destinationTrackId } = request.body;
+
+          if (
+            isNaN(listId) ||
+            !sourceTrackId ||
+            !destinationTrackId ||
+            isNaN(Number(sourceTrackId)) ||
+            isNaN(Number(destinationTrackId))
+          ) {
+            reply.status(400).send({ error: 'Invalid parameters' });
+            return;
+          }
+
+          const result = await this.vibe.replaceTrackInSubmissions(
+            listId,
+            Number(sourceTrackId),
+            Number(destinationTrackId)
+          );
+
+          if (!result.success) {
+            reply.status(500).send({ error: result.error });
+            return;
+          }
+
+          reply.send({ success: true, updatedCount: result.updatedCount });
+        } catch (error) {
+          console.error('Error replacing track in submissions:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
+      }
+    );
+
     // Route to delete a submission by its ID
     this.fastify.delete(
       '/vibe/submissions/:submissionId',

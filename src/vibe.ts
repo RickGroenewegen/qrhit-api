@@ -17,6 +17,50 @@ class Vibe {
   private prisma = new PrismaClient();
 
   /**
+   * Update all CompanyListSubmissionTrack records for a given listId,
+   * changing trackId from sourceTrackId to destinationTrackId.
+   * @param listId The company list ID
+   * @param sourceTrackId The trackId to replace
+   * @param destinationTrackId The new trackId to set
+   * @returns Object with success status and count of updated records
+   */
+  public async replaceTrackInSubmissions(
+    listId: number,
+    sourceTrackId: number,
+    destinationTrackId: number
+  ): Promise<{ success: boolean; updatedCount?: number; error?: string }> {
+    try {
+      if (!listId || isNaN(listId) || !sourceTrackId || isNaN(sourceTrackId) || !destinationTrackId || isNaN(destinationTrackId)) {
+        return { success: false, error: 'Invalid parameters provided' };
+      }
+
+      // Find all submission tracks for this listId and sourceTrackId
+      const updated = await this.prisma.companyListSubmissionTrack.updateMany({
+        where: {
+          trackId: sourceTrackId,
+          CompanyListSubmission: {
+            companyListId: listId,
+          },
+        },
+        data: {
+          trackId: destinationTrackId,
+        },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Updated ${color.white.bold(updated.count)} CompanyListSubmissionTrack records for listId ${color.white.bold(listId)}: trackId ${color.white.bold(sourceTrackId)} -> ${color.white.bold(destinationTrackId)}`
+        )
+      );
+
+      return { success: true, updatedCount: updated.count };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error replacing track in submissions: ${error}`));
+      return { success: false, error: 'Error replacing track in submissions' };
+    }
+  }
+
+  /**
    * Delete a submission by its ID.
    * @param submissionId The ID of the submission to delete.
    * @returns Object with success status and optional error.
