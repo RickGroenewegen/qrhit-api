@@ -58,7 +58,7 @@ class Vibe {
             id: true,
             companyId: true,
             name: true,
-            description: true,
+            // description: true, // REMOVED
             slug: true,
             showNames: true,
             background: true,
@@ -83,6 +83,18 @@ class Vibe {
             reviewLink: true,
             hideCircle: true,
             languages: true, // Add languages property
+            description_en: true,
+            description_nl: true,
+            description_de: true,
+            description_fr: true,
+            description_es: true,
+            description_it: true,
+            description_pt: true,
+            description_pl: true,
+            description_hin: true,
+            description_jp: true,
+            description_cn: true,
+            description_ru: true,
           },
         });
         if (companyList) {
@@ -138,7 +150,7 @@ class Vibe {
         success: true,
         data: {
           questions,
-          list: companyList, // companyList now includes numberOfUncheckedTracks and languages as array
+          list: companyList, // companyList now includes numberOfUncheckedTracks and languages as array and all description_* fields
           ranking, // Add the ranking array here
           availableLocales: translationInstance.allLocales, // Add availableLocales property
         },
