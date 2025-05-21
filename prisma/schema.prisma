@@ -516,7 +516,18 @@ model CompanyList {
   playlistId              Int?
   paymentId               Int?
   name                    String
-  description             String
+  description_en          String    @default("")
+  description_nl          String    @default("")
+  description_de          String    @default("")
+  description_fr          String    @default("")
+  description_es          String    @default("")
+  description_it          String    @default("")
+  description_pt          String    @default("")
+  description_pl          String    @default("")
+  description_hin         String    @default("")
+  description_jp          String    @default("")
+  description_cn          String    @default("")
+  description_ru          String    @default("")
   slug                    String
   background              String?
   background2             String?
@@ -535,6 +546,7 @@ model CompanyList {
   votingLogo              String?
   downloadLink            String?
   reviewLink              String?
+  languages               String    @default("nl")
   numberOfUncheckedTracks Int       @default(0)
   totalSpotifyTracks      Int       @default(0)
   hideCircle              Boolean   @default(false)
