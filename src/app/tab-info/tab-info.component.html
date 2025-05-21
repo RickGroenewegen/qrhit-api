@@ -12,9 +12,11 @@
 <div [formGroup]="listForm.get('descriptions')">
   <div *ngFor="let lang of availableLocales">
     <label [for]="'desc-' + lang">Description ({{ lang }})</label>
-    <input
-      [id]="'desc-' + lang"
-      [formControlName]="lang"
-    />
+    <ng-container *ngIf="listForm.get('descriptions')?.get(lang)">
+      <input
+        [id]="'desc-' + lang"
+        [formControlName]="lang"
+      />
+    </ng-container>
   </div>
 </div>
