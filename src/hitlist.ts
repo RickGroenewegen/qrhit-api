@@ -504,6 +504,7 @@ class Hitlist {
           description: true,
           numberOfTracks: true,
           minimumNumberOfTracks: true,
+          languages: true,
           showNames: true,
           numberOfCards: true,
           votingBackground: true,
@@ -567,10 +568,11 @@ class Hitlist {
           companyName: companyList.Company.name,
           votingBackground: companyList.votingBackground,
           votingLogo: companyList.votingLogo,
+          languages: companyList.languages,
           showNames: companyList.showNames,
-          startAt: companyList.startAt, // Added startAt
-          endAt: companyList.endAt, // Added endAt
-          votingOpen: votingOpen, // Added calculated votingOpen
+          startAt: companyList.startAt,
+          endAt: companyList.endAt,
+          votingOpen: votingOpen,
           submissionStatus: submissionStatus,
         },
       };
