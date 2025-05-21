@@ -599,8 +599,8 @@ class Vibe {
       const descriptions: Record<string, string | undefined> = {};
       for (const locale of translationInstance.allLocales) {
         const descKey = `description_${locale}`;
-        if (listData[descKey] !== undefined) {
-          descriptions[descKey] = listData[descKey];
+        if ((listData as Record<string, any>)[descKey] !== undefined) {
+          descriptions[descKey] = (listData as Record<string, any>)[descKey];
         }
       }
 
@@ -815,8 +815,8 @@ class Vibe {
       const translationInstance = new (await import('./translation')).default();
       for (const locale of translationInstance.allLocales) {
         const descKey = `description_${locale}`;
-        if (fields[descKey] !== undefined) {
-          updateData[descKey] = String(fields[descKey]);
+        if ((fields as Record<string, any>)[descKey] !== undefined) {
+          (updateData as Record<string, any>)[descKey] = String((fields as Record<string, any>)[descKey]);
         }
       }
 

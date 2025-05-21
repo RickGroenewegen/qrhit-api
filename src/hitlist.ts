@@ -570,14 +570,7 @@ class Hitlist {
 
       // Determine locale for description
       let usedLocale = 'nl';
-      if (
-        typeof global !== 'undefined' &&
-        global['__hitlist_locale'] &&
-        typeof global['__hitlist_locale'] === 'string'
-      ) {
-        usedLocale = global['__hitlist_locale'];
-      }
-      // Fallback: try to get from process.env if set
+      // Use process.env or fallback to 'nl'
       if (
         typeof process !== 'undefined' &&
         process.env.HITLIST_LOCALE &&
@@ -589,9 +582,9 @@ class Hitlist {
       // Pick the right description field
       const descKey = `description_${usedLocale}`;
       const description =
-        companyList[descKey] ||
-        companyList['description_nl'] ||
-        companyList['description_en'] ||
+        (companyList as Record<string, any>)[descKey] ||
+        (companyList as Record<string, any>)['description_nl'] ||
+        (companyList as Record<string, any>)['description_en'] ||
         '';
 
       return {
