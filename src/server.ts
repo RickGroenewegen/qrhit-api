@@ -267,15 +267,15 @@ class Server {
 
     // Route to replace trackId in CompanyListSubmissionTrack for a given list
     this.fastify.post(
-      '/vibe/lists/:listId/replace-track',
+      '/vibe/lists/:companyListId/replace-track',
       getAuthHandler(['admin', 'vibeadmin']),
       async (request: any, reply: any) => {
         try {
-          const listId = parseInt(request.params.listId);
+          const companyListId = parseInt(request.params.companyListId);
           const { sourceTrackId, destinationTrackId } = request.body;
 
           if (
-            isNaN(listId) ||
+            isNaN(companyListId) ||
             !sourceTrackId ||
             !destinationTrackId ||
             isNaN(Number(sourceTrackId)) ||
@@ -286,7 +286,7 @@ class Server {
           }
 
           const result = await this.vibe.replaceTrackInSubmissions(
-            listId,
+            companyListId,
             Number(sourceTrackId),
             Number(destinationTrackId)
           );
