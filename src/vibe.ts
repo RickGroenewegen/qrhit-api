@@ -1421,13 +1421,6 @@ class Vibe {
         });
 
       if (verifiedSubmissions.length === 0) {
-        this.logger.log(
-          color.yellow.bold(
-            `No verified submissions found for list ${color.white.bold(
-              companyList.name
-            )} (ID: ${listId})`
-          )
-        );
         return { success: true, data: { list: companyList, ranking: [] } }; // Return empty ranking
       }
 
