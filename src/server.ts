@@ -721,6 +721,44 @@ class Server {
       }
     );
 
+    // Protected admin route to delete a discount code by id
+    this.fastify.delete(
+      '/admin/discount/:id',
+      getAuthHandler(['admin']),
+      async (request: any, reply: any) => {
+        const id = parseInt(request.params.id);
+        if (isNaN(id)) {
+          reply.status(400).send({ success: false, error: 'Invalid id' });
+          return;
+        }
+        const result = await this.discount.deleteDiscountCode(id);
+        if (result.success) {
+          reply.send({ success: true });
+        } else {
+          reply.status(500).send({ success: false, error: result.error });
+        }
+      }
+    );
+
+    // Protected admin route to update a discount code by id
+    this.fastify.put(
+      '/admin/discount/:id',
+      getAuthHandler(['admin']),
+      async (request: any, reply: any) => {
+        const id = parseInt(request.params.id);
+        if (isNaN(id)) {
+          reply.status(400).send({ success: false, error: 'Invalid id' });
+          return;
+        }
+        const result = await this.discount.updateDiscountCode(id, request.body);
+        if (result.success) {
+          reply.send({ success: true, code: result.code });
+        } else {
+          reply.status(400).send({ success: false, error: result.error });
+        }
+      }
+    );
+
     this.fastify.post('/push/register', async (request: any, reply: any) => {
       const { token, type } = request.body;
       if (!token || !type) {

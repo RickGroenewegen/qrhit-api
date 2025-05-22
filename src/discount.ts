@@ -94,6 +94,78 @@ class Discount {
     }
   }
 
+  /**
+   * Delete a discount code by id.
+   * @param id Discount code id
+   */
+  public async deleteDiscountCode(id: number): Promise<{ success: boolean; error?: string }> {
+    try {
+      await this.prisma.discountCode.delete({
+        where: { id },
+      });
+      return { success: true };
+    } catch (error) {
+      return { success: false, error: 'Failed to delete discount code' };
+    }
+  }
+
+  /**
+   * Update a discount code by id.
+   * @param id Discount code id
+   * @param params Same params as create
+   */
+  public async updateDiscountCode(
+    id: number,
+    params: {
+      amount: number;
+      startDate?: number | null;
+      endDate?: number | null;
+      general?: boolean | number | string;
+      playlistId?: string;
+      digital?: boolean | number | string;
+    }
+  ): Promise<{ success: boolean; code?: string; error?: string }> {
+    try {
+      const {
+        amount,
+        startDate,
+        endDate,
+        general,
+        playlistId,
+        digital,
+      } = params;
+
+      if (
+        typeof amount !== 'number' ||
+        isNaN(amount) ||
+        amount <= 0
+      ) {
+        return { success: false, error: 'Invalid amount' };
+      }
+
+      const generalBool = general === true || general === 1 || general === '1';
+      const digitalBool = digital === true || digital === 1 || digital === '1';
+      const startDateObj = startDate ? new Date(Number(startDate) * 1000) : null;
+      const endDateObj = endDate ? new Date(Number(endDate) * 1000) : null;
+
+      const updated = await this.prisma.discountCode.update({
+        where: { id },
+        data: {
+          amount,
+          startDate: startDateObj,
+          endDate: endDateObj,
+          general: generalBool,
+          playlistId: playlistId || null,
+          digital: digitalBool,
+        },
+      });
+
+      return { success: true, code: updated.code };
+    } catch (error) {
+      return { success: false, error: 'Failed to update discount code' };
+    }
+  }
+
   public async createDiscountCode(
     amount: number,
     from: string,
