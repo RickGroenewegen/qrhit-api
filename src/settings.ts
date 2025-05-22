@@ -129,19 +129,9 @@ class Settings {
         update: { value: value },
         create: { key: key, value: value },
       });
-      this.logger.log(
-        color.blue.bold(
-          `Setting '${color.white.bold(key)}' updated in the database.`
-        )
-      );
       // Invalidate cache
       const cacheKey = this.getCacheKey(key);
       await this.cache.del(cacheKey);
-      this.logger.log(
-        color.blue.bold(
-          `Cache for setting '${color.white.bold(key)}' invalidated.`
-        )
-      );
     } catch (error) {
       this.logger.log(
         color.red.bold(

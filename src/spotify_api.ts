@@ -53,11 +53,6 @@ class SpotifyApi {
     }
 
     if (refreshToken) {
-      this.logger.log(
-        color.blue.bold(
-          'Spotify access token expired or invalid, attempting refresh...'
-        )
-      );
       const refreshedToken = await this.refreshAccessToken(refreshToken);
       if (refreshedToken) {
         return refreshedToken; // Return the newly refreshed token

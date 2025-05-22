@@ -480,7 +480,10 @@ class Mail {
     }
   }
 
-  public async renderRaw(params: MailParams): Promise<string> {
+  public async renderRaw(
+    params: MailParams,
+    sendBCC: boolean = true
+  ): Promise<string> {
     let attachmentString = '';
 
     for (const attachment of params.attachments) {
@@ -503,7 +506,9 @@ ${attachment.data}
     const rawEmail = `From: ${params.from}
 To: ${params.to}
 ${
-  process.env['ENVIRONMENT'] !== 'development' && process.env['INFO_EMAIL']
+  process.env['ENVIRONMENT'] !== 'development' &&
+  process.env['INFO_EMAIL'] &&
+  sendBCC
     ? `Bcc: ${process.env['INFO_EMAIL']}\n`
     : ''
 }Subject: ${params.subject}
@@ -751,16 +756,19 @@ ${params.html}
         },
       ];
 
-      const rawEmail = await this.renderRaw({
-        from: `OnzeVibe <${process.env['FROM_EMAIL']}>`,
-        to: email,
-        subject,
-        html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
-        text,
-        attachments,
-        unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
-        replyTo: process.env['REPLY_TO_EMAIL'],
-      });
+      const rawEmail = await this.renderRaw(
+        {
+          from: `OnzeVibe <${process.env['FROM_EMAIL']}>`,
+          to: email,
+          subject,
+          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+          text,
+          attachments,
+          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+          replyTo: process.env['REPLY_TO_EMAIL'],
+        },
+        false // No BCC for verification emails
+      );
 
       const emailBuffer = Buffer.from(rawEmail);
 
