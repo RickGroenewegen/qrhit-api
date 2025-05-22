@@ -458,13 +458,6 @@ class Hitlist {
       });
 
       if (!submission) {
-        this.logger.log(
-          color.red.bold(
-            `Submission with verification hash ${color.white.bold(
-              verificationHash
-            )} not found`
-          )
-        );
         return false;
       }
 
