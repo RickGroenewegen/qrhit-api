@@ -8,6 +8,77 @@ class Discount {
   private prisma = new PrismaClient();
   private utils = new Utils();
 
+  /**
+   * Create a discount code with all business logic.
+   * @param params Object containing amount, startDate, endDate, general, playlistId, digital
+   * @returns {Promise<{ success: boolean, code?: string, error?: string }>}
+   */
+  public async createAdminDiscountCode(params: {
+    amount: number;
+    startDate?: number | null;
+    endDate?: number | null;
+    general?: boolean | number | string;
+    playlistId?: string;
+    digital?: boolean | number | string;
+  }): Promise<{ success: boolean; code?: string; error?: string }> {
+    try {
+      const {
+        amount,
+        startDate,
+        endDate,
+        general,
+        playlistId,
+        digital,
+      } = params;
+
+      // Validate required fields
+      if (
+        typeof amount !== 'number' ||
+        isNaN(amount) ||
+        amount <= 0
+      ) {
+        return { success: false, error: 'Invalid amount' };
+      }
+
+      // general and digital can be boolean or 1/0
+      const generalBool = general === true || general === 1 || general === '1';
+      const digitalBool = digital === true || digital === 1 || digital === '1';
+
+      // Convert unix timestamps to Date or null
+      const startDateObj = startDate ? new Date(Number(startDate) * 1000) : null;
+      const endDateObj = endDate ? new Date(Number(endDate) * 1000) : null;
+
+      // Generate random code in format XXXX-XXXX-XXXX-XXXX
+      const CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+      const generatePart = () => {
+        let result = '';
+        for (let i = 0; i < 4; i++) {
+          const idx = Math.floor(Math.random() * CHARS.length);
+          result += CHARS[idx];
+        }
+        return result;
+      };
+      const code = [generatePart(), generatePart(), generatePart(), generatePart()].join('-');
+
+      // Create the discount code in the database
+      const discount = await this.prisma.discountCode.create({
+        data: {
+          code,
+          amount,
+          startDate: startDateObj,
+          endDate: endDateObj,
+          general: generalBool,
+          playlistId: playlistId || null,
+          digital: digitalBool,
+        },
+      });
+
+      return { success: true, code: discount.code };
+    } catch (error) {
+      return { success: false, error: 'Failed to create discount code' };
+    }
+  }
+
   public async createDiscountCode(
     amount: number,
     from: string,
