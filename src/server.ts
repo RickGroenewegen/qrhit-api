@@ -707,6 +707,20 @@ class Server {
       }
     );
 
+    // Protected admin route to get all discount codes
+    this.fastify.get(
+      '/admin/discount/all',
+      getAuthHandler(['admin']),
+      async (_request: any, reply: any) => {
+        const result = await this.discount.getAllDiscounts();
+        if (result.success) {
+          reply.send({ success: true, discounts: result.discounts });
+        } else {
+          reply.status(500).send({ success: false, error: result.error });
+        }
+      }
+    );
+
     this.fastify.post('/push/register', async (request: any, reply: any) => {
       const { token, type } = request.body;
       if (!token || !type) {

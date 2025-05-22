@@ -79,6 +79,21 @@ class Discount {
     }
   }
 
+  /**
+   * Get all discount codes from the database.
+   * @returns {Promise<{ success: boolean, discounts?: any[], error?: string }>}
+   */
+  public async getAllDiscounts(): Promise<{ success: boolean; discounts?: any[]; error?: string }> {
+    try {
+      const discounts = await this.prisma.discountCode.findMany({
+        orderBy: { createdAt: 'desc' },
+      });
+      return { success: true, discounts };
+    } catch (error) {
+      return { success: false, error: 'Failed to fetch discounts' };
+    }
+  }
+
   public async createDiscountCode(
     amount: number,
     from: string,
