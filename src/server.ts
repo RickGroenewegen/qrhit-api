@@ -693,6 +693,71 @@ class Server {
       }
     );
 
+    // Protected admin route to create a discount code
+    this.fastify.post(
+      '/admin/discount/create',
+      getAuthHandler(['admin']),
+      async (request: any, reply: any) => {
+        try {
+          const {
+            amount,
+            startDate,
+            endDate,
+            general,
+            playlistId,
+            digital,
+          } = request.body;
+
+          // Validate required fields
+          if (
+            typeof amount !== 'number' ||
+            isNaN(amount) ||
+            amount <= 0
+          ) {
+            reply.status(400).send({ success: false, error: 'Invalid amount' });
+            return;
+          }
+
+          // general and digital can be boolean or 1/0
+          const generalBool = general === true || general === 1 || general === '1';
+          const digitalBool = digital === true || digital === 1 || digital === '1';
+
+          // Convert unix timestamps to Date or null
+          const startDateObj = startDate ? new Date(Number(startDate) * 1000) : null;
+          const endDateObj = endDate ? new Date(Number(endDate) * 1000) : null;
+
+          // Generate random code in format XXXX-XXXX-XXXX-XXXX
+          const CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+          const generatePart = () => {
+            let result = '';
+            for (let i = 0; i < 4; i++) {
+              const idx = Math.floor(Math.random() * CHARS.length);
+              result += CHARS[idx];
+            }
+            return result;
+          };
+          const code = [generatePart(), generatePart(), generatePart(), generatePart()].join('-');
+
+          // Create the discount code in the database
+          const discount = await this.discount['prisma'].discountCode.create({
+            data: {
+              code,
+              amount,
+              startDate: startDateObj,
+              endDate: endDateObj,
+              general: generalBool,
+              playlistId: playlistId || null,
+              digital: digitalBool,
+            },
+          });
+
+          reply.send({ success: true, code: discount.code });
+        } catch (error) {
+          reply.status(500).send({ success: false, error: 'Failed to create discount code' });
+        }
+      }
+    );
+
     this.fastify.post('/push/register', async (request: any, reply: any) => {
       const { token, type } = request.body;
       if (!token || !type) {
