@@ -165,6 +165,20 @@ class Hitlist {
       if (!submission) {
         // Generate a unique verification hash
 
+        // Compute cardName: Firstname (capitalized) + first letter of Lastname (capitalized) + "."
+        let cardName: string | null = null;
+        if (firstname && firstname.trim().length > 0) {
+          const first = firstname.trim();
+          let lastInitial = '';
+          if (lastname && lastname.trim().length > 0) {
+            lastInitial = ' ' + lastname.trim().charAt(0).toUpperCase() + '.';
+          }
+          cardName =
+            first.charAt(0).toUpperCase() +
+            first.slice(1) +
+            lastInitial;
+        }
+
         submission = await this.prisma.companyListSubmission.create({
           data: {
             companyListId: parseInt(companyListId),
@@ -176,6 +190,7 @@ class Hitlist {
             email: email || null,
             agreeToUseName: agreeToUseName,
             locale: locale,
+            cardName: cardName,
           },
         });
 
