@@ -97,6 +97,46 @@ class Vibe {
       return { success: false, error: 'Error deleting submission' };
     }
   }
+
+  /**
+   * Update a submission by its ID. Only cardName is editable for now.
+   * @param submissionId The ID of the submission to update.
+   * @param data Object with editable fields (currently only cardName).
+   * @returns Object with success status and updated submission data or error.
+   */
+  public async updateSubmission(
+    submissionId: number,
+    data: { cardName: string }
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      if (!submissionId || isNaN(submissionId)) {
+        return { success: false, error: 'Invalid submission ID provided' };
+      }
+      if (!data.cardName || typeof data.cardName !== 'string' || data.cardName.trim() === '') {
+        return { success: false, error: 'cardName is required and must be a non-empty string' };
+      }
+      // Check if submission exists
+      const submission = await this.prisma.companyListSubmission.findUnique({
+        where: { id: submissionId },
+      });
+      if (!submission) {
+        return { success: false, error: 'Submission not found' };
+      }
+      const updated = await this.prisma.companyListSubmission.update({
+        where: { id: submissionId },
+        data: { cardName: data.cardName },
+      });
+      this.logger.log(
+        color.blue.bold(
+          `Updated cardName for submission: ${color.white.bold(submissionId)}`
+        )
+      );
+      return { success: true, data: updated };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error updating submission: ${error}`));
+      return { success: false, error: 'Error updating submission' };
+    }
+  }
   private logger = new Logger();
   private utils = new Utils();
   private discount = new Discount();

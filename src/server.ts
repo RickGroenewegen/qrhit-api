@@ -1042,6 +1042,39 @@ class Server {
       }
     );
 
+    // Protected route to update a list submission (currently only cardName is editable)
+    this.fastify.put(
+      '/vibe/submissions/:submissionId',
+      getAuthHandler(['admin', 'vibeadmin']),
+      async (request: any, reply: any) => {
+        try {
+          const submissionId = parseInt(request.params.submissionId);
+          if (isNaN(submissionId)) {
+            reply.status(400).send({ error: 'Invalid submission ID' });
+            return;
+          }
+          const { cardName } = request.body;
+          if (typeof cardName !== 'string' || cardName.trim() === '') {
+            reply.status(400).send({ error: 'cardName is required and must be a non-empty string' });
+            return;
+          }
+          const result = await this.vibe.updateSubmission(submissionId, { cardName });
+          if (!result.success) {
+            let statusCode = 500;
+            if (result.error === 'Submission not found') {
+              statusCode = 404;
+            }
+            reply.status(statusCode).send({ error: result.error });
+            return;
+          }
+          reply.send({ success: true, data: result.data });
+        } catch (error) {
+          console.error('Error updating submission:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
+      }
+    );
+
     this.fastify.get(
       '/download_invoice/:invoiceId',
       getAuthHandler(['admin']),
