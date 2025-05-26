@@ -174,9 +174,7 @@ class Hitlist {
             lastInitial = ' ' + lastname.trim().charAt(0).toUpperCase() + '.';
           }
           cardName =
-            first.charAt(0).toUpperCase() +
-            first.slice(1) +
-            lastInitial;
+            first.charAt(0).toUpperCase() + first.slice(1) + lastInitial;
         }
 
         submission = await this.prisma.companyListSubmission.create({
