@@ -148,11 +148,6 @@ class Vibe {
         where: { id: submissionId },
         data: { cardName: data.cardName },
       });
-      this.logger.log(
-        color.blue.bold(
-          `Updated cardName for submission: ${color.white.bold(submissionId)}`
-        )
-      );
       return { success: true, data: updated };
     } catch (error) {
       this.logger.log(color.red.bold(`Error updating submission: ${error}`));
@@ -1266,8 +1261,6 @@ class Vibe {
         // 2. Iterate through aggregated map to prepare TrackExtraInfo data
         for (const [trackId, voters] of trackSubmissionsMap.entries()) {
           if (voters.length === 0) continue;
-
-          console.log(trackId, voters);
 
           // Use cardName field for each voter, fallback to Anonymous if not present
           const cardNames: string[] = [];
