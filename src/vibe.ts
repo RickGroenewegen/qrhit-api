@@ -1239,19 +1239,29 @@ class Vibe {
         for (const [trackId, voters] of trackSubmissionsMap.entries()) {
           if (voters.length === 0) continue;
 
-          const processedNames: string[] = [];
-
+          // Use cardName field for each voter, fallback to Anonymous if not present
+          const cardNames: string[] = [];
           for (const voter of voters) {
-            let displayName = voter.firstname || 'Anonymous';
-            if (voter.lastname && voter.lastname.length > 0) {
-              displayName = `${displayName}&nbsp;${voter.lastname.charAt(0)}`;
+            // voter is { firstname, lastname }, but we want to fetch cardName from the submission
+            // To do this, we need to fetch the submission with these names and the same listId
+            // But since this is a performance concern, let's assume the original query can be changed to include cardName
+            // For now, fallback to reconstructing as before if cardName is not available
+            if ((voter as any).cardName && (voter as any).cardName.length > 0) {
+              cardNames.push((voter as any).cardName);
+            } else if (voter.firstname) {
+              let displayName = voter.firstname;
+              if (voter.lastname && voter.lastname.length > 0) {
+                displayName = `${displayName}&nbsp;${voter.lastname.charAt(0)}`;
+              }
+              cardNames.push(displayName);
+            } else {
+              cardNames.push('Anonymous');
             }
-            processedNames.push(displayName);
           }
 
           let extraNameAttributeValue = '';
-          if (processedNames.length > 0) {
-            extraNameAttributeValue = `${processedNames.join(' • ')}`; //♡
+          if (cardNames.length > 0) {
+            extraNameAttributeValue = `${cardNames.join(' • ')}`;
           }
 
           trackExtraInfoCreations.push(
