@@ -165,16 +165,50 @@ class Hitlist {
       if (!submission) {
         // Generate a unique verification hash
 
-        // Compute cardName: Firstname (capitalized) + first letter of Lastname (capitalized) + "."
+        // Compute cardName: Firstname (capitalized) + tussenvoegsel(s) (if any) + first letter of main surname (capitalized) + "."
         let cardName: string | null = null;
         if (firstname && firstname.trim().length > 0) {
           const first = firstname.trim();
-          let lastInitial = '';
+          let lastPart = '';
           if (lastname && lastname.trim().length > 0) {
-            lastInitial = ' ' + lastname.trim().charAt(0).toUpperCase() + '.';
+            // Dutch tussenvoegsels to support
+            const tussenvoegsels = [
+              'de', 'den', 'der', 'van', 'van de', 'van den', 'van der', 'van het', 'van het', 'ter', 'ten', 'te', 'op', 'aan', 'in', 'uit', 'over'
+            ];
+            const last = lastname.trim();
+            // Split the lastname into words
+            const lastWords = last.split(/\s+/);
+            let tussenvoegsel = '';
+            let mainSurname = '';
+            // Try to find the longest matching tussenvoegsel from the start
+            for (let i = lastWords.length - 1; i >= 0; i--) {
+              const candidate = lastWords.slice(0, i).join(' ').toLowerCase();
+              if (tussenvoegsels.includes(candidate)) {
+                tussenvoegsel = lastWords.slice(0, i).join(' ');
+                mainSurname = lastWords.slice(i).join(' ');
+                break;
+              }
+            }
+            if (!mainSurname) {
+              // No tussenvoegsel found, so all but last word are tussenvoegsel (if any)
+              if (lastWords.length > 1) {
+                tussenvoegsel = lastWords.slice(0, lastWords.length - 1).join(' ');
+                mainSurname = lastWords[lastWords.length - 1];
+              } else {
+                mainSurname = lastWords[0];
+              }
+            }
+            let formatted = '';
+            if (tussenvoegsel) {
+              formatted = `${tussenvoegsel} `;
+            }
+            if (mainSurname && mainSurname.length > 0) {
+              formatted += mainSurname.charAt(0).toUpperCase() + '.';
+            }
+            lastPart = ' ' + formatted.trim();
           }
           cardName =
-            first.charAt(0).toUpperCase() + first.slice(1) + lastInitial;
+            first.charAt(0).toUpperCase() + first.slice(1) + lastPart;
         }
 
         submission = await this.prisma.companyListSubmission.create({
