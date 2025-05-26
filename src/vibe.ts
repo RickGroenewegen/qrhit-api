@@ -1273,7 +1273,7 @@ class Vibe {
           const cardNames: string[] = [];
           for (const voter of voters) {
             if (voter.cardName && voter.cardName.length > 0) {
-              cardNames.push(voter.cardName);
+              cardNames.push(voter.cardName.replace(/ /g, '&nbsp;'));
             }
           }
 
