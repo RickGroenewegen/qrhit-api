@@ -227,6 +227,7 @@ class Vibe {
               id: true,
               firstname: true,
               lastname: true,
+              cardName: true,
               email: true,
               status: true,
               verified: true,
