@@ -145,7 +145,7 @@ class Server {
       return {
         // Conditionally apply preHandler based on environment
         preHandler:
-          process.env['ENVIRONMENT'] === 'develdopment'
+          process.env['ENVIRONMENT'] === 'development'
             ? undefined // Skip preHandler in development
             : (request: any, reply: any) =>
                 verifyTokenMiddleware(request, reply, allowedGroups),
@@ -698,7 +698,9 @@ class Server {
       '/admin/discount/create',
       getAuthHandler(['admin']),
       async (request: any, reply: any) => {
-        const result = await this.discount.createAdminDiscountCode(request.body);
+        const result = await this.discount.createAdminDiscountCode(
+          request.body
+        );
         if (result.success) {
           reply.send({ success: true, code: result.code });
         } else {
@@ -1055,10 +1057,14 @@ class Server {
           }
           const { cardName } = request.body;
           if (typeof cardName !== 'string' || cardName.trim() === '') {
-            reply.status(400).send({ error: 'cardName is required and must be a non-empty string' });
+            reply.status(400).send({
+              error: 'cardName is required and must be a non-empty string',
+            });
             return;
           }
-          const result = await this.vibe.updateSubmission(submissionId, { cardName });
+          const result = await this.vibe.updateSubmission(submissionId, {
+            cardName,
+          });
           if (!result.success) {
             let statusCode = 500;
             if (result.error === 'Submission not found') {

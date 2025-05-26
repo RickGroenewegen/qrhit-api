@@ -173,7 +173,17 @@ class Hitlist {
           if (lastname && lastname.trim().length > 0) {
             // Dutch tussenvoegsels to support
             const tussenvoegsels = [
-              'de', 'den', 'der', 'van', 'van de', 'van den', 'van der', 'van het', 'van het', 'ter', 'ten', 'te', 'op', 'aan', 'in', 'uit', 'over'
+              'de',
+              'den',
+              'der',
+              'van',
+              'van de',
+              'van den',
+              'van der',
+              'van het',
+              'van het',
+              'ter',
+              'ten',
             ];
             const last = lastname.trim();
             // Split the lastname into words
@@ -192,7 +202,9 @@ class Hitlist {
             if (!mainSurname) {
               // No tussenvoegsel found, so all but last word are tussenvoegsel (if any)
               if (lastWords.length > 1) {
-                tussenvoegsel = lastWords.slice(0, lastWords.length - 1).join(' ');
+                tussenvoegsel = lastWords
+                  .slice(0, lastWords.length - 1)
+                  .join(' ');
                 mainSurname = lastWords[lastWords.length - 1];
               } else {
                 mainSurname = lastWords[0];
@@ -207,8 +219,7 @@ class Hitlist {
             }
             lastPart = ' ' + formatted.trim();
           }
-          cardName =
-            first.charAt(0).toUpperCase() + first.slice(1) + lastPart;
+          cardName = first.charAt(0).toUpperCase() + first.slice(1) + lastPart;
         }
 
         submission = await this.prisma.companyListSubmission.create({

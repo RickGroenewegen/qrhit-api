@@ -598,6 +598,7 @@ model CompanyListSubmission {
   verificationHash String?   @unique
   firstname        String?
   lastname         String?
+  cardName         String?
   email            String?
   status           String    @default("open")
   verified         Boolean   @default(false)
