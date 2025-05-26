@@ -30,7 +30,14 @@ class Vibe {
     destinationTrackId: number
   ): Promise<{ success: boolean; updatedCount?: number; error?: string }> {
     try {
-      if (!companyListId || isNaN(companyListId) || !sourceTrackId || isNaN(sourceTrackId) || !destinationTrackId || isNaN(destinationTrackId)) {
+      if (
+        !companyListId ||
+        isNaN(companyListId) ||
+        !sourceTrackId ||
+        isNaN(sourceTrackId) ||
+        !destinationTrackId ||
+        isNaN(destinationTrackId)
+      ) {
         return { success: false, error: 'Invalid parameters provided' };
       }
 
@@ -49,13 +56,21 @@ class Vibe {
 
       this.logger.log(
         color.blue.bold(
-          `Updated ${color.white.bold(updated.count)} CompanyListSubmissionTrack records for companyListId ${color.white.bold(companyListId)}: trackId ${color.white.bold(sourceTrackId)} -> ${color.white.bold(destinationTrackId)}`
+          `Updated ${color.white.bold(
+            updated.count
+          )} CompanyListSubmissionTrack records for companyListId ${color.white.bold(
+            companyListId
+          )}: trackId ${color.white.bold(sourceTrackId)} -> ${color.white.bold(
+            destinationTrackId
+          )}`
         )
       );
 
       return { success: true, updatedCount: updated.count };
     } catch (error) {
-      this.logger.log(color.red.bold(`Error replacing track in submissions: ${error}`));
+      this.logger.log(
+        color.red.bold(`Error replacing track in submissions: ${error}`)
+      );
       return { success: false, error: 'Error replacing track in submissions' };
     }
   }
@@ -112,8 +127,15 @@ class Vibe {
       if (!submissionId || isNaN(submissionId)) {
         return { success: false, error: 'Invalid submission ID provided' };
       }
-      if (!data.cardName || typeof data.cardName !== 'string' || data.cardName.trim() === '') {
-        return { success: false, error: 'cardName is required and must be a non-empty string' };
+      if (
+        !data.cardName ||
+        typeof data.cardName !== 'string' ||
+        data.cardName.trim() === ''
+      ) {
+        return {
+          success: false,
+          error: 'cardName is required and must be a non-empty string',
+        };
       }
       // Check if submission exists
       const submission = await this.prisma.companyListSubmission.findUnique({
@@ -1239,6 +1261,8 @@ class Vibe {
         for (const [trackId, voters] of trackSubmissionsMap.entries()) {
           if (voters.length === 0) continue;
 
+          console.log(111, voters);
+
           // Use cardName field for each voter, fallback to Anonymous if not present
           const cardNames: string[] = [];
           for (const voter of voters) {
@@ -1251,7 +1275,9 @@ class Vibe {
             } else if (voter.firstname) {
               let displayName = voter.firstname;
               if (voter.lastname && voter.lastname.length > 0) {
-                displayName = `${displayName}&nbsp;${voter.lastname.charAt(0)}`;
+                displayName = `${displayName}&nbsp;${voter.lastname.charAt(
+                  0
+                )}.`;
               }
               cardNames.push(displayName);
             } else {
