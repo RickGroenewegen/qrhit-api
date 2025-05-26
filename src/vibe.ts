@@ -1240,7 +1240,11 @@ class Vibe {
         // 1. Aggregate submissions by trackId
         const trackSubmissionsMap: Map<
           number,
-          { firstname: string | null; lastname: string | null; cardName: string | null }[]
+          {
+            firstname: string | null;
+            lastname: string | null;
+            cardName: string | null;
+          }[]
         > = new Map();
         for (const submission of submissionsWithNameToUse) {
           const trackId = submission.trackId;
@@ -1263,19 +1267,13 @@ class Vibe {
         for (const [trackId, voters] of trackSubmissionsMap.entries()) {
           if (voters.length === 0) continue;
 
+          console.log(trackId, voters);
+
           // Use cardName field for each voter, fallback to Anonymous if not present
           const cardNames: string[] = [];
           for (const voter of voters) {
             if (voter.cardName && voter.cardName.length > 0) {
               cardNames.push(voter.cardName);
-            } else if (voter.firstname) {
-              let displayName = voter.firstname;
-              if (voter.lastname && voter.lastname.length > 0) {
-                displayName = `${displayName}&nbsp;${voter.lastname.charAt(0)}.`;
-              }
-              cardNames.push(displayName);
-            } else {
-              cardNames.push('Anonymous');
             }
           }
 
