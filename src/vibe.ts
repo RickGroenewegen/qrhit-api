@@ -1230,6 +1230,7 @@ class Vibe {
               select: {
                 firstname: true,
                 lastname: true,
+                cardName: true,
               },
             },
           },
@@ -1239,7 +1240,7 @@ class Vibe {
         // 1. Aggregate submissions by trackId
         const trackSubmissionsMap: Map<
           number,
-          { firstname: string | null; lastname: string | null }[]
+          { firstname: string | null; lastname: string | null; cardName: string | null }[]
         > = new Map();
         for (const submission of submissionsWithNameToUse) {
           const trackId = submission.trackId;
@@ -1251,6 +1252,7 @@ class Vibe {
             trackSubmissionsMap.get(trackId)!.push({
               firstname: submission.CompanyListSubmission.firstname,
               lastname: submission.CompanyListSubmission.lastname,
+              cardName: submission.CompanyListSubmission.cardName,
             });
           }
         }
@@ -1261,23 +1263,15 @@ class Vibe {
         for (const [trackId, voters] of trackSubmissionsMap.entries()) {
           if (voters.length === 0) continue;
 
-          console.log(111, voters);
-
           // Use cardName field for each voter, fallback to Anonymous if not present
           const cardNames: string[] = [];
           for (const voter of voters) {
-            // voter is { firstname, lastname }, but we want to fetch cardName from the submission
-            // To do this, we need to fetch the submission with these names and the same listId
-            // But since this is a performance concern, let's assume the original query can be changed to include cardName
-            // For now, fallback to reconstructing as before if cardName is not available
-            if ((voter as any).cardName && (voter as any).cardName.length > 0) {
-              cardNames.push((voter as any).cardName);
+            if (voter.cardName && voter.cardName.length > 0) {
+              cardNames.push(voter.cardName);
             } else if (voter.firstname) {
               let displayName = voter.firstname;
               if (voter.lastname && voter.lastname.length > 0) {
-                displayName = `${displayName}&nbsp;${voter.lastname.charAt(
-                  0
-                )}.`;
+                displayName = `${displayName}&nbsp;${voter.lastname.charAt(0)}.`;
               }
               cardNames.push(displayName);
             } else {
