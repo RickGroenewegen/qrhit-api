@@ -1742,9 +1742,18 @@ class PrintEnBind {
     try {
       const payments = await this.prisma.payment.findMany({
         where: {
-          printApiOrderId: {
-            not: '',
-          },
+          AND: [
+            {
+              printApiOrderId: {
+                not: '',
+              },
+            },
+            {
+              printApiOrderId: {
+                not: null,
+              },
+            },
+          ],
         },
         select: {
           paymentId: true,
