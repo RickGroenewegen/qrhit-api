@@ -56,13 +56,13 @@ class Vibe {
 
       this.logger.log(
         color.blue.bold(
-          `Updated ${color.white.bold(
+          `Corrected ${color.white.bold(
             updated.count
-          )} CompanyListSubmissionTrack records for companyListId ${color.white.bold(
+          )} votes for company list ${color.white.bold(
             companyListId
-          )}: trackId ${color.white.bold(sourceTrackId)} -> ${color.white.bold(
-            destinationTrackId
-          )}`
+          )}. Moved votes from track ${color.white.bold(
+            sourceTrackId
+          )} to ${color.white.bold(destinationTrackId)}`
         )
       );
 

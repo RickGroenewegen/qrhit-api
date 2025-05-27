@@ -438,6 +438,8 @@ class Mollie {
         paymentId: true,
         status: true,
         totalPrice: true,
+        totalPriceWithoutTax: true,
+        printApiPrice: true,
         createdAt: true,
         updatedAt: true,
         orderId: true,

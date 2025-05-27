@@ -97,6 +97,7 @@ model Payment {
   printApiPrice           Float                @default(0)
   clientIp                String?
   totalPrice              Float
+  totalPriceWithoutTax    Float                @default(0)
   status                  String
   createdAt               DateTime             @default(now())
   updatedAt               DateTime             @updatedAt

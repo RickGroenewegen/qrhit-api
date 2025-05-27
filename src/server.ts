@@ -730,8 +730,11 @@ class Server {
       async (_request: any, reply: any) => {
         const PrintEnBind = (await import('./printers/printenbind')).default;
         const printEnBind = PrintEnBind.getInstance();
-        await printEnBind.updateAllPaymentsWithPrintApiOrderId();
-        reply.send({ success: true, message: 'Updated all payments with printApiOrderId' });
+        printEnBind.updateAllPaymentsWithPrintApiOrderId();
+        reply.send({
+          success: true,
+          message: 'Updated all payments with printApiOrderId',
+        });
       }
     );
 
