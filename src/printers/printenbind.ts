@@ -1734,6 +1734,42 @@ class PrintEnBind {
       );
     }
   }
+
+  /**
+   * Retrieves all payments with a printApiOrderId > 0 and calls setPaymentInfo for each.
+   */
+  public async updateAllPaymentsWithPrintApiOrderId(): Promise<void> {
+    try {
+      const payments = await this.prisma.payment.findMany({
+        where: {
+          printApiOrderId: {
+            not: '',
+          },
+        },
+        select: {
+          paymentId: true,
+        },
+      });
+
+      for (const payment of payments) {
+        const paymentData = await this.prisma.payment.findUnique({
+          where: { paymentId: payment.paymentId },
+        });
+        if (paymentData && paymentData.printApiOrderId && paymentData.printApiOrderId !== '') {
+          await this.setPaymentInfo(paymentData.printApiOrderId, paymentData);
+        }
+      }
+      this.logger.log(
+        color.green.bold(
+          `Updated payment info for all payments with printApiOrderId > 0`
+        )
+      );
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error updating payments with printApiOrderId: ${error}`)
+      );
+    }
+  }
 }
 
 export default PrintEnBind;
