@@ -1281,7 +1281,8 @@ class PrintEnBind {
 
   private async setPaymentInfo(
     printApiOrderId: string,
-    payment: any
+    payment: any,
+    newStatus: string = 'Submitted'
   ): Promise<void> {
     const authToken = await this.getAuthToken();
     const taxRate = (await this.data.getTaxRate(payment.countrycode))!;
@@ -1313,7 +1314,7 @@ class PrintEnBind {
           printApiPrice,
           totalPriceWithoutTax,
           profit: newProfit,
-          printApiStatus: 'Submitted',
+          printApiStatus: newStatus,
         },
       });
 
@@ -1783,7 +1784,11 @@ class PrintEnBind {
           paymentData.printApiOrderId &&
           paymentData.printApiOrderId !== ''
         ) {
-          await this.setPaymentInfo(paymentData.printApiOrderId, paymentData);
+          await this.setPaymentInfo(
+            paymentData.printApiOrderId,
+            paymentData,
+            paymentData.printApiStatus
+          );
         }
       }
     } catch (error) {
