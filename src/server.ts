@@ -723,6 +723,18 @@ class Server {
       }
     );
 
+    // Protected admin route to update all payments with printApiOrderId
+    this.fastify.post(
+      '/admin/printenbind/update-payments',
+      getAuthHandler(['admin']),
+      async (_request: any, reply: any) => {
+        const PrintEnBind = (await import('./printers/printenbind')).default;
+        const printEnBind = PrintEnBind.getInstance();
+        await printEnBind.updateAllPaymentsWithPrintApiOrderId();
+        reply.send({ success: true, message: 'Updated all payments with printApiOrderId' });
+      }
+    );
+
     // Protected admin route to delete a discount code by id
     this.fastify.delete(
       '/admin/discount/:id',
