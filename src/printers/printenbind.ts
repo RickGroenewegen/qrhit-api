@@ -1750,7 +1750,7 @@ class PrintEnBind {
             },
             {
               printApiOrderId: {
-                not: null,
+                not: undefined,
               },
             },
           ],
@@ -1764,7 +1764,11 @@ class PrintEnBind {
         const paymentData = await this.prisma.payment.findUnique({
           where: { paymentId: payment.paymentId },
         });
-        if (paymentData && paymentData.printApiOrderId && paymentData.printApiOrderId !== '') {
+        if (
+          paymentData &&
+          paymentData.printApiOrderId &&
+          paymentData.printApiOrderId !== ''
+        ) {
           await this.setPaymentInfo(paymentData.printApiOrderId, paymentData);
         }
       }
