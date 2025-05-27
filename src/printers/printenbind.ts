@@ -1318,11 +1318,17 @@ class PrintEnBind {
       });
 
       this.logger.log(
-        color.blue.bold(
-          `Retrieved order amount from Print&Bind for order ${color.white.bold(
-            printApiOrderId
-          )}: ${color.white.bold(printApiPrice)}`
-        )
+        color.green.bold(
+          `Set payment info for order ${color.white.bold(printApiOrderId)}: `
+        ) +
+        color.cyan(`PrintApiPrice: `) +
+        color.white.bold(`${printApiPrice}`) +
+        color.cyan(` | TotalPriceWithoutTax: `) +
+        color.white.bold(`${totalPriceWithoutTax}`) +
+        color.cyan(` | Profit: `) +
+        (newProfit >= 0
+          ? color.green.bold(`${newProfit}`)
+          : color.red.bold(`${newProfit}`))
       );
     } catch (e) {
       console.log(123, e);
