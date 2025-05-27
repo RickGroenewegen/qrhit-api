@@ -1318,17 +1318,17 @@ class PrintEnBind {
       });
 
       this.logger.log(
-        color.green.bold(
-          `Set payment info for order ${color.white.bold(printApiOrderId)}: `
-        ) +
-        color.cyan(`PrintApiPrice: `) +
-        color.white.bold(`${printApiPrice}`) +
-        color.cyan(` | TotalPriceWithoutTax: `) +
-        color.white.bold(`${totalPriceWithoutTax}`) +
-        color.cyan(` | Profit: `) +
-        (newProfit >= 0
-          ? color.green.bold(`${newProfit}`)
-          : color.red.bold(`${newProfit}`))
+        color.blue.bold(
+          `Payment info updated for order ${color.white.bold(
+            printApiOrderId
+          )} [TP: ${color.white.bold(
+            payment.totalPrice.toFixed(2)
+          )}] [TPWT: ${color.white.bold(
+            totalPriceWithoutTax.toFixed(2)
+          )}] [API: ${color.white.bold(
+            printApiPrice.toFixed(2)
+          )}] [PR: ${color.white.bold(newProfit.toFixed(2))}]`
+        )
       );
     } catch (e) {
       console.log(123, e);
@@ -1766,6 +1766,14 @@ class PrintEnBind {
         },
       });
 
+      this.logger.log(
+        color.blue.bold(
+          `Updating payment info for ${color.white.bold(
+            payments.length.toString()
+          )} payments`
+        )
+      );
+
       for (const payment of payments) {
         const paymentData = await this.prisma.payment.findUnique({
           where: { paymentId: payment.paymentId },
@@ -1778,11 +1786,6 @@ class PrintEnBind {
           await this.setPaymentInfo(paymentData.printApiOrderId, paymentData);
         }
       }
-      this.logger.log(
-        color.green.bold(
-          `Updated payment info for all payments with printApiOrderId > 0`
-        )
-      );
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error updating payments with printApiOrderId: ${error}`)
