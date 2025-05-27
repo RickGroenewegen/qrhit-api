@@ -135,14 +135,14 @@ class AnalyticsClient {
         },
       },
       select: {
-        totalPrice: true,
+        totalPriceWithoutTax: true,
         profit: true,
       },
     });
 
     const totals = payments.reduce(
       (acc, payment) => {
-        acc.totalPrice += payment.totalPrice;
+        acc.totalPrice += payment.totalPriceWithoutTax;
         acc.totalProfit += payment.profit;
         return acc;
       },

@@ -70,7 +70,7 @@ class Mollie {
       },
       _sum: {
         totalPrice: true,
-        productPriceWithoutTax: true,
+        totalPriceWithoutTax: true,
       },
     });
 
@@ -83,13 +83,13 @@ class Mollie {
         existingDay.numberOfSales += entry._count._all;
         existingDay.totalPrice += entry._sum.totalPrice || 0;
         existingDay.totalPriceWithoutTax +=
-          entry._sum.productPriceWithoutTax || 0;
+          entry._sum.totalPriceWithoutTax || 0;
       } else {
         acc.push({
           day,
           numberOfSales: entry._count._all,
           totalPrice: entry._sum.totalPrice || 0,
-          totalPriceWithoutTax: entry._sum.productPriceWithoutTax || 0,
+          totalPriceWithoutTax: entry._sum.totalPriceWithoutTax || 0,
         });
       }
       return acc;
@@ -135,7 +135,7 @@ class Mollie {
       },
       _sum: {
         totalPrice: true,
-        productPriceWithoutTax: true,
+        totalPriceWithoutTax: true,
       },
       _max: {
         taxRate: true,
@@ -172,7 +172,7 @@ class Mollie {
           country: entry.countrycode || 'Unknown',
           numberOfSales: entry._count._all,
           totalPrice: entry._sum.totalPrice || 0,
-          totalPriceWithoutTax: entry._sum.productPriceWithoutTax,
+          totalPriceWithoutTax: entry._sum.totalPriceWithoutTax,
           taxRate: entry._max.taxRate,
           totalPlaylists: totalPlaylistsSold,
         };
@@ -218,7 +218,7 @@ class Mollie {
       },
       _sum: {
         totalPrice: true,
-        productPriceWithoutTax: true,
+        totalPriceWithoutTax: true,
         productVATPrice: true,
       },
     });
@@ -227,7 +227,7 @@ class Mollie {
       taxRate: entry.taxRate || 0,
       numberOfSales: entry._count._all,
       totalPrice: entry._sum.totalPrice || 0,
-      totalPriceWithoutTax: entry._sum.productPriceWithoutTax || 0,
+      totalPriceWithoutTax: entry._sum.totalPriceWithoutTax || 0,
       totalVAT: entry._sum.productVATPrice || 0,
     }));
 
@@ -800,6 +800,13 @@ class Mollie {
       delete params.extraOrderData.agreeTerms;
       delete params.extraOrderData.agreeNoRefund;
 
+      const taxRate = (await this.data.getTaxRate(
+        params.extraOrderData.countrycode
+      ))!;
+      const molliePaymentAmountWithoutTax = parseFloat(
+        (molliePaymentAmount / (1 + taxRate / 100)).toFixed(2)
+      );
+
       const insertResult = await this.prisma.payment.create({
         data: {
           paymentId: molliePaymentId,
@@ -808,6 +815,7 @@ class Mollie {
             connect: { id: userDatabaseId },
           },
           totalPrice: molliePaymentAmount,
+          totalPriceWithoutTax: molliePaymentAmountWithoutTax,
           status: molliePaymentStatus,
           locale: params.locale,
           taxRate: calculateResult.data.taxRate,
