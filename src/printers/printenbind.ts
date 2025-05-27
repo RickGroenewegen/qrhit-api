@@ -1258,44 +1258,7 @@ class PrintEnBind {
         });
       }
 
-      let printApiPrice = 0;
-      let totalProfit = 0;
-
-      try {
-        const orderResponse = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${result.data.orderId}`,
-          {
-            method: 'GET',
-            headers: { Authorization: authToken! },
-          }
-        );
-
-        const order = await orderResponse.json();
-
-        printApiPrice = parseFloat(order.amount);
-
-        const newProfit = payment.productPriceWithoutTax - printApiPrice;
-
-        await this.prisma.payment.update({
-          where: { paymentId: payment.paymentId },
-          data: {
-            printApiPrice,
-            profit: newProfit,
-            printApiStatus: 'Submitted',
-          },
-        });
-
-        this.logger.log(
-          color.blue.bold(
-            `Retrieved order amount from Print&Bind for order ${color.white.bold(
-              result.data.orderId
-            )}: ${color.white.bold(printApiPrice)}`
-          )
-        );
-      } catch (e) {
-        console.log(123, e);
-        // Nothing
-      }
+      this.setPaymentInfo(result.data.orderId, payment);
 
       return {
         success: true,
@@ -1313,6 +1276,57 @@ class PrintEnBind {
           apiCalls: finalApiCalls,
         },
       };
+    }
+  }
+
+  private async setPaymentInfo(
+    printApiOrderId: string,
+    payment: any
+  ): Promise<void> {
+    const authToken = await this.getAuthToken();
+    const taxRate = (await this.data.getTaxRate(payment.countrycode))!;
+
+    const totalPriceWithoutTax = parseFloat(
+      (payment.totalPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)
+    );
+
+    let printApiPrice = 0;
+
+    try {
+      const orderResponse = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/orders/${printApiOrderId}`,
+        {
+          method: 'GET',
+          headers: { Authorization: authToken! },
+        }
+      );
+
+      const order = await orderResponse.json();
+
+      printApiPrice = parseFloat(order.amount);
+
+      const newProfit = totalPriceWithoutTax - printApiPrice;
+
+      await this.prisma.payment.update({
+        where: { paymentId: payment.paymentId },
+        data: {
+          printApiPrice,
+          totalPriceWithoutTax,
+          profit: newProfit,
+          printApiStatus: 'Submitted',
+        },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Retrieved order amount from Print&Bind for order ${color.white.bold(
+            printApiOrderId
+          )}: ${color.white.bold(printApiPrice)}`
+        )
+      );
+    } catch (e) {
+      console.log(123, e);
+      // Nothing
     }
   }
 
