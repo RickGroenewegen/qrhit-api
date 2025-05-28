@@ -321,7 +321,7 @@ class Vibe {
             companyList.languages = [];
           }
 
-          // New: Get submissions for this list
+          // New: Get submissions for this list, including count of votes casted
           submissions = await this.prisma.companyListSubmission.findMany({
             where: { companyListId: listId },
             select: {
@@ -336,9 +336,18 @@ class Vibe {
               locale: true,
               agreeToUseName: true,
               createdAt: true,
+              _count: {
+                select: { CompanyListSubmissionTrack: true },
+              },
             },
             orderBy: { createdAt: 'desc' },
           });
+
+          // Add a 'votesCast' property to each submission
+          submissions = submissions.map((submission: any) => ({
+            ...submission,
+            votesCast: submission._count?.CompanyListSubmissionTrack || 0,
+          }));
         } else {
           // If companyList is not found, return error early
           return { success: false, error: 'Company list not found' };
