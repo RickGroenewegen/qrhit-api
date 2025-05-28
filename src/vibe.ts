@@ -1687,7 +1687,7 @@ class Vibe {
             lastname: true,
             CompanyListSubmissionTrack: {
               // Fetch associated tracks ordered by position, and createdAt with the first
-              orderBy: { position: 'asc', createdAt: 'asc' },
+              orderBy: { position: 'asc' },
               select: {
                 trackId: true,
                 position: true,
