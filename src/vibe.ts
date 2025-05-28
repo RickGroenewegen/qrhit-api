@@ -1639,11 +1639,11 @@ class Vibe {
           },
           select: {
             id: true,
-            firstname: true, // Added firstname
-            lastname: true, // Added lastname
+            firstname: true,
+            lastname: true,
             CompanyListSubmissionTrack: {
-              // Fetch associated tracks ordered by position
-              orderBy: { position: 'asc' },
+              // Fetch associated tracks ordered by position, and createdAt with the first
+              orderBy: { position: 'asc', createdAt: 'asc' },
               select: {
                 trackId: true,
                 position: true,
