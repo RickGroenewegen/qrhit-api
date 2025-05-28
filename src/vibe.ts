@@ -1708,7 +1708,7 @@ class Vibe {
       for (const submission of verifiedSubmissions) {
         const voterName = `${submission.firstname || ''} ${
           submission.lastname || ''
-        }`.trim(); // Construct full name, trim whitespace
+        }`.trim(); // Construct full name, trim whitespace test
 
         for (const submissionTrack of submission.CompanyListSubmissionTrack) {
           // Increment vote count for this track
