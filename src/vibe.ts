@@ -154,6 +154,50 @@ class Vibe {
       return { success: false, error: 'Error updating submission' };
     }
   }
+  /**
+   * Verify a playlist submission by its ID.
+   * @param submissionId The ID of the submission to verify.
+   * @returns Object with success status and updated submission or error.
+   */
+  public async verifySubmission(
+    submissionId: number
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+      if (!submissionId || isNaN(submissionId)) {
+        return { success: false, error: 'Invalid submission ID provided' };
+      }
+
+      // Check if submission exists
+      const submission = await this.prisma.companyListSubmission.findUnique({
+        where: { id: submissionId },
+      });
+
+      if (!submission) {
+        return { success: false, error: 'Submission not found' };
+      }
+
+      // Update the submission: set verified true, set verifiedAt, optionally update status
+      const updated = await this.prisma.companyListSubmission.update({
+        where: { id: submissionId },
+        data: {
+          verified: true,
+          verifiedAt: new Date(),
+          status: 'submitted', // Optionally set status to 'submitted'
+        },
+      });
+
+      this.logger.log(
+        color.green.bold(
+          `Verified submission: ${color.white.bold(submissionId)}`
+        )
+      );
+
+      return { success: true, data: updated };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error verifying submission: ${error}`));
+      return { success: false, error: 'Error verifying submission' };
+    }
+  }
   private logger = new Logger();
   private utils = new Utils();
   private discount = new Discount();

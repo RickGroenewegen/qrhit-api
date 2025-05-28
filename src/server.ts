@@ -1096,6 +1096,34 @@ class Server {
       }
     );
 
+    // Protected route to verify a playlist submission
+    this.fastify.put(
+      '/vibe/submissions/:submissionId/verify',
+      getAuthHandler(['admin', 'vibeadmin']),
+      async (request: any, reply: any) => {
+        try {
+          const submissionId = parseInt(request.params.submissionId);
+          if (isNaN(submissionId)) {
+            reply.status(400).send({ error: 'Invalid submission ID' });
+            return;
+          }
+          const result = await this.vibe.verifySubmission(submissionId);
+          if (!result.success) {
+            let statusCode = 500;
+            if (result.error === 'Submission not found') {
+              statusCode = 404;
+            }
+            reply.status(statusCode).send({ error: result.error });
+            return;
+          }
+          reply.send({ success: true, data: result.data });
+        } catch (error) {
+          console.error('Error verifying submission:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
+      }
+    );
+
     this.fastify.get(
       '/download_invoice/:invoiceId',
       getAuthHandler(['admin']),
