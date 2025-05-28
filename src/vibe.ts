@@ -1700,10 +1700,11 @@ class Vibe {
         return { success: true, data: { list: companyList, ranking: [] } }; // Return empty ranking
       }
 
-      // 3. Calculate points, count votes, and collect voter names for each track
+      // 3. Calculate points, count votes, collect voter names, and track first vote time for each track
       const trackScores: { [trackId: number]: number } = {};
       const trackVoteCounts: { [trackId: number]: number } = {}; // To store vote counts
       const trackVotersMap: { [trackId: number]: string[] } = {}; // To store voter names
+      const trackFirstVoteTime: { [trackId: number]: Date } = {}; // To store first vote time
 
       for (const submission of verifiedSubmissions) {
         const voterName = `${submission.firstname || ''} ${
@@ -1733,6 +1734,15 @@ class Vibe {
             trackScores[submissionTrack.trackId] =
               (trackScores[submissionTrack.trackId] || 0) + points;
           }
+
+          // Track the first vote time for each track
+          if (!trackFirstVoteTime[submissionTrack.trackId]) {
+            // Use the createdAt of the submission as the time of the first vote for this track
+            // If createdAt is not available, fallback to current time
+            // @ts-ignore
+            const createdAt = submission.createdAt ? new Date(submission.createdAt) : new Date();
+            trackFirstVoteTime[submissionTrack.trackId] = createdAt;
+          }
         }
       }
 
@@ -1753,15 +1763,22 @@ class Vibe {
         },
       });
 
-      // 5. Combine track details with scores and sort
+      // 5. Combine track details with scores and sort (with tiebreaker: first vote wins)
       const rankedTracks = tracks
         .map((track) => ({
           ...track,
           score: trackScores[track.id] || 0, // Default score to 0 if somehow missing
           voteCount: trackVoteCounts[track.id] || 0, // Add vote count, default to 0
           voters: trackVotersMap[track.id] || [], // Add voters array, default to empty
+          firstVoteTime: trackFirstVoteTime[track.id] || new Date(0), // Add first vote time for tiebreaker
         }))
-        .sort((a, b) => b.score - a.score) // Sort descending by score
+        .sort((a, b) => {
+          if (b.score !== a.score) {
+            return b.score - a.score; // Sort descending by score
+          }
+          // Tie-break: track with earliest first vote wins
+          return a.firstVoteTime.getTime() - b.firstVoteTime.getTime();
+        })
         // Add the 'withinLimit' property based on the index and numberOfCards
         .map((track, index) => ({
           ...track,
