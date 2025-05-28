@@ -343,11 +343,14 @@ class Vibe {
             orderBy: { createdAt: 'desc' },
           });
 
-          // Add a 'votesCast' property to each submission
-          submissions = submissions.map((submission: any) => ({
-            ...submission,
-            votesCast: submission._count?.CompanyListSubmissionTrack || 0,
-          }));
+          // Add a 'voteCount' property to each submission and remove _count
+          submissions = submissions.map((submission: any) => {
+            const { _count, ...rest } = submission;
+            return {
+              ...rest,
+              voteCount: _count?.CompanyListSubmissionTrack || 0,
+            };
+          });
         } else {
           // If companyList is not found, return error early
           return { success: false, error: 'Company list not found' };
