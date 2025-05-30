@@ -1697,6 +1697,7 @@ class Vibe {
             id: true,
             firstname: true,
             lastname: true,
+            createdAt: true,
             CompanyListSubmissionTrack: {
               // Fetch associated tracks ordered by position, and createdAt with the first
               orderBy: { position: 'asc' },
@@ -1752,7 +1753,9 @@ class Vibe {
             // Use the createdAt of the submission as the time of the first vote for this track
             // If createdAt is not available, fallback to current time
             // @ts-ignore
-            const createdAt = submission.createdAt ? new Date(submission.createdAt) : new Date();
+            const createdAt = submission.createdAt
+              ? new Date(submission.createdAt)
+              : new Date();
             trackFirstVoteTime[submissionTrack.trackId] = createdAt;
           }
         }
