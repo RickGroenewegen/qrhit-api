@@ -1717,7 +1717,9 @@ class Vibe {
       // 3. Calculate points, count votes, collect voter objects, and track first vote time for each track
       const trackScores: { [trackId: number]: number } = {};
       const trackVoteCounts: { [trackId: number]: number } = {}; // To store vote counts
-      const trackVotersMap: { [trackId: number]: { name: string; agreeToUseName: boolean }[] } = {}; // To store voter objects
+      const trackVotersMap: {
+        [trackId: number]: { name: string; agreeToUseName: boolean }[];
+      } = {}; // To store voter objects
       const trackFirstVoteTime: { [trackId: number]: Date } = {}; // To store first vote time
 
       for (const submission of verifiedSubmissions) {
@@ -1774,6 +1776,7 @@ class Vibe {
         },
         select: {
           id: true,
+          trackId: true,
           name: true,
           manuallyChecked: true,
           artist: true,
@@ -1917,7 +1920,7 @@ class Vibe {
       const limitedPlaylistResult = await this.createPlaylist(
         companyList.Company.name,
         companyList.name, // Original name
-        topTracks.map((track: any) => track.spotifyLink!.split('/').pop()!) // Use spotifyLink from ranked data
+        topTracks.map((track: any) => track.trackId) // Use spotifyLink from ranked data
       );
 
       // --- Update CompanyList with Limited Playlist URL ---
