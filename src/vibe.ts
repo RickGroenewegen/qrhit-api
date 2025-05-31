@@ -1697,6 +1697,7 @@ class Vibe {
             id: true,
             firstname: true,
             lastname: true,
+            agreeToUseName: true, // <-- Add this field
             createdAt: true,
             CompanyListSubmissionTrack: {
               // Fetch associated tracks ordered by position, and createdAt with the first
@@ -1713,29 +1714,33 @@ class Vibe {
         return { success: true, data: { list: companyList, ranking: [] } }; // Return empty ranking
       }
 
-      // 3. Calculate points, count votes, collect voter names, and track first vote time for each track
+      // 3. Calculate points, count votes, collect voter objects, and track first vote time for each track
       const trackScores: { [trackId: number]: number } = {};
       const trackVoteCounts: { [trackId: number]: number } = {}; // To store vote counts
-      const trackVotersMap: { [trackId: number]: string[] } = {}; // To store voter names
+      const trackVotersMap: { [trackId: number]: { name: string; agreeToUseName: boolean }[] } = {}; // To store voter objects
       const trackFirstVoteTime: { [trackId: number]: Date } = {}; // To store first vote time
 
       for (const submission of verifiedSubmissions) {
         const voterName = `${submission.firstname || ''} ${
           submission.lastname || ''
         }`.trim(); // Construct full name, trim whitespace test
+        const agreeToUseName = !!submission.agreeToUseName;
 
         for (const submissionTrack of submission.CompanyListSubmissionTrack) {
           // Increment vote count for this track
           trackVoteCounts[submissionTrack.trackId] =
             (trackVoteCounts[submissionTrack.trackId] || 0) + 1;
 
-          // Add voter name
+          // Add voter object
           if (!trackVotersMap[submissionTrack.trackId]) {
             trackVotersMap[submissionTrack.trackId] = [];
           }
-          // Add name only if it's not an empty string (e.g. if both firstname and lastname were null/empty)
+          // Add object only if name is not empty
           if (voterName) {
-            trackVotersMap[submissionTrack.trackId].push(voterName);
+            trackVotersMap[submissionTrack.trackId].push({
+              name: voterName,
+              agreeToUseName,
+            });
           }
 
           // Points = maxPoints - position + 1
@@ -1784,7 +1789,7 @@ class Vibe {
           ...track,
           score: trackScores[track.id] || 0, // Default score to 0 if somehow missing
           voteCount: trackVoteCounts[track.id] || 0, // Add vote count, default to 0
-          voters: trackVotersMap[track.id] || [], // Add voters array, default to empty
+          voters: trackVotersMap[track.id] || [], // Add voters array of objects, default to empty
           firstVoteTime: trackFirstVoteTime[track.id] || new Date(0), // Add first vote time for tiebreaker
         }))
         .sort((a, b) => {
