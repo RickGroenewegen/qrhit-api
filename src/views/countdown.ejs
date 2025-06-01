@@ -35,14 +35,14 @@
             <div class="title">
                 <img src="/assets/images/logo_white.png" alt="QRSong! Logo" class="logo-image"/>
             </div>
-            <h2 class="onboarding-heading"><%= translations.youNeedToInstall %></h2>
-            <div class="device-selector">
+            <h2 class="onboarding-heading" style="margin-bottom: 32px;"><%= translations.youNeedToInstall %></h2>
+            <div class="device-selector" style="margin-bottom: 40px;">
                 <button id="app-store" onclick="location.href='https://apps.apple.com/app/qrsong/id6727011939';" class="device-button download-button"><i class="fab fa-apple"></i> <%= translations.appStore %></button>
                 <button id="google-play" onclick="location.href='https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong';" class="device-button download-button"><i class="fab fa-google-play"></i> <%= translations.googlePlay %></button>
                 <!-- <button id="pwa" class="device-button active"><i class="fas fa-download"></i> <%= translations.other %></button> -->
             </div>
-            <div style="color: white; font-size: 16px; font-style: italic; margin-top: 24px;">"<%= translations.createYourOwn %>"</div>
-            <button onclick="window.open('<%= domain %>', '_blank');" class="device-button download-button" style="margin-top: 20px;"><i class="fas fa-globe"></i> <%= translations.visit %></button>
+            <div style="color: white; font-size: 16px; font-style: italic; margin-top: 40px; margin-bottom: 16px;">"<%= translations.createYourOwn %>"</div>
+            <button onclick="window.open('<%= domain %>', '_blank');" class="device-button download-button" style="margin-top: 20px; margin-bottom: 32px;"><i class="fas fa-globe"></i> <%= translations.visit %></button>
             <div id="pwa-instructions" class="install-instructions active">
                 <div class="step">
                     <div class="step-number">1</div>
