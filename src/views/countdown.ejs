@@ -33,6 +33,19 @@
             margin-right: auto;
             display: block;
         }
+        .device-selector.flex-align {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 16px;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        .device-selector.flex-align .device-button {
+            flex: 1 1 0;
+            min-width: 0;
+        }
     </style>
 </head>
 <body>
@@ -58,7 +71,7 @@
                 <img src="/assets/images/logo_white.png" alt="QRSong! Logo" class="logo-image"/>
             </div>
             <h2 class="onboarding-heading" style="margin-bottom: 32px;"><%= translations.youNeedToInstall %></h2>
-            <div class="device-selector" style="margin-bottom: 40px;">
+            <div class="device-selector flex-align" style="margin-bottom: 40px;">
                 <button id="app-store" onclick="location.href='https://apps.apple.com/app/qrsong/id6727011939';" class="device-button download-button"><i class="fab fa-apple"></i> <%= translations.appStore %></button>
                 <button id="google-play" onclick="location.href='https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong';" class="device-button download-button"><i class="fab fa-google-play"></i> <%= translations.googlePlay %></button>
                 <!-- <button id="pwa" class="device-button active"><i class="fas fa-download"></i> <%= translations.other %></button> -->
