@@ -25,6 +25,14 @@
             text-align: center;
             display: inline-block;
         }
+        .visit-website-btn {
+            min-width: 260px !important;
+            width: 100%;
+            max-width: 400px;
+            margin-left: auto;
+            margin-right: auto;
+            display: block;
+        }
     </style>
 </head>
 <body>
@@ -56,7 +64,7 @@
                 <!-- <button id="pwa" class="device-button active"><i class="fas fa-download"></i> <%= translations.other %></button> -->
             </div>
             <div style="color: white; font-size: 16px; font-style: italic; margin-top: 40px; margin-bottom: 16px;">"<%= translations.createYourOwn %>"</div>
-            <button onclick="window.open('<%= domain %>', '_blank');" class="device-button download-button" style="margin-top: 20px; margin-bottom: 32px;"><i class="fas fa-globe"></i> <%= translations.visit %></button>
+            <button onclick="window.open('<%= domain %>', '_blank');" class="device-button download-button visit-website-btn" style="margin-top: 20px; margin-bottom: 32px;"><i class="fas fa-globe"></i> <%= translations.visit %></button>
             <div id="pwa-instructions" class="install-instructions active">
                 <div class="step">
                     <div class="step-number">1</div>
