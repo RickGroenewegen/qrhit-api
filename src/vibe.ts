@@ -1919,8 +1919,8 @@ class Vibe {
       // --- Create/Update Limited Playlist ---
       const limitedPlaylistResult = await this.createPlaylist(
         companyList.Company.name,
-        companyList.name, // Original name
-        topTracks.map((track: any) => track.trackId) // Use spotifyLink from ranked data
+        companyList.name,
+        topTracks.map((track: any) => track.trackId)
       );
 
       // --- Update CompanyList with Limited Playlist URL ---
