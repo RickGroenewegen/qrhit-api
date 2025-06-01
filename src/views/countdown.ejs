@@ -37,11 +37,10 @@
             display: flex;
             justify-content: center;
             align-items: center;
-            gap: 0;
+            gap: 32px;
             max-width: 500px;
             margin-left: auto;
             margin-right: auto;
-            position: relative;
         }
         .device-selector.flex-align .device-button {
             flex: 1 1 40%;
@@ -49,16 +48,17 @@
             max-width: 220px;
         }
         .visit-website-btn {
-            position: absolute;
-            left: 50%;
-            top: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 2;
-            min-width: 240px !important;
-            width: 60%;
+            min-width: 220px !important;
+            width: 100%;
             max-width: 320px;
-            margin: 0;
+            margin: 32px auto 0 auto;
             display: block;
+            position: static;
+            left: auto;
+            top: auto;
+            transform: none;
+            z-index: auto;
+            box-sizing: border-box;
         }
         @media (max-width: 700px) {
             .device-selector.flex-align {
@@ -70,8 +70,6 @@
             .visit-website-btn {
                 max-width: 100%;
                 width: 100%;
-                position: static;
-                transform: none;
             }
         }
     </style>
@@ -99,12 +97,12 @@
                 <img src="/assets/images/logo_white.png" alt="QRSong! Logo" class="logo-image"/>
             </div>
             <h2 class="onboarding-heading" style="margin-bottom: 32px;"><%= translations.youNeedToInstall %></h2>
-            <div class="device-selector flex-align" style="margin-bottom: 56px; position: relative; min-height: 64px;">
-                <button id="app-store" onclick="location.href='https://apps.apple.com/app/qrsong/id6727011939';" class="device-button download-button" style="z-index:1;"><i class="fab fa-apple"></i> <%= translations.appStore %></button>
-                <button onclick="window.open('<%= domain %>', '_blank');" class="device-button download-button visit-website-btn"><i class="fas fa-globe"></i> <%= translations.visit %></button>
-                <button id="google-play" onclick="location.href='https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong';" class="device-button download-button" style="z-index:1;"><i class="fab fa-google-play"></i> <%= translations.googlePlay %></button>
+            <div class="device-selector flex-align" style="margin-bottom: 40px;">
+                <button id="app-store" onclick="location.href='https://apps.apple.com/app/qrsong/id6727011939';" class="device-button download-button"><i class="fab fa-apple"></i> <%= translations.appStore %></button>
+                <button id="google-play" onclick="location.href='https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong';" class="device-button download-button"><i class="fab fa-google-play"></i> <%= translations.googlePlay %></button>
                 <!-- <button id="pwa" class="device-button active"><i class="fas fa-download"></i> <%= translations.other %></button> -->
             </div>
+            <button onclick="window.open('<%= domain %>', '_blank');" class="device-button download-button visit-website-btn"><i class="fas fa-globe"></i> <%= translations.visit %></button>
             <div style="color: white; font-size: 16px; font-style: italic; margin-top: 40px; margin-bottom: 16px;">"<%= translations.createYourOwn %>"</div>
             <div id="pwa-instructions" class="install-instructions active">
                 <div class="step">
