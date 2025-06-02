@@ -1303,9 +1303,10 @@ class Server {
         await reply.view('poster_vibe.ejs', {
           posterId,
           qrUrl,
-          brandColor: process.env['BRAND_COLOR'] || '#FF2D55',
-          brandSecondary: process.env['BRAND_SECONDARY'] || '#22223B',
-          brandAccent: process.env['BRAND_ACCENT'] || '#4EA8DE',
+          // Hardcoded brand colors for poster as per brand guide
+          brandColor: '#5FBFFF',
+          brandSecondary: '#3F6FAF',
+          brandAccent: '#E56581',
           appDomain: process.env['APP_DOMAIN'],
         });
       }

@@ -22,7 +22,7 @@
       font-family: 'Montserrat', Arial, sans-serif;
       margin: 0;
       padding: 0;
-      background: linear-gradient(135deg, <%= brandColor %> 0%, <%= brandAccent %> 100%);
+      background: linear-gradient(135deg, #5FBFFF 0%, #E56581 100%);
       color: #fff;
       width: 210mm;
       height: 297mm;
@@ -36,7 +36,7 @@
       width: 180mm;
       height: 267mm;
       margin: 15mm auto;
-      background: rgba(34,34,59,0.92);
+      background: rgba(63,111,175,0.92); /* Brand secondary, slightly transparent */
       border-radius: 18px;
       box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
       display: flex;
@@ -53,8 +53,8 @@
       margin-top: 0;
       margin-bottom: 12mm;
       text-align: center;
-      color: <%= brandColor %>;
-      text-shadow: 2px 2px 0 <%= brandAccent %>, 0 4px 24px #0008;
+      color: #5FBFFF;
+      text-shadow: 2px 2px 0 #E56581, 0 4px 24px #0008;
     }
     .poster-subtitle {
       font-size: 28px;
@@ -62,7 +62,7 @@
       margin-bottom: 10mm;
       text-align: center;
       color: #fff;
-      text-shadow: 0 2px 8px <%= brandAccent %>;
+      text-shadow: 0 2px 8px #E56581;
     }
     .music-notes {
       position: absolute;
@@ -91,7 +91,7 @@
       font-size: 22px;
       font-weight: 600;
       margin-bottom: 6mm;
-      color: <%= brandAccent %>;
+      color: #E56581;
       text-shadow: 0 2px 8px #0008;
     }
     .qr-code {
@@ -117,11 +117,11 @@
       margin-top: 10mm;
       font-weight: 400;
       letter-spacing: 1px;
-      text-shadow: 0 2px 8px <%= brandAccent %>;
+      text-shadow: 0 2px 8px #E56581;
     }
     .brand-domain {
       font-size: 20px;
-      color: <%= brandColor %>;
+      color: #5FBFFF;
       font-weight: 700;
       margin-top: 4mm;
       text-align: center;
@@ -152,7 +152,7 @@
       <div class="poster-subtitle">
         Scan the QR code<br>
         and post your top tracks.<br>
-        <span style="font-size:20px;color:<%= brandAccent %>;">Let the music speak!</span>
+        <span style="font-size:20px;color:#E56581;">Let the music speak!</span>
       </div>
     </div>
     <div class="qr-section">
@@ -164,7 +164,7 @@
     <div>
       <div class="poster-footer">
         Join the vibe. Inspire others. <br>
-        <span style="font-size:22px;font-weight:600;color:<%= brandAccent %>;">#MyTopSongs</span>
+        <span style="font-size:22px;font-weight:600;color:#E56581;">#MyTopSongs</span>
       </div>
       <div class="brand-domain"><%= appDomain %></div>
     </div>
