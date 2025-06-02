@@ -1162,6 +1162,33 @@ class Server {
             });
             return;
           }
+
+          // If user is companyadmin, check that the submission belongs to their company
+          if (request.user.userGroups.includes('companyadmin')) {
+            // Get the submission and its companyId
+            const submission = await this.vibe.prisma.companyListSubmission.findUnique({
+              where: { id: submissionId },
+              include: {
+                CompanyList: {
+                  select: { companyId: true }
+                }
+              }
+            });
+            if (!submission) {
+              reply.status(404).send({ error: 'Submission not found' });
+              return;
+            }
+            if (
+              !submission.CompanyList ||
+              submission.CompanyList.companyId !== request.user.companyId
+            ) {
+              reply.status(403).send({
+                error: 'Forbidden: Submission does not belong to your company',
+              });
+              return;
+            }
+          }
+
           const result = await this.vibe.updateSubmission(submissionId, {
             cardName,
           });
