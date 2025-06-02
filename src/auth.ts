@@ -226,13 +226,15 @@ export async function createOrUpdateAdminUser(
           UPDATE users 
           SET password = ${hashedPassword}, 
               salt = ${salt}, 
-              displayName = ${displayName}
+              displayName = ${displayName},
+              email = ${email}
           WHERE id = ${existingUser.id}
         `;
       } else {
         await prisma.$executeRaw`
           UPDATE users 
-          SET displayName = ${displayName}
+          SET displayName = ${displayName},
+              email = ${email}
           WHERE id = ${existingUser.id}
         `;
       }
