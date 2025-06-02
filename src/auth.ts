@@ -250,6 +250,9 @@ export async function createOrUpdateAdminUser(
     } else {
       // Create new user using raw SQL to bypass Prisma type checking
       // This is a temporary solution until Prisma client is regenerated
+      if (!password) {
+        throw new Error('Password is required when creating a new user');
+      }
       const salt = generateSalt();
       const hashedPassword = hashPassword(password, salt);
       await prisma.$executeRaw`
