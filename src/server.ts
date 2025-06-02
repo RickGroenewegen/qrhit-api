@@ -145,11 +145,8 @@ class Server {
     const getAuthHandler = (allowedGroups: string[]) => {
       return {
         // Conditionally apply preHandler based on environment
-        preHandler:
-          process.env['ENVIRONMENT'] === 'development'
-            ? undefined // Skip preHandler in development
-            : (request: any, reply: any) =>
-                verifyTokenMiddleware(request, reply, allowedGroups),
+        preHandler: (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, allowedGroups),
       };
     };
 
@@ -608,7 +605,12 @@ class Server {
       const authResult = await authenticateUser(loginEmail, password);
 
       if (authResult) {
-        reply.send({ token: authResult.token, userId: authResult.userId });
+        reply.send({
+          token: authResult.token,
+          userId: authResult.userId,
+          userGroups: authResult.userGroups,
+          companyId: authResult.companyId,
+        });
         return;
       } else {
         reply.status(401).send({ error: 'Invalid credentials' });
@@ -1057,8 +1059,10 @@ class Server {
 
     this.fastify.get(
       '/vibe/company/:companyId',
-      getAuthHandler(['admin', 'vibeadmin']),
+      getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
       async (request: any, reply: any) => {
+        console.log(111, request.headers);
+
         try {
           // Use the Vibe class to get company lists
           const result = await this.vibe.getCompanyLists(
