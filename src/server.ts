@@ -124,6 +124,9 @@ class Server {
         return false;
       }
 
+      // Attach decoded token to request for later use
+      request.user = decoded;
+
       // Check if user has any of the allowed groups
       if (allowedGroups.length > 0) {
         const userGroups = decoded.userGroups || [];
