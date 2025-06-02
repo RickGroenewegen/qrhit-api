@@ -340,7 +340,7 @@ class Server {
     // Route to delete a submission by its ID
     this.fastify.delete(
       '/vibe/submissions/:submissionId',
-      getAuthHandler(['admin', 'vibeadmin']),
+      getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
       async (request: any, reply: any) => {
         try {
           const submissionId = parseInt(request.params.submissionId);
