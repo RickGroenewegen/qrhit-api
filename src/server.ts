@@ -1166,14 +1166,15 @@ class Server {
           // If user is companyadmin, check that the submission belongs to their company
           if (request.user.userGroups.includes('companyadmin')) {
             // Get the submission and its companyId
-            const submission = await this.vibe.prisma.companyListSubmission.findUnique({
-              where: { id: submissionId },
-              include: {
-                CompanyList: {
-                  select: { companyId: true }
-                }
-              }
-            });
+            const submission =
+              await this.vibe.prisma.companyListSubmission.findUnique({
+                where: { id: submissionId },
+                include: {
+                  CompanyList: {
+                    select: { companyId: true },
+                  },
+                },
+              });
             if (!submission) {
               reply.status(404).send({ error: 'Submission not found' });
               return;

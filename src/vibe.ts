@@ -14,14 +14,16 @@ import Cache from './cache';
 
 class Vibe {
   private static instance: Vibe;
-  private prisma = new PrismaClient();
+  public prisma = new PrismaClient();
 
   /**
    * Get all users that belong to a specific company.
    * @param companyId The company ID to get users for
    * @returns Object with success status and array of users or error
    */
-  public async getUsersByCompany(companyId: number): Promise<{ success: boolean; users?: any[]; error?: string }> {
+  public async getUsersByCompany(
+    companyId: number
+  ): Promise<{ success: boolean; users?: any[]; error?: string }> {
     try {
       if (!companyId || isNaN(companyId)) {
         return { success: false, error: 'Invalid company ID provided' };
@@ -52,7 +54,9 @@ class Vibe {
 
       return { success: true, users };
     } catch (error) {
-      this.logger.log(color.red.bold(`Error getting users by company: ${error}`));
+      this.logger.log(
+        color.red.bold(`Error getting users by company: ${error}`)
+      );
       return { success: false, error: 'Error retrieving users for company' };
     }
   }
