@@ -159,6 +159,28 @@ class Vibe {
   }
 
   /**
+   * Helper to check if a submission belongs to a company.
+   * @param submissionId The submission ID
+   * @param companyId The company ID to check against
+   * @returns Promise<boolean>
+   */
+  public async submissionBelongsToCompany(submissionId: number, companyId: number): Promise<boolean> {
+    if (!submissionId || isNaN(submissionId) || !companyId || isNaN(companyId)) {
+      return false;
+    }
+    const submission = await this.prisma.companyListSubmission.findUnique({
+      where: { id: submissionId },
+      include: {
+        CompanyList: {
+          select: { companyId: true }
+        }
+      }
+    });
+    if (!submission || !submission.CompanyList) return false;
+    return submission.CompanyList.companyId === companyId;
+  }
+
+  /**
    * Update a submission by its ID. Only cardName is editable for now.
    * @param submissionId The ID of the submission to update.
    * @param data Object with editable fields (currently only cardName).

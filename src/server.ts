@@ -1212,7 +1212,7 @@ class Server {
     // Protected route to verify a playlist submission
     this.fastify.put(
       '/vibe/submissions/:submissionId/verify',
-      getAuthHandler(['admin', 'vibeadmin']),
+      getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
       async (request: any, reply: any) => {
         try {
           const submissionId = parseInt(request.params.submissionId);
@@ -1220,6 +1220,21 @@ class Server {
             reply.status(400).send({ error: 'Invalid submission ID' });
             return;
           }
+
+          // If user is companyadmin, check that the submission belongs to their company
+          if (request.user.userGroups.includes('companyadmin')) {
+            const belongs = await this.vibe.submissionBelongsToCompany(
+              submissionId,
+              request.user.companyId
+            );
+            if (!belongs) {
+              reply.status(403).send({
+                error: 'Forbidden: Submission does not belong to your company',
+              });
+              return;
+            }
+          }
+
           const result = await this.vibe.verifySubmission(submissionId);
           if (!result.success) {
             let statusCode = 500;
