@@ -4,6 +4,7 @@ import {
   verifyToken,
   authenticateUser,
   createOrUpdateAdminUser,
+  deleteUserById,
 } from './auth';
 import Fastify from 'fastify';
 import replyFrom from '@fastify/reply-from';
@@ -570,6 +571,25 @@ class Server {
         } catch (error) {
           console.error('Error creating admin user:', error);
           reply.status(500).send({ error: 'Failed to create admin user' });
+        }
+      }
+    );
+
+    // Protected admin route to delete a user by id
+    this.fastify.delete(
+      '/admin/user/:id',
+      getAuthHandler(['admin']),
+      async (request: any, reply: any) => {
+        const id = parseInt(request.params.id);
+        if (isNaN(id)) {
+          reply.status(400).send({ success: false, error: 'Invalid user id' });
+          return;
+        }
+        const result = await deleteUserById(id);
+        if (result.success) {
+          reply.send({ success: true });
+        } else {
+          reply.status(500).send({ success: false, error: result.error });
         }
       }
     );

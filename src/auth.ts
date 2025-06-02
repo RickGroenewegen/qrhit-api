@@ -71,6 +71,23 @@ export function verifyToken(token: string): any {
 }
 
 /**
+ * Deletes a user by id
+ * @param id The user's id
+ * @returns {Promise<{ success: boolean; error?: string }>}
+ */
+export async function deleteUserById(id: number): Promise<{ success: boolean; error?: string }> {
+  try {
+    await prisma.user.delete({
+      where: { id },
+    });
+    return { success: true };
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    return { success: false, error: 'Failed to delete user' };
+  }
+}
+
+/**
  * Authenticates a user with email and password
  * @param email The user's email
  * @param password The user's password
