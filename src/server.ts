@@ -548,7 +548,7 @@ class Server {
         const { email, password, displayName, companyId, userGroup } =
           request.body;
 
-        if (!email || !password || !displayName) {
+        if (!email || !displayName) {
           reply.status(400).send({ error: 'Missing required fields' });
           return;
         }
