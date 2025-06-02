@@ -386,6 +386,13 @@ class Server {
             playlistUrl,
           } = request.body;
 
+          if (request.user.userGroups.includes('companyadmin')) {
+            reply.status(403).send({
+              error: 'Forbidden',
+            });
+            return;
+          }
+
           if (isNaN(companyId)) {
             reply.status(400).send({ error: 'Invalid company ID' });
             return;
@@ -463,6 +470,13 @@ class Server {
 
           if (isNaN(companyId) || isNaN(listId)) {
             reply.status(400).send({ error: 'Invalid company or list ID' });
+            return;
+          }
+
+          if (request.user.userGroups.includes('companyadmin')) {
+            reply.status(403).send({
+              error: 'Forbidden',
+            });
             return;
           }
 
@@ -1035,7 +1049,7 @@ class Server {
 
     this.fastify.get(
       '/vibe/state/:listId',
-      getAuthHandler(['admin', 'vibeadmin']),
+      getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
       async (request: any, reply: any) => {
         try {
           // Get the token from the request
@@ -1064,7 +1078,15 @@ class Server {
       '/vibe/company/:companyId',
       getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
       async (request: any, reply: any) => {
-        console.log(111, request.headers);
+        if (
+          request.user.userGroups.includes('companyadmin') &&
+          request.user.companyId !== parseInt(request.params.companyId)
+        ) {
+          reply
+            .status(403)
+            .send({ error: 'Forbidden: Access to this company is restricted' });
+          return;
+        }
 
         try {
           // Use the Vibe class to get company lists
@@ -1125,7 +1147,7 @@ class Server {
     // Protected route to update a list submission (currently only cardName is editable)
     this.fastify.put(
       '/vibe/submissions/:submissionId',
-      getAuthHandler(['admin', 'vibeadmin']),
+      getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
       async (request: any, reply: any) => {
         try {
           const submissionId = parseInt(request.params.submissionId);
