@@ -227,6 +227,38 @@ class Server {
       }
     );
 
+    // Protected route to get all users for a specific company
+    this.fastify.get(
+      '/vibe/users/:companyId',
+      getAuthHandler(['admin', 'vibeadmin']),
+      async (request: any, reply: any) => {
+        try {
+          const companyId = parseInt(request.params.companyId);
+
+          if (isNaN(companyId)) {
+            reply.status(400).send({ error: 'Invalid company ID' });
+            return;
+          }
+
+          const result = await this.vibe.getUsersByCompany(companyId);
+
+          if (!result.success) {
+            let statusCode = 500;
+            if (result.error === 'Company not found') {
+              statusCode = 404;
+            }
+            reply.status(statusCode).send({ error: result.error });
+            return;
+          }
+
+          reply.send({ success: true, users: result.users });
+        } catch (error) {
+          console.error('Error retrieving users for company:', error);
+          reply.status(500).send({ error: 'Internal server error' });
+        }
+      }
+    );
+
     this.fastify.delete(
       '/vibe/companies/:companyId',
       getAuthHandler(['admin', 'vibeadmin']),

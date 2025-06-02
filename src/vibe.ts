@@ -17,6 +17,47 @@ class Vibe {
   private prisma = new PrismaClient();
 
   /**
+   * Get all users that belong to a specific company.
+   * @param companyId The company ID to get users for
+   * @returns Object with success status and array of users or error
+   */
+  public async getUsersByCompany(companyId: number): Promise<{ success: boolean; users?: any[]; error?: string }> {
+    try {
+      if (!companyId || isNaN(companyId)) {
+        return { success: false, error: 'Invalid company ID provided' };
+      }
+
+      // Check if company exists
+      const company = await this.prisma.company.findUnique({
+        where: { id: companyId },
+      });
+
+      if (!company) {
+        return { success: false, error: 'Company not found' };
+      }
+
+      // Get all users for this company
+      const users = await this.prisma.user.findMany({
+        where: { companyId },
+        orderBy: { displayName: 'asc' },
+        select: {
+          id: true,
+          userId: true,
+          email: true,
+          displayName: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      return { success: true, users };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error getting users by company: ${error}`));
+      return { success: false, error: 'Error retrieving users for company' };
+    }
+  }
+
+  /**
    * Update all CompanyListSubmissionTrack records for a given listId,
    * changing trackId from sourceTrackId to destinationTrackId.
    * @param listId The company list ID
