@@ -545,7 +545,8 @@ class Server {
       '/admin/create',
       getAuthHandler(['admin']),
       async (request: any, reply: any) => {
-        const { email, password, displayName } = request.body;
+        const { email, password, displayName, companyId, userGroup } =
+          request.body;
 
         if (!email || !password || !displayName) {
           reply.status(400).send({ error: 'Missing required fields' });
@@ -556,7 +557,9 @@ class Server {
           const user = await createOrUpdateAdminUser(
             email,
             password,
-            displayName
+            displayName,
+            companyId,
+            userGroup
           );
           reply.send({
             success: true,
