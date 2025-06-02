@@ -19,10 +19,18 @@
       }
     }
     body {
-      font-family: 'Montserrat', Arial, sans-serif;
+      font-family: 'Bebas Neue', 'Courier New', Courier, monospace;
       margin: 0;
       padding: 0;
-      background: linear-gradient(135deg, #5FBFFF 0%, #E56581 100%);
+      background: repeating-linear-gradient(
+        135deg,
+        #5FBFFF 0mm,
+        #5FBFFF 10mm,
+        #3F6FAF 10mm,
+        #3F6FAF 20mm,
+        #E56581 20mm,
+        #E56581 30mm
+      );
       color: #fff;
       width: 210mm;
       height: 297mm;
@@ -31,38 +39,63 @@
       box-sizing: border-box;
       position: relative;
       overflow: hidden;
+      filter: sepia(0.12) contrast(1.08) brightness(0.98);
     }
     .poster-container {
       width: 180mm;
       height: 267mm;
       margin: 15mm auto;
-      background: rgba(63,111,175,0.92); /* Brand secondary, slightly transparent */
+      background: rgba(255,255,255,0.85);
       border-radius: 18px;
-      box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+      box-shadow: 0 8px 32px 0 rgba(63, 111, 175, 0.25), 0 0 0 8px #3F6FAF inset;
       display: flex;
       flex-direction: column;
       align-items: center;
       justify-content: space-between;
       padding: 24mm 18mm;
       position: relative;
+      border: 6px double #E56581;
+      border-top-width: 18px;
+      border-bottom-width: 18px;
+      box-sizing: border-box;
+      /* Add a subtle paper texture overlay */
+      background-image:
+        url('https://www.transparenttextures.com/patterns/old-mathematics.png'),
+        linear-gradient(135deg, #fff 80%, #f7f7f7 100%);
+      background-blend-mode: multiply;
     }
     .poster-title {
-      font-size: 48px;
+      font-size: 64px;
+      font-family: 'Bebas Neue', 'Courier New', Courier, monospace;
       font-weight: 900;
-      letter-spacing: 2px;
+      letter-spacing: 4px;
       margin-top: 0;
-      margin-bottom: 12mm;
+      margin-bottom: 10mm;
       text-align: center;
-      color: #5FBFFF;
-      text-shadow: 2px 2px 0 #E56581, 0 4px 24px #0008;
+      color: #E56581;
+      text-shadow:
+        2px 2px 0 #3F6FAF,
+        0 4px 24px #0008,
+        0 0 8px #fff8;
+      filter: drop-shadow(0 2px 0 #fff8);
+      text-transform: uppercase;
+      border-bottom: 4px dashed #3F6FAF;
+      padding-bottom: 4mm;
+      background: linear-gradient(90deg, #fff 60%, #E56581 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
     }
     .poster-subtitle {
-      font-size: 28px;
+      font-size: 32px;
+      font-family: 'Bebas Neue', 'Courier New', Courier, monospace;
       font-weight: 600;
       margin-bottom: 10mm;
       text-align: center;
-      color: #fff;
-      text-shadow: 0 2px 8px #E56581;
+      color: #3F6FAF;
+      text-shadow: 0 2px 8px #E56581, 0 0 2px #fff8;
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
     .music-notes {
       position: absolute;
@@ -72,9 +105,10 @@
     }
     .music-notes svg {
       position: absolute;
-      opacity: 0.18;
+      opacity: 0.13;
       width: 80mm;
       height: 80mm;
+      filter: blur(0.5px) sepia(0.2) contrast(1.1);
     }
     .music-notes .note1 { top: 10mm; left: 10mm; }
     .music-notes .note2 { top: 40mm; right: 20mm; }
@@ -88,48 +122,69 @@
       z-index: 2;
     }
     .qr-label {
-      font-size: 22px;
-      font-weight: 600;
+      font-size: 28px;
+      font-family: 'Bebas Neue', 'Courier New', Courier, monospace;
+      font-weight: 700;
       margin-bottom: 6mm;
       color: #E56581;
-      text-shadow: 0 2px 8px #0008;
+      text-shadow: 0 2px 8px #3F6FAF, 0 0 2px #fff8;
+      letter-spacing: 2px;
+      text-transform: uppercase;
     }
     .qr-code {
       background: #fff;
       border-radius: 16px;
       padding: 12mm;
-      box-shadow: 0 2px 16px 0 rgba(0,0,0,0.18);
+      box-shadow: 0 2px 16px 0 rgba(63,111,175,0.18), 0 0 0 4px #5FBFFF inset;
       margin-bottom: 8mm;
       display: flex;
       align-items: center;
       justify-content: center;
+      border: 3px solid #3F6FAF;
     }
     .qr-code img {
       width: 60mm;
       height: 60mm;
       object-fit: contain;
       display: block;
+      filter: sepia(0.2) contrast(1.1);
     }
     .poster-footer {
-      font-size: 18px;
-      color: #fff;
+      font-size: 22px;
+      font-family: 'Bebas Neue', 'Courier New', Courier, monospace;
+      color: #3F6FAF;
       text-align: center;
       margin-top: 10mm;
       font-weight: 400;
-      letter-spacing: 1px;
-      text-shadow: 0 2px 8px #E56581;
+      letter-spacing: 2px;
+      text-shadow: 0 2px 8px #E56581, 0 0 2px #fff8;
+      text-transform: uppercase;
     }
     .brand-domain {
-      font-size: 20px;
-      color: #5FBFFF;
+      font-size: 24px;
+      font-family: 'Bebas Neue', 'Courier New', Courier, monospace;
+      color: #E56581;
       font-weight: 700;
       margin-top: 4mm;
       text-align: center;
-      text-shadow: 0 2px 8px #0008;
+      text-shadow: 0 2px 8px #3F6FAF, 0 0 2px #fff8;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+    }
+    /* Add a subtle worn effect */
+    .poster-container:after {
+      content: "";
+      pointer-events: none;
+      position: absolute;
+      inset: 0;
+      background: url('https://www.transparenttextures.com/patterns/diamond-upholstery.png');
+      opacity: 0.13;
+      z-index: 10;
+      mix-blend-mode: multiply;
     }
   </style>
-  <!-- Optionally include a Google Fonts link for Montserrat -->
-  <link href="https://fonts.googleapis.com/css?family=Montserrat:400,600,900&display=swap" rel="stylesheet">
+  <!-- Vintage/retro fonts -->
+  <link href="https://fonts.googleapis.com/css?family=Bebas+Neue:400,700&display=swap" rel="stylesheet">
 </head>
 <body>
   <div class="music-notes">
@@ -152,7 +207,7 @@
       <div class="poster-subtitle">
         Scan the QR code<br>
         and post your top tracks.<br>
-        <span style="font-size:20px;color:#E56581;">Let the music speak!</span>
+        <span style="font-size:22px;color:#E56581;font-family:'Bebas Neue',monospace;text-shadow:0 1px 0 #fff8;">Let the music speak!</span>
       </div>
     </div>
     <div class="qr-section">
@@ -163,8 +218,8 @@
     </div>
     <div>
       <div class="poster-footer">
-        Join the vibe. Inspire others. <br>
-        <span style="font-size:22px;font-weight:600;color:#E56581;">#MyTopSongs</span>
+        Join the vibe. Inspire others.<br>
+        <span style="font-size:26px;font-weight:700;color:#E56581;letter-spacing:2px;text-shadow:0 1px 0 #fff8;">#MyTopSongs</span>
       </div>
       <div class="brand-domain"><%= appDomain %></div>
     </div>
