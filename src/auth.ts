@@ -204,22 +204,19 @@ export async function createOrUpdateAdminUser(
         updatePassword = true;
       }
 
-      // Update existing user using raw SQL to bypass Prisma type checking
-      // This is a temporary solution until Prisma client is regenerated
+      // Never overwrite companyId when editing a user
       if (updatePassword) {
         await prisma.$executeRaw`
           UPDATE users 
           SET password = ${hashedPassword}, 
               salt = ${salt}, 
-              displayName = ${displayName},
-              companyId = ${companyId ?? null}
+              displayName = ${displayName}
           WHERE email = ${email}
         `;
       } else {
         await prisma.$executeRaw`
           UPDATE users 
-          SET displayName = ${displayName},
-              companyId = ${companyId ?? null}
+          SET displayName = ${displayName}
           WHERE email = ${email}
         `;
       }
