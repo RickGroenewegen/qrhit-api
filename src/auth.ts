@@ -162,7 +162,9 @@ export async function getUserGroups(userId: string): Promise<string[]> {
 export async function createOrUpdateAdminUser(
   email: string,
   password: string,
-  displayName: string
+  displayName: string,
+  companyId?: number,
+  userGroup?: string
 ): Promise<any> {
   const salt = generateSalt();
   const hashedPassword = hashPassword(password, salt);
