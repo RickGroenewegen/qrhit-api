@@ -545,7 +545,7 @@ class Server {
       '/admin/create',
       getAuthHandler(['admin']),
       async (request: any, reply: any) => {
-        const { email, password, displayName, companyId, userGroup } =
+        const { email, password, displayName, companyId, userGroup, id } =
           request.body;
 
         if (!email || !displayName) {
@@ -559,7 +559,8 @@ class Server {
             password,
             displayName,
             companyId,
-            userGroup
+            userGroup,
+            id
           );
           reply.send({
             success: true,

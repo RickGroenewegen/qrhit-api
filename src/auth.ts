@@ -164,7 +164,8 @@ export async function createOrUpdateAdminUser(
   password: string,
   displayName: string,
   companyId?: number,
-  userGroup?: string
+  userGroup?: string,
+  id?: number
 ): Promise<any> {
   const userId = email;
   const userHash = crypto.randomBytes(16).toString('hex');
@@ -181,17 +182,32 @@ export async function createOrUpdateAdminUser(
       }
     }
 
-    // Check if user exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email },
-      include: {
-        UserGroupUser: {
-          include: {
-            UserGroup: true,
+    // If id is provided, use it to find the user (edit mode)
+    let existingUser: any = null;
+    if (id) {
+      existingUser = await prisma.user.findUnique({
+        where: { id },
+        include: {
+          UserGroupUser: {
+            include: {
+              UserGroup: true,
+            },
           },
         },
-      },
-    });
+      });
+    } else {
+      // Otherwise, find by email (create mode or legacy)
+      existingUser = await prisma.user.findUnique({
+        where: { email },
+        include: {
+          UserGroupUser: {
+            include: {
+              UserGroup: true,
+            },
+          },
+        },
+      });
+    }
 
     if (existingUser) {
       // If password is provided, update password and salt, otherwise keep old ones
@@ -211,13 +227,13 @@ export async function createOrUpdateAdminUser(
           SET password = ${hashedPassword}, 
               salt = ${salt}, 
               displayName = ${displayName}
-          WHERE email = ${email}
+          WHERE id = ${existingUser.id}
         `;
       } else {
         await prisma.$executeRaw`
           UPDATE users 
           SET displayName = ${displayName}
-          WHERE email = ${email}
+          WHERE id = ${existingUser.id}
         `;
       }
 
@@ -238,7 +254,7 @@ export async function createOrUpdateAdminUser(
 
       // Fetch the updated user
       return await prisma.user.findUnique({
-        where: { email },
+        where: { id: existingUser.id },
         include: {
           UserGroupUser: {
             include: {
