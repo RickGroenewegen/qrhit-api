@@ -172,6 +172,17 @@ export async function createOrUpdateAdminUser(
   const userHash = crypto.randomBytes(16).toString('hex');
 
   try {
+    // Check if userGroup is provided and exists
+    let userGroupRecord: any = null;
+    if (userGroup) {
+      userGroupRecord = await prisma.userGroup.findUnique({
+        where: { name: userGroup },
+      });
+      if (!userGroupRecord) {
+        throw new Error(`UserGroup "${userGroup}" does not exist`);
+      }
+    }
+
     // Check if user exists
     const existingUser = await prisma.user.findUnique({
       where: { email },
@@ -191,9 +202,25 @@ export async function createOrUpdateAdminUser(
         UPDATE users 
         SET password = ${hashedPassword}, 
             salt = ${salt}, 
-            displayName = ${displayName} 
+            displayName = ${displayName},
+            companyId = ${companyId ?? null}
         WHERE email = ${email}
       `;
+
+      // Connect user to userGroup if provided and not already a member
+      if (userGroupRecord) {
+        const alreadyMember = existingUser.UserGroupUser.some(
+          (ugu: any) => ugu.UserGroup.name === userGroup
+        );
+        if (!alreadyMember) {
+          await prisma.userInGroup.create({
+            data: {
+              userId: existingUser.id,
+              groupId: userGroupRecord.id,
+            },
+          });
+        }
+      }
 
       // Fetch the updated user
       return await prisma.user.findUnique({
@@ -210,7 +237,7 @@ export async function createOrUpdateAdminUser(
       // Create new user using raw SQL to bypass Prisma type checking
       // This is a temporary solution until Prisma client is regenerated
       await prisma.$executeRaw`
-        INSERT INTO users (userId, email, displayName, hash, password, salt, marketingEmails, sync, createdAt, updatedAt)
+        INSERT INTO users (userId, email, displayName, hash, password, salt, marketingEmails, sync, createdAt, updatedAt, companyId)
         VALUES (
           ${userId}, 
           ${email}, 
@@ -221,12 +248,13 @@ export async function createOrUpdateAdminUser(
           0, 
           0, 
           NOW(), 
-          NOW()
+          NOW(),
+          ${companyId ?? null}
         )
       `;
 
       // Fetch the created user
-      return await prisma.user.findUnique({
+      const createdUser = await prisma.user.findUnique({
         where: { email },
         include: {
           UserGroupUser: {
@@ -236,6 +264,18 @@ export async function createOrUpdateAdminUser(
           },
         },
       });
+
+      // Connect user to userGroup if provided
+      if (userGroupRecord && createdUser) {
+        await prisma.userInGroup.create({
+          data: {
+            userId: createdUser.id,
+            groupId: userGroupRecord.id,
+          },
+        });
+      }
+
+      return createdUser;
     }
   } catch (error) {
     console.error('Error creating/updating admin user:', error);
