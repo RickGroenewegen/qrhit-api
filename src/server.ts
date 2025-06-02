@@ -1291,6 +1291,26 @@ class Server {
       }
     );
 
+    // New route: /vibe/poster/:posterId
+    this.fastify.get(
+      '/vibe/poster/:posterId',
+      async (request: any, reply: any) => {
+        // You can fetch poster data here if needed, for now just pass posterId and env vars
+        const posterId = request.params.posterId;
+        // Optionally, generate a QR code URL for the poster
+        // For now, let's use a generic QR code that links to a submission page for the posterId
+        const qrUrl = `${process.env['APP_DOMAIN']}/vibe/post/${posterId}`;
+        await reply.view('poster_vibe.ejs', {
+          posterId,
+          qrUrl,
+          brandColor: process.env['BRAND_COLOR'] || '#FF2D55',
+          brandSecondary: process.env['BRAND_SECONDARY'] || '#22223B',
+          brandAccent: process.env['BRAND_ACCENT'] || '#4EA8DE',
+          appDomain: process.env['APP_DOMAIN'],
+        });
+      }
+    );
+
     this.fastify.post(
       '/php/:paymentHasPlaylistId',
       getAuthHandler(['admin']),
