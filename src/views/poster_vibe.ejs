@@ -87,16 +87,25 @@
       background-clip: text;
     }
     .poster-subtitle {
-      font-size: 32px;
+      font-size: 36px;
       font-family: 'Bebas Neue', 'Courier New', Courier, monospace;
-      font-weight: 600;
-      margin-bottom: 10mm;
+      font-weight: 900;
+      letter-spacing: 4px;
       margin-top: 0;
+      margin-bottom: 10mm;
       text-align: center;
-      color: #3F6FAF;
-      text-shadow: 0 2px 8px #fff8;
-      letter-spacing: 2px;
+      color: #E56581;
+      text-shadow:
+        2px 2px 0 #3F6FAF,
+        0 4px 24px #0008,
+        0 0 8px #fff8;
+      filter: drop-shadow(0 2px 0 #fff8);
       text-transform: uppercase;
+      background: linear-gradient(90deg, #fff 60%, #E56581 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      padding-bottom: 0;
     }
     .music-notes {
       position: absolute;
@@ -208,9 +217,7 @@
     </div>
     <div>
       <div class="poster-title">Zwart Techniek</div>
-      <div class="poster-subtitle" style="margin-top:0;margin-bottom:10mm;">
-        Top 200!
-      </div>
+      <div class="poster-subtitle">Top 200</div>
     </div>
     <div class="qr-section">
       <div class="qr-code">
