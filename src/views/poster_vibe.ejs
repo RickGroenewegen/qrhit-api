@@ -143,14 +143,40 @@
     }
     .qr-code {
       background: #fff;
-      border-radius: 16px;
-      padding: 4mm;
-      box-shadow: 0 2px 16px 0 rgba(63,111,175,0.18), 0 0 0 4px #5FBFFF inset;
+      border-radius: 50%;
+      padding: 6mm;
       margin-bottom: 8mm;
       display: flex;
       align-items: center;
       justify-content: center;
-      border: 3px solid #3F6FAF;
+      position: relative;
+      /* Creative: add a retro sunburst effect behind the QR */
+      box-shadow:
+        0 0 0 0 #E56581,
+        0 0 0 8px #FAF6F3,
+        0 0 32px 8px #18565E44;
+      z-index: 2;
+    }
+    .qr-code::before {
+      content: "";
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 110mm;
+      height: 110mm;
+      transform: translate(-50%, -50%);
+      background: repeating-conic-gradient(
+        from 0deg,
+        #E56581 0deg 10deg,
+        #FAF6F3 10deg 20deg,
+        #18565E 20deg 30deg,
+        #FFFBF5 30deg 40deg
+      );
+      border-radius: 50%;
+      opacity: 0.13;
+      z-index: 1;
+      pointer-events: none;
+      filter: blur(1px);
     }
     .qr-code img {
       width: 70mm;
@@ -158,6 +184,9 @@
       object-fit: contain;
       display: block;
       filter: sepia(0.2) contrast(1.1);
+      border-radius: 50%;
+      z-index: 2;
+      box-shadow: 0 2px 16px 0 #18565E22;
     }
     .poster-footer {
       font-size: 22px;
