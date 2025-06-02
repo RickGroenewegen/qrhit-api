@@ -166,8 +166,6 @@ export async function createOrUpdateAdminUser(
   companyId?: number,
   userGroup?: string
 ): Promise<any> {
-  const salt = generateSalt();
-  const hashedPassword = hashPassword(password, salt);
   const userId = email;
   const userHash = crypto.randomBytes(16).toString('hex');
 
@@ -196,16 +194,35 @@ export async function createOrUpdateAdminUser(
     });
 
     if (existingUser) {
+      // If password is provided, update password and salt, otherwise keep old ones
+      let updatePassword = false;
+      let hashedPassword = existingUser.password;
+      let salt = existingUser.salt;
+      if (password) {
+        salt = generateSalt();
+        hashedPassword = hashPassword(password, salt);
+        updatePassword = true;
+      }
+
       // Update existing user using raw SQL to bypass Prisma type checking
       // This is a temporary solution until Prisma client is regenerated
-      await prisma.$executeRaw`
-        UPDATE users 
-        SET password = ${hashedPassword}, 
-            salt = ${salt}, 
-            displayName = ${displayName},
-            companyId = ${companyId ?? null}
-        WHERE email = ${email}
-      `;
+      if (updatePassword) {
+        await prisma.$executeRaw`
+          UPDATE users 
+          SET password = ${hashedPassword}, 
+              salt = ${salt}, 
+              displayName = ${displayName},
+              companyId = ${companyId ?? null}
+          WHERE email = ${email}
+        `;
+      } else {
+        await prisma.$executeRaw`
+          UPDATE users 
+          SET displayName = ${displayName},
+              companyId = ${companyId ?? null}
+          WHERE email = ${email}
+        `;
+      }
 
       // Connect user to userGroup if provided and not already a member
       if (userGroupRecord) {
@@ -236,6 +253,8 @@ export async function createOrUpdateAdminUser(
     } else {
       // Create new user using raw SQL to bypass Prisma type checking
       // This is a temporary solution until Prisma client is regenerated
+      const salt = generateSalt();
+      const hashedPassword = hashPassword(password, salt);
       await prisma.$executeRaw`
         INSERT INTO users (userId, email, displayName, hash, password, salt, marketingEmails, sync, createdAt, updatedAt, companyId)
         VALUES (
