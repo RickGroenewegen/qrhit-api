@@ -350,6 +350,20 @@ class Server {
             return;
           }
 
+          // If user is companyadmin, check that the submission belongs to their company
+          if (request.user.userGroups.includes('companyadmin')) {
+            const belongs = await this.vibe.submissionBelongsToCompany(
+              submissionId,
+              request.user.companyId
+            );
+            if (!belongs) {
+              reply.status(403).send({
+                error: 'Forbidden: Submission does not belong to your company',
+              });
+              return;
+            }
+          }
+
           const result = await this.vibe.deleteSubmission(submissionId);
 
           if (!result.success) {
