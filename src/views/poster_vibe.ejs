@@ -150,34 +150,13 @@
       align-items: center;
       justify-content: center;
       position: relative;
-      /* Creative: add a retro sunburst effect behind the QR */
+      /* Removed retro sunburst effect and diagonal bars */
       box-shadow:
         0 0 0 0 #E56581,
         0 0 0 8px #FAF6F3,
         0 0 32px 8px #18565E44;
       z-index: 2;
       overflow: visible;
-    }
-    .qr-code::before {
-      content: "";
-      position: absolute;
-      left: 50%;
-      top: 50%;
-      width: 120mm;
-      height: 60mm;
-      transform: translate(-50%, -50%);
-      background: repeating-linear-gradient(
-        120deg,
-        #E56581 0mm, #E56581 6mm,
-        #FAF6F3 6mm, #FAF6F3 12mm,
-        #18565E 12mm, #18565E 18mm,
-        #FFFBF5 18mm, #FFFBF5 24mm
-      );
-      border-radius: 18px;
-      opacity: 0.13;
-      z-index: 1;
-      pointer-events: none;
-      filter: blur(1px);
     }
     .qr-code img {
       width: 70mm;
