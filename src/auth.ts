@@ -75,7 +75,9 @@ export function verifyToken(token: string): any {
  * @param id The user's id
  * @returns {Promise<{ success: boolean; error?: string }>}
  */
-export async function deleteUserById(id: number): Promise<{ success: boolean; error?: string }> {
+export async function deleteUserById(
+  id: number
+): Promise<{ success: boolean; error?: string }> {
   try {
     await prisma.user.delete({
       where: { id },
@@ -96,7 +98,12 @@ export async function deleteUserById(id: number): Promise<{ success: boolean; er
 export async function authenticateUser(
   email: string,
   password: string
-): Promise<{ token: string; userId: string } | null> {
+): Promise<{
+  token: string;
+  userId: string;
+  userGroups: string[];
+  companyId: number | undefined;
+} | null> {
   try {
     // First get the full user record
     const user = await prisma.user.findUnique({
@@ -133,7 +140,12 @@ export async function authenticateUser(
       user.companyId || undefined
     );
 
-    return { token, userId: user.userId };
+    return {
+      token,
+      userId: user.userId,
+      userGroups: userGroups,
+      companyId: user.companyId || undefined,
+    };
   } catch (error) {
     console.error('Authentication error:', error);
     return null;
@@ -261,6 +273,7 @@ export async function createOrUpdateAdminUser(
         const alreadyMember = existingUser.UserGroupUser.some(
           (ugu: any) => ugu.UserGroup.name === userGroup
         );
+
         if (!alreadyMember) {
           await prisma.userInGroup.create({
             data: {
