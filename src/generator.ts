@@ -537,7 +537,7 @@ class Generator {
             },
           });
 
-          if (playlist.orderType == 'digital') {
+          if (playlist.orderType == 'digital' && !skipMail) {
             await this.mail.sendEmail(
               'digital',
               payment,
