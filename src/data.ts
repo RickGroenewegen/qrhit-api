@@ -1457,6 +1457,7 @@ class Data {
             )
           );
         }
+        updateCounter++;
         continue;
       }
 
