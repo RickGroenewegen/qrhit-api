@@ -474,6 +474,7 @@ class Mollie {
             doubleSided: true,
             background: true,
             logo: true,
+            subType: true,
             orderType: {
               select: {
                 name: true,
