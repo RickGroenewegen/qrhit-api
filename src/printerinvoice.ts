@@ -94,6 +94,17 @@ class PrinterInvoice {
       return { success: false, error: 'Failed to delete printer invoice' };
     }
   }
+
+  // Placeholder for processing invoice data
+  async processInvoiceData(id: number, body: any) {
+    // Output the body for now, implement logic later
+    return {
+      success: true,
+      message: 'processInvoiceData called',
+      id,
+      body
+    };
+  }
 }
 
 export default PrinterInvoice;

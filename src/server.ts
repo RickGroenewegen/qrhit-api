@@ -895,6 +895,22 @@ class Server {
       }
     );
 
+    // Admin route: Process a PrinterInvoice (custom logic to be implemented)
+    this.fastify.post(
+      '/admin/printerinvoices/:id/process',
+      getAuthHandler(['admin']),
+      async (request: any, reply: any) => {
+        const id = parseInt(request.params.id);
+        if (isNaN(id)) {
+          reply.status(400).send({ success: false, error: 'Invalid id' });
+          return;
+        }
+        // Call the processInvoiceData method and output the body for now
+        const result = await this.printerInvoice.processInvoiceData(id, request.body);
+        reply.send(result);
+      }
+    );
+
     // Admin route: Delete a PrinterInvoice (only if no payments refer to it)
     this.fastify.delete(
       '/admin/printerinvoices/:id',
