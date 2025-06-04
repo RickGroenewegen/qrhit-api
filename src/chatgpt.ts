@@ -899,7 +899,8 @@ ${htmlString}
                   },
                   required: ['opdrachtnummer', 'date', 'amount'],
                 },
-                description: 'Array of extracted orders, excluding negated pairs.',
+                description:
+                  'Array of extracted orders, excluding negated pairs.',
               },
             },
             required: ['opdrachtnummers'],

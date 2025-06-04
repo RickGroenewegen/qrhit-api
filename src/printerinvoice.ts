@@ -103,6 +103,8 @@ class PrinterInvoice {
     const chatgpt = new ChatGPT();
     const extraction = await chatgpt.extractOpdrachtnummers(content);
 
+    console.log(111, extraction);
+
     return {
       success: true,
       extracted: extraction.opdrachtnummers,
