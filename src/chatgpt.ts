@@ -853,6 +853,8 @@ HTML:
 ${htmlString}
 `;
 
+    console.log(111, prompt);
+
     const result = await this.openai.chat.completions.create({
       model: 'gpt-4o',
       temperature: 0,
@@ -870,7 +872,8 @@ ${htmlString}
       functions: [
         {
           name: 'extractOpdrachtnummers',
-          description: 'Extracts an array of opdrachtnummers, order dates, and amounts from HTML.',
+          description:
+            'Extracts an array of opdrachtnummers, order dates, and amounts from HTML.',
           parameters: {
             type: 'object',
             properties: {
@@ -907,6 +910,9 @@ ${htmlString}
       const funcCall = result.choices[0].message.function_call;
       try {
         const parsed = JSON.parse(funcCall.arguments as string);
+
+        console.log(222, parsed.opdrachtnummers);
+
         return { opdrachtnummers: parsed.opdrachtnummers };
       } catch (e) {
         this.logger.log(
