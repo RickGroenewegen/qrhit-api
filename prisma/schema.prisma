@@ -95,6 +95,8 @@ model Payment {
   printApiOrderResponse   String?              @default("") @db.Text
   printApiTrackingLink    String?              @default("")
   printApiPrice           Float                @default(0)
+  printApiInvoicePrice    Float                @default(0)
+  printerInvoiceId        Int?
   clientIp                String?
   totalPrice              Float
   totalPriceWithoutTax    Float                @default(0)
@@ -144,6 +146,7 @@ model Payment {
   userAgreedToPrintingAt  DateTime?
   sentToPrinter           Boolean              @default(false)
   sentToPrinterAt         DateTime?
+  printerInvoice          PrinterInvoice?      @relation(fields: [printerInvoiceId], references: [id], onDelete: SetNull)
 
   DiscountCodedUses DiscountCodedUses[]
   Review            Review[]
@@ -387,6 +390,21 @@ model Track {
   @@index([isrc])
   @@index([artist, name])
   @@map("tracks")
+}
+
+model PrinterInvoice {
+  id                Int     @id @default(autoincrement())
+  invoiceNumber     String
+  description       String? @db.Text
+  totalPriceExclVat Float
+  totalPriceInclVat Float
+  lastUsedContentId String?
+
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  Payment   Payment[]
+
+  @@map("printer_invoices")
 }
 
 // Join table for Playlist and Track

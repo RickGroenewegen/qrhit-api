@@ -1,8 +1,10 @@
+import Logger from './logger';
 import PrismaInstance from './prisma';
 
 class PrinterInvoice {
   private static instance: PrinterInvoice;
   private prisma = PrismaInstance.getInstance();
+  private logger = new Logger();
 
   private constructor() {}
 
@@ -106,14 +108,18 @@ class PrinterInvoice {
     const color = require('console-log-colors').color;
     this.logger.log(
       color.blue.bold(
-        `Starting ChatGPT extraction for invoiceId=${color.white(id)}`
+        `Starting text extraction from content for invoiceId ${color.white(id)}`
       )
     );
 
     const extraction = await chatgpt.extractOrders(content);
 
     // Loop over the extracted orders and update payments
-    const results: Array<{ orderId: string; updated: boolean; amount: number }> = [];
+    const results: Array<{
+      orderId: string;
+      updated: boolean;
+      amount: number;
+    }> = [];
     const warnings: Array<{ orderId: string; amount: number }> = [];
 
     for (const order of extraction.orders) {
@@ -125,8 +131,10 @@ class PrinterInvoice {
         if (updated.count > 0) {
           // Success
           this.logger.log(
-            color.green.bold(
-              `✔ Updated payment with printApiOrderId=${color.white(order.orderId)} to printApiInvoicePrice=${color.white(order.amount)}`
+            color.blue.bold(
+              `Updated payment with orderId ${color.white(
+                order.orderId
+              )} to price ${color.white(order.amount.toFixed(2))}`
             )
           );
           results.push({
@@ -138,7 +146,9 @@ class PrinterInvoice {
           // Not found
           this.logger.log(
             color.yellow.bold(
-              `⚠ No payment found for printApiOrderId=${color.white(order.orderId)} (amount=${color.white(order.amount)})`
+              `No payment found for orderId ${color.white(
+                order.orderId
+              )} (Amount: ${color.white(order.amount.toFixed(2))})`
             )
           );
           results.push({
@@ -155,7 +165,9 @@ class PrinterInvoice {
         // Error
         this.logger.log(
           color.red.bold(
-            `✖ Error updating payment for printApiOrderId=${color.white(order.orderId)}: ${color.white((e as Error).message)}`
+            `Error updating payment for orderId ${color.white(
+              order.orderId
+            )}: ${color.white((e as Error).message)}`
           )
         );
         results.push({
@@ -172,17 +184,14 @@ class PrinterInvoice {
 
     // Summary log
     this.logger.log(
-      color.cyan.bold(
-        `Processed ${color.white(extraction.orders.length)} orders. Updated: ${color.white(results.filter(r => r.updated).length)}, Warnings: ${color.white(warnings.length)}`
+      color.blue.bold(
+        `Processed ${color.white(
+          extraction.orders.length
+        )} orders. Updated: ${color.white(
+          results.filter((r) => r.updated).length
+        )}, Warnings: ${color.white(warnings.length)}`
       )
     );
-    if (warnings.length > 0) {
-      this.logger.log(
-        color.yellow.bold(
-          `Warning: No payment found for the following orderIds: ${color.white(warnings.map(w => w.orderId).join(', '))}`
-        )
-      );
-    }
 
     return {
       success: true,
@@ -191,7 +200,7 @@ class PrinterInvoice {
       warnings,
       summary: {
         total: extraction.orders.length,
-        updated: results.filter(r => r.updated).length,
+        updated: results.filter((r) => r.updated).length,
         warnings: warnings.length,
       },
     };
