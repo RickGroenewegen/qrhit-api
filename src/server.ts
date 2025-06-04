@@ -43,7 +43,7 @@ import Designer from './designer';
 import Hitlist from './hitlist';
 import Vibe from './vibe';
 import AudioClient from './audio'; // Import AudioClient
-import PrinterInvoiceService from './printerinvoice';
+import PrinterInvoice from './printerinvoice';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -85,6 +85,7 @@ class Server {
   private designer = Designer.getInstance();
   private hitlist = Hitlist.getInstance();
   private vibe = Vibe.getInstance();
+  private printerInvoice = new PrinterInvoice();
   private audio = AudioClient.getInstance(); // Instantiate AudioClient
   private whiteLabels = [
     {
@@ -822,7 +823,10 @@ class Server {
           const invoices = await PrinterInvoiceService.getAllPrinterInvoices();
           reply.send({ success: true, invoices });
         } catch (error) {
-          reply.status(500).send({ success: false, error: 'Failed to fetch printer invoices' });
+          reply.status(500).send({
+            success: false,
+            error: 'Failed to fetch printer invoices',
+          });
         }
       }
     );
@@ -837,7 +841,12 @@ class Server {
           reply.status(400).send({ success: false, error: 'Invalid id' });
           return;
         }
-        const { invoiceNumber, description, totalPriceExclVat, totalPriceInclVat } = request.body;
+        const {
+          invoiceNumber,
+          description,
+          totalPriceExclVat,
+          totalPriceInclVat,
+        } = request.body;
         const result = await PrinterInvoiceService.updatePrinterInvoice(id, {
           invoiceNumber,
           description,
