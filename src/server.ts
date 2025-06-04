@@ -85,7 +85,7 @@ class Server {
   private designer = Designer.getInstance();
   private hitlist = Hitlist.getInstance();
   private vibe = Vibe.getInstance();
-  private printerInvoice = PrinterInvoiceService;
+  private printerInvoice = PrinterInvoiceService.getInstance();
   private audio = AudioClient.getInstance(); // Instantiate AudioClient
   private whiteLabels = [
     {
