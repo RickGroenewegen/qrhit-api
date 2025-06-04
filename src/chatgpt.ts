@@ -830,6 +830,7 @@ export class ChatGPT {
 
   /**
    * Extracts an array of Opdrachtnummers, their order dates (DD-MM-YYYY), and amounts from a pasted HTML string.
+   * Uses OpenAI function calling to enforce structured output.
    * @param htmlString The HTML string to extract data from.
    * @returns Promise<{ opdrachtnummers: Array<{ opdrachtnummer: string, date: string, amount: number }> }>
    */
@@ -846,16 +847,14 @@ Given the following HTML (Dutch, copy-pasted from a web page), extract an array 
 - date (string, the order date in DD-MM-YYYY format)
 - amount (number, the amount, as a float, in euros)
 
-Return ONLY a JSON array of these objects, no explanation, no extra text.
+Return ONLY the structured data as requested, no explanation, no extra text.
 
 HTML:
 ${htmlString}
 `;
 
-    console.log(111, prompt);
-
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4.1',
+      model: 'gpt-4o',
       temperature: 0,
       messages: [
         {
@@ -867,33 +866,60 @@ ${htmlString}
           content: prompt,
         },
       ],
+      function_call: { name: 'extractOpdrachtnummers' },
+      functions: [
+        {
+          name: 'extractOpdrachtnummers',
+          description: 'Extracts an array of opdrachtnummers, order dates, and amounts from HTML.',
+          parameters: {
+            type: 'object',
+            properties: {
+              opdrachtnummers: {
+                type: 'array',
+                items: {
+                  type: 'object',
+                  properties: {
+                    opdrachtnummer: {
+                      type: 'string',
+                      description: 'The order number (Opdrachtnummer)',
+                    },
+                    date: {
+                      type: 'string',
+                      description: 'The order date in DD-MM-YYYY format',
+                    },
+                    amount: {
+                      type: 'number',
+                      description: 'The amount in euros',
+                    },
+                  },
+                  required: ['opdrachtnummer', 'date', 'amount'],
+                },
+                description: 'Array of extracted orders',
+              },
+            },
+            required: ['opdrachtnummers'],
+          },
+        },
+      ],
     });
 
-    // Try to parse the first code block or the first JSON in the response
-    let jsonString = '';
-    if (result?.choices?.[0]?.message?.content) {
-      const content = result.choices[0].message.content;
-      // Try to extract JSON from a code block
-      const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]+?)\s*```/);
-      if (codeBlockMatch) {
-        jsonString = codeBlockMatch[1];
-      } else {
-        // Fallback: try to find the first { or [ and parse from there
-        const firstBrace = content.indexOf('[');
-        if (firstBrace !== -1) {
-          jsonString = content.slice(firstBrace);
-        } else {
-          jsonString = content;
-        }
+    if (result?.choices[0]?.message?.function_call) {
+      const funcCall = result.choices[0].message.function_call;
+      try {
+        const parsed = JSON.parse(funcCall.arguments as string);
+        return { opdrachtnummers: parsed.opdrachtnummers };
+      } catch (e) {
+        this.logger.log(
+          color.red.bold(
+            'Failed to parse Opdrachtnummers JSON from ChatGPT function_call'
+          )
+        );
+        return { opdrachtnummers: [] };
       }
-    }
-    try {
-      const opdrachtnummers = JSON.parse(jsonString);
-      return { opdrachtnummers };
-    } catch (e) {
+    } else {
       this.logger.log(
         color.red.bold(
-          'Failed to parse Opdrachtnummers JSON from ChatGPT response'
+          'No function_call result from ChatGPT for Opdrachtnummers extraction'
         )
       );
       return { opdrachtnummers: [] };
