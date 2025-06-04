@@ -22,7 +22,7 @@ class PrinterInvoice {
         totalPriceExclVat: true,
         totalPriceInclVat: true,
       },
-      orderBy: { createdAt: 'desc', id: 'desc' },
+      orderBy: { id: 'desc' },
     });
   }
 
