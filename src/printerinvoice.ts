@@ -101,6 +101,15 @@ class PrinterInvoice {
     // Dynamically import ChatGPT to avoid circular dependency
     const { ChatGPT } = await import('./chatgpt');
     const chatgpt = new ChatGPT();
+
+    // Use logger to indicate start of ChatGPT extraction
+    const color = require('console-log-colors').color;
+    this.logger.log(
+      color.blue.bold(
+        `Starting ChatGPT extraction for invoiceId=${color.white(id)}`
+      )
+    );
+
     const extraction = await chatgpt.extractOrders(content);
 
     // Loop over the extracted orders and update payments
@@ -115,10 +124,9 @@ class PrinterInvoice {
         });
         if (updated.count > 0) {
           // Success
-          // eslint-disable-next-line no-console
-          console.log(
-            require('console-log-colors').color.green.bold(
-              `✔ Updated payment with printApiOrderId=${order.orderId} to printApiInvoicePrice=${order.amount}`
+          this.logger.log(
+            color.green.bold(
+              `✔ Updated payment with printApiOrderId=${color.white(order.orderId)} to printApiInvoicePrice=${color.white(order.amount)}`
             )
           );
           results.push({
@@ -128,10 +136,9 @@ class PrinterInvoice {
           });
         } else {
           // Not found
-          // eslint-disable-next-line no-console
-          console.warn(
-            require('console-log-colors').color.yellow.bold(
-              `⚠ No payment found for printApiOrderId=${order.orderId} (amount=${order.amount})`
+          this.logger.log(
+            color.yellow.bold(
+              `⚠ No payment found for printApiOrderId=${color.white(order.orderId)} (amount=${color.white(order.amount)})`
             )
           );
           results.push({
@@ -146,10 +153,9 @@ class PrinterInvoice {
         }
       } catch (e) {
         // Error
-        // eslint-disable-next-line no-console
-        console.error(
-          require('console-log-colors').color.red.bold(
-            `✖ Error updating payment for printApiOrderId=${order.orderId}: ${(e as Error).message}`
+        this.logger.log(
+          color.red.bold(
+            `✖ Error updating payment for printApiOrderId=${color.white(order.orderId)}: ${color.white((e as Error).message)}`
           )
         );
         results.push({
@@ -165,18 +171,15 @@ class PrinterInvoice {
     }
 
     // Summary log
-    const color = require('console-log-colors').color;
-    // eslint-disable-next-line no-console
-    console.log(
+    this.logger.log(
       color.cyan.bold(
-        `Processed ${extraction.orders.length} orders. Updated: ${results.filter(r => r.updated).length}, Warnings: ${warnings.length}`
+        `Processed ${color.white(extraction.orders.length)} orders. Updated: ${color.white(results.filter(r => r.updated).length)}, Warnings: ${color.white(warnings.length)}`
       )
     );
     if (warnings.length > 0) {
-      // eslint-disable-next-line no-console
-      console.warn(
+      this.logger.log(
         color.yellow.bold(
-          `Warning: No payment found for the following orderIds: ${warnings.map(w => w.orderId).join(', ')}`
+          `Warning: No payment found for the following orderIds: ${color.white(warnings.map(w => w.orderId).join(', '))}`
         )
       );
     }
