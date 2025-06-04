@@ -95,19 +95,19 @@ class PrinterInvoice {
     }
   }
 
-  // Process invoice data using ChatGPT to extract Opdrachtnummers, dates, and amounts
+  // Process invoice data using ChatGPT to extract orderIds, dates, and amounts
   async processInvoiceData(id: number, body: any) {
     const content = body.content || '';
     // Dynamically import ChatGPT to avoid circular dependency
     const { ChatGPT } = await import('./chatgpt');
     const chatgpt = new ChatGPT();
-    const extraction = await chatgpt.extractOpdrachtnummers(content);
+    const extraction = await chatgpt.extractOrders(content);
 
     console.log(111, extraction);
 
     return {
       success: true,
-      extracted: extraction.opdrachtnummers,
+      extracted: extraction.orders,
     };
   }
 }
