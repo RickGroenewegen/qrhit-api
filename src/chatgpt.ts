@@ -804,4 +804,66 @@ export class ChatGPT {
 
     return answer!;
   }
+
+  /**
+   * Extracts an array of Opdrachtnummers, their order dates (DD-MM-YYYY), and amounts from a pasted HTML string.
+   * @param htmlString The HTML string to extract data from.
+   * @returns Promise<{ opdrachtnummers: Array<{ opdrachtnummer: string, date: string, amount: number }> }>
+   */
+  public async extractOpdrachtnummers(htmlString: string): Promise<{ opdrachtnummers: Array<{ opdrachtnummer: string, date: string, amount: number }> }> {
+    const prompt = `
+Given the following HTML (Dutch, copy-pasted from a web page), extract an array of objects with the following fields:
+- opdrachtnummer (string, the order number, called "Opdrachtnummer")
+- date (string, the order date in DD-MM-YYYY format)
+- amount (number, the amount, as a float, in euros)
+
+Return ONLY a JSON array of these objects, no explanation, no extra text.
+
+HTML:
+${htmlString}
+`;
+
+    const result = await this.openai.chat.completions.create({
+      model: 'gpt-4o',
+      temperature: 0,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a helpful assistant that extracts structured data from Dutch HTML order overviews.`
+        },
+        {
+          role: 'user',
+          content: prompt
+        }
+      ]
+    });
+
+    // Try to parse the first code block or the first JSON in the response
+    let jsonString = '';
+    if (result?.choices?.[0]?.message?.content) {
+      const content = result.choices[0].message.content;
+      // Try to extract JSON from a code block
+      const codeBlockMatch = content.match(/```(?:json)?\s*([\s\S]+?)\s*```/);
+      if (codeBlockMatch) {
+        jsonString = codeBlockMatch[1];
+      } else {
+        // Fallback: try to find the first { or [ and parse from there
+        const firstBrace = content.indexOf('[');
+        if (firstBrace !== -1) {
+          jsonString = content.slice(firstBrace);
+        } else {
+          jsonString = content;
+        }
+      }
+    }
+    try {
+      const opdrachtnummers = JSON.parse(jsonString);
+      return { opdrachtnummers };
+    } catch (e) {
+      this.logger.log(
+        color.red.bold('Failed to parse Opdrachtnummers JSON from ChatGPT response')
+      );
+      return { opdrachtnummers: [] };
+    }
+  }
 }
