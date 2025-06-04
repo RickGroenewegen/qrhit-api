@@ -43,6 +43,7 @@ import Designer from './designer';
 import Hitlist from './hitlist';
 import Vibe from './vibe';
 import AudioClient from './audio'; // Import AudioClient
+import PrinterInvoiceService from './printerinvoice';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -808,6 +809,64 @@ class Server {
           reply.send({ success: true, discounts: result.discounts });
         } else {
           reply.status(500).send({ success: false, error: result.error });
+        }
+      }
+    );
+
+    // Admin route: Get all PrinterInvoices
+    this.fastify.get(
+      '/admin/printerinvoices',
+      getAuthHandler(['admin']),
+      async (_request: any, reply: any) => {
+        try {
+          const invoices = await PrinterInvoiceService.getAllPrinterInvoices();
+          reply.send({ success: true, invoices });
+        } catch (error) {
+          reply.status(500).send({ success: false, error: 'Failed to fetch printer invoices' });
+        }
+      }
+    );
+
+    // Admin route: Update a PrinterInvoice
+    this.fastify.put(
+      '/admin/printerinvoices/:id',
+      getAuthHandler(['admin']),
+      async (request: any, reply: any) => {
+        const id = parseInt(request.params.id);
+        if (isNaN(id)) {
+          reply.status(400).send({ success: false, error: 'Invalid id' });
+          return;
+        }
+        const { invoiceNumber, description, totalPriceExclVat, totalPriceInclVat } = request.body;
+        const result = await PrinterInvoiceService.updatePrinterInvoice(id, {
+          invoiceNumber,
+          description,
+          totalPriceExclVat,
+          totalPriceInclVat,
+        });
+        if (result.success) {
+          reply.send({ success: true, invoice: result.invoice });
+        } else {
+          reply.status(400).send({ success: false, error: result.error });
+        }
+      }
+    );
+
+    // Admin route: Delete a PrinterInvoice (only if no payments refer to it)
+    this.fastify.delete(
+      '/admin/printerinvoices/:id',
+      getAuthHandler(['admin']),
+      async (request: any, reply: any) => {
+        const id = parseInt(request.params.id);
+        if (isNaN(id)) {
+          reply.status(400).send({ success: false, error: 'Invalid id' });
+          return;
+        }
+        const result = await PrinterInvoiceService.deletePrinterInvoice(id);
+        if (result.success) {
+          reply.send({ success: true });
+        } else {
+          reply.status(400).send({ success: false, error: result.error });
         }
       }
     );
