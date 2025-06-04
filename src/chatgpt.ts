@@ -447,7 +447,9 @@ export class ChatGPT {
 
     this.logger.log(
       color.blue.bold(
-        `Translating ${color.white.bold(reviews.length)} Trustpilot reviews to ${color.white.bold(
+        `Translating ${color.white.bold(
+          reviews.length
+        )} Trustpilot reviews to ${color.white.bold(
           targetLocales.length
         )} locales`
       )
@@ -457,7 +459,7 @@ export class ChatGPT {
     const batchSize = 5;
     for (let i = 0; i < reviews.length; i += batchSize) {
       const batch = reviews.slice(i, i + batchSize);
-      
+
       this.logger.log(
         color.blue.bold(
           `Processing batch ${color.white.bold(
@@ -471,9 +473,12 @@ export class ChatGPT {
         .map((review, index) => {
           // Get the locale-specific content or fall back to English
           const locale = review.locale?.split('-')[0].toLowerCase() || 'en';
-          const title = review[`title_${locale}` as keyof typeof review] || review.title_en;
-          const message = review[`message_${locale}` as keyof typeof review] || review.message_en;
-          
+          const title =
+            review[`title_${locale}` as keyof typeof review] || review.title_en;
+          const message =
+            review[`message_${locale}` as keyof typeof review] ||
+            review.message_en;
+
           return `Review ${index + 1}:\nTitle: ${title}\nMessage: ${message}`;
         })
         .join('\n\n');
@@ -486,14 +491,16 @@ export class ChatGPT {
             role: 'system',
             content: `You are a professional translator who specializes in translating customer reviews. 
                       Translate the provided Trustpilot reviews into multiple languages while preserving the 
-                      original meaning, tone, and sentiment. Keep translations natural and culturally appropriate.`
+                      original meaning, tone, and sentiment. Keep translations natural and culturally appropriate.`,
           },
           {
             role: 'user',
-            content: `Translate the following Trustpilot reviews into these languages: ${targetLocales.join(', ')}.
+            content: `Translate the following Trustpilot reviews into these languages: ${targetLocales.join(
+              ', '
+            )}.
                       
-                      ${reviewsPrompt}`
-          }
+                      ${reviewsPrompt}`,
+          },
         ],
         function_call: { name: 'translateReviews' },
         functions: [
@@ -509,64 +516,70 @@ export class ChatGPT {
                     properties: {
                       reviewIndex: {
                         type: 'integer',
-                        description: 'The index of the review in the batch (starting from 0)'
+                        description:
+                          'The index of the review in the batch (starting from 0)',
                       },
                       translations: {
                         type: 'object',
                         properties: Object.fromEntries(
-                          targetLocales.map(locale => [
+                          targetLocales.map((locale) => [
                             locale,
                             {
                               type: 'object',
                               properties: {
                                 title: {
                                   type: 'string',
-                                  description: `The translated title in ${locale}`
+                                  description: `The translated title in ${locale}`,
                                 },
                                 message: {
                                   type: 'string',
-                                  description: `The translated message in ${locale}`
-                                }
+                                  description: `The translated message in ${locale}`,
+                                },
                               },
-                              required: ['title', 'message']
-                            }
+                              required: ['title', 'message'],
+                            },
                           ])
                         ),
-                        required: targetLocales
-                      }
+                        required: targetLocales,
+                      },
                     },
-                    required: ['reviewIndex', 'translations']
-                  }
-                }
+                    required: ['reviewIndex', 'translations'],
+                  },
+                },
               },
-              required: ['translations']
-            }
-          }
-        ]
+              required: ['translations'],
+            },
+          },
+        ],
       });
 
       if (result?.choices[0]?.message?.function_call) {
         const funcCall = result.choices[0].message.function_call;
         try {
           const translationResults = JSON.parse(funcCall.arguments as string);
-          
+
           // Update each review with translations
           for (const translationResult of translationResults.translations) {
             const reviewIndex = translationResult.reviewIndex;
             const review = batch[reviewIndex];
-            
+
             // For each locale, update the database with translations
-            for (const [locale, translation] of Object.entries(translationResult.translations)) {
-              const localeTranslation = translation as { title: string; message: string };
-              
+            for (const [locale, translation] of Object.entries(
+              translationResult.translations
+            )) {
+              const localeTranslation = translation as {
+                title: string;
+                message: string;
+              };
+
               // Create column names based on locale
               const titleColumn = `title_${locale}` as keyof TrustPilot;
               const messageColumn = `message_${locale}` as keyof TrustPilot;
-              
+
               // Only update if the column exists and doesn't already have content
               if (
-                titleColumn in review && 
-                messageColumn in review && 
+                titleColumn in review &&
+                messageColumn in review &&
                 (!review[titleColumn] || review[titleColumn] === '')
               ) {
                 // Update the review with translations
@@ -575,31 +588,39 @@ export class ChatGPT {
                   data: {
                     [titleColumn]: localeTranslation.title,
                     [messageColumn]: localeTranslation.message,
-                  } as any
+                  } as any,
                 });
-                
+
                 this.logger.log(
                   color.green.bold(
-                    `Updated translations for review ID ${color.white.bold(review.id)} to ${color.white.bold(locale)}`
+                    `Updated translations for review ID ${color.white.bold(
+                      review.id
+                    )} to ${color.white.bold(locale)}`
                   )
                 );
               }
             }
           }
         } catch (error) {
-          this.logger.log(color.red.bold(`Error parsing translation results: ${error}`));
+          this.logger.log(
+            color.red.bold(`Error parsing translation results: ${error}`)
+          );
           console.error(error);
         }
       }
-      
+
       // Add a delay between batches to avoid rate limits
       if (i + batchSize < reviews.length) {
-        this.logger.log(color.blue.bold('Waiting before processing next batch...'));
-        await new Promise(resolve => setTimeout(resolve, 2000));
+        this.logger.log(
+          color.blue.bold('Waiting before processing next batch...')
+        );
+        await new Promise((resolve) => setTimeout(resolve, 2000));
       }
     }
-    
-    this.logger.log(color.green.bold('Finished translating all Trustpilot reviews'));
+
+    this.logger.log(
+      color.green.bold('Finished translating all Trustpilot reviews')
+    );
   }
 
   public async translateGenreNames(
@@ -668,7 +689,9 @@ export class ChatGPT {
           ) as Record<string, string>;
           this.logger.log(
             color.green.bold(
-              `Successfully translated genre "${color.white.bold(genreNameEn)}".`
+              `Successfully translated genre "${color.white.bold(
+                genreNameEn
+              )}".`
             )
           );
           return translations;
@@ -810,7 +833,13 @@ export class ChatGPT {
    * @param htmlString The HTML string to extract data from.
    * @returns Promise<{ opdrachtnummers: Array<{ opdrachtnummer: string, date: string, amount: number }> }>
    */
-  public async extractOpdrachtnummers(htmlString: string): Promise<{ opdrachtnummers: Array<{ opdrachtnummer: string, date: string, amount: number }> }> {
+  public async extractOpdrachtnummers(htmlString: string): Promise<{
+    opdrachtnummers: Array<{
+      opdrachtnummer: string;
+      date: string;
+      amount: number;
+    }>;
+  }> {
     const prompt = `
 Given the following HTML (Dutch, copy-pasted from a web page), extract an array of objects with the following fields:
 - opdrachtnummer (string, the order number, called "Opdrachtnummer")
@@ -823,19 +852,21 @@ HTML:
 ${htmlString}
 `;
 
+    console.log(111, prompt);
+
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4.1',
       temperature: 0,
       messages: [
         {
           role: 'system',
-          content: `You are a helpful assistant that extracts structured data from Dutch HTML order overviews.`
+          content: `You are a helpful assistant that extracts structured data from Dutch HTML order overviews.`,
         },
         {
           role: 'user',
-          content: prompt
-        }
-      ]
+          content: prompt,
+        },
+      ],
     });
 
     // Try to parse the first code block or the first JSON in the response
@@ -861,7 +892,9 @@ ${htmlString}
       return { opdrachtnummers };
     } catch (e) {
       this.logger.log(
-        color.red.bold('Failed to parse Opdrachtnummers JSON from ChatGPT response')
+        color.red.bold(
+          'Failed to parse Opdrachtnummers JSON from ChatGPT response'
+        )
       );
       return { opdrachtnummers: [] };
     }
