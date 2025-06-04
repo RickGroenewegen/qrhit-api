@@ -1,6 +1,6 @@
 import PrismaInstance from './prisma';
 
-class PrinterInvoiceService {
+class PrinterInvoice {
   private prisma = PrismaInstance.getInstance();
 
   async getAllPrinterInvoices() {
@@ -16,12 +16,15 @@ class PrinterInvoiceService {
     });
   }
 
-  async updatePrinterInvoice(id: number, data: {
-    invoiceNumber?: string;
-    description?: string;
-    totalPriceExclVat?: number;
-    totalPriceInclVat?: number;
-  }) {
+  async updatePrinterInvoice(
+    id: number,
+    data: {
+      invoiceNumber?: string;
+      description?: string;
+      totalPriceExclVat?: number;
+      totalPriceInclVat?: number;
+    }
+  ) {
     try {
       const updated = await this.prisma.printerInvoice.update({
         where: { id },
@@ -60,4 +63,4 @@ class PrinterInvoiceService {
   }
 }
 
-export default new PrinterInvoiceService();
+export default new PrinterInvoice();
