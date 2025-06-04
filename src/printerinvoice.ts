@@ -1,7 +1,17 @@
 import PrismaInstance from './prisma';
 
 class PrinterInvoiceService {
+  private static instance: PrinterInvoiceService;
   private prisma = PrismaInstance.getInstance();
+
+  private constructor() {}
+
+  public static getInstance(): PrinterInvoiceService {
+    if (!PrinterInvoiceService.instance) {
+      PrinterInvoiceService.instance = new PrinterInvoiceService();
+    }
+    return PrinterInvoiceService.instance;
+  }
 
   async getAllPrinterInvoices() {
     return await this.prisma.printerInvoice.findMany({
@@ -63,4 +73,4 @@ class PrinterInvoiceService {
   }
 }
 
-export default new PrinterInvoiceService();
+export default PrinterInvoiceService;
