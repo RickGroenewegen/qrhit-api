@@ -104,29 +104,93 @@ class PrinterInvoice {
     const extraction = await chatgpt.extractOrders(content);
 
     // Loop over the extracted orders and update payments
-    const results: Array<{ orderId: string; updated: boolean }> = [];
+    const results: Array<{ orderId: string; updated: boolean; amount: number }> = [];
+    const warnings: Array<{ orderId: string; amount: number }> = [];
+
     for (const order of extraction.orders) {
       try {
         const updated = await this.prisma.payment.updateMany({
           where: { printApiOrderId: order.orderId },
           data: { printApiInvoicePrice: order.amount },
         });
-        results.push({
-          orderId: order.orderId,
-          updated: updated.count > 0,
-        });
+        if (updated.count > 0) {
+          // Success
+          // eslint-disable-next-line no-console
+          console.log(
+            require('console-log-colors').color.green.bold(
+              `✔ Updated payment with printApiOrderId=${order.orderId} to printApiInvoicePrice=${order.amount}`
+            )
+          );
+          results.push({
+            orderId: order.orderId,
+            updated: true,
+            amount: order.amount,
+          });
+        } else {
+          // Not found
+          // eslint-disable-next-line no-console
+          console.warn(
+            require('console-log-colors').color.yellow.bold(
+              `⚠ No payment found for printApiOrderId=${order.orderId} (amount=${order.amount})`
+            )
+          );
+          results.push({
+            orderId: order.orderId,
+            updated: false,
+            amount: order.amount,
+          });
+          warnings.push({
+            orderId: order.orderId,
+            amount: order.amount,
+          });
+        }
       } catch (e) {
+        // Error
+        // eslint-disable-next-line no-console
+        console.error(
+          require('console-log-colors').color.red.bold(
+            `✖ Error updating payment for printApiOrderId=${order.orderId}: ${(e as Error).message}`
+          )
+        );
         results.push({
           orderId: order.orderId,
           updated: false,
+          amount: order.amount,
+        });
+        warnings.push({
+          orderId: order.orderId,
+          amount: order.amount,
         });
       }
+    }
+
+    // Summary log
+    const color = require('console-log-colors').color;
+    // eslint-disable-next-line no-console
+    console.log(
+      color.cyan.bold(
+        `Processed ${extraction.orders.length} orders. Updated: ${results.filter(r => r.updated).length}, Warnings: ${warnings.length}`
+      )
+    );
+    if (warnings.length > 0) {
+      // eslint-disable-next-line no-console
+      console.warn(
+        color.yellow.bold(
+          `Warning: No payment found for the following orderIds: ${warnings.map(w => w.orderId).join(', ')}`
+        )
+      );
     }
 
     return {
       success: true,
       extracted: extraction.orders,
       updateResults: results,
+      warnings,
+      summary: {
+        total: extraction.orders.length,
+        updated: results.filter(r => r.updated).length,
+        warnings: warnings.length,
+      },
     };
   }
 }
