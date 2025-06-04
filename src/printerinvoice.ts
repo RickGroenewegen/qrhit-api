@@ -1,16 +1,16 @@
 import PrismaInstance from './prisma';
 
-class PrinterInvoiceService {
-  private static instance: PrinterInvoiceService;
+class PrinterInvoice {
+  private static instance: PrinterInvoice;
   private prisma = PrismaInstance.getInstance();
 
   private constructor() {}
 
-  public static getInstance(): PrinterInvoiceService {
-    if (!PrinterInvoiceService.instance) {
-      PrinterInvoiceService.instance = new PrinterInvoiceService();
+  public static getInstance(): PrinterInvoice {
+    if (!PrinterInvoice.instance) {
+      PrinterInvoice.instance = new PrinterInvoice();
     }
-    return PrinterInvoiceService.instance;
+    return PrinterInvoice.instance;
   }
 
   async getAllPrinterInvoices() {
@@ -73,4 +73,4 @@ class PrinterInvoiceService {
   }
 }
 
-export default PrinterInvoiceService;
+export default PrinterInvoice;
