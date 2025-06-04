@@ -103,11 +103,30 @@ class PrinterInvoice {
     const chatgpt = new ChatGPT();
     const extraction = await chatgpt.extractOrders(content);
 
-    console.log(111, extraction);
+    // Loop over the extracted orders and update payments
+    const results: Array<{ orderId: string; updated: boolean }> = [];
+    for (const order of extraction.orders) {
+      try {
+        const updated = await this.prisma.payment.updateMany({
+          where: { printApiOrderId: order.orderId },
+          data: { printApiInvoicePrice: order.amount },
+        });
+        results.push({
+          orderId: order.orderId,
+          updated: updated.count > 0,
+        });
+      } catch (e) {
+        results.push({
+          orderId: order.orderId,
+          updated: false,
+        });
+      }
+    }
 
     return {
       success: true,
       extracted: extraction.orders,
+      updateResults: results,
     };
   }
 }
