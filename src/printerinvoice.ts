@@ -98,11 +98,13 @@ class PrinterInvoice {
   // Placeholder for processing invoice data
   async processInvoiceData(id: number, body: any) {
     // Output the body for now, implement logic later
+
+    const content = body.content || '';
+
+    console.log(111, content);
+
     return {
       success: true,
-      message: 'processInvoiceData called',
-      id,
-      body
     };
   }
 }
