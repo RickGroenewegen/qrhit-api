@@ -831,6 +831,7 @@ export class ChatGPT {
   /**
    * Extracts an array of Opdrachtnummers, their order dates (DD-MM-YYYY), and amounts from a pasted HTML string.
    * Uses OpenAI function calling to enforce structured output.
+   * Ignores any "Creditfactuur" that completely negates a "Factuur" (leave both out).
    * @param htmlString The HTML string to extract data from.
    * @returns Promise<{ opdrachtnummers: Array<{ opdrachtnummer: string, date: string, amount: number }> }>
    */
@@ -842,10 +843,13 @@ export class ChatGPT {
     }>;
   }> {
     const prompt = `
-Given the following HTML (Dutch, copy-pasted from a web page), extract an array of objects with the following fields:
+Given the following unstructured Dutch HTML/text (copy-pasted from a web page), extract an array of objects with the following fields:
 - opdrachtnummer (string, the order number, called "Opdrachtnummer")
 - date (string, the order date in DD-MM-YYYY format)
 - amount (number, the amount, as a float, in euros)
+
+Some lines may refer to a "Factuur" (invoice) and some to a "Creditfactuur" (credit invoice). 
+If you notice a "Creditfactuur" that completely negates a "Factuur" (i.e., same opdrachtnummer and amount, but negative), leave both out of the result.
 
 Return ONLY the structured data as requested, no explanation, no extra text.
 
@@ -853,15 +857,13 @@ HTML:
 ${htmlString}
 `;
 
-    console.log(111, prompt);
-
     const result = await this.openai.chat.completions.create({
       model: 'gpt-4o',
       temperature: 0,
       messages: [
         {
           role: 'system',
-          content: `You are a helpful assistant that extracts structured data from Dutch HTML order overviews.`,
+          content: `You are a helpful assistant that extracts structured data from Dutch HTML order overviews. Ignore any "Creditfactuur" that completely negates a "Factuur" (same opdrachtnummer and amount, but negative), and leave both out of the result.`,
         },
         {
           role: 'user',
@@ -873,7 +875,7 @@ ${htmlString}
         {
           name: 'extractOpdrachtnummers',
           description:
-            'Extracts an array of opdrachtnummers, order dates, and amounts from HTML.',
+            'Extracts an array of opdrachtnummers, order dates, and amounts from HTML. Ignores any Creditfactuur that negates a Factuur (same opdrachtnummer and amount, but negative).',
           parameters: {
             type: 'object',
             properties: {
@@ -897,7 +899,7 @@ ${htmlString}
                   },
                   required: ['opdrachtnummer', 'date', 'amount'],
                 },
-                description: 'Array of extracted orders',
+                description: 'Array of extracted orders, excluding negated pairs.',
               },
             },
             required: ['opdrachtnummers'],
@@ -910,9 +912,6 @@ ${htmlString}
       const funcCall = result.choices[0].message.function_call;
       try {
         const parsed = JSON.parse(funcCall.arguments as string);
-
-        console.log(222, parsed.opdrachtnummers);
-
         return { opdrachtnummers: parsed.opdrachtnummers };
       } catch (e) {
         this.logger.log(
