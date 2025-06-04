@@ -831,6 +831,40 @@ class Server {
       }
     );
 
+    // Admin route: Create a new PrinterInvoice
+    this.fastify.post(
+      '/admin/printerinvoices',
+      getAuthHandler(['admin']),
+      async (request: any, reply: any) => {
+        const { invoiceNumber, description, totalPriceExclVat, totalPriceInclVat } = request.body;
+        if (
+          !invoiceNumber ||
+          typeof invoiceNumber !== 'string' ||
+          typeof description !== 'string' ||
+          typeof totalPriceExclVat !== 'number' ||
+          typeof totalPriceInclVat !== 'number'
+        ) {
+          reply.status(400).send({ success: false, error: 'Invalid or missing fields' });
+          return;
+        }
+        try {
+          const result = await this.printerInvoice.createPrinterInvoice({
+            invoiceNumber,
+            description,
+            totalPriceExclVat,
+            totalPriceInclVat,
+          });
+          if (result.success) {
+            reply.send({ success: true, invoice: result.invoice });
+          } else {
+            reply.status(400).send({ success: false, error: result.error });
+          }
+        } catch (error) {
+          reply.status(500).send({ success: false, error: 'Failed to create printer invoice' });
+        }
+      }
+    );
+
     // Admin route: Update a PrinterInvoice
     this.fastify.put(
       '/admin/printerinvoices/:id',

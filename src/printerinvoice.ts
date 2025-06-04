@@ -53,6 +53,29 @@ class PrinterInvoice {
     }
   }
 
+  async createPrinterInvoice(data: {
+    invoiceNumber: string;
+    description: string;
+    totalPriceExclVat: number;
+    totalPriceInclVat: number;
+  }) {
+    try {
+      const created = await this.prisma.printerInvoice.create({
+        data,
+        select: {
+          id: true,
+          invoiceNumber: true,
+          description: true,
+          totalPriceExclVat: true,
+          totalPriceInclVat: true,
+        },
+      });
+      return { success: true, invoice: created };
+    } catch (error) {
+      return { success: false, error: 'Failed to create printer invoice' };
+    }
+  }
+
   async deletePrinterInvoice(id: number) {
     // Check if any payments refer to this invoice
     const count = await this.prisma.payment.count({
