@@ -101,6 +101,9 @@ class Vibe {
         },
       });
 
+      // Mark the company list for Spotify reload
+      await this.markSpotifyForReload(companyListId);
+
       this.logger.log(
         color.blue.bold(
           `Corrected ${color.white.bold(
@@ -148,6 +151,9 @@ class Vibe {
       await this.prisma.companyListSubmission.delete({
         where: { id: submissionId },
       });
+
+      // Mark the company list for Spotify reload
+      await this.markSpotifyForReload(submission.companyListId);
 
       this.logger.log(
         color.blue.bold(`Deleted submission: ${color.white.bold(submissionId)}`)
@@ -225,6 +231,10 @@ class Vibe {
         where: { id: submissionId },
         data: { cardName: data.cardName },
       });
+
+      // Mark the company list for Spotify reload
+      await this.markSpotifyForReload(submission.companyListId);
+
       return { success: true, data: updated };
     } catch (error) {
       this.logger.log(color.red.bold(`Error updating submission: ${error}`));
@@ -262,6 +272,9 @@ class Vibe {
           status: 'submitted', // Optionally set status to 'submitted'
         },
       });
+
+      // Mark the company list for Spotify reload
+      await this.markSpotifyForReload(submission.companyListId);
 
       this.logger.log(
         color.green.bold(
@@ -1335,6 +1348,18 @@ class Vibe {
     if (!slug) return;
     const cacheKey = `companyListByDomain:${slug}`;
     await this.cache.del(cacheKey);
+  }
+
+  /**
+   * Mark a company list as requiring a Spotify refresh.
+   * @param companyListId The ID of the company list.
+   */
+  private async markSpotifyForReload(companyListId: number) {
+    if (!companyListId) return;
+    await this.prisma.companyList.update({
+      where: { id: companyListId },
+      data: { spotifyRefreshRequired: true },
+    });
   }
 
   /**
