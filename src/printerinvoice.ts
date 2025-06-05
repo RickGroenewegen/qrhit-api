@@ -121,21 +121,28 @@ class PrinterInvoice {
     const extraction = await chatgpt.extractOrders(content);
 
     // Loop over the extracted orders and update payments
-    const results: Array<{
+    const orderResults: Array<{
       orderId: string;
-      updated: boolean;
+      paymentId: number | null;
       amount: number;
+      paymentAmount: number | null;
     }> = [];
-    const warnings: Array<{ orderId: string; amount: number }> = [];
 
     for (const order of extraction.orders) {
       try {
-        const updated = await this.prisma.payment.updateMany({
+        // Find the payment by printApiOrderId
+        const payment = await this.prisma.payment.findFirst({
           where: { printApiOrderId: order.orderId },
-          data: { printApiInvoicePrice: order.amount },
+          select: { id: true, printApiPrice: true },
         });
-        if (updated.count > 0) {
-          // Success
+
+        if (payment) {
+          // Update the payment's printApiInvoicePrice
+          await this.prisma.payment.updateMany({
+            where: { printApiOrderId: order.orderId },
+            data: { printApiInvoicePrice: order.amount },
+          });
+
           this.logger.log(
             color.blue.bold(
               `Updated payment with orderId ${color.white(
@@ -143,13 +150,14 @@ class PrinterInvoice {
               )} to price ${color.white(order.amount.toFixed(2))}`
             )
           );
-          results.push({
+
+          orderResults.push({
             orderId: order.orderId,
-            updated: true,
+            paymentId: payment.id,
             amount: order.amount,
+            paymentAmount: payment.printApiPrice,
           });
         } else {
-          // Not found
           this.logger.log(
             color.yellow.bold(
               `No payment found for orderId ${color.white(
@@ -157,18 +165,14 @@ class PrinterInvoice {
               )} (Amount: ${color.white(order.amount.toFixed(2))})`
             )
           );
-          results.push({
+          orderResults.push({
             orderId: order.orderId,
-            updated: false,
+            paymentId: null,
             amount: order.amount,
-          });
-          warnings.push({
-            orderId: order.orderId,
-            amount: order.amount,
+            paymentAmount: null,
           });
         }
       } catch (e) {
-        // Error
         this.logger.log(
           color.red.bold(
             `Error updating payment for orderId ${color.white(
@@ -176,14 +180,11 @@ class PrinterInvoice {
             )}: ${color.white((e as Error).message)}`
           )
         );
-        results.push({
+        orderResults.push({
           orderId: order.orderId,
-          updated: false,
+          paymentId: null,
           amount: order.amount,
-        });
-        warnings.push({
-          orderId: order.orderId,
-          amount: order.amount,
+          paymentAmount: null,
         });
       }
     }
@@ -193,23 +194,15 @@ class PrinterInvoice {
       color.blue.bold(
         `Processed ${color.white(
           extraction.orders.length
-        )} orders. Updated: ${color.white(
-          results.filter((r) => r.updated).length
-        )}, Warnings: ${color.white(warnings.length)}`
+        )} orders. Found: ${color.white(
+          orderResults.filter((r) => r.paymentId !== null).length
+        )}, Not found: ${color.white(
+          orderResults.filter((r) => r.paymentId === null).length
+        )}`
       )
     );
 
-    return {
-      success: true,
-      extracted: extraction.orders,
-      updateResults: results,
-      warnings,
-      summary: {
-        total: extraction.orders.length,
-        updated: results.filter((r) => r.updated).length,
-        warnings: warnings.length,
-      },
-    };
+    return orderResults;
   }
 }
 
