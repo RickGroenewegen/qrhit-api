@@ -1293,10 +1293,7 @@ class Vibe {
       });
 
       // Invalidate cache for this list (by slug)
-      if (updatedList.slug) {
-        const cacheKey = `companyListByDomain:${updatedList.slug}`;
-        await this.cache.del(cacheKey);
-      }
+      await this.clearCompanyListCache(updatedList.slug);
 
       // Return the updated list and explicitly include the processed filenames
       return {
@@ -1327,6 +1324,16 @@ class Vibe {
       console.log(error);
       return { success: false, error: 'Error updating company list' };
     }
+  }
+
+  /**
+   * Centralized cache clearing for a company list by slug.
+   * @param slug The slug of the company list.
+   */
+  private async clearCompanyListCache(slug?: string) {
+    if (!slug) return;
+    const cacheKey = `companyListByDomain:${slug}`;
+    await this.cache.del(cacheKey);
   }
 
   /**
@@ -1506,10 +1513,13 @@ class Vibe {
     }
 
     // Update the list status to 'generating_pdf' using prisma
-    await this.prisma.companyList.update({
+    const updatedCompanyList = await this.prisma.companyList.update({
       where: { id: listId },
       data: { status: 'generating_pdf' },
     });
+
+    // Invalidate cache for this list (by slug)
+    await this.clearCompanyListCache(updatedCompanyList.slug);
 
     if (!companyList) {
       return { success: false, error: 'Company list not found' };
@@ -1757,10 +1767,13 @@ class Vibe {
       const reviewLink = `${process.env['FRONTEND_URI']}/usersuggestions/${result.data.paymentId}/${user.hash}/${playlistId}/0`;
 
       // Update the list status to 'generating_pdf' using prisma
-      await this.prisma.companyList.update({
+      const finalizedList = await this.prisma.companyList.update({
         where: { id: listId },
         data: { status: 'pdf_complete', downloadLink, reviewLink },
       });
+
+      // Invalidate cache for this list (by slug)
+      await this.clearCompanyListCache(finalizedList.slug);
 
       this.logger.log(
         color.blue.bold(
@@ -2106,10 +2119,13 @@ class Vibe {
       }
 
       // Update the list status to:  spotify_list_generated
-      await this.prisma.companyList.update({
+      const updatedSpotifyList = await this.prisma.companyList.update({
         where: { id: companyListId },
         data: { status: 'spotify_list_generated' },
       });
+
+      // Invalidate cache for this list (by slug)
+      await this.clearCompanyListCache(updatedSpotifyList.slug);
 
       // --- End Update ---
 
