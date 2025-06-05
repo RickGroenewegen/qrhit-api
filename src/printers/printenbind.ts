@@ -1292,6 +1292,7 @@ class PrintEnBind {
     );
 
     let printApiPrice = 0;
+    let printApiPriceInclVat = 0;
 
     try {
       const orderResponse = await fetch(
@@ -1305,6 +1306,8 @@ class PrintEnBind {
       const order = await orderResponse.json();
 
       printApiPrice = parseFloat(order.amount);
+      printApiPriceInclVat =
+        parseFloat(order.amount) + parseFloat(order.amount_tax_standard);
 
       const newProfit = totalPriceWithoutTax - printApiPrice;
 
@@ -1312,6 +1315,7 @@ class PrintEnBind {
         where: { paymentId: payment.paymentId },
         data: {
           printApiPrice,
+          printApiPriceInclVat,
           totalPriceWithoutTax,
           profit: newProfit,
           printApiStatus: newStatus,

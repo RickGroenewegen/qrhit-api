@@ -441,6 +441,7 @@ model PaymentHasPlaylist {
   priceWithoutVAT            Float
   priceVAT                   Float
   printApiPrice              Float     @default(0)
+  printApiPriceInclVat       Float     @default(0)
   printApiUploaded           Boolean   @default(false)
   printApiUploadResponse     String?   @db.Text
   printerPageCount           Int       @default(0)
