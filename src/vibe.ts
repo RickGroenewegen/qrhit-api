@@ -2147,7 +2147,7 @@ class Vibe {
       // Update the list status to:  spotify_list_generated
       const updatedSpotifyList = await this.prisma.companyList.update({
         where: { id: companyListId },
-        data: { status: 'spotify_list_generated' },
+        data: { status: 'spotify_list_generated', spotifyRefreshRequired: false },
       });
 
       // Invalidate cache for this list (by slug)
