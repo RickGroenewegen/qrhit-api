@@ -95,6 +95,7 @@ model Payment {
   printApiOrderResponse   String?              @default("") @db.Text
   printApiTrackingLink    String?              @default("")
   printApiPrice           Float                @default(0)
+  printApiPriceInclVat    Float                @default(0)
   printApiInvoicePrice    Float                @default(0)
   printerInvoiceId        Int?
   clientIp                String?
@@ -419,39 +420,39 @@ model PlaylistHasTrack {
 }
 
 model PaymentHasPlaylist {
-  id                         Int       @id @default(autoincrement())
-  payment                    Payment   @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+  id                         Int      @id @default(autoincrement())
+  payment                    Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
   paymentId                  Int
-  playlist                   Playlist  @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  playlist                   Playlist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
   playlistId                 Int
   amount                     Int
   numberOfTracks             Int
   orderTypeId                Int
   type                       String
-  subType                    String?   @default("none")
+  subType                    String?  @default("none")
   filename                   String?
   filenameDigital            String?
   filenameDigitalDoubleSided String?
-  doubleSided                Boolean   @default(false)
-  eco                        Boolean   @default(false)
-  hideCircle                 Boolean   @default(false)
-  qrColor                    String    @default("#000000")
-  hideDomain                 Boolean   @default(false)
+  doubleSided                Boolean  @default(false)
+  eco                        Boolean  @default(false)
+  hideCircle                 Boolean  @default(false)
+  qrColor                    String   @default("#000000")
+  hideDomain                 Boolean  @default(false)
   price                      Float
   priceWithoutVAT            Float
   priceVAT                   Float
-  printApiPrice              Float     @default(0)
-  printApiPriceInclVat       Float     @default(0)
-  printApiUploaded           Boolean   @default(false)
-  printApiUploadResponse     String?   @db.Text
-  printerPageCount           Int       @default(0)
-  suggestionsPending         Boolean   @default(false)
-  eligableForPrinter         Boolean   @default(false)
-  eligableForPrinterAt       DateTime?
-  emoji                      String?
-  background                 String?
-  logo                       String?
-  orderType                  OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
+  printApiPrice              Float    @default(0)
+
+  printApiUploaded       Boolean   @default(false)
+  printApiUploadResponse String?   @db.Text
+  printerPageCount       Int       @default(0)
+  suggestionsPending     Boolean   @default(false)
+  eligableForPrinter     Boolean   @default(false)
+  eligableForPrinterAt   DateTime?
+  emoji                  String?
+  background             String?
+  logo                   String?
+  orderType              OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
 
   @@unique([paymentId, playlistId])
   @@map("payment_has_playlist")
