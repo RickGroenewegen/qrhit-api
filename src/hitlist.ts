@@ -162,6 +162,8 @@ class Hitlist {
 
       const verificationHash = this.utils.generateRandomString(32);
 
+      let createdOrUpdatedSubmission = false;
+
       if (!submission) {
         // Generate a unique verification hash
 
@@ -237,6 +239,8 @@ class Hitlist {
           },
         });
 
+        createdOrUpdatedSubmission = true;
+
         this.logger.log(
           color.blue.bold(
             `Created new company list submission with hash ${color.white.bold(
@@ -257,6 +261,12 @@ class Hitlist {
             agreeToUseName: agreeToUseName, // Added agreeToUseName
           },
         });
+        createdOrUpdatedSubmission = true;
+      }
+
+      // If a submission was created or updated, mark the company list for Spotify reload
+      if (createdOrUpdatedSubmission) {
+        await this.vibe['markSpotifyForReload'](parseInt(companyListId));
       }
 
       // Send verification email if we have an email address
@@ -490,6 +500,9 @@ class Hitlist {
           }
         }
 
+        // Mark the company list for Spotify reload after any change to the tracks
+        await this.vibe['markSpotifyForReload'](parseInt(companyListId));
+
         this.logger.log(
           color.green.bold(
             `Created ${color.white.bold(
@@ -538,6 +551,9 @@ class Hitlist {
           verifiedAt: new Date(),
         },
       });
+
+      // Mark the company list for Spotify reload after verification
+      await this.vibe['markSpotifyForReload'](submission.companyListId);
 
       this.logger.log(
         color.green.bold(
