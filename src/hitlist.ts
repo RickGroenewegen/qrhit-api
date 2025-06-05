@@ -345,7 +345,17 @@ class Hitlist {
       scoredHitlist.sort((a, b) => b.score - a.score);
 
       // 4. Filter to keep only top tracks within the limit
-      const filteredHitlist = scoredHitlist.slice(0, maxTracksToKeep);
+      let filteredHitlist = scoredHitlist.slice(0, maxTracksToKeep);
+
+      // 5. Remove duplicate trackIds, keeping only the first occurrence
+      const seenTrackIds = new Set();
+      filteredHitlist = filteredHitlist.filter((track) => {
+        if (seenTrackIds.has(track.trackId)) {
+          return false;
+        }
+        seenTrackIds.add(track.trackId);
+        return true;
+      });
 
       if (filteredHitlist.length === 0) {
         this.logger.log(
