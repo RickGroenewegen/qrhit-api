@@ -570,6 +570,7 @@ model CompanyList {
   languages               String    @default("nl")
   numberOfUncheckedTracks Int       @default(0)
   totalSpotifyTracks      Int       @default(0)
+  spotifyRefreshRequired  Boolean   @default(true)
   hideCircle              Boolean   @default(false)
   showNames               Boolean   @default(false)
   createdAt               DateTime  @default(now())
