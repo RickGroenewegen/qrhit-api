@@ -11,9 +11,11 @@ import sharp from 'sharp'; // Import sharp
 import Spotify from './spotify';
 import Generator from './generator';
 import Cache from './cache';
+import Translation from './translation';
 
 class Vibe {
   private static instance: Vibe;
+  private translation = new Translation();
   public prisma = new PrismaClient();
 
   /**
@@ -307,12 +309,10 @@ class Vibe {
 
       // Import Translation here to avoid circular dependencies
       // eslint-disable-next-line @typescript-eslint/no-var-requires
-      const Translation = (await import('./translation')).default;
-      const translationInstance = new Translation();
 
       if (listId) {
         // Get all available locales from translationInstance
-        const availableLocales = translationInstance.allLocales;
+        const availableLocales = this.translation.allLocales;
         // Build the select object dynamically to include all description fields
         const selectObj: Record<string, boolean | object> = {
           id: true,
@@ -438,9 +438,9 @@ class Vibe {
         data: {
           questions,
           list: companyList, // companyList now includes numberOfUncheckedTracks and languages as array and all description_* fields
-          ranking, // Add the ranking array here
-          availableLocales: translationInstance.allLocales, // Add availableLocales property
-          submissions, // New: submissions array
+          ranking,
+          availableLocales: this.translation.allLocales,
+          submissions,
         },
       };
     } catch (error) {
