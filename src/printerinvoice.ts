@@ -140,7 +140,7 @@ class PrinterInvoice {
           // Update the payment's printApiInvoicePrice
           await this.prisma.payment.updateMany({
             where: { printApiOrderId: order.orderId },
-            data: { printApiInvoicePrice: order.amount },
+            data: { printApiInvoicePrice: order.amount, printerInvoiceId: id },
           });
 
           this.logger.log(
