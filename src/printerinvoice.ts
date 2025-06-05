@@ -155,7 +155,7 @@ class PrinterInvoice {
             orderId: order.orderId,
             paymentId: payment.id,
             amount: order.amount,
-            paymentAmount: payment.printApiPrice,
+            paymentAmount: payment.printApiPriceInclVat,
           });
         } else {
           this.logger.log(
