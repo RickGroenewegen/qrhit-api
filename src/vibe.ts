@@ -164,17 +164,25 @@ class Vibe {
    * @param companyId The company ID to check against
    * @returns Promise<boolean>
    */
-  public async submissionBelongsToCompany(submissionId: number, companyId: number): Promise<boolean> {
-    if (!submissionId || isNaN(submissionId) || !companyId || isNaN(companyId)) {
+  public async submissionBelongsToCompany(
+    submissionId: number,
+    companyId: number
+  ): Promise<boolean> {
+    if (
+      !submissionId ||
+      isNaN(submissionId) ||
+      !companyId ||
+      isNaN(companyId)
+    ) {
       return false;
     }
     const submission = await this.prisma.companyListSubmission.findUnique({
       where: { id: submissionId },
       include: {
         CompanyList: {
-          select: { companyId: true }
-        }
-      }
+          select: { companyId: true },
+        },
+      },
     });
     if (!submission || !submission.CompanyList) return false;
     return submission.CompanyList.companyId === companyId;
@@ -1340,24 +1348,25 @@ class Vibe {
   ): Promise<void> {
     try {
       // Get all submission tracks for this list
-      const allSubmissionTracks = await this.prisma.companyListSubmissionTrack.findMany({
-        where: {
-          CompanyListSubmission: {
-            companyListId: listId,
-          },
-        },
-        select: {
-          trackId: true,
-          CompanyListSubmission: {
-            select: {
-              firstname: true,
-              lastname: true,
-              cardName: true,
-              agreeToUseName: true,
+      const allSubmissionTracks =
+        await this.prisma.companyListSubmissionTrack.findMany({
+          where: {
+            CompanyListSubmission: {
+              companyListId: listId,
             },
           },
-        },
-      });
+          select: {
+            trackId: true,
+            CompanyListSubmission: {
+              select: {
+                firstname: true,
+                lastname: true,
+                cardName: true,
+                agreeToUseName: true,
+              },
+            },
+          },
+        });
 
       // Aggregate submissions by trackId
       const trackSubmissionsMap: Map<
@@ -1379,15 +1388,17 @@ class Vibe {
             firstname: submission.CompanyListSubmission.firstname,
             lastname: submission.CompanyListSubmission.lastname,
             cardName: submission.CompanyListSubmission.cardName,
-            agreeToUseName: submission.CompanyListSubmission.agreeToUseName ?? false,
+            agreeToUseName:
+              submission.CompanyListSubmission.agreeToUseName ?? false,
           });
         }
       }
 
       // If ranking is not provided, use all unique trackIds in any order
-      const trackIdsInOrder = ranking && Array.isArray(ranking) && ranking.length > 0
-        ? ranking
-        : Array.from(trackSubmissionsMap.keys());
+      const trackIdsInOrder =
+        ranking && Array.isArray(ranking) && ranking.length > 0
+          ? ranking
+          : Array.from(trackSubmissionsMap.keys());
 
       const trackExtraInfoCreations = [];
 
@@ -1676,8 +1687,14 @@ class Vibe {
       let rankingTrackIds: number[] = [];
       try {
         const rankingResult = await this.getRanking(listId);
-        if (rankingResult.success && rankingResult.data && Array.isArray(rankingResult.data.ranking)) {
-          rankingTrackIds = rankingResult.data.ranking.map((track: any) => track.id);
+        if (
+          rankingResult.success &&
+          rankingResult.data &&
+          Array.isArray(rankingResult.data.ranking)
+        ) {
+          rankingTrackIds = rankingResult.data.ranking.map(
+            (track: any) => track.id
+          );
         }
       } catch (e) {
         this.logger.log(
@@ -1687,7 +1704,12 @@ class Vibe {
         );
       }
 
-      await this.addTrackExtraInfo(listId, playlist.id, !!companyList.showNames, rankingTrackIds);
+      await this.addTrackExtraInfo(
+        listId,
+        playlist.id,
+        !!companyList.showNames,
+        rankingTrackIds
+      );
 
       await this.mollie.clearPDFs(result.data.paymentId);
       this.generator.generate(
