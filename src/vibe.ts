@@ -1330,7 +1330,7 @@ class Vibe {
    * Centralized cache clearing for a company list by slug.
    * @param slug The slug of the company list.
    */
-  private async clearCompanyListCache(slug?: string) {
+  private async clearCompanyListCache(slug: string) {
     if (!slug) return;
     const cacheKey = `companyListByDomain:${slug}`;
     await this.cache.del(cacheKey);
