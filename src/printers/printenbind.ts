@@ -1306,8 +1306,11 @@ class PrintEnBind {
       const order = await orderResponse.json();
 
       printApiPrice = parseFloat(order.amount);
-      printApiPriceInclVat =
-        parseFloat(order.amount) + parseFloat(order.amount_tax_standard);
+      printApiPriceInclVat = parseFloat(
+        (
+          parseFloat(order.amount) + parseFloat(order.amount_tax_standard)
+        ).toFixed(2)
+      );
 
       const newProfit = totalPriceWithoutTax - printApiPrice;
 
