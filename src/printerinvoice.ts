@@ -132,7 +132,7 @@ class PrinterInvoice {
       try {
         // Find the payment by printApiOrderId
         const payment = await this.prisma.payment.findFirst({
-          where: { printApiOrderId: order.orderId },
+          where: { printApiOrderId: order.orderId, printerInvoiceId: id },
           select: { id: true, printApiPrice: true },
         });
 
