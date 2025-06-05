@@ -322,6 +322,7 @@ class Vibe {
           showNames: true,
           background: true,
           background2: true,
+          spotifyRefreshRequired: true,
           playlistSource: true,
           totalSpotifyTracks: true,
           numberOfUncheckedTracks: true,
