@@ -133,7 +133,7 @@ class PrinterInvoice {
         // Find the payment by printApiOrderId, but only if it does NOT already have a printerInvoiceId
         const payment = await this.prisma.payment.findFirst({
           where: { printApiOrderId: order.orderId, printerInvoiceId: null },
-          select: { id: true, printApiPrice: true },
+          select: { id: true, printApiPrice: true, printApiPriceInclVat: true },
         });
 
         if (payment) {
