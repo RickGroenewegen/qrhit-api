@@ -1323,105 +1323,125 @@ class Vibe {
 
   /**
    * Adds TrackExtraInfo records for a given company list and playlist.
-   * Retrieves submissions where users agreed to use their name, formats the names,
-   * and creates TrackExtraInfo entries for each unique track.
+   * Always creates an entry for each unique track in the ranking.
+   * If shownames is true, includes names for users who agreed to use their name.
+   * Sets extraArtistAttribute to the position in the ranking (#1, #2, ...).
    * @param listId The ID of the company list.
    * @param playlistId The ID of the playlist.
+   * @param shownames Whether to include names in extraNameAttribute.
+   * @param ranking Optional: Array of trackIds in ranking order (for position).
    * @private
    */
   private async addTrackExtraInfo(
     listId: number,
-    playlistId: number
+    playlistId: number,
+    shownames: boolean,
+    ranking?: number[]
   ): Promise<void> {
     try {
-      const submissionsWithNameToUse =
-        await this.prisma.companyListSubmissionTrack.findMany({
-          where: {
-            CompanyListSubmission: {
-              companyListId: listId,
+      // Get all submission tracks for this list
+      const allSubmissionTracks = await this.prisma.companyListSubmissionTrack.findMany({
+        where: {
+          CompanyListSubmission: {
+            companyListId: listId,
+          },
+        },
+        select: {
+          trackId: true,
+          CompanyListSubmission: {
+            select: {
+              firstname: true,
+              lastname: true,
+              cardName: true,
               agreeToUseName: true,
             },
           },
-          select: {
-            trackId: true,
-            CompanyListSubmission: {
-              select: {
-                firstname: true,
-                lastname: true,
-                cardName: true,
-              },
-            },
-          },
-        });
+        },
+      });
 
-      if (submissionsWithNameToUse && submissionsWithNameToUse.length > 0) {
-        // 1. Aggregate submissions by trackId
-        const trackSubmissionsMap: Map<
-          number,
-          {
-            firstname: string | null;
-            lastname: string | null;
-            cardName: string | null;
-          }[]
-        > = new Map();
-        for (const submission of submissionsWithNameToUse) {
-          const trackId = submission.trackId;
-          if (!trackSubmissionsMap.has(trackId)) {
-            trackSubmissionsMap.set(trackId, []);
-          }
-          // Ensure CompanyListSubmission is not null before accessing its properties
-          if (submission.CompanyListSubmission) {
-            trackSubmissionsMap.get(trackId)!.push({
-              firstname: submission.CompanyListSubmission.firstname,
-              lastname: submission.CompanyListSubmission.lastname,
-              cardName: submission.CompanyListSubmission.cardName,
-            });
-          }
+      // Aggregate submissions by trackId
+      const trackSubmissionsMap: Map<
+        number,
+        {
+          firstname: string | null;
+          lastname: string | null;
+          cardName: string | null;
+          agreeToUseName: boolean | null;
+        }[]
+      > = new Map();
+      for (const submission of allSubmissionTracks) {
+        const trackId = submission.trackId;
+        if (!trackSubmissionsMap.has(trackId)) {
+          trackSubmissionsMap.set(trackId, []);
         }
+        if (submission.CompanyListSubmission) {
+          trackSubmissionsMap.get(trackId)!.push({
+            firstname: submission.CompanyListSubmission.firstname,
+            lastname: submission.CompanyListSubmission.lastname,
+            cardName: submission.CompanyListSubmission.cardName,
+            agreeToUseName: submission.CompanyListSubmission.agreeToUseName ?? false,
+          });
+        }
+      }
 
-        const trackExtraInfoCreations = [];
+      // If ranking is not provided, use all unique trackIds in any order
+      const trackIdsInOrder = ranking && Array.isArray(ranking) && ranking.length > 0
+        ? ranking
+        : Array.from(trackSubmissionsMap.keys());
 
-        // 2. Iterate through aggregated map to prepare TrackExtraInfo data
-        for (const [trackId, voters] of trackSubmissionsMap.entries()) {
-          if (voters.length === 0) continue;
+      const trackExtraInfoCreations = [];
 
-          // Use cardName field for each voter, fallback to Anonymous if not present
-          const cardNames: string[] = [];
+      // Iterate through tracks in ranking order, assign position
+      for (let i = 0; i < trackIdsInOrder.length; i++) {
+        const trackId = trackIdsInOrder[i];
+        const voters = trackSubmissionsMap.get(trackId) || [];
+
+        // Only include names if shownames is true and user agreed
+        let cardNames: string[] = [];
+        if (shownames) {
           for (const voter of voters) {
-            if (voter.cardName && voter.cardName.length > 0) {
+            if (
+              voter.agreeToUseName &&
+              voter.cardName &&
+              voter.cardName.length > 0
+            ) {
               cardNames.push(voter.cardName.replace(/ /g, '&nbsp;'));
             }
           }
-
-          let extraNameAttributeValue = '';
-          if (cardNames.length > 0) {
-            extraNameAttributeValue = `${cardNames.join(' • ')}`;
-          }
-
-          trackExtraInfoCreations.push(
-            this.prisma.trackExtraInfo.create({
-              data: {
-                playlistId: playlistId,
-                trackId: trackId,
-                extraNameAttribute: extraNameAttributeValue,
-                extraArtistAttribute: null,
-              },
-            })
-          );
         }
 
-        if (trackExtraInfoCreations.length > 0) {
-          await Promise.all(trackExtraInfoCreations);
-          this.logger.log(
-            color.blue.bold(
-              `Successfully created ${color.white.bold(
-                trackExtraInfoCreations.length
-              )} extra track info records fo tracks in playlist ${color.white.bold(
-                playlistId
-              )}.`
-            )
-          );
+        let extraNameAttributeValue = '';
+        if (cardNames.length > 0) {
+          extraNameAttributeValue = `${cardNames.join(' • ')}`;
         }
+
+        // Position in ranking (1-based)
+        const position = i + 1;
+        const extraArtistAttributeValue = `#${position}`;
+
+        trackExtraInfoCreations.push(
+          this.prisma.trackExtraInfo.create({
+            data: {
+              playlistId: playlistId,
+              trackId: trackId,
+              extraNameAttribute: extraNameAttributeValue,
+              extraArtistAttribute: extraArtistAttributeValue,
+            },
+          })
+        );
+      }
+
+      if (trackExtraInfoCreations.length > 0) {
+        await Promise.all(trackExtraInfoCreations);
+        this.logger.log(
+          color.blue.bold(
+            `Successfully created ${color.white.bold(
+              trackExtraInfoCreations.length
+            )} extra track info records for tracks in playlist ${color.white.bold(
+              playlistId
+            )}.`
+          )
+        );
       }
     } catch (error) {
       this.logger.log(
@@ -1643,28 +1663,41 @@ class Vibe {
     });
 
     if (playlist) {
-      // If companyList has showNames set to true, we will add the names to the cards
-      if (companyList.showNames) {
+      // Always add extra track info, passing showNames as a parameter and ranking for position
+      this.logger.log(
+        color.blue.bold(
+          `Adding extra track info for company list ${color.white.bold(
+            companyList.name
+          )} (showNames: ${companyList.showNames ? 'true' : 'false'})`
+        )
+      );
+
+      // Get ranking for this list to determine order/position
+      let rankingTrackIds: number[] = [];
+      try {
+        const rankingResult = await this.getRanking(listId);
+        if (rankingResult.success && rankingResult.data && Array.isArray(rankingResult.data.ranking)) {
+          rankingTrackIds = rankingResult.data.ranking.map((track: any) => track.id);
+        }
+      } catch (e) {
         this.logger.log(
-          color.blue.bold(
-            `Company list ${color.white.bold(
-              companyList.name
-            )} has shows the names on the cards. Retrieving names...`
+          color.yellow.bold(
+            `Could not retrieve ranking for extra track info: ${e}`
           )
         );
-
-        await this.addTrackExtraInfo(listId, playlist.id);
-
-        await this.mollie.clearPDFs(result.data.paymentId);
-        this.generator.generate(
-          result.data.paymentId,
-          clientIp,
-          '',
-          this.mollie,
-          true, // Force finalize
-          true
-        );
       }
+
+      await this.addTrackExtraInfo(listId, playlist.id, !!companyList.showNames, rankingTrackIds);
+
+      await this.mollie.clearPDFs(result.data.paymentId);
+      this.generator.generate(
+        result.data.paymentId,
+        clientIp,
+        '',
+        this.mollie,
+        true, // Force finalize
+        true
+      );
 
       const payment = await this.mollie.getPayment(result.data.paymentId);
 
