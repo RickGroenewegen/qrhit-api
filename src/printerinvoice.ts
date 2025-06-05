@@ -99,6 +99,12 @@ class PrinterInvoice {
 
   // Process invoice data using ChatGPT to extract orderIds, dates, and amounts
   async processInvoiceData(id: number, body: any) {
+    // First, disconnect all payments from this printer invoice
+    await this.prisma.payment.updateMany({
+      where: { printerInvoiceId: id },
+      data: { printerInvoiceId: null },
+    });
+
     const content = body.content || '';
     // Dynamically import ChatGPT to avoid circular dependency
     const { ChatGPT } = await import('./chatgpt');
