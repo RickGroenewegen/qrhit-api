@@ -55,16 +55,18 @@ class PrinterInvoice {
         profit += payment.profit || 0;
         totalPriceWithoutTax += payment.totalPriceWithoutTax || 0;
       }
+      // Helper to round to 2 decimals
+      const round2 = (num: number) => Math.round((num + Number.EPSILON) * 100) / 100;
       // Remove Payment array from result, add totals as top-level properties
       const { Payment, ...rest } = invoice;
       return {
         ...rest,
-        totalPrice,
-        printApiPrice,
-        printApiPriceInclVat,
-        printApiInvoicePrice,
-        profit,
-        totalPriceWithoutTax,
+        totalPrice: round2(totalPrice),
+        printApiPrice: round2(printApiPrice),
+        printApiPriceInclVat: round2(printApiPriceInclVat),
+        printApiInvoicePrice: round2(printApiInvoicePrice),
+        profit: round2(profit),
+        totalPriceWithoutTax: round2(totalPriceWithoutTax),
       };
     });
   }
