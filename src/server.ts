@@ -836,7 +836,12 @@ class Server {
       '/admin/printerinvoices',
       getAuthHandler(['admin']),
       async (request: any, reply: any) => {
-        const { invoiceNumber, description, totalPriceExclVat, totalPriceInclVat } = request.body;
+        const {
+          invoiceNumber,
+          description,
+          totalPriceExclVat,
+          totalPriceInclVat,
+        } = request.body;
         if (
           !invoiceNumber ||
           typeof invoiceNumber !== 'string' ||
@@ -844,7 +849,9 @@ class Server {
           typeof totalPriceExclVat !== 'number' ||
           typeof totalPriceInclVat !== 'number'
         ) {
-          reply.status(400).send({ success: false, error: 'Invalid or missing fields' });
+          reply
+            .status(400)
+            .send({ success: false, error: 'Invalid or missing fields' });
           return;
         }
         try {
@@ -860,7 +867,10 @@ class Server {
             reply.status(400).send({ success: false, error: result.error });
           }
         } catch (error) {
-          reply.status(500).send({ success: false, error: 'Failed to create printer invoice' });
+          reply.status(500).send({
+            success: false,
+            error: 'Failed to create printer invoice',
+          });
         }
       }
     );
@@ -906,7 +916,10 @@ class Server {
           return;
         }
         // Call the processInvoiceData method and output the body for now
-        const result = await this.printerInvoice.processInvoiceData(id, request.body);
+        const result = await this.printerInvoice.processInvoiceData(
+          id,
+          request.body
+        );
         reply.send(result);
       }
     );
@@ -1728,6 +1741,29 @@ class Server {
       });
     });
 
+    this.fastify.get('/qr2/:trackId/:php', async (request: any, reply) => {
+      // Get the 'Accept-Language' header from the request
+
+      console.log(111, request.params.trackId, request.params.php);
+
+      const locale = this.utils.parseAcceptLanguage(
+        request.headers['accept-language']
+      );
+      const translations = await this.translation.getTranslationsByPrefix(
+        locale,
+        'countdown'
+      );
+      let useVersion = this.version;
+      if (process.env['ENVIRONMENT'] === 'development') {
+        useVersion = new Date().getTime().toString();
+      }
+      await reply.view(`countdown.ejs`, {
+        translations,
+        version: useVersion,
+        domain: process.env['FRONTEND_URI'],
+      });
+    });
+
     this.fastify.get('/qrvibe/:trackId', async (request: any, reply) => {
       // Get the 'Accept-Language' header from the request
       const locale = this.utils.parseAcceptLanguage(
@@ -1749,6 +1785,23 @@ class Server {
     });
 
     this.fastify.get('/qrlink/:trackId', async (request: any, reply) => {
+      // Get the reqeust headers
+      const headers = request.headers;
+
+      const result = await this.data.getLink(
+        request.params.trackId,
+        request.clientIp
+      );
+      let link = '';
+      let yt = '';
+      if (result.success) {
+        link = result.data.link;
+        yt = result.data.youtubeLink;
+      }
+      return { link, yt };
+    });
+
+    this.fastify.get('/qrlink2/:trackId/:php', async (request: any, reply) => {
       // Get the reqeust headers
       const headers = request.headers;
 
