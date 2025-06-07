@@ -16,15 +16,47 @@ class PrinterInvoice {
   }
 
   async getAllPrinterInvoices() {
-    return await this.prisma.printerInvoice.findMany({
+    // Get all printer invoices with their payment totals
+    const invoices = await this.prisma.printerInvoice.findMany({
       select: {
         id: true,
         invoiceNumber: true,
         description: true,
         totalPriceExclVat: true,
         totalPriceInclVat: true,
+        Payment: {
+          select: {
+            totalPrice: true,
+            printApiPrice: true,
+            printApiPriceInclVat: true,
+            printApiInvoicePrice: true,
+          },
+        },
       },
       orderBy: { id: 'desc' },
+    });
+
+    // Calculate totals for each invoice
+    return invoices.map((invoice: any) => {
+      const payments = invoice.Payment || [];
+      const totals = {
+        totalPrice: 0,
+        printApiPrice: 0,
+        printApiPriceInclVat: 0,
+        printApiInvoicePrice: 0,
+      };
+      for (const payment of payments) {
+        totals.totalPrice += payment.totalPrice || 0;
+        totals.printApiPrice += payment.printApiPrice || 0;
+        totals.printApiPriceInclVat += payment.printApiPriceInclVat || 0;
+        totals.printApiInvoicePrice += payment.printApiInvoicePrice || 0;
+      }
+      // Remove Payment array from result, add totals
+      const { Payment, ...rest } = invoice;
+      return {
+        ...rest,
+        totals,
+      };
     });
   }
 
