@@ -31,6 +31,7 @@ class PrinterInvoice {
             printApiPriceInclVat: true,
             printApiInvoicePrice: true,
             profit: true,
+            totalPriceWithoutTax: true,
           },
         },
       },
@@ -45,12 +46,14 @@ class PrinterInvoice {
       let printApiPriceInclVat = 0;
       let printApiInvoicePrice = 0;
       let profit = 0;
+      let totalPriceWithoutTax = 0;
       for (const payment of payments) {
         totalPrice += payment.totalPrice || 0;
         printApiPrice += payment.printApiPrice || 0;
         printApiPriceInclVat += payment.printApiPriceInclVat || 0;
         printApiInvoicePrice += payment.printApiInvoicePrice || 0;
         profit += payment.profit || 0;
+        totalPriceWithoutTax += payment.totalPriceWithoutTax || 0;
       }
       // Remove Payment array from result, add totals as top-level properties
       const { Payment, ...rest } = invoice;
@@ -61,6 +64,7 @@ class PrinterInvoice {
         printApiPriceInclVat,
         printApiInvoicePrice,
         profit,
+        totalPriceWithoutTax,
       };
     });
   }
