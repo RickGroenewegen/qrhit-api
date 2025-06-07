@@ -47,6 +47,7 @@ class PrinterInvoice {
       let printApiInvoicePrice = 0;
       let profit = 0;
       let totalPriceWithoutTax = 0;
+      const totalPayments = payments.length;
       for (const payment of payments) {
         totalPrice += payment.totalPrice || 0;
         printApiPrice += payment.printApiPrice || 0;
@@ -67,6 +68,7 @@ class PrinterInvoice {
         printApiInvoicePrice: round2(printApiInvoicePrice),
         profit: round2(profit),
         totalPriceWithoutTax: round2(totalPriceWithoutTax),
+        totalPayments,
       };
     });
   }
