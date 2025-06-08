@@ -611,7 +611,10 @@ class Suggestion {
 
       // Execute all updates if there are any
       if (updateQueries.length > 0) {
-        await Promise.all(updateQueries);
+        // Run updates in series to avoid exhausting the connection pool
+        for (const query of updateQueries) {
+          await query;
+        }
         // Update payment status
         await this.prisma.$executeRaw`
           UPDATE payment_has_playlist
