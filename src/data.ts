@@ -1430,7 +1430,7 @@ class Data {
     tracks: Track[]
   ): Promise<void> {
     // Maximum number of concurrent getReleaseDate calls
-    const MAX_CONCURRENT_RELEASE_DATE = 1;
+    const MAX_CONCURRENT_RELEASE_DATE = 2;
 
     // Fetch tracks that need year update
     const tracksNeedingYearUpdate = await this.prisma.$queryRaw<
