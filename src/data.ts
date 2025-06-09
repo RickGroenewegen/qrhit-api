@@ -1430,7 +1430,7 @@ class Data {
     tracks: Track[]
   ): Promise<void> {
     // Maximum number of concurrent getReleaseDate calls
-    const MAX_CONCURRENT_RELEASE_DATE = 2;
+    const MAX_CONCURRENT_RELEASE_DATE = 1;
 
     // Fetch tracks that need year update
     const tracksNeedingYearUpdate = await this.prisma.$queryRaw<
@@ -1557,14 +1557,19 @@ class Data {
           resolve();
           return;
         }
-        while (inFlight < MAX_CONCURRENT_RELEASE_DATE && nextIndex < queue.length) {
+        while (
+          inFlight < MAX_CONCURRENT_RELEASE_DATE &&
+          nextIndex < queue.length
+        ) {
           const track = queue[nextIndex++];
           inFlight++;
           processTrack(track)
             .catch((err) => {
               this.logger.log(
                 color.red.bold(
-                  `Error updating year for track '${color.white.bold(track.artist)} - ${color.white.bold(track.name)}': ${err}`
+                  `Error updating year for track '${color.white.bold(
+                    track.artist
+                  )} - ${color.white.bold(track.name)}': ${err}`
                 )
               );
             })

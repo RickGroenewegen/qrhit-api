@@ -81,7 +81,7 @@ export class OpenPerplex {
       return year;
     } catch (error) {
       console.error('Error:', error);
-      throw error;
+      return 0;
     }
   }
 }

@@ -38,6 +38,7 @@ export class Music {
     spotifyReleaseYear: number
   ): Promise<any> {
     // Search MusicBrainz
+
     const [mbResult, discogsResult, openPerplexYear] = await Promise.all([
       this.searchMusicBrainz(isrc, artist, title),
       this.searchDiscogs(artist, title),
