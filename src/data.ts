@@ -1541,16 +1541,42 @@ class Data {
       updateCounter++;
     };
 
-    // Process tracks in batches of MAX_CONCURRENT_RELEASE_DATE
-    let idx = 0;
-    while (idx < tracksNeedingYearUpdate.length) {
-      const batch = tracksNeedingYearUpdate.slice(
-        idx,
-        idx + MAX_CONCURRENT_RELEASE_DATE
-      );
-      await Promise.all(batch.map(processTrack));
-      idx += MAX_CONCURRENT_RELEASE_DATE;
-    }
+    // Rolling concurrency implementation
+    const queue = [...tracksNeedingYearUpdate];
+    let inFlight = 0;
+    let nextIndex = 0;
+
+    return new Promise<void>((resolve, reject) => {
+      if (queue.length === 0) {
+        resolve();
+        return;
+      }
+
+      const launchNext = () => {
+        if (nextIndex >= queue.length && inFlight === 0) {
+          resolve();
+          return;
+        }
+        while (inFlight < MAX_CONCURRENT_RELEASE_DATE && nextIndex < queue.length) {
+          const track = queue[nextIndex++];
+          inFlight++;
+          processTrack(track)
+            .catch((err) => {
+              this.logger.log(
+                color.red.bold(
+                  `Error updating year for track '${color.white.bold(track.artist)} - ${color.white.bold(track.name)}': ${err}`
+                )
+              );
+            })
+            .finally(() => {
+              inFlight--;
+              launchNext();
+            });
+        }
+      };
+
+      launchNext();
+    });
   }
 
   public async areAllTracksManuallyChecked(
