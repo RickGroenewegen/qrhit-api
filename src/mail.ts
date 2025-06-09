@@ -802,10 +802,12 @@ ${params.html}
       // Get all users
       const users = await prisma.user.findMany({
         select: {
+          id: true,
           email: true,
           displayName: true,
           createdAt: true,
           marketingEmails: true,
+          locale: true,
         },
         where: {
           sync: true,
@@ -817,12 +819,31 @@ ${params.html}
         return;
       }
 
+      // For users with missing locale, try to fetch from their last payment and update
+      for (const user of users) {
+        if (!user.locale || user.locale.trim() === '') {
+          const lastPayment = await prisma.payment.findFirst({
+            where: { userId: user.id, locale: { not: null } },
+            orderBy: { createdAt: 'desc' },
+            select: { locale: true },
+          });
+          if (lastPayment && lastPayment.locale) {
+            await prisma.user.update({
+              where: { id: user.id },
+              data: { locale: lastPayment.locale },
+            });
+            user.locale = lastPayment.locale;
+          }
+        }
+      }
+
       // Format contacts for Mail Octopus API
       const contacts = users.map((user) => ({
         email: user.email,
         fields: {
           FirstName: user.displayName,
           SignupDate: user.createdAt.toISOString(),
+          Locale: user.locale || '',
         },
         status: user.marketingEmails ? 'subscribed' : 'unsubscribed',
       }));
