@@ -1332,15 +1332,25 @@ class Data {
         skipDuplicates: true,
       });
 
-      // Then get YouTube links for all new tracks
+      // Then get YouTube links for all new tracks (async, fire-and-forget)
       for (const track of newTracks) {
-        const youtubeId = await this.getYouTubeLink(track.artist, track.name);
-        if (youtubeId) {
-          await this.prisma.track.update({
-            where: { trackId: track.id },
-            data: { youtubeLink: youtubeId },
-          });
-        }
+        (async () => {
+          try {
+            const youtubeId = await this.getYouTubeLink(track.artist, track.name);
+            if (youtubeId) {
+              await this.prisma.track.update({
+                where: { trackId: track.id },
+                data: { youtubeLink: youtubeId },
+              });
+            }
+          } catch (err) {
+            this.logger.log(
+              color.yellow.bold(
+                `Failed to update YouTube link for track '${color.white.bold(track.artist)} - ${color.white.bold(track.name)}': ${err}`
+              )
+            );
+          }
+        })();
       }
     }
 
