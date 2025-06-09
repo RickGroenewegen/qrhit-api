@@ -14,7 +14,9 @@ export class OpenPerplex {
     const apiKey = process.env['OPENPERPLEX_API_KEY']; // Replace with your actual API key
     const options = {
       query: prompt,
+      model: 'gpt-4o-mini',
       response_language: 'en',
+      answer_type: 'text',
     };
 
     const params = new URLSearchParams(
