@@ -1336,8 +1336,6 @@ class Data {
       (async () => {
         for (const track of newTracks) {
           try {
-            console.log('youtubeId', track.artist, track.name);
-
             const youtubeId = await this.getYouTubeLink(
               track.artist,
               track.name
