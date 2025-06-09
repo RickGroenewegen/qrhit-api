@@ -1429,6 +1429,9 @@ class Data {
     trackIds: string[],
     tracks: Track[]
   ): Promise<void> {
+    // Maximum number of concurrent getReleaseDate calls
+    const MAX_CONCURRENT_RELEASE_DATE = 2;
+
     // Fetch tracks that need year update
     const tracksNeedingYearUpdate = await this.prisma.$queryRaw<
       TrackNeedingYearUpdate[]
@@ -1440,8 +1443,8 @@ class Data {
 
     let updateCounter = 1;
 
-    // Update years for tracks
-    for (const track of tracksNeedingYearUpdate) {
+    // Helper to process a single track
+    const processTrack = async (track: TrackNeedingYearUpdate) => {
       // Check for existing track with same ISRC and update if found
       const { wasUpdated, method } = await this.findAndUpdateTrackByISRC(
         track.isrc ?? '',
@@ -1474,7 +1477,7 @@ class Data {
           );
         }
         updateCounter++;
-        continue;
+        return;
       }
 
       let spotifyYear = 0;
@@ -1536,6 +1539,14 @@ class Data {
         );
       }
       updateCounter++;
+    };
+
+    // Process tracks in batches of MAX_CONCURRENT_RELEASE_DATE
+    let idx = 0;
+    while (idx < tracksNeedingYearUpdate.length) {
+      const batch = tracksNeedingYearUpdate.slice(idx, idx + MAX_CONCURRENT_RELEASE_DATE);
+      await Promise.all(batch.map(processTrack));
+      idx += MAX_CONCURRENT_RELEASE_DATE;
     }
   }
 
