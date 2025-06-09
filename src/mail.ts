@@ -823,7 +823,7 @@ ${params.html}
       for (const user of users) {
         if (!user.locale || user.locale.trim() === '') {
           const lastPayment = await prisma.payment.findFirst({
-            where: { userId: user.id, locale: { not: null } },
+            where: { userId: user.id, locale: { not: '' } },
             orderBy: { createdAt: 'desc' },
             select: { locale: true },
           });
