@@ -1332,9 +1332,9 @@ class Data {
         skipDuplicates: true,
       });
 
-      // Then get YouTube links for all new tracks (async, fire-and-forget)
-      for (const track of newTracks) {
-        (async () => {
+      // Then get YouTube links for all new tracks (async, fire-and-forget for the whole loop)
+      (async () => {
+        for (const track of newTracks) {
           try {
             console.log('youtubeId', track.artist, track.name);
 
@@ -1357,8 +1357,8 @@ class Data {
               )
             );
           }
-        })();
-      }
+        }
+      })();
     }
 
     this.logger.log(
