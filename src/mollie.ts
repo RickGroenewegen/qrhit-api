@@ -692,6 +692,7 @@ class Mollie {
         userId: params.extraOrderData.email,
         email: params.extraOrderData.email,
         displayName: params.extraOrderData.fullname,
+        locale: params.locale,
       });
 
       const playlistDatabaseIds = await this.data.storePlaylists(

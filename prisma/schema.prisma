@@ -164,6 +164,7 @@ model User {
   userId          String           @unique
   email           String           @unique
   displayName     String
+  locale          String?
   hash            String           @unique
   password        String?
   salt            String?

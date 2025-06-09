@@ -87,7 +87,7 @@ export class ChatGPT {
       console.log(prompt);
 
       const result = await this.openai.chat.completions.create({
-        model: 'o3-mini',
+        model: 'o4-mini',
         messages: [
           {
             role: 'system',
@@ -260,7 +260,7 @@ export class ChatGPT {
     const prompt = `Playlist name: "${playlistName}"\n\nSample tracks:\n${tracksPrompt}`;
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4.1',
       temperature: 0.2,
       messages: [
         {
@@ -350,8 +350,8 @@ export class ChatGPT {
     );
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0.2,
+      model: 'o4-mini',
+      temperature: 1,
       messages: [
         {
           role: 'system',
@@ -484,8 +484,8 @@ export class ChatGPT {
         .join('\n\n');
 
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        temperature: 0.3,
+        model: 'o4-mini',
+        temperature: 1,
         messages: [
           {
             role: 'system',
@@ -646,8 +646,8 @@ export class ChatGPT {
 
     try {
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        temperature: 0.3,
+        model: 'o4-mini',
+        temperature: 1,
         messages: [
           {
             role: 'system',
@@ -732,8 +732,8 @@ export class ChatGPT {
     let answer = undefined;
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      temperature: 0,
+      model: 'o4-mini',
+      temperature: 1,
       messages: [
         {
           role: 'system',
@@ -858,7 +858,7 @@ ${htmlString}
 `;
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4o',
+      model: 'gpt-4.1',
       temperature: 0,
       messages: [
         {
@@ -886,7 +886,8 @@ ${htmlString}
                   properties: {
                     orderId: {
                       type: 'string',
-                      description: 'The order number (Opdrachtnummer in the input)',
+                      description:
+                        'The order number (Opdrachtnummer in the input)',
                     },
                     date: {
                       type: 'string',

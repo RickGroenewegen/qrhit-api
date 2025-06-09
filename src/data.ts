@@ -558,6 +558,7 @@ class Data {
           userId: userParams.userId,
           email: userParams.email,
           displayName: userParams.displayName,
+          locale: userParams.locale,
           hash: hash,
           sync: true,
         },
