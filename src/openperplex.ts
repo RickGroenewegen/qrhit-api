@@ -45,7 +45,7 @@ export class OpenPerplex {
           )
         );
 
-        // Wait 3 seconds and try again
+        // Wait 5 seconds and try again
         await new Promise((resolve) => setTimeout(resolve, 5000));
         return await this.ask(artist, title);
       } else if (!response.ok) {
@@ -80,7 +80,15 @@ export class OpenPerplex {
 
       return year;
     } catch (error) {
-      console.error('Error:', error);
+      this.logger.log(
+        color.yellow.bold(
+          `Error fetching data from OpenPerplex: ${
+            error instanceof Error
+              ? color.white.bold(error.message)
+              : color.white.bold(String(error))
+          }`
+        )
+      );
       return 0;
     }
   }
