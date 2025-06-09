@@ -1544,7 +1544,10 @@ class Data {
     // Process tracks in batches of MAX_CONCURRENT_RELEASE_DATE
     let idx = 0;
     while (idx < tracksNeedingYearUpdate.length) {
-      const batch = tracksNeedingYearUpdate.slice(idx, idx + MAX_CONCURRENT_RELEASE_DATE);
+      const batch = tracksNeedingYearUpdate.slice(
+        idx,
+        idx + MAX_CONCURRENT_RELEASE_DATE
+      );
       await Promise.all(batch.map(processTrack));
       idx += MAX_CONCURRENT_RELEASE_DATE;
     }
