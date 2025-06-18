@@ -574,7 +574,7 @@ class Server {
 
     this.fastify.post(
       '/admin/create',
-      getAuthHandler(['admin']),
+      getAuthHandler(['admin', 'vibeadmin']),
       async (request: any, reply: any) => {
         const { email, password, displayName, companyId, userGroup, id } =
           request.body;
