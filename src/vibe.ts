@@ -34,6 +34,7 @@ class Vibe {
       // Check if company exists
       const company = await this.prisma.company.findUnique({
         where: { id: companyId },
+        select: { id: true, test: true }, // Include test property
       });
 
       if (!company) {
@@ -54,7 +55,8 @@ class Vibe {
         },
       });
 
-      return { success: true, users };
+      // Optionally, you could return the company test property as well
+      return { success: true, users, test: company.test };
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error getting users by company: ${error}`)
@@ -594,6 +596,7 @@ class Vibe {
         'city',
         'contactphone',
         'contactemail',
+        'test', // Allow updating the test property
       ];
 
       // Filter out invalid fields
@@ -683,7 +686,7 @@ class Vibe {
    */
   public async getAllCompanies(): Promise<any> {
     try {
-      // Fetch companies and include a count of their lists
+      // Fetch companies and include a count of their lists and the "test" property
       const companiesWithListCount = await this.prisma.company.findMany({
         orderBy: { name: 'asc' },
         include: {
@@ -693,10 +696,11 @@ class Vibe {
         },
       });
 
-      // Map the result to add the numberOfLists property
+      // Map the result to add the numberOfLists property and ensure "test" is present
       const companies = companiesWithListCount.map((company) => ({
         ...company,
         numberOfLists: company._count.CompanyList, // Use the actual count
+        test: company.test, // Ensure test property is present
         _count: undefined, // Remove the internal _count object
       }));
 
@@ -717,7 +721,7 @@ class Vibe {
    * @param name The name of the company to create
    * @returns Object with success status and the newly created company
    */
-  public async createCompany(name: string): Promise<any> {
+  public async createCompany(name: string, test: boolean = false): Promise<any> {
     try {
       if (!name || name.trim() === '') {
         return { success: false, error: 'Company name cannot be empty' };
@@ -738,6 +742,7 @@ class Vibe {
       const newCompany = await this.prisma.company.create({
         data: {
           name: name.trim(), // Trim whitespace
+          test: test, // Store the test property
         },
       });
 

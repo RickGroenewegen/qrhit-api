@@ -528,15 +528,15 @@ class Server {
       getAuthHandler(['admin', 'vibeadmin']),
       async (request: any, reply: any) => {
         try {
-          const { name } = request.body;
+          const { name, test } = request.body;
 
           if (!name) {
             reply.status(400).send({ error: 'Missing required field: name' });
             return;
           }
 
-          // Use the Vibe class to create the company
-          const result = await this.vibe.createCompany(name);
+          // Use the Vibe class to create the company, pass test property if present
+          const result = await this.vibe.createCompany(name, test);
 
           if (!result.success) {
             // Use 409 Conflict if company already exists, otherwise 500
