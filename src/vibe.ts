@@ -691,7 +691,7 @@ class Vibe {
       const companiesWithListCount = await this.prisma.company.findMany({
         orderBy: [
           { test: 'asc' }, // false (0) first, then true (1)
-          { name: 'asc' }
+          { name: 'asc' },
         ],
         include: {
           _count: {
@@ -725,7 +725,10 @@ class Vibe {
    * @param name The name of the company to create
    * @returns Object with success status and the newly created company
    */
-  public async createCompany(name: string, test: boolean = false): Promise<any> {
+  public async createCompany(
+    name: string,
+    test: boolean = false
+  ): Promise<any> {
     try {
       if (!name || name.trim() === '') {
         return { success: false, error: 'Company name cannot be empty' };
@@ -2156,7 +2159,10 @@ class Vibe {
       // Update the list status to:  spotify_list_generated
       const updatedSpotifyList = await this.prisma.companyList.update({
         where: { id: companyListId },
-        data: { status: 'spotify_list_generated', spotifyRefreshRequired: false },
+        data: {
+          status: 'spotify_list_generated',
+          spotifyRefreshRequired: false,
+        },
       });
 
       // Invalidate cache for this list (by slug)
