@@ -194,10 +194,12 @@ export async function createOrUpdateAdminUser(
   displayName: string,
   companyId?: number,
   userGroup?: string,
-  id?: number
+  id?: number,
+  currentUserGroups?: string[] // Pass the current user's groups for permission check
 ): Promise<any> {
   const userId = email;
   const userHash = crypto.randomBytes(16).toString('hex');
+  // The order of this array defines the hierarchy: first is highest
   const groupRank = ['admin', 'vibeadmin', 'companyadmin'];
 
   try {
@@ -209,6 +211,32 @@ export async function createOrUpdateAdminUser(
       });
       if (!userGroupRecord) {
         throw new Error(`UserGroup "${userGroup}" does not exist`);
+      }
+    }
+
+    // Permission check: Only allow creating users in a group lower than the current user's highest group
+    if (userGroup && currentUserGroups && currentUserGroups.length > 0) {
+      // Find the highest group of the current user
+      const currentUserHighestRank = currentUserGroups
+        .map((g) => groupRank.indexOf(g))
+        .filter((i) => i !== -1)
+        .sort((a, b) => a - b)[0];
+
+      const targetGroupRank = groupRank.indexOf(userGroup);
+
+      if (
+        currentUserHighestRank === undefined ||
+        currentUserHighestRank === -1 ||
+        targetGroupRank === -1
+      ) {
+        throw new Error('Invalid user group for permission check');
+      }
+
+      // Only allow if the target group is lower (higher index) than the current user's highest group
+      if (targetGroupRank <= currentUserHighestRank) {
+        throw new Error(
+          `Insufficient permissions: cannot create user in group "${userGroup}"`
+        );
       }
     }
 
