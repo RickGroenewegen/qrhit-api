@@ -524,6 +524,7 @@ model TrustPilot {
 model Company {
   id          Int           @id @default(autoincrement())
   name        String
+  test        Boolean       @default(false)
   createdAt   DateTime      @default(now())
   updatedAt   DateTime      @updatedAt
   CompanyList CompanyList[]
