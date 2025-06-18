@@ -25,7 +25,7 @@ class Vibe {
    */
   public async getUsersByCompany(
     companyId: number
-  ): Promise<{ success: boolean; users?: any[]; error?: string }> {
+  ): Promise<{ success: boolean; users?: any[]; error?: string; test?: boolean }> {
     try {
       if (!companyId || isNaN(companyId)) {
         return { success: false, error: 'Invalid company ID provided' };
