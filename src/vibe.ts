@@ -687,8 +687,12 @@ class Vibe {
   public async getAllCompanies(): Promise<any> {
     try {
       // Fetch companies and include a count of their lists and the "test" property
+      // Order: test=false first, then by name
       const companiesWithListCount = await this.prisma.company.findMany({
-        orderBy: { name: 'asc' },
+        orderBy: [
+          { test: 'asc' }, // false (0) first, then true (1)
+          { name: 'asc' }
+        ],
         include: {
           _count: {
             select: { CompanyList: true },
