@@ -591,7 +591,8 @@ class Server {
             displayName,
             companyId,
             userGroup,
-            id
+            id,
+            request.user?.userGroups // Pass current user's groups for permission check
           );
           reply.send({
             success: true,
