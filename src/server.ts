@@ -262,6 +262,37 @@ class Server {
       }
     );
 
+    this.fastify.put(
+      '/vibe/companies/:companyId',
+      getAuthHandler(['admin', 'vibeadmin']),
+      async (request: any, reply: any) => {
+        const companyId = parseInt(request.params.companyId);
+        const { name, test } = request.body;
+
+        if (isNaN(companyId)) {
+          reply.status(400).send({ error: 'Invalid company ID' });
+          return;
+        }
+        if (!name) {
+          reply.status(400).send({ error: 'Missing required field: name' });
+          return;
+        }
+
+        const result = await this.vibe.updateCompany(companyId, { name, test });
+
+        if (!result.success) {
+          let statusCode = 500;
+          if (result.error === 'Company not found') {
+            statusCode = 404;
+          }
+          reply.status(statusCode).send({ error: result.error });
+          return;
+        }
+
+        reply.send({ success: true, company: result.data.company });
+      }
+    );
+
     this.fastify.delete(
       '/vibe/companies/:companyId',
       getAuthHandler(['admin', 'vibeadmin']),
