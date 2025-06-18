@@ -198,6 +198,7 @@ export async function createOrUpdateAdminUser(
 ): Promise<any> {
   const userId = email;
   const userHash = crypto.randomBytes(16).toString('hex');
+  const groupRank = ['admin', 'vibeadmin', 'companyadmin'];
 
   try {
     // Check if userGroup is provided and exists
