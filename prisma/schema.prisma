@@ -515,6 +515,7 @@ model TrustPilot {
   rating      Float
   image       String
   locale      String?
+  landingPage Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 

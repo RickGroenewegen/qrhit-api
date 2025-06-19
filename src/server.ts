@@ -704,13 +704,14 @@ class Server {
     );
 
     this.fastify.get(
-      '/reviews/:locale/:amount',
+      '/reviews/:locale/:amount/:landingPage',
       async (request: any, _reply) => {
         const amount = parseInt(request.params.amount) || 0;
         return await this.trustpilot.getReviews(
           true,
           amount,
-          request.params.locale
+          request.params.locale,
+          this.utils.parseBoolean(request.params.landingPage)
         );
       }
     );
