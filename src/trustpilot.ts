@@ -222,7 +222,8 @@ class Trustpilot {
   public async getReviews(
     cache: boolean = true,
     amount: number | string = 0,
-    locale: string = 'en'
+    locale: string = 'en',
+    landingPage: boolean = false
   ): Promise<ApiResult> {
     try {
       // Convert amount to number if it's a string
