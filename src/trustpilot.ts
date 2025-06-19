@@ -242,9 +242,7 @@ class Trustpilot {
         orderBy: {
           updatedAt: 'desc',
         },
-        where: {
-          ...(landingPage ? { landingPage: true } : {}),
-        },
+        where: landingPage ? { landingPage: true } : undefined,
         ...(amountNum > 0 ? { take: amountNum } : {}),
       });
 
