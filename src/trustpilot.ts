@@ -246,9 +246,6 @@ class Trustpilot {
         ...(amountNum > 0 ? { take: amountNum } : {}),
       });
 
-      console.log(1112, landingPage);
-      console.log(1113, dbReviews);
-
       // Map database records to TrustpilotReview format
       const reviews: TrustpilotReview[] = dbReviews.map((review) => {
         // Get the appropriate locale-specific title and message
