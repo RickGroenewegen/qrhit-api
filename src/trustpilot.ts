@@ -226,8 +226,6 @@ class Trustpilot {
     landingPage: boolean = false
   ): Promise<ApiResult> {
     try {
-      console.log(1);
-
       // Convert amount to number if it's a string
       const amountNum = typeof amount === 'string' ? parseInt(amount) : amount;
 
