@@ -226,11 +226,16 @@ class Trustpilot {
     landingPage: boolean = false
   ): Promise<ApiResult> {
     try {
+      let landingPageInt = 0;
+      if (landingPage) {
+        landingPageInt = 1;
+      }
+
       // Convert amount to number if it's a string
       const amountNum = typeof amount === 'string' ? parseInt(amount) : amount;
 
       const today = new Date().toISOString().split('T')[0];
-      const cacheKey = `trustpilot_reviews_${today}_${amountNum}_${locale}`;
+      const cacheKey = `trustpilot_reviews_${today}_${amountNum}_${locale}_${landingPageInt}`;
       const cacheResult = await this.cache.get(cacheKey);
 
       if (cacheResult && cache) {
