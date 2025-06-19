@@ -242,7 +242,7 @@ class Trustpilot {
         orderBy: {
           updatedAt: 'desc',
         },
-        where: landingPage ? { landingPage: true } : undefined,
+        // TrustPilot does not have a landingPage field, so ignore landingPage filter
         ...(amountNum > 0 ? { take: amountNum } : {}),
       });
 
