@@ -705,14 +705,8 @@ class Server {
 
     this.fastify.get('/spotify/auth-url', async (_request, reply) => {
       const authUrl = this.spotify.getAuthorizationUrl();
-      if (authUrl) {
-        reply.send({ success: true, authUrl });
-      } else {
-        reply.status(500).send({
-          success: false,
-          error: 'Could not generate Spotify authorization URL',
-        });
-      }
+      console.log(111, authUrl);
+      reply.send({ success: true });
     });
 
     this.fastify.get(
