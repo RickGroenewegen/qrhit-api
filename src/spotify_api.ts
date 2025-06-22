@@ -232,6 +232,32 @@ class SpotifyApi {
           needsReAuth: true,
           authUrl: this.getAuthorizationUrl() ?? undefined, // Convert null to undefined
         };
+      } else if (status === 400) {
+        // Check for specific error messages that indicate an auth problem
+        if (
+          message &&
+          (
+            message.toLowerCase().includes('invalid_grant') ||
+            message.toLowerCase().includes('invalid_request') ||
+            message.toLowerCase().includes('invalid client') ||
+            message.toLowerCase().includes('invalid_token') ||
+            message.toLowerCase().includes('token expired')
+          )
+        ) {
+          this.settings.deleteSetting('spotify_access_token');
+          this.settings.deleteSetting('spotify_token_expires_at');
+          return {
+            success: false,
+            error: 'Spotify authorization error (token likely expired/invalid)',
+            needsReAuth: true,
+            authUrl: this.getAuthorizationUrl() ?? undefined,
+          };
+        }
+        return {
+          success: false,
+          error: `Spotify API error: 400 Bad Request`,
+          needsReAuth: false,
+        };
       } else if (status === 404) {
         return {
           success: false,
