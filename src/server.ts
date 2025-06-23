@@ -93,6 +93,7 @@ class Server {
       template: 'k7',
     },
   ];
+  private useSpotifyRemote: boolean = true;
 
   private version: string = '1.0.0';
 
@@ -1837,7 +1838,7 @@ class Server {
         link = result.data.link;
         yt = result.data.youtubeLink;
       }
-      return { link, yt };
+      return { link: link, yt: yt, r: this.useSpotifyRemote };
     });
 
     this.fastify.get('/qrlink2/:trackId/:php', async (request: any, reply) => {
@@ -1854,7 +1855,7 @@ class Server {
         link = result.data.link;
         yt = result.data.youtubeLink;
       }
-      return { link, yt };
+      return { link: link, yt: yt, r: this.useSpotifyRemote };
     });
 
     this.fastify.get(
