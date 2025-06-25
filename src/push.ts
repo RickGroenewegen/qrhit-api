@@ -2,7 +2,6 @@ import { PrismaClient, PushToken } from '@prisma/client';
 import admin from 'firebase-admin';
 import { color } from 'console-log-colors';
 import Logger from './logger';
-import Cache from './cache';
 
 admin.initializeApp({
   credential: admin.credential.cert(
@@ -26,25 +25,37 @@ class Push {
     return Push.instance;
   }
 
+  // In-memory lock map for atomic addToken
+  private static tokenLocks: Map<string, Promise<void> | null> = new Map();
+
   public async addToken(token: string, type: string): Promise<void> {
-    const cache = Cache.getInstance();
     const lockKey = `push:addToken:${token}`;
-    let lockAcquired = false;
-    try {
+    this.logger.log(
+      color.cyan.bold(
+        `Attempting to acquire in-memory lock for push token: ${color.white.bold(token)}`
+      )
+    );
+
+    // Simple in-memory lock using a Promise chain per token
+    let release: (() => void) | null = null;
+    let lockPromise = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+
+    // Wait for any existing lock to finish
+    while (Push.tokenLocks.get(lockKey)) {
       this.logger.log(
-        color.cyan.bold(
-          `Attempting to acquire lock for push token: ${color.white.bold(token)}`
+        color.yellow.bold(
+          `Waiting for existing lock on token: ${color.white.bold(token)}`
         )
       );
-      lockAcquired = await cache.acquireLock(lockKey, 5);
-      if (!lockAcquired) {
-        this.logger.log(
-          color.red.bold(
-            `Could not acquire lock for push token: ${color.white.bold(token)}. Operation aborted.`
-          )
-        );
-        throw new Error('Could not acquire lock for push token operation');
-      }
+      // eslint-disable-next-line no-await-in-loop
+      await Push.tokenLocks.get(lockKey);
+    }
+    // Set our lock
+    Push.tokenLocks.set(lockKey, lockPromise);
+
+    try {
       this.logger.log(
         color.cyan.bold(
           `Lock acquired for push token: ${color.white.bold(token)}`
@@ -106,23 +117,14 @@ class Push {
       );
       throw error;
     } finally {
-      if (lockAcquired) {
-        try {
-          const cache = Cache.getInstance();
-          await cache.releaseLock(lockKey);
-          this.logger.log(
-            color.cyan.bold(
-              `Lock released for push token: ${color.white.bold(token)}`
-            )
-          );
-        } catch (releaseError) {
-          this.logger.log(
-            color.red.bold(
-              `Error releasing lock for push token: ${color.white.bold(token)}`
-            )
-          );
-        }
-      }
+      // Release the lock
+      Push.tokenLocks.delete(lockKey);
+      if (release) release();
+      this.logger.log(
+        color.cyan.bold(
+          `Lock released for push token: ${color.white.bold(token)}`
+        )
+      );
     }
   }
 
