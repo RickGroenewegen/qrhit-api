@@ -10,3 +10,4 @@ firebase.json
 public/background
 public/logo
 public/companydata
+.build-temp
