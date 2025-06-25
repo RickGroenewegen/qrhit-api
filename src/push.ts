@@ -2,6 +2,7 @@ import { PrismaClient, PushToken } from '@prisma/client';
 import admin from 'firebase-admin';
 import { color } from 'console-log-colors';
 import Logger from './logger';
+import Cache from './cache';
 
 admin.initializeApp({
   credential: admin.credential.cert(
@@ -26,7 +27,29 @@ class Push {
   }
 
   public async addToken(token: string, type: string): Promise<void> {
+    const cache = Cache.getInstance();
+    const lockKey = `push:addToken:${token}`;
+    let lockAcquired = false;
     try {
+      this.logger.log(
+        color.cyan.bold(
+          `Attempting to acquire lock for push token: ${color.white.bold(token)}`
+        )
+      );
+      lockAcquired = await cache.acquireLock(lockKey, 5);
+      if (!lockAcquired) {
+        this.logger.log(
+          color.red.bold(
+            `Could not acquire lock for push token: ${color.white.bold(token)}. Operation aborted.`
+          )
+        );
+        throw new Error('Could not acquire lock for push token operation');
+      }
+      this.logger.log(
+        color.cyan.bold(
+          `Lock acquired for push token: ${color.white.bold(token)}`
+        )
+      );
       this.logger.log(
         color.cyan.bold(
           `Attempting to add or update push token: ${color.white.bold(
@@ -82,6 +105,24 @@ class Push {
         )
       );
       throw error;
+    } finally {
+      if (lockAcquired) {
+        try {
+          const cache = Cache.getInstance();
+          await cache.releaseLock(lockKey);
+          this.logger.log(
+            color.cyan.bold(
+              `Lock released for push token: ${color.white.bold(token)}`
+            )
+          );
+        } catch (releaseError) {
+          this.logger.log(
+            color.red.bold(
+              `Error releasing lock for push token: ${color.white.bold(token)}`
+            )
+          );
+        }
+      }
     }
   }
 
