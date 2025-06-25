@@ -13,6 +13,7 @@ class Push {
   private static instance: Push;
   private prisma: PrismaClient;
   private logger = new Logger();
+  private static tokenLocks: Map<string, Promise<void> | null> = new Map();
 
   private constructor() {
     this.prisma = new PrismaClient();
@@ -25,14 +26,13 @@ class Push {
     return Push.instance;
   }
 
-  // In-memory lock map for atomic addToken
-  private static tokenLocks: Map<string, Promise<void> | null> = new Map();
-
   public async addToken(token: string, type: string): Promise<void> {
     const lockKey = `push:addToken:${token}`;
     this.logger.log(
       color.cyan.bold(
-        `Attempting to acquire in-memory lock for push token: ${color.white.bold(token)}`
+        `Attempting to acquire in-memory lock for push token: ${color.white.bold(
+          token
+        )}`
       )
     );
 
