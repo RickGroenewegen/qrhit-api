@@ -93,7 +93,7 @@ class Server {
       template: 'k7',
     },
   ];
-  private useSpotifyRemote: boolean = false;
+  private useSpotifyRemote: boolean = true;
 
   private version: string = '1.0.0';
 
