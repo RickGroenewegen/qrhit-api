@@ -68,54 +68,67 @@ class Push {
           )} of type: ${color.white.bold(type)}`
         )
       );
-      const existingToken = await this.prisma.pushToken.findUnique({
-        where: { token },
-      });
 
-      if (existingToken) {
+      // Use a transaction to guarantee atomicity at the DB level
+      await this.prisma.$transaction(async (tx) => {
+        const existingToken = await tx.pushToken.findUnique({
+          where: { token },
+        });
+
+        if (existingToken) {
+          this.logger.log(
+            color.yellow.bold(
+              `Token already exists. Updating token: ${color.white.bold(token)}`
+            )
+          );
+          await tx.pushToken.update({
+            where: { token },
+            data: { type, valid: true },
+          });
+          this.logger.log(
+            color.green.bold(
+              `Token updated successfully: ${color.white.bold(token)}`
+            )
+          );
+        } else {
+          this.logger.log(
+            color.cyan.bold(
+              `Token does not exist. Creating new token: ${color.white.bold(
+                token
+              )}`
+            )
+          );
+          await tx.pushToken.create({
+            data: { token, type, valid: true },
+          });
+          this.logger.log(
+            color.green.bold(
+              `Token created successfully: ${color.white.bold(token)}`
+            )
+          );
+        }
+      });
+    } catch (error: any) {
+      // If unique constraint error, log and ignore (another process/thread created it)
+      if (error.code === 'P2002' && error.meta?.target?.includes('token')) {
         this.logger.log(
           color.yellow.bold(
-            `Token already exists. Updating token: ${color.white.bold(token)}`
-          )
-        );
-        await this.prisma.pushToken.update({
-          where: { token },
-          data: { type, valid: true },
-        });
-        this.logger.log(
-          color.green.bold(
-            `Token updated successfully: ${color.white.bold(token)}`
+            `Token already created by another process/thread: ${color.white.bold(token)}`
           )
         );
       } else {
         this.logger.log(
-          color.cyan.bold(
-            `Token does not exist. Creating new token: ${color.white.bold(
-              token
-            )}`
+          color.red.bold(
+            `Error adding or updating push token: ${color.white.bold(token)}`
           )
         );
-        await this.prisma.pushToken.create({
-          data: { token, type, valid: true },
-        });
         this.logger.log(
-          color.green.bold(
-            `Token created successfully: ${color.white.bold(token)}`
+          color.red.bold(
+            `Error details: ${color.white.bold((error as Error).message)}`
           )
         );
+        throw error;
       }
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(
-          `Error adding or updating push token: ${color.white.bold(token)}`
-        )
-      );
-      this.logger.log(
-        color.red.bold(
-          `Error details: ${color.white.bold((error as Error).message)}`
-        )
-      );
-      throw error;
     } finally {
       // Release the lock
       Push.tokenLocks.delete(lockKey);
