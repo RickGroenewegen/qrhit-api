@@ -37,7 +37,7 @@ class Push {
     );
 
     // Simple in-memory lock using a Promise chain per token
-    let release: (() => void) | null = null;
+    let release: (() => void) | undefined;
     let lockPromise = new Promise<void>((resolve) => {
       release = resolve;
     });
@@ -119,7 +119,7 @@ class Push {
     } finally {
       // Release the lock
       Push.tokenLocks.delete(lockKey);
-      if (release) release();
+      if (typeof release === 'function') release();
       this.logger.log(
         color.cyan.bold(
           `Lock released for push token: ${color.white.bold(token)}`
