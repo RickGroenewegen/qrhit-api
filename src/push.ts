@@ -28,13 +28,6 @@ class Push {
 
   public async addToken(token: string, type: string): Promise<void> {
     const lockKey = `push:addToken:${token}`;
-    this.logger.log(
-      color.cyan.bold(
-        `Attempting to acquire in-memory lock for push token: ${color.white.bold(
-          token
-        )}`
-      )
-    );
 
     // Simple in-memory lock using a Promise chain per token
     let release: (() => void) | undefined;
@@ -44,11 +37,6 @@ class Push {
 
     // Wait for any existing lock to finish
     while (Push.tokenLocks.get(lockKey)) {
-      this.logger.log(
-        color.yellow.bold(
-          `Waiting for existing lock on token: ${color.white.bold(token)}`
-        )
-      );
       // eslint-disable-next-line no-await-in-loop
       await Push.tokenLocks.get(lockKey);
     }
@@ -56,19 +44,6 @@ class Push {
     Push.tokenLocks.set(lockKey, lockPromise);
 
     try {
-      this.logger.log(
-        color.cyan.bold(
-          `Lock acquired for push token: ${color.white.bold(token)}`
-        )
-      );
-      this.logger.log(
-        color.cyan.bold(
-          `Attempting to add or update push token: ${color.white.bold(
-            token
-          )} of type: ${color.white.bold(type)}`
-        )
-      );
-
       // Use a transaction to guarantee atomicity at the DB level
       await this.prisma.$transaction(async (tx) => {
         const existingToken = await tx.pushToken.findUnique({
@@ -76,28 +51,11 @@ class Push {
         });
 
         if (existingToken) {
-          this.logger.log(
-            color.yellow.bold(
-              `Token already exists. Updating token: ${color.white.bold(token)}`
-            )
-          );
           await tx.pushToken.update({
             where: { token },
             data: { type, valid: true },
           });
-          this.logger.log(
-            color.green.bold(
-              `Token updated successfully: ${color.white.bold(token)}`
-            )
-          );
         } else {
-          this.logger.log(
-            color.cyan.bold(
-              `Token does not exist. Creating new token: ${color.white.bold(
-                token
-              )}`
-            )
-          );
           await tx.pushToken.create({
             data: { token, type, valid: true },
           });
@@ -111,11 +69,7 @@ class Push {
     } catch (error: any) {
       // If unique constraint error, log and ignore (another process/thread created it)
       if (error.code === 'P2002' && error.meta?.target?.includes('token')) {
-        this.logger.log(
-          color.yellow.bold(
-            `Token already created by another process/thread: ${color.white.bold(token)}`
-          )
-        );
+        // Do not log normal duplicate
       } else {
         this.logger.log(
           color.red.bold(
@@ -133,11 +87,6 @@ class Push {
       // Release the lock
       Push.tokenLocks.delete(lockKey);
       if (typeof release === 'function') release();
-      this.logger.log(
-        color.cyan.bold(
-          `Lock released for push token: ${color.white.bold(token)}`
-        )
-      );
     }
   }
 
