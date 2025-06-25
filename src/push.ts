@@ -61,7 +61,9 @@ class Push {
           });
           this.logger.log(
             color.green.bold(
-              `Token created successfully: ${color.white.bold(token)}`
+              `Token (${color.white.bold(
+                type
+              )}) created successfully: ${color.white.bold(token)}`
             )
           );
         }
