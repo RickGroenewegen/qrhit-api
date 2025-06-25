@@ -27,15 +27,54 @@ class Push {
 
   public async addToken(token: string, type: string): Promise<void> {
     try {
-      await this.prisma.pushToken.upsert({
-        where: { token },
-        update: { type, valid: true },  // Also ensure token is marked as valid when updated
-        create: { token, type, valid: true }
+      this.logger.log(
+        color.cyan.bold(
+          `Attempting to add or update push token: ${color.white.bold(token)} of type: ${color.white.bold(type)}`
+        )
+      );
+      const existingToken = await this.prisma.pushToken.findUnique({
+        where: { token }
       });
+
+      if (existingToken) {
+        this.logger.log(
+          color.yellow.bold(
+            `Token already exists. Updating token: ${color.white.bold(token)}`
+          )
+        );
+        await this.prisma.pushToken.update({
+          where: { token },
+          data: { type, valid: true }
+        });
+        this.logger.log(
+          color.green.bold(
+            `Token updated successfully: ${color.white.bold(token)}`
+          )
+        );
+      } else {
+        this.logger.log(
+          color.cyan.bold(
+            `Token does not exist. Creating new token: ${color.white.bold(token)}`
+          )
+        );
+        await this.prisma.pushToken.create({
+          data: { token, type, valid: true }
+        });
+        this.logger.log(
+          color.green.bold(
+            `Token created successfully: ${color.white.bold(token)}`
+          )
+        );
+      }
     } catch (error) {
       this.logger.log(
         color.red.bold(
-          `Error adding push token: ${color.white.bold(token)}`
+          `Error adding or updating push token: ${color.white.bold(token)}`
+        )
+      );
+      this.logger.log(
+        color.red.bold(
+          `Error details: ${color.white.bold((error as Error).message)}`
         )
       );
       throw error;
