@@ -29,11 +29,13 @@ class Push {
     try {
       this.logger.log(
         color.cyan.bold(
-          `Attempting to add or update push token: ${color.white.bold(token)} of type: ${color.white.bold(type)}`
+          `Attempting to add or update push token: ${color.white.bold(
+            token
+          )} of type: ${color.white.bold(type)}`
         )
       );
       const existingToken = await this.prisma.pushToken.findUnique({
-        where: { token }
+        where: { token },
       });
 
       if (existingToken) {
@@ -44,7 +46,7 @@ class Push {
         );
         await this.prisma.pushToken.update({
           where: { token },
-          data: { type, valid: true }
+          data: { type, valid: true },
         });
         this.logger.log(
           color.green.bold(
@@ -54,11 +56,13 @@ class Push {
       } else {
         this.logger.log(
           color.cyan.bold(
-            `Token does not exist. Creating new token: ${color.white.bold(token)}`
+            `Token does not exist. Creating new token: ${color.white.bold(
+              token
+            )}`
           )
         );
         await this.prisma.pushToken.create({
-          data: { token, type, valid: true }
+          data: { token, type, valid: true },
         });
         this.logger.log(
           color.green.bold(
