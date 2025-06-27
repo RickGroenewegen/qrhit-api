@@ -1825,12 +1825,15 @@ class Server {
     });
 
     this.fastify.get('/qrlink/:trackId', async (request: any, reply) => {
-      // Get the reqeust headers
+      // Get the request headers
       const headers = request.headers;
+      const userAgent = headers['user-agent'] || '';
 
       const result = await this.data.getLink(
         request.params.trackId,
-        request.clientIp
+        request.clientIp,
+        true,
+        userAgent
       );
       let link = '';
       let yt = '';
@@ -1842,12 +1845,15 @@ class Server {
     });
 
     this.fastify.get('/qrlink2/:trackId/:php', async (request: any, reply) => {
-      // Get the reqeust headers
+      // Get the request headers
       const headers = request.headers;
+      const userAgent = headers['user-agent'] || '';
 
       const result = await this.data.getLink(
         request.params.trackId,
-        request.clientIp
+        request.clientIp,
+        true,
+        userAgent
       );
       let link = '';
       let yt = '';
