@@ -1193,7 +1193,7 @@ class Data {
     // Log IP, trackId, and user agent
     this.logger.log(
       color.blue.bold(
-        `getLink called: trackId=${color.white.bold(
+        `Link called for track ${color.white.bold(
           trackId
         )}, ip=${color.white.bold(clientIp)}, userAgent=${color.white.bold(
           userAgent || 'unknown'
