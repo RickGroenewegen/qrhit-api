@@ -1174,13 +1174,32 @@ class Data {
     await this.cache.executeCommand('ltrim', ipInfoListKey, 0, 999); // Keep only the last 100 entries
   }
 
+  /**
+   * Get a link for a track, logging IP, trackId, and user agent.
+   * @param trackId
+   * @param clientIp
+   * @param useCache
+   * @param userAgent (optional) - pass user agent string if available
+   */
   public async getLink(
     trackId: number,
     clientIp: string,
-    useCache: boolean = true
+    useCache: boolean = true,
+    userAgent?: string
   ): Promise<ApiResult> {
     this.analytics.increaseCounter('songs', 'played');
     this.logLink(trackId, clientIp);
+
+    // Log IP, trackId, and user agent
+    this.logger.log(
+      color.blue.bold(
+        `getLink called: trackId=${color.white.bold(
+          trackId
+        )}, ip=${color.white.bold(clientIp)}, userAgent=${color.white.bold(
+          userAgent || 'unknown'
+        )}`
+      )
+    );
 
     const cacheKey = `track_links:${trackId}`;
     const cachedData = await this.cache.get(cacheKey);
