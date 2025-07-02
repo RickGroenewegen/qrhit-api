@@ -2,7 +2,7 @@
   "mail.mailSubject": "Wir haben Bestellung {{ orderId }} erhalten!",
   "mail.greatNews": "Wir haben deine Bestellung erhalten!",
   "mail.belowAreDetails": "Nachfolgend sind Ihre Bestelldetails. Die Karten werden an die folgende Adresse gesendet",
-  "mail.weHopeYouHaveFun": "Wir finalisieren gerade alle Releasedaten. Sobald dieser Prozess abgeschlossen ist, erhältst du eine Benachrichtigung, dass dein PDF zum Drucken und Versenden bereit ist. Ab diesem Moment hast du 36 Stunden, um Änderungen an deinen Karten vorzunehmen oder sie sofort drucken & versenden zu lassen.",
+  "mail.weHopeYouHaveFun": "Wir finalisieren gerade alle Releasedaten. Sobald dieser Prozess abgeschlossen ist, erhältst du eine Benachrichtigung, dass dein PDF zum Drucken und Versenden bereit ist. Ab diesem Moment hast du 36 Stunden, um Änderungen an deinen Karten vorzunehmen oder sie sofort drucken und versenden zu lassen.",
   "mail.greetings": "Mit freundlichen Grüßen",
   "mail.orderInformation": "Bestellinformationen",
   "mail.orderNumber": "Bestellnummer",

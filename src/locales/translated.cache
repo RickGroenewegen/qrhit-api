@@ -4832,19 +4832,6 @@
     "cn",
     "ru"
   ],
-  "mail.weHopeYouHaveFun": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp",
-    "cn",
-    "ru"
-  ],
   "mail.finalizedMailSubject": [
     "nl",
     "de",
@@ -5301,6 +5288,19 @@
     "ru"
   ],
   "verification.team": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "hin",
+    "jp",
+    "cn",
+    "ru"
+  ],
+  "mail.weHopeYouHaveFun": [
     "nl",
     "de",
     "fr",

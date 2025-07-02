@@ -2,7 +2,7 @@
   "mail.mailSubject": "We hebben bestelling {{ orderId }} ontvangen!",
   "mail.greatNews": "We hebben je bestelling ontvangen!",
   "mail.belowAreDetails": "Hieronder staan je bestelgegevens. De kaarten worden naar het volgende adres gestuurd",
-  "mail.weHopeYouHaveFun": "We zijn momenteel alle releasedata aan het afronden. Zodra dit proces voltooid is, ontvang je een melding dat je PDF klaar is voor printen en verzenden. Vanaf dat moment heb je 36 uur om wijzigingen aan je kaarten aan te brengen of ze direct te laten printen & verzenden.",
+  "mail.weHopeYouHaveFun": "We zijn momenteel alle releasedata aan het afronden. Zodra dit proces voltooid is, ontvang je een melding dat je PDF klaar is voor printen en verzenden. Vanaf dat moment heb je 36 uur om wijzigingen aan je kaarten aan te brengen of ze direct te laten printen en verzenden.",
   "mail.greetings": "Met vriendelijke groet",
   "mail.orderInformation": "Bestelinformatie",
   "mail.orderNumber": "Ordernummer",
