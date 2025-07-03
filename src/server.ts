@@ -191,7 +191,7 @@ class Server {
 
     this.fastify.put(
       '/vibe/companies/:companyId/lists/:listId',
-      getAuthHandler(['admin', 'vibeadmin']),
+      getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
       async (request: any, reply: any) => {
         try {
           const companyId = parseInt(request.params.companyId);
@@ -199,6 +199,17 @@ class Server {
 
           if (isNaN(companyId) || isNaN(listId)) {
             reply.status(400).send({ error: 'Invalid company or list ID' });
+            return;
+          }
+
+          // If user is companyadmin, only allow editing their own company
+          if (
+            request.user.userGroups.includes('companyadmin') &&
+            request.user.companyId !== companyId
+          ) {
+            reply
+              .status(403)
+              .send({ error: 'Forbidden: You can only edit your own company' });
             return;
           }
 
