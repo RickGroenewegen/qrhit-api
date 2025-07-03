@@ -224,6 +224,24 @@ class Vibe {
         );
       }
 
+      // Send pushover notification for new company registration
+      try {
+        await this.mail.pushover.sendMessage(
+          {
+            title: 'New company registered',
+            message: `Company: ${company}\nContact: ${fullname} <${email}>`,
+            sound: 'incoming',
+          },
+          '127.0.0.1'
+        );
+      } catch (pushErr) {
+        this.logger.log(
+          color.red.bold(
+            `Failed to send pushover notification for new company registration: ${pushErr}`
+          )
+        );
+      }
+
       return {
         success: true,
         company: companyResult.data.company,
