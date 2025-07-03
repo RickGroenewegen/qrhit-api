@@ -1677,10 +1677,17 @@ class Server {
   public async addRoutes() {
     // Unprotected endpoint to create a company and company list
     this.fastify.post('/vibe/companylist/create', async (request: any, reply: any) => {
-      const { fullname, company, email } = request.body || {};
+      const { fullname, company, email, captchaToken } = request.body || {};
 
       if (!fullname || !company || !email) {
         reply.status(400).send({ success: false, error: 'Missing required fields: fullname, company, email' });
+        return;
+      }
+
+      // Captcha check (same as sendContactForm in mail.ts)
+      const isHuman = await this.utils.verifyRecaptcha(captchaToken);
+      if (!isHuman) {
+        reply.status(400).send({ success: false, error: 'reCAPTCHA verification failed' });
         return;
       }
 
