@@ -404,5 +404,18 @@
   "countdown_onzevibe.allRightsReserved": "版权所有",
   "countdown_onzevibe.appStore": "App Store",
   "countdown_onzevibe.googlePlay": "Google Play",
-  "countdown_onzevibe.other": "其他"
+  "countdown_onzevibe.other": "其他",
+  "portal_welcome.title": "欢迎来到您的OnzeVibe门户",
+  "portal_welcome.intro": "已为您创建门户",
+  "portal_welcome.intro2": "你现在可以登录并管理你的公司列表。",
+  "portal_welcome.portalUrlLabel": "投票门户网址",
+  "portal_welcome.usernameLabel": "用户名",
+  "portal_welcome.passwordLabel": "密码",
+  "portal_welcome.passwordAdvice": "我们建议您在登录后立即更改密码。",
+  "portal_welcome.success": "祝好运，玩得开心！",
+  "portal_welcome.team": "OnzeVibe团队",
+  "portal_welcome.adminUrlLabel": "管理员网址",
+  "portal_welcome.adminUrlInfo": "这是您的用户名和密码的登录页面",
+  "portal_welcome.adminUrlLabelMail": "管理员登录页面",
+  "portal_welcome.contactWithin24h": "我们将在24小时内联系您，帮助您开始。"
 }

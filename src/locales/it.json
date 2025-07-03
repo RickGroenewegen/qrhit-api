@@ -408,5 +408,18 @@
   "countdown_onzevibe.allRightsReserved": "Tutti i diritti riservati",
   "countdown_onzevibe.appStore": "App Store",
   "countdown_onzevibe.googlePlay": "Google Play",
-  "countdown_onzevibe.other": "Altro"
+  "countdown_onzevibe.other": "Altro",
+  "portal_welcome.title": "Benvenuto nel tuo portale OnzeVibe",
+  "portal_welcome.intro": "È stato creato un portale per",
+  "portal_welcome.intro2": "Ora puoi accedere e gestire la tua lista aziendale.",
+  "portal_welcome.portalUrlLabel": "URL del portale di voto",
+  "portal_welcome.usernameLabel": "Nome utente",
+  "portal_welcome.passwordLabel": "Password",
+  "portal_welcome.passwordAdvice": "Consigliamo di cambiare la password subito dopo l'accesso.",
+  "portal_welcome.success": "Buona fortuna e divertiti!",
+  "portal_welcome.team": "Il team di OnzeVibe",
+  "portal_welcome.adminUrlLabel": "URL admin",
+  "portal_welcome.adminUrlInfo": "Questa è la pagina di accesso per il tuo nome utente e password",
+  "portal_welcome.adminUrlLabelMail": "Pagina di accesso admin",
+  "portal_welcome.contactWithin24h": "Ti contatteremo entro 24 ore per aiutarti a iniziare."
 }

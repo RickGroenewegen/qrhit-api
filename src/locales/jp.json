@@ -404,5 +404,18 @@
   "countdown_onzevibe.allRightsReserved": "全著作権所有",
   "countdown_onzevibe.appStore": "App Store",
   "countdown_onzevibe.googlePlay": "Google Play",
-  "countdown_onzevibe.other": "その他"
+  "countdown_onzevibe.other": "その他",
+  "portal_welcome.title": "あなたのOnzeVibeポータルへようこそ",
+  "portal_welcome.intro": "のためにポータルが作成されました",
+  "portal_welcome.intro2": "今すぐログインして会社リストを管理できます。",
+  "portal_welcome.portalUrlLabel": "投票ポータルURL",
+  "portal_welcome.usernameLabel": "ユーザー名",
+  "portal_welcome.passwordLabel": "パスワード",
+  "portal_welcome.passwordAdvice": "ログイン後すぐにパスワードを変更することをお勧めします。",
+  "portal_welcome.success": "頑張って楽しんでね！",
+  "portal_welcome.team": "OnzeVibeチーム",
+  "portal_welcome.adminUrlLabel": "管理者URL",
+  "portal_welcome.adminUrlInfo": "これはユーザー名とパスワードのログインページです",
+  "portal_welcome.adminUrlLabelMail": "管理者ログインページ",
+  "portal_welcome.contactWithin24h": "24時間以内にご連絡し、開始をお手伝いします。"
 }

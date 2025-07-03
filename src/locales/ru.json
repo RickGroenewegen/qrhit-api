@@ -404,5 +404,18 @@
   "countdown_onzevibe.allRightsReserved": "Все права защищены",
   "countdown_onzevibe.appStore": "App Store",
   "countdown_onzevibe.googlePlay": "Google Play",
-  "countdown_onzevibe.other": "Другое"
+  "countdown_onzevibe.other": "Другое",
+  "portal_welcome.title": "Добро пожаловать в ваш портал OnzeVibe",
+  "portal_welcome.intro": "Портал создан для",
+  "portal_welcome.intro2": "Теперь вы можете войти и управлять списком компаний.",
+  "portal_welcome.portalUrlLabel": "URL портала голосования",
+  "portal_welcome.usernameLabel": "Имя пользователя",
+  "portal_welcome.passwordLabel": "Пароль",
+  "portal_welcome.passwordAdvice": "Рекомендуем сменить пароль сразу после входа.",
+  "portal_welcome.success": "Удачи и веселья!",
+  "portal_welcome.team": "Команда OnzeVibe",
+  "portal_welcome.adminUrlLabel": "URL администратора",
+  "portal_welcome.adminUrlInfo": "Это страница входа для вашего имени пользователя и пароля",
+  "portal_welcome.adminUrlLabelMail": "Страница входа администратора",
+  "portal_welcome.contactWithin24h": "Мы свяжемся с вами в течение 24 часов, чтобы помочь вам начать."
 }

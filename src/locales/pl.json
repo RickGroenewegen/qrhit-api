@@ -408,5 +408,18 @@
   "countdown_onzevibe.allRightsReserved": "Wszelkie prawa zastrzeżone",
   "countdown_onzevibe.appStore": "App Store",
   "countdown_onzevibe.googlePlay": "Google Play",
-  "countdown_onzevibe.other": "Inne"
+  "countdown_onzevibe.other": "Inne",
+  "portal_welcome.title": "Witamy w twoim portalu OnzeVibe",
+  "portal_welcome.intro": "Utworzono portal dla",
+  "portal_welcome.intro2": "Możesz teraz się zalogować i zarządzać swoją listą firm.",
+  "portal_welcome.portalUrlLabel": "URL portalu głosowania",
+  "portal_welcome.usernameLabel": "Nazwa użytkownika",
+  "portal_welcome.passwordLabel": "Hasło",
+  "portal_welcome.passwordAdvice": "Zalecamy zmianę hasła zaraz po zalogowaniu.",
+  "portal_welcome.success": "Powodzenia i dobrej zabawy!",
+  "portal_welcome.team": "Zespół OnzeVibe",
+  "portal_welcome.adminUrlLabel": "URL administratora",
+  "portal_welcome.adminUrlInfo": "To jest strona logowania dla twojej nazwy użytkownika i hasła",
+  "portal_welcome.adminUrlLabelMail": "Strona logowania administratora",
+  "portal_welcome.contactWithin24h": "Skontaktujemy się z tobą w ciągu 24 godzin, aby pomóc ci zacząć."
 }

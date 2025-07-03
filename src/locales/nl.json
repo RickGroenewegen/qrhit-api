@@ -413,5 +413,18 @@
   "countdown_onzevibe.allRightsReserved": "Alle rechten voorbehouden",
   "countdown_onzevibe.appStore": "App Store",
   "countdown_onzevibe.googlePlay": "Google Play",
-  "countdown_onzevibe.other": "Overig"
+  "countdown_onzevibe.other": "Overig",
+  "portal_welcome.title": "Welkom bij je OnzeVibe portal!",
+  "portal_welcome.intro": "Er is een portal aangemaakt voor",
+  "portal_welcome.intro2": "Je kunt nu inloggen en je bedrijfslijst beheren.",
+  "portal_welcome.portalUrlLabel": "Stem portal URL",
+  "portal_welcome.usernameLabel": "Gebruikersnaam",
+  "portal_welcome.passwordLabel": "Wachtwoord",
+  "portal_welcome.passwordAdvice": "We raden aan je wachtwoord direct na inloggen te wijzigen.",
+  "portal_welcome.success": "Veel succes en veel plezier!",
+  "portal_welcome.team": "Het OnzeVibe-team",
+  "portal_welcome.adminUrlLabel": "Beheerder URL",
+  "portal_welcome.adminUrlInfo": "Dit is de inlogpagina voor je gebruikersnaam en wachtwoord",
+  "portal_welcome.adminUrlLabelMail": "Beheerder inlogpagina",
+  "portal_welcome.contactWithin24h": "We nemen binnen 24 uur contact met je op om je op weg te helpen."
 }

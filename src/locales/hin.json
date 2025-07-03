@@ -404,5 +404,18 @@
   "countdown_onzevibe.allRightsReserved": "सर्वाधिकार सुरक्षित",
   "countdown_onzevibe.appStore": "ऐप स्टोर",
   "countdown_onzevibe.googlePlay": "गूगल प्ले",
-  "countdown_onzevibe.other": "अन्य"
+  "countdown_onzevibe.other": "अन्य",
+  "portal_welcome.title": "आपके OnzeVibe पोर्टल में आपका स्वागत है",
+  "portal_welcome.intro": "के लिए एक पोर्टल बनाया गया है",
+  "portal_welcome.intro2": "अब आप लॉग इन कर सकते हैं और अपनी कंपनी सूची प्रबंधित कर सकते हैं।",
+  "portal_welcome.portalUrlLabel": "वोटिंग पोर्टल URL",
+  "portal_welcome.usernameLabel": "उपयोगकर्ता नाम",
+  "portal_welcome.passwordLabel": "पासवर्ड",
+  "portal_welcome.passwordAdvice": "हम अनुशंसा करते हैं कि लॉग इन करने के तुरंत बाद अपना पासवर्ड बदलें।",
+  "portal_welcome.success": "शुभकामनाएँ और मज़े करें!",
+  "portal_welcome.team": "OnzeVibe टीम",
+  "portal_welcome.adminUrlLabel": "एडमिन URL",
+  "portal_welcome.adminUrlInfo": "यह आपके यूजरनेम और पासवर्ड के लिए लॉगिन पेज है",
+  "portal_welcome.adminUrlLabelMail": "एडमिन लॉगिन पेज",
+  "portal_welcome.contactWithin24h": "हम 24 घंटे के भीतर आपसे संपर्क करेंगे ताकि आप शुरू कर सकें।"
 }
