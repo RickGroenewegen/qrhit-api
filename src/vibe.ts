@@ -132,7 +132,7 @@ class Vibe {
       });
       if (!user) {
         // Generate a hash for the user (required field)
-        const userHash = crypto.randomBytes(8).toString('hex').slice(0, 16);
+        const userHash = require('crypto').randomBytes(8).toString('hex').slice(0, 16);
         user = await this.prisma.user.create({
           data: {
             userId: email,
