@@ -118,9 +118,8 @@ class Vibe {
 
       // Hash the password using the same method as in auth.ts
       // (pbkdf2Sync with 10000 iterations, 64 bytes, sha512)
-      const { generateSalt, hashPassword } = await import('./auth');
-      const salt = generateSalt();
-      const hash = hashPassword(generatedPassword, salt);
+      const salt = auth.generateSalt();
+      const hash = auth.hashPassword(generatedPassword, salt);
 
       // Find the 'companyadmin' user group (do not create if it doesn't exist)
       const companyAdminGroup = await this.prisma.userGroup.findUnique({
