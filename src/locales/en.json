@@ -53,7 +53,17 @@
 	"mail.reviewRequest": "Thank you for your recent QRSong! purchase. We hope you are enjoying your cards! We would love to hear your feedback. Please take a moment to leave a review on our website.",
 	"mail.leaveReview": "Leave a Review",
 	"mail.unsubscribe": "Unsubscribe",
-		
+
+	"portal_welcome.title": "Welcome to your OnzeVibe portal",
+	"portal_welcome.intro": "A portal has been created for",
+	"portal_welcome.intro2": "You can now log in and manage your company list.",
+	"portal_welcome.portalUrlLabel": "Portal URL",
+	"portal_welcome.usernameLabel": "Username",
+	"portal_welcome.passwordLabel": "Password",
+	"portal_welcome.passwordAdvice": "We recommend changing your password immediately after logging in.",
+	"portal_welcome.success": "Good luck and have fun!",
+	"portal_welcome.team": "The OnzeVibe Team",
+
 	"invoice.description" : "Description",
 	"invoice.amount" : "Amount",
 	"invoice.pricePerPiece" : "Price / pc.",
