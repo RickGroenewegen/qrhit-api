@@ -388,15 +388,10 @@ class Generator {
     const outputDir = `${process.env['PUBLIC_DIR']}/qr/${subdir}`;
     await this.utils.createDir(outputDir);
 
-    console.log(111, dbTracks[0]);
-
     if (process.env['ENVIRONMENT'] === 'development') {
       // Use old method in series
       for (const track of dbTracks) {
         const link = `${process.env['API_URI']}/qr2/${track.id}/${track.paymentHasPlaylistId}`;
-
-        console.log(222, link);
-
         const outputPath = `${outputDir}/${track.trackId}.png`;
         await this.qr.generateQR(link, outputPath, playlist.qrColor);
       }

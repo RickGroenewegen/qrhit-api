@@ -1848,9 +1848,6 @@ class Server {
       // Get the request headers
       const headers = request.headers;
       const userAgent = headers['user-agent'] || '';
-
-      console.log(222, request.params.trackId, request.params.php);
-
       const result = await this.data.getLink(
         request.params.trackId,
         request.clientIp,
