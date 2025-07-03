@@ -1676,14 +1676,20 @@ class Server {
 
   public async addRoutes() {
     // Unprotected endpoint to create a company and company list (moved to Vibe)
-    this.fastify.post('/vibe/companylist/create', async (request: any, reply: any) => {
-      const result = await this.vibe.handleCompanyListCreate(request.body);
-      if (!result.success) {
-        reply.status(result.statusCode || 400).send(result);
-      } else {
-        reply.send(result);
+    this.fastify.post(
+      '/vibe/companylist/create',
+      async (request: any, reply: any) => {
+        const result = await this.vibe.handleCompanyListCreate(
+          request.body,
+          request.clientIp
+        );
+        if (!result.success) {
+          reply.status(result.statusCode || 400).send(result);
+        } else {
+          reply.send(result);
+        }
       }
-    });
+    );
 
     this.fastify.get(
       '/.well-known/apple-app-site-association',
