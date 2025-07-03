@@ -58,5 +58,16 @@
             "5": "Music history quiz"
         },
         "imagination": "Let your imagination run wild and create your own unique music games with QRSong! cards."
+    },
+    "portal_welcome": {
+        "title": "Welcome to your OnzeVibe portal",
+        "intro": "A portal has been created for",
+        "intro2": "You can now log in and manage your company list.",
+        "portalUrlLabel": "Portal URL",
+        "usernameLabel": "Username",
+        "passwordLabel": "Password",
+        "passwordAdvice": "We recommend changing your password immediately after logging in.",
+        "success": "Good luck and have fun!",
+        "team": "The OnzeVibe Team"
     }
 }

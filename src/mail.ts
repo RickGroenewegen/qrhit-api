@@ -74,6 +74,12 @@ class Mail {
 
     const logoPath = `${process.env['ASSETS_DIR']}/images/onzevibe_logo.png`;
 
+    // Fetch translations for portal welcome mail
+    const translations = await this.translation.getTranslationsByPrefix(
+      locale,
+      'portal_welcome'
+    );
+
     const mailParams = {
       fullname: fullname || email.split('@')[0],
       companyName,
@@ -82,6 +88,7 @@ class Mail {
       password,
       productName: process.env['PRODUCT_NAME'],
       currentYear: new Date().getFullYear(),
+      translations,
     };
 
     try {

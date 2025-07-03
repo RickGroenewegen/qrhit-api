@@ -37,8 +37,8 @@
                                 <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
                                     <tr>
                                         <td>
-                                            <h1 style="margin: 0 0 20px; font-size: 24px; line-height: 1.1; color: #18565E; text-align: center; font-weight: 500;">Welkom bij je OnzeVibe portal, {{ fullname }}!</h1>
-                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.5; color: #333333;">Voor <strong>{{ companyName }}</strong> is een portal aangemaakt. Je kunt nu inloggen en je bedrijfslijst beheren.</p>
+                                            <h1 style="margin: 0 0 20px; font-size: 24px; line-height: 1.1; color: #18565E; text-align: center; font-weight: 500;">{{ translations.title }}, {{ fullname }}!</h1>
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.5; color: #333333;">{{ translations.intro }} <strong>{{ companyName }}</strong>. {{ translations.intro2 }}</p>
                                             <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation" style="margin-top: 24px; margin-bottom: 24px;">
                                                 <tr>
                                                     <td align="center">
@@ -55,7 +55,7 @@
                                             <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom: 16px;">
                                                 <tr>
                                                     <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0;">
-                                                        <strong>Portal URL:</strong>
+                                                        <strong>{{ translations.portalUrlLabel }}:</strong>
                                                     </td>
                                                     <td style="font-size: 16px; line-height: 1.5; color: #18565E; padding: 8px 0;">
                                                         <a href="{{ portalUrl }}" style="color: #18565E;">{{ portalUrl }}</a>
@@ -63,7 +63,7 @@
                                                 </tr>
                                                 <tr>
                                                     <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0;">
-                                                        <strong>Gebruikersnaam:</strong>
+                                                        <strong>{{ translations.usernameLabel }}:</strong>
                                                     </td>
                                                     <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0;">
                                                         {{ username }}
@@ -71,15 +71,15 @@
                                                 </tr>
                                                 <tr>
                                                     <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0;">
-                                                        <strong>Wachtwoord:</strong>
+                                                        <strong>{{ translations.passwordLabel }}:</strong>
                                                     </td>
                                                     <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0;">
                                                         {{ password }}
                                                     </td>
                                                 </tr>
                                             </table>
-                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.5; color: #333333;">We raden aan om je wachtwoord direct te wijzigen na het inloggen.</p>
-                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.5; color: #333333;">Veel succes en plezier!<br>Het OnzeVibe Team</p>
+                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.5; color: #333333;">{{ translations.passwordAdvice }}</p>
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.5; color: #333333;">{{ translations.success }}<br>{{ translations.team }}</p>
                                         </td>
                                     </tr>
                                 </table>
