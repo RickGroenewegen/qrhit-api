@@ -925,7 +925,7 @@ class Data {
     return playlist[0];
   }
 
-  public async getTracks(playlistId: number, userId: number): Promise<any> {
+  public async getTracks(playlistId: number, userId: number = 0): Promise<any> {
     // Note: COALESCE(NULLIF(tei.column, ''), tracks.column) is used for string fields
     // to handle cases where extra info might be an empty string instead of NULL.
     // For numeric fields like year, COALESCE(tei.year, tracks.year) is sufficient.
