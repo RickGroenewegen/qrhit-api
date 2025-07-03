@@ -930,17 +930,27 @@ class Data {
     // to handle cases where extra info might be an empty string instead of NULL.
     // For numeric fields like year, COALESCE(tei.year, tracks.year) is sufficient.
     const tracks = await this.prisma.$queryRaw`
-        SELECT      tracks.id, 
-                    tracks.trackId, 
-                    COALESCE(NULLIF(tei.artist, ''), tracks.artist) as artist, 
-                    COALESCE(tei.year, tracks.year) as year, 
-                    COALESCE(NULLIF(tei.name, ''), tracks.name) as name,
-                    tei.extraNameAttribute,
-                    tei.extraArtistAttribute
-        FROM        tracks
-        INNER JOIN  playlist_has_tracks ON tracks.id = playlist_has_tracks.trackId
-        LEFT JOIN   trackextrainfo tei ON tei.trackId = tracks.id AND tei.playlistId = ${playlistId}
-        WHERE       playlist_has_tracks.playlistId = ${playlistId}`;
+        SELECT
+            tracks.id,
+            tracks.trackId,
+            COALESCE(NULLIF(tei.artist, ''), tracks.artist) as artist,
+            COALESCE(tei.year, tracks.year) as year,
+            COALESCE(NULLIF(tei.name, ''), tracks.name) as name,
+            tei.extraNameAttribute,
+            tei.extraArtistAttribute,
+            (
+                SELECT php.id
+                FROM payment_has_playlist php
+                INNER JOIN payments p ON php.paymentId = p.id
+                WHERE
+                    php.playlistId = playlist_has_tracks.playlistId
+                    AND (${userId} > 0 AND p.userId = ${userId} OR ${userId} = 0)
+                LIMIT 1
+            ) as paymentHasPlaylistId
+        FROM tracks
+        INNER JOIN playlist_has_tracks ON tracks.id = playlist_has_tracks.trackId
+        LEFT JOIN trackextrainfo tei ON tei.trackId = tracks.id AND tei.playlistId = ${playlistId}
+        WHERE playlist_has_tracks.playlistId = ${playlistId}`;
 
     return tracks;
   }
