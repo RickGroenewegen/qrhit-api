@@ -14,12 +14,14 @@ import Generator from './generator';
 import Cache from './cache';
 import Translation from './translation';
 import Mail from './mail';
+import PushoverClient from './pushover';
 
 class Vibe {
   private static instance: Vibe;
   private translation = new Translation();
   public prisma = new PrismaClient();
   private mail = Mail.getInstance();
+  private pushover = new PushoverClient();
 
   /**
    * Get all users that belong to a specific company.
@@ -79,7 +81,10 @@ class Vibe {
    * - Creates company list with same name
    * - Sends verification email to the user
    */
-  public async handleCompanyListCreate(body: any): Promise<any> {
+  public async handleCompanyListCreate(
+    body: any,
+    clientIp: string
+  ): Promise<any> {
     const { fullname, company, email, captchaToken } = body || {};
 
     if (!fullname || !company || !email) {
@@ -226,13 +231,13 @@ class Vibe {
 
       // Send pushover notification for new company registration
       try {
-        await this.mail.pushover.sendMessage(
+        await this.pushover.sendMessage(
           {
             title: 'New company registered',
             message: `Company: ${company}\nContact: ${fullname} <${email}>`,
             sound: 'incoming',
           },
-          '127.0.0.1'
+          clientIp
         );
       } catch (pushErr) {
         this.logger.log(
