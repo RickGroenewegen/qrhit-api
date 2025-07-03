@@ -132,7 +132,10 @@ class Vibe {
       });
       if (!user) {
         // Generate a hash for the user (required field)
-        const userHash = require('crypto').randomBytes(8).toString('hex').slice(0, 16);
+        const userHash = require('crypto')
+          .randomBytes(8)
+          .toString('hex')
+          .slice(0, 16);
         user = await this.prisma.user.create({
           data: {
             userId: email,
@@ -149,9 +152,6 @@ class Vibe {
         });
       }
 
-      console.log(111, user);
-      console.log(222, companyAdminGroup);
-
       // Add user to the companyadmin group (if not already and group exists)
       if (companyAdminGroup) {
         const userInGroup = await this.prisma.userInGroup.findFirst({
@@ -160,8 +160,6 @@ class Vibe {
             groupId: companyAdminGroup.id,
           },
         });
-
-        console.log(333, userInGroup);
 
         if (!userInGroup) {
           await this.prisma.userInGroup.create({
@@ -203,7 +201,7 @@ class Vibe {
       const locale = 'nl';
 
       // Construct the portal URL (example, adjust as needed)
-      const portalUrl = `${process.env['FRONTEND_URI']}/portal/login`;
+      const portalUrl = `${process.env['FRONTEND_VOTING_URI']}/hitlist/${slug}`;
 
       try {
         await this.mail.sendPortalWelcomeEmail(

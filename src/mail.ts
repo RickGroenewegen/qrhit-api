@@ -122,7 +122,10 @@ class Mail {
           from: `OnzeVibe <${process.env['FROM_EMAIL']}>`,
           to: email,
           subject,
-          html: html.replace('<img src="logo.png"', '<img src="cid:onzevibe_logo"'),
+          html: html.replace(
+            '<img src="logo.png"',
+            '<img src="cid:onzevibe_logo"'
+          ),
           text,
           attachments,
           unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
@@ -148,7 +151,9 @@ class Mail {
       console.error('Error while sending portal welcome email:', error);
       this.logger.log(
         color.red.bold(
-          `Failed to send portal welcome email to ${white.bold(email)}: ${error}`
+          `Failed to send portal welcome email to ${white.bold(
+            email
+          )}: ${error}`
         )
       );
     }
