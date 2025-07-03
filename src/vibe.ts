@@ -202,6 +202,7 @@ class Vibe {
 
       // Construct the portal URL (example, adjust as needed)
       const portalUrl = `${process.env['FRONTEND_VOTING_URI']}/hitlist/${slug}`;
+      const adminUrl = process.env['FRONTEND_VOTING_URI'];
 
       try {
         await this.mail.sendPortalWelcomeEmail(
@@ -211,7 +212,8 @@ class Vibe {
           portalUrl,
           email, // Use email as username
           generatedPassword,
-          locale
+          locale,
+          adminUrl // pass admin URL
         );
       } catch (err) {
         // Log but do not fail the endpoint if email fails

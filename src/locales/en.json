@@ -58,6 +58,7 @@
 	"portal_welcome.intro": "A portal has been created for",
 	"portal_welcome.intro2": "You can now log in and manage your company list.",
 	"portal_welcome.portalUrlLabel": "Portal URL",
+	"portal_welcome.adminUrlLabel": "Admin URL",
 	"portal_welcome.usernameLabel": "Username",
 	"portal_welcome.passwordLabel": "Password",
 	"portal_welcome.passwordAdvice": "We recommend changing your password immediately after logging in.",

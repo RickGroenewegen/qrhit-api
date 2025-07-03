@@ -68,7 +68,8 @@ class Mail {
     portalUrl: string,
     username: string,
     password: string,
-    locale: string = 'nl'
+    locale: string = 'nl',
+    adminUrl?: string // new param for admin URL
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -84,6 +85,7 @@ class Mail {
       fullname: fullname || email.split('@')[0],
       companyName,
       portalUrl,
+      adminUrl,
       username,
       password,
       productName: process.env['PRODUCT_NAME'],
