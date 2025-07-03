@@ -1,35 +1,83 @@
 <!DOCTYPE html>
-<html lang="nl">
+<html lang="nl" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
 <head>
-  <meta charset="utf-8">
-  <title>Welkom bij OnzeVibe Portal</title>
-  <style>
-    body { font-family: 'Caros Soft', 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #FFFBF5; }
-    .container { max-width: 600px; margin: 0 auto; background: #FAF6F3; border-radius: 8px; padding: 32px; }
-    .button { background: #18565E; color: #fff; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: bold; }
-    .footer { color: #718096; font-size: 12px; text-align: center; margin-top: 32px; }
-  </style>
+    <meta charset="utf-8">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <title>OnzeVibe - Portal aangemaakt</title>
+    <!--[if mso]>
+    <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+    <style>
+      td,th,div,p,a,h1,h2,h3,h4,h5,h6 {font-family: "Segoe UI", sans-serif; mso-line-height-rule: exactly;}
+    </style>
+    <![endif]-->
+    <style>
+      body, table, td, a, p, h1, h2, h3, h4, h5, h6 { font-family: 'Caros Soft', 'Helvetica Neue', Helvetica, Arial, sans-serif; }
+    </style>
 </head>
-<body>
-  <div class="container">
-    <div style="text-align:center;">
-      <img src="cid:onzevibe_logo" alt="OnzeVibe Logo" style="max-width: 220px; height: auto; margin-bottom: 32px;">
+<body style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #FFFBF5;">
+    <div style="display: none;">Welkom bij je OnzeVibe portal - OnzeVibe</div>
+    <div role="article" aria-roledescription="email" aria-label="OnzeVibe Portal Setup" lang="nl" style="font-family: 'Caros Soft', 'Helvetica Neue', Helvetica, Arial, sans-serif; background-color: #FFFBF5;">
+        <table style="width: 100%; font-family: 'Caros Soft', 'Helvetica Neue', Helvetica, Arial, sans-serif;" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+                <td align="center" style="padding: 24px;">
+                    <table class="container" style="width: 100%; max-width: 600px; background-color: #FAF6F3; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);" cellpadding="0" cellspacing="0" role="presentation">
+                        <tr>
+                            <td style="padding: 32px;">
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td align="center" style="padding-bottom: 32px;">
+                                            <img src="cid:onzevibe_logo" alt="OnzeVibe Logo" style="max-width: 220px; height: auto;">
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td>
+                                            <h1 style="margin: 0 0 20px; font-size: 24px; line-height: 1.1; color: #18565E; text-align: center; font-weight: 500;">Welkom bij je OnzeVibe portal, {{ fullname }}!</h1>
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.5; color: #333333;">Voor <strong>{{ companyName }}</strong> is een portal aangemaakt. Je kunt nu inloggen en je bedrijfslijst beheren.</p>
+                                            <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation" style="margin-top: 24px; margin-bottom: 24px;">
+                                                <tr>
+                                                    <td align="center">
+                                                        <table border="0" cellspacing="0" cellpadding="0" role="presentation">
+                                                            <tr>
+                                                                <td align="center" style="border-radius: 4px;" bgcolor="#18565E">
+                                                                    <a href="{{ portalUrl }}" target="_blank" style="font-size: 16px; font-family: 'Caros Soft', 'Helvetica Neue', Helvetica, Arial, sans-serif; color: #ffffff; text-decoration: none; text-transform: uppercase; border-radius: 4px; padding: 12px 24px; border: 1px solid #18565E; display: inline-block; font-weight: bold; letter-spacing: 0.5px;">Ga naar portal</a>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.5; color: #333333;">
+                                                <strong>Portal URL:</strong> <a href="{{ portalUrl }}" style="color: #18565E;">{{ portalUrl }}</a><br>
+                                                <strong>Gebruikersnaam:</strong> {{ username }}<br>
+                                                <strong>Wachtwoord:</strong> {{ password }}
+                                            </p>
+                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 1.5; color: #333333;">We raden aan om je wachtwoord direct te wijzigen na het inloggen.</p>
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 1.5; color: #333333;">Veel succes en plezier!<br>Het OnzeVibe Team</p>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td style="padding-top: 32px;">
+                                            <p style="margin: 0; font-size: 16px; line-height: 1.5; color: #333333;">
+                                                &copy; {{ currentYear }} OnzeVibe. All rights reserved.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
     </div>
-    <h1 style="color:#18565E;">Welkom bij je OnzeVibe portal, {{ fullname }}!</h1>
-    <p>Voor <strong>{{ companyName }}</strong> is een portal aangemaakt. Je kunt nu inloggen en je bedrijfslijst beheren.</p>
-    <p>
-      <strong>Portal URL:</strong><br>
-      <a href="{{ portalUrl }}" class="button" target="_blank">{{ portalUrl }}</a>
-    </p>
-    <p>
-      <strong>Gebruikersnaam:</strong> {{ username }}<br>
-      <strong>Wachtwoord:</strong> {{ password }}
-    </p>
-    <p>We raden aan om je wachtwoord direct te wijzigen na het inloggen.</p>
-    <p>Veel succes en plezier!<br>Het OnzeVibe Team</p>
-    <div class="footer">
-      &copy; {{ currentYear }} OnzeVibe. All rights reserved.
-    </div>
-  </div>
 </body>
 </html>
