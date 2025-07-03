@@ -393,7 +393,7 @@ class Generator {
     if (process.env['ENVIRONMENT'] === 'development') {
       // Use old method in series
       for (const track of dbTracks) {
-        const link = `${process.env['API_URI']}/qr/${track.id}/${track.paymentHasPlaylistId}`;
+        const link = `${process.env['API_URI']}/qr2/${track.id}/${track.paymentHasPlaylistId}`;
 
         console.log(222, link);
 
@@ -407,7 +407,7 @@ class Generator {
         const batch = dbTracks.slice(i, i + batchSize);
         await Promise.all(
           batch.map(async (track: any) => {
-            const link = `${process.env['API_URI']}/qr/${track.id}/${track.paymentHasPlaylistId}`;
+            const link = `${process.env['API_URI']}/qr2/${track.id}/${track.paymentHasPlaylistId}`;
             const outputPath = `${outputDir}/${track.trackId}.png`;
             await this.qr.generateQRLambda(link, outputPath, playlist.qrColor);
           })
