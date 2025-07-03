@@ -499,6 +499,12 @@ class Generator {
             digitalTemplate = 'digital_double';
           }
 
+          let printerTemplate = 'printer';
+
+          if (payment.vibe) {
+            printerTemplate = 'printer_vibe';
+          }
+
           const [generatedFilenameDigital, generatedFilename] =
             await Promise.all([
               this.pdf.generatePDF(
@@ -514,7 +520,9 @@ class Generator {
                     filename,
                     playlist,
                     payment,
-                    playlist.subType == 'sheets' ? 'printer_sheets' : 'printer',
+                    playlist.subType == 'sheets'
+                      ? 'printer_sheets'
+                      : printerTemplate,
                     payment.qrSubDir
                   )
                 : Promise.resolve(''),

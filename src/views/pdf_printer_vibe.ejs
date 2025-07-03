@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Your QR Cards</title>
+<style>
+    body {
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+    }
+    .card-front, .card-back {
+        width: 60mm;
+        height: 60mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+    }
+    .card-front {
+        <% if (php.background && php.background.length) { %>
+        background-image: url('<%= process.env['API_URI'] %>/public/background/<%= php.background %>');
+        <% } else { %>
+        background-image: url('<%= process.env['API_URI'] %>/assets/images/card_background2.png');
+        <% } %>
+        background-size: cover;
+    }
+    .circle-bg {
+        position: absolute;
+        width: 48mm;
+        height: 48mm;
+        background-color: #fff;
+        border-radius: 50%;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        z-index: 2;
+        border: 1px solid #e0e0e0;
+    }
+    .card-back {
+        background-color: #ffffff; /* or any other color you prefer */
+    }
+    .qr {
+        width: 60%;
+        height: auto;
+        position: relative;
+        z-index: 3;
+    }
+    .text {
+        text-align: center;
+        padding-top: 2mm;
+        padding-bottom: 2mm;
+    }
+    .text.artist {
+        margin-left: 3mm;
+        margin-right: 3mm;
+        font-size: 18px;
+        overflow-wrap: break-word; /* Prevent breaking mid-word */
+    }
+    .text.year {
+        font-size: 40px;
+        font-weight: bold;
+    }
+    .text.name {
+        margin-left: 3mm;
+        margin-right: 3mm;
+        font-size: 16px;
+        font-style: italic;
+        overflow-wrap: break-word; /* Prevent breaking mid-word */
+    }
+    .url, .url-bottom {
+        font-size: 12px;
+        position: absolute;
+        bottom: 10mm;
+        text-align: center;
+        width: 100%;
+        font-style: italic;
+        color: #909090;
+        z-index: 3;
+    }
+    .logo {
+        position: absolute;
+        top: 5mm;
+        max-width: 20mm;
+        max-height: 10mm;
+        z-index: 4;
+    }
+    .url-bottom {
+        bottom: 5mm;
+    }
+</style>
+</head>
+<body>
+<% tracks.forEach((track, index) => { %>
+    <div class="card-front">
+        <% if (php.logo && php.logo.length) { %>
+            <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
+        <% } %>
+        <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
+        <div class="url">
+            <% if (!php.hideDomain) { %>
+                <%= process.env['APP_DOMAIN'] %>
+            <% } %>
+        </div>
+    </div>
+    <div style="page-break-after: always;"></div>
+    <div class="card-back" style="position: relative;">
+        <div class="text artist">
+            <%= track.artist %>
+            <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
+                <div style="font-size: 14px; color: #666; margin-top: 2mm;"><%= track.extraArtistAttribute %></div>
+            <% } %>
+        </div>
+        <div class="text year"><%= track.year %></div>
+        <div class="text name">
+            <%= track.name %>
+            <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
+                <div style="font-size: 12px; color: #666; margin-top: 2mm;"><%- track.extraNameAttribute %></div>
+            <% } %>
+        </div>
+        <div class="url-bottom">
+            <% if (!playlist.hideDomain && !php.hideDomain) { %>
+                 <% if (php.emoji && php.emoji.length) { %>
+                    <span style="<%= eco ? 'filter: grayscale(100%);' : '' %> font-size: 16px;"><%= php.emoji %></span>
+                <% } %>
+                <%= process.env['APP_DOMAIN'] %>
+                <% if (php.emoji && php.emoji.length) { %>
+                    <span style="<%= eco ? 'filter: grayscale(100%);' : '' %> font-size: 16px;"><%= php.emoji %></span>
+                <% } %>
+            <% } %>
+        </div>
+        <% if (!payment.vibe) { %>
+            <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 10px; color: #909090;">#<%= php.paymentHasPlaylistId %></div>
+        <% } %>
+    </div>
+    <div style="page-break-after: always;"></div>
+<% }); %>
+</body>
+</html>
