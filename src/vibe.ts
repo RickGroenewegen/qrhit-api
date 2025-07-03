@@ -25,9 +25,7 @@ class Vibe {
    * @param companyId The company ID to get users for
    * @returns Object with success status and array of users or error
    */
-  public async getUsersByCompany(
-    companyId: number
-  ): Promise<{
+  public async getUsersByCompany(companyId: number): Promise<{
     success: boolean;
     users?: any[];
     error?: string;
@@ -153,6 +151,9 @@ class Vibe {
         });
       }
 
+      console.log(111, user);
+      console.log(222, companyAdminGroup);
+
       // Add user to the companyadmin group (if not already and group exists)
       if (companyAdminGroup) {
         const userInGroup = await this.prisma.userInGroup.findFirst({
@@ -161,6 +162,9 @@ class Vibe {
             groupId: companyAdminGroup.id,
           },
         });
+
+        console.log(333, userInGroup);
+
         if (!userInGroup) {
           await this.prisma.userInGroup.create({
             data: {
