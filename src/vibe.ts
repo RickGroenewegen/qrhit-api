@@ -118,27 +118,31 @@ class Vibe {
         return { success: false, error: listResult.error || 'Failed to create company list', statusCode: 409 };
       }
 
-      // 3. Send verification email to the user
-      // Generate a verification hash (for demo, use random string)
-      const verificationHash = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
-      // You may want to store this hash in the DB for later verification
+      // 3. Send portal welcome email to the user
+      // Generate a random password for the user (for demo, use random string)
+      const generatedPassword = Math.random().toString(36).slice(-10);
+      // You may want to store this password in the DB and create the user here
 
       // Use 'nl' as default locale for now, or allow override
       const locale = 'nl';
 
+      // Construct the portal URL (example, adjust as needed)
+      const portalUrl = `${process.env['FRONTEND_URI']}/portal/login`;
+
       try {
-        await this.mail.sendVerificationEmail(
+        await this.mail.sendPortalWelcomeEmail(
           email,
           fullname,
           company,
-          verificationHash,
-          locale,
-          slug
+          portalUrl,
+          email, // Use email as username
+          generatedPassword,
+          locale
         );
       } catch (err) {
         // Log but do not fail the endpoint if email fails
         this.logger.log(
-          color.red.bold(`Failed to send verification email to ${email}: ${err}`)
+          color.red.bold(`Failed to send portal welcome email to ${email}: ${err}`)
         );
       }
 
@@ -146,7 +150,7 @@ class Vibe {
         success: true,
         company: companyResult.data.company,
         list: listResult.data.list,
-        verificationSent: true,
+        portalWelcomeSent: true,
       };
     } catch (error) {
       return { success: false, error: 'Internal server error', statusCode: 500 };
