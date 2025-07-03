@@ -66,6 +66,7 @@
 	"portal_welcome.passwordAdvice": "We recommend changing your password immediately after logging in.",
 	"portal_welcome.success": "Good luck and have fun!",
 	"portal_welcome.team": "The OnzeVibe Team",
+	"portal_welcome.contactWithin24h": "We will contact you within 24 hours to help you get started.",
 
 	"invoice.description" : "Description",
 	"invoice.amount" : "Amount",
