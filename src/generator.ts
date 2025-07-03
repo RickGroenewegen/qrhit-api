@@ -368,13 +368,13 @@ class Generator {
         )} tracks for playlist: ${white.bold(playlist.playlistId)}`
       )
     );
-    const dbTracks = await this.data.getTracks(playlist.id, 0);
+    const dbTracks = await this.data.getTracks(playlist.id);
     playlist.numberOfTracks = dbTracks.length;
   }
 
   private async generateQRCodes(
     playlist: any,
-    dbTracks: Track[],
+    dbTracks: any[],
     subdir: string
   ): Promise<void> {
     this.logger.log(
@@ -388,10 +388,15 @@ class Generator {
     const outputDir = `${process.env['PUBLIC_DIR']}/qr/${subdir}`;
     await this.utils.createDir(outputDir);
 
+    console.log(111, dbTracks[0]);
+
     if (process.env['ENVIRONMENT'] === 'development') {
       // Use old method in series
       for (const track of dbTracks) {
-        const link = `${process.env['API_URI']}/qr/${track.id}`;
+        const link = `${process.env['API_URI']}/qr/${track.id}/${track.paymentHasPlaylistId}`;
+
+        console.log(222, link);
+
         const outputPath = `${outputDir}/${track.trackId}.png`;
         await this.qr.generateQR(link, outputPath, playlist.qrColor);
       }
@@ -401,8 +406,8 @@ class Generator {
       for (let i = 0; i < dbTracks.length; i += batchSize) {
         const batch = dbTracks.slice(i, i + batchSize);
         await Promise.all(
-          batch.map(async (track: Track) => {
-            const link = `${process.env['API_URI']}/qr/${track.id}`;
+          batch.map(async (track: any) => {
+            const link = `${process.env['API_URI']}/qr/${track.id}/${track.paymentHasPlaylistId}`;
             const outputPath = `${outputDir}/${track.trackId}.png`;
             await this.qr.generateQRLambda(link, outputPath, playlist.qrColor);
           })
