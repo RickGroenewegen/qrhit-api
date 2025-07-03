@@ -125,21 +125,18 @@ class Vibe {
         .update(generatedPassword + salt)
         .digest('hex');
 
-      // Find or create the 'companyadmin' user group
-      let companyAdminGroup = await this.prisma.userGroup.findUnique({
+      // Find the 'companyadmin' user group (do not create if it doesn't exist)
+      const companyAdminGroup = await this.prisma.userGroup.findUnique({
         where: { name: 'companyadmin' },
       });
-      if (!companyAdminGroup) {
-        companyAdminGroup = await this.prisma.userGroup.create({
-          data: { name: 'companyadmin' },
-        });
-      }
 
       // Create the user (if not exists)
       let user = await this.prisma.user.findUnique({
         where: { email },
       });
       if (!user) {
+        // Generate a hash for the user (required field)
+        const userHash = crypto.randomBytes(8).toString('hex').slice(0, 16);
         user = await this.prisma.user.create({
           data: {
             userId: email,
@@ -147,6 +144,7 @@ class Vibe {
             displayName: fullname || email.split('@')[0],
             password: hash,
             salt: salt,
+            hash: userHash,
             companyId: companyId,
             locale: 'nl',
             marketingEmails: false,
@@ -155,20 +153,22 @@ class Vibe {
         });
       }
 
-      // Add user to the companyadmin group (if not already)
-      const userInGroup = await this.prisma.userInGroup.findFirst({
-        where: {
-          userId: user.id,
-          groupId: companyAdminGroup.id,
-        },
-      });
-      if (!userInGroup) {
-        await this.prisma.userInGroup.create({
-          data: {
+      // Add user to the companyadmin group (if not already and group exists)
+      if (companyAdminGroup) {
+        const userInGroup = await this.prisma.userInGroup.findFirst({
+          where: {
             userId: user.id,
             groupId: companyAdminGroup.id,
           },
         });
+        if (!userInGroup) {
+          await this.prisma.userInGroup.create({
+            data: {
+              userId: user.id,
+              groupId: companyAdminGroup.id,
+            },
+          });
+        }
       }
 
       // 2. Create the company list with the same name
