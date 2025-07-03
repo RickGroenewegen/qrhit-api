@@ -1675,6 +1675,57 @@ class Server {
   }
 
   public async addRoutes() {
+    // Unprotected endpoint to create a company and company list
+    this.fastify.post('/vibe/companylist/create', async (request: any, reply: any) => {
+      const { fullname, company, email } = request.body || {};
+
+      if (!fullname || !company || !email) {
+        reply.status(400).send({ success: false, error: 'Missing required fields: fullname, company, email' });
+        return;
+      }
+
+      try {
+        // 1. Create the company (if not exists)
+        const companyResult = await this.vibe.createCompany(company, false);
+        if (!companyResult.success) {
+          reply.status(409).send({ success: false, error: companyResult.error || 'Failed to create company' });
+          return;
+        }
+        const companyId = companyResult.data.company.id;
+
+        // 2. Create the company list with the same name
+        // Use the company name as the list name and slug (slugify for URL safety)
+        const slug = company
+          .toLowerCase()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-+|-+$/g, '')
+          .substring(0, 50);
+
+        const listData = {
+          name: company,
+          slug,
+          numberOfCards: 10,
+          numberOfTracks: 10,
+          // Optionally add description fields for all locales as empty string
+        };
+
+        const listResult = await this.vibe.createCompanyList(companyId, listData);
+
+        if (!listResult.success) {
+          reply.status(409).send({ success: false, error: listResult.error || 'Failed to create company list' });
+          return;
+        }
+
+        reply.send({
+          success: true,
+          company: companyResult.data.company,
+          list: listResult.data.list,
+        });
+      } catch (error) {
+        reply.status(500).send({ success: false, error: 'Internal server error' });
+      }
+    });
+
     this.fastify.get(
       '/.well-known/apple-app-site-association',
       async (_request, reply) => {
