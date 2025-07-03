@@ -1,4 +1,5 @@
 import { PrismaClient, CompanyList } from '@prisma/client'; // Added CompanyList
+import * as auth from './auth';
 import Logger from './logger';
 import { color } from 'console-log-colors';
 import fs from 'fs/promises'; // Added fs
