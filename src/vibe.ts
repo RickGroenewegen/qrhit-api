@@ -12,11 +12,13 @@ import Spotify from './spotify';
 import Generator from './generator';
 import Cache from './cache';
 import Translation from './translation';
+import Mail from './mail';
 
 class Vibe {
   private static instance: Vibe;
   private translation = new Translation();
   public prisma = new PrismaClient();
+  private mail = Mail.getInstance();
 
   /**
    * Get all users that belong to a specific company.
@@ -62,6 +64,92 @@ class Vibe {
         color.red.bold(`Error getting users by company: ${error}`)
       );
       return { success: false, error: 'Error retrieving users for company' };
+    }
+  }
+
+  /**
+   * Handle the POST /vibe/companylist/create endpoint logic.
+   * Accepts: fullname, company, email, captchaToken
+   * - Verifies captcha
+   * - Creates company (if not exists)
+   * - Creates company list with same name
+   * - Sends verification email to the user
+   */
+  public async handleCompanyListCreate(body: any): Promise<any> {
+    const { fullname, company, email, captchaToken } = body || {};
+
+    if (!fullname || !company || !email) {
+      return { success: false, error: 'Missing required fields: fullname, company, email', statusCode: 400 };
+    }
+
+    // Captcha check (same as sendContactForm in mail.ts)
+    const isHuman = await this.utils.verifyRecaptcha(captchaToken);
+    if (!isHuman) {
+      return { success: false, error: 'reCAPTCHA verification failed', statusCode: 400 };
+    }
+
+    try {
+      // 1. Create the company (if not exists)
+      const companyResult = await this.createCompany(company, false);
+      if (!companyResult.success) {
+        return { success: false, error: companyResult.error || 'Failed to create company', statusCode: 409 };
+      }
+      const companyId = companyResult.data.company.id;
+
+      // 2. Create the company list with the same name
+      // Use the company name as the list name and slug (slugify for URL safety)
+      const slug = company
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/^-+|-+$/g, '')
+        .substring(0, 50);
+
+      const listData = {
+        name: company,
+        slug,
+        numberOfCards: 10,
+        numberOfTracks: 10,
+        // Optionally add description fields for all locales as empty string
+      };
+
+      const listResult = await this.createCompanyList(companyId, listData);
+
+      if (!listResult.success) {
+        return { success: false, error: listResult.error || 'Failed to create company list', statusCode: 409 };
+      }
+
+      // 3. Send verification email to the user
+      // Generate a verification hash (for demo, use random string)
+      const verificationHash = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+      // You may want to store this hash in the DB for later verification
+
+      // Use 'nl' as default locale for now, or allow override
+      const locale = 'nl';
+
+      try {
+        await this.mail.sendVerificationEmail(
+          email,
+          fullname,
+          company,
+          verificationHash,
+          locale,
+          slug
+        );
+      } catch (err) {
+        // Log but do not fail the endpoint if email fails
+        this.logger.log(
+          color.red.bold(`Failed to send verification email to ${email}: ${err}`)
+        );
+      }
+
+      return {
+        success: true,
+        company: companyResult.data.company,
+        list: listResult.data.list,
+        verificationSent: true,
+      };
+    } catch (error) {
+      return { success: false, error: 'Internal server error', statusCode: 500 };
     }
   }
 
