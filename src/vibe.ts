@@ -27,7 +27,12 @@ class Vibe {
    */
   public async getUsersByCompany(
     companyId: number
-  ): Promise<{ success: boolean; users?: any[]; error?: string; test?: boolean }> {
+  ): Promise<{
+    success: boolean;
+    users?: any[];
+    error?: string;
+    test?: boolean;
+  }> {
     try {
       if (!companyId || isNaN(companyId)) {
         return { success: false, error: 'Invalid company ID provided' };
@@ -79,20 +84,32 @@ class Vibe {
     const { fullname, company, email, captchaToken } = body || {};
 
     if (!fullname || !company || !email) {
-      return { success: false, error: 'Missing required fields: fullname, company, email', statusCode: 400 };
+      return {
+        success: false,
+        error: 'Missing required fields: fullname, company, email',
+        statusCode: 400,
+      };
     }
 
     // Captcha check (same as sendContactForm in mail.ts)
     const isHuman = await this.utils.verifyRecaptcha(captchaToken);
     if (!isHuman) {
-      return { success: false, error: 'reCAPTCHA verification failed', statusCode: 400 };
+      return {
+        success: false,
+        error: 'reCAPTCHA verification failed',
+        statusCode: 400,
+      };
     }
 
     try {
       // 1. Create the company (if not exists)
       const companyResult = await this.createCompany(company, false);
       if (!companyResult.success) {
-        return { success: false, error: companyResult.error || 'Failed to create company', statusCode: 409 };
+        return {
+          success: false,
+          error: companyResult.error || 'Failed to create company',
+          statusCode: 409,
+        };
       }
       const companyId = companyResult.data.company.id;
 
@@ -103,7 +120,10 @@ class Vibe {
       // Hash the password (simple hash for demo, replace with real hash in production)
       const crypto = await import('crypto');
       const salt = crypto.randomBytes(16).toString('hex');
-      const hash = crypto.createHash('sha256').update(generatedPassword + salt).digest('hex');
+      const hash = crypto
+        .createHash('sha256')
+        .update(generatedPassword + salt)
+        .digest('hex');
 
       // Find or create the 'companyadmin' user group
       let companyAdminGroup = await this.prisma.userGroup.findUnique({
@@ -170,7 +190,11 @@ class Vibe {
       const listResult = await this.createCompanyList(companyId, listData);
 
       if (!listResult.success) {
-        return { success: false, error: listResult.error || 'Failed to create company list', statusCode: 409 };
+        return {
+          success: false,
+          error: listResult.error || 'Failed to create company list',
+          statusCode: 409,
+        };
       }
 
       // Use 'nl' as default locale for now, or allow override
@@ -192,7 +216,9 @@ class Vibe {
       } catch (err) {
         // Log but do not fail the endpoint if email fails
         this.logger.log(
-          color.red.bold(`Failed to send portal welcome email to ${email}: ${err}`)
+          color.red.bold(
+            `Failed to send portal welcome email to ${email}: ${err}`
+          )
         );
       }
 
@@ -203,7 +229,11 @@ class Vibe {
         portalWelcomeSent: true,
       };
     } catch (error) {
-      return { success: false, error: 'Internal server error', statusCode: 500 };
+      return {
+        success: false,
+        error: 'Internal server error',
+        statusCode: 500,
+      };
     }
   }
 
