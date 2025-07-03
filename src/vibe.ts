@@ -96,6 +96,61 @@ class Vibe {
       }
       const companyId = companyResult.data.company.id;
 
+      // 1b. Create the user for this company (admin)
+      // Generate a random password for the user (for demo, use random string)
+      const generatedPassword = Math.random().toString(36).slice(-10);
+
+      // Hash the password (simple hash for demo, replace with real hash in production)
+      const crypto = await import('crypto');
+      const salt = crypto.randomBytes(16).toString('hex');
+      const hash = crypto.createHash('sha256').update(generatedPassword + salt).digest('hex');
+
+      // Find or create the 'companyadmin' user group
+      let companyAdminGroup = await this.prisma.userGroup.findUnique({
+        where: { name: 'companyadmin' },
+      });
+      if (!companyAdminGroup) {
+        companyAdminGroup = await this.prisma.userGroup.create({
+          data: { name: 'companyadmin' },
+        });
+      }
+
+      // Create the user (if not exists)
+      let user = await this.prisma.user.findUnique({
+        where: { email },
+      });
+      if (!user) {
+        user = await this.prisma.user.create({
+          data: {
+            userId: email,
+            email,
+            displayName: fullname || email.split('@')[0],
+            password: hash,
+            salt: salt,
+            companyId: companyId,
+            locale: 'nl',
+            marketingEmails: false,
+            sync: false,
+          },
+        });
+      }
+
+      // Add user to the companyadmin group (if not already)
+      const userInGroup = await this.prisma.userInGroup.findFirst({
+        where: {
+          userId: user.id,
+          groupId: companyAdminGroup.id,
+        },
+      });
+      if (!userInGroup) {
+        await this.prisma.userInGroup.create({
+          data: {
+            userId: user.id,
+            groupId: companyAdminGroup.id,
+          },
+        });
+      }
+
       // 2. Create the company list with the same name
       // Use the company name as the list name and slug (slugify for URL safety)
       const slug = company
@@ -117,11 +172,6 @@ class Vibe {
       if (!listResult.success) {
         return { success: false, error: listResult.error || 'Failed to create company list', statusCode: 409 };
       }
-
-      // 3. Send portal welcome email to the user
-      // Generate a random password for the user (for demo, use random string)
-      const generatedPassword = Math.random().toString(36).slice(-10);
-      // You may want to store this password in the DB and create the user here
 
       // Use 'nl' as default locale for now, or allow override
       const locale = 'nl';
