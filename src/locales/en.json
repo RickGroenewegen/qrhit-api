@@ -57,7 +57,7 @@
 	"portal_welcome.title": "Welcome to your OnzeVibe portal",
 	"portal_welcome.intro": "A portal has been created for",
 	"portal_welcome.intro2": "You can now log in and manage your company list.",
-	"portal_welcome.portalUrlLabel": "Portal URL",
+	"portal_welcome.portalUrlLabel": "Voting portal URL",
 	"portal_welcome.adminUrlLabel": "Admin URL",
 	"portal_welcome.adminUrlInfo": "This is the login page for your username and password",
 	"portal_welcome.adminUrlLabelMail": "Admin login page",
