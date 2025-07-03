@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+  <meta charset="utf-8">
+  <title>Welkom bij OnzeVibe Portal</title>
+  <style>
+    body { font-family: 'Caros Soft', 'Helvetica Neue', Helvetica, Arial, sans-serif; background: #FFFBF5; }
+    .container { max-width: 600px; margin: 0 auto; background: #FAF6F3; border-radius: 8px; padding: 32px; }
+    .button { background: #18565E; color: #fff; padding: 12px 24px; border-radius: 4px; text-decoration: none; font-weight: bold; }
+    .footer { color: #718096; font-size: 12px; text-align: center; margin-top: 32px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div style="text-align:center;">
+      <img src="cid:onzevibe_logo" alt="OnzeVibe Logo" style="max-width: 220px; height: auto; margin-bottom: 32px;">
+    </div>
+    <h1 style="color:#18565E;">Welkom bij je OnzeVibe portal, {{ fullname }}!</h1>
+    <p>Voor <strong>{{ companyName }}</strong> is een portal aangemaakt. Je kunt nu inloggen en je bedrijfslijst beheren.</p>
+    <p>
+      <strong>Portal URL:</strong><br>
+      <a href="{{ portalUrl }}" class="button" target="_blank">{{ portalUrl }}</a>
+    </p>
+    <p>
+      <strong>Gebruikersnaam:</strong> {{ username }}<br>
+      <strong>Wachtwoord:</strong> {{ password }}
+    </p>
+    <p>We raden aan om je wachtwoord direct te wijzigen na het inloggen.</p>
+    <p>Veel succes en plezier!<br>Het OnzeVibe Team</p>
+    <div class="footer">
+      &copy; {{ currentYear }} OnzeVibe. All rights reserved.
+    </div>
+  </div>
+</body>
+</html>
