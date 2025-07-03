@@ -23,7 +23,7 @@
         <table style="width: 100%; font-family: 'Caros Soft', 'Helvetica Neue', Helvetica, Arial, sans-serif;" cellpadding="0" cellspacing="0" role="presentation">
             <tr>
                 <td align="center" style="padding: 24px;">
-                    <table class="container" style="width: 100%; max-width: 600px; background-color: #FAF6F3; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);" cellpadding="0" cellspacing="0" role="presentation">
+                    <table class="container" style="width: 100%; max-width: 760px; background-color: #FAF6F3; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05);" cellpadding="0" cellspacing="0" role="presentation">
                         <tr>
                             <td style="padding: 32px;">
                                 <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
@@ -54,23 +54,25 @@
                                             </table>
                                             <table width="100%" cellpadding="0" cellspacing="0" role="presentation" style="margin-bottom: 16px;">
                                                 <tr>
-                                                    <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0;">
+                                                    <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0; white-space: nowrap;">
                                                         <strong>{{ translations.portalUrlLabel }}:</strong>
                                                     </td>
                                                     <td style="font-size: 16px; line-height: 1.5; color: #18565E; padding: 8px 0;">
-                                                        <a href="{{ portalUrl }}" style="color: #18565E;">{{ portalUrl }}</a>
+                                                        <a href="{{ portalUrl }}" style="color: #18565E; word-break: break-all;">{{ portalUrl }}</a>
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0;">
+                                                    <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0; white-space: nowrap;">
                                                         <strong>{{ translations.adminUrlLabel }}:</strong>
                                                     </td>
                                                     <td style="font-size: 16px; line-height: 1.5; color: #18565E; padding: 8px 0;">
-                                                        {{ adminUrl }}
+                                                        <a href="{{ adminUrl }}" style="color: #18565E; word-break: break-all;">{{ adminUrl }}</a>
+                                                        <br>
+                                                        <span style="font-size: 13px; color: #888;">({{ translations.adminUrlInfo }})</span>
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0;">
+                                                    <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0; white-space: nowrap;">
                                                         <strong>{{ translations.usernameLabel }}:</strong>
                                                     </td>
                                                     <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0;">
@@ -78,7 +80,7 @@
                                                     </td>
                                                 </tr>
                                                 <tr>
-                                                    <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0;">
+                                                    <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0; white-space: nowrap;">
                                                         <strong>{{ translations.passwordLabel }}:</strong>
                                                     </td>
                                                     <td style="font-size: 16px; line-height: 1.5; color: #333333; padding: 8px 0;">
