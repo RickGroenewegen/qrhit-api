@@ -483,7 +483,8 @@ class PrintEnBind {
       countrycode: string;
     },
     logging: boolean = false,
-    cache: boolean = true
+    cache: boolean = true,
+    fast: boolean = false
   ): Promise<
     ApiResult & {
       apiCalls?: Array<{
@@ -528,6 +529,10 @@ class PrintEnBind {
 
     // Add remaining articles
     for (let i = 0; i < items.length; i++) {
+      if (fast) {
+        items[i].production_method = 'fast';
+      }
+
       if (items[i].type == 'physical' && !physicalOrderCreated) {
         if (items[i].type == 'physical') {
           const orderType = await this.getOrderType(
@@ -919,6 +924,11 @@ class PrintEnBind {
         totalPrice = 0;
       }
 
+      if (params.fast) {
+        totalPrice = totalPrice * 1.25; // 20% extra for fast track
+        totalProductPriceWithoutVAT = totalProductPriceWithoutVAT * 1.25; // 20% extra for fast track
+      }
+
       if (countrySelected) {
         totalPrice += shipping; // + handling;
       }
@@ -1217,7 +1227,8 @@ class PrintEnBind {
         countrycode: payment.countrycode,
       },
       true,
-      false
+      false,
+      payment.fast || false
     );
 
     let finalApiCalls = result.apiCalls || [];
@@ -1489,6 +1500,7 @@ class PrintEnBind {
                 countrycode: countryCode,
               },
               true,
+              false,
               false
             );
 

@@ -147,6 +147,7 @@ model Payment {
   userAgreedToPrintingAt  DateTime?
   sentToPrinter           Boolean              @default(false)
   sentToPrinterAt         DateTime?
+  fast                    Boolean              @default(false)
   printerInvoice          PrinterInvoice?      @relation(fields: [printerInvoiceId], references: [id], onDelete: SetNull)
 
   DiscountCodedUses DiscountCodedUses[]

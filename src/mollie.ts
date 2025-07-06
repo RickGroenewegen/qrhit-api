@@ -451,6 +451,7 @@ class Mollie {
         printApiOrderId: true,
         sentToPrinterAt: true,
         sentToPrinter: true,
+        fast: true,
         email: true,
         fullname: true,
         locale: true,
@@ -551,10 +552,12 @@ class Mollie {
       if (params.extraOrderData.vibe) {
         vibe = params.extraOrderData.vibe;
       }
+
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
         countrycode: params.extraOrderData.countrycode,
         cart: params.cart,
+        fast: params.extraOrderData.fast || false,
       });
 
       const discountResult = await this.discount.calculateDiscounts(
