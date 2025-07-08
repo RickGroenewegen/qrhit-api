@@ -19,6 +19,7 @@ import SpotifyScraper from './spotify_scraper';
 import SpotifyRapidApi2 from './spotify_rapidapi2';
 
 class Spotify {
+  private static instance: Spotify;
   private cache = Cache.getInstance();
   private data = Data.getInstance(); // Keep Data instance if needed elsewhere
   private utils = new Utils();
@@ -40,12 +41,20 @@ class Spotify {
     this.getJumboData();
   }
 
+  public static getInstance(): Data {
+    if (!Spotify.instance) {
+      Spotify.instance = new Spotify();
+    }
+    return Spotify.instance;
+  }
+
   /**
    * Fetches Jumbo gameset data and populates the jumboCardMap.
    */
   private async getJumboData(): Promise<void> {
     try {
-      const url = 'https://hitster.jumboplay.com/hitster-assets/gameset_database.json';
+      const url =
+        'https://hitster.jumboplay.com/hitster-assets/gameset_database.json';
       const response = await axios.get(url, { timeout: 10000 });
       const data = response.data;
       if (data && Array.isArray(data.gamesets)) {
@@ -65,7 +74,9 @@ class Spotify {
         }
         this.logger.log(
           color.green.bold(
-            `Jumbo gameset data loaded: ${Object.keys(this.jumboCardMap).length} cards mapped`
+            `Jumbo gameset data loaded: ${color.white.bold(
+              Object.keys(this.jumboCardMap).length
+            )} cards mapped`
           )
         );
       } else {
@@ -1072,4 +1083,4 @@ class Spotify {
   }
 }
 
-export default Spotify;
+export default Data;
