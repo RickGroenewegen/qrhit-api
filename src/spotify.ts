@@ -892,7 +892,6 @@ class Spotify {
       let currentUrl = url;
       let lastLocation = url;
       let maxRedirects = 5;
-      let foundSpotifyUrl: string | null = null;
       let response;
 
       for (let i = 0; i < maxRedirects; i++) {
