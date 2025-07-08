@@ -881,7 +881,7 @@ class Spotify {
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
-          // Log that this is a cached result
+          // Do not log here; logging will be handled in server.ts
           return parsed;
         } catch (e) {
           // ignore parse error, continue to resolve

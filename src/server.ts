@@ -1898,11 +1898,29 @@ class Server {
         return;
       }
       try {
-        const result = await this.spotify.resolveSpotifyUrl(url);
-        // Log the unknown link scan
+        let isCached = false;
+        let result: any;
+        // Wrap resolveSpotifyUrl to detect cache hit
+        const cacheKey = `qrlink_unknown_result_${Buffer.from(
+          (!/^https?:\/\//i.test(url) ? 'https://' + url : url)
+        ).toString('base64')}`;
+        const cached = await this.spotify['cache'].get(cacheKey);
+        if (cached) {
+          try {
+            result = JSON.parse(cached);
+            isCached = true;
+          } catch {
+            // ignore parse error, fallback to actual resolve
+            result = await this.spotify.resolveSpotifyUrl(url);
+          }
+        } else {
+          result = await this.spotify.resolveSpotifyUrl(url);
+        }
+
+        // Log the unknown link scan, indicate if cached
         this.logger.log(
           color.blue.bold(
-            `Unknown link scanned: ` +
+            `Unknown link scanned${isCached ? ' (CACHED)' : ''}: ` +
             color.white.bold(`url="${url}"`) +
             color.blue.bold(', result=') +
             color.white.bold(JSON.stringify(result))
