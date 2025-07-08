@@ -951,11 +951,25 @@ class Spotify {
           const setSku = match[1];
           const cardNumber = match[2];
           const key = `${setSku}_${cardNumber}`;
+          const cacheKey = `qrlink_unknown_result_hitstergame_${key}`;
+          const cached = await this.cache.get(cacheKey);
+          if (cached) {
+            try {
+              const parsed = JSON.parse(cached);
+              return parsed;
+            } catch (e) {
+              // ignore parse error, continue to resolve
+            }
+          }
           const spotifyId = this.jumboCardMap[key];
           if (spotifyId) {
-            return { success: true, spotifyUri: `spotify:track:${spotifyId}` };
+            const result = { success: true, spotifyUri: `spotify:track:${spotifyId}` };
+            await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+            return result;
           } else {
-            return { success: false, error: `No mapping found for ${key}` };
+            const result = { success: false, error: `No mapping found for ${key}` };
+            await this.cache.set(cacheKey, JSON.stringify(result), 600);
+            return result;
           }
         }
       }
