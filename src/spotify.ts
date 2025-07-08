@@ -18,6 +18,8 @@ import SpotifyRapidApi from './spotify_rapidapi';
 import SpotifyScraper from './spotify_scraper';
 import SpotifyRapidApi2 from './spotify_rapidapi2';
 
+import cheerio from 'cheerio';
+
 class Spotify {
   private cache = Cache.getInstance();
   private data = Data.getInstance(); // Keep Data instance if needed elsewhere
@@ -857,6 +859,114 @@ class Spotify {
   public getAuthorizationUrl(): string | null {
     // Delegate to the SpotifyApi instance
     return this.spotifyApi.getAuthorizationUrl();
+  }
+
+  /**
+   * Attempts to resolve a Spotify URI from a given URL by following all known redirect mechanisms.
+   * @param url The URL to resolve.
+   * @returns {Promise<{ success: boolean, spotifyUri?: string, error?: string }>}
+   */
+  public async resolveSpotifyUrl(url: string): Promise<{ success: boolean; spotifyUri?: string; error?: string }> {
+    try {
+      // 1. Follow HTTP redirects (301/302/other 3xx)
+      let currentUrl = url;
+      let lastLocation = url;
+      let maxRedirects = 5;
+      let foundSpotifyUrl: string | null = null;
+      let response;
+
+      for (let i = 0; i < maxRedirects; i++) {
+        response = await axios.get(currentUrl, {
+          maxRedirects: 0,
+          validateStatus: (status) => status >= 200 && status < 400,
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (compatible; SpotifyResolver/1.0)',
+          },
+        }).catch((err) => err.response);
+
+        // Check for redirect headers
+        if (response && response.status >= 300 && response.status < 400 && response.headers.location) {
+          lastLocation = response.headers.location;
+          // Absolute or relative
+          if (!/^https?:\/\//.test(lastLocation)) {
+            // Relative redirect
+            const base = new URL(currentUrl);
+            lastLocation = new URL(lastLocation, base).toString();
+          }
+          // Check if the redirect location is a Spotify URL/URI
+          const spotifyUri = this.extractSpotifyUri(lastLocation);
+          if (spotifyUri) {
+            return { success: true, spotifyUri };
+          }
+          currentUrl = lastLocation;
+        } else {
+          // Not a redirect, break and check content
+          break;
+        }
+      }
+
+      // 2. Check if the final URL is a Spotify URL/URI
+      if (lastLocation) {
+        const spotifyUri = this.extractSpotifyUri(lastLocation);
+        if (spotifyUri) {
+          return { success: true, spotifyUri };
+        }
+      }
+
+      // 3. Look for META redirect or JS location.href in the HTML
+      if (response && response.data) {
+        const html = response.data;
+        // Use cheerio to parse HTML
+        const $ = cheerio.load(html);
+
+        // Check for <meta http-equiv="refresh" content="0; url=...">
+        const metaRefresh = $('meta[http-equiv="refresh"]').attr('content');
+        if (metaRefresh) {
+          const match = metaRefresh.match(/url=(.+)$/i);
+          if (match && match[1]) {
+            const metaUrl = match[1].trim().replace(/['"]/g, '');
+            const spotifyUri = this.extractSpotifyUri(metaUrl);
+            if (spotifyUri) {
+              return { success: true, spotifyUri };
+            }
+          }
+        }
+
+        // Check for JS location.href or window.location
+        const jsRedirectMatch = html.match(/location\.href\s*=\s*['"]([^'"]+)['"]/i)
+          || html.match(/window\.location\s*=\s*['"]([^'"]+)['"]/i);
+        if (jsRedirectMatch && jsRedirectMatch[1]) {
+          const jsUrl = jsRedirectMatch[1];
+          const spotifyUri = this.extractSpotifyUri(jsUrl);
+          if (spotifyUri) {
+            return { success: true, spotifyUri };
+          }
+        }
+      }
+
+      return { success: false, error: 'No Spotify URI found via redirects or page content.' };
+    } catch (e: any) {
+      return { success: false, error: e.message || 'Error resolving Spotify URL' };
+    }
+  }
+
+  /**
+   * Extracts a Spotify URI from a given string (URL or URI).
+   * @param input
+   * @returns string | null
+   */
+  private extractSpotifyUri(input: string): string | null {
+    if (!input) return null;
+    // Match spotify URIs (spotify:track:..., spotify:album:..., etc.)
+    const uriMatch = input.match(/spotify:(track|album|playlist|artist):[a-zA-Z0-9]+/);
+    if (uriMatch) return uriMatch[0];
+
+    // Match Spotify web URLs and convert to URI
+    const urlMatch = input.match(/https?:\/\/open\.spotify\.com\/(track|album|playlist|artist)\/([a-zA-Z0-9]+)/);
+    if (urlMatch) {
+      return `spotify:${urlMatch[1]}:${urlMatch[2]}`;
+    }
+    return null;
   }
 }
 

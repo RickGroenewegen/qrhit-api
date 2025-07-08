@@ -1890,6 +1890,25 @@ class Server {
       return { link: link, yt: yt, r: this.useSpotifyRemote };
     });
 
+    // New endpoint: POST /qrlink_unknown
+    this.fastify.post('/qrlink_unknown', async (request: any, reply: any) => {
+      const { url } = request.body;
+      if (!url || typeof url !== 'string') {
+        reply.status(400).send({ success: false, error: 'Missing or invalid url parameter' });
+        return;
+      }
+      try {
+        const result = await this.spotify.resolveSpotifyUrl(url);
+        if (result.success) {
+          reply.send({ success: true, spotifyUri: result.spotifyUri });
+        } else {
+          reply.status(404).send({ success: false, error: result.error || 'No Spotify URI found' });
+        }
+      } catch (e: any) {
+        reply.status(500).send({ success: false, error: e.message || 'Internal error' });
+      }
+    });
+
     this.fastify.get(
       '/qr/pdf/:playlistId/:paymentId/:template/:startIndex/:endIndex/:subdir/:eco/:emptyPages',
       async (request: any, reply) => {
