@@ -925,8 +925,8 @@ class PrintEnBind {
       }
 
       if (params.fast) {
-        totalPrice = totalPrice * 1.25; // 20% extra for fast track
-        totalProductPriceWithoutVAT = totalProductPriceWithoutVAT * 1.25; // 20% extra for fast track
+        totalPrice = totalPrice * 1.2; // 20% extra for fast track
+        totalProductPriceWithoutVAT = totalProductPriceWithoutVAT * 1.2; // 20% extra for fast track
       }
 
       if (countrySelected) {
