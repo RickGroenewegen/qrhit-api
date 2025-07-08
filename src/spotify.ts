@@ -931,6 +931,24 @@ class Spotify {
         url = 'https://' + url;
       }
 
+      // Special handling for hitstergame.com links
+      if (url.includes('hitstergame.com')) {
+        // Try to extract the set_sku and cardnumber from the URL
+        // Example: https://hitstergame.com/nl/aaaa0027/00153
+        const match = url.match(/hitstergame\.com\/[^/]+\/([a-zA-Z0-9]+)\/([0-9]+)/);
+        if (match) {
+          const setSku = match[1];
+          const cardNumber = match[2];
+          const key = `${setSku}_${cardNumber}`;
+          const spotifyId = this.jumboCardMap[key];
+          if (spotifyId) {
+            return { success: true, spotifyUri: `spotify:track:${spotifyId}` };
+          } else {
+            return { success: false, error: `No mapping found for ${key}` };
+          }
+        }
+      }
+
       // Use a cache key based on the url
       const cacheKey = `qrlink_unknown_result_${Buffer.from(url).toString(
         'base64'
