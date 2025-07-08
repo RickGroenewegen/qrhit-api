@@ -18,7 +18,6 @@ import SpotifyRapidApi from './spotify_rapidapi';
 import SpotifyScraper from './spotify_scraper';
 import SpotifyRapidApi2 from './spotify_rapidapi2';
 
-
 class Spotify {
   private cache = Cache.getInstance();
   private data = Data.getInstance(); // Keep Data instance if needed elsewhere
@@ -865,7 +864,9 @@ class Spotify {
    * @param url The URL to resolve.
    * @returns {Promise<{ success: boolean, spotifyUri?: string, error?: string }>}
    */
-  public async resolveSpotifyUrl(url: string): Promise<{ success: boolean; spotifyUri?: string; error?: string }> {
+  public async resolveSpotifyUrl(
+    url: string
+  ): Promise<{ success: boolean; spotifyUri?: string; error?: string }> {
     try {
       // Add https:// if missing
       if (!/^https?:\/\//i.test(url)) {
@@ -873,20 +874,14 @@ class Spotify {
       }
 
       // Use a cache key based on the url
-      const cacheKey = `qrlink_unknown_result_${Buffer.from(url).toString('base64')}`;
+      const cacheKey = `qrlink_unknown_result_${Buffer.from(url).toString(
+        'base64'
+      )}`;
       const cached = await this.cache.get(cacheKey);
       if (cached) {
         try {
           const parsed = JSON.parse(cached);
           // Log that this is a cached result
-          this.logger.log(
-            color.blue.bold(
-              `Unknown link scanned (CACHED): ` +
-              color.white.bold(`url="${url}"`) +
-              color.blue.bold(', result=') +
-              color.white.bold(JSON.stringify(parsed))
-            )
-          );
           return parsed;
         } catch (e) {
           // ignore parse error, continue to resolve
@@ -901,16 +896,23 @@ class Spotify {
       let response;
 
       for (let i = 0; i < maxRedirects; i++) {
-        response = await axios.get(currentUrl, {
-          maxRedirects: 0,
-          validateStatus: (status) => status >= 200 && status < 400,
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (compatible; SpotifyResolver/1.0)',
-          },
-        }).catch((err) => err.response);
+        response = await axios
+          .get(currentUrl, {
+            maxRedirects: 0,
+            validateStatus: (status) => status >= 200 && status < 400,
+            headers: {
+              'User-Agent': 'Mozilla/5.0 (compatible; SpotifyResolver/1.0)',
+            },
+          })
+          .catch((err) => err.response);
 
         // Check for redirect headers
-        if (response && response.status >= 300 && response.status < 400 && response.headers.location) {
+        if (
+          response &&
+          response.status >= 300 &&
+          response.status < 400 &&
+          response.headers.location
+        ) {
           lastLocation = response.headers.location;
           // Absolute or relative
           if (!/^https?:\/\//.test(lastLocation)) {
@@ -979,11 +981,17 @@ class Spotify {
         }
       }
 
-      const result = { success: false, error: 'No Spotify URI found via redirects or page content.' };
+      const result = {
+        success: false,
+        error: 'No Spotify URI found via redirects or page content.',
+      };
       await this.cache.set(cacheKey, JSON.stringify(result), 3600);
       return result;
     } catch (e: any) {
-      const result = { success: false, error: e.message || 'Error resolving Spotify URL' };
+      const result = {
+        success: false,
+        error: e.message || 'Error resolving Spotify URL',
+      };
       // Optionally cache errors as well, but for a shorter time
       await this.cache.set(
         `qrlink_unknown_result_${Buffer.from(url).toString('base64')}`,
@@ -1002,11 +1010,15 @@ class Spotify {
   private extractSpotifyUri(input: string): string | null {
     if (!input) return null;
     // Match spotify URIs (spotify:track:..., spotify:album:..., etc.)
-    const uriMatch = input.match(/spotify:(track|album|playlist|artist):[a-zA-Z0-9]+/);
+    const uriMatch = input.match(
+      /spotify:(track|album|playlist|artist):[a-zA-Z0-9]+/
+    );
     if (uriMatch) return uriMatch[0];
 
     // Match Spotify web URLs and convert to URI
-    const urlMatch = input.match(/https?:\/\/open\.spotify\.com\/(track|album|playlist|artist)\/([a-zA-Z0-9]+)/);
+    const urlMatch = input.match(
+      /https?:\/\/open\.spotify\.com\/(track|album|playlist|artist)\/([a-zA-Z0-9]+)/
+    );
     if (urlMatch) {
       return `spotify:${urlMatch[1]}:${urlMatch[2]}`;
     }
