@@ -935,15 +935,18 @@ class Spotify {
   public async resolveSpotifyUrl(
     url: string
   ): Promise<{ success: boolean; spotifyUri?: string; error?: string }> {
+    // Check cache first for all URLs
+    const cacheKey = `qrlink_unknown_result_${crypto
+      .createHash('md5')
+      .update(url)
+      .digest('hex')}`;
+
     try {
       // Add https:// if missing
       if (!/^https?:\/\//i.test(url)) {
         url = 'https://' + url;
       }
 
-      // Check cache first for all URLs
-      const cacheKey = `qrlink_unknown_result_${crypto.createHash('md5').update(url).digest('hex')}`;
-      
       const cached = await this.cache.get(cacheKey);
       if (cached) {
         try {
@@ -967,11 +970,17 @@ class Spotify {
           const key = `${setSku}_${cardNumber}`;
           const spotifyId = this.jumboCardMap[key];
           if (spotifyId) {
-            const result = { success: true, spotifyUri: `spotify:track:${spotifyId}` };
+            const result = {
+              success: true,
+              spotifyUri: `spotify:track:${spotifyId}`,
+            };
             await this.cache.set(cacheKey, JSON.stringify(result), 3600);
             return result;
           } else {
-            const result = { success: false, error: `No mapping found for ${key}` };
+            const result = {
+              success: false,
+              error: `No mapping found for ${key}`,
+            };
             await this.cache.set(cacheKey, JSON.stringify(result), 600);
             return result;
           }
