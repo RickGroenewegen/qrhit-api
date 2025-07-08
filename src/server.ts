@@ -1901,7 +1901,12 @@ class Server {
         const result = await this.spotify.resolveSpotifyUrl(url);
         // Log the unknown link scan
         this.logger.log(
-          `Unknown link scanned: url="${url}", result=${JSON.stringify(result)}`
+          color.yellow.bold(
+            `Unknown link scanned: ` +
+            color.white.bold(`url="${url}"`) +
+            color.yellow.bold(', result=') +
+            color.white.bold(JSON.stringify(result))
+          )
         );
         if (result.success) {
           reply.send({ success: true, spotifyUri: result.spotifyUri });
