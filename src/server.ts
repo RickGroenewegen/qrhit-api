@@ -1900,32 +1900,15 @@ class Server {
         return;
       }
       try {
-        let isCached = false;
-        let result: any;
-        // Wrap resolveSpotifyUrl to detect cache hit
-        const cacheKey = `qrlink_unknown_result_${Buffer.from(
-          !/^https?:\/\//i.test(url) ? 'https://' + url : url
-        ).toString('base64')}`;
-        const cached = await this.spotify['cache'].get(cacheKey);
-        if (cached) {
-          try {
-            result = JSON.parse(cached);
-            isCached = true;
-          } catch {
-            // ignore parse error, fallback to actual resolve
-            result = await this.spotify.resolveSpotifyUrl(url);
-          }
-        } else {
-          result = await this.spotify.resolveSpotifyUrl(url);
-        }
+        const result = await this.spotify.resolveSpotifyUrl(url);
 
         // Log the unknown link scan, indicate if cached
         this.logger.log(
           color.blue.bold(
-            `Unknown link scanned${isCached ? ' (CACHED)' : ''}: ` +
+            `Unknown link scanned${result.cached ? ' (CACHED)' : ''}: ` +
               color.white.bold(`url="${url}"`) +
               color.blue.bold(', result=') +
-              color.white.bold(JSON.stringify(result))
+              color.white.bold(JSON.stringify({ success: result.success, spotifyUri: result.spotifyUri, error: result.error }))
           )
         );
         if (result.success) {
