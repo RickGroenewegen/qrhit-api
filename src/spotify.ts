@@ -877,7 +877,17 @@ class Spotify {
       const cached = await this.cache.get(cacheKey);
       if (cached) {
         try {
-          return JSON.parse(cached);
+          const parsed = JSON.parse(cached);
+          // Log that this is a cached result
+          this.logger.log(
+            color.blue.bold(
+              `Unknown link scanned (CACHED): ` +
+              color.white.bold(`url="${url}"`) +
+              color.blue.bold(', result=') +
+              color.white.bold(JSON.stringify(parsed))
+            )
+          );
+          return parsed;
         } catch (e) {
           // ignore parse error, continue to resolve
         }
