@@ -18,7 +18,6 @@ import SpotifyRapidApi from './spotify_rapidapi';
 import SpotifyScraper from './spotify_scraper';
 import SpotifyRapidApi2 from './spotify_rapidapi2';
 
-import cheerio from 'cheerio';
 
 class Spotify {
   private cache = Cache.getInstance();
@@ -913,18 +912,19 @@ class Spotify {
         }
       }
 
-      // 3. Look for META redirect or JS location.href in the HTML
+      // 3. Look for META redirect or JS location.href in the HTML using RegExp
       if (response && response.data) {
         const html = response.data;
-        // Use cheerio to parse HTML
-        const $ = cheerio.load(html);
 
         // Check for <meta http-equiv="refresh" content="0; url=...">
-        const metaRefresh = $('meta[http-equiv="refresh"]').attr('content');
-        if (metaRefresh) {
-          const match = metaRefresh.match(/url=(.+)$/i);
-          if (match && match[1]) {
-            const metaUrl = match[1].trim().replace(/['"]/g, '');
+        const metaRefreshMatch = html.match(
+          /<meta[^>]+http-equiv=["']?refresh["']?[^>]+content=["']?([^"'>]+)["']?[^>]*>/i
+        );
+        if (metaRefreshMatch && metaRefreshMatch[1]) {
+          const content = metaRefreshMatch[1];
+          const urlMatch = content.match(/url=(.+)$/i);
+          if (urlMatch && urlMatch[1]) {
+            const metaUrl = urlMatch[1].trim().replace(/['"]/g, '');
             const spotifyUri = this.extractSpotifyUri(metaUrl);
             if (spotifyUri) {
               return { success: true, spotifyUri };
@@ -933,8 +933,9 @@ class Spotify {
         }
 
         // Check for JS location.href or window.location
-        const jsRedirectMatch = html.match(/location\.href\s*=\s*['"]([^'"]+)['"]/i)
-          || html.match(/window\.location\s*=\s*['"]([^'"]+)['"]/i);
+        const jsRedirectMatch =
+          html.match(/location\.href\s*=\s*['"]([^'"]+)['"]/i) ||
+          html.match(/window\.location\s*=\s*['"]([^'"]+)['"]/i);
         if (jsRedirectMatch && jsRedirectMatch[1]) {
           const jsUrl = jsRedirectMatch[1];
           const spotifyUri = this.extractSpotifyUri(jsUrl);
