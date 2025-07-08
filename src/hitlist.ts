@@ -21,7 +21,7 @@ class Hitlist {
   private utils = new Utils();
   private music: Music = new Music();
   private data = Data.getInstance();
-  private spotify = new Spotify();
+  private spotify = Spotify.getInstance();
   private mail = Mail.getInstance();
   private settings = Settings.getInstance(); // Instantiate Settings
   private vibe = Vibe.getInstance(); // Instantiate Vibe
@@ -727,7 +727,7 @@ class Hitlist {
       }
 
       // Use Spotify search instead of database search
-      const spotify = new Spotify();
+      const spotify = Spotify.getInstance();
       const spotifyResult = await this.spotify.searchTracks(searchString);
 
       if (!spotifyResult.success) {

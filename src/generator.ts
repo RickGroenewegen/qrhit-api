@@ -30,7 +30,7 @@ class Generator {
   private prisma = PrismaInstance.getInstance();
   private data = Data.getInstance();
   private pushover = new PushoverClient();
-  private spotify = new Spotify();
+  private spotify = Spotify.getInstance();
   private mail = Mail.getInstance();
   private qr = new QR();
   private pdf = new PDF();

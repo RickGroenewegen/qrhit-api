@@ -17,6 +17,7 @@ import SpotifyApi from './spotify_api';
 import SpotifyRapidApi from './spotify_rapidapi';
 import SpotifyScraper from './spotify_scraper';
 import SpotifyRapidApi2 from './spotify_rapidapi2';
+import cluster from 'cluster';
 
 class Spotify {
   private static instance: Spotify;
@@ -52,6 +53,8 @@ class Spotify {
    * Fetches Jumbo gameset data and populates the jumboCardMap.
    */
   private async getJumboData(): Promise<void> {
+    const isPrimary = cluster.isPrimary;
+
     try {
       const url =
         'https://hitster.jumboplay.com/hitster-assets/gameset_database.json';
@@ -72,13 +75,19 @@ class Spotify {
             }
           }
         }
-        this.logger.log(
-          color.green.bold(
-            `Jumbo gameset data loaded: ${color.white.bold(
-              Object.keys(this.jumboCardMap).length
-            )} cards mapped`
-          )
-        );
+        if (isPrimary) {
+          this.utils.isMainServer().then(async (isMainServer) => {
+            if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+              this.logger.log(
+                color.green.bold(
+                  `Jumbo gameset data loaded: ${color.white.bold(
+                    Object.keys(this.jumboCardMap).length
+                  )} cards mapped`
+                )
+              );
+            }
+          });
+        }
       } else {
         this.logger.log(
           color.yellow.bold('Jumbo gameset data: No gamesets found in response')
@@ -935,7 +944,9 @@ class Spotify {
       if (url.includes('hitstergame.com')) {
         // Try to extract the set_sku and cardnumber from the URL
         // Example: https://hitstergame.com/nl/aaaa0027/00153
-        const match = url.match(/hitstergame\.com\/[^/]+\/([a-zA-Z0-9]+)\/([0-9]+)/);
+        const match = url.match(
+          /hitstergame\.com\/[^/]+\/([a-zA-Z0-9]+)\/([0-9]+)/
+        );
         if (match) {
           const setSku = match[1];
           const cardNumber = match[2];

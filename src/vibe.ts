@@ -491,7 +491,7 @@ class Vibe {
   private utils = new Utils();
   private discount = new Discount();
   private data = Data.getInstance();
-  private spotify = new Spotify();
+  private spotify = Spotify.getInstance();
   private mollie = new Mollie();
   private generator = Generator.getInstance();
   private cache = Cache.getInstance();

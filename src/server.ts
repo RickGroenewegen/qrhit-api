@@ -63,7 +63,7 @@ class Server {
   private workerId: number = 0;
   private isMainServer: boolean = false;
   private utils = new Utils();
-  private spotify = new Spotify();
+  private spotify = Spotify.getInstance();
   private mollie = new Mollie();
   private qr = new Qr();
   private data = Data.getInstance();
@@ -1894,7 +1894,9 @@ class Server {
     this.fastify.post('/qrlink_unknown', async (request: any, reply: any) => {
       const { url } = request.body;
       if (!url || typeof url !== 'string') {
-        reply.status(400).send({ success: false, error: 'Missing or invalid url parameter' });
+        reply
+          .status(400)
+          .send({ success: false, error: 'Missing or invalid url parameter' });
         return;
       }
       try {
@@ -1902,7 +1904,7 @@ class Server {
         let result: any;
         // Wrap resolveSpotifyUrl to detect cache hit
         const cacheKey = `qrlink_unknown_result_${Buffer.from(
-          (!/^https?:\/\//i.test(url) ? 'https://' + url : url)
+          !/^https?:\/\//i.test(url) ? 'https://' + url : url
         ).toString('base64')}`;
         const cached = await this.spotify['cache'].get(cacheKey);
         if (cached) {
@@ -1921,21 +1923,28 @@ class Server {
         this.logger.log(
           color.blue.bold(
             `Unknown link scanned${isCached ? ' (CACHED)' : ''}: ` +
-            color.white.bold(`url="${url}"`) +
-            color.blue.bold(', result=') +
-            color.white.bold(JSON.stringify(result))
+              color.white.bold(`url="${url}"`) +
+              color.blue.bold(', result=') +
+              color.white.bold(JSON.stringify(result))
           )
         );
         if (result.success) {
           reply.send({ success: true, spotifyUri: result.spotifyUri });
         } else {
-          reply.status(404).send({ success: false, error: result.error || 'No Spotify URI found' });
+          reply
+            .status(404)
+            .send({
+              success: false,
+              error: result.error || 'No Spotify URI found',
+            });
         }
       } catch (e: any) {
         this.logger.log(
           `Error scanning unknown link: url="${url}", error=${e.message || e}`
         );
-        reply.status(500).send({ success: false, error: e.message || 'Internal error' });
+        reply
+          .status(500)
+          .send({ success: false, error: e.message || 'Internal error' });
       }
     });
 

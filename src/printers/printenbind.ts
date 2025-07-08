@@ -28,7 +28,7 @@ class PrintEnBind {
   private logger = new Log();
   private mail = Mail.getInstance();
   private data = Data.getInstance();
-  private spotify = new Spotify();
+  private spotify = Spotify.getInstance();
   private utils = new Utils();
   private countryCodes: string[] = [
     'AF',

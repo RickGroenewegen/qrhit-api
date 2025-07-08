@@ -24,7 +24,7 @@ class Order {
   private prisma = PrismaInstance.getInstance();
   private cache = Cache.getInstance();
   private utils = new Utils();
-  private spotify = new Spotify();
+  private spotify = Spotify.getInstance();
   private logger = new Log();
   private printer = PrintEnBind.getInstance();
 
