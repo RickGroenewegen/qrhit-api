@@ -33,6 +33,53 @@ class Spotify {
 
   private api = this.spotifyApi; // Default to SpotifyScraper
 
+  // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
+  private jumboCardMap: { [key: string]: string } = {};
+
+  constructor() {
+    this.getJumboData();
+  }
+
+  /**
+   * Fetches Jumbo gameset data and populates the jumboCardMap.
+   */
+  private async getJumboData(): Promise<void> {
+    try {
+      const url = 'https://hitster.jumboplay.com/hitster-assets/gameset_database.json';
+      const response = await axios.get(url, { timeout: 10000 });
+      const data = response.data;
+      if (data && Array.isArray(data.gamesets)) {
+        for (const gameset of data.gamesets) {
+          const sku = gameset.sku;
+          const cards = gameset.gameset_data?.cards;
+          if (sku && Array.isArray(cards)) {
+            for (const card of cards) {
+              const cardNumber = card.CardNumber;
+              const spotifyId = card.Spotify;
+              if (cardNumber && spotifyId) {
+                const key = `${sku}_${cardNumber}`;
+                this.jumboCardMap[key] = spotifyId;
+              }
+            }
+          }
+        }
+        this.logger.log(
+          color.green.bold(
+            `Jumbo gameset data loaded: ${Object.keys(this.jumboCardMap).length} cards mapped`
+          )
+        );
+      } else {
+        this.logger.log(
+          color.yellow.bold('Jumbo gameset data: No gamesets found in response')
+        );
+      }
+    } catch (e: any) {
+      this.logger.log(
+        color.red.bold(`Failed to fetch Jumbo gameset data: ${e.message || e}`)
+      );
+    }
+  }
+
   public async getPlaylist(
     playlistId: string,
     cache: boolean = true,
