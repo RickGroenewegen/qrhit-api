@@ -18,6 +18,7 @@ import SpotifyRapidApi from './spotify_rapidapi';
 import SpotifyScraper from './spotify_scraper';
 import SpotifyRapidApi2 from './spotify_rapidapi2';
 import cluster from 'cluster';
+import crypto from 'crypto';
 
 class Spotify {
   private static instance: Spotify;
@@ -941,12 +942,7 @@ class Spotify {
       }
 
       // Check cache first for all URLs
-      const cacheKey = url.includes('hitstergame.com') 
-        ? (() => {
-            const match = url.match(/hitstergame\.com\/[^/]+\/([a-zA-Z0-9]+)\/([0-9]+)/);
-            return match ? `qrlink_unknown_result_hitstergame_${match[1]}_${match[2]}` : `qrlink_unknown_result_${Buffer.from(url).toString('base64')}`;
-          })()
-        : `qrlink_unknown_result_${Buffer.from(url).toString('base64')}`;
+      const cacheKey = `qrlink_unknown_result_${crypto.createHash('md5').update(url).digest('hex')}`;
       
       const cached = await this.cache.get(cacheKey);
       if (cached) {
