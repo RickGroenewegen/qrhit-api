@@ -940,6 +940,24 @@ class Spotify {
         url = 'https://' + url;
       }
 
+      // Check cache first for all URLs
+      const cacheKey = url.includes('hitstergame.com') 
+        ? (() => {
+            const match = url.match(/hitstergame\.com\/[^/]+\/([a-zA-Z0-9]+)\/([0-9]+)/);
+            return match ? `qrlink_unknown_result_hitstergame_${match[1]}_${match[2]}` : `qrlink_unknown_result_${Buffer.from(url).toString('base64')}`;
+          })()
+        : `qrlink_unknown_result_${Buffer.from(url).toString('base64')}`;
+      
+      const cached = await this.cache.get(cacheKey);
+      if (cached) {
+        try {
+          const parsed = JSON.parse(cached);
+          return parsed;
+        } catch (e) {
+          // ignore parse error, continue to resolve
+        }
+      }
+
       // Special handling for hitstergame.com links
       if (url.includes('hitstergame.com')) {
         // Try to extract the set_sku and cardnumber from the URL
@@ -951,16 +969,6 @@ class Spotify {
           const setSku = match[1];
           const cardNumber = match[2];
           const key = `${setSku}_${cardNumber}`;
-          const cacheKey = `qrlink_unknown_result_hitstergame_${key}`;
-          const cached = await this.cache.get(cacheKey);
-          if (cached) {
-            try {
-              const parsed = JSON.parse(cached);
-              return parsed;
-            } catch (e) {
-              // ignore parse error, continue to resolve
-            }
-          }
           const spotifyId = this.jumboCardMap[key];
           if (spotifyId) {
             const result = { success: true, spotifyUri: `spotify:track:${spotifyId}` };
@@ -971,21 +979,6 @@ class Spotify {
             await this.cache.set(cacheKey, JSON.stringify(result), 600);
             return result;
           }
-        }
-      }
-
-      // Use a cache key based on the url
-      const cacheKey = `qrlink_unknown_result_${Buffer.from(url).toString(
-        'base64'
-      )}`;
-      const cached = await this.cache.get(cacheKey);
-      if (cached) {
-        try {
-          const parsed = JSON.parse(cached);
-          // Do not log here; logging will be handled in server.ts
-          return parsed;
-        } catch (e) {
-          // ignore parse error, continue to resolve
         }
       }
 
@@ -1092,12 +1085,8 @@ class Spotify {
         success: false,
         error: e.message || 'Error resolving Spotify URL',
       };
-      // Optionally cache errors as well, but for a shorter time
-      await this.cache.set(
-        `qrlink_unknown_result_${Buffer.from(url).toString('base64')}`,
-        JSON.stringify(result),
-        600
-      );
+      // Cache errors as well, but for a shorter time
+      await this.cache.set(cacheKey, JSON.stringify(result), 600);
       return result;
     }
   }
