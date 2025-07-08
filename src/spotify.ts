@@ -41,7 +41,7 @@ class Spotify {
     this.getJumboData();
   }
 
-  public static getInstance(): Data {
+  public static getInstance(): Spotify {
     if (!Spotify.instance) {
       Spotify.instance = new Spotify();
     }
@@ -1083,4 +1083,4 @@ class Spotify {
   }
 }
 
-export default Data;
+export default Spotify;
