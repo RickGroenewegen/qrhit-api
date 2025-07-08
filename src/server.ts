@@ -1899,12 +1899,19 @@ class Server {
       }
       try {
         const result = await this.spotify.resolveSpotifyUrl(url);
+        // Log the unknown link scan
+        this.logger.log(
+          `Unknown link scanned: url="${url}", result=${JSON.stringify(result)}`
+        );
         if (result.success) {
           reply.send({ success: true, spotifyUri: result.spotifyUri });
         } else {
           reply.status(404).send({ success: false, error: result.error || 'No Spotify URI found' });
         }
       } catch (e: any) {
+        this.logger.log(
+          `Error scanning unknown link: url="${url}", error=${e.message || e}`
+        );
         reply.status(500).send({ success: false, error: e.message || 'Internal error' });
       }
     });
