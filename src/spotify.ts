@@ -867,6 +867,10 @@ class Spotify {
    */
   public async resolveSpotifyUrl(url: string): Promise<{ success: boolean; spotifyUri?: string; error?: string }> {
     try {
+      // Add https:// if missing
+      if (!/^https?:\/\//i.test(url)) {
+        url = 'https://' + url;
+      }
       // 1. Follow HTTP redirects (301/302/other 3xx)
       let currentUrl = url;
       let lastLocation = url;
