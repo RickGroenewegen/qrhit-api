@@ -871,6 +871,18 @@ class Spotify {
       if (!/^https?:\/\//i.test(url)) {
         url = 'https://' + url;
       }
+
+      // Use a cache key based on the url
+      const cacheKey = `qrlink_unknown_result_${Buffer.from(url).toString('base64')}`;
+      const cached = await this.cache.get(cacheKey);
+      if (cached) {
+        try {
+          return JSON.parse(cached);
+        } catch (e) {
+          // ignore parse error, continue to resolve
+        }
+      }
+
       // 1. Follow HTTP redirects (301/302/other 3xx)
       let currentUrl = url;
       let lastLocation = url;
@@ -899,7 +911,9 @@ class Spotify {
           // Check if the redirect location is a Spotify URL/URI
           const spotifyUri = this.extractSpotifyUri(lastLocation);
           if (spotifyUri) {
-            return { success: true, spotifyUri };
+            const result = { success: true, spotifyUri };
+            await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+            return result;
           }
           currentUrl = lastLocation;
         } else {
@@ -912,7 +926,9 @@ class Spotify {
       if (lastLocation) {
         const spotifyUri = this.extractSpotifyUri(lastLocation);
         if (spotifyUri) {
-          return { success: true, spotifyUri };
+          const result = { success: true, spotifyUri };
+          await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+          return result;
         }
       }
 
@@ -931,7 +947,9 @@ class Spotify {
             const metaUrl = urlMatch[1].trim().replace(/['"]/g, '');
             const spotifyUri = this.extractSpotifyUri(metaUrl);
             if (spotifyUri) {
-              return { success: true, spotifyUri };
+              const result = { success: true, spotifyUri };
+              await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+              return result;
             }
           }
         }
@@ -944,14 +962,25 @@ class Spotify {
           const jsUrl = jsRedirectMatch[1];
           const spotifyUri = this.extractSpotifyUri(jsUrl);
           if (spotifyUri) {
-            return { success: true, spotifyUri };
+            const result = { success: true, spotifyUri };
+            await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+            return result;
           }
         }
       }
 
-      return { success: false, error: 'No Spotify URI found via redirects or page content.' };
+      const result = { success: false, error: 'No Spotify URI found via redirects or page content.' };
+      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+      return result;
     } catch (e: any) {
-      return { success: false, error: e.message || 'Error resolving Spotify URL' };
+      const result = { success: false, error: e.message || 'Error resolving Spotify URL' };
+      // Optionally cache errors as well, but for a shorter time
+      await this.cache.set(
+        `qrlink_unknown_result_${Buffer.from(url).toString('base64')}`,
+        JSON.stringify(result),
+        600
+      );
+      return result;
     }
   }
 
