@@ -1908,18 +1908,22 @@ class Server {
             `Unknown link scanned${result.cached ? ' (CACHED)' : ''}: ` +
               color.white.bold(`url="${url}"`) +
               color.blue.bold(', result=') +
-              color.white.bold(JSON.stringify({ success: result.success, spotifyUri: result.spotifyUri, error: result.error }))
+              color.white.bold(
+                JSON.stringify({
+                  success: result.success,
+                  spotifyUri: result.spotifyUri,
+                  error: result.error,
+                })
+              )
           )
         );
         if (result.success) {
           reply.send({ success: true, spotifyUri: result.spotifyUri });
         } else {
-          reply
-            .status(404)
-            .send({
-              success: false,
-              error: result.error || 'No Spotify URI found',
-            });
+          reply.status(404).send({
+            success: false,
+            error: result.error || 'No Spotify URI found',
+          });
         }
       } catch (e: any) {
         this.logger.log(
@@ -2135,9 +2139,7 @@ class Server {
     });
 
     this.fastify.get('/cache', async (request: any, _reply) => {
-      await this.cache.flush();
       this.order.updateFeaturedPlaylists();
-      await this.cache.flush();
       return { success: true };
     });
 
