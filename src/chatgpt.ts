@@ -1049,27 +1049,21 @@ Context: ${summary || content.substring(0, 200)}
       );
 
       const response = await this.openai.images.generate({
-        model: 'gpt-image-1',
+        model: 'dall-e-3',
         prompt: imagePrompt,
         n: 1,
-        size: '1536x1024',
-        quality: 'high',
+        size: '1792x1024',
+        quality: 'standard',
+        style: 'vivid',
+        response_format: 'b64_json',
       });
 
-      console.log(111, response.data);
-
-      if (response.data && response.data.length > 0 && response.data[0].url) {
-        const imageUrl = response.data[0].url;
-
-        // Download the image
-        const imageResponse = await fetch(imageUrl);
-        if (!imageResponse.ok) {
-          throw new Error(
-            `Failed to download image: ${imageResponse.statusText}`
-          );
-        }
-
-        const imageBuffer = await imageResponse.arrayBuffer();
+      if (
+        response.data &&
+        response.data.length > 0 &&
+        response.data[0].b64_json
+      ) {
+        const imageBuffer = Buffer.from(response.data[0].b64_json, 'base64');
 
         // Generate filename
         const timestamp = Date.now();
@@ -1077,7 +1071,7 @@ Context: ${summary || content.substring(0, 200)}
         const filepath = path.join(blogImagesDir, filename);
 
         // Compress and optimize the image using Sharp
-        await sharp(Buffer.from(imageBuffer))
+        await sharp(imageBuffer)
           .jpeg({ quality: 85, progressive: true })
           .resize(1280, 720, { fit: 'cover' })
           .toFile(filepath);
@@ -1090,7 +1084,7 @@ Context: ${summary || content.substring(0, 200)}
 
         return filename;
       } else {
-        this.logger.log(color.red.bold('No image URL received from DALL-E'));
+        this.logger.log(color.red.bold('No image data received from DALL-E'));
         return null;
       }
     } catch (error) {
