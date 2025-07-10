@@ -1551,8 +1551,8 @@ class Server {
     await this.setVersion();
     await this.createDirs();
     await this.registerPlugins();
-    await this.addRoutes();
     await this.addAuthRoutes();
+    await this.addRoutes();
     await this.startCluster();
   };
 
