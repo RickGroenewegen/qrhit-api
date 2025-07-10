@@ -681,22 +681,24 @@ model AppSetting {
 
   @@map("app_settings") // Optional: Define the table name explicitly
 }
+
 model Blog {
-  id        Int      @id @default(autoincrement())
-  active    Boolean  @default(false)
-  image     String?
-  title_en  String
-  title_nl  String
-  title_de  String
-  title_fr  String
-  title_es  String
-  title_it  String
-  title_pt  String
-  title_pl  String
-  title_hin String
-  title_jp  String
-  title_cn  String
-  title_ru  String
+  id          Int      @id @default(autoincrement())
+  slug        String?  @unique
+  active      Boolean  @default(false)
+  image       String?
+  title_en    String
+  title_nl    String
+  title_de    String
+  title_fr    String
+  title_es    String
+  title_it    String
+  title_pt    String
+  title_pl    String
+  title_hin   String
+  title_jp    String
+  title_cn    String
+  title_ru    String
   content_en  String   @db.Text
   content_nl  String   @db.Text
   content_de  String   @db.Text
@@ -721,8 +723,8 @@ model Blog {
   summary_jp  String?  @db.Text
   summary_cn  String?  @db.Text
   summary_ru  String?  @db.Text
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@map("blogs")
 }

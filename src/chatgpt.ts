@@ -1031,13 +1031,15 @@ Write in a professional, informative, and engaging style. The tone should be cle
 
 Design requirements:
 - Photographic style
-- Include simple musical elements like QR codes, music notes, or sound waves
+- Never show any cards, or QR codes in the image
+- You may include a musical theme
 - Professional look suitable for a tech/music blog
 - Widescreen format (16:9 aspect ratio)
 - NO TEXT OR WORDS in the image whatsoever
 - Simple composition with clear focus
 - Minimal elements, not cluttered
 - If you include any QR cards in the image, they should be styled like our reference image.
+
 
 Blog topic: "${title}"
 Context: ${summary || content.substring(0, 200)}
@@ -1050,10 +1052,17 @@ Context: ${summary || content.substring(0, 200)}
         )
       );
 
+      const imagePath = path.join(
+        process.env['ASSETS_DIR']!,
+        'images/cards.png'
+      );
+      const imageBuffer = await fs.readFile(imagePath);
+
+      // Construct a File object from the buffer
+      const file = new File([imageBuffer], 'cards.png', { type: 'image/png' });
+
       const response = await this.openai.images.edit({
-        image: fsOld.createReadStream(
-          `${process.env['ASSETS_DIR']}/images/cards.png`
-        ),
+        image: file,
         prompt: imagePrompt,
         n: 1,
         model: 'gpt-image-1',
@@ -1067,10 +1076,7 @@ Context: ${summary || content.substring(0, 200)}
       //   n: 1,
       //   size: '1536x1024',
       //   quality: 'high',
-      //   response_format: 'b64_json',
       // });
-
-      console.log(111, response.data);
 
       if (
         response.data &&
