@@ -87,8 +87,6 @@ export class ChatGPT {
         )
       );
 
-      console.log(prompt);
-
       const result = await this.openai.chat.completions.create({
         model: 'o4-mini',
         messages: [
@@ -1028,25 +1026,21 @@ Write in a professional, informative, and engaging style. The tone should be cle
       }
 
       // Create a prompt for image generation
-      const imagePrompt = `Create a clean, modern blog image for QRSong! (a music QR card service).
+      const imagePrompt = `Create a blog image for QRSong! (a music QR card service).
 
 Design requirements:
-- Clean, minimalist design with few elements
-- Modern flat design or photographic style
+- Photographic style
 - Include simple musical elements like QR codes, music notes, or sound waves
-- Use QRSong! brand colors: primary blue (#5FBFFF), secondary blue (#3F6FAF), accent pink (#E56581)
 - Professional look suitable for a tech/music blog
 - Widescreen format (16:9 aspect ratio)
 - NO TEXT OR WORDS in the image whatsoever
 - Simple composition with clear focus
-- Can be either photographic or illustrated/drawn style
 - Minimal elements, not cluttered
-- Clean gradient backgrounds with the brand colors
 
 Blog topic: "${title}"
 Context: ${summary || content.substring(0, 200)}
 
-The image should be clean, simple, and music-related while maintaining the QRSong! brand aesthetic. Keep it minimal and uncluttered.`;
+`;
 
       this.logger.log(
         color.blue.bold(
@@ -1055,13 +1049,14 @@ The image should be clean, simple, and music-related while maintaining the QRSon
       );
 
       const response = await this.openai.images.generate({
-        model: 'dall-e-3',
+        model: 'gpt-image-1',
         prompt: imagePrompt,
         n: 1,
-        size: '1792x1024',
-        quality: 'standard',
-        style: 'vivid',
+        size: '1536x1024',
+        quality: 'high',
       });
+
+      console.log(111, response.data);
 
       if (response.data && response.data.length > 0 && response.data[0].url) {
         const imageUrl = response.data[0].url;
