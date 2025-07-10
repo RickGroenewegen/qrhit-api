@@ -504,9 +504,12 @@ export default async function blogRoutes(fastify: FastifyInstance) {
         return;
       }
 
-      // Generate blog image
+      // Generate blog image using instructions from database
       logger.log(
-        color.blue.bold('[AI Blog Image] Generating new blog image...')
+        color.blue.bold('[AI Blog Image] Generating new blog image using stored instructions...')
+      );
+      logger.log(
+        color.blue.bold(`[AI Blog Image] Instructions: "${color.white.bold(imageInstructions)}"`)
       );
       const imageFilename = await openai.generateBlogImage(
         imageInstructions
