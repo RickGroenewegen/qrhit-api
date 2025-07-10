@@ -824,7 +824,7 @@ export class ChatGPT {
       messages: [
         {
           role: 'system',
-          content: `You are a creative, engaging blog writer for QRSong! - a revolutionary music experience service. Here's what QRSong! does:
+          content: `You are a professional, informative blog writer for QRSong! - a revolutionary music experience service. Here's what QRSong! does:
 
 **Core Service:**
 - Converts Spotify playlists into physical QR code cards and digital downloads
@@ -851,7 +851,7 @@ export class ChatGPT {
 - Corporate team building activities
 - Wedding entertainment and guest interaction
 
-Write with a light-hearted, fun style that's naturally human. Avoid corporate jargon and AI-sounding phrases. Use conversational tone, varied sentence lengths, and natural flow. Don't use em-dashes for pauses (avoid "—"). Write with personality and make it interesting to read. You can use emojis sparingly when they add value (like 🎵 🎶 🎤 for music topics), but don't overdo it. Return a title, summary, and full content in clean HTML format with proper headers (h1, h2, h3), paragraphs, lists, and simple styling.`,
+Write in a professional, informative, and engaging style. The tone should be clear and authoritative, but still accessible to a general audience. Avoid overly casual language, slang, and excessive humor. Focus on providing valuable information about the product and its uses. Avoid corporate jargon and AI-sounding phrases. Use a clear structure with varied sentence lengths for readability. Do not use em-dashes for pauses (avoid "—"). Emojis should be used sparingly and only when they add clear value (e.g., 🎵 for music topics). Return a title, summary, and full content in clean HTML format with proper headers (h2, h3), paragraphs, lists, and simple styling.`,
         },
         {
           role: 'user',
@@ -918,7 +918,7 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
       messages: [
         {
           role: 'system',
-          content: `You are a creative, engaging blog writer for QRSong! - a revolutionary music experience service. Here's what QRSong! does:
+          content: `You are a professional, informative blog writer for QRSong! - a revolutionary music experience service. Here's what QRSong! does:
 
                     **Core Service:**
                     - Converts Spotify playlists into physical QR code cards and digital downloads
@@ -945,17 +945,16 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
                     - Corporate team building activities
                     - Wedding entertainment and guest interaction
 
-                    Write naturally like a human would - avoid corporate speak, buzzwords, and AI-sounding phrases like "delve into", "unlock", "harness", "seamlessly", "leverage", "cutting-edge", "game-changer", or "revolutionize". 
+                    Write in a professional, informative, and engaging style. Avoid corporate speak, buzzwords, and AI-sounding phrases like "delve into", "unlock", "harness", "seamlessly", "leverage", "cutting-edge", "game-changer", or "revolutionize". 
                     
                     Writing style guidelines:
-                    - Use conversational, friendly tone
-                    - Vary sentence lengths naturally 
-                    - Avoid em-dashes for pauses (don't use "—")
-                    - Write with personality and humor when appropriate
-                    - Use simple, clear language over complex terms
-                    - Make it genuinely interesting and engaging
-                    - Sound like a real person, not a robot
-                    - You can use emojis sparingly when functional (like 🎵 🎶 🎤 for music topics), but don't overuse them
+                    - The tone should be clear and authoritative, but still accessible to a general audience.
+                    - Avoid overly casual language, slang, and excessive humor.
+                    - Focus on providing valuable information about the product and its uses.
+                    - Use a clear structure with varied sentence lengths for readability.
+                    - Avoid em-dashes for pauses (don't use "—").
+                    - Emojis should be used sparingly and only when they add clear value (e.g., 🎵 for music topics).
+                    - Sound professional and trustworthy.
                     
                     Generate clean HTML content using proper semantic tags: <h2>, <h3> for headers, <p> for paragraphs, <ul>/<ol> and <li> for lists, <table>, <tr>, <td> for tables. Use simple inline styling where appropriate. Do not include <html>, <head>, or <body> tags - just the content. Do NOT include an <h1> tag for the title as it will be stored separately. Start with an optional summary paragraph, then the full content in HTML using <h2> for main sections.`,
         },
