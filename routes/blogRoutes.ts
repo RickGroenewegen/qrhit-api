@@ -79,8 +79,9 @@ export default async function blogRoutes(fastify: FastifyInstance) {
     '/admin/blogs/:id',
     { 
       preHandler: fastify.authenticate && fastify.authenticate(['admin']),
-      config: {
-        rawBody: true
+      preValidation: async (request: any, reply: any) => {
+        // Skip body parsing for DELETE requests
+        request.body = undefined;
       }
     },
     async (request: any, reply: any) => {
