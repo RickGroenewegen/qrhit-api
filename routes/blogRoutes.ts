@@ -71,10 +71,6 @@ export default async function blogRoutes(fastify: FastifyInstance) {
     async (request: any, reply: any) => {
       const { instruction } = request.body;
 
-      console.log(111, instruction);
-
-      const targetLocales: string[] = SUPPORTED_LOCALES;
-
       if (!instruction) {
         reply
           .status(400)
@@ -87,16 +83,11 @@ export default async function blogRoutes(fastify: FastifyInstance) {
           `[AI Blog] Starting blog generation for instruction: "${color.white.bold(instruction)}"`
         )
       );
-      logger.log(
-        color.blue.bold(
-          `[AI Blog] Target locales: ${color.white.bold(targetLocales.join(', '))}`
-        )
-      );
 
       // 1. Generate the blog in English
       logger.log(
         color.blue.bold(
-          '[AI Blog] Step 1/4: Generating blog content in English...'
+          '[AI Blog] Step 1/2: Generating blog content in English...'
         )
       );
       const aiResultEn = await openai.askBlog(instruction);
@@ -131,109 +122,14 @@ export default async function blogRoutes(fastify: FastifyInstance) {
         )
       );
 
-      // 2. Translate the blog to all other locales
-      // We'll translate title, summary, and content separately
+      // 2. Create blog data with only English content
       const blogData: any = {};
       blogData['title_en'] = aiResultEn.title;
       blogData['content_en'] = aiResultEn.content;
       blogData['summary_en'] = aiResultEn.summary || '';
 
-      // Only translate to non-English locales
-      const localesToTranslate = targetLocales.filter((l) => l !== 'en');
-
       logger.log(
-        color.blue.bold(
-          `[AI Blog] Step 2/4: Translating blog to ${color.white.bold(
-            localesToTranslate.length
-          )} locales: ${color.white.bold(localesToTranslate.join(', '))}`
-        )
-      );
-
-      // Translate title
-      logger.log(
-        color.blue.bold(
-          `[AI Blog] Step 2a/4: Translating title to ${color.white.bold(localesToTranslate.length)} languages...`
-        )
-      );
-      const titleTranslations = await openai.translateText(
-        aiResultEn.title,
-        localesToTranslate
-      );
-      logger.log(
-        color.green.bold(
-          `[AI Blog] ✓ Title translations completed for: ${color.white.bold(Object.keys(
-            titleTranslations
-          ).join(', '))}`
-        )
-      );
-
-      // Translate summary
-      let summaryTranslations = {};
-      if (aiResultEn.summary) {
-        logger.log(
-          color.blue.bold(
-            `[AI Blog] Step 2b/4: Translating summary to ${color.white.bold(localesToTranslate.length)} languages...`
-          )
-        );
-        summaryTranslations = await openai.translateText(
-          aiResultEn.summary,
-          localesToTranslate
-        );
-        logger.log(
-          color.green.bold(
-            `[AI Blog] ✓ Summary translations completed for: ${color.white.bold(Object.keys(
-              summaryTranslations
-            ).join(', '))}`
-          )
-        );
-      } else {
-        logger.log(
-          color.yellow.bold(
-            '[AI Blog] Step 2b/4: Skipping summary translation (no summary provided)'
-          )
-        );
-      }
-
-      // Translate content (markdown)
-      logger.log(
-        color.blue.bold(
-          `[AI Blog] Step 2c/4: Translating content (${color.white.bold(aiResultEn.content.length)} chars) to ${color.white.bold(localesToTranslate.length)} languages...`
-        )
-      );
-      const contentTranslations = await openai.translateText(
-        aiResultEn.content,
-        localesToTranslate
-      );
-      logger.log(
-        color.green.bold(
-          `[AI Blog] ✓ Content translations completed for: ${color.white.bold(Object.keys(
-            contentTranslations
-          ).join(', '))}`
-        )
-      );
-
-      logger.log(
-        color.blue.bold(
-          '[AI Blog] Step 3/4: Assembling blog data with all translations...'
-        )
-      );
-      for (const locale of localesToTranslate) {
-        blogData[`title_${locale}`] = titleTranslations[locale] || '';
-        blogData[`content_${locale}`] = contentTranslations[locale] || '';
-        blogData[`summary_${locale}`] =
-          (summaryTranslations as any)[locale] || '';
-
-        logger.log(
-          color.blue.bold(
-            `[AI Blog] - ${color.white.bold(locale.toUpperCase())}: Title="${color.white.bold((
-              titleTranslations[locale] || ''
-            ).substring(0, 50))}..."`
-          )
-        );
-      }
-
-      logger.log(
-        color.blue.bold('[AI Blog] Step 4/4: Saving blog to database...')
+        color.blue.bold('[AI Blog] Step 2/2: Saving English blog to database...')
       );
 
       // Save the generated blog
@@ -252,23 +148,173 @@ export default async function blogRoutes(fastify: FastifyInstance) {
         );
         logger.log(color.blue.bold(`[AI Blog] Summary:`));
         logger.log(color.blue.bold(`[AI Blog] - Blog ID: ${color.white.bold(result.blog.id)}`));
-        logger.log(
-          color.blue.bold(
-            `[AI Blog] - Languages: ${color.white.bold(targetLocales.length)} (${color.white.bold(targetLocales.join(
-              ', '
-            ))})`
-          )
-        );
         logger.log(color.blue.bold(`[AI Blog] - English title: "${color.white.bold(aiResultEn.title)}"`));
         logger.log(
           color.blue.bold(
             `[AI Blog] - Content length: ${color.white.bold(aiResultEn.content.length)} characters`
           )
         );
+        logger.log(
+          color.yellow.bold(
+            `[AI Blog] Note: Use /admin/blogs/${result.blog.id}/translate to translate to other languages`
+          )
+        );
       } else {
         logger.log(
           color.red.bold(
             `[AI Blog] ✗ Failed to create blog in database: ${color.white.bold(result.error)}`
+          )
+        );
+      }
+
+      reply.send(result);
+    }
+  );
+
+  // Admin: Translate a blog post to other languages
+  fastify.post(
+    '/admin/blogs/:id/translate',
+    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id);
+      if (isNaN(id)) {
+        reply.status(400).send({ success: false, error: 'Invalid blog id' });
+        return;
+      }
+
+      const { targetLocales } = request.body;
+      const locales = targetLocales || SUPPORTED_LOCALES.filter((l) => l !== 'en');
+
+      logger.log(
+        color.blue.bold(
+          `[AI Blog Translate] Starting translation for blog ID: ${color.white.bold(id)}`
+        )
+      );
+      logger.log(
+        color.blue.bold(
+          `[AI Blog Translate] Target locales: ${color.white.bold(locales.join(', '))}`
+        )
+      );
+
+      // Get the existing blog
+      const existingBlog = await blog.getBlogById(id);
+      if (!existingBlog.success || !existingBlog.blog) {
+        reply.status(404).send({ success: false, error: 'Blog not found' });
+        return;
+      }
+
+      const blogData = existingBlog.blog;
+      const englishTitle = blogData.title_en;
+      const englishContent = blogData.content_en;
+      const englishSummary = blogData.summary_en;
+
+      if (!englishTitle || !englishContent) {
+        reply.status(400).send({ 
+          success: false, 
+          error: 'Blog must have English title and content to translate' 
+        });
+        return;
+      }
+
+      logger.log(
+        color.blue.bold(
+          `[AI Blog Translate] Step 1/4: Translating title to ${color.white.bold(locales.length)} languages...`
+        )
+      );
+      const titleTranslations = await openai.translateText(englishTitle, locales);
+      logger.log(
+        color.green.bold(
+          `[AI Blog Translate] ✓ Title translations completed for: ${color.white.bold(Object.keys(
+            titleTranslations
+          ).join(', '))}`
+        )
+      );
+
+      // Translate summary if it exists
+      let summaryTranslations = {};
+      if (englishSummary && englishSummary.trim()) {
+        logger.log(
+          color.blue.bold(
+            `[AI Blog Translate] Step 2/4: Translating summary to ${color.white.bold(locales.length)} languages...`
+          )
+        );
+        summaryTranslations = await openai.translateText(englishSummary, locales);
+        logger.log(
+          color.green.bold(
+            `[AI Blog Translate] ✓ Summary translations completed for: ${color.white.bold(Object.keys(
+              summaryTranslations
+            ).join(', '))}`
+          )
+        );
+      } else {
+        logger.log(
+          color.yellow.bold(
+            '[AI Blog Translate] Step 2/4: Skipping summary translation (no summary provided)'
+          )
+        );
+      }
+
+      // Translate content
+      logger.log(
+        color.blue.bold(
+          `[AI Blog Translate] Step 3/4: Translating content (${color.white.bold(englishContent.length)} chars) to ${color.white.bold(locales.length)} languages...`
+        )
+      );
+      const contentTranslations = await openai.translateText(englishContent, locales);
+      logger.log(
+        color.green.bold(
+          `[AI Blog Translate] ✓ Content translations completed for: ${color.white.bold(Object.keys(
+            contentTranslations
+          ).join(', '))}`
+        )
+      );
+
+      // Prepare update data
+      logger.log(
+        color.blue.bold(
+          '[AI Blog Translate] Step 4/4: Updating blog with translations...'
+        )
+      );
+      const updateData: any = {};
+      for (const locale of locales) {
+        updateData[`title_${locale}`] = titleTranslations[locale] || '';
+        updateData[`content_${locale}`] = contentTranslations[locale] || '';
+        updateData[`summary_${locale}`] = (summaryTranslations as any)[locale] || '';
+
+        logger.log(
+          color.blue.bold(
+            `[AI Blog Translate] - ${color.white.bold(locale.toUpperCase())}: Title="${color.white.bold((
+              titleTranslations[locale] || ''
+            ).substring(0, 50))}..."`
+          )
+        );
+      }
+
+      // Update the blog
+      const result = await blog.updateBlog(id, updateData);
+
+      if (result.success) {
+        logger.log(
+          color.green.bold(
+            `[AI Blog Translate] ✓ Blog translations updated successfully for ID: ${color.white.bold(id)}`
+          )
+        );
+        logger.log(
+          color.green.bold(
+            `[AI Blog Translate] ✓ Translation process completed successfully`
+          )
+        );
+        logger.log(color.blue.bold(`[AI Blog Translate] Summary:`));
+        logger.log(color.blue.bold(`[AI Blog Translate] - Blog ID: ${color.white.bold(id)}`));
+        logger.log(
+          color.blue.bold(
+            `[AI Blog Translate] - Languages translated: ${color.white.bold(locales.length)} (${color.white.bold(locales.join(', '))})`
+          )
+        );
+      } else {
+        logger.log(
+          color.red.bold(
+            `[AI Blog Translate] ✗ Failed to update blog translations: ${color.white.bold(result.error)}`
           )
         );
       }
