@@ -202,6 +202,125 @@ export default async function blogRoutes(fastify: FastifyInstance) {
     }
   );
 
+  // Admin: Generate a blog post using AI with streaming (expects { instruction })
+  fastify.post(
+    '/admin/blogs/generate-stream',
+    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    async (request: any, reply: any) => {
+      const { instruction } = request.body;
+
+      if (!instruction) {
+        reply
+          .status(400)
+          .send({ success: false, error: 'Missing instruction' });
+        return;
+      }
+
+      logger.log(
+        color.blue.bold(
+          `[AI Blog Stream] Starting streaming blog generation for instruction: "${color.white.bold(instruction)}"`
+        )
+      );
+
+      // Set up Server-Sent Events
+      reply.raw.writeHead(200, {
+        'Content-Type': 'text/event-stream',
+        'Cache-Control': 'no-cache',
+        'Connection': 'keep-alive',
+        'Access-Control-Allow-Origin': '*',
+        'Access-Control-Allow-Headers': 'Cache-Control'
+      });
+
+      const sendEvent = (event: string, data: any) => {
+        reply.raw.write(`event: ${event}\n`);
+        reply.raw.write(`data: ${JSON.stringify(data)}\n\n`);
+      };
+
+      try {
+        sendEvent('status', { message: 'Starting AI blog generation...', step: 1, total: 2 });
+
+        logger.log(
+          color.blue.bold(
+            '[AI Blog Stream] Step 1/2: Generating blog content in English...'
+          )
+        );
+
+        // Generate the blog with streaming
+        const aiResultEn = await openai.askBlogStream(instruction, (chunk: string) => {
+          sendEvent('chunk', { content: chunk });
+        });
+
+        if (!aiResultEn || !aiResultEn.title || !aiResultEn.content) {
+          logger.log(
+            color.red.bold(
+              '[AI Blog Stream] ERROR: AI failed to generate blog in English'
+            )
+          );
+          sendEvent('error', { error: 'AI failed to generate blog in English' });
+          reply.raw.end();
+          return;
+        }
+
+        logger.log(color.green.bold(`[AI Blog Stream] ✓ English blog generated successfully`));
+        logger.log(color.blue.bold(`[AI Blog Stream] - Title: "${color.white.bold(aiResultEn.title)}"`));
+        logger.log(
+          color.blue.bold(
+            `[AI Blog Stream] - Content length: ${color.white.bold(aiResultEn.content.length)} characters`
+          )
+        );
+
+        sendEvent('status', { message: 'Saving blog to database...', step: 2, total: 2 });
+
+        // Create blog data with only English content
+        const blogData: any = {};
+        blogData['title_en'] = aiResultEn.title;
+        blogData['content_en'] = aiResultEn.content;
+        blogData['summary_en'] = aiResultEn.summary || '';
+
+        logger.log(
+          color.blue.bold('[AI Blog Stream] Step 2/2: Saving English blog to database...')
+        );
+
+        // Save the generated blog
+        const result = await blog.createBlog(blogData);
+
+        if (result.success && result.blog) {
+          logger.log(
+            color.green.bold(
+              `[AI Blog Stream] ✓ Blog created successfully with ID: ${color.white.bold(result.blog.id)}`
+            )
+          );
+
+          sendEvent('complete', {
+            success: true,
+            blog: result.blog,
+            title: aiResultEn.title,
+            contentLength: aiResultEn.content.length,
+            summary: aiResultEn.summary,
+            message: `Blog created successfully with ID: ${result.blog.id}`
+          });
+        } else {
+          logger.log(
+            color.red.bold(
+              `[AI Blog Stream] ✗ Failed to create blog in database: ${color.white.bold(result.error)}`
+            )
+          );
+          sendEvent('error', { error: `Failed to create blog in database: ${result.error}` });
+        }
+
+      } catch (error) {
+        logger.log(
+          color.red.bold(
+            `[AI Blog Stream] ✗ Error during streaming generation: ${color.white.bold((error as Error).message)}`
+          )
+        );
+        sendEvent('error', { error: (error as Error).message });
+      }
+
+      reply.raw.end();
+    }
+  );
+
   // Admin: Translate a blog post to other languages
   fastify.post(
     '/admin/blogs/:id/translate',

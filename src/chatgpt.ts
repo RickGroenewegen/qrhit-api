@@ -869,6 +869,94 @@ export class ChatGPT {
   }
 
   /**
+   * Generate a blog post using AI streaming.
+   * @param instruction The instruction for the AI (string)
+   * @param onChunk Callback function to handle streaming chunks
+   * @returns {Promise<{title: string, content: string, summary?: string}>}
+   */
+  public async askBlogStream(
+    instruction: string, 
+    onChunk: (chunk: string) => void
+  ): Promise<{ title: string; content: string; summary?: string }> {
+    const stream = await this.openai.chat.completions.create({
+      model: 'gpt-4.1',
+      temperature: 0.7,
+      stream: true,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a professional blog writer. Write a markdown blog post based on the user's instruction. 
+                    Start with a title on the first line (prefixed with "# "), then a blank line, then an optional summary paragraph, 
+                    then another blank line, then the full content in markdown. Do not include any AI disclaimers.`,
+        },
+        {
+          role: 'user',
+          content: instruction,
+        },
+      ],
+    });
+
+    let fullContent = '';
+    
+    for await (const chunk of stream) {
+      const content = chunk.choices[0]?.delta?.content || '';
+      if (content) {
+        fullContent += content;
+        onChunk(content);
+      }
+    }
+
+    // Parse the streamed content to extract title, summary, and content
+    const lines = fullContent.split('\n');
+    let title = '';
+    let summary = '';
+    let content = '';
+    
+    let currentSection = 'title';
+    let contentStartIndex = 0;
+    
+    for (let i = 0; i < lines.length; i++) {
+      const line = lines[i];
+      
+      if (currentSection === 'title' && line.startsWith('# ')) {
+        title = line.substring(2).trim();
+        currentSection = 'summary';
+        continue;
+      }
+      
+      if (currentSection === 'summary') {
+        if (line.trim() === '') {
+          if (summary.trim()) {
+            currentSection = 'content';
+            contentStartIndex = i + 1;
+          }
+          continue;
+        }
+        summary += (summary ? ' ' : '') + line.trim();
+      }
+    }
+    
+    // Extract content from the remaining lines
+    if (contentStartIndex > 0) {
+      content = lines.slice(contentStartIndex).join('\n').trim();
+    } else {
+      // Fallback: if no clear structure, use everything after title as content
+      const titleLineIndex = lines.findIndex(line => line.startsWith('# '));
+      if (titleLineIndex >= 0) {
+        content = lines.slice(titleLineIndex + 1).join('\n').trim();
+      } else {
+        content = fullContent;
+      }
+    }
+
+    return {
+      title: title || 'Generated Blog Post',
+      content: content || fullContent,
+      summary: summary || undefined
+    };
+  }
+
+  /**
    * Translate a text to multiple target locales using OpenAI.
    * @param text The text to translate
    * @param targetLocales Array of locale codes to translate to (e.g. ['nl', 'de'])
