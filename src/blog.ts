@@ -18,10 +18,40 @@ class Blog {
     return Blog.instance;
   }
 
+  // Get all blogs for admin (includes inactive blogs)
+  public async getAllBlogsAdmin() {
+    try {
+      const blogs = await this.prisma.blog.findMany({
+        orderBy: { createdAt: 'desc' },
+        select: this.getSelectObject(),
+      });
+      return { success: true, blogs };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
+  // Get a single blog by id for admin (includes inactive blogs)
+  public async getBlogByIdAdmin(id: number) {
+    try {
+      const blog = await this.prisma.blog.findUnique({
+        where: { id },
+        select: this.getSelectObject(true),
+      });
+      if (!blog) {
+        return { success: false, error: 'Blog not found' };
+      }
+      return { success: true, blog };
+    } catch (error) {
+      return { success: false, error: (error as Error).message };
+    }
+  }
+
   // Create a new blog post (expects keys like title_en, content_en, summary_en, etc.)
   public async createBlog(input: BlogInput) {
     try {
       const data: any = {};
+      data.active = input.active !== undefined ? input.active : true;
       for (const locale of SUPPORTED_LOCALES) {
         data[`title_${locale}`] = input[`title_${locale}`] || '';
         data[`content_${locale}`] = input[`content_${locale}`] || '';
@@ -38,6 +68,9 @@ class Blog {
   public async updateBlog(id: number, input: BlogInput) {
     try {
       const data: any = {};
+      if (input.hasOwnProperty('active')) {
+        data.active = input.active;
+      }
       for (const locale of SUPPORTED_LOCALES) {
         if (input.hasOwnProperty(`title_${locale}`)) {
           data[`title_${locale}`] = input[`title_${locale}`];
@@ -73,6 +106,7 @@ class Blog {
   public async getAllBlogs() {
     try {
       const blogs = await this.prisma.blog.findMany({
+        where: { active: true },
         orderBy: { createdAt: 'desc' },
         select: this.getSelectObject(),
       });
@@ -93,6 +127,9 @@ class Blog {
       if (!blog) {
         return { success: false, error: 'Blog not found' };
       }
+      if (!blog.active) {
+        return { success: false, error: 'Blog not found' };
+      }
       // No HTML rendering on backend; just return the blog as-is
       return { success: true, blog };
     } catch (error) {
@@ -102,7 +139,7 @@ class Blog {
 
   // Helper: select all language fields
   private getSelectObject(includeContent = false) {
-    const select: any = { id: true, createdAt: true, updatedAt: true };
+    const select: any = { id: true, active: true, createdAt: true, updatedAt: true };
     for (const locale of SUPPORTED_LOCALES) {
       select[`title_${locale}`] = true;
       select[`summary_${locale}`] = true;
