@@ -462,6 +462,87 @@ export default async function blogRoutes(fastify: FastifyInstance) {
     }
   );
 
+  // Admin: Refresh blog image
+  fastify.post(
+    '/admin/blogs/:id/refresh-image',
+    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id);
+      if (isNaN(id)) {
+        reply.status(400).send({ success: false, error: 'Invalid blog id' });
+        return;
+      }
+
+      logger.log(
+        color.blue.bold(
+          `[AI Blog Image] Starting image refresh for blog ID: ${color.white.bold(
+            id
+          )}`
+        )
+      );
+
+      // Get the existing blog (use admin method to access inactive blogs) - use English for image generation context
+      const existingBlog = await blog.getBlogByIdAdmin(id, 'en');
+      if (!existingBlog.success || !existingBlog.blog) {
+        reply.status(404).send({ success: false, error: 'Blog not found' });
+        return;
+      }
+
+      const blogData = existingBlog.blog;
+      const englishTitle = blogData.title as string;
+      const englishContent = blogData.content as string;
+      const englishSummary = (blogData.summary as string) || '';
+
+      // Generate blog image
+      logger.log(
+        color.blue.bold('[AI Blog Image] Generating new blog image...')
+      );
+      const imageFilename = await openai.generateBlogImage(
+        englishTitle,
+        englishSummary,
+        englishContent
+      );
+
+      if (imageFilename) {
+        logger.log(
+          color.green.bold(
+            `[AI Blog Image] ✓ New blog image generated: ${color.white.bold(
+              imageFilename
+            )}`
+          )
+        );
+        // Save the new image to the blog
+        const result = await blog.updateBlog(id, { image: imageFilename });
+        if (result.success) {
+          logger.log(
+            color.green.bold(
+              `[AI Blog Image] ✓ Blog image updated successfully for ID: ${color.white.bold(
+                id
+              )}`
+            )
+          );
+        } else {
+          logger.log(
+            color.red.bold(
+              `[AI Blog Image] ✗ Failed to update blog with new image: ${color.white.bold(
+                result.error
+              )}`
+            )
+          );
+        }
+        reply.send(result);
+      } else {
+        logger.log(
+          color.yellow.bold('[AI Blog Image] ⚠ Failed to generate blog image')
+        );
+        reply.status(500).send({
+          success: false,
+          error: 'Failed to generate new blog image',
+        });
+      }
+    }
+  );
+
   // Public: Get all blogs for a specific locale
   fastify.get('/blogs/:locale', async (request: any, reply: any) => {
     const { locale } = request.params;
