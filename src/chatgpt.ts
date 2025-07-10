@@ -9,6 +9,7 @@ import { TrustPilot, genre as GenrePrismaModel } from '@prisma/client';
 import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
+import * as fsOld from 'fs';
 
 export class ChatGPT {
   private utils = new Utils();
@@ -1036,6 +1037,7 @@ Design requirements:
 - NO TEXT OR WORDS in the image whatsoever
 - Simple composition with clear focus
 - Minimal elements, not cluttered
+- If you include any QR cards in the image, they should be styled like our reference image.
 
 Blog topic: "${title}"
 Context: ${summary || content.substring(0, 200)}
@@ -1048,13 +1050,27 @@ Context: ${summary || content.substring(0, 200)}
         )
       );
 
-      const response = await this.openai.images.generate({
-        model: 'gpt-image-1',
+      const response = await this.openai.images.edit({
+        image: fsOld.createReadStream(
+          `${process.env['ASSETS_DIR']}/images/cards.png`
+        ),
         prompt: imagePrompt,
         n: 1,
+        model: 'gpt-image-1',
         size: '1536x1024',
         quality: 'high',
       });
+
+      // const response = await this.openai.images.generate({
+      //   model: 'gpt-image-1',
+      //   prompt: imagePrompt,
+      //   n: 1,
+      //   size: '1536x1024',
+      //   quality: 'high',
+      //   response_format: 'b64_json',
+      // });
+
+      console.log(111, response.data);
 
       if (
         response.data &&
