@@ -71,21 +71,38 @@ export default async function blogRoutes(fastify: FastifyInstance) {
         return;
       }
 
-      // Generate blog for each locale
-      const blogData: any = {};
-      for (const locale of targetLocales) {
-        // Pass instruction + locale to AI
-        const aiResult = await openai.askBlog(
-          `${instruction}\n\nWrite the blog in ${locale} language.`
-        );
-        if (!aiResult || !aiResult.title || !aiResult.content) {
-          reply.status(500).send({ success: false, error: `AI failed to generate blog for ${locale}` });
-          return;
-        }
-        blogData[`title_${locale}`] = aiResult.title;
-        blogData[`content_${locale}`] = aiResult.content;
-        blogData[`summary_${locale}`] = aiResult.summary || '';
+      // 1. Generate the blog in English
+      const aiResultEn = await openai.askBlog(instruction);
+      if (!aiResultEn || !aiResultEn.title || !aiResultEn.content) {
+        reply.status(500).send({ success: false, error: `AI failed to generate blog in English` });
+        return;
       }
+
+      // 2. Translate the blog to all other locales
+      // We'll translate title, summary, and content separately
+      const blogData: any = {};
+      blogData['title_en'] = aiResultEn.title;
+      blogData['content_en'] = aiResultEn.content;
+      blogData['summary_en'] = aiResultEn.summary || '';
+
+      // Only translate to non-English locales
+      const localesToTranslate = targetLocales.filter((l) => l !== 'en');
+
+      // Translate title
+      const titleTranslations = await openai.translateText(aiResultEn.title, localesToTranslate);
+      // Translate summary
+      const summaryTranslations = aiResultEn.summary
+        ? await openai.translateText(aiResultEn.summary, localesToTranslate)
+        : {};
+      // Translate content (markdown)
+      const contentTranslations = await openai.translateText(aiResultEn.content, localesToTranslate);
+
+      for (const locale of localesToTranslate) {
+        blogData[`title_${locale}`] = titleTranslations[locale] || '';
+        blogData[`content_${locale}`] = contentTranslations[locale] || '';
+        blogData[`summary_${locale}`] = summaryTranslations[locale] || '';
+      }
+
       // Save the generated blog
       const result = await blog.createBlog(blogData);
       reply.send(result);

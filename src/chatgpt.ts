@@ -869,6 +869,65 @@ export class ChatGPT {
   }
 
   /**
+   * Translate a text to multiple target locales using OpenAI.
+   * @param text The text to translate
+   * @param targetLocales Array of locale codes to translate to (e.g. ['nl', 'de'])
+   * @returns Promise<Record<string, string>> (locale -> translated text)
+   */
+  public async translateText(text: string, targetLocales: string[]): Promise<Record<string, string>> {
+    if (!text || !targetLocales || targetLocales.length === 0) return {};
+    const result = await this.openai.chat.completions.create({
+      model: 'gpt-4.1',
+      temperature: 0.3,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a professional translator. Translate the provided text into the specified languages. Only return the translated text for each language, no explanations or disclaimers.`,
+        },
+        {
+          role: 'user',
+          content: `Translate the following text into these languages: ${targetLocales.join(', ')}.\n\nText:\n${text}`,
+        },
+      ],
+      function_call: { name: 'translateText' },
+      functions: [
+        {
+          name: 'translateText',
+          parameters: {
+            type: 'object',
+            properties: Object.fromEntries(
+              targetLocales.map((locale) => [
+                locale,
+                {
+                  type: 'string',
+                  description: `The translated text in ${locale}`,
+                },
+              ])
+            ),
+            required: targetLocales,
+          },
+        },
+      ],
+    });
+
+    if (result?.choices[0]?.message?.function_call) {
+      const funcCall = result.choices[0].message.function_call;
+      try {
+        const translations = JSON.parse(funcCall.arguments as string);
+        return translations;
+      } catch (error) {
+        this.logger.log(
+          color.red.bold(
+            `Error parsing translation results for blog: ${error}`
+          )
+        );
+        this.logger.log(color.red.bold(`Raw response: ${funcCall.arguments}`));
+      }
+    }
+    return {};
+  }
+
+  /**
    * Extracts an array of order IDs, their order dates (DD-MM-YYYY), and amounts from a pasted HTML string.
    * Uses OpenAI function calling to enforce structured output.
    * Ignores any "Creditfactuur" that completely negates a "Factuur" (leave both out).
