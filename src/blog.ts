@@ -30,10 +30,12 @@ class Blog {
         orderBy: { createdAt: 'desc' },
         select: this.getSelectObject(),
       });
-      
+
       // Transform blogs to include localized content
-      const localizedBlogs = blogs.map(blog => this.transformBlogForLocale(blog, locale));
-      
+      const localizedBlogs = blogs.map((blog) =>
+        this.transformBlogForLocale(blog, locale)
+      );
+
       return { success: true, blogs: localizedBlogs };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -55,10 +57,10 @@ class Blog {
       if (!blog) {
         return { success: false, error: 'Blog not found' };
       }
-      
+
       // Transform blog to include localized content (admin can see inactive blogs)
       const localizedBlog = this.transformBlogForLocale(blog, locale);
-      
+
       return { success: true, blog: localizedBlog };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -128,6 +130,8 @@ class Blog {
 
   // Get all blogs (public)
   public async getAllBlogs(locale: string) {
+    console.log(111, locale);
+
     try {
       // Validate locale
       if (!SUPPORTED_LOCALES.includes(locale)) {
@@ -139,10 +143,12 @@ class Blog {
         orderBy: { createdAt: 'desc' },
         select: this.getSelectObject(),
       });
-      
+
       // Transform blogs to include localized content
-      const localizedBlogs = blogs.map(blog => this.transformBlogForLocale(blog, locale));
-      
+      const localizedBlogs = blogs.map((blog) =>
+        this.transformBlogForLocale(blog, locale)
+      );
+
       return { success: true, blogs: localizedBlogs };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -167,10 +173,10 @@ class Blog {
       if (!blog.active) {
         return { success: false, error: 'Blog not found' };
       }
-      
+
       // Transform blog to include localized content
       const localizedBlog = this.transformBlogForLocale(blog, locale);
-      
+
       return { success: true, blog: localizedBlog };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -179,7 +185,13 @@ class Blog {
 
   // Helper: select all language fields
   private getSelectObject(includeContent = false) {
-    const select: any = { id: true, active: true, image: true, createdAt: true, updatedAt: true };
+    const select: any = {
+      id: true,
+      active: true,
+      image: true,
+      createdAt: true,
+      updatedAt: true,
+    };
     for (const locale of SUPPORTED_LOCALES) {
       select[`title_${locale}`] = true;
       select[`summary_${locale}`] = true;
@@ -202,8 +214,12 @@ class Blog {
     };
 
     // Include content if it exists in the original blog
-    if (blog.hasOwnProperty(`content_${locale}`) || blog.hasOwnProperty('content_en')) {
-      transformedBlog.content = blog[`content_${locale}`] || blog.content_en || '';
+    if (
+      blog.hasOwnProperty(`content_${locale}`) ||
+      blog.hasOwnProperty('content_en')
+    ) {
+      transformedBlog.content =
+        blog[`content_${locale}`] || blog.content_en || '';
     }
 
     return transformedBlog;
