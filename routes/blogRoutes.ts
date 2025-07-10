@@ -61,6 +61,21 @@ export default async function blogRoutes(fastify: FastifyInstance) {
     }
   );
 
+  // Admin: Get a single blog by id (defaults to English, includes inactive blogs)
+  fastify.get(
+    '/admin/blogs/:id',
+    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id);
+      if (isNaN(id)) {
+        reply.status(400).send({ success: false, error: 'Invalid blog id' });
+        return;
+      }
+      const result = await blog.getBlogByIdAdmin(id, 'en');
+      reply.send(result);
+    }
+  );
+
   // Admin: Update a blog post (expects { title_xx, content_xx, summary_xx, active } for all supported locales)
   fastify.put(
     '/admin/blogs/:id',
