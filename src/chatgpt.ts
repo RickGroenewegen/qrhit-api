@@ -866,7 +866,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
             properties: {
               title: {
                 type: 'string',
-                description: 'The blog post title',
+                description: 'The blog post title (keep it short and concise, maximum 8 words)',
               },
               summary: {
                 type: 'string',
