@@ -56,15 +56,13 @@ export default async function blogRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // Admin: Generate a blog post using AI (expects { instruction, locales?: string[] })
+  // Admin: Generate a blog post using AI (expects { instruction })
   fastify.post(
     '/admin/blogs/generate',
     { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
-      const { instruction, locales } = request.body;
-      const targetLocales: string[] = Array.isArray(locales) && locales.length > 0
-        ? locales.filter((l: string) => SUPPORTED_LOCALES.includes(l))
-        : SUPPORTED_LOCALES;
+      const { instruction } = request.body;
+      const targetLocales: string[] = SUPPORTED_LOCALES;
 
       if (!instruction) {
         reply.status(400).send({ success: false, error: 'Missing instruction' });
