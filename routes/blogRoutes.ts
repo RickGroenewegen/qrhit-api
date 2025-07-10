@@ -229,9 +229,9 @@ export default async function blogRoutes(fastify: FastifyInstance) {
       }
 
       const blogData = existingBlog.blog;
-      const englishTitle = blogData.title_en;
-      const englishContent = blogData.content_en;
-      const englishSummary = blogData.summary_en;
+      const englishTitle = blogData.title_en as string;
+      const englishContent = blogData.content_en as string;
+      const englishSummary = blogData.summary_en as string | null;
 
       if (!englishTitle || !englishContent) {
         reply.status(400).send({ 
