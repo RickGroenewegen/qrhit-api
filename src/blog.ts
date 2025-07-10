@@ -70,6 +70,9 @@ class Blog {
     try {
       const data: any = {};
       data.active = input.active !== undefined ? input.active : true;
+      if (input.image) {
+        data.image = input.image;
+      }
       for (const locale of SUPPORTED_LOCALES) {
         data[`title_${locale}`] = input[`title_${locale}`] || '';
         data[`content_${locale}`] = input[`content_${locale}`] || '';
@@ -88,6 +91,9 @@ class Blog {
       const data: any = {};
       if (input.hasOwnProperty('active')) {
         data.active = input.active;
+      }
+      if (input.hasOwnProperty('image')) {
+        data.image = input.image;
       }
       for (const locale of SUPPORTED_LOCALES) {
         if (input.hasOwnProperty(`title_${locale}`)) {
