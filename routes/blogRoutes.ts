@@ -110,7 +110,7 @@ export default async function blogRoutes(fastify: FastifyInstance) {
     '/admin/blogs/generate',
     { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
-      const { instruction } = request.body;
+      const { instruction, instructions_image } = request.body;
 
       if (!instruction) {
         reply
@@ -183,26 +183,31 @@ export default async function blogRoutes(fastify: FastifyInstance) {
         )
       );
 
-      // Generate blog image
-      logger.log(color.blue.bold('[AI Blog] Generating blog image...'));
-      const imageFilename = await openai.generateBlogImage(
-        aiResultEn.title,
-        aiResultEn.summary || '',
-        aiResultEn.content
-      );
-
-      if (imageFilename) {
-        blogData.image = imageFilename;
-        logger.log(
-          color.green.bold(
-            `[AI Blog] ✓ Blog image generated: ${color.white.bold(
-              imageFilename
-            )}`
-          )
+      // Generate blog image if instructions_image is provided
+      if (instructions_image) {
+        logger.log(color.blue.bold('[AI Blog] Generating blog image...'));
+        const imageFilename = await openai.generateBlogImage(
+          instructions_image
         );
+
+        if (imageFilename) {
+          blogData.image = imageFilename;
+          blogData.image_instructions = instructions_image;
+          logger.log(
+            color.green.bold(
+              `[AI Blog] ✓ Blog image generated: ${color.white.bold(
+                imageFilename
+              )}`
+            )
+          );
+        } else {
+          logger.log(
+            color.yellow.bold('[AI Blog] ⚠ Failed to generate blog image')
+          );
+        }
       } else {
         logger.log(
-          color.yellow.bold('[AI Blog] ⚠ Failed to generate blog image')
+          color.yellow.bold('[AI Blog] No image instructions provided, skipping image generation')
         );
       }
 
@@ -489,18 +494,22 @@ export default async function blogRoutes(fastify: FastifyInstance) {
       }
 
       const blogData = existingBlog.blog;
-      const englishTitle = blogData.title as string;
-      const englishContent = blogData.content as string;
-      const englishSummary = (blogData.summary as string) || '';
+      const imageInstructions = blogData.image_instructions as string;
+
+      if (!imageInstructions) {
+        reply.status(400).send({
+          success: false,
+          error: 'Blog must have image_instructions to refresh image',
+        });
+        return;
+      }
 
       // Generate blog image
       logger.log(
         color.blue.bold('[AI Blog Image] Generating new blog image...')
       );
       const imageFilename = await openai.generateBlogImage(
-        englishTitle,
-        englishSummary,
-        englishContent
+        imageInstructions
       );
 
       if (imageFilename) {

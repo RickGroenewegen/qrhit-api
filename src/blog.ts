@@ -90,6 +90,9 @@ class Blog {
       if (input.image) {
         data.image = input.image;
       }
+      if (input.image_instructions) {
+        data.image_instructions = input.image_instructions;
+      }
       for (const locale of SUPPORTED_LOCALES) {
         data[`title_${locale}`] = input[`title_${locale}`] || '';
         data[`content_${locale}`] = input[`content_${locale}`] || '';
@@ -111,6 +114,9 @@ class Blog {
       }
       if (input.hasOwnProperty('image')) {
         data.image = input.image;
+      }
+      if (input.hasOwnProperty('image_instructions')) {
+        data.image_instructions = input.image_instructions;
       }
       for (const locale of SUPPORTED_LOCALES) {
         if (input.hasOwnProperty(`title_${locale}`)) {
@@ -217,6 +223,7 @@ class Blog {
       slug: true,
       active: true,
       image: true,
+      image_instructions: true,
       createdAt: true,
       updatedAt: true,
     };
@@ -236,6 +243,7 @@ class Blog {
       slug: blog.slug,
       active: blog.active,
       image: blog.image,
+      image_instructions: blog.image_instructions,
       createdAt: blog.createdAt,
       updatedAt: blog.updatedAt,
       title: blog[`title_${locale}`] || blog.title_en || '',
