@@ -1000,16 +1000,12 @@ Write in a professional, informative, and engaging style. The tone should be cle
   }
 
   /**
-   * Generate a blog image using DALL-E based on blog content
-   * @param title Blog title
-   * @param summary Blog summary
-   * @param content Blog content (HTML)
+   * Generate a blog image using DALL-E based on image instructions
+   * @param imageInstructions Instructions for generating the image
    * @returns Promise<string | null> - Returns filename if successful, null if failed
    */
   public async generateBlogImage(
-    title: string,
-    summary: string,
-    content: string
+    imageInstructions: string
   ): Promise<string | null> {
     try {
       // Create blog_images directory if it doesn't exist
@@ -1026,29 +1022,12 @@ Write in a professional, informative, and engaging style. The tone should be cle
         );
       }
 
-      // Create a prompt for image generation
-      const imagePrompt = `Create a blog image for QRSong! (a music QR card service).
-
-Design requirements:
-- Photographic style
-- Never show any cards, or QR codes in the image
-- You may include a musical theme
-- Professional look suitable for a tech/music blog
-- Widescreen format (16:9 aspect ratio)
-- NO TEXT OR WORDS in the image whatsoever
-- Simple composition with clear focus
-- Minimal elements, not cluttered
-- If you include any QR cards in the image, they should be styled like our reference image.
-
-
-Blog topic: "${title}"
-Context: ${summary || content.substring(0, 200)}
-
-`;
+      // Use the provided image instructions directly
+      const imagePrompt = imageInstructions;
 
       this.logger.log(
         color.blue.bold(
-          `Generating blog image for: "${color.white.bold(title)}"`
+          `Generating blog image with instructions: "${color.white.bold(imageInstructions)}"`
         )
       );
 
