@@ -187,6 +187,29 @@ export default async function blogRoutes(fastify: FastifyInstance) {
         )
       );
 
+      // Generate blog image
+      logger.log(
+        color.blue.bold('[AI Blog] Generating blog image...')
+      );
+      const imageFilename = await openai.generateBlogImage(
+        aiResultEn.title,
+        aiResultEn.summary || '',
+        aiResultEn.content
+      );
+      
+      if (imageFilename) {
+        blogData.image = imageFilename;
+        logger.log(
+          color.green.bold(
+            `[AI Blog] ✓ Blog image generated: ${color.white.bold(imageFilename)}`
+          )
+        );
+      } else {
+        logger.log(
+          color.yellow.bold('[AI Blog] ⚠ Failed to generate blog image')
+        );
+      }
+
       // Save the generated blog
       const result = await blog.createBlog(blogData);
 
@@ -344,9 +367,44 @@ export default async function blogRoutes(fastify: FastifyInstance) {
 
         logger.log(
           color.blue.bold(
-            '[AI Blog Stream] Step 2/2: Saving English blog to database...'
+            '[AI Blog Stream] Step 2/3: Generating blog image...'
           )
         );
+
+        // Generate blog image
+        sendEvent('status', {
+          message: 'Generating blog image...',
+          step: 2,
+          total: 3,
+        });
+
+        logger.log(
+          color.blue.bold('[AI Blog Stream] Generating blog image...')
+        );
+        const imageFilename = await openai.generateBlogImage(
+          aiResultEn.title,
+          aiResultEn.summary || '',
+          aiResultEn.content
+        );
+        
+        if (imageFilename) {
+          blogData.image = imageFilename;
+          logger.log(
+            color.green.bold(
+              `[AI Blog Stream] ✓ Blog image generated: ${color.white.bold(imageFilename)}`
+            )
+          );
+        } else {
+          logger.log(
+            color.yellow.bold('[AI Blog Stream] ⚠ Failed to generate blog image')
+          );
+        }
+
+        sendEvent('status', {
+          message: 'Saving blog to database...',
+          step: 3,
+          total: 3,
+        });
 
         // Save the generated blog
         const result = await blog.createBlog(blogData);

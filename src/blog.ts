@@ -173,7 +173,7 @@ class Blog {
 
   // Helper: select all language fields
   private getSelectObject(includeContent = false) {
-    const select: any = { id: true, active: true, createdAt: true, updatedAt: true };
+    const select: any = { id: true, active: true, image: true, createdAt: true, updatedAt: true };
     for (const locale of SUPPORTED_LOCALES) {
       select[`title_${locale}`] = true;
       select[`summary_${locale}`] = true;
@@ -188,6 +188,7 @@ class Blog {
     const transformedBlog: any = {
       id: blog.id,
       active: blog.active,
+      image: blog.image,
       createdAt: blog.createdAt,
       updatedAt: blog.updatedAt,
       title: blog[`title_${locale}`] || blog.title_en || '',

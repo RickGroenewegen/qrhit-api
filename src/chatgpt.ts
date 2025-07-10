@@ -6,6 +6,8 @@ import { color } from 'console-log-colors';
 import Translation from './translation';
 import { GenreId } from './interfaces/Genre';
 import { TrustPilot, genre as GenrePrismaModel } from '@prisma/client';
+import fs from 'fs/promises';
+import path from 'path';
 
 export class ChatGPT {
   private utils = new Utils();
@@ -870,7 +872,7 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
               },
               content: {
                 type: 'string',
-                description: 'The blog post content in clean HTML format with headers, paragraphs, lists, and simple styling',
+                description: 'The blog post content in clean HTML format with headers, paragraphs, lists, and simple styling (do not include h1 tags)',
               },
             },
             required: ['title', 'content'],
@@ -951,7 +953,7 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
                     - Sound like a real person, not a robot
                     - You can use emojis sparingly when functional (like 🎵 🎶 🎤 for music topics), but don't overuse them
                     
-                    Generate clean HTML content using proper semantic tags: <h1>, <h2>, <h3> for headers, <p> for paragraphs, <ul>/<ol> and <li> for lists, <table>, <tr>, <td> for tables. Use simple inline styling where appropriate. Do not include <html>, <head>, or <body> tags - just the content. Start with an <h1> title, then an optional summary paragraph, then the full content in HTML.`,
+                    Generate clean HTML content using proper semantic tags: <h2>, <h3> for headers, <p> for paragraphs, <ul>/<ol> and <li> for lists, <table>, <tr>, <td> for tables. Use simple inline styling where appropriate. Do not include <html>, <head>, or <body> tags - just the content. Do NOT include an <h1> tag for the title as it will be stored separately. Start with an optional summary paragraph, then the full content in HTML using <h2> for main sections.`,
         },
         {
           role: 'user',
@@ -971,40 +973,25 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
     }
 
     // Parse the streamed HTML content to extract title, summary, and content
-    let title = '';
+    // Since we don't include h1 tags, we need to parse differently
+    let title = 'Generated Blog Post';
     let summary = '';
-    let content = '';
+    let content = fullContent.trim();
     
-    // Extract title from <h1> tag
-    const h1Match = fullContent.match(/<h1[^>]*>(.*?)<\/h1>/i);
-    if (h1Match) {
-      title = h1Match[1].trim();
-      // Remove the h1 tag from content for processing
-      const contentAfterTitle = fullContent.replace(/<h1[^>]*>.*?<\/h1>/i, '').trim();
-      
-      // Look for the first paragraph as potential summary
-      const firstPMatch = contentAfterTitle.match(/<p[^>]*>(.*?)<\/p>/i);
-      if (firstPMatch) {
-        const potentialSummary = firstPMatch[1].trim();
-        // If it's reasonably short, use it as summary
-        if (potentialSummary.length < 300) {
-          summary = potentialSummary;
-          // Remove this paragraph from content
-          content = contentAfterTitle.replace(/<p[^>]*>.*?<\/p>/i, '').trim();
-        } else {
-          content = contentAfterTitle;
-        }
-      } else {
-        content = contentAfterTitle;
+    // Look for the first paragraph as potential summary
+    const firstPMatch = content.match(/<p[^>]*>(.*?)<\/p>/i);
+    if (firstPMatch) {
+      const potentialSummary = firstPMatch[1].trim();
+      // If it's reasonably short, use it as summary
+      if (potentialSummary.length < 300) {
+        summary = potentialSummary;
+        // Remove this paragraph from content
+        content = content.replace(/<p[^>]*>.*?<\/p>/i, '').trim();
       }
-    } else {
-      // Fallback: use full content if no clear structure
-      content = fullContent;
-      title = 'Generated Blog Post';
     }
 
     return {
-      title: title || 'Generated Blog Post',
+      title,
       content: content || fullContent,
       summary: summary || undefined
     };

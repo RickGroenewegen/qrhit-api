@@ -684,6 +684,7 @@ model AppSetting {
 model Blog {
   id        Int      @id @default(autoincrement())
   active    Boolean  @default(true)
+  image     String?
   title_en  String
   title_nl  String
   title_de  String
