@@ -295,6 +295,20 @@ class Data {
       },
     });
 
+    // Get active blogs with non-empty slugs
+    const activeBlogs = await this.prisma.blog.findMany({
+      where: {
+        active: true,
+        slug: {
+          not: null,
+        },
+      },
+      select: {
+        slug: true,
+        updatedAt: true,
+      },
+    });
+
     // Define standard paths with default values
     const standardPaths = [
       '/faq',
@@ -360,6 +374,13 @@ class Data {
           lastmod: playlist.updatedAt.toISOString().split('T')[0],
           changefreq: 'daily',
           priority: '0.9',
+        })),
+        // Add blog pages
+        ...activeBlogs.map((blog) => ({
+          loc: `/${locale}/blog/${blog.slug}`,
+          lastmod: blog.updatedAt.toISOString().split('T')[0],
+          changefreq: 'weekly',
+          priority: '0.7',
         })),
       ];
 
