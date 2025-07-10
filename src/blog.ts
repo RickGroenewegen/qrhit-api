@@ -1,5 +1,4 @@
 import PrismaInstance from './prisma';
-import { marked } from 'marked';
 import Translation from './translation';
 
 const SUPPORTED_LOCALES = new Translation().allLocales;
@@ -77,12 +76,8 @@ class Blog {
         orderBy: { createdAt: 'desc' },
         select: this.getSelectObject(),
       });
-      // Add html fields for each locale
-      const blogsWithHtml = blogs.map((blog: any) => ({
-        ...blog,
-        html: this.getHtmlForAllLocales(blog),
-      }));
-      return { success: true, blogs: blogsWithHtml };
+      // No HTML rendering on backend; just return the blogs as-is
+      return { success: true, blogs };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -98,9 +93,8 @@ class Blog {
       if (!blog) {
         return { success: false, error: 'Blog not found' };
       }
-      // Render markdown to HTML for all locales
-      const html = this.getHtmlForAllLocales(blog);
-      return { success: true, blog: { ...blog, html } };
+      // No HTML rendering on backend; just return the blog as-is
+      return { success: true, blog };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -115,19 +109,6 @@ class Blog {
       if (includeContent) select[`content_${locale}`] = true;
     }
     return select;
-  }
-
-  // Helper: render markdown to HTML for all locales
-  private getHtmlForAllLocales(blog: any) {
-    const html: any = {};
-    for (const locale of SUPPORTED_LOCALES) {
-      if (blog[`content_${locale}`]) {
-        html[locale] = marked.parse(blog[`content_${locale}`]);
-      } else {
-        html[locale] = '';
-      }
-    }
-    return html;
   }
 }
 
