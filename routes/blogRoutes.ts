@@ -34,19 +34,20 @@ export default async function blogRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // Admin: Get all blogs (includes inactive blogs)
+  // Admin: Get all blogs for a specific locale (includes inactive blogs)
   fastify.get(
-    '/admin/blogs',
+    '/admin/blogs/:locale',
     { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
-    async (_request: any, reply: any) => {
-      const result = await blog.getAllBlogsAdmin();
+    async (request: any, reply: any) => {
+      const { locale } = request.params;
+      const result = await blog.getAllBlogsAdmin(locale);
       reply.send(result);
     }
   );
 
-  // Admin: Get a single blog by id (includes inactive blogs)
+  // Admin: Get a single blog by id for a specific locale (includes inactive blogs)
   fastify.get(
-    '/admin/blogs/:id',
+    '/admin/blogs/:locale/:id',
     { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
       const id = parseInt(request.params.id);
@@ -54,7 +55,8 @@ export default async function blogRoutes(fastify: FastifyInstance) {
         reply.status(400).send({ success: false, error: 'Invalid blog id' });
         return;
       }
-      const result = await blog.getBlogByIdAdmin(id);
+      const { locale } = request.params;
+      const result = await blog.getBlogByIdAdmin(id, locale);
       reply.send(result);
     }
   );
@@ -348,8 +350,8 @@ export default async function blogRoutes(fastify: FastifyInstance) {
         )
       );
 
-      // Get the existing blog (use admin method to access inactive blogs)
-      const existingBlog = await blog.getBlogByIdAdmin(id);
+      // Get the existing blog (use admin method to access inactive blogs) - use English for translation source
+      const existingBlog = await blog.getBlogByIdAdmin(id, 'en');
       if (!existingBlog.success || !existingBlog.blog) {
         reply.status(404).send({ success: false, error: 'Blog not found' });
         return;

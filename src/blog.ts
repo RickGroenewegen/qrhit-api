@@ -19,21 +19,35 @@ class Blog {
   }
 
   // Get all blogs for admin (includes inactive blogs)
-  public async getAllBlogsAdmin() {
+  public async getAllBlogsAdmin(locale: string) {
     try {
+      // Validate locale
+      if (!SUPPORTED_LOCALES.includes(locale)) {
+        return { success: false, error: 'Invalid locale' };
+      }
+
       const blogs = await this.prisma.blog.findMany({
         orderBy: { createdAt: 'desc' },
         select: this.getSelectObject(),
       });
-      return { success: true, blogs };
+      
+      // Transform blogs to include localized content
+      const localizedBlogs = blogs.map(blog => this.transformBlogForLocale(blog, locale));
+      
+      return { success: true, blogs: localizedBlogs };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
   }
 
   // Get a single blog by id for admin (includes inactive blogs)
-  public async getBlogByIdAdmin(id: number) {
+  public async getBlogByIdAdmin(id: number, locale: string) {
     try {
+      // Validate locale
+      if (!SUPPORTED_LOCALES.includes(locale)) {
+        return { success: false, error: 'Invalid locale' };
+      }
+
       const blog = await this.prisma.blog.findUnique({
         where: { id },
         select: this.getSelectObject(true),
@@ -41,7 +55,11 @@ class Blog {
       if (!blog) {
         return { success: false, error: 'Blog not found' };
       }
-      return { success: true, blog };
+      
+      // Transform blog to include localized content (admin can see inactive blogs)
+      const localizedBlog = this.transformBlogForLocale(blog, locale);
+      
+      return { success: true, blog: localizedBlog };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
