@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify/types/instance';
+import blogRoutes from '../routes/blogRoutes';
 import {
   generateToken,
   verifyToken,
@@ -1686,6 +1687,9 @@ class Server {
   }
 
   public async addRoutes() {
+    // Register blog routes
+    await blogRoutes(this.fastify);
+
     // Unprotected endpoint to create a company and company list (moved to Vibe)
     this.fastify.post(
       '/vibe/companylist/create',

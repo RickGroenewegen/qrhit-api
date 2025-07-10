@@ -784,27 +784,6 @@ export class ChatGPT {
         const completionTokens = result.usage!.completion_tokens;
         const totalTokens = result.usage!.total_tokens;
 
-        // console.log();
-
-        // console.log(
-        //   `Prompt tokens: ${promptTokens} (Cost: $${(
-        //     (promptTokens / 1_000_000) *
-        //     0.15
-        //   ).toFixed(6)})`
-        // );
-        // console.log(
-        //   `Completion tokens: ${completionTokens} (Cost: $${(
-        //     (completionTokens / 1_000_000) *
-        //     0.6
-        //   ).toFixed(6)})`
-        // );
-        // console.log(
-        //   `Total tokens: ${totalTokens} (Cost: $${(
-        //     (promptTokens / 1_000_000) * 0.15 +
-        //     (completionTokens / 1_000_000) * 0.6
-        //   ).toFixed(6)})`
-        // );
-
         const funcCall = result.choices[0].message.function_call;
         const functionCallName = funcCall.name;
         let completionArguments;
@@ -826,6 +805,67 @@ export class ChatGPT {
     }
 
     return answer!;
+  }
+
+  /**
+   * Generate a blog post using AI function calling.
+   * @param instruction The instruction for the AI (string)
+   * @returns {Promise<{title: string, content: string, summary?: string}>}
+   */
+  public async askBlog(instruction: string): Promise<{ title: string; content: string; summary?: string }> {
+    const result = await this.openai.chat.completions.create({
+      model: 'gpt-4.1',
+      temperature: 0.7,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a professional blog writer. Write a markdown blog post based on the user's instruction. Return a title, a summary, and the full content in markdown. Do not include any AI disclaimers.`,
+        },
+        {
+          role: 'user',
+          content: instruction,
+        },
+      ],
+      function_call: { name: 'generateBlog' },
+      functions: [
+        {
+          name: 'generateBlog',
+          parameters: {
+            type: 'object',
+            properties: {
+              title: {
+                type: 'string',
+                description: 'The blog post title',
+              },
+              summary: {
+                type: 'string',
+                description: 'A short summary of the blog post',
+              },
+              content: {
+                type: 'string',
+                description: 'The blog post content in markdown',
+              },
+            },
+            required: ['title', 'content'],
+          },
+        },
+      ],
+    });
+
+    if (result?.choices[0]?.message?.function_call) {
+      const funcCall = result.choices[0].message.function_call;
+      try {
+        const blog = JSON.parse(funcCall.arguments as string);
+        return blog;
+      } catch (error) {
+        this.logger.log(
+          color.red.bold(`Error parsing AI blog response: ${error}`)
+        );
+        this.logger.log(color.red.bold(`Raw response: ${funcCall.arguments}`));
+        return { title: '', content: '', summary: '' };
+      }
+    }
+    return { title: '', content: '', summary: '' };
   }
 
   /**

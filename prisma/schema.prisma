@@ -681,3 +681,13 @@ model AppSetting {
 
   @@map("app_settings") // Optional: Define the table name explicitly
 }
+model Blog {
+  id        Int      @id @default(autoincrement())
+  title     String
+  content   String   @db.Text
+  summary   String?  @db.Text
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@map("blogs")
+}
