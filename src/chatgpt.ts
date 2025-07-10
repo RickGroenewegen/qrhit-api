@@ -898,7 +898,6 @@ export class ChatGPT {
                     
                     Start with a title on the first line (prefixed with "# "), then a blank line, then an optional summary paragraph, then another blank line, then the full content in markdown.`,
         },
-        },
         {
           role: 'user',
           content: instruction,
