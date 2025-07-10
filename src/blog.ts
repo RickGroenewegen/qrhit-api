@@ -71,7 +71,10 @@ class Blog {
   public async createBlog(input: BlogInput) {
     try {
       if (!input.title_en) {
-        return { success: false, error: 'English title (title_en) is required' };
+        return {
+          success: false,
+          error: 'English title (title_en) is required',
+        };
       }
 
       const data: any = {};
@@ -151,8 +154,6 @@ class Blog {
 
   // Get all blogs (public)
   public async getAllBlogs(locale: string) {
-    console.log(111, locale);
-
     try {
       // Validate locale
       if (!SUPPORTED_LOCALES.includes(locale)) {
