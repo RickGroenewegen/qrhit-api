@@ -69,7 +69,7 @@ class Blog {
   public async createBlog(input: BlogInput) {
     try {
       const data: any = {};
-      data.active = input.active !== undefined ? input.active : true;
+      data.active = input.active !== undefined ? input.active : false;
       if (input.image) {
         data.image = input.image;
       }
