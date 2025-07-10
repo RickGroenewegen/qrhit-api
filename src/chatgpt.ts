@@ -1037,7 +1037,7 @@ Design requirements:
 - Include simple musical elements like QR codes, music notes, or sound waves
 - Use QRSong! brand colors: primary blue (#5FBFFF), secondary blue (#3F6FAF), accent pink (#E56581)
 - Professional look suitable for a tech/music blog
-- Square format (1:1 aspect ratio)
+- Widescreen format (16:9 aspect ratio)
 - NO TEXT OR WORDS in the image whatsoever
 - Simple composition with clear focus
 - Can be either photographic or illustrated/drawn style
@@ -1059,7 +1059,7 @@ The image should be clean, simple, and music-related while maintaining the QRSon
         model: 'dall-e-3',
         prompt: imagePrompt,
         n: 1,
-        size: '1024x1024',
+        size: '1792x1024',
         quality: 'standard',
         style: 'vivid',
       });
@@ -1085,7 +1085,7 @@ The image should be clean, simple, and music-related while maintaining the QRSon
         // Compress and optimize the image using Sharp
         await sharp(Buffer.from(imageBuffer))
           .jpeg({ quality: 85, progressive: true })
-          .resize(1024, 1024, { fit: 'cover' })
+          .resize(1280, 720, { fit: 'cover' })
           .toFile(filepath);
 
         this.logger.log(
