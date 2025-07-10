@@ -8,6 +8,7 @@ import { GenreId } from './interfaces/Genre';
 import { TrustPilot, genre as GenrePrismaModel } from '@prisma/client';
 import fs from 'fs/promises';
 import path from 'path';
+import sharp from 'sharp';
 
 export class ChatGPT {
   private utils = new Utils();
@@ -1028,22 +1029,25 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
       }
 
       // Create a prompt for image generation
-      const imagePrompt = `Create a modern, vibrant blog header image for QRSong! (a music QR card service).
+      const imagePrompt = `Create a clean, modern blog image for QRSong! (a music QR card service).
 
 Design requirements:
-- Modern flat design style with vibrant colors
-- Include musical elements like QR codes, music notes, or sound waves
+- Clean, minimalist design with few elements
+- Modern flat design or photographic style
+- Include simple musical elements like QR codes, music notes, or sound waves
 - Use QRSong! brand colors: primary blue (#5FBFFF), secondary blue (#3F6FAF), accent pink (#E56581)
-- Clean, professional look suitable for a tech/music blog
-- Horizontal layout (16:9 aspect ratio)
-- No text overlays (text will be added separately)
-- Abstract or geometric patterns related to music and technology
-- Gradient backgrounds with the brand colors
+- Professional look suitable for a tech/music blog
+- Square format (1:1 aspect ratio)
+- NO TEXT OR WORDS in the image whatsoever
+- Simple composition with clear focus
+- Can be either photographic or illustrated/drawn style
+- Minimal elements, not cluttered
+- Clean gradient backgrounds with the brand colors
 
 Blog topic: "${title}"
 Context: ${summary || content.substring(0, 200)}
 
-The image should feel modern, tech-savvy, and music-related while maintaining the QRSong! brand aesthetic.`;
+The image should be clean, simple, and music-related while maintaining the QRSong! brand aesthetic. Keep it minimal and uncluttered.`;
 
       this.logger.log(
         color.blue.bold(
@@ -1055,7 +1059,7 @@ The image should feel modern, tech-savvy, and music-related while maintaining th
         model: 'dall-e-3',
         prompt: imagePrompt,
         n: 1,
-        size: '1792x1024',
+        size: '1024x1024',
         quality: 'standard',
         style: 'vivid',
       });
@@ -1075,11 +1079,14 @@ The image should feel modern, tech-savvy, and music-related while maintaining th
 
         // Generate filename
         const timestamp = Date.now();
-        const filename = `blog_${timestamp}.png`;
+        const filename = `blog_${timestamp}.jpg`;
         const filepath = path.join(blogImagesDir, filename);
 
-        // Save the image
-        await fs.writeFile(filepath, Buffer.from(imageBuffer));
+        // Compress and optimize the image using Sharp
+        await sharp(Buffer.from(imageBuffer))
+          .jpeg({ quality: 85, progressive: true })
+          .resize(1024, 1024, { fit: 'cover' })
+          .toFile(filepath);
 
         this.logger.log(
           color.green.bold(
