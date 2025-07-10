@@ -103,22 +103,25 @@ class Blog {
   }
 
   // Get all blogs (public)
-  public async getAllBlogs() {
+  public async getAllBlogs(locale?: string) {
     try {
       const blogs = await this.prisma.blog.findMany({
         where: { active: true },
         orderBy: { createdAt: 'desc' },
         select: this.getSelectObject(),
       });
-      // No HTML rendering on backend; just return the blogs as-is
-      return { success: true, blogs };
+      
+      // Transform blogs to include localized content
+      const localizedBlogs = blogs.map(blog => this.transformBlogForLocale(blog, locale));
+      
+      return { success: true, blogs: localizedBlogs };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
   }
 
   // Get a single blog by id (public)
-  public async getBlogById(id: number) {
+  public async getBlogById(id: number, locale?: string) {
     try {
       const blog = await this.prisma.blog.findUnique({
         where: { id },
@@ -130,8 +133,11 @@ class Blog {
       if (!blog.active) {
         return { success: false, error: 'Blog not found' };
       }
-      // No HTML rendering on backend; just return the blog as-is
-      return { success: true, blog };
+      
+      // Transform blog to include localized content
+      const localizedBlog = this.transformBlogForLocale(blog, locale);
+      
+      return { success: true, blog: localizedBlog };
     } catch (error) {
       return { success: false, error: (error as Error).message };
     }
@@ -146,6 +152,29 @@ class Blog {
       if (includeContent) select[`content_${locale}`] = true;
     }
     return select;
+  }
+
+  // Helper: transform blog data to include localized content without language suffixes
+  private transformBlogForLocale(blog: any, locale?: string) {
+    // Default to English if no locale provided or invalid locale
+    const targetLocale = locale && SUPPORTED_LOCALES.includes(locale) ? locale : 'en';
+    
+    // Create the transformed blog object
+    const transformedBlog: any = {
+      id: blog.id,
+      active: blog.active,
+      createdAt: blog.createdAt,
+      updatedAt: blog.updatedAt,
+      title: blog[`title_${targetLocale}`] || blog.title_en || '',
+      summary: blog[`summary_${targetLocale}`] || blog.summary_en || '',
+    };
+
+    // Include content if it exists in the original blog
+    if (blog.hasOwnProperty(`content_${targetLocale}`) || blog.hasOwnProperty('content_en')) {
+      transformedBlog.content = blog[`content_${targetLocale}`] || blog.content_en || '';
+    }
+
+    return transformedBlog;
   }
 }
 

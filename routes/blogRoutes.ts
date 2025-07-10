@@ -476,8 +476,9 @@ export default async function blogRoutes(fastify: FastifyInstance) {
   );
 
   // Public: Get all blogs
-  fastify.get('/blogs', async (_request: any, reply: any) => {
-    const result = await blog.getAllBlogs();
+  fastify.get('/blogs', async (request: any, reply: any) => {
+    const { locale } = request.query;
+    const result = await blog.getAllBlogs(locale);
     reply.send(result);
   });
 
@@ -488,7 +489,8 @@ export default async function blogRoutes(fastify: FastifyInstance) {
       reply.status(400).send({ success: false, error: 'Invalid blog id' });
       return;
     }
-    const result = await blog.getBlogById(id);
+    const { locale } = request.query;
+    const result = await blog.getBlogById(id, locale);
     reply.send(result);
   });
 }
