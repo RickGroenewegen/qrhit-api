@@ -70,7 +70,22 @@ class Blog {
   // Create a new blog post (expects keys like title_en, content_en, summary_en, etc.)
   public async createBlog(input: BlogInput) {
     try {
+      if (!input.title_en) {
+        return { success: false, error: 'English title (title_en) is required' };
+      }
+
       const data: any = {};
+
+      // Create and ensure unique slug
+      const baseSlug = this.slugify(input.title_en);
+      let slug = baseSlug;
+      let counter = 1;
+      while (await this.prisma.blog.findUnique({ where: { slug } })) {
+        slug = `${baseSlug}-${counter}`;
+        counter++;
+      }
+      data.slug = slug;
+
       data.active = input.active !== undefined ? input.active : false;
       if (input.image) {
         data.image = input.image;
@@ -155,8 +170,8 @@ class Blog {
     }
   }
 
-  // Get a single blog by id (public)
-  public async getBlogById(id: number, locale: string) {
+  // Get a single blog by slug (public)
+  public async getBlogBySlug(slug: string, locale: string) {
     try {
       // Validate locale
       if (!SUPPORTED_LOCALES.includes(locale)) {
@@ -164,7 +179,7 @@ class Blog {
       }
 
       const blog = await this.prisma.blog.findUnique({
-        where: { id },
+        where: { slug },
         select: this.getSelectObject(true),
       });
       if (!blog) {
@@ -183,10 +198,23 @@ class Blog {
     }
   }
 
+  private slugify(text: string): string {
+    return text
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]+/g, '')
+      .replace(/--+/g, '-');
+  }
+
   // Helper: select all language fields
   private getSelectObject(includeContent = false) {
     const select: any = {
       id: true,
+      slug: true,
       active: true,
       image: true,
       createdAt: true,
@@ -205,6 +233,7 @@ class Blog {
     // Create the transformed blog object
     const transformedBlog: any = {
       id: blog.id,
+      slug: blog.slug,
       active: blog.active,
       image: blog.image,
       createdAt: blog.createdAt,

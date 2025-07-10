@@ -16,14 +16,10 @@ export default async function blogRoutes(fastify: FastifyInstance) {
     '/admin/blogs',
     { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
-      // No required fields, but at least one language should be present
-      const hasAnyLocale = Object.keys(request.body).some(
-        (k) => k.startsWith('title_') || k.startsWith('content_')
-      );
-      if (!hasAnyLocale) {
+      if (!request.body.title_en) {
         reply.status(400).send({
           success: false,
-          error: 'Missing blog content for any language',
+          error: 'English title (title_en) is required',
         });
         return;
       }
@@ -473,15 +469,10 @@ export default async function blogRoutes(fastify: FastifyInstance) {
     reply.send(result);
   });
 
-  // Public: Get a single blog by id for a specific locale
-  fastify.get('/blogs/:locale/:id', async (request: any, reply: any) => {
-    const id = parseInt(request.params.id);
-    if (isNaN(id)) {
-      reply.status(400).send({ success: false, error: 'Invalid blog id' });
-      return;
-    }
-    const { locale } = request.params;
-    const result = await blog.getBlogById(id, locale);
+  // Public: Get a single blog by slug for a specific locale
+  fastify.get('/blogs/:locale/:slug', async (request: any, reply: any) => {
+    const { locale, slug } = request.params;
+    const result = await blog.getBlogBySlug(slug, locale);
     reply.send(result);
   });
 }
