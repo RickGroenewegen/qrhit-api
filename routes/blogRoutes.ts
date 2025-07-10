@@ -475,21 +475,21 @@ export default async function blogRoutes(fastify: FastifyInstance) {
     }
   );
 
-  // Public: Get all blogs
-  fastify.get('/blogs', async (request: any, reply: any) => {
-    const { locale } = request.query;
+  // Public: Get all blogs for a specific locale
+  fastify.get('/blogs/:locale', async (request: any, reply: any) => {
+    const { locale } = request.params;
     const result = await blog.getAllBlogs(locale);
     reply.send(result);
   });
 
-  // Public: Get a single blog by id
-  fastify.get('/blogs/:id', async (request: any, reply: any) => {
+  // Public: Get a single blog by id for a specific locale
+  fastify.get('/blogs/:locale/:id', async (request: any, reply: any) => {
     const id = parseInt(request.params.id);
     if (isNaN(id)) {
       reply.status(400).send({ success: false, error: 'Invalid blog id' });
       return;
     }
-    const { locale } = request.query;
+    const { locale } = request.params;
     const result = await blog.getBlogById(id, locale);
     reply.send(result);
   });
