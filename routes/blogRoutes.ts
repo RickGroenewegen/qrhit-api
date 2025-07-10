@@ -247,6 +247,8 @@ export default async function blogRoutes(fastify: FastifyInstance) {
 
         // Generate the blog with streaming
         const aiResultEn = await openai.askBlogStream(instruction, (chunk: string) => {
+          // Log the chunk to console so we can see it streaming
+          process.stdout.write(color.cyan(chunk));
           sendEvent('chunk', { content: chunk });
         });
 
