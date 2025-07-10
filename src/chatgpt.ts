@@ -819,7 +819,7 @@ export class ChatGPT {
       messages: [
         {
           role: 'system',
-          content: `You are a professional blog writer. Write a markdown blog post based on the user's instruction. Return a title, a summary, and the full content in markdown. Do not include any AI disclaimers.`,
+          content: `You are a creative, engaging blog writer with a light-hearted and fun writing style. Write naturally like a human would - avoid corporate jargon, overly formal language, and AI-sounding phrases. Use conversational tone, varied sentence lengths, and natural flow. Don't use em-dashes for pauses (avoid "—"). Write with personality and make it interesting to read. Return a title, summary, and full content in markdown format.`,
         },
         {
           role: 'user',
@@ -885,9 +885,19 @@ export class ChatGPT {
       messages: [
         {
           role: 'system',
-          content: `You are a professional blog writer. Write a markdown blog post based on the user's instruction. 
-                    Start with a title on the first line (prefixed with "# "), then a blank line, then an optional summary paragraph, 
-                    then another blank line, then the full content in markdown. Do not include any AI disclaimers.`,
+          content: `You are a creative, engaging blog writer with a light-hearted and fun writing style. Write naturally like a human would - avoid corporate speak, buzzwords, and AI-sounding phrases like "delve into", "unlock", "harness", "seamlessly", "leverage", "cutting-edge", "game-changer", or "revolutionize". 
+                    
+                    Writing style guidelines:
+                    - Use conversational, friendly tone
+                    - Vary sentence lengths naturally 
+                    - Avoid em-dashes for pauses (don't use "—")
+                    - Write with personality and humor when appropriate
+                    - Use simple, clear language over complex terms
+                    - Make it genuinely interesting and engaging
+                    - Sound like a real person, not a robot
+                    
+                    Start with a title on the first line (prefixed with "# "), then a blank line, then an optional summary paragraph, then another blank line, then the full content in markdown.`,
+        },
         },
         {
           role: 'user',
@@ -970,7 +980,7 @@ export class ChatGPT {
       messages: [
         {
           role: 'system',
-          content: `You are a professional translator. Translate the provided text into the specified languages. Only return the translated text for each language, no explanations or disclaimers.`,
+          content: `You are a professional translator who maintains the original tone and style. When translating, preserve the light-hearted, conversational, and natural writing style of the original text. Avoid making translations sound formal or robotic. Keep the same personality and flow in each language.`,
         },
         {
           role: 'user',
