@@ -1,9 +1,8 @@
 import PrismaInstance from './prisma';
 import { marked } from 'marked';
+import Translation from './translation';
 
-const SUPPORTED_LOCALES = [
-  'en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'hin', 'jp', 'cn', 'ru'
-];
+const SUPPORTED_LOCALES = new Translation().allLocales;
 
 type BlogInput = {
   [key: string]: any;

@@ -1,10 +1,12 @@
 import { FastifyInstance } from 'fastify';
 import Blog from '../src/blog';
 import { ChatGPT } from '../src/chatgpt';
+import Translation from '../src/translation';
 
 export default async function blogRoutes(fastify: FastifyInstance) {
   const blog = Blog.getInstance();
   const openai = new ChatGPT();
+  const SUPPORTED_LOCALES = new Translation().allLocales;
 
   // Admin: Create a blog post (expects { title_xx, content_xx, summary_xx } for all supported locales)
   fastify.post(
@@ -60,9 +62,6 @@ export default async function blogRoutes(fastify: FastifyInstance) {
     { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
       const { instruction, locales } = request.body;
-      const SUPPORTED_LOCALES = [
-        'en', 'nl', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'hin', 'jp', 'cn', 'ru'
-      ];
       const targetLocales: string[] = Array.isArray(locales) && locales.length > 0
         ? locales.filter((l: string) => SUPPORTED_LOCALES.includes(l))
         : SUPPORTED_LOCALES;
