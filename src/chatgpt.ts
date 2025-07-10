@@ -846,7 +846,7 @@ export class ChatGPT {
 - Corporate team building activities
 - Wedding entertainment and guest interaction
 
-Write with a light-hearted, fun style that's naturally human. Avoid corporate jargon and AI-sounding phrases. Use conversational tone, varied sentence lengths, and natural flow. Don't use em-dashes for pauses (avoid "—"). Write with personality and make it interesting to read. You can use emojis sparingly when they add value (like 🎵 🎶 🎤 for music topics), but don't overdo it. Return a title, summary, and full content in markdown format.`,
+Write with a light-hearted, fun style that's naturally human. Avoid corporate jargon and AI-sounding phrases. Use conversational tone, varied sentence lengths, and natural flow. Don't use em-dashes for pauses (avoid "—"). Write with personality and make it interesting to read. You can use emojis sparingly when they add value (like 🎵 🎶 🎤 for music topics), but don't overdo it. Return a title, summary, and full content in clean HTML format with proper headers (h1, h2, h3), paragraphs, lists, and simple styling.`,
         },
         {
           role: 'user',
@@ -870,7 +870,7 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
               },
               content: {
                 type: 'string',
-                description: 'The blog post content in markdown',
+                description: 'The blog post content in clean HTML format with headers, paragraphs, lists, and simple styling',
               },
             },
             required: ['title', 'content'],
@@ -951,7 +951,7 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
                     - Sound like a real person, not a robot
                     - You can use emojis sparingly when functional (like 🎵 🎶 🎤 for music topics), but don't overuse them
                     
-                    Start with a title on the first line (prefixed with "# "), then a blank line, then an optional summary paragraph, then another blank line, then the full content in markdown.`,
+                    Generate clean HTML content using proper semantic tags: <h1>, <h2>, <h3> for headers, <p> for paragraphs, <ul>/<ol> and <li> for lists, <table>, <tr>, <td> for tables. Use simple inline styling where appropriate. Do not include <html>, <head>, or <body> tags - just the content. Start with an <h1> title, then an optional summary paragraph, then the full content in HTML.`,
         },
         {
           role: 'user',
@@ -970,47 +970,37 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
       }
     }
 
-    // Parse the streamed content to extract title, summary, and content
-    const lines = fullContent.split('\n');
+    // Parse the streamed HTML content to extract title, summary, and content
     let title = '';
     let summary = '';
     let content = '';
     
-    let currentSection = 'title';
-    let contentStartIndex = 0;
-    
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+    // Extract title from <h1> tag
+    const h1Match = fullContent.match(/<h1[^>]*>(.*?)<\/h1>/i);
+    if (h1Match) {
+      title = h1Match[1].trim();
+      // Remove the h1 tag from content for processing
+      const contentAfterTitle = fullContent.replace(/<h1[^>]*>.*?<\/h1>/i, '').trim();
       
-      if (currentSection === 'title' && line.startsWith('# ')) {
-        title = line.substring(2).trim();
-        currentSection = 'summary';
-        continue;
-      }
-      
-      if (currentSection === 'summary') {
-        if (line.trim() === '') {
-          if (summary.trim()) {
-            currentSection = 'content';
-            contentStartIndex = i + 1;
-          }
-          continue;
+      // Look for the first paragraph as potential summary
+      const firstPMatch = contentAfterTitle.match(/<p[^>]*>(.*?)<\/p>/i);
+      if (firstPMatch) {
+        const potentialSummary = firstPMatch[1].trim();
+        // If it's reasonably short, use it as summary
+        if (potentialSummary.length < 300) {
+          summary = potentialSummary;
+          // Remove this paragraph from content
+          content = contentAfterTitle.replace(/<p[^>]*>.*?<\/p>/i, '').trim();
+        } else {
+          content = contentAfterTitle;
         }
-        summary += (summary ? ' ' : '') + line.trim();
-      }
-    }
-    
-    // Extract content from the remaining lines
-    if (contentStartIndex > 0) {
-      content = lines.slice(contentStartIndex).join('\n').trim();
-    } else {
-      // Fallback: if no clear structure, use everything after title as content
-      const titleLineIndex = lines.findIndex(line => line.startsWith('# '));
-      if (titleLineIndex >= 0) {
-        content = lines.slice(titleLineIndex + 1).join('\n').trim();
       } else {
-        content = fullContent;
+        content = contentAfterTitle;
       }
+    } else {
+      // Fallback: use full content if no clear structure
+      content = fullContent;
+      title = 'Generated Blog Post';
     }
 
     return {
