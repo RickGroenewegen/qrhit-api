@@ -814,7 +814,9 @@ export class ChatGPT {
    * @param instruction The instruction for the AI (string)
    * @returns {Promise<{title: string, content: string, summary?: string}>}
    */
-  public async askBlog(instruction: string): Promise<{ title: string; content: string; summary?: string }> {
+  public async askBlog(
+    instruction: string
+  ): Promise<{ title: string; content: string; summary?: string }> {
     const result = await this.openai.chat.completions.create({
       model: 'gpt-4.1',
       temperature: 0.7,
@@ -872,7 +874,8 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
               },
               content: {
                 type: 'string',
-                description: 'The blog post content in clean HTML format with headers, paragraphs, lists, and simple styling (do not include h1 tags)',
+                description:
+                  'The blog post content in clean HTML format with headers, paragraphs, lists, and simple styling (do not include h1 tags)',
               },
             },
             required: ['title', 'content'],
@@ -904,7 +907,7 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
    * @returns {Promise<{title: string, content: string, summary?: string}>}
    */
   public async askBlogStream(
-    instruction: string, 
+    instruction: string,
     onChunk: (chunk: string) => void
   ): Promise<{ title: string; content: string; summary?: string }> {
     const stream = await this.openai.chat.completions.create({
@@ -963,7 +966,7 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
     });
 
     let fullContent = '';
-    
+
     for await (const chunk of stream) {
       const content = chunk.choices[0]?.delta?.content || '';
       if (content) {
@@ -977,7 +980,7 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
     let title = 'Generated Blog Post';
     let summary = '';
     let content = fullContent.trim();
-    
+
     // Look for the first paragraph as potential summary
     const firstPMatch = content.match(/<p[^>]*>(.*?)<\/p>/i);
     if (firstPMatch) {
@@ -993,8 +996,110 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
     return {
       title,
       content: content || fullContent,
-      summary: summary || undefined
+      summary: summary || undefined,
     };
+  }
+
+  /**
+   * Generate a blog image using DALL-E based on blog content
+   * @param title Blog title
+   * @param summary Blog summary
+   * @param content Blog content (HTML)
+   * @returns Promise<string | null> - Returns filename if successful, null if failed
+   */
+  public async generateBlogImage(
+    title: string,
+    summary: string,
+    content: string
+  ): Promise<string | null> {
+    try {
+      // Create blog_images directory if it doesn't exist
+      const blogImagesDir = path.join(
+        process.env['PUBLIC_DIR']!,
+        'blog_images'
+      );
+      try {
+        await fs.access(blogImagesDir);
+      } catch {
+        await fs.mkdir(blogImagesDir, { recursive: true });
+        this.logger.log(
+          color.blue.bold(`Created blog images directory: ${blogImagesDir}`)
+        );
+      }
+
+      // Create a prompt for image generation
+      const imagePrompt = `Create a modern, vibrant blog header image for QRSong! (a music QR card service).
+
+Design requirements:
+- Modern flat design style with vibrant colors
+- Include musical elements like QR codes, music notes, or sound waves
+- Use QRSong! brand colors: primary blue (#5FBFFF), secondary blue (#3F6FAF), accent pink (#E56581)
+- Clean, professional look suitable for a tech/music blog
+- Horizontal layout (16:9 aspect ratio)
+- No text overlays (text will be added separately)
+- Abstract or geometric patterns related to music and technology
+- Gradient backgrounds with the brand colors
+
+Blog topic: "${title}"
+Context: ${summary || content.substring(0, 200)}
+
+The image should feel modern, tech-savvy, and music-related while maintaining the QRSong! brand aesthetic.`;
+
+      this.logger.log(
+        color.blue.bold(
+          `Generating blog image for: "${color.white.bold(title)}"`
+        )
+      );
+
+      const response = await this.openai.images.generate({
+        model: 'dall-e-3',
+        prompt: imagePrompt,
+        n: 1,
+        size: '1792x1024',
+        quality: 'standard',
+        style: 'vivid',
+      });
+
+      if (response.data && response.data.length > 0 && response.data[0].url) {
+        const imageUrl = response.data[0].url;
+
+        // Download the image
+        const imageResponse = await fetch(imageUrl);
+        if (!imageResponse.ok) {
+          throw new Error(
+            `Failed to download image: ${imageResponse.statusText}`
+          );
+        }
+
+        const imageBuffer = await imageResponse.arrayBuffer();
+
+        // Generate filename
+        const timestamp = Date.now();
+        const filename = `blog_${timestamp}.png`;
+        const filepath = path.join(blogImagesDir, filename);
+
+        // Save the image
+        await fs.writeFile(filepath, Buffer.from(imageBuffer));
+
+        this.logger.log(
+          color.green.bold(
+            `Blog image generated and saved: ${color.white.bold(filename)}`
+          )
+        );
+
+        return filename;
+      } else {
+        this.logger.log(color.red.bold('No image URL received from DALL-E'));
+        return null;
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error generating blog image: ${(error as Error).message}`
+        )
+      );
+      return null;
+    }
   }
 
   /**
@@ -1003,7 +1108,10 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
    * @param targetLocales Array of locale codes to translate to (e.g. ['nl', 'de'])
    * @returns Promise<Record<string, string>> (locale -> translated text)
    */
-  public async translateText(text: string, targetLocales: string[]): Promise<Record<string, string>> {
+  public async translateText(
+    text: string,
+    targetLocales: string[]
+  ): Promise<Record<string, string>> {
     if (!text || !targetLocales || targetLocales.length === 0) return {};
     const result = await this.openai.chat.completions.create({
       model: 'gpt-4.1',
@@ -1015,7 +1123,9 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
         },
         {
           role: 'user',
-          content: `Translate the following text into these languages: ${targetLocales.join(', ')}.\n\nText:\n${text}`,
+          content: `Translate the following text into these languages: ${targetLocales.join(
+            ', '
+          )}.\n\nText:\n${text}`,
         },
       ],
       function_call: { name: 'translateText' },
@@ -1046,9 +1156,7 @@ Write with a light-hearted, fun style that's naturally human. Avoid corporate ja
         return translations;
       } catch (error) {
         this.logger.log(
-          color.red.bold(
-            `Error parsing translation results for blog: ${error}`
-          )
+          color.red.bold(`Error parsing translation results for blog: ${error}`)
         );
         this.logger.log(color.red.bold(`Raw response: ${funcCall.arguments}`));
       }
