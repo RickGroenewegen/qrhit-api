@@ -77,7 +77,12 @@ export default async function blogRoutes(fastify: FastifyInstance) {
   // Admin: Delete a blog post
   fastify.delete(
     '/admin/blogs/:id',
-    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    { 
+      preHandler: fastify.authenticate && fastify.authenticate(['admin']),
+      config: {
+        rawBody: true
+      }
+    },
     async (request: any, reply: any) => {
       const id = parseInt(request.params.id);
       if (isNaN(id)) {
