@@ -1049,13 +1049,11 @@ Context: ${summary || content.substring(0, 200)}
       );
 
       const response = await this.openai.images.generate({
-        model: 'dall-e-3',
+        model: 'gpt-image-1',
         prompt: imagePrompt,
         n: 1,
-        size: '1792x1024',
-        quality: 'standard',
-        style: 'vivid',
-        response_format: 'b64_json',
+        size: '1536x1024',
+        quality: 'high',
       });
 
       if (
