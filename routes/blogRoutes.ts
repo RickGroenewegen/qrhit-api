@@ -118,7 +118,7 @@ export default async function blogRoutes(fastify: FastifyInstance) {
       // Save the generated blog
       const result = await blog.createBlog(blogData);
 
-      if (result.success) {
+      if (result.success && result.blog) {
         reply.log.info(`[AI Blog] Blog created successfully with id: ${result.blog.id}`);
       } else {
         reply.log.error(`[AI Blog] Failed to create blog: ${result.error}`);
