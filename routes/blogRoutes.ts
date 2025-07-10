@@ -70,15 +70,20 @@ export default async function blogRoutes(fastify: FastifyInstance) {
       }
 
       reply.log.info(`[AI Blog] Starting blog generation for instruction: "${instruction}"`);
+      reply.log.info(`[AI Blog] Target locales: ${targetLocales.join(', ')}`);
 
       // 1. Generate the blog in English
-      reply.log.info('[AI Blog] Generating blog in English...');
+      reply.log.info('[AI Blog] Step 1/4: Generating blog content in English...');
       const aiResultEn = await openai.askBlog(instruction);
       if (!aiResultEn || !aiResultEn.title || !aiResultEn.content) {
+        reply.log.error('[AI Blog] ERROR: AI failed to generate blog in English');
         reply.status(500).send({ success: false, error: `AI failed to generate blog in English` });
         return;
       }
-      reply.log.info('[AI Blog] English blog generated. Title: ' + aiResultEn.title);
+      reply.log.info(`[AI Blog] ✓ English blog generated successfully`);
+      reply.log.info(`[AI Blog] - Title: "${aiResultEn.title}"`);
+      reply.log.info(`[AI Blog] - Content length: ${aiResultEn.content.length} characters`);
+      reply.log.info(`[AI Blog] - Summary: ${aiResultEn.summary ? `"${aiResultEn.summary.substring(0, 100)}..."` : 'None'}`);
 
       // 2. Translate the blog to all other locales
       // We'll translate title, summary, and content separately
@@ -90,38 +95,52 @@ export default async function blogRoutes(fastify: FastifyInstance) {
       // Only translate to non-English locales
       const localesToTranslate = targetLocales.filter((l) => l !== 'en');
 
-      reply.log.info(`[AI Blog] Translating blog to locales: ${localesToTranslate.join(', ')}`);
+      reply.log.info(`[AI Blog] Step 2/4: Translating blog to ${localesToTranslate.length} locales: ${localesToTranslate.join(', ')}`);
 
       // Translate title
-      reply.log.info('[AI Blog] Translating title...');
+      reply.log.info(`[AI Blog] Step 2a/4: Translating title to ${localesToTranslate.length} languages...`);
       const titleTranslations = await openai.translateText(aiResultEn.title, localesToTranslate);
+      reply.log.info(`[AI Blog] ✓ Title translations completed for: ${Object.keys(titleTranslations).join(', ')}`);
 
       // Translate summary
       let summaryTranslations = {};
       if (aiResultEn.summary) {
-        reply.log.info('[AI Blog] Translating summary...');
+        reply.log.info(`[AI Blog] Step 2b/4: Translating summary to ${localesToTranslate.length} languages...`);
         summaryTranslations = await openai.translateText(aiResultEn.summary, localesToTranslate);
+        reply.log.info(`[AI Blog] ✓ Summary translations completed for: ${Object.keys(summaryTranslations).join(', ')}`);
+      } else {
+        reply.log.info('[AI Blog] Step 2b/4: Skipping summary translation (no summary provided)');
       }
 
       // Translate content (markdown)
-      reply.log.info('[AI Blog] Translating content...');
+      reply.log.info(`[AI Blog] Step 2c/4: Translating content (${aiResultEn.content.length} chars) to ${localesToTranslate.length} languages...`);
       const contentTranslations = await openai.translateText(aiResultEn.content, localesToTranslate);
+      reply.log.info(`[AI Blog] ✓ Content translations completed for: ${Object.keys(contentTranslations).join(', ')}`);
 
+      reply.log.info('[AI Blog] Step 3/4: Assembling blog data with all translations...');
       for (const locale of localesToTranslate) {
         blogData[`title_${locale}`] = titleTranslations[locale] || '';
         blogData[`content_${locale}`] = contentTranslations[locale] || '';
         blogData[`summary_${locale}`] = (summaryTranslations as any)[locale] || '';
+        
+        reply.log.info(`[AI Blog] - ${locale.toUpperCase()}: Title="${(titleTranslations[locale] || '').substring(0, 50)}..."`);
       }
 
-      reply.log.info('[AI Blog] All translations complete. Saving blog to database...');
+      reply.log.info('[AI Blog] Step 4/4: Saving blog to database...');
 
       // Save the generated blog
       const result = await blog.createBlog(blogData);
 
       if (result.success && result.blog) {
-        reply.log.info(`[AI Blog] Blog created successfully with id: ${result.blog.id}`);
+        reply.log.info(`[AI Blog] ✓ Blog created successfully with ID: ${result.blog.id}`);
+        reply.log.info(`[AI Blog] ✓ Blog generation process completed successfully`);
+        reply.log.info(`[AI Blog] Summary:`);
+        reply.log.info(`[AI Blog] - Blog ID: ${result.blog.id}`);
+        reply.log.info(`[AI Blog] - Languages: ${targetLocales.length} (${targetLocales.join(', ')})`);
+        reply.log.info(`[AI Blog] - English title: "${aiResultEn.title}"`);
+        reply.log.info(`[AI Blog] - Content length: ${aiResultEn.content.length} characters`);
       } else {
-        reply.log.error(`[AI Blog] Failed to create blog: ${result.error}`);
+        reply.log.error(`[AI Blog] ✗ Failed to create blog in database: ${result.error}`);
       }
 
       reply.send(result);
