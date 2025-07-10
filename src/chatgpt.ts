@@ -850,7 +850,7 @@ export class ChatGPT {
 - Corporate team building activities
 - Wedding entertainment and guest interaction
 
-Write in a professional, informative, and engaging style. The tone should be clear and authoritative, but still accessible to a general audience. Avoid overly casual language, slang, and excessive humor. Focus on providing valuable information about the product and its uses. Avoid corporate jargon and AI-sounding phrases. Use a clear structure with varied sentence lengths for readability. Do not use em-dashes for pauses (avoid "—"). Emojis should be used sparingly and only when they add clear value (e.g., 🎵 for music topics). Return a title, summary, and full content in clean HTML format with proper headers (h2, h3), paragraphs, lists, and simple styling.`,
+Write in a professional, informative, and engaging style. The tone should be clear and authoritative, but still accessible to a general audience. Avoid overly casual language, slang, and excessive humor. Focus on providing valuable information about the product and its uses. Avoid corporate jargon and AI-sounding phrases. Use a clear structure with varied sentence lengths for readability. Never use em-dashes (—) as they look very AI-generated - use commas, periods, or parentheses instead. Emojis should be used sparingly and only when they add clear value (e.g., 🎵 for music topics). Return a title, summary, and full content in clean HTML format with proper headers (h2, h3), paragraphs, lists, and simple styling.`,
         },
         {
           role: 'user',
@@ -951,7 +951,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
                     - Avoid overly casual language, slang, and excessive humor.
                     - Focus on providing valuable information about the product and its uses.
                     - Use a clear structure with varied sentence lengths for readability.
-                    - Avoid em-dashes for pauses (don't use "—").
+                    - Never use em-dashes (—) as they look very AI-generated. Use commas, periods, or parentheses instead.
                     - Emojis should be used sparingly and only when they add clear value (e.g., 🎵 for music topics).
                     - Sound professional and trustworthy.
                     
