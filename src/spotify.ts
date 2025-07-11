@@ -1103,26 +1103,26 @@ class Spotify {
    */
   private extractSpotifyUri(input: string): string | null {
     if (!input) return null;
-    // Match spotify URIs (spotify:track:..., spotify:album:..., etc.)
+    // Match spotify track URIs only (spotify:track:...)
     const uriMatch = input.match(
-      /spotify:(track|album|playlist|artist):[a-zA-Z0-9]+/
+      /spotify:track:[a-zA-Z0-9]+/
     );
     if (uriMatch) return uriMatch[0];
 
-    // Match Spotify web URLs and convert to URI
+    // Match Spotify web track URLs and convert to URI
     const urlMatch = input.match(
-      /https?:\/\/open\.spotify\.com\/(track|album|playlist|artist)\/([a-zA-Z0-9]+)/
+      /https?:\/\/open\.spotify\.com\/track\/([a-zA-Z0-9]+)/
     );
     if (urlMatch) {
-      return `spotify:${urlMatch[1]}:${urlMatch[2]}`;
+      return `spotify:track:${urlMatch[1]}`;
     }
 
-    // Match spotify:// URLs and convert to URI
+    // Match spotify:// track URLs and convert to URI
     const spotifyUrlMatch = input.match(
-      /spotify:\/\/(track|album|playlist|artist)\/([a-zA-Z0-9]+)/
+      /spotify:\/\/track\/([a-zA-Z0-9]+)/
     );
     if (spotifyUrlMatch) {
-      return `spotify:${spotifyUrlMatch[1]}:${spotifyUrlMatch[2]}`;
+      return `spotify:track:${spotifyUrlMatch[1]}`;
     }
     
     return null;
