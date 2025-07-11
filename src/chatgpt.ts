@@ -866,6 +866,19 @@ export class ChatGPT {
 - Use bullet points and numbered lists for better readability and SEO
 - Write content that encourages engagement and longer page visits
 
+**INTERNAL LINKING RESTRICTIONS:**
+Only use these approved internal links (replace [lang] with appropriate language code):
+- /[lang]/generate/playlist (First step in creating your playlist)
+- /[lang]/playlists (Featured playlists if you need inspiration)
+- /[lang]/giftcard (You can buy and redeem giftcards here)
+- /[lang]/examples (Pictures of our product and example PDFs for download)
+- /[lang]/pricing (Pricing overview / calculator)
+- /[lang]/reviews (All our reviews)
+- /[lang]/faq (FAQ)
+- /[lang]/onzevibe (QRSong!, but for companies)
+- /[lang]/contact (Our contact page)
+Do NOT link to any other pages or external sites unless specifically requested.
+
 Write in a professional, informative, and engaging style. The tone should be clear and authoritative, but still accessible to a general audience. Avoid overly casual language, slang, and excessive humor. Focus on providing valuable information about the product and its uses. Avoid corporate jargon and AI-sounding phrases. Use a clear structure with varied sentence lengths for readability. Never use em-dashes (—) as they look very AI-generated - use commas, periods, or parentheses instead. Emojis should be used sparingly and only when they add clear value (e.g., 🎵 for music topics). Return a title, summary, and full content in clean HTML format with proper headers (h2, h3), paragraphs, lists, and simple styling.`,
         },
         {
@@ -974,6 +987,19 @@ Write in a professional, informative, and engaging style. The tone should be cle
                     - Include relevant statistics, benefits, and specific use cases
                     - Use bullet points and numbered lists for better readability and SEO
                     - Write content that encourages engagement and longer page visits
+
+                    **INTERNAL LINKING RESTRICTIONS:**
+                    Only use these approved internal links (replace [lang] with appropriate language code):
+                    - /[lang]/generate/playlist (First step in creating your playlist)
+                    - /[lang]/playlists (Featured playlists if you need inspiration)
+                    - /[lang]/giftcard (You can buy and redeem giftcards here)
+                    - /[lang]/examples (Pictures of our product and example PDFs for download)
+                    - /[lang]/pricing (Pricing overview / calculator)
+                    - /[lang]/reviews (All our reviews)
+                    - /[lang]/faq (FAQ)
+                    - /[lang]/onzevibe (QRSong!, but for companies)
+                    - /[lang]/contact (Our contact page)
+                    Do NOT link to any other pages or external sites unless specifically requested.
 
                     Write in a professional, informative, and engaging style. Avoid corporate speak, buzzwords, and AI-sounding phrases like "delve into", "unlock", "harness", "seamlessly", "leverage", "cutting-edge", "game-changer", or "revolutionize". 
                     
