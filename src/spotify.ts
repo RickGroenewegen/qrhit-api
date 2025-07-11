@@ -1116,6 +1116,15 @@ class Spotify {
     if (urlMatch) {
       return `spotify:${urlMatch[1]}:${urlMatch[2]}`;
     }
+
+    // Match spotify:// URLs and convert to URI
+    const spotifyUrlMatch = input.match(
+      /spotify:\/\/(track|album|playlist|artist)\/([a-zA-Z0-9]+)/
+    );
+    if (spotifyUrlMatch) {
+      return `spotify:${spotifyUrlMatch[1]}:${spotifyUrlMatch[2]}`;
+    }
+    
     return null;
   }
 }
