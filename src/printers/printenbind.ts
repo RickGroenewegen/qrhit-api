@@ -526,9 +526,17 @@ class PrintEnBind {
     let orderId = null;
     let totalItems = items.length;
     let totalItemsSuccess = 0;
+    let paymentMethod = 'bundled';
+
+    if (!this.data.euCountryCodes.includes(customerInfo.countrycode)) {
+      paymentMethod = 'account';
+    }
+
+    console.log(111, 'payment_method', paymentMethod);
 
     // Add remaining articles
     for (let i = 0; i < items.length; i++) {
+      items[i].payment_method = paymentMethod;
       if (fast) {
         items[i].production_method = 'fast';
       }

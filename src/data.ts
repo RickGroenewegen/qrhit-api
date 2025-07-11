@@ -302,14 +302,16 @@ class Data {
     const activeBlogs = await this.prisma.blog.findMany({
       where: {
         active: true,
-        OR: locales.map(locale => ({
+        OR: locales.map((locale) => ({
           [`slug_${locale}`]: {
             not: null,
           },
         })),
       },
       select: {
-        ...Object.fromEntries(locales.map(locale => [`slug_${locale}`, true])),
+        ...Object.fromEntries(
+          locales.map((locale) => [`slug_${locale}`, true])
+        ),
         updatedAt: true,
       },
     });
@@ -381,7 +383,9 @@ class Data {
         ...activeBlogs
           .filter((blog) => blog[`slug_${locale}` as keyof typeof blog])
           .map((blog) => ({
-            loc: `/${locale}/blog/${blog[`slug_${locale}` as keyof typeof blog]}`,
+            loc: `/${locale}/blog/${
+              blog[`slug_${locale}` as keyof typeof blog]
+            }`,
             lastmod: blog.updatedAt.toISOString().split('T')[0],
             changefreq: 'weekly',
             priority: '0.7',
@@ -534,7 +538,7 @@ class Data {
     return lastPlays;
   }
 
-  private euCountryCodes: string[] = [
+  public euCountryCodes: string[] = [
     'AT', // Austria
     'BE', // Belgium
     'BG', // Bulgaria
