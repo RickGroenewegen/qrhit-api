@@ -882,7 +882,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
             properties: {
               title: {
                 type: 'string',
-                description: 'The blog post title (keep it short and concise, maximum 8 words). Make it sound natural and human-written - avoid AI-sounding phrases like "Ultimate Guide", "Comprehensive", "Mastering", "Unlocking", "Revolutionary", or overly promotional language. Use simple, direct language that a real person would use. Include relevant keywords for SEO while maintaining readability.',
+                description: 'The blog post title (keep it short and concise, maximum 8 words). Use sentence case (only capitalize the first word and proper nouns). Make it sound natural and human-written - avoid AI-sounding phrases like "Ultimate Guide", "Comprehensive", "Mastering", "Unlocking", "Revolutionary", or overly promotional language. Use simple, direct language that a real person would use. Include relevant keywords for SEO while maintaining readability.',
               },
               summary: {
                 type: 'string',
