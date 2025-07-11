@@ -295,16 +295,18 @@ class Data {
       },
     });
 
-    // Get active blogs with non-empty slugs
+    // Get active blogs with non-empty slugs for all locales
     const activeBlogs = await this.prisma.blog.findMany({
       where: {
         active: true,
-        slug: {
-          not: null,
-        },
+        OR: locales.map(locale => ({
+          [`slug_${locale}`]: {
+            not: null,
+          },
+        })),
       },
       select: {
-        slug: true,
+        ...Object.fromEntries(locales.map(locale => [`slug_${locale}`, true])),
         updatedAt: true,
       },
     });
@@ -375,13 +377,15 @@ class Data {
           changefreq: 'daily',
           priority: '0.9',
         })),
-        // Add blog pages
-        ...activeBlogs.map((blog) => ({
-          loc: `/${locale}/blog/${blog.slug}`,
-          lastmod: blog.updatedAt.toISOString().split('T')[0],
-          changefreq: 'weekly',
-          priority: '0.7',
-        })),
+        // Add blog pages for this locale
+        ...activeBlogs
+          .filter((blog) => blog[`slug_${locale}` as keyof typeof blog])
+          .map((blog) => ({
+            loc: `/${locale}/blog/${blog[`slug_${locale}` as keyof typeof blog]}`,
+            lastmod: blog.updatedAt.toISOString().split('T')[0],
+            changefreq: 'weekly',
+            priority: '0.7',
+          })),
       ];
 
       const localeSitemapContent = `<?xml version="1.0" encoding="UTF-8"?>

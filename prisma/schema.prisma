@@ -684,7 +684,18 @@ model AppSetting {
 
 model Blog {
   id                Int      @id @default(autoincrement())
-  slug              String?  @unique
+  slug_en           String?  @unique
+  slug_nl           String?  @unique
+  slug_de           String?  @unique
+  slug_fr           String?  @unique
+  slug_es           String?  @unique
+  slug_it           String?  @unique
+  slug_pt           String?  @unique
+  slug_pl           String?  @unique
+  slug_hin          String?  @unique
+  slug_jp           String?  @unique
+  slug_cn           String?  @unique
+  slug_ru           String?  @unique
   active            Boolean  @default(false)
   image             String?
   image_instructions String? @db.Text

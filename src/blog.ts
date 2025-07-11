@@ -79,15 +79,22 @@ class Blog {
 
       const data: any = {};
 
-      // Create and ensure unique slug
-      const baseSlug = this.slugify(input.title_en);
-      let slug = baseSlug;
-      let counter = 1;
-      while (await this.prisma.blog.findUnique({ where: { slug } })) {
-        slug = `${baseSlug}-${counter}`;
-        counter++;
+      // Create and ensure unique slugs for each locale
+      for (const locale of SUPPORTED_LOCALES) {
+        const title = input[`title_${locale}`];
+        if (title) {
+          const baseSlug = this.slugify(title);
+          let slug = baseSlug;
+          let counter = 1;
+          while (await this.prisma.blog.findFirst({ 
+            where: { [`slug_${locale}`]: slug } 
+          })) {
+            slug = `${baseSlug}-${counter}`;
+            counter++;
+          }
+          data[`slug_${locale}`] = slug;
+        }
       }
-      data.slug = slug;
 
       data.active = input.active !== undefined ? input.active : false;
       if (input.image) {
@@ -121,9 +128,29 @@ class Blog {
       if (input.hasOwnProperty('image_instructions')) {
         data.image_instructions = input.image_instructions;
       }
+      
+      // Handle slug updates for each locale
       for (const locale of SUPPORTED_LOCALES) {
         if (input.hasOwnProperty(`title_${locale}`)) {
           data[`title_${locale}`] = input[`title_${locale}`];
+          
+          // Update slug if title changed
+          const title = input[`title_${locale}`];
+          if (title) {
+            const baseSlug = this.slugify(title);
+            let slug = baseSlug;
+            let counter = 1;
+            while (await this.prisma.blog.findFirst({ 
+              where: { 
+                [`slug_${locale}`]: slug,
+                id: { not: id } // Exclude current blog from check
+              } 
+            })) {
+              slug = `${baseSlug}-${counter}`;
+              counter++;
+            }
+            data[`slug_${locale}`] = slug;
+          }
         }
         if (input.hasOwnProperty(`content_${locale}`)) {
           data[`content_${locale}`] = input[`content_${locale}`];
@@ -185,8 +212,8 @@ class Blog {
         return { success: false, error: 'Invalid locale' };
       }
 
-      const blog = await this.prisma.blog.findUnique({
-        where: { slug },
+      const blog = await this.prisma.blog.findFirst({
+        where: { [`slug_${locale}`]: slug },
         select: this.getSelectObject(true),
       });
       if (!blog) {
@@ -221,7 +248,6 @@ class Blog {
   private getSelectObject(includeContent = false) {
     const select: any = {
       id: true,
-      slug: true,
       active: true,
       image: true,
       image_instructions: true,
@@ -229,6 +255,7 @@ class Blog {
       updatedAt: true,
     };
     for (const locale of SUPPORTED_LOCALES) {
+      select[`slug_${locale}`] = true;
       select[`title_${locale}`] = true;
       select[`summary_${locale}`] = true;
       if (includeContent) select[`content_${locale}`] = true;
@@ -241,7 +268,7 @@ class Blog {
     // Create the transformed blog object
     const transformedBlog: any = {
       id: blog.id,
-      slug: blog.slug,
+      slug: blog[`slug_${locale}`] || blog.slug_en || '',
       active: blog.active,
       image: blog.image,
       image_instructions: blog.image_instructions,
