@@ -281,6 +281,9 @@ class Data {
   }
 
   private async createSiteMap(): Promise<void> {
+    // Get all available locales from Translation class
+    const locales = this.translate.allLocales;
+
     // Get featured playlists with non-empty slugs
     const featuredPlaylists = await this.prisma.playlist.findMany({
       where: {
@@ -327,9 +330,6 @@ class Data {
 
     // Get current date in YYYY-MM-DD format for lastmod
     const currentDate = new Date().toISOString().split('T')[0];
-
-    // Get all available locales from Translation class
-    const locales = this.translate.allLocales;
 
     // Create sitemap index file that references language-specific sitemaps
     const sitemapIndexContent = `<?xml version="1.0" encoding="UTF-8"?>
