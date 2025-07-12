@@ -441,16 +441,16 @@ class Hitlist {
               },
             });
 
-            const youtubeId = await this.data.getYouTubeLink(
-              track.artist,
-              track.name
-            );
-            if (youtubeId) {
-              await this.prisma.track.update({
-                where: { trackId: track.trackId },
-                data: { youtubeLink: youtubeId },
-              });
-            }
+            // const youtubeId = await this.data.getYouTubeLink(
+            //   track.artist,
+            //   track.name
+            // );
+            // if (youtubeId) {
+            //   await this.prisma.track.update({
+            //     where: { trackId: track.trackId },
+            //     data: { youtubeLink: youtubeId },
+            //   });
+            // }
 
             // Add to the list of newly created tracks
             newTrackIds.push(trackData.trackId);

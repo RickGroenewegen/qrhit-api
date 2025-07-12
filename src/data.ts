@@ -50,6 +50,7 @@ class Data {
     artist: string,
     name: string
   ): Promise<string | null> {
+    return null;
     try {
       // First try YouTube Music API
       const ytMusicOptions = {
