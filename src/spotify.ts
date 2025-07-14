@@ -137,7 +137,7 @@ class Spotify {
         if (isSlug) {
           if (!dbCacheResult || !cache) {
             const dbPlaylist = await this.prisma.playlist.findFirst({
-              where: { slug: playlistId },
+              where: { slug: playlistId, featured: true },
             });
             if (!dbPlaylist) {
               return { success: false, error: 'playlistNotFound' };
@@ -195,7 +195,7 @@ class Spotify {
 
         if (featured) {
           const dbPlaylist = await this.prisma.playlist.findFirst({
-            where: { slug: playlistId },
+            where: { slug: playlistId, featured: true },
           });
 
           playlistName = dbPlaylist?.name || playlistName;
@@ -276,7 +276,7 @@ class Spotify {
       if (!cacheResult || !cache) {
         if (isSlug) {
           const dbPlaylist = await this.prisma.playlist.findFirst({
-            where: { slug: playlistId },
+            where: { slug: playlistId, featured: true },
           });
           if (!dbPlaylist) {
             return { success: false, error: 'playlistNotFound' };
@@ -932,9 +932,12 @@ class Spotify {
    * @param url The URL to resolve.
    * @returns {Promise<{ success: boolean, spotifyUri?: string, error?: string, cached?: boolean }>}
    */
-  public async resolveSpotifyUrl(
-    url: string
-  ): Promise<{ success: boolean; spotifyUri?: string; error?: string; cached?: boolean }> {
+  public async resolveSpotifyUrl(url: string): Promise<{
+    success: boolean;
+    spotifyUri?: string;
+    error?: string;
+    cached?: boolean;
+  }> {
     // Check cache first for all URLs
     const cacheKey = `qrlink_unknown_result_${crypto
       .createHash('md5')
@@ -1104,9 +1107,7 @@ class Spotify {
   private extractSpotifyUri(input: string): string | null {
     if (!input) return null;
     // Match spotify track URIs only (spotify:track:...)
-    const uriMatch = input.match(
-      /spotify:track:[a-zA-Z0-9]+/
-    );
+    const uriMatch = input.match(/spotify:track:[a-zA-Z0-9]+/);
     if (uriMatch) return uriMatch[0];
 
     // Match Spotify web track URLs and convert to URI
@@ -1118,13 +1119,11 @@ class Spotify {
     }
 
     // Match spotify:// track URLs and convert to URI
-    const spotifyUrlMatch = input.match(
-      /spotify:\/\/track\/([a-zA-Z0-9]+)/
-    );
+    const spotifyUrlMatch = input.match(/spotify:\/\/track\/([a-zA-Z0-9]+)/);
     if (spotifyUrlMatch) {
       return `spotify:track:${spotifyUrlMatch[1]}`;
     }
-    
+
     return null;
   }
 }
