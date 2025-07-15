@@ -998,48 +998,27 @@ class Data {
     track: any;
     totalUnchecked: number;
   }> {
-    const [track, totalCount] = await Promise.all([
-      this.prisma.track.findFirst({
-        where: {
-          manuallyChecked: false,
-          year: {
-            gt: 0,
-          },
-        },
-        select: {
-          id: true,
-          name: true,
-          spotifyLink: true,
-          artist: true,
-          year: true,
-          yearSource: true,
-          certainty: true,
-          reasoning: true,
-          spotifyYear: true,
-          discogsYear: true,
-          aiYear: true,
-          musicBrainzYear: true,
-          openPerplexYear: true,
-          standardDeviation: true,
-          googleResults: true,
-        },
-        orderBy: {
-          id: 'asc',
-        },
-      }),
-      this.prisma.track.count({
-        where: {
-          manuallyChecked: false,
-          year: {
-            gt: 0,
-          },
-        },
-      }),
-    ]);
+    // Use a single optimized query to get both the track and count
+    const result = await this.prisma.$queryRaw<any[]>`
+      SELECT 
+        (SELECT COUNT(*) FROM tracks WHERE manuallyChecked = false AND year > 0) as totalUnchecked,
+        t.id, t.name, t.spotifyLink, t.artist, t.year, t.yearSource, 
+        t.certainty, t.reasoning, t.spotifyYear, t.discogsYear, t.aiYear, 
+        t.musicBrainzYear, t.openPerplexYear, t.standardDeviation, t.googleResults
+      FROM tracks t
+      WHERE t.manuallyChecked = false AND t.year > 0
+      ORDER BY t.id ASC
+      LIMIT 1
+    `;
 
+    if (result.length === 0) {
+      return { track: null, totalUnchecked: 0 };
+    }
+
+    const { totalUnchecked, ...track } = result[0];
     return {
       track,
-      totalUnchecked: totalCount,
+      totalUnchecked: Number(totalUnchecked),
     };
   }
 
