@@ -16,10 +16,10 @@ const languages = [
   'it',
   'pt',
   'pl',
-  'hin',
+  //'hin',
   'jp',
   'cn',
-  'ru',
+  //'ru',
 ];
 const languagesFull = [
   'Dutch',

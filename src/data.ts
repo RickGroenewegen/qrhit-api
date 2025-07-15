@@ -927,9 +927,6 @@ class Data {
         FROM        payments
         WHERE       payments.paymentId = ${paymentId}`;
 
-    console.log(111, paymentId, playlistId);
-    console.log(222, paymentDetails);
-
     const connectedPlaylists: any[] = await this.prisma.$queryRaw`
         SELECT      playlists.id,
                     playlists.playlistId,
