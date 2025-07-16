@@ -291,7 +291,7 @@ class Vibe {
             fullname,
             company,
             locale,
-            user.verificationHash || undefined
+            verificationHash || undefined
           );
         } else {
           // Send regular OnzeVibe portal welcome email
