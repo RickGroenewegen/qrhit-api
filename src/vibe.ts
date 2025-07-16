@@ -74,8 +74,37 @@ class Vibe {
   }
 
   /**
+   * Validate password strength
+   * @param password The password to validate
+   * @returns Object with isValid boolean and error message if invalid
+   */
+  private validatePassword(password: string): { isValid: boolean; error?: string } {
+    if (password.length < 8) {
+      return { isValid: false, error: 'Password must be at least 8 characters long' };
+    }
+
+    if (!/[A-Z]/.test(password)) {
+      return { isValid: false, error: 'Password must contain at least one uppercase letter' };
+    }
+
+    if (!/[a-z]/.test(password)) {
+      return { isValid: false, error: 'Password must contain at least one lowercase letter' };
+    }
+
+    if (!/[0-9]/.test(password)) {
+      return { isValid: false, error: 'Password must contain at least one number' };
+    }
+
+    if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+      return { isValid: false, error: 'Password must contain at least one special character' };
+    }
+
+    return { isValid: true };
+  }
+
+  /**
    * Handle the POST /vibe/companylist/create endpoint logic.
-   * Accepts: fullname, company, email, captchaToken
+   * Accepts: fullname, company, email, captchaToken, password1, password2
    * - Verifies captcha
    * - Creates company (if not exists)
    * - Creates company list with same name
@@ -85,7 +114,7 @@ class Vibe {
     body: any,
     clientIp: string
   ): Promise<any> {
-    const { fullname, company, email, captchaToken } = body || {};
+    const { fullname, company, email, captchaToken, password1, password2 } = body || {};
 
     if (!fullname || !company || !email) {
       return {
@@ -105,6 +134,32 @@ class Vibe {
       };
     }
 
+    // Handle password validation if custom passwords are provided
+    let userPassword: string;
+    if (password1 && password2) {
+      if (password1 !== password2) {
+        return {
+          success: false,
+          error: 'Passwords do not match',
+          statusCode: 400,
+        };
+      }
+
+      const passwordValidation = this.validatePassword(password1);
+      if (!passwordValidation.isValid) {
+        return {
+          success: false,
+          error: passwordValidation.error,
+          statusCode: 400,
+        };
+      }
+
+      userPassword = password1;
+    } else {
+      // Generate a random password for the user (for demo, use random string)
+      userPassword = Math.random().toString(36).slice(-10);
+    }
+
     try {
       // 1. Create the company (if not exists)
       const companyResult = await this.createCompany(company, false);
@@ -118,13 +173,10 @@ class Vibe {
       const companyId = companyResult.data.company.id;
 
       // 1b. Create the user for this company (admin)
-      // Generate a random password for the user (for demo, use random string)
-      const generatedPassword = Math.random().toString(36).slice(-10);
-
       // Hash the password using the same method as in auth.ts
       // (pbkdf2Sync with 10000 iterations, 64 bytes, sha512)
       const salt = auth.generateSalt();
-      const hash = auth.hashPassword(generatedPassword, salt);
+      const hash = auth.hashPassword(userPassword, salt);
 
       // Find the 'companyadmin' user group (do not create if it doesn't exist)
       const companyAdminGroup = await this.prisma.userGroup.findUnique({
@@ -216,7 +268,7 @@ class Vibe {
           company,
           portalUrl,
           email, // Use email as username
-          generatedPassword,
+          userPassword,
           locale,
           adminUrl // pass admin URL
         );
