@@ -225,7 +225,7 @@ class Vibe {
 
         // For QRVote users, generate verification hash and set verified to false
         // For regular users, set verified to true with current date
-        let verificationHash: string = '';
+        let verificationHash: string | null = null;
         let verified = true;
         let verifiedAt: Date | null = new Date();
 
@@ -315,7 +315,7 @@ class Vibe {
             fullname,
             company,
             locale,
-            verificationHash || '' // Pass verification hash if QRVote
+            verificationHash || ''
           );
         } else {
           // Send regular OnzeVibe portal welcome email
