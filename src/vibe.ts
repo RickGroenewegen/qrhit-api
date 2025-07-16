@@ -114,7 +114,7 @@ class Vibe {
     body: any,
     clientIp: string
   ): Promise<any> {
-    const { fullname, company, email, captchaToken, password1, password2 } = body || {};
+    const { fullname, company, email, captchaToken, password1, password2, qrvote } = body || {};
 
     if (!fullname || !company || !email) {
       return {
@@ -262,21 +262,33 @@ class Vibe {
       const adminUrl = process.env['FRONTEND_VOTING_URI'];
 
       try {
-        await this.mail.sendPortalWelcomeEmail(
-          email,
-          fullname,
-          company,
-          portalUrl,
-          email, // Use email as username
-          userPassword,
-          locale,
-          adminUrl // pass admin URL
-        );
+        // Check if this is a QRVote request
+        if (this.utils.parseBoolean(qrvote)) {
+          // Send QRVote welcome email (no password, username, or admin URL)
+          await this.mail.sendQRVoteWelcomeEmail(
+            email,
+            fullname,
+            company,
+            locale
+          );
+        } else {
+          // Send regular OnzeVibe portal welcome email
+          await this.mail.sendPortalWelcomeEmail(
+            email,
+            fullname,
+            company,
+            portalUrl,
+            email, // Use email as username
+            userPassword,
+            locale,
+            adminUrl // pass admin URL
+          );
+        }
       } catch (err) {
         // Log but do not fail the endpoint if email fails
         this.logger.log(
           color.red.bold(
-            `Failed to send portal welcome email to ${email}: ${err}`
+            `Failed to send welcome email to ${email}: ${err}`
           )
         );
       }
