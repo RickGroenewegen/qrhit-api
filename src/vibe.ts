@@ -308,7 +308,7 @@ class Vibe {
 
       try {
         // Check if this is a QRVote request
-        if (this.utils.parseBoolean(qrvote)) {
+        if (isQRVote) {
           // Send QRVote welcome email with verification hash
           await this.mail.sendQRVoteWelcomeEmail(
             email,
