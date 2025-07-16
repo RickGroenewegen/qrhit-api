@@ -178,9 +178,12 @@ class Vibe {
       const salt = auth.generateSalt();
       const hash = auth.hashPassword(userPassword, salt);
 
-      // Find the 'companyadmin' user group (do not create if it doesn't exist)
-      const companyAdminGroup = await this.prisma.userGroup.findUnique({
-        where: { name: 'companyadmin' },
+      const isQRVote = this.utils.parseBoolean(qrvote);
+      
+      // Find the appropriate user group based on qrvote flag
+      const userGroupName = isQRVote ? 'qrvoteadmin' : 'companyadmin';
+      const userGroup = await this.prisma.userGroup.findUnique({
+        where: { name: userGroupName },
       });
 
       // Create the user (if not exists)
@@ -193,6 +196,21 @@ class Vibe {
           .randomBytes(8)
           .toString('hex')
           .slice(0, 16);
+        
+        // For QRVote users, generate verification hash and set verified to false
+        // For regular users, set verified to true with current date
+        let verificationHash = null;
+        let verified = true;
+        let verifiedAt = new Date();
+        
+        if (isQRVote) {
+          verificationHash = require('crypto')
+            .randomBytes(16)
+            .toString('hex');
+          verified = false;
+          verifiedAt = null;
+        }
+        
         user = await this.prisma.user.create({
           data: {
             userId: email,
@@ -205,16 +223,19 @@ class Vibe {
             locale: 'nl',
             marketingEmails: false,
             sync: false,
+            verificationHash: verificationHash,
+            verified: verified,
+            verifiedAt: verifiedAt,
           },
         });
       }
 
-      // Add user to the companyadmin group (if not already and group exists)
-      if (companyAdminGroup) {
+      // Add user to the appropriate group (if not already and group exists)
+      if (userGroup) {
         const userInGroup = await this.prisma.userInGroup.findFirst({
           where: {
             userId: user.id,
-            groupId: companyAdminGroup.id,
+            groupId: userGroup.id,
           },
         });
 
@@ -222,7 +243,7 @@ class Vibe {
           await this.prisma.userInGroup.create({
             data: {
               userId: user.id,
-              groupId: companyAdminGroup.id,
+              groupId: userGroup.id,
             },
           });
         }
@@ -264,12 +285,13 @@ class Vibe {
       try {
         // Check if this is a QRVote request
         if (this.utils.parseBoolean(qrvote)) {
-          // Send QRVote welcome email (no password, username, or admin URL)
+          // Send QRVote welcome email with verification hash
           await this.mail.sendQRVoteWelcomeEmail(
             email,
             fullname,
             company,
-            locale
+            locale,
+            user.verificationHash || undefined
           );
         } else {
           // Send regular OnzeVibe portal welcome email

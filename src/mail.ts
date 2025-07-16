@@ -62,7 +62,8 @@ class Mail {
     email: string,
     fullname: string,
     companyName: string,
-    locale: string = 'nl'
+    locale: string = 'nl',
+    verificationHash?: string
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -74,7 +75,9 @@ class Mail {
       'qrvote_welcome'
     );
 
-    const verifyUrl = `${process.env['FRONTEND_URI']}/${locale}/account/verify`;
+    const verifyUrl = verificationHash 
+      ? `${process.env['FRONTEND_URI']}/${locale}/account/verify/${verificationHash}`
+      : `${process.env['FRONTEND_URI']}/${locale}/account/verify`;
 
     const mailParams = {
       fullname: fullname || email.split('@')[0],
