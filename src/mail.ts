@@ -71,7 +71,7 @@ class Mail {
     // Fetch translations for QRVote welcome mail
     const translations = await this.translation.getTranslationsByPrefix(
       locale,
-      'portal_welcome'
+      'qrvote_welcome'
     );
 
     const verifyUrl = `${process.env['FRONTEND_URI']}/${locale}/account/verify`;
