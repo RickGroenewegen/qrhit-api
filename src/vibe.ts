@@ -252,6 +252,19 @@ class Vibe {
             verifiedAt: verifiedAt,
           },
         });
+      } else {
+        // User already exists, update with verification hash if QRVote
+        if (isQRVote) {
+          const verificationHash = require('crypto').randomBytes(16).toString('hex');
+          user = await this.prisma.user.update({
+            where: { id: user.id },
+            data: {
+              verificationHash: verificationHash,
+              verified: false,
+              verifiedAt: null,
+            },
+          });
+        }
       }
 
       // Add user to the appropriate group (if not already and group exists)
