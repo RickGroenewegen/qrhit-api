@@ -78,25 +78,43 @@ class Vibe {
    * @param password The password to validate
    * @returns Object with isValid boolean and error message if invalid
    */
-  private validatePassword(password: string): { isValid: boolean; error?: string } {
+  private validatePassword(password: string): {
+    isValid: boolean;
+    error?: string;
+  } {
     if (password.length < 8) {
-      return { isValid: false, error: 'Password must be at least 8 characters long' };
+      return {
+        isValid: false,
+        error: 'Password must be at least 8 characters long',
+      };
     }
 
     if (!/[A-Z]/.test(password)) {
-      return { isValid: false, error: 'Password must contain at least one uppercase letter' };
+      return {
+        isValid: false,
+        error: 'Password must contain at least one uppercase letter',
+      };
     }
 
     if (!/[a-z]/.test(password)) {
-      return { isValid: false, error: 'Password must contain at least one lowercase letter' };
+      return {
+        isValid: false,
+        error: 'Password must contain at least one lowercase letter',
+      };
     }
 
     if (!/[0-9]/.test(password)) {
-      return { isValid: false, error: 'Password must contain at least one number' };
+      return {
+        isValid: false,
+        error: 'Password must contain at least one number',
+      };
     }
 
     if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-      return { isValid: false, error: 'Password must contain at least one special character' };
+      return {
+        isValid: false,
+        error: 'Password must contain at least one special character',
+      };
     }
 
     return { isValid: true };
@@ -114,7 +132,15 @@ class Vibe {
     body: any,
     clientIp: string
   ): Promise<any> {
-    const { fullname, company, email, captchaToken, password1, password2, qrvote } = body || {};
+    const {
+      fullname,
+      company,
+      email,
+      captchaToken,
+      password1,
+      password2,
+      qrvote,
+    } = body || {};
 
     if (!fullname || !company || !email) {
       return {
@@ -179,7 +205,7 @@ class Vibe {
       const hash = auth.hashPassword(userPassword, salt);
 
       const isQRVote = this.utils.parseBoolean(qrvote);
-      
+
       // Find the appropriate user group based on qrvote flag
       const userGroupName = isQRVote ? 'qrvoteadmin' : 'companyadmin';
       const userGroup = await this.prisma.userGroup.findUnique({
@@ -196,21 +222,19 @@ class Vibe {
           .randomBytes(8)
           .toString('hex')
           .slice(0, 16);
-        
+
         // For QRVote users, generate verification hash and set verified to false
         // For regular users, set verified to true with current date
-        let verificationHash: string | null = null;
+        let verificationHash: string = '';
         let verified = true;
         let verifiedAt: Date | null = new Date();
-        
+
         if (isQRVote) {
-          verificationHash = require('crypto')
-            .randomBytes(16)
-            .toString('hex');
+          verificationHash = require('crypto').randomBytes(16).toString('hex');
           verified = false;
           verifiedAt = null;
         }
-        
+
         user = await this.prisma.user.create({
           data: {
             userId: email,
@@ -291,7 +315,7 @@ class Vibe {
             fullname,
             company,
             locale,
-            verificationHash || undefined
+            verificationHash || '' // Pass verification hash if QRVote
           );
         } else {
           // Send regular OnzeVibe portal welcome email
@@ -309,9 +333,7 @@ class Vibe {
       } catch (err) {
         // Log but do not fail the endpoint if email fails
         this.logger.log(
-          color.red.bold(
-            `Failed to send welcome email to ${email}: ${err}`
-          )
+          color.red.bold(`Failed to send welcome email to ${email}: ${err}`)
         );
       }
 
