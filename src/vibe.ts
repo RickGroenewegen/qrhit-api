@@ -199,9 +199,9 @@ class Vibe {
         
         // For QRVote users, generate verification hash and set verified to false
         // For regular users, set verified to true with current date
-        let verificationHash = null;
+        let verificationHash: string | null = null;
         let verified = true;
-        let verifiedAt = new Date();
+        let verifiedAt: Date | null = new Date();
         
         if (isQRVote) {
           verificationHash = require('crypto')
