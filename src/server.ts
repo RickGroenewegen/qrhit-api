@@ -726,7 +726,7 @@ class Server {
       }
     });
 
-    this.fastify.post('/account/reset-password', async (request: any, reply: any) => {
+    this.fastify.post('/account/reset-password-request', async (request: any, reply: any) => {
       const { email } = request.body;
 
       const result = await initiatePasswordReset(email);
