@@ -86,7 +86,7 @@ class Account {
           numberOfTracks: php.numberOfTracks,
           createdAt: payment.createdAt,
           type: php.type,
-          digitalFilename: php.filenameDigital || undefined,
+          digitalFilename: php.type === 'digital' ? (php.filenameDigital || '') : '',
         }))
       );
 
