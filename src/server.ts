@@ -7,6 +7,7 @@ import {
   createOrUpdateAdminUser,
   deleteUserById,
   registerAccount,
+  verifyUser,
 } from './auth';
 import Fastify from 'fastify';
 import replyFrom from '@fastify/reply-from';
@@ -705,6 +706,19 @@ class Server {
         reply.send(result);
       } else {
         const statusCode = result.error === 'accountAlreadyExists' ? 409 : 400;
+        reply.status(statusCode).send(result);
+      }
+    });
+
+    this.fastify.post('/account/verify', async (request: any, reply: any) => {
+      const { verificationHash } = request.body;
+
+      const result = await verifyUser(verificationHash);
+
+      if (result.success) {
+        reply.send(result);
+      } else {
+        const statusCode = result.error === 'invalidVerificationHash' || result.error === 'accountAlreadyVerified' ? 400 : 500;
         reply.status(statusCode).send(result);
       }
     });

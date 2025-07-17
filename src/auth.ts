@@ -243,6 +243,95 @@ function validatePassword(password: string): {
 }
 
 /**
+ * Verifies a user account using verification hash
+ * @param verificationHash The verification hash from the email
+ * @returns Object with success status, auth token, and user info or error
+ */
+export async function verifyUser(
+  verificationHash: string
+): Promise<{
+  success: boolean;
+  token?: string;
+  userId?: string;
+  userGroups?: string[];
+  companyId?: number;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    // Validate required field
+    if (!verificationHash) {
+      return {
+        success: false,
+        error: 'missingVerificationHash',
+      };
+    }
+
+    // Find user with this verification hash
+    const user = await prisma.user.findUnique({
+      where: { verificationHash },
+      include: {
+        UserGroupUser: {
+          include: {
+            UserGroup: true,
+          },
+        },
+      },
+    });
+
+    if (!user) {
+      return {
+        success: false,
+        error: 'invalidVerificationHash',
+      };
+    }
+
+    // Check if user is already verified
+    if (user.verified) {
+      return {
+        success: false,
+        error: 'accountAlreadyVerified',
+      };
+    }
+
+    // Verify the user account
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        verified: true,
+        verifiedAt: new Date(),
+        verificationHash: null, // Clear the verification hash
+      },
+    });
+
+    // Extract user group names
+    const userGroups = user.UserGroupUser.map((ugu) => ugu.UserGroup.name);
+
+    // Generate auth token
+    const token = generateToken(
+      user.userId,
+      userGroups,
+      user.companyId || undefined
+    );
+
+    return {
+      success: true,
+      token,
+      userId: user.userId,
+      userGroups: userGroups,
+      companyId: user.companyId || undefined,
+      message: 'accountVerified',
+    };
+  } catch (error) {
+    console.error('Error in account verification:', error);
+    return {
+      success: false,
+      error: 'internalServerError',
+    };
+  }
+}
+
+/**
  * Registers a new user account or upgrades an existing unverified account
  * @param displayName The user's display name
  * @param email The user's email address

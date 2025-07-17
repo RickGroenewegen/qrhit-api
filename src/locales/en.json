@@ -202,6 +202,12 @@
 	"qrsong_verification.thanks" : "Thank you",
 	"qrsong_verification.team" : "The QRSong Team",
 
+	"account_verification.missingVerificationHash" : "Verification hash is required",
+	"account_verification.invalidVerificationHash" : "Invalid or expired verification link",
+	"account_verification.accountAlreadyVerified" : "Account is already verified",
+	"account_verification.accountVerified" : "Account successfully verified",
+	"account_verification.internalServerError" : "Internal server error",
+
 	"countries.AF" : "Afghanistan",
 	"countries.AX" : "Aland Islands",
 	"countries.AL" : "Albania",
