@@ -286,8 +286,9 @@ class Vibe {
       const listData = {
         name: company,
         slug,
-        numberOfCards: 10,
-        numberOfTracks: 10,
+        numberOfCards: 200,
+        numberOfTracks: 5,
+        minimumNumberOfTracks: 5,
         // Optionally add description fields for all locales as empty string
       };
 
