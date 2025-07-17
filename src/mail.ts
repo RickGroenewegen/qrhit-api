@@ -74,7 +74,7 @@ class Mail {
       'password_reset'
     );
 
-    const resetLink = `${process.env['FRONTEND_URI']}/${locale}/account/reset-password?token=${resetToken}`;
+    const resetLink = `${process.env['FRONTEND_URI']}/${locale}/account/reset-password/${resetToken}`;
 
     const mailParams = {
       fullname: fullname || email.split('@')[0],
