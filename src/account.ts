@@ -87,7 +87,7 @@ class Account {
           name: php.playlist.name,
           numberOfTracks: php.numberOfTracks,
           createdAt: payment.createdAt,
-          type: php.type,
+          type: php.type === 'physical' && php.subType === 'sheets' ? 'sheets' : php.type,
           digitalFilename: php.type === 'digital' ? (php.filenameDigital || '') : '',
           orderId: payment.printApiOrderId || '',
           trackingLink: payment.printApiTrackingLink || '',
