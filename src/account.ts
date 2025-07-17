@@ -81,14 +81,18 @@ class Account {
       });
 
       // Transform payments to playlist data
-      const playlists = payments.flatMap(payment =>
-        payment.PaymentHasPlaylist.map(php => ({
+      const playlists = payments.flatMap((payment) =>
+        payment.PaymentHasPlaylist.map((php) => ({
           id: php.playlist.id,
           name: php.playlist.name,
           numberOfTracks: php.numberOfTracks,
           createdAt: payment.createdAt,
-          type: php.type === 'physical' && php.subType === 'sheets' ? 'sheets' : php.type,
-          digitalFilename: php.type === 'digital' ? (php.filenameDigital || '') : '',
+          type:
+            php.type === 'physical' && php.subType === 'sheets'
+              ? 'sheets'
+              : php.type,
+          digitalFilename:
+            php.type === 'digital' ? php.filenameDigital || '' : '',
           orderId: payment.orderId || '',
           trackingLink: payment.printApiTrackingLink || '',
         }))
@@ -100,6 +104,8 @@ class Account {
         name: string;
         numberOfVotes: number;
       }> = [];
+
+      console.log(111, user.id);
 
       if (user.id) {
         // Find company lists where this user has made submissions
@@ -127,7 +133,9 @@ class Account {
           },
         });
 
-        companyLists = userCompanyLists.map(list => ({
+        console.log(222, userCompanyLists);
+
+        companyLists = userCompanyLists.map((list) => ({
           id: list.id,
           name: list.name,
           numberOfVotes: list._count.CompanyListSubmission,
@@ -152,9 +160,7 @@ class Account {
         },
       };
     } catch (error) {
-      this.logger.log(
-        color.red.bold(`Error getting user data: ${error}`)
-      );
+      this.logger.log(color.red.bold(`Error getting user data: ${error}`));
       return { success: false, error: 'Error retrieving user data' };
     }
   }
