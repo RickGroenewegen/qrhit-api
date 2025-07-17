@@ -697,9 +697,9 @@ class Server {
     });
 
     this.fastify.post('/account/register', async (request: any, reply: any) => {
-      const { displayName, email, password1, password2 } = request.body;
+      const { displayName, email, password1, password2, captchaToken } = request.body;
 
-      const result = await registerAccount(displayName, email, password1, password2);
+      const result = await registerAccount(displayName, email, password1, password2, captchaToken);
 
       if (result.success) {
         reply.send(result);

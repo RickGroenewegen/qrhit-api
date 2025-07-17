@@ -243,13 +243,15 @@ function validatePassword(password: string): {
  * @param email The user's email address
  * @param password1 The password
  * @param password2 The password confirmation
+ * @param captchaToken The reCAPTCHA token for verification
  * @returns Object with success status and message or error
  */
 export async function registerAccount(
   displayName: string,
   email: string,
   password1: string,
-  password2: string
+  password2: string,
+  captchaToken: string
 ): Promise<{
   success: boolean;
   message?: string;
@@ -257,10 +259,19 @@ export async function registerAccount(
 }> {
   try {
     // Validate required fields
-    if (!displayName || !email || !password1 || !password2) {
+    if (!displayName || !email || !password1 || !password2 || !captchaToken) {
       return {
         success: false,
         error: 'missingRequiredFields',
+      };
+    }
+
+    // Verify captcha
+    const isHuman = await utils.verifyRecaptcha(captchaToken);
+    if (!isHuman) {
+      return {
+        success: false,
+        error: 'captchaVerificationFailed',
       };
     }
 
