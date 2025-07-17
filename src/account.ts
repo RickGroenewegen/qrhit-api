@@ -41,6 +41,11 @@ class Account {
       companyLists: Array<{
         id: number;
         name: string;
+        description: string;
+        slug: string;
+        status: string;
+        startAt: Date | null;
+        endAt: Date | null;
         numberOfVotes: number;
       }>;
     };
@@ -102,6 +107,11 @@ class Account {
       let companyLists: Array<{
         id: number;
         name: string;
+        description: string;
+        slug: string;
+        status: string;
+        startAt: Date | null;
+        endAt: Date | null;
         numberOfVotes: number;
       }> = [];
 
@@ -122,6 +132,11 @@ class Account {
           select: {
             id: true,
             name: true,
+            description_nl: true,
+            slug: true,
+            status: true,
+            startAt: true,
+            endAt: true,
             _count: {
               select: {
                 CompanyListSubmission: {
@@ -137,6 +152,11 @@ class Account {
         companyLists = userCompanyLists.map((list) => ({
           id: list.id,
           name: list.name,
+          description: list.description_nl,
+          slug: list.slug,
+          status: list.status,
+          startAt: list.startAt,
+          endAt: list.endAt,
           numberOfVotes: list._count.CompanyListSubmission,
         }));
       }
