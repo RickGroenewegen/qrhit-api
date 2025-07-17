@@ -509,12 +509,43 @@ class Data {
       })
       .filter((trackId: number) => !isNaN(trackId));
 
+    const phpIds = ipInfoList
+      .map((ipInfoJson: any) => {
+        const ipInfo = JSON.parse(ipInfoJson);
+        return ipInfo.php ? parseInt(ipInfo.php) : null;
+      })
+      .filter((phpId: number | null) => phpId !== null);
+
+    // Fetch tracks
     const tracks = await this.prisma.track.findMany({
       where: { id: { in: trackIds } },
       select: { id: true, name: true, artist: true },
     });
 
+    // Fetch payment_has_playlist data with playlist names and user display names in a single query
+    const phpData = phpIds.length > 0 ? await this.prisma.paymentHasPlaylist.findMany({
+      where: { id: { in: phpIds } },
+      select: {
+        id: true,
+        playlist: {
+          select: {
+            name: true,
+          },
+        },
+        payment: {
+          select: {
+            user: {
+              select: {
+                displayName: true,
+              },
+            },
+          },
+        },
+      },
+    }) : [];
+
     const trackMap = new Map(tracks.map((track) => [track.id, track]));
+    const phpMap = new Map(phpData.map((php) => [php.id, php]));
 
     const lastPlays = ipInfoList
       .map((ipInfoJson: any) => {
@@ -522,7 +553,7 @@ class Data {
         const track = trackMap.get(parseInt(ipInfo.trackId));
 
         if (track) {
-          return {
+          const result: any = {
             title: track.name,
             artist: track.artist,
             city: ipInfo.city,
@@ -532,6 +563,17 @@ class Data {
             longitude: ipInfo.longitude,
             timestamp: ipInfo.timestamp,
           };
+
+          // Add playlist and user info if php is available
+          if (ipInfo.php) {
+            const phpInfo = phpMap.get(parseInt(ipInfo.php));
+            if (phpInfo) {
+              result.playlistName = phpInfo.playlist.name;
+              result.displayName = phpInfo.payment.user?.displayName || null;
+            }
+          }
+
+          return result;
         }
       })
       .filter(Boolean);
