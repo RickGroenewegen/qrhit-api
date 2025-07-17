@@ -191,6 +191,17 @@
 	"countdown_onzevibe.googlePlay" : "Google Play",
 	"countdown_onzevibe.other" : "Other",
 
+	"qrsong_verification.subject" : "Verify Your QRSong Account",
+	"qrsong_verification.title" : "Verify Your Account",
+	"qrsong_verification.hello" : "Hello",
+	"qrsong_verification.thankYou" : "Thank you for creating your QRSong account!",
+	"qrsong_verification.toComplete" : "To complete your registration, please verify your email address by clicking the button below:",
+	"qrsong_verification.buttonText" : "Verify My Account",
+	"qrsong_verification.ignoreMessage" : "If you did not create this account, you can safely ignore this email.",
+	"qrsong_verification.buttonFallback" : "If the button above doesn't work, you can also copy and paste the following link into your browser:",
+	"qrsong_verification.thanks" : "Thank you",
+	"qrsong_verification.team" : "The QRSong Team",
+
 	"countries.AF" : "Afghanistan",
 	"countries.AX" : "Aland Islands",
 	"countries.AL" : "Albania",

@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="utf-8">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <title>{{ productName }} - {{ translations.title }}</title>
+    <!--[if mso]>
+    <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+    <style>
+      td,th,div,p,a,h1,h2,h3,h4,h5,h6 {font-family: "Segoe UI", sans-serif; mso-line-height-rule: exactly;}
+    </style>
+    <![endif]-->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap');
+    </style>
+</head>
+<body style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #f8fafc;">
+    <div style="display: none;">{{ translations.title }} - {{ productName }}</div>
+    <div role="article" aria-roledescription="email" aria-label="{{ productName }} {{ translations.title }}" lang="en" style="font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc;">
+        <table style="width: 100%; font-family: 'Lato', sans-serif;" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+                <td align="center" style="padding: 24px;">
+                    <table class="container" style="width: 100%; max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" cellpadding="0" cellspacing="0" role="presentation">
+                        <tr>
+                            <td style="padding: 24px;">
+                                <!-- Logo -->
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td align="center" style="padding-bottom: 24px;">
+                                            <img src="cid:logo" alt="{{ productName }} Logo" style="max-width: 200px; height: auto;">
+                                        </td>
+                                    </tr>
+                                </table>
+                                <!-- Content -->
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td>
+                                            <h1 style="margin: 0 0 24px; font-size: 24px; line-height: 32px; color: #2d3748; font-weight: 700;">{{ translations.title }}</h1>
+                                            
+                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.hello }} {{ fullname }},</p>
+                                            
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.thankYou }}</p>
+                                            
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.toComplete }}</p>
+                                            
+                                            <!-- Verify Account Button -->
+                                            <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation" style="margin-top: 24px; margin-bottom: 24px;">
+                                                <tr>
+                                                    <td align="center">
+                                                        <table border="0" cellspacing="0" cellpadding="0" role="presentation">
+                                                            <tr>
+                                                                <td align="center" style="border-radius: 4px;" bgcolor="#4299e1">
+                                                                    <a href="{{ verificationLink }}" target="_blank" style="font-size: 16px; font-family: 'Lato', sans-serif; color: #ffffff; text-decoration: none; text-transform: uppercase; border-radius: 4px; padding: 12px 24px; border: 1px solid #4299e1; display: inline-block; font-weight: bold; letter-spacing: 0.5px;">{{ translations.buttonText }}</a>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+
+                                            <p style="margin: 0 0 16px; font-size: 14px; line-height: 20px; color: #718096;">{{ translations.buttonFallback }}</p>
+                                            <p style="margin: 0 0 24px; font-size: 14px; line-height: 20px; color: #718096; word-break: break-all;">{{ verificationLink }}</p>
+                                            
+                                            <p style="margin: 0 0 16px; font-size: 14px; line-height: 20px; color: #718096;">{{ translations.ignoreMessage }}</p>
+                                            
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.thanks }},<br>{{ translations.team }}</p>
+                                        </td>
+                                    </tr>
+                                </table>
+                                <!-- Closing -->
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td style="padding-top: 32px; border-top: 1px solid #e2e8f0;">
+                                            <p style="margin: 0; font-size: 14px; line-height: 20px; color: #718096; text-align: center;">
+                                                &copy; {{ currentYear }} {{ productName }}. All rights reserved.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

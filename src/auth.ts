@@ -338,12 +338,13 @@ export async function registerAccount(
         };
       }
     } else {
-      // Create new user
+      // Create new user with verification hash
       const salt = generateSalt();
       const hashedPassword = hashPassword(password1, salt);
       const userHash = crypto.randomBytes(16).toString('hex');
+      const verificationHash = crypto.randomBytes(16).toString('hex');
 
-      await prisma.user.create({
+      const newUser = await prisma.user.create({
         data: {
           userId: email,
           email,
@@ -355,10 +356,21 @@ export async function registerAccount(
           marketingEmails: false,
           sync: false,
           upgraded: true,
-          verified: true,
-          verifiedAt: new Date(),
+          verified: false,
+          verificationHash: verificationHash,
+          verifiedAt: null,
         },
       });
+
+      // Send verification email
+      const Mail = (await import('./mail')).default;
+      const mailInstance = Mail.getInstance();
+      await mailInstance.sendQRSongVerificationMail(
+        email,
+        displayName,
+        verificationHash,
+        'en'
+      );
 
       return {
         success: true,

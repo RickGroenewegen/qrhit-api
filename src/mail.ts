@@ -52,6 +52,107 @@ class Mail {
   }
 
   /**
+   * Send a QRSong verification email to a user for account verification.
+   * @param email The user's email address
+   * @param fullname The user's full name
+   * @param verificationHash The verification hash for the user
+   * @param locale The user's locale (default: 'en')
+   */
+  public async sendQRSongVerificationMail(
+    email: string,
+    fullname: string,
+    verificationHash: string,
+    locale: string = 'en'
+  ): Promise<void> {
+    if (!this.ses) return;
+
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+
+    // Fetch translations for QRSong verification mail
+    const translations = await this.translation.getTranslationsByPrefix(
+      locale,
+      'qrsong_verification'
+    );
+
+    const verificationLink = `${process.env['FRONTEND_URI']}/${locale}/account/verify/${verificationHash}`;
+
+    const mailParams = {
+      fullname: fullname || email.split('@')[0],
+      verificationLink,
+      productName: process.env['PRODUCT_NAME'],
+      currentYear: new Date().getFullYear(),
+      translations,
+    };
+
+    try {
+      // Read the logo file and convert it to Base64
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+
+      const html = await this.templates.render(
+        'mails/qrsong_verification_html',
+        mailParams
+      );
+      const text = await this.templates.render(
+        'mails/qrsong_verification_text',
+        mailParams
+      );
+
+      const subject = this.translation.translate(
+        'qrsong_verification.subject',
+        locale
+      );
+
+      const attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+
+      const rawEmail = await this.renderRaw(
+        {
+          from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+          to: email,
+          subject,
+          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+          text,
+          attachments,
+          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+          replyTo: process.env['REPLY_TO_EMAIL'],
+        },
+        false // No BCC for verification emails
+      );
+
+      const emailBuffer = Buffer.from(rawEmail);
+
+      // Prepare and send the raw email
+      const command = new SendRawEmailCommand({
+        RawMessage: {
+          Data: emailBuffer,
+        },
+      });
+
+      await this.ses.send(command);
+      this.logger.log(
+        color.blue.bold(`QRSong verification email sent to ${white.bold(email)}`)
+      );
+    } catch (error) {
+      console.error('Error while sending QRSong verification email:', error);
+      this.logger.log(
+        color.red.bold(
+          `Failed to send QRSong verification email to ${white.bold(
+            email
+          )}: ${error}`
+        )
+      );
+    }
+  }
+
+  /**
    * Send a QRVote welcome email to a user for account verification.
    * @param email The user's email address
    * @param fullname The user's full name
