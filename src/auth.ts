@@ -442,7 +442,21 @@ export async function registerAccount(
 
     if (existingUser) {
       if (existingUser.upgraded) {
-        // User already upgraded, return duplicate account error
+        // User already upgraded, send verification email and return duplicate account error
+        try {
+          const Mail = (await import('./mail')).default;
+          const mailInstance = Mail.getInstance();
+          await mailInstance.sendQRSongVerificationMail(
+            email,
+            displayName,
+            '', // No verification hash needed for existing users
+            'en'
+          );
+        } catch (emailError) {
+          console.error('Error sending verification email to existing user:', emailError);
+          // Continue with the error response even if email fails
+        }
+        
         return {
           success: false,
           error: 'accountAlreadyExists',
