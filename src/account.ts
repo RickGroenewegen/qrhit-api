@@ -105,18 +105,19 @@ class Account {
         numberOfVotes: number;
       }> = [];
 
-      console.log(111, user.id);
+      // Get the user with their companyId
+      const userWithCompany = await this.prisma.user.findUnique({
+        where: { userId },
+        select: {
+          companyId: true,
+        },
+      });
 
-      if (user.id) {
-        // Find company lists where this user has made submissions
+      if (userWithCompany?.companyId) {
+        // Find all company lists that belong to the user's company
         const userCompanyLists = await this.prisma.companyList.findMany({
           where: {
-            CompanyListSubmission: {
-              some: {
-                // Find submissions where the user's email matches
-                email: user.email,
-              },
-            },
+            companyId: userWithCompany.companyId,
           },
           select: {
             id: true,
@@ -132,8 +133,6 @@ class Account {
             },
           },
         });
-
-        console.log(222, userCompanyLists);
 
         companyLists = userCompanyLists.map((list) => ({
           id: list.id,
