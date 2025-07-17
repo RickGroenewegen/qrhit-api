@@ -703,9 +703,17 @@ class Server {
     });
 
     this.fastify.post('/account/register', async (request: any, reply: any) => {
-      const { displayName, email, password1, password2, captchaToken, locale } = request.body;
+      const { displayName, email, password1, password2, captchaToken, locale } =
+        request.body;
 
-      const result = await registerAccount(displayName, email, password1, password2, captchaToken, locale);
+      const result = await registerAccount(
+        displayName,
+        email,
+        password1,
+        password2,
+        captchaToken,
+        locale
+      );
 
       if (result.success) {
         reply.send(result);
@@ -723,44 +731,73 @@ class Server {
       if (result.success) {
         reply.send(result);
       } else {
-        const statusCode = result.error === 'invalidHash' || result.error === 'alreadyVerified' ? 400 : 500;
+        const statusCode =
+          result.error === 'invalidHash' || result.error === 'alreadyVerified'
+            ? 400
+            : 500;
         reply.status(statusCode).send(result);
       }
     });
 
-    this.fastify.post('/account/reset-password-request', async (request: any, reply: any) => {
-      const { email, captchaToken } = request.body;
+    this.fastify.post(
+      '/account/reset-password-request',
+      async (request: any, reply: any) => {
+        const { email, captchaToken } = request.body;
 
-      const result = await initiatePasswordReset(email, captchaToken);
+        const result = await initiatePasswordReset(email, captchaToken);
 
-      if (result.success) {
+        if (result.success) {
+          reply.send(result);
+        } else {
+          const statusCode =
+            result.error === 'missingRequiredFields' ||
+            result.error === 'invalidEmailFormat' ||
+            result.error === 'captchaVerificationFailed'
+              ? 400
+              : 500;
+          reply.status(statusCode).send(result);
+        }
+      }
+    );
+
+    this.fastify.post(
+      '/account/reset-password',
+      async (request: any, reply: any) => {
+        const { hash, password1, password2, captchaToken } = request.body;
+
+        const result = await resetPassword(
+          hash,
+          password1,
+          password2,
+          captchaToken
+        );
+
+        if (result.success) {
+          reply.send(result);
+        } else {
+          const statusCode =
+            result.error === 'missingRequiredFields' ||
+            result.error === 'passwordsDoNotMatch' ||
+            result.error === 'captchaVerificationFailed' ||
+            result.error === 'invalidOrExpiredToken' ||
+            result.error?.startsWith('password')
+              ? 400
+              : 500;
+          reply.status(statusCode).send(result);
+        }
+      }
+    );
+
+    this.fastify.get(
+      '/account/reset-password-check/:hash',
+      async (request: any, reply: any) => {
+        const { hash } = request.params;
+
+        const result = await checkPasswordResetToken(hash);
+
         reply.send(result);
-      } else {
-        const statusCode = result.error === 'missingRequiredFields' || result.error === 'invalidEmailFormat' || result.error === 'captchaVerificationFailed' ? 400 : 500;
-        reply.status(statusCode).send(result);
       }
-    });
-
-    this.fastify.post('/account/reset-password', async (request: any, reply: any) => {
-      const { hash, password1, password2, captchaToken } = request.body;
-
-      const result = await resetPassword(hash, password1, password2, captchaToken);
-
-      if (result.success) {
-        reply.send(result);
-      } else {
-        const statusCode = result.error === 'missingRequiredFields' || result.error === 'passwordsDoNotMatch' || result.error === 'captchaVerificationFailed' || result.error === 'invalidOrExpiredToken' || result.error?.startsWith('password') ? 400 : 500;
-        reply.status(statusCode).send(result);
-      }
-    });
-
-    this.fastify.get('/account/reset-password-check/:hash', async (request: any, reply: any) => {
-      const { hash } = request.params;
-
-      const result = await checkPasswordResetToken(hash);
-
-      reply.send(result);
-    });
+    );
 
     this.fastify.get(
       '/account/overview',
@@ -777,9 +814,9 @@ class Server {
           }
         } catch (error) {
           console.error('Error in /account/overview route:', error);
-          reply.status(500).send({ 
-            success: false, 
-            error: 'Internal server error' 
+          reply.status(500).send({
+            success: false,
+            error: 'Internal server error',
           });
         }
       }
@@ -1973,7 +2010,8 @@ class Server {
         request.params.trackId,
         request.clientIp,
         true,
-        userAgent
+        userAgent,
+        request.params.php
       );
       let link = '';
       let yt = '';

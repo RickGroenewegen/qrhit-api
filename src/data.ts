@@ -1176,12 +1176,17 @@ class Data {
     return { wasUpdated: false, method: '' };
   }
 
-  public async logLink(trackId: number, clientIp: string): Promise<void> {
+  public async logLink(
+    trackId: number,
+    clientIp: string,
+    php?: number
+  ): Promise<void> {
     const ipInfo = await this.utils.lookupIp(clientIp);
     const ipInfoWithTrackId = {
       ...ipInfo,
       trackId,
       timestamp: new Date().toISOString(),
+      php,
     };
     // Store the IP info in a list and maintain only the last 100 entries
     const ipInfoListKey = 'ipInfoList';
@@ -1204,17 +1209,18 @@ class Data {
     trackId: number,
     clientIp: string,
     useCache: boolean = true,
-    userAgent?: string
+    userAgent?: string,
+    php?: number
   ): Promise<ApiResult> {
     this.analytics.increaseCounter('songs', 'played');
-    this.logLink(trackId, clientIp);
+    this.logLink(trackId, clientIp, php);
 
     // Log IP, trackId, and user agent
     this.logger.log(
       color.blue.bold(
         `Link called for track ${color.white.bold(
           trackId
-        )}, ip=${color.white.bold(clientIp)}, userAgent=${color.white.bold(
+        )} and, ip=${color.white.bold(clientIp)}, userAgent=${color.white.bold(
           userAgent || 'unknown'
         )}`
       )
