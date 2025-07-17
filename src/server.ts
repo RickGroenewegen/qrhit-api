@@ -9,6 +9,7 @@ import {
   registerAccount,
   verifyUser,
   initiatePasswordReset,
+  resetPassword,
 } from './auth';
 import Fastify from 'fastify';
 import replyFrom from '@fastify/reply-from';
@@ -735,6 +736,19 @@ class Server {
         reply.send(result);
       } else {
         const statusCode = result.error === 'missingRequiredFields' || result.error === 'invalidEmailFormat' || result.error === 'captchaVerificationFailed' ? 400 : 500;
+        reply.status(statusCode).send(result);
+      }
+    });
+
+    this.fastify.post('/account/reset-password', async (request: any, reply: any) => {
+      const { hash, password1, password2, captchaToken } = request.body;
+
+      const result = await resetPassword(hash, password1, password2, captchaToken);
+
+      if (result.success) {
+        reply.send(result);
+      } else {
+        const statusCode = result.error === 'missingRequiredFields' || result.error === 'passwordsDoNotMatch' || result.error === 'captchaVerificationFailed' || result.error === 'invalidOrExpiredToken' || result.error?.startsWith('password') ? 400 : 500;
         reply.status(statusCode).send(result);
       }
     });

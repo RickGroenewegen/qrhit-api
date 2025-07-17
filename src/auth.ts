@@ -375,6 +375,107 @@ async function ensureUserInGroup(userId: number, groupName: string): Promise<voi
 }
 
 /**
+ * Resets a user's password using a reset token
+ * @param resetToken The password reset token
+ * @param password1 The new password
+ * @param password2 The password confirmation
+ * @param captchaToken The reCAPTCHA token for verification
+ * @returns Object with success status and message or error
+ */
+export async function resetPassword(
+  resetToken: string,
+  password1: string,
+  password2: string,
+  captchaToken: string
+): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    // Validate required fields
+    if (!resetToken || !password1 || !password2 || !captchaToken) {
+      return {
+        success: false,
+        error: 'missingRequiredFields',
+      };
+    }
+
+    // Verify captcha
+    const isHuman = await utils.verifyRecaptcha(captchaToken);
+    if (!isHuman) {
+      return {
+        success: false,
+        error: 'captchaVerificationFailed',
+      };
+    }
+
+    // Check if passwords match
+    if (password1 !== password2) {
+      return {
+        success: false,
+        error: 'passwordsDoNotMatch',
+      };
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(password1);
+    if (!passwordValidation.isValid) {
+      return {
+        success: false,
+        error: passwordValidation.error,
+      };
+    }
+
+    // Find user with this reset token
+    const user = await prisma.user.findUnique({
+      where: { passwordResetToken: resetToken },
+    });
+
+    if (!user) {
+      return {
+        success: false,
+        error: 'invalidOrExpiredToken',
+      };
+    }
+
+    // Check if token has expired
+    if (!user.passwordResetExpiry || user.passwordResetExpiry < new Date()) {
+      return {
+        success: false,
+        error: 'invalidOrExpiredToken',
+      };
+    }
+
+    // Generate new password hash
+    const salt = generateSalt();
+    const hashedPassword = hashPassword(password1, salt);
+
+    // Update user's password and clear reset token
+    await prisma.user.update({
+      where: { id: user.id },
+      data: {
+        password: hashedPassword,
+        salt: salt,
+        passwordResetToken: null,
+        passwordResetExpiry: null,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'passwordResetSuccess',
+    };
+  } catch (error) {
+    console.error('Error in password reset:', error);
+    return {
+      success: false,
+      error: 'internalServerError',
+    };
+  }
+}
+
+/**
  * Initiates password reset process by sending reset email
  * @param email The user's email address
  * @param captchaToken The reCAPTCHA token for verification
