@@ -128,6 +128,11 @@ export async function authenticateUser(
       return null;
     }
 
+    // Check if user is verified
+    if (!user.verified) {
+      return null;
+    }
+
     const isValid = verifyPassword(password, user.password, user.salt);
     if (!isValid) {
       return null;
