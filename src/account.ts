@@ -46,6 +46,9 @@ class Account {
         status: string;
         startAt: Date | null;
         endAt: Date | null;
+        numberOfCards: number;
+        numberOfTracks: number;
+        minimumNumberOfTracks: number | null;
         numberOfVotes: number;
       }>;
     };
@@ -112,6 +115,9 @@ class Account {
         status: string;
         startAt: Date | null;
         endAt: Date | null;
+        numberOfCards: number;
+        numberOfTracks: number;
+        minimumNumberOfTracks: number | null;
         numberOfVotes: number;
       }> = [];
 
@@ -137,6 +143,9 @@ class Account {
             status: true,
             startAt: true,
             endAt: true,
+            numberOfCards: true,
+            numberOfTracks: true,
+            minimumNumberOfTracks: true,
             _count: {
               select: {
                 CompanyListSubmission: {
@@ -157,6 +166,9 @@ class Account {
           status: list.status,
           startAt: list.startAt,
           endAt: list.endAt,
+          numberOfCards: list.numberOfCards,
+          numberOfTracks: list.numberOfTracks,
+          minimumNumberOfTracks: list.minimumNumberOfTracks,
           numberOfVotes: list._count.CompanyListSubmission,
         }));
       }
