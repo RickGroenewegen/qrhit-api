@@ -47,6 +47,7 @@ import Hitlist from './hitlist';
 import Vibe from './vibe';
 import AudioClient from './audio'; // Import AudioClient
 import PrinterInvoiceService from './printerinvoice';
+import Account from './account';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -90,6 +91,7 @@ class Server {
   private vibe = Vibe.getInstance();
   private printerInvoice = PrinterInvoiceService.getInstance();
   private audio = AudioClient.getInstance(); // Instantiate AudioClient
+  private account = Account.getInstance();
   private whiteLabels = [
     {
       domain: 'k7.com',
@@ -722,6 +724,29 @@ class Server {
         reply.status(statusCode).send(result);
       }
     });
+
+    this.fastify.get(
+      '/account/overview',
+      getAuthHandler(['users']),
+      async (request: any, reply: any) => {
+        try {
+          const result = await this.account.getUserData(request.user.userId);
+
+          if (result.success) {
+            reply.send(result);
+          } else {
+            const statusCode = result.error === 'User not found' ? 404 : 500;
+            reply.status(statusCode).send(result);
+          }
+        } catch (error) {
+          console.error('Error in /account/overview route:', error);
+          reply.status(500).send({ 
+            success: false, 
+            error: 'Internal server error' 
+          });
+        }
+      }
+    );
 
     this.fastify.get(
       '/verify/:paymentId',
