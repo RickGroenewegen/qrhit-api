@@ -89,7 +89,7 @@ class Account {
           createdAt: payment.createdAt,
           type: php.type === 'physical' && php.subType === 'sheets' ? 'sheets' : php.type,
           digitalFilename: php.type === 'digital' ? (php.filenameDigital || '') : '',
-          orderId: payment.printApiOrderId || '',
+          orderId: payment.orderId || '',
           trackingLink: payment.printApiTrackingLink || '',
         }))
       );
