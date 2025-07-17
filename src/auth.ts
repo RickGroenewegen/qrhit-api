@@ -263,7 +263,7 @@ export async function verifyUser(
     if (!verificationHash) {
       return {
         success: false,
-        error: 'missingVerificationHash',
+        error: 'hashIsRequired',
       };
     }
 
@@ -282,7 +282,7 @@ export async function verifyUser(
     if (!user) {
       return {
         success: false,
-        error: 'invalidVerificationHash',
+        error: 'invalidHash',
       };
     }
 
@@ -290,7 +290,7 @@ export async function verifyUser(
     if (user.verified) {
       return {
         success: false,
-        error: 'accountAlreadyVerified',
+        error: 'alreadyVerified',
       };
     }
 
@@ -320,13 +320,13 @@ export async function verifyUser(
       userId: user.userId,
       userGroups: userGroups,
       companyId: user.companyId || undefined,
-      message: 'accountVerified',
+      message: 'verificationSuccess',
     };
   } catch (error) {
     console.error('Error in account verification:', error);
     return {
       success: false,
-      error: 'internalServerError',
+      error: 'serverError',
     };
   }
 }

@@ -718,7 +718,7 @@ class Server {
       if (result.success) {
         reply.send(result);
       } else {
-        const statusCode = result.error === 'invalidVerificationHash' || result.error === 'accountAlreadyVerified' ? 400 : 500;
+        const statusCode = result.error === 'invalidHash' || result.error === 'alreadyVerified' ? 400 : 500;
         reply.status(statusCode).send(result);
       }
     });
