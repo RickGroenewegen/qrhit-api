@@ -273,6 +273,7 @@ class Vibe {
       if (userGroup) {
         await this.ensureUserInGroup(user.id, userGroupName);
       }
+      await this.ensureUserInGroup(user.id, 'users');
 
       // 2. Create the company list with the same name
       // Use the company name as the list name and slug (slugify for URL safety)
@@ -612,7 +613,10 @@ class Vibe {
    * @param userId The user's database ID
    * @param groupName The name of the usergroup to connect the user to
    */
-  private async ensureUserInGroup(userId: number, groupName: string): Promise<void> {
+  private async ensureUserInGroup(
+    userId: number,
+    groupName: string
+  ): Promise<void> {
     try {
       // First, ensure the usergroup exists
       let userGroup = await this.prisma.userGroup.findUnique({
