@@ -2,9 +2,11 @@ import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import Utils from './utils';
+import Mail from './mail';
 
 const prisma = new PrismaClient();
 const utils = new Utils();
+const mail = Mail.getInstance();
 
 /**
  * Generates a random salt for password hashing
@@ -444,9 +446,7 @@ export async function registerAccount(
       if (existingUser.upgraded) {
         // User already upgraded, send verification email and return duplicate account error
         try {
-          const Mail = (await import('./mail')).default;
-          const mailInstance = Mail.getInstance();
-          await mailInstance.sendQRSongVerificationMail(
+          await mail.sendQRSongVerificationMail(
             email,
             displayName,
             '', // No verification hash needed for existing users
@@ -513,9 +513,7 @@ export async function registerAccount(
       await ensureUserInGroup(newUser.id, 'users');
 
       // Send verification email
-      const Mail = (await import('./mail')).default;
-      const mailInstance = Mail.getInstance();
-      await mailInstance.sendQRSongVerificationMail(
+      await mail.sendQRSongVerificationMail(
         email,
         displayName,
         verificationHash,
