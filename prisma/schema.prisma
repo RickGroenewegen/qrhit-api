@@ -161,27 +161,29 @@ model Payment {
 }
 
 model User {
-  id               Int              @id @default(autoincrement())
-  userId           String           @unique
-  email            String           @unique
-  displayName      String
-  locale           String?
-  hash             String           @unique
-  password         String?
-  salt             String?
-  companyId        Int?
-  marketingEmails  Boolean          @default(false)
-  sync             Boolean          @default(false)
-  payments         Payment[]
-  verificationHash String?          @unique
-  verified         Boolean          @default(false)
-  verifiedAt       DateTime?
-  upgraded         Boolean          @default(false)
-  createdAt        DateTime         @default(now())
-  updatedAt        DateTime         @updatedAt
-  UserSuggestion   UserSuggestion[]
-  UserGroupUser    UserInGroup[]
-  Company          Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  id                   Int              @id @default(autoincrement())
+  userId               String           @unique
+  email                String           @unique
+  displayName          String
+  locale               String?
+  hash                 String           @unique
+  password             String?
+  salt                 String?
+  companyId            Int?
+  marketingEmails      Boolean          @default(false)
+  sync                 Boolean          @default(false)
+  payments             Payment[]
+  verificationHash     String?          @unique
+  verified             Boolean          @default(false)
+  verifiedAt           DateTime?
+  passwordResetToken   String?          @unique
+  passwordResetExpiry  DateTime?
+  upgraded             Boolean          @default(false)
+  createdAt            DateTime         @default(now())
+  updatedAt            DateTime         @updatedAt
+  UserSuggestion       UserSuggestion[]
+  UserGroupUser        UserInGroup[]
+  Company              Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([hash])
   @@map("users")

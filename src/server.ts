@@ -8,6 +8,7 @@ import {
   deleteUserById,
   registerAccount,
   verifyUser,
+  initiatePasswordReset,
 } from './auth';
 import Fastify from 'fastify';
 import replyFrom from '@fastify/reply-from';
@@ -721,6 +722,19 @@ class Server {
         reply.send(result);
       } else {
         const statusCode = result.error === 'invalidHash' || result.error === 'alreadyVerified' ? 400 : 500;
+        reply.status(statusCode).send(result);
+      }
+    });
+
+    this.fastify.post('/account/reset-password', async (request: any, reply: any) => {
+      const { email } = request.body;
+
+      const result = await initiatePasswordReset(email);
+
+      if (result.success) {
+        reply.send(result);
+      } else {
+        const statusCode = result.error === 'emailIsRequired' || result.error === 'invalidEmailFormat' ? 400 : 500;
         reply.status(statusCode).send(result);
       }
     });

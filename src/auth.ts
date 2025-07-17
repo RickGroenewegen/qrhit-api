@@ -375,6 +375,78 @@ async function ensureUserInGroup(userId: number, groupName: string): Promise<voi
 }
 
 /**
+ * Initiates password reset process by sending reset email
+ * @param email The user's email address
+ * @returns Object with success status and message or error
+ */
+export async function initiatePasswordReset(
+  email: string
+): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    // Validate required field
+    if (!email) {
+      return {
+        success: false,
+        error: 'emailIsRequired',
+      };
+    }
+
+    // Validate email format
+    if (!utils.isValidEmail(email)) {
+      return {
+        success: false,
+        error: 'invalidEmailFormat',
+      };
+    }
+
+    // Find user by email
+    const user = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    // Always return success to prevent email enumeration attacks
+    // But only send email if user exists and is verified
+    if (user && user.verified) {
+      // Generate reset token
+      const resetToken = crypto.randomBytes(32).toString('hex');
+      const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+
+      // Store reset token in database
+      await prisma.user.update({
+        where: { id: user.id },
+        data: {
+          passwordResetToken: resetToken,
+          passwordResetExpiry: resetTokenExpiry,
+        },
+      });
+
+      // Send password reset email
+      await mail.sendPasswordResetMail(
+        email,
+        user.displayName,
+        resetToken,
+        user.locale || 'en'
+      );
+    }
+
+    return {
+      success: true,
+      message: 'passwordResetEmailSent',
+    };
+  } catch (error) {
+    console.error('Error in password reset initiation:', error);
+    return {
+      success: false,
+      error: 'internalServerError',
+    };
+  }
+}
+
+/**
  * Registers a new user account or upgrades an existing unverified account
  * @param displayName The user's display name
  * @param email The user's email address
