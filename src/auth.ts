@@ -470,6 +470,7 @@ export async function registerAccount(
         // User exists but not upgraded, update the user
         const salt = generateSalt();
         const hashedPassword = hashPassword(password1, salt);
+        const verificationHash = crypto.randomBytes(16).toString('hex');
 
         const updatedUser = await prisma.user.update({
           where: { email },
@@ -479,11 +480,22 @@ export async function registerAccount(
             salt,
             upgraded: true,
             locale: userLocale,
+            verified: false,
+            verificationHash: verificationHash,
+            verifiedAt: null,
           },
         });
 
         // Ensure user is connected to 'users' usergroup
         await ensureUserInGroup(updatedUser.id, 'users');
+
+        // Send verification email
+        await mail.sendQRSongVerificationMail(
+          email,
+          displayName,
+          verificationHash,
+          userLocale
+        );
 
         return {
           success: true,
