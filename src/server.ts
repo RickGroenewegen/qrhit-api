@@ -6,8 +6,7 @@ import {
   authenticateUser,
   createOrUpdateAdminUser,
   deleteUserById,
-  generateSalt,
-  hashPassword,
+  registerAccount,
 } from './auth';
 import Fastify from 'fastify';
 import replyFrom from '@fastify/reply-from';
@@ -700,152 +699,13 @@ class Server {
     this.fastify.post('/account/register', async (request: any, reply: any) => {
       const { displayName, email, password1, password2 } = request.body;
 
-      // Validate required fields
-      if (!displayName || !email || !password1 || !password2) {
-        reply.status(400).send({ 
-          success: false, 
-          error: 'Missing required fields: displayName, email, password1, password2' 
-        });
-        return;
-      }
+      const result = await registerAccount(displayName, email, password1, password2);
 
-      // Validate email format
-      if (!this.utils.isValidEmail(email)) {
-        reply.status(400).send({ 
-          success: false, 
-          error: 'Invalid email format' 
-        });
-        return;
-      }
-
-      // Check if passwords match
-      if (password1 !== password2) {
-        reply.status(400).send({ 
-          success: false, 
-          error: 'Passwords do not match' 
-        });
-        return;
-      }
-
-      // Validate password strength using the same method as in vibe.ts
-      const validatePassword = (password: string): { isValid: boolean; error?: string } => {
-        if (password.length < 8) {
-          return {
-            isValid: false,
-            error: 'Password must be at least 8 characters long',
-          };
-        }
-
-        if (!/[A-Z]/.test(password)) {
-          return {
-            isValid: false,
-            error: 'Password must contain at least one uppercase letter',
-          };
-        }
-
-        if (!/[a-z]/.test(password)) {
-          return {
-            isValid: false,
-            error: 'Password must contain at least one lowercase letter',
-          };
-        }
-
-        if (!/[0-9]/.test(password)) {
-          return {
-            isValid: false,
-            error: 'Password must contain at least one number',
-          };
-        }
-
-        if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
-          return {
-            isValid: false,
-            error: 'Password must contain at least one special character',
-          };
-        }
-
-        return { isValid: true };
-      };
-
-      const passwordValidation = validatePassword(password1);
-      if (!passwordValidation.isValid) {
-        reply.status(400).send({ 
-          success: false, 
-          error: passwordValidation.error 
-        });
-        return;
-      }
-
-      try {
-        // Check if user already exists
-        const existingUser = await this.data.prisma.user.findUnique({
-          where: { email },
-        });
-
-        if (existingUser) {
-          if (existingUser.upgraded) {
-            // User already upgraded, return duplicate account error
-            reply.status(409).send({ 
-              success: false, 
-              error: 'An account with this email address already exists' 
-            });
-            return;
-          } else {
-            // User exists but not upgraded, update the user
-            const salt = generateSalt();
-            const hashedPassword = hashPassword(password1, salt);
-
-            await this.data.prisma.user.update({
-              where: { email },
-              data: {
-                displayName,
-                password: hashedPassword,
-                salt,
-                upgraded: true,
-              },
-            });
-
-            reply.send({ 
-              success: true, 
-              message: 'Account upgraded successfully' 
-            });
-            return;
-          }
-        } else {
-          // Create new user
-          const salt = generateSalt();
-          const hashedPassword = hashPassword(password1, salt);
-          const userHash = require('crypto').randomBytes(16).toString('hex');
-
-          await this.data.prisma.user.create({
-            data: {
-              userId: email,
-              email,
-              displayName,
-              password: hashedPassword,
-              salt,
-              hash: userHash,
-              locale: 'en',
-              marketingEmails: false,
-              sync: false,
-              upgraded: true,
-              verified: true,
-              verifiedAt: new Date(),
-            },
-          });
-
-          reply.send({ 
-            success: true, 
-            message: 'Account created successfully' 
-          });
-          return;
-        }
-      } catch (error) {
-        console.error('Error in account registration:', error);
-        reply.status(500).send({ 
-          success: false, 
-          error: 'Internal server error' 
-        });
+      if (result.success) {
+        reply.send(result);
+      } else {
+        const statusCode = result.error === 'An account with this email address already exists' ? 409 : 400;
+        reply.status(statusCode).send(result);
       }
     });
 

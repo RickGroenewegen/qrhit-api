@@ -1,8 +1,10 @@
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
+import Utils from './utils';
 
 const prisma = new PrismaClient();
+const utils = new Utils();
 
 /**
  * Generates a random salt for password hashing
@@ -185,6 +187,174 @@ export async function getUserGroups(userId: string): Promise<string[]> {
   } catch (error) {
     console.error('Error getting user groups:', error);
     return [];
+  }
+}
+
+/**
+ * Validates password strength
+ * @param password The password to validate
+ * @returns Object with isValid boolean and error message if invalid
+ */
+function validatePassword(password: string): {
+  isValid: boolean;
+  error?: string;
+} {
+  if (password.length < 8) {
+    return {
+      isValid: false,
+      error: 'Password must be at least 8 characters long',
+    };
+  }
+
+  if (!/[A-Z]/.test(password)) {
+    return {
+      isValid: false,
+      error: 'Password must contain at least one uppercase letter',
+    };
+  }
+
+  if (!/[a-z]/.test(password)) {
+    return {
+      isValid: false,
+      error: 'Password must contain at least one lowercase letter',
+    };
+  }
+
+  if (!/[0-9]/.test(password)) {
+    return {
+      isValid: false,
+      error: 'Password must contain at least one number',
+    };
+  }
+
+  if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
+    return {
+      isValid: false,
+      error: 'Password must contain at least one special character',
+    };
+  }
+
+  return { isValid: true };
+}
+
+/**
+ * Registers a new user account or upgrades an existing unverified account
+ * @param displayName The user's display name
+ * @param email The user's email address
+ * @param password1 The password
+ * @param password2 The password confirmation
+ * @returns Object with success status and message or error
+ */
+export async function registerAccount(
+  displayName: string,
+  email: string,
+  password1: string,
+  password2: string
+): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+}> {
+  try {
+    // Validate required fields
+    if (!displayName || !email || !password1 || !password2) {
+      return {
+        success: false,
+        error: 'Missing required fields: displayName, email, password1, password2',
+      };
+    }
+
+    // Validate email format
+    if (!utils.isValidEmail(email)) {
+      return {
+        success: false,
+        error: 'Invalid email format',
+      };
+    }
+
+    // Check if passwords match
+    if (password1 !== password2) {
+      return {
+        success: false,
+        error: 'Passwords do not match',
+      };
+    }
+
+    // Validate password strength
+    const passwordValidation = validatePassword(password1);
+    if (!passwordValidation.isValid) {
+      return {
+        success: false,
+        error: passwordValidation.error,
+      };
+    }
+
+    // Check if user already exists
+    const existingUser = await prisma.user.findUnique({
+      where: { email },
+    });
+
+    if (existingUser) {
+      if (existingUser.upgraded) {
+        // User already upgraded, return duplicate account error
+        return {
+          success: false,
+          error: 'An account with this email address already exists',
+        };
+      } else {
+        // User exists but not upgraded, update the user
+        const salt = generateSalt();
+        const hashedPassword = hashPassword(password1, salt);
+
+        await prisma.user.update({
+          where: { email },
+          data: {
+            displayName,
+            password: hashedPassword,
+            salt,
+            upgraded: true,
+          },
+        });
+
+        return {
+          success: true,
+          message: 'Account upgraded successfully',
+        };
+      }
+    } else {
+      // Create new user
+      const salt = generateSalt();
+      const hashedPassword = hashPassword(password1, salt);
+      const userHash = crypto.randomBytes(16).toString('hex');
+
+      await prisma.user.create({
+        data: {
+          userId: email,
+          email,
+          displayName,
+          password: hashedPassword,
+          salt,
+          hash: userHash,
+          locale: 'en',
+          marketingEmails: false,
+          sync: false,
+          upgraded: true,
+          verified: true,
+          verifiedAt: new Date(),
+        },
+      });
+
+      return {
+        success: true,
+        message: 'Account created successfully',
+      };
+    }
+  } catch (error) {
+    console.error('Error in account registration:', error);
+    return {
+      success: false,
+      error: 'Internal server error',
+    };
   }
 }
 
