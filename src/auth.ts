@@ -332,27 +332,28 @@ export async function verifyUser(
 }
 
 /**
- * Ensures the 'users' usergroup exists and connects a user to it
+ * Ensures a usergroup exists and connects a user to it
  * @param userId The user's database ID
+ * @param groupName The name of the usergroup to connect the user to
  */
-async function ensureUserInUsersGroup(userId: number): Promise<void> {
+async function ensureUserInGroup(userId: number, groupName: string): Promise<void> {
   try {
-    // First, ensure the 'users' usergroup exists
-    let usersGroup = await prisma.userGroup.findUnique({
-      where: { name: 'users' },
+    // First, ensure the usergroup exists
+    let userGroup = await prisma.userGroup.findUnique({
+      where: { name: groupName },
     });
 
-    if (!usersGroup) {
-      usersGroup = await prisma.userGroup.create({
-        data: { name: 'users' },
+    if (!userGroup) {
+      userGroup = await prisma.userGroup.create({
+        data: { name: groupName },
       });
     }
 
-    // Check if user is already in the 'users' group
+    // Check if user is already in the group
     const existingConnection = await prisma.userInGroup.findFirst({
       where: {
         userId: userId,
-        groupId: usersGroup.id,
+        groupId: userGroup.id,
       },
     });
 
@@ -361,12 +362,12 @@ async function ensureUserInUsersGroup(userId: number): Promise<void> {
       await prisma.userInGroup.create({
         data: {
           userId: userId,
-          groupId: usersGroup.id,
+          groupId: userGroup.id,
         },
       });
     }
   } catch (error) {
-    console.error('Error ensuring user is in users group:', error);
+    console.error(`Error ensuring user is in ${groupName} group:`, error);
     // Don't throw here to avoid breaking the registration process
   }
 }
@@ -462,7 +463,7 @@ export async function registerAccount(
         });
 
         // Ensure user is connected to 'users' usergroup
-        await ensureUserInUsersGroup(updatedUser.id);
+        await ensureUserInGroup(updatedUser.id, 'users');
 
         return {
           success: true,
@@ -495,7 +496,7 @@ export async function registerAccount(
       });
 
       // Ensure user is connected to 'users' usergroup
-      await ensureUserInUsersGroup(newUser.id);
+      await ensureUserInGroup(newUser.id, 'users');
 
       // Send verification email
       const Mail = (await import('./mail')).default;
@@ -630,20 +631,9 @@ export async function createOrUpdateAdminUser(
         `;
       }
 
-      // Connect user to userGroup if provided and not already a member
+      // Connect user to userGroup if provided using the helper function
       if (userGroupRecord) {
-        const alreadyMember = existingUser.UserGroupUser.some(
-          (ugu: any) => ugu.UserGroup.name === userGroup
-        );
-
-        if (!alreadyMember) {
-          await prisma.userInGroup.create({
-            data: {
-              userId: existingUser.id,
-              groupId: userGroupRecord.id,
-            },
-          });
-        }
+        await ensureUserInGroup(existingUser.id, userGroup!);
       }
 
       // Fetch the updated user
@@ -694,14 +684,9 @@ export async function createOrUpdateAdminUser(
         },
       });
 
-      // Connect user to userGroup if provided
+      // Connect user to userGroup if provided using the helper function
       if (userGroupRecord && createdUser) {
-        await prisma.userInGroup.create({
-          data: {
-            userId: createdUser.id,
-            groupId: userGroupRecord.id,
-          },
-        });
+        await ensureUserInGroup(createdUser.id, userGroup!);
       }
 
       return createdUser;

@@ -269,23 +269,9 @@ class Vibe {
         }
       }
 
-      // Add user to the appropriate group (if not already and group exists)
+      // Add user to the appropriate group using the helper function
       if (userGroup) {
-        const userInGroup = await this.prisma.userInGroup.findFirst({
-          where: {
-            userId: user.id,
-            groupId: userGroup.id,
-          },
-        });
-
-        if (!userInGroup) {
-          await this.prisma.userInGroup.create({
-            data: {
-              userId: user.id,
-              groupId: userGroup.id,
-            },
-          });
-        }
+        await this.ensureUserInGroup(user.id, userGroupName);
       }
 
       // 2. Create the company list with the same name
@@ -620,6 +606,49 @@ class Vibe {
   private cache = Cache.getInstance();
 
   private constructor() {}
+
+  /**
+   * Ensures a usergroup exists and connects a user to it
+   * @param userId The user's database ID
+   * @param groupName The name of the usergroup to connect the user to
+   */
+  private async ensureUserInGroup(userId: number, groupName: string): Promise<void> {
+    try {
+      // First, ensure the usergroup exists
+      let userGroup = await this.prisma.userGroup.findUnique({
+        where: { name: groupName },
+      });
+
+      if (!userGroup) {
+        userGroup = await this.prisma.userGroup.create({
+          data: { name: groupName },
+        });
+      }
+
+      // Check if user is already in the group
+      const existingConnection = await this.prisma.userInGroup.findFirst({
+        where: {
+          userId: userId,
+          groupId: userGroup.id,
+        },
+      });
+
+      // If not already connected, create the connection
+      if (!existingConnection) {
+        await this.prisma.userInGroup.create({
+          data: {
+            userId: userId,
+            groupId: userGroup.id,
+          },
+        });
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error ensuring user is in ${groupName} group: ${error}`)
+      );
+      // Don't throw here to avoid breaking the registration process
+    }
+  }
 
   public static getInstance(): Vibe {
     if (!Vibe.instance) {
