@@ -69,11 +69,11 @@
 	"portal_welcome.contactWithin24h": "We will contact you within 24 hours to help you get started.",
 
 	"qrvote_welcome.title": "Welcome to QRVote",
-	"qrvote_welcome.intro": "Your account has been created for",
-	"qrvote_welcome.intro2": "Please verify your account to get started.",
+	"qrvote_welcome.intro": "Your QRVote! portal has been created for de voting list:",
+	"qrvote_welcome.intro2": "Please verify your account to get access to it!.",
 	"qrvote_welcome.verifyButton": "Verify my account",
 	"qrvote_welcome.success": "We're excited to have you on board!",
-	"qrvote_welcome.team": "The QRVote Team",
+	"qrvote_welcome.team": "The QRSong! Team",
 	"qrvote_welcome.contactWithin24h": "If you have any questions, feel free to contact us.",
 
 	"invoice.description" : "Description",

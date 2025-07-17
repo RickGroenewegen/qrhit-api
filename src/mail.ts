@@ -63,7 +63,7 @@ class Mail {
     fullname: string,
     companyName: string,
     locale: string = 'nl',
-    verificationHash?: string
+    verificationHash: string
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -75,9 +75,7 @@ class Mail {
       'qrvote_welcome'
     );
 
-    const verifyUrl = verificationHash 
-      ? `${process.env['FRONTEND_URI']}/${locale}/account/verify/${verificationHash}`
-      : `${process.env['FRONTEND_URI']}/${locale}/account/verify`;
+    const verifyUrl = `${process.env['FRONTEND_URI']}/${locale}/account/verify/${verificationHash}`;
 
     const mailParams = {
       fullname: fullname || email.split('@')[0],
@@ -119,10 +117,7 @@ class Mail {
           from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
           to: email,
           subject,
-          html: html.replace(
-            '<img src="logo.png"',
-            '<img src="cid:logo"'
-          ),
+          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
           text,
           attachments,
           unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
