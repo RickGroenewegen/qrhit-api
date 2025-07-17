@@ -523,26 +523,29 @@ class Data {
     });
 
     // Fetch payment_has_playlist data with playlist names and user display names in a single query
-    const phpData = phpIds.length > 0 ? await this.prisma.paymentHasPlaylist.findMany({
-      where: { id: { in: phpIds } },
-      select: {
-        id: true,
-        playlist: {
-          select: {
-            name: true,
-          },
-        },
-        payment: {
-          select: {
-            user: {
-              select: {
-                displayName: true,
+    const phpData =
+      phpIds.length > 0
+        ? await this.prisma.paymentHasPlaylist.findMany({
+            where: { id: { in: phpIds } },
+            select: {
+              id: true,
+              playlist: {
+                select: {
+                  name: true,
+                },
+              },
+              payment: {
+                select: {
+                  user: {
+                    select: {
+                      displayName: true,
+                    },
+                  },
+                },
               },
             },
-          },
-        },
-      },
-    }) : [];
+          })
+        : [];
 
     const trackMap = new Map(tracks.map((track) => [track.id, track]));
     const phpMap = new Map(phpData.map((php) => [php.id, php]));
