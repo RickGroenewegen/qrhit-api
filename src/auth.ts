@@ -476,6 +476,42 @@ export async function resetPassword(
 }
 
 /**
+ * Checks if a password reset token is valid and not expired
+ * @param resetToken The password reset token to check
+ * @returns Object with valid boolean
+ */
+export async function checkPasswordResetToken(
+  resetToken: string
+): Promise<{
+  valid: boolean;
+}> {
+  try {
+    if (!resetToken) {
+      return { valid: false };
+    }
+
+    // Find user with this reset token
+    const user = await prisma.user.findUnique({
+      where: { passwordResetToken: resetToken },
+    });
+
+    if (!user) {
+      return { valid: false };
+    }
+
+    // Check if token has expired
+    if (!user.passwordResetExpiry || user.passwordResetExpiry < new Date()) {
+      return { valid: false };
+    }
+
+    return { valid: true };
+  } catch (error) {
+    console.error('Error checking password reset token:', error);
+    return { valid: false };
+  }
+}
+
+/**
  * Initiates password reset process by sending reset email
  * @param email The user's email address
  * @param captchaToken The reCAPTCHA token for verification

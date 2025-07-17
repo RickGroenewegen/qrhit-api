@@ -10,6 +10,7 @@ import {
   verifyUser,
   initiatePasswordReset,
   resetPassword,
+  checkPasswordResetToken,
 } from './auth';
 import Fastify from 'fastify';
 import replyFrom from '@fastify/reply-from';
@@ -751,6 +752,14 @@ class Server {
         const statusCode = result.error === 'missingRequiredFields' || result.error === 'passwordsDoNotMatch' || result.error === 'captchaVerificationFailed' || result.error === 'invalidOrExpiredToken' || result.error?.startsWith('password') ? 400 : 500;
         reply.status(statusCode).send(result);
       }
+    });
+
+    this.fastify.get('/account/reset-password-check/:hash', async (request: any, reply: any) => {
+      const { hash } = request.params;
+
+      const result = await checkPasswordResetToken(hash);
+
+      reply.send(result);
     });
 
     this.fastify.get(
