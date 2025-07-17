@@ -704,7 +704,7 @@ class Server {
       if (result.success) {
         reply.send(result);
       } else {
-        const statusCode = result.error === 'An account with this email address already exists' ? 409 : 400;
+        const statusCode = result.error === 'accountAlreadyExists' ? 409 : 400;
         reply.status(statusCode).send(result);
       }
     });

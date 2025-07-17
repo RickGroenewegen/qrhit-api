@@ -202,35 +202,35 @@ function validatePassword(password: string): {
   if (password.length < 8) {
     return {
       isValid: false,
-      error: 'Password must be at least 8 characters long',
+      error: 'passwordTooShort',
     };
   }
 
   if (!/[A-Z]/.test(password)) {
     return {
       isValid: false,
-      error: 'Password must contain at least one uppercase letter',
+      error: 'passwordNeedsUppercase',
     };
   }
 
   if (!/[a-z]/.test(password)) {
     return {
       isValid: false,
-      error: 'Password must contain at least one lowercase letter',
+      error: 'passwordNeedsLowercase',
     };
   }
 
   if (!/[0-9]/.test(password)) {
     return {
       isValid: false,
-      error: 'Password must contain at least one number',
+      error: 'passwordNeedsNumber',
     };
   }
 
   if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)) {
     return {
       isValid: false,
-      error: 'Password must contain at least one special character',
+      error: 'passwordNeedsSpecialCharacter',
     };
   }
 
@@ -260,7 +260,7 @@ export async function registerAccount(
     if (!displayName || !email || !password1 || !password2) {
       return {
         success: false,
-        error: 'Missing required fields: displayName, email, password1, password2',
+        error: 'missingRequiredFields',
       };
     }
 
@@ -268,7 +268,7 @@ export async function registerAccount(
     if (!utils.isValidEmail(email)) {
       return {
         success: false,
-        error: 'Invalid email format',
+        error: 'invalidEmailFormat',
       };
     }
 
@@ -276,7 +276,7 @@ export async function registerAccount(
     if (password1 !== password2) {
       return {
         success: false,
-        error: 'Passwords do not match',
+        error: 'passwordsDoNotMatch',
       };
     }
 
@@ -299,7 +299,7 @@ export async function registerAccount(
         // User already upgraded, return duplicate account error
         return {
           success: false,
-          error: 'An account with this email address already exists',
+          error: 'accountAlreadyExists',
         };
       } else {
         // User exists but not upgraded, update the user
@@ -318,7 +318,7 @@ export async function registerAccount(
 
         return {
           success: true,
-          message: 'Account upgraded successfully',
+          message: 'accountUpgraded',
         };
       }
     } else {
@@ -346,14 +346,14 @@ export async function registerAccount(
 
       return {
         success: true,
-        message: 'Account created successfully',
+        message: 'accountCreated',
       };
     }
   } catch (error) {
     console.error('Error in account registration:', error);
     return {
       success: false,
-      error: 'Internal server error',
+      error: 'internalServerError',
     };
   }
 }
