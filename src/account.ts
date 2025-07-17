@@ -50,6 +50,7 @@ class Account {
         numberOfTracks: number;
         minimumNumberOfTracks: number | null;
         numberOfVotes: number;
+        numberOfSongsVoted: number;
       }>;
     };
     error?: string;
@@ -119,6 +120,7 @@ class Account {
         numberOfTracks: number;
         minimumNumberOfTracks: number | null;
         numberOfVotes: number;
+        numberOfSongsVoted: number;
       }> = [];
 
       // Get the user with their companyId
@@ -155,22 +157,45 @@ class Account {
                 },
               },
             },
+            CompanyListSubmission: {
+              where: {
+                verified: true,
+              },
+              select: {
+                CompanyListSubmissionTrack: {
+                  select: {
+                    trackId: true,
+                  },
+                },
+              },
+            },
           },
         });
 
-        companyLists = userCompanyLists.map((list) => ({
-          id: list.id,
-          name: list.name,
-          description: list.description_nl,
-          slug: list.slug,
-          status: list.status,
-          startAt: list.startAt,
-          endAt: list.endAt,
-          numberOfCards: list.numberOfCards,
-          numberOfTracks: list.numberOfTracks,
-          minimumNumberOfTracks: list.minimumNumberOfTracks,
-          numberOfVotes: list._count.CompanyListSubmission,
-        }));
+        companyLists = userCompanyLists.map((list) => {
+          // Count unique tracks that have been voted on
+          const uniqueTrackIds = new Set();
+          list.CompanyListSubmission.forEach((submission) => {
+            submission.CompanyListSubmissionTrack.forEach((track) => {
+              uniqueTrackIds.add(track.trackId);
+            });
+          });
+
+          return {
+            id: list.id,
+            name: list.name,
+            description: list.description_nl,
+            slug: list.slug,
+            status: list.status,
+            startAt: list.startAt,
+            endAt: list.endAt,
+            numberOfCards: list.numberOfCards,
+            numberOfTracks: list.numberOfTracks,
+            minimumNumberOfTracks: list.minimumNumberOfTracks,
+            numberOfVotes: list._count.CompanyListSubmission,
+            numberOfSongsVoted: uniqueTrackIds.size,
+          };
+        });
       }
 
       this.logger.log(
