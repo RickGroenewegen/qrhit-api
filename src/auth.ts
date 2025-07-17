@@ -381,6 +381,7 @@ async function ensureUserInGroup(userId: number, groupName: string): Promise<voi
  * @param password1 The password
  * @param password2 The password confirmation
  * @param captchaToken The reCAPTCHA token for verification
+ * @param locale The user's language code
  * @returns Object with success status and message or error
  */
 export async function registerAccount(
@@ -388,7 +389,8 @@ export async function registerAccount(
   email: string,
   password1: string,
   password2: string,
-  captchaToken: string
+  captchaToken: string,
+  locale?: string
 ): Promise<{
   success: boolean;
   message?: string;
@@ -402,6 +404,9 @@ export async function registerAccount(
         error: 'missingRequiredFields',
       };
     }
+
+    // Default locale to 'en' if not provided
+    const userLocale = locale || 'en';
 
     // Verify captcha
     const isHuman = await utils.verifyRecaptcha(captchaToken);
@@ -450,7 +455,7 @@ export async function registerAccount(
             email,
             displayName,
             '', // No verification hash needed for existing users
-            'en'
+            userLocale
           );
         } catch (emailError) {
           console.error('Error sending verification email to existing user:', emailError);
@@ -473,6 +478,7 @@ export async function registerAccount(
             password: hashedPassword,
             salt,
             upgraded: true,
+            locale: userLocale,
           },
         });
 
@@ -499,7 +505,7 @@ export async function registerAccount(
           password: hashedPassword,
           salt,
           hash: userHash,
-          locale: 'en',
+          locale: userLocale,
           marketingEmails: false,
           sync: false,
           upgraded: true,
@@ -517,7 +523,7 @@ export async function registerAccount(
         email,
         displayName,
         verificationHash,
-        'en'
+        userLocale
       );
 
       return {
