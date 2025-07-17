@@ -377,21 +377,32 @@ async function ensureUserInGroup(userId: number, groupName: string): Promise<voi
 /**
  * Initiates password reset process by sending reset email
  * @param email The user's email address
+ * @param captchaToken The reCAPTCHA token for verification
  * @returns Object with success status and message or error
  */
 export async function initiatePasswordReset(
-  email: string
+  email: string,
+  captchaToken: string
 ): Promise<{
   success: boolean;
   message?: string;
   error?: string;
 }> {
   try {
-    // Validate required field
-    if (!email) {
+    // Validate required fields
+    if (!email || !captchaToken) {
       return {
         success: false,
-        error: 'emailIsRequired',
+        error: 'missingRequiredFields',
+      };
+    }
+
+    // Verify captcha
+    const isHuman = await utils.verifyRecaptcha(captchaToken);
+    if (!isHuman) {
+      return {
+        success: false,
+        error: 'captchaVerificationFailed',
       };
     }
 

@@ -727,14 +727,14 @@ class Server {
     });
 
     this.fastify.post('/account/reset-password-request', async (request: any, reply: any) => {
-      const { email } = request.body;
+      const { email, captchaToken } = request.body;
 
-      const result = await initiatePasswordReset(email);
+      const result = await initiatePasswordReset(email, captchaToken);
 
       if (result.success) {
         reply.send(result);
       } else {
-        const statusCode = result.error === 'emailIsRequired' || result.error === 'invalidEmailFormat' ? 400 : 500;
+        const statusCode = result.error === 'missingRequiredFields' || result.error === 'invalidEmailFormat' || result.error === 'captchaVerificationFailed' ? 400 : 500;
         reply.status(statusCode).send(result);
       }
     });
