@@ -332,6 +332,46 @@ export async function verifyUser(
 }
 
 /**
+ * Ensures the 'users' usergroup exists and connects a user to it
+ * @param userId The user's database ID
+ */
+async function ensureUserInUsersGroup(userId: number): Promise<void> {
+  try {
+    // First, ensure the 'users' usergroup exists
+    let usersGroup = await prisma.userGroup.findUnique({
+      where: { name: 'users' },
+    });
+
+    if (!usersGroup) {
+      usersGroup = await prisma.userGroup.create({
+        data: { name: 'users' },
+      });
+    }
+
+    // Check if user is already in the 'users' group
+    const existingConnection = await prisma.userInGroup.findFirst({
+      where: {
+        userId: userId,
+        groupId: usersGroup.id,
+      },
+    });
+
+    // If not already connected, create the connection
+    if (!existingConnection) {
+      await prisma.userInGroup.create({
+        data: {
+          userId: userId,
+          groupId: usersGroup.id,
+        },
+      });
+    }
+  } catch (error) {
+    console.error('Error ensuring user is in users group:', error);
+    // Don't throw here to avoid breaking the registration process
+  }
+}
+
+/**
  * Registers a new user account or upgrades an existing unverified account
  * @param displayName The user's display name
  * @param email The user's email address
@@ -411,7 +451,7 @@ export async function registerAccount(
         const salt = generateSalt();
         const hashedPassword = hashPassword(password1, salt);
 
-        await prisma.user.update({
+        const updatedUser = await prisma.user.update({
           where: { email },
           data: {
             displayName,
@@ -420,6 +460,9 @@ export async function registerAccount(
             upgraded: true,
           },
         });
+
+        // Ensure user is connected to 'users' usergroup
+        await ensureUserInUsersGroup(updatedUser.id);
 
         return {
           success: true,
@@ -450,6 +493,9 @@ export async function registerAccount(
           verifiedAt: null,
         },
       });
+
+      // Ensure user is connected to 'users' usergroup
+      await ensureUserInUsersGroup(newUser.id);
 
       // Send verification email
       const Mail = (await import('./mail')).default;
