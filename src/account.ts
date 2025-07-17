@@ -34,7 +34,9 @@ class Account {
         numberOfTracks: number;
         createdAt: Date;
         type: string;
-        digitalFilename?: string;
+        digitalFilename: string;
+        orderId: string;
+        trackingLink: string;
       }>;
       companyLists: Array<{
         id: number;
@@ -87,6 +89,8 @@ class Account {
           createdAt: payment.createdAt,
           type: php.type,
           digitalFilename: php.type === 'digital' ? (php.filenameDigital || '') : '',
+          orderId: payment.printApiOrderId || '',
+          trackingLink: payment.printApiTrackingLink || '',
         }))
       );
 
