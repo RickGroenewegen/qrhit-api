@@ -9,8 +9,11 @@
         src: url('<%= process.env['API_URI'] %>/assets/fonts/Lovelo.otf') format('opentype');
         font-weight: normal;
         font-style: normal;
-        font-display: swap; /* Fallback to system font while loading */
+        font-display: block; /* Wait for font to load before rendering */
     }
+    
+    /* Preload the font to ensure it's available */
+    @import url('<%= process.env['API_URI'] %>/assets/fonts/Lovelo.otf');
     body {
         font-family: Arial, sans-serif;
         margin: 0;

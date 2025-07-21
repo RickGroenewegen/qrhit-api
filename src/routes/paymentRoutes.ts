@@ -8,6 +8,7 @@ import Translation from '../translation';
 import Utils from '../utils';
 import fs from 'fs/promises';
 import path from 'path';
+import Formatters from '../formatters';
 
 export default async function paymentRoutes(fastify: FastifyInstance) {
   const mollie = new Mollie();
@@ -17,6 +18,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   const review = Review.getInstance();
   const translation = new Translation();
   const utils = new Utils();
+  const formatters = new Formatters().getFormatters();
 
   // Check payment status
   fastify.post('/mollie/check', async (request: any, _reply) => {
@@ -34,16 +36,19 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   });
 
   // Get order progress
-  fastify.get('/progress/:playlistId/:paymentId', async (request: any, _reply) => {
-    const data = await Data.getInstance().getPayment(
-      request.params.paymentId,
-      request.params.playlistId
-    );
-    return {
-      success: true,
-      data,
-    };
-  });
+  fastify.get(
+    '/progress/:playlistId/:paymentId',
+    async (request: any, _reply) => {
+      const data = await Data.getInstance().getPayment(
+        request.params.paymentId,
+        request.params.playlistId
+      );
+      return {
+        success: true,
+        data,
+      };
+    }
+  );
 
   // Get order type
   fastify.get(
@@ -187,8 +192,6 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       }
     }
 
-    const formatters = {}; // Add formatters here if needed
-
     await reply.view(`invoice.ejs`, {
       payment,
       playlists,
@@ -247,11 +250,17 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
       if (payment.email) {
         let template = request.params.template;
-        
+
         // Check for specific Treffer email
-        if (payment.email.toLowerCase() === 'west14+treffer@gmail.com' && request.params.template === 'printer') {
+        if (
+          payment.email.toLowerCase() === 'west14+treffer@gmail.com' &&
+          request.params.template === 'printer'
+        ) {
           template = 'treffer_printer';
-        } else if (whitelabel && request.params.template.indexOf('digital_double') > -1) {
+        } else if (
+          whitelabel &&
+          request.params.template.indexOf('digital_double') > -1
+        ) {
           template = `${request.params.template}_${whitelabel.template}`;
         }
 
@@ -276,11 +285,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
   fastify.post('/review/:paymentId', async (request: any, _reply) => {
     const { rating, review } = request.body;
-    return await review.createReview(
-      request.params.paymentId,
-      rating,
-      review
-    );
+    return await review.createReview(request.params.paymentId, rating, review);
   });
 
   // Print API webhook
@@ -291,15 +296,18 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
   // Development routes
   if (process.env['ENVIRONMENT'] == 'development') {
-    fastify.get('/generate_invoice/:paymentId', async (request: any, _reply) => {
-      const payment = await mollie.getPayment(request.params.paymentId);
-      if (payment) {
-        const pdfPath = await order.createInvoice(payment);
-        // Send tracking email would go here
-        return { success: true };
-      } else {
-        return { success: false };
+    fastify.get(
+      '/generate_invoice/:paymentId',
+      async (request: any, _reply) => {
+        const payment = await mollie.getPayment(request.params.paymentId);
+        if (payment) {
+          const pdfPath = await order.createInvoice(payment);
+          // Send tracking email would go here
+          return { success: true };
+        } else {
+          return { success: false };
+        }
       }
-    });
+    );
   }
 }
