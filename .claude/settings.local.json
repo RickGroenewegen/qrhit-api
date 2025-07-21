@@ -8,7 +8,9 @@
       "Bash(node:*)",
       "Bash(npx tsc:*)",
       "Bash(npx prisma db push:*)",
-      "Bash(find:*)"
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "WebFetch(domain:www.facebook.com)"
     ],
     "deny": []
   }

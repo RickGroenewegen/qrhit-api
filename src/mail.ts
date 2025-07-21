@@ -239,7 +239,9 @@ class Mail {
 
       await this.ses.send(command);
       this.logger.log(
-        color.blue.bold(`QRSong verification email sent to ${white.bold(email)}`)
+        color.blue.bold(
+          `QRSong verification email sent to ${white.bold(email)}`
+        )
       );
     } catch (error) {
       console.error('Error while sending QRSong verification email:', error);
@@ -1123,13 +1125,15 @@ ${params.html}
     if (!this.ses) return;
 
     // Choose logo and template based on isQrvote flag
-    const logoPath = isQrvote 
-      ? `${process.env['ASSETS_DIR']}/images/qrsong.png`
+    const logoPath = isQrvote
+      ? `${process.env['ASSETS_DIR']}/images/logo.png`
       : `${process.env['ASSETS_DIR']}/images/onzevibe_logo.png`;
     const logoContentId = isQrvote ? 'qrsong_logo' : 'onzevibe_logo';
-    const templatePrefix = isQrvote ? 'mails/qrvote_verification' : 'mails/verification';
+    const templatePrefix = isQrvote
+      ? 'mails/qrvote_verification'
+      : 'mails/verification';
     const brandName = isQrvote ? 'QRSong!' : 'OnzeVibe';
-    
+
     // Use the company domain if provided, otherwise fall back to FRONTEND_URI
     const verificationLink = `${process.env['FRONTEND_VOTING_URI']}/hitlist/${slug}/verify/${verificationHash}`;
 
