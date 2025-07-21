@@ -246,10 +246,14 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       const whitelabel = whiteLabels.find((wl) => wl.domain === emailDomain);
 
       if (payment.email) {
-        const template =
-          whitelabel && request.params.template.indexOf('digital_double') > -1
-            ? `${request.params.template}_${whitelabel.template}`
-            : request.params.template;
+        let template = request.params.template;
+        
+        // Check for specific Treffer email
+        if (payment.email.toLowerCase() === 'west14+treffer@gmail.com' && request.params.template === 'printer') {
+          template = 'treffer_printer';
+        } else if (whitelabel && request.params.template.indexOf('digital_double') > -1) {
+          template = `${request.params.template}_${whitelabel.template}`;
+        }
 
         await reply.view(`pdf_${template}.ejs`, {
           subdir,
