@@ -322,6 +322,7 @@ class Data {
       '/faq',
       '/pricing',
       '/reviews',
+      '/blog',
       '/giftcard',
       '/examples',
       '/generate/playlist',
