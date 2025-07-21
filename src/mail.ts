@@ -1117,11 +1117,19 @@ ${params.html}
     companyName: string,
     verificationHash: string,
     locale: string,
-    slug?: string
+    slug?: string,
+    isQrvote: boolean = false
   ): Promise<void> {
     if (!this.ses) return;
 
-    const logoPath = `${process.env['ASSETS_DIR']}/images/onzevibe_logo.png`;
+    // Choose logo and template based on isQrvote flag
+    const logoPath = isQrvote 
+      ? `${process.env['ASSETS_DIR']}/images/qrsong.png`
+      : `${process.env['ASSETS_DIR']}/images/onzevibe_logo.png`;
+    const logoContentId = isQrvote ? 'qrsong_logo' : 'onzevibe_logo';
+    const templatePrefix = isQrvote ? 'mails/qrvote_verification' : 'mails/verification';
+    const brandName = isQrvote ? 'QRSong!' : 'OnzeVibe';
+    
     // Use the company domain if provided, otherwise fall back to FRONTEND_URI
     const verificationLink = `${process.env['FRONTEND_VOTING_URI']}/hitlist/${slug}/verify/${verificationHash}`;
 
@@ -1145,35 +1153,35 @@ ${params.html}
       const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
 
       const html = await this.templates.render(
-        'mails/verification_html',
+        `${templatePrefix}_html`,
         mailParams
       );
       const text = await this.templates.render(
-        'mails/verification_text',
+        `${templatePrefix}_text`,
         mailParams
       );
 
       const subject = `${this.translation.translate(
         'verification.subject',
         locale
-      )} - OnzeVibe`;
+      )} - ${brandName}`;
 
       const attachments: Attachment[] = [
         {
           contentType: 'image/png',
-          filename: 'onzevibe_logo.png',
+          filename: isQrvote ? 'qrsong_logo.png' : 'onzevibe_logo.png',
           data: logoBase64,
           isInline: true,
-          cid: 'onzevibe_logo',
+          cid: logoContentId,
         },
       ];
 
       const rawEmail = await this.renderRaw(
         {
-          from: `OnzeVibe <${process.env['FROM_EMAIL']}>`,
+          from: `${brandName} <${process.env['FROM_EMAIL']}>`,
           to: email,
           subject,
-          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+          html: html,
           text,
           attachments,
           unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,

@@ -140,6 +140,7 @@ class Vibe {
       password1,
       password2,
       qrvote,
+      marketingEmails,
     } = body || {};
 
     if (!fullname || !company || !email) {
@@ -245,7 +246,7 @@ class Vibe {
             hash: userHash,
             companyId: companyId,
             locale: 'nl',
-            marketingEmails: false,
+            marketingEmails: !!marketingEmails,
             sync: false,
             verificationHash: verificationHash,
             verified: verified,
@@ -289,6 +290,7 @@ class Vibe {
         numberOfCards: 200,
         numberOfTracks: 5,
         minimumNumberOfTracks: 5,
+        qrvote: isQRVote, // Set to true when created through QRVote form
         // Optionally add description fields for all locales as empty string
       };
 
@@ -707,6 +709,7 @@ class Vibe {
           endAt: true,
           votingBackground: true,
           votingLogo: true,
+          qrvote: true,
           Company: true,
           downloadLink: true,
           reviewLink: true,
@@ -1206,6 +1209,7 @@ class Vibe {
       numberOfTracks: number;
       playlistSource?: string; // Added optional playlistSource
       playlistUrl?: string; // Added optional playlistUrl
+      qrvote?: boolean; // Added optional qrvote flag
     }
   ): Promise<any> {
     try {
@@ -1289,6 +1293,7 @@ class Vibe {
           playlistSource: playlistSource || 'voting', // Default to 'voting' if not provided
           playlistUrl: playlistUrl || null, // Set to null if not provided
           status: 'new', // Start with 'new' status
+          qrvote: listData.qrvote ?? false, // Use provided qrvote value or default to false
         },
       });
 

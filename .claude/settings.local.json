@@ -1,0 +1,15 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(mkdir:*)",
+      "Bash(npm run build:*)",
+      "Bash(timeout 10s npm run start:dev2)",
+      "Bash(true)",
+      "Bash(node:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npx prisma db push:*)",
+      "Bash(find:*)"
+    ],
+    "deny": []
+  }
+}

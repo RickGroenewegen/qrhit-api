@@ -63,6 +63,9 @@ class Hitlist {
       const agreeToUseName = this.utils.parseBoolean(
         hitlist[0]?.agreeToUseName
       ); // Added agreeToUseName
+      const marketingEmails = this.utils.parseBoolean(
+        hitlist[0]?.marketingEmails
+      ); // Added marketingEmails
 
       let constructedFullname: string | null = (
         (firstname || '') +
@@ -116,7 +119,7 @@ class Hitlist {
             },
           },
           slug: true, // Select slug for verification email link
-          // Add other fields if needed later
+          qrvote: true, // Select qrvote flag for email template selection
         },
       });
 
@@ -234,6 +237,7 @@ class Hitlist {
             lastname: lastname || null,
             email: email || null,
             agreeToUseName: agreeToUseName,
+            marketingEmails: marketingEmails,
             locale: locale,
             cardName: cardName,
           },
@@ -259,6 +263,7 @@ class Hitlist {
             email: email || submission.email,
             verificationHash: verificationHash,
             agreeToUseName: agreeToUseName, // Added agreeToUseName
+            marketingEmails: marketingEmails, // Added marketingEmails
           },
         });
         createdOrUpdatedSubmission = true;
@@ -277,7 +282,8 @@ class Hitlist {
           companyList.Company.name,
           submission.verificationHash,
           submission.locale || 'nl', // Use the provided locale or default to 'nl'
-          companyList.slug!
+          companyList.slug!,
+          companyList.qrvote // Pass qrvote flag for template selection
         );
       }
 
@@ -589,7 +595,11 @@ class Hitlist {
             }
           );
           if (submission) {
-            cachedData.data.submissionStatus = submission.status;
+            // Only return the submission status if it's verified
+            // This prevents showing "Thank you!" for pending_verification submissions
+            if (submission.verified || submission.status === 'submitted') {
+              cachedData.data.submissionStatus = submission.status;
+            }
           }
         }
         return cachedData;
@@ -609,6 +619,7 @@ class Hitlist {
           numberOfCards: true,
           votingBackground: true,
           votingLogo: true,
+          qrvote: true,
           startAt: true, // Added startAt
           endAt: true, // Added endAt
           Company: {
@@ -646,7 +657,11 @@ class Hitlist {
         });
 
         if (submission) {
-          submissionStatus = submission.status;
+          // Only return the submission status if it's verified
+          // This prevents showing "Thank you!" for pending_verification submissions
+          if (submission.verified || submission.status === 'submitted') {
+            submissionStatus = submission.status;
+          }
         }
       }
 
@@ -701,6 +716,7 @@ class Hitlist {
           companyName: companyList.Company.name,
           votingBackground: companyList.votingBackground,
           votingLogo: companyList.votingLogo,
+          qrvote: companyList.qrvote,
           languages: companyList.languages,
           showNames: companyList.showNames,
           startAt: companyList.startAt,

@@ -121,6 +121,8 @@ export async function authenticateUser(
       },
     });
 
+    console.log(222, email, user);
+
     if (!user) {
       return null;
     }
@@ -136,6 +138,9 @@ export async function authenticateUser(
     }
 
     const isValid = verifyPassword(password, user.password, user.salt);
+
+    console.log(333, isValid);
+
     if (!isValid) {
       return null;
     }
@@ -249,9 +254,7 @@ function validatePassword(password: string): {
  * @param verificationHash The verification hash from the email
  * @returns Object with success status, auth token, and user info or error
  */
-export async function verifyUser(
-  verificationHash: string
-): Promise<{
+export async function verifyUser(verificationHash: string): Promise<{
   success: boolean;
   token?: string;
   userId?: string;
@@ -338,7 +341,10 @@ export async function verifyUser(
  * @param userId The user's database ID
  * @param groupName The name of the usergroup to connect the user to
  */
-async function ensureUserInGroup(userId: number, groupName: string): Promise<void> {
+async function ensureUserInGroup(
+  userId: number,
+  groupName: string
+): Promise<void> {
   try {
     // First, ensure the usergroup exists
     let userGroup = await prisma.userGroup.findUnique({
@@ -480,9 +486,7 @@ export async function resetPassword(
  * @param resetToken The password reset token to check
  * @returns Object with valid boolean
  */
-export async function checkPasswordResetToken(
-  resetToken: string
-): Promise<{
+export async function checkPasswordResetToken(resetToken: string): Promise<{
   valid: boolean;
 }> {
   try {
@@ -678,10 +682,13 @@ export async function registerAccount(
             userLocale
           );
         } catch (emailError) {
-          console.error('Error sending verification email to existing user:', emailError);
+          console.error(
+            'Error sending verification email to existing user:',
+            emailError
+          );
           // Continue with the error response even if email fails
         }
-        
+
         return {
           success: false,
           error: 'accountAlreadyExists',
