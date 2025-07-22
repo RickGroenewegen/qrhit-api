@@ -1217,11 +1217,98 @@ ${params.html}
     }
   }
 
+  private async completeUserInformation(): Promise<void> {
+    try {
+      this.logger.log(
+        color.blue.bold('Completing user information from payment data')
+      );
+
+      // Get all users without country
+      const usersWithoutCountry = await prisma.user.findMany({
+        where: {
+          country: null,
+        },
+        select: {
+          id: true,
+          email: true,
+        },
+      });
+
+      if (usersWithoutCountry.length === 0) {
+        this.logger.log(color.yellow.bold('No users without country found'));
+        return;
+      }
+
+      this.logger.log(
+        color.blue.bold(
+          `Found ${white.bold(
+            usersWithoutCountry.length
+          )} users without country`
+        )
+      );
+
+      // Update each user with country from their payments
+      for (const user of usersWithoutCountry) {
+        const payment = await prisma.payment.findFirst({
+          where: {
+            email: user.email,
+            countrycode: { not: null },
+          },
+          orderBy: { createdAt: 'desc' },
+          select: { countrycode: true },
+        });
+
+        if (payment && payment.countrycode) {
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              country: payment.countrycode,
+              sync: true,
+            },
+          });
+          this.logger.log(
+            color.blue.bold(
+              `Updated country for ${white.bold(user.email)} to ${white.bold(
+                payment.countrycode
+              )} and marked for sync`
+            )
+          );
+        }
+      }
+    } catch (error: any) {
+      this.logger.log(
+        color.red(
+          `Error completing user information: ${white.bold(error.message)}`
+        )
+      );
+    }
+  }
+
   public async uploadContacts(): Promise<void> {
     try {
       this.logger.log(
         color.blue.bold('Starting daily contact upload to Mail Octopus')
       );
+
+      // First complete user information
+      await this.completeUserInformation();
+
+      // Define country codes array
+      const countryCodes = ['NL'];
+
+      // Build lists object dynamically
+      const lists: { [key: string]: string | undefined } = {
+        general: process.env['MAIL_OCTOPUS_LIST_ID'],
+      };
+
+      // Add country-specific lists only if environment variable exists
+      for (const countryCode of countryCodes) {
+        const envKey = `MAIL_OCTOPUS_LIST_ID_${countryCode}`;
+        const listId = process.env[envKey];
+        if (listId) {
+          lists[countryCode] = listId;
+        }
+      }
 
       // Get all users
       const users = await prisma.user.findMany({
@@ -1232,6 +1319,7 @@ ${params.html}
           createdAt: true,
           marketingEmails: true,
           locale: true,
+          country: true,
         },
         where: {
           sync: true,
@@ -1261,74 +1349,137 @@ ${params.html}
         }
       }
 
-      // Format contacts for Mail Octopus API
-      const contacts = users.map((user) => ({
-        email: user.email,
-        fields: {
-          FirstName: user.displayName,
-          SignupDate: user.createdAt.toISOString(),
-          Locale: user.locale || '',
-        },
-        status: user.marketingEmails ? 'subscribed' : 'unsubscribed',
-      }));
-
-      // Mail Octopus API v2 endpoint
-      const listId = process.env.MAIL_OCTOPUS_LIST_ID;
+      // Process each list
       const apiKey = process.env.MAIL_OCTOPUS_API_KEY;
-      const apiUrl = `https://api.emailoctopus.com/lists/${listId}/contacts`;
+      const processedEmails = new Set<string>();
 
-      for (const contact of contacts) {
-        try {
-          const result = await axios.put(
-            apiUrl,
-            {
-              api_key: apiKey,
-              email_address: contact.email,
-              fields: contact.fields,
-              status: contact.status,
-              list_id: listId,
-            },
-            {
-              headers: {
-                'Content-Type': 'application/json',
-                Authorization: `Bearer ${apiKey}`,
-              },
-            }
-          );
-
+      for (const [listName, listId] of Object.entries(lists)) {
+        if (!listId) {
+          const skipDescription =
+            listName === 'general'
+              ? 'general (all countries)'
+              : `${listName} country`;
           this.logger.log(
-            color.green.bold(
-              `Successfully uploaded contact ${white.bold(contact.email)}`
+            color.yellow(
+              `Skipping ${white.bold(
+                skipDescription
+              )} list - no list ID configured`
             )
           );
-
-          // Set sync to false after successful upload
-          await prisma.user.update({
-            where: {
-              email: contact.email,
-            },
-            data: {
-              sync: false,
-            },
-          });
-        } catch (err: any) {
-          // Log individual contact errors but continue with others
-          this.logger.log(
-            color.red(
-              `Error uploading contact ${white.bold(
-                contact.email
-              )}: ${white.bold(err.message)}`
-            )
-          );
-          console.log(err);
+          continue;
         }
+
+        const listDescription =
+          listName === 'general' ? 'general' : `${listName}`;
+
+        this.logger.log(
+          color.blue.bold(
+            `Processing ${white.bold(listDescription)} list (${white.bold(
+              listId
+            )})`
+          )
+        );
+
+        // Filter users based on list type
+        let filteredUsers = users;
+        if (listName !== 'general') {
+          // For country-specific lists, filter by country
+          filteredUsers = users.filter((user) => user.country === listName);
+        }
+
+        if (filteredUsers.length === 0) {
+          this.logger.log(
+            color.yellow(
+              `No users found for ${white.bold(listDescription)} list`
+            )
+          );
+          continue;
+        }
+
+        // Format contacts for Mail Octopus API
+        const contacts = filteredUsers.map((user) => ({
+          email: user.email,
+          fields: {
+            FirstName: user.displayName,
+            SignupDate: user.createdAt.toISOString(),
+            Locale: user.locale || '',
+            Country: user.country || '',
+          },
+          status: user.marketingEmails ? 'subscribed' : 'unsubscribed',
+        }));
+
+        // Mail Octopus API v2 endpoint
+        const apiUrl = `https://api.emailoctopus.com/lists/${listId}/contacts`;
+        let successCount = 0;
+
+        for (const contact of contacts) {
+          try {
+            await axios.put(
+              apiUrl,
+              {
+                api_key: apiKey,
+                email_address: contact.email,
+                fields: contact.fields,
+                status: contact.status,
+                list_id: listId,
+              },
+              {
+                headers: {
+                  'Content-Type': 'application/json',
+                  Authorization: `Bearer ${apiKey}`,
+                },
+              }
+            );
+
+            this.logger.log(
+              color.blue.bold(
+                `[${white.bold(
+                  listDescription
+                )}] Successfully uploaded ${white.bold(contact.email)}`
+              )
+            );
+
+            successCount++;
+            processedEmails.add(contact.email);
+          } catch (err: any) {
+            // Log individual contact errors but continue with others
+            this.logger.log(
+              color.red(
+                `[${white.bold(listDescription)}] Error uploading ${white.bold(
+                  contact.email
+                )}: ${white.bold(err.message)}`
+              )
+            );
+            console.log(err);
+          }
+        }
+
+        this.logger.log(
+          color.blue.bold(
+            `[${white.bold(listDescription)}] Uploaded ${white.bold(
+              successCount
+            )} out of ${white.bold(contacts.length)} contacts`
+          )
+        );
+      }
+
+      // Set sync to false for all successfully processed users
+      if (processedEmails.size > 0) {
+        await prisma.user.updateMany({
+          where: {
+            email: { in: Array.from(processedEmails) },
+          },
+          data: {
+            sync: false,
+          },
+        });
       }
 
       this.logger.log(
         color.blue.bold(
-          `Successfully uploaded ${white.bold(
-            contacts.length
-          )} contacts to Mail Octopus`
+          `Contact upload completed. Processed ${white.bold(
+            processedEmails.size
+          )} unique contacts across all lists`
         )
       );
     } catch (error: any) {
