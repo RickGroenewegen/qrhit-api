@@ -532,8 +532,6 @@ class PrintEnBind {
       paymentMethod = 'account';
     }
 
-    console.log(111, 'payment_method', paymentMethod);
-
     // Add remaining articles
     for (let i = 0; i < items.length; i++) {
       items[i].payment_method = paymentMethod;

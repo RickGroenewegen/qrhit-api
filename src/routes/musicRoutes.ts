@@ -279,35 +279,38 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   });
 
   // Complete Spotify authorization
-  fastify.post('/hitlist/spotify-auth-complete', async (request: any, reply) => {
-    const { code } = request.body;
+  fastify.post(
+    '/hitlist/spotify-auth-complete',
+    async (request: any, reply) => {
+      const { code } = request.body;
 
-    if (!code) {
-      return { success: false, error: 'Missing authorization code' };
+      if (!code) {
+        return { success: false, error: 'Missing authorization code' };
+      }
+
+      const token = await spotify.getTokensFromAuthCode(code);
+
+      if (token) {
+        logger.log(
+          color.green.bold(
+            'Spotify authorization successful via POST. Token stored.'
+          )
+        );
+        return {
+          success: true,
+          message: 'Spotify authorization successful.',
+        };
+      } else {
+        logger.log(
+          color.red.bold('Failed to exchange Spotify auth code via POST.')
+        );
+        return {
+          success: false,
+          error: 'Failed to complete Spotify authorization.',
+        };
+      }
     }
-
-    const token = await spotify.getTokensFromAuthCode(code);
-
-    if (token) {
-      logger.log(
-        color.green.bold(
-          'Spotify authorization successful via POST. Token stored.'
-        )
-      );
-      return {
-        success: true,
-        message: 'Spotify authorization successful.',
-      };
-    } else {
-      logger.log(
-        color.red.bold('Failed to exchange Spotify auth code via POST.')
-      );
-      return {
-        success: false,
-        error: 'Failed to complete Spotify authorization.',
-      };
-    }
-  });
+  );
 
   // Spotify callback
   fastify.get('/spotify_callback', async (request: any, reply) => {

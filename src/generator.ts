@@ -309,7 +309,6 @@ class Generator {
     }
   }
 
-
   private async storePlaylistData(
     payment: any,
     playlist: any,

@@ -23,8 +23,6 @@ export default async function accountRoutes(
       password: string;
     };
 
-    console.log(111, email, password);
-
     // For backward compatibility, check if using old username field
     const username = request.body.username;
     const loginEmail = email || username;
