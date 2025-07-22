@@ -1441,6 +1441,9 @@ ${params.html}
 
             successCount++;
             processedEmails.add(contact.email);
+
+            // Wait 250ms before the next request to respect rate limiting
+            await new Promise(resolve => setTimeout(resolve, 250));
           } catch (err: any) {
             // Log individual contact errors but continue with others
             this.logger.log(
@@ -1451,6 +1454,9 @@ ${params.html}
               )
             );
             console.log(err);
+            
+            // Also wait after errors to avoid hitting rate limits
+            await new Promise(resolve => setTimeout(resolve, 250));
           }
         }
 
