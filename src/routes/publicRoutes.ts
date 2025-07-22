@@ -333,7 +333,10 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         request.params.paymentId,
         request.clientIp,
         '',
-        mollie
+        mollie,
+        false,
+        false,
+        false
       );
       return { success: true };
     });

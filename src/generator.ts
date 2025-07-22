@@ -143,7 +143,8 @@ class Generator {
     refreshPlaylists: string,
     mollie: Mollie,
     forceFinalize: boolean = false,
-    skipMainMail: boolean = false
+    skipMainMail: boolean = false,
+    onlyProductMail: boolean = false
   ): Promise<void> {
     this.logger.log(
       blue.bold(`Starting generation for payment: ${white.bold(paymentId)}`)
@@ -187,7 +188,7 @@ class Generator {
     }
 
     // Send the main mail for cards
-    if (productType == 'cards' && !skipMainMail) {
+    if (productType == 'cards' && !skipMainMail && !onlyProductMail) {
       await this.mail.sendEmail('main_' + orderType, payment, playlists);
     }
 
@@ -251,7 +252,7 @@ class Generator {
         payment.paymentId,
         mollie,
         forceFinalize,
-        skipMainMail
+        skipMainMail && !onlyProductMail
       );
     }
 
@@ -307,6 +308,7 @@ class Generator {
       );
     }
   }
+
 
   private async storePlaylistData(
     payment: any,

@@ -173,6 +173,26 @@ export default async function adminRoutes(
     }
   );
 
+  // Regenerate order (Only product email)
+  fastify.get(
+    '/regenerate-product-only/:paymentId',
+    getAuthHandler(['admin']),
+    async (request: any, _reply) => {
+      await mollie.clearPDFs(request.params.paymentId);
+      // This will skip the main "order received" email but still send product emails
+      generator.generate(
+        request.params.paymentId,
+        request.clientIp,
+        '',
+        mollie,
+        true, // Force finalize
+        false, // Don't skip main mail (but onlyProductMail will handle it)
+        true // Only product mail
+      );
+      return { success: true };
+    }
+  );
+
   // Get orders with search
   fastify.post(
     '/orders',

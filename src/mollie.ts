@@ -879,14 +879,18 @@ class Mollie {
             params.refreshPlaylists.join(','),
             this,
             false,
-            skipGenerationMail
+            skipGenerationMail,
+            false
           );
         } else {
           this.generator.generate(
             molliePaymentId,
             clientIp,
             params.refreshPlaylists.join(','),
-            this
+            this,
+            false,
+            false,
+            false
           );
         }
       }
@@ -1004,7 +1008,10 @@ class Mollie {
             params.id,
             metadata.clientIp,
             metadata.refreshPlaylists,
-            this
+            this,
+            false,
+            false,
+            false
           );
         } else if (this.failedPaymentStatus.includes(payment.status)) {
           await this.discount.removeDiscountUsesByPaymentId(dbPayment.id);

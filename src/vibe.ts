@@ -2125,7 +2125,8 @@ class Vibe {
         '',
         this.mollie,
         true, // Force finalize
-        true
+        true,
+        false
       );
 
       const payment = await this.mollie.getPayment(result.data.paymentId);

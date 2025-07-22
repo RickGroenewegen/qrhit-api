@@ -669,7 +669,8 @@ class Suggestion {
             '',
             this.mollie,
             true, // Force finalize
-            true // Skip main mail
+            true, // Skip main mail
+            false
           );
 
           if (hasPhysicalPlaylists) {
