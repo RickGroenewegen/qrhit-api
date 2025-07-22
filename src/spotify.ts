@@ -1110,9 +1110,18 @@ class Spotify {
     const uriMatch = input.match(/spotify:track:[a-zA-Z0-9]+/);
     if (uriMatch) return uriMatch[0];
 
-    // Match Spotify web track URLs and convert to URI
+    // Match Spotify API URLs (https://api.spotify.com/v1/tracks/...)
+    const apiMatch = input.match(
+      /https?:\/\/api\.spotify\.com\/v\d+\/tracks\/([a-zA-Z0-9]+)/
+    );
+    if (apiMatch) {
+      return `spotify:track:${apiMatch[1]}`;
+    }
+
+    // Match Spotify web track URLs with optional locale and query params
+    // Supports: /track/, /intl-xx/track/, and query parameters like ?si=...
     const urlMatch = input.match(
-      /https?:\/\/open\.spotify\.com\/track\/([a-zA-Z0-9]+)/
+      /https?:\/\/open\.spotify\.com(?:\/intl-[a-z]{2})?\/track\/([a-zA-Z0-9]+)(?:\?.*)?/
     );
     if (urlMatch) {
       return `spotify:track:${urlMatch[1]}`;
