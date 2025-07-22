@@ -38,19 +38,22 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const mollie = new Mollie();
 
   // Apple App Site Association
-  fastify.get('/.well-known/apple-app-site-association', async (_request, reply) => {
-    const filePath = path.join(
-      process.env['APP_ROOT'] as string,
-      '..',
-      'apple-app-site-association'
-    );
-    try {
-      const fileContent = await fs.readFile(filePath, 'utf-8');
-      reply.header('Content-Type', 'application/json').send(fileContent);
-    } catch (error) {
-      reply.status(404).send({ error: 'File not found' });
+  fastify.get(
+    '/.well-known/apple-app-site-association',
+    async (_request, reply) => {
+      const filePath = path.join(
+        process.env['APP_ROOT'] as string,
+        '..',
+        'apple-app-site-association'
+      );
+      try {
+        const fileContent = await fs.readFile(filePath, 'utf-8');
+        reply.header('Content-Type', 'application/json').send(fileContent);
+      } catch (error) {
+        reply.status(404).send({ error: 'File not found' });
+      }
     }
-  });
+  );
 
   // Robots.txt
   fastify.get('/robots.txt', async (_request, reply) => {
@@ -93,7 +96,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
 
   // Upload contacts
   fastify.get('/upload_contacts', async (request: any, _reply) => {
-    const result = await mail.uploadContacts();
+    mail.uploadContacts();
     return { success: true };
   });
 
@@ -136,15 +139,18 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   });
 
   // Reviews
-  fastify.get('/reviews/:locale/:amount/:landingPage', async (request: any, _reply) => {
-    const amount = parseInt(request.params.amount) || 0;
-    return await trustpilot.getReviews(
-      true,
-      amount,
-      request.params.locale,
-      utils.parseBoolean(request.params.landingPage)
-    );
-  });
+  fastify.get(
+    '/reviews/:locale/:amount/:landingPage',
+    async (request: any, _reply) => {
+      const amount = parseInt(request.params.amount) || 0;
+      return await trustpilot.getReviews(
+        true,
+        amount,
+        request.params.locale,
+        utils.parseBoolean(request.params.landingPage)
+      );
+    }
+  );
 
   fastify.get('/reviews_details', async (_request: any, _reply) => {
     return await trustpilot.getCompanyDetails();
