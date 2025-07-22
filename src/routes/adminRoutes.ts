@@ -1,8 +1,5 @@
 import { FastifyInstance } from 'fastify';
-import {
-  createOrUpdateAdminUser,
-  deleteUserById,
-} from '../auth';
+import { createOrUpdateAdminUser, deleteUserById } from '../auth';
 import Generator from '../generator';
 import AnalyticsClient from '../analytics';
 import Data from '../data';
@@ -566,8 +563,12 @@ export default async function adminRoutes(
     '/admin/printerinvoices',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
-      const { invoiceNumber, description, totalPriceExclVat, totalPriceInclVat } =
-        request.body;
+      const {
+        invoiceNumber,
+        description,
+        totalPriceExclVat,
+        totalPriceInclVat,
+      } = request.body;
       if (
         !invoiceNumber ||
         typeof invoiceNumber !== 'string' ||
@@ -610,8 +611,12 @@ export default async function adminRoutes(
         reply.status(400).send({ success: false, error: 'Invalid id' });
         return;
       }
-      const { invoiceNumber, description, totalPriceExclVat, totalPriceInclVat } =
-        request.body;
+      const {
+        invoiceNumber,
+        description,
+        totalPriceExclVat,
+        totalPriceInclVat,
+      } = request.body;
       const result = await printerInvoice.updatePrinterInvoice(id, {
         invoiceNumber,
         description,

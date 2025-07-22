@@ -121,8 +121,6 @@ export async function authenticateUser(
       },
     });
 
-    console.log(222, email, user);
-
     if (!user) {
       return null;
     }
@@ -138,8 +136,6 @@ export async function authenticateUser(
     }
 
     const isValid = verifyPassword(password, user.password, user.salt);
-
-    console.log(333, isValid);
 
     if (!isValid) {
       return null;
