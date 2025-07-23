@@ -88,6 +88,7 @@ class Cache {
 
   async flush(): Promise<void> {
     await this.executeCommand('flushdb');
+    this.logManager.log(color.blue.bold('Redis cache flushed!'));
   }
 
   async del(key: string): Promise<void> {

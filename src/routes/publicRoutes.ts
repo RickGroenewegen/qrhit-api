@@ -15,6 +15,7 @@ import Utils from '../utils';
 import Logger from '../logger';
 import Review from '../review';
 import Mollie from '../mollie';
+import Cache from '../cache';
 import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
@@ -36,6 +37,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const logger = new Logger();
   const review = Review.getInstance();
   const mollie = new Mollie();
+  const cache = Cache.getInstance();
 
   // Apple App Site Association
   fastify.get(
@@ -90,6 +92,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
 
   // Cache update
   fastify.get('/cache', async (request: any, _reply) => {
+    cache.flush();
     order.updateFeaturedPlaylists();
     return { success: true };
   });
