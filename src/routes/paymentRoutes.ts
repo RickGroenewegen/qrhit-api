@@ -7,8 +7,9 @@ import Review from '../review';
 import Translation from '../translation';
 import Utils from '../utils';
 import fs from 'fs/promises';
-import path from 'path';
+import { color } from 'console-log-colors';
 import Formatters from '../formatters';
+import Logger from '../logger';
 
 export default async function paymentRoutes(fastify: FastifyInstance) {
   const mollie = new Mollie();
@@ -17,6 +18,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   const discount = new Discount();
   const review = Review.getInstance();
   const translation = new Translation();
+  const logger = new Logger();
   const utils = new Utils();
   const formatters = new Formatters().getFormatters();
 
@@ -117,7 +119,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           reply.type('application/pdf');
           const fileContent = await fs.readFile(pdfFile.filePath);
 
-          console.log(`User downloaded file: ${pdfFile.filePath}`);
+          logger.log(
+            color.blue.bold(
+              `User downloaded file: ${color.white.bold(pdfFile.filePath)}`
+            )
+          );
 
           reply.send(fileContent);
         } catch (error) {
