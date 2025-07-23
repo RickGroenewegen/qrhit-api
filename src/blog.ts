@@ -2,6 +2,7 @@ import PrismaInstance from './prisma';
 import Translation from './translation';
 import Cache from './cache';
 
+const CACHE_PREFIX = 'blog2';
 const SUPPORTED_LOCALES = new Translation().allLocales;
 
 type BlogInput = {
@@ -113,10 +114,10 @@ class Blog {
         data[`summary_${locale}`] = input[`summary_${locale}`] || '';
       }
       const blog = await this.prisma.blog.create({ data });
-      
+
       // Clear blog caches after creating a new blog
       await this.clearBlogCaches();
-      
+
       return { success: true, blog };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -173,10 +174,10 @@ class Blog {
         where: { id },
         data,
       });
-      
+
       // Clear blog caches after updating a blog
       await this.clearBlogCaches();
-      
+
       return { success: true, blog };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -187,10 +188,10 @@ class Blog {
   public async deleteBlog(id: number) {
     try {
       await this.prisma.blog.delete({ where: { id } });
-      
+
       // Clear blog caches after deleting a blog
       await this.clearBlogCaches();
-      
+
       return { success: true };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -206,9 +207,9 @@ class Blog {
       }
 
       // Check cache first
-      const cacheKey = `blogs:all:${locale}`;
+      const cacheKey = `${CACHE_PREFIX}s:all:${locale}`;
       const cachedBlogs = await this.cache.get(cacheKey);
-      
+
       if (cachedBlogs) {
         return { success: true, blogs: JSON.parse(cachedBlogs) };
       }
@@ -235,6 +236,8 @@ class Blog {
 
   // Get a single blog by slug (public)
   public async getBlogBySlug(slug: string, locale: string) {
+    console.log(111, locale, slug);
+
     try {
       // Validate locale
       if (!SUPPORTED_LOCALES.includes(locale)) {
@@ -242,9 +245,9 @@ class Blog {
       }
 
       // Check cache first
-      const cacheKey = `blog:${slug}:${locale}`;
+      const cacheKey = `${CACHE_PREFIX}:${slug}:${locale}`;
       const cachedBlog = await this.cache.get(cacheKey);
-      
+
       if (cachedBlog) {
         return { success: true, blog: JSON.parse(cachedBlog) };
       }
@@ -329,11 +332,11 @@ class Blog {
   private async clearBlogCaches(): Promise<void> {
     // Clear all cached blog lists for all locales
     for (const locale of SUPPORTED_LOCALES) {
-      await this.cache.del(`blogs:all:${locale}`);
+      await this.cache.del(`${CACHE_PREFIX}s:all:${locale}`);
     }
-    
+
     // Clear all individual blog caches using pattern
-    await this.cache.delPattern('blog:*');
+    await this.cache.delPattern(`${CACHE_PREFIX}:*`);
   }
 
   // Helper: select all language fields
