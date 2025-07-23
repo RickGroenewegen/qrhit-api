@@ -1,5 +1,6 @@
 import PrismaInstance from './prisma';
 import Translation from './translation';
+import Cache from './cache';
 
 const SUPPORTED_LOCALES = new Translation().allLocales;
 
@@ -10,6 +11,7 @@ type BlogInput = {
 class Blog {
   private static instance: Blog;
   private prisma = PrismaInstance.getInstance();
+  private cache = Cache.getInstance();
 
   public static getInstance(): Blog {
     if (!Blog.instance) {
@@ -86,9 +88,11 @@ class Blog {
           const baseSlug = this.slugify(title);
           let slug = baseSlug;
           let counter = 1;
-          while (await this.prisma.blog.findFirst({ 
-            where: { [`slug_${locale}`]: slug } 
-          })) {
+          while (
+            await this.prisma.blog.findFirst({
+              where: { [`slug_${locale}`]: slug },
+            })
+          ) {
             slug = `${baseSlug}-${counter}`;
             counter++;
           }
@@ -109,6 +113,10 @@ class Blog {
         data[`summary_${locale}`] = input[`summary_${locale}`] || '';
       }
       const blog = await this.prisma.blog.create({ data });
+      
+      // Clear blog caches after creating a new blog
+      await this.clearBlogCaches();
+      
       return { success: true, blog };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -128,24 +136,26 @@ class Blog {
       if (input.hasOwnProperty('image_instructions')) {
         data.image_instructions = input.image_instructions;
       }
-      
+
       // Handle slug updates for each locale
       for (const locale of SUPPORTED_LOCALES) {
         if (input.hasOwnProperty(`title_${locale}`)) {
           data[`title_${locale}`] = input[`title_${locale}`];
-          
+
           // Update slug if title changed
           const title = input[`title_${locale}`];
           if (title) {
             const baseSlug = this.slugify(title);
             let slug = baseSlug;
             let counter = 1;
-            while (await this.prisma.blog.findFirst({ 
-              where: { 
-                [`slug_${locale}`]: slug,
-                id: { not: id } // Exclude current blog from check
-              } 
-            })) {
+            while (
+              await this.prisma.blog.findFirst({
+                where: {
+                  [`slug_${locale}`]: slug,
+                  id: { not: id }, // Exclude current blog from check
+                },
+              })
+            ) {
               slug = `${baseSlug}-${counter}`;
               counter++;
             }
@@ -163,6 +173,10 @@ class Blog {
         where: { id },
         data,
       });
+      
+      // Clear blog caches after updating a blog
+      await this.clearBlogCaches();
+      
       return { success: true, blog };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -173,6 +187,10 @@ class Blog {
   public async deleteBlog(id: number) {
     try {
       await this.prisma.blog.delete({ where: { id } });
+      
+      // Clear blog caches after deleting a blog
+      await this.clearBlogCaches();
+      
       return { success: true };
     } catch (error) {
       return { success: false, error: (error as Error).message };
@@ -187,6 +205,14 @@ class Blog {
         return { success: false, error: 'Invalid locale' };
       }
 
+      // Check cache first
+      const cacheKey = `blogs:all:${locale}`;
+      const cachedBlogs = await this.cache.get(cacheKey);
+      
+      if (cachedBlogs) {
+        return { success: true, blogs: JSON.parse(cachedBlogs) };
+      }
+
       const blogs = await this.prisma.blog.findMany({
         where: { active: true },
         orderBy: { createdAt: 'desc' },
@@ -197,6 +223,9 @@ class Blog {
       const localizedBlogs = blogs.map((blog) =>
         this.transformBlogForLocale(blog, locale)
       );
+
+      // Cache the result for 24 hours (86400 seconds)
+      await this.cache.set(cacheKey, JSON.stringify(localizedBlogs), 86400);
 
       return { success: true, blogs: localizedBlogs };
     } catch (error) {
@@ -212,19 +241,71 @@ class Blog {
         return { success: false, error: 'Invalid locale' };
       }
 
-      const blog = await this.prisma.blog.findFirst({
-        where: { [`slug_${locale}`]: slug },
+      // Check cache first
+      const cacheKey = `blog:${slug}:${locale}`;
+      const cachedBlog = await this.cache.get(cacheKey);
+      
+      if (cachedBlog) {
+        return { success: true, blog: JSON.parse(cachedBlog) };
+      }
+
+      // First, try to find the blog by the locale-specific slug
+      let blog = await this.prisma.blog.findFirst({
+        where: {
+          [`slug_${locale}`]: slug,
+          active: true,
+        },
         select: this.getSelectObject(true),
       });
+
+      // If not found, try to find the blog by any slug across all locales
       if (!blog) {
-        return { success: false, error: 'Blog not found' };
+        const orConditions = SUPPORTED_LOCALES.map((loc) => ({
+          [`slug_${loc}`]: slug,
+        }));
+
+        blog = await this.prisma.blog.findFirst({
+          where: {
+            AND: [{ OR: orConditions }, { active: true }],
+          },
+          select: this.getSelectObject(true),
+        });
+
+        if (blog) {
+          // Log which locale's slug matched
+          for (const loc of SUPPORTED_LOCALES) {
+            if (blog[`slug_${loc}`] === slug) {
+              break;
+            }
+          }
+        }
       }
-      if (!blog.active) {
+
+      if (!blog) {
         return { success: false, error: 'Blog not found' };
       }
 
       // Transform blog to include localized content
       const localizedBlog = this.transformBlogForLocale(blog, locale);
+
+      // Add all language slugs to support proper hreflang tags
+      const allSlugs: { [key: string]: string } = {};
+      for (const loc of SUPPORTED_LOCALES) {
+        if (blog[`slug_${loc}`]) {
+          allSlugs[loc] = blog[`slug_${loc}`];
+        }
+      }
+      localizedBlog.allSlugs = allSlugs;
+
+      // Add a flag to indicate if a redirect is needed
+      const correctSlug = blog[`slug_${locale}`];
+      if (correctSlug && correctSlug !== slug) {
+        localizedBlog.shouldRedirect = true;
+        localizedBlog.correctSlug = correctSlug;
+      }
+
+      // Cache the result for 24 hours (86400 seconds)
+      await this.cache.set(cacheKey, JSON.stringify(localizedBlog), 86400);
 
       return { success: true, blog: localizedBlog };
     } catch (error) {
@@ -242,6 +323,17 @@ class Blog {
       .replace(/\s+/g, '-')
       .replace(/[^\w-]+/g, '')
       .replace(/--+/g, '-');
+  }
+
+  // Helper: clear blog-related caches
+  private async clearBlogCaches(): Promise<void> {
+    // Clear all cached blog lists for all locales
+    for (const locale of SUPPORTED_LOCALES) {
+      await this.cache.del(`blogs:all:${locale}`);
+    }
+    
+    // Clear all individual blog caches using pattern
+    await this.cache.delPattern('blog:*');
   }
 
   // Helper: select all language fields
