@@ -236,8 +236,6 @@ class Blog {
 
   // Get a single blog by slug (public)
   public async getBlogBySlug(slug: string, locale: string) {
-    console.log(111, locale, slug);
-
     try {
       // Validate locale
       if (!SUPPORTED_LOCALES.includes(locale)) {
