@@ -478,9 +478,9 @@ class Order {
   }
 
   public startCron(): void {
-    new CronJob('0 2 * * *', async () => {
-      await this.updateFeaturedPlaylists();
-    }).start();
+    // new CronJob('0 2 * * *', async () => {
+    //   await this.updateFeaturedPlaylists();
+    // }).start();
   }
 
   public async getOrderTypes(type: string = 'cards') {
