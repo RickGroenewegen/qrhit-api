@@ -243,13 +243,13 @@ class SpotifyRapidApi {
     let offset = 0;
     const limit = 100; // RapidAPI endpoint seems to support 100
 
-    this.logger.log(
-      color.blue.bold(
-        `Fetching tracks in ${color.white.bold(
-          'RapidAPI'
-        )} for playlist ${color.white.bold(playlistId)}`
-      )
-    );
+    // this.logger.log(
+    //   color.blue.bold(
+    //     `Fetching tracks in ${color.white.bold(
+    //       'RapidAPI'
+    //     )} for playlist ${color.white.bold(playlistId)}`
+    //   )
+    // );
 
     try {
       while (true) {

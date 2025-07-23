@@ -274,6 +274,14 @@ class Spotify {
       const cacheResult = await this.cache.get(cacheKey);
 
       if (!cacheResult || !cache) {
+        this.logger.log(
+          color.blue.bold(
+            `Fetching tracks from API for playlist ${color.white.bold(
+              playlistId
+            )} (${playlistData.name})`
+          )
+        );
+
         if (isSlug) {
           const dbPlaylist = await this.prisma.playlist.findFirst({
             where: { slug: playlistId, featured: true },
@@ -559,6 +567,14 @@ class Spotify {
         // Limit the tracks to MAX_CARDS if we have more
         allFormattedTracks = allFormattedTracks.slice(0, MAX_CARDS);
       } else {
+        this.logger.log(
+          color.blue.bold(
+            `Fetching tracks from CACHE for playlist ${color.white.bold(
+              playlistId
+            )} (${playlistData.name})`
+          )
+        );
+
         // Use cached result
         const cachedResult = JSON.parse(cacheResult);
         // Assuming cache stores the final processed result object directly

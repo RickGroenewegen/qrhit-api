@@ -214,13 +214,13 @@ class SpotifyRapidApi2 {
     let offset = 0;
     const limit = 100;
 
-    this.logger.log(
-      color.blue.bold(
-        `Fetching tracks in ${color.white.bold(
-          'RapidAPI2'
-        )} for playlist ${color.white.bold(playlistId)}`
-      )
-    );
+    // this.logger.log(
+    //   color.blue.bold(
+    //     `Fetching tracks in ${color.white.bold(
+    //       'RapidAPI2'
+    //     )} for playlist ${color.white.bold(playlistId)}`
+    //   )
+    // );
 
     try {
       while (true) {
@@ -364,7 +364,7 @@ class SpotifyRapidApi2 {
             ...formData.getHeaders(),
             'x-rapidapi-key': this.rapidApiKey,
             'x-rapidapi-host': 'spotify-scraper2.p.rapidapi.com',
-            'accept': 'application/json',
+            accept: 'application/json',
           },
         }
       );

@@ -236,13 +236,11 @@ class SpotifyApi {
         // Check for specific error messages that indicate an auth problem
         if (
           message &&
-          (
-            message.toLowerCase().includes('invalid_grant') ||
+          (message.toLowerCase().includes('invalid_grant') ||
             message.toLowerCase().includes('invalid_request') ||
             message.toLowerCase().includes('invalid client') ||
             message.toLowerCase().includes('invalid_token') ||
-            message.toLowerCase().includes('token expired')
-          )
+            message.toLowerCase().includes('token expired'))
         ) {
           this.settings.deleteSetting('spotify_access_token');
           this.settings.deleteSetting('spotify_token_expires_at');
@@ -372,13 +370,13 @@ class SpotifyApi {
       };
     }
 
-    this.logger.log(
-      color.blue.bold(
-        `Fetching tracks in ${color.white.bold(
-          'SpotifyAPI'
-        )} for playlist ${color.white.bold(playlistId)}`
-      )
-    );
+    // this.logger.log(
+    //   color.blue.bold(
+    //     `Fetching tracks in ${color.white.bold(
+    //       'SpotifyAPI'
+    //     )} for playlist ${color.white.bold(playlistId)}`
+    //   )
+    // );
 
     let allItems: any[] = [];
     // Use the fields parameter to potentially reduce response size if needed
