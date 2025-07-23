@@ -520,7 +520,7 @@ class Data {
     // Fetch tracks
     const tracks = await this.prisma.track.findMany({
       where: { id: { in: trackIds } },
-      select: { id: true, name: true, artist: true },
+      select: { id: true, name: true, artist: true, trackId: true },
     });
 
     // Fetch payment_has_playlist data with playlist names and user display names in a single query
@@ -566,6 +566,7 @@ class Data {
             latitude: ipInfo.latitude,
             longitude: ipInfo.longitude,
             timestamp: ipInfo.timestamp,
+            trackId: track.trackId,
           };
 
           // Add playlist and user info if php is available

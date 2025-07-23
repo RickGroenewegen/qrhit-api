@@ -16,7 +16,8 @@
       "Bash(md5:*)",
       "Bash(sudo rm:*)",
       "Bash(touch:*)",
-      "Bash(chmod:*)"
+      "Bash(chmod:*)",
+      "WebFetch(domain:developer.spotify.com)"
     ],
     "deny": []
   }
