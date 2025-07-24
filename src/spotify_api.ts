@@ -303,16 +303,130 @@ class SpotifyApi {
   }
 
   /**
+   * Handles rate limiting with retry logic for Spotify API calls.
+   * @param fn The async function to execute
+   * @param context Description of the operation for logging
+   * @param maxRetries Maximum number of retry attempts (default 3)
+   * @returns The result from the function or an error result
+   */
+  private async executeWithRetry<T>(
+    fn: () => Promise<T>,
+    context: string,
+    maxRetries: number = 3
+  ): Promise<T | ApiResult> {
+    let retries = 0;
+    let lastError: any;
+
+    while (retries < maxRetries) {
+      try {
+        return await fn();
+      } catch (error) {
+        lastError = error;
+
+        if (axios.isAxiosError(error) && error.response?.status === 429) {
+          const retryAfter = error.response.headers['retry-after'];
+          const retryAfterSeconds = retryAfter
+            ? parseInt(retryAfter, 10)
+            : null;
+
+          if (retries < maxRetries - 1) {
+            // Calculate wait time with exponential backoff and jitter
+            let waitTimeMs: number;
+
+            if (retryAfterSeconds) {
+              // Use Retry-After header if available, add small buffer
+              waitTimeMs = retryAfterSeconds * 1000 + 500;
+              this.logger.log(
+                color.yellow.bold(
+                  `Spotify API rate limit hit ${color.white.bold(
+                    context
+                  )}. Retry-After: ${color.white.bold(
+                    retryAfterSeconds
+                  )}s. Waiting ${color.white.bold(
+                    waitTimeMs
+                  )} ms before retry ${color.white.bold(
+                    retries + 1
+                  )} / ${color.white.bold(maxRetries)}`
+                )
+              );
+            } else {
+              // Exponential backoff with jitter when no Retry-After header
+              const baseDelay = Math.pow(2, retries) * 1000; // 1s, 2s, 4s
+              const jitter = Math.random() * 1000; // 0-1s random jitter
+              waitTimeMs = baseDelay + jitter;
+              this.logger.log(
+                color.yellow.bold(
+                  `Spotify API rate limit hit ${color.white.bold(
+                    context
+                  )} (no Retry-After header). Using exponential backoff: ${color.white.bold(
+                    waitTimeMs
+                  )} ms before retry ${color.white.bold(
+                    retries + 1
+                  )} / ${color.white.bold(maxRetries)}`
+                )
+              );
+            }
+
+            await this.delay(waitTimeMs);
+            retries++;
+
+            // Log retry attempt
+            this.logger.log(
+              color.blue(
+                `Retrying ${color.white.bold(
+                  context
+                )} (attempt ${color.white.bold(retries + 1)}/${color.white.bold(
+                  maxRetries
+                )})...`
+              )
+            );
+          } else {
+            // Last attempt failed
+            this.logger.log(
+              color.red.bold(
+                `Spotify API rate limit ${color.white.bold(
+                  context
+                )}: Max retries (${color.white.bold(maxRetries)}) exhausted`
+              )
+            );
+            throw error;
+          }
+        } else {
+          // Non-rate-limit error, don't retry
+          throw error;
+        }
+      }
+    }
+
+    // This should not be reached, but just in case
+    throw lastError;
+  }
+
+  /**
    * Fetches the Spotify User ID for the authenticated user.
    * @param accessToken A valid Spotify access token.
    * @returns {Promise<string | null>} The user ID or null if an error occurs.
    */
   private async getUserId(accessToken: string): Promise<string | null> {
     try {
-      const response = await axios.get('https://api.spotify.com/v1/me', {
-        headers: { Authorization: `Bearer ${accessToken}` },
-      });
-      return response.data.id;
+      const result = await this.executeWithRetry(async () => {
+        const response = await axios.get('https://api.spotify.com/v1/me', {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        return response.data;
+      }, 'fetching user ID');
+
+      // Check if executeWithRetry returned an ApiResult (error case)
+      if (result && typeof result === 'object' && 'success' in result) {
+        this.logger.log(
+          color.red.bold(
+            `Error fetching Spotify user ID: ${(result as ApiResult).error}`
+          )
+        );
+        return null;
+      }
+
+      return result.id;
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error fetching Spotify user ID: ${error}`)
@@ -341,14 +455,24 @@ class SpotifyApi {
     try {
       // Request only the fields needed by spotify.ts: id, name, description, images.url, tracks.total
       const fields = 'id,name,description,images(url),tracks(total)';
-      const response = await axios.get(
-        `https://api.spotify.com/v1/playlists/${playlistId}`,
-        {
-          params: { fields: fields }, // Add fields parameter
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
-      return { success: true, data: response.data };
+
+      const result = await this.executeWithRetry(async () => {
+        const response = await axios.get(
+          `https://api.spotify.com/v1/playlists/${playlistId}`,
+          {
+            params: { fields: fields }, // Add fields parameter
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        return response.data;
+      }, `fetching playlist ${playlistId}`);
+
+      // Check if executeWithRetry returned an ApiResult (error case)
+      if (result && typeof result === 'object' && 'success' in result) {
+        return result as ApiResult;
+      }
+
+      return { success: true, data: result };
     } catch (error) {
       return this.handleApiError(error, `fetching playlist ${playlistId}`);
     }
@@ -386,15 +510,26 @@ class SpotifyApi {
 
     try {
       while (nextUrl) {
-        const response: AxiosResponse<any> = await axios.get(nextUrl, {
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+        const currentUrl = nextUrl; // Capture for closure
+
+        const result = await this.executeWithRetry(async () => {
+          const response: AxiosResponse<any> = await axios.get(currentUrl, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          return response.data;
+        }, `fetching tracks for playlist ${playlistId} (page)`);
+
+        // Check if executeWithRetry returned an ApiResult (error case)
+        if (result && typeof result === 'object' && 'success' in result) {
+          return result as ApiResult;
+        }
+
         // Filter out null tracks which can sometimes occur
-        const validItems = response.data.items.filter(
+        const validItems = result.items.filter(
           (item: any) => item && item.track
         );
         allItems = allItems.concat(validItems);
-        nextUrl = response.data.next;
+        nextUrl = result.next;
       }
       // Note: The response structure here is slightly different than getPlaylist.
       // We return the combined 'items' array directly.
@@ -441,19 +576,32 @@ class SpotifyApi {
 
       for (let i = 0; i < trackIds.length; i += chunkSize) {
         const chunk = trackIds.slice(i, i + chunkSize);
-        const response = await axios.get(`https://api.spotify.com/v1/tracks`, {
-          params: {
-            ids: chunk.join(','),
-            // Note: The /v1/tracks endpoint doesn't directly support a 'fields' param for the top-level response in the same way as others.
-            // It returns an object { tracks: [...] }. We request all fields for the track objects within the array.
-            // If specific fields were needed *within* each track, that's handled by the API structure itself.
-            // We are already getting the necessary fields based on the default response.
-            // If optimization was needed *within* track objects, it would require a different approach if the API supported it.
-          },
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
+
+        const result = await this.executeWithRetry(async () => {
+          const response = await axios.get(
+            `https://api.spotify.com/v1/tracks`,
+            {
+              params: {
+                ids: chunk.join(','),
+                // Note: The /v1/tracks endpoint doesn't directly support a 'fields' param for the top-level response in the same way as others.
+                // It returns an object { tracks: [...] }. We request all fields for the track objects within the array.
+                // If specific fields were needed *within* each track, that's handled by the API structure itself.
+                // We are already getting the necessary fields based on the default response.
+                // If optimization was needed *within* track objects, it would require a different approach if the API supported it.
+              },
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
+          );
+          return response.data;
+        }, `fetching tracks by IDs (chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(trackIds.length / chunkSize)})`);
+
+        // Check if executeWithRetry returned an ApiResult (error case)
+        if (result && typeof result === 'object' && 'success' in result) {
+          return result as ApiResult;
+        }
+
         // Filter out null tracks from the chunk response before concatenating
-        const validTracksInChunk = response.data.tracks.filter(
+        const validTracksInChunk = result.tracks.filter(
           (track: any) => track !== null
         );
         allTracks = allTracks.concat(validTracksInChunk);
@@ -494,23 +642,19 @@ class SpotifyApi {
 
     limit = Math.min(limit, 50); // Enforce Spotify API limit
 
-    let retries = 0;
-    const maxRetries = 3;
-    let lastErrorResult: ApiResult | null = null;
-
     // Initial access token fetch
-    let accessToken = await this.getAccessToken();
+    const accessToken = await this.getAccessToken();
     if (!accessToken) {
       return {
         success: false,
-        error: 'Spotify authentication required (initial attempt)',
+        error: 'Spotify authentication required',
         needsReAuth: true,
         authUrl: this.getAuthorizationUrl() ?? undefined,
       };
     }
 
-    while (retries < maxRetries) {
-      try {
+    try {
+      const result = await this.executeWithRetry(async () => {
         // Request only the fields needed by spotify.ts: tracks(items(id, name, artists(name), album(images(url))), total)
         const fields =
           'tracks(items(id,name,artists(name),album(images(url))),total)';
@@ -524,65 +668,19 @@ class SpotifyApi {
           },
           headers: { Authorization: `Bearer ${accessToken}` },
         });
+        return response.data;
+      }, `searching tracks for "${searchTerm}"`);
 
-        // The response contains a 'tracks' object with items, total, etc.
-        return { success: true, data: response.data };
-      } catch (error) {
-        lastErrorResult = this.handleApiError(
-          error,
-          `searching tracks for "${searchTerm}" (attempt ${
-            retries + 1
-          }/${maxRetries})`
-        );
-
-        // Check if it's a 429 error and if we have more retries left (don't retry on the last attempt)
-        if (
-          lastErrorResult.error?.includes('429') &&
-          retries < maxRetries - 1
-        ) {
-          const retryAfterSeconds = lastErrorResult.retryAfter;
-          // Default backoff: 1s for 1st retry (retries=0 -> (0+1)*1000), 2s for 2nd retry (retries=1 -> (1+1)*1000)
-          // For the third retry (retries=2), it would be 3s.
-          let waitTimeMs = (retries + 1) * 1000; // Default incremental backoff
-
-          if (retryAfterSeconds) {
-            waitTimeMs = retryAfterSeconds * 1000 + 500;
-            // Removed logger call: Spotify API rate limit (429). Retrying after...
-          } else {
-            // Removed logger call: Spotify API rate limit (429). No Retry-After header...
-          }
-
-          await this.delay(waitTimeMs);
-          retries++;
-
-          // Re-fetch access token before next attempt
-          accessToken = await this.getAccessToken();
-          if (!accessToken) {
-            // Removed logger call: Failed to get access token for retry...
-            return {
-              success: false,
-              error: 'Spotify authentication required during retry attempt',
-              needsReAuth: true, // Signal re-auth might be needed
-              authUrl: this.getAuthorizationUrl() ?? undefined,
-            };
-          }
-          // Continue to the next iteration of the while loop for the next attempt
-        } else {
-          // Not a 429 error, or it was a 429 on the last attempt (retries === maxRetries -1), or some other error.
-          // No more retries for this error type or retries exhausted.
-          return lastErrorResult;
-        }
+      // Check if executeWithRetry returned an ApiResult (error case)
+      if (result && typeof result === 'object' && 'success' in result) {
+        return result as ApiResult;
       }
+
+      // The response contains a 'tracks' object with items, total, etc.
+      return { success: true, data: result };
+    } catch (error) {
+      return this.handleApiError(error, `searching tracks for "${searchTerm}"`);
     }
-    // This line should ideally not be reached if the logic correctly returns from within the loop.
-    // It acts as a fallback if all retries are exhausted and the loop finishes.
-    return (
-      lastErrorResult || {
-        success: false,
-        error: `Max retries (${maxRetries}) reached for searchTracks.`,
-        needsReAuth: false,
-      }
-    );
   }
 
   /**
@@ -632,31 +730,56 @@ class SpotifyApi {
         // Fetch user's playlists to check if one with the same name already exists
         // Request only needed fields: items(id, name, owner(id), external_urls)
         const playlistCheckFields = 'items(id,name,owner(id),external_urls)';
-        const userPlaylistsResponse = await axios.get(
-          `https://api.spotify.com/v1/me/playlists`,
-          {
-            params: { limit: maxPlaylistsToCheck, fields: playlistCheckFields }, // Add fields
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
 
-        const userPlaylists = userPlaylistsResponse.data.items || []; // Ensure it's an array
-        const foundPlaylist = userPlaylists.find(
-          (p: any) => p.name === playlistName && p.owner.id === userId
-        );
+        const playlistsResult = await this.executeWithRetry(async () => {
+          const response = await axios.get(
+            `https://api.spotify.com/v1/me/playlists`,
+            {
+              params: {
+                limit: maxPlaylistsToCheck,
+                fields: playlistCheckFields,
+              }, // Add fields
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
+          );
+          return response.data;
+        }, 'fetching user playlists for duplicate check');
 
-        if (foundPlaylist) {
-          existingPlaylistId = foundPlaylist.id;
-          playlistUrl = foundPlaylist.external_urls.spotify;
+        // Check if executeWithRetry returned an ApiResult (error case)
+        if (
+          playlistsResult &&
+          typeof playlistsResult === 'object' &&
+          'success' in playlistsResult
+        ) {
           this.logger.log(
-            color.blue.bold(
-              `Found existing playlist "${color.white.bold(
-                playlistName
-              )}" with ID ${color.white.bold(
-                existingPlaylistId
-              )}. Will update tracks.`
+            color.yellow.bold(
+              `Could not fetch user playlists to check for existing one: ${
+                (playlistsResult as ApiResult).error
+              }`
             )
           );
+          // Continue to create a new playlist if fetching fails
+        } else {
+          const userPlaylistsResponse = { data: playlistsResult };
+
+          const userPlaylists = userPlaylistsResponse.data.items || []; // Ensure it's an array
+          const foundPlaylist = userPlaylists.find(
+            (p: any) => p.name === playlistName && p.owner.id === userId
+          );
+
+          if (foundPlaylist) {
+            existingPlaylistId = foundPlaylist.id;
+            playlistUrl = foundPlaylist.external_urls.spotify;
+            this.logger.log(
+              color.blue.bold(
+                `Found existing playlist "${color.white.bold(
+                  playlistName
+                )}" with ID ${color.white.bold(
+                  existingPlaylistId
+                )}. Will update tracks.`
+              )
+            );
+          }
         }
       } catch (playlistFetchError) {
         this.logger.log(
@@ -677,15 +800,29 @@ class SpotifyApi {
         for (let i = 0; i < trackUris.length; i += chunkSize) {
           const chunk = trackUris.slice(i, i + chunkSize);
           const method = i === 0 ? 'put' : 'post'; // First chunk replaces, subsequent chunks add
-          await axios({
-            method: method,
-            url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-            data: JSON.stringify({ uris: chunk }),
-          });
+
+          const updateResult = await this.executeWithRetry(async () => {
+            await axios({
+              method: method,
+              url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+              headers: {
+                Authorization: `Bearer ${accessToken}`,
+                'Content-Type': 'application/json',
+              },
+              data: JSON.stringify({ uris: chunk }),
+            });
+            return { success: true };
+          }, `updating playlist ${playlistId} tracks (chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(trackUris.length / chunkSize)})`);
+
+          // Check if executeWithRetry returned an ApiResult (error case)
+          if (
+            updateResult &&
+            typeof updateResult === 'object' &&
+            'success' in updateResult &&
+            !(updateResult as any).success
+          ) {
+            return updateResult as ApiResult;
+          }
         }
         // Ensure playlistUrl is set if we found an existing playlist
         if (!playlistUrl) {
@@ -704,30 +841,14 @@ class SpotifyApi {
             )}". Creating new playlist for user ${userId}.`
           )
         );
-        const createResponse = await axios.post(
-          `https://api.spotify.com/v1/users/${userId}/playlists`,
-          JSON.stringify({
-            name: playlistName,
-            description: playlistDescription,
-            public: true, // Or false depending on requirements
-          }),
-          {
-            headers: {
-              Authorization: `Bearer ${accessToken}`,
-              'Content-Type': 'application/json',
-            },
-          }
-        );
-        playlistId = createResponse.data.id;
-        playlistUrl = createResponse.data.external_urls.spotify;
-
-        // Add tracks (max 100 per request)
-        const chunkSize = 100;
-        for (let i = 0; i < trackUris.length; i += chunkSize) {
-          const chunk = trackUris.slice(i, i + chunkSize);
-          await axios.post(
-            `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
-            JSON.stringify({ uris: chunk }),
+        const createResult = await this.executeWithRetry(async () => {
+          const response = await axios.post(
+            `https://api.spotify.com/v1/users/${userId}/playlists`,
+            JSON.stringify({
+              name: playlistName,
+              description: playlistDescription,
+              public: true, // Or false depending on requirements
+            }),
             {
               headers: {
                 Authorization: `Bearer ${accessToken}`,
@@ -735,6 +856,50 @@ class SpotifyApi {
               },
             }
           );
+          return response.data;
+        }, `creating playlist "${playlistName}"`);
+
+        // Check if executeWithRetry returned an ApiResult (error case)
+        if (
+          createResult &&
+          typeof createResult === 'object' &&
+          'success' in createResult
+        ) {
+          return createResult as ApiResult;
+        }
+
+        const createResponse = { data: createResult };
+        playlistId = createResponse.data.id;
+        playlistUrl = createResponse.data.external_urls.spotify;
+
+        // Add tracks (max 100 per request)
+        const chunkSize = 100;
+        for (let i = 0; i < trackUris.length; i += chunkSize) {
+          const chunk = trackUris.slice(i, i + chunkSize);
+
+          const addResult = await this.executeWithRetry(async () => {
+            await axios.post(
+              `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+              JSON.stringify({ uris: chunk }),
+              {
+                headers: {
+                  Authorization: `Bearer ${accessToken}`,
+                  'Content-Type': 'application/json',
+                },
+              }
+            );
+            return { success: true };
+          }, `adding tracks to playlist ${playlistId} (chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(trackUris.length / chunkSize)})`);
+
+          // Check if executeWithRetry returned an ApiResult (error case)
+          if (
+            addResult &&
+            typeof addResult === 'object' &&
+            'success' in addResult &&
+            !(addResult as any).success
+          ) {
+            return addResult as ApiResult;
+          }
         }
       }
 
@@ -791,17 +956,26 @@ class SpotifyApi {
 
     try {
       // Note: This only gets the first page. A full implementation would paginate.
-      const response = await axios.get(
-        `https://api.spotify.com/v1/me/playlists`,
-        {
-          params: {
-            limit: limit,
-            offset: offset,
-          },
-          headers: { Authorization: `Bearer ${accessToken}` },
-        }
-      );
-      return { success: true, data: response.data };
+      const result = await this.executeWithRetry(async () => {
+        const response = await axios.get(
+          `https://api.spotify.com/v1/me/playlists`,
+          {
+            params: {
+              limit: limit,
+              offset: offset,
+            },
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        return response.data;
+      }, `fetching user playlists (limit: ${limit}, offset: ${offset})`);
+
+      // Check if executeWithRetry returned an ApiResult (error case)
+      if (result && typeof result === 'object' && 'success' in result) {
+        return result as ApiResult;
+      }
+
+      return { success: true, data: result };
     } catch (error) {
       return this.handleApiError(error, `fetching user playlists`);
     }
