@@ -25,7 +25,7 @@ export class Music {
     this.axiosInstance = axios.create({
       baseURL: 'http://musicbrainz.org/ws/2/',
       headers: {
-        'User-Agent': 'QRHit/1.0 (info@rickgroenewegen.nl)', // Set the custom User-Agent here
+        'User-Agent': 'QRHit/1.0 (info@rickgroenewegen.nl)',
       },
     });
   }
@@ -86,7 +86,7 @@ export class Music {
 
                     MusicBrainz thinks the release year is ${mbResult.year}
                     Discogs thinks the release year is ${discogsResult.year}
-                    OpenPerlex (AI scraping) thinks the release year is ${openPerplexYear}
+                    OpenPerplex (AI scraping) thinks the release year is ${openPerplexYear}
 
                     What is the release you think of this song based on the information above? Also explain on which information you based your answer on.
                     `;
