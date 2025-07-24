@@ -229,28 +229,16 @@ export class Music {
         isrc: isrc,
       },
     });
-    if (result) {
-      return { year: result.year, source: 'mb_isrc' };
-    } else {
-      let apiResult = await this.getReleaseDateFromMusicBrainzAPI(
-        isrc,
-        artist,
-        title
-      );
-      if (apiResult.year > 0) {
-        return { year: apiResult.year, source: 'mb_api_isrc' };
-      }
 
-      apiResult = await this.getReleaseDateFromMusicBrainzAPI(
-        isrc,
-        artist,
-        title,
-        'artistAndTitle'
-      );
+    let apiResult = await this.getReleaseDateFromMusicBrainzAPI(
+      isrc,
+      artist,
+      title,
+      'artistAndTitle'
+    );
 
-      if (apiResult.year > 0) {
-        return { year: apiResult.year, source: 'mb_api_artist_title' };
-      }
+    if (apiResult.year > 0) {
+      return { year: apiResult.year, source: 'mb_api_artist_title' };
     }
 
     return { year: 0, source: '' };
