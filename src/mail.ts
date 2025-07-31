@@ -174,7 +174,7 @@ class Mail {
     // Fetch translations for QRSong activation mail
     const translations = await this.translation.getTranslationsByPrefix(
       locale,
-      'qrsong_activation'
+      'qrgames_activation'
     );
 
     const activationLink = `nl.rickgroenewegen.qrsong://activation?hash=${userHash}`;
@@ -194,16 +194,16 @@ class Mail {
       const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
 
       const html = await this.templates.render(
-        'mails/qrsong_activation_html',
+        'mails/qrgames_activation_html',
         mailParams
       );
       const text = await this.templates.render(
-        'mails/qrsong_activation_text',
+        'mails/qrgames_activation_text',
         mailParams
       );
 
       const subject = this.translation.translate(
-        'qrsong_activation.subject',
+        'qrgames_activation.subject',
         locale
       );
 
@@ -242,9 +242,7 @@ class Mail {
 
       await this.ses.send(command);
       this.logger.log(
-        color.blue.bold(
-          `QRSong activation email sent to ${white.bold(email)}`
-        )
+        color.blue.bold(`QRSong activation email sent to ${white.bold(email)}`)
       );
     } catch (error) {
       console.error('Error while sending QRSong activation email:', error);
@@ -1549,7 +1547,7 @@ ${params.html}
             processedEmails.add(contact.email);
 
             // Wait 250ms before the next request to respect rate limiting
-            await new Promise(resolve => setTimeout(resolve, 250));
+            await new Promise((resolve) => setTimeout(resolve, 250));
           } catch (err: any) {
             // Log individual contact errors but continue with others
             this.logger.log(
@@ -1560,9 +1558,9 @@ ${params.html}
               )
             );
             console.log(err);
-            
+
             // Also wait after errors to avoid hitting rate limits
-            await new Promise(resolve => setTimeout(resolve, 250));
+            await new Promise((resolve) => setTimeout(resolve, 250));
           }
         }
 
