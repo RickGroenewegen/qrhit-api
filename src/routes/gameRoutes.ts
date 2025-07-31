@@ -119,6 +119,29 @@ const gameRoutes = async (fastify: FastifyInstance) => {
       }
     }
   );
+
+  // Get purchased playlists for a user by their hash
+  fastify.get<{ Params: { userHash: string } }>(
+    '/api/games/playlists/:userHash',
+    async (request, reply) => {
+      try {
+        const { userHash } = request.params;
+        const result = await game.getUserPlaylists(userHash);
+        return reply.send(result);
+      } catch (error: any) {
+        fastify.log.error(error);
+        
+        if (error.message === 'User not found') {
+          return reply.status(404).send({ error: 'User not found' });
+        }
+        
+        return reply.status(500).send({ 
+          error: 'Failed to get user playlists',
+          message: error.message,
+        });
+      }
+    }
+  );
 };
 
 export default gameRoutes;

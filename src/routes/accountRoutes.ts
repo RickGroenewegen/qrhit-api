@@ -276,9 +276,9 @@ export default async function accountRoutes(
     }
   );
 
-  // QRSong activation code request
+  // QRSong games activation code request
   fastify.post(
-    '/api/account/request-activation',
+    '/api/account/games-request-activation',
     async (request: any, reply: any) => {
       const { email } = request.body;
 
@@ -322,20 +322,15 @@ export default async function accountRoutes(
         ).toString();
 
         // Store the code with user hash (expires in 1 hour)
-        const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-        const codeData = JSON.stringify({
-          userHash: payment.user.hash,
-          email: email.toLowerCase(),
-          expiresAt,
-        });
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000);
 
-        // Store in AppSetting with a unique key
-        const codeKey = `activation_code_${activationCode}`;
-
-        await prisma.appSetting.upsert({
-          where: { key: codeKey },
-          update: { value: codeData },
-          create: { key: codeKey, value: codeData },
+        // Update the user record with activation code
+        await prisma.user.update({
+          where: { id: payment.user.id },
+          data: {
+            gamesActivationCode: activationCode,
+            gamesActivationCodeExpiry: expiresAt,
+          },
         });
 
         // Get the user's preferred locale
@@ -364,63 +359,138 @@ export default async function accountRoutes(
     }
   );
 
-  // Validate activation code
+  // Validate games activation code
   fastify.post(
-    '/api/account/validate-activation',
+    '/api/account/games-validate-activation',
     async (request: any, reply: any) => {
       const { code } = request.body;
+      const validationId = Math.random().toString(36).substring(7);
+      const timestamp = new Date().toISOString();
+      
+      console.log(`[${validationId}] Activation validation request received at ${timestamp}`);
+      console.log(`[${validationId}] Code provided: ${code?.substring(0, 3)}***`);
 
       if (!code || code.length !== 6) {
+        console.log(`[${validationId}] Invalid code format - Code length: ${code?.length || 0}`);
         reply.status(400).send({
           success: false,
           error: 'invalidCode',
+          message: 'Invalid activation code format',
+          details: 'Activation code must be exactly 6 digits',
+          providedLength: code?.length || 0,
+          requiredLength: 6,
         });
         return;
       }
 
       try {
-        const codeKey = `activation_code_${code}`;
-        const setting = await prisma.appSetting.findUnique({
-          where: { key: codeKey },
+        console.log(`[${validationId}] Looking up activation code in database...`);
+        
+        // Find user with this activation code
+        const user = await prisma.user.findFirst({
+          where: {
+            gamesActivationCode: code,
+          },
         });
 
-        if (!setting) {
+        if (!user) {
+          console.log(`[${validationId}] Activation code not found in database`);
           reply.status(400).send({
             success: false,
             error: 'invalidCode',
+            message: 'Invalid or non-existent activation code',
+            details: 'The code you entered is incorrect or has already been used',
+            suggestions: [
+              'Double-check the 6-digit code from your email',
+              'Request a new activation code if needed',
+              'Ensure you entered all 6 digits correctly'
+            ],
           });
           return;
         }
 
-        const codeData = JSON.parse(setting.value);
+        console.log(`[${validationId}] Activation code found for user`);
+        console.log(`[${validationId}] User details - Email: ${user.email?.substring(0, 3)}***, Hash: ${user.hash?.substring(0, 8)}...`);
 
         // Check if code is expired
-        if (new Date(codeData.expiresAt) < new Date()) {
-          // Delete expired code
-          await prisma.appSetting.delete({
-            where: { key: codeKey },
+        if (!user.gamesActivationCodeExpiry) {
+          console.log(`[${validationId}] No expiry date found for activation code`);
+          reply.status(400).send({
+            success: false,
+            error: 'invalidCode',
+            message: 'Invalid activation code',
+            details: 'This code is not valid',
           });
+          return;
+        }
+
+        const expiryDate = new Date(user.gamesActivationCodeExpiry);
+        const currentDate = new Date();
+        const timeRemaining = expiryDate.getTime() - currentDate.getTime();
+        
+        if (timeRemaining <= 0) {
+          console.log(`[${validationId}] Code expired - Expired at: ${user.gamesActivationCodeExpiry}, Current time: ${currentDate.toISOString()}`);
+          console.log(`[${validationId}] Time since expiry: ${Math.abs(timeRemaining / 1000 / 60).toFixed(2)} minutes`);
+          
+          // Clear expired code
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              gamesActivationCode: null,
+              gamesActivationCodeExpiry: null,
+            },
+          });
+          
+          console.log(`[${validationId}] Expired code cleared from user record`);
 
           reply.status(400).send({
             success: false,
             error: 'codeExpired',
+            message: 'Activation code has expired',
+            details: 'This code was valid for 1 hour after generation',
+            expiredAt: user.gamesActivationCodeExpiry,
+            expiredMinutesAgo: Math.floor(Math.abs(timeRemaining / 1000 / 60)),
+            suggestion: 'Please request a new activation code',
           });
           return;
         }
 
-        // Delete the code after successful validation
-        await prisma.appSetting.delete({
-          where: { key: codeKey },
+        console.log(`[${validationId}] Code is valid - Time remaining: ${Math.floor(timeRemaining / 1000 / 60)} minutes`);
+        console.log(`[${validationId}] Validation successful - Returning user hash`);
+
+        // Clear the code after successful validation
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            gamesActivationCode: null,
+            gamesActivationCodeExpiry: null,
+          },
         });
+        
+        console.log(`[${validationId}] Activation code cleared after successful validation`);
+        console.log(`[${validationId}] User ${user.hash?.substring(0, 8)}... successfully activated`);
 
         reply.send({
           success: true,
-          userHash: codeData.userHash,
+          userHash: user.hash,
+          message: 'Activation successful',
+          details: 'Your account has been activated and you can now access your purchased content',
+          validationId,
+          activatedAt: timestamp,
         });
       } catch (error) {
+        console.error(`[${validationId}] Error during validation:`, error);
+        console.error(`[${validationId}] Error type:`, (error as Error).name);
+        console.error(`[${validationId}] Error message:`, (error as Error).message);
+        console.error(`[${validationId}] Stack trace:`, (error as Error).stack);
+        
         reply.status(500).send({
           success: false,
           error: 'validationFailed',
+          message: 'An error occurred during validation',
+          details: 'Please try again or contact support if the issue persists',
+          validationId,
+          timestamp,
         });
       }
     }

@@ -262,6 +262,61 @@ class Game {
     const key = `game:${gameId}:questionTypeIndex`;
     await this.redis.setex(key, this.gameExpiration, index.toString());
   }
+
+  // Get purchased playlists for a user by their hash
+  async getUserPlaylists(userHash: string) {
+    const prisma = PrismaInstance.getInstance();
+
+    // Find the user by hash
+    const user = await prisma.user.findUnique({
+      where: { hash: userHash },
+    });
+
+    if (!user) {
+      throw new Error('User not found');
+    }
+
+    // Get all paid payments for this user
+    const payments = await prisma.payment.findMany({
+      where: {
+        userId: user.id,
+        status: 'paid',
+      },
+      include: {
+        PaymentHasPlaylist: {
+          include: {
+            playlist: true,
+          },
+        },
+      },
+    });
+
+    // Extract unique playlists from all payments
+    const playlistMap = new Map();
+    
+    payments.forEach((payment) => {
+      payment.PaymentHasPlaylist.forEach((php) => {
+        if (!playlistMap.has(php.playlist.id)) {
+          playlistMap.set(php.playlist.id, {
+            id: php.playlist.id,
+            playlistId: php.playlist.playlistId,
+            name: php.playlist.name,
+            numberOfTracks: php.playlist.numberOfTracks,
+            image: php.playlist.image,
+            genre: php.playlist.genreId,
+          });
+        }
+      });
+    });
+
+    const playlists = Array.from(playlistMap.values());
+
+    return {
+      success: true,
+      playlists,
+      userHash,
+    };
+  }
 }
 
 export default Game;
