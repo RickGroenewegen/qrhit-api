@@ -450,5 +450,6 @@
   "password_reset.expiry": "セキュリティ上の理由から、このパスワードリセットリンクは1時間で期限切れになります。",
   "password_reset.ignoreMessage": "パスワードリセットを要求していない場合は、このメールを無視しても大丈夫です。",
   "password_reset.thanks": "ありがとう",
-  "password_reset.team": "QRSongチーム"
+  "password_reset.team": "QRSongチーム",
+  "qrsong_activation.subject": "qrsong_アクティベーション.件名"
 }

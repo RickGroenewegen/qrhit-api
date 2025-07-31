@@ -459,5 +459,6 @@
   "password_reset.expiry": "Om veiligheidsredenen verloopt deze link voor het resetten van het wachtwoord over 1 uur.",
   "password_reset.ignoreMessage": "Als je geen wachtwoordreset hebt aangevraagd, kun je deze e-mail veilig negeren.",
   "password_reset.thanks": "Dank je",
-  "password_reset.team": "Het QRSong Team"
+  "password_reset.team": "Het QRSong Team",
+  "qrsong_activation.subject": "qrsong_activering.onderwerp"
 }

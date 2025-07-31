@@ -454,5 +454,6 @@
   "password_reset.expiry": "Por razões de segurança, este link de redefinição de senha expirará em 1 hora.",
   "password_reset.ignoreMessage": "Se você não solicitou uma redefinição de senha, pode ignorar este e-mail.",
   "password_reset.thanks": "Obrigado",
-  "password_reset.team": "A equipe QRSong"
+  "password_reset.team": "A equipe QRSong",
+  "qrsong_activation.subject": "qrsong_ativação.assunto"
 }

@@ -458,5 +458,6 @@
   "password_reset.expiry": "Por razones de seguridad, este enlace de restablecimiento de contraseña caducará en 1 hora.",
   "password_reset.ignoreMessage": "Si no solicitaste un restablecimiento de contraseña, puedes ignorar este correo.",
   "password_reset.thanks": "Gracias",
-  "password_reset.team": "El equipo QRSong"
+  "password_reset.team": "El equipo QRSong",
+  "qrsong_activation.subject": "qrsong_activación.asunto"
 }

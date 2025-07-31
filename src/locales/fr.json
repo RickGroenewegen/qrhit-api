@@ -459,5 +459,6 @@
   "password_reset.expiry": "Pour des raisons de sécurité, ce lien de réinitialisation du mot de passe expirera dans 1 heure.",
   "password_reset.ignoreMessage": "Si tu n'as pas demandé de réinitialisation de mot de passe, tu peux ignorer cet e-mail.",
   "password_reset.thanks": "Merci",
-  "password_reset.team": "L'équipe QRSong"
+  "password_reset.team": "L'équipe QRSong",
+  "qrsong_activation.subject": "qrsong_activation.sujet"
 }

@@ -8,6 +8,10 @@ import {
   authenticateUser,
 } from '../auth';
 import Account from '../account';
+import Mail from '../mail';
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
 
 export default async function accountRoutes(
   fastify: FastifyInstance,
@@ -15,6 +19,7 @@ export default async function accountRoutes(
   getAuthHandler: any
 ) {
   const account = Account.getInstance();
+  const mail = Mail.getInstance();
 
   // User login/validation
   fastify.post('/validate', async (request: any, reply: any) => {
@@ -269,6 +274,199 @@ export default async function accountRoutes(
         reply.status(500).send({
           success: false,
           error: 'Internal server error',
+        });
+      }
+    }
+  );
+
+  // QRSong activation code request
+  fastify.post(
+    '/api/account/request-activation',
+    async (request: any, reply: any) => {
+      console.log('=== ACTIVATION REQUEST RECEIVED ===');
+      console.log('Request body:', request.body);
+      console.log('Request headers:', request.headers);
+
+      const { email } = request.body;
+      console.log('Email from request:', email);
+
+      // Validate email
+      if (!email || !email.includes('@')) {
+        console.log('Invalid email format:', email);
+        reply.status(400).send({
+          success: false,
+          error: 'invalidEmail',
+        });
+        return;
+      }
+
+      try {
+        console.log('Looking for payments with email:', email.toLowerCase());
+        // Look for payments with this email
+        const payment = await prisma.payment.findFirst({
+          where: {
+            email: email.toLowerCase(),
+            status: 'paid',
+          },
+          include: {
+            user: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+        console.log('Payment found:', payment ? 'Yes' : 'No');
+        if (payment) {
+          console.log('Payment details:', {
+            id: payment.id,
+            email: payment.email,
+            userId: payment.userId,
+            status: payment.status,
+            hasUser: !!payment.user,
+          });
+        }
+
+        if (!payment || !payment.user) {
+          console.log('No valid payment/user found for email:', email);
+          // Don't reveal whether email exists or not
+          reply.send({
+            success: true,
+            message:
+              'If this email is associated with a purchase, an activation code will be sent.',
+          });
+          return;
+        }
+
+        // Generate a 6-digit code
+        const activationCode = Math.floor(
+          100000 + Math.random() * 900000
+        ).toString();
+        console.log('Generated activation code:', activationCode);
+
+        // Store the code with user hash (expires in 1 hour)
+        const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+        const codeData = JSON.stringify({
+          userHash: payment.user.hash,
+          email: email.toLowerCase(),
+          expiresAt,
+        });
+        console.log('Code data to store:', codeData);
+
+        // Store in AppSetting with a unique key
+        const codeKey = `activation_code_${activationCode}`;
+        console.log('Storing code with key:', codeKey);
+
+        await prisma.appSetting.upsert({
+          where: { key: codeKey },
+          update: { value: codeData },
+          create: { key: codeKey, value: codeData },
+        });
+        console.log('Code stored successfully');
+
+        // Get the user's preferred locale
+        const locale = payment.locale || 'en';
+        console.log('User locale:', locale);
+
+        // Send activation email with user's hash and code
+        console.log('Sending activation email to:', email);
+        await mail.sendQRSongActivationMail(
+          email,
+          payment.fullname || payment.user.displayName,
+          payment.user.hash,
+          locale,
+          activationCode
+        );
+        console.log('Activation email sent successfully');
+
+        reply.send({
+          success: true,
+          message:
+            'If this email is associated with a purchase, an activation code will be sent.',
+        });
+        console.log('=== ACTIVATION REQUEST COMPLETED SUCCESSFULLY ===');
+      } catch (error) {
+        console.error('=== ERROR IN ACTIVATION REQUEST ===');
+        console.error(
+          'Error type:',
+          error instanceof Error ? error.constructor.name : typeof error
+        );
+        console.error(
+          'Error message:',
+          error instanceof Error ? error.message : String(error)
+        );
+        console.error(
+          'Error stack:',
+          error instanceof Error ? error.stack : 'No stack trace'
+        );
+        console.error('Full error object:', error);
+
+        reply.status(500).send({
+          success: false,
+          error: 'failedToSendActivationCode',
+        });
+      }
+    }
+  );
+
+  // Validate activation code
+  fastify.post(
+    '/api/account/validate-activation',
+    async (request: any, reply: any) => {
+      const { code } = request.body;
+
+      if (!code || code.length !== 6) {
+        reply.status(400).send({
+          success: false,
+          error: 'invalidCode',
+        });
+        return;
+      }
+
+      try {
+        const codeKey = `activation_code_${code}`;
+        const setting = await prisma.appSetting.findUnique({
+          where: { key: codeKey },
+        });
+
+        if (!setting) {
+          reply.status(400).send({
+            success: false,
+            error: 'invalidCode',
+          });
+          return;
+        }
+
+        const codeData = JSON.parse(setting.value);
+
+        // Check if code is expired
+        if (new Date(codeData.expiresAt) < new Date()) {
+          // Delete expired code
+          await prisma.appSetting.delete({
+            where: { key: codeKey },
+          });
+
+          reply.status(400).send({
+            success: false,
+            error: 'codeExpired',
+          });
+          return;
+        }
+
+        // Delete the code after successful validation
+        await prisma.appSetting.delete({
+          where: { key: codeKey },
+        });
+
+        reply.send({
+          success: true,
+          userHash: codeData.userHash,
+        });
+      } catch (error) {
+        console.error('Error validating activation code:', error);
+        reply.status(500).send({
+          success: false,
+          error: 'validationFailed',
         });
       }
     }

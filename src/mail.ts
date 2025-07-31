@@ -153,6 +153,112 @@ class Mail {
   }
 
   /**
+   * Send a QRSong activation email for activating purchased cards.
+   * @param email The user's email address
+   * @param fullname The user's full name
+   * @param userHash The user's hash for activation
+   * @param locale The user's locale (default: 'en')
+   * @param activationCode The 6-digit activation code
+   */
+  public async sendQRSongActivationMail(
+    email: string,
+    fullname: string,
+    userHash: string,
+    locale: string = 'en',
+    activationCode?: string
+  ): Promise<void> {
+    if (!this.ses) return;
+
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+
+    // Fetch translations for QRSong activation mail
+    const translations = await this.translation.getTranslationsByPrefix(
+      locale,
+      'qrsong_activation'
+    );
+
+    const activationLink = `nl.rickgroenewegen.qrsong://activation?hash=${userHash}`;
+
+    const mailParams = {
+      fullname: fullname || email.split('@')[0],
+      activationLink,
+      activationCode,
+      productName: process.env['PRODUCT_NAME'],
+      currentYear: new Date().getFullYear(),
+      translations,
+    };
+
+    try {
+      // Read the logo file and convert it to Base64
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+
+      const html = await this.templates.render(
+        'mails/qrsong_activation_html',
+        mailParams
+      );
+      const text = await this.templates.render(
+        'mails/qrsong_activation_text',
+        mailParams
+      );
+
+      const subject = this.translation.translate(
+        'qrsong_activation.subject',
+        locale
+      );
+
+      const attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+
+      const rawEmail = await this.renderRaw(
+        {
+          from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+          to: email,
+          subject,
+          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+          text,
+          attachments,
+          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+          replyTo: process.env['REPLY_TO_EMAIL'],
+        },
+        false // No BCC for activation emails
+      );
+
+      const emailBuffer = Buffer.from(rawEmail);
+
+      // Prepare and send the raw email
+      const command = new SendRawEmailCommand({
+        RawMessage: {
+          Data: emailBuffer,
+        },
+      });
+
+      await this.ses.send(command);
+      this.logger.log(
+        color.blue.bold(
+          `QRSong activation email sent to ${white.bold(email)}`
+        )
+      );
+    } catch (error) {
+      console.error('Error while sending QRSong activation email:', error);
+      this.logger.log(
+        color.red.bold(
+          `Failed to send QRSong activation email to ${white.bold(
+            email
+          )}: ${error}`
+        )
+      );
+    }
+  }
+
+  /**
    * Send a QRSong verification email to a user for account verification.
    * @param email The user's email address
    * @param fullname The user's full name

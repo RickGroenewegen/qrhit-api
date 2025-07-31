@@ -454,5 +454,6 @@
   "password_reset.expiry": "Ze względów bezpieczeństwa ten link do resetowania hasła wygaśnie za 1 godzinę.",
   "password_reset.ignoreMessage": "Jeśli nie prosiłeś o zresetowanie hasła, możesz zignorować tę wiadomość.",
   "password_reset.thanks": "Dziękuję",
-  "password_reset.team": "Zespół QRSong"
+  "password_reset.team": "Zespół QRSong",
+  "qrsong_activation.subject": "qrsong_aktywacja.temat"
 }

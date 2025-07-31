@@ -6,6 +6,7 @@ import vibeRoutes from './routes/vibeRoutes';
 import musicRoutes from './routes/musicRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import publicRoutes from './routes/publicRoutes';
+import gameRoutes from './routes/gameRoutes';
 import { verifyToken } from './auth';
 import Fastify from 'fastify';
 import replyFrom from '@fastify/reply-from';
@@ -19,6 +20,8 @@ import view from '@fastify/view';
 import ejs from 'ejs';
 import fs from 'fs/promises';
 import ipPlugin from './plugins/ipPlugin';
+import { createServer } from 'http';
+import WebSocketServer from './websocket';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -39,6 +42,8 @@ class Server {
   private isMainServer: boolean = false;
   private utils = new Utils();
   private version: string = '1.0.0';
+  private httpServer: any;
+  private wsServer: WebSocketServer | null = null;
 
   private constructor() {
     this.fastify = Fastify({
@@ -117,6 +122,9 @@ class Server {
     
     // Register public routes
     await publicRoutes(this.fastify);
+    
+    // Register game routes
+    await gameRoutes(this.fastify);
   }
 
   public init = async () => {
@@ -181,6 +189,15 @@ class Server {
     return new Promise(async (resolve, reject) => {
       try {
         await this.fastify.listen({ port: this.port, host: '0.0.0.0' });
+        
+        // Initialize WebSocket server on all workers with Redis adapter
+        if (this.fastify.server) {
+          this.wsServer = new WebSocketServer(this.fastify.server);
+          this.logger.log(
+            color.blue.bold(`WebSocket server initialized on worker ${this.workerId} with Redis adapter`)
+          );
+        }
+        
         this.logger.log(
           color.green.bold('Fastify running on port: ') +
             color.white.bold(this.port) +

@@ -454,5 +454,6 @@
   "password_reset.expiry": "Per motivi di sicurezza, questo link per reimpostare la password scadrà in 1 ora.",
   "password_reset.ignoreMessage": "Se non hai richiesto un reset della password, puoi ignorare questa email.",
   "password_reset.thanks": "Grazie",
-  "password_reset.team": "Il team QRSong"
+  "password_reset.team": "Il team QRSong",
+  "qrsong_activation.subject": "qrsong_attivazione.oggetto"
 }
