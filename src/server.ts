@@ -113,16 +113,16 @@ class Server {
   public async addRoutes() {
     // Register blog routes
     await blogRoutes(this.fastify);
-    
+
     // Register music/spotify routes
     await musicRoutes(this.fastify);
-    
+
     // Register payment routes
     await paymentRoutes(this.fastify);
-    
+
     // Register public routes
     await publicRoutes(this.fastify);
-    
+
     // Register game routes
     await gameRoutes(this.fastify);
   }
@@ -189,15 +189,19 @@ class Server {
     return new Promise(async (resolve, reject) => {
       try {
         await this.fastify.listen({ port: this.port, host: '0.0.0.0' });
-        
+
         // Initialize WebSocket server on all workers with Redis adapter
         if (this.fastify.server) {
           this.wsServer = new WebSocketServer(this.fastify.server);
           this.logger.log(
-            color.blue.bold(`WebSocket server initialized on worker ${this.workerId} with Redis adapter`)
+            color.blue.bold(
+              `WebSocket server initialized on worker ${color.white.bold(
+                this.workerId
+              )} with Redis adapter`
+            )
           );
         }
-        
+
         this.logger.log(
           color.green.bold('Fastify running on port: ') +
             color.white.bold(this.port) +

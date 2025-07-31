@@ -67,16 +67,18 @@ class Game {
       type: data.gameType,
       playMode: data.playMode,
       settings: data.settings,
-      players: [{
-        id: hostId,
-        name: data.hostName,
-        avatar: data.hostAvatar,
-        score: 0,
-        isHost: true
-      }],
+      players: [
+        {
+          id: hostId,
+          name: data.hostName,
+          avatar: data.hostAvatar,
+          score: 0,
+          isHost: true,
+        },
+      ],
       currentRound: 0,
       state: 'waiting',
-      createdAt: Date.now()
+      createdAt: Date.now(),
     };
 
     // Store game data in Redis
@@ -89,27 +91,28 @@ class Game {
     return gameId;
   }
 
-  async joinGame(gameId: string, playerName: string, playerAvatar?: string): Promise<any> {
-    console.log(`Game.joinGame: Attempting to join game ${gameId} with player ${playerName}`);
-    
+  async joinGame(
+    gameId: string,
+    playerName: string,
+    playerAvatar?: string
+  ): Promise<any> {
     const gameData = await this.getGameData(gameId);
-    
+
     if (!gameData) {
       console.error(`Game.joinGame: Game ${gameId} not found in Redis`);
       return null;
     }
-    
-    console.log(`Game.joinGame: Found game ${gameId}, state: ${gameData.state}, players: ${gameData.players.length}`);
 
     if (gameData.state !== 'waiting') {
-      console.error(`Game.joinGame: Game ${gameId} has already started (state: ${gameData.state})`);
+      console.error(
+        `Game.joinGame: Game ${gameId} has already started (state: ${gameData.state})`
+      );
       throw new Error('Game has already started');
     }
 
     // Check if player already exists
-    const existingPlayer = gameData.players.find(p => p.name === playerName);
+    const existingPlayer = gameData.players.find((p) => p.name === playerName);
     if (existingPlayer) {
-      console.error(`Game.joinGame: Player ${playerName} already exists in game ${gameId}`);
       throw new Error('Player with this name already exists');
     }
 
@@ -120,11 +123,10 @@ class Game {
       name: playerName,
       avatar: playerAvatar,
       score: 0,
-      isHost: false
+      isHost: false,
     };
-    
+
     gameData.players.push(newPlayer);
-    console.log(`Game.joinGame: Added player ${playerName} to game ${gameId}, total players now: ${gameData.players.length}`);
 
     // Update game data
     await this.redis.setex(
@@ -132,12 +134,11 @@ class Game {
       this.gameExpiration,
       JSON.stringify(gameData)
     );
-    console.log(`Game.joinGame: Updated game ${gameId} in Redis`);
 
     return {
       gameId,
       playMode: gameData.playMode,
-      playerId
+      playerId,
     };
   }
 
@@ -163,20 +164,20 @@ class Game {
 
   async getRandomTrack(): Promise<any> {
     const prisma = PrismaInstance.getInstance();
-    
+
     // Get a random track from playlist 159
     // First, get the count of tracks in playlist 159
     const count = await prisma.track.count({
       where: {
         spotifyLink: {
-          not: null
+          not: null,
         },
         playlists: {
           some: {
-            playlistId: 159
-          }
-        }
-      }
+            playlistId: 159,
+          },
+        },
+      },
     });
 
     if (count === 0) {
@@ -190,13 +191,13 @@ class Game {
     const tracks = await prisma.track.findMany({
       where: {
         spotifyLink: {
-          not: null
+          not: null,
         },
         playlists: {
           some: {
-            playlistId: 159
-          }
-        }
+            playlistId: 159,
+          },
+        },
       },
       skip: randomOffset,
       take: 1,
@@ -207,8 +208,8 @@ class Game {
         spotifyLink: true,
         year: true,
         spotifyYear: true,
-        preview: true
-      }
+        preview: true,
+      },
     });
 
     if (tracks.length === 0) {
@@ -216,7 +217,7 @@ class Game {
     }
 
     const track = tracks[0];
-    
+
     // Determine year and decade
     const year = track.year || track.spotifyYear || null;
     let decade = null;
@@ -232,14 +233,14 @@ class Game {
       releaseDate: year ? `${year}-01-01` : null,
       year: year,
       decade: decade,
-      previewUrl: track.preview
+      previewUrl: track.preview,
     };
   }
 
   // Clean up expired games (can be called periodically)
   async cleanupExpiredGames(): Promise<void> {
     const keys = await this.redis.keys('game:*');
-    
+
     for (const key of keys) {
       const ttl = await this.redis.ttl(key);
       if (ttl === -1) {

@@ -242,13 +242,14 @@ class Mail {
 
       await this.ses.send(command);
       this.logger.log(
-        color.blue.bold(`QRSong activation email sent to ${white.bold(email)}`)
+        color.blue.bold(
+          `QRGames! activation email sent to ${white.bold(email)}`
+        )
       );
     } catch (error) {
-      console.error('Error while sending QRSong activation email:', error);
       this.logger.log(
         color.red.bold(
-          `Failed to send QRSong activation email to ${white.bold(
+          `Failed to send QRGames! activation email to ${white.bold(
             email
           )}: ${error}`
         )

@@ -162,7 +162,6 @@ export default async function accountRoutes(
           reply.status(statusCode).send(result);
         }
       } catch (error) {
-        console.error('Error in /account/overview route:', error);
         reply.status(500).send({
           success: false,
           error: 'Internal server error',
@@ -229,7 +228,6 @@ export default async function accountRoutes(
           reply.status(statusCode).send(result);
         }
       } catch (error) {
-        console.error('Error in /account/voting-portal PUT route:', error);
         reply.status(500).send({
           success: false,
           error: 'Internal server error',
@@ -270,7 +268,6 @@ export default async function accountRoutes(
           reply.status(statusCode).send(result);
         }
       } catch (error) {
-        console.error('Error in /account/voting-portal DELETE route:', error);
         reply.status(500).send({
           success: false,
           error: 'Internal server error',
@@ -283,16 +280,10 @@ export default async function accountRoutes(
   fastify.post(
     '/api/account/request-activation',
     async (request: any, reply: any) => {
-      console.log('=== ACTIVATION REQUEST RECEIVED ===');
-      console.log('Request body:', request.body);
-      console.log('Request headers:', request.headers);
-
       const { email } = request.body;
-      console.log('Email from request:', email);
 
       // Validate email
       if (!email || !email.includes('@')) {
-        console.log('Invalid email format:', email);
         reply.status(400).send({
           success: false,
           error: 'invalidEmail',
@@ -301,7 +292,6 @@ export default async function accountRoutes(
       }
 
       try {
-        console.log('Looking for payments with email:', email.toLowerCase());
         // Look for payments with this email
         const payment = await prisma.payment.findFirst({
           where: {
@@ -316,19 +306,7 @@ export default async function accountRoutes(
           },
         });
 
-        console.log('Payment found:', payment ? 'Yes' : 'No');
-        if (payment) {
-          console.log('Payment details:', {
-            id: payment.id,
-            email: payment.email,
-            userId: payment.userId,
-            status: payment.status,
-            hasUser: !!payment.user,
-          });
-        }
-
         if (!payment || !payment.user) {
-          console.log('No valid payment/user found for email:', email);
           // Don't reveal whether email exists or not
           reply.send({
             success: true,
@@ -342,7 +320,6 @@ export default async function accountRoutes(
         const activationCode = Math.floor(
           100000 + Math.random() * 900000
         ).toString();
-        console.log('Generated activation code:', activationCode);
 
         // Store the code with user hash (expires in 1 hour)
         const expiresAt = new Date(Date.now() + 60 * 60 * 1000).toISOString();
@@ -351,25 +328,20 @@ export default async function accountRoutes(
           email: email.toLowerCase(),
           expiresAt,
         });
-        console.log('Code data to store:', codeData);
 
         // Store in AppSetting with a unique key
         const codeKey = `activation_code_${activationCode}`;
-        console.log('Storing code with key:', codeKey);
 
         await prisma.appSetting.upsert({
           where: { key: codeKey },
           update: { value: codeData },
           create: { key: codeKey, value: codeData },
         });
-        console.log('Code stored successfully');
 
         // Get the user's preferred locale
         const locale = payment.locale || 'en';
-        console.log('User locale:', locale);
 
         // Send activation email with user's hash and code
-        console.log('Sending activation email to:', email);
         await mail.sendQRSongActivationMail(
           email,
           payment.fullname || payment.user.displayName,
@@ -377,30 +349,13 @@ export default async function accountRoutes(
           locale,
           activationCode
         );
-        console.log('Activation email sent successfully');
 
         reply.send({
           success: true,
           message:
             'If this email is associated with a purchase, an activation code will be sent.',
         });
-        console.log('=== ACTIVATION REQUEST COMPLETED SUCCESSFULLY ===');
       } catch (error) {
-        console.error('=== ERROR IN ACTIVATION REQUEST ===');
-        console.error(
-          'Error type:',
-          error instanceof Error ? error.constructor.name : typeof error
-        );
-        console.error(
-          'Error message:',
-          error instanceof Error ? error.message : String(error)
-        );
-        console.error(
-          'Error stack:',
-          error instanceof Error ? error.stack : 'No stack trace'
-        );
-        console.error('Full error object:', error);
-
         reply.status(500).send({
           success: false,
           error: 'failedToSendActivationCode',
@@ -463,7 +418,6 @@ export default async function accountRoutes(
           userHash: codeData.userHash,
         });
       } catch (error) {
-        console.error('Error validating activation code:', error);
         reply.status(500).send({
           success: false,
           error: 'validationFailed',
