@@ -197,6 +197,12 @@ class WebSocketServer {
         `WebSocket: Current players in game ${gameId}:`,
         gameData.players.map((p) => p.name)
       );
+      
+      // Log game settings including userHash and playlists
+      console.log(`WebSocket: Game settings for ${gameId}:`);
+      console.log(`  - User Hash: ${gameData.settings.userHash || 'none'}`);
+      console.log(`  - Playlist IDs: [${gameData.settings.playlistIds ? gameData.settings.playlistIds.join(', ') : '159 (default)'}]`);
+      console.log(`  - Number of Rounds: ${gameData.settings.numberOfRounds}`);
 
       // Notify all players in the room
       this.io.to(gameId).emit('playerJoined', {
@@ -262,6 +268,7 @@ class WebSocketServer {
   private async handleStartGame(socket: Socket, data: { gameId: string }) {
     try {
       const { gameId } = data;
+      console.log('WebSocket: handleStartGame called for game:', gameId);
 
       if (!socket.data.isHost) {
         socket.emit('error', 'Only the host can start the game');
@@ -274,6 +281,12 @@ class WebSocketServer {
         return;
       }
 
+      console.log('WebSocket: Starting game with settings:', {
+        playlistIds: gameData.settings.playlistIds,
+        userHash: gameData.settings.userHash,
+        numberOfRounds: gameData.settings.numberOfRounds
+      });
+
       // Update game state
       gameData.state = 'playing';
       gameData.currentRound = 1;
@@ -284,10 +297,12 @@ class WebSocketServer {
 
       // Start first round countdown
       setTimeout(() => {
+        console.log('WebSocket: Emitting roundStarting for game:', gameId);
         this.io.to(gameId).emit('roundStarting', { round: 1 });
       }, 1000);
     } catch (error) {
       this.logger.log('Error starting game');
+      console.error('WebSocket: Error in handleStartGame:', error);
       socket.emit('error', 'Failed to start game');
     }
   }
@@ -298,19 +313,31 @@ class WebSocketServer {
   ) {
     try {
       const { gameId, round } = data;
+      console.log('WebSocket: handleRequestQuestion called for game:', gameId, 'round:', round);
 
       if (!socket.data.isHost) {
+        console.log('WebSocket: Non-host tried to request question');
         return; // Only host can request questions
       }
 
-      // Get a random track
-      const track = await this.game.getRandomTrack();
+      // Get a random track from the game's selected playlists
+      console.log('WebSocket: Getting random track for game:', gameId);
+      const track = await this.game.getRandomTrack(gameId);
       if (!track) {
+        console.log('WebSocket: No tracks available for game:', gameId);
         socket.emit('error', 'No tracks available');
         return;
       }
 
+      console.log('WebSocket: Selected track for game', gameId, ':', {
+        name: track.name,
+        artist: track.artist,
+        uri: track.uri,
+        year: track.year
+      });
+
       // Generate a question
+      console.log('WebSocket: Generating question for track');
       const question = await this.partyGame.generateQuestion(track, gameId);
 
       // Store current question
@@ -330,6 +357,7 @@ class WebSocketServer {
         },
       });
     } catch (error) {
+      console.error('WebSocket: Error in handleRequestQuestion:', error);
       this.logger.log('Error requesting question');
       socket.emit('error', 'Failed to get question');
     }

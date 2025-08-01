@@ -9,6 +9,8 @@ interface CreateGameBody {
   playMode: 'home' | 'remote';
   settings: {
     numberOfRounds: number;
+    playlistIds?: number[];
+    userHash?: string;
   };
 }
 
@@ -19,7 +21,8 @@ interface JoinGameBody {
 }
 
 interface GameQuery {
-  trackId: string;
+  trackId?: string;
+  gameId?: string;
 }
 
 const gameRoutes = async (fastify: FastifyInstance) => {
@@ -106,7 +109,8 @@ const gameRoutes = async (fastify: FastifyInstance) => {
     '/api/games/random-track',
     async (request, reply) => {
       try {
-        const track = await game.getRandomTrack();
+        const { gameId } = request.query;
+        const track = await game.getRandomTrack(gameId);
 
         if (!track) {
           return reply.status(404).send({ error: 'No tracks available' });
@@ -120,27 +124,57 @@ const gameRoutes = async (fastify: FastifyInstance) => {
     }
   );
 
-  // Get purchased playlists for a user by their hash
+  // Shared handler for playlist routes
+  const playlistHandler = async (request: any, reply: any) => {
+    const requestId = Math.random().toString(36).substring(7);
+    const timestamp = new Date().toISOString();
+    
+    try {
+      const userHash = request.params?.userHash;
+      console.log(`[${requestId}] Playlist request at ${timestamp}`);
+      console.log(`[${requestId}] Route: ${request.url}`);
+      console.log(`[${requestId}] UserHash: ${userHash || 'none'}`);
+      
+      if (!userHash) {
+        console.log(`[${requestId}] No userHash - fetching basic playlists only`);
+        // No userHash provided, return basic playlists only
+        const result = await game.getBasicPlaylists();
+        console.log(`[${requestId}] Basic playlists result:`, JSON.stringify(result, null, 2));
+        return reply.send(result);
+      }
+      
+      console.log(`[${requestId}] UserHash provided - fetching user playlists`);
+      // UserHash provided, return user playlists (which includes basic)
+      const result = await game.getUserPlaylists(userHash);
+      console.log(`[${requestId}] User playlists result:`, JSON.stringify(result, null, 2));
+      return reply.send(result);
+    } catch (error: any) {
+      console.error(`[${requestId}] Error in playlist handler:`, error);
+      console.error(`[${requestId}] Error stack:`, error.stack);
+      fastify.log.error(error);
+      
+      if (error.message === 'User not found') {
+        console.log(`[${requestId}] Returning 404 - User not found`);
+        return reply.status(404).send({ error: 'User not found' });
+      }
+      
+      console.log(`[${requestId}] Returning 500 - General error`);
+      return reply.status(500).send({ 
+        error: 'Failed to get playlists',
+        message: error.message,
+      });
+    }
+  };
+
+  // Get playlists without userHash - returns basic playlists only
+  console.log('Registering route: GET /api/games/playlists');
+  fastify.get('/api/games/playlists', playlistHandler);
+
+  // Get playlists with userHash - returns basic + user playlists
+  console.log('Registering route: GET /api/games/playlists/:userHash');
   fastify.get<{ Params: { userHash: string } }>(
     '/api/games/playlists/:userHash',
-    async (request, reply) => {
-      try {
-        const { userHash } = request.params;
-        const result = await game.getUserPlaylists(userHash);
-        return reply.send(result);
-      } catch (error: any) {
-        fastify.log.error(error);
-        
-        if (error.message === 'User not found') {
-          return reply.status(404).send({ error: 'User not found' });
-        }
-        
-        return reply.status(500).send({ 
-          error: 'Failed to get user playlists',
-          message: error.message,
-        });
-      }
-    }
+    playlistHandler
   );
 };
 
