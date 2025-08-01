@@ -501,6 +501,7 @@ class Game {
 
   // Cache all tracks for specific playlists
   async cachePlaylistTracks(playlistIds: number[]): Promise<void> {
+    // Always sort IDs to ensure consistent cache keys
     const sortedIds = [...playlistIds].sort((a, b) => a - b);
     const cacheKey = `playlists:${sortedIds.join('_')}:tracks`;
     console.log('cachePlaylistTracks called with playlistIds:', playlistIds);
@@ -598,6 +599,7 @@ class Game {
 
   // Get cached tracks for playlists
   async getCachedTracks(playlistIds: number[]): Promise<any[] | null> {
+    // Always sort IDs to ensure consistent cache keys
     const sortedIds = [...playlistIds].sort((a, b) => a - b);
     const cacheKey = `playlists:${sortedIds.join('_')}:tracks`;
     console.log('getCachedTracks - looking for cache key:', cacheKey);
@@ -640,6 +642,25 @@ class Game {
       // Cache the tracks for these playlists
       await this.cachePlaylistTracks(playlistIds);
     }
+  }
+
+  // Check if game cache is ready
+  async isGameCacheReady(gameId: string): Promise<boolean> {
+    const gameData = await this.getGameData(gameId);
+    if (!gameData) return false;
+
+    let playlistIds = gameData.settings.playlistIds || [20];
+    
+    // Validate ownership if userHash is provided
+    if (gameData.settings.userHash && gameData.settings.playlistIds) {
+      playlistIds = await this.validatePlaylistOwnership(
+        gameData.settings.userHash,
+        playlistIds
+      );
+    }
+
+    const tracks = await this.getCachedTracks(playlistIds);
+    return tracks !== null && tracks.length > 0;
   }
 }
 

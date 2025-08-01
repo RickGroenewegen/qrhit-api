@@ -28,7 +28,6 @@ class WebSocketServer {
   private io: SocketIOServer;
   private game: Game;
   private partyGame: PartyGame;
-  private leaderboardTimeouts: Map<string, NodeJS.Timeout> = new Map();
   private logger: Logger;
   private redis: Redis;
 
@@ -138,6 +137,10 @@ class WebSocketServer {
         await this.handleSubmitAnswer(socket, data);
       });
 
+      socket.on('showLeaderboard', async (data: { gameId: string }) => {
+        await this.handleShowLeaderboard(socket, data);
+      });
+
       socket.on('startNextRound', async (data: { gameId: string }) => {
         await this.handleStartNextRound(socket, data);
       });
@@ -173,6 +176,17 @@ class WebSocketServer {
       // Join the game room
       socket.join(gameId);
       console.log(`WebSocket: Socket ${socket.id} joined room ${gameId}`);
+
+      // Ensure cache is warmed for this game when host joins
+      if (isHost) {
+        console.log(`WebSocket: Host joined - warming cache for game ${gameId}`);
+        // Fire and forget - don't block the join
+        this.game.prewarmGameCache(gameId).then(() => {
+          console.log(`WebSocket: Cache warming completed for game ${gameId}`);
+        }).catch(err => {
+          console.error(`WebSocket: Error warming cache for game ${gameId}:`, err);
+        });
+      }
 
       // Get updated game data
       const gameData = await this.game.getGame(gameId);
@@ -231,15 +245,18 @@ class WebSocketServer {
   ) {
     try {
       const { gameId, playerName } = data;
+      console.log(`WebSocket: Player "${playerName}" attempting to rejoin game "${gameId}"`);
 
       const gameData = await this.game.getGame(gameId);
       if (!gameData) {
+        console.error(`WebSocket: Game ${gameId} not found for rejoin`);
         socket.emit('error', 'Game not found');
         return;
       }
 
       const player = gameData.players.find((p) => p.name === playerName);
       if (!player) {
+        console.error(`WebSocket: Player ${playerName} not found in game ${gameId}`);
         socket.emit('error', 'Player not found in game');
         return;
       }
@@ -252,6 +269,7 @@ class WebSocketServer {
 
       // Join the game room
       socket.join(gameId);
+      console.log(`WebSocket: Player ${playerName} rejoined game ${gameId} (state: ${gameData.state}, round: ${gameData.currentRound})`);
 
       // Send game data
       socket.emit('gameData', {
@@ -259,8 +277,15 @@ class WebSocketServer {
         currentRound: gameData.currentRound,
         totalRounds: gameData.settings.numberOfRounds,
       });
+
+      // If game is in playing state and we're in a round, emit the round starting event
+      if (gameData.state === 'playing' && gameData.currentRound > 0) {
+        console.log(`WebSocket: Game is in progress, emitting roundStarting for rejoined player`);
+        socket.emit('roundStarting', { round: gameData.currentRound });
+      }
     } catch (error) {
       this.logger.log('Error rejoining game');
+      console.error('WebSocket: Error in handleRejoinGame:', error);
       socket.emit('error', 'Failed to rejoin game');
     }
   }
@@ -294,12 +319,13 @@ class WebSocketServer {
 
       // Notify all players
       this.io.to(gameId).emit('gameStarted');
+      console.log('WebSocket: Emitted gameStarted for game:', gameId);
 
-      // Start first round countdown
+      // Start first round countdown with a longer delay to ensure clients have navigated
       setTimeout(() => {
         console.log('WebSocket: Emitting roundStarting for game:', gameId);
         this.io.to(gameId).emit('roundStarting', { round: 1 });
-      }, 1000);
+      }, 2000);
     } catch (error) {
       this.logger.log('Error starting game');
       console.error('WebSocket: Error in handleStartGame:', error);
@@ -406,25 +432,25 @@ class WebSocketServer {
           answers: results.answers,
           correctAnswer: results.correctAnswer,
         });
-
-        // Clear any existing timeout for this game
-        const existingTimeout = this.leaderboardTimeouts.get(gameId);
-        if (existingTimeout) {
-          clearTimeout(existingTimeout);
-        }
-
-        // Show leaderboard after a delay
-        const timeout = setTimeout(async () => {
-          const leaderboard = await this.partyGame.getLeaderboard(gameId);
-          this.io.to(gameId).emit('showLeaderboard', { leaderboard });
-          this.leaderboardTimeouts.delete(gameId);
-        }, 8000);
-
-        this.leaderboardTimeouts.set(gameId, timeout);
       }
     } catch (error) {
       this.logger.log('Error submitting answer');
       socket.emit('error', 'Failed to submit answer');
+    }
+  }
+
+  private async handleShowLeaderboard(socket: Socket, data: { gameId: string }) {
+    try {
+      const { gameId } = data;
+
+      if (!socket.data.isHost) {
+        return; // Only host can show leaderboard
+      }
+
+      const leaderboard = await this.partyGame.getLeaderboard(gameId);
+      this.io.to(gameId).emit('showLeaderboard', { leaderboard });
+    } catch (error) {
+      this.logger.log('Error showing leaderboard');
     }
   }
 
@@ -439,22 +465,8 @@ class WebSocketServer {
       const gameData = await this.game.getGame(gameId);
       if (!gameData) return;
 
-      // Clear any pending leaderboard timeout
-      const existingTimeout = this.leaderboardTimeouts.get(gameId);
-      if (existingTimeout) {
-        clearTimeout(existingTimeout);
-        this.leaderboardTimeouts.delete(gameId);
-      }
-
       gameData.currentRound++;
       await this.game.updateGame(gameId, gameData);
-
-      // Clear the timeout one more time to be absolutely sure
-      const timeout = this.leaderboardTimeouts.get(gameId);
-      if (timeout) {
-        clearTimeout(timeout);
-        this.leaderboardTimeouts.delete(gameId);
-      }
 
       // Start countdown for next round
       this.io
