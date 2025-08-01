@@ -99,7 +99,7 @@
         <% } %>
         <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
         <div class="url">
-            <% if (!php.hideDomain) { %>
+            <% if (!playlist.hideDomain && !php.hideDomain) { %>
                 <%= process.env['APP_DOMAIN'] %>
             <% } %>
         </div>

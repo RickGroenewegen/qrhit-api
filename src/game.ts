@@ -96,7 +96,7 @@ class Game {
 
     // Pre-warm the cache for this game (non-blocking)
     this.prewarmGameCache(gameId).catch(err => {
-      console.error('Error pre-warming game cache:', err);
+      // Error pre-warming game cache
     });
 
     return gameId;
@@ -110,14 +110,10 @@ class Game {
     const gameData = await this.getGameData(gameId);
 
     if (!gameData) {
-      console.error(`Game.joinGame: Game ${gameId} not found in Redis`);
       return null;
     }
 
     if (gameData.state !== 'waiting') {
-      console.error(
-        `Game.joinGame: Game ${gameId} has already started (state: ${gameData.state})`
-      );
       throw new Error('Game has already started');
     }
 
@@ -174,49 +170,39 @@ class Game {
   }
 
   async getRandomTrack(gameId?: string): Promise<any> {
-    console.log('getRandomTrack called with gameId:', gameId);
     let playlistIds = [20]; // Default to basic playlist
 
     // If gameId is provided, get the playlist IDs from the game
     if (gameId) {
       const gameData = await this.getGameData(gameId);
-      console.log('Game data retrieved:', gameData ? 'found' : 'not found');
       if (
         gameData &&
         gameData.settings.playlistIds &&
         gameData.settings.playlistIds.length > 0
       ) {
         playlistIds = gameData.settings.playlistIds;
-        console.log('Using playlist IDs from game:', playlistIds);
 
         // If userHash is provided, validate playlist ownership
         if (gameData.settings.userHash) {
-          console.log('Validating playlist ownership for userHash:', gameData.settings.userHash);
           playlistIds = await this.validatePlaylistOwnership(
             gameData.settings.userHash,
             playlistIds
           );
-          console.log('Validated playlist IDs:', playlistIds);
         }
       }
     }
 
-    console.log('Final playlist IDs to use:', playlistIds);
     
     // Try to get tracks from cache first
     let tracks = await this.getCachedTracks(playlistIds);
-    console.log('Cached tracks found:', tracks ? tracks.length : 0);
     
     if (!tracks) {
-      console.log('Cache miss - loading tracks from database for playlists:', playlistIds);
       // Cache miss - load tracks and cache them
       await this.cachePlaylistTracks(playlistIds);
       tracks = await this.getCachedTracks(playlistIds);
-      console.log('After caching, tracks found:', tracks ? tracks.length : 0);
     }
 
     if (!tracks || tracks.length === 0) {
-      console.log('No tracks available for playlists:', playlistIds);
       return null;
     }
 
@@ -241,13 +227,6 @@ class Game {
       decade: decade,
       previewUrl: track.preview,
     };
-    
-    console.log('Returning random track:', {
-      name: result.name,
-      artist: result.artist,
-      uri: result.uri,
-      year: result.year
-    });
     
     return result;
   }
@@ -282,11 +261,9 @@ class Game {
   async getBasicPlaylists() {
     const prisma = PrismaInstance.getInstance();
 
-    console.log('getBasicPlaylists called');
     
     // Define basic playlist IDs that are available to everyone
     const basicPlaylistIds = [20]; // Metal basic playlist
-    console.log('Looking for basic playlist IDs:', basicPlaylistIds);
     
     // Get basic playlists
     const basicPlaylists = await prisma.playlist.findMany({
@@ -305,7 +282,6 @@ class Game {
       },
     });
 
-    console.log('Raw basic playlists from DB:', basicPlaylists);
 
     // Format basic playlists
     const formattedBasicPlaylists = basicPlaylists.map(playlist => ({
@@ -314,14 +290,12 @@ class Game {
       private: false, // Basic playlists are not private
     }));
 
-    console.log('Formatted basic playlists:', formattedBasicPlaylists);
 
     const result = {
       success: true,
       playlists: formattedBasicPlaylists,
     };
 
-    console.log('Final result from getBasicPlaylists:', result);
     return result;
   }
 
@@ -329,7 +303,6 @@ class Game {
   async getUserPlaylists(userHash: string) {
     const prisma = PrismaInstance.getInstance();
 
-    console.log(`getUserPlaylists called with userHash: ${userHash}`);
 
     // Define basic playlist IDs that are available to everyone
     const basicPlaylistIds = [20]; // Metal basic playlist
@@ -351,7 +324,6 @@ class Game {
       },
     });
 
-    console.log(`Found ${basicPlaylists.length} basic playlists`);
 
     // Format basic playlists
     const formattedBasicPlaylists = basicPlaylists.map(playlist => ({
@@ -365,7 +337,6 @@ class Game {
       where: { hash: userHash },
     });
 
-    console.log(`User found: ${user ? 'Yes, ID: ' + user.id : 'No'}`);
 
     if (!user) {
       // If user not found, still return basic playlists
@@ -391,7 +362,6 @@ class Game {
       },
     });
 
-    console.log(`Found ${payments.length} paid payments for user`);
 
     // Extract unique playlists from all payments
     const playlistMap = new Map();
@@ -414,11 +384,9 @@ class Game {
     });
 
     const userPlaylists = Array.from(playlistMap.values());
-    console.log(`Found ${userPlaylists.length} unique user playlists`);
 
     // Combine basic and user playlists
     const allPlaylists = [...formattedBasicPlaylists, ...userPlaylists];
-    console.log(`Returning total of ${allPlaylists.length} playlists`);
 
     return {
       success: true,
@@ -504,18 +472,13 @@ class Game {
     // Always sort IDs to ensure consistent cache keys
     const sortedIds = [...playlistIds].sort((a, b) => a - b);
     const cacheKey = `playlists:${sortedIds.join('_')}:tracks`;
-    console.log('cachePlaylistTracks called with playlistIds:', playlistIds);
-    console.log('Sorted IDs:', sortedIds);
-    console.log('Cache key:', cacheKey);
     
     // Check if already cached
     const cached = await this.cache.get(cacheKey, false);
     if (cached) {
-      console.log('Tracks already cached, returning');
       return;
     }
 
-    console.log('Fetching tracks from database for playlists:', playlistIds);
     
     // First, let's check if these playlists exist and have tracks
     const playlistsWithTrackCount = await this.prisma.playlist.findMany({
@@ -533,11 +496,6 @@ class Game {
       }
     });
     
-    console.log('Playlists found:', playlistsWithTrackCount.map(p => ({
-      id: p.id,
-      name: p.name,
-      trackCount: p._count.tracks
-    })));
     
     // Fetch all tracks for these playlists
     const tracks = await this.prisma.track.findMany({
@@ -563,37 +521,18 @@ class Game {
         preview: true,
       },
     });
-    
-    console.log('Database query returned', tracks.length, 'tracks');
-    if (tracks.length > 0) {
-      console.log('Sample track:', {
-        id: tracks[0].id,
-        name: tracks[0].name,
-        artist: tracks[0].artist,
-        spotifyLink: tracks[0].spotifyLink,
-        year: tracks[0].year
-      });
-    }
 
     // Cache tracks for 4 hours (same as game expiration)
-    console.log('Caching', tracks.length, 'tracks with key:', cacheKey);
     try {
       await this.cache.set(
         cacheKey,
         JSON.stringify(tracks),
         this.gameExpiration
       );
-      console.log('Cache set completed');
       
       // Verify the cache was set
-      const verifyCache = await this.cache.get(cacheKey, false);
-      console.log('Cache verification - data exists:', !!verifyCache);
-      if (verifyCache) {
-        const parsed = JSON.parse(verifyCache);
-        console.log('Cache verification - track count:', parsed.length);
-      }
     } catch (error) {
-      console.error('Error caching tracks:', error);
+      // Error caching tracks
     }
   }
 
@@ -602,16 +541,13 @@ class Game {
     // Always sort IDs to ensure consistent cache keys
     const sortedIds = [...playlistIds].sort((a, b) => a - b);
     const cacheKey = `playlists:${sortedIds.join('_')}:tracks`;
-    console.log('getCachedTracks - looking for cache key:', cacheKey);
     const cached = await this.cache.get(cacheKey, false);
     
     if (cached) {
       const tracks = JSON.parse(cached);
-      console.log('getCachedTracks - found cached tracks:', tracks.length);
       return tracks;
     }
     
-    console.log('getCachedTracks - no cache found');
     return null;
   }
 

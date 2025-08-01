@@ -30,6 +30,29 @@ class WebSocketServer {
   private partyGame: PartyGame;
   private logger: Logger;
   private redis: Redis;
+  private playerAvatars: Map<string, Map<string, string>> = new Map(); // gameId -> playerId -> avatarUrl
+
+  // Store player avatars separately
+  private async storePlayerAvatar(gameId: string, playerId: string, avatar: string): Promise<void> {
+    if (!this.playerAvatars.has(gameId)) {
+      this.playerAvatars.set(gameId, new Map());
+    }
+    this.playerAvatars.get(gameId)!.set(playerId, avatar);
+    
+    // Also store in Redis for persistence
+    await this.redis.hset(`game:${gameId}:avatars`, playerId, avatar);
+    await this.redis.expire(`game:${gameId}:avatars`, 60 * 60 * 4);
+  }
+  
+  // Get all avatars for a game
+  private async getGameAvatars(gameId: string): Promise<Map<string, string>> {
+    const avatars = await this.redis.hgetall(`game:${gameId}:avatars`);
+    const map = new Map<string, string>();
+    for (const [playerId, avatar] of Object.entries(avatars)) {
+      map.set(playerId, avatar);
+    }
+    return map;
+  }
 
   constructor(server: HTTPServer) {
     this.io = new SocketIOServer(server, {
@@ -112,7 +135,6 @@ class WebSocketServer {
 
   private initializeHandlers() {
     this.io.on('connection', (socket: Socket) => {
-      console.log('Client connected:', socket.id);
 
       socket.on('joinGame', async (data: JoinGameData) => {
         await this.handleJoinGame(socket, data);
@@ -154,7 +176,6 @@ class WebSocketServer {
       });
 
       socket.on('disconnect', () => {
-        console.log('Client disconnected:', socket.id);
         this.handleDisconnect(socket);
       });
     });
@@ -164,9 +185,6 @@ class WebSocketServer {
     try {
       const { gameId, playerName, playerAvatar, isHost } = data;
 
-      console.log(
-        `WebSocket: Player "${playerName}" attempting to join game "${gameId}" (isHost: ${isHost})`
-      );
 
       // Store player info on socket
       socket.data.gameId = gameId;
@@ -175,23 +193,20 @@ class WebSocketServer {
 
       // Join the game room
       socket.join(gameId);
-      console.log(`WebSocket: Socket ${socket.id} joined room ${gameId}`);
 
       // Ensure cache is warmed for this game when host joins
       if (isHost) {
-        console.log(`WebSocket: Host joined - warming cache for game ${gameId}`);
         // Fire and forget - don't block the join
         this.game.prewarmGameCache(gameId).then(() => {
-          console.log(`WebSocket: Cache warming completed for game ${gameId}`);
+          // Cache warming completed
         }).catch(err => {
-          console.error(`WebSocket: Error warming cache for game ${gameId}:`, err);
+          // Error warming cache
         });
       }
 
       // Get updated game data
       const gameData = await this.game.getGame(gameId);
       if (!gameData) {
-        console.error(`WebSocket: Game ${gameId} not found`);
         socket.emit('error', 'Game not found');
         return;
       }
@@ -200,39 +215,27 @@ class WebSocketServer {
       const player = gameData.players.find((p) => p.name === playerName);
       if (player) {
         socket.data.playerId = player.id;
-        console.log(
-          `WebSocket: Found existing player ${playerName} with ID ${player.id}`
-        );
+        
+        // Store avatar separately if provided
+        if (player.avatar) {
+          await this.storePlayerAvatar(gameId, player.id, player.avatar);
+        }
       } else {
-        console.log(`WebSocket: Player ${playerName} not found in game data`);
       }
 
-      console.log(
-        `WebSocket: Current players in game ${gameId}:`,
-        gameData.players.map((p) => p.name)
-      );
-      
-      // Log game settings including userHash and playlists
-      console.log(`WebSocket: Game settings for ${gameId}:`);
-      console.log(`  - User Hash: ${gameData.settings.userHash || 'none'}`);
-      console.log(`  - Playlist IDs: [${gameData.settings.playlistIds ? gameData.settings.playlistIds.join(', ') : '159 (default)'}]`);
-      console.log(`  - Number of Rounds: ${gameData.settings.numberOfRounds}`);
-
-      // Notify all players in the room
+      // Send players data with avatars (only on join)
       this.io.to(gameId).emit('playerJoined', {
         players: gameData.players,
       });
-      console.log(
-        `WebSocket: Notified all players in room ${gameId} about player join`
-      );
 
-      // Send game data to the joining player
+      // Send game data to the joining player with all avatars
+      const gameAvatars = await this.getGameAvatars(gameId);
       socket.emit('gameData', {
         players: gameData.players,
         currentRound: gameData.currentRound,
         totalRounds: gameData.settings.numberOfRounds,
+        avatars: Object.fromEntries(gameAvatars) // Send all avatars as an object
       });
-      console.log(`WebSocket: Sent game data to player ${playerName}`);
     } catch (error) {
       this.logger.log('Error joining game');
       socket.emit('error', 'Failed to join game');
@@ -245,18 +248,15 @@ class WebSocketServer {
   ) {
     try {
       const { gameId, playerName } = data;
-      console.log(`WebSocket: Player "${playerName}" attempting to rejoin game "${gameId}"`);
 
       const gameData = await this.game.getGame(gameId);
       if (!gameData) {
-        console.error(`WebSocket: Game ${gameId} not found for rejoin`);
         socket.emit('error', 'Game not found');
         return;
       }
 
       const player = gameData.players.find((p) => p.name === playerName);
       if (!player) {
-        console.error(`WebSocket: Player ${playerName} not found in game ${gameId}`);
         socket.emit('error', 'Player not found in game');
         return;
       }
@@ -269,23 +269,24 @@ class WebSocketServer {
 
       // Join the game room
       socket.join(gameId);
-      console.log(`WebSocket: Player ${playerName} rejoined game ${gameId} (state: ${gameData.state}, round: ${gameData.currentRound})`);
 
-      // Send game data
+      // Get all avatars for the game
+      const gameAvatars = await this.getGameAvatars(gameId);
+      
+      // Send game data with avatars
       socket.emit('gameData', {
         players: gameData.players,
         currentRound: gameData.currentRound,
         totalRounds: gameData.settings.numberOfRounds,
+        avatars: Object.fromEntries(gameAvatars) // Send all avatars as an object
       });
 
       // If game is in playing state and we're in a round, emit the round starting event
       if (gameData.state === 'playing' && gameData.currentRound > 0) {
-        console.log(`WebSocket: Game is in progress, emitting roundStarting for rejoined player`);
         socket.emit('roundStarting', { round: gameData.currentRound });
       }
     } catch (error) {
       this.logger.log('Error rejoining game');
-      console.error('WebSocket: Error in handleRejoinGame:', error);
       socket.emit('error', 'Failed to rejoin game');
     }
   }
@@ -293,7 +294,6 @@ class WebSocketServer {
   private async handleStartGame(socket: Socket, data: { gameId: string }) {
     try {
       const { gameId } = data;
-      console.log('WebSocket: handleStartGame called for game:', gameId);
 
       if (!socket.data.isHost) {
         socket.emit('error', 'Only the host can start the game');
@@ -306,12 +306,6 @@ class WebSocketServer {
         return;
       }
 
-      console.log('WebSocket: Starting game with settings:', {
-        playlistIds: gameData.settings.playlistIds,
-        userHash: gameData.settings.userHash,
-        numberOfRounds: gameData.settings.numberOfRounds
-      });
-
       // Update game state
       gameData.state = 'playing';
       gameData.currentRound = 1;
@@ -319,16 +313,13 @@ class WebSocketServer {
 
       // Notify all players
       this.io.to(gameId).emit('gameStarted');
-      console.log('WebSocket: Emitted gameStarted for game:', gameId);
 
       // Start first round countdown with a longer delay to ensure clients have navigated
       setTimeout(() => {
-        console.log('WebSocket: Emitting roundStarting for game:', gameId);
         this.io.to(gameId).emit('roundStarting', { round: 1 });
       }, 2000);
     } catch (error) {
       this.logger.log('Error starting game');
-      console.error('WebSocket: Error in handleStartGame:', error);
       socket.emit('error', 'Failed to start game');
     }
   }
@@ -339,31 +330,19 @@ class WebSocketServer {
   ) {
     try {
       const { gameId, round } = data;
-      console.log('WebSocket: handleRequestQuestion called for game:', gameId, 'round:', round);
 
       if (!socket.data.isHost) {
-        console.log('WebSocket: Non-host tried to request question');
         return; // Only host can request questions
       }
 
       // Get a random track from the game's selected playlists
-      console.log('WebSocket: Getting random track for game:', gameId);
       const track = await this.game.getRandomTrack(gameId);
       if (!track) {
-        console.log('WebSocket: No tracks available for game:', gameId);
         socket.emit('error', 'No tracks available');
         return;
       }
 
-      console.log('WebSocket: Selected track for game', gameId, ':', {
-        name: track.name,
-        artist: track.artist,
-        uri: track.uri,
-        year: track.year
-      });
-
       // Generate a question
-      console.log('WebSocket: Generating question for track');
       const question = await this.partyGame.generateQuestion(track, gameId);
 
       // Store current question
@@ -383,7 +362,6 @@ class WebSocketServer {
         },
       });
     } catch (error) {
-      console.error('WebSocket: Error in handleRequestQuestion:', error);
       this.logger.log('Error requesting question');
       socket.emit('error', 'Failed to get question');
     }
@@ -427,9 +405,15 @@ class WebSocketServer {
           gameAnswers
         );
 
+        // Remove avatars from answers to reduce data transfer
+        const answersWithoutAvatars = results.answers.map(answer => {
+          const { playerAvatar, ...rest } = answer;
+          return rest;
+        });
+        
         // Send results to all players
         this.io.to(gameId).emit('showResults', {
-          answers: results.answers,
+          answers: answersWithoutAvatars,
           correctAnswer: results.correctAnswer,
         });
       }
@@ -448,7 +432,14 @@ class WebSocketServer {
       }
 
       const leaderboard = await this.partyGame.getLeaderboard(gameId);
-      this.io.to(gameId).emit('showLeaderboard', { leaderboard });
+      
+      // Remove avatars from leaderboard to reduce data transfer
+      const leaderboardWithoutAvatars = leaderboard.map(player => {
+        const { avatar, ...rest } = player;
+        return rest;
+      });
+      
+      this.io.to(gameId).emit('showLeaderboard', { leaderboard: leaderboardWithoutAvatars });
     } catch (error) {
       this.logger.log('Error showing leaderboard');
     }
@@ -497,7 +488,13 @@ class WebSocketServer {
         await this.game.updateGame(gameId, gameData);
       }
 
-      this.io.to(gameId).emit('gameFinished', { topPlayers });
+      // Remove avatars from final results to reduce data transfer
+      const topPlayersWithoutAvatars = topPlayers.map(player => {
+        const { avatar, ...rest } = player;
+        return rest;
+      });
+
+      this.io.to(gameId).emit('gameFinished', { topPlayers: topPlayersWithoutAvatars });
     } catch (error) {
       this.logger.log('Error showing final results');
     }
@@ -526,6 +523,8 @@ class WebSocketServer {
       // Clear stored data from Redis
       await this.clearPlayerAnswers(gameId);
       await this.redis.del(`game:${gameId}:currentQuestion`);
+      
+      // Don't clear avatars on restart - they should persist
 
       // Notify all players
       this.io.to(gameId).emit('gameRestarted');

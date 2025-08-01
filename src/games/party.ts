@@ -2,9 +2,10 @@ import Game from '../game';
 import { fuzzy } from 'fast-fuzzy';
 
 export interface Question {
-  type: 'artist' | 'song' | 'year' | 'decade';
+  type: 'artist' | 'song' | 'year' | 'decade' | 'earlier-later';
   text: string;
-  correctAnswer: string | number;
+  correctAnswer: string | number | boolean;
+  referenceYear?: number; // For earlier-later questions
 }
 
 export interface PlayerAnswer {
@@ -32,13 +33,13 @@ class PartyGame {
 
   // Generate a cycled question type
   async generateQuestion(track: any, gameId: string): Promise<Question> {
-    const questionTypes: ('artist' | 'song' | 'year' | 'decade')[] = ['artist', 'song', 'year', 'decade'];
+    const questionTypes: ('artist' | 'song' | 'year' | 'decade' | 'earlier-later')[] = ['artist', 'song', 'year', 'decade', 'earlier-later'];
     
     // Get current question type index from Redis
     const currentIndex = await this.game.getQuestionTypeIndex(gameId);
     const type = questionTypes[currentIndex];
     
-    // Update index for next question (cycle through 0, 1, 2, 3)
+    // Update index for next question (cycle through all types)
     await this.game.setQuestionTypeIndex(gameId, (currentIndex + 1) % questionTypes.length);
     
     let question: Question;
@@ -73,6 +74,24 @@ class PartyGame {
           type: 'decade',
           text: 'whatIsTheDecade',
           correctAnswer: track.decade || 1990
+        };
+        break;
+      
+      case 'earlier-later':
+        // Generate a reference year that's 1-3 years before or after the actual year
+        const actualYear = track.year || 1990;
+        const offset = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3
+        const direction = Math.random() < 0.5 ? -1 : 1; // Before or after
+        const referenceYear = actualYear + (offset * direction);
+        
+        // The answer is true if the song is earlier than the reference year
+        const isEarlier = actualYear < referenceYear;
+        
+        question = {
+          type: 'earlier-later',
+          text: 'wasReleasedEarlierOrLater',
+          correctAnswer: isEarlier, // true = earlier, false = later
+          referenceYear: referenceYear
         };
         break;
     }
@@ -128,6 +147,24 @@ class PartyGame {
         return {
           isCorrect: isDecadeCorrect,
           points: isDecadeCorrect ? 1 : 0
+        };
+      
+      case 'earlier-later':
+        // For earlier-later questions, the answer should be 'earlier' or 'later'
+        const normalizedEarlierLater = normalizedAnswer.toLowerCase();
+        const correctEarlierLater = question.correctAnswer === true;
+        
+        // Check if the answer matches
+        let isEarlierLaterCorrect = false;
+        if ((normalizedEarlierLater === 'earlier' || normalizedEarlierLater === 'before') && correctEarlierLater) {
+          isEarlierLaterCorrect = true;
+        } else if ((normalizedEarlierLater === 'later' || normalizedEarlierLater === 'after') && !correctEarlierLater) {
+          isEarlierLaterCorrect = true;
+        }
+        
+        return {
+          isCorrect: isEarlierLaterCorrect,
+          points: isEarlierLaterCorrect ? 1 : 0
         };
       
       default:
@@ -223,10 +260,16 @@ class PartyGame {
     // Update game data
     await this.game.updateGame(gameId, gameData);
 
+    // Format correct answer based on question type
+    let formattedCorrectAnswer = question.correctAnswer.toString();
+    if (question.type === 'earlier-later') {
+      formattedCorrectAnswer = question.correctAnswer === true ? 'earlier' : 'later';
+    }
+    
     return {
       question,
       answers: results,
-      correctAnswer: question.correctAnswer.toString()
+      correctAnswer: formattedCorrectAnswer
     };
   }
 
