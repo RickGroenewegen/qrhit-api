@@ -34,7 +34,7 @@ class PartyGame {
   // Generate a cycled question type
   async generateQuestion(track: any, gameId: string): Promise<Question> {
     // Get game settings to retrieve selected round types
-    const gameData = await this.game.getGameData(gameId);
+    const gameData = await this.game.getGame(gameId);
     const selectedTypes = gameData?.settings?.roundTypes || ['artist', 'song', 'year', 'decade', 'earlier-later'];
     
     // Ensure we have valid question types
