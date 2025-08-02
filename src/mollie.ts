@@ -16,6 +16,7 @@ import Discount from './discount';
 import { CronJob } from 'cron';
 import cluster from 'cluster';
 import { promises as fs } from 'fs';
+import Game from './game';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -29,6 +30,7 @@ class Mollie {
   private openPaymentStatus = ['open', 'pending', 'authorized'];
   private paidPaymentStatus = ['paid'];
   private failedPaymentStatus = ['failed', 'canceled', 'expired'];
+  private game = new Game();
 
   constructor() {
     if (cluster.isPrimary) {
@@ -958,6 +960,11 @@ class Mollie {
           id: true,
           paymentId: true,
           status: true,
+          user: {
+            select: {
+              hash: true,
+            },
+          },
         },
         where: {
           paymentId: payment.id,
@@ -1003,6 +1010,15 @@ class Mollie {
             clientIp: string;
             refreshPlaylists: string;
           };
+
+          // Clear the playlist cache for this user since they may have purchased new playlists
+          if (dbPayment.user?.hash) {
+            await this.game.clearUserPlaylistCache(dbPayment.user.hash);
+            this.logger.log(
+              color.green.bold('Cleared playlist cache for user: ') +
+              color.white.bold(dbPayment.user.hash)
+            );
+          }
 
           this.generator.generate(
             params.id,

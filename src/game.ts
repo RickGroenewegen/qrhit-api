@@ -259,6 +259,15 @@ class Game {
 
   // Get only basic playlists (for users not logged in)
   async getBasicPlaylists() {
+    const cacheKey = 'playlists:basic';
+    const cacheDuration = 60 * 60 * 24; // 24 hours
+    
+    // Try to get from cache first
+    const cachedResult = await this.cache.get(cacheKey);
+    if (cachedResult) {
+      return JSON.parse(cachedResult);
+    }
+    
     const prisma = PrismaInstance.getInstance();
 
     
@@ -296,11 +305,38 @@ class Game {
       playlists: formattedBasicPlaylists,
     };
 
+    // Cache the result
+    await this.cache.set(cacheKey, JSON.stringify(result), cacheDuration);
+    
     return result;
   }
 
   // Get playlists for a user by their hash (includes basic playlists)
+  // Clear playlist cache for a specific user
+  async clearUserPlaylistCache(userHash: string) {
+    const cacheKey = `playlists:user:${userHash}`;
+    await this.cache.del(cacheKey);
+  }
+  
+  // Clear all playlist caches (basic and user-specific)
+  async clearAllPlaylistCache() {
+    // Clear basic playlists cache
+    await this.cache.del('playlists:basic');
+    
+    // Clear all user playlist caches using pattern
+    await this.cache.delPattern('playlists:user:*');
+  }
+
   async getUserPlaylists(userHash: string) {
+    const cacheKey = `playlists:user:${userHash}`;
+    const cacheDuration = 60 * 60 * 24; // 24 hours
+    
+    // Try to get from cache first
+    const cachedResult = await this.cache.get(cacheKey);
+    if (cachedResult) {
+      return JSON.parse(cachedResult);
+    }
+    
     const prisma = PrismaInstance.getInstance();
 
 
@@ -340,11 +376,16 @@ class Game {
 
     if (!user) {
       // If user not found, still return basic playlists
-      return {
+      const result = {
         success: true,
         playlists: formattedBasicPlaylists,
         userHash,
       };
+      
+      // Cache the result (shorter duration for non-existing users)
+      await this.cache.set(cacheKey, JSON.stringify(result), 60 * 60); // 1 hour
+      
+      return result;
     }
 
     // Get all paid payments for this user
@@ -388,11 +429,16 @@ class Game {
     // Combine basic and user playlists
     const allPlaylists = [...formattedBasicPlaylists, ...userPlaylists];
 
-    return {
+    const result = {
       success: true,
       playlists: allPlaylists,
       userHash,
     };
+    
+    // Cache the result
+    await this.cache.set(cacheKey, JSON.stringify(result), cacheDuration);
+    
+    return result;
   }
 
 
