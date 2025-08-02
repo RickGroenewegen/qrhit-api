@@ -9,6 +9,7 @@ interface CreateGameBody {
   playMode: 'home' | 'remote';
   settings: {
     numberOfRounds: number;
+    roundCountdown?: number;
     playlistIds?: number[];
     userHash?: string;
   };

@@ -6,6 +6,7 @@ import Cache from './cache';
 
 interface GameSettings {
   numberOfRounds: number;
+  roundCountdown?: number;
   playlistIds?: number[];
   userHash?: string;
 }

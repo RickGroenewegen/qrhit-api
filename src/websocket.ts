@@ -234,6 +234,7 @@ class WebSocketServer {
         players: gameData.players,
         currentRound: gameData.currentRound,
         totalRounds: gameData.settings.numberOfRounds,
+        roundCountdown: gameData.settings.roundCountdown,
         avatars: Object.fromEntries(gameAvatars) // Send all avatars as an object
       });
     } catch (error) {
@@ -278,6 +279,7 @@ class WebSocketServer {
         players: gameData.players,
         currentRound: gameData.currentRound,
         totalRounds: gameData.settings.numberOfRounds,
+        roundCountdown: gameData.settings.roundCountdown,
         avatars: Object.fromEntries(gameAvatars) // Send all avatars as an object
       });
 
