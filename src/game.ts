@@ -7,6 +7,7 @@ import Cache from './cache';
 interface GameSettings {
   numberOfRounds: number;
   roundCountdown?: number;
+  roundTypes?: string[];
   playlistIds?: number[];
   userHash?: string;
 }
@@ -171,7 +172,7 @@ class Game {
   }
 
   async getRandomTrack(gameId?: string): Promise<any> {
-    let playlistIds = [20]; // Default to basic playlist
+    let playlistIds: number[] = [];
 
     // If gameId is provided, get the playlist IDs from the game
     if (gameId) {
@@ -191,6 +192,14 @@ class Game {
           );
         }
       }
+    } else {
+      // Only use default playlist when no gameId is provided
+      playlistIds = [20]; // Default to basic playlist
+    }
+
+    // If no playlists available, return null
+    if (playlistIds.length === 0) {
+      return null;
     }
 
     
@@ -447,8 +456,11 @@ class Game {
     userHash: string,
     requestedPlaylistIds: number[]
   ): Promise<number[]> {
-    // Always include the basic playlist (20)
-    const validPlaylistIds = [20];
+    // Start with an empty array instead of always including basic playlist
+    const validPlaylistIds: number[] = [];
+
+    // Define basic playlist IDs that are available to everyone
+    const basicPlaylistIds = [20]; // Metal basic playlist
 
     // Check cache first for owned playlists
     const cacheKey = `user:${userHash}:owned_playlists`;
@@ -470,6 +482,12 @@ class Game {
       });
 
       if (!user) {
+        // If no user found, only allow basic playlists
+        requestedPlaylistIds.forEach((playlistId) => {
+          if (basicPlaylistIds.includes(playlistId)) {
+            validPlaylistIds.push(playlistId);
+          }
+        });
         return validPlaylistIds;
       }
 
@@ -504,9 +522,11 @@ class Game {
       );
     }
 
-    // Only include playlists that are both requested and owned
+    // Include playlists that are either:
+    // 1. Basic playlists that were requested
+    // 2. Private playlists that are both requested and owned
     requestedPlaylistIds.forEach((playlistId) => {
-      if (ownedPlaylistIds.has(playlistId)) {
+      if (basicPlaylistIds.includes(playlistId) || ownedPlaylistIds.has(playlistId)) {
         validPlaylistIds.push(playlistId);
       }
     });

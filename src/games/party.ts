@@ -33,13 +33,23 @@ class PartyGame {
 
   // Generate a cycled question type
   async generateQuestion(track: any, gameId: string): Promise<Question> {
-    const questionTypes: ('artist' | 'song' | 'year' | 'decade' | 'earlier-later')[] = ['artist', 'song', 'year', 'decade', 'earlier-later'];
+    // Get game settings to retrieve selected round types
+    const gameData = await this.game.getGameData(gameId);
+    const selectedTypes = gameData?.settings?.roundTypes || ['artist', 'song', 'year', 'decade', 'earlier-later'];
+    
+    // Ensure we have valid question types
+    const validTypes = selectedTypes.filter(type => 
+      ['artist', 'song', 'year', 'decade', 'earlier-later'].includes(type)
+    ) as ('artist' | 'song' | 'year' | 'decade' | 'earlier-later')[];
+    
+    // Fallback to all types if no valid types
+    const questionTypes = validTypes.length > 0 ? validTypes : ['artist', 'song', 'year', 'decade', 'earlier-later'] as ('artist' | 'song' | 'year' | 'decade' | 'earlier-later')[];
     
     // Get current question type index from Redis
     const currentIndex = await this.game.getQuestionTypeIndex(gameId);
-    const type = questionTypes[currentIndex];
+    const type = questionTypes[currentIndex % questionTypes.length];
     
-    // Update index for next question (cycle through all types)
+    // Update index for next question (cycle through selected types)
     await this.game.setQuestionTypeIndex(gameId, (currentIndex + 1) % questionTypes.length);
     
     let question: Question;
