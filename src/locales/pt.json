@@ -455,5 +455,18 @@
   "password_reset.ignoreMessage": "Se você não solicitou uma redefinição de senha, pode ignorar este e-mail.",
   "password_reset.thanks": "Obrigado",
   "password_reset.team": "A equipe QRSong",
-  "qrsong_activation.subject": "qrsong_ativação.assunto"
+  "qrsong_activation.subject": "qrsong_ativação.assunto",
+  "qrgames_activation.subject": "Seu código de ativação QRGames!",
+  "qrgames_activation.greeting": "Oi",
+  "qrgames_activation.greatNews": "Aqui está seu código de ativação para os cartões QRSong!:",
+  "qrgames_activation.yourActivationCode": "Seu código de ativação",
+  "qrgames_activation.codeExpires": "Este código expira em 1 hora",
+  "qrgames_activation.simpleInstructions": "Insira este código no app QRSong! para ativar suas playlists compradas.",
+  "qrgames_activation.onceActivated": "Uma vez ativado, todas as suas playlists compradas estarão disponíveis no app ao hospedar jogos.",
+  "qrgames_activation.needHelp": "Se você tiver dúvidas ou precisar de ajuda, sinta-se à vontade para contatar nossa equipe de suporte.",
+  "qrgames_activation.happyPlaying": "Divirta-se jogando!",
+  "qrgames_activation.team": "A equipe QRSong!",
+  "qrgames_activation.allRightsReserved": "Todos os direitos reservados",
+  "qrgames_activation.visitWebsite": "Visite nosso site",
+  "qrgames_activation.contactSupport": "Contato Suporte"
 }

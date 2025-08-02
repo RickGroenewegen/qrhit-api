@@ -451,5 +451,18 @@
   "password_reset.ignoreMessage": "パスワードリセットを要求していない場合は、このメールを無視しても大丈夫です。",
   "password_reset.thanks": "ありがとう",
   "password_reset.team": "QRSongチーム",
-  "qrsong_activation.subject": "qrsong_アクティベーション.件名"
+  "qrsong_activation.subject": "qrsong_アクティベーション.件名",
+  "qrgames_activation.subject": "あなたのQRGames! アクティベーションコード",
+  "qrgames_activation.greeting": "こんにちは",
+  "qrgames_activation.greatNews": "こちらがQRSong! カードのアクティベーションコードです:",
+  "qrgames_activation.yourActivationCode": "あなたのアクティベーションコード",
+  "qrgames_activation.codeExpires": "このコードは1時間で期限切れです",
+  "qrgames_activation.simpleInstructions": "購入したプレイリストを有効にするには、このコードをQRSong! アプリに入力してください。",
+  "qrgames_activation.onceActivated": "一度有効化されると、購入したすべてのプレイリストがゲームをホストする際にアプリで利用可能になります。",
+  "qrgames_activation.needHelp": "質問やサポートが必要な場合は、サポートチームにお気軽にお問い合わせください。",
+  "qrgames_activation.happyPlaying": "楽しく遊んでね！",
+  "qrgames_activation.team": "QRSong! チーム",
+  "qrgames_activation.allRightsReserved": "全著作権所有",
+  "qrgames_activation.visitWebsite": "私たちのウェブサイトを訪問",
+  "qrgames_activation.contactSupport": "サポートに連絡"
 }

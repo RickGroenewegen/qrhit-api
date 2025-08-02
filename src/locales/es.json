@@ -458,6 +458,19 @@
   "password_reset.expiry": "Por razones de seguridad, este enlace de restablecimiento de contraseña caducará en 1 hora.",
   "password_reset.ignoreMessage": "Si no solicitaste un restablecimiento de contraseña, puedes ignorar este correo.",
   "password_reset.thanks": "Gracias",
-  "password_reset.team": "El equipo QRSong",
-  "qrsong_activation.subject": "qrsong_activación.asunto"
+  "password_reset.team": "El equipo de QRSong",
+  "qrsong_activation.subject": "qrsong_activación.asunto",
+  "qrgames_activation.subject": "¡Tu código de activación de QRGames!",
+  "qrgames_activation.greeting": "Hola",
+  "qrgames_activation.greatNews": "Aquí está tu código de activación para las tarjetas QRSong!:",
+  "qrgames_activation.yourActivationCode": "Tu código de activación",
+  "qrgames_activation.codeExpires": "Este código expira en 1 hora",
+  "qrgames_activation.simpleInstructions": "Introduce este código en la app QRSong! para activar tus listas de reproducción compradas.",
+  "qrgames_activation.onceActivated": "Una vez activado, todas tus listas de reproducción compradas estarán disponibles en la app al organizar juegos.",
+  "qrgames_activation.needHelp": "Si tienes alguna pregunta o necesitas ayuda, no dudes en contactar a nuestro equipo de soporte.",
+  "qrgames_activation.happyPlaying": "¡Que te diviertas jugando!",
+  "qrgames_activation.team": "¡El equipo QRSong!",
+  "qrgames_activation.allRightsReserved": "Todos los derechos reservados",
+  "qrgames_activation.visitWebsite": "Visita nuestro sitio",
+  "qrgames_activation.contactSupport": "Contactar soporte"
 }

@@ -49,6 +49,12 @@ class Game {
     this.cache = Cache.getInstance();
   }
 
+  // Helper method to get basic playlist IDs from environment
+  private getBasicPlaylistIds(): number[] {
+    const basicPlaylistIdsStr = process.env.BASIC_PLAYLIST_IDS || '20';
+    return basicPlaylistIdsStr.split(',').map(id => parseInt(id.trim())).filter(id => !isNaN(id));
+  }
+
   // Generate a short, memorable game ID
   private generateGameId(): string {
     // Generate a 6-character ID using custom alphabet
@@ -281,8 +287,8 @@ class Game {
     const prisma = PrismaInstance.getInstance();
 
     
-    // Define basic playlist IDs that are available to everyone
-    const basicPlaylistIds = [20]; // Metal basic playlist
+    // Get basic playlist IDs
+    const basicPlaylistIds = this.getBasicPlaylistIds();
     
     // Get basic playlists
     const basicPlaylists = await prisma.playlist.findMany({
@@ -350,8 +356,8 @@ class Game {
     const prisma = PrismaInstance.getInstance();
 
 
-    // Define basic playlist IDs that are available to everyone
-    const basicPlaylistIds = [20]; // Metal basic playlist
+    // Get basic playlist IDs
+    const basicPlaylistIds = this.getBasicPlaylistIds();
     
     // Get basic playlists first
     const basicPlaylists = await prisma.playlist.findMany({
@@ -459,8 +465,8 @@ class Game {
     // Start with an empty array instead of always including basic playlist
     const validPlaylistIds: number[] = [];
 
-    // Define basic playlist IDs that are available to everyone
-    const basicPlaylistIds = [20]; // Metal basic playlist
+    // Get basic playlist IDs
+    const basicPlaylistIds = this.getBasicPlaylistIds();
 
     // Check cache first for owned playlists
     const cacheKey = `user:${userHash}:owned_playlists`;

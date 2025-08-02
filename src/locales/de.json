@@ -460,5 +460,18 @@
   "password_reset.ignoreMessage": "Wenn du kein Passwort-Reset angefordert hast, kannst du diese E-Mail ignorieren.",
   "password_reset.thanks": "Danke",
   "password_reset.team": "Das QRSong Team",
-  "qrsong_activation.subject": "qrsong_aktivierung.betreff"
+  "qrsong_activation.subject": "qrsong_aktivierung.betreff",
+  "qrgames_activation.subject": "Dein QRGames! Aktivierungscode",
+  "qrgames_activation.greeting": "Hi",
+  "qrgames_activation.greatNews": "Hier ist dein Aktivierungscode für QRSong! Karten:",
+  "qrgames_activation.yourActivationCode": "Dein Aktivierungscode",
+  "qrgames_activation.codeExpires": "Dieser Code läuft in 1 Stunde ab",
+  "qrgames_activation.simpleInstructions": "Gib diesen Code in die QRSong! App ein, um deine gekauften Playlists zu aktivieren.",
+  "qrgames_activation.onceActivated": "Sobald aktiviert, sind alle deine gekauften Playlists in der App verfügbar, wenn du Spiele hostest.",
+  "qrgames_activation.needHelp": "Wenn du Fragen hast oder Hilfe benötigst, kontaktiere gerne unser Support-Team.",
+  "qrgames_activation.happyPlaying": "Viel Spaß beim Spielen!",
+  "qrgames_activation.team": "Das QRSong! Team",
+  "qrgames_activation.allRightsReserved": "Alle Rechte vorbehalten",
+  "qrgames_activation.visitWebsite": "Besuche unsere Website",
+  "qrgames_activation.contactSupport": "Kontakt Support"
 }

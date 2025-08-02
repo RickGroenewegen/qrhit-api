@@ -5853,5 +5853,135 @@
     "pt",
     "pl",
     "jp"
+  ],
+  "qrgames_activation.subject": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp"
+  ],
+  "qrgames_activation.greeting": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp"
+  ],
+  "qrgames_activation.greatNews": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp"
+  ],
+  "qrgames_activation.yourActivationCode": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp"
+  ],
+  "qrgames_activation.codeExpires": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp"
+  ],
+  "qrgames_activation.simpleInstructions": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp"
+  ],
+  "qrgames_activation.onceActivated": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp"
+  ],
+  "qrgames_activation.needHelp": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp"
+  ],
+  "qrgames_activation.happyPlaying": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp"
+  ],
+  "qrgames_activation.team": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp"
+  ],
+  "qrgames_activation.allRightsReserved": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp"
+  ],
+  "qrgames_activation.visitWebsite": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp"
+  ],
+  "qrgames_activation.contactSupport": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp"
   ]
 }

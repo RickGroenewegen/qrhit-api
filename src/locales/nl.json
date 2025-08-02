@@ -460,5 +460,18 @@
   "password_reset.ignoreMessage": "Als je geen wachtwoordreset hebt aangevraagd, kun je deze e-mail veilig negeren.",
   "password_reset.thanks": "Dank je",
   "password_reset.team": "Het QRSong Team",
-  "qrsong_activation.subject": "qrsong_activering.onderwerp"
+  "qrsong_activation.subject": "qrsong_activering.onderwerp",
+  "qrgames_activation.subject": "Je QRGames! Activatiecode",
+  "qrgames_activation.greeting": "Hoi",
+  "qrgames_activation.greatNews": "Hier is je activatiecode voor QRSong! kaarten:",
+  "qrgames_activation.yourActivationCode": "Je Activatiecode",
+  "qrgames_activation.codeExpires": "Deze code verloopt over 1 uur",
+  "qrgames_activation.simpleInstructions": "Voer deze code in de QRSong! app in om je gekochte afspeellijsten te activeren.",
+  "qrgames_activation.onceActivated": "Eenmaal geactiveerd, zijn al je gekochte afspeellijsten beschikbaar in de app bij het hosten van spellen.",
+  "qrgames_activation.needHelp": "Als je vragen hebt of hulp nodig hebt, neem gerust contact op met ons ondersteuningsteam.",
+  "qrgames_activation.happyPlaying": "Veel speelplezier!",
+  "qrgames_activation.team": "Het QRSong! Team",
+  "qrgames_activation.allRightsReserved": "Alle rechten voorbehouden",
+  "qrgames_activation.visitWebsite": "Bezoek onze website",
+  "qrgames_activation.contactSupport": "Contact Support"
 }
