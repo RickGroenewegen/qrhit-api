@@ -5874,16 +5874,6 @@
     "pl",
     "jp"
   ],
-  "qrgames_activation.greatNews": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "jp"
-  ],
   "qrgames_activation.yourActivationCode": [
     "nl",
     "de",
@@ -5952,7 +5942,8 @@
     "it",
     "pt",
     "pl",
-    "jp"
+    "jp",
+    "cn"
   ],
   "qrgames_activation.allRightsReserved": [
     "nl",
@@ -5962,7 +5953,8 @@
     "it",
     "pt",
     "pl",
-    "jp"
+    "jp",
+    "cn"
   ],
   "qrgames_activation.visitWebsite": [
     "nl",
@@ -5972,9 +5964,21 @@
     "it",
     "pt",
     "pl",
-    "jp"
+    "jp",
+    "cn"
   ],
   "qrgames_activation.contactSupport": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn"
+  ],
+  "qrgames_activation.greatNews": [
     "nl",
     "de",
     "fr",

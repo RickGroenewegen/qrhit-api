@@ -449,5 +449,9 @@
   "password_reset.buttonFallback": "如果上面的按钮不起作用，您也可以复制并粘贴以下链接到您的浏览器：",
   "password_reset.expiry": "出于安全原因，此密码重置链接将在1小时后过期。",
   "password_reset.ignoreMessage": "如果您没有请求重置密码，可以放心忽略此邮件。",
-  "password_reset.thanks": "谢谢"
+  "password_reset.thanks": "谢谢",
+  "qrgames_activation.team": "QRSong! チーム",
+  "qrgames_activation.allRightsReserved": "全著作権所有",
+  "qrgames_activation.visitWebsite": "ウェブサイトへ",
+  "qrgames_activation.contactSupport": "サポートに連絡"
 }
