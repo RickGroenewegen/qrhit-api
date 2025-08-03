@@ -21,7 +21,7 @@ import ejs from 'ejs';
 import fs from 'fs/promises';
 import ipPlugin from './plugins/ipPlugin';
 import { createServer } from 'http';
-import WebSocketServer from './websocket';
+import NativeWebSocketServer from './websocket-native';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -43,7 +43,7 @@ class Server {
   private utils = new Utils();
   private version: string = '1.0.0';
   private httpServer: any;
-  private wsServer: WebSocketServer | null = null;
+  private wsServer: NativeWebSocketServer | null = null;
 
   private constructor() {
     this.fastify = Fastify({
@@ -192,12 +192,12 @@ class Server {
 
         // Initialize WebSocket server on all workers with Redis adapter
         if (this.fastify.server) {
-          this.wsServer = new WebSocketServer(this.fastify.server);
+          this.wsServer = new NativeWebSocketServer(this.fastify.server);
           this.logger.log(
             color.blue.bold(
-              `WebSocket server initialized on worker ${color.white.bold(
+              `Native WebSocket server initialized on worker ${color.white.bold(
                 this.workerId
-              )} with Redis adapter`
+              )} with Redis adapter at /ws`
             )
           );
         }

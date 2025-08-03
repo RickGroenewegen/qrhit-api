@@ -1,6 +1,5 @@
 import { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify';
 import Game from '../game';
-import { Socket } from 'socket.io';
 
 interface CreateGameBody {
   hostName: string;
