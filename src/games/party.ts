@@ -31,6 +31,27 @@ class PartyGame {
     this.game = new Game();
   }
 
+  // Get the next question type without generating the full question
+  async getNextQuestionType(gameId: string): Promise<string> {
+    // Get game settings to retrieve selected round types
+    const gameData = await this.game.getGame(gameId);
+    const selectedTypes = gameData?.settings?.roundTypes || ['artist', 'song', 'year', 'decade', 'earlier-later'];
+    
+    // Ensure we have valid question types
+    const validTypes = selectedTypes.filter(type => 
+      ['artist', 'song', 'year', 'decade', 'earlier-later'].includes(type)
+    ) as ('artist' | 'song' | 'year' | 'decade' | 'earlier-later')[];
+    
+    // Fallback to all types if no valid types
+    const questionTypes = validTypes.length > 0 ? validTypes : ['artist', 'song', 'year', 'decade', 'earlier-later'] as ('artist' | 'song' | 'year' | 'decade' | 'earlier-later')[];
+    
+    // Get current question type index from Redis
+    const currentIndex = await this.game.getQuestionTypeIndex(gameId);
+    const type = questionTypes[currentIndex % questionTypes.length];
+    
+    return type;
+  }
+
   // Generate a cycled question type
   async generateQuestion(track: any, gameId: string): Promise<Question> {
     // Get game settings to retrieve selected round types

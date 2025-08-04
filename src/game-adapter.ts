@@ -76,12 +76,15 @@ export class GameAdapter {
     const gameData = await this.game.getGame(gameId);
     if (!gameData) return null;
 
+
     // Add computed fields
-    return {
+    const result = {
       ...gameData,
       totalRounds: gameData.settings.numberOfRounds,
       roundCountdown: gameData.settings.roundCountdown || 30
     };
+
+    return result;
   }
 
   // Get players list
@@ -186,6 +189,11 @@ export class GameAdapter {
     await this.game.updateGame(gameId, gameData);
     
     return gameData.players;
+  }
+
+  // Get the next question type
+  async getNextQuestionType(gameId: string): Promise<string> {
+    return this.partyGame.getNextQuestionType(gameId);
   }
 
   // Expose methods from PartyGame

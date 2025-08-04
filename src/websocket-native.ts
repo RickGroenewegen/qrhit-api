@@ -232,16 +232,24 @@ class NativeWebSocketServer {
       const gameData = await this.gameAdapter.getGameData(gameId);
       const avatars = await this.getGameAvatars(gameId);
 
+
+      // Calculate totalRounds with logging
+      const totalRounds = gameData?.totalRounds || gameData?.settings?.numberOfRounds || 3;
+      
+      // Prepare game data
+      const gameDataToSend = {
+        players,
+        currentRound: gameData?.currentRound || 1,
+        totalRounds: totalRounds,
+        roundCountdown: gameData?.roundCountdown || 30,
+        avatars: Object.fromEntries(avatars)
+      };
+      
+      
       // Send game data to the new player
       this.sendMessage(ws, {
         type: 'gameData',
-        data: {
-          players,
-          currentRound: gameData?.currentRound || 1,
-          totalRounds: gameData?.totalRounds || 3,
-          roundCountdown: gameData?.roundCountdown || 30,
-          avatars: Object.fromEntries(avatars)
-        }
+        data: gameDataToSend
       });
 
       // Notify all other players
@@ -301,16 +309,24 @@ class NativeWebSocketServer {
     const gameData = await this.gameAdapter.getGameData(gameId);
     const avatars = await this.getGameAvatars(gameId);
 
+
+    // Calculate totalRounds with logging
+    const totalRounds = gameData?.totalRounds || gameData?.settings?.numberOfRounds || 3;
+    
+    // Prepare game data
+    const gameDataToSend = {
+      players,
+      currentRound: gameData?.currentRound || 1,
+      totalRounds: totalRounds,
+      roundCountdown: gameData?.roundCountdown || 30,
+      avatars: Object.fromEntries(avatars)
+    };
+    
+    
     // Send game data to the rejoined player
     this.sendMessage(ws, {
       type: 'gameData',
-      data: {
-        players,
-        currentRound: gameData?.currentRound || 1,
-        totalRounds: gameData?.totalRounds || 3,
-        roundCountdown: gameData?.roundCountdown || 30,
-        avatars: Object.fromEntries(avatars)
-      }
+      data: gameDataToSend
     });
   }
 
@@ -325,12 +341,20 @@ class NativeWebSocketServer {
     try {
       await this.gameAdapter.startGame(gameId);
       
-      // Notify all players
-      this.broadcastToGame(gameId, 'gameStarted', {});
+      // Get updated game data
+      const gameData = await this.gameAdapter.getGameData(gameId);
+      
+      // Notify all players with game data
+      this.broadcastToGame(gameId, 'gameStarted', {
+        totalRounds: gameData?.totalRounds || gameData?.settings?.numberOfRounds || 3,
+        currentRound: gameData?.currentRound || 1,
+        roundCountdown: gameData?.roundCountdown || 30
+      });
       
       // Start first round after a delay
-      setTimeout(() => {
-        this.broadcastToGame(gameId, 'roundStarting', { round: 1 });
+      setTimeout(async () => {
+        const questionType = await this.gameAdapter.getNextQuestionType(gameId);
+        this.broadcastToGame(gameId, 'roundStarting', { round: 1, questionType });
       }, 1000);
     } catch (error: any) {
       this.sendError(connection.ws, error.message);
@@ -447,7 +471,8 @@ class NativeWebSocketServer {
     const nextRound = (gameData?.currentRound || 1) + 1;
     
     await this.gameAdapter.updateGameRound(gameId, nextRound);
-    this.broadcastToGame(gameId, 'roundStarting', { round: nextRound });
+    const questionType = await this.gameAdapter.getNextQuestionType(gameId);
+    this.broadcastToGame(gameId, 'roundStarting', { round: nextRound, questionType });
   }
 
   private async handleShowFinalResults(connectionId: string, data: any) {

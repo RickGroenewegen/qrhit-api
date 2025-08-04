@@ -76,6 +76,7 @@ class Game {
     const gameId = this.generateGameId();
     const hostId = this.utils.generateRandomString(21); // Similar length to nanoid
 
+
     const gameData: GameData = {
       id: gameId,
       type: data.gameType,
@@ -94,6 +95,7 @@ class Game {
       state: 'waiting',
       createdAt: Date.now(),
     };
+
 
     // Store game data in Redis
     await this.redis.setex(
@@ -166,7 +168,8 @@ class Game {
     if (!data) {
       return null;
     }
-    return JSON.parse(data);
+    const parsed = JSON.parse(data);
+    return parsed;
   }
 
   async updateGame(gameId: string, gameData: GameData): Promise<void> {
