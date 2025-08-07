@@ -9,6 +9,7 @@ interface CreateGameBody {
   settings: {
     numberOfRounds: number;
     roundCountdown?: number;
+    roundTypes?: string[];
     playlistIds?: number[];
     userHash?: string;
   };

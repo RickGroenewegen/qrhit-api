@@ -2,7 +2,7 @@ import Game from '../game';
 import { fuzzy } from 'fast-fuzzy';
 
 export interface Question {
-  type: 'artist' | 'song' | 'year' | 'decade' | 'earlier-later';
+  type: 'artist' | 'word-count' | 'song' | 'year' | 'decade' | 'earlier-later';
   text: string;
   correctAnswer: string | number | boolean;
   referenceYear?: number; // For earlier-later questions
@@ -35,19 +35,23 @@ class PartyGame {
   async getNextQuestionType(gameId: string): Promise<string> {
     // Get game settings to retrieve selected round types
     const gameData = await this.game.getGame(gameId);
-    const selectedTypes = gameData?.settings?.roundTypes || ['artist', 'song', 'year', 'decade', 'earlier-later'];
+    const selectedTypes = gameData?.settings?.roundTypes || ['artist', 'word-count', 'song', 'year', 'decade', 'earlier-later'];
     
-    // Ensure we have valid question types
-    const validTypes = selectedTypes.filter(type => 
-      ['artist', 'song', 'year', 'decade', 'earlier-later'].includes(type)
-    ) as ('artist' | 'song' | 'year' | 'decade' | 'earlier-later')[];
     
-    // Fallback to all types if no valid types
-    const questionTypes = validTypes.length > 0 ? validTypes : ['artist', 'song', 'year', 'decade', 'earlier-later'] as ('artist' | 'song' | 'year' | 'decade' | 'earlier-later')[];
+    // Define the server's preferred order
+    const serverOrder: ('artist' | 'word-count' | 'song' | 'year' | 'decade' | 'earlier-later')[] = ['artist', 'word-count', 'song', 'year', 'decade', 'earlier-later'];
+    
+    // Filter server order to only include selected types
+    const questionTypes = serverOrder.filter(type => selectedTypes.includes(type));
+    
+    // Fallback if no valid types
+    const finalTypes = questionTypes.length > 0 ? questionTypes : serverOrder;
+    
     
     // Get current question type index from Redis
     const currentIndex = await this.game.getQuestionTypeIndex(gameId);
-    const type = questionTypes[currentIndex % questionTypes.length];
+    const type = finalTypes[currentIndex % finalTypes.length];
+    
     
     return type;
   }
@@ -56,22 +60,25 @@ class PartyGame {
   async generateQuestion(track: any, gameId: string): Promise<Question> {
     // Get game settings to retrieve selected round types
     const gameData = await this.game.getGame(gameId);
-    const selectedTypes = gameData?.settings?.roundTypes || ['artist', 'song', 'year', 'decade', 'earlier-later'];
+    const selectedTypes = gameData?.settings?.roundTypes || ['artist', 'word-count', 'song', 'year', 'decade', 'earlier-later'];
     
-    // Ensure we have valid question types
-    const validTypes = selectedTypes.filter(type => 
-      ['artist', 'song', 'year', 'decade', 'earlier-later'].includes(type)
-    ) as ('artist' | 'song' | 'year' | 'decade' | 'earlier-later')[];
     
-    // Fallback to all types if no valid types
-    const questionTypes = validTypes.length > 0 ? validTypes : ['artist', 'song', 'year', 'decade', 'earlier-later'] as ('artist' | 'song' | 'year' | 'decade' | 'earlier-later')[];
+    // Define the server's preferred order
+    const serverOrder: ('artist' | 'word-count' | 'song' | 'year' | 'decade' | 'earlier-later')[] = ['artist', 'word-count', 'song', 'year', 'decade', 'earlier-later'];
+    
+    // Filter server order to only include selected types
+    const questionTypes = serverOrder.filter(type => selectedTypes.includes(type));
+    
+    // Fallback if no valid types
+    const finalTypes = questionTypes.length > 0 ? questionTypes : serverOrder;
+    
     
     // Get current question type index from Redis
     const currentIndex = await this.game.getQuestionTypeIndex(gameId);
-    const type = questionTypes[currentIndex % questionTypes.length];
+    const type = finalTypes[currentIndex % finalTypes.length];
     
     // Update index for next question (cycle through selected types)
-    await this.game.setQuestionTypeIndex(gameId, (currentIndex + 1) % questionTypes.length);
+    await this.game.setQuestionTypeIndex(gameId, (currentIndex + 1) % finalTypes.length);
     
     let question: Question;
     
@@ -123,6 +130,20 @@ class PartyGame {
           text: 'wasReleasedEarlierOrLater',
           correctAnswer: isEarlier, // true = earlier, false = later
           referenceYear: referenceYear
+        };
+        break;
+      
+      case 'word-count':
+        // Count words in the song title
+        // Split by whitespace and filter out empty strings
+        const words = track.name.split(/\s+/).filter((word: string) => word.trim().length > 0);
+        const wordCount = words.length;
+        
+        
+        question = {
+          type: 'word-count',
+          text: 'howManyWordsInTitle',
+          correctAnswer: wordCount
         };
         break;
     }
@@ -196,6 +217,20 @@ class PartyGame {
         return {
           isCorrect: isEarlierLaterCorrect,
           points: isEarlierLaterCorrect ? 1 : 0
+        };
+      
+      case 'word-count':
+        const correctCount = Number(question.correctAnswer);
+        const answerCount = Number(answer);
+        
+        if (isNaN(answerCount)) {
+          return { isCorrect: false, points: 0 };
+        }
+        
+        const isCountCorrect = correctCount === answerCount;
+        return {
+          isCorrect: isCountCorrect,
+          points: isCountCorrect ? 1 : 0
         };
       
       default:
