@@ -234,14 +234,14 @@ class NativeWebSocketServer {
 
 
       // Calculate totalRounds with logging
-      const totalRounds = gameData?.totalRounds || gameData?.settings?.numberOfRounds || 3;
+      const totalRounds = gameData?.settings?.numberOfRounds || 3;
       
       // Prepare game data
       const gameDataToSend = {
         players,
         currentRound: gameData?.currentRound || 1,
         totalRounds: totalRounds,
-        roundCountdown: gameData?.roundCountdown || 30,
+        roundCountdown: gameData?.settings?.roundCountdown || 30,
         avatars: Object.fromEntries(avatars)
       };
       
@@ -311,14 +311,14 @@ class NativeWebSocketServer {
 
 
     // Calculate totalRounds with logging
-    const totalRounds = gameData?.totalRounds || gameData?.settings?.numberOfRounds || 3;
+    const totalRounds = gameData?.settings?.numberOfRounds || 3;
     
     // Prepare game data
     const gameDataToSend = {
       players,
       currentRound: gameData?.currentRound || 1,
       totalRounds: totalRounds,
-      roundCountdown: gameData?.roundCountdown || 30,
+      roundCountdown: gameData?.settings?.roundCountdown || 30,
       avatars: Object.fromEntries(avatars)
     };
     
@@ -346,9 +346,9 @@ class NativeWebSocketServer {
       
       // Notify all players with game data
       this.broadcastToGame(gameId, 'gameStarted', {
-        totalRounds: gameData?.totalRounds || gameData?.settings?.numberOfRounds || 3,
+        totalRounds: gameData?.settings?.numberOfRounds || 3,
         currentRound: gameData?.currentRound || 1,
-        roundCountdown: gameData?.roundCountdown || 30
+        roundCountdown: gameData?.settings?.roundCountdown || 30
       });
       
       // Start first round after a delay

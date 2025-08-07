@@ -330,6 +330,8 @@ class Data {
       '/privacy-policy',
       '/terms-and-conditions',
       '/playlists',
+      '/onzevibe',
+      '/qr-cards-as-a-service',
     ];
 
     // Get current date in YYYY-MM-DD format for lastmod
