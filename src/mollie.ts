@@ -475,6 +475,7 @@ class Mollie {
             filename: true,
             eco: true,
             doubleSided: true,
+            hideDomain: true,
             background: true,
             logo: true,
             subType: true,

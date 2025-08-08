@@ -1815,7 +1815,8 @@ class Data {
   public async updatePaymentHasPlaylist(
     paymentHasPlaylistId: number,
     eco: boolean,
-    doubleSided: boolean
+    doubleSided: boolean,
+    hideDomain: boolean
   ): Promise<{ success: boolean; error?: string }> {
     try {
       await this.prisma.paymentHasPlaylist.update({
@@ -1823,6 +1824,7 @@ class Data {
         data: {
           eco: eco,
           doubleSided: doubleSided,
+          hideDomain: hideDomain,
         },
       });
       this.logger.log(

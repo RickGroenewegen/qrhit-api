@@ -457,7 +457,7 @@ export default async function adminRoutes(
         const paymentHasPlaylistId = parseInt(
           request.params.paymentHasPlaylistId
         );
-        const { eco, doubleSided } = request.body;
+        const { eco, doubleSided, hideDomain } = request.body;
 
         if (isNaN(paymentHasPlaylistId)) {
           reply
@@ -466,6 +466,7 @@ export default async function adminRoutes(
           return;
         }
 
+        // Validate required boolean fields
         if (typeof eco !== 'boolean' || typeof doubleSided !== 'boolean') {
           reply.status(400).send({
             success: false,
@@ -473,11 +474,15 @@ export default async function adminRoutes(
           });
           return;
         }
+        
+        // hideDomain is optional, default to false if not provided
+        const hideDomainValue = typeof hideDomain === 'boolean' ? hideDomain : false;
 
         const result = await data.updatePaymentHasPlaylist(
           paymentHasPlaylistId,
           eco,
-          doubleSided
+          doubleSided,
+          hideDomainValue
         );
 
         if (!result.success) {
