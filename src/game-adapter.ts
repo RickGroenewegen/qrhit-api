@@ -234,12 +234,15 @@ export class GameAdapter {
       });
 
       playerAnswers.push({
+        playerId: playerId,
         playerName: player.name,
-        avatar: player.avatar,
+        playerAvatar: player.avatar,
+        avatar: player.avatar, // For backwards compatibility
         answer: answer,
         isCorrect: result.isCorrect,
         points: result.points,
-        yearDifference: result.distance
+        yearDifference: result.distance,
+        distance: result.distance
       });
     }
 

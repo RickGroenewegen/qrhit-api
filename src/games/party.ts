@@ -158,12 +158,34 @@ class PartyGame {
     switch (question.type) {
       case 'artist':
       case 'song':
+        // Reject empty answers immediately
+        if (!normalizedAnswer || normalizedAnswer.length === 0) {
+          return {
+            isCorrect: false,
+            points: 0
+          };
+        }
+        
         // Use fuzzy matching for text answers
         const correctAnswer = question.correctAnswer.toString().toLowerCase();
         const similarity = fuzzy(normalizedAnswer, correctAnswer);
         
-        // Consider correct if similarity is above 0.8 (80%)
-        const isTextCorrect = similarity > 0.8;
+        // For partial matches, check if the answer is too short compared to the correct answer
+        const answerWordCount = normalizedAnswer.split(/\s+/).filter(w => w.length > 0).length;
+        const correctWordCount = correctAnswer.split(/\s+/).filter(w => w.length > 0).length;
+        
+        // If the answer has significantly fewer words than the correct answer, require higher similarity
+        let requiredSimilarity = 0.85; // Base threshold increased from 0.8
+        if (correctWordCount > 1 && answerWordCount < correctWordCount) {
+          // For multi-word correct answers, penalize partial answers
+          requiredSimilarity = Math.min(0.95, 0.85 + (0.1 * (correctWordCount - answerWordCount)));
+        }
+        
+        // Also check minimum length ratio to prevent very short answers from matching
+        const lengthRatio = normalizedAnswer.length / correctAnswer.length;
+        
+        // Consider correct if similarity is above threshold AND length ratio is reasonable
+        const isTextCorrect = similarity > requiredSimilarity && lengthRatio > 0.6;
         return {
           isCorrect: isTextCorrect,
           points: isTextCorrect ? 1 : 0

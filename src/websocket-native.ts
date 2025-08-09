@@ -190,6 +190,12 @@ class NativeWebSocketServer {
       case 'restartGame':
         await this.handleRestartGame(connectionId, data);
         break;
+      case 'extendTimer':
+        await this.handleExtendTimer(connectionId, data);
+        break;
+      case 'overrideAnswer':
+        await this.handleOverrideAnswer(connectionId, data);
+        break;
       case 'ping':
         this.sendMessage(ws, { type: 'pong' });
         break;
@@ -305,17 +311,17 @@ class NativeWebSocketServer {
     // Update player ID in game
     await this.gameAdapter.updatePlayerId(gameId, oldConnectionId, connectionId);
 
-    // Get game data
+    // Get updated game data and players after ID update
     const gameData = await this.gameAdapter.getGameData(gameId);
+    const updatedPlayers = await this.gameAdapter.getPlayers(gameId);
     const avatars = await this.getGameAvatars(gameId);
-
 
     // Calculate totalRounds with logging
     const totalRounds = gameData?.settings?.numberOfRounds || 3;
     
     // Prepare game data
     const gameDataToSend = {
-      players,
+      players: updatedPlayers,
       currentRound: gameData?.currentRound || 1,
       totalRounds: totalRounds,
       roundCountdown: gameData?.settings?.roundCountdown || 30,
@@ -345,11 +351,12 @@ class NativeWebSocketServer {
       const gameData = await this.gameAdapter.getGameData(gameId);
       
       // Notify all players with game data
-      this.broadcastToGame(gameId, 'gameStarted', {
+      const gameStartedData = {
         totalRounds: gameData?.settings?.numberOfRounds || 3,
         currentRound: gameData?.currentRound || 1,
         roundCountdown: gameData?.settings?.roundCountdown || 30
-      });
+      };
+      this.broadcastToGame(gameId, 'gameStarted', gameStartedData);
       
       // Start first round after a delay
       setTimeout(async () => {
@@ -424,6 +431,10 @@ class NativeWebSocketServer {
     const answers = await this.getPlayerAnswers(gameId);
     const players = await this.gameAdapter.getPlayers(gameId);
     
+    // Get game data for current round
+    const gameData = await this.gameAdapter.getGameData(gameId);
+    const currentRound = gameData?.currentRound || 1;
+    
     // Calculate results
     const results = await this.gameAdapter.calculateResults(
       gameId,
@@ -431,6 +442,16 @@ class NativeWebSocketServer {
       currentQuestion.track,
       Object.fromEntries(answers)
     );
+
+    // Store answer results for each player (for potential overrides)
+    for (const answerData of results.answers) {
+      const answerKey = `answer:${gameId}:${currentRound}:${answerData.playerId}`;
+      await this.redis.set(answerKey, JSON.stringify({
+        answer: answerData.answer,
+        isCorrect: answerData.isCorrect,
+        points: answerData.points
+      }), 'EX', 3600); // Expire after 1 hour
+    }
 
     // Update scores
     for (const [playerId, points] of Object.entries(results.scores)) {
@@ -497,6 +518,86 @@ class NativeWebSocketServer {
 
     await this.gameAdapter.resetGame(gameId);
     this.broadcastToGame(gameId, 'gameRestarted', {});
+  }
+
+  private async handleExtendTimer(connectionId: string, data: any) {
+    const { gameId, seconds } = data;
+    const connection = this.connections.get(connectionId);
+    
+    // Only allow host to extend timer
+    if (!connection || !connection.isHost) {
+      return;
+    }
+
+    // Broadcast timer extension to all players in the game (including the host)
+    // The host needs to receive this too to update their timer
+    this.broadcastToGame(gameId, 'timerExtended', { seconds: seconds || 10 });
+  }
+
+  private async handleOverrideAnswer(connectionId: string, data: any) {
+    const { gameId, playerId, isCorrect } = data;
+    
+    const connection = this.connections.get(connectionId);
+    
+    // Only allow host to override answers
+    if (!connection || !connection.isHost) {
+      console.log('Not host, ignoring override request');
+      return;
+    }
+
+    // Get the game data
+    const gameData = await this.gameAdapter.getGameData(gameId);
+    if (!gameData) {
+      return;
+    }
+
+    // Find the player
+    const player = gameData.players.find(p => p.id === playerId);
+    if (!player) {
+      return;
+    }
+
+    // Calculate points difference and update score
+    const oldScore = player.score || 0;
+    const pointsToAdd = isCorrect ? 1 : 0;
+    const pointsToRemove = !isCorrect ? 1 : 0;
+    
+    // Get current round answer data from Redis if available
+    const currentAnswerKey = `answer:${gameId}:${gameData.currentRound}:${playerId}`;
+    const previousAnswer = await this.redis.get(currentAnswerKey);
+    
+    let pointsDifference = 0;
+    if (previousAnswer) {
+      const answerData = JSON.parse(previousAnswer);
+      const wasCorrect = answerData.isCorrect;
+      
+      // Calculate the difference
+      if (wasCorrect && !isCorrect) {
+        // Was correct, now incorrect: remove 1 point
+        pointsDifference = -1;
+      } else if (!wasCorrect && isCorrect) {
+        // Was incorrect, now correct: add 1 point
+        pointsDifference = 1;
+      }
+      
+      // Update the stored answer data
+      answerData.isCorrect = isCorrect;
+      answerData.points = isCorrect ? 1 : 0;
+      await this.redis.set(currentAnswerKey, JSON.stringify(answerData));
+    }
+
+    // Update player score
+    if (pointsDifference !== 0) {
+      await this.gameAdapter.updatePlayerScore(gameId, playerId, pointsDifference);
+    }
+
+    // Broadcast the override to all players
+    this.broadcastToGame(gameId, 'answerOverridden', { 
+      playerId, 
+      isCorrect,
+      points: isCorrect ? 1 : 0,
+      pointsDifference
+    });
   }
 
   private handleDisconnect(connectionId: string) {
