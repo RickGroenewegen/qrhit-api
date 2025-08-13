@@ -504,6 +504,52 @@ export default async function adminRoutes(
     }
   );
 
+  // Export playlist to Excel
+  fastify.get(
+    '/admin/playlist-excel/:paymentId/:paymentHasPlaylistId',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { paymentId, paymentHasPlaylistId } = request.params;
+        const paymentHasPlaylistIdInt = parseInt(paymentHasPlaylistId);
+        
+        if (isNaN(paymentHasPlaylistIdInt)) {
+          reply.status(400).send({ 
+            success: false, 
+            error: 'Invalid paymentHasPlaylistId' 
+          });
+          return;
+        }
+
+        // Generate Excel file
+        const excelBuffer = await data.generatePlaylistExcel(
+          paymentId, 
+          paymentHasPlaylistIdInt
+        );
+        
+        if (!excelBuffer) {
+          reply.status(404).send({ 
+            success: false, 
+            error: 'Playlist not found' 
+          });
+          return;
+        }
+
+        // Set response headers for Excel file download
+        reply
+          .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+          .header('Content-Disposition', `attachment; filename="playlist-${paymentId}-${paymentHasPlaylistId}.xlsx"`)
+          .send(excelBuffer);
+      } catch (error) {
+        console.error('Error generating Excel file:', error);
+        reply.status(500).send({ 
+          success: false, 
+          error: 'Failed to generate Excel file' 
+        });
+      }
+    }
+  );
+
   // Discount code management
   fastify.post(
     '/admin/discount/create',

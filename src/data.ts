@@ -30,6 +30,7 @@ import { ChatGPT } from './chatgpt';
 import YTMusic from 'ytmusic-api';
 import axios, { AxiosInstance } from 'axios';
 import Spotify from './spotify';
+import * as ExcelJS from 'exceljs';
 
 class Data {
   private static instance: Data;
@@ -1523,7 +1524,7 @@ class Data {
     tracks: Track[]
   ): Promise<void> {
     // Maximum number of concurrent getReleaseDate calls
-    const MAX_CONCURRENT_RELEASE_DATE = 2;
+    const MAX_CONCURRENT_RELEASE_DATE = 3;
 
     // Fetch tracks that need year update
     const tracksNeedingYearUpdate = await this.prisma.$queryRaw<
@@ -1974,6 +1975,111 @@ class Data {
       updated: updatedCount,
       errors: errorCount,
     };
+  }
+
+  /**
+   * Generate Excel file for a playlist
+   * @param paymentId The payment ID
+   * @param paymentHasPlaylistId The payment has playlist ID
+   * @returns Excel file buffer or null if not found
+   */
+  public async generatePlaylistExcel(
+    paymentId: string,
+    paymentHasPlaylistId: number
+  ): Promise<Buffer | null> {
+    try {
+      // Fetch the payment with its playlists and tracks
+      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findFirst({
+        where: {
+          id: paymentHasPlaylistId,
+          payment: {
+            paymentId: paymentId
+          }
+        }
+      });
+
+      if (!paymentHasPlaylist) {
+        this.logger.log(`PaymentHasPlaylist not found for payment ${paymentId} and id ${paymentHasPlaylistId}`);
+        return null;
+      }
+
+      // Fetch the tracks for this playlist
+      const playlistTracks = await this.prisma.playlistHasTrack.findMany({
+        where: {
+          playlistId: paymentHasPlaylist.playlistId
+        },
+        include: {
+          track: true
+        },
+        orderBy: {
+          trackId: 'asc'
+        }
+      });
+
+      if (!playlistTracks || playlistTracks.length === 0) {
+        this.logger.log(`No tracks found for playlistId ${paymentHasPlaylist.playlistId}`);
+        return null;
+      }
+
+      const tracks = playlistTracks.map((pht: any) => pht.track);
+
+      // Create a new workbook and worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Playlist Songs');
+
+      // Add header row
+      worksheet.columns = [
+        { header: 'ID', key: 'id', width: 15 },
+        { header: 'Artist', key: 'artist', width: 30 },
+        { header: 'Title', key: 'title', width: 30 },
+        { header: 'Year', key: 'year', width: 10 },
+        { header: 'Spotify Link', key: 'spotifyLink', width: 50 },
+        { header: 'QRSong! Link', key: 'qrsongLink', width: 50 }
+      ];
+
+      // Style the header row
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' }
+      };
+
+      // Add data rows
+      tracks.forEach((track: any) => {
+        const spotifyLink = track.trackId ? `https://open.spotify.com/track/${track.trackId}` : '';
+        const qrsongLink = `https://api.qrsong.io/qrlink2/${track.id}/${paymentHasPlaylistId}`;
+        
+        worksheet.addRow({
+          id: track.id,
+          artist: track.artist || '',
+          title: track.name || '',
+          year: track.year || '',
+          spotifyLink: spotifyLink,
+          qrsongLink: qrsongLink
+        });
+      });
+
+      // Add borders to all cells
+      worksheet.eachRow((row, rowNumber) => {
+        row.eachCell((cell) => {
+          cell.border = {
+            top: { style: 'thin' },
+            left: { style: 'thin' },
+            bottom: { style: 'thin' },
+            right: { style: 'thin' }
+          };
+        });
+      });
+
+      // Generate buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+      return Buffer.from(buffer);
+
+    } catch (error) {
+      this.logger.log(`Error generating Excel file: ${error}`);
+      return null;
+    }
   }
 }
 
