@@ -757,7 +757,12 @@ class Mollie {
 
           const printApiItemPrice = orderType.amount * item.amount;
 
-          const itemPrice = item.price * item.amount;
+          let itemPrice = item.price * item.amount;
+          
+          // Add €2 per set if hideDomain is true (for cards only)
+          if (item.hideDomain && item.productType === 'cards') {
+            itemPrice += 2 * item.amount;
+          }
 
           const itemPriceWithoutVAT = parseFloat(
             (itemPrice / (1 + calculateResult.data.taxRate / 100)).toFixed(2)

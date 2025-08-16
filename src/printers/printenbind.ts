@@ -902,9 +902,16 @@ class PrintEnBind {
         if (item.type == 'physical' || item.type == 'sheets') {
           physicalItems += parseInt(item.amount);
         }
-        totalPrice += item.price * item.amount;
+        let itemTotalPrice = item.price * item.amount;
+        
+        // Add €2 per set if hideDomain is true (for cards only)
+        if (item.hideDomain && item.productType === 'cards') {
+          itemTotalPrice += 2 * item.amount;
+        }
+        
+        totalPrice += itemTotalPrice;
         const productPriceWithoutVAT = parseFloat(
-          ((item.price * item.amount) / (1 + (taxRate ?? 0) / 100)).toFixed(2)
+          (itemTotalPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)
         );
 
         totalProductPriceWithoutVAT += productPriceWithoutVAT;
@@ -1056,7 +1063,7 @@ class PrintEnBind {
     let price = 0;
     let colorPrice = 0.018;
     let colorPriceA4 = 0.09;
-    let paperPrice = 0.035;
+    let paperPrice = 0.034;
     let paperPriceA4 = 0.104;
     let cardPrice = colorPrice * 2 + paperPrice;
     let A4Price = colorPriceA4 * 2 + paperPriceA4;

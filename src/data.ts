@@ -1989,35 +1989,41 @@ class Data {
   ): Promise<Buffer | null> {
     try {
       // Fetch the payment with its playlists and tracks
-      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findFirst({
-        where: {
-          id: paymentHasPlaylistId,
-          payment: {
-            paymentId: paymentId
-          }
+      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findFirst(
+        {
+          where: {
+            id: paymentHasPlaylistId,
+            payment: {
+              paymentId: paymentId,
+            },
+          },
         }
-      });
+      );
 
       if (!paymentHasPlaylist) {
-        this.logger.log(`PaymentHasPlaylist not found for payment ${paymentId} and id ${paymentHasPlaylistId}`);
+        this.logger.log(
+          `PaymentHasPlaylist not found for payment ${paymentId} and id ${paymentHasPlaylistId}`
+        );
         return null;
       }
 
       // Fetch the tracks for this playlist
       const playlistTracks = await this.prisma.playlistHasTrack.findMany({
         where: {
-          playlistId: paymentHasPlaylist.playlistId
+          playlistId: paymentHasPlaylist.playlistId,
         },
         include: {
-          track: true
+          track: true,
         },
         orderBy: {
-          trackId: 'asc'
-        }
+          trackId: 'asc',
+        },
       });
 
       if (!playlistTracks || playlistTracks.length === 0) {
-        this.logger.log(`No tracks found for playlistId ${paymentHasPlaylist.playlistId}`);
+        this.logger.log(
+          `No tracks found for playlistId ${paymentHasPlaylist.playlistId}`
+        );
         return null;
       }
 
@@ -2034,7 +2040,7 @@ class Data {
         { header: 'Title', key: 'title', width: 30 },
         { header: 'Year', key: 'year', width: 10 },
         { header: 'Spotify Link', key: 'spotifyLink', width: 50 },
-        { header: 'QRSong! Link', key: 'qrsongLink', width: 50 }
+        { header: 'QRSong! Link', key: 'qrsongLink', width: 50 },
       ];
 
       // Style the header row
@@ -2042,21 +2048,23 @@ class Data {
       worksheet.getRow(1).fill = {
         type: 'pattern',
         pattern: 'solid',
-        fgColor: { argb: 'FFE0E0E0' }
+        fgColor: { argb: 'FFE0E0E0' },
       };
 
       // Add data rows
       tracks.forEach((track: any) => {
-        const spotifyLink = track.trackId ? `https://open.spotify.com/track/${track.trackId}` : '';
-        const qrsongLink = `https://api.qrsong.io/qrlink2/${track.id}/${paymentHasPlaylistId}`;
-        
+        const spotifyLink = track.trackId
+          ? `https://open.spotify.com/track/${track.trackId}`
+          : '';
+        const qrsongLink = `https://api.qrsong.io/qr2/${track.id}/${paymentHasPlaylistId}`;
+
         worksheet.addRow({
           id: track.id,
           artist: track.artist || '',
           title: track.name || '',
           year: track.year || '',
           spotifyLink: spotifyLink,
-          qrsongLink: qrsongLink
+          qrsongLink: qrsongLink,
         });
       });
 
@@ -2067,7 +2075,7 @@ class Data {
             top: { style: 'thin' },
             left: { style: 'thin' },
             bottom: { style: 'thin' },
-            right: { style: 'thin' }
+            right: { style: 'thin' },
           };
         });
       });
@@ -2075,7 +2083,6 @@ class Data {
       // Generate buffer
       const buffer = await workbook.xlsx.writeBuffer();
       return Buffer.from(buffer);
-
     } catch (error) {
       this.logger.log(`Error generating Excel file: ${error}`);
       return null;
