@@ -88,6 +88,8 @@ export class Music {
                     Discogs thinks the release year is ${discogsResult.year}
                     OpenPerplex (AI scraping) thinks the release year is ${openPerplexYear}
 
+                    When evaulating a classical song, we are looking for the year of original composition, not the year of release.
+
                     What is the release you think of this song based on the information above? Also explain on which information you based your answer on.
                     `;
 
@@ -183,6 +185,18 @@ export class Music {
         spotifyReleaseYear == openPerplexYear
       ) {
         finalYear = spotifyReleaseYear;
+        standardDeviation = 0;
+      }
+
+      // Rule 4: If both OpenPerplex and AI years are equal and smaller than Spotify year, use that year
+      if (
+        openPerplexYear > 0 &&
+        aiResult.year > 0 &&
+        openPerplexYear == aiResult.year &&
+        spotifyReleaseYear > 0 &&
+        openPerplexYear < spotifyReleaseYear
+      ) {
+        finalYear = openPerplexYear;
         standardDeviation = 0;
       }
     }

@@ -8,7 +8,7 @@ export class OpenPerplex {
 
   public async ask(artist: string, title: string): Promise<number> {
     let year = 0;
-    const prompt = `What is the release date of the song ${title} by ${artist} and provide your source URL.`;
+    const prompt = `What is the release date of the song ${title} by ${artist} and provide your source URL. When evaulating a classical song, we are looking for the year of original composition, not the year of release.`;
 
     const baseUrl = 'https://node.apiopenperplex.com';
     const apiKey = process.env['OPENPERPLEX_API_KEY']; // Replace with your actual API key
