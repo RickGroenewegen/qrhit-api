@@ -253,7 +253,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
 
   // Designer upload
   fastify.post('/designer/upload/:type', async (request: any, reply) => {
-    const { image, filename } = request.body;
+    const { image, filename, hideCircle } = request.body;
     const { type } = request.params;
 
     if (!image) {
@@ -264,7 +264,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     let result = { success: false };
 
     if (type == 'background') {
-      result = await designer.uploadBackgroundImage(image, filename);
+      result = await designer.uploadBackgroundImage(image, filename, hideCircle);
     } else if (type == 'logo') {
       result = await designer.uploadLogoImage(image, filename);
     }

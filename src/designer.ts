@@ -39,11 +39,13 @@ class Designer {
    * Uploads a background image from a base64 string
    * @param base64Image The base64 encoded image string
    * @param filename Optional filename, if not provided a nanoid will be used
+   * @param hideCircle Optional flag to hide the white circle overlay
    * @returns Object with success status, filename and file path
    */
   public async uploadBackgroundImage(
     base64Image: string,
-    filename?: string
+    filename?: string,
+    hideCircle: boolean = false
   ): Promise<{
     success: boolean;
     filename?: string;
@@ -92,30 +94,38 @@ class Designer {
         const buffer = Buffer.from(base64Data, 'base64');
 
         // Process the image with sharp
-        // Resize to 1000x1000, draw a white circle, add a 32px white border, and convert to PNG with compression
-        const processedBuffer = await sharp(buffer)
-          .resize(1000, 1000, { fit: 'cover' })
-          .composite([
-            {
-              input: {
-                create: {
-                  width: 1000,
-                  height: 1000,
-                  channels: 4,
-                  background: { r: 0, g: 0, b: 0, alpha: 0 },
-                },
+        // Resize to 1000x1000, optionally add white circle, and convert to PNG with compression
+        let sharpInstance = sharp(buffer).resize(1000, 1000, { fit: 'cover' });
+        
+        // Build composite layers
+        const compositeOptions: any[] = [
+          {
+            input: {
+              create: {
+                width: 1000,
+                height: 1000,
+                channels: 4,
+                background: { r: 0, g: 0, b: 0, alpha: 0 },
               },
-              blend: 'dest-over',
             },
-            {
-              input: Buffer.from(
-                `<svg width="1000" height="1000">
+            blend: 'dest-over',
+          },
+        ];
+        
+        // Only add the white circle if hideCircle is false
+        if (!hideCircle) {
+          compositeOptions.push({
+            input: Buffer.from(
+              `<svg width="1000" height="1000">
                 <circle cx="500" cy="500" r="400" fill="white" stroke="white" stroke-width="10"/>
               </svg>`
-              ),
-              blend: 'over',
-            },
-          ])
+            ),
+            blend: 'over',
+          });
+        }
+        
+        const processedBuffer = await sharpInstance
+          .composite(compositeOptions)
           .png({ compressionLevel: 9, quality: 90 }) // Convert to PNG with high compression
           .toBuffer();
 
