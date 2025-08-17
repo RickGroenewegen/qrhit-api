@@ -72,7 +72,7 @@ export class Music {
       title
     );
 
-    let prompt = `  I have gaterhered information about a certain song on the internet: ${artist} - ${title}
+    let prompt = `  I have gathered information about a certain song on the internet: ${artist} - ${title}
                     Use your own knowledge. I will share all this information with you below. My goal is to find the release year of this song.
                     If the release date is literally found on Wikipedia, I will use that information.
                     
