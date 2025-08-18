@@ -16,7 +16,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   const data = Data.getInstance();
   const order = Order.getInstance();
   const discount = new Discount();
-  const review = Review.getInstance();
+  const reviewObj = Review.getInstance();
   const translation = new Translation();
   const logger = new Logger();
   const utils = new Utils();
@@ -286,12 +286,16 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
   // Reviews
   fastify.get('/review/:paymentId', async (request: any, _reply) => {
-    return await review.checkReview(request.params.paymentId);
+    return await reviewObj.checkReview(request.params.paymentId);
   });
 
   fastify.post('/review/:paymentId', async (request: any, _reply) => {
     const { rating, review } = request.body;
-    return await review.createReview(request.params.paymentId, rating, review);
+    return await reviewObj.createReview(
+      request.params.paymentId,
+      rating,
+      review
+    );
   });
 
   // Print API webhook
