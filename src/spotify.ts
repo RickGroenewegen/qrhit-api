@@ -158,7 +158,9 @@ class Spotify {
 
         this.logger.log(
           color.blue.bold(
-            `Fetching playlist from API for ${color.white.bold(
+            `Fetching playlist from API (${
+              isSlug ? 'slug' : 'id'
+            } / Cache: ${cache}) for ${color.white.bold(
               playlistId
             )}${ipInfo}${uaInfo}`
           )
@@ -305,7 +307,9 @@ class Spotify {
           : '';
         this.logger.log(
           color.blue.bold(
-            `Fetching tracks from API for playlist ${color.white.bold(
+            `Fetching tracks from API (${
+              isSlug ? 'slug' : 'id'
+            } / Cache: {${cache}} for playlist ${color.white.bold(
               playlistId
             )} (${playlistData.name})${ipInfo}${uaInfo}`
           )
