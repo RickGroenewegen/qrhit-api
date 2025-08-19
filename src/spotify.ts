@@ -34,7 +34,7 @@ class Spotify {
   private spotifyScraper = new SpotifyScraper(); // Instantiate SpotifyScraper if needed
   private SpotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
 
-  private api = this.spotifyRapidApi; // Default to SpotifyScraper
+  private api = this.spotifyApi; // Default to SpotifyScraper
 
   // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
   private jumboCardMap: { [key: string]: string } = {};
@@ -229,12 +229,12 @@ class Spotify {
           image,
         };
 
-        this.cache.set(cacheKey, JSON.stringify(playlist), 3600);
+        this.cache.set(cacheKey, JSON.stringify(playlist));
 
         // If this was a slug lookup, also cache with the actual playlist ID
         if (isSlug && checkPlaylistId !== playlistId) {
           const actualCacheKey = `playlist_${checkPlaylistId}_${locale}`;
-          this.cache.set(actualCacheKey, JSON.stringify(playlist), 3600);
+          this.cache.set(actualCacheKey, JSON.stringify(playlist));
         }
       } else {
         playlist = JSON.parse(cacheResult);
@@ -725,7 +725,7 @@ class Spotify {
       };
 
       // Cache the final processed result for 1 hour
-      await this.cache.set(cacheKey, JSON.stringify(finalResult), 3600);
+      await this.cache.set(cacheKey, JSON.stringify(finalResult));
 
       return finalResult;
     } catch (error: any) {
@@ -1022,14 +1022,14 @@ class Spotify {
               success: true,
               spotifyUri: `spotify:track:${spotifyId}`,
             };
-            await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+            await this.cache.set(cacheKey, JSON.stringify(result));
             return { ...result, cached: false };
           } else {
             const result = {
               success: false,
               error: `No mapping found for ${key}`,
             };
-            await this.cache.set(cacheKey, JSON.stringify(result), 600);
+            await this.cache.set(cacheKey, JSON.stringify(result));
             return { ...result, cached: false };
           }
         }
@@ -1070,7 +1070,7 @@ class Spotify {
           const spotifyUri = this.extractSpotifyUri(lastLocation);
           if (spotifyUri) {
             const result = { success: true, spotifyUri };
-            await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+            await this.cache.set(cacheKey, JSON.stringify(result));
             return { ...result, cached: false };
           }
           currentUrl = lastLocation;
@@ -1085,7 +1085,7 @@ class Spotify {
         const spotifyUri = this.extractSpotifyUri(lastLocation);
         if (spotifyUri) {
           const result = { success: true, spotifyUri };
-          await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+          await this.cache.set(cacheKey, JSON.stringify(result));
           return { ...result, cached: false };
         }
       }
@@ -1106,7 +1106,7 @@ class Spotify {
             const spotifyUri = this.extractSpotifyUri(metaUrl);
             if (spotifyUri) {
               const result = { success: true, spotifyUri };
-              await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+              await this.cache.set(cacheKey, JSON.stringify(result));
               return { ...result, cached: false };
             }
           }
@@ -1121,7 +1121,7 @@ class Spotify {
           const spotifyUri = this.extractSpotifyUri(jsUrl);
           if (spotifyUri) {
             const result = { success: true, spotifyUri };
-            await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+            await this.cache.set(cacheKey, JSON.stringify(result));
             return { ...result, cached: false };
           }
         }
@@ -1131,7 +1131,7 @@ class Spotify {
         success: false,
         error: 'No Spotify URI found via redirects or page content.',
       };
-      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+      await this.cache.set(cacheKey, JSON.stringify(result));
       return { ...result, cached: false };
     } catch (e: any) {
       const result = {
