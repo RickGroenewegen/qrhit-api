@@ -1,4 +1,4 @@
-import { format } from 'date-fns';
+import { format, set } from 'date-fns';
 import { MAX_CARDS, MAX_CARDS_PHYSICAL } from './config/constants';
 import { color, white } from 'console-log-colors';
 import axios, { AxiosRequestConfig } from 'axios';
@@ -158,7 +158,7 @@ class Spotify {
 
         this.logger.log(
           color.blue.bold(
-            `Fetching playlist from API (${
+            `Fetching playlist from API (${cacheKey} / ${
               isSlug ? 'slug' : 'id'
             } / Cache: ${cache}) for ${color.white.bold(
               playlistId
@@ -231,6 +231,7 @@ class Spotify {
           image,
         };
 
+        console.log(111, 'set', cacheKey);
         this.cache.set(cacheKey, JSON.stringify(playlist));
 
         // If this was a slug lookup, also cache with the actual playlist ID
@@ -307,7 +308,7 @@ class Spotify {
           : '';
         this.logger.log(
           color.blue.bold(
-            `Fetching tracks from API (${
+            `Fetching tracks from API (${cacheKey} / ${
               isSlug ? 'slug' : 'id'
             } / Cache: {${cache}} for playlist ${color.white.bold(
               playlistId
