@@ -89,11 +89,11 @@ export class ChatGPT {
       );
 
       const result = await this.openai.chat.completions.create({
-        model: 'o4-mini',
+        model: 'gpt-5',
         messages: [
           {
             role: 'system',
-            content: `You are a helpful assistant that helps verify song release years. I will provide a list of songs with their years. For each song that you believe has an incorrect year, return the correct year with an explanation and sources. Only suggest different years when you are highly confident.`,
+            content: `You are a helpful assistant that helps verify song release years. For classical songs I'm not looking for release year, but for the year of composition. I will provide a list of songs with their years. For each song that you believe has an incorrect year, return the correct year with an explanation and sources. Only suggest different years when you are highly confident.`,
           },
           {
             role: 'user',
@@ -895,11 +895,13 @@ Write in a professional, informative, and engaging style. The tone should be cle
             properties: {
               title: {
                 type: 'string',
-                description: 'The blog post title (keep it short and concise, maximum 8 words). Use sentence case (only capitalize the first word and proper nouns). Make it sound natural and human-written - avoid AI-sounding phrases like "Ultimate Guide", "Comprehensive", "Mastering", "Unlocking", "Revolutionary", or overly promotional language. Use simple, direct language that a real person would use. Include relevant keywords for SEO while maintaining readability.',
+                description:
+                  'The blog post title (keep it short and concise, maximum 8 words). Use sentence case (only capitalize the first word and proper nouns). Make it sound natural and human-written - avoid AI-sounding phrases like "Ultimate Guide", "Comprehensive", "Mastering", "Unlocking", "Revolutionary", or overly promotional language. Use simple, direct language that a real person would use. Include relevant keywords for SEO while maintaining readability.',
               },
               summary: {
                 type: 'string',
-                description: 'A compelling meta description under 160 characters that includes target keywords and encourages clicks. This will be used for SEO purposes.',
+                description:
+                  'A compelling meta description under 160 characters that includes target keywords and encourages clicks. This will be used for SEO purposes.',
               },
               content: {
                 type: 'string',
@@ -1084,7 +1086,9 @@ Write in a professional, informative, and engaging style. The tone should be cle
 
       this.logger.log(
         color.blue.bold(
-          `Generating blog image with instructions: "${color.white.bold(imageInstructions)}"`
+          `Generating blog image with instructions: "${color.white.bold(
+            imageInstructions
+          )}"`
         )
       );
 

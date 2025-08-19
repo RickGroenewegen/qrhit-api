@@ -231,7 +231,6 @@ class Spotify {
           image,
         };
 
-        console.log(111, 'set', cacheKey);
         this.cache.set(cacheKey, JSON.stringify(playlist));
 
         // If this was a slug lookup, also cache with the actual playlist ID

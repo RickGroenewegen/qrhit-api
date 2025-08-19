@@ -15,6 +15,8 @@ class Discount {
    */
   public async createAdminDiscountCode(params: {
     amount: number;
+    code?: string;
+    description?: string;
     startDate?: number | null;
     endDate?: number | null;
     general?: boolean | number | string;
@@ -24,6 +26,8 @@ class Discount {
     try {
       const {
         amount,
+        code: manualCode,
+        description,
         startDate,
         endDate,
         general,
@@ -48,23 +52,40 @@ class Discount {
       const startDateObj = startDate ? new Date(Number(startDate) * 1000) : null;
       const endDateObj = endDate ? new Date(Number(endDate) * 1000) : null;
 
-      // Generate random code in format XXXX-XXXX-XXXX-XXXX
-      const CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
-      const generatePart = () => {
-        let result = '';
-        for (let i = 0; i < 4; i++) {
-          const idx = Math.floor(Math.random() * CHARS.length);
-          result += CHARS[idx];
+      let code: string;
+      
+      if (manualCode) {
+        // Use the manually provided code
+        code = manualCode.trim().toUpperCase();
+        
+        // Check if code already exists
+        const existingCode = await this.prisma.discountCode.findUnique({
+          where: { code },
+        });
+        
+        if (existingCode) {
+          return { success: false, error: 'Discount code already exists' };
         }
-        return result;
-      };
-      const code = [generatePart(), generatePart(), generatePart(), generatePart()].join('-');
+      } else {
+        // Generate random code in format XXXX-XXXX-XXXX-XXXX
+        const CHARS = '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        const generatePart = () => {
+          let result = '';
+          for (let i = 0; i < 4; i++) {
+            const idx = Math.floor(Math.random() * CHARS.length);
+            result += CHARS[idx];
+          }
+          return result;
+        };
+        code = [generatePart(), generatePart(), generatePart(), generatePart()].join('-');
+      }
 
       // Create the discount code in the database
       const discount = await this.prisma.discountCode.create({
         data: {
           code,
           amount,
+          description: description || null,
           startDate: startDateObj,
           endDate: endDateObj,
           general: generalBool,
@@ -118,6 +139,8 @@ class Discount {
     id: number,
     params: {
       amount: number;
+      code?: string;
+      description?: string;
       startDate?: number | null;
       endDate?: number | null;
       general?: boolean | number | string;
@@ -128,6 +151,8 @@ class Discount {
     try {
       const {
         amount,
+        code: newCode,
+        description,
         startDate,
         endDate,
         general,
@@ -148,16 +173,35 @@ class Discount {
       const startDateObj = startDate ? new Date(Number(startDate) * 1000) : null;
       const endDateObj = endDate ? new Date(Number(endDate) * 1000) : null;
 
+      const updateData: any = {
+        amount,
+        description: description !== undefined ? description : undefined,
+        startDate: startDateObj,
+        endDate: endDateObj,
+        general: generalBool,
+        playlistId: playlistId || null,
+        digital: digitalBool,
+      };
+
+      // If a new code is provided, validate it's unique
+      if (newCode) {
+        const trimmedCode = newCode.trim().toUpperCase();
+        
+        // Check if this code exists for a different discount
+        const existingCode = await this.prisma.discountCode.findUnique({
+          where: { code: trimmedCode },
+        });
+        
+        if (existingCode && existingCode.id !== id) {
+          return { success: false, error: 'Discount code already exists' };
+        }
+        
+        updateData.code = trimmedCode;
+      }
+
       const updated = await this.prisma.discountCode.update({
         where: { id },
-        data: {
-          amount,
-          startDate: startDateObj,
-          endDate: endDateObj,
-          general: generalBool,
-          playlistId: playlistId || null,
-          digital: digitalBool,
-        },
+        data: updateData,
       });
 
       return { success: true, code: updated.code };
@@ -442,6 +486,7 @@ class Discount {
           id: true,
           code: true,
           amount: true,
+          description: true,
           from: true,
           message: true,
         },
