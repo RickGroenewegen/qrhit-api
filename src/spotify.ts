@@ -310,9 +310,9 @@ class Spotify {
           color.blue.bold(
             `Fetching tracks from API (${cacheKey} / ${
               isSlug ? 'slug' : 'id'
-            } / Cache: {${cache}} for playlist ${color.white.bold(
-              playlistId
-            )} (${playlistData.name})${ipInfo}${uaInfo}`
+            } / Cache: ${cache} for playlist ${color.white.bold(playlistId)} (${
+              playlistData.name
+            })${ipInfo}${uaInfo}`
           )
         );
 
