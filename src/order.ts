@@ -152,7 +152,10 @@ class Order {
     return pdfPath;
   }
 
-  public async updateFeaturedPlaylists(clientIp: string = '', userAgent: string = ''): Promise<void> {
+  public async updateFeaturedPlaylists(
+    clientIp: string = '',
+    userAgent: string = ''
+  ): Promise<void> {
     this.logger.log(
       color.blue.bold(
         'Refreshing cache and updating featured playlists with decade percentages and descriptions'
@@ -160,6 +163,8 @@ class Order {
     );
 
     try {
+      this.logger.log(color.blue.bold('Retrieving featured playlists from DB'));
+
       // Get all featured playlists
       const featuredPlaylists = await this.prisma.playlist.findMany({
         where: { featured: true },
@@ -172,7 +177,21 @@ class Order {
         },
       });
 
+      this.logger.log(
+        color.blue.bold(
+          `Found ${color.white.bold(
+            featuredPlaylists.length
+          )} featured playlists`
+        )
+      );
+
       for (const playlist of featuredPlaylists) {
+        this.logger.log(
+          color.blue.bold(
+            `Reloading playlist: ${color.white.bold(playlist.name)}`
+          )
+        );
+
         // Get fresh data from Spotify
         await this.spotify.getPlaylist(
           playlist.slug,
@@ -185,7 +204,22 @@ class Order {
           clientIp,
           userAgent
         );
-        await this.spotify.getTracks(playlist.slug, false, '', false, true, clientIp, userAgent);
+
+        this.logger.log(
+          color.blue.bold(
+            `Reloading tracks for playlist: ${color.white.bold(playlist.name)}`
+          )
+        );
+
+        await this.spotify.getTracks(
+          playlist.slug,
+          false,
+          '',
+          false,
+          true,
+          clientIp,
+          userAgent
+        );
 
         // Calculate decade percentages
         const tracks = playlist.tracks
@@ -481,9 +515,9 @@ class Order {
   }
 
   public startCron(): void {
-    // new CronJob('0 2 * * *', async () => {
-    //   await this.updateFeaturedPlaylists();
-    // }).start();
+    new CronJob('0 2 * * *', async () => {
+      await this.updateFeaturedPlaylists();
+    }).start();
   }
 
   public async getOrderTypes(type: string = 'cards') {

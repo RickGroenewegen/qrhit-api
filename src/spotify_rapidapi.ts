@@ -300,6 +300,9 @@ class SpotifyRapidApi {
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
       const message = axiosError.message;
+
+      console.log(axiosError); // Log the full error response for debugging
+
       this.logger.log(
         color.red.bold(
           `Error fetching RapidAPI tracks for ${playlistId}: ${status} - ${message}`
