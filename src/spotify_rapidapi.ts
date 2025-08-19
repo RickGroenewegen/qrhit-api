@@ -297,11 +297,11 @@ class SpotifyRapidApi {
 
       return { success: true, data: { items: allItems } };
     } catch (error) {
+      console.log(123, error); // Log the full error response for debugging
+
       const axiosError = error as AxiosError;
       const status = axiosError.response?.status;
       const message = axiosError.message;
-
-      console.log(axiosError); // Log the full error response for debugging
 
       this.logger.log(
         color.red.bold(
