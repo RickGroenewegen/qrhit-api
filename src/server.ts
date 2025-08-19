@@ -233,7 +233,7 @@ class Server {
       origin: '*',
       methods: 'GET, POST, OPTIONS, PUT, PATCH, DELETE',
       allowedHeaders:
-        'Origin, X-Requested-With, Content-Type, Accept, sentry-trace, baggage, Authorization',
+        'x-user-agent, Origin, X-Requested-With, Content-Type, Accept, sentry-trace, baggage, Authorization',
       credentials: true,
     });
 
