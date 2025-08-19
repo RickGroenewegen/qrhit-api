@@ -138,14 +138,7 @@ class Spotify {
         const uaInfo = userAgent
           ? ` with User-Agent: ${color.white.bold(userAgent)}`
           : '';
-        this.logger.log(
-          color.blue.bold(
-            `Fetching playlist from API for ${color.white.bold(
-              playlistId
-            )}${ipInfo}${uaInfo}`
-          )
-        );
-        
+
         let checkPlaylistId = playlistId;
 
         if (isSlug) {
@@ -162,6 +155,14 @@ class Spotify {
             checkPlaylistId = dbCacheResult;
           }
         }
+
+        this.logger.log(
+          color.blue.bold(
+            `Fetching playlist from API for ${color.white.bold(
+              playlistId
+            )}${ipInfo}${uaInfo}`
+          )
+        );
 
         // Access token handling is now done within the specific API implementation (e.g., SpotifyApi)
         const result = await this.api.getPlaylist(checkPlaylistId);
