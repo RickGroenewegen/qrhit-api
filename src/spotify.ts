@@ -222,7 +222,7 @@ class Spotify {
 
         playlist = {
           id: playlistId,
-          playlistId: playlistId,
+          playlistId: checkPlaylistId,
           name: playlistName,
           description: playlistDescription,
           numberOfTracks: playlistData.tracks?.total || 0,
@@ -230,6 +230,12 @@ class Spotify {
         };
 
         this.cache.set(cacheKey, JSON.stringify(playlist), 3600);
+
+        // If this was a slug lookup, also cache with the actual playlist ID
+        if (isSlug && checkPlaylistId !== playlistId) {
+          const actualCacheKey = `playlist_${checkPlaylistId}_${locale}`;
+          this.cache.set(actualCacheKey, JSON.stringify(playlist), 3600);
+        }
       } else {
         playlist = JSON.parse(cacheResult);
       }
