@@ -39,6 +39,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
 
   // Get Spotify playlist info
   fastify.post('/spotify/playlists', async (request: any, _reply) => {
+    const userAgent = request.headers['user-agent'] || '';
     return await spotify.getPlaylist(
       request.body.playlistId,
       utils.parseBoolean(request.body.cache),
@@ -46,7 +47,9 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       true,
       utils.parseBoolean(request.body.featured),
       utils.parseBoolean(request.body.slug),
-      request.body.locale
+      request.body.locale,
+      request.clientIp,
+      userAgent
     );
   });
 

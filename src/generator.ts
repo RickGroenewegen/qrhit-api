@@ -144,7 +144,8 @@ class Generator {
     mollie: Mollie,
     forceFinalize: boolean = false,
     skipMainMail: boolean = false,
-    onlyProductMail: boolean = false
+    onlyProductMail: boolean = false,
+    userAgent: string = ''
   ): Promise<void> {
     this.logger.log(
       blue.bold(`Starting generation for payment: ${white.bold(paymentId)}`)
@@ -202,7 +203,9 @@ class Generator {
         await this.storePlaylistData(
           payment,
           playlist,
-          refreshPlaylistArray.includes(playlist.playlistId)
+          refreshPlaylistArray.includes(playlist.playlistId),
+          ip,
+          userAgent
         );
 
         // Get tracks for QR generation
@@ -312,7 +315,9 @@ class Generator {
   private async storePlaylistData(
     payment: any,
     playlist: any,
-    refreshCache: boolean = false
+    refreshCache: boolean = false,
+    clientIp: string = '',
+    userAgent: string = ''
   ): Promise<void> {
     let exists = true;
 
@@ -340,8 +345,8 @@ class Generator {
       '',
       false,
       false,
-      '',
-      ''
+      clientIp,
+      userAgent
     );
     const tracks = response.data.tracks;
 

@@ -152,7 +152,7 @@ class Order {
     return pdfPath;
   }
 
-  public async updateFeaturedPlaylists(): Promise<void> {
+  public async updateFeaturedPlaylists(clientIp: string = '', userAgent: string = ''): Promise<void> {
     this.logger.log(
       color.blue.bold(
         'Refreshing cache and updating featured playlists with decade percentages and descriptions'
@@ -180,9 +180,12 @@ class Order {
           '',
           false,
           true,
-          true
+          true,
+          'en',
+          clientIp,
+          userAgent
         );
-        await this.spotify.getTracks(playlist.slug, false, '', false, true, '', '');
+        await this.spotify.getTracks(playlist.slug, false, '', false, true, clientIp, userAgent);
 
         // Calculate decade percentages
         const tracks = playlist.tracks

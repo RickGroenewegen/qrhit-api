@@ -93,7 +93,8 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   // Cache update
   fastify.get('/cache', async (request: any, _reply) => {
     cache.flush();
-    order.updateFeaturedPlaylists();
+    const userAgent = request.headers['user-agent'] || '';
+    order.updateFeaturedPlaylists(request.clientIp, userAgent);
     return { success: true };
   });
 
@@ -332,6 +333,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
 
     // Generate order
     fastify.get('/generate/:paymentId', async (request: any, _reply) => {
+      const userAgent = request.headers['user-agent'] || '';
       await generator.generate(
         request.params.paymentId,
         request.clientIp,
@@ -339,7 +341,8 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         mollie,
         false,
         false,
-        false
+        false,
+        userAgent
       );
       return { success: true };
     });

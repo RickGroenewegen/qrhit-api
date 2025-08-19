@@ -108,7 +108,9 @@ class Spotify {
     checkCaptcha: boolean,
     featured: boolean = false,
     isSlug: boolean = false,
-    locale: string = 'en'
+    locale: string = 'en',
+    clientIp: string = '',
+    userAgent: string = ''
   ): Promise<ApiResult> {
     let playlist: Playlist | null = null;
 
@@ -132,6 +134,18 @@ class Spotify {
       const dbCacheResult = await this.cache.get(dbCacheKey);
 
       if (!cacheResult || !cache) {
+        const ipInfo = clientIp ? ` from IP ${color.white.bold(clientIp)}` : '';
+        const uaInfo = userAgent
+          ? ` with User-Agent: ${color.white.bold(userAgent)}`
+          : '';
+        this.logger.log(
+          color.blue.bold(
+            `Fetching playlist from API for ${color.white.bold(
+              playlistId
+            )}${ipInfo}${uaInfo}`
+          )
+        );
+        
         let checkPlaylistId = playlistId;
 
         if (isSlug) {
@@ -257,7 +271,9 @@ class Spotify {
         false, // Check captcha (not used here)
         isSlug, // Pass featured flag (derived from isSlug for simplicity here, adjust if needed)
         isSlug, // Pass isSlug flag
-        'en' // Default locale, adjust if needed
+        'en', // Default locale, adjust if needed
+        clientIp,
+        userAgent
       );
 
       if (!playlistResult.success || !playlistResult.data) {
@@ -277,7 +293,9 @@ class Spotify {
 
       if (!cacheResult || !cache) {
         const ipInfo = clientIp ? ` from IP ${color.white.bold(clientIp)}` : '';
-        const uaInfo = userAgent ? ` with User-Agent: ${color.white.bold(userAgent)}` : '';
+        const uaInfo = userAgent
+          ? ` with User-Agent: ${color.white.bold(userAgent)}`
+          : '';
         this.logger.log(
           color.blue.bold(
             `Fetching tracks from API for playlist ${color.white.bold(

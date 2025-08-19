@@ -161,13 +161,16 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, _reply) => {
       await mollie.clearPDFs(request.params.paymentId);
+      const userAgent = request.headers['user-agent'] || '';
       generator.generate(
         request.params.paymentId,
         request.clientIp,
         '',
         mollie,
         true, // Force finalize
-        !utils.parseBoolean(request.params.email) // Skip main mail
+        !utils.parseBoolean(request.params.email), // Skip main mail
+        false,
+        userAgent
       );
       return { success: true };
     }
@@ -179,6 +182,7 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, _reply) => {
       await mollie.clearPDFs(request.params.paymentId);
+      const userAgent = request.headers['user-agent'] || '';
       // This will skip the main "order received" email but still send product emails
       generator.generate(
         request.params.paymentId,
@@ -187,7 +191,8 @@ export default async function adminRoutes(
         mollie,
         true, // Force finalize
         false, // Don't skip main mail (but onlyProductMail will handle it)
-        true // Only product mail
+        true, // Only product mail
+        userAgent
       );
       return { success: true };
     }
