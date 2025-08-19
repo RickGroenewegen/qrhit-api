@@ -273,7 +273,7 @@ class Spotify {
       // Get playlist details first (handles slug, gets track count for cache key)
       const playlistResult = await this.getPlaylist(
         playlistId,
-        false, // Use cache for playlist info
+        isSlug ? true : false, // Use cache for slug-based playlists, not for regular ones
         '', // Captcha token (not used here)
         false, // Check captcha (not used here)
         isSlug, // Pass featured flag (derived from isSlug for simplicity here, adjust if needed)
