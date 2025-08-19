@@ -25,12 +25,15 @@ export default async function musicRoutes(fastify: FastifyInstance) {
 
   // Get Spotify playlist tracks
   fastify.post('/spotify/playlists/tracks', async (request: any, _reply) => {
+    const userAgent = request.headers['user-agent'] || '';
     return await spotify.getTracks(
       request.body.playlistId,
       utils.parseBoolean(request.body.cache),
       request.body.captchaToken,
       true,
-      utils.parseBoolean(request.body.slug)
+      utils.parseBoolean(request.body.slug),
+      request.clientIp,
+      userAgent
     );
   });
 

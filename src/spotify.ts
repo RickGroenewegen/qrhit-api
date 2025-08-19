@@ -237,7 +237,9 @@ class Spotify {
     cache: boolean = true,
     captchaToken: string = '',
     checkCaptcha: boolean,
-    isSlug: boolean = false
+    isSlug: boolean = false,
+    clientIp: string = '',
+    userAgent: string = ''
   ): Promise<ApiResult> {
     try {
       let cacheKey = `tracks2_${playlistId}`; // Use different prefix for cache key
@@ -274,11 +276,13 @@ class Spotify {
       const cacheResult = await this.cache.get(cacheKey);
 
       if (!cacheResult || !cache) {
+        const ipInfo = clientIp ? ` from IP ${color.white.bold(clientIp)}` : '';
+        const uaInfo = userAgent ? ` with User-Agent: ${color.white.bold(userAgent)}` : '';
         this.logger.log(
           color.blue.bold(
             `Fetching tracks from API for playlist ${color.white.bold(
               playlistId
-            )} (${playlistData.name})`
+            )} (${playlistData.name})${ipInfo}${uaInfo}`
           )
         );
 

@@ -182,7 +182,7 @@ class Order {
           true,
           true
         );
-        await this.spotify.getTracks(playlist.slug, false, '', false, true);
+        await this.spotify.getTracks(playlist.slug, false, '', false, true, '', '');
 
         // Calculate decade percentages
         const tracks = playlist.tracks

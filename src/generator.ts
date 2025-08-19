@@ -338,7 +338,10 @@ class Generator {
       playlist.playlistId,
       !refreshCache,
       '',
-      false
+      false,
+      false,
+      '',
+      ''
     );
     const tracks = response.data.tracks;
 
