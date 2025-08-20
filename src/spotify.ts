@@ -128,119 +128,218 @@ class Spotify {
     // }
 
     try {
-      const cacheKey = `playlist_${playlistId}_${locale}`;
-      const cacheResult = await this.cache.get(cacheKey);
+      // Remove locale from cache key - cache all descriptions together
+      const cacheKey = `playlist_${playlistId}`;
+      const lockKey = `playlist_fetch_${playlistId}`;
       const dbCacheKey = `playlistdb_${playlistId}`;
+
+      // Try to get from cache first
+      let cacheResult = await this.cache.get(cacheKey);
       const dbCacheResult = await this.cache.get(dbCacheKey);
 
       if (!cacheResult || !cache) {
-        const ipInfo = clientIp ? ` from IP ${color.white.bold(clientIp)}` : '';
-        const uaInfo = userAgent
-          ? ` with User-Agent: ${color.white.bold(userAgent)}`
-          : '';
+        // Try to acquire lock for this playlist
+        const lockAcquired = await this.cache.acquireLock(lockKey, 30); // 30 second TTL
 
-        let checkPlaylistId = playlistId;
-
-        if (isSlug) {
-          if (!dbCacheResult || !cache) {
-            const dbPlaylist = await this.prisma.playlist.findFirst({
-              where: { slug: playlistId, featured: true },
-            });
-            if (!dbPlaylist) {
-              return { success: false, error: 'playlistNotFound' };
-            }
-            checkPlaylistId = dbPlaylist.playlistId;
-            this.cache.set(dbCacheKey, checkPlaylistId);
-          } else {
-            checkPlaylistId = dbCacheResult;
-          }
-        }
-
-        this.logger.log(
-          color.blue.bold(
-            `Fetching playlist from API (${cacheKey} / ${
-              isSlug ? 'slug' : 'id'
-            } / Cache: ${cache}) for ${color.white.bold(
-              playlistId
-            )}${ipInfo}${uaInfo}`
-          )
-        );
-
-        // Access token handling is now done within the specific API implementation (e.g., SpotifyApi)
-        const result = await this.api.getPlaylist(checkPlaylistId);
-
-        if (!result.success) {
-          // Check if the error indicates a need for re-authentication
-          if (result.needsReAuth) {
-            return { success: false, error: result.error, needsReAuth: true };
-          }
-          if (
-            result.error === 'Spotify resource not found' ||
-            result.error === 'playlistNotFound'
-          ) {
-            return { success: false, error: 'playlistNotFound' };
-          }
-          return {
-            success: false,
-            error: result.error || 'Error getting playlist from API',
-          };
-        }
-
-        const playlistData = result.data;
-
-        // Add check to ensure playlistData exists before accessing its properties
-        if (!playlistData) {
+        if (!lockAcquired) {
+          // Another request is already fetching this playlist
+          // Wait and retry getting from cache
           this.logger.log(
-            color.red.bold(
-              `Playlist data missing from API response for ${checkPlaylistId}`
+            color.yellow.bold(
+              `Waiting for another request to fetch playlist ${color.white.bold(
+                playlistId
+              )}`
             )
           );
-          return {
-            success: false,
-            error: 'Error getting playlist data from API',
-          };
+
+          // Poll cache every 100ms for up to 10 seconds
+          const maxAttempts = 100;
+          for (let i = 0; i < maxAttempts; i++) {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+            cacheResult = await this.cache.get(cacheKey);
+            if (cacheResult) {
+              break;
+            }
+          }
+
+          // If still no cache result after waiting, return error
+          if (!cacheResult) {
+            return {
+              success: false,
+              error: 'Timeout waiting for playlist data',
+            };
+          }
+        } else {
+          // We acquired the lock, fetch the playlist
+          try {
+            const ipInfo = clientIp
+              ? ` from IP ${color.white.bold(clientIp)}`
+              : '';
+            const uaInfo = userAgent
+              ? ` with User-Agent: ${color.white.bold(userAgent)}`
+              : '';
+
+            let checkPlaylistId = playlistId;
+
+            if (isSlug) {
+              if (!dbCacheResult || !cache) {
+                const dbPlaylist = await this.prisma.playlist.findFirst({
+                  where: { slug: playlistId, featured: true },
+                });
+                if (!dbPlaylist) {
+                  await this.cache.releaseLock(lockKey);
+                  return { success: false, error: 'playlistNotFound' };
+                }
+                checkPlaylistId = dbPlaylist.playlistId;
+                this.cache.set(dbCacheKey, checkPlaylistId);
+              } else {
+                checkPlaylistId = dbCacheResult;
+              }
+            }
+
+            this.logger.log(
+              color.blue.bold(
+                `Fetching playlist from API for ${color.white.bold(
+                  playlistId
+                )}${ipInfo}${uaInfo}`
+              )
+            );
+
+            // Access token handling is now done within the specific API implementation (e.g., SpotifyApi)
+            const result = await this.api.getPlaylist(checkPlaylistId);
+
+            if (!result.success) {
+              await this.cache.releaseLock(lockKey);
+              // Check if the error indicates a need for re-authentication
+              if (result.needsReAuth) {
+                return {
+                  success: false,
+                  error: result.error,
+                  needsReAuth: true,
+                };
+              }
+              if (
+                result.error === 'Spotify resource not found' ||
+                result.error === 'playlistNotFound'
+              ) {
+                return { success: false, error: 'playlistNotFound' };
+              }
+              return {
+                success: false,
+                error: result.error || 'Error getting playlist from API',
+              };
+            }
+
+            const playlistData = result.data;
+
+            // Add check to ensure playlistData exists before accessing its properties
+            if (!playlistData) {
+              await this.cache.releaseLock(lockKey);
+              this.logger.log(
+                color.red.bold(
+                  `Playlist data missing from API response for ${checkPlaylistId}`
+                )
+              );
+              return {
+                success: false,
+                error: 'Error getting playlist data from API',
+              };
+            }
+
+            let image = '';
+            // Now it's safe to access playlistData properties
+            if (playlistData.images && playlistData.images.length > 0) {
+              image = playlistData.images[0].url;
+            }
+
+            let playlistName = playlistData.name;
+            let playlistDescription = playlistData.description;
+            let allDescriptions: Record<string, string | null> = {};
+
+            if (featured) {
+              // Build select object dynamically based on available locales
+              const selectFields: any = { name: true };
+              for (const lang of this.translate.allLocales) {
+                selectFields[`description_${lang}`] = true;
+              }
+
+              const dbPlaylist = await this.prisma.playlist.findFirst({
+                where: { slug: playlistId, featured: true },
+                select: selectFields,
+              });
+
+              if (dbPlaylist) {
+                playlistName = dbPlaylist.name || playlistName;
+
+                // Collect all descriptions dynamically
+                for (const lang of this.translate.allLocales) {
+                  const descField =
+                    `description_${lang}` as keyof typeof dbPlaylist;
+                  const descValue = dbPlaylist[descField];
+                  if (descValue && typeof descValue === 'string') {
+                    allDescriptions[lang] = descValue;
+                  }
+                }
+              }
+            }
+
+            // Cache the full playlist data with all descriptions
+            const cachedPlaylistData = {
+              id: playlistId,
+              playlistId: checkPlaylistId,
+              name: playlistName,
+              description: playlistDescription, // Default Spotify description
+              descriptions: allDescriptions, // All language descriptions
+              numberOfTracks: playlistData.tracks?.total || 0,
+              image,
+            };
+
+            this.cache.set(cacheKey, JSON.stringify(cachedPlaylistData));
+
+            // If this was a slug lookup, also cache with the actual playlist ID
+            if (isSlug && checkPlaylistId !== playlistId) {
+              const actualCacheKey = `playlist_${checkPlaylistId}`;
+              this.cache.set(
+                actualCacheKey,
+                JSON.stringify(cachedPlaylistData)
+              );
+            }
+
+            // Release the lock after successful caching
+            await this.cache.releaseLock(lockKey);
+
+            // Extract the appropriate description for the requested locale
+            playlist = {
+              id: playlistId,
+              playlistId: checkPlaylistId,
+              name: playlistName,
+              description: allDescriptions[locale] || playlistDescription,
+              numberOfTracks: cachedPlaylistData.numberOfTracks,
+              image,
+            };
+          } catch (error) {
+            // Make sure to release lock in case of any error
+            await this.cache.releaseLock(lockKey);
+            throw error;
+          }
         }
-
-        let image = '';
-        // Now it's safe to access playlistData properties
-        if (playlistData.images && playlistData.images.length > 0) {
-          image = playlistData.images[0].url;
-        }
-
-        let playlistName = playlistData.name;
-        let playlistDescription = playlistData.description;
-
-        if (featured) {
-          const dbPlaylist = await this.prisma.playlist.findFirst({
-            where: { slug: playlistId, featured: true },
-          });
-
-          playlistName = dbPlaylist?.name || playlistName;
-          playlistDescription =
-            (dbPlaylist
-              ? dbPlaylist[`description_${locale}` as keyof typeof dbPlaylist]
-              : null) || playlistDescription;
-        }
-
-        playlist = {
-          id: playlistId,
-          playlistId: checkPlaylistId,
-          name: playlistName,
-          description: playlistDescription,
-          numberOfTracks: playlistData.tracks?.total || 0,
-          image,
-        };
-
-        this.cache.set(cacheKey, JSON.stringify(playlist));
-
-        // If this was a slug lookup, also cache with the actual playlist ID
-        if (isSlug && checkPlaylistId !== playlistId) {
-          const actualCacheKey = `playlist_${checkPlaylistId}_${locale}`;
-          this.cache.set(actualCacheKey, JSON.stringify(playlist));
-        }
-      } else {
-        playlist = JSON.parse(cacheResult);
       }
+
+      if (!playlist && cacheResult) {
+        // Parse cached data and extract appropriate description
+        const cachedData = JSON.parse(cacheResult);
+        playlist = {
+          id: cachedData.id,
+          playlistId: cachedData.playlistId,
+          name: cachedData.name,
+          description:
+            (cachedData.descriptions && cachedData.descriptions[locale]) ||
+            cachedData.description,
+          numberOfTracks: cachedData.numberOfTracks,
+          image: cachedData.image,
+        };
+      }
+
       return {
         success: true,
         data: playlist,
@@ -307,11 +406,9 @@ class Spotify {
           : '';
         this.logger.log(
           color.blue.bold(
-            `Fetching tracks from API (${cacheKey} / ${
-              isSlug ? 'slug' : 'id'
-            } / Cache: ${cache} for playlist ${color.white.bold(playlistId)} (${
-              playlistData.name
-            })${ipInfo}${uaInfo}`
+            `Fetching tracks from API for playlist ${color.white.bold(
+              playlistId
+            )} (${playlistData.name})${ipInfo}${uaInfo}`
           )
         );
 

@@ -262,8 +262,8 @@ export class ChatGPT {
     const prompt = `Playlist name: "${playlistName}"\n\nSample tracks:\n${tracksPrompt}`;
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4.1',
-      temperature: 0.2,
+      model: 'gpt-5',
+      temperature: 0.7,
       messages: [
         {
           role: 'system',
@@ -818,7 +818,7 @@ export class ChatGPT {
     instruction: string
   ): Promise<{ title: string; content: string; summary?: string }> {
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4.1',
+      model: 'gpt-5',
       temperature: 0.7,
       messages: [
         {
@@ -942,7 +942,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
     onChunk: (chunk: string) => void
   ): Promise<{ title: string; content: string; summary?: string }> {
     const stream = await this.openai.chat.completions.create({
-      model: 'gpt-4.1',
+      model: 'gpt-5',
       temperature: 0.7,
       stream: true,
       messages: [
@@ -1169,8 +1169,8 @@ Write in a professional, informative, and engaging style. The tone should be cle
   ): Promise<Record<string, string>> {
     if (!text || !targetLocales || targetLocales.length === 0) return {};
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4.1',
-      temperature: 0.3,
+      model: 'gpt-5',
+      temperature: 0.5,
       messages: [
         {
           role: 'system',
@@ -1249,7 +1249,7 @@ ${htmlString}
 `;
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-4.1',
+      model: 'gpt-5',
       temperature: 0,
       messages: [
         {
