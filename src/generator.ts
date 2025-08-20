@@ -156,11 +156,7 @@ class Generator {
 
     const refreshPlaylistArray = refreshPlaylists.split(',');
 
-    console.log(111, paymentId);
-
     const paymentStatus = await mollie.checkPaymentStatus(paymentId);
-
-    console.log(222, paymentStatus);
 
     const userId = paymentStatus.data.payment.user.userId;
     let payment = await mollie.getPayment(paymentId);
