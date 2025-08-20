@@ -697,14 +697,6 @@ class Spotify {
         // Limit the tracks to MAX_CARDS if we have more
         allFormattedTracks = allFormattedTracks.slice(0, MAX_CARDS);
       } else {
-        this.logger.log(
-          color.blue.bold(
-            `Fetching tracks from CACHE for playlist ${color.white.bold(
-              playlistId
-            )} (${playlistData.name})`
-          )
-        );
-
         // Use cached result
         const cachedResult = JSON.parse(cacheResult);
         // Assuming cache stores the final processed result object directly
