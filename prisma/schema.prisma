@@ -528,6 +528,7 @@ model TrustPilot {
   image       String
   locale      String?
   landingPage Boolean  @default(false)
+  hide        Boolean  @default(false)
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
 
