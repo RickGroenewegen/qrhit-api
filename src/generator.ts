@@ -628,6 +628,13 @@ class Generator {
       where: {
         paymentId,
       },
+      include: {
+        user: {
+          select: {
+            hash: true,
+          },
+        },
+      },
     });
 
     if (
@@ -686,6 +693,13 @@ class Generator {
       });
 
       if (orderData.success) {
+        // Send email notification to customer about printing started
+        if (payment.user) {
+          for (const physicalPlaylist of physicalPlaylists) {
+            await this.mail.sendToPrinterMail(payment as typeof payment & { user: { hash: string } }, physicalPlaylist.playlist);
+          }
+        }
+        
         this.logger.log(
           color.green.bold(
             `Order sent to printer for payment: ${white.bold(paymentId)}`

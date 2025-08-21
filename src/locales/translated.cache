@@ -5842,7 +5842,8 @@
     "it",
     "pt",
     "pl",
-    "jp"
+    "jp",
+    "cn"
   ],
   "qrsong_activation.subject": [
     "nl",
@@ -5862,7 +5863,8 @@
     "it",
     "pt",
     "pl",
-    "jp"
+    "jp",
+    "cn"
   ],
   "qrgames_activation.greeting": [
     "nl",
@@ -5872,7 +5874,8 @@
     "it",
     "pt",
     "pl",
-    "jp"
+    "jp",
+    "cn"
   ],
   "qrgames_activation.yourActivationCode": [
     "nl",
@@ -5882,7 +5885,8 @@
     "it",
     "pt",
     "pl",
-    "jp"
+    "jp",
+    "cn"
   ],
   "qrgames_activation.codeExpires": [
     "nl",
@@ -5892,7 +5896,8 @@
     "it",
     "pt",
     "pl",
-    "jp"
+    "jp",
+    "cn"
   ],
   "qrgames_activation.simpleInstructions": [
     "nl",
@@ -5902,7 +5907,8 @@
     "it",
     "pt",
     "pl",
-    "jp"
+    "jp",
+    "cn"
   ],
   "qrgames_activation.onceActivated": [
     "nl",
@@ -5912,7 +5918,8 @@
     "it",
     "pt",
     "pl",
-    "jp"
+    "jp",
+    "cn"
   ],
   "qrgames_activation.needHelp": [
     "nl",
@@ -5922,7 +5929,8 @@
     "it",
     "pt",
     "pl",
-    "jp"
+    "jp",
+    "cn"
   ],
   "qrgames_activation.happyPlaying": [
     "nl",
@@ -5932,7 +5940,8 @@
     "it",
     "pt",
     "pl",
-    "jp"
+    "jp",
+    "cn"
   ],
   "qrgames_activation.team": [
     "nl",
@@ -5986,6 +5995,62 @@
     "it",
     "pt",
     "pl",
-    "jp"
+    "jp",
+    "cn"
+  ],
+  "mail.freeDigitalIncluded": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn"
+  ],
+  "mail.downloadDigitalButton": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn"
+  ],
+  "mail.printingStarted": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn"
+  ],
+  "mail.sendToPrinterMailSubject": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn"
+  ],
+  "mail.downloadDigitalButtonPrinter": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn"
   ]
 }

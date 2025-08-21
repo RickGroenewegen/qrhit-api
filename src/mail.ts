@@ -999,6 +999,90 @@ class Mail {
     }
   }
 
+  async sendToPrinterMail(
+    payment: Payment & { user: { hash: string } },
+    playlist: any
+  ): Promise<void> {
+    if (!this.ses) return;
+
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+
+    const translations = await this.translation.getTranslationsByPrefix(
+      payment.locale,
+      'mail'
+    );
+    
+
+    const mailParams = {
+      payment,
+      playlist,
+      orderId: payment.orderId,
+      numberOfTracks: playlist.tracks?.length || 0,
+      digitalDownloadLink: `${process.env['API_URI']}/download/${payment.paymentId}/${payment.user.hash}/${playlist.playlistId}/digital`,
+      productName: process.env['PRODUCT_NAME'],
+      currentYear: new Date().getFullYear(),
+      translations,
+    };
+
+    try {
+      // Read the logo file and convert it to Base64
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+
+      let locale = payment.locale;
+
+      const html = await this.templates.render(
+        `mails/send_to_printer_html`,
+        mailParams
+      );
+      const text = await this.templates.render(
+        `mails/send_to_printer_text`,
+        mailParams
+      );
+
+      const subject = decode(
+        this.translation.translate('mail.sendToPrinterMailSubject', locale, {
+          orderId: payment.orderId,
+          playlist: playlist.name,
+        })
+      );
+
+      let attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+
+      const rawEmail = await this.renderRaw({
+        from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+        to: payment.email,
+        subject,
+        html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+        text,
+        attachments,
+        unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+        replyTo: process.env['REPLY_TO_EMAIL'],
+      });
+
+      const emailBuffer = Buffer.from(rawEmail);
+
+      // Prepare and send the raw email
+      const command = new SendRawEmailCommand({
+        RawMessage: {
+          Data: emailBuffer,
+        },
+      });
+
+      await this.ses.send(command);
+    } catch (error) {
+      console.error('Error while sending email with attachment', error);
+    }
+  }
+
   public async renderRaw(
     params: MailParams,
     sendBCC: boolean = true

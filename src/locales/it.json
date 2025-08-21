@@ -461,12 +461,17 @@
   "qrgames_activation.greatNews": "Ecco il tuo codice di attivazione per le carte QRSong!:",
   "qrgames_activation.yourActivationCode": "Il tuo codice di attivazione",
   "qrgames_activation.codeExpires": "Questo codice scade tra 1 ora",
-  "qrgames_activation.simpleInstructions": "Inserisci questo codice nell'app QRSong! per attivare le tue playlist acquistate.",
-  "qrgames_activation.onceActivated": "Una volta attivate, tutte le tue playlist acquistate saranno disponibili nell'app durante l'hosting di giochi.",
-  "qrgames_activation.needHelp": "Se hai domande o hai bisogno di aiuto, non esitare a contattare il nostro team di supporto.",
+  "qrgames_activation.simpleInstructions": "Inserisci questo codice nell’app QRSong! per attivare le playlist acquistate.",
+  "qrgames_activation.onceActivated": "Una volta attivato, tutte le playlist acquistate saranno disponibili nell’app quando ospiti giochi.",
+  "qrgames_activation.needHelp": "Domande o bisogno di aiuto? Scrivici pure al supporto.",
   "qrgames_activation.happyPlaying": "Buon divertimento!",
   "qrgames_activation.team": "Il team QRSong!",
   "qrgames_activation.allRightsReserved": "Tutti i diritti riservati",
   "qrgames_activation.visitWebsite": "Visita il nostro sito",
-  "qrgames_activation.contactSupport": "Contatta il supporto"
+  "qrgames_activation.contactSupport": "Contatta il supporto",
+  "mail.freeDigitalIncluded": "Con l’acquisto della carta QR fisica, hai anche la versione digitale GRATIS! Scaricala ora e usa subito le tue carte mentre quelle fisiche sono in spedizione.",
+  "mail.downloadDigitalButton": "Scarica le carte digitali",
+  "mail.sendToPrinterMailSubject": "Abbiamo iniziato a stampare le carte per la playlist {{ playlist }}!",
+  "mail.printingStarted": "Ottime notizie! Stiamo stampando le tue carte musicali QR. Le spediamo a breve.",
+  "mail.downloadDigitalButtonPrinter": "Scarica il tuo PDF"
 }

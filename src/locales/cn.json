@@ -453,5 +453,20 @@
   "qrgames_activation.team": "QRSong! チーム",
   "qrgames_activation.allRightsReserved": "全著作権所有",
   "qrgames_activation.visitWebsite": "ウェブサイトへ",
-  "qrgames_activation.contactSupport": "サポートに連絡"
+  "qrgames_activation.contactSupport": "サポートに連絡",
+  "mail.freeDigitalIncluded": "购买实体QR卡，还送你数字版，完全免费！现在下载，实体卡寄来前就能用上。",
+  "mail.downloadDigitalButton": "下载数字卡片",
+  "password_reset.team": "QRSong团队",
+  "qrgames_activation.subject": "你的QRGames!激活码",
+  "qrgames_activation.greeting": "嗨",
+  "qrgames_activation.greatNews": "你的QRSong!卡片激活码：",
+  "qrgames_activation.yourActivationCode": "你的激活码",
+  "qrgames_activation.codeExpires": "此激活码1小时后失效",
+  "qrgames_activation.simpleInstructions": "在QRSong!应用里输入此码激活你买的歌单。",
+  "qrgames_activation.onceActivated": "激活后，你买的所有歌单在主持游戏时都能在App里用。",
+  "mail.sendToPrinterMailSubject": "我们已经开始为歌单{{ playlist }}打印卡片啦！",
+  "mail.printingStarted": "好消息！你的QR音乐卡正在打印，很快就会寄给你。",
+  "qrgames_activation.needHelp": "有问题或需要帮助？随时联系我们的客服。",
+  "qrgames_activation.happyPlaying": "玩得开心！",
+  "mail.downloadDigitalButtonPrinter": "下载你的PDF"
 }

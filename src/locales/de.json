@@ -467,11 +467,16 @@
   "qrgames_activation.yourActivationCode": "Dein Aktivierungscode",
   "qrgames_activation.codeExpires": "Dieser Code läuft in 1 Stunde ab",
   "qrgames_activation.simpleInstructions": "Gib diesen Code in der QRSong! App ein, um deine gekauften Playlists zu aktivieren.",
-  "qrgames_activation.onceActivated": "Einmal aktiviert, sind alle deine gekauften Playlists in der App verfügbar, wenn du Spiele hostest.",
-  "qrgames_activation.needHelp": "Wenn du Fragen hast oder Hilfe benötigst, kontaktiere gerne unser Support-Team.",
+  "qrgames_activation.onceActivated": "Nach der Aktivierung sind alle gekauften Playlists in der App verfügbar, wenn du Spiele hostest.",
+  "qrgames_activation.needHelp": "Hast du Fragen oder brauchst Hilfe? Melde dich einfach beim Support.",
   "qrgames_activation.happyPlaying": "Viel Spaß beim Spielen!",
   "qrgames_activation.team": "Das QRSong! Team",
   "qrgames_activation.allRightsReserved": "Alle Rechte vorbehalten",
   "qrgames_activation.visitWebsite": "Besuche unsere Website",
-  "qrgames_activation.contactSupport": "Kontakt Support"
+  "qrgames_activation.contactSupport": "Kontakt Support",
+  "mail.freeDigitalIncluded": "Mit deinem physischen QR-Kartenkauf bekommst du die digitale Version komplett GRATIS dazu! Lade sie jetzt runter und nutze deine Karten sofort, während die physischen Karten verschickt werden.",
+  "mail.downloadDigitalButton": "Digitale Karten herunterladen",
+  "mail.sendToPrinterMailSubject": "Wir haben angefangen, die Karten für die Playlist {{ playlist }} zu drucken!",
+  "mail.printingStarted": "Gute Nachrichten! Wir drucken jetzt deine QR-Musikkarten. Deine Karten sind bald auf dem Weg.",
+  "mail.downloadDigitalButtonPrinter": "Lad dir dein PDF runter"
 }
