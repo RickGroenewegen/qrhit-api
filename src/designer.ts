@@ -4,11 +4,13 @@ import Log from './logger';
 import Utils from './utils';
 import { color, white } from 'console-log-colors';
 import sharp from 'sharp';
+import PrismaInstance from './prisma';
 
 class Designer {
   private static instance: Designer;
   private logger = new Log();
   private utils = new Utils();
+  private prisma = PrismaInstance.getInstance();
 
   private constructor() {
     // Initialize the background directory
@@ -96,7 +98,7 @@ class Designer {
         // Process the image with sharp
         // Resize to 1000x1000, optionally add white circle, and convert to PNG with compression
         let sharpInstance = sharp(buffer).resize(1000, 1000, { fit: 'cover' });
-        
+
         // Build composite layers
         const compositeOptions: any[] = [
           {
@@ -111,7 +113,7 @@ class Designer {
             blend: 'dest-over',
           },
         ];
-        
+
         // Only add the white circle if hideCircle is false
         if (!hideCircle) {
           compositeOptions.push({
@@ -123,7 +125,7 @@ class Designer {
             blend: 'over',
           });
         }
-        
+
         const processedBuffer = await sharpInstance
           .composite(compositeOptions)
           .png({ compressionLevel: 9, quality: 90 }) // Convert to PNG with high compression
@@ -243,6 +245,167 @@ class Designer {
         color.red.bold(`Error uploading logo image: ${white.bold(error)}`)
       );
       return { success: false, error: String(error) };
+    }
+  }
+
+  /**
+   * Get card design for a payment/playlist combination
+   * Validates ownership through paymentId and userHash
+   */
+  public async getCardDesign(
+    paymentId: string,
+    userHash: string,
+    playlistId: string
+  ): Promise<any> {
+    try {
+      // Get card design data from PaymentHasPlaylist
+      const cardDesign = await this.prisma.$queryRaw<any[]>`
+        SELECT 
+          php.background,
+          php.logo,
+          php.emoji,
+          php.hideDomain,
+          php.hideCircle,
+          php.qrColor,
+          php.doubleSided,
+          php.eco,
+          php.type,
+          pl.name as playlistName,
+          pl.numberOfTracks
+        FROM payments p
+        JOIN users u ON p.userId = u.id
+        JOIN payment_has_playlist php ON php.paymentId = p.id
+        JOIN playlists pl ON pl.id = php.playlistId
+        WHERE p.paymentId = ${paymentId}
+        AND u.hash = ${userHash}
+        AND pl.playlistId = ${playlistId}
+        LIMIT 1
+      `;
+
+      if (cardDesign.length > 0) {
+        // Get first track ID for QR code preview
+        const firstTrack = await this.prisma.$queryRaw<any[]>`
+          SELECT t.trackId
+          FROM payments p
+          JOIN users u ON p.userId = u.id
+          JOIN payment_has_playlist php ON php.paymentId = p.id
+          JOIN playlists pl ON pl.id = php.playlistId
+          JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
+          JOIN tracks t ON t.id = pht.trackId
+          WHERE p.paymentId = ${paymentId}
+          AND u.hash = ${userHash}
+          AND pl.playlistId = ${playlistId}
+          ORDER BY t.name ASC
+          LIMIT 1
+        `;
+
+        return {
+          success: true,
+          data: {
+            ...cardDesign[0],
+            firstTrackId: firstTrack.length > 0 ? firstTrack[0].trackId : null,
+          },
+        };
+      }
+
+      return { success: false, error: 'Card design not found' };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error getting card design: ${white.bold(error)}`)
+      );
+      return { success: false, error: String(error) };
+    }
+  }
+
+  /**
+   * Update card design for a payment/playlist combination
+   * Validates ownership through paymentId and userHash
+   */
+  public async updateCardDesign(
+    paymentId: string,
+    userHash: string,
+    playlistId: string,
+    design: {
+      background?: string;
+      logo?: string;
+      emoji?: string;
+      hideDomain?: boolean;
+      hideCircle?: boolean;
+      qrColor?: string;
+      doubleSided?: boolean;
+      eco?: boolean;
+    }
+  ): Promise<boolean> {
+    try {
+      // Verify ownership by checking payment and user hash
+      const payment = await this.prisma.$queryRaw<any[]>`
+        SELECT p.id, p.status
+        FROM payments p
+        JOIN users u ON p.userId = u.id
+        WHERE p.paymentId = ${paymentId}
+        AND u.hash = ${userHash}
+        AND p.status = 'paid'
+        LIMIT 1
+      `;
+
+      if (payment.length === 0) {
+        this.logger.log(
+          color.red.bold(`Unauthorized access attempt for payment ${paymentId}`)
+        );
+        return false;
+      }
+
+      const paymentDbId = payment[0].id;
+
+      // Get the playlist database ID
+      const playlist = await this.prisma.playlist.findFirst({
+        where: {
+          playlistId: playlistId,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      if (!playlist) {
+        this.logger.log(color.red.bold(`Playlist not found: ${playlistId}`));
+        return false;
+      }
+
+      // Update the PaymentHasPlaylist record with the new design
+      await this.prisma.paymentHasPlaylist.update({
+        where: {
+          paymentId_playlistId: {
+            paymentId: paymentDbId,
+            playlistId: playlist.id,
+          },
+        },
+        data: {
+          background: design.background,
+          logo: design.logo,
+          emoji: design.emoji,
+          hideDomain: design.hideDomain,
+          hideCircle: design.hideCircle,
+          qrColor: design.qrColor,
+          doubleSided: design.doubleSided,
+          eco: design.eco,
+        },
+      });
+
+      this.logger.log(
+        color.green.bold(
+          `Card design updated for payment ${color.white.bold(
+            paymentId
+          )} and playlist ${color.white.bold(playlistId)}`
+        )
+      );
+
+      return true;
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error updating card design: ${white.bold(error)}`)
+      );
+      return false;
     }
   }
 }

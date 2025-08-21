@@ -272,6 +272,68 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     return result;
   });
 
+  // Get card design for user suggestions
+  fastify.get(
+    '/usersuggestions/:paymentId/:userHash/:playlistId/design',
+    async (request: any, reply) => {
+      const { paymentId, userHash, playlistId } = request.params;
+      
+      const result = await designer.getCardDesign(
+        paymentId,
+        userHash,
+        playlistId
+      );
+
+      if (!result.success) {
+        reply.status(404).send(result);
+        return;
+      }
+
+      return result;
+    }
+  );
+
+  // Update card design for user suggestions
+  fastify.post(
+    '/usersuggestions/:paymentId/:userHash/:playlistId/design',
+    async (request: any, reply) => {
+      const { paymentId, userHash, playlistId } = request.params;
+      const { 
+        background, 
+        logo, 
+        emoji, 
+        hideDomain, 
+        hideCircle, 
+        qrColor,
+        doubleSided,
+        eco 
+      } = request.body;
+
+      const success = await designer.updateCardDesign(
+        paymentId,
+        userHash,
+        playlistId,
+        {
+          background,
+          logo,
+          emoji,
+          hideDomain,
+          hideCircle,
+          qrColor,
+          doubleSided,
+          eco
+        }
+      );
+
+      if (!success) {
+        reply.status(403).send({ success: false, error: 'Unauthorized or invalid request' });
+        return;
+      }
+
+      return { success };
+    }
+  );
+
   // Development routes
   if (process.env['ENVIRONMENT'] == 'development') {
     // Test audio generation
