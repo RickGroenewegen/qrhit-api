@@ -32,9 +32,9 @@ class Spotify {
   private spotifyApi = new SpotifyApi(); // Instantiate SpotifyApi
   private spotifyRapidApi = new SpotifyRapidApi(); // Instantiate SpotifyRapidApi
   private spotifyScraper = new SpotifyScraper(); // Instantiate SpotifyScraper if needed
-  private SpotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
+  private spotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
 
-  private api = this.spotifyRapidApi; // Default to SpotifyScraper
+  private api = this.spotifyScraper; // Default to SpotifyScraper
 
   // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
   private jumboCardMap: { [key: string]: string } = {};
