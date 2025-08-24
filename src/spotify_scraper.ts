@@ -281,6 +281,7 @@ class SpotifyScraper {
     try {
       const options = this.createOptions('/v1/playlist/contents', {
         playlistId: playlistId,
+        limit: 5000,
       });
 
       // Make the request directly
