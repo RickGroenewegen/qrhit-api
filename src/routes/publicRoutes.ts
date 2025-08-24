@@ -265,7 +265,11 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     let result = { success: false };
 
     if (type == 'background') {
-      result = await designer.uploadBackgroundImage(image, filename, hideCircle);
+      result = await designer.uploadBackgroundImage(
+        image,
+        filename,
+        hideCircle
+      );
     } else if (type == 'logo') {
       result = await designer.uploadLogoImage(image, filename);
     }
@@ -277,7 +281,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     '/usersuggestions/:paymentId/:userHash/:playlistId/design',
     async (request: any, reply) => {
       const { paymentId, userHash, playlistId } = request.params;
-      
+
       const result = await designer.getCardDesign(
         paymentId,
         userHash,
@@ -298,15 +302,15 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     '/usersuggestions/:paymentId/:userHash/:playlistId/design',
     async (request: any, reply) => {
       const { paymentId, userHash, playlistId } = request.params;
-      const { 
-        background, 
-        logo, 
-        emoji, 
-        hideDomain, 
-        hideCircle, 
+      const {
+        background,
+        logo,
+        emoji,
+        hideDomain,
+        hideCircle,
         qrColor,
         doubleSided,
-        eco 
+        eco,
       } = request.body;
 
       const success = await designer.updateCardDesign(
@@ -321,12 +325,14 @@ export default async function publicRoutes(fastify: FastifyInstance) {
           hideCircle,
           qrColor,
           doubleSided,
-          eco
+          eco,
         }
       );
 
       if (!success) {
-        reply.status(403).send({ success: false, error: 'Unauthorized or invalid request' });
+        reply
+          .status(403)
+          .send({ success: false, error: 'Unauthorized or invalid request' });
         return;
       }
 

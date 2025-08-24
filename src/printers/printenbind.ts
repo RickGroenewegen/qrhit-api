@@ -290,7 +290,7 @@ class PrintEnBind {
 
           // Schedule monthly shipping costs update (1st day of month at 1 AM)
           const shippingJob = new CronJob('0 1 1 * *', async () => {
-            await this.calculateShippingCosts();
+            //await this.calculateShippingCosts();
           });
           shippingJob.start();
         }
@@ -903,12 +903,12 @@ class PrintEnBind {
           physicalItems += parseInt(item.amount);
         }
         let itemTotalPrice = item.price * item.amount;
-        
+
         // Add €2 per set if hideDomain is true (for cards only)
         if (item.hideDomain && item.productType === 'cards') {
           itemTotalPrice += 2 * item.amount;
         }
-        
+
         totalPrice += itemTotalPrice;
         const productPriceWithoutVAT = parseFloat(
           (itemTotalPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)
@@ -931,7 +931,7 @@ class PrintEnBind {
             shipping = 2.99;
           }
         } else {
-          shipping -= 3;
+          shipping -= 1;
         }
       } else if (physicalItems > 0 && !shippingResult) {
         totalPrice = 0;

@@ -34,7 +34,7 @@ class Spotify {
   private spotifyScraper = new SpotifyScraper(); // Instantiate SpotifyScraper if needed
   private SpotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
 
-  private api = this.spotifyScraper; // Default to SpotifyScraper
+  private api = this.SpotifyRapidApi; // Default to SpotifyScraper
 
   // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
   private jumboCardMap: { [key: string]: string } = {};
@@ -752,6 +752,14 @@ class Spotify {
       if (cacheResult) {
         return JSON.parse(cacheResult);
       }
+
+      this.logger.log(
+        color.blue.bold(
+          `Fetching tracks by ID from API for ${color.white.bold(
+            trackIds.length
+          )} tracks`
+        )
+      );
 
       // Call the abstracted API method
       const result = await this.api.getTracksByIds(trackIds);
