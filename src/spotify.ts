@@ -17,6 +17,7 @@ import SpotifyApi from './spotify_api';
 import SpotifyRapidApi from './spotify_rapidapi';
 import SpotifyScraper from './spotify_scraper';
 import SpotifyRapidApi2 from './spotify_rapidapi2';
+import RateLimitManager from './rate_limit_manager';
 import cluster from 'cluster';
 import crypto from 'crypto';
 
@@ -33,8 +34,9 @@ class Spotify {
   private spotifyRapidApi = new SpotifyRapidApi(); // Instantiate SpotifyRapidApi
   private spotifyScraper = new SpotifyScraper(); // Instantiate SpotifyScraper if needed
   private spotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
+  private rateLimitManager = RateLimitManager.getInstance(); // Add rate limit manager
 
-  private api = this.spotifyScraper; // Default to SpotifyScraper
+  private api = this.spotifyApi; // Default to SpotifyApi
 
   // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
   private jumboCardMap: { [key: string]: string } = {};
@@ -205,8 +207,13 @@ class Spotify {
               )
             );
 
-            // Access token handling is now done within the specific API implementation (e.g., SpotifyApi)
-            const result = await this.api.getPlaylist(checkPlaylistId);
+            // Use rate limit manager for automatic fallback on 429 errors
+            const result = await this.rateLimitManager.executeWithFallback(
+              'getPlaylist',
+              [checkPlaylistId],
+              this.spotifyApi,
+              this.spotifyScraper
+            );
 
             if (!result.success) {
               await this.cache.releaseLock(lockKey);
@@ -422,8 +429,13 @@ class Spotify {
           checkPlaylistId = dbPlaylist.playlistId;
         }
 
-        // Fetch all track items using the appropriate API implementation
-        const result = await this.api.getTracks(checkPlaylistId);
+        // Use rate limit manager for automatic fallback on 429 errors
+        const result = await this.rateLimitManager.executeWithFallback(
+          'getTracks',
+          [checkPlaylistId],
+          this.spotifyApi,
+          this.spotifyScraper
+        );
 
         if (!result.success) {
           // Handle errors, including potential re-authentication needs
@@ -761,8 +773,13 @@ class Spotify {
         )
       );
 
-      // Call the abstracted API method
-      const result = await this.api.getTracksByIds(trackIds);
+      // Use rate limit manager for automatic fallback on 429 errors
+      const result = await this.rateLimitManager.executeWithFallback(
+        'getTracksByIds',
+        [trackIds],
+        this.spotifyApi,
+        this.spotifyScraper
+      );
 
       if (!result.success) {
         // Handle errors, including potential re-authentication needs
@@ -860,57 +877,19 @@ class Spotify {
         return JSON.parse(cacheResult);
       }
 
-      let result = await this.api.searchTracks(searchTerm, limit, offset);
+      // Use rate limit manager for automatic fallback on 429 errors
+      const result = await this.rateLimitManager.executeWithFallback(
+        'searchTracks',
+        [searchTerm, limit, offset],
+        this.spotifyApi,
+        this.spotifyScraper
+      );
+      
+      // Determine which API was used for logging
+      const rateLimitStatus = await this.rateLimitManager.getRateLimitStatus();
       let apiUsed = 'SpotifyAPI';
-
-      // If the primary API call fails due to rate limiting (429)
-      // use round-robin between SpotifyScraper and SpotifyRapidApi
-      if (
-        !result.success &&
-        (result.error?.includes('429') || result.retryAfter !== undefined)
-      ) {
-        // Toggle between APIs for round-robin load balancing
-        this.lastSearchApi =
-          this.lastSearchApi === 'scraper' ? 'rapidapi' : 'scraper';
-
-        if (this.lastSearchApi === 'rapidapi') {
-          apiUsed = 'RapidAPI';
-          result = await this.spotifyRapidApi.searchTracks(
-            searchTerm,
-            limit,
-            offset
-          );
-        } else {
-          apiUsed = 'ScraperAPI';
-          result = await this.spotifyScraper.searchTracks(
-            searchTerm,
-            limit,
-            offset
-          );
-        }
-
-        // If the first fallback also fails with 429, try the other API as a last resort
-        if (
-          !result.success &&
-          (result.error?.includes('429') || result.retryAfter !== undefined)
-        ) {
-          // Use the API we didn't just try
-          if (this.lastSearchApi === 'rapidapi') {
-            apiUsed = 'ScraperAPI (last resort)';
-            result = await this.spotifyScraper.searchTracks(
-              searchTerm,
-              limit,
-              offset
-            );
-          } else {
-            apiUsed = 'RapidAPI (last resort)';
-            result = await this.spotifyRapidApi.searchTracks(
-              searchTerm,
-              limit,
-              offset
-            );
-          }
-        }
+      if (rateLimitStatus.spotifyApi.limited && !rateLimitStatus.spotifyScraper.limited) {
+        apiUsed = 'ScraperAPI';
       }
 
       // Determine items found for logging

@@ -456,23 +456,16 @@ class SpotifyApi {
       // Request only the fields needed by spotify.ts: id, name, description, images.url, tracks.total
       const fields = 'id,name,description,images(url),tracks(total)';
 
-      const result = await this.executeWithRetry(async () => {
-        const response = await axios.get(
-          `https://api.spotify.com/v1/playlists/${playlistId}`,
-          {
-            params: { fields: fields }, // Add fields parameter
-            headers: { Authorization: `Bearer ${accessToken}` },
-          }
-        );
-        return response.data;
-      }, `fetching playlist ${playlistId}`);
-
-      // Check if executeWithRetry returned an ApiResult (error case)
-      if (result && typeof result === 'object' && 'success' in result) {
-        return result as ApiResult;
-      }
-
-      return { success: true, data: result };
+      // Don't use executeWithRetry for rate limits - let RateLimitManager handle it
+      const response = await axios.get(
+        `https://api.spotify.com/v1/playlists/${playlistId}`,
+        {
+          params: { fields: fields }, // Add fields parameter
+          headers: { Authorization: `Bearer ${accessToken}` },
+        }
+      );
+      
+      return { success: true, data: response.data };
     } catch (error) {
       return this.handleApiError(error, `fetching playlist ${playlistId}`);
     }
@@ -512,17 +505,11 @@ class SpotifyApi {
       while (nextUrl) {
         const currentUrl = nextUrl; // Capture for closure
 
-        const result = await this.executeWithRetry(async () => {
-          const response: AxiosResponse<any> = await axios.get(currentUrl, {
-            headers: { Authorization: `Bearer ${accessToken}` },
-          });
-          return response.data;
-        }, `fetching tracks for playlist ${playlistId} (page)`);
-
-        // Check if executeWithRetry returned an ApiResult (error case)
-        if (result && typeof result === 'object' && 'success' in result) {
-          return result as ApiResult;
-        }
+        // Don't use executeWithRetry for rate limits - let RateLimitManager handle it
+        const response: AxiosResponse<any> = await axios.get(currentUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+        const result = response.data;
 
         // Filter out null tracks which can sometimes occur
         const validItems = result.items.filter(
@@ -577,28 +564,22 @@ class SpotifyApi {
       for (let i = 0; i < trackIds.length; i += chunkSize) {
         const chunk = trackIds.slice(i, i + chunkSize);
 
-        const result = await this.executeWithRetry(async () => {
-          const response = await axios.get(
-            `https://api.spotify.com/v1/tracks`,
-            {
-              params: {
-                ids: chunk.join(','),
-                // Note: The /v1/tracks endpoint doesn't directly support a 'fields' param for the top-level response in the same way as others.
-                // It returns an object { tracks: [...] }. We request all fields for the track objects within the array.
-                // If specific fields were needed *within* each track, that's handled by the API structure itself.
-                // We are already getting the necessary fields based on the default response.
-                // If optimization was needed *within* track objects, it would require a different approach if the API supported it.
-              },
-              headers: { Authorization: `Bearer ${accessToken}` },
-            }
-          );
-          return response.data;
-        }, `fetching tracks by IDs (chunk ${Math.floor(i / chunkSize) + 1}/${Math.ceil(trackIds.length / chunkSize)})`);
-
-        // Check if executeWithRetry returned an ApiResult (error case)
-        if (result && typeof result === 'object' && 'success' in result) {
-          return result as ApiResult;
-        }
+        // Don't use executeWithRetry for rate limits - let RateLimitManager handle it
+        const response = await axios.get(
+          `https://api.spotify.com/v1/tracks`,
+          {
+            params: {
+              ids: chunk.join(','),
+              // Note: The /v1/tracks endpoint doesn't directly support a 'fields' param for the top-level response in the same way as others.
+              // It returns an object { tracks: [...] }. We request all fields for the track objects within the array.
+              // If specific fields were needed *within* each track, that's handled by the API structure itself.
+              // We are already getting the necessary fields based on the default response.
+              // If optimization was needed *within* track objects, it would require a different approach if the API supported it.
+            },
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        const result = response.data;
 
         // Filter out null tracks from the chunk response before concatenating
         const validTracksInChunk = result.tracks.filter(
@@ -654,30 +635,23 @@ class SpotifyApi {
     }
 
     try {
-      const result = await this.executeWithRetry(async () => {
-        // Request only the fields needed by spotify.ts: tracks(items(id, name, artists(name), album(images(url))), total)
-        const fields =
-          'tracks(items(id,name,artists(name),album(images(url))),total)';
-        const response = await axios.get(`https://api.spotify.com/v1/search`, {
-          params: {
-            q: searchTerm,
-            type: 'track',
-            limit: limit,
-            offset: offset,
-            fields: fields, // Add fields parameter
-          },
-          headers: { Authorization: `Bearer ${accessToken}` },
-        });
-        return response.data;
-      }, `searching tracks for "${searchTerm}"`);
-
-      // Check if executeWithRetry returned an ApiResult (error case)
-      if (result && typeof result === 'object' && 'success' in result) {
-        return result as ApiResult;
-      }
-
+      // Don't use executeWithRetry for rate limits - let RateLimitManager handle it
+      // Request only the fields needed by spotify.ts: tracks(items(id, name, artists(name), album(images(url))), total)
+      const fields =
+        'tracks(items(id,name,artists(name),album(images(url))),total)';
+      const response = await axios.get(`https://api.spotify.com/v1/search`, {
+        params: {
+          q: searchTerm,
+          type: 'track',
+          limit: limit,
+          offset: offset,
+          fields: fields, // Add fields parameter
+        },
+        headers: { Authorization: `Bearer ${accessToken}` },
+      });
+      
       // The response contains a 'tracks' object with items, total, etc.
-      return { success: true, data: result };
+      return { success: true, data: response.data };
     } catch (error) {
       return this.handleApiError(error, `searching tracks for "${searchTerm}"`);
     }
