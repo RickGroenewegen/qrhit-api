@@ -2734,6 +2734,9 @@ class Vibe {
         commercialPrice -= projectManagementDifference;
       }
 
+      // Apply manual discount to commercial price (client pays less)
+      commercialPrice -= (manualDiscount || 0);
+
       // Calculate profits
       const kickBackFee = tierData.kickBackFee;
       let resellerDiscountForUs = 0;
@@ -2746,6 +2749,7 @@ class Vibe {
         }
       }
 
+      // Our profit is reduced by the manual discount
       const profitPerBox =
         kickBackFee + resellerDiscountForUs - (manualDiscount || 0);
       const ourProfit = profitPerBox * quantity;
