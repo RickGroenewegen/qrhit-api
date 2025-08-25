@@ -2604,6 +2604,187 @@ class Vibe {
       return { success: false, error: 'Error creating Spotify playlist' };
     }
   }
+
+  /**
+   * Calculate pricing for HappiBox orders
+   * @param params Calculation parameters
+   * @returns Object with calculation results
+   */
+  public async calculatePricing(params: {
+    quantity: number;
+    includePersonalization: boolean;
+    shipmentOnLocation: boolean;
+    soldBy: 'onzevibe' | 'happibox';
+    isReseller: boolean;
+    manualDiscount: number;
+  }): Promise<any> {
+    try {
+      const {
+        quantity,
+        includePersonalization,
+        shipmentOnLocation,
+        soldBy,
+        isReseller,
+        manualDiscount
+      } = params;
+
+      // Validate input
+      if (!quantity || quantity < 1) {
+        return { success: false, error: 'Invalid quantity' };
+      }
+
+      // Pricing tiers
+      const pricingTiers: Record<number, any> = {
+        100: {
+          productionCost: 4.9,
+          cards: 9.288,
+          personalization: 5,
+          projectManagement: 5,
+          fulfillment: 1.5,
+          shipping: 2.95,
+          kickBackFee: 3,
+          resellerDiscount: 3.079,
+          commercialPrice: 44.95,
+        },
+        250: {
+          productionCost: 2.95,
+          cards: 6.408,
+          personalization: 2,
+          projectManagement: 1,
+          fulfillment: 1.5,
+          shipping: 2.95,
+          kickBackFee: 4.5,
+          resellerDiscount: 4.613,
+          commercialPrice: 30.95,
+        },
+        500: {
+          productionCost: 2.95,
+          cards: 6.408,
+          personalization: 1,
+          projectManagement: 0.5,
+          fulfillment: 1.5,
+          shipping: 2.95,
+          kickBackFee: 4.3,
+          resellerDiscount: 3.46,
+          commercialPrice: 22.95,
+        },
+        1000: {
+          productionCost: 2.8,
+          cards: 5.25,
+          personalization: 0.6,
+          projectManagement: 0.25,
+          fulfillment: 1.5,
+          shipping: 2.95,
+          kickBackFee: 4.1,
+          resellerDiscount: 3.079,
+          commercialPrice: 20.5,
+        },
+        2500: {
+          productionCost: 2.7,
+          cards: 4.15,
+          personalization: 0.2,
+          projectManagement: 0.25,
+          fulfillment: 1.5,
+          shipping: 2.95,
+          kickBackFee: 3.8,
+          resellerDiscount: 2.744,
+          commercialPrice: 18.5,
+        },
+        5000: {
+          productionCost: 2.4,
+          cards: 3.828,
+          personalization: 0.1,
+          projectManagement: 0.15,
+          fulfillment: 1.5,
+          shipping: 2.95,
+          kickBackFee: 3.5,
+          resellerDiscount: 2.546,
+          commercialPrice: 16.95,
+        },
+      };
+
+      // Determine appropriate tier
+      let tierKey: number;
+      if (quantity < 250) tierKey = 100;
+      else if (quantity < 500) tierKey = 250;
+      else if (quantity < 1000) tierKey = 500;
+      else if (quantity < 2500) tierKey = 1000;
+      else if (quantity < 5000) tierKey = 2500;
+      else tierKey = 5000;
+
+      const tierData = pricingTiers[tierKey];
+
+      // Calculate adjustments
+      let commercialPrice = tierData.commercialPrice;
+      const adjustedShipping = shipmentOnLocation ? 0.35 : tierData.shipping;
+      const shippingDifference = tierData.shipping - adjustedShipping;
+      const adjustedProjectManagement = soldBy === 'onzevibe' ? 0 : tierData.projectManagement;
+      const projectManagementDifference = tierData.projectManagement - adjustedProjectManagement;
+
+      // Adjust commercial price
+      if (!includePersonalization) {
+        commercialPrice -= tierData.personalization;
+      }
+      if (shipmentOnLocation) {
+        commercialPrice -= shippingDifference;
+      }
+      if (soldBy === 'onzevibe') {
+        commercialPrice -= projectManagementDifference;
+      }
+
+      // Calculate profits
+      const kickBackFee = tierData.kickBackFee;
+      let resellerDiscountForUs = 0;
+      
+      if (!isReseller) {
+        if (soldBy === 'happibox') {
+          resellerDiscountForUs = tierData.resellerDiscount * 0.5;
+        } else {
+          resellerDiscountForUs = tierData.resellerDiscount;
+        }
+      }
+      
+      const profitPerBox = kickBackFee + resellerDiscountForUs - (manualDiscount || 0);
+      const ourProfit = profitPerBox * quantity;
+      const resellerProfit = isReseller ? tierData.resellerDiscount * quantity : 0;
+      const clientPrice = commercialPrice * quantity;
+      const happiBoxPayment = clientPrice - ourProfit - resellerProfit;
+
+      // Return calculation results
+      return {
+        success: true,
+        calculation: {
+          quantity,
+          tierKey,
+          tierData,
+          adjustments: {
+            includePersonalization,
+            shipmentOnLocation,
+            soldBy,
+            isReseller,
+            manualDiscount: manualDiscount || 0,
+            adjustedShipping,
+            shippingDifference,
+            adjustedProjectManagement,
+            projectManagementDifference,
+          },
+          pricing: {
+            commercialPricePerBox: commercialPrice,
+            profitPerBox,
+            clientPrice,
+            ourProfit,
+            resellerProfit,
+            happiBoxPayment,
+          },
+        },
+      };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error calculating pricing: ${error}`)
+      );
+      return { success: false, error: 'Error calculating pricing' };
+    }
+  }
 }
 
 export default Vibe;

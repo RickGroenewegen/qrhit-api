@@ -634,6 +634,27 @@ export default async function vibeRoutes(
     }
   });
 
+  // Calculate pricing (admin and vibeadmin only)
+  fastify.post(
+    '/vibe/calculate',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      try {
+        const result = await vibe.calculatePricing(request.body);
+
+        if (!result.success) {
+          reply.status(400).send({ error: result.error });
+          return;
+        }
+
+        reply.send(result);
+      } catch (error) {
+        console.error('Error calculating pricing:', error);
+        reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
   // Vibe poster
   fastify.get('/vibe/poster/:posterId', async (request: any, reply: any) => {
     const posterId = request.params.posterId;
