@@ -2625,7 +2625,7 @@ class Vibe {
         shipmentOnLocation,
         soldBy,
         isReseller,
-        manualDiscount
+        manualDiscount,
       } = params;
 
       // Validate input
@@ -2647,8 +2647,8 @@ class Vibe {
           commercialPrice: 44.95,
         },
         250: {
-          productionCost: 2.95,
-          cards: 6.408,
+          productionCost: 4.9,
+          cards: 9.288,
           personalization: 2,
           projectManagement: 1,
           fulfillment: 1.5,
@@ -2718,8 +2718,10 @@ class Vibe {
       let commercialPrice = tierData.commercialPrice;
       const adjustedShipping = shipmentOnLocation ? 0.35 : tierData.shipping;
       const shippingDifference = tierData.shipping - adjustedShipping;
-      const adjustedProjectManagement = soldBy === 'onzevibe' ? 0 : tierData.projectManagement;
-      const projectManagementDifference = tierData.projectManagement - adjustedProjectManagement;
+      const adjustedProjectManagement =
+        soldBy === 'onzevibe' ? 0 : tierData.projectManagement;
+      const projectManagementDifference =
+        tierData.projectManagement - adjustedProjectManagement;
 
       // Adjust commercial price
       if (!includePersonalization) {
@@ -2735,7 +2737,7 @@ class Vibe {
       // Calculate profits
       const kickBackFee = tierData.kickBackFee;
       let resellerDiscountForUs = 0;
-      
+
       if (!isReseller) {
         if (soldBy === 'happibox') {
           resellerDiscountForUs = tierData.resellerDiscount * 0.5;
@@ -2743,10 +2745,13 @@ class Vibe {
           resellerDiscountForUs = tierData.resellerDiscount;
         }
       }
-      
-      const profitPerBox = kickBackFee + resellerDiscountForUs - (manualDiscount || 0);
+
+      const profitPerBox =
+        kickBackFee + resellerDiscountForUs - (manualDiscount || 0);
       const ourProfit = profitPerBox * quantity;
-      const resellerProfit = isReseller ? tierData.resellerDiscount * quantity : 0;
+      const resellerProfit = isReseller
+        ? tierData.resellerDiscount * quantity
+        : 0;
       const clientPrice = commercialPrice * quantity;
       const happiBoxPayment = clientPrice - ourProfit - resellerProfit;
 
@@ -2779,9 +2784,7 @@ class Vibe {
         },
       };
     } catch (error) {
-      this.logger.log(
-        color.red.bold(`Error calculating pricing: ${error}`)
-      );
+      this.logger.log(color.red.bold(`Error calculating pricing: ${error}`));
       return { success: false, error: 'Error calculating pricing' };
     }
   }
