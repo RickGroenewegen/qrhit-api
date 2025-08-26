@@ -819,7 +819,6 @@ export class ChatGPT {
   ): Promise<{ title: string; content: string; summary?: string }> {
     const result = await this.openai.chat.completions.create({
       model: 'gpt-5',
-      temperature: 0.7,
       messages: [
         {
           role: 'system',
@@ -876,6 +875,8 @@ Only use these approved internal links (replace [lang] with appropriate language
 - /[lang]/reviews (All our reviews)
 - /[lang]/faq (FAQ)
 - /[lang]/onzevibe (QRSong!, but for companies)
+- /[lang]/pubquiz (Our music quiz service)
+- /[lang]/qr-cards-as-a-service (QR cards as a service)
 - /[lang]/contact (Our contact page)
 Do NOT link to any other pages or external sites unless specifically requested.
 

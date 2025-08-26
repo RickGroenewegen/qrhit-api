@@ -4,6 +4,7 @@ import path from 'path';
 
 class Translation {
   private i18n: I18n;
+  private memoryCache: Map<string, Record<string, string>> = new Map();
   public allLocales: string[] = [
     'en',
     'nl',
@@ -44,6 +45,16 @@ class Translation {
     locale: string,
     prefix: string
   ): Promise<Record<string, string> | null> {
+    // Create a cache key for this specific locale and prefix combination
+    const cacheKey = `${locale}:${prefix}`;
+
+    // Try to get from in-memory cache first
+    const cachedData = this.memoryCache.get(cacheKey);
+    if (cachedData) {
+      return Object.keys(cachedData).length > 0 ? cachedData : null;
+    }
+
+    // If not in cache, read from file
     const translationsPath = path.join(
       `${process.env['APP_ROOT']}/locales`,
       `${locale}.json`
@@ -61,6 +72,9 @@ class Translation {
           filteredTranslations[newKey] = translations[key];
         }
       }
+
+      // Store in memory cache
+      this.memoryCache.set(cacheKey, filteredTranslations);
 
       return Object.keys(filteredTranslations).length > 0
         ? filteredTranslations
