@@ -322,7 +322,7 @@
   "mail.orderData": "Bestelldaten",
   "invoice.bancontact": "Bancontact",
   "mail.mailSubjectDigital": "Hier ist dein PDF für '{{ playlist }}'!",
-  "mail.greatNewsMainDigital": "Wir haben deine Bestellung erhalten!"
+  "mail.greatNewsMainDigital": "Wir haben deine Bestellung erhalten!",
   "mail.weHopeYouHaveFunMainDigital": "Die digitale Version(en) deiner Playlist(s) werden gerade erstellt. Wir bestätigen alle Veröffentlichungsdaten und du solltest sie innerhalb der nächsten 24 Stunden per E-Mail erhalten. Wir hoffen, du hast viel musikalischen Spaß! Wenn du weitere Fragen hast, zögere nicht, uns über das Kontaktformular auf unserer Website zu mailen.",
   "mail.playlists": "Wiedergabeliste(n)",
   "payment.playlists": "Wiedergabelisten mit QR-Karten",
