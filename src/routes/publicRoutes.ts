@@ -63,10 +63,12 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   // Robots.txt
   fastify.get('/robots.txt', async (_request, reply) => {
     try {
-    const robotsContent =
+      const robotsContent =
         'User-agent: Googlebot\nDisallow:\nUser-agent: Googlebot-image\nDisallow:';
 
       reply.header('Content-Type', 'text/plain').send(robotsContent);
+    } catch (error) {
+      reply.status(500).send('Error serving robots.txt');
     }
   });
 
