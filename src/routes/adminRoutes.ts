@@ -479,9 +479,10 @@ export default async function adminRoutes(
           });
           return;
         }
-        
+
         // hideDomain is optional, default to false if not provided
-        const hideDomainValue = typeof hideDomain === 'boolean' ? hideDomain : false;
+        const hideDomainValue =
+          typeof hideDomain === 'boolean' ? hideDomain : false;
 
         const result = await data.updatePaymentHasPlaylist(
           paymentHasPlaylistId,
@@ -517,39 +518,45 @@ export default async function adminRoutes(
       try {
         const { paymentId, paymentHasPlaylistId } = request.params;
         const paymentHasPlaylistIdInt = parseInt(paymentHasPlaylistId);
-        
+
         if (isNaN(paymentHasPlaylistIdInt)) {
-          reply.status(400).send({ 
-            success: false, 
-            error: 'Invalid paymentHasPlaylistId' 
+          reply.status(400).send({
+            success: false,
+            error: 'Invalid paymentHasPlaylistId',
           });
           return;
         }
 
         // Generate Excel file
         const excelBuffer = await data.generatePlaylistExcel(
-          paymentId, 
+          paymentId,
           paymentHasPlaylistIdInt
         );
-        
+
         if (!excelBuffer) {
-          reply.status(404).send({ 
-            success: false, 
-            error: 'Playlist not found' 
+          reply.status(404).send({
+            success: false,
+            error: 'Playlist not found',
           });
           return;
         }
 
         // Set response headers for Excel file download
         reply
-          .header('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
-          .header('Content-Disposition', `attachment; filename="playlist-${paymentId}-${paymentHasPlaylistId}.xlsx"`)
+          .header(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          )
+          .header(
+            'Content-Disposition',
+            `attachment; filename="playlist-${paymentId}-${paymentHasPlaylistId}.xlsx"`
+          )
           .send(excelBuffer);
       } catch (error) {
         console.error('Error generating Excel file:', error);
-        reply.status(500).send({ 
-          success: false, 
-          error: 'Failed to generate Excel file' 
+        reply.status(500).send({
+          success: false,
+          error: 'Failed to generate Excel file',
         });
       }
     }
@@ -762,7 +769,7 @@ export default async function adminRoutes(
       try {
         const { limit = 2 } = request.body;
         const { merchantCenter } = await import('../merchantcenter');
-        await merchantCenter.uploadFeaturedPlaylists(limit);
+        merchantCenter.uploadFeaturedPlaylists(limit);
         reply.send({
           success: true,
           message: `Uploaded ${limit} featured playlists to Merchant Center`,

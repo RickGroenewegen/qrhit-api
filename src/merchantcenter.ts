@@ -490,6 +490,13 @@ export class MerchantCenterService {
       variant.type
     );
 
+    // Check if we're using the fallback Spotify image (indicates generation failure)
+    if (productImage.includes('scdn.co') || productImage.includes('spotify')) {
+      this.logger.log(red('⚠️ WARNING: Using original Spotify image instead of composite'));
+      this.logger.log(red(`  Product: ${variant.slug} [${variant.type}/${variant.locale}]`));
+      this.logger.log(red(`  Image URL: ${productImage}`));
+    }
+
     // Generate product URL with orderType parameter
     const productUrl = `${baseUrl}/${variant.locale}/product/${variant.slug}?orderType=${variant.type}`;
 
@@ -762,9 +769,7 @@ export class MerchantCenterService {
         // Don't use 'binary' encoding - response.data is already a buffer/arraybuffer
         playlistImageBuffer = Buffer.from(response.data);
       } catch (downloadError: any) {
-        this.logger.log(
-          red(`📷 Failed to download image: ${downloadError.message}`)
-        );
+        // This will cause fallback to Spotify image
         throw downloadError;
       }
 
@@ -796,9 +801,7 @@ export class MerchantCenterService {
           )
           .toBuffer();
       } catch (resizeError: any) {
-        this.logger.log(
-          red(`📷 Failed to resize image: ${resizeError.message}`)
-        );
+        // This will cause fallback to Spotify image
         throw resizeError;
       }
 
@@ -839,10 +842,13 @@ export class MerchantCenterService {
       const apiUri = process.env.API_URI || 'https://api.qrsong.io';
       return `${apiUri}/public/products/${versionedFileName}`;
     } catch (error: any) {
-      // Fall back to original image if generation fails
+      // Log error that causes fallback to original Spotify image
       this.logger.log(
-        red(`📷 Image generation failed: ${error.message || error}`)
+        red(`⚠️ Image composite generation failed - using Spotify image as fallback`)
       );
+      this.logger.log(red(`  Error: ${error.message || error}`));
+      this.logger.log(red(`  Product: ${imageKey}`));
+      this.logger.log(red(`  Fallback URL: ${playlistImageUrl}`));
       return playlistImageUrl;
     }
   }
