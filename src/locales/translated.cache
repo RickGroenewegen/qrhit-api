@@ -6052,5 +6052,38 @@
     "pl",
     "jp",
     "cn"
+  ],
+  "product_type.digital": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn"
+  ],
+  "product_type.sheets": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn"
+  ],
+  "product_type.physical": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn"
   ]
 }

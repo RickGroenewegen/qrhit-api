@@ -226,7 +226,8 @@ export default async function vibeRoutes(
         shipmentOnLocation: false,
         soldBy: 'onzevibe',
         isReseller: false,
-        manualDiscount: 0
+        manualDiscount: 0,
+        fluidMode: false
       };
       let calculationResult: any = {};
       
@@ -242,7 +243,8 @@ export default async function vibeRoutes(
             shipmentOnLocation: calculation.shipmentOnLocation || false,
             soldBy: calculation.soldBy || 'onzevibe',
             isReseller: calculation.isReseller || false,
-            manualDiscount: calculation.manualDiscount || 0
+            manualDiscount: calculation.manualDiscount || 0,
+            fluidMode: calculation.fluidMode || false
           });
           
           if (pricingResult.success) {

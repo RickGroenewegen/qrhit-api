@@ -468,5 +468,8 @@
   "mail.printingStarted": "好消息！你的QR音乐卡正在打印，很快就会寄给你。",
   "qrgames_activation.needHelp": "有问题或需要帮助？随时联系我们的客服。",
   "qrgames_activation.happyPlaying": "玩得开心！",
-  "mail.downloadDigitalButtonPrinter": "下载你的PDF"
+  "mail.downloadDigitalButtonPrinter": "下载你的PDF",
+  "product_type.digital": "数字PDF",
+  "product_type.sheets": "打印纸张",
+  "product_type.physical": "实体卡片"
 }

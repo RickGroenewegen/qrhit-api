@@ -478,5 +478,8 @@
   "mail.downloadDigitalButton": "Télécharger les cartes digitales",
   "mail.sendToPrinterMailSubject": "On a commencé à imprimer les cartes pour la playlist {{ playlist }} !",
   "mail.printingStarted": "Bonne nouvelle ! On imprime tes cartes QR musicales. Elles seront bientôt envoyées.",
-  "mail.downloadDigitalButtonPrinter": "Télécharge ton PDF"
+  "mail.downloadDigitalButtonPrinter": "Télécharge ton PDF",
+  "product_type.digital": "PDF numérique",
+  "product_type.sheets": "Feuilles à imprimer",
+  "product_type.physical": "Cartes physiques"
 }

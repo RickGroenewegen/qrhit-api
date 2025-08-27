@@ -753,4 +753,26 @@ export default async function adminRoutes(
       });
     }
   );
+
+  // Google Merchant Center routes
+  fastify.post(
+    '/admin/merchant-center/upload-featured',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { limit = 2 } = request.body;
+        const { merchantCenter } = await import('../merchantcenter');
+        await merchantCenter.uploadFeaturedPlaylists(limit);
+        reply.send({
+          success: true,
+          message: `Uploaded ${limit} featured playlists to Merchant Center`,
+        });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to upload to Merchant Center',
+        });
+      }
+    }
+  );
 }

@@ -2632,6 +2632,7 @@ class Vibe {
     soldBy: 'onzevibe' | 'happibox';
     isReseller: boolean;
     manualDiscount: number;
+    fluidMode?: boolean;
   }): Promise<any> {
     try {
       const {
@@ -2641,6 +2642,7 @@ class Vibe {
         soldBy,
         isReseller,
         manualDiscount,
+        fluidMode = false,
       } = params;
 
       // Validate input
@@ -2718,19 +2720,71 @@ class Vibe {
         },
       };
 
-      // Determine appropriate tier
+      // Determine appropriate tier and calculate pricing
       let tierKey: number;
-      if (quantity < 250) tierKey = 100;
-      else if (quantity < 500) tierKey = 250;
-      else if (quantity < 1000) tierKey = 500;
-      else if (quantity < 2500) tierKey = 1000;
-      else if (quantity < 5000) tierKey = 2500;
-      else tierKey = 5000;
+      let tierData: any;
+      let commercialPrice: number;
 
-      const tierData = pricingTiers[tierKey];
+      if (fluidMode && quantity > 100) {
+        // Fluid mode: interpolate between tiers
+        const tierThresholds = [100, 250, 500, 1000, 2500, 5000];
+        
+        // Find the two surrounding tiers
+        let lowerTier = 100;
+        let upperTier = 5000;
+        
+        for (let i = 0; i < tierThresholds.length - 1; i++) {
+          if (quantity >= tierThresholds[i] && quantity < tierThresholds[i + 1]) {
+            lowerTier = tierThresholds[i];
+            upperTier = tierThresholds[i + 1];
+            break;
+          }
+        }
+        
+        // Handle edge case for quantities >= 5000
+        if (quantity >= 5000) {
+          tierKey = 5000;
+          tierData = pricingTiers[5000];
+          commercialPrice = tierData.commercialPrice;
+        } else {
+          // Linear interpolation between tiers
+          const lowerTierData = pricingTiers[lowerTier];
+          const upperTierData = pricingTiers[upperTier];
+          
+          // Calculate interpolation factor (0 to 1)
+          const factor = (quantity - lowerTier) / (upperTier - lowerTier);
+          
+          // Interpolate all pricing components
+          tierData = {
+            productionCost: lowerTierData.productionCost + (upperTierData.productionCost - lowerTierData.productionCost) * factor,
+            cards: lowerTierData.cards + (upperTierData.cards - lowerTierData.cards) * factor,
+            personalization: lowerTierData.personalization + (upperTierData.personalization - lowerTierData.personalization) * factor,
+            projectManagement: lowerTierData.projectManagement + (upperTierData.projectManagement - lowerTierData.projectManagement) * factor,
+            fulfillment: lowerTierData.fulfillment + (upperTierData.fulfillment - lowerTierData.fulfillment) * factor,
+            shipping: lowerTierData.shipping + (upperTierData.shipping - lowerTierData.shipping) * factor,
+            kickBackFee: lowerTierData.kickBackFee + (upperTierData.kickBackFee - lowerTierData.kickBackFee) * factor,
+            resellerDiscount: lowerTierData.resellerDiscount + (upperTierData.resellerDiscount - lowerTierData.resellerDiscount) * factor,
+            commercialPrice: lowerTierData.commercialPrice + (upperTierData.commercialPrice - lowerTierData.commercialPrice) * factor,
+          };
+          
+          // Use interpolated tier for display
+          tierKey = lowerTier; // Display the lower tier as reference
+          commercialPrice = tierData.commercialPrice;
+        }
+      } else {
+        // Standard mode: use tier brackets
+        if (quantity < 250) tierKey = 100;
+        else if (quantity < 500) tierKey = 250;
+        else if (quantity < 1000) tierKey = 500;
+        else if (quantity < 2500) tierKey = 1000;
+        else if (quantity < 5000) tierKey = 2500;
+        else tierKey = 5000;
+        
+        tierData = pricingTiers[tierKey];
+        commercialPrice = tierData.commercialPrice;
+      }
 
       // Calculate adjustments
-      let commercialPrice = tierData.commercialPrice;
       const adjustedShipping = shipmentOnLocation ? 0.35 : tierData.shipping;
       const shippingDifference = tierData.shipping - adjustedShipping;
       const adjustedProjectManagement =
@@ -2791,6 +2845,7 @@ class Vibe {
             shippingDifference,
             adjustedProjectManagement,
             projectManagementDifference,
+            fluidMode,
           },
           pricing: {
             commercialPricePerBox: commercialPrice,

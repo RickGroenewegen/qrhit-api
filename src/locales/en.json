@@ -1,4 +1,7 @@
 {
+	"product_type.digital": "Digital PDF",
+	"product_type.sheets": "Print Sheets",
+	"product_type.physical": "Physical Cards",
 	"mail.mailSubject": "We have received order {{ orderId }}!",
 	"mail.mailSubjectDigital": "Here is your PDF for '{{ playlist }}'!",
 	"mail.mailSubjectVoucher": "Here is your gift voucher!",

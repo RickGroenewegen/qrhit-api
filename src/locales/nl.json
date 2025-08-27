@@ -478,5 +478,8 @@
   "mail.downloadDigitalButton": "Download Digitale Kaarten",
   "mail.sendToPrinterMailSubject": "We zijn begonnen met het printen van de kaarten voor playlist {{ playlist }}!",
   "mail.printingStarted": "Goed nieuws! We zijn begonnen met het printen van je QR-muziekkaarten. Je kaarten worden snel verzonden.",
-  "mail.downloadDigitalButtonPrinter": "Download je PDF"
+  "mail.downloadDigitalButtonPrinter": "Download je PDF",
+  "product_type.digital": "Digitale PDF",
+  "product_type.sheets": "Printvellen",
+  "product_type.physical": "Fysieke kaarten"
 }

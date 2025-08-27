@@ -477,5 +477,8 @@
   "mail.downloadDigitalButton": "Descargar cartas digitales",
   "mail.sendToPrinterMailSubject": "¡Ya empezamos a imprimir las cartas para la playlist {{ playlist }}!",
   "mail.printingStarted": "¡Buenas noticias! Ya estamos imprimiendo tus cartas QR. Pronto te las enviamos.",
-  "mail.downloadDigitalButtonPrinter": "Descarga tu PDF"
+  "mail.downloadDigitalButtonPrinter": "Descarga tu PDF",
+  "product_type.digital": "PDF digital",
+  "product_type.sheets": "Hojas para imprimir",
+  "product_type.physical": "Cartas físicas"
 }

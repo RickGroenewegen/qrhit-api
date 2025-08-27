@@ -12,3 +12,8 @@ public/logo
 public/companydata
 .build-temp
 public/blog_images
+credentials/
+merchant-center-key.json
+*-service-account*.json
+google-merchant.json
+public/products

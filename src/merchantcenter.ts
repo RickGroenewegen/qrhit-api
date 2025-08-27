@@ -1,0 +1,847 @@
+import { google } from 'googleapis';
+import { PrismaClient } from '@prisma/client';
+import Logger from './logger';
+import Translation from './translation';
+import Order from './order';
+import sharp from 'sharp';
+import axios from 'axios';
+import path from 'path';
+import fs from 'fs/promises';
+import { blue, red, yellow, white, green } from 'console-log-colors';
+
+interface ProductVariant {
+  id: number;  // Database ID
+  playlistId: string;
+  name: string;
+  description?: string;
+  image: string;
+  price: number;
+  numberOfTracks: number;
+  type: 'digital' | 'sheets' | 'physical';
+  locale: string;
+  slug: string;
+  genre?: string;
+}
+
+interface MerchantProduct {
+  id: string;  // Composite ID for Google (e.g., "online:en:US:123")
+  offerId: string;  // Simple unique ID for the product
+  title: string;
+  description: string;
+  link: string;
+  imageLink: string;
+  availability: string;
+  condition: string;
+  price: {
+    value: string;
+    currency: string;
+  };
+  brand: string;
+  contentLanguage: string;
+  targetCountry: string;
+  channel: string;
+  productTypes: string[];
+  googleProductCategory: string;
+  shipping?: Array<{
+    country: string;
+    service: string;
+    price: {
+      value: string;
+      currency: string;
+    };
+    minHandlingTime?: number;
+    maxHandlingTime?: number;
+    minTransitTime?: number;
+    maxTransitTime?: number;
+  }>;
+  shippingLabel?: string;
+  customAttributes: Array<{
+    name: string;
+    value: string;
+  }>;
+}
+
+export class MerchantCenterService {
+  private static instance: MerchantCenterService;
+  private prisma: PrismaClient;
+  private logger: Logger;
+  private translate: Translation;
+  private order: Order;
+  private content: any; // Google Shopping Content API
+  private merchantId: string;
+  private auth: any;
+  private initialized: boolean = false;
+  private initPromise: Promise<void> | null = null;
+  
+  // Supported locales for Merchant Center - limiting to main markets
+  private supportedLocales = ['en', 'nl', 'de'];
+  
+  // Mapping of locales to target countries for Google Merchant Center
+  private localeToCountry: { [key: string]: string } = {
+    'en': 'US',
+    'nl': 'NL',
+    'de': 'DE',
+    'fr': 'FR',
+    'es': 'ES',
+    'it': 'IT',
+    'pt': 'PT',
+    'pl': 'PL',
+    'jp': 'JP',
+    'cn': 'CN'
+  };
+
+  private constructor() {
+    this.prisma = new PrismaClient();
+    this.logger = new Logger();
+    this.translate = new Translation();
+    this.order = Order.getInstance();
+    this.merchantId = process.env.GOOGLE_MERCHANT_ID || '';
+  }
+
+  public static getInstance(): MerchantCenterService {
+    if (!MerchantCenterService.instance) {
+      MerchantCenterService.instance = new MerchantCenterService();
+    }
+    return MerchantCenterService.instance;
+  }
+
+  private async ensureInitialized(): Promise<void> {
+    if (this.initialized) {
+      return;
+    }
+
+    if (this.initPromise) {
+      return this.initPromise;
+    }
+
+    this.initPromise = this.initializeAuth();
+    await this.initPromise;
+    this.initialized = true;
+  }
+
+  private async initializeAuth() {
+    try {
+      // Check if required environment variables are set
+      if (!process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE) {
+        this.logger.log('Warning: GOOGLE_SERVICE_ACCOUNT_KEY_FILE not set in environment variables');
+        // Initialize with mock/empty content for testing
+        this.content = { products: { get: async () => null, insert: async () => {}, update: async () => {}, delete: async () => {}, list: async () => ({ data: { resources: [] } }) } };
+        return;
+      }
+
+      if (!this.merchantId) {
+        this.logger.log('Warning: GOOGLE_MERCHANT_ID not set in environment variables');
+        // Initialize with mock/empty content for testing
+        this.content = { products: { get: async () => null, insert: async () => {}, update: async () => {}, delete: async () => {}, list: async () => ({ data: { resources: [] } }) } };
+        return;
+      }
+
+      // Use service account authentication
+      const auth = new google.auth.GoogleAuth({
+        keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE,
+        scopes: ['https://www.googleapis.com/auth/content']
+      });
+      
+      this.auth = await auth.getClient();
+      
+      // Initialize the Content API
+      this.content = google.content({
+        version: 'v2.1',
+        auth: this.auth
+      });
+      
+      this.logger.log(blue.bold('Merchant Center API initialized'));
+    } catch (error) {
+      this.logger.log(`Failed to initialize Google Merchant Center API: ${error}`);
+      // Initialize with mock/empty content to prevent crashes
+      this.content = { products: { get: async () => null, insert: async () => {}, update: async () => {}, delete: async () => {}, list: async () => ({ data: { resources: [] } }) } };
+    }
+  }
+
+  /**
+   * Upload featured playlists to Google Merchant Center (sync mode)
+   * This will:
+   * - Create new products for featured playlists
+   * - Update existing products
+   * - Remove products that are no longer featured
+   * @param limit - Number of playlists to upload (default 2)
+   */
+  public async uploadFeaturedPlaylists(limit: number = 2): Promise<void> {
+    await this.ensureInitialized();
+    
+    try {
+      // In development, only upload 1 playlist
+      const isDevelopment = process.env['ENVIRONMENT'] === 'development';
+      const playlistLimit = isDevelopment ? 1 : limit;
+      
+      this.logger.log(blue.bold('Merchant Center sync starting'));
+      
+      // Fetch featured playlists from database
+      const playlists = await this.prisma.playlist.findMany({
+        where: { 
+          featured: true,
+          slug: { not: '' }
+        },
+        include: {
+          genre: true
+        },
+        orderBy: {
+          score: 'desc'
+        },
+        take: playlistLimit
+      });
+
+      if (playlists.length === 0) {
+        this.logger.log('Warning: No featured playlists found');
+        return;
+      }
+
+      this.logger.log(blue.bold(`Found ${white.bold(playlists.length.toString())} playlists`));
+
+      // Track which product IDs should exist
+      const expectedProductIds: Set<string> = new Set();
+
+      // Process each playlist and collect expected product IDs
+      for (const playlist of playlists) {
+        const productIds = await this.uploadPlaylist(playlist);
+        productIds.forEach(id => expectedProductIds.add(id));
+      }
+
+      // Get all existing products from Merchant Center
+      try {
+        const existingProducts = await this.listProducts();
+        let removedCount = 0;
+        
+        // Find and remove outdated products
+        for (const product of existingProducts) {
+          if (product.id && !expectedProductIds.has(product.id)) {
+            try {
+              await this.deleteProduct(product.id);
+              removedCount++;
+            } catch (error) {
+              // Silent failure
+            }
+          }
+        }
+        
+        if (removedCount > 0) {
+          this.logger.log(yellow(`Removed ${white.bold(removedCount.toString())} outdated products`));
+        }
+      } catch (error) {
+        // Silent failure for cleanup
+      }
+
+      this.logger.log(green.bold('✓ Sync completed'));
+    } catch (error) {
+      this.logger.log(red(`Sync failed: ${error}`));
+      throw error;
+    }
+  }
+
+  /**
+   * Upload a single playlist with all its variants (digital, sheets, physical)
+   * @returns Array of product IDs that were created/updated
+   */
+  private async uploadPlaylist(playlist: any): Promise<string[]> {
+    const productIds: string[] = [];
+    
+    // Get actual prices from OrderType like the summary component does
+    const numberOfTracks = playlist.numberOfTracks;
+    
+    // Get order types for each product variant
+    const cardsOrderType = await this.order.getOrderType(
+      numberOfTracks,
+      false,
+      'cards',
+      playlist.playlistId,
+      'none'
+    );
+    const digitalOrderType = await this.order.getOrderType(
+      numberOfTracks,
+      true,
+      'cards',
+      playlist.playlistId,
+      'none'
+    );
+    const sheetsOrderType = await this.order.getOrderType(
+      numberOfTracks,
+      false,
+      'cards',
+      playlist.playlistId,
+      'sheets'
+    );
+    
+    const productTypes = [
+      { type: 'digital', price: digitalOrderType?.amount || digitalOrderType?.amountWithMargin || playlist.priceDigital || 9.99 },
+      { type: 'sheets', price: sheetsOrderType?.amount || sheetsOrderType?.amountWithMargin || playlist.priceSheets || 14.99 },
+      { type: 'physical', price: cardsOrderType?.amount || cardsOrderType?.amountWithMargin || playlist.price || 29.99 }
+    ];
+
+    // In development, only process en, nl, de locales
+    const isDevelopment = process.env['ENVIRONMENT'] === 'development';
+    const localesToProcess = isDevelopment 
+      ? this.supportedLocales.filter(l => ['en', 'nl', 'de'].includes(l))
+      : this.supportedLocales;
+
+    // Process each product type for each locale
+    for (const locale of localesToProcess) {
+      // Check if playlist is featured for this locale
+      if (playlist.featuredLocale && !playlist.featuredLocale.includes(locale)) {
+        continue;
+      }
+
+      for (const productType of productTypes) {
+        const variant: ProductVariant = {
+          id: playlist.id,  // Use database ID
+          playlistId: playlist.playlistId,
+          name: playlist.name,
+          description: playlist[`description_${locale}`] || playlist.description_en,
+          image: playlist.image,
+          price: productType.price,
+          numberOfTracks: playlist.numberOfTracks,
+          type: productType.type as 'digital' | 'sheets' | 'physical',
+          locale: locale,
+          slug: playlist.slug,
+          genre: playlist.genre ? playlist.genre[`name_${locale}`] : undefined
+        };
+
+        const productId = await this.uploadProductVariant(variant);
+        if (productId) {
+          productIds.push(productId);
+        }
+      }
+    }
+    
+    return productIds;
+  }
+
+  /**
+   * Upload a single product variant to Google Merchant Center
+   * @returns The product ID if successful, null otherwise
+   */
+  private async uploadProductVariant(variant: ProductVariant): Promise<string | null> {
+    try {
+      const product = await this.createMerchantProduct(variant);
+      
+      // Check if product exists
+      const existingProduct = await this.getProduct(product.id);
+      
+      if (existingProduct) {
+        // Update existing product
+        await this.updateProduct(product);
+        this.logger.log(yellow(`↻ ${white.bold(variant.slug)} [${white.bold(variant.type)}/${white.bold(variant.locale)}]`));
+      } else {
+        // Insert new product
+        await this.insertProduct(product);
+        this.logger.log(green.bold(`✓ ${white.bold(variant.slug)} [${white.bold(variant.type)}/${white.bold(variant.locale)}]`));
+      }
+      
+      return product.id;
+    } catch (error: any) {
+      this.logger.log(red(`✗ ${white.bold(variant.slug)} [${white.bold(variant.type)}/${white.bold(variant.locale)}]: ${error.message || error}`));
+      return null;
+    }
+  }
+
+  /**
+   * Create a Google Merchant Center product object
+   */
+  private async createMerchantProduct(variant: ProductVariant): Promise<MerchantProduct> {
+    const baseUrl = process.env.FRONTEND_URL || 'https://www.qrsong.io';
+    const country = this.localeToCountry[variant.locale] || 'US';
+    
+    // Generate unique ID using Google's required format
+    // Format for online products: "online:{lang}:{country}:{id}"
+    // We'll use a simple numeric ID combining playlist ID, type, and locale
+    const typeNum = variant.type === 'digital' ? 1 : variant.type === 'sheets' ? 2 : 3;
+    const localeNum = {'en':1,'nl':2,'de':3}[variant.locale] || 1;
+    const uniqueId = `${variant.id}_${typeNum}_${localeNum}`;
+    const productId = `online:${variant.locale}:${country}:${uniqueId}`;
+    
+    // Generate composite product image with the template (unique per variant)
+    const imageKey = `${variant.playlistId}_${variant.type}_${variant.locale}`;
+    const productImage = await this.generateProductImage(variant.image, imageKey, variant.type);
+    
+    // Generate product URL with orderType parameter
+    const productUrl = `${baseUrl}/${variant.locale}/product/${variant.slug}?orderType=${variant.type}`;
+    
+    // Determine product title based on type and locale
+    const typeLabel = await this.getProductTypeLabel(variant.type, variant.locale);
+    const title = `${variant.name} - ${typeLabel}`;
+    
+    // Create description
+    let description = variant.description || '';
+    // Add track count to description
+    const tracksLabel: { [key: string]: string } = {
+      'en': `Contains ${variant.numberOfTracks} music tracks`,
+      'nl': `Bevat ${variant.numberOfTracks} muzieknummers`,
+      'de': `Enthält ${variant.numberOfTracks} Musiktitel`,
+      'fr': `Contient ${variant.numberOfTracks} pistes musicales`,
+      'es': `Contiene ${variant.numberOfTracks} pistas de música`,
+      'it': `Contiene ${variant.numberOfTracks} brani musicali`,
+      'pt': `Contém ${variant.numberOfTracks} faixas de música`,
+      'pl': `Zawiera ${variant.numberOfTracks} utworów muzycznych`,
+      'jp': `${variant.numberOfTracks}曲の音楽トラックを含む`,
+      'cn': `包含${variant.numberOfTracks}首音乐曲目`
+    };
+    description += ` ${tracksLabel[variant.locale] || tracksLabel['en']}`;
+    
+    // Determine Google product category based on type
+    let googleCategory = '5030'; // Default: Arts & Entertainment > Hobbies & Creative Arts > Arts & Crafts
+    if (variant.type === 'digital') {
+      googleCategory = '839'; // Media > Music & Sound Recordings
+    }
+    
+    // Add shipping information based on product type
+    const shipping = [];
+    
+    // Digital products have free instant shipping
+    if (variant.type === 'digital') {
+      shipping.push({
+        country: country,
+        service: 'Digital Delivery',
+        price: {
+          value: '0',
+          currency: 'EUR'
+        },
+        minHandlingTime: 0,
+        maxHandlingTime: 0,
+        minTransitTime: 0,
+        maxTransitTime: 0
+      });
+    } else {
+      // Physical products and sheets have standard shipping
+      shipping.push({
+        country: country,
+        service: 'Standard Shipping',
+        price: {
+          value: '4.95',
+          currency: 'EUR'
+        },
+        minHandlingTime: 1,
+        maxHandlingTime: 2,
+        minTransitTime: 2,
+        maxTransitTime: 5
+      });
+    }
+
+    return {
+      id: productId,
+      offerId: uniqueId, // Add the offerId field which is required
+      title: title,
+      description: description.substring(0, 5000), // Max 5000 characters
+      link: productUrl,
+      imageLink: productImage, // Use the generated composite image
+      availability: 'in_stock',
+      condition: 'new',
+      price: {
+        value: variant.price.toFixed(2),
+        currency: 'EUR'
+      },
+      brand: 'QRSong!',
+      contentLanguage: variant.locale,
+      targetCountry: country,
+      channel: 'online',
+      productTypes: this.getProductTypes(variant),
+      googleProductCategory: googleCategory,
+      shipping: shipping,
+      shippingLabel: variant.type === 'digital' ? 'digital_delivery' : 'standard_shipping',
+      customAttributes: [
+        {
+          name: 'number_of_tracks',
+          value: variant.numberOfTracks.toString()
+        },
+        {
+          name: 'product_variant',
+          value: variant.type
+        },
+        {
+          name: 'playlist_slug',
+          value: variant.slug
+        }
+      ]
+    };
+  }
+
+  /**
+   * Get product type label in the specified locale using translation system
+   */
+  private async getProductTypeLabel(type: string, locale: string): Promise<string> {
+    // Get all product type translations for this locale
+    const productTranslations = await this.translate.getTranslationsByPrefix(locale, 'product_type');
+    
+    if (productTranslations && productTranslations[type]) {
+      return productTranslations[type];
+    }
+    
+    // Fall back to English if locale not found
+    if (locale !== 'en') {
+      const enTranslations = await this.translate.getTranslationsByPrefix('en', 'product_type');
+      if (enTranslations && enTranslations[type]) {
+        return enTranslations[type];
+      }
+    }
+    
+    // Final fallback
+    const defaultLabels: { [key: string]: string } = {
+      'digital': 'Digital PDF',
+      'sheets': 'Print Sheets',
+      'physical': 'Physical Cards'
+    };
+    return defaultLabels[type] || type;
+  }
+
+  /**
+   * Generate a composite product image with the playlist cover on the product card template
+   * @param playlistImageUrl - URL of the playlist cover image
+   * @param imageKey - Unique key for caching (e.g., playlistId_type_locale)
+   * @param productType - Type of product (digital, sheets, or physical)
+   * @returns URL of the generated composite image
+   */
+  private async generateProductImage(playlistImageUrl: string, imageKey: string, productType: string): Promise<string> {
+    try {
+      // Debug log the image URL
+      this.logger.log(blue.bold(`📷 Processing image from: ${white.bold(playlistImageUrl.substring(0, 50))}...`));
+      
+      // Paths for images - use product_pdf.jpg for digital products, product_cards.jpg for others
+      const templateFile = productType === 'digital' ? 'product_pdf.jpg' : 'product_cards.jpg';
+      const templatePath = path.join(__dirname, '..', 'assets', 'images', templateFile);
+      const publicDir = process.env.PUBLIC_DIR || path.join(__dirname, '..', 'public');
+      const outputDir = path.join(publicDir, 'products');
+      const outputFileName = `merchant_${imageKey}.jpg`;
+      const outputPath = path.join(outputDir, outputFileName);
+      
+      // In development, always regenerate images to ensure latest styling
+      const isDevelopment = process.env['ENVIRONMENT'] === 'development';
+      const forceRegenerate = isDevelopment;
+      
+      // Check if composite image already exists (skip check if forcing regenerate)
+      if (!forceRegenerate) {
+        try {
+          await fs.access(outputPath);
+          // Using cached image - add version parameter to bust Google's cache
+          const apiUri = process.env.API_URI || 'https://www.qrsong.io';
+          const version = Date.now(); // Use timestamp as version
+          return `${apiUri}/public/products/${outputFileName}?v=${version}`;
+        } catch {
+          // File doesn't exist, continue to generate it
+        }
+      }
+      
+      // Create output directory if it doesn't exist
+      try {
+        await fs.mkdir(outputDir, { recursive: true });
+      } catch (error: any) {
+        // Directory might already exist, that's ok
+        if (error.code !== 'EEXIST') {
+          throw error;
+        }
+      }
+      
+      // Download the playlist image
+      let playlistImageBuffer: Buffer;
+      try {
+        const response = await axios.get(playlistImageUrl, {
+          responseType: 'arraybuffer',
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          },
+          maxRedirects: 5
+        });
+        // Don't use 'binary' encoding - response.data is already a buffer/arraybuffer
+        playlistImageBuffer = Buffer.from(response.data);
+        this.logger.log(blue.bold(`📷 Downloaded image: ${white.bold(playlistImageBuffer.length.toString())} bytes`));
+      } catch (downloadError: any) {
+        this.logger.log(red(`📷 Failed to download image: ${downloadError.message}`));
+        throw downloadError;
+      }
+      
+      // Get template dimensions
+      const templateMetadata = await sharp(templatePath).metadata();
+      const templateWidth = templateMetadata.width || 1200;
+      const templateHeight = templateMetadata.height || 1200;
+      
+      // Calculate overlay dimensions (place in bottom right, about 45% of the template size for bigger appearance)
+      const overlaySize = Math.floor(Math.min(templateWidth, templateHeight) * 0.45);
+      const margin = Math.floor(Math.min(templateWidth, templateHeight) * 0.04);
+      const borderWidth = 6;
+      
+      // Resize playlist image - add error handling
+      let resizedPlaylistImage: Buffer;
+      try {
+        // First, ensure Sharp can process the image by converting it to a known format
+        resizedPlaylistImage = await sharp(playlistImageBuffer)
+          .jpeg() // Convert to JPEG first to ensure compatibility
+          .resize(overlaySize - (borderWidth * 2), overlaySize - (borderWidth * 2), {
+            fit: 'cover',
+            position: 'centre'
+          })
+          .toBuffer();
+      } catch (resizeError: any) {
+        this.logger.log(red(`📷 Failed to resize image: ${resizeError.message}`));
+        throw resizeError;
+      }
+      
+      // Create white border frame
+      const borderedImage = await sharp(resizedPlaylistImage)
+        .extend({
+          top: borderWidth,
+          bottom: borderWidth,
+          left: borderWidth,
+          right: borderWidth,
+          background: { r: 255, g: 255, b: 255, alpha: 1 }
+        })
+        .toBuffer();
+      
+      // Create a subtle shadow effect by compositing twice - once offset for shadow, once on top
+      await sharp(templatePath)
+        .composite([
+          // Shadow layer - slightly offset and darker
+          {
+            input: await sharp(borderedImage)
+              .modulate({ brightness: 0.3 }) // Darken for shadow effect
+              .toBuffer(),
+            top: templateHeight - overlaySize - margin + 4,
+            left: templateWidth - overlaySize - margin + 4,
+            blend: 'multiply'
+          },
+          // Main image on top
+          {
+            input: borderedImage,
+            top: templateHeight - overlaySize - margin,
+            left: templateWidth - overlaySize - margin
+          }
+        ])
+        .jpeg({ quality: 90 })
+        .toFile(outputPath);
+      
+      // Image generated successfully - add version parameter to bust Google's cache
+      this.logger.log(blue.bold(`📷 Generated image: ${white.bold(outputFileName)}`));
+      const apiUri = process.env.API_URI || 'https://www.qrsong.io';
+      const version = Date.now(); // Use timestamp as version
+      return `${apiUri}/public/products/${outputFileName}?v=${version}`;
+      
+    } catch (error: any) {
+      // Fall back to original image if generation fails
+      this.logger.log(red(`📷 Image generation failed: ${error.message || error}`));
+      return playlistImageUrl;
+    }
+  }
+
+  /**
+   * Get product type hierarchy for Google Shopping
+   */
+  private getProductTypes(variant: ProductVariant): string[] {
+    const types = ['Music', 'QR Codes'];
+    
+    if (variant.genre) {
+      types.push(variant.genre);
+    }
+    
+    switch (variant.type) {
+      case 'digital':
+        types.push('Digital Downloads');
+        break;
+      case 'sheets':
+        types.push('Printable');
+        break;
+      case 'physical':
+        types.push('Physical Product');
+        break;
+    }
+    
+    return types;
+  }
+
+  /**
+   * Get a product from Google Merchant Center
+   */
+  private async getProduct(productId: string): Promise<any> {
+    if (!this.content || !this.content.products) {
+      this.logger.log(yellow('Warning: Merchant Center API not initialized'));
+      return null;
+    }
+    
+    try {
+      const response = await this.content.products.get({
+        merchantId: this.merchantId,
+        productId: productId
+      });
+      return response.data;
+    } catch (error: any) {
+      if (error.code === 404) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Insert a new product to Google Merchant Center
+   */
+  private async insertProduct(product: MerchantProduct): Promise<void> {
+    if (!this.content || !this.content.products) {
+      this.logger.log(yellow('Warning: Merchant Center API not initialized'));
+      return;
+    }
+    
+    try {
+      await this.content.products.insert({
+        merchantId: this.merchantId,
+        requestBody: product as any
+      });
+    } catch (error: any) {
+      // Rethrow with simplified message
+      throw error;
+    }
+  }
+
+  /**
+   * Update an existing product in Google Merchant Center
+   */
+  private async updateProduct(product: MerchantProduct): Promise<void> {
+    if (!this.content || !this.content.products) {
+      this.logger.log(yellow('Warning: Merchant Center API not initialized'));
+      return;
+    }
+    
+    try {
+      // Create a copy of the product without fields that shouldn't be in update request
+      const { id, offerId, targetCountry, contentLanguage, channel, customAttributes, ...productForUpdate } = product;
+      
+      await this.content.products.update({
+        merchantId: this.merchantId,
+        productId: id, // Pass the id as a parameter
+        requestBody: productForUpdate as any // Body should not contain id, offerId, targetCountry, etc.
+      });
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Delete a product from Google Merchant Center
+   */
+  public async deleteProduct(productId: string): Promise<void> {
+    await this.ensureInitialized();
+    
+    try {
+      await this.content.products.delete({
+        merchantId: this.merchantId,
+        productId: productId
+      });
+      // Product deleted successfully
+    } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Clear all products from Google Merchant Center (Development only)
+   * This will delete ALL products from the account - use with caution!
+   */
+  public async clearAllProducts(): Promise<void> {
+    // Only allow in development environment
+    if (process.env['ENVIRONMENT'] !== 'development') {
+      this.logger.log('ERROR: clearAllProducts() can only be run in development environment!');
+      throw new Error('clearAllProducts() is only available in development mode');
+    }
+
+    await this.ensureInitialized();
+    
+    try {
+      this.logger.log(yellow('Clearing all products (dev mode)'));
+      
+      // Get all existing products
+      const existingProducts = await this.listProducts();
+      
+      if (existingProducts.length === 0) {
+        return;
+      }
+      
+      // Delete each product
+      let deletedCount = 0;
+      let failedCount = 0;
+      
+      for (const product of existingProducts) {
+        if (product.id) {
+          try {
+            await this.content.products.delete({
+              merchantId: this.merchantId,
+              productId: product.id
+            });
+            deletedCount++;
+            // Silent deletion
+          } catch (error) {
+            failedCount++;
+            // Silent failure, counted in summary
+          }
+        }
+      }
+      
+      if (deletedCount > 0) {
+        this.logger.log(blue.bold(`Cleared ${white(deletedCount.toString())} products`));
+      }
+      if (failedCount > 0) {
+        this.logger.log(yellow(`Failed to clear ${white(failedCount.toString())} products`));
+      }
+      
+    } catch (error) {
+      this.logger.log(`Error clearing products: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * List all products in Google Merchant Center
+   */
+  public async listProducts(): Promise<any[]> {
+    await this.ensureInitialized();
+    
+    try {
+      const response = await this.content.products.list({
+        merchantId: this.merchantId
+      });
+      return response.data.resources || [];
+    } catch (error) {
+      this.logger.log(`Failed to list products: ${error}`);
+      throw error;
+    }
+  }
+
+  /**
+   * Sync all featured playlists with Google Merchant Center
+   */
+  public async syncAllFeaturedPlaylists(): Promise<void> {
+    await this.ensureInitialized();
+    
+    try {
+      this.logger.log('Starting full sync with Google Merchant Center');
+      
+      // Get all featured playlists
+      const playlists = await this.prisma.playlist.findMany({
+        where: { 
+          featured: true,
+          slug: { not: '' }
+        },
+        include: {
+          genre: true
+        }
+      });
+
+      this.logger.log(`Syncing ${playlists.length} featured playlists`);
+
+      for (const playlist of playlists) {
+        await this.uploadPlaylist(playlist);
+      }
+
+      this.logger.log('Full sync completed');
+    } catch (error) {
+      this.logger.log(`Error during full sync: ${error}`);
+      throw error;
+    }
+  }
+}
+
+// Export singleton instance
+export const merchantCenter = MerchantCenterService.getInstance();

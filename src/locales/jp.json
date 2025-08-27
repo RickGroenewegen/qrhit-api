@@ -469,5 +469,8 @@
   "mail.downloadDigitalButton": "デジタルカードをダウンロード",
   "mail.sendToPrinterMailSubject": "プレイリスト{{ playlist }}のカード印刷を始めたよ！",
   "mail.printingStarted": "いいニュース！QR音楽カードを印刷中だよ。すぐ発送するね。",
-  "mail.downloadDigitalButtonPrinter": "PDFをダウンロード"
+  "mail.downloadDigitalButtonPrinter": "PDFをダウンロード",
+  "product_type.digital": "デジタルPDF",
+  "product_type.sheets": "印刷用シート",
+  "product_type.physical": "物理カード"
 }
