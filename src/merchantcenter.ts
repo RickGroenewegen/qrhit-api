@@ -500,9 +500,6 @@ export class MerchantCenterService {
    */
   private async generateProductImage(playlistImageUrl: string, imageKey: string, productType: string): Promise<string> {
     try {
-      // Debug log the image URL
-      this.logger.log(blue.bold(`📷 Processing image from: ${white.bold(playlistImageUrl.substring(0, 50))}...`));
-      
       // Paths for images - use product_pdf.jpg for digital products, product_cards.jpg for others
       const templateFile = productType === 'digital' ? 'product_pdf.jpg' : 'product_cards.jpg';
       const templatePath = path.join(__dirname, '..', 'assets', 'images', templateFile);
@@ -550,7 +547,6 @@ export class MerchantCenterService {
         });
         // Don't use 'binary' encoding - response.data is already a buffer/arraybuffer
         playlistImageBuffer = Buffer.from(response.data);
-        this.logger.log(blue.bold(`📷 Downloaded image: ${white.bold(playlistImageBuffer.length.toString())} bytes`));
       } catch (downloadError: any) {
         this.logger.log(red(`📷 Failed to download image: ${downloadError.message}`));
         throw downloadError;
@@ -616,7 +612,6 @@ export class MerchantCenterService {
         .toFile(outputPath);
       
       // Image generated successfully - add version parameter to bust Google's cache
-      this.logger.log(blue.bold(`📷 Generated image: ${white.bold(outputFileName)}`));
       const apiUri = process.env.API_URI || 'https://www.qrsong.io';
       const version = Date.now(); // Use timestamp as version
       return `${apiUri}/public/products/${outputFileName}?v=${version}`;
