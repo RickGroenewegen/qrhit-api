@@ -536,15 +536,8 @@
             <table class="totals-table">
                 <tr class="total-row subtotal">
                     <td colspan="3">Subtotaal</td>
-                    <td>€&nbsp;<%= (calculationResult.pricing.clientPrice + (calculation.manualDiscount * calculation.quantity)).toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= calculationResult.pricing.clientPrice.toFixed(2).replace('.', ',') %></td>
                 </tr>
-                
-                <% if (calculation.manualDiscount > 0) { %>
-                <tr class="total-row discount">
-                    <td colspan="3">Korting (€&nbsp;<%= calculation.manualDiscount.toFixed(2).replace('.', ',') %> per box)</td>
-                    <td>-&nbsp;€&nbsp;<%= (calculation.manualDiscount * calculation.quantity).toFixed(2).replace('.', ',') %></td>
-                </tr>
-                <% } %>
                 
                 <tr class="total-row grand-total">
                     <td colspan="3">Totaal excl. BTW</td>
