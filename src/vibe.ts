@@ -189,7 +189,10 @@ class Vibe {
 
     try {
       // 1. Create the company (if not exists)
-      const companyResult = await this.createCompany({ name: company, test: false });
+      const companyResult = await this.createCompany({
+        name: company,
+        test: false,
+      });
       if (!companyResult.success) {
         return {
           success: false,
@@ -985,12 +988,6 @@ class Vibe {
         },
       });
 
-      this.logger.log(
-        color.green.bold(
-          `Updated company ${color.white.bold(updatedCompany.name)}`
-        )
-      );
-
       return {
         success: true,
         data: {
@@ -1086,20 +1083,18 @@ class Vibe {
    * @param name The name of the company to create
    * @returns Object with success status and the newly created company
    */
-  public async createCompany(
-    companyData: {
-      name: string;
-      test?: boolean;
-      address?: string;
-      housenumber?: string;
-      city?: string;
-      zipcode?: string;
-      countrycode?: string;
-      contact?: string;
-      contactemail?: string;
-      contactphone?: string;
-    }
-  ): Promise<any> {
+  public async createCompany(companyData: {
+    name: string;
+    test?: boolean;
+    address?: string;
+    housenumber?: string;
+    city?: string;
+    zipcode?: string;
+    countrycode?: string;
+    contact?: string;
+    contactemail?: string;
+    contactphone?: string;
+  }): Promise<any> {
     try {
       if (!companyData.name || companyData.name.trim() === '') {
         return { success: false, error: 'Company name cannot be empty' };
@@ -2826,13 +2821,19 @@ class Vibe {
     userId: number,
     userGroups: string[],
     userCompanyId?: number
-  ): Promise<{ success: boolean; data?: Buffer; filename?: string; error?: string }> {
+  ): Promise<{
+    success: boolean;
+    data?: Buffer;
+    filename?: string;
+    error?: string;
+  }> {
     try {
       // If user is companyadmin, only allow for their own company
       if (userGroups.includes('companyadmin') && userCompanyId !== companyId) {
-        return { 
-          success: false, 
-          error: 'Forbidden: You can only generate quotations for your own company' 
+        return {
+          success: false,
+          error:
+            'Forbidden: You can only generate quotations for your own company',
         };
       }
 
@@ -2841,29 +2842,31 @@ class Vibe {
       if (!companiesResult.success || !companiesResult.data?.companies) {
         return { success: false, error: 'Failed to fetch companies' };
       }
-      const company = companiesResult.data.companies.find((c: any) => c.id === companyId);
-      
+      const company = companiesResult.data.companies.find(
+        (c: any) => c.id === companyId
+      );
+
       if (!company) {
         return { success: false, error: 'Company not found' };
       }
-      
+
       // Generate unique quotation number
       const quotationNumber = `ONZ${Date.now().toString().slice(-8)}`;
-      
+
       // Prepare file path
       const tempDir = '/tmp';
       const fileName = `quotation_${quotationNumber}_${Date.now()}.pdf`;
       const filePath = path.join(tempDir, fileName);
-      
+
       // Generate PDF using ConvertAPI
       const PDF = require('./pdf').default;
       const pdfManager = new PDF();
       const convertapi = pdfManager['convertapi'];
-      
+
       // Create the URL for the HTML rendering
       const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
       const htmlUrl = `${baseUrl}/vibe/quotation/${companyId}/${quotationNumber}`;
-      
+
       const options = {
         File: htmlUrl,
         PageSize: 'a4',
@@ -2878,20 +2881,23 @@ class Vibe {
 
       const result = await convertapi.convert('pdf', options, 'htm');
       await result.saveFiles(filePath);
-      
+
       // Read the generated PDF
       const pdfBuffer = await fs.readFile(filePath);
-      
+
       // Clean up
       await fs.unlink(filePath).catch(() => {}); // Ignore unlink errors
-      
+
       // Generate filename for download
-      const downloadFilename = `Offerte_${company.name.replace(/[^a-zA-Z0-9]/g, '_')}_${quotationNumber}.pdf`;
-      
+      const downloadFilename = `Offerte_${company.name.replace(
+        /[^a-zA-Z0-9]/g,
+        '_'
+      )}_${quotationNumber}.pdf`;
+
       return {
         success: true,
         data: pdfBuffer,
-        filename: downloadFilename
+        filename: downloadFilename,
       };
     } catch (error: any) {
       this.logger.log(color.red.bold(`Error generating quotation: ${error}`));

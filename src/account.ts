@@ -302,17 +302,9 @@ class Account {
         },
       });
 
-      this.logger.log(
-        color.green.bold(
-          `Updated CompanyList ID ${companyListId} for user: ${userId}`
-        )
-      );
-
       return { success: true };
     } catch (error) {
-      this.logger.log(
-        color.red.bold(`Error updating CompanyList: ${error}`)
-      );
+      this.logger.log(color.red.bold(`Error updating CompanyList: ${error}`));
       return { success: false, error: 'Error updating company list' };
     }
   }
@@ -378,9 +370,7 @@ class Account {
 
       return { success: true };
     } catch (error) {
-      this.logger.log(
-        color.red.bold(`Error deleting CompanyList: ${error}`)
-      );
+      this.logger.log(color.red.bold(`Error deleting CompanyList: ${error}`));
       return { success: false, error: 'Error deleting company list' };
     }
   }
@@ -481,12 +471,6 @@ class Account {
         });
       }
 
-      this.logger.log(
-        color.green.bold(
-          `Updated CompanyList images for ID ${companyListId} for user: ${userId}`
-        )
-      );
-
       return {
         success: true,
         data: {
@@ -516,9 +500,7 @@ class Account {
   ): Promise<string | null> {
     // Check if fileData exists and has a filename
     if (!fileData || !fileData.filename) {
-      this.logger.log(
-        color.yellow.bold(`No file provided for ${type}`)
-      );
+      this.logger.log(color.yellow.bold(`No file provided for ${type}`));
       return null;
     }
 
