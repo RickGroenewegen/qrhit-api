@@ -528,13 +528,22 @@ model TrustPilot {
 }
 
 model Company {
-  id          Int           @id @default(autoincrement())
-  name        String
-  test        Boolean       @default(false)
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-  CompanyList CompanyList[]
-  User        User[]
+  id           Int           @id @default(autoincrement())
+  name         String
+  test         Boolean       @default(false)
+  address      String?
+  housenumber  String?
+  city         String?
+  zipcode      String?
+  countrycode  String?
+  contact      String?
+  contactemail String?
+  contactphone String?
+  calculation  String?       @db.Text
+  createdAt    DateTime      @default(now())
+  updatedAt    DateTime      @updatedAt
+  CompanyList  CompanyList[]
+  User         User[]
 
   @@map("companies")
 }

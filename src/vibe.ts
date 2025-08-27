@@ -189,7 +189,7 @@ class Vibe {
 
     try {
       // 1. Create the company (if not exists)
-      const companyResult = await this.createCompany(company, false);
+      const companyResult = await this.createCompany({ name: company, test: false });
       if (!companyResult.success) {
         return {
           success: false,
@@ -948,12 +948,16 @@ class Vibe {
       // Validate the data
       const validFields = [
         'name',
+        'test',
         'address',
-        'zipcode',
+        'housenumber',
         'city',
-        'contactphone',
+        'zipcode',
+        'countrycode',
+        'contact',
         'contactemail',
-        'test', // Allow updating the test property
+        'contactphone',
+        'calculation',
       ];
 
       // Filter out invalid fields
@@ -1083,17 +1087,27 @@ class Vibe {
    * @returns Object with success status and the newly created company
    */
   public async createCompany(
-    name: string,
-    test: boolean = false
+    companyData: {
+      name: string;
+      test?: boolean;
+      address?: string;
+      housenumber?: string;
+      city?: string;
+      zipcode?: string;
+      countrycode?: string;
+      contact?: string;
+      contactemail?: string;
+      contactphone?: string;
+    }
   ): Promise<any> {
     try {
-      if (!name || name.trim() === '') {
+      if (!companyData.name || companyData.name.trim() === '') {
         return { success: false, error: 'Company name cannot be empty' };
       }
 
       // Check if company with the same name already exists (case-sensitive check is default for MySQL unless collation is CI)
       const existingCompany = await this.prisma.company.findFirst({
-        where: { name: { equals: name.trim() } }, // Removed mode: 'insensitive', added trim()
+        where: { name: { equals: companyData.name.trim() } }, // Removed mode: 'insensitive', added trim()
       });
 
       if (existingCompany) {
@@ -1105,8 +1119,16 @@ class Vibe {
 
       const newCompany = await this.prisma.company.create({
         data: {
-          name: name.trim(), // Trim whitespace
-          test: test, // Store the test property
+          name: companyData.name.trim(), // Trim whitespace
+          test: companyData.test || false, // Store the test property
+          address: companyData.address,
+          housenumber: companyData.housenumber,
+          city: companyData.city,
+          zipcode: companyData.zipcode,
+          countrycode: companyData.countrycode,
+          contact: companyData.contact,
+          contactemail: companyData.contactemail,
+          contactphone: companyData.contactphone,
         },
       });
 
@@ -2788,6 +2810,92 @@ class Vibe {
     } catch (error) {
       this.logger.log(color.red.bold(`Error calculating pricing: ${error}`));
       return { success: false, error: 'Error calculating pricing' };
+    }
+  }
+
+  /**
+   * Generate a quotation PDF for a company
+   * @param companyId The company ID
+   * @param userId The user making the request
+   * @param userGroups The user's groups
+   * @param userCompanyId The user's company ID (for companyadmin validation)
+   * @returns Buffer with PDF data or error
+   */
+  public async generateQuotationPDF(
+    companyId: number,
+    userId: number,
+    userGroups: string[],
+    userCompanyId?: number
+  ): Promise<{ success: boolean; data?: Buffer; filename?: string; error?: string }> {
+    try {
+      // If user is companyadmin, only allow for their own company
+      if (userGroups.includes('companyadmin') && userCompanyId !== companyId) {
+        return { 
+          success: false, 
+          error: 'Forbidden: You can only generate quotations for your own company' 
+        };
+      }
+
+      // Get company details
+      const companiesResult = await this.getAllCompanies();
+      if (!companiesResult.success || !companiesResult.data?.companies) {
+        return { success: false, error: 'Failed to fetch companies' };
+      }
+      const company = companiesResult.data.companies.find((c: any) => c.id === companyId);
+      
+      if (!company) {
+        return { success: false, error: 'Company not found' };
+      }
+      
+      // Generate unique quotation number
+      const quotationNumber = `ONZ${Date.now().toString().slice(-8)}`;
+      
+      // Prepare file path
+      const tempDir = '/tmp';
+      const fileName = `quotation_${quotationNumber}_${Date.now()}.pdf`;
+      const filePath = path.join(tempDir, fileName);
+      
+      // Generate PDF using ConvertAPI
+      const PDF = require('./pdf').default;
+      const pdfManager = new PDF();
+      const convertapi = pdfManager['convertapi'];
+      
+      // Create the URL for the HTML rendering
+      const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
+      const htmlUrl = `${baseUrl}/vibe/quotation/${companyId}/${quotationNumber}`;
+      
+      const options = {
+        File: htmlUrl,
+        PageSize: 'a4',
+        RespectViewport: 'false',
+        MarginTop: 0,
+        MarginBottom: 0,
+        MarginLeft: 0,
+        MarginRight: 0,
+        ConversionDelay: 3,
+        CompressPDF: 'true',
+      };
+
+      const result = await convertapi.convert('pdf', options, 'htm');
+      await result.saveFiles(filePath);
+      
+      // Read the generated PDF
+      const pdfBuffer = await fs.readFile(filePath);
+      
+      // Clean up
+      await fs.unlink(filePath).catch(() => {}); // Ignore unlink errors
+      
+      // Generate filename for download
+      const downloadFilename = `Offerte_${company.name.replace(/[^a-zA-Z0-9]/g, '_')}_${quotationNumber}.pdf`;
+      
+      return {
+        success: true,
+        data: pdfBuffer,
+        filename: downloadFilename
+      };
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`Error generating quotation: ${error}`));
+      return { success: false, error: 'Failed to generate quotation' };
     }
   }
 }
