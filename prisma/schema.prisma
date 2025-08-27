@@ -162,32 +162,32 @@ model Payment {
 }
 
 model User {
-  id                   Int              @id @default(autoincrement())
-  userId               String           @unique
-  email                String           @unique
-  displayName          String
-  locale               String?
-  country              String?
-  hash                 String           @unique
-  password             String?
-  salt                 String?
-  companyId            Int?
-  marketingEmails      Boolean          @default(false)
-  sync                 Boolean          @default(false)
-  payments             Payment[]
-  verificationHash     String?          @unique
-  verified             Boolean          @default(false)
-  verifiedAt           DateTime?
-  passwordResetToken   String?          @unique
-  passwordResetExpiry  DateTime?
-  gamesActivationCode  String?          @unique
+  id                        Int              @id @default(autoincrement())
+  userId                    String           @unique
+  email                     String           @unique
+  displayName               String
+  locale                    String?
+  country                   String?
+  hash                      String           @unique
+  password                  String?
+  salt                      String?
+  companyId                 Int?
+  marketingEmails           Boolean          @default(false)
+  sync                      Boolean          @default(false)
+  payments                  Payment[]
+  verificationHash          String?          @unique
+  verified                  Boolean          @default(false)
+  verifiedAt                DateTime?
+  passwordResetToken        String?          @unique
+  passwordResetExpiry       DateTime?
+  gamesActivationCode       String?          @unique
   gamesActivationCodeExpiry DateTime?
-  upgraded             Boolean          @default(false)
-  createdAt            DateTime         @default(now())
-  updatedAt            DateTime         @updatedAt
-  UserSuggestion       UserSuggestion[]
-  UserGroupUser        UserInGroup[]
-  Company              Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  upgraded                  Boolean          @default(false)
+  createdAt                 DateTime         @default(now())
+  updatedAt                 DateTime         @updatedAt
+  UserSuggestion            UserSuggestion[]
+  UserGroupUser             UserInGroup[]
+  Company                   Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
 
   @@index([hash])
   @@map("users")
@@ -264,10 +264,8 @@ model genre {
   name_it   String
   name_pt   String
   name_pl   String
-  name_hin  String
   name_jp   String
   name_cn   String
-  name_ru   String?
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   Playlist  Playlist[]
@@ -290,10 +288,8 @@ model Playlist {
   description_it       String?              @db.Text
   description_pt       String?              @db.Text
   description_pl       String?              @db.Text
-  description_hin      String?              @db.Text
   description_jp       String?              @db.Text
   description_cn       String?              @db.Text
-  description_ru       String?              @db.Text
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
   featured             Boolean              @default(false)
@@ -508,10 +504,8 @@ model TrustPilot {
   title_it    String
   title_pt    String
   title_pl    String
-  title_hin   String
   title_jp    String
   title_cn    String
-  title_ru    String?
   message_en  String   @db.Text
   message_nl  String   @db.Text
   message_de  String   @db.Text
@@ -520,10 +514,8 @@ model TrustPilot {
   message_it  String   @db.Text
   message_pt  String   @db.Text
   message_pl  String   @db.Text
-  message_hin String   @db.Text
   message_jp  String   @db.Text
   message_cn  String   @db.Text
-  message_ru  String?  @db.Text
   rating      Float
   image       String
   locale      String?
@@ -561,10 +553,8 @@ model CompanyList {
   description_it          String    @default("")
   description_pt          String    @default("")
   description_pl          String    @default("")
-  description_hin         String    @default("")
   description_jp          String    @default("")
   description_cn          String    @default("")
-  description_ru          String    @default("")
   slug                    String
   background              String?
   background2             String?
@@ -706,10 +696,8 @@ model Blog {
   slug_it            String?  @unique
   slug_pt            String?  @unique
   slug_pl            String?  @unique
-  slug_hin           String?  @unique
   slug_jp            String?  @unique
   slug_cn            String?  @unique
-  slug_ru            String?  @unique
   active             Boolean  @default(false)
   image              String?
   image_instructions String?  @db.Text
@@ -721,10 +709,8 @@ model Blog {
   title_it           String
   title_pt           String
   title_pl           String
-  title_hin          String
   title_jp           String
   title_cn           String
-  title_ru           String
   content_en         String   @db.Text
   content_nl         String   @db.Text
   content_de         String   @db.Text
@@ -733,10 +719,8 @@ model Blog {
   content_it         String   @db.Text
   content_pt         String   @db.Text
   content_pl         String   @db.Text
-  content_hin        String   @db.Text
   content_jp         String   @db.Text
   content_cn         String   @db.Text
-  content_ru         String   @db.Text
   summary_en         String?  @db.Text
   summary_nl         String?  @db.Text
   summary_de         String?  @db.Text
@@ -745,10 +729,8 @@ model Blog {
   summary_it         String?  @db.Text
   summary_pt         String?  @db.Text
   summary_pl         String?  @db.Text
-  summary_hin        String?  @db.Text
   summary_jp         String?  @db.Text
   summary_cn         String?  @db.Text
-  summary_ru         String?  @db.Text
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 

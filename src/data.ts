@@ -333,6 +333,7 @@ class Data {
       '/playlists',
       '/onzevibe',
       '/qr-cards-as-a-service',
+      '/pubquiz',
     ];
 
     // Get current date in YYYY-MM-DD format for lastmod

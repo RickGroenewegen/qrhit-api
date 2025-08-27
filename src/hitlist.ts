@@ -637,10 +637,8 @@ class Hitlist {
           description_it: true,
           description_pt: true,
           description_pl: true,
-          description_hin: true,
           description_jp: true,
           description_cn: true,
-          description_ru: true,
         },
       });
 

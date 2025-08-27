@@ -827,6 +827,7 @@ export class ChatGPT {
 **Core Service:**
 - Converts Spotify playlists into physical QR code cards and digital downloads
 - Users scan QR codes with the QRSong! mobile app to instantly play songs in Spotify
+- Users have to guess artist, title and release year of the songs
 - Creates interactive musical experiences perfect for parties, gifts, and social gatherings
 
 **Key Features & Benefits:**
@@ -837,12 +838,14 @@ export class ChatGPT {
 - Supports multiple languages and international shipping
 - Gift card options available
 - Custom playlist creation from any Spotify playlist URL
-- Curated featured playlists available on the website
-- Professional printing and shipping services
+- Curated featured playlists available on the website if you don't have any inspiration
+- Professional printing and shipping services on 350g premium paper
 - Digital assembly option for immediate use
+- Purchasing a physical product includes a free digital download
 
 **Use Cases:**
 - Party entertainment and ice breakers
+- Good prize for pub quizzes
 - Music education and trivia nights
 - Unique personalized gifts for music lovers
 - Family game nights with musical challenges

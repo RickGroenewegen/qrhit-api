@@ -1200,10 +1200,8 @@ class Vibe {
       description_it?: string;
       description_pt?: string;
       description_pl?: string;
-      description_hin?: string;
       description_jp?: string;
       description_cn?: string;
-      description_ru?: string;
       slug: string;
       numberOfCards: number;
       numberOfTracks: number;
@@ -2735,7 +2733,7 @@ class Vibe {
       }
 
       // Apply manual discount to commercial price (client pays less)
-      commercialPrice -= (manualDiscount || 0);
+      commercialPrice -= manualDiscount || 0;
 
       // Calculate profits
       const kickBackFee = tierData.kickBackFee;
