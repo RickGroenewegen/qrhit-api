@@ -484,16 +484,23 @@ export class MerchantCenterService {
 
     // Generate composite product image with the template (unique per variant)
     const imageKey = `${variant.playlistId}_${variant.type}_${variant.locale}`;
+
     const productImage = await this.generateProductImage(
       variant.image,
       imageKey,
       variant.type
     );
 
+    console.log(111, productImage);
+
     // Check if we're using the fallback Spotify image (indicates generation failure)
     if (productImage.includes('scdn.co') || productImage.includes('spotify')) {
-      this.logger.log(red('⚠️ WARNING: Using original Spotify image instead of composite'));
-      this.logger.log(red(`  Product: ${variant.slug} [${variant.type}/${variant.locale}]`));
+      this.logger.log(
+        red('⚠️ WARNING: Using original Spotify image instead of composite')
+      );
+      this.logger.log(
+        red(`  Product: ${variant.slug} [${variant.type}/${variant.locale}]`)
+      );
       this.logger.log(red(`  Image URL: ${productImage}`));
     }
 
@@ -844,7 +851,9 @@ export class MerchantCenterService {
     } catch (error: any) {
       // Log error that causes fallback to original Spotify image
       this.logger.log(
-        red(`⚠️ Image composite generation failed - using Spotify image as fallback`)
+        red(
+          `⚠️ Image composite generation failed - using Spotify image as fallback`
+        )
       );
       this.logger.log(red(`  Error: ${error.message || error}`));
       this.logger.log(red(`  Product: ${imageKey}`));
@@ -947,11 +956,7 @@ export class MerchantCenterService {
             blue(`  - Link: ${white.bold(productBefore?.link || 'N/A')}`)
           );
           this.logger.log(
-            blue(
-              `  - Image: ${white.bold(
-                productBefore?.imageLink?.substring(0, 100) || 'N/A'
-              )}...`
-            )
+            blue(`  - Image: ${white.bold(productBefore?.imageLink || 'N/A')}`)
           );
           this.logger.log(
             blue(
@@ -1010,11 +1015,7 @@ export class MerchantCenterService {
           blue(`  - Link: ${white.bold(productForUpdate.link || 'N/A')}`)
         );
         this.logger.log(
-          blue(
-            `  - Image: ${white.bold(
-              productForUpdate.imageLink?.substring(0, 100) || 'N/A'
-            )}...`
-          )
+          blue(`  - Image: ${white.bold(productForUpdate.imageLink || 'N/A')}`)
         );
         this.logger.log(
           blue(
@@ -1090,11 +1091,7 @@ export class MerchantCenterService {
             green(`  - Link: ${white.bold(productAfter?.link || 'N/A')}`)
           );
           this.logger.log(
-            green(
-              `  - Image: ${white.bold(
-                productAfter?.imageLink?.substring(0, 100) || 'N/A'
-              )}...`
-            )
+            green(`  - Image: ${white.bold(productAfter?.imageLink || 'N/A')}`)
           );
           this.logger.log(
             green(
