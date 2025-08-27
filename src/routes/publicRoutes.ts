@@ -39,6 +39,9 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const mollie = new Mollie();
   const cache = Cache.getInstance();
 
+  // Cache for robots.txt content
+  let robotsTxtCache: string | null = null;
+
   // Apple App Site Association
   fastify.get(
     '/.well-known/apple-app-site-association',
@@ -59,9 +62,12 @@ export default async function publicRoutes(fastify: FastifyInstance) {
 
   // Robots.txt
   fastify.get('/robots.txt', async (_request, reply) => {
-    reply
-      .header('Content-Type', 'text/plain')
-      .send('User-agent: *\nDisallow: /');
+    try {
+    const robotsContent =
+        'User-agent: Googlebot\nAllow: /\n\nUser-agent: Googlebot-Image\nAllow: /\n\nUser-agent: *\nDisallow: /';
+
+      reply.header('Content-Type', 'text/plain').send(robotsContent);
+    }
   });
 
   // Contact form
