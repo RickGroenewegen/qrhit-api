@@ -481,5 +481,9 @@
   "mail.downloadDigitalButtonPrinter": "Lad dir dein PDF runter",
   "product_type.digital": "Digitale PDF",
   "product_type.sheets": "Druckbögen",
-  "product_type.physical": "Physische Karten"
+  "product_type.physical": "Physische Karten",
+  "merchant.qr_music_game": "QR Musikspiel",
+  "merchant.cards": "Karten",
+  "merchant.pdf": "PDF",
+  "merchant.sheets": "Blätter"
 }

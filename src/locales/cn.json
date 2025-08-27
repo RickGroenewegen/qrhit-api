@@ -471,5 +471,9 @@
   "mail.downloadDigitalButtonPrinter": "下载你的PDF",
   "product_type.digital": "数字PDF",
   "product_type.sheets": "打印纸张",
-  "product_type.physical": "实体卡片"
+  "product_type.physical": "实体卡片",
+  "merchant.qr_music_game": "QR音乐游戏",
+  "merchant.cards": "卡牌",
+  "merchant.pdf": "PDF",
+  "merchant.sheets": "シート"
 }

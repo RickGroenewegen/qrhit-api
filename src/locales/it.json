@@ -476,5 +476,9 @@
   "mail.downloadDigitalButtonPrinter": "Scarica il tuo PDF",
   "product_type.digital": "PDF digitale",
   "product_type.sheets": "Fogli da stampare",
-  "product_type.physical": "Carte fisiche"
+  "product_type.physical": "Carte fisiche",
+  "merchant.qr_music_game": "Gioco QR Musica",
+  "merchant.cards": "carte",
+  "merchant.pdf": "PDF",
+  "merchant.sheets": "fogli"
 }

@@ -472,5 +472,9 @@
   "mail.downloadDigitalButtonPrinter": "PDFをダウンロード",
   "product_type.digital": "デジタルPDF",
   "product_type.sheets": "印刷用シート",
-  "product_type.physical": "物理カード"
+  "product_type.physical": "物理カード",
+  "merchant.qr_music_game": "QR音楽ゲーム",
+  "merchant.cards": "カード",
+  "merchant.pdf": "PDF",
+  "merchant.sheets": "シート"
 }

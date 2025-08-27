@@ -6085,5 +6085,49 @@
     "pl",
     "jp",
     "cn"
+  ],
+  "merchant.qr_music_game": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn"
+  ],
+  "merchant.cards": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn"
+  ],
+  "merchant.pdf": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn"
+  ],
+  "merchant.sheets": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn"
   ]
 }

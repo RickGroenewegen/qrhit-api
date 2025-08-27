@@ -263,7 +263,6 @@ export class ChatGPT {
 
     const result = await this.openai.chat.completions.create({
       model: 'gpt-5',
-      temperature: 0.7,
       messages: [
         {
           role: 'system',
@@ -947,7 +946,6 @@ Write in a professional, informative, and engaging style. The tone should be cle
   ): Promise<{ title: string; content: string; summary?: string }> {
     const stream = await this.openai.chat.completions.create({
       model: 'gpt-5',
-      temperature: 0.7,
       stream: true,
       messages: [
         {

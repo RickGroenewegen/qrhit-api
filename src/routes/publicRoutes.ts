@@ -64,13 +64,13 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   fastify.get('/robots.txt', async (_request, reply) => {
     try {
     const robotsContent =
-        'User-agent: Googlebot\nAllow: /\n\nUser-agent: Googlebot-Image\nAllow: /\n\nUser-agent: *\nDisallow: /';
+        'User-agent: Googlebot\nDisallow:\nUser-agent: Googlebot-image\nDisallow:';
 
       reply.header('Content-Type', 'text/plain').send(robotsContent);
     }
   });
 
-  // Contact form
+  // Conta  ct form
   fastify.post('/contact', async (request: any, _reply) => {
     return await mail.sendContactForm(request.body, request.clientIp);
   });

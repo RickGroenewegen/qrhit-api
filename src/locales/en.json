@@ -1,4 +1,8 @@
 {
+	"merchant.qr_music_game": "QR Music Game",
+	"merchant.pdf": "PDF",
+	"merchant.sheets": "sheets",
+	"merchant.cards": "cards",
 	"product_type.digital": "Digital PDF",
 	"product_type.sheets": "Print Sheets",
 	"product_type.physical": "Physical Cards",

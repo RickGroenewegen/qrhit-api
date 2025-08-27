@@ -479,7 +479,11 @@
   "mail.sendToPrinterMailSubject": "We zijn begonnen met het printen van de kaarten voor playlist {{ playlist }}!",
   "mail.printingStarted": "Goed nieuws! We zijn begonnen met het printen van je QR-muziekkaarten. Je kaarten worden snel verzonden.",
   "mail.downloadDigitalButtonPrinter": "Download je PDF",
+  "merchant.qr_music_game": "QR Muziekspel",
+  "merchant.cards": "kaarten",
   "product_type.digital": "Digitale PDF",
   "product_type.sheets": "Printvellen",
-  "product_type.physical": "Fysieke kaarten"
+  "product_type.physical": "Fysieke kaarten",
+  "merchant.pdf": "PDF",
+  "merchant.sheets": "vellen"
 }
