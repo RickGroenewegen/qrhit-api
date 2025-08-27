@@ -668,13 +668,8 @@ export class MerchantCenterService {
       // Paths for images - use product_pdf.jpg for digital products, product_cards.jpg for others
       const templateFile =
         productType === 'digital' ? 'product_pdf.jpg' : 'product_cards.jpg';
-      const templatePath = path.join(
-        __dirname,
-        '..',
-        'assets',
-        'images',
-        templateFile
-      );
+      const templatePath = `${process.env['ASSETS_DIR']}/images/${templateFile}`;
+
       const publicDir =
         process.env.PUBLIC_DIR || path.join(__dirname, '..', 'public');
       const outputDir = path.join(publicDir, 'products');
