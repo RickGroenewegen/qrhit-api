@@ -384,7 +384,7 @@ class Designer {
           background: design.background,
           logo: design.logo,
           emoji: design.emoji,
-          hideDomain: design.hideDomain,
+          hideDomain: this.utils.parseBoolean(design.hideDomain),
           hideCircle: design.hideCircle,
           qrColor: design.qrColor,
           doubleSided: design.doubleSided,
