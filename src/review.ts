@@ -21,7 +21,7 @@ class Review {
           new CronJob(
             '0 * * * *',
             async () => {
-              await this.processReviewEmails();
+              //await this.processReviewEmails();
             },
             null,
             true
