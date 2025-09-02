@@ -924,12 +924,23 @@ class PrintEnBind {
       if (physicalItems > 0 && shippingResult) {
         shipping = shippingResult!.cost || 0;
         handling = 0;
-        if (params.countrycode === 'NL') {
-          if (totalPrice >= 50) {
-            shipping = 0;
-          } else {
-            shipping = 2.99;
+
+        // Calculate total number of playlists ordered
+        let totalPlaylists = 0;
+        for (const item of params.cart.items) {
+          if (item.productType === 'cards') {
+            totalPlaylists += parseInt(item.amount) || 0;
           }
+        }
+
+        // Free shipping for NL, DE, BE when ordering 2 or more playlists
+        if (
+          ['NL', 'DE', 'BE'].includes(params.countrycode) &&
+          totalPlaylists >= 2
+        ) {
+          shipping = 0;
+        } else if (params.countrycode === 'NL') {
+          shipping = 2.99;
         } else {
           shipping -= 1;
         }
