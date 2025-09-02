@@ -192,7 +192,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                 rowIndices.forEach(function(i) { %>
                     <% if (paddedTracks[i] !== null) { %>
                         <div class="card front">
-                            <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/card_background2.png" alt="Card Background">
+                            <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/background_new.png" alt="Card Background">
                             <!-- <div class="circle"></div> -->
                             <div class="qr">
                                 <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= paddedTracks[i].trackId %>.png" alt="QR Code">

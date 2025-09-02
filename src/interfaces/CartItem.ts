@@ -20,4 +20,6 @@ export interface CartItem {
   emoji?: string;
   background?: string;
   logo?: string;
+  selectedFont?: string;
+  selectedFontSize?: string;
 }

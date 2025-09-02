@@ -681,6 +681,8 @@ class Data {
         payment_has_playlist.emoji,
         payment_has_playlist.background,
         payment_has_playlist.logo,
+        payment_has_playlist.selectedFont,
+        payment_has_playlist.selectedFontSize,
         payment_has_playlist.doubleSided,
         payment_has_playlist.eco,
         payment_has_playlist.qrColor,

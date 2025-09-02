@@ -461,6 +461,8 @@ model PaymentHasPlaylist {
   emoji                  String?
   background             String?
   logo                   String?
+  selectedFont           String?   @default("Arial, sans-serif")
+  selectedFontSize       String?   @default("16px")
   orderType              OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
 
   @@unique([paymentId, playlistId])

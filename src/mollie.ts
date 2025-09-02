@@ -790,6 +790,8 @@ class Mollie {
             emoji: item.emoji || '',
             background: item.background || '',
             logo: item.logo || '',
+            selectedFont: item.selectedFont || 'Arial, sans-serif',
+            selectedFontSize: item.selectedFontSize || '16px',
           };
         })
       );
