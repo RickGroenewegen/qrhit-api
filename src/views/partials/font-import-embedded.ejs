@@ -1,0 +1,60 @@
+<% 
+// Extract font name for embedded fonts
+let fontStyles = '';
+if (php.selectedFont && php.selectedFont !== 'Arial, sans-serif') {
+    // Extract the font name before the comma
+    let fontName = php.selectedFont.split(',')[0].trim().replace(/["']/g, '');
+    // Convert to Google Fonts format (e.g., "Bebas Neue" -> "Bebas+Neue")
+    let googleFontName = fontName.replace(/ /g, '+');
+    // Add appropriate weight based on font
+    let weights = ':wght@';
+    if (fontName.includes('Bebas')) weights += '400';
+    else if (fontName.includes('Pacifico')) weights += '400';
+    else if (fontName.includes('Oswald')) weights += '400;700';
+    else if (fontName.includes('Playfair')) weights += '400;700';
+    else if (fontName.includes('Dancing')) weights += '400;700';
+    else if (fontName.includes('Fredoka')) weights += '400;700';
+    else if (fontName.includes('Caveat')) weights += '400;700';
+    else if (fontName.includes('Righteous')) weights += '400';
+    else if (fontName.includes('Alfa')) weights += '400';
+    else if (fontName.includes('Montserrat')) weights += '400;700';
+    else weights += '400;700'; // default
+    
+    // Use Google Fonts API v2 with text parameter for subset optimization
+    fontStyles = `
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=${googleFontName}${weights}&display=block" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=${googleFontName}${weights}&display=block');
+        
+        /* Force font loading */
+        body {
+            font-family: ${php.selectedFont} !important;
+        }
+        
+        /* Preload hack to ensure font is loaded */
+        body::before {
+            content: "preload";
+            font-family: ${php.selectedFont};
+            position: absolute;
+            left: -9999px;
+            visibility: hidden;
+        }
+        
+        /* Apply font to all text elements */
+        .text, .text.artist, .text.year, .text.name {
+            font-family: ${php.selectedFont} !important;
+        }
+    </style>`;
+} else {
+    // Default to web-safe Arial
+    fontStyles = `
+    <style>
+        body, .text, .text.artist, .text.year, .text.name {
+            font-family: Arial, sans-serif !important;
+        }
+    </style>`;
+}
+%>
+<%- fontStyles %>

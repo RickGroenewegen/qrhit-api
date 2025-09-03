@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Your QR Cards</title>
-<%- include('partials/font-import') %>
+<%- include('partials/font-import-inline') %>
 <style>
     @media print {
         @page {
@@ -89,11 +89,11 @@
         justify-content: center;
     }
     .domain {
-        font-family: Arial, sans-serif;
-        font-size: 13px;
-        color: #909090; /* Match the color used on the back */
+        font-family: Arial, sans-serif !important;
+        font-size: 11px;
+        color: #b0b0b0; /* Lighter gray color */
         position: absolute;
-        bottom: 10mm;
+        bottom: 13mm;
         width: 100%;
         text-align: center;
         z-index: 2;
@@ -249,7 +249,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                         <div class="text" style="margin-top: 0mm;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;">
                             <%= tracks[i].artist %>
                             <% if (tracks[i].extraArtistAttribute && tracks[i].extraArtistAttribute.length > 0) { %>
-                                <div style="font-family: Arial, sans-serif; font-size: 14px; color: #666; margin-top: 2mm;"><%= tracks[i].extraArtistAttribute %></div>
+                                <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 2mm;"><%= tracks[i].extraArtistAttribute %></div>
                             <% } %>
                         </div>
                         <div class="text" style="margin-top: 5mm;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= tracks[i].year %></div>
@@ -259,7 +259,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                                 <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 2mm;"><%= tracks[i].extraNameAttribute %></div>
                             <% } %>
                         </div>
-                        <div class="text" style="margin-top: 5mm;font-size:14px;color:#909090;font-family:Arial, sans-serif;">                          
+                        <div class="text" style="margin-top: 5mm;font-size:11px;color:#b0b0b0;font-family:Arial, sans-serif !important;">                          
                             <% if (!playlist.hideDomain && !php.hideDomain) { %>
                                  <% if (php.emoji && php.emoji.length) { %>
                                     <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>

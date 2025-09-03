@@ -114,6 +114,7 @@ class PDF {
           MarginBottom: 0,
           MarginLeft: 0,
           CompressPDF: 'true',
+          LoadLazyContent: 'true', // Load all lazy content including fonts
         } as any;
 
         if (template === 'printer') {

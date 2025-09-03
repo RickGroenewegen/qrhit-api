@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Your QR Cards</title>
-<%- include('partials/font-import') %>
+<%- include('partials/font-import-inline') %>
 <style>
     body {
         font-family: <%= php.selectedFont || 'Arial, sans-serif' %>;
@@ -71,14 +71,13 @@
         overflow-wrap: break-word; /* Prevent breaking mid-word */
     }
     .url, .url-bottom {
-        font-family: Arial, sans-serif;
-        font-size: 12px;
+        font-family: Arial, sans-serif !important;
+        font-size: 11px;
         position: absolute;
-        bottom: 10mm;
+        bottom: 13mm;
         text-align: center;
         width: 100%;
-        font-style: italic;
-        color: #909090;
+        color: #b0b0b0;
         z-index: 3;
     }
     .logo {
@@ -117,7 +116,7 @@
         <div class="text artist" style="font-size:<%= php.selectedFontSize || '18px' %>;">
             <%= track.artist %>
             <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
-                <div style="font-family: Arial, sans-serif; font-size: 14px; color: #666; margin-top: 2mm;"><%= track.extraArtistAttribute %></div>
+                <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 2mm;"><%= track.extraArtistAttribute %></div>
             <% } %>
         </div>
         <div class="text year" style="font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '50px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '40px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '46px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '44px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '42px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '44px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '48px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '46px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '42px' : '48px' %>; font-weight:bold;"><%= track.year %></div>
