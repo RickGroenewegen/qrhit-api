@@ -13,7 +13,8 @@ export interface CartItem {
   personalMessage?: string;
   doubleSided?: boolean;
   qrColor?: string;
-  hideCircle?: boolean;
+  hideCircle?: boolean; // DEPRECATED: Use qrBackgroundType instead
+  qrBackgroundType?: 'none' | 'circle' | 'square'; // Background shape for QR code (default: 'square')
   hideDomain?: boolean;
   eco?: boolean;
   isSlug?: boolean;

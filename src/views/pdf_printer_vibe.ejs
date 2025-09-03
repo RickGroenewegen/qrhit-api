@@ -29,8 +29,8 @@
     }
     .white-square {
         position: absolute;
-        width: 36mm;
-        height: 36mm;
+        width: 36.3mm;
+        height: 36.3mm;
         background-color: #fff;
         top: 50%;
         left: 50%;
@@ -101,10 +101,10 @@
         <% } %>
         <% if (!php.hideCircle) { %>
             <div class="white-square">
-                <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" style="width: 32mm; height: 32mm; margin-left: 2px; margin-top: 2px;">
+                <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" style="width: 32mm; height: 32mm;">
             </div>
         <% } else { %>
-            <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr" style="margin-left: 2px; margin-top: 2px;">
+            <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
         <% } %>
         <div class="url">
             <% if (!php.hideDomain) { %>

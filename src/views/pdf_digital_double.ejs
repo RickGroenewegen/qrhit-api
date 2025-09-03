@@ -77,8 +77,8 @@
    
     .white-square {
         position: absolute;
-        width: 36mm;
-        height: 36mm;
+        width: 36.3mm;
+        height: 36.3mm;
         background-color: #fff;
         top: 50%;
         left: 50%;
@@ -188,13 +188,24 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                             <% if (php.logo && php.logo.length) { %>
                                 <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
                             <% } %>
-                            <% if (!php.hideCircle) { %>
+                            <% 
+                            // Determine QR background type - handle backward compatibility
+                            let qrBgType = php.qrBackgroundType || (php.hideCircle ? 'none' : 'square');
+                            %>
+                            <% if (qrBgType === 'square') { %>
+                                <!-- White square background for QR code -->
                                 <div class="white-square">
-                                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 32mm; height: 32mm; margin-left: 2px; margin-top: 2px;">
+                                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 32mm; height: 32mm;">
+                                </div>
+                            <% } else if (qrBgType === 'circle') { %>
+                                <!-- Circle is already embedded in the background image, just show QR -->
+                                <div class="qr">
+                                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 32mm; height: 32mm;">
                                 </div>
                             <% } else { %>
+                                <!-- No background shape -->
                                 <div class="qr">
-                                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 32mm; height: 32mm; margin-left: 2px; margin-top: 2px;">
+                                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 32mm; height: 32mm;">
                                 </div>
                             <% } %>
                             <div class="domain">                              

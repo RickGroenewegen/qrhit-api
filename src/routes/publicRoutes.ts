@@ -262,7 +262,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
 
   // Designer upload
   fastify.post('/designer/upload/:type', async (request: any, reply) => {
-    const { image, filename, hideCircle } = request.body;
+    const { image, filename, hideCircle, qrBackgroundType } = request.body;
     const { type } = request.params;
 
     if (!image) {
@@ -273,10 +273,12 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     let result = { success: false };
 
     if (type == 'background') {
+      // Convert hideCircle to qrBackgroundType for backward compatibility
+      const backgroundType = qrBackgroundType || (hideCircle ? 'none' : 'square');
       result = await designer.uploadBackgroundImage(
         image,
         filename,
-        hideCircle
+        backgroundType
       );
     } else if (type == 'logo') {
       result = await designer.uploadLogoImage(image, filename);

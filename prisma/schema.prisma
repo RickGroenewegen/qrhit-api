@@ -445,6 +445,7 @@ model PaymentHasPlaylist {
   doubleSided                Boolean  @default(false)
   eco                        Boolean  @default(false)
   hideCircle                 Boolean  @default(false)
+  qrBackgroundType           String   @default("square")
   qrColor                    String   @default("#000000")
   hideDomain                 Boolean  @default(false)
   price                      Float

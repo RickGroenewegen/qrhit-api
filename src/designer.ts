@@ -41,13 +41,13 @@ class Designer {
    * Uploads a background image from a base64 string
    * @param base64Image The base64 encoded image string
    * @param filename Optional filename, if not provided a nanoid will be used
-   * @param hideCircle Optional flag to hide the white circle overlay
+   * @param qrBackgroundType Type of QR background: 'none', 'circle', 'square' (default: 'square')
    * @returns Object with success status, filename and file path
    */
   public async uploadBackgroundImage(
     base64Image: string,
     filename?: string,
-    hideCircle: boolean = false
+    qrBackgroundType: 'none' | 'circle' | 'square' = 'square'
   ): Promise<{
     success: boolean;
     filename?: string;
@@ -114,8 +114,8 @@ class Designer {
           },
         ];
 
-        // Only add the white circle if hideCircle is false
-        if (!hideCircle) {
+        // Add white background shape based on qrBackgroundType
+        if (qrBackgroundType === 'circle') {
           compositeOptions.push({
             input: Buffer.from(
               `<svg width="1000" height="1000">
@@ -124,7 +124,11 @@ class Designer {
             ),
             blend: 'over',
           });
+        } else if (qrBackgroundType === 'square') {
+          // Don't draw anything for square - it's handled in PDF generation
+          // The square is drawn directly in the PDF, not on the background image
         }
+        // For 'none', we don't add any background shape
 
         const processedBuffer = await sharpInstance
           .composite(compositeOptions)
