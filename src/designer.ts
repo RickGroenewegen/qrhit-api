@@ -114,21 +114,9 @@ class Designer {
           },
         ];
 
-        // Add white background shape based on qrBackgroundType
-        if (qrBackgroundType === 'circle') {
-          compositeOptions.push({
-            input: Buffer.from(
-              `<svg width="1000" height="1000">
-                <circle cx="500" cy="500" r="400" fill="white" stroke="white" stroke-width="10"/>
-              </svg>`
-            ),
-            blend: 'over',
-          });
-        } else if (qrBackgroundType === 'square') {
-          // Don't draw anything for square - it's handled in PDF generation
-          // The square is drawn directly in the PDF, not on the background image
-        }
-        // For 'none', we don't add any background shape
+        // No longer draw shapes on the background image
+        // All QR background shapes (circle, square) are now handled in the EJS templates
+        // This keeps the background clean and allows for better PDF generation
 
         const processedBuffer = await sharpInstance
           .composite(compositeOptions)

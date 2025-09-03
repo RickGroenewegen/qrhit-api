@@ -172,8 +172,8 @@
                         <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 32mm; height: 32mm;">
                     </div>
                 <% } else if (qrBgType === 'circle') { %>
-                    <!-- Circle is already embedded in the background image, just show QR -->
-                    <div class="qr">
+                    <!-- White circle background for QR code -->
+                    <div style="position: absolute; width: 48mm; height: 48mm; background-color: #fff; border-radius: 50%; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1; display: flex; align-items: center; justify-content: center;">
                         <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 32mm; height: 32mm;">
                     </div>
                 <% } else { %>
@@ -196,8 +196,8 @@
                         <div style="font-family: Arial, sans-serif; font-size: 10px; color: #666; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
                     <% } %>
                 </div>
-                <div class="text" style="margin-top: 5mm;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= track.year %></div>
-                <div class="text" style="margin-top: 7mm;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;">
+                <div class="text" style="margin-top: <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>3mm<% } else { %>5mm<% } %>;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= track.year %></div>
+                <div class="text" style="margin-top: <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>5mm<% } else { %>7mm<% } %>;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;">
                     <%= track.name %>
                     <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
                         <div style="font-family: Arial, sans-serif; font-size: 10px; color: #666; margin-top: 1mm;"><%= track.extraNameAttribute %></div>
