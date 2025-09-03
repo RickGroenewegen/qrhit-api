@@ -3,9 +3,10 @@
 <head>
 <meta charset="UTF-8">
 <title>Your QR Cards</title>
+<%- include('partials/font-import') %>
 <style>
     body {
-        font-family: Arial, sans-serif;
+        font-family: <%= php.selectedFont || 'Arial, sans-serif' %>;
         margin: 0;
         padding: 0;
     }
@@ -26,17 +27,18 @@
         <% } %>
         background-size: cover;
     }
-    .circle-bg {
+    .white-square {
         position: absolute;
-        width: 48mm;
-        height: 48mm;
+        width: 36mm;
+        height: 36mm;
         background-color: #fff;
-        border-radius: 50%;
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
         z-index: 2;
-        border: 1px solid #e0e0e0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     .card-back {
         background-color: #ffffff; /* or any other color you prefer */
@@ -66,10 +68,10 @@
         margin-left: 3mm;
         margin-right: 3mm;
         font-size: 16px;
-        font-style: italic;
         overflow-wrap: break-word; /* Prevent breaking mid-word */
     }
     .url, .url-bottom {
+        font-family: Arial, sans-serif;
         font-size: 12px;
         position: absolute;
         bottom: 10mm;
@@ -98,7 +100,13 @@
         <% if (php.logo && php.logo.length) { %>
             <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
         <% } %>
-        <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
+        <% if (!php.hideCircle) { %>
+            <div class="white-square">
+                <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" style="width: 32mm; height: 32mm; margin-left: 2px; margin-top: 2px;">
+            </div>
+        <% } else { %>
+            <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr" style="margin-left: 2px; margin-top: 2px;">
+        <% } %>
         <div class="url">
             <% if (!playlist.hideDomain && !php.hideDomain) { %>
                 <%= process.env['APP_DOMAIN'] %>
@@ -107,17 +115,17 @@
     </div>
     <div style="page-break-after: always;"></div>
     <div class="card-back" style="position: relative;">
-        <div class="text artist">
+        <div class="text artist" style="font-size:<%= php.selectedFontSize || '18px' %>;">
             <%= track.artist %>
             <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
-                <div style="font-size: 14px; color: #666; margin-top: 2mm;"><%= track.extraArtistAttribute %></div>
+                <div style="font-family: Arial, sans-serif; font-size: 14px; color: #666; margin-top: 2mm;"><%= track.extraArtistAttribute %></div>
             <% } %>
         </div>
-        <div class="text year"><%= track.year %></div>
-        <div class="text name">
+        <div class="text year" style="font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '50px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '40px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '46px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '44px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '42px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '44px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '48px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '46px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '42px' : '48px' %>; font-weight:bold;"><%= track.year %></div>
+        <div class="text name" style="font-size:<%= php.selectedFontSize || '16px' %>;">
             <%= track.name %>
             <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
-                <div style="font-size: 12px; color: #666; margin-top: 2mm;"><%- track.extraNameAttribute %></div>
+                <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 2mm;"><%- track.extraNameAttribute %></div>
             <% } %>
         </div>
         <div class="url-bottom">
@@ -132,7 +140,7 @@
             <% } %>
         </div>
         <% if (!payment.vibe) { %>
-            <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 8px; color: #c0c0c0;">#<%= php.paymentHasPlaylistId %></div>
+            <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 8px; color: #c0c0c0; font-family: Arial, sans-serif;">#<%= php.paymentHasPlaylistId %></div>
         <% } %>
     </div>
     <div style="page-break-after: always;"></div>
