@@ -248,14 +248,14 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                         <div class="text" style="margin-top: 0mm;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;">
                             <%= tracks[i].artist %>
                             <% if (tracks[i].extraArtistAttribute && tracks[i].extraArtistAttribute.length > 0) { %>
-                                <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 2mm;"><%= tracks[i].extraArtistAttribute %></div>
+                                <div style="font-family: Arial, sans-serif; font-size: 10px; color: #666; margin-top: 1mm;"><%= tracks[i].extraArtistAttribute %></div>
                             <% } %>
                         </div>
                         <div class="text" style="margin-top: 5mm;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= tracks[i].year %></div>
                         <div class="text" style="margin-top: 7mm;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;">
                             <%= tracks[i].name %>
                             <% if (tracks[i].extraNameAttribute && tracks[i].extraNameAttribute.length > 0) { %>
-                                <div style="font-family: Arial, sans-serif; font-size: 12px; color: #666; margin-top: 2mm;"><%= tracks[i].extraNameAttribute %></div>
+                                <div style="font-family: Arial, sans-serif; font-size: 10px; color: #666; margin-top: 1mm;"><%= tracks[i].extraNameAttribute %></div>
                             <% } %>
                         </div>
                         <div class="text" style="margin-top: 5mm;font-size:11px;color:#b0b0b0;font-family:Arial, sans-serif !important;">
