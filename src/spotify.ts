@@ -1129,13 +1129,13 @@ class Spotify {
       .digest('hex')}`;
 
     try {
-      // Check if it's a MusicMatch pattern first (mm:playlistId:trackId)
-      const musicMatchPattern = /^mm:(\d+):(\d+)$/;
-      const musicMatchMatch = url.match(musicMatchPattern);
-      if (musicMatchMatch) {
-        const playlistId = musicMatchMatch[1];
-        const trackId = musicMatchMatch[2];
-        const key = `${playlistId}_${trackId}`;
+      // Check if it's a MusicMatch Game URL pattern first (https://api.musicmatchgame.com/paymentHasPlaylistId/trackId)
+      const musicMatchGamePattern = /^https?:\/\/api\.musicmatchgame\.com\/(\d+)\/(\d+)$/;
+      const musicMatchGameMatch = url.match(musicMatchGamePattern);
+      if (musicMatchGameMatch) {
+        const paymentHasPlaylistId = musicMatchGameMatch[1];
+        const trackId = musicMatchGameMatch[2];
+        const key = `${paymentHasPlaylistId}_${trackId}`;
         const spotifyId = this.musicMatchMap[key];
         
         if (spotifyId) {
@@ -1148,7 +1148,7 @@ class Spotify {
         } else {
           const result = {
             success: false,
-            error: `No MusicMatch mapping found for playlist ${playlistId}, track ${trackId}`,
+            error: `No MusicMatch mapping found for payment_has_playlist ${paymentHasPlaylistId}, track ${trackId}`,
           };
           await this.cache.set(cacheKey, JSON.stringify(result));
           return { ...result, cached: false };

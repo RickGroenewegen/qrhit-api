@@ -912,7 +912,7 @@ class Generator {
       // Generate QR codes for all tracks
       const trackData = [];
       for (const track of tracks) {
-        const qrLink = `mm:${paymentHasPlaylistId}:${track.id}`;
+        const qrLink = `https://api.musicmatchgame.com/${paymentHasPlaylistId}/${track.id}`;
         const safeArtist = sanitizeFilename(track.artist || 'unknown').toLowerCase();
         const safeName = sanitizeFilename(track.name || 'untitled').toLowerCase();
         const svgFilename = `track_${track.id}_${safeArtist}_${safeName}.svg`;
