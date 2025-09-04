@@ -890,10 +890,11 @@ class Generator {
       // Create a unique filename for this gameset
       const timestamp = Date.now();
       const zipFilename = `gameset_${paymentId}_${playlist.playlistId}_${timestamp}.zip`;
-      const zipPath = path.join(process.cwd(), 'public', 'gamesets', zipFilename);
+      const publicDir = process.env.PUBLIC_DIR || path.join(process.cwd(), 'public');
+      const zipPath = path.join(publicDir, 'gamesets', zipFilename);
       
       // Ensure the gamesets directory exists
-      await fs.mkdir(path.join(process.cwd(), 'public', 'gamesets'), { recursive: true });
+      await fs.mkdir(path.join(publicDir, 'gamesets'), { recursive: true });
       
       // Create a file stream
       const output = createWriteStream(zipPath);
