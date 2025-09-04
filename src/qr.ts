@@ -54,10 +54,11 @@ class Qr {
   public async generateQR(
     link: string,
     outputPath: string,
-    qrColor: string = '#000000'
+    qrColor: string = '#000000',
+    type: 'png' | 'svg' = 'png'
   ) {
     await QRCode.toFile(outputPath, link, {
-      type: 'png',
+      type: type as any,
       width: 600,
       color: {
         dark: qrColor,

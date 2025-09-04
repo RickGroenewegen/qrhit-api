@@ -7,6 +7,7 @@ import Mollie from './mollie';
 import crypto from 'crypto';
 import sanitizeFilename from 'sanitize-filename';
 import * as fs from 'fs/promises';
+import { createWriteStream } from 'fs';
 import * as path from 'path';
 import Data from './data';
 import PushoverClient from './pushover';
@@ -22,6 +23,7 @@ import { Track } from '@prisma/client';
 import Discount from './discount';
 import { ApiResult } from './interfaces/ApiResult';
 import Cache from './cache';
+import archiver from 'archiver';
 
 class Generator {
   private static instance: Generator;
@@ -854,6 +856,112 @@ class Generator {
     filenameDigital = generatedFilenameDigital;
 
     return { filename, filenameDigital };
+  }
+
+  public async createGameset(paymentId: string, paymentHasPlaylistId: number): Promise<string> {
+    try {
+      this.logger.log(blue.bold('Creating gameset ZIP for payment ') + white.bold(paymentId) + blue.bold(', playlist ') + white.bold(paymentHasPlaylistId.toString()) + blue.bold('...'));
+      
+      // Get the specific payment_has_playlist entry with its playlist and tracks
+      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: paymentHasPlaylistId },
+        include: {
+          playlist: {
+            include: {
+              tracks: {
+                include: {
+                  track: true
+                }
+              }
+            }
+          }
+        }
+      });
+
+      if (!paymentHasPlaylist) {
+        throw new Error('Payment has playlist entry not found: ' + paymentHasPlaylistId);
+      }
+
+      const playlist = paymentHasPlaylist.playlist;
+      
+      // Get all tracks from the playlist
+      const tracks = playlist.tracks.map(pt => pt.track);
+      
+      // Create a unique filename for this gameset
+      const timestamp = Date.now();
+      const zipFilename = `gameset_${paymentId}_${playlist.playlistId}_${timestamp}.zip`;
+      const zipPath = path.join(process.cwd(), 'public', 'gamesets', zipFilename);
+      
+      // Ensure the gamesets directory exists
+      await fs.mkdir(path.join(process.cwd(), 'public', 'gamesets'), { recursive: true });
+      
+      // Create a file stream
+      const output = createWriteStream(zipPath);
+      const archive = archiver('zip', {
+        zlib: { level: 9 } // Maximum compression
+      });
+      
+      // Pipe archive data to the file
+      archive.pipe(output);
+      
+      // Create temporary directory for QR codes
+      const tempDir = path.join(process.cwd(), 'temp', `gameset_${timestamp}`);
+      await fs.mkdir(tempDir, { recursive: true });
+      
+      // Generate QR codes for all tracks
+      const trackData = [];
+      for (const track of tracks) {
+        const qrLink = `mm:${paymentHasPlaylistId}:${track.id}`;
+        const svgFilename = `track_${track.id}.svg`;
+        const svgPath = path.join(tempDir, svgFilename);
+        
+        // Generate QR code as SVG
+        await this.qr.generateQR(qrLink, svgPath, '#000000', 'svg');
+        
+        // Add to archive
+        archive.file(svgPath, { name: svgFilename });
+        
+        // Add track data for JSON
+        // Extract track ID from Spotify link (format: https://open.spotify.com/track/TRACKID)
+        const spotifyTrackId = track.spotifyLink ? track.spotifyLink.split('/track/')[1]?.split('?')[0] || '' : '';
+        trackData.push({
+          i: track.id,
+          l: spotifyTrackId
+        });
+      }
+      
+      // Create JSON file with track information
+      const jsonContent = JSON.stringify({ 
+        i: paymentHasPlaylistId,
+        n: "",
+        t: trackData 
+      }, null, 2);
+      const jsonPath = path.join(tempDir, 'tracks.json');
+      await fs.writeFile(jsonPath, jsonContent);
+      archive.file(jsonPath, { name: 'tracks.json' });
+      
+      // Finalize the archive
+      await archive.finalize();
+      
+      // Wait for the stream to finish
+      await new Promise<void>((resolve, reject) => {
+        output.on('close', () => resolve());
+        output.on('error', reject);
+      });
+      
+      // Clean up temporary directory
+      await fs.rm(tempDir, { recursive: true, force: true });
+      
+      this.logger.log(color.green.bold('Gameset ZIP created: ') + white.bold(zipFilename));
+      
+      // Return the URL to download the ZIP
+      return `/public/gamesets/${zipFilename}`;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      this.logger.log(color.red.bold('Error creating gameset: ') + white.bold(errorMessage));
+      console.error(error);
+      throw error;
+    }
   }
 }
 
