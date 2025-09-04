@@ -913,7 +913,9 @@ class Generator {
       const trackData = [];
       for (const track of tracks) {
         const qrLink = `mm:${paymentHasPlaylistId}:${track.id}`;
-        const svgFilename = `track_${track.id}.svg`;
+        const safeArtist = sanitizeFilename(track.artist || 'unknown').toLowerCase();
+        const safeName = sanitizeFilename(track.name || 'untitled').toLowerCase();
+        const svgFilename = `track_${track.id}_${safeArtist}_${safeName}.svg`;
         const svgPath = path.join(tempDir, svgFilename);
         
         // Generate QR code as SVG
