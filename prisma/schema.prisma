@@ -423,6 +423,7 @@ model PlaylistHasTrack {
   playlistId Int
   track      Track    @relation(fields: [trackId], references: [id], onDelete: Cascade)
   trackId    Int
+  order      Int      @default(0)
 
   @@id([playlistId, trackId]) // Composite primary key
   @@map("playlist_has_tracks")
