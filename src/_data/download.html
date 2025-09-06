@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Download Music Match - Companion App</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            background: linear-gradient(135deg, #5e4d8b 0%, #764ba2 50%, #e91e63 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            position: relative;
+            overflow-x: hidden;
+        }
+
+        @media (max-width: 480px) {
+            body {
+                padding: 10px;
+            }
+        }
+
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 30l15-15M30 30l-15 15M30 30l15 15M30 30l-15-15' stroke='%23ffffff' stroke-opacity='0.03' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+            pointer-events: none;
+        }
+
+        .container {
+            max-width: 900px;
+            width: 100%;
+            position: relative;
+            z-index: 1;
+        }
+
+        .card {
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 24px;
+            padding: 48px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        @media (max-width: 480px) {
+            .card {
+                padding: 24px 16px;
+                border-radius: 20px;
+            }
+        }
+
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, #e91e63, #9c27b0, #673ab7);
+            animation: gradient-shift 3s ease infinite;
+        }
+
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+
+        h1 {
+            text-align: center;
+            font-size: 3rem;
+            font-weight: 800;
+            margin-bottom: 16px;
+            background: linear-gradient(135deg, #5e4d8b, #e91e63);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            letter-spacing: -1px;
+        }
+
+        @media (max-width: 480px) {
+            h1 {
+                font-size: 2rem;
+            }
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
+            font-size: 1.5rem;
+            line-height: 1.6;
+            margin-bottom: 50px;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        @media (max-width: 480px) {
+            .subtitle {
+                font-size: 1.125rem;
+                margin-bottom: 40px;
+            }
+        }
+
+
+        .app-buttons {
+            display: flex;
+            gap: 16px;
+            justify-content: center;
+            flex-wrap: wrap;
+            margin-bottom: 32px;
+        }
+
+        @media (max-width: 480px) {
+            .app-buttons {
+                gap: 12px;
+                margin-bottom: 24px;
+            }
+        }
+
+        .app-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            padding: 16px 28px;
+            border-radius: 12px;
+            text-decoration: none;
+            font-weight: 600;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            position: relative;
+            overflow: hidden;
+            min-width: 180px;
+            justify-content: center;
+        }
+
+        @media (max-width: 480px) {
+            .app-btn {
+                padding: 16px 20px;
+                min-width: unset;
+                width: 100%;
+                min-height: 56px;
+                -webkit-tap-highlight-color: transparent;
+            }
+        }
+
+        .app-btn::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.2);
+            transform: translate(-50%, -50%);
+            transition: width 0.5s, height 0.5s;
+        }
+
+        .app-btn:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .ios-btn {
+            background: #000;
+            color: white;
+        }
+
+        .ios-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+        }
+
+        .android-btn {
+            background: linear-gradient(135deg, #00c853, #00897b);
+            color: white;
+        }
+
+        .android-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(0, 200, 83, 0.3);
+        }
+
+        .app-btn-content {
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+        }
+
+        .app-btn-label {
+            font-size: 0.75rem;
+            opacity: 0.9;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        @media (max-width: 480px) {
+            .app-btn-label {
+                font-size: 0.625rem;
+            }
+        }
+
+        .app-btn-store {
+            font-size: 1.125rem;
+            font-weight: 700;
+        }
+
+        @media (max-width: 480px) {
+            .app-btn-store {
+                font-size: 1rem;
+            }
+        }
+
+
+
+        .logo {
+            display: inline-block;
+            width: 300px;
+            height: 300px;
+            position: relative;
+            margin: 0 auto 32px;
+            animation: float 4s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); }
+            50% { transform: translateY(-10px) rotate(3deg); }
+        }
+
+        .logo img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+        }
+
+        @media (max-width: 480px) {
+            .logo {
+                width: 240px;
+                height: 240px;
+            }
+            .logo img {
+                width: 100%;
+                height: 100%;
+            }
+        }
+
+        .logo-wrapper {
+            text-align: center;
+        }
+
+        .footer {
+            text-align: center;
+            padding-top: 32px;
+            border-top: 1px solid #eee;
+            color: #999;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 480px) {
+            .footer {
+                padding-top: 24px;
+                font-size: 0.75rem;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .app-buttons {
+                flex-direction: column;
+            }
+        }
+
+        .app-btn i {
+            font-size: 24px;
+        }
+
+        @media (max-width: 480px) {
+            .app-btn i {
+                font-size: 20px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="card">
+            <div class="logo-wrapper">
+                <div class="logo">
+                    <img src="logo.png" alt="Music Match Logo">
+                </div>
+            </div>
+            
+            <h1>Music Match</h1>
+            <p class="subtitle">
+                Download the Music Match companion app and start scanning your cards
+            </p>
+
+            
+            <div class="app-buttons">
+                <a href="https://apps.apple.com/app/qrsong/id6727011939" target="_blank" class="app-btn ios-btn">
+                    <i class="fab fa-apple"></i>
+                    <div class="app-btn-content">
+                        <span class="app-btn-label">Download on the</span>
+                        <span class="app-btn-store">App Store</span>
+                    </div>
+                </a>
+                
+                <a href="https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong" target="_blank" class="app-btn android-btn">
+                    <i class="fab fa-google-play"></i>
+                    <div class="app-btn-content">
+                        <span class="app-btn-label">Get it on</span>
+                        <span class="app-btn-store">Google Play</span>
+                    </div>
+                </a>
+            </div>
+            
+            
+            <div class="footer">
+                <p>Available for iOS 13+ and Android 6.0+</p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

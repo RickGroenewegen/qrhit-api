@@ -344,12 +344,19 @@ export class MerchantCenterService {
     // Process each product type for each locale
     let variantCount = 0;
     for (const locale of localesToProcess) {
-      // Check if playlist is featured for this locale
-      if (
-        playlist.featuredLocale &&
-        !playlist.featuredLocale.includes(locale)
-      ) {
-        continue;
+      // Check if playlist has a specific featured locale
+      // If featuredLocale is set, only upload for that specific locale
+      // If featuredLocale is not set, upload for all supported locales
+      if (playlist.featuredLocale) {
+        // Only process if this is the specific featured locale
+        if (playlist.featuredLocale !== locale) {
+          continue;
+        }
+        // Also check if the featured locale is in the supported locales
+        if (!this.supportedLocales.includes(playlist.featuredLocale)) {
+          // Skip this playlist entirely if its featured locale is not supported
+          continue;
+        }
       }
 
       for (const productType of productTypes) {

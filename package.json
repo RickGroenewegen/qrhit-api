@@ -78,6 +78,7 @@
   },
   "devDependencies": {
     "@types/accept-language-parser": "^1.5.8",
+    "@types/archiver": "^6.0.3",
     "@types/ejs": "^3.1.5",
     "@types/he": "^1.2.3",
     "@types/i18n": "^0.13.12",

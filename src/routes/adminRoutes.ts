@@ -782,4 +782,36 @@ export default async function adminRoutes(
       }
     }
   );
+
+  // Create gameset ZIP with QR codes
+  fastify.post(
+    '/admin/gameset/create',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { paymentId, paymentHasPlaylistId } = request.body;
+        
+        if (!paymentId || !paymentHasPlaylistId) {
+          reply.status(400).send({
+            success: false,
+            error: 'Missing required parameters: paymentId and paymentHasPlaylistId'
+          });
+          return;
+        }
+        
+        const downloadUrl = await generator.createGameset(paymentId, paymentHasPlaylistId);
+        reply.send({
+          success: true,
+          downloadUrl: downloadUrl,
+          message: 'Gameset ZIP created successfully'
+        });
+      } catch (error: any) {
+        console.error('Error creating gameset:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to create gameset'
+        });
+      }
+    }
+  );
 }

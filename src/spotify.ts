@@ -40,9 +40,12 @@ class Spotify {
 
   // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
   private jumboCardMap: { [key: string]: string } = {};
+  // MusicMatch mapping: key = 'playlistId_trackId', value = spotify track id
+  private musicMatchMap: { [key: string]: string } = {};
 
   constructor() {
     this.getJumboData();
+    this.loadMusicMatchData();
   }
 
   public static getInstance(): Spotify {
@@ -99,6 +102,62 @@ class Spotify {
     } catch (e: any) {
       this.logger.log(
         color.red.bold(`Failed to fetch Jumbo gameset data: ${e.message || e}`)
+      );
+    }
+  }
+
+  /**
+   * Loads MusicMatch data from the JSON file and populates the musicMatchMap.
+   */
+  private async loadMusicMatchData(): Promise<void> {
+    const isPrimary = cluster.isPrimary;
+    
+    try {
+      // Import the musicmatch.json file
+      const fs = require('fs').promises;
+      const path = require('path');
+      const appRoot = process.env.APP_ROOT || path.join(__dirname, '..');
+      const filePath = path.join(appRoot, '_data', 'musicmatch.json');
+      
+      const fileContent = await fs.readFile(filePath, 'utf8');
+      const data = JSON.parse(fileContent);
+      
+      if (data && data.p && Array.isArray(data.p)) {
+        for (const playlist of data.p) {
+          const playlistId = playlist.i;
+          if (playlistId && Array.isArray(playlist.t)) {
+            for (const track of playlist.t) {
+              const trackId = track.i;
+              const spotifyId = track.l;
+              if (trackId && spotifyId) {
+                const key = `${playlistId}_${trackId}`;
+                this.musicMatchMap[key] = spotifyId;
+              }
+            }
+          }
+        }
+        
+        if (isPrimary) {
+          this.utils.isMainServer().then(async (isMainServer) => {
+            if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+              this.logger.log(
+                color.green.bold(
+                  `MusicMatch data loaded: ${color.white.bold(
+                    Object.keys(this.musicMatchMap).length
+                  )} tracks mapped`
+                )
+              );
+            }
+          });
+        }
+      } else {
+        this.logger.log(
+          color.yellow.bold('MusicMatch data: No playlists found in file')
+        );
+      }
+    } catch (e: any) {
+      this.logger.log(
+        color.yellow.bold(`Failed to load MusicMatch data: ${e.message || e}`)
       );
     }
   }
@@ -1070,6 +1129,32 @@ class Spotify {
       .digest('hex')}`;
 
     try {
+      // Check if it's a MusicMatch Game URL pattern first (https://api.musicmatchgame.com/paymentHasPlaylistId/trackId)
+      const musicMatchGamePattern = /^https?:\/\/api\.musicmatchgame\.com\/(\d+)\/(\d+)$/;
+      const musicMatchGameMatch = url.match(musicMatchGamePattern);
+      if (musicMatchGameMatch) {
+        const paymentHasPlaylistId = musicMatchGameMatch[1];
+        const trackId = musicMatchGameMatch[2];
+        const key = `${paymentHasPlaylistId}_${trackId}`;
+        const spotifyId = this.musicMatchMap[key];
+        
+        if (spotifyId) {
+          const result = {
+            success: true,
+            spotifyUri: `spotify:track:${spotifyId}`,
+          };
+          await this.cache.set(cacheKey, JSON.stringify(result));
+          return { ...result, cached: false };
+        } else {
+          const result = {
+            success: false,
+            error: `No MusicMatch mapping found for payment_has_playlist ${paymentHasPlaylistId}, track ${trackId}`,
+          };
+          await this.cache.set(cacheKey, JSON.stringify(result));
+          return { ...result, cached: false };
+        }
+      }
+
       // Add https:// if missing
       if (!/^https?:\/\//i.test(url)) {
         url = 'https://' + url;
