@@ -884,21 +884,19 @@ class Mollie {
 
       if (triggerDirectGeneration) {
         if (waitForDirectGeneration) {
-          await this.generator.generate(
+          await this.generator.queueGenerate(
             molliePaymentId,
             clientIp,
             params.refreshPlaylists.join(','),
-            this,
             false,
             skipGenerationMail,
             false
           );
         } else {
-          this.generator.generate(
+          this.generator.queueGenerate(
             molliePaymentId,
             clientIp,
             params.refreshPlaylists.join(','),
-            this,
             false,
             false,
             false
@@ -955,6 +953,23 @@ class Mollie {
 
   public async processWebhook(params: any): Promise<ApiResult> {
     if (params.id) {
+      this.logger.log(
+        color.blue.bold('Processing webhook with ID: ') +
+        color.white.bold(params.id)
+      );
+
+      // Check if this is a valid Mollie payment ID format (starts with "tr_")
+      if (!params.id.startsWith('tr_')) {
+        this.logger.log(
+          color.red.bold('Invalid payment ID format in webhook: ') +
+          color.white.bold(params.id)
+        );
+        return {
+          success: false,
+          error: 'Invalid payment ID format'
+        };
+      }
+
       let payment;
 
       // Try the live client first, with a fallback to test
@@ -1029,11 +1044,10 @@ class Mollie {
             );
           }
 
-          this.generator.generate(
+          this.generator.queueGenerate(
             params.id,
             metadata.clientIp,
             metadata.refreshPlaylists,
-            this,
             false,
             false,
             false

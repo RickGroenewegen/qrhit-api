@@ -1,6 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import { createOrUpdateAdminUser, deleteUserById } from '../auth';
 import Generator from '../generator';
+import GeneratorQueue from '../generatorQueue';
 import AnalyticsClient from '../analytics';
 import Data from '../data';
 import { OpenPerplex } from '../openperplex';
@@ -162,17 +163,16 @@ export default async function adminRoutes(
     async (request: any, _reply) => {
       await mollie.clearPDFs(request.params.paymentId);
       const userAgent = request.headers['user-agent'] || '';
-      generator.generate(
+      const jobId = await generator.queueGenerate(
         request.params.paymentId,
         request.clientIp,
         '',
-        mollie,
         true, // Force finalize
         !utils.parseBoolean(request.params.email), // Skip main mail
         false,
         userAgent
       );
-      return { success: true };
+      return { success: true, jobId };
     }
   );
 
@@ -184,19 +184,64 @@ export default async function adminRoutes(
       await mollie.clearPDFs(request.params.paymentId);
       const userAgent = request.headers['user-agent'] || '';
       // This will skip the main "order received" email but still send product emails
-      generator.generate(
+      const jobId = await generator.queueGenerate(
         request.params.paymentId,
         request.clientIp,
         '',
-        mollie,
         true, // Force finalize
         false, // Don't skip main mail (but onlyProductMail will handle it)
         true, // Only product mail
         userAgent
       );
-      return { success: true };
+      return { success: true, jobId };
     }
   );
+
+  // Queue status endpoints
+  fastify.get('/queue/status', getAuthHandler(['admin']), async () => {
+    if (!process.env['REDIS_URL']) {
+      return { error: 'Queue not configured' };
+    }
+    
+    const generatorQueue = GeneratorQueue.getInstance();
+    const status = await generatorQueue.getQueueStatus();
+    return { success: true, status };
+  });
+
+  fastify.get('/queue/job/:jobId', getAuthHandler(['admin']), async (request: any) => {
+    if (!process.env['REDIS_URL']) {
+      return { error: 'Queue not configured' };
+    }
+    
+    const generatorQueue = GeneratorQueue.getInstance();
+    const job = await generatorQueue.getJobStatus(request.params.jobId);
+    
+    if (!job) {
+      return { error: 'Job not found' };
+    }
+    
+    return { success: true, job };
+  });
+
+  fastify.post('/queue/retry-failed', getAuthHandler(['admin']), async () => {
+    if (!process.env['REDIS_URL']) {
+      return { error: 'Queue not configured' };
+    }
+    
+    const generatorQueue = GeneratorQueue.getInstance();
+    await generatorQueue.retryFailedJobs();
+    return { success: true, message: 'Failed jobs requeued for retry' };
+  });
+
+  fastify.post('/queue/clear', getAuthHandler(['admin']), async () => {
+    if (!process.env['REDIS_URL']) {
+      return { error: 'Queue not configured' };
+    }
+    
+    const generatorQueue = GeneratorQueue.getInstance();
+    await generatorQueue.clearQueue();
+    return { success: true, message: 'Queue cleared' };
+  });
 
   // Get orders with search
   fastify.post(

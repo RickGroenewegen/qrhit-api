@@ -22,6 +22,7 @@ import fs from 'fs/promises';
 import ipPlugin from './plugins/ipPlugin';
 import { createServer } from 'http';
 import NativeWebSocketServer from './websocket-native';
+import GeneratorQueue from './generatorQueue';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -163,6 +164,36 @@ class Server {
         )
       );
 
+      // Initialize queue workers only if explicitly enabled
+      // In production, use the standalone worker process instead
+      if (
+        process.env['REDIS_URL'] &&
+        process.env['RUN_QUEUE_WORKERS'] === 'true'
+      ) {
+        try {
+          const workerCount = parseInt(process.env['QUEUE_WORKERS'] || '2');
+          const generatorQueue = GeneratorQueue.getInstance();
+          await generatorQueue.initializeWorkers(workerCount);
+          this.logger.log(
+            color.green.bold(
+              `Generator queue workers initialized successfully (${color.white.bold(
+                workerCount.toString()
+              )} workers on this server)`
+            )
+          );
+        } catch (error) {
+          this.logger.log(
+            color.red.bold(`Failed to initialize queue workers: ${error}`)
+          );
+        }
+      } else if (process.env['REDIS_URL']) {
+        this.logger.log(
+          color.blue.bold(
+            'Queue workers not initialized (use standalone worker process or set RUN_QUEUE_WORKERS=true)'
+          )
+        );
+      }
+
       const numCPUs = os.cpus().length;
       for (let i = 0; i < numCPUs; i++) {
         cluster.fork({
@@ -193,13 +224,6 @@ class Server {
         // Initialize WebSocket server on all workers with Redis adapter
         if (this.fastify.server) {
           this.wsServer = new NativeWebSocketServer(this.fastify.server);
-          this.logger.log(
-            color.blue.bold(
-              `Native WebSocket server initialized on worker ${color.white.bold(
-                this.workerId
-              )} with Redis adapter at /ws`
-            )
-          );
         }
 
         this.logger.log(

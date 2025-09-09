@@ -412,17 +412,16 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     // Generate order
     fastify.get('/generate/:paymentId', async (request: any, _reply) => {
       const userAgent = request.headers['user-agent'] || '';
-      await generator.generate(
+      const jobId = await generator.queueGenerate(
         request.params.paymentId,
         request.clientIp,
         '',
-        mollie,
         false,
         false,
         false,
         userAgent
       );
-      return { success: true };
+      return { success: true, jobId };
     });
 
     // Send mail

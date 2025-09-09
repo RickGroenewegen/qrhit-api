@@ -2134,11 +2134,10 @@ class Vibe {
       );
 
       await this.mollie.clearPDFs(result.data.paymentId);
-      this.generator.generate(
+      await this.generator.queueGenerate(
         result.data.paymentId,
         clientIp,
         '',
-        this.mollie,
         true, // Force finalize
         true,
         false

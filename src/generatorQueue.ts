@@ -1,0 +1,287 @@
+import { Queue, Worker, QueueEvents } from 'bullmq';
+import { color, blue, white } from 'console-log-colors';
+import Logger from './logger';
+import Mollie from './mollie';
+import Redis from 'ioredis';
+import cluster from 'cluster';
+
+interface GenerateJobData {
+  paymentId: string;
+  ip: string;
+  refreshPlaylists: string;
+  forceFinalize?: boolean;
+  skipMainMail?: boolean;
+  onlyProductMail?: boolean;
+  userAgent?: string;
+}
+
+class GeneratorQueue {
+  private static instance: GeneratorQueue;
+  private queue: Queue<GenerateJobData>;
+  private workers: Worker<GenerateJobData>[] = [];
+  private queueEvents?: QueueEvents;
+  private logger = new Logger();
+  private connection: Redis;
+
+  private constructor() {
+    const redisUrl = process.env['REDIS_URL'] || 'redis://localhost:6379';
+
+    this.connection = new Redis(redisUrl, {
+      maxRetriesPerRequest: null,
+      enableReadyCheck: false,
+    });
+
+    this.queue = new Queue<GenerateJobData>('generator', {
+      connection: this.connection,
+      defaultJobOptions: {
+        removeOnComplete: {
+          count: 100,
+          age: 24 * 3600, // 24 hours
+        },
+        removeOnFail: {
+          count: 50,
+          age: 24 * 3600, // 24 hours
+        },
+        attempts: 3,
+        backoff: {
+          type: 'exponential',
+          delay: 2000,
+        },
+      },
+    });
+
+    // Only set up event listeners on the primary/master process
+    // to avoid duplicate logging from all cluster workers
+    if (cluster.isPrimary || !cluster.isWorker) {
+      this.queueEvents = new QueueEvents('generator', {
+        connection: this.connection.duplicate(),
+      });
+
+      this.setupEventListeners();
+    }
+  }
+
+  public static getInstance(): GeneratorQueue {
+    if (!GeneratorQueue.instance) {
+      GeneratorQueue.instance = new GeneratorQueue();
+    }
+    return GeneratorQueue.instance;
+  }
+
+  private setupEventListeners(): void {
+    if (!this.queueEvents) return;
+
+    // this.queueEvents.on('completed', ({ jobId, returnvalue }) => {
+    //   this.logger.log(
+    //     color.green.bold(`Job ${white.bold(jobId)} completed successfully`)
+    //   );
+    // });
+
+    this.queueEvents.on('failed', ({ jobId, failedReason }) => {
+      this.logger.log(
+        color.red.bold(
+          `Job ${white.bold(jobId)} failed: ${white.bold(failedReason)}`
+        )
+      );
+    });
+
+    this.queueEvents.on('progress', ({ jobId, data }) => {
+      // this.logger.log(
+      //   blue.bold(
+      //     `Job ${white.bold(jobId)} progress: ${white.bold(
+      //       JSON.stringify(data)
+      //     )}`
+      //   )
+      // );
+    });
+  }
+
+  public async addGenerateJob(data: GenerateJobData): Promise<string> {
+    const job = await this.queue.add('generate', data, {
+      priority: data.forceFinalize ? 1 : 10,
+    });
+
+    this.logger.log(
+      blue.bold(
+        `Added generate job to queue for payment: ${white.bold(
+          data.paymentId
+        )} with job ID: ${white.bold(job.id || 'unknown')}`
+      )
+    );
+
+    return job.id || '';
+  }
+
+  public async initializeWorkers(concurrency: number = 2): Promise<void> {
+    this.logger.log(
+      blue.bold(
+        `Initializing ${white.bold(
+          concurrency.toString()
+        )} workers for generator queue`
+      )
+    );
+
+    for (let i = 0; i < concurrency; i++) {
+      const worker = new Worker<GenerateJobData>(
+        'generator',
+        async (job) => {
+          const {
+            paymentId,
+            ip,
+            refreshPlaylists,
+            forceFinalize,
+            skipMainMail,
+            onlyProductMail,
+            userAgent,
+          } = job.data;
+
+          this.logger.log(
+            blue.bold(
+              `Worker ${white.bold(i + 1)} processing job ${white.bold(
+                job.id || 'unknown'
+              )} for payment: ${white.bold(paymentId)}`
+            )
+          );
+
+          await job.updateProgress({ status: 'initializing', workerId: i + 1 });
+
+          try {
+            // Lazy load Generator to avoid circular dependency
+            const Generator = (await import('./generator')).default;
+            const generator = Generator.getInstance();
+            const mollie = new Mollie();
+
+            await job.updateProgress({ status: 'processing', workerId: i + 1 });
+
+            await generator.generate(
+              paymentId,
+              ip,
+              refreshPlaylists,
+              mollie,
+              forceFinalize || false,
+              skipMainMail || false,
+              onlyProductMail || false,
+              userAgent || ''
+            );
+
+            await job.updateProgress({ status: 'completed', workerId: i + 1 });
+
+            this.logger.log(
+              color.green.bold(
+                `Worker ${i + 1} completed job ${white.bold(
+                  job.id || 'unknown'
+                )} for payment: ${white.bold(paymentId)}`
+              )
+            );
+
+            return { success: true, paymentId, workerId: i + 1 };
+          } catch (error) {
+            this.logger.log(
+              color.red.bold(
+                `Worker ${white.bold(i + 1)} error processing job ${white.bold(
+                  job.id || 'unknown'
+                )}: ${error}`
+              )
+            );
+            throw error;
+          }
+        },
+        {
+          connection: this.connection.duplicate(),
+          concurrency: 1,
+          autorun: true,
+        }
+      );
+
+      worker.on('error', (error) => {
+        this.logger.log(
+          color.red.bold(`Worker ${i + 1} error: ${error.message}`)
+        );
+      });
+
+      this.workers.push(worker);
+    }
+
+    this.logger.log(
+      color.green.bold(
+        `Successfully initialized ${white.bold(
+          concurrency.toString()
+        )} BullMQ workers`
+      )
+    );
+  }
+
+  public async getQueueStatus(): Promise<{
+    waiting: number;
+    active: number;
+    completed: number;
+    failed: number;
+    delayed: number;
+  }> {
+    const [waiting, active, completed, failed, delayed] = await Promise.all([
+      this.queue.getWaitingCount(),
+      this.queue.getActiveCount(),
+      this.queue.getCompletedCount(),
+      this.queue.getFailedCount(),
+      this.queue.getDelayedCount(),
+    ]);
+
+    return { waiting, active, completed, failed, delayed };
+  }
+
+  public async getJobStatus(jobId: string): Promise<any> {
+    const job = await this.queue.getJob(jobId);
+    if (!job) {
+      return null;
+    }
+
+    return {
+      id: job.id,
+      name: job.name,
+      data: job.data,
+      progress: job.progress,
+      attemptsMade: job.attemptsMade,
+      finishedOn: job.finishedOn,
+      processedOn: job.processedOn,
+      failedReason: job.failedReason,
+      returnvalue: job.returnvalue,
+    };
+  }
+
+  public async shutdown(): Promise<void> {
+    this.logger.log(blue.bold('Shutting down generator queue...'));
+
+    // Only close queueEvents if it was initialized (on primary process)
+    if (this.queueEvents) {
+      await this.queueEvents.close();
+    }
+
+    for (const worker of this.workers) {
+      await worker.close();
+    }
+
+    await this.queue.close();
+    this.connection.disconnect();
+
+    this.logger.log(color.green.bold('Generator queue shut down successfully'));
+  }
+
+  public async clearQueue(): Promise<void> {
+    await this.queue.drain();
+    this.logger.log(color.yellow.bold('Queue has been cleared'));
+  }
+
+  public async retryFailedJobs(): Promise<void> {
+    const failedJobs = await this.queue.getFailed();
+    for (const job of failedJobs) {
+      await job.retry();
+    }
+    this.logger.log(
+      blue.bold(
+        `Retrying ${white.bold(failedJobs.length.toString())} failed jobs`
+      )
+    );
+  }
+}
+
+export default GeneratorQueue;

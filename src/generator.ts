@@ -24,6 +24,7 @@ import Discount from './discount';
 import { ApiResult } from './interfaces/ApiResult';
 import Cache from './cache';
 import archiver from 'archiver';
+import GeneratorQueue from './generatorQueue';
 
 class Generator {
   private static instance: Generator;
@@ -40,9 +41,17 @@ class Generator {
   private analytics = AnalyticsClient.getInstance();
   private discount = new Discount();
   private cache = Cache.getInstance();
+  private generatorQueue: GeneratorQueue | null = null;
 
   private constructor() {
     this.setCron();
+  }
+
+  private getGeneratorQueue(): GeneratorQueue | null {
+    if (!this.generatorQueue && process.env['REDIS_URL']) {
+      this.generatorQueue = GeneratorQueue.getInstance();
+    }
+    return this.generatorQueue;
   }
 
   public static getInstance(): Generator {
@@ -137,6 +146,47 @@ class Generator {
       true,
       'Europe/Amsterdam'
     );
+  }
+
+  public async queueGenerate(
+    paymentId: string,
+    ip: string,
+    refreshPlaylists: string,
+    forceFinalize: boolean = false,
+    skipMainMail: boolean = false,
+    onlyProductMail: boolean = false,
+    userAgent: string = ''
+  ): Promise<string> {
+    const queue = this.getGeneratorQueue();
+    if (!queue) {
+      this.logger.log(
+        color.yellow.bold('Queue not available, processing directly')
+      );
+      const mollie = new Mollie();
+      await this.generate(
+        paymentId,
+        ip,
+        refreshPlaylists,
+        mollie,
+        forceFinalize,
+        skipMainMail,
+        onlyProductMail,
+        userAgent
+      );
+      return 'direct';
+    }
+
+    const jobId = await queue.addGenerateJob({
+      paymentId,
+      ip,
+      refreshPlaylists,
+      forceFinalize,
+      skipMainMail,
+      onlyProductMail,
+      userAgent,
+    });
+
+    return jobId;
   }
 
   public async generate(
@@ -621,6 +671,76 @@ class Generator {
     }
   }
 
+  private async validatePDFPageCounts(
+    physicalPlaylists: Array<{ playlist: any; filename: string }>
+  ): Promise<{ isValid: boolean; errors: string[] }> {
+    const validationErrors: string[] = [];
+
+    for (const physicalPlaylist of physicalPlaylists) {
+      const { playlist, filename } = physicalPlaylist;
+      const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+
+      try {
+        // Count pages in the physical PDF
+        const pageCount = await this.pdf.countPDFPages(pdfPath);
+
+        // Get actual track count for this playlist
+        const actualTracks = playlist.numberOfTracks;
+
+        // Calculate expected pages based on format
+        let expectedPages: number;
+        let formatType: string;
+
+        if (playlist.subType === 'sheets') {
+          // Sheets format: 12 cards processed per iteration (6 cards per page, 3x2 layout)
+          // Each iteration creates 2 pages: one for fronts, one for backs
+          // Example: 25 tracks = Math.ceil(25/12) = 3 iterations = 6 pages
+          expectedPages = Math.ceil(actualTracks / 12) * 2;
+          formatType = 'sheets';
+        } else {
+          // Cards format: 1 card per page, 2 pages per track (front and back)
+          expectedPages = actualTracks * 2;
+          formatType = 'cards';
+        }
+
+        if (pageCount !== expectedPages) {
+          const errorMessage = `PDF validation failed for playlist ${white.bold(
+            playlist.name
+          )} (${white.bold(
+            playlist.playlistId
+          )}) [${formatType}]: Expected ${white.bold(
+            expectedPages.toString()
+          )} pages for ${white.bold(
+            actualTracks.toString()
+          )} tracks but PDF has ${white.bold(pageCount.toString())} pages`;
+          validationErrors.push(errorMessage);
+          this.logger.log(color.red.bold(errorMessage));
+        } else {
+          this.logger.log(
+            color.green.bold(
+              `PDF validation passed for playlist ${white.bold(
+                playlist.name
+              )} [${formatType}]: ${white.bold(
+                actualTracks.toString()
+              )} tracks, ${white.bold(pageCount.toString())} pages`
+            )
+          );
+        }
+      } catch (error) {
+        const errorMessage = `Failed to validate PDF for playlist ${white.bold(
+          playlist.name
+        )} (${white.bold(playlist.playlistId)}): ${error}`;
+        validationErrors.push(errorMessage);
+        this.logger.log(color.red.bold(errorMessage));
+      }
+    }
+
+    return {
+      isValid: validationErrors.length === 0,
+      errors: validationErrors,
+    };
+  }
+
   public async sendToPrinter(paymentId: string, clientIp: string) {
     let printApiOrderId = '';
     let printApiOrderRequest = '';
@@ -672,67 +792,11 @@ class Generator {
       }
 
       // Validate PDF page counts before sending to printer
-      const validationErrors: string[] = [];
-      for (const physicalPlaylist of physicalPlaylists) {
-        const { playlist, filename } = physicalPlaylist;
-        const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-
-        try {
-          // Count pages in the physical PDF
-          const pageCount = await this.pdf.countPDFPages(pdfPath);
-
-          // Get actual track count for this playlist
-          const actualTracks = playlist.numberOfTracks;
-
-          // Calculate expected pages based on format
-          let expectedPages: number;
-          let formatType: string;
-          
-          if (playlist.subType === 'sheets') {
-            // Sheets format: 12 cards processed per iteration (6 cards per page, 3x2 layout)
-            // Each iteration creates 2 pages: one for fronts, one for backs
-            // Example: 25 tracks = Math.ceil(25/12) = 3 iterations = 6 pages
-            expectedPages = Math.ceil(actualTracks / 12) * 2;
-            formatType = 'sheets';
-          } else {
-            // Cards format: 1 card per page, 2 pages per track (front and back)
-            expectedPages = actualTracks * 2;
-            formatType = 'cards';
-          }
-
-          if (pageCount !== expectedPages) {
-            const errorMessage = `PDF validation failed for playlist ${white.bold(
-              playlist.name
-            )} (${white.bold(playlist.playlistId)}) [${formatType}]: Expected ${white.bold(
-              expectedPages.toString()
-            )} pages for ${white.bold(
-              actualTracks.toString()
-            )} tracks but PDF has ${white.bold(pageCount.toString())} pages`;
-            validationErrors.push(errorMessage);
-            this.logger.log(color.red.bold(errorMessage));
-          } else {
-            this.logger.log(
-              color.green.bold(
-                `PDF validation passed for playlist ${white.bold(
-                  playlist.name
-                )} [${formatType}]: ${white.bold(actualTracks.toString())} tracks, ${white.bold(
-                  pageCount.toString()
-                )} pages`
-              )
-            );
-          }
-        } catch (error) {
-          const errorMessage = `Failed to validate PDF for playlist ${white.bold(
-            playlist.name
-          )} (${white.bold(playlist.playlistId)}): ${error}`;
-          validationErrors.push(errorMessage);
-          this.logger.log(color.red.bold(errorMessage));
-        }
-      }
+      const validation = await this.validatePDFPageCounts(physicalPlaylists);
 
       // If there are validation errors, send Pushover notification and abort
-      if (validationErrors.length > 0) {
-        const fullMessage = `PDF validation errors for payment ${paymentId}:\n\n${validationErrors.join(
+      if (!validation.isValid) {
+        const fullMessage = `PDF validation errors for payment ${paymentId}:\n\n${validation.errors.join(
           '\n'
         )}`;
 

@@ -663,11 +663,10 @@ class Suggestion {
           }
 
           await this.mollie.clearPDFs(paymentId);
-          await this.generator.generate(
+          await this.generator.queueGenerate(
             paymentId,
             '',
             '',
-            this.mollie,
             true, // Force finalize
             true, // Skip main mail
             false
