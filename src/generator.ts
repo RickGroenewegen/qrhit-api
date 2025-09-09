@@ -671,6 +671,94 @@ class Generator {
         }
       }
 
+      // Validate PDF page counts before sending to printer
+      const validationErrors: string[] = [];
+      for (const physicalPlaylist of physicalPlaylists) {
+        const { playlist, filename } = physicalPlaylist;
+        const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+
+        try {
+          // Count pages in the physical PDF
+          const pageCount = await this.pdf.countPDFPages(pdfPath);
+
+          // Get actual track count for this playlist
+          const actualTracks = playlist.numberOfTracks;
+
+          // Calculate expected pages based on format
+          let expectedPages: number;
+          let formatType: string;
+          
+          if (playlist.subType === 'sheets') {
+            // Sheets format: 12 cards processed per iteration (6 cards per page, 3x2 layout)
+            // Each iteration creates 2 pages: one for fronts, one for backs
+            // Example: 25 tracks = Math.ceil(25/12) = 3 iterations = 6 pages
+            expectedPages = Math.ceil(actualTracks / 12) * 2;
+            formatType = 'sheets';
+          } else {
+            // Cards format: 1 card per page, 2 pages per track (front and back)
+            expectedPages = actualTracks * 2;
+            formatType = 'cards';
+          }
+
+          if (pageCount !== expectedPages) {
+            const errorMessage = `PDF validation failed for playlist ${white.bold(
+              playlist.name
+            )} (${white.bold(playlist.playlistId)}) [${formatType}]: Expected ${white.bold(
+              expectedPages.toString()
+            )} pages for ${white.bold(
+              actualTracks.toString()
+            )} tracks but PDF has ${white.bold(pageCount.toString())} pages`;
+            validationErrors.push(errorMessage);
+            this.logger.log(color.red.bold(errorMessage));
+          } else {
+            this.logger.log(
+              color.green.bold(
+                `PDF validation passed for playlist ${white.bold(
+                  playlist.name
+                )} [${formatType}]: ${white.bold(actualTracks.toString())} tracks, ${white.bold(
+                  pageCount.toString()
+                )} pages`
+              )
+            );
+          }
+        } catch (error) {
+          const errorMessage = `Failed to validate PDF for playlist ${white.bold(
+            playlist.name
+          )} (${white.bold(playlist.playlistId)}): ${error}`;
+          validationErrors.push(errorMessage);
+          this.logger.log(color.red.bold(errorMessage));
+        }
+      }
+
+      // If there are validation errors, send Pushover notification and abort
+      if (validationErrors.length > 0) {
+        const fullMessage = `PDF validation errors for payment ${paymentId}:\n\n${validationErrors.join(
+          '\n'
+        )}`;
+
+        // Send Pushover notification
+        this.pushover.sendMessage(
+          {
+            title: '🚨 PDF Validation Error - Order Not Sent',
+            message: fullMessage,
+            sound: 'siren',
+            priority: 1, // High priority
+          },
+          clientIp
+        );
+
+        // Log the error and return without sending to printer
+        this.logger.log(
+          color.red.bold(
+            `Order ${white.bold(
+              paymentId
+            )} not sent to printer due to PDF validation errors`
+          )
+        );
+
+        return;
+      }
+
       const orderData = await this.order.createOrder(
         payment,
         physicalPlaylists,
@@ -905,7 +993,7 @@ class Generator {
       // Get all tracks from the playlist with their order
       const tracksWithOrder = playlist.tracks.map((pt) => ({
         track: pt.track,
-        order: pt.order
+        order: pt.order,
       }));
 
       // Create a unique filename for this gameset
@@ -942,7 +1030,7 @@ class Generator {
         const safeName = sanitizeFilename(
           track.name || 'untitled'
         ).toLowerCase();
-        
+
         // Prepend order number with zero padding (5 characters)
         const orderPadded = String(order).padStart(5, '0');
         const svgFilename = `${orderPadded}_track_${track.id}_${safeArtist}_${safeName}.svg`;
