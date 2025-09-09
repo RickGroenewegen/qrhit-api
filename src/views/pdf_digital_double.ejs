@@ -252,11 +252,11 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                             
                             <% if (!playlist.hideDomain && !php.hideDomain) { %>
                                 <% if (php.emoji && php.emoji.length) { %>
-                                    <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
+                                    <span style="font-family: Arial, sans-serif !important; <%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
                                 <% } %>
                                 <%= process.env['APP_DOMAIN'] %>
                                  <% if (php.emoji && php.emoji.length) { %>
-                                    <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
+                                    <span style="font-family: Arial, sans-serif !important; <%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
                                 <% } %>
                             <% } %>
                            

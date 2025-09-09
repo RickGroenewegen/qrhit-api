@@ -223,11 +223,11 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                         <img src="<%= process.env['API_URI'] %>/assets/images/k7.png" alt="K7 Middle" style="height: 4mm; margin-top: 4mm;">
                         <div class="text" style="margin-top: 4mm;font-size:11px;color:#b0b0b0;font-family:Arial, sans-serif !important;">
                             <% if (php.emoji && php.emoji.length) { %>
-                                <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
+                                <span style="font-family: Arial, sans-serif !important; <%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
                             <% } %>
                             <%= process.env['APP_DOMAIN'] %>
                             <% if (php.emoji && php.emoji.length) { %>
-                                <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
+                                <span style="font-family: Arial, sans-serif !important; <%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
                             <% } %>
                         </div>
                     </div>
