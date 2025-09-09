@@ -248,15 +248,15 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                                 <div style="font-family: Arial, sans-serif; font-size: 10px; color: #666; margin-top: 1mm;"><%= tracks[i].extraNameAttribute %></div>
                             <% } %>
                         </div>
-                        <div class="text" style="margin-top: 5mm;font-size:11px;color:#b0b0b0;font-family:Arial, sans-serif !important;">
+                        <div class="text" style="margin-top: 5mm;font-size:11px;color:#b0b0b0;">
                             
                             <% if (!playlist.hideDomain && !php.hideDomain) { %>
                                 <% if (php.emoji && php.emoji.length) { %>
-                                    <span style="font-family: Arial, sans-serif !important; <%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
+                                    <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
                                 <% } %>
-                                <%= process.env['APP_DOMAIN'] %>
+                                <span style="font-family:Arial, sans-serif !important;"><%= process.env['APP_DOMAIN'] %></span>
                                  <% if (php.emoji && php.emoji.length) { %>
-                                    <span style="font-family: Arial, sans-serif !important; <%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
+                                    <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
                                 <% } %>
                             <% } %>
                            
