@@ -229,6 +229,160 @@ class GeneratorQueue {
     return { waiting, active, completed, failed, delayed };
   }
 
+  public async getDetailedQueueStatus(): Promise<{
+    counts: {
+      waiting: number;
+      active: number;
+      completed: number;
+      failed: number;
+      delayed: number;
+      paused: number;
+    };
+    jobs: {
+      waiting: any[];
+      active: any[];
+      completed: any[];
+      failed: any[];
+      delayed: any[];
+    };
+    queueInfo: {
+      isPaused: boolean;
+      name: string;
+      workerCount: number;
+    };
+  }> {
+    const [
+      waiting,
+      active,
+      completed,
+      failed,
+      delayed,
+      waitingJobs,
+      activeJobs,
+      completedJobs,
+      failedJobs,
+      delayedJobs,
+      isPaused,
+    ] = await Promise.all([
+      this.queue.getWaitingCount(),
+      this.queue.getActiveCount(),
+      this.queue.getCompletedCount(),
+      this.queue.getFailedCount(),
+      this.queue.getDelayedCount(),
+      this.queue.getWaiting(0, 50),
+      this.queue.getActive(0, 50),
+      this.queue.getCompleted(0, 50),
+      this.queue.getFailed(0, 50),
+      this.queue.getDelayed(0, 50),
+      this.queue.isPaused(),
+    ]);
+
+    const formatJob = (job: any) => ({
+      id: job.id,
+      name: job.name,
+      data: job.data,
+      progress: job.progress,
+      attemptsMade: job.attemptsMade,
+      opts: {
+        attempts: job.opts?.attempts,
+        delay: job.opts?.delay,
+        priority: job.opts?.priority,
+      },
+      timestamp: job.timestamp,
+      finishedOn: job.finishedOn,
+      processedOn: job.processedOn,
+      failedReason: job.failedReason,
+      returnvalue: job.returnvalue,
+      stacktrace: job.stacktrace,
+    });
+
+    return {
+      counts: {
+        waiting,
+        active,
+        completed,
+        failed,
+        delayed,
+        paused: isPaused ? 1 : 0,
+      },
+      jobs: {
+        waiting: waitingJobs.map(formatJob),
+        active: activeJobs.map(formatJob),
+        completed: completedJobs.map(formatJob),
+        failed: failedJobs.map(formatJob),
+        delayed: delayedJobs.map(formatJob),
+      },
+      queueInfo: {
+        isPaused,
+        name: this.queue.name,
+        workerCount: this.workers.length,
+      },
+    };
+  }
+
+  public async getJobsByStatus(
+    status: 'waiting' | 'active' | 'completed' | 'failed' | 'delayed',
+    start: number = 0,
+    end: number = 50
+  ): Promise<any[]> {
+    let jobs: any[] = [];
+    
+    switch (status) {
+      case 'waiting':
+        jobs = await this.queue.getWaiting(start, end);
+        break;
+      case 'active':
+        jobs = await this.queue.getActive(start, end);
+        break;
+      case 'completed':
+        jobs = await this.queue.getCompleted(start, end);
+        break;
+      case 'failed':
+        jobs = await this.queue.getFailed(start, end);
+        break;
+      case 'delayed':
+        jobs = await this.queue.getDelayed(start, end);
+        break;
+    }
+
+    return jobs.map((job) => ({
+      id: job.id,
+      name: job.name,
+      data: job.data,
+      progress: job.progress,
+      attemptsMade: job.attemptsMade,
+      opts: job.opts,
+      timestamp: job.timestamp,
+      finishedOn: job.finishedOn,
+      processedOn: job.processedOn,
+      failedReason: job.failedReason,
+      returnvalue: job.returnvalue,
+      stacktrace: job.stacktrace,
+    }));
+  }
+
+  public async retryJob(jobId: string): Promise<void> {
+    const job = await this.queue.getJob(jobId);
+    if (job && (await job.isFailed())) {
+      await job.retry();
+    }
+  }
+
+  public async removeJob(jobId: string): Promise<void> {
+    const job = await this.queue.getJob(jobId);
+    if (job) {
+      await job.remove();
+    }
+  }
+
+  public async pauseQueue(): Promise<void> {
+    await this.queue.pause();
+  }
+
+  public async resumeQueue(): Promise<void> {
+    await this.queue.resume();
+  }
+
   public async getJobStatus(jobId: string): Promise<any> {
     const job = await this.queue.getJob(jobId);
     if (!job) {

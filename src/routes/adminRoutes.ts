@@ -202,32 +202,186 @@ export default async function adminRoutes(
     if (!process.env['REDIS_URL']) {
       return { error: 'Queue not configured' };
     }
-    
+
     const generatorQueue = GeneratorQueue.getInstance();
     const status = await generatorQueue.getQueueStatus();
     return { success: true, status };
   });
 
-  fastify.get('/queue/job/:jobId', getAuthHandler(['admin']), async (request: any) => {
+  // Get detailed queue status with jobs
+  fastify.get(
+    '/queue/detailed',
+    getAuthHandler(['admin']),
+    async (request: any) => {
+      if (!process.env['REDIS_URL']) {
+        return { error: 'Queue not configured' };
+      }
+
+      try {
+        const generatorQueue = GeneratorQueue.getInstance();
+        const detailedStatus = await generatorQueue.getDetailedQueueStatus();
+        return { success: true, ...detailedStatus };
+      } catch (error: any) {
+        console.error('Error getting detailed queue status:', error);
+        return {
+          error: 'Failed to get queue details',
+          message: error.message || 'Unknown error',
+        };
+      }
+    }
+  );
+
+  // Get jobs by status with pagination
+  fastify.get(
+    '/queue/jobs/:status',
+    getAuthHandler(['admin']),
+    async (request: any) => {
+      if (!process.env['REDIS_URL']) {
+        return { error: 'Queue not configured' };
+      }
+
+      const { status } = request.params;
+      const { start = 0, end = 50 } = request.query;
+
+      const validStatuses = [
+        'waiting',
+        'active',
+        'completed',
+        'failed',
+        'delayed',
+      ];
+      if (!validStatuses.includes(status)) {
+        return {
+          error: 'Invalid status. Must be one of: ' + validStatuses.join(', '),
+        };
+      }
+
+      try {
+        const generatorQueue = GeneratorQueue.getInstance();
+        const jobs = await generatorQueue.getJobsByStatus(
+          status as any,
+          parseInt(start),
+          parseInt(end)
+        );
+        return { success: true, jobs, status };
+      } catch (error: any) {
+        console.error('Error getting jobs by status:', error);
+        return {
+          error: 'Failed to get jobs',
+          message: error.message || 'Unknown error',
+        };
+      }
+    }
+  );
+
+  fastify.get(
+    '/queue/job/:jobId',
+    getAuthHandler(['admin']),
+    async (request: any) => {
+      if (!process.env['REDIS_URL']) {
+        return { error: 'Queue not configured' };
+      }
+
+      const generatorQueue = GeneratorQueue.getInstance();
+      const job = await generatorQueue.getJobStatus(request.params.jobId);
+
+      if (!job) {
+        return { error: 'Job not found' };
+      }
+
+      return { success: true, job };
+    }
+  );
+
+  // Retry a specific job
+  fastify.post(
+    '/queue/job/:jobId/retry',
+    getAuthHandler(['admin']),
+    async (request: any) => {
+      if (!process.env['REDIS_URL']) {
+        return { error: 'Queue not configured' };
+      }
+
+      try {
+        const generatorQueue = GeneratorQueue.getInstance();
+        await generatorQueue.retryJob(request.params.jobId);
+        return { success: true, message: 'Job requeued for retry' };
+      } catch (error: any) {
+        console.error('Error retrying job:', error);
+        return {
+          error: 'Failed to retry job',
+          message: error.message || 'Unknown error',
+        };
+      }
+    }
+  );
+
+  // Remove a specific job
+  fastify.delete(
+    '/queue/job/:jobId',
+    getAuthHandler(['admin']),
+    async (request: any) => {
+      if (!process.env['REDIS_URL']) {
+        return { error: 'Queue not configured' };
+      }
+
+      try {
+        const generatorQueue = GeneratorQueue.getInstance();
+        await generatorQueue.removeJob(request.params.jobId);
+        return { success: true, message: 'Job removed' };
+      } catch (error: any) {
+        console.error('Error removing job:', error);
+        return {
+          error: 'Failed to remove job',
+          message: error.message || 'Unknown error',
+        };
+      }
+    }
+  );
+
+  // Pause the queue
+  fastify.post('/queue/pause', getAuthHandler(['admin']), async () => {
     if (!process.env['REDIS_URL']) {
       return { error: 'Queue not configured' };
     }
-    
-    const generatorQueue = GeneratorQueue.getInstance();
-    const job = await generatorQueue.getJobStatus(request.params.jobId);
-    
-    if (!job) {
-      return { error: 'Job not found' };
+
+    try {
+      const generatorQueue = GeneratorQueue.getInstance();
+      await generatorQueue.pauseQueue();
+      return { success: true, message: 'Queue paused' };
+    } catch (error: any) {
+      console.error('Error pausing queue:', error);
+      return {
+        error: 'Failed to pause queue',
+        message: error.message || 'Unknown error',
+      };
     }
-    
-    return { success: true, job };
+  });
+
+  // Resume the queue
+  fastify.post('/queue/resume', getAuthHandler(['admin']), async () => {
+    if (!process.env['REDIS_URL']) {
+      return { error: 'Queue not configured' };
+    }
+
+    try {
+      const generatorQueue = GeneratorQueue.getInstance();
+      await generatorQueue.resumeQueue();
+      return { success: true, message: 'Queue resumed' };
+    } catch (error: any) {
+      console.error('Error resuming queue:', error);
+      return {
+        error: 'Failed to resume queue',
+        message: error.message || 'Unknown error',
+      };
+    }
   });
 
   fastify.post('/queue/retry-failed', getAuthHandler(['admin']), async () => {
     if (!process.env['REDIS_URL']) {
       return { error: 'Queue not configured' };
     }
-    
+
     const generatorQueue = GeneratorQueue.getInstance();
     await generatorQueue.retryFailedJobs();
     return { success: true, message: 'Failed jobs requeued for retry' };
@@ -237,7 +391,7 @@ export default async function adminRoutes(
     if (!process.env['REDIS_URL']) {
       return { error: 'Queue not configured' };
     }
-    
+
     const generatorQueue = GeneratorQueue.getInstance();
     await generatorQueue.clearQueue();
     return { success: true, message: 'Queue cleared' };
@@ -835,26 +989,30 @@ export default async function adminRoutes(
     async (request: any, reply: any) => {
       try {
         const { paymentId, paymentHasPlaylistId } = request.body;
-        
+
         if (!paymentId || !paymentHasPlaylistId) {
           reply.status(400).send({
             success: false,
-            error: 'Missing required parameters: paymentId and paymentHasPlaylistId'
+            error:
+              'Missing required parameters: paymentId and paymentHasPlaylistId',
           });
           return;
         }
-        
-        const downloadUrl = await generator.createGameset(paymentId, paymentHasPlaylistId);
+
+        const downloadUrl = await generator.createGameset(
+          paymentId,
+          paymentHasPlaylistId
+        );
         reply.send({
           success: true,
           downloadUrl: downloadUrl,
-          message: 'Gameset ZIP created successfully'
+          message: 'Gameset ZIP created successfully',
         });
       } catch (error: any) {
         console.error('Error creating gameset:', error);
         reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to create gameset'
+          error: error.message || 'Failed to create gameset',
         });
       }
     }
