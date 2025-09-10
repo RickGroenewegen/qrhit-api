@@ -167,11 +167,10 @@ class Server {
       // Initialize queue workers only if explicitly enabled
       // In production, use the standalone worker process instead
 
-      console.log(111, await this.utils.isMainServer());
-
       if (
         process.env['REDIS_URL'] &&
-        process.env['RUN_QUEUE_WORKERS'] === 'true'
+        process.env['RUN_QUEUE_WORKERS'] === 'true' &&
+        (await this.utils.isMainServer())
       ) {
         try {
           const workerCount = parseInt(process.env['QUEUE_WORKERS'] || '2');
