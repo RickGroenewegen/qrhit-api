@@ -166,6 +166,9 @@ class Server {
 
       // Initialize queue workers only if explicitly enabled
       // In production, use the standalone worker process instead
+
+      console.log(111, await this.utils.isMainServer());
+
       if (
         process.env['REDIS_URL'] &&
         process.env['RUN_QUEUE_WORKERS'] === 'true'
