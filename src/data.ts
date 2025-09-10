@@ -1053,14 +1053,29 @@ class Data {
     totalUnchecked: number;
   }> {
     // Use a single optimized query to get both the track and count
+    // Only include tracks that are associated with payments where processedFirstTime = true
     const result = await this.prisma.$queryRaw<any[]>`
       SELECT 
-        (SELECT COUNT(*) FROM tracks WHERE manuallyChecked = false AND year > 0) as totalUnchecked,
+        (SELECT COUNT(DISTINCT t.id) 
+         FROM tracks t
+         INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId
+         INNER JOIN playlists pl ON pht.playlistId = pl.id
+         INNER JOIN payment_has_playlist php ON pl.id = php.playlistId
+         INNER JOIN payments p ON php.paymentId = p.id
+         WHERE t.manuallyChecked = false 
+         AND t.year > 0
+         AND p.processedFirstTime = true) as totalUnchecked,
         t.id, t.name, t.spotifyLink, t.artist, t.year, t.yearSource, 
         t.certainty, t.reasoning, t.spotifyYear, t.discogsYear, t.aiYear, 
         t.musicBrainzYear, t.openPerplexYear, t.standardDeviation, t.googleResults
       FROM tracks t
-      WHERE t.manuallyChecked = false AND t.year > 0
+      INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId
+      INNER JOIN playlists pl ON pht.playlistId = pl.id
+      INNER JOIN payment_has_playlist php ON pl.id = php.playlistId
+      INNER JOIN payments p ON php.paymentId = p.id
+      WHERE t.manuallyChecked = false 
+      AND t.year > 0
+      AND p.processedFirstTime = true
       ORDER BY t.id ASC
       LIMIT 1
     `;

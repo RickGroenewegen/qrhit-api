@@ -17,7 +17,8 @@
       "Bash(sudo rm:*)",
       "Bash(touch:*)",
       "Bash(chmod:*)",
-      "WebFetch(domain:developer.spotify.com)"
+      "WebFetch(domain:developer.spotify.com)",
+      "Read(//Users/rick/Sites/qrhit/**)"
     ],
     "deny": []
   }

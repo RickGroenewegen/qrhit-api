@@ -331,6 +331,15 @@ class Generator {
       parseInt(payment.totalPrice)
     );
 
+    // Update processedFirstTime fields
+    await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: {
+        processedFirstTime: true,
+        processedFirstTimeAt: new Date()
+      }
+    });
+
     this.logger.log(
       color.green.bold(
         `Order processed successfully for payment: ${white.bold(paymentId)}`

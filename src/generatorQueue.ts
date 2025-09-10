@@ -168,7 +168,7 @@ class GeneratorQueue {
 
             this.logger.log(
               color.green.bold(
-                `Worker ${i + 1} completed job ${white.bold(
+                `Worker ${white.bold(i + 1)} completed job ${white.bold(
                   job.id || 'unknown'
                 )} for payment: ${white.bold(paymentId)}`
               )
@@ -326,7 +326,7 @@ class GeneratorQueue {
     end: number = 50
   ): Promise<any[]> {
     let jobs: any[] = [];
-    
+
     switch (status) {
       case 'waiting':
         jobs = await this.queue.getWaiting(start, end);
