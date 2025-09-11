@@ -1100,8 +1100,8 @@ Write in a professional, informative, and engaging style. The tone should be cle
       );
       const imageBuffer = await fs.readFile(imagePath);
 
-      // Construct a File object from the buffer
-      const file = new File([imageBuffer], 'cards.png', { type: 'image/png' });
+      // Construct a File object from the buffer (convert to Uint8Array)
+      const file = new File([new Uint8Array(imageBuffer)], 'cards.png', { type: 'image/png' });
 
       const response = await this.openai.images.edit({
         image: file,

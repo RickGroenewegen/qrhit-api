@@ -2,7 +2,7 @@ import knex from 'knex';
 import { Knex } from 'knex';
 import dotenv from 'dotenv';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 // Knex configuration object
 const knexConfig: Knex.Config = {

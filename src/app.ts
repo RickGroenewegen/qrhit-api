@@ -3,7 +3,7 @@ import dotenv from 'dotenv';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 (BigInt.prototype as any).toJSON = function () {
   const int = Number.parseInt(this.toString());

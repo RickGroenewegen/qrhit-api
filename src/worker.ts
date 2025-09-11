@@ -5,7 +5,7 @@ import GeneratorQueue from './generatorQueue';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
-dotenv.config();
+dotenv.config({ quiet: true });
 
 // Configure BigInt serialization
 (BigInt.prototype as any).toJSON = function () {
