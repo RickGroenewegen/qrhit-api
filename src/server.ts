@@ -170,7 +170,8 @@ class Server {
       if (
         process.env['REDIS_URL'] &&
         process.env['RUN_QUEUE_WORKERS'] === 'true' &&
-        (await this.utils.isMainServer())
+        ((await this.utils.isMainServer()) ||
+          process.env['ENVIRONMENT'] === 'development')
       ) {
         try {
           const workerCount = parseInt(process.env['QUEUE_WORKERS'] || '2');

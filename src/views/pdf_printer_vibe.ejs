@@ -106,7 +106,7 @@
             <!-- No background shape -->
             <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
         <% } %>
-        <div class="url">
+        <div class="url" style="<%= qrBgType === 'circle' ? 'bottom: 10mm;' : '' %>">
             <% if (!php.hideDomain) { %>
                 <%= process.env['APP_DOMAIN'] %>
             <% } %>

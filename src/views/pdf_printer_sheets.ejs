@@ -199,7 +199,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                                     <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 32mm; height: 32mm;">
                                 </div>
                             <% } %>
-                            <div class="domain">                              
+                            <div class="domain" style="<%= qrBgType === 'circle' ? 'bottom: 10mm;' : '' %>">                              
                                 <% if (!php.hideDomain) { %>
                                     <%= process.env['APP_DOMAIN'] %>
                                 <% } %>                                
