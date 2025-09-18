@@ -5,11 +5,10 @@ import OpenAI from 'openai';
 import { color } from 'console-log-colors';
 import Translation from './translation';
 import { GenreId } from './interfaces/Genre';
-import { TrustPilot, genre as GenrePrismaModel } from '@prisma/client';
+import { TrustPilot } from '@prisma/client';
 import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
-import * as fsOld from 'fs';
 
 export class ChatGPT {
   private utils = new Utils();
@@ -1101,7 +1100,9 @@ Write in a professional, informative, and engaging style. The tone should be cle
       const imageBuffer = await fs.readFile(imagePath);
 
       // Construct a File object from the buffer (convert to Uint8Array)
-      const file = new File([new Uint8Array(imageBuffer)], 'cards.png', { type: 'image/png' });
+      const file = new File([new Uint8Array(imageBuffer)], 'cards.png', {
+        type: 'image/png',
+      });
 
       const response = await this.openai.images.edit({
         image: file,

@@ -108,7 +108,7 @@
         <% } %>
         <div class="url" style="<%= qrBgType === 'circle' ? 'bottom: 10mm;' : '' %>">
             <% if (!php.hideDomain) { %>
-                <%= process.env['APP_DOMAIN'] %>
+                <span style="font-family: Arial, sans-serif !important;"><%= process.env['APP_DOMAIN'] %></span>
             <% } %>
         </div>
     </div>

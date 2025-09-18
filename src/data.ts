@@ -820,10 +820,15 @@ class Data {
         query += ` AND playlists.featuredLocale IS NULL`;
       }
 
-      // Add ordering if locale is provided
+      // Add ordering: prioritize matching locale, then sort by score
       if (locale) {
         query += `
-        ORDER BY score DESC
+        ORDER BY
+          CASE
+            WHEN FIND_IN_SET('${locale}', playlists.featuredLocale) > 0 THEN 0
+            ELSE 1
+          END,
+          score DESC
       `;
       }
 

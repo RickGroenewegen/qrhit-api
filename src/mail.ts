@@ -619,6 +619,18 @@ class Mail {
       throw new Error('reCAPTCHA verification failed');
     }
 
+    // Log contact form submission with user's IP
+    this.logger.log(
+      color.cyan.bold(
+        `Contact form submitted by ${white.bold(otherData.email)} from IP ${white.bold(ip)}`
+      )
+    );
+    this.logger.log(
+      color.cyan(
+        `  Name: ${white(otherData.name)}, Subject: ${white(otherData.subject || 'N/A')}`
+      )
+    );
+
     const subject = otherData.subject;
 
     const message = `

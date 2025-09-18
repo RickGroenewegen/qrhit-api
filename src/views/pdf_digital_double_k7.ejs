@@ -172,8 +172,8 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                                 <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 36mm; height: 36mm;">
                                 <img src="<%= process.env['API_URI'] %>/assets/images/k7.png" alt="K7 Bottom" style="height: 4mm; margin-top:1mm;">
                             </div>
-                            <div class="domain">                              
-                                <%= process.env['APP_DOMAIN'] %>                                
+                            <div class="domain">
+                                <span style="font-family: Arial, sans-serif !important;"><%= process.env['APP_DOMAIN'] %></span>
                             </div>
                         </div>
                     <% } else { %>
