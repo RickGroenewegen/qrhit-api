@@ -18,7 +18,8 @@
       "Bash(touch:*)",
       "Bash(chmod:*)",
       "WebFetch(domain:developer.spotify.com)",
-      "Read(//Users/rick/Sites/qrhit/**)"
+      "Read(//Users/rick/Sites/qrhit/**)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

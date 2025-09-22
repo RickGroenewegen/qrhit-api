@@ -3,64 +3,226 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Privacy Policy - Music Match</title>
+    <title>Privacy Policy - Music Match Scanner</title>
+    <link rel="icon" type="image/png" href="favicon.png">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        :root {
+            --mm-pink: #F86A9C;
+            --mm-orange: #FFA35C;
+            --mm-yellow: #FFD600;
+            --mm-purple: #6C5B7B;
+            --mm-dark-purple: #4A3F5B;
+            --mm-white: #FFFFFF;
+            --mm-cream: #FDFBCF;
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.6;
-            color: #333;
-            max-width: 800px;
-            margin: 0 auto;
+            background: url('background.png') center/cover no-repeat fixed;
+            min-height: 100vh;
             padding: 20px;
-            background-color: #f5f5f5;
+            position: relative;
+            line-height: 1.6;
         }
+
+        body::after {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.3);
+            pointer-events: none;
+            z-index: 0;
+        }
+
+        .page-container {
+            max-width: 900px;
+            margin: 0 auto;
+            position: relative;
+            z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
+            padding-top: 40px;
+        }
+
+        .logo-wrapper {
+            text-align: center;
+        }
+
+        .logo {
+            display: inline-block;
+            width: 200px;
+            height: auto;
+            position: relative;
+            filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.8));
+        }
+
+        .logo img {
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+        }
+
         .container {
-            background: white;
-            padding: 30px;
-            border-radius: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
+            padding: 48px;
+            border-radius: 24px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
+            border: 2px solid rgba(253, 251, 207, 0.3);
+            width: 100%;
+            position: relative;
+            overflow: hidden;
         }
+
+        .container::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+            background: linear-gradient(90deg, var(--mm-pink), var(--mm-orange), var(--mm-yellow));
+            animation: gradient-shift 3s ease infinite;
+        }
+
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
         h1 {
-            color: #2c3e50;
-            border-bottom: 3px solid #3498db;
-            padding-bottom: 10px;
+            color: #333;
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--mm-pink), var(--mm-orange), var(--mm-yellow));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: -1px;
         }
+
         h2 {
-            color: #34495e;
+            color: var(--mm-purple);
             margin-top: 30px;
+            margin-bottom: 15px;
+            font-size: 1.5rem;
+            font-weight: 700;
         }
+
         p {
             margin-bottom: 15px;
+            color: #555;
         }
+
         ul {
             margin-bottom: 15px;
+            padding-left: 30px;
         }
+
         li {
             margin-bottom: 8px;
+            color: #555;
         }
+
         .last-updated {
             font-style: italic;
-            color: #666;
+            color: #888;
             margin-bottom: 30px;
+            text-align: center;
         }
+
         .contact-info {
-            background-color: #f8f9fa;
-            padding: 15px;
-            border-left: 4px solid #3498db;
+            background: linear-gradient(135deg, rgba(248, 106, 156, 0.1), rgba(255, 163, 92, 0.1));
+            padding: 20px;
+            border-left: 4px solid var(--mm-pink);
             margin-top: 20px;
+            border-radius: 8px;
         }
+
         a {
-            color: #3498db;
+            color: var(--mm-pink);
             text-decoration: none;
+            font-weight: 500;
+            transition: color 0.3s ease;
         }
+
         a:hover {
+            color: var(--mm-orange);
             text-decoration: underline;
+        }
+
+        .footer {
+            text-align: center;
+            padding-top: 32px;
+            margin-top: 40px;
+            border-top: 1px solid #eee;
+            color: #999;
+            font-size: 0.875rem;
+        }
+
+        @media (max-width: 768px) {
+            .container {
+                padding: 30px 20px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            h2 {
+                font-size: 1.3rem;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .logo {
+                width: 150px;
+            }
+
+            .container {
+                padding: 24px 16px;
+                border-radius: 20px;
+            }
+
+            h1 {
+                font-size: 1.5rem;
+            }
+
+            h2 {
+                font-size: 1.2rem;
+            }
+
+            .page-container {
+                padding-top: 20px;
+            }
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>Privacy Policy – Music Match</h1>
+    <div class="page-container">
+        <div class="logo-wrapper">
+            <div class="logo">
+                <img src="musicmatch.svg" alt="Music Match Logo">
+            </div>
+        </div>
+
+        <div class="container">
+            <h1>Privacy Policy</h1>
         
         <p class="last-updated">Last updated: <script>document.write(new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' }));</script></p>
         
@@ -101,6 +263,11 @@
         
         <h2>9. Changes to this Policy</h2>
         <p>We may update this Privacy Policy from time to time. Any updates will be posted within the app or on our website with a revised "Last updated" date.</p>
+
+        <div class="footer">
+            <p>Music Match © 2024. All Rights Reserved.</p>
+        </div>
+        </div>
     </div>
 </body>
 </html>

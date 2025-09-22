@@ -3,9 +3,20 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Download Music Match - Companion App</title>
+    <title>Music Match Scanner - Download App</title>
+    <link rel="icon" type="image/png" href="favicon.png">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
     <style>
+        :root {
+            --mm-pink: #F86A9C;
+            --mm-orange: #FFA35C;
+            --mm-yellow: #FFD600;
+            --mm-purple: #6C5B7B;
+            --mm-dark-purple: #4A3F5B;
+            --mm-white: #FFFFFF;
+            --mm-cream: #FDFBCF;
+        }
+
         * {
             margin: 0;
             padding: 0;
@@ -14,7 +25,7 @@
 
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            background: linear-gradient(135deg, #5e4d8b 0%, #764ba2 50%, #e91e63 100%);
+            background: url('/background.png') center/cover no-repeat fixed;
             min-height: 100vh;
             display: flex;
             align-items: center;
@@ -30,15 +41,16 @@
             }
         }
 
-        body::before {
+        body::after {
             content: '';
             position: absolute;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-            background: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M30 30l15-15M30 30l-15 15M30 30l15 15M30 30l-15-15' stroke='%23ffffff' stroke-opacity='0.03' stroke-width='2' fill='none'/%3E%3C/svg%3E");
+            background: rgba(0, 0, 0, 0.3);
             pointer-events: none;
+            z-index: 0;
         }
 
         .container {
@@ -46,15 +58,22 @@
             width: 100%;
             position: relative;
             z-index: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 30px;
         }
 
         .card {
-            background: rgba(255, 255, 255, 0.98);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(20px);
             border-radius: 24px;
             padding: 48px;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3), 0 0 0 1px rgba(255, 255, 255, 0.1);
             position: relative;
             overflow: hidden;
+            border: 2px solid rgba(253, 251, 207, 0.3);
+            width: 100%;
         }
 
         @media (max-width: 480px) {
@@ -71,7 +90,7 @@
             left: 0;
             right: 0;
             height: 4px;
-            background: linear-gradient(90deg, #e91e63, #9c27b0, #673ab7);
+            background: linear-gradient(90deg, var(--mm-pink), var(--mm-orange), var(--mm-yellow));
             animation: gradient-shift 3s ease infinite;
         }
 
@@ -86,11 +105,12 @@
             font-size: 3rem;
             font-weight: 800;
             margin-bottom: 16px;
-            background: linear-gradient(135deg, #5e4d8b, #e91e63);
+            background: linear-gradient(135deg, var(--mm-pink), var(--mm-orange), var(--mm-yellow));
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
             letter-spacing: -1px;
+            text-transform: uppercase;
         }
 
         @media (max-width: 480px) {
@@ -102,12 +122,13 @@
         .subtitle {
             text-align: center;
             color: #666;
-            font-size: 1.5rem;
+            font-size: 1.3rem;
             line-height: 1.6;
             margin-bottom: 50px;
             max-width: 600px;
             margin-left: auto;
             margin-right: auto;
+            font-weight: 500;
         }
 
         @media (max-width: 480px) {
@@ -177,23 +198,27 @@
         }
 
         .ios-btn {
-            background: #000;
+            background: linear-gradient(135deg, #1a1a2e, #0f0f1e);
             color: white;
+            border: 2px solid rgba(253, 251, 207, 0.2);
         }
 
         .ios-btn:hover {
             transform: translateY(-2px);
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
+            box-shadow: 0 10px 30px rgba(255, 214, 0, 0.3);
+            border-color: var(--mm-yellow);
         }
 
         .android-btn {
-            background: linear-gradient(135deg, #00c853, #00897b);
+            background: #00c853;
             color: white;
+            border: 2px solid transparent;
         }
 
         .android-btn:hover {
             transform: translateY(-2px);
             box-shadow: 0 10px 30px rgba(0, 200, 83, 0.3);
+            background: #00b04a;
         }
 
         .app-btn-content {
@@ -232,16 +257,10 @@
 
         .logo {
             display: inline-block;
-            width: 300px;
-            height: 300px;
+            width: 250px;
+            height: auto;
             position: relative;
-            margin: 0 auto 32px;
-            animation: float 4s ease-in-out infinite;
-        }
-
-        @keyframes float {
-            0%, 100% { transform: translateY(0) rotate(0deg); }
-            50% { transform: translateY(-10px) rotate(3deg); }
+            filter: drop-shadow(0 8px 24px rgba(0, 0, 0, 0.8));
         }
 
         .logo img {
@@ -252,12 +271,12 @@
 
         @media (max-width: 480px) {
             .logo {
-                width: 240px;
-                height: 240px;
+                width: 200px;
+                height: auto;
             }
             .logo img {
                 width: 100%;
-                height: 100%;
+                height: auto;
             }
         }
 
@@ -299,16 +318,15 @@
 </head>
 <body>
     <div class="container">
-        <div class="card">
-            <div class="logo-wrapper">
-                <div class="logo">
-                    <img src="logo.png" alt="Music Match Logo">
-                </div>
+        <div class="logo-wrapper">
+            <div class="logo">
+                <img src="/musicmatch.svg" alt="Music Match Logo">
             </div>
-            
-            <h1>Music Match</h1>
+        </div>
+
+        <div class="card">
             <p class="subtitle">
-                Download the Music Match companion app and start scanning your cards
+                Scan your music cards and instantly play your favorite tracks
             </p>
 
             
@@ -332,7 +350,8 @@
             
             
             <div class="footer">
-                <p>Available for iOS 13+ and Android 6.0+</p>
+                <p>Music Match © 2024. All Rights Reserved.</p>
+                <p style="margin-top: 8px; font-size: 0.75rem;">Available for iOS 13+ and Android 6.0+</p>
             </div>
         </div>
     </div>

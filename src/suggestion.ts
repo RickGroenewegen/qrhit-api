@@ -375,8 +375,6 @@ class Suggestion {
     andSend: boolean,
     clientIp: string
   ): Promise<boolean> {
-    console.log(111, andSend);
-
     try {
       // First verify ownership
       const { verified } = await this.verifyPaymentOwnership(
@@ -671,7 +669,7 @@ class Suggestion {
             '',
             true, // Force finalize
             true, // Skip main mail
-            true // Only produt mail
+            false // Only produt mail
           );
 
           if (hasPhysicalPlaylists) {
