@@ -909,19 +909,20 @@ export async function createOrUpdateAdminUser(
       const salt = generateSalt();
       const hashedPassword = hashPassword(password, salt);
       await prisma.$executeRaw`
-        INSERT INTO users (userId, email, displayName, hash, password, salt, marketingEmails, sync, createdAt, updatedAt, companyId)
+        INSERT INTO users (userId, email, displayName, hash, password, salt, marketingEmails, sync, createdAt, updatedAt, companyId, verified)
         VALUES (
-          ${userId}, 
-          ${email}, 
-          ${displayName}, 
-          ${userHash}, 
-          ${hashedPassword}, 
-          ${salt}, 
-          0, 
-          0, 
-          NOW(), 
+          ${userId},
+          ${email},
+          ${displayName},
+          ${userHash},
+          ${hashedPassword},
+          ${salt},
+          0,
+          0,
           NOW(),
-          ${companyId ?? null}
+          NOW(),
+          ${companyId ?? null},
+          1
         )
       `;
 
