@@ -589,7 +589,7 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply) => {
       const { artistOnlyForMe, titleOnlyForMe, yearOnlyForMe } = request.body;
-      suggestion.processCorrections(
+      await suggestion.processCorrections(
         request.params.paymentId,
         request.params.userHash,
         request.params.playlistId,

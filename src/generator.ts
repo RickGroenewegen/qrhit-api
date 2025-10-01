@@ -155,7 +155,12 @@ class Generator {
     forceFinalize: boolean = false,
     skipMainMail: boolean = false,
     onlyProductMail: boolean = false,
-    userAgent: string = ''
+    userAgent: string = '',
+    onCompleteData?: {
+      type: 'checkPrinter';
+      paymentId: string;
+      clientIp: string;
+    }
   ): Promise<string> {
     const queue = this.getGeneratorQueue();
     if (!queue) {
@@ -173,6 +178,15 @@ class Generator {
         onlyProductMail,
         userAgent
       );
+      // If processing directly, execute the callback immediately
+      if (onCompleteData?.type === 'checkPrinter') {
+        const Suggestion = (await import('./suggestion')).default;
+        const suggestion = Suggestion.getInstance();
+        await (suggestion as any).checkIfReadyForPrinter(
+          onCompleteData.paymentId,
+          onCompleteData.clientIp
+        );
+      }
       return 'direct';
     }
 
@@ -184,6 +198,7 @@ class Generator {
       skipMainMail,
       onlyProductMail,
       userAgent,
+      onCompleteData,
     });
 
     return jobId;
@@ -336,8 +351,8 @@ class Generator {
       where: { id: payment.id },
       data: {
         processedFirstTime: true,
-        processedFirstTimeAt: new Date()
-      }
+        processedFirstTimeAt: new Date(),
+      },
     });
 
     this.logger.log(

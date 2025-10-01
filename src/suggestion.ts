@@ -669,12 +669,17 @@ class Suggestion {
             '',
             true, // Force finalize
             true, // Skip main mail
-            false // Only produt mail
+            false, // Only produt mail
+            '', // User agent
+            // Callback data to check printer readiness after generation completes
+            hasPhysicalPlaylists
+              ? {
+                  type: 'checkPrinter',
+                  paymentId,
+                  clientIp,
+                }
+              : undefined
           );
-
-          if (hasPhysicalPlaylists) {
-            this.checkIfReadyForPrinter(paymentId, clientIp);
-          }
         }
       } else {
         this.logger.log(

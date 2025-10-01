@@ -13,6 +13,12 @@ interface GenerateJobData {
   skipMainMail?: boolean;
   onlyProductMail?: boolean;
   userAgent?: string;
+  onCompleteData?: {
+    // Instead of callback ID, store the data needed to recreate the callback
+    type: 'checkPrinter';
+    paymentId: string;
+    clientIp: string;
+  };
 }
 
 class GeneratorQueue {
@@ -71,11 +77,30 @@ class GeneratorQueue {
   private setupEventListeners(): void {
     if (!this.queueEvents) return;
 
-    // this.queueEvents.on('completed', ({ jobId, returnvalue }) => {
-    //   this.logger.log(
-    //     color.green.bold(`Job ${white.bold(jobId)} completed successfully`)
-    //   );
-    // });
+    this.queueEvents.on('completed', async ({ jobId, returnvalue }) => {
+      // this.logger.log(
+      //   color.green.bold(`Job ${white.bold(jobId)} completed successfully`)
+      // );
+
+      // Check if there's callback data for this job
+      const job = await this.queue.getJob(jobId);
+      if (job?.data.onCompleteData) {
+        try {
+          await this.executeCallback(job.data.onCompleteData);
+          this.logger.log(
+            color.green.bold(
+              `Executed completion callback for job ${white.bold(jobId)}`
+            )
+          );
+        } catch (error) {
+          this.logger.log(
+            color.red.bold(
+              `Error executing callback for job ${white.bold(jobId)}: ${error}`
+            )
+          );
+        }
+      }
+    });
 
     this.queueEvents.on('failed', ({ jobId, failedReason }) => {
       this.logger.log(
@@ -96,7 +121,26 @@ class GeneratorQueue {
     });
   }
 
-  public async addGenerateJob(data: GenerateJobData): Promise<string> {
+  private async executeCallback(
+    callbackData: GenerateJobData['onCompleteData']
+  ): Promise<void> {
+    if (!callbackData) return;
+
+    // Recreate and execute the callback based on its type
+    if (callbackData.type === 'checkPrinter') {
+      // Lazy load to avoid circular dependency
+      const Suggestion = (await import('./suggestion')).default;
+      const suggestion = Suggestion.getInstance();
+      await (suggestion as any).checkIfReadyForPrinter(
+        callbackData.paymentId,
+        callbackData.clientIp
+      );
+    }
+  }
+
+  public async addGenerateJob(
+    data: GenerateJobData
+  ): Promise<string> {
     const job = await this.queue.add('generate', data, {
       priority: data.forceFinalize ? 1 : 10,
     });
@@ -105,7 +149,9 @@ class GeneratorQueue {
       blue.bold(
         `Added generate job to queue for payment: ${white.bold(
           data.paymentId
-        )} with job ID: ${white.bold(job.id || 'unknown')}`
+        )} with job ID: ${white.bold(job.id || 'unknown')}${
+          data.onCompleteData ? ' (with completion callback)' : ''
+        }`
       )
     );
 
