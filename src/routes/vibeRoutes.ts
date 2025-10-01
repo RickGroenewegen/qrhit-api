@@ -35,7 +35,7 @@ export default async function vibeRoutes(
   // Update company list
   fastify.put(
     '/vibe/companies/:companyId/lists/:listId',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    getAuthHandler(['admin', 'vibeadmin']),
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
@@ -43,17 +43,6 @@ export default async function vibeRoutes(
 
         if (isNaN(companyId) || isNaN(listId)) {
           reply.status(400).send({ error: 'Invalid company or list ID' });
-          return;
-        }
-
-        // If user is companyadmin, only allow editing their own company
-        if (
-          request.user.userGroups.includes('companyadmin') &&
-          request.user.companyId !== companyId
-        ) {
-          reply
-            .status(403)
-            .send({ error: 'Forbidden: You can only edit your own company' });
           return;
         }
 
@@ -116,17 +105,17 @@ export default async function vibeRoutes(
     getAuthHandler(['admin', 'vibeadmin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
-      const { 
-        name, 
-        test, 
-        address, 
-        housenumber, 
-        city, 
-        zipcode, 
+      const {
+        name,
+        test,
+        address,
+        housenumber,
+        city,
+        zipcode,
         countrycode,
         contact,
         contactemail,
-        contactphone
+        contactphone,
       } = request.body;
 
       if (isNaN(companyId)) {
@@ -138,8 +127,8 @@ export default async function vibeRoutes(
         return;
       }
 
-      const result = await vibe.updateCompany(companyId, { 
-        name, 
+      const result = await vibe.updateCompany(companyId, {
+        name,
         test,
         address,
         housenumber,
@@ -148,7 +137,7 @@ export default async function vibeRoutes(
         countrycode,
         contact,
         contactemail,
-        contactphone
+        contactphone,
       });
 
       if (!result.success) {
@@ -204,93 +193,99 @@ export default async function vibeRoutes(
   );
 
   // Quotation HTML View (for PDF generation)
-  fastify.get('/vibe/quotation/:companyId/:quotationNumber', async (request: any, reply: any) => {
-    try {
-      const companyId = parseInt(request.params.companyId);
-      const quotationNumber = request.params.quotationNumber;
-      
-      // Get company data directly from database
-      const companiesResult = await vibe.getAllCompanies();
-      const companies = companiesResult.data.companies;
-      const company = companies.find((c: any) => c.id === companyId);
-      
-      if (!company) {
-        reply.status(404).send({ error: 'Company not found' });
-        return;
-      }
-      
-      // Parse the stored calculation from company database
-      let calculation: any = {
-        quantity: 100,
-        includePersonalization: true,
-        shipmentOnLocation: false,
-        soldBy: 'onzevibe',
-        isReseller: false,
-        manualDiscount: 0,
-        fluidMode: false
-      };
-      let calculationResult: any = {};
-      
-      if (company.calculation) {
-        try {
-          const storedCalc = JSON.parse(company.calculation);
-          calculation = storedCalc;
-          
-          // Use the Vibe calculatePricing method to get the result
-          const pricingResult = await vibe.calculatePricing({
-            quantity: calculation.quantity || 100,
-            includePersonalization: calculation.includePersonalization !== undefined ? calculation.includePersonalization : true,
-            shipmentOnLocation: calculation.shipmentOnLocation || false,
-            soldBy: calculation.soldBy || 'onzevibe',
-            isReseller: calculation.isReseller || false,
-            manualDiscount: calculation.manualDiscount || 0,
-            fluidMode: calculation.fluidMode || false
-          });
-          
-          if (pricingResult.success) {
-            calculationResult = pricingResult.calculation;
-          }
-        } catch (e) {
-          console.error('Error parsing company calculation:', e);
+  fastify.get(
+    '/vibe/quotation/:companyId/:quotationNumber',
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+        const quotationNumber = request.params.quotationNumber;
+
+        // Get company data directly from database
+        const companiesResult = await vibe.getAllCompanies();
+        const companies = companiesResult.data.companies;
+        const company = companies.find((c: any) => c.id === companyId);
+
+        if (!company) {
+          reply.status(404).send({ error: 'Company not found' });
+          return;
         }
-      }
-      
-      // Date formatting functions
-      const formatDate = (date: Date) => {
-        const options: Intl.DateTimeFormatOptions = { 
-          year: 'numeric', 
-          month: 'long', 
-          day: 'numeric' 
+
+        // Parse the stored calculation from company database
+        let calculation: any = {
+          quantity: 100,
+          includePersonalization: true,
+          shipmentOnLocation: false,
+          soldBy: 'onzevibe',
+          isReseller: false,
+          manualDiscount: 0,
+          fluidMode: false,
         };
-        return date.toLocaleDateString('nl-NL', options);
-      };
-      
-      const formatCurrency = (value: number) => {
-        return new Intl.NumberFormat('nl-NL', {
-          style: 'currency',
-          currency: 'EUR'
-        }).format(value);
-      };
-      
-      const today = new Date();
-      const validUntil = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
-      const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-      
-      await reply.view('vibe_quotation.ejs', {
-        company,
-        calculation,
-        calculationResult,
-        quotationNumber,
-        validUntil,
-        formatCurrency,
-        formatDate,
-        baseUrl
-      });
-    } catch (error) {
-      console.error('Error rendering quotation view:', error);
-      reply.status(500).send({ error: 'Failed to render quotation' });
+        let calculationResult: any = {};
+
+        if (company.calculation) {
+          try {
+            const storedCalc = JSON.parse(company.calculation);
+            calculation = storedCalc;
+
+            // Use the Vibe calculatePricing method to get the result
+            const pricingResult = await vibe.calculatePricing({
+              quantity: calculation.quantity || 100,
+              includePersonalization:
+                calculation.includePersonalization !== undefined
+                  ? calculation.includePersonalization
+                  : true,
+              shipmentOnLocation: calculation.shipmentOnLocation || false,
+              soldBy: calculation.soldBy || 'onzevibe',
+              isReseller: calculation.isReseller || false,
+              manualDiscount: calculation.manualDiscount || 0,
+              fluidMode: calculation.fluidMode || false,
+            });
+
+            if (pricingResult.success) {
+              calculationResult = pricingResult.calculation;
+            }
+          } catch (e) {
+            console.error('Error parsing company calculation:', e);
+          }
+        }
+
+        // Date formatting functions
+        const formatDate = (date: Date) => {
+          const options: Intl.DateTimeFormatOptions = {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          };
+          return date.toLocaleDateString('nl-NL', options);
+        };
+
+        const formatCurrency = (value: number) => {
+          return new Intl.NumberFormat('nl-NL', {
+            style: 'currency',
+            currency: 'EUR',
+          }).format(value);
+        };
+
+        const today = new Date();
+        const validUntil = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
+        const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
+
+        await reply.view('vibe_quotation.ejs', {
+          company,
+          calculation,
+          calculationResult,
+          quotationNumber,
+          validUntil,
+          formatCurrency,
+          formatDate,
+          baseUrl,
+        });
+      } catch (error) {
+        console.error('Error rendering quotation view:', error);
+        reply.status(500).send({ error: 'Failed to render quotation' });
+      }
     }
-  });
+  );
 
   // Generate quotation PDF
   fastify.post(
@@ -314,16 +309,22 @@ export default async function vibeRoutes(
         );
 
         if (!result.success) {
-          const statusCode = result.error?.includes('Forbidden') ? 403 : 
-                           result.error?.includes('not found') ? 404 : 500;
+          const statusCode = result.error?.includes('Forbidden')
+            ? 403
+            : result.error?.includes('not found')
+            ? 404
+            : 500;
           reply.status(statusCode).send({ error: result.error });
           return;
         }
 
         // Set response headers for PDF download
         reply.header('Content-Type', 'application/pdf');
-        reply.header('Content-Disposition', `attachment; filename="${result.filename}"`);
-        
+        reply.header(
+          'Content-Disposition',
+          `attachment; filename="${result.filename}"`
+        );
+
         reply.send(result.data);
       } catch (error) {
         console.error('Error generating quotation:', error);
@@ -591,8 +592,8 @@ export default async function vibeRoutes(
     getAuthHandler(['admin', 'vibeadmin']),
     async (request: any, reply: any) => {
       try {
-        const { 
-          name, 
+        const {
+          name,
           test,
           address,
           housenumber,
@@ -601,7 +602,7 @@ export default async function vibeRoutes(
           countrycode,
           contact,
           contactemail,
-          contactphone
+          contactphone,
         } = request.body;
 
         if (!name) {
@@ -619,7 +620,7 @@ export default async function vibeRoutes(
           countrycode,
           contact,
           contactemail,
-          contactphone
+          contactphone,
         });
 
         if (!result.success) {
