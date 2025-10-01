@@ -1223,6 +1223,78 @@ Write in a professional, informative, and engaging style. The tone should be cle
   }
 
   /**
+   * Splits a long artist or title string into multiple segments, ensuring no segment exceeds 25 characters.
+   * Uses OpenAI function calling to intelligently split the string at natural breaking points.
+   * @param text The text to split (artist or title)
+   * @param type The type of text ('artist' or 'title')
+   * @returns Promise<string[]> Array of segments, each <= 25 characters
+   */
+  public async splitArtistOrString(
+    text: string,
+    type: 'artist' | 'title'
+  ): Promise<string[]> {
+    const result = await this.openai.chat.completions.create({
+      model: 'gpt-5',
+      temperature: 1,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a text processing assistant that splits long strings intelligently. When splitting text, preserve meaning and readability by breaking at natural points like spaces, punctuation, or syllable boundaries. Each segment must be 25 characters or less.`,
+        },
+        {
+          role: 'user',
+          content: `Split the following ${type} into segments where each segment is maximum 25 characters. Try to split at natural breaking points (spaces, punctuation, syllables) to maintain readability:\n\n"${text}"`,
+        },
+      ],
+      function_call: { name: 'splitText' },
+      functions: [
+        {
+          name: 'splitText',
+          description: `Splits a ${type} string into segments of maximum 25 characters each`,
+          parameters: {
+            type: 'object',
+            properties: {
+              segments: {
+                type: 'array',
+                items: {
+                  type: 'string',
+                  maxLength: 25,
+                  description: 'A segment of the text, maximum 25 characters',
+                },
+                description:
+                  'Array of text segments, each 25 characters or less',
+              },
+            },
+            required: ['segments'],
+          },
+        },
+      ],
+    });
+
+    if (result?.choices[0]?.message?.function_call) {
+      const funcCall = result.choices[0].message.function_call;
+      try {
+        const parsed = JSON.parse(funcCall.arguments as string);
+        return parsed.segments || [text];
+      } catch (e) {
+        this.logger.log(
+          color.red.bold(
+            `Failed to parse splitText JSON from ChatGPT function_call for ${type}: "${text}"`
+          )
+        );
+        return [text];
+      }
+    } else {
+      this.logger.log(
+        color.red.bold(
+          `No function_call result from ChatGPT for splitText for ${type}: "${text}"`
+        )
+      );
+      return [text];
+    }
+  }
+
+  /**
    * Extracts an array of order IDs, their order dates (DD-MM-YYYY), and amounts from a pasted HTML string.
    * Uses OpenAI function calling to enforce structured output.
    * Ignores any "Creditfactuur" that completely negates a "Factuur" (leave both out).

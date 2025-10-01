@@ -1250,6 +1250,58 @@ class Data {
     return { wasUpdated: false, method: '' };
   }
 
+  /**
+   * Sanitizes a title or artist string by checking for words >= 25 characters.
+   * If found, uses ChatGPT to split the long word intelligently.
+   * @param text The text to sanitize (title or artist)
+   * @param type The type of text ('artist' or 'title')
+   * @returns Promise<string> The sanitized text
+   */
+  private async sanitizeTitleOrArtist(
+    text: string,
+    type: 'artist' | 'title'
+  ): Promise<string> {
+    if (!text) return text;
+
+    // Check if any word in the text is >= 25 characters
+    const words = text.split(/\s+/);
+    const hasLongWord = words.some((word) => word.length >= 25);
+
+    if (!hasLongWord) {
+      return text;
+    }
+
+    // Found a long word, log it and split using ChatGPT
+    const longWords = words.filter((word) => word.length >= 25);
+    this.logger.log(
+      color.yellow.bold(
+        `Found long ${type} word(s) >= 25 characters: ${color.white.bold(
+          longWords.join(', ')
+        )} in "${color.white.bold(text)}"`
+      )
+    );
+
+    // Process each long word
+    let sanitizedText = text;
+    for (const longWord of longWords) {
+      const segments = await this.openai.splitArtistOrString(longWord, type);
+      const splitWord = segments.join(' ');
+
+      this.logger.log(
+        color.green.bold(
+          `Split long ${type} word "${color.white.bold(
+            longWord
+          )}" into: "${color.white.bold(splitWord)}"`
+        )
+      );
+
+      // Replace the long word with the split version
+      sanitizedText = sanitizedText.replace(longWord, splitWord);
+    }
+
+    return sanitizedText;
+  }
+
   public async logLink(
     trackId: number,
     clientIp: string,
@@ -1436,17 +1488,32 @@ class Data {
 
     // Step 3: Insert new tracks
     if (newTracks.length > 0) {
-      // First create the tracks
+      // First sanitize and create the tracks
+      const sanitizedTracksData = await Promise.all(
+        newTracks.map(async (track) => {
+          const sanitizedTitle = await this.sanitizeTitleOrArtist(
+            this.utils.cleanTrackName(track.name),
+            'title'
+          );
+          const sanitizedArtist = await this.sanitizeTitleOrArtist(
+            track.artist,
+            'artist'
+          );
+
+          return {
+            trackId: track.id,
+            name: sanitizedTitle,
+            isrc: track.isrc,
+            artist: sanitizedArtist,
+            spotifyLink: track.link,
+            album: this.utils.cleanTrackName(track.album),
+            preview: track.preview,
+          };
+        })
+      );
+
       await this.prisma.track.createMany({
-        data: newTracks.map((track) => ({
-          trackId: track.id,
-          name: this.utils.cleanTrackName(track.name),
-          isrc: track.isrc,
-          artist: track.artist,
-          spotifyLink: track.link,
-          album: this.utils.cleanTrackName(track.album),
-          preview: track.preview,
-        })),
+        data: sanitizedTracksData,
         skipDuplicates: true,
       });
 
@@ -1491,10 +1558,19 @@ class Data {
           select: { youtubeLink: true },
         });
 
+        const sanitizedTitle = await this.sanitizeTitleOrArtist(
+          this.utils.cleanTrackName(track.name),
+          'title'
+        );
+        const sanitizedArtist = await this.sanitizeTitleOrArtist(
+          track.artist,
+          'artist'
+        );
+
         const updateData: any = {
-          name: this.utils.cleanTrackName(track.name),
+          name: sanitizedTitle,
           isrc: track.isrc,
-          artist: track.artist,
+          artist: sanitizedArtist,
           spotifyLink: track.link,
           album: this.utils.cleanTrackName(track.album),
           preview: track.preview,
@@ -1810,11 +1886,14 @@ class Data {
     clientIp: string
   ): Promise<boolean> {
     try {
+      const sanitizedTitle = await this.sanitizeTitleOrArtist(name, 'title');
+      const sanitizedArtist = await this.sanitizeTitleOrArtist(artist, 'artist');
+
       await this.prisma.track.update({
         where: { id },
         data: {
-          artist,
-          name,
+          artist: sanitizedArtist,
+          name: sanitizedTitle,
           year,
           spotifyLink,
           youtubeLink,
