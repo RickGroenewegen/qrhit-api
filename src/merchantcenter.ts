@@ -216,6 +216,21 @@ export class MerchantCenterService {
       const playlistLimit = isDevelopment ? 1 : limit;
 
       this.logger.log(blue.bold('Merchant Center sync starting'));
+      this.logger.log(
+        blue.bold(
+          `🔧 Environment: ${white.bold(isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION')}`
+        )
+      );
+      this.logger.log(
+        blue.bold(
+          `📊 Requested limit from API: ${white.bold(limit !== undefined ? limit.toString() : 'undefined')}`
+        )
+      );
+      this.logger.log(
+        blue.bold(
+          `📊 Effective playlist limit: ${white.bold(playlistLimit !== undefined ? playlistLimit.toString() : 'UNLIMITED (all featured)')}`
+        )
+      );
 
       // Fetch featured playlists from database
       const playlists = await this.prisma.playlist.findMany({
@@ -238,7 +253,7 @@ export class MerchantCenterService {
       }
 
       this.logger.log(
-        blue.bold(`Found ${white.bold(playlists.length.toString())} playlists`)
+        blue.bold(`Found ${white.bold(playlists.length.toString())} playlists to upload`)
       );
 
       // Track which product IDs should exist
