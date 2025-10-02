@@ -205,15 +205,17 @@ export class MerchantCenterService {
    * - Create new products for featured playlists
    * - Update existing products
    * - Remove products that are no longer featured
-   * @param limit - Number of playlists to upload (default 2)
+   * In development: uploads 2 playlists for faster testing
+   * In production: uploads all featured playlists
    */
-  public async uploadFeaturedPlaylists(limit: number = 2): Promise<void> {
+  public async uploadFeaturedPlaylists(): Promise<void> {
     await this.ensureInitialized();
 
     try {
-      // In development, only upload 1 playlist
+      // In development, only upload 2 playlists for faster testing
+      // In production, upload all featured playlists
       const isDevelopment = process.env['ENVIRONMENT'] === 'development';
-      const playlistLimit = isDevelopment ? 1 : limit;
+      const playlistLimit = isDevelopment ? 2 : undefined;
 
       this.logger.log(blue.bold('Merchant Center sync starting'));
       this.logger.log(
@@ -223,12 +225,7 @@ export class MerchantCenterService {
       );
       this.logger.log(
         blue.bold(
-          `📊 Requested limit from API: ${white.bold(limit !== undefined ? limit.toString() : 'undefined')}`
-        )
-      );
-      this.logger.log(
-        blue.bold(
-          `📊 Effective playlist limit: ${white.bold(playlistLimit !== undefined ? playlistLimit.toString() : 'UNLIMITED (all featured)')}`
+          `📊 Playlist limit: ${white.bold(playlistLimit !== undefined ? playlistLimit.toString() : 'UNLIMITED (all featured)')}`
         )
       );
 
