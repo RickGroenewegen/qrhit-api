@@ -19,6 +19,7 @@ interface ProductVariant {
   numberOfTracks: number;
   type: 'digital' | 'sheets' | 'physical';
   locale: string;
+  country: string;
   slug: string;
   genre?: string;
 }
@@ -76,7 +77,17 @@ export class MerchantCenterService {
   // Supported locales for Merchant Center - limiting to main markets
   private supportedLocales = ['en', 'nl', 'de'];
 
-  // Mapping of locales to target countries for Google Merchant Center
+  // Mapping of locale-country combinations for Google Merchant Center
+  // Multiple countries can use the same language content
+  private localeCountryPairs: Array<{ locale: string; country: string }> = [
+    { locale: 'en', country: 'US' },
+    { locale: 'nl', country: 'NL' },
+    { locale: 'nl', country: 'BE' }, // Belgium using Dutch content
+    { locale: 'de', country: 'DE' },
+    { locale: 'de', country: 'AT' }, // Austria using German content
+  ];
+
+  // Legacy mapping - kept for backwards compatibility
   private localeToCountry: { [key: string]: string } = {
     en: 'US',
     nl: 'NL',
@@ -337,13 +348,15 @@ export class MerchantCenterService {
     // In development, only process en, nl, de locales
     const isDevelopment = process.env['ENVIRONMENT'] === 'development';
     const debugMode = process.env['DEBUG_MERCHANT_CENTER'] === 'true';
-    const localesToProcess = isDevelopment
-      ? this.supportedLocales.filter((l) => ['en', 'nl', 'de'].includes(l))
-      : this.supportedLocales;
+    const pairsToProcess = isDevelopment
+      ? this.localeCountryPairs.filter((p) => ['en', 'nl', 'de'].includes(p.locale))
+      : this.localeCountryPairs;
 
-    // Process each product type for each locale
+    // Process each product type for each locale-country pair
     let variantCount = 0;
-    for (const locale of localesToProcess) {
+    for (const pair of pairsToProcess) {
+      const { locale, country } = pair;
+
       // Check if playlist has a specific featured locale
       // If featuredLocale is set, only upload for that specific locale
       // If featuredLocale is not set, upload for all supported locales
@@ -381,6 +394,7 @@ export class MerchantCenterService {
           numberOfTracks: playlist.numberOfTracks,
           type: productType.type as 'digital' | 'sheets' | 'physical',
           locale: locale,
+          country: country,
           slug: playlist.slug,
           genre: playlist.genre ? playlist.genre[`name_${locale}`] : undefined,
         };
@@ -478,7 +492,7 @@ export class MerchantCenterService {
     variant: ProductVariant
   ): Promise<MerchantProduct> {
     const baseUrl = process.env.FRONTEND_URI || 'https://www.qrsong.io';
-    const country = this.localeToCountry[variant.locale] || 'US';
+    const country = variant.country;
 
     // Generate unique ID using Google's required format
     // Format for online products: "online:{lang}:{country}:{id}"
@@ -686,9 +700,15 @@ export class MerchantCenterService {
     productType: string
   ): Promise<string> {
     try {
-      // Paths for images - use product_pdf.jpg for digital products, product_cards.jpg for others
-      const templateFile =
-        productType === 'digital' ? 'product_pdf.jpg' : 'product_cards.jpg';
+      // Paths for images - use product_pdf.jpg for digital, product_sheets.jpg for sheets, product_cards.jpg for cards
+      let templateFile: string;
+      if (productType === 'digital') {
+        templateFile = 'product_pdf.jpg';
+      } else if (productType === 'sheets') {
+        templateFile = 'product_sheets.jpg';
+      } else {
+        templateFile = 'product_cards.jpg';
+      }
       const templatePath = `${process.env['ASSETS_DIR']}/images/${templateFile}`;
 
       const publicDir =
