@@ -225,13 +225,6 @@ class MusicFetch {
       });
 
       if (result.success) {
-        this.logger.log(
-          color.green.bold(
-            `Updated track ${white.bold(
-              trackId.toString()
-            )} with MusicFetch links`
-          )
-        );
         return true;
       } else {
         this.logger.log(
@@ -303,29 +296,42 @@ class MusicFetch {
         );
       });
 
+      if (tracksToProcess.length === 0) {
+        this.logger.log(
+          color.blue.bold(
+            `No tracks to process for playlist ${white.bold(
+              playlistId.toString()
+            )} - all tracks already have links`
+          )
+        );
+        return;
+      }
+
       this.logger.log(
         color.blue.bold(
-          `Found ${white.bold(
+          `Processing ${white.bold(
             tracksToProcess.length.toString()
-          )} tracks to process in playlist ${white.bold(
-            playlistId.toString()
-          )}`
+          )} tracks for playlist ${white.bold(playlistId.toString())}`
         )
       );
 
       // Process tracks sequentially with rate limiting
+      let successCount = 0;
       for (const playlistTrack of tracksToProcess) {
         const track = playlistTrack.track;
         if (track.spotifyLink) {
-          await this.updateTrackWithLinks(track.id, track.spotifyLink);
+          const success = await this.updateTrackWithLinks(track.id, track.spotifyLink);
+          if (success) successCount++;
         }
       }
 
       this.logger.log(
         color.green.bold(
-          `Completed MusicFetch processing for playlist: ${white.bold(
-            playlistId.toString()
-          )}`
+          `Successfully fetched links for ${white.bold(
+            successCount.toString()
+          )} of ${white.bold(
+            tracksToProcess.length.toString()
+          )} tracks in playlist ${white.bold(playlistId.toString())}`
         )
       );
     } catch (error) {
@@ -402,15 +408,22 @@ class MusicFetch {
         });
       }
 
+      result.totalProcessed = tracksToProcess.length;
+
+      if (tracksToProcess.length === 0) {
+        this.logger.log(
+          color.blue.bold('No tracks found to process - all tracks already have links')
+        );
+        return result;
+      }
+
       this.logger.log(
         color.blue.bold(
-          `Found ${white.bold(
+          `Processing ${white.bold(
             tracksToProcess.length.toString()
-          )} tracks to process`
+          )} tracks`
         )
       );
-
-      result.totalProcessed = tracksToProcess.length;
 
       // Process tracks sequentially with rate limiting
       for (const track of tracksToProcess) {
