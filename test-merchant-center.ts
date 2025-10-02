@@ -26,9 +26,9 @@ async function testMerchantCenter() {
       logger.log(blue.bold(`Development mode: ${white.bold('1 playlist')}, ${white.bold('en/nl/de')} locales only`));
     }
     
-    // Test uploading featured playlists (limited in dev mode)
+    // Test uploading featured playlists (limit determined by environment)
     logger.log(blue.bold('Uploading featured playlists...'));
-    await merchantCenter.uploadFeaturedPlaylists(2);
+    await merchantCenter.uploadFeaturedPlaylists();
     
     // List all products
     logger.log(blue.bold('Listing products...'));

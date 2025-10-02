@@ -27,7 +27,7 @@ async function testMerchantUpdate() {
     
     // First, do a sync to ensure products exist
     logger.log(blue.bold('\n1. Initial sync to ensure products exist...'));
-    await merchantCenter.uploadFeaturedPlaylists(1);
+    await merchantCenter.uploadFeaturedPlaylists();
     
     // Wait for products to be indexed
     logger.log(blue.bold('\n2. Waiting 3 seconds for indexing...'));
@@ -53,8 +53,8 @@ async function testMerchantUpdate() {
     logger.log(blue.bold('\n4. Running sync again to trigger updates...'));
     logger.log(yellow.bold('Watch for update debug logs below:'));
     logger.log(yellow('-------------------------------------------'));
-    
-    await merchantCenter.uploadFeaturedPlaylists(1);
+
+    await merchantCenter.uploadFeaturedPlaylists();
     
     logger.log(yellow('-------------------------------------------'));
     
