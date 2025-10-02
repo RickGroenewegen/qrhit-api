@@ -1156,19 +1156,21 @@ export default async function adminRoutes(
         const MusicFetch = (await import('../musicfetch')).default;
         const musicFetch = MusicFetch.getInstance();
 
-        // Process tracks in background
-        const result = await musicFetch.processBulkTracks(trackIds);
+        // Start processing in background (don't wait for result)
+        musicFetch.processBulkTracks(trackIds).catch((error) => {
+          console.error('Error in background MusicFetch processing:', error);
+        });
 
+        // Send immediate response
         reply.send({
           success: true,
-          message: 'MusicFetch processing started',
-          result,
+          message: 'MusicFetch bulk processing started in background',
         });
       } catch (error: any) {
-        console.error('Error processing MusicFetch bulk action:', error);
+        console.error('Error starting MusicFetch bulk action:', error);
         reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to process MusicFetch bulk action',
+          error: error.message || 'Failed to start MusicFetch bulk action',
         });
       }
     }

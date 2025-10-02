@@ -348,7 +348,7 @@ class MusicFetch {
   }
 
   /**
-   * Process multiple tracks for bulk action
+   * Process multiple tracks for bulk action in chunks
    */
   public async processBulkTracks(
     trackIds?: number[]
@@ -366,100 +366,132 @@ class MusicFetch {
     };
 
     try {
-      let tracksToProcess;
+      let hasMore = true;
+      let chunkNumber = 0;
 
-      if (trackIds && trackIds.length > 0) {
-        // Process specific tracks
-        tracksToProcess = await this.prisma.track.findMany({
-          where: {
-            id: { in: trackIds },
-            spotifyLink: { not: null },
-          },
-          select: {
-            id: true,
-            spotifyLink: true,
-            musicFetchAttempts: true,
-            name: true,
-            artist: true,
-          },
-        });
-      } else {
-        // Process all tracks missing at least one link
-        tracksToProcess = await this.prisma.track.findMany({
-          where: {
-            spotifyLink: { not: null },
-            musicFetchAttempts: { lt: this.MAX_ATTEMPTS },
-            OR: [
-              { deezerLink: null },
-              { youtubeMusicLink: null },
-              { appleMusicLink: null },
-              { amazonMusicLink: null },
-              { tidalLink: null },
-            ],
-          },
-          select: {
-            id: true,
-            spotifyLink: true,
-            musicFetchAttempts: true,
-            name: true,
-            artist: true,
-          },
-          take: 100, // Limit to 100 tracks per bulk operation
-        });
-      }
+      while (hasMore) {
+        chunkNumber++;
+        let tracksToProcess;
 
-      result.totalProcessed = tracksToProcess.length;
-
-      if (tracksToProcess.length === 0) {
-        this.logger.log(
-          color.blue.bold('No tracks found to process - all tracks already have links')
-        );
-        return result;
-      }
-
-      this.logger.log(
-        color.blue.bold(
-          `Processing ${white.bold(
-            tracksToProcess.length.toString()
-          )} tracks`
-        )
-      );
-
-      // Process tracks sequentially with rate limiting
-      for (const track of tracksToProcess) {
-        if (!track.spotifyLink) {
-          result.skipped++;
-          continue;
-        }
-
-        if (track.musicFetchAttempts >= this.MAX_ATTEMPTS) {
-          result.skipped++;
-          continue;
-        }
-
-        const success = await this.updateTrackWithLinks(
-          track.id,
-          track.spotifyLink
-        );
-
-        if (success) {
-          result.successful++;
-        } else {
-          result.failed++;
-          result.errors.push({
-            trackId: track.id,
-            error: 'Failed to fetch or update links',
+        if (trackIds && trackIds.length > 0) {
+          // Process specific tracks (single batch)
+          tracksToProcess = await this.prisma.track.findMany({
+            where: {
+              id: { in: trackIds },
+              spotifyLink: { not: null },
+            },
+            select: {
+              id: true,
+              spotifyLink: true,
+              musicFetchAttempts: true,
+              name: true,
+              artist: true,
+            },
           });
+          hasMore = false; // Only one batch for specific tracks
+        } else {
+          // Process all tracks missing at least one link in chunks of 1000
+          tracksToProcess = await this.prisma.track.findMany({
+            where: {
+              spotifyLink: { not: null },
+              musicFetchAttempts: { lt: this.MAX_ATTEMPTS },
+              OR: [
+                { deezerLink: null },
+                { youtubeMusicLink: null },
+                { appleMusicLink: null },
+                { amazonMusicLink: null },
+                { tidalLink: null },
+              ],
+            },
+            select: {
+              id: true,
+              spotifyLink: true,
+              musicFetchAttempts: true,
+              name: true,
+              artist: true,
+            },
+            take: 1000, // Process 1000 tracks per chunk
+          });
+
+          // If we got less than 1000, this is the last batch
+          if (tracksToProcess.length < 1000) {
+            hasMore = false;
+          }
         }
+
+        if (tracksToProcess.length === 0) {
+          this.logger.log(
+            color.blue.bold('No more tracks found to process - all tracks have links or max attempts reached')
+          );
+          break;
+        }
+
+        this.logger.log(
+          color.blue.bold(
+            `Processing chunk ${white.bold(
+              chunkNumber.toString()
+            )}: ${white.bold(
+              tracksToProcess.length.toString()
+            )} tracks`
+          )
+        );
+
+        // Process tracks sequentially with rate limiting
+        for (const track of tracksToProcess) {
+          if (!track.spotifyLink) {
+            result.skipped++;
+            continue;
+          }
+
+          if (track.musicFetchAttempts >= this.MAX_ATTEMPTS) {
+            result.skipped++;
+            continue;
+          }
+
+          const success = await this.updateTrackWithLinks(
+            track.id,
+            track.spotifyLink
+          );
+
+          if (success) {
+            result.successful++;
+          } else {
+            result.failed++;
+            result.errors.push({
+              trackId: track.id,
+              error: 'Failed to fetch or update links',
+            });
+          }
+        }
+
+        result.totalProcessed += tracksToProcess.length;
+
+        this.logger.log(
+          color.green.bold(
+            `Chunk ${white.bold(
+              chunkNumber.toString()
+            )} complete: ${white.bold(
+              result.successful.toString()
+            )} successful, ${white.bold(
+              result.failed.toString()
+            )} failed, ${white.bold(result.skipped.toString())} skipped (Total processed: ${white.bold(
+              result.totalProcessed.toString()
+            )})`
+          )
+        );
       }
 
       this.logger.log(
         color.green.bold(
-          `Bulk processing complete: ${white.bold(
+          `All bulk processing complete: ${white.bold(
             result.successful.toString()
           )} successful, ${white.bold(
             result.failed.toString()
-          )} failed, ${white.bold(result.skipped.toString())} skipped`
+          )} failed, ${white.bold(
+            result.skipped.toString()
+          )} skipped across ${white.bold(
+            result.totalProcessed.toString()
+          )} total tracks`
         )
       );
 
