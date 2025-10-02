@@ -1056,9 +1056,11 @@ export default async function adminRoutes(
     async (request: any, reply: any) => {
       try {
         const isDevelopment = process.env['ENVIRONMENT'] === 'development';
+
         // In development, only upload 2 playlists for faster testing
-        // In production, upload all featured playlists
-        const { limit = isDevelopment ? 2 : undefined } = request.body;
+        // In production, upload all featured playlists (ignore frontend input)
+        const limit = isDevelopment ? 2 : undefined;
+
         const { merchantCenter } = await import('../merchantcenter');
         merchantCenter.uploadFeaturedPlaylists(limit);
         reply.send({
