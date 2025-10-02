@@ -74,11 +74,8 @@ export default class Copy {
         createdAt,
         updatedAt,
         PaymentHasPlaylist,
-        user,
-        OrderType,
-        printerInvoice,
         ...paymentData
-      } = originalPayment;
+      } = originalPayment as any;
 
       // Create the duplicated payment with all fields copied
       const newPayment = await this.prisma.payment.create({
@@ -91,14 +88,12 @@ export default class Copy {
 
       // Duplicate PaymentHasPlaylist records
       for (const php of originalPayment.PaymentHasPlaylist) {
-        // Copy all fields except id, paymentId, and relations
+        // Copy all fields except id and paymentId
         const {
           id: phpId,
-          payment,
-          playlist,
-          orderType,
+          paymentId: oldPaymentId,
           ...phpData
-        } = php;
+        } = php as any;
 
         await this.prisma.paymentHasPlaylist.create({
           data: {
