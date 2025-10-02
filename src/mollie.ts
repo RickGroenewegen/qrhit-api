@@ -387,14 +387,14 @@ class Mollie {
       search.textSearch && search.textSearch.trim() !== ''
         ? {
             OR: [
-              { fullname: { contains: search.textSearch } },
-              { orderId: { contains: search.textSearch } },
-              { printApiOrderId: { contains: search.textSearch } },
+              { fullname: { search: search.textSearch } },
+              { orderId: { search: search.textSearch } },
+              { printApiOrderId: { search: search.textSearch } },
               {
                 PaymentHasPlaylist: {
                   some: {
                     playlist: {
-                      name: { contains: search.textSearch },
+                      name: { search: search.textSearch },
                     },
                   },
                 },

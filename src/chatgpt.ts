@@ -1243,7 +1243,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
         },
         {
           role: 'user',
-          content: `Split the following ${type} into segments where each segment is maximum 20 characters. Try to split at natural breaking points (spaces, punctuation, syllables) to maintain readability:\n\n"${text}"`,
+          content: `Split the following ${type} into segments where each segment is maximum 20 characters. Try to split at natural breaking points (spaces, punctuation, syllables) to maintain readability and preferebly somewhere around the middle:\n\n"${text}"`,
         },
       ],
       function_call: { name: 'splitText' },

@@ -2,7 +2,8 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider = "prisma-client-js"
+  provider        = "prisma-client-js"
+  previewFeatures = ["fullTextIndex", "fullTextSearch"]
 }
 
 datasource db {
@@ -171,6 +172,8 @@ model Payment {
   @@index([vibe, test, createdAt])
   @@index([vibe, test, status, createdAt])
   @@index([vibe, test, finalized, createdAt])
+  // Full-text search indexes for dashboard search
+  @@fulltext([fullname, orderId, printApiOrderId])
   @@map("payments")
 }
 
@@ -337,7 +340,7 @@ model Playlist {
   CompanyList          CompanyList[]
 
   @@index([playlistId])
-  @@index([name])
+  @@fulltext([name])
   @@map("playlists")
 }
 
@@ -411,7 +414,6 @@ model Track {
 
   @@index([trackId])
   @@index([isrc])
-  @@index([artist, name])
   @@index([manuallyChecked, year, id])
   @@index([youtubeLink])
   @@fulltext([artist, name])
