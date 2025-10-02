@@ -502,15 +502,6 @@ class Mollie {
               select: {
                 name: true,
                 playlistId: true,
-                tracks: {
-                  select: {
-                    track: {
-                      select: {
-                        manuallyChecked: true,
-                      },
-                    },
-                  },
-                },
               },
             },
           },

@@ -157,9 +157,20 @@ model Payment {
   Review            Review[]
   CompanyList       CompanyList[]
 
-  @@index([userId]) // Index for performance on queries
+  @@index([userId])
   @@index([paymentId])
   @@index([printApiOrderId])
+  @@index([fullname])
+  @@index([orderId])
+  @@index([status])
+  @@index([finalized])
+  @@index([test])
+  @@index([vibe])
+  @@index([createdAt])
+  // Composite indexes for common query patterns
+  @@index([vibe, test, createdAt])
+  @@index([vibe, test, status, createdAt])
+  @@index([vibe, test, finalized, createdAt])
   @@map("payments")
 }
 
@@ -326,6 +337,7 @@ model Playlist {
   CompanyList          CompanyList[]
 
   @@index([playlistId])
+  @@index([name])
   @@map("playlists")
 }
 
@@ -470,6 +482,10 @@ model PaymentHasPlaylist {
   orderType              OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
 
   @@unique([paymentId, playlistId])
+  @@index([paymentId])
+  @@index([playlistId])
+  @@index([type])
+  @@index([paymentId, type])
   @@map("payment_has_playlist")
 }
 
