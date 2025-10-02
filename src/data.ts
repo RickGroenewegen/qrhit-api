@@ -1056,29 +1056,31 @@ class Data {
   public async getFirstUncheckedTrack(): Promise<{
     track: any;
     totalUnchecked: number;
+    currentPlaylistId: number | null;
   }> {
     // Use a single optimized query to get both the track and count
     // Only include tracks that are associated with payments where processedFirstTime = true
     const result = await this.prisma.$queryRaw<any[]>`
-      SELECT 
-        (SELECT COUNT(DISTINCT t.id) 
+      SELECT
+        (SELECT COUNT(DISTINCT t.id)
          FROM tracks t
          INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId
          INNER JOIN playlists pl ON pht.playlistId = pl.id
          INNER JOIN payment_has_playlist php ON pl.id = php.playlistId
          INNER JOIN payments p ON php.paymentId = p.id
-         WHERE t.manuallyChecked = false 
+         WHERE t.manuallyChecked = false
          AND t.year > 0
          AND p.processedFirstTime = true) as totalUnchecked,
-        t.id, t.name, t.spotifyLink, t.artist, t.year, t.yearSource, 
-        t.certainty, t.reasoning, t.spotifyYear, t.discogsYear, t.aiYear, 
-        t.musicBrainzYear, t.openPerplexYear, t.standardDeviation, t.googleResults
+        t.id, t.name, t.spotifyLink, t.artist, t.year, t.yearSource,
+        t.certainty, t.reasoning, t.spotifyYear, t.discogsYear, t.aiYear,
+        t.musicBrainzYear, t.openPerplexYear, t.standardDeviation, t.googleResults,
+        pl.id as playlistId
       FROM tracks t
       INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId
       INNER JOIN playlists pl ON pht.playlistId = pl.id
       INNER JOIN payment_has_playlist php ON pl.id = php.playlistId
       INNER JOIN payments p ON php.paymentId = p.id
-      WHERE t.manuallyChecked = false 
+      WHERE t.manuallyChecked = false
       AND t.year > 0
       AND p.processedFirstTime = true
       ORDER BY t.id ASC
@@ -1086,14 +1088,52 @@ class Data {
     `;
 
     if (result.length === 0) {
-      return { track: null, totalUnchecked: 0 };
+      return { track: null, totalUnchecked: 0, currentPlaylistId: null };
     }
 
-    const { totalUnchecked, ...track } = result[0];
+    const { totalUnchecked, playlistId, ...track } = result[0];
     return {
       track,
       totalUnchecked: Number(totalUnchecked),
+      currentPlaylistId: Number(playlistId),
     };
+  }
+
+  public async getYearCheckQueue(): Promise<
+    Array<{
+      playlistId: number;
+      playlistName: string;
+      clientName: string;
+      uncheckedCount: number;
+      paymentId: string;
+    }>
+  > {
+    const result = await this.prisma.$queryRaw<any[]>`
+      SELECT
+        pl.id as playlistId,
+        pl.name as playlistName,
+        p.fullname as clientName,
+        COUNT(DISTINCT t.id) as uncheckedCount,
+        p.paymentId
+      FROM tracks t
+      INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId
+      INNER JOIN playlists pl ON pht.playlistId = pl.id
+      INNER JOIN payment_has_playlist php ON pl.id = php.playlistId
+      INNER JOIN payments p ON php.paymentId = p.id
+      WHERE t.manuallyChecked = false
+      AND t.year > 0
+      AND p.processedFirstTime = true
+      GROUP BY pl.id, pl.name, p.fullname, p.paymentId, p.createdAt
+      ORDER BY p.createdAt ASC, pl.id ASC
+    `;
+
+    return result.map((row) => ({
+      playlistId: Number(row.playlistId),
+      playlistName: row.playlistName,
+      clientName: row.clientName,
+      uncheckedCount: Number(row.uncheckedCount),
+      paymentId: row.paymentId,
+    }));
   }
 
   public async updateTrackCheck(

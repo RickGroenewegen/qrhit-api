@@ -555,6 +555,19 @@ export default async function adminRoutes(
     }
   );
 
+  // Year check queue
+  fastify.get(
+    '/yearcheck/queue',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const queue = await data.getYearCheckQueue();
+      reply.send({
+        success: true,
+        queue,
+      });
+    }
+  );
+
   // Year check
   fastify.get(
     '/yearcheck',
@@ -565,6 +578,7 @@ export default async function adminRoutes(
         success: true,
         track: result.track,
         totalUnchecked: result.totalUnchecked,
+        currentPlaylistId: result.currentPlaylistId,
       });
     }
   );
