@@ -390,6 +390,15 @@ class Mollie {
               { fullname: { contains: search.textSearch } },
               { orderId: { contains: search.textSearch } },
               { printApiOrderId: { contains: search.textSearch } },
+              {
+                PaymentHasPlaylist: {
+                  some: {
+                    playlist: {
+                      name: { contains: search.textSearch },
+                    },
+                  },
+                },
+              },
             ],
           }
         : {};
@@ -510,6 +519,29 @@ class Mollie {
     });
 
     return { payments, totalItems };
+  }
+
+  public async deletePayment(paymentId: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Check if payment exists
+      const payment = await this.prisma.payment.findUnique({
+        where: { paymentId },
+      });
+
+      if (!payment) {
+        return { success: false, error: 'Payment not found' };
+      }
+
+      // Delete the payment (cascading deletes will handle related records)
+      await this.prisma.payment.delete({
+        where: { paymentId },
+      });
+
+      return { success: true };
+    } catch (error) {
+      console.error('Error deleting payment:', error);
+      return { success: false, error: 'Failed to delete payment from database' };
+    }
   }
 
   private mollieClient = createMollieClient({

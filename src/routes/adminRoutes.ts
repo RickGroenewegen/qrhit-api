@@ -39,7 +39,8 @@ export default async function adminRoutes(
     async (request: any, _reply) => {
       return await generator.sendToPrinter(
         request.body.paymentId,
-        request.clientIp
+        request.clientIp,
+        true
       );
     }
   );
@@ -416,6 +417,40 @@ export default async function adminRoutes(
         currentPage: search.page,
         itemsPerPage: search.itemsPerPage,
       });
+    }
+  );
+
+  // Delete payment permanently
+  fastify.delete(
+    '/payment/:paymentId',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentId } = request.params;
+
+      if (!paymentId) {
+        reply
+          .status(400)
+          .send({ success: false, error: 'Payment ID is required' });
+        return;
+      }
+
+      try {
+        const result = await mollie.deletePayment(paymentId);
+
+        if (result.success) {
+          reply.send({
+            success: true,
+            message: 'Payment deleted successfully',
+          });
+        } else {
+          reply.status(404).send({ success: false, error: result.error });
+        }
+      } catch (error) {
+        console.error('Error deleting payment:', error);
+        reply
+          .status(500)
+          .send({ success: false, error: 'Failed to delete payment' });
+      }
     }
   );
 

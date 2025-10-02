@@ -765,7 +765,11 @@ class Generator {
     };
   }
 
-  public async sendToPrinter(paymentId: string, clientIp: string) {
+  public async sendToPrinter(
+    paymentId: string,
+    clientIp: string,
+    force: boolean = false
+  ): Promise<void> {
     let printApiOrderId = '';
     let printApiOrderRequest = '';
     let printApiOrderResponse = '';
@@ -782,6 +786,14 @@ class Generator {
         },
       },
     });
+
+    // Reset sentToPrinter to false when manually sending to printer
+    if (payment && force) {
+      await this.prisma.payment.update({
+        where: { id: payment.id },
+        data: { sentToPrinter: false },
+      });
+    }
 
     if (
       (payment && payment.canBeSentToPrinter && !payment.sentToPrinter) ||
