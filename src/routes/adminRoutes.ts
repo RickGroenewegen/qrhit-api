@@ -1055,12 +1055,17 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const { limit = 2 } = request.body;
+        const isDevelopment = process.env['ENVIRONMENT'] === 'development';
+        // In development, only upload 2 playlists for faster testing
+        // In production, upload all featured playlists
+        const { limit = isDevelopment ? 2 : undefined } = request.body;
         const { merchantCenter } = await import('../merchantcenter');
         merchantCenter.uploadFeaturedPlaylists(limit);
         reply.send({
           success: true,
-          message: `Uploaded ${limit} featured playlists to Merchant Center`,
+          message: limit
+            ? `Uploaded ${limit} featured playlists to Merchant Center`
+            : 'Uploaded all featured playlists to Merchant Center',
         });
       } catch (error: any) {
         reply.status(500).send({

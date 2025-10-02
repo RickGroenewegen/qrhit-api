@@ -463,7 +463,7 @@ export class MerchantCenterService {
             yellow(
               `↻ ${white.bold(variant.slug)} [${white.bold(
                 variant.type
-              )}/${white.bold(variant.locale)}]`
+              )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]`
             )
           );
         } catch (updateError: any) {
@@ -480,7 +480,7 @@ export class MerchantCenterService {
           green.bold(
             `✓ ${white.bold(variant.slug)} [${white.bold(
               variant.type
-            )}/${white.bold(variant.locale)}]`
+            )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]`
           )
         );
       }
@@ -491,7 +491,7 @@ export class MerchantCenterService {
         red(
           `✗ ${white.bold(variant.slug)} [${white.bold(
             variant.type
-          )}/${white.bold(variant.locale)}]: ${error.message || error}`
+          )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]: ${error.message || error}`
         )
       );
       return null;
