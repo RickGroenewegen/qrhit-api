@@ -12,6 +12,7 @@ import Utils from '../utils';
 import Mollie from '../mollie';
 import Order from '../order';
 import Suggestion from '../suggestion';
+import Copy from '../copy';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -31,6 +32,7 @@ export default async function adminRoutes(
   const mollie = new Mollie();
   const order = Order.getInstance();
   const suggestion = Suggestion.getInstance();
+  const copy = Copy.getInstance();
 
   // Create order (admin only)
   fastify.post(
@@ -450,6 +452,58 @@ export default async function adminRoutes(
         reply
           .status(500)
           .send({ success: false, error: 'Failed to delete payment' });
+      }
+    }
+  );
+
+  // Duplicate payment and regenerate
+  fastify.post(
+    '/admin/payment/:paymentId/duplicate',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentId } = request.params;
+
+      if (!paymentId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Payment ID is required',
+        });
+        return;
+      }
+
+      try {
+        // Duplicate the payment
+        const result = await copy.duplicatePayment(paymentId);
+
+        if (!result.success) {
+          reply.status(404).send({ success: false, error: result.error });
+          return;
+        }
+
+        // Queue regeneration for the new payment
+        const userAgent = request.headers['user-agent'] || '';
+        const jobId = await generator.queueGenerate(
+          result.newPaymentId!,
+          request.clientIp,
+          '',
+          true, // Force finalize
+          false, // Don't skip main mail
+          false, // Not only product mail
+          userAgent
+        );
+
+        reply.send({
+          success: true,
+          message: 'Payment duplicated and queued for regeneration',
+          newPaymentId: result.newPaymentId,
+          jobId: jobId,
+        });
+      } catch (error) {
+        console.error('Error duplicating payment:', error);
+        reply.status(500).send({
+          success: false,
+          error: 'Failed to duplicate payment',
+        });
       }
     }
   );
