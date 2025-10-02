@@ -1239,18 +1239,18 @@ Write in a professional, informative, and engaging style. The tone should be cle
       messages: [
         {
           role: 'system',
-          content: `You are a text processing assistant that splits long strings intelligently. When splitting text, preserve meaning and readability by breaking at natural points like spaces, punctuation, or syllable boundaries. Each segment must be 25 characters or less.`,
+          content: `You are a text processing assistant that splits long strings intelligently. When splitting text, preserve meaning and readability by breaking at natural points like spaces, punctuation, or syllable boundaries. Each segment must be 20 characters or less.`,
         },
         {
           role: 'user',
-          content: `Split the following ${type} into segments where each segment is maximum 25 characters. Try to split at natural breaking points (spaces, punctuation, syllables) to maintain readability:\n\n"${text}"`,
+          content: `Split the following ${type} into segments where each segment is maximum 20 characters. Try to split at natural breaking points (spaces, punctuation, syllables) to maintain readability:\n\n"${text}"`,
         },
       ],
       function_call: { name: 'splitText' },
       functions: [
         {
           name: 'splitText',
-          description: `Splits a ${type} string into segments of maximum 25 characters each`,
+          description: `Splits a ${type} string into segments of maximum 20 characters each`,
           parameters: {
             type: 'object',
             properties: {
@@ -1258,11 +1258,11 @@ Write in a professional, informative, and engaging style. The tone should be cle
                 type: 'array',
                 items: {
                   type: 'string',
-                  maxLength: 25,
-                  description: 'A segment of the text, maximum 25 characters',
+                  maxLength: 20,
+                  description: 'A segment of the text, maximum 20 characters',
                 },
                 description:
-                  'Array of text segments, each 25 characters or less',
+                  'Array of text segments, each 20 characters or less',
               },
             },
             required: ['segments'],

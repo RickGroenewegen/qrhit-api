@@ -3,10 +3,13 @@ import { PrismaClient } from '@prisma/client';
 import Logger from './logger';
 import Translation from './translation';
 import Order from './order';
+import Utils from './utils';
 import sharp from 'sharp';
 import axios from 'axios';
 import path from 'path';
 import fs from 'fs/promises';
+import cluster from 'cluster';
+import { CronJob } from 'cron';
 import { blue, red, yellow, white, green } from 'console-log-colors';
 
 interface ProductVariant {
@@ -68,6 +71,7 @@ export class MerchantCenterService {
   private logger: Logger;
   private translate: Translation;
   private order: Order;
+  private utils: Utils;
   private content: any; // Google Shopping Content API
   private merchantId: string;
   private auth: any;
@@ -106,7 +110,33 @@ export class MerchantCenterService {
     this.logger = new Logger();
     this.translate = new Translation();
     this.order = Order.getInstance();
+    this.utils = new Utils();
     this.merchantId = process.env.GOOGLE_MERCHANT_ID || '';
+
+    // Set up cron job to sync products at 4 AM every day
+    // Only run on primary cluster worker and main server
+    if (cluster.isPrimary) {
+      this.utils.isMainServer().then(async (isMainServer) => {
+        if (isMainServer) {
+          this.logger.log(
+            blue.bold('Setting up Merchant Center daily sync at 4 AM')
+          );
+          const job = new CronJob('0 4 * * *', async () => {
+            this.logger.log(
+              blue.bold('Running scheduled Merchant Center sync')
+            );
+            try {
+              await this.uploadFeaturedPlaylists();
+            } catch (error) {
+              this.logger.log(
+                red(`Scheduled Merchant Center sync failed: ${error}`)
+              );
+            }
+          });
+          job.start();
+        }
+      });
+    }
   }
 
   public static getInstance(): MerchantCenterService {

@@ -1265,17 +1265,17 @@ class Data {
 
     // Check if any word in the text is >= 25 characters
     const words = text.split(/\s+/);
-    const hasLongWord = words.some((word) => word.length >= 25);
+    const hasLongWord = words.some((word) => word.length >= 20);
 
     if (!hasLongWord) {
       return text;
     }
 
     // Found a long word, log it and split using ChatGPT
-    const longWords = words.filter((word) => word.length >= 25);
+    const longWords = words.filter((word) => word.length >= 20);
     this.logger.log(
       color.yellow.bold(
-        `Found long ${type} word(s) >= 25 characters: ${color.white.bold(
+        `Found long ${type} word(s) >= 20 characters: ${color.white.bold(
           longWords.join(', ')
         )} in "${color.white.bold(text)}"`
       )
@@ -1887,7 +1887,10 @@ class Data {
   ): Promise<boolean> {
     try {
       const sanitizedTitle = await this.sanitizeTitleOrArtist(name, 'title');
-      const sanitizedArtist = await this.sanitizeTitleOrArtist(artist, 'artist');
+      const sanitizedArtist = await this.sanitizeTitleOrArtist(
+        artist,
+        'artist'
+      );
 
       await this.prisma.track.update({
         where: { id },
