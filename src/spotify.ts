@@ -406,6 +406,9 @@ class Spotify {
         };
       }
 
+      // Track analytics for playlist retrieval
+      this.analytics.increaseCounter('spotify', 'playlist', 1);
+
       return {
         success: true,
         data: playlist,
@@ -791,6 +794,9 @@ class Spotify {
 
       this.cache.set(cacheKeyCount, allFormattedTracks.length.toString());
       this.cache.set(cacheKey, JSON.stringify(finalResult)); // Cache the final processed result
+
+      // Track analytics for tracks retrieval
+      this.analytics.increaseCounter('spotify', 'tracks', allFormattedTracks.length);
 
       return finalResult; // Return the processed result
     } catch (e: any) {
