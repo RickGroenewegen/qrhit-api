@@ -429,7 +429,7 @@ export class MerchantCenterService {
       // In development mode, skip actual API calls
       if (isDevelopment) {
         this.logger.log(
-          blue(
+          blue.bold(
             `🔨 DEV: Would upload ${white.bold(variant.slug)} [${white.bold(
               variant.type
             )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]`
@@ -524,8 +524,6 @@ export class MerchantCenterService {
       imageKey,
       variant.type
     );
-
-    console.log(111, productImage);
 
     // Check if we're using the fallback Spotify image (indicates generation failure)
     if (productImage.includes('scdn.co') || productImage.includes('spotify')) {
@@ -825,12 +823,26 @@ export class MerchantCenterService {
       const templateWidth = templateMetadata.width || 1200;
       const templateHeight = templateMetadata.height || 1200;
 
-      // Calculate overlay dimensions (place in bottom right, about 45% of the template size for bigger appearance)
+      // Calculate overlay dimensions
+      // For cards: place in top right, smaller size (80% of normal)
+      // For others: place in bottom right
+      const isCards = productType === 'physical';
+      const baseSizeMultiplier = 0.45;
+      const cardsSizeMultiplier = baseSizeMultiplier * 0.80;
+
       const overlaySize = Math.floor(
-        Math.min(templateWidth, templateHeight) * 0.45
+        Math.min(templateWidth, templateHeight) * (isCards ? cardsSizeMultiplier : baseSizeMultiplier)
       );
       const margin = Math.floor(Math.min(templateWidth, templateHeight) * 0.04);
       const borderWidth = 6;
+
+      // Determine position based on product type
+      const topPosition = isCards
+        ? margin
+        : templateHeight - overlaySize - margin;
+      const shadowTopPosition = isCards
+        ? margin + 4
+        : templateHeight - overlaySize - margin + 4;
 
       // Resize playlist image - add error handling
       let resizedPlaylistImage: Buffer;
@@ -871,14 +883,14 @@ export class MerchantCenterService {
             input: await sharp(borderedImage)
               .modulate({ brightness: 0.3 }) // Darken for shadow effect
               .toBuffer(),
-            top: templateHeight - overlaySize - margin + 4,
+            top: shadowTopPosition,
             left: templateWidth - overlaySize - margin + 4,
             blend: 'multiply',
           },
           // Main image on top
           {
             input: borderedImage,
-            top: templateHeight - overlaySize - margin,
+            top: topPosition,
             left: templateWidth - overlaySize - margin,
           },
         ])

@@ -19,7 +19,6 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   // Get Spotify authorization URL
   fastify.get('/spotify/auth-url', async (_request, reply) => {
     const authUrl = spotify.getAuthorizationUrl();
-    console.log(111, authUrl);
     reply.send({ success: true });
   });
 
