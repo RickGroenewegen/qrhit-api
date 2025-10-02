@@ -542,7 +542,7 @@ export default async function adminRoutes(
       if (!id || !artist || !name || !year || !spotifyLink || !youtubeLink) {
         return { success: false, error: 'Missing required fields' };
       }
-      const success = await data.updateTrack(
+      const result = await data.updateTrack(
         id,
         artist,
         name,
@@ -551,7 +551,7 @@ export default async function adminRoutes(
         youtubeLink,
         request.clientIp
       );
-      return { success };
+      return result;
     }
   );
 

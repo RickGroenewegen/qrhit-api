@@ -1943,7 +1943,7 @@ class Data {
     spotifyLink: string,
     youtubeLink: string,
     clientIp: string
-  ): Promise<boolean> {
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       const sanitizedTitle = await this.sanitizeTitleOrArtist(name, 'title');
       const sanitizedArtist = await this.sanitizeTitleOrArtist(
@@ -1965,9 +1965,15 @@ class Data {
       // Get the link again, but without the cache
       await this.getLink(id, clientIp, false);
       await this.checkUnfinalizedPayments();
-      return true;
-    } catch (error) {
-      return false;
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Failed to update track ${id}: ${error?.message}`)
+      );
+      return {
+        success: false,
+        error: error?.message || 'Unknown database error'
+      };
     }
   }
 
