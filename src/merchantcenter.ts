@@ -424,6 +424,19 @@ export class MerchantCenterService {
   ): Promise<string | null> {
     try {
       const product = await this.createMerchantProduct(variant);
+      const isDevelopment = process.env['ENVIRONMENT'] === 'development';
+
+      // In development mode, skip actual API calls
+      if (isDevelopment) {
+        this.logger.log(
+          blue(
+            `🔨 DEV: Would upload ${white.bold(variant.slug)} [${white.bold(
+              variant.type
+            )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]`
+          )
+        );
+        return product.id;
+      }
 
       // Check if product exists
       const existingProduct = await this.getProduct(product.id);
