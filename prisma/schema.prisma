@@ -413,6 +413,8 @@ model Track {
   @@index([isrc])
   @@index([artist, name])
   @@index([manuallyChecked, year, id])
+  @@index([youtubeLink])
+  @@fulltext([artist, name])
   @@map("tracks")
 }
 

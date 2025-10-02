@@ -1106,6 +1106,8 @@ class Data {
       clientName: string;
       uncheckedCount: number;
       paymentId: string;
+      totalPrice: number;
+      createdAt: Date;
     }>
   > {
     const result = await this.prisma.$queryRaw<any[]>`
@@ -1114,7 +1116,9 @@ class Data {
         pl.name as playlistName,
         p.fullname as clientName,
         COUNT(DISTINCT t.id) as uncheckedCount,
-        p.paymentId
+        p.paymentId,
+        p.totalPrice,
+        p.createdAt
       FROM tracks t
       INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId
       INNER JOIN playlists pl ON pht.playlistId = pl.id
@@ -1123,7 +1127,7 @@ class Data {
       WHERE t.manuallyChecked = false
       AND t.year > 0
       AND p.processedFirstTime = true
-      GROUP BY pl.id, pl.name, p.fullname, p.paymentId, p.createdAt
+      GROUP BY pl.id, pl.name, p.fullname, p.paymentId, p.totalPrice, p.createdAt
       ORDER BY p.createdAt ASC, pl.id ASC
     `;
 
@@ -1133,6 +1137,8 @@ class Data {
       clientName: row.clientName,
       uncheckedCount: Number(row.uncheckedCount),
       paymentId: row.paymentId,
+      totalPrice: Number(row.totalPrice),
+      createdAt: row.createdAt,
     }));
   }
 
@@ -1899,21 +1905,34 @@ class Data {
     searchTerm: string,
     missingYouTubeLink: boolean = false
   ): Promise<any[]> {
-    const tracks = await this.prisma.$queryRaw<any[]>`
-      SELECT id, artist, name, year, youtubeLink, spotifyLink
-      FROM tracks 
-      WHERE (
-        LOWER(artist) LIKE LOWER(${`%${searchTerm}%`})
-        OR LOWER(name) LIKE LOWER(${`%${searchTerm}%`})
-      )
-      ${
-        missingYouTubeLink
-          ? Prisma.sql`AND (youtubeLink IS NULL OR youtubeLink = '')`
-          : Prisma.sql``
-      }
-      LIMIT 10000
-    `;
-    return tracks;
+    // Use FULLTEXT search when there's a search term, otherwise regular query
+    if (searchTerm && searchTerm.trim().length > 0) {
+      const tracks = await this.prisma.$queryRaw<any[]>`
+        SELECT id, artist, name, year, youtubeLink, spotifyLink
+        FROM tracks
+        WHERE MATCH(artist, name) AGAINST (${searchTerm} IN BOOLEAN MODE)
+        ${
+          missingYouTubeLink
+            ? Prisma.sql`AND (youtubeLink IS NULL OR youtubeLink = '')`
+            : Prisma.sql``
+        }
+        LIMIT 100
+      `;
+      return tracks;
+    } else {
+      // If no search term, just return tracks filtered by youtubeLink
+      const tracks = await this.prisma.$queryRaw<any[]>`
+        SELECT id, artist, name, year, youtubeLink, spotifyLink
+        FROM tracks
+        ${
+          missingYouTubeLink
+            ? Prisma.sql`WHERE (youtubeLink IS NULL OR youtubeLink = '')`
+            : Prisma.sql`WHERE 1=1`
+        }
+        LIMIT 100
+      `;
+      return tracks;
+    }
   }
 
   public async updateTrack(
