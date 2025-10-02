@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import { color, blue, white } from 'console-log-colors';
 import Logger from './logger';
 import GeneratorQueue from './generatorQueue';
+import MusicFetchQueue from './musicfetchQueue';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
@@ -26,10 +27,12 @@ if (process.env['ENVIRONMENT'] !== 'development') {
 class QueueWorker {
   private logger = new Logger();
   private generatorQueue: GeneratorQueue;
+  private musicFetchQueue: MusicFetchQueue;
   private shutdownInProgress = false;
 
   constructor() {
     this.generatorQueue = GeneratorQueue.getInstance();
+    this.musicFetchQueue = MusicFetchQueue.getInstance();
     this.setupSignalHandlers();
   }
 
@@ -44,7 +47,10 @@ class QueueWorker {
       );
 
       try {
-        await this.generatorQueue.shutdown();
+        await Promise.all([
+          this.generatorQueue.shutdown(),
+          this.musicFetchQueue.close(),
+        ]);
         this.logger.log(color.green.bold('Worker shutdown complete'));
         process.exit(0);
       } catch (error) {
@@ -76,25 +82,40 @@ class QueueWorker {
 
     try {
       await this.generatorQueue.initializeWorkers(workerCount);
-      
+
+      // Start MusicFetch workers (1 worker to respect rate limits)
+      this.musicFetchQueue.startWorkers(1);
+
       this.logger.log(
         color.green.bold(
-          `Queue worker started successfully with ${white.bold(
+          `Queue workers started successfully with ${white.bold(
             workerCount.toString()
-          )} concurrent workers`
+          )} Generator workers and 1 MusicFetch worker`
         )
       );
 
       // Log queue status every 30 seconds
       setInterval(async () => {
         try {
-          const status = await this.generatorQueue.getQueueStatus();
+          const [generatorStatus, musicFetchStatus] = await Promise.all([
+            this.generatorQueue.getQueueStatus(),
+            this.musicFetchQueue.getQueueStatus(),
+          ]);
+
           this.logger.log(
-            blue.bold('Queue Status:') +
-            ` Waiting: ${white.bold(status.waiting.toString())}` +
-            ` | Active: ${white.bold(status.active.toString())}` +
-            ` | Completed: ${white.bold(status.completed.toString())}` +
-            ` | Failed: ${white.bold(status.failed.toString())}`
+            blue.bold('Generator Queue:') +
+            ` Waiting: ${white.bold(generatorStatus.waiting.toString())}` +
+            ` | Active: ${white.bold(generatorStatus.active.toString())}` +
+            ` | Completed: ${white.bold(generatorStatus.completed.toString())}` +
+            ` | Failed: ${white.bold(generatorStatus.failed.toString())}`
+          );
+
+          this.logger.log(
+            blue.bold('MusicFetch Queue:') +
+            ` Waiting: ${white.bold(musicFetchStatus.waiting.toString())}` +
+            ` | Active: ${white.bold(musicFetchStatus.active.toString())}` +
+            ` | Completed: ${white.bold(musicFetchStatus.completed.toString())}` +
+            ` | Failed: ${white.bold(musicFetchStatus.failed.toString())}`
           );
         } catch (error) {
           this.logger.log(

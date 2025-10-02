@@ -2259,6 +2259,104 @@ class Data {
       return null;
     }
   }
+
+  /**
+   * Get tracks that are missing MusicFetch links
+   * @param limit Maximum number of tracks to return
+   * @returns Array of tracks missing at least one platform link
+   */
+  public async getTracksWithoutMusicLinks(limit: number = 100): Promise<any[]> {
+    try {
+      const tracks = await this.prisma.track.findMany({
+        where: {
+          spotifyLink: { not: null },
+          musicFetchAttempts: { lt: 3 },
+          OR: [
+            { deezerLink: null },
+            { youtubeMusicLink: null },
+            { appleMusicLink: null },
+            { amazonMusicLink: null },
+            { tidalLink: null },
+          ],
+        },
+        select: {
+          id: true,
+          trackId: true,
+          name: true,
+          artist: true,
+          spotifyLink: true,
+          deezerLink: true,
+          youtubeMusicLink: true,
+          appleMusicLink: true,
+          amazonMusicLink: true,
+          tidalLink: true,
+          musicFetchAttempts: true,
+          musicFetchLastAttempt: true,
+        },
+        take: limit,
+        orderBy: {
+          musicFetchLastAttempt: 'asc', // Prioritize tracks never attempted or attempted longest ago
+        },
+      });
+
+      return tracks;
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error getting tracks without music links: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        )
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Update a track's MusicFetch platform links
+   * @param trackId The track ID
+   * @param links Object containing platform links
+   * @returns Success status
+   */
+  public async updateTrackMusicLinks(
+    trackId: number,
+    links: {
+      deezerLink?: string | null;
+      youtubeMusicLink?: string | null;
+      appleMusicLink?: string | null;
+      amazonMusicLink?: string | null;
+      tidalLink?: string | null;
+    }
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      await this.prisma.track.update({
+        where: { id: trackId },
+        data: {
+          deezerLink: links.deezerLink,
+          youtubeMusicLink: links.youtubeMusicLink,
+          appleMusicLink: links.appleMusicLink,
+          amazonMusicLink: links.amazonMusicLink,
+          tidalLink: links.tidalLink,
+          musicFetchLastAttempt: new Date(),
+          musicFetchAttempts: { increment: 1 },
+        },
+      });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating track music links: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        )
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
 }
 
 export default Data;

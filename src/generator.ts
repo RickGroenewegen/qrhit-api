@@ -447,6 +447,9 @@ class Generator {
 
     await this.data.storeTracks(playlist.id, playlist.playlistId, tracks);
 
+    // Trigger MusicFetch processing asynchronously (non-blocking)
+    this.triggerMusicFetchForPlaylist(playlist.id);
+
     this.logger.log(
       blue.bold(
         `Retrieving ${white.bold(
@@ -456,6 +459,35 @@ class Generator {
     );
     const dbTracks = await this.data.getTracks(playlist.id);
     playlist.numberOfTracks = dbTracks.length;
+  }
+
+  /**
+   * Trigger MusicFetch processing for a playlist asynchronously
+   * This runs in the background and doesn't block playlist generation
+   */
+  private triggerMusicFetchForPlaylist(playlistId: number): void {
+    if (!process.env['MUSICFETCH_API_KEY']) {
+      return; // Skip if API key not configured
+    }
+
+    // Import and run asynchronously without blocking
+    import('./musicfetch')
+      .then((module) => {
+        const musicFetch = module.default.getInstance();
+        // Process in background without waiting
+        musicFetch.processPlaylistTracks(playlistId).catch((error) => {
+          this.logger.log(
+            color.red.bold(
+              `Error processing MusicFetch for playlist ${playlistId}: ${error}`
+            )
+          );
+        });
+      })
+      .catch((error) => {
+        this.logger.log(
+          color.red.bold(`Error loading MusicFetch module: ${error}`)
+        );
+      });
   }
 
   private async generateQRCodes(

@@ -1119,4 +1119,58 @@ export default async function adminRoutes(
       }
     }
   );
+
+  // MusicFetch bulk action endpoints
+  fastify.get(
+    '/admin/tracks/missing-music-links',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { limit = 100 } = request.query;
+        const tracks = await data.getTracksWithoutMusicLinks(
+          parseInt(limit) || 100
+        );
+        reply.send({
+          success: true,
+          count: tracks.length,
+          tracks,
+        });
+      } catch (error: any) {
+        console.error('Error fetching tracks missing music links:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to fetch tracks',
+        });
+      }
+    }
+  );
+
+  fastify.post(
+    '/admin/tracks/fetch-music-links',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { trackIds } = request.body;
+
+        // Dynamically import MusicFetch
+        const MusicFetch = (await import('../musicfetch')).default;
+        const musicFetch = MusicFetch.getInstance();
+
+        // Process tracks in background
+        const result = await musicFetch.processBulkTracks(trackIds);
+
+        reply.send({
+          success: true,
+          message: 'MusicFetch processing started',
+          result,
+        });
+      } catch (error: any) {
+        console.error('Error processing MusicFetch bulk action:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to process MusicFetch bulk action',
+        });
+      }
+    }
+  );
 }
