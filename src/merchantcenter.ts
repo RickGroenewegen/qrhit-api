@@ -287,8 +287,10 @@ export class MerchantCenterService {
       const expectedProductIds: Set<string> = new Set();
 
       // Process each playlist and collect expected product IDs
-      for (const playlist of playlists) {
-        const productIds = await this.uploadPlaylist(playlist);
+      for (let i = 0; i < playlists.length; i++) {
+        const playlist = playlists[i];
+        const progress = ((i + 1) / playlists.length * 100).toFixed(1);
+        const productIds = await this.uploadPlaylist(playlist, progress);
         productIds.forEach((id) => expectedProductIds.add(id));
       }
 
@@ -329,9 +331,11 @@ export class MerchantCenterService {
 
   /**
    * Upload a single playlist with all its variants (digital, sheets, physical)
+   * @param playlist - The playlist to upload
+   * @param progress - Progress percentage string (e.g., "23.1")
    * @returns Array of product IDs that were created/updated
    */
-  private async uploadPlaylist(playlist: any): Promise<string[]> {
+  private async uploadPlaylist(playlist: any, progress?: string): Promise<string[]> {
     const productIds: string[] = [];
 
     // Get actual prices from OrderType like the summary component does
@@ -441,7 +445,7 @@ export class MerchantCenterService {
           genre: playlist.genre ? playlist.genre[`name_${locale}`] : undefined,
         };
 
-        const productId = await this.uploadProductVariant(variant);
+        const productId = await this.uploadProductVariant(variant, progress);
         if (productId) {
           productIds.push(productId);
           variantCount++;
@@ -459,10 +463,13 @@ export class MerchantCenterService {
 
   /**
    * Upload a single product variant to Google Merchant Center
+   * @param variant - The product variant to upload
+   * @param progress - Progress percentage string (e.g., "23.1")
    * @returns The product ID if successful, null otherwise
    */
   private async uploadProductVariant(
-    variant: ProductVariant
+    variant: ProductVariant,
+    progress?: string
   ): Promise<string | null> {
     try {
       const product = await this.createMerchantProduct(variant);
@@ -470,11 +477,12 @@ export class MerchantCenterService {
 
       // In development mode, skip actual API calls
       if (isDevelopment) {
+        const progressText = progress ? ` (${progress}%)` : '';
         this.logger.log(
           blue.bold(
             `🔨 DEV: Would upload ${white.bold(variant.slug)} [${white.bold(
               variant.type
-            )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]`
+            )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]${progressText}`
           )
         );
         return product.id;
@@ -501,11 +509,12 @@ export class MerchantCenterService {
         // Try update with the ID that Google returned
         try {
           await this.updateProduct(product, existingProduct.id || product.id);
+          const progressText = progress ? ` (${progress}%)` : '';
           this.logger.log(
             yellow(
               `↻ ${white.bold(variant.slug)} [${white.bold(
                 variant.type
-              )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]`
+              )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]${progressText}`
             )
           );
         } catch (updateError: any) {
@@ -518,22 +527,24 @@ export class MerchantCenterService {
       } else {
         // Insert new product
         await this.insertProduct(product);
+        const progressText = progress ? ` (${progress}%)` : '';
         this.logger.log(
           green.bold(
             `✓ ${white.bold(variant.slug)} [${white.bold(
               variant.type
-            )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]`
+            )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]${progressText}`
           )
         );
       }
 
       return product.id;
     } catch (error: any) {
+      const progressText = progress ? ` (${progress}%)` : '';
       this.logger.log(
         red(
           `✗ ${white.bold(variant.slug)} [${white.bold(
             variant.type
-          )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]: ${error.message || error}`
+          )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]: ${error.message || error}${progressText}`
         )
       );
       return null;
