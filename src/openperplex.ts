@@ -16,7 +16,7 @@ export class OpenPerplex {
     });
 
     try {
-      const response = await client.search({
+      const response = await client.answer({
         query: prompt,
         model: 'openai/gpt-4o-mini',
         temperature: 0.2,
