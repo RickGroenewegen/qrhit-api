@@ -174,20 +174,21 @@
                 <% if (php.logo && php.logo.length) { %>
                     <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
                 <% } %>
-                <% 
+                <%
                 // Determine QR background type - handle backward compatibility
                 let qrBgType = php.qrBackgroundType || (php.hideCircle ? 'none' : 'square');
+                let qrBgColor = php.qrBackgroundColor || '#ffffff';
                 %>
                 <% if (qrBgType === 'square') { %>
-                    <!-- White square background for QR code using SVG -->
+                    <!-- Square background for QR code using SVG -->
                     <svg style="position: absolute; width: 36.3mm; height: 36.3mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1;" xmlns="http://www.w3.org/2000/svg">
-                        <rect x="0" y="0" width="100%" height="100%" fill="white" />
+                        <rect x="0" y="0" width="100%" height="100%" fill="<%= qrBgColor %>" />
                     </svg>
                     <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="position: absolute; width: 32mm; height: 32mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2;">
                 <% } else if (qrBgType === 'circle') { %>
-                    <!-- White circle background for QR code using SVG -->
+                    <!-- Circle background for QR code using SVG -->
                     <svg style="position: absolute; width: 52mm; height: 52mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1;" xmlns="http://www.w3.org/2000/svg">
-                        <circle cx="50%" cy="50%" r="26mm" fill="white" />
+                        <circle cx="50%" cy="50%" r="26mm" fill="<%= qrBgColor %>" />
                     </svg>
                     <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="position: absolute; width: 36mm; height: 36mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2;">
                 <% } else { %>

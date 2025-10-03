@@ -686,6 +686,7 @@ class Data {
         payment_has_playlist.doubleSided,
         payment_has_playlist.eco,
         payment_has_playlist.qrColor,
+        payment_has_playlist.qrBackgroundColor,
         payment_has_playlist.hideCircle,
         payment_has_playlist.qrBackgroundType,
         payment_has_playlist.hideDomain,

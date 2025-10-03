@@ -804,6 +804,7 @@ class Mollie {
             doubleSided: item.doubleSided,
             eco: item.eco,
             qrColor: item.qrColor || '#000000',
+            qrBackgroundColor: item.qrBackgroundColor || '#ffffff',
             hideCircle: item.hideCircle,
             qrBackgroundType: item.qrBackgroundType || (item.hideCircle ? 'none' : 'square'),
             hideDomain: item.hideDomain,

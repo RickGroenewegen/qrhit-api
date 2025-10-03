@@ -473,6 +473,7 @@ model PaymentHasPlaylist {
   hideCircle                 Boolean  @default(false)
   qrBackgroundType           String   @default("square")
   qrColor                    String   @default("#000000")
+  qrBackgroundColor          String   @default("#ffffff")
   hideDomain                 Boolean  @default(false)
   price                      Float
   priceWithoutVAT            Float
