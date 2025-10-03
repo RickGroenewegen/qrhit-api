@@ -1249,6 +1249,7 @@ class Data {
     });
 
     if (currentTrack) {
+      // First, only fetch IDs and year to minimize data transfer
       const existingTracksByMetadata = await this.prisma.track.findMany({
         where: {
           artist: currentTrack.artist,
@@ -1263,69 +1264,90 @@ class Data {
         },
         select: {
           id: true,
-          artist: true,
-          name: true,
           year: true,
-          yearSource: true,
-          certainty: true,
-          reasoning: true,
-          deezerLink: true,
-          youtubeMusicLink: true,
-          appleMusicLink: true,
-          amazonMusicLink: true,
-          tidalLink: true,
         },
       });
 
       if (existingTracksByMetadata.length === 1) {
-        // If only one match found, use it
-        const track = existingTracksByMetadata[0];
-        await this.prisma.track.update({
-          where: { id: trackId },
-          data: {
-            year: track.year,
-            yearSource: 'otherTrack_metadata_' + track.yearSource,
-            certainty: track.certainty,
-            reasoning: track.reasoning,
-            manuallyChecked: true,
-            deezerLink: track.deezerLink,
-            youtubeMusicLink: track.youtubeMusicLink,
-            appleMusicLink: track.appleMusicLink,
-            amazonMusicLink: track.amazonMusicLink,
-            tidalLink: track.tidalLink,
+        // Only one match found, fetch full track details
+        const matchedTrack = await this.prisma.track.findUnique({
+          where: { id: existingTracksByMetadata[0].id },
+          select: {
+            year: true,
+            yearSource: true,
+            certainty: true,
+            reasoning: true,
+            deezerLink: true,
+            youtubeMusicLink: true,
+            appleMusicLink: true,
+            amazonMusicLink: true,
+            tidalLink: true,
           },
         });
-        return { wasUpdated: true, method: 'artistTitle' };
+
+        if (matchedTrack) {
+          await this.prisma.track.update({
+            where: { id: trackId },
+            data: {
+              year: matchedTrack.year,
+              yearSource: 'otherTrack_metadata_' + matchedTrack.yearSource,
+              certainty: matchedTrack.certainty,
+              reasoning: matchedTrack.reasoning,
+              manuallyChecked: true,
+              deezerLink: matchedTrack.deezerLink,
+              youtubeMusicLink: matchedTrack.youtubeMusicLink,
+              appleMusicLink: matchedTrack.appleMusicLink,
+              amazonMusicLink: matchedTrack.amazonMusicLink,
+              tidalLink: matchedTrack.tidalLink,
+            },
+          });
+          return { wasUpdated: true, method: 'artistTitle' };
+        }
       } else if (existingTracksByMetadata.length > 1) {
         // Check if all matches have the same year
         const years = new Set(existingTracksByMetadata.map((t) => t.year));
         if (years.size === 1) {
-          // All matches have the same year, use the first one
-          const track = existingTracksByMetadata[0];
-          await this.prisma.track.update({
-            where: { id: trackId },
-            data: {
-              year: track.year,
-              yearSource: 'otherTrack_metadata_multiple_' + track.yearSource,
-              certainty: track.certainty,
-              reasoning: track.reasoning,
-              manuallyChecked: true,
-              deezerLink: track.deezerLink,
-              youtubeMusicLink: track.youtubeMusicLink,
-              appleMusicLink: track.appleMusicLink,
-              amazonMusicLink: track.amazonMusicLink,
-              tidalLink: track.tidalLink,
+          // All matches have the same year, fetch full details for the first one
+          const matchedTrack = await this.prisma.track.findUnique({
+            where: { id: existingTracksByMetadata[0].id },
+            select: {
+              year: true,
+              yearSource: true,
+              certainty: true,
+              reasoning: true,
+              deezerLink: true,
+              youtubeMusicLink: true,
+              appleMusicLink: true,
+              amazonMusicLink: true,
+              tidalLink: true,
             },
           });
-          return { wasUpdated: true, method: 'artistTitle_multiple' };
+
+          if (matchedTrack) {
+            await this.prisma.track.update({
+              where: { id: trackId },
+              data: {
+                year: matchedTrack.year,
+                yearSource: 'otherTrack_metadata_multiple_' + matchedTrack.yearSource,
+                certainty: matchedTrack.certainty,
+                reasoning: matchedTrack.reasoning,
+                manuallyChecked: true,
+                deezerLink: matchedTrack.deezerLink,
+                youtubeMusicLink: matchedTrack.youtubeMusicLink,
+                appleMusicLink: matchedTrack.appleMusicLink,
+                amazonMusicLink: matchedTrack.amazonMusicLink,
+                tidalLink: matchedTrack.tidalLink,
+              },
+            });
+            return { wasUpdated: true, method: 'artistTitle_multiple' };
+          }
         } else {
           // Multiple matches with different years - don't update but notify
-          const firstTrack = existingTracksByMetadata[0];
           this.logger.log(
             color.yellow.bold(
               `Same track with different years found (${color.white.bold(
-                firstTrack.artist
-              )} - ${color.white.bold(firstTrack.name)}).`
+                currentTrack.artist
+              )} - ${color.white.bold(currentTrack.name)}).`
             )
           );
           console.log(existingTracksByMetadata);
