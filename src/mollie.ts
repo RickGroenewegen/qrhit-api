@@ -498,10 +498,46 @@ class Mollie {
             printApiUploaded: true,
             printApiUploadResponse: true,
             type: true,
+            // QR Code customization
+            qrBackgroundType: true,
+            qrColor: true,
+            qrBackgroundColor: true,
+            selectedFont: true,
+            selectedFontSize: true,
+            emoji: true,
+            // Front side color/gradient
+            backgroundFrontType: true,
+            backgroundFrontColor: true,
+            useFrontGradient: true,
+            gradientFrontColor: true,
+            gradientFrontDegrees: true,
+            gradientFrontPosition: true,
+            // Back side fields
+            backgroundBackType: true,
+            backgroundBack: true,
+            backgroundBackColor: true,
+            fontColor: true,
+            useGradient: true,
+            gradientBackgroundColor: true,
+            gradientDegrees: true,
+            gradientPosition: true,
             playlist: {
               select: {
                 name: true,
                 playlistId: true,
+                tracks: {
+                  select: {
+                    track: {
+                      select: {
+                        trackId: true,
+                      },
+                    },
+                  },
+                  orderBy: {
+                    order: 'asc',
+                  },
+                  take: 1,
+                },
               },
             },
           },
