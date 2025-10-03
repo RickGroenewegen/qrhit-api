@@ -280,6 +280,14 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         filename,
         backgroundType
       );
+    } else if (type == 'backgroundBack') {
+      // Upload background for the back side of cards
+      const backgroundType = qrBackgroundType || 'square';
+      result = await designer.uploadBackgroundBackImage(
+        image,
+        filename,
+        backgroundType
+      );
     } else if (type == 'logo') {
       result = await designer.uploadLogoImage(image, filename);
     }

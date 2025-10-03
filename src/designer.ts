@@ -155,6 +155,119 @@ class Designer {
   }
 
   /**
+   * Uploads a background image for the back side from a base64 string
+   * @param base64Image The base64 encoded image string
+   * @param filename Optional filename, if not provided a nanoid will be used
+   * @param qrBackgroundType Type of QR background: 'none', 'circle', 'square' (default: 'square')
+   * @returns Object with success status, filename and file path
+   */
+  public async uploadBackgroundBackImage(
+    base64Image: string,
+    filename?: string,
+    qrBackgroundType: 'none' | 'circle' | 'square' = 'square'
+  ): Promise<{
+    success: boolean;
+    filename?: string;
+    filePath?: string;
+    error?: string;
+  }> {
+    try {
+      // Validate the base64 string
+      if (!base64Image) {
+        return { success: false, error: 'No image provided' };
+      }
+
+      let imageType: string;
+      let base64Data: string;
+
+      // Handle both full data URI and raw base64 string
+      if (base64Image.includes('base64,')) {
+        // Extract the actual base64 data and determine the file type
+        const matches = base64Image.match(
+          /^data:image\/([a-zA-Z]+);base64,(.+)$/
+        );
+        if (!matches || matches.length !== 3) {
+          return { success: false, error: 'Invalid image data format' };
+        }
+        imageType = matches[1];
+        base64Data = matches[2];
+      } else {
+        // Assume it's a raw base64 string and try to determine format from content
+        // Default to png if we can't determine
+        imageType = 'png';
+        base64Data = base64Image;
+      }
+
+      // Generate unique filename using utils.generateRandomString
+      const uniqueId = this.utils.generateRandomString(32); // Generate a 32-character unique ID
+      const actualFilename = `${uniqueId}.png`.toLowerCase(); // Always use PNG format
+
+      const filePath = path.join(
+        process.env['PUBLIC_DIR'] as string,
+        'background',
+        actualFilename
+      );
+
+      try {
+        // Create buffer from base64
+        const buffer = Buffer.from(base64Data, 'base64');
+
+        // Process the image with sharp
+        // Resize to 1000x1000 and convert to PNG with compression
+        let sharpInstance = sharp(buffer).resize(1000, 1000, { fit: 'cover' });
+
+        // Build composite layers
+        const compositeOptions: any[] = [
+          {
+            input: {
+              create: {
+                width: 1000,
+                height: 1000,
+                channels: 4,
+                background: { r: 0, g: 0, b: 0, alpha: 0 },
+              },
+            },
+            blend: 'dest-over',
+          },
+        ];
+
+        const processedBuffer = await sharpInstance
+          .composite(compositeOptions)
+          .png({ compressionLevel: 9, quality: 90 }) // Convert to PNG with high compression
+          .toBuffer();
+
+        // Write the processed file
+        await fs.writeFile(filePath, processedBuffer);
+
+        this.logger.log(
+          color.green.bold(
+            `Background back image processed and uploaded successfully: ${white.bold(
+              filePath
+            )}`
+          )
+        );
+
+        // Return the relative path that would be accessible from the web
+        const relativePath = `/public/background/${actualFilename}`;
+        return {
+          success: true,
+          filename: actualFilename,
+        };
+      } catch (writeError) {
+        this.logger.log(
+          color.red.bold(`Error writing image file: ${white.bold(writeError)}`)
+        );
+        return { success: false, error: `Error writing file: ${writeError}` };
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error uploading background back image: ${white.bold(error)}`)
+      );
+      return { success: false, error: String(error) };
+    }
+  }
+
+  /**
    * Uploads a logo image from a base64 string
    * @param base64Image The base64 encoded image string
    * @param filename Optional filename, if not provided a random string will be used
@@ -252,7 +365,7 @@ class Designer {
     try {
       // Get card design data from PaymentHasPlaylist
       const cardDesign = await this.prisma.$queryRaw<any[]>`
-        SELECT 
+        SELECT
           php.background,
           php.logo,
           php.emoji,
@@ -262,6 +375,13 @@ class Designer {
           php.doubleSided,
           php.eco,
           php.type,
+          php.backgroundBack,
+          php.backgroundBackColor,
+          php.fontColor,
+          php.useGradient,
+          php.gradientBackgroundColor,
+          php.gradientDegrees,
+          php.gradientPosition,
           pl.name as playlistName,
           pl.numberOfTracks
         FROM payments p
@@ -326,6 +446,13 @@ class Designer {
       qrColor?: string;
       doubleSided?: boolean;
       eco?: boolean;
+      backgroundBack?: string;
+      backgroundBackColor?: string;
+      fontColor?: string;
+      useGradient?: boolean;
+      gradientBackgroundColor?: string;
+      gradientDegrees?: number;
+      gradientPosition?: number;
     }
   ): Promise<boolean> {
     try {
@@ -381,6 +508,13 @@ class Designer {
           qrColor: design.qrColor,
           doubleSided: design.doubleSided,
           eco: design.eco,
+          backgroundBack: design.backgroundBack,
+          backgroundBackColor: design.backgroundBackColor,
+          fontColor: design.fontColor,
+          useGradient: this.utils.parseBoolean(design.useGradient),
+          gradientBackgroundColor: design.gradientBackgroundColor,
+          gradientDegrees: design.gradientDegrees,
+          gradientPosition: design.gradientPosition,
         },
       });
 

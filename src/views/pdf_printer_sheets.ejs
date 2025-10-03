@@ -117,6 +117,30 @@
         align-items: center;
         text-align: center;
         height: 60mm;
+        position: relative;
+        overflow: hidden;
+        <% if (php.useGradient) {
+            const firstStop = Math.max(0, php.gradientPosition - 50);
+            const secondStop = Math.min(100, php.gradientPosition + 50);
+            const bgColor = php.backgroundBackColor || '#ffffff';
+            const gradColor = php.gradientBackgroundColor || '#ffffff';
+            const degrees = php.gradientDegrees || 180;
+        %>
+        background: linear-gradient(<%= degrees %>deg, <%= bgColor %> <%= firstStop %>%, <%= gradColor %> <%= secondStop %>%);
+        <% } else if (php.backgroundBackColor) { %>
+        background-color: <%= php.backgroundBackColor %>;
+        <% } else { %>
+        background-color: #ffffff;
+        <% } %>
+    }
+    .background-image-back {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 0;
     }
     .text {
         font-size: 12px;
@@ -166,8 +190,8 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                 // Render the cards in this row
                 rowIndices.forEach(function(i) { %>
                     <% if (i !== null) { %>
-                        <div class="card front">
-                            <% if (!eco) { %>
+                        <div class="card front" style="<%= !eco && php.backgroundFrontType === 'solid' ? (php.useFrontGradient ? 'background: linear-gradient(' + (php.gradientFrontDegrees || 180) + 'deg, ' + (php.backgroundFrontColor || '#ffffff') + ' ' + Math.max(0, (php.gradientFrontPosition || 50) - 50) + '%, ' + (php.gradientFrontColor || '#ffffff') + ' ' + Math.min(100, (php.gradientFrontPosition || 50) + 50) + '%);' : 'background: ' + (php.backgroundFrontColor || '#ffffff') + ';') : '' %>">
+                            <% if (!eco && php.backgroundFrontType !== 'solid') { %>
                                 <% if (php.background && php.background.length) { %>
                                     <img class="background-image" src="<%= process.env['API_URI'] %>/public/background/<%= php.background %>" alt="Card Background">
                                 <% } else { %>
@@ -236,20 +260,23 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
             rowIndices.forEach(function(i) { %>
                 <% if (i !== null) { %>
                     <div class="card back" style="position: relative;">
-                        <div class="text" style="margin-top: 0mm;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;">
+                        <% if (php.backgroundBack && php.backgroundBack.length) { %>
+                            <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
+                        <% } %>
+                        <div class="text" style="margin-top: 0mm;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;">
                             <%= tracks[i].artist %>
                             <% if (tracks[i].extraArtistAttribute && tracks[i].extraArtistAttribute.length > 0) { %>
                                 <div style="font-family: Arial, sans-serif; font-size: 10px; color: #666; margin-top: 1mm;"><%= tracks[i].extraArtistAttribute %></div>
                             <% } %>
                         </div>
-                        <div class="text" style="margin-top: <% if (tracks[i].extraArtistAttribute && tracks[i].extraArtistAttribute.length > 0) { %>3mm<% } else { %>5mm<% } %>;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding-left:2mm;padding-right:2mm;"><%= tracks[i].year %></div>
-                        <div class="text" style="margin-top: <% if (tracks[i].extraNameAttribute && tracks[i].extraNameAttribute.length > 0) { %>5mm<% } else { %>7mm<% } %>;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;">
+                        <div class="text" style="margin-top: <% if (tracks[i].extraArtistAttribute && tracks[i].extraArtistAttribute.length > 0) { %>3mm<% } else { %>5mm<% } %>;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding-left:2mm;padding-right:2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;"><%= tracks[i].year %></div>
+                        <div class="text" style="margin-top: <% if (tracks[i].extraNameAttribute && tracks[i].extraNameAttribute.length > 0) { %>5mm<% } else { %>7mm<% } %>;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;">
                             <%= tracks[i].name %>
                             <% if (tracks[i].extraNameAttribute && tracks[i].extraNameAttribute.length > 0) { %>
                                 <div style="font-family: Arial, sans-serif; font-size: 10px; color: #666; margin-top: 1mm;"><%= tracks[i].extraNameAttribute %></div>
                             <% } %>
                         </div>
-                        <div class="text" style="margin-top: 5mm;font-size:11px;color:#b0b0b0;">                          
+                        <div class="text" style="margin-top: 5mm;font-size:11px;color:<%= php.fontColor || '#b0b0b0' %>;position:relative;z-index:1;">
                             <% if (!playlist.hideDomain && !php.hideDomain) { %>
                                  <% if (php.emoji && php.emoji.length) { %>
                                     <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
@@ -258,9 +285,9 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                                 <% if (php.emoji && php.emoji.length) { %>
                                     <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
                                 <% } %>
-                            <% } %>                            
+                            <% } %>
                         </div>
-                        <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 8px; color: #c0c0c0; font-family: Arial, sans-serif;">#<%= php.paymentHasPlaylistId %></div>
+                        <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 8px; color: <%= php.fontColor || '#c0c0c0' %>; font-family: Arial, sans-serif;">#<%= php.paymentHasPlaylistId %></div>
                     </div>
                 <% } else { %>
                     <div class="card back"></div>

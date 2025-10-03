@@ -816,6 +816,22 @@ class Mollie {
             logo: item.logo || '',
             selectedFont: item.selectedFont || 'Arial, sans-serif',
             selectedFontSize: item.selectedFontSize || '16px',
+            // Front side color/gradient
+            backgroundFrontType: item.backgroundFrontType || 'image',
+            backgroundFrontColor: item.backgroundFrontColor || '#ffffff',
+            useFrontGradient: item.useFrontGradient || false,
+            gradientFrontColor: item.gradientFrontColor || '#ffffff',
+            gradientFrontDegrees: item.gradientFrontDegrees || 180,
+            gradientFrontPosition: item.gradientFrontPosition || 50,
+            // Back side
+            backgroundBackType: item.backgroundBackType || 'image',
+            backgroundBack: item.backgroundBack || '',
+            backgroundBackColor: item.backgroundBackColor || '#ffffff',
+            fontColor: item.fontColor || '#000000',
+            useGradient: item.useGradient || false,
+            gradientBackgroundColor: item.gradientBackgroundColor || '#ffffff',
+            gradientDegrees: item.gradientDegrees || 180,
+            gradientPosition: item.gradientPosition || 50,
           };
         })
       );

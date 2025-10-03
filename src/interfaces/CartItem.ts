@@ -23,4 +23,20 @@ export interface CartItem {
   logo?: string;
   selectedFont?: string;
   selectedFontSize?: string;
+  // Front side color/gradient
+  backgroundFrontType?: 'solid' | 'image';
+  backgroundFrontColor?: string;
+  useFrontGradient?: boolean;
+  gradientFrontColor?: string;
+  gradientFrontDegrees?: number;
+  gradientFrontPosition?: number;
+  // Back side
+  backgroundBackType?: 'solid' | 'image';
+  backgroundBack?: string;
+  backgroundBackColor?: string;
+  fontColor?: string;
+  useGradient?: boolean;
+  gradientBackgroundColor?: string;
+  gradientDegrees?: number;
+  gradientPosition?: number;
 }

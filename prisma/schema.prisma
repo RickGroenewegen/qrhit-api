@@ -490,6 +490,23 @@ model PaymentHasPlaylist {
   logo                   String?
   selectedFont           String?   @default("Arial, sans-serif")
   selectedFontSize       String?   @default("16px")
+  // Front side color/gradient fields
+  backgroundFrontType    String?   @default("image") // 'solid' or 'image'
+  backgroundFrontColor   String?   @default("#ffffff")
+  useFrontGradient       Boolean   @default(false)
+  gradientFrontColor     String?   @default("#ffffff")
+  gradientFrontDegrees   Int       @default(180)
+  gradientFrontPosition  Int       @default(50)
+  // Back side fields
+  backgroundBackType     String?   @default("image") // 'solid' or 'image'
+  backgroundBack         String?
+  backgroundBackColor    String?   @default("#ffffff")
+  fontColor              String?   @default("#000000")
+  useGradient            Boolean   @default(false)
+  gradientBackgroundColor String?  @default("#ffffff")
+  gradientDegrees        Int       @default(180)
+  gradientPosition       Int       @default(50) // 0-100: controls color stop positions
+  sameAsFront            Boolean   @default(false) // Copy front side settings to back
   orderType              OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
 
   @@unique([paymentId, playlistId])

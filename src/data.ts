@@ -690,6 +690,20 @@ class Data {
         payment_has_playlist.qrBackgroundType,
         payment_has_playlist.hideDomain,
         payment_has_playlist.subType,
+        payment_has_playlist.backgroundFrontType,
+        payment_has_playlist.backgroundFrontColor,
+        payment_has_playlist.useFrontGradient,
+        payment_has_playlist.gradientFrontColor,
+        payment_has_playlist.gradientFrontDegrees,
+        payment_has_playlist.gradientFrontPosition,
+        payment_has_playlist.backgroundBackType,
+        payment_has_playlist.backgroundBack,
+        payment_has_playlist.backgroundBackColor,
+        payment_has_playlist.fontColor,
+        payment_has_playlist.useGradient,
+        payment_has_playlist.gradientBackgroundColor,
+        payment_has_playlist.gradientDegrees,
+        payment_has_playlist.gradientPosition,
         playlists.numberOfTracks,
         payment_has_playlist.type AS orderType
       FROM 
@@ -1200,6 +1214,11 @@ class Data {
         yearSource: true,
         certainty: true,
         reasoning: true,
+        deezerLink: true,
+        youtubeMusicLink: true,
+        appleMusicLink: true,
+        amazonMusicLink: true,
+        tidalLink: true,
       },
     });
 
@@ -1212,6 +1231,11 @@ class Data {
           certainty: existingTrackByISRC.certainty,
           reasoning: existingTrackByISRC.reasoning,
           manuallyChecked: true,
+          deezerLink: existingTrackByISRC.deezerLink,
+          youtubeMusicLink: existingTrackByISRC.youtubeMusicLink,
+          appleMusicLink: existingTrackByISRC.appleMusicLink,
+          amazonMusicLink: existingTrackByISRC.amazonMusicLink,
+          tidalLink: existingTrackByISRC.tidalLink,
         },
       });
       return { wasUpdated: true, method: 'isrc' };
@@ -1244,6 +1268,11 @@ class Data {
           yearSource: true,
           certainty: true,
           reasoning: true,
+          deezerLink: true,
+          youtubeMusicLink: true,
+          appleMusicLink: true,
+          amazonMusicLink: true,
+          tidalLink: true,
         },
       });
 
@@ -1258,6 +1287,11 @@ class Data {
             certainty: track.certainty,
             reasoning: track.reasoning,
             manuallyChecked: true,
+            deezerLink: track.deezerLink,
+            youtubeMusicLink: track.youtubeMusicLink,
+            appleMusicLink: track.appleMusicLink,
+            amazonMusicLink: track.amazonMusicLink,
+            tidalLink: track.tidalLink,
           },
         });
         return { wasUpdated: true, method: 'artistTitle' };
@@ -1275,6 +1309,11 @@ class Data {
               certainty: track.certainty,
               reasoning: track.reasoning,
               manuallyChecked: true,
+              deezerLink: track.deezerLink,
+              youtubeMusicLink: track.youtubeMusicLink,
+              appleMusicLink: track.appleMusicLink,
+              amazonMusicLink: track.amazonMusicLink,
+              tidalLink: track.tidalLink,
             },
           });
           return { wasUpdated: true, method: 'artistTitle_multiple' };
