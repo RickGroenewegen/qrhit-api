@@ -125,7 +125,7 @@
             <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" style="position: absolute; width: 32mm; height: 32mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2;">
         <% } else if (qrBgType === 'circle') { %>
             <!-- Circle background for QR code using SVG -->
-            <svg style="position: absolute; width: 48mm; height: 48mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1;" xmlns="http://www.w3.org/2000/svg">
+            <svg style="position: absolute; width: 52mm; height: 52mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1;" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="50%" cy="50%" r="26mm" fill="<%= qrBgColor %>" />
             </svg>
             <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" style="position: absolute; width: 36mm; height: 36mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2;">
