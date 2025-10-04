@@ -379,6 +379,7 @@ class Designer {
           php.doubleSided,
           php.eco,
           php.type,
+          php.subType,
           php.backgroundFrontType,
           php.backgroundFrontColor,
           php.useFrontGradient,
