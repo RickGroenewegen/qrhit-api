@@ -363,7 +363,7 @@ class Designer {
     playlistId: string
   ): Promise<any> {
     try {
-      // Get card design data from PaymentHasPlaylist
+      // Get card design data from PaymentHasPlaylist (ALL design fields)
       const cardDesign = await this.prisma.$queryRaw<any[]>`
         SELECT
           php.background,
@@ -371,11 +371,22 @@ class Designer {
           php.emoji,
           php.hideDomain,
           php.hideCircle,
+          php.qrBackgroundType,
           php.qrColor,
+          php.qrBackgroundColor,
+          php.selectedFont,
+          php.selectedFontSize,
           php.doubleSided,
           php.eco,
           php.type,
+          php.backgroundFrontType,
+          php.backgroundFrontColor,
+          php.useFrontGradient,
+          php.gradientFrontColor,
+          php.gradientFrontDegrees,
+          php.gradientFrontPosition,
           php.backgroundBack,
+          php.backgroundBackType,
           php.backgroundBackColor,
           php.fontColor,
           php.useGradient,
@@ -383,7 +394,8 @@ class Designer {
           php.gradientDegrees,
           php.gradientPosition,
           pl.name as playlistName,
-          pl.numberOfTracks
+          pl.numberOfTracks,
+          pl.playlistId
         FROM payments p
         JOIN users u ON p.userId = u.id
         JOIN payment_has_playlist php ON php.paymentId = p.id
@@ -443,10 +455,21 @@ class Designer {
       emoji?: string;
       hideDomain?: boolean;
       hideCircle?: boolean;
+      qrBackgroundType?: 'none' | 'circle' | 'square';
       qrColor?: string;
+      qrBackgroundColor?: string;
+      selectedFont?: string;
+      selectedFontSize?: string;
       doubleSided?: boolean;
       eco?: boolean;
+      backgroundFrontType?: 'solid' | 'image';
+      backgroundFrontColor?: string;
+      useFrontGradient?: boolean;
+      gradientFrontColor?: string;
+      gradientFrontDegrees?: number;
+      gradientFrontPosition?: number;
       backgroundBack?: string;
+      backgroundBackType?: 'solid' | 'image';
       backgroundBackColor?: string;
       fontColor?: string;
       useGradient?: boolean;
@@ -505,10 +528,21 @@ class Designer {
           emoji: design.emoji,
           hideDomain: this.utils.parseBoolean(design.hideDomain),
           hideCircle: design.hideCircle,
+          qrBackgroundType: design.qrBackgroundType,
           qrColor: design.qrColor,
+          qrBackgroundColor: design.qrBackgroundColor,
+          selectedFont: design.selectedFont,
+          selectedFontSize: design.selectedFontSize,
           doubleSided: design.doubleSided,
           eco: design.eco,
+          backgroundFrontType: design.backgroundFrontType,
+          backgroundFrontColor: design.backgroundFrontColor,
+          useFrontGradient: this.utils.parseBoolean(design.useFrontGradient),
+          gradientFrontColor: design.gradientFrontColor,
+          gradientFrontDegrees: design.gradientFrontDegrees,
+          gradientFrontPosition: design.gradientFrontPosition,
           backgroundBack: design.backgroundBack,
+          backgroundBackType: design.backgroundBackType,
           backgroundBackColor: design.backgroundBackColor,
           fontColor: design.fontColor,
           useGradient: this.utils.parseBoolean(design.useGradient),

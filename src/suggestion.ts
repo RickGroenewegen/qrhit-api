@@ -386,9 +386,35 @@ class Suggestion {
         return false;
       }
 
+      // Get paymentHasPlaylistId and type independently (needed even if no text corrections)
+      const phpInfo = await this.prisma.$queryRaw<any[]>`
+        SELECT
+          php.id AS paymentHasPlaylistId,
+          php.type AS playlistType
+        FROM payments p
+        JOIN users u ON p.userId = u.id
+        JOIN payment_has_playlist php ON php.paymentId = p.id
+        JOIN playlists pl ON pl.id = php.playlistId
+        WHERE p.paymentId = ${paymentId}
+        AND u.hash = ${userHash}
+        AND pl.playlistId = ${playlistId}
+        LIMIT 1
+      `;
+
+      if (phpInfo.length === 0) {
+        this.logger.log(
+          color.red.bold('PaymentHasPlaylist not found for correction')
+        );
+        return false;
+      }
+
+      const paymentHasPlaylistId = phpInfo[0].paymentHasPlaylistId;
+      const playlistType = phpInfo[0].playlistType;
+      const hasPhysicalPlaylists = playlistType === 'physical';
+
       // Get all suggestions for this payment/playlist combination
       const suggestions = await this.prisma.$queryRaw<any[]>`
-        SELECT 
+        SELECT
           t.id as trackId,
           t.name as originalName,
           t.artist as originalArtist,
@@ -396,8 +422,6 @@ class Suggestion {
           us.name as suggestedName,
           us.artist as suggestedArtist,
           us.year as suggestedYear,
-          php.id AS paymentHasPlaylistId,
-          php.type AS playlistType,
           us.extraNameAttribute as suggestedExtraNameAttribute,
           us.extraArtistAttribute as suggestedExtraArtistAttribute
         FROM payments p
@@ -605,94 +629,94 @@ class Suggestion {
         }
       }
 
-      let hasPhysicalPlaylists = suggestions.some(
-        (suggestion) => suggestion.playlistType === 'physical'
-      );
-
-      // Execute all updates if there are any
+      // Execute all text correction updates if there are any
       if (updateQueries.length > 0) {
         // Run updates in series to avoid exhausting the connection pool
         for (const query of updateQueries) {
           await query;
         }
-        // Update payment status
-        await this.prisma.$executeRaw`
-          UPDATE payment_has_playlist
-          SET suggestionsPending = false
-          WHERE id = ${suggestions[0].paymentHasPlaylistId}
-        `;
-        // Delete all user suggestions for this payment
-        await this.prisma.$executeRaw`
-          DELETE FROM usersuggestions
-          WHERE userId = (SELECT id FROM users WHERE hash = ${userHash})
-          AND trackId IN (
-            SELECT id
-            FROM tracks
-            WHERE id IN (
-              SELECT trackId
-              FROM playlist_has_tracks
-              WHERE playlistId = (
-                SELECT id
-                FROM playlists
-                WHERE playlistId = ${playlistId}
-              )
-            )
-          )
-        `;
 
         this.logger.log(
           color.green.bold(
             `Successfully processed ${color.white.bold(
               updateQueries.length
-            )} corrections`
+            )} text corrections`
+          )
+        );
+      } else {
+        this.logger.log(
+          color.yellow.bold('No text corrections detected')
+        );
+      }
+
+      // Always clear suggestionsPending flag (using the independently queried paymentHasPlaylistId)
+      await this.prisma.$executeRaw`
+        UPDATE payment_has_playlist
+        SET suggestionsPending = false
+        WHERE id = ${paymentHasPlaylistId}
+      `;
+
+      // Delete all user suggestions for this payment (if any exist)
+      await this.prisma.$executeRaw`
+        DELETE FROM usersuggestions
+        WHERE userId = (SELECT id FROM users WHERE hash = ${userHash})
+        AND trackId IN (
+          SELECT id
+          FROM tracks
+          WHERE id IN (
+            SELECT trackId
+            FROM playlist_has_tracks
+            WHERE playlistId = (
+              SELECT id
+              FROM playlists
+              WHERE playlistId = ${playlistId}
+            )
+          )
+        )
+      `;
+
+      // ALWAYS regenerate PDFs when andSend=true (even if only design changes, no text corrections)
+      if (andSend) {
+        this.logger.log(
+          color.blue.bold(
+            'Regenerating PDFs (may include design changes from correction form)'
           )
         );
 
-        if (andSend) {
-          // set userAgreed van paymentByPlaylist op true
-          if (hasPhysicalPlaylists) {
-            await this.prisma.paymentHasPlaylist.update({
-              where: {
-                id: suggestions[0].paymentHasPlaylistId,
-              },
-              data: {
-                eligableForPrinter: true,
-                eligableForPrinterAt: new Date(),
-              },
-            });
-          }
-
-          await this.mollie.clearPDFs(paymentId);
-          await this.generator.queueGenerate(
-            paymentId,
-            '',
-            '',
-            true, // Force finalize
-            true, // Skip main mail
-            false, // Only produt mail
-            '', // User agent
-            // Callback data to check printer readiness after generation completes
-            hasPhysicalPlaylists
-              ? {
-                  type: 'checkPrinter',
-                  paymentId,
-                  clientIp,
-                }
-              : undefined
-          );
+        // Set eligableForPrinter for physical playlists
+        if (hasPhysicalPlaylists) {
+          await this.prisma.paymentHasPlaylist.update({
+            where: {
+              id: paymentHasPlaylistId,
+            },
+            data: {
+              eligableForPrinter: true,
+              eligableForPrinterAt: new Date(),
+            },
+          });
         }
-      } else {
-        this.logger.log(
-          color.yellow.bold('No changes detected in suggestions')
+
+        // Clear old PDFs and regenerate
+        await this.mollie.clearPDFs(paymentId);
+        await this.generator.queueGenerate(
+          paymentId,
+          '',
+          '',
+          true, // Force finalize
+          true, // Skip main mail
+          false, // Only product mail
+          '', // User agent
+          // Callback data to check printer readiness after generation completes
+          hasPhysicalPlaylists
+            ? {
+                type: 'checkPrinter',
+                paymentId,
+                clientIp,
+              }
+            : undefined
         );
-
-        // Set suggestionsPending to false
-        await this.prisma.$executeRaw`
-          UPDATE payment_has_playlist
-          SET suggestionsPending = false
-          WHERE id = ${suggestions[0].paymentHasPlaylistId}
-        `;
-
+      } else {
+        // If not sending, just check if ready for printer (for physical orders)
         if (hasPhysicalPlaylists) {
           this.checkIfReadyForPrinter(paymentId, clientIp);
         }
