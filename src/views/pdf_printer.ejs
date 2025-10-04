@@ -144,20 +144,22 @@
         <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
             <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
         <% } %>
-        <div class="text" style="margin-top: 0mm;font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;">
-            <%= track.artist %>
-            <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
-                <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
-            <% } %>
+        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; position: relative; z-index: 1;">
+            <div class="text" style="font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;">
+                <%= track.artist %>
+                <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
+                    <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
+                <% } %>
+            </div>
+            <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;"><%= track.year %></div>
+            <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;">
+                <%= track.name %>
+                <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
+                    <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
+                <% } %>
+            </div>
         </div>
-        <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;"><%= track.year %></div>
-        <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;">
-            <%= track.name %>
-            <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
-                <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
-            <% } %>
-        </div>
-        <div class="text" style="margin-top: 5mm;font-size:11px;color:<%= php.fontColor || '#b0b0b0' %>;position:relative;z-index:1;text-align:center;">
+        <div style="position: absolute; bottom: 6mm; width: 100%; text-align: center; font-size: 11px; color: <%= php.fontColor || '#b0b0b0' %>; z-index: 2;">
             <% if (!playlist.hideDomain && !php.hideDomain) { %>
                  <% if (php.emoji && php.emoji.length) { %>
                     <span style="<%= eco ? 'filter: grayscale(100%);' : '' %> font-size: 16px;"><%= php.emoji %></span>
@@ -169,7 +171,7 @@
             <% } %>
         </div>
         <% if (!payment.vibe) { %>
-            <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 8px; color: <%= php.fontColor || '#c0c0c0' %>; font-family: Arial, sans-serif;">#<%= php.paymentHasPlaylistId %></div>
+            <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 8px; color: <%= php.fontColor || '#c0c0c0' %>; font-family: Arial, sans-serif; z-index: 2;">#<%= php.paymentHasPlaylistId %></div>
         <% } %>
     </div>
     <div style="page-break-after: always;"></div>
