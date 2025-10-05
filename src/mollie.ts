@@ -484,7 +484,6 @@ class Mollie {
             filename: true,
             eco: true,
             doubleSided: true,
-            hideDomain: true,
             background: true,
             logo: true,
             subType: true,
@@ -817,12 +816,6 @@ class Mollie {
           const printApiItemPrice = orderType.amount * item.amount;
 
           let itemPrice = item.price * item.amount;
-          
-          // Add €2 per set if hideDomain is true (for cards only)
-          if (item.hideDomain && item.productType === 'cards') {
-            itemPrice += 2 * item.amount;
-          }
-
           const itemPriceWithoutVAT = parseFloat(
             (itemPrice / (1 + calculateResult.data.taxRate / 100)).toFixed(2)
           );
@@ -843,7 +836,6 @@ class Mollie {
             qrBackgroundColor: item.qrBackgroundColor || '#ffffff',
             hideCircle: item.hideCircle,
             qrBackgroundType: item.qrBackgroundType || (item.hideCircle ? 'none' : 'square'),
-            hideDomain: item.hideDomain,
             price: itemPrice,
             priceWithoutVAT: itemPriceWithoutVAT,
             priceVAT: itemPriceVAT,

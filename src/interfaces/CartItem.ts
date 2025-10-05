@@ -16,7 +16,6 @@ export interface CartItem {
   hideCircle?: boolean; // DEPRECATED: Use qrBackgroundType instead
   qrBackgroundType?: 'none' | 'circle' | 'square'; // Background shape for QR code (default: 'square')
   qrBackgroundColor?: string; // Background color of the QR code square/circle (default: '#ffffff')
-  hideDomain?: boolean;
   eco?: boolean;
   isSlug?: boolean;
   emoji?: string;

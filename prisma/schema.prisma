@@ -331,7 +331,6 @@ model Playlist {
   decadePercentage0    Int                  @default(0)
   downloads            Int                  @default(0)
   score                Int                  @default(0)
-  hideDomain           Boolean              @default(false)
   tracks               PlaylistHasTrack[]
   Payment              PaymentHasPlaylist[]
   UserSuggestion       UserSuggestion[]
@@ -475,7 +474,6 @@ model PaymentHasPlaylist {
   qrBackgroundType           String   @default("square")
   qrColor                    String   @default("#000000")
   qrBackgroundColor          String   @default("#ffffff")
-  hideDomain                 Boolean  @default(false)
   price                      Float
   priceWithoutVAT            Float
   priceVAT                   Float

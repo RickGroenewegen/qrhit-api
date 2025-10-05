@@ -223,11 +223,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                                     <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[i].trackId %>.png" alt="QR Code" style="width: 32mm; height: 32mm;">
                                 </div>
                             <% } %>
-                            <div class="domain" style="<%= qrBgType === 'circle' ? 'bottom: 10mm;' : '' %>">                              
-                                <% if (!php.hideDomain) { %>
-                                    <span style="font-family: Arial, sans-serif !important;"><%= process.env['APP_DOMAIN'] %></span>
-                                <% } %>                           
-                            </div>
+                            <!-- Domain URL removed - always hidden -->
                         </div>
                     <% } else { %>
                         <div class="card front"></div>
@@ -276,19 +272,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                                 <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= tracks[i].extraNameAttribute %></div>
                             <% } %>
                         </div>
-                        <div class="text" style="margin-top: 5mm;font-size:11px;color:<%= php.fontColor || '#b0b0b0' %>;position:relative;z-index:1;">
-
-                            <% if (!playlist.hideDomain && !php.hideDomain) { %>
-                                <% if (php.emoji && php.emoji.length) { %>
-                                    <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
-                                <% } %>
-                                <span style="font-family:Arial, sans-serif !important;"><%= process.env['APP_DOMAIN'] %></span>
-                                 <% if (php.emoji && php.emoji.length) { %>
-                                    <span style="<%= eco ? 'filter: grayscale(100%);' : '' %>"><%= php.emoji %></span>
-                                <% } %>
-                            <% } %>
-                           
-                        </div>
+                        <!-- Domain URL removed from back side - always hidden -->
                     </div>
                 <% } else { %>
                     <div class="card back"></div>

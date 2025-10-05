@@ -369,7 +369,6 @@ class Designer {
           php.background,
           php.logo,
           php.emoji,
-          php.hideDomain,
           php.hideCircle,
           php.qrBackgroundType,
           php.qrColor,
@@ -454,7 +453,6 @@ class Designer {
       background?: string;
       logo?: string;
       emoji?: string;
-      hideDomain?: boolean;
       hideCircle?: boolean;
       qrBackgroundType?: 'none' | 'circle' | 'square';
       qrColor?: string;
@@ -527,7 +525,6 @@ class Designer {
           background: design.background,
           logo: design.logo,
           emoji: design.emoji,
-          hideDomain: this.utils.parseBoolean(design.hideDomain),
           hideCircle: design.hideCircle,
           qrBackgroundType: design.qrBackgroundType,
           qrColor: design.qrColor,

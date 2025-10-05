@@ -132,11 +132,7 @@
             <!-- No background shape -->
             <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
         <% } %>
-        <div class="url" style="<%= qrBgType === 'circle' ? 'bottom: 10mm;' : '' %>">
-            <% if (!php.hideDomain) { %>
-                <span style="font-family: Arial, sans-serif !important;"><%= process.env['APP_DOMAIN'] %></span>
-            <% } %>
-        </div>
+        <!-- Domain URL removed - always hidden -->
     </div>
     <div style="page-break-after: always;"></div>
     <div class="card-back" style="position: relative;">
@@ -156,17 +152,7 @@
                 <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
             <% } %>
         </div>
-        <div class="text" style="margin-top: 5mm;font-size:11px;color:<%= php.fontColor || '#b0b0b0' %>;position:relative;z-index:1;text-align:center;">
-            <% if (!playlist.hideDomain && !php.hideDomain) { %>
-                 <% if (php.emoji && php.emoji.length) { %>
-                    <span style="<%= eco ? 'filter: grayscale(100%);' : '' %> font-size: 16px;"><%= php.emoji %></span>
-                <% } %>
-                <span style="font-family: Arial, sans-serif !important;"><%= process.env['APP_DOMAIN'] %></span>
-                <% if (php.emoji && php.emoji.length) { %>
-                    <span style="<%= eco ? 'filter: grayscale(100%);' : '' %> font-size: 16px;"><%= php.emoji %></span>
-                <% } %>
-            <% } %>
-        </div>
+        <!-- Domain URL removed from back side - always hidden -->
         <% if (!payment.vibe) { %>
             <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 10px; color: <%= php.fontColor || '#909090' %>; font-family: Arial, sans-serif;">#<%= php.paymentHasPlaylistId %></div>
         <% } %>

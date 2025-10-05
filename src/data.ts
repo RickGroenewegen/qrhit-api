@@ -689,7 +689,6 @@ class Data {
         payment_has_playlist.qrBackgroundColor,
         payment_has_playlist.hideCircle,
         payment_has_playlist.qrBackgroundType,
-        payment_has_playlist.hideDomain,
         payment_has_playlist.subType,
         payment_has_playlist.backgroundFrontType,
         payment_has_playlist.backgroundFrontColor,
@@ -2049,8 +2048,7 @@ class Data {
   public async updatePaymentHasPlaylist(
     paymentHasPlaylistId: number,
     eco: boolean,
-    doubleSided: boolean,
-    hideDomain: boolean
+    doubleSided: boolean
   ): Promise<{ success: boolean; error?: string }> {
     try {
       await this.prisma.paymentHasPlaylist.update({
@@ -2058,7 +2056,6 @@ class Data {
         data: {
           eco: eco,
           doubleSided: doubleSided,
-          hideDomain: hideDomain,
         },
       });
       this.logger.log(

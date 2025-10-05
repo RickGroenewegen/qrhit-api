@@ -903,12 +903,6 @@ class PrintEnBind {
           physicalItems += parseInt(item.amount);
         }
         let itemTotalPrice = item.price * item.amount;
-
-        // Add €2 per set if hideDomain is true (for cards only)
-        if (item.hideDomain && item.productType === 'cards') {
-          itemTotalPrice += 2 * item.amount;
-        }
-
         totalPrice += itemTotalPrice;
         const productPriceWithoutVAT = parseFloat(
           (itemTotalPrice / (1 + (taxRate ?? 0) / 100)).toFixed(2)

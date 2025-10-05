@@ -2017,7 +2017,6 @@ class Vibe {
         playlistName: companyList.name,
         numberOfTracks: companyList.numberOfCards,
         hideCircle: companyList.hideCircle,
-        hideDomain: true,
         qrColor: companyList.qrColor,
         amount: 1,
         price: price,
