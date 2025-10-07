@@ -160,6 +160,7 @@ class Generator {
       type: 'checkPrinter';
       paymentId: string;
       clientIp: string;
+      paymentHasPlaylistId?: number;
     }
   ): Promise<string> {
     const queue = this.getGeneratorQueue();
@@ -180,6 +181,17 @@ class Generator {
       );
       // If processing directly, execute the callback immediately
       if (onCompleteData?.type === 'checkPrinter') {
+        // Set eligableForPrinter to true now that PDFs are regenerated
+        if (onCompleteData.paymentHasPlaylistId) {
+          await this.prisma.paymentHasPlaylist.update({
+            where: { id: onCompleteData.paymentHasPlaylistId },
+            data: {
+              eligableForPrinter: true,
+              eligableForPrinterAt: new Date(),
+            },
+          });
+        }
+
         const Suggestion = (await import('./suggestion')).default;
         const suggestion = Suggestion.getInstance();
         await (suggestion as any).checkIfReadyForPrinter(

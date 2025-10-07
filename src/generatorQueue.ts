@@ -4,6 +4,7 @@ import Logger from './logger';
 import Mollie from './mollie';
 import Redis from 'ioredis';
 import cluster from 'cluster';
+import PrismaInstance from './prisma';
 
 interface GenerateJobData {
   paymentId: string;
@@ -18,6 +19,7 @@ interface GenerateJobData {
     type: 'checkPrinter';
     paymentId: string;
     clientIp: string;
+    paymentHasPlaylistId?: number;
   };
 }
 
@@ -128,6 +130,18 @@ class GeneratorQueue {
 
     // Recreate and execute the callback based on its type
     if (callbackData.type === 'checkPrinter') {
+      // Set eligableForPrinter to true now that PDFs are regenerated
+      if (callbackData.paymentHasPlaylistId) {
+        const prisma = PrismaInstance.getInstance();
+        await prisma.paymentHasPlaylist.update({
+          where: { id: callbackData.paymentHasPlaylistId },
+          data: {
+            eligableForPrinter: true,
+            eligableForPrinterAt: new Date(),
+          },
+        });
+      }
+
       // Lazy load to avoid circular dependency
       const Suggestion = (await import('./suggestion')).default;
       const suggestion = Suggestion.getInstance();

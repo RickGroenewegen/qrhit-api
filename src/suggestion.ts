@@ -256,13 +256,14 @@ class Suggestion {
 
         return true;
       } else if (paymentHasPlaylist?.type == 'physical') {
-        // Set eligableForPrinter to true
+        // User approved without text corrections, but design might have changed
+        // Set eligableForPrinter to FALSE first, then regenerate PDFs
         await this.prisma.paymentHasPlaylist.update({
           where: { id: paymentHasPlaylist.id },
-          data: { eligableForPrinter: true, eligableForPrinterAt: new Date() },
+          data: { eligableForPrinter: false },
         });
 
-        this.prisma.payment.update({
+        await this.prisma.payment.update({
           where: { paymentId },
           data: {
             userAgreedToPrinting: true,
@@ -270,7 +271,24 @@ class Suggestion {
           },
         });
 
-        this.checkIfReadyForPrinter(paymentId, clientIp);
+        // Clear old PDFs and regenerate (to capture any design changes)
+        await this.mollie.clearPDFs(paymentId);
+        await this.generator.queueGenerate(
+          paymentId,
+          '',
+          '',
+          true, // Force finalize
+          true, // Skip main mail
+          false, // Only product mail
+          '', // User agent
+          // Callback to set eligableForPrinter and check printer readiness after generation
+          {
+            type: 'checkPrinter',
+            paymentId,
+            clientIp,
+            paymentHasPlaylistId: paymentHasPlaylist.id,
+          }
+        );
 
         return true;
       }
@@ -683,15 +701,15 @@ class Suggestion {
           )
         );
 
-        // Set eligableForPrinter for physical playlists
+        // Set eligableForPrinter to FALSE first to prevent premature sending to printer
+        // It will be set to true AFTER the PDFs are regenerated
         if (hasPhysicalPlaylists) {
           await this.prisma.paymentHasPlaylist.update({
             where: {
               id: paymentHasPlaylistId,
             },
             data: {
-              eligableForPrinter: true,
-              eligableForPrinterAt: new Date(),
+              eligableForPrinter: false,
             },
           });
         }
@@ -712,6 +730,7 @@ class Suggestion {
                 type: 'checkPrinter',
                 paymentId,
                 clientIp,
+                paymentHasPlaylistId,
               }
             : undefined
         );
