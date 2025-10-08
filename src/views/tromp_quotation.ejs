@@ -517,26 +517,36 @@
         </div>
 
         <!-- Totals -->
+        <%
+            // Calculate subtotal from line items
+            const mainProductTotal = calculationResult.pricePerSet * calculationResult.quantity;
+            const extrasTotal = calculationResult.extras && calculationResult.extras.length > 0
+                ? calculationResult.extras.reduce((sum, extra) => sum + extra.price, 0)
+                : 0;
+            const subtotal = mainProductTotal + extrasTotal;
+            const vat = Math.round(subtotal * 0.21 * 100) / 100; // Round VAT to 2 decimals
+            const totalInclVat = subtotal + vat; // Add rounded VAT to subtotal
+        %>
         <div class="totals-container">
             <table class="totals-table">
                 <tr class="total-row subtotal">
                     <td colspan="3">Subtotaal</td>
-                    <td>€&nbsp;<%= calculationResult.clientPrice.toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= subtotal.toFixed(2).replace('.', ',') %></td>
                 </tr>
 
                 <tr class="total-row grand-total">
                     <td colspan="3">Totaal excl. BTW</td>
-                    <td>€&nbsp;<%= calculationResult.clientPrice.toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= subtotal.toFixed(2).replace('.', ',') %></td>
                 </tr>
 
                 <tr class="total-row vat">
                     <td colspan="3">BTW 21%</td>
-                    <td>€&nbsp;<%= (calculationResult.clientPrice * 0.21).toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= vat.toFixed(2).replace('.', ',') %></td>
                 </tr>
 
                 <tr class="total-row grand-total-incl">
                     <td colspan="3">Totaal incl. BTW</td>
-                    <td>€&nbsp;<%= (calculationResult.clientPrice * 1.21).toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= totalInclVat.toFixed(2).replace('.', ',') %></td>
                 </tr>
             </table>
         </div>
