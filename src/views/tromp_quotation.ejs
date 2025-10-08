@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Offerte - <%= company.name %></title>
+    <style>
+        @media print {
+            @page {
+                size: A4;
+                margin: 0;
+            }
+            body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.5;
+            color: #333;
+            background: white;
+            font-size: 14px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 210mm;
+            height: 297mm;
+            margin: 0 auto;
+            padding: 15mm;
+            box-sizing: border-box;
+            background: white;
+            border: 1px solid #eee;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Header Section */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 25px;
+            padding-bottom: 20px;
+        }
+
+        .quotation-title {
+            font-size: 42px;
+            color: #5FBFFF;
+            font-weight: 300;
+            letter-spacing: -1px;
+        }
+
+        .company-section {
+            text-align: right;
+        }
+
+        .company-section .label {
+            font-size: 10px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .logo {
+            height: 50px;
+            width: auto;
+            margin-bottom: 8px;
+        }
+
+        .company-details {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.3;
+            text-align: right;
+        }
+
+        /* Contact and Details Section */
+        .info-section {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 50px;
+            margin-bottom: 30px;
+        }
+
+        .info-box {
+            position: relative;
+        }
+
+        .info-label {
+            font-size: 11px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+            padding-left: 15px;
+            position: relative;
+        }
+
+        .info-label:before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 15px;
+            background: #5FBFFF;
+        }
+
+        .info-content {
+            padding-left: 15px;
+        }
+
+        .info-content .name {
+            font-size: 15px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 4px;
+        }
+
+        .info-content .details {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .info-field {
+            margin-top: 4px;
+            display: flex;
+            gap: 12px;
+        }
+
+        .info-field .field-label {
+            font-weight: 600;
+            color: #333;
+            min-width: 60px;
+            display: inline-block;
+        }
+
+        /* Quotation Details Box */
+        .quotation-details {
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 4px;
+        }
+
+        .quotation-details .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 12px;
+            font-size: 13px;
+        }
+
+        .quotation-details .detail-label {
+            color: #666;
+        }
+
+        .quotation-details .detail-value {
+            color: #333;
+            font-weight: 600;
+        }
+
+        /* Table Section */
+        .table-container {
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: separate;
+            border-spacing: 0;
+        }
+
+        thead {
+            background: #5FBFFF;
+            color: white;
+        }
+
+        thead th {
+            padding: 12px 20px;
+            text-align: left;
+            font-weight: 500;
+            font-size: 13px;
+        }
+
+        thead th:first-child {
+            border-top-left-radius: 4px;
+            border-bottom-left-radius: 4px;
+        }
+
+        thead th:nth-child(3),
+        thead th:nth-child(4) {
+            text-align: right;
+        }
+
+        thead th:last-child {
+            border-top-right-radius: 4px;
+            border-bottom-right-radius: 4px;
+        }
+
+        tbody tr {
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        tbody tr:last-child {
+            border-bottom: none;
+        }
+
+        tbody td {
+            padding: 12px 20px;
+            font-size: 13px;
+            color: #333;
+        }
+
+        tbody td:nth-child(2) {
+            text-align: center;
+        }
+
+        tbody td:nth-child(3),
+        tbody td:nth-child(4) {
+            text-align: right;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        .item-description {
+            color: #333;
+        }
+
+        .item-details {
+            display: block;
+            font-size: 11px;
+            color: #999;
+            margin-top: 4px;
+        }
+
+        /* Totals Section */
+        .totals-container {
+            margin-top: -1px;
+            margin-bottom: 30px;
+        }
+
+        .totals-table {
+            width: 100%;
+            margin-top: -1px;
+        }
+
+        .totals-table td {
+            padding: 6px 20px;
+            font-size: 13px;
+        }
+
+        .totals-table td:last-child {
+            text-align: right;
+            font-weight: 600;
+            white-space: nowrap;
+            width: 17.5%;
+        }
+
+        .totals-table td:first-child {
+            text-align: right;
+            padding-right: 20px;
+            color: #666;
+        }
+
+        .total-row.subtotal td {
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 10px;
+            font-size: 13px;
+        }
+
+        .total-row.grand-total td {
+            padding-top: 10px;
+            border-top: 2px solid #5FBFFF;
+            font-weight: 600;
+            font-size: 13px;
+        }
+
+        .total-row.vat td {
+            padding: 6px 20px;
+            color: #666;
+            font-style: italic;
+            font-size: 13px;
+        }
+
+        .total-row.vat td:last-child {
+            font-weight: 600;
+            font-style: normal;
+        }
+
+        .total-row.grand-total-incl td {
+            padding-top: 8px;
+            border-top: 2px solid #5FBFFF;
+            font-size: 16px;
+            font-weight: bold;
+        }
+
+        .total-row.grand-total-incl td:last-child {
+            color: #5FBFFF;
+            font-size: 18px;
+        }
+
+        /* Terms Section */
+        .terms-section {
+            margin-bottom: 25px;
+            page-break-before: always;
+            padding-top: 20px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #5FBFFF;
+            display: inline-block;
+        }
+
+        .terms-list {
+            list-style: none;
+            padding: 0;
+        }
+
+        .terms-list li {
+            position: relative;
+            padding-left: 25px;
+            margin-bottom: 10px;
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .terms-list li:before {
+            content: counter(item) ".";
+            counter-increment: item;
+            position: absolute;
+            left: 0;
+            color: #5FBFFF;
+            font-weight: 600;
+        }
+
+        .terms-list {
+            counter-reset: item;
+        }
+
+        /* Notes Section */
+        .notes-section {
+            margin-bottom: 40px;
+        }
+
+        .notes-content {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.8;
+            background: #f9f9f9;
+            padding: 20px;
+            border-radius: 4px;
+            border-left: 4px solid #5FBFFF;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+        }
+
+        .footer-content {
+            font-size: 13px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .footer-content strong {
+            color: #333;
+        }
+
+        .footer-content a {
+            color: #5FBFFF;
+            text-decoration: none;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1 class="quotation-title">Offerte</h1>
+            </div>
+            <div class="company-section">
+                <div class="label">Offerte door</div>
+                <img src="<%= baseUrl %>/assets/images/logo.png" alt="QRSong!" class="logo" />
+                <div class="company-details">
+                    QRSong!<br>
+                    Box A3821<br>
+                    Keurenplein 41<br>
+                    1069CD Amsterdam<br>
+                    info@qrsong.io<br>
+                    KVK: 72308281<br>
+                    BTW: NL002059751B81
+                </div>
+            </div>
+        </div>
+
+        <!-- Contact Info and Quote Details -->
+        <div class="info-section">
+            <div class="info-box">
+                <div class="info-label">Offerte gericht aan</div>
+                <div class="info-content">
+                    <div class="name"><%= company.name %></div>
+                    <div class="details">
+                        <% if (company.address && company.housenumber) { %>
+                            <%= company.address %> <%= company.housenumber %><br>
+                        <% } %>
+                        <% if (company.zipcode && company.city) { %>
+                            <%= company.zipcode %> <%= company.city %><br>
+                        <% } %>
+                        <% if (company.countrycode) { %>
+                            <%= company.countrycode %><br>
+                        <% } %>
+
+                        <% if (company.contact) { %>
+                            <div class="info-field">
+                                <span class="field-label">Contact</span>
+                                <span><%= company.contact %></span>
+                            </div>
+                        <% } %>
+                        <% if (company.contactphone) { %>
+                            <div class="info-field">
+                                <span class="field-label">Tel</span>
+                                <span><%= company.contactphone %></span>
+                            </div>
+                        <% } %>
+                        <% if (company.contactemail) { %>
+                            <div class="info-field">
+                                <span class="field-label">Email</span>
+                                <span><%= company.contactemail %></span>
+                            </div>
+                        <% } %>
+                    </div>
+                </div>
+            </div>
+
+            <div class="info-box">
+                <div class="info-label">Offerte Details</div>
+                <div class="quotation-details">
+                    <div class="detail-row">
+                        <span class="detail-label">Offerte #</span>
+                        <span class="detail-value"><%= quotationNumber %></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Offerte Datum</span>
+                        <span class="detail-value"><%= formatDate(new Date()) %></span>
+                    </div>
+                    <div class="detail-row">
+                        <span class="detail-label">Geldig tot</span>
+                        <span class="detail-value"><%= formatDate(validUntil) %></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Items Table -->
+        <div class="table-container">
+            <table>
+                <thead>
+                    <tr>
+                        <th style="width: 50%">Omschrijving</th>
+                        <th style="width: 15%">Aantal</th>
+                        <th style="width: 17.5%">Prijs excl. BTW</th>
+                        <th style="width: 17.5%">Bedrag excl. BTW</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <!-- Main product line -->
+                    <tr>
+                        <td>
+                            <span class="item-description">QRSong! muziekkaarten set</span>
+                            <span class="item-details">
+                                Een doos met 2 kleinere doosjes met ieder 100 kaarten
+                            </span>
+                        </td>
+                        <td><%= calculationResult.quantity %></td>
+                        <td>€&nbsp;<%= calculationResult.pricePerSet.toFixed(2).replace('.', ',') %></td>
+                        <td>€&nbsp;<%= (calculationResult.pricePerSet * calculationResult.quantity).toFixed(2).replace('.', ',') %></td>
+                    </tr>
+
+                    <!-- Extras -->
+                    <% if (calculationResult.extras && calculationResult.extras.length > 0) { %>
+                        <% calculationResult.extras.forEach(function(extra) { %>
+                        <tr>
+                            <td>
+                                <span class="item-description"><%= extra.name %></span>
+                                <span class="item-details">Eenmalige kosten</span>
+                            </td>
+                            <td>1</td>
+                            <td>€&nbsp;<%= extra.price.toFixed(2).replace('.', ',') %></td>
+                            <td>€&nbsp;<%= extra.price.toFixed(2).replace('.', ',') %></td>
+                        </tr>
+                        <% }); %>
+                    <% } %>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Totals -->
+        <div class="totals-container">
+            <table class="totals-table">
+                <tr class="total-row subtotal">
+                    <td colspan="3">Subtotaal</td>
+                    <td>€&nbsp;<%= calculationResult.clientPrice.toFixed(2).replace('.', ',') %></td>
+                </tr>
+
+                <tr class="total-row grand-total">
+                    <td colspan="3">Totaal excl. BTW</td>
+                    <td>€&nbsp;<%= calculationResult.clientPrice.toFixed(2).replace('.', ',') %></td>
+                </tr>
+
+                <tr class="total-row vat">
+                    <td colspan="3">BTW 21%</td>
+                    <td>€&nbsp;<%= (calculationResult.clientPrice * 0.21).toFixed(2).replace('.', ',') %></td>
+                </tr>
+
+                <tr class="total-row grand-total-incl">
+                    <td colspan="3">Totaal incl. BTW</td>
+                    <td>€&nbsp;<%= (calculationResult.clientPrice * 1.21).toFixed(2).replace('.', ',') %></td>
+                </tr>
+            </table>
+        </div>
+
+        <!-- Terms and Conditions -->
+        <div class="terms-section">
+            <h2 class="section-title">Algemene Voorwaarden</h2>
+            <ol class="terms-list">
+                <li>Betaling dient te geschieden binnen 14 dagen na factuurdatum.</li>
+                <li>Alle bedragen zijn in EUR, betaling via bankoverschrijving.</li>
+                <li>Bij akkoord graag deze offerte ondertekend retour.</li>
+                <li>Deze offerte is geldig tot <%= formatDate(validUntil) %>.</li>
+                <li>Leveringstijd: conform bespreking.</li>
+            </ol>
+        </div>
+
+        <!-- Notes Section -->
+        <div class="notes-section">
+            <h2 class="section-title">Productinformatie</h2>
+            <div class="notes-content">
+                <strong>Wat wordt geleverd:</strong><br>
+                • <%= calculationResult.quantity %> complete sets<br>
+                • Elke set bevat: Een doos, met 2 kleinere doosjes die ieder 100 kaarten bevatten (Totaal 200 kaarten)<br>
+                • Totaal: <%= calculationResult.quantity %> dozen en <%= calculationResult.quantity * 200 %> kaarten<br><br>
+
+                <strong>Specificaties Doosjes:</strong><br>
+                • Materiaal: incada excel (gc2), wit, 325 grs/m²<br>
+                • Bedrukking: 5/0 Voorzijde full-colour + all over glanzend dispersielak<br>
+                • Formaat: 17,5 x 19,1 cm<br>
+                • Afwerking: stansen, rillen en uitbreken, kaartspeldoosjes langsnaadplakken<br>
+                • Twee kaartdoosjes (fefco0210): plano 175x191mm, inhoudmaat 62x16x122mm<br>
+                • Verzameldoosje (fefco0427): plano 227x338mm, inhoudsmaat 123x123x18mm<br><br>
+
+                <strong>Specificaties Kaarten:</strong><br>
+                • Materiaal: tweezijdig gesteken sulfaatkarton, wit, 300 grs/m²<br>
+                • Bedrukking: 4/4 tweezijdig full colour in digidruk<br>
+                • Formaat: 6 x 6 cm<br>
+                • Afwerking: per 2x50 stuks verpakt in doosjes
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-content">
+                Voor vragen over deze offerte kunt u contact opnemen via <a href="mailto:info@qrsong.io">info@qrsong.io</a>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

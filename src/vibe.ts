@@ -961,6 +961,7 @@ class Vibe {
         'contactemail',
         'contactphone',
         'calculation',
+        'calculationTromp',
       ];
 
       // Filter out invalid fields
@@ -2862,18 +2863,135 @@ class Vibe {
   }
 
   /**
+   * Calculate Tromp pricing for boxes and card sets
+   * Based on Tromp Print & Packaging quote (Offerte 202511652)
+   * @param params Calculation parameters
+   * @returns Object with calculation results
+   */
+  public async calculateTrompPricing(params: {
+    quantity: number;
+    includeStansmestekening: boolean;
+    includeStansvorm: boolean;
+    profitMargin: number;
+  }): Promise<any> {
+    try {
+      const { quantity, includeStansmestekening, includeStansvorm, profitMargin } = params;
+
+      // Validate input
+      if (!quantity || quantity < 1) {
+        return { success: false, error: 'Invalid quantity' };
+      }
+
+      // Box pricing tiers - these are for "units" (1 unit = 3 physical boxes)
+      // From the quote: prices are for the number of box sets (units), not individual boxes
+      const boxPricingTiers: { quantity: number; totalPrice: number }[] = [
+        { quantity: 1000, totalPrice: 1165.00 },   // 3,000 boxes / 3 = 1,000 units
+        { quantity: 2500, totalPrice: 1667.50 },   // 7,500 boxes / 3 = 2,500 units
+        { quantity: 5000, totalPrice: 2505.00 },   // 15,000 boxes / 3 = 5,000 units
+      ];
+
+      // Card set pricing tiers (price for total quantity in EUR)
+      // Each set = 200 song cards + 1 cover card
+      const cardPricingTiers: { quantity: number; totalPrice: number }[] = [
+        { quantity: 50, totalPrice: 545.00 },
+        { quantity: 100, totalPrice: 840.00 },
+        { quantity: 150, totalPrice: 1135.00 },
+        { quantity: 200, totalPrice: 1430.00 },
+        { quantity: 250, totalPrice: 1725.00 },
+        { quantity: 300, totalPrice: 2020.00 },
+        { quantity: 400, totalPrice: 2610.00 },
+        { quantity: 500, totalPrice: 3200.00 },
+        { quantity: 750, totalPrice: 4675.00 },
+        { quantity: 1000, totalPrice: 6150.00 },
+        { quantity: 2500, totalPrice: 15000.00 },
+        { quantity: 5000, totalPrice: 29750.00 },
+      ];
+
+      // Helper function to find the appropriate tier (round down to nearest tier)
+      const findTier = (qty: number, tiers: { quantity: number; totalPrice: number }[]) => {
+        // Start from the highest tier and work backwards to find the closest tier <= quantity
+        for (let i = tiers.length - 1; i >= 0; i--) {
+          if (qty >= tiers[i].quantity) {
+            return tiers[i];
+          }
+        }
+        // If quantity is less than all tiers, use the lowest tier
+        return tiers[0];
+      };
+
+      // Calculate box price (quantity is already in "units", where 1 unit = 3 boxes)
+      const boxTier = findTier(quantity, boxPricingTiers);
+      const boxPricePerUnit = boxTier.totalPrice / boxTier.quantity;
+      const boxPrice = boxPricePerUnit * quantity;
+
+      // Calculate card set price (1 set per unit)
+      const cardTier = findTier(quantity, cardPricingTiers);
+      const cardPricePerUnit = cardTier.totalPrice / cardTier.quantity;
+      const cardPrice = cardPricePerUnit * quantity;
+
+      // Calculate extras
+      const extras: { name: string; price: number }[] = [];
+      let extrasTotal = 0;
+
+      if (includeStansmestekening) {
+        extras.push({ name: 'Stansmestekening + dummy', price: 150.00 });
+        extrasTotal += 150.00;
+      }
+
+      if (includeStansvorm) {
+        extras.push({ name: 'Stansvorm', price: 425.00 });
+        extrasTotal += 425.00;
+      }
+
+      // Calculate totals
+      const trompCost = boxPrice + cardPrice + extrasTotal;
+      const ourProfit = (profitMargin || 0) * quantity;
+      // Price per set includes boxes + cards + profit (but NOT extras, as they're one-time costs shown separately)
+      const baseCostPerSet = (boxPrice + cardPrice) / quantity;
+      const profitPerSet = profitMargin || 0;
+      const pricePerSet = Math.round((baseCostPerSet + profitPerSet) * 100) / 100; // Round to 2 decimals
+      const clientPrice = trompCost + ourProfit;
+
+      // Return calculation results
+      return {
+        success: true,
+        calculation: {
+          quantity,
+          boxTierName: `${boxTier.quantity} units (${boxTier.quantity * 3} boxes) @ €${(boxTier.totalPrice / boxTier.quantity).toFixed(2)}/unit`,
+          boxPricePerUnit: boxPricePerUnit,
+          boxPrice: boxPrice,
+          cardTierName: `${cardTier.quantity} sets @ €${(cardTier.totalPrice / cardTier.quantity).toFixed(2)}/set`,
+          cardPricePerUnit: cardPricePerUnit,
+          cardPrice: cardPrice,
+          extras: extras,
+          extrasTotal: extrasTotal,
+          trompCost: trompCost,
+          ourProfit: ourProfit,
+          pricePerSet: pricePerSet,
+          clientPrice: clientPrice,
+        },
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error calculating Tromp pricing: ${error}`));
+      return { success: false, error: 'Error calculating Tromp pricing' };
+    }
+  }
+
+  /**
    * Generate a quotation PDF for a company
    * @param companyId The company ID
    * @param userId The user making the request
    * @param userGroups The user's groups
    * @param userCompanyId The user's company ID (for companyadmin validation)
+   * @param type The quotation type ('onzevibe' or 'qrsong')
    * @returns Buffer with PDF data or error
    */
   public async generateQuotationPDF(
     companyId: number,
     userId: number,
     userGroups: string[],
-    userCompanyId?: number
+    userCompanyId?: number,
+    type: string = 'onzevibe'
   ): Promise<{
     success: boolean;
     data?: Buffer;
@@ -2904,7 +3022,8 @@ class Vibe {
       }
 
       // Generate unique quotation number
-      const quotationNumber = `ONZ${Date.now().toString().slice(-8)}`;
+      const prefix = type === 'qrsong' ? 'QRS' : 'ONZ';
+      const quotationNumber = `${prefix}${Date.now().toString().slice(-8)}`;
 
       // Prepare file path
       const tempDir = '/tmp';
@@ -2918,7 +3037,11 @@ class Vibe {
 
       // Create the URL for the HTML rendering
       const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-      const htmlUrl = `${baseUrl}/vibe/quotation/${companyId}/${quotationNumber}`;
+      const htmlUrl = `${baseUrl}/vibe/quotation/${type}/${companyId}/${quotationNumber}`;
+
+      this.logger.log(
+        color.blue.bold(`Generating PDF quotation from URL: `) + color.white.bold(htmlUrl)
+      );
 
       const options = {
         File: htmlUrl,

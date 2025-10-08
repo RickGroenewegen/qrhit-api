@@ -192,11 +192,40 @@ export default async function vibeRoutes(
     }
   );
 
+  // Update company Tromp calculation
+  fastify.put(
+    '/vibe/companies/:companyId/calculation-tromp',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const { calculationTromp } = request.body;
+
+      if (isNaN(companyId)) {
+        reply.status(400).send({ error: 'Invalid company ID' });
+        return;
+      }
+
+      const result = await vibe.updateCompany(companyId, { calculationTromp });
+
+      if (!result.success) {
+        let statusCode = 500;
+        if (result.error === 'Company not found') {
+          statusCode = 404;
+        }
+        reply.status(statusCode).send({ error: result.error });
+        return;
+      }
+
+      reply.send({ success: true, company: result.data.company });
+    }
+  );
+
   // Quotation HTML View (for PDF generation)
   fastify.get(
-    '/vibe/quotation/:companyId/:quotationNumber',
+    '/vibe/quotation/:type/:companyId/:quotationNumber',
     async (request: any, reply: any) => {
       try {
+        const type = request.params.type; // 'onzevibe' or 'qrsong'
         const companyId = parseInt(request.params.companyId);
         const quotationNumber = request.params.quotationNumber;
 
@@ -210,42 +239,75 @@ export default async function vibeRoutes(
           return;
         }
 
-        // Parse the stored calculation from company database
-        let calculation: any = {
-          quantity: 100,
-          includePersonalization: true,
-          shipmentOnLocation: false,
-          soldBy: 'onzevibe',
-          isReseller: false,
-          manualDiscount: 0,
-          fluidMode: false,
-        };
+        let calculation: any = {};
         let calculationResult: any = {};
 
-        if (company.calculation) {
-          try {
-            const storedCalc = JSON.parse(company.calculation);
-            calculation = storedCalc;
+        if (type === 'qrsong') {
+          // Tromp calculation
+          calculation = {
+            quantity: 100,
+            includeStansmestekening: false,
+            includeStansvorm: false,
+            profitMargin: 0,
+          };
 
-            // Use the Vibe calculatePricing method to get the result
-            const pricingResult = await vibe.calculatePricing({
-              quantity: calculation.quantity || 100,
-              includePersonalization:
-                calculation.includePersonalization !== undefined
-                  ? calculation.includePersonalization
-                  : true,
-              shipmentOnLocation: calculation.shipmentOnLocation || false,
-              soldBy: calculation.soldBy || 'onzevibe',
-              isReseller: calculation.isReseller || false,
-              manualDiscount: calculation.manualDiscount || 0,
-              fluidMode: calculation.fluidMode || false,
-            });
-
-            if (pricingResult.success) {
-              calculationResult = pricingResult.calculation;
+          if (company.calculationTromp) {
+            try {
+              const storedCalc = JSON.parse(company.calculationTromp);
+              calculation = storedCalc;
+            } catch (e) {
+              console.error('Error parsing company Tromp calculation:', e);
             }
-          } catch (e) {
-            console.error('Error parsing company calculation:', e);
+          }
+
+          // Use the Vibe calculateTrompPricing method
+          const pricingResult = await vibe.calculateTrompPricing({
+            quantity: calculation.quantity || 100,
+            includeStansmestekening: calculation.includeStansmestekening || false,
+            includeStansvorm: calculation.includeStansvorm || false,
+            profitMargin: calculation.profitMargin || 0,
+          });
+
+          if (pricingResult.success) {
+            calculationResult = pricingResult.calculation;
+          }
+        } else {
+          // OnzeVibe calculation
+          calculation = {
+            quantity: 100,
+            includePersonalization: true,
+            shipmentOnLocation: false,
+            soldBy: 'onzevibe',
+            isReseller: false,
+            manualDiscount: 0,
+            fluidMode: false,
+          };
+
+          if (company.calculation) {
+            try {
+              const storedCalc = JSON.parse(company.calculation);
+              calculation = storedCalc;
+            } catch (e) {
+              console.error('Error parsing company calculation:', e);
+            }
+          }
+
+          // Use the Vibe calculatePricing method
+          const pricingResult = await vibe.calculatePricing({
+            quantity: calculation.quantity || 100,
+            includePersonalization:
+              calculation.includePersonalization !== undefined
+                ? calculation.includePersonalization
+                : true,
+            shipmentOnLocation: calculation.shipmentOnLocation || false,
+            soldBy: calculation.soldBy || 'onzevibe',
+            isReseller: calculation.isReseller || false,
+            manualDiscount: calculation.manualDiscount || 0,
+            fluidMode: calculation.fluidMode || false,
+          });
+
+          if (pricingResult.success) {
+            calculationResult = pricingResult.calculation;
           }
         }
 
@@ -270,7 +332,10 @@ export default async function vibeRoutes(
         const validUntil = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
 
-        await reply.view('vibe_quotation.ejs', {
+        // Use the appropriate template
+        const template = type === 'qrsong' ? 'tromp_quotation.ejs' : 'vibe_quotation.ejs';
+
+        await reply.view(template, {
           company,
           calculation,
           calculationResult,
@@ -294,6 +359,7 @@ export default async function vibeRoutes(
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
+        const { type } = request.body; // 'onzevibe' or 'qrsong'
 
         if (isNaN(companyId)) {
           reply.status(400).send({ error: 'Invalid company ID' });
@@ -305,7 +371,8 @@ export default async function vibeRoutes(
           companyId,
           request.user.userId,
           request.user.userGroups,
-          request.user.companyId
+          request.user.companyId,
+          type || 'onzevibe'
         );
 
         if (!result.success) {
@@ -863,6 +930,27 @@ export default async function vibeRoutes(
         reply.send(result);
       } catch (error) {
         console.error('Error calculating pricing:', error);
+        reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  // Calculate Tromp pricing (admin only)
+  fastify.post(
+    '/vibe/calculate-tromp',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const result = await vibe.calculateTrompPricing(request.body);
+
+        if (!result.success) {
+          reply.status(400).send({ error: result.error });
+          return;
+        }
+
+        reply.send(result);
+      } catch (error) {
+        console.error('Error calculating Tromp pricing:', error);
         reply.status(500).send({ error: 'Internal server error' });
       }
     }
