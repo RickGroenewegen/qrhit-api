@@ -390,6 +390,7 @@ class Mollie {
               { fullname: { search: search.textSearch } },
               { orderId: { search: search.textSearch } },
               { printApiOrderId: { search: search.textSearch } },
+              { paymentId: { search: search.textSearch } },
               {
                 PaymentHasPlaylist: {
                   some: {

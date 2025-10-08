@@ -1945,18 +1945,20 @@ class Data {
     }
 
     // Get all the playlist IDs (The real spotify one) for the checked payments
-    const playlistIds = await this.prisma.$queryRaw<string[]>`
-      SELECT pl.playlistId
-      FROM payments p
-      JOIN payment_has_playlist php ON php.paymentId = p.id
-      JOIN playlists pl ON pl.id = php.playlistId
-      WHERE p.paymentId IN (${Prisma.join(checkedPaymentIds)})
-    `;
+    if (checkedPaymentIds.length > 0) {
+      const playlistIds = await this.prisma.$queryRaw<string[]>`
+        SELECT pl.playlistId
+        FROM payments p
+        JOIN payment_has_playlist php ON php.paymentId = p.id
+        JOIN playlists pl ON pl.id = php.playlistId
+        WHERE p.paymentId IN (${Prisma.join(checkedPaymentIds)})
+      `;
 
-    // Clear cache for each playlist
-    for (const playlistId of playlistIds) {
-      await this.cache.del('tracks_' + playlistId);
-      await this.cache.del('trackcount_' + playlistId);
+      // Clear cache for each playlist
+      for (const playlistId of playlistIds) {
+        await this.cache.del('tracks_' + playlistId);
+        await this.cache.del('trackcount_' + playlistId);
+      }
     }
 
     return checkedPaymentIds;

@@ -460,7 +460,7 @@ class Generator {
     await this.data.storeTracks(playlist.id, playlist.playlistId, tracks);
 
     // Trigger MusicFetch processing asynchronously (non-blocking)
-    //this.triggerMusicFetchForPlaylist(playlist.id);
+    this.triggerMusicFetchForPlaylist(playlist.id);
 
     this.logger.log(
       blue.bold(
