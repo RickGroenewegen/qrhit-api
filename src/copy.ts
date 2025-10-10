@@ -74,6 +74,7 @@ export default class Copy {
         createdAt,
         updatedAt,
         PaymentHasPlaylist,
+        printApiOrderId,
         ...paymentData
       } = originalPayment as any;
 
@@ -83,6 +84,7 @@ export default class Copy {
           ...paymentData,
           paymentId: newPaymentId,
           orderId: newOrderId,
+          sendToPrinter: 0,
         },
       });
 

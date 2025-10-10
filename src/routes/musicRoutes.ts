@@ -213,7 +213,13 @@ export default async function musicRoutes(fastify: FastifyInstance) {
 
   fastify.post('/hitlist/search', async (request: any, _reply) => {
     const { searchString, limit = 10, offset = 0 } = request.body;
-    return await spotify.searchTracks(searchString);
+    return await hitlist.searchTracks(searchString);
+    //return await spotify.searchTracks(searchString);
+  });
+
+  fastify.post('/hitlist/search-musicfetch', async (request: any, _reply) => {
+    const { searchString } = request.body;
+    return await hitlist.searchTracksMusicFetch(searchString);
   });
 
   fastify.post('/hitlist/tracks', async (request: any, _reply) => {

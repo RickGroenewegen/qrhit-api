@@ -582,7 +582,7 @@ class Hitlist {
   ) {
     try {
       // Try to get from cache first
-      const cacheKey = `companyListByDomain:${slug}`;
+      const cacheKey = `companyListByDomain:${slug}:${hash}`;
       const cached = await this.cache.get(cacheKey);
       if (cached) {
         const cachedData = JSON.parse(cached);
@@ -775,6 +775,91 @@ class Hitlist {
     } catch (error) {
       this.logger.log(color.red.bold(`Error searching tracks: ${error}`));
       return { success: false, error: 'Error searching tracks' };
+    }
+  }
+
+  public async searchTracksMusicFetch(searchString: string) {
+    try {
+      if (!searchString || searchString.length < 2) {
+        return { success: false, error: 'Search string too short' };
+      }
+
+      const apiKey = process.env['MUSICFETCH_API_KEY'];
+      if (!apiKey) {
+        this.logger.log(
+          color.red.bold('MUSICFETCH_API_KEY environment variable not set')
+        );
+        return { success: false, error: 'MusicFetch API key not configured' };
+      }
+
+      // Encode the search string for URL
+      const encodedQuery = encodeURIComponent(searchString);
+      const url = `https://api.musicfetch.io/search?query=${encodedQuery}&types=track,artist`;
+
+      this.logger.log(
+        color.blue.bold(
+          `Searching MusicFetch for tracks matching "${color.white.bold(
+            searchString
+          )}"`
+        )
+      );
+
+      // Make the API request
+      const response: AxiosResponse = await axios.get(url, {
+        headers: {
+          'x-token': apiKey,
+        },
+        timeout: 10000,
+      });
+
+      if (!response.data || !response.data.result) {
+        return { success: false, error: 'Invalid response from MusicFetch API' };
+      }
+
+      const result = response.data.result;
+
+      // Extract tracks from the response
+      const tracks = (result.tracks || []).map((track: any) => {
+        // Extract Spotify track ID from the link
+        const trackIdMatch = track.link?.match(/\/track\/([a-zA-Z0-9]+)/);
+        const trackId = trackIdMatch ? trackIdMatch[1] : '';
+
+        // Get the primary artist name
+        const artistName = track.artists?.[0]?.name || '';
+
+        return {
+          id: trackId,
+          trackId: trackId,
+          name: track.name || '',
+          artist: artistName,
+          image: track.image?.url || '',
+          link: track.link || '',
+        };
+      }).filter((track: any) => track.trackId && track.name && track.artist);
+
+      this.logger.log(
+        color.green.bold(
+          `Found ${color.white.bold(tracks.length)} tracks from MusicFetch`
+        )
+      );
+
+      return {
+        success: true,
+        data: {
+          tracks: tracks,
+          totalCount: tracks.length,
+          offset: 0,
+          limit: tracks.length,
+          hasMore: false,
+        },
+      };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error searching MusicFetch tracks: ${error.message || error}`
+        )
+      );
+      return { success: false, error: 'Error searching MusicFetch tracks' };
     }
   }
 }

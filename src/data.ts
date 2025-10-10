@@ -9,7 +9,6 @@ import { CronJob } from 'cron';
 import { ApiResult } from './interfaces/ApiResult';
 import { promises as fs } from 'fs';
 import path from 'path';
-import spotifyToYTMusic from 'spotify-to-ytmusic';
 
 interface TrackNeedingYearUpdate {
   id: number;
@@ -31,6 +30,8 @@ import YTMusic from 'ytmusic-api';
 import axios, { AxiosInstance } from 'axios';
 import Spotify from './spotify';
 import * as ExcelJS from 'exceljs';
+
+const TRACK_LINKS_CACHE_PREFIX = 'track_links_v2';
 
 class Data {
   private static instance: Data;
@@ -245,6 +246,7 @@ class Data {
         id: true,
         spotifyLink: true,
         youtubeLink: true,
+        appleMusicLink: true,
       },
       where: {
         spotifyLink: {
@@ -259,8 +261,12 @@ class Data {
         const data = {
           link: track.spotifyLink,
           youtubeLink: track.youtubeLink,
+          appleMusicLink: track.appleMusicLink,
         };
-        await this.cache.set(`track_links:${track.id}`, JSON.stringify(data));
+        await this.cache.set(
+          `${TRACK_LINKS_CACHE_PREFIX}:${track.id}`,
+          JSON.stringify(data)
+        );
         cacheCount++;
       }
     }
@@ -1327,7 +1333,8 @@ class Data {
               where: { id: trackId },
               data: {
                 year: matchedTrack.year,
-                yearSource: 'otherTrack_metadata_multiple_' + matchedTrack.yearSource,
+                yearSource:
+                  'otherTrack_metadata_multiple_' + matchedTrack.yearSource,
                 certainty: matchedTrack.certainty,
                 reasoning: matchedTrack.reasoning,
                 manuallyChecked: true,
@@ -1459,7 +1466,7 @@ class Data {
       )
     );
 
-    const cacheKey = `track_links:${trackId}`;
+    const cacheKey = `${TRACK_LINKS_CACHE_PREFIX}:${trackId}`;
     const cachedData = await this.cache.get(cacheKey);
 
     if (cachedData && useCache) {
@@ -1470,7 +1477,7 @@ class Data {
     }
 
     const linkQuery: any[] = await this.prisma.$queryRaw`
-      SELECT spotifyLink, youtubeLink
+      SELECT spotifyLink, youtubeLink, appleMusicLink
       FROM tracks
       WHERE id = ${trackId}`;
 
@@ -1478,6 +1485,7 @@ class Data {
       const data = {
         link: linkQuery[0].spotifyLink,
         youtubeLink: linkQuery[0].youtubeLink,
+        appleMusicLink: linkQuery[0].appleMusicLink,
       };
 
       if (data.link && data.youtubeLink) {
@@ -2035,7 +2043,7 @@ class Data {
       );
       return {
         success: false,
-        error: error?.message || 'Unknown database error'
+        error: error?.message || 'Unknown database error',
       };
     }
   }

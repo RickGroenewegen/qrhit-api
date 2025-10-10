@@ -173,7 +173,7 @@ model Payment {
   @@index([vibe, test, status, createdAt])
   @@index([vibe, test, finalized, createdAt])
   // Full-text search indexes for dashboard search
-  @@fulltext([fullname, orderId, printApiOrderId])
+  @@fulltext([fullname, orderId, printApiOrderId, paymentId])
   @@map("payments")
 }
 
