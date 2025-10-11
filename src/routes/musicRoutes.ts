@@ -174,12 +174,14 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     );
     let link = '';
     let yt = '';
+    let appleMusicLink = '';
     if (result.success) {
       link = result.data.link;
       yt = result.data.youtubeLink;
+      appleMusicLink = result.data.appleMusicLink;
     }
     const useSpotifyRemote = true; // Default value
-    return { link: link, yt: yt, r: useSpotifyRemote };
+    return { link: link, yt: yt, am: appleMusicLink, r: useSpotifyRemote };
   });
 
   fastify.get('/qrlink2/:trackId/:php', async (request: any, reply) => {
@@ -194,12 +196,15 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     );
     let link = '';
     let yt = '';
+    let appleMusicLink = '';
+
     if (result.success) {
       link = result.data.link;
       yt = result.data.youtubeLink;
+      appleMusicLink = result.data.appleMusicLink;
     }
     const useSpotifyRemote = true; // Default value
-    return { link: link, yt: yt, r: useSpotifyRemote };
+    return { link: link, yt: yt, am: appleMusicLink, r: useSpotifyRemote };
   });
 
   // Hitlist routes

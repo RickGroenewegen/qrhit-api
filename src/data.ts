@@ -1488,7 +1488,7 @@ class Data {
         appleMusicLink: linkQuery[0].appleMusicLink,
       };
 
-      if (data.link && data.youtubeLink) {
+      if (data.link) {
         await this.cache.set(cacheKey, JSON.stringify(data));
       }
 
