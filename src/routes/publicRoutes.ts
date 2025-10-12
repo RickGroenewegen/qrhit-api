@@ -346,7 +346,11 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         gradientBackgroundColor,
         gradientDegrees,
         gradientPosition,
+        frontOpacity,
+        backOpacity,
       } = request.body;
+
+      logger.log(`[Card Design Update] Received opacity values: frontOpacity=${frontOpacity} (${typeof frontOpacity}), backOpacity=${backOpacity} (${typeof backOpacity})`);
 
       const success = await designer.updateCardDesign(
         paymentId,
@@ -378,6 +382,8 @@ export default async function publicRoutes(fastify: FastifyInstance) {
           gradientBackgroundColor,
           gradientDegrees,
           gradientPosition,
+          frontOpacity,
+          backOpacity,
         }
       );
 

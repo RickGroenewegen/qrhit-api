@@ -507,6 +507,8 @@ model PaymentHasPlaylist {
   gradientDegrees        Int       @default(180)
   gradientPosition       Int       @default(50) // 0-100: controls color stop positions
   sameAsFront            Boolean   @default(false) // Copy front side settings to back
+  frontOpacity           Int       @default(100) // Front background image opacity 0-100 (100% = fully visible by default)
+  backOpacity            Int       @default(50) // Back background image opacity 0-100 (default 50%)
   orderType              OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
 
   @@unique([paymentId, playlistId])

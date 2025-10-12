@@ -710,6 +710,8 @@ class Data {
         payment_has_playlist.gradientBackgroundColor,
         payment_has_playlist.gradientDegrees,
         payment_has_playlist.gradientPosition,
+        payment_has_playlist.frontOpacity,
+        payment_has_playlist.backOpacity,
         playlists.numberOfTracks,
         payment_has_playlist.type AS orderType
       FROM 

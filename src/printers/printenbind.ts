@@ -1136,18 +1136,17 @@ class PrintEnBind {
 
     let alternatives = {};
     if (recurse) {
+      // Calculate physical cards price (type: 'physical' without subType defaults to cards)
       const physical: number =
-        (await this.calculateSingleItem({ ...params, type: 'physical' }, false))
+        (await this.calculateSingleItem({ ...params, type: 'physical', subType: 'none' }, false))
           .price - price;
 
+      // Calculate digital price
       const digital: number =
-        (await this.calculateSingleItem({ ...params, type: 'digital' }, false))
+        (await this.calculateSingleItem({ ...params, type: 'digital', subType: 'none' }, false))
           .price - price;
 
-      // const cards: number =
-      //   (await this.calculateSingleItem({ ...params, format: 'cards' }, false))
-      //     .price - price;
-
+      // Calculate sheets price
       const sheets: number =
         (
           await this.calculateSingleItem(
@@ -1156,36 +1155,11 @@ class PrintEnBind {
           )
         ).price - price;
 
-      // const single: number =
-      //   (await this.calculateSingleItem({ ...params, format: 'single' }, false))
-      //     .price - price;
-
-      // const double: number =
-      //   (await this.calculateSingleItem({ ...params, format: 'double' }, false))
-      //     .price - price;
-
-      // const color: number =
-      //   (
-      //     await this.calculateSingleItem(
-      //       { ...params, colorMode: 'color' },
-      //       false
-      //     )
-      //   ).price - price;
-
-      // const bw: number =
-      //   (await this.calculateSingleItem({ ...params, colorMode: 'bw' }, false))
-      //     .price - price;
-
       alternatives = {
         type: {
           physical: parseFloat(physical.toFixed(2)),
           digital: parseFloat(digital.toFixed(2)),
-          // cards: parseFloat(cards.toFixed(2)),
           sheets: parseFloat(sheets.toFixed(2)),
-          // single: parseFloat(single.toFixed(2)),
-          // double: parseFloat(double.toFixed(2)),
-          // color: parseFloat(color.toFixed(2)),
-          // bw: parseFloat(bw.toFixed(2)),
         },
       };
     }

@@ -20,6 +20,15 @@
         position: relative;
     }
     .card-front {
+        overflow: hidden;
+    }
+    .card-front::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
         <% if (php.backgroundFrontType !== 'solid') { %>
             <% if (php.background && php.background.length) { %>
             background-image: url('<%= process.env['API_URI'] %>/public/background/<%= php.background %>');
@@ -27,8 +36,10 @@
             background-image: url('<%= process.env['API_URI'] %>/assets/images/background_new.png');
             <% } %>
             background-size: cover;
+            background-position: center;
         <% } %>
-        overflow: hidden;
+        opacity: <%= (php.frontOpacity !== undefined ? php.frontOpacity : 100) / 100 %>;
+        z-index: 0;
     }
     /* White square styling removed - now using SVG */
     .card-back {
@@ -56,6 +67,7 @@
         height: 100%;
         object-fit: cover;
         z-index: 0;
+        opacity: <%= (php.backOpacity !== undefined ? php.backOpacity : 50) / 100 %>;
     }
     .qr {
         width: 60%;

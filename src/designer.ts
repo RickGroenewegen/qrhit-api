@@ -393,6 +393,8 @@ class Designer {
           php.gradientBackgroundColor,
           php.gradientDegrees,
           php.gradientPosition,
+          php.frontOpacity,
+          php.backOpacity,
           pl.name as playlistName,
           pl.numberOfTracks,
           pl.playlistId
@@ -475,6 +477,8 @@ class Designer {
       gradientBackgroundColor?: string;
       gradientDegrees?: number;
       gradientPosition?: number;
+      frontOpacity?: number;
+      backOpacity?: number;
     }
   ): Promise<boolean> {
     try {
@@ -547,6 +551,8 @@ class Designer {
           gradientBackgroundColor: design.gradientBackgroundColor,
           gradientDegrees: design.gradientDegrees,
           gradientPosition: design.gradientPosition,
+          frontOpacity: design.frontOpacity,
+          backOpacity: design.backOpacity,
         },
       });
 

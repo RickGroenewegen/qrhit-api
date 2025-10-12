@@ -39,4 +39,6 @@ export interface CartItem {
   gradientBackgroundColor?: string;
   gradientDegrees?: number;
   gradientPosition?: number;
+  frontOpacity?: number; // Front background image opacity 0-100 (default 100% fully visible)
+  backOpacity?: number; // Back background image opacity 0-100 (default 50%)
 }

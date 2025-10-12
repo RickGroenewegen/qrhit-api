@@ -73,6 +73,7 @@
         height: 100%;
         object-fit: cover;
         z-index: 0;
+        opacity: <%= (php.frontOpacity !== undefined ? php.frontOpacity : 100) / 100 %>;
     }
    
     /* White square styling removed - now using SVG */
@@ -141,6 +142,7 @@
         height: 100%;
         object-fit: cover;
         z-index: 0;
+        opacity: <%= (php.backOpacity !== undefined ? php.backOpacity : 50) / 100 %>;
     }
     .text {
         font-size: 12px;

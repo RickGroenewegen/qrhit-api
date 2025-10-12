@@ -521,6 +521,9 @@ class Mollie {
             gradientBackgroundColor: true,
             gradientDegrees: true,
             gradientPosition: true,
+            // Opacity
+            frontOpacity: true,
+            backOpacity: true,
             playlist: {
               select: {
                 name: true,
@@ -862,6 +865,9 @@ class Mollie {
             gradientBackgroundColor: item.gradientBackgroundColor || '#ffffff',
             gradientDegrees: item.gradientDegrees || 180,
             gradientPosition: item.gradientPosition || 50,
+            // Opacity
+            frontOpacity: item.frontOpacity !== undefined ? item.frontOpacity : 100,
+            backOpacity: item.backOpacity !== undefined ? item.backOpacity : 50,
           };
         })
       );
