@@ -92,7 +92,11 @@ class MusicFetch {
       );
 
       // Check if we have result.services in the response
-      if (response.data && response.data.result && response.data.result.services) {
+      if (
+        response.data &&
+        response.data.result &&
+        response.data.result.services
+      ) {
         const services = response.data.result.services;
         const links: MusicLinks = {
           deezerLink: services.deezer?.link || null,
@@ -102,11 +106,11 @@ class MusicFetch {
           tidalLink: services.tidal?.link || null,
         };
 
-        this.logger.log(
-          color.green.bold(
-            `Successfully fetched music links for: ${white.bold(spotifyUrl)}`
-          )
-        );
+        // this.logger.log(
+        //   color.green.bold(
+        //     `Successfully fetched music links for: ${white.bold(spotifyUrl)}`
+        //   )
+        // );
 
         return { success: true, links };
       }
@@ -320,7 +324,10 @@ class MusicFetch {
       for (const playlistTrack of tracksToProcess) {
         const track = playlistTrack.track;
         if (track.spotifyLink) {
-          const success = await this.updateTrackWithLinks(track.id, track.spotifyLink);
+          const success = await this.updateTrackWithLinks(
+            track.id,
+            track.spotifyLink
+          );
           if (success) successCount++;
         }
       }
@@ -353,9 +360,7 @@ class MusicFetch {
   public async processBulkTracks(
     trackIds?: number[]
   ): Promise<BulkProcessResult> {
-    this.logger.log(
-      color.blue.bold('Starting MusicFetch bulk processing')
-    );
+    this.logger.log(color.blue.bold('Starting MusicFetch bulk processing'));
 
     const result: BulkProcessResult = {
       totalProcessed: 0,
@@ -421,7 +426,9 @@ class MusicFetch {
 
         if (tracksToProcess.length === 0) {
           this.logger.log(
-            color.blue.bold('No more tracks found to process - all tracks have links or max attempts reached')
+            color.blue.bold(
+              'No more tracks found to process - all tracks have links or max attempts reached'
+            )
           );
           break;
         }
@@ -430,9 +437,7 @@ class MusicFetch {
           color.blue.bold(
             `Processing chunk ${white.bold(
               chunkNumber.toString()
-            )}: ${white.bold(
-              tracksToProcess.length.toString()
-            )} tracks`
+            )}: ${white.bold(tracksToProcess.length.toString())} tracks`
           )
         );
 
@@ -468,13 +473,13 @@ class MusicFetch {
 
         this.logger.log(
           color.green.bold(
-            `Chunk ${white.bold(
-              chunkNumber.toString()
-            )} complete: ${white.bold(
+            `Chunk ${white.bold(chunkNumber.toString())} complete: ${white.bold(
               result.successful.toString()
             )} successful, ${white.bold(
               result.failed.toString()
-            )} failed, ${white.bold(result.skipped.toString())} skipped (Total processed: ${white.bold(
+            )} failed, ${white.bold(
+              result.skipped.toString()
+            )} skipped (Total processed: ${white.bold(
               result.totalProcessed.toString()
             )})`
           )
