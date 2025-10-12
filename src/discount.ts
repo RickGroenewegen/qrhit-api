@@ -109,7 +109,27 @@ class Discount {
       const discounts = await this.prisma.discountCode.findMany({
         orderBy: { createdAt: 'desc' },
       });
-      return { success: true, discounts };
+
+      // Calculate spent and remaining amounts for each discount
+      const discountsWithBalance = await Promise.all(
+        discounts.map(async (discount) => {
+          const totalUsed = await this.prisma.discountCodedUses.aggregate({
+            where: { discountCodeId: discount.id },
+            _sum: { amount: true },
+          });
+
+          const totalSpent = totalUsed._sum.amount || 0;
+          const amountLeft = discount.amount - totalSpent;
+
+          return {
+            ...discount,
+            totalSpent,
+            amountLeft,
+          };
+        })
+      );
+
+      return { success: true, discounts: discountsWithBalance };
     } catch (error) {
       return { success: false, error: 'Failed to fetch discounts' };
     }

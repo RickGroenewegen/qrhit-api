@@ -274,7 +274,8 @@ export default async function publicRoutes(fastify: FastifyInstance) {
 
     if (type == 'background') {
       // Convert hideCircle to qrBackgroundType for backward compatibility
-      const backgroundType = qrBackgroundType || (hideCircle ? 'none' : 'square');
+      const backgroundType =
+        qrBackgroundType || (hideCircle ? 'none' : 'square');
       result = await designer.uploadBackgroundImage(
         image,
         filename,
@@ -349,8 +350,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         frontOpacity,
         backOpacity,
       } = request.body;
-
-      logger.log(`[Card Design Update] Received opacity values: frontOpacity=${frontOpacity} (${typeof frontOpacity}), backOpacity=${backOpacity} (${typeof backOpacity})`);
 
       const success = await designer.updateCardDesign(
         paymentId,
