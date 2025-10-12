@@ -795,11 +795,22 @@ class Generator {
           );
         }
       } catch (error) {
-        const errorMessage = `Failed to validate PDF for playlist ${white.bold(
-          playlist.name
-        )} (${white.bold(playlist.playlistId)}): ${error}`;
-        validationErrors.push(errorMessage);
-        this.logger.log(color.red.bold(errorMessage));
+        // Check if the error is a file not found error (ENOENT)
+        const isFileNotFound =
+          error &&
+          typeof error === 'object' &&
+          'code' in error &&
+          error.code === 'ENOENT';
+
+        // Only log validation errors that are not "file not found" errors
+        if (!isFileNotFound) {
+          const errorMessage = `Failed to validate PDF for playlist ${white.bold(
+            playlist.name
+          )} (${white.bold(playlist.playlistId)}): ${error}`;
+          validationErrors.push(errorMessage);
+          this.logger.log(color.red.bold(errorMessage));
+        }
+        // If file doesn't exist, silently skip validation for this playlist
       }
     }
 
