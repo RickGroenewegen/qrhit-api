@@ -748,30 +748,10 @@ class Hitlist {
         return spotifyResult;
       }
 
-      // Transform the Spotify search results to match the expected format
-      // Based on the JSON structure from the error, we need to extract data differently
-      const tracks = spotifyResult.data?.tracks?.items
-        ? spotifyResult.data.tracks.items
-            .filter((item: any) => item && item.data && item.data.id) // Filter out any empty data items
-            .map((item: any) => {
-              const track = item.data;
-              const artistName = track.artists?.items?.[0]?.profile?.name || '';
-              const trackName = track.name || '';
-
-              return {
-                id: track.id,
-                trackId: track.id, // Use the Spotify track ID
-                name: trackName,
-                artist: artistName,
-              };
-            })
-            .filter((track: any) => track.name && track.artist) // Filter out tracks with empty name or artist
-        : [];
-
-      return {
-        success: true,
-        data: tracks,
-      };
+      // The spotify searchTracks method returns data in this format:
+      // { success: true, data: { tracks: [...], totalCount, offset, limit, hasMore } }
+      // We simply return this structure to the frontend
+      return spotifyResult;
     } catch (error) {
       this.logger.log(color.red.bold(`Error searching tracks: ${error}`));
       return { success: false, error: 'Error searching tracks' };
@@ -813,29 +793,34 @@ class Hitlist {
       });
 
       if (!response.data || !response.data.result) {
-        return { success: false, error: 'Invalid response from MusicFetch API' };
+        return {
+          success: false,
+          error: 'Invalid response from MusicFetch API',
+        };
       }
 
       const result = response.data.result;
 
       // Extract tracks from the response
-      const tracks = (result.tracks || []).map((track: any) => {
-        // Extract Spotify track ID from the link
-        const trackIdMatch = track.link?.match(/\/track\/([a-zA-Z0-9]+)/);
-        const trackId = trackIdMatch ? trackIdMatch[1] : '';
+      const tracks = (result.tracks || [])
+        .map((track: any) => {
+          // Extract Spotify track ID from the link
+          const trackIdMatch = track.link?.match(/\/track\/([a-zA-Z0-9]+)/);
+          const trackId = trackIdMatch ? trackIdMatch[1] : '';
 
-        // Get the primary artist name
-        const artistName = track.artists?.[0]?.name || '';
+          // Get the primary artist name
+          const artistName = track.artists?.[0]?.name || '';
 
-        return {
-          id: trackId,
-          trackId: trackId,
-          name: track.name || '',
-          artist: artistName,
-          image: track.image?.url || '',
-          link: track.link || '',
-        };
-      }).filter((track: any) => track.trackId && track.name && track.artist);
+          return {
+            id: trackId,
+            trackId: trackId,
+            name: track.name || '',
+            artist: artistName,
+            image: track.image?.url || '',
+            link: track.link || '',
+          };
+        })
+        .filter((track: any) => track.trackId && track.name && track.artist);
 
       this.logger.log(
         color.green.bold(
