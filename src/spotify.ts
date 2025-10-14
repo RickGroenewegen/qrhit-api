@@ -1130,13 +1130,19 @@ class Spotify {
     error?: string;
     cached?: boolean;
   }> {
-    try {
-      // Add https:// if missing to normalize URL for domain checking
-      let normalizedUrl = url;
-      if (!/^https?:\/\//i.test(normalizedUrl)) {
-        normalizedUrl = 'https://' + normalizedUrl;
-      }
+    // Add https:// if missing to normalize URL for domain checking
+    let normalizedUrl = url;
+    if (!/^https?:\/\//i.test(normalizedUrl)) {
+      normalizedUrl = 'https://' + normalizedUrl;
+    }
 
+    // Calculate cache key outside try block so it's accessible in catch
+    const cacheKey = `qrlink_unknown_result_${crypto
+      .createHash('md5')
+      .update(normalizedUrl)
+      .digest('hex')}`;
+
+    try {
       // Check if the URL's domain is in the blacklist
       try {
         const urlObj = new URL(normalizedUrl);
@@ -1151,12 +1157,6 @@ class Spotify {
       } catch (e) {
         // If URL parsing fails, continue with original logic
       }
-
-      // Check cache first for all URLs
-      const cacheKey = `qrlink_unknown_result_${crypto
-        .createHash('md5')
-        .update(normalizedUrl)
-        .digest('hex')}`;
 
       // Check if it's a MusicMatch Game URL pattern first (https://api.musicmatchgame.com/paymentHasPlaylistId/trackId)
       const musicMatchGamePattern = /^https?:\/\/api\.musicmatchgame\.com\/(\d+)\/(\d+)$/;
