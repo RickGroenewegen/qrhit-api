@@ -1225,8 +1225,8 @@ class Spotify {
       }
 
       // 1. Follow HTTP redirects (301/302/other 3xx)
-      let currentUrl = url;
-      let lastLocation = url;
+      let currentUrl = normalizedUrl;
+      let lastLocation = normalizedUrl;
       let maxRedirects = 5;
       let response;
 
