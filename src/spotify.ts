@@ -113,17 +113,17 @@ class Spotify {
    */
   private async loadMusicMatchData(): Promise<void> {
     const isPrimary = cluster.isPrimary;
-    
+
     try {
       // Import the musicmatch.json file
       const fs = require('fs').promises;
       const path = require('path');
       const appRoot = process.env.APP_ROOT || path.join(__dirname, '..');
       const filePath = path.join(appRoot, '_data', 'musicmatch.json');
-      
+
       const fileContent = await fs.readFile(filePath, 'utf8');
       const data = JSON.parse(fileContent);
-      
+
       if (data && data.p && Array.isArray(data.p)) {
         for (const playlist of data.p) {
           const playlistId = playlist.i;
@@ -138,7 +138,7 @@ class Spotify {
             }
           }
         }
-        
+
         if (isPrimary) {
           this.utils.isMainServer().then(async (isMainServer) => {
             if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
@@ -798,7 +798,11 @@ class Spotify {
       this.cache.set(cacheKey, JSON.stringify(finalResult)); // Cache the final processed result
 
       // Track analytics for tracks retrieval
-      this.analytics.increaseCounter('spotify', 'tracks', allFormattedTracks.length);
+      this.analytics.increaseCounter(
+        'spotify',
+        'tracks',
+        allFormattedTracks.length
+      );
 
       return finalResult; // Return the processed result
     } catch (e: any) {
@@ -951,11 +955,14 @@ class Spotify {
         this.spotifyApi,
         this.spotifyScraper
       );
-      
+
       // Determine which API was used for logging
       const rateLimitStatus = await this.rateLimitManager.getRateLimitStatus();
       let apiUsed = 'SpotifyAPI';
-      if (rateLimitStatus.spotifyApi.limited && !rateLimitStatus.spotifyScraper.limited) {
+      if (
+        rateLimitStatus.spotifyApi.limited &&
+        !rateLimitStatus.spotifyScraper.limited
+      ) {
         apiUsed = 'ScraperAPI';
       }
 
@@ -1148,7 +1155,13 @@ class Spotify {
         const urlObj = new URL(normalizedUrl);
         const hostname = urlObj.hostname.toLowerCase();
 
-        if (this.domainBlacklist.some(domain => hostname === domain.toLowerCase() || hostname.endsWith('.' + domain.toLowerCase()))) {
+        if (
+          this.domainBlacklist.some(
+            (domain) =>
+              hostname === domain.toLowerCase() ||
+              hostname.endsWith('.' + domain.toLowerCase())
+          )
+        ) {
           return {
             success: false,
             error: 'Domain is blacklisted and cannot be resolved',
@@ -1159,14 +1172,15 @@ class Spotify {
       }
 
       // Check if it's a MusicMatch Game URL pattern first (https://api.musicmatchgame.com/paymentHasPlaylistId/trackId)
-      const musicMatchGamePattern = /^https?:\/\/api\.musicmatchgame\.com\/(\d+)\/(\d+)$/;
+      const musicMatchGamePattern =
+        /^https?:\/\/api\.musicmatchgame\.com\/(\d+)\/(\d+)$/;
       const musicMatchGameMatch = normalizedUrl.match(musicMatchGamePattern);
       if (musicMatchGameMatch) {
         const paymentHasPlaylistId = musicMatchGameMatch[1];
         const trackId = musicMatchGameMatch[2];
         const key = `${paymentHasPlaylistId}_${trackId}`;
         const spotifyId = this.musicMatchMap[key];
-        
+
         if (spotifyId) {
           const result = {
             success: true,
@@ -1330,6 +1344,149 @@ class Spotify {
       // Cache errors as well, but for a shorter time
       await this.cache.set(cacheKey, JSON.stringify(result), 600);
       return { ...result, cached: false };
+    }
+  }
+
+  /**
+   * Resolves a Spotify shortlink by following HTTP redirects.
+   * @param url The shortlink URL to resolve (e.g., https://spotify.link/...)
+   * @returns {Promise<{ success: boolean, url?: string, error?: string }>}
+   */
+  public async resolveShortlink(url: string): Promise<{
+    success: boolean;
+    url?: string;
+    error?: string;
+  }> {
+    try {
+      let currentUrl = url;
+      let redirectCount = 0;
+      const maxRedirects = 5;
+      let lastResponse: any = null;
+
+      // Manually follow redirects to ensure we get the final URL
+      while (redirectCount < maxRedirects) {
+        const response = await axios.get(currentUrl, {
+          maxRedirects: 0, // Don't follow redirects automatically
+          validateStatus: (status) => status < 400, // Accept 2xx and 3xx
+          headers: {
+            'User-Agent':
+              'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36',
+          },
+        });
+
+        lastResponse = response;
+
+        // Check if this is a redirect (3xx status code)
+        if (response.status >= 300 && response.status < 400) {
+          const location = response.headers['location'];
+
+          if (location) {
+            // Handle relative URLs
+            if (location.startsWith('http')) {
+              currentUrl = location;
+            } else {
+              const baseUrl = new URL(currentUrl);
+              currentUrl = new URL(location, baseUrl.origin).toString();
+            }
+            redirectCount++;
+            continue;
+          } else {
+            // 3xx without location header, stop here
+            break;
+          }
+        } else {
+          // 2xx response, we've reached the final destination
+          currentUrl = response.request.res.responseUrl || currentUrl;
+          break;
+        }
+      }
+
+      // Check if the final URL is already a Spotify playlist URL
+      if (currentUrl && currentUrl.includes('open.spotify.com/playlist/')) {
+        this.logger.log(
+          color.blue.bold(
+            `Shortlink resolved: ` +
+              color.white.bold(`url="${url}"`) +
+              color.blue.bold(' -> ') +
+              color.white.bold(`finalUrl="${currentUrl}"`)
+          )
+        );
+        return { success: true, url: currentUrl };
+      }
+
+      // If we didn't get a direct Spotify URL, try to extract it from the HTML
+      if (
+        lastResponse &&
+        lastResponse.data &&
+        typeof lastResponse.data === 'string'
+      ) {
+        const html = lastResponse.data;
+
+        // Find all occurrences of Spotify playlist URLs in the HTML
+        const urlPattern =
+          /https:\/\/open\.spotify\.com\/playlist\/([a-zA-Z0-9]+)[^\s"'<>]*/gi;
+        const matches = html.match(urlPattern);
+
+        if (matches && matches.length > 0) {
+          // Count occurrences of each unique URL (cleaned without query params)
+          const urlCounts: { [key: string]: number } = {};
+
+          matches.forEach((url: string) => {
+            // Clean URL by removing query parameters
+            const cleanUrl = url.split('?')[0];
+            urlCounts[cleanUrl] = (urlCounts[cleanUrl] || 0) + 1;
+          });
+
+          // Find the URL with the most occurrences
+          let mostCommonUrl: string | null = null;
+          let maxCount = 0;
+
+          for (const [url, count] of Object.entries(urlCounts)) {
+            if (count > maxCount) {
+              maxCount = count;
+              mostCommonUrl = url;
+            }
+          }
+
+          if (mostCommonUrl) {
+            this.logger.log(
+              color.blue.bold(
+                `Shortlink resolved via HTML parsing (${color.white.bold(
+                  maxCount
+                )} occurrences): ` +
+                  color.white.bold(`url="${url}"`) +
+                  color.blue.bold(' -> ') +
+                  color.white.bold(`finalUrl="${mostCommonUrl}"`)
+              )
+            );
+            return { success: true, url: mostCommonUrl };
+          }
+        }
+      }
+
+      this.logger.log(
+        color.red.bold(
+          `Failed to resolve shortlink: ` +
+            color.white.bold(`url="${url}"`) +
+            color.red.bold(' - No Spotify playlist URL found in response')
+        )
+      );
+      return {
+        success: false,
+        error: 'URL did not resolve to a Spotify playlist',
+      };
+    } catch (e: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error resolving shortlink: ` +
+            color.white.bold(`url="${url}"`) +
+            color.red.bold(`, error=${e.message || e}`)
+        )
+      );
+      return {
+        success: false,
+        error: e.message || 'Internal error',
+      };
     }
   }
 

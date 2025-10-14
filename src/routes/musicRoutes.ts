@@ -52,6 +52,37 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     );
   });
 
+  // Resolve Spotify shortlink by following redirects
+  fastify.post('/resolve_shortlink', async (request: any, reply: any) => {
+    const { url } = request.body;
+    if (!url || typeof url !== 'string') {
+      reply
+        .status(400)
+        .send({ success: false, error: 'Missing or invalid url parameter' });
+      return;
+    }
+
+    try {
+      const result = await spotify.resolveShortlink(url);
+
+      if (result.success) {
+        reply.send({ success: true, url: result.url });
+      } else {
+        reply.status(404).send({
+          success: false,
+          error: result.error || 'URL did not resolve to a Spotify playlist',
+        });
+      }
+    } catch (e: any) {
+      logger.log(
+        `Error resolving shortlink: url="${url}", error=${e.message || e}`
+      );
+      reply
+        .status(500)
+        .send({ success: false, error: e.message || 'Internal error' });
+    }
+  });
+
   // Resolve unknown Spotify URL
   fastify.post('/qrlink_unknown', async (request: any, reply: any) => {
     const { url } = request.body;
