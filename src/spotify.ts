@@ -42,6 +42,8 @@ class Spotify {
   private jumboCardMap: { [key: string]: string } = {};
   // MusicMatch mapping: key = 'playlistId_trackId', value = spotify track id
   private musicMatchMap: { [key: string]: string } = {};
+  // Domain blacklist: URLs from these domains will not be resolved
+  private domainBlacklist: string[] = ['q.me-qr.com'];
 
   constructor() {
     this.getJumboData();
@@ -1128,16 +1130,37 @@ class Spotify {
     error?: string;
     cached?: boolean;
   }> {
-    // Check cache first for all URLs
-    const cacheKey = `qrlink_unknown_result_${crypto
-      .createHash('md5')
-      .update(url)
-      .digest('hex')}`;
-
     try {
+      // Add https:// if missing to normalize URL for domain checking
+      let normalizedUrl = url;
+      if (!/^https?:\/\//i.test(normalizedUrl)) {
+        normalizedUrl = 'https://' + normalizedUrl;
+      }
+
+      // Check if the URL's domain is in the blacklist
+      try {
+        const urlObj = new URL(normalizedUrl);
+        const hostname = urlObj.hostname.toLowerCase();
+
+        if (this.domainBlacklist.some(domain => hostname === domain.toLowerCase() || hostname.endsWith('.' + domain.toLowerCase()))) {
+          return {
+            success: false,
+            error: 'Domain is blacklisted and cannot be resolved',
+          };
+        }
+      } catch (e) {
+        // If URL parsing fails, continue with original logic
+      }
+
+      // Check cache first for all URLs
+      const cacheKey = `qrlink_unknown_result_${crypto
+        .createHash('md5')
+        .update(normalizedUrl)
+        .digest('hex')}`;
+
       // Check if it's a MusicMatch Game URL pattern first (https://api.musicmatchgame.com/paymentHasPlaylistId/trackId)
       const musicMatchGamePattern = /^https?:\/\/api\.musicmatchgame\.com\/(\d+)\/(\d+)$/;
-      const musicMatchGameMatch = url.match(musicMatchGamePattern);
+      const musicMatchGameMatch = normalizedUrl.match(musicMatchGamePattern);
       if (musicMatchGameMatch) {
         const paymentHasPlaylistId = musicMatchGameMatch[1];
         const trackId = musicMatchGameMatch[2];
@@ -1161,11 +1184,6 @@ class Spotify {
         }
       }
 
-      // Add https:// if missing
-      if (!/^https?:\/\//i.test(url)) {
-        url = 'https://' + url;
-      }
-
       const cached = await this.cache.get(cacheKey);
       if (cached) {
         try {
@@ -1177,10 +1195,10 @@ class Spotify {
       }
 
       // Special handling for hitstergame.com links
-      if (url.includes('hitstergame.com')) {
+      if (normalizedUrl.includes('hitstergame.com')) {
         // Try to extract the set_sku and cardnumber from the URL
         // Example: https://hitstergame.com/nl/aaaa0027/00153
-        const match = url.match(
+        const match = normalizedUrl.match(
           /hitstergame\.com\/[^/]+\/([a-zA-Z0-9]+)\/([0-9]+)/
         );
         if (match) {
