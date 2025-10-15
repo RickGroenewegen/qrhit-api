@@ -830,6 +830,14 @@ class Generator {
     let printApiOrderRequest = '';
     let printApiOrderResponse = '';
 
+    // Reset sentToPrinter to false when manually sending to printer
+    await this.prisma.payment.update({
+      where: {
+        paymentId,
+      },
+      data: { sentToPrinter: false },
+    });
+
     const payment = await this.prisma.payment.findFirst({
       where: {
         paymentId,
@@ -843,16 +851,11 @@ class Generator {
       },
     });
 
-    // Reset sentToPrinter to false when manually sending to printer
-    if (payment && force) {
-      await this.prisma.payment.update({
-        where: { id: payment.id },
-        data: { sentToPrinter: false },
-      });
-    }
-
     if (
-      (payment && payment.canBeSentToPrinter && !payment.sentToPrinter && !payment.printerHold) ||
+      (payment &&
+        payment.canBeSentToPrinter &&
+        !payment.sentToPrinter &&
+        !payment.printerHold) ||
       (payment && process.env['ENVIRONMENT'] === 'development')
     ) {
       const playlists = await this.data.getPlaylistsByPaymentId(
