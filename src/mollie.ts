@@ -524,6 +524,11 @@ class Mollie {
               select: {
                 name: true,
                 playlistId: true,
+                _count: {
+                  select: {
+                    tracks: true,
+                  },
+                },
                 tracks: {
                   select: {
                     track: {
