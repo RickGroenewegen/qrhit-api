@@ -71,10 +71,20 @@ export default class Copy {
       // Create a copy of all payment fields, excluding specific ones
       const {
         id,
+        userId,
+        printerInvoiceId,
+        orderTypeId,
         createdAt,
         updatedAt,
         PaymentHasPlaylist,
         printApiOrderId,
+        sendToPrinter,
+        user,
+        OrderType,
+        printerInvoice,
+        DiscountCodedUses,
+        Review,
+        CompanyList,
         ...paymentData
       } = originalPayment as any;
 
@@ -82,9 +92,9 @@ export default class Copy {
       const newPayment = await this.prisma.payment.create({
         data: {
           ...paymentData,
+          userId: originalPayment.userId,
           paymentId: newPaymentId,
           orderId: newOrderId,
-          sendToPrinter: 0,
         },
       });
 
