@@ -409,10 +409,17 @@ class Mollie {
         ? { finalized: search.finalized }
         : {};
 
-    // Printer hold filter - if true, only include payments with printerHold = true
+    // Printer hold filter - if true, only include payments with printerHold = true AND at least one physical playlist
     const printerHoldClause =
       typeof search.printerHold === 'boolean' && search.printerHold
-        ? { printerHold: true }
+        ? {
+            printerHold: true,
+            PaymentHasPlaylist: {
+              some: {
+                type: 'physical'
+              }
+            }
+          }
         : {};
 
     const totalItems = await this.prisma.payment.count({
