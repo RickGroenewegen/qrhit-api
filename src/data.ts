@@ -2088,6 +2088,43 @@ class Data {
     }
   }
 
+  public async updatePaymentPrinterHold(
+    paymentId: string,
+    printerHold: boolean
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const payment = await this.prisma.payment.findUnique({
+        where: { paymentId },
+        select: { id: true },
+      });
+
+      if (!payment) {
+        return { success: false, error: 'Payment not found' };
+      }
+
+      await this.prisma.payment.update({
+        where: { paymentId },
+        data: { printerHold },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Updated printer hold for payment ${color.white.bold(paymentId)} to ${color.white.bold(printerHold)}`
+        )
+      );
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating printer hold for payment ${color.white.bold(
+            paymentId
+          )}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
   public async translateGenres(): Promise<{
     processed: number;
     updated: number;

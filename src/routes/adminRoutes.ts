@@ -532,30 +532,17 @@ export default async function adminRoutes(
         return;
       }
 
-      try {
-        const payment = await data.prisma.payment.findUnique({
-          where: { paymentId },
-        });
+      const result = await data.updatePaymentPrinterHold(
+        paymentId,
+        printerHold
+      );
 
-        if (!payment) {
-          reply.status(404).send({
-            success: false,
-            error: 'Payment not found',
-          });
-          return;
-        }
-
-        await data.prisma.payment.update({
-          where: { paymentId },
-          data: { printerHold },
-        });
-
+      if (result.success) {
         reply.send({ success: true });
-      } catch (error) {
-        console.error('Error updating printer hold:', error);
-        reply.status(500).send({
+      } else {
+        reply.status(result.error === 'Payment not found' ? 404 : 500).send({
           success: false,
-          error: 'Failed to update printer hold status',
+          error: result.error,
         });
       }
     }
