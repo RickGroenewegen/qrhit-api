@@ -150,6 +150,7 @@ model Payment {
   sentToPrinter           Boolean              @default(false)
   sentToPrinterAt         DateTime?
   fast                    Boolean              @default(false)
+  printerHold             Boolean              @default(true)
   processedFirstTime      Boolean              @default(false)
   processedFirstTimeAt    DateTime?
   printerInvoice          PrinterInvoice?      @relation(fields: [printerInvoiceId], references: [id], onDelete: SetNull)

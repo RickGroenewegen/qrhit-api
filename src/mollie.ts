@@ -409,16 +409,11 @@ class Mollie {
         ? { finalized: search.finalized }
         : {};
 
-    // Physical filter - if true, only include payments with physical items
-    const physicalClause = search.physical
-      ? {
-          PaymentHasPlaylist: {
-            some: {
-              type: 'physical',
-            },
-          },
-        }
-      : {};
+    // Printer hold filter - if true, only include payments with printerHold = true
+    const printerHoldClause =
+      typeof search.printerHold === 'boolean' && search.printerHold
+        ? { printerHold: true }
+        : {};
 
     const totalItems = await this.prisma.payment.count({
       where: {
@@ -427,7 +422,7 @@ class Mollie {
         ...whereClause,
         ...textSearchClause,
         ...finalizedClause,
-        ...physicalClause,
+        ...printerHoldClause,
       },
     });
 
@@ -438,7 +433,7 @@ class Mollie {
         ...whereClause,
         ...textSearchClause,
         ...finalizedClause,
-        ...physicalClause,
+        ...printerHoldClause,
       },
       skip: (search.page - 1) * search.itemsPerPage,
       take: search.itemsPerPage,
@@ -464,6 +459,7 @@ class Mollie {
         sentToPrinterAt: true,
         sentToPrinter: true,
         fast: true,
+        printerHold: true,
         email: true,
         fullname: true,
         locale: true,

@@ -81,6 +81,7 @@ class Generator {
         const payments = await this.prisma.payment.findMany({
           where: {
             sentToPrinter: false,
+            printerHold: false,
             vibe: false,
             OR: [
               {
@@ -851,7 +852,7 @@ class Generator {
     }
 
     if (
-      (payment && payment.canBeSentToPrinter && !payment.sentToPrinter) ||
+      (payment && payment.canBeSentToPrinter && !payment.sentToPrinter && !payment.printerHold) ||
       (payment && process.env['ENVIRONMENT'] === 'development')
     ) {
       const playlists = await this.data.getPlaylistsByPaymentId(

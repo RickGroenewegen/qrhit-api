@@ -508,6 +508,59 @@ export default async function adminRoutes(
     }
   );
 
+  // Update printer hold status for payment
+  fastify.post(
+    '/payment/:paymentId/printer-hold',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentId } = request.params;
+      const { printerHold } = request.body;
+
+      if (!paymentId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Payment ID is required',
+        });
+        return;
+      }
+
+      if (typeof printerHold !== 'boolean') {
+        reply.status(400).send({
+          success: false,
+          error: 'printerHold must be a boolean',
+        });
+        return;
+      }
+
+      try {
+        const payment = await data.prisma.payment.findUnique({
+          where: { paymentId },
+        });
+
+        if (!payment) {
+          reply.status(404).send({
+            success: false,
+            error: 'Payment not found',
+          });
+          return;
+        }
+
+        await data.prisma.payment.update({
+          where: { paymentId },
+          data: { printerHold },
+        });
+
+        reply.send({ success: true });
+      } catch (error) {
+        console.error('Error updating printer hold:', error);
+        reply.status(500).send({
+          success: false,
+          error: 'Failed to update printer hold status',
+        });
+      }
+    }
+  );
+
   // Analytics
   fastify.get(
     '/analytics',
