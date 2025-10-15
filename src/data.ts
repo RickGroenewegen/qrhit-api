@@ -572,7 +572,7 @@ class Data {
             artist: track.artist,
             city: ipInfo.city,
             region: ipInfo.region,
-            country: ipInfo.country,
+            country: ipInfo.country_code,
             latitude: ipInfo.latitude,
             longitude: ipInfo.longitude,
             timestamp: ipInfo.timestamp,

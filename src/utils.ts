@@ -5,9 +5,12 @@ import axios from 'axios';
 import parser from 'accept-language-parser';
 import Translation from './translation';
 import Cache from './cache';
+import maxmind, { CityResponse, Reader } from 'maxmind';
+import path from 'path';
 
 class Utils {
   private translation: Translation = new Translation();
+  private static maxmindReader: Reader<CityResponse> | null = null;
 
   /**
    * Get a random sample of elements from an array
@@ -360,6 +363,28 @@ class Utils {
     return emailRegex.test(email);
   }
 
+  /**
+   * Initialize the MaxMind database reader
+   */
+  private async initMaxMind(): Promise<void> {
+    if (Utils.maxmindReader) {
+      return; // Already initialized
+    }
+
+    try {
+      const dbPath = path.join(process.env['PRIVATE_DIR']!, 'ip', 'GeoLite2-City.mmdb');
+      Utils.maxmindReader = await maxmind.open<CityResponse>(dbPath);
+    } catch (error) {
+      console.error('Error initializing MaxMind database:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Lookup IP address information using MaxMind GeoLite2-City database
+   * @param ip IP address to lookup
+   * @returns IP information in ipapi.co compatible format
+   */
   public async lookupIp(ip: string): Promise<any> {
     const cache = Cache.getInstance();
     const cacheKey = `ipLookup:${ip}`;
@@ -371,16 +396,36 @@ class Utils {
 
     try {
       let ipToCheck = ip;
-      const apiKey = process.env['IPLOOKUP_KEY'];
 
       if (process.env['ENVIRONMENT'] === 'development') {
         ipToCheck = '85.145.135.140';
       }
 
-      const response = await axios.get(
-        `https://ipapi.co/${ipToCheck}/json/?key=${apiKey}`
-      );
-      const data = response.data;
+      // Initialize MaxMind if not already done
+      if (!Utils.maxmindReader) {
+        await this.initMaxMind();
+      }
+
+      // Get geo data from MaxMind
+      const geoData = Utils.maxmindReader!.get(ipToCheck);
+
+      // Transform MaxMind response to match ipapi.co format
+      const data = {
+        ip: ipToCheck,
+        city: geoData?.city?.names?.en || null,
+        region: geoData?.subdivisions?.[0]?.names?.en || null,
+        region_code: geoData?.subdivisions?.[0]?.iso_code || null,
+        country: geoData?.country?.names?.en || null,
+        country_code: geoData?.country?.iso_code || null,
+        country_name: geoData?.country?.names?.en || null,
+        continent_code: geoData?.continent?.code || null,
+        postal: geoData?.postal?.code || null,
+        latitude: geoData?.location?.latitude || null,
+        longitude: geoData?.location?.longitude || null,
+        timezone: geoData?.location?.time_zone || null,
+        in_eu: geoData?.country?.is_in_european_union || false,
+      };
+
       await cache.set(cacheKey, JSON.stringify(data), 86400); // Cache individual IP info for 1 day
 
       // Store the IP info in a list and maintain only the last 100 entries

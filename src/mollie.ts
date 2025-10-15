@@ -416,9 +416,9 @@ class Mollie {
             printerHold: true,
             PaymentHasPlaylist: {
               some: {
-                type: 'physical'
-              }
-            }
+                type: 'physical',
+              },
+            },
           }
         : {};
 
@@ -559,7 +559,9 @@ class Mollie {
     return { payments, totalItems };
   }
 
-  public async deletePayment(paymentId: string): Promise<{ success: boolean; error?: string }> {
+  public async deletePayment(
+    paymentId: string
+  ): Promise<{ success: boolean; error?: string }> {
     try {
       // Check if payment exists
       const payment = await this.prisma.payment.findUnique({
@@ -578,7 +580,10 @@ class Mollie {
       return { success: true };
     } catch (error) {
       console.error('Error deleting payment:', error);
-      return { success: false, error: 'Failed to delete payment from database' };
+      return {
+        success: false,
+        error: 'Failed to delete payment from database',
+      };
     }
   }
 
@@ -714,17 +719,13 @@ class Mollie {
         // Try to get the country code from the IP to improve the payment methods
         let locationCountryCode = '';
         try {
-          const response = await axios.get(
-            `https://ipapi.co/${clientIp}/json`,
-            {
-              timeout: 2000,
-            }
-          );
-          const location = response.data;
-          if (!location.error) {
-            locationCountryCode = location.country.toLowerCase();
+          const location = await this.utils.lookupIp(clientIp);
+          if (location && location.country_code) {
+            locationCountryCode = location.country_code.toLowerCase();
           }
-        } catch (error) {}
+        } catch (error) {
+          console.error('Error looking up IP for payment methods:', error);
+        }
 
         const localeData = this.getMollieLocaleData(
           params.locale,
@@ -847,7 +848,8 @@ class Mollie {
             qrColor: item.qrColor || '#000000',
             qrBackgroundColor: item.qrBackgroundColor || '#ffffff',
             hideCircle: item.hideCircle,
-            qrBackgroundType: item.qrBackgroundType || (item.hideCircle ? 'none' : 'square'),
+            qrBackgroundType:
+              item.qrBackgroundType || (item.hideCircle ? 'none' : 'square'),
             price: itemPrice,
             priceWithoutVAT: itemPriceWithoutVAT,
             priceVAT: itemPriceVAT,
@@ -874,7 +876,8 @@ class Mollie {
             gradientDegrees: item.gradientDegrees || 180,
             gradientPosition: item.gradientPosition || 50,
             // Opacity
-            frontOpacity: item.frontOpacity !== undefined ? item.frontOpacity : 100,
+            frontOpacity:
+              item.frontOpacity !== undefined ? item.frontOpacity : 100,
             backOpacity: item.backOpacity !== undefined ? item.backOpacity : 50,
           };
         })
@@ -1038,18 +1041,18 @@ class Mollie {
     if (params.id) {
       this.logger.log(
         color.blue.bold('Processing webhook with ID: ') +
-        color.white.bold(params.id)
+          color.white.bold(params.id)
       );
 
       // Check if this is a valid Mollie payment ID format (starts with "tr_")
       if (!params.id.startsWith('tr_')) {
         this.logger.log(
           color.red.bold('Invalid payment ID format in webhook: ') +
-          color.white.bold(params.id)
+            color.white.bold(params.id)
         );
         return {
           success: false,
-          error: 'Invalid payment ID format'
+          error: 'Invalid payment ID format',
         };
       }
 
@@ -1123,7 +1126,7 @@ class Mollie {
             await this.game.clearUserPlaylistCache(dbPayment.user.hash);
             this.logger.log(
               color.green.bold('Cleared playlist cache for user: ') +
-              color.white.bold(dbPayment.user.hash)
+                color.white.bold(dbPayment.user.hash)
             );
           }
 
