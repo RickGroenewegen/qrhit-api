@@ -3,6 +3,7 @@ import { color, blue, white } from 'console-log-colors';
 import Logger from './logger';
 import GeneratorQueue from './generatorQueue';
 import MusicFetchQueue from './musicfetchQueue';
+import ExcelQueue from './excelQueue';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
@@ -28,11 +29,13 @@ class QueueWorker {
   private logger = new Logger();
   private generatorQueue: GeneratorQueue;
   private musicFetchQueue: MusicFetchQueue;
+  private excelQueue: ExcelQueue;
   private shutdownInProgress = false;
 
   constructor() {
     this.generatorQueue = GeneratorQueue.getInstance();
     this.musicFetchQueue = MusicFetchQueue.getInstance();
+    this.excelQueue = ExcelQueue.getInstance();
     this.setupSignalHandlers();
   }
 
@@ -50,6 +53,7 @@ class QueueWorker {
         await Promise.all([
           this.generatorQueue.shutdown(),
           this.musicFetchQueue.close(),
+          this.excelQueue.close(),
         ]);
         this.logger.log(color.green.bold('Worker shutdown complete'));
         process.exit(0);
@@ -86,20 +90,24 @@ class QueueWorker {
       // Start MusicFetch workers (1 worker to respect rate limits)
       this.musicFetchQueue.startWorkers(1);
 
+      // Start Excel workers (2 workers for concurrent Excel processing)
+      this.excelQueue.startWorkers(2);
+
       this.logger.log(
         color.green.bold(
           `Queue workers started successfully with ${white.bold(
             workerCount.toString()
-          )} Generator workers and 1 MusicFetch worker`
+          )} Generator workers, 1 MusicFetch worker, and 2 Excel workers`
         )
       );
 
       // Log queue status every 30 seconds
       setInterval(async () => {
         try {
-          const [generatorStatus, musicFetchStatus] = await Promise.all([
+          const [generatorStatus, musicFetchStatus, excelStatus] = await Promise.all([
             this.generatorQueue.getQueueStatus(),
             this.musicFetchQueue.getQueueStatus(),
+            this.excelQueue.getQueueStatus(),
           ]);
 
           this.logger.log(
@@ -116,6 +124,14 @@ class QueueWorker {
             ` | Active: ${white.bold(musicFetchStatus.active.toString())}` +
             ` | Completed: ${white.bold(musicFetchStatus.completed.toString())}` +
             ` | Failed: ${white.bold(musicFetchStatus.failed.toString())}`
+          );
+
+          this.logger.log(
+            blue.bold('Excel Queue:') +
+            ` Waiting: ${white.bold(excelStatus.waiting.toString())}` +
+            ` | Active: ${white.bold(excelStatus.active.toString())}` +
+            ` | Completed: ${white.bold(excelStatus.completed.toString())}` +
+            ` | Failed: ${white.bold(excelStatus.failed.toString())}`
           );
         } catch (error) {
           this.logger.log(

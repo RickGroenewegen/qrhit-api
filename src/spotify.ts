@@ -479,7 +479,7 @@ class Spotify {
           color.blue.bold(
             `Fetching tracks from API for playlist ${color.white.bold(
               playlistId
-            )} (${playlistData.name})${ipInfo}${uaInfo}`
+            )} (${color.white.bold(playlistData.name)})${ipInfo}${uaInfo}`
           )
         );
 
@@ -1103,6 +1103,16 @@ class Spotify {
     // Note: SpotifyRapidApi's implementation might return an error if not supported.
     // Use the specific implementation instance directly
     return this.spotifyApi.createOrUpdatePlaylist(playlistName, trackIds);
+  }
+
+  /**
+   * Public method to delete (unfollow) a Spotify playlist.
+   * Delegates to the SpotifyApi instance.
+   * @param playlistId The Spotify playlist ID to delete/unfollow.
+   * @returns {Promise<ApiResult>} Result of the deletion operation.
+   */
+  public async deletePlaylist(playlistId: string): Promise<ApiResult> {
+    return this.spotifyApi.deletePlaylist(playlistId);
   }
 
   /**

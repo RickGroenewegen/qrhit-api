@@ -1518,7 +1518,8 @@ class Data {
   public async storeTracks(
     playlistDatabaseId: number,
     playlistId: string,
-    tracks: any
+    tracks: any,
+    trackOrder?: Map<string, number>
   ): Promise<any> {
     const providedTrackIds = tracks.map((track: any) => track.id);
 
@@ -1719,13 +1720,41 @@ class Data {
       )
     );
 
-    // Bulk insert playlist_has_tracks
-    await this.prisma.$executeRaw`
-      INSERT IGNORE INTO playlist_has_tracks (playlistId, trackId)
-      SELECT ${playlistDatabaseId}, id
-      FROM tracks
-      WHERE trackId IN (${Prisma.join(providedTrackIds)})
-    `;
+    // Bulk insert playlist_has_tracks with order
+    if (trackOrder && trackOrder.size > 0) {
+      // Build CASE statement for order
+      const orderCases: Prisma.Sql[] = [];
+      for (const [trackId, order] of trackOrder.entries()) {
+        orderCases.push(Prisma.sql`WHEN trackId = ${trackId} THEN ${order}`);
+      }
+
+      await this.prisma.$executeRaw`
+        INSERT IGNORE INTO playlist_has_tracks (playlistId, trackId, \`order\`)
+        SELECT ${playlistDatabaseId}, id,
+          CASE
+            ${Prisma.join(orderCases, ' ')}
+            ELSE 0
+          END as \`order\`
+        FROM tracks
+        WHERE trackId IN (${Prisma.join(providedTrackIds)})
+      `;
+
+      this.logger.log(
+        color.green.bold(
+          `Inserted playlist_has_tracks records with Excel row order for ${color.white.bold(
+            providedTrackIds.length
+          )} tracks`
+        )
+      );
+    } else {
+      // Original behavior without order
+      await this.prisma.$executeRaw`
+        INSERT IGNORE INTO playlist_has_tracks (playlistId, trackId)
+        SELECT ${playlistDatabaseId}, id
+        FROM tracks
+        WHERE trackId IN (${Prisma.join(providedTrackIds)})
+      `;
+    }
 
     this.logger.log(
       color.blue.bold(

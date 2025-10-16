@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import { createOrUpdateAdminUser, deleteUserById } from '../auth';
 import Generator from '../generator';
 import GeneratorQueue from '../generatorQueue';
+import ExcelQueue from '../excelQueue';
 import AnalyticsClient from '../analytics';
 import Data from '../data';
 import { OpenPerplex } from '../openperplex';
@@ -13,6 +14,7 @@ import Mollie from '../mollie';
 import Order from '../order';
 import Suggestion from '../suggestion';
 import Copy from '../copy';
+import Excel from '../excel';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -1206,6 +1208,132 @@ export default async function adminRoutes(
         reply.status(500).send({
           success: false,
           error: error.message || 'Failed to start MusicFetch bulk action',
+        });
+      }
+    }
+  );
+
+  // Supplement Excel with QRSong links (async via queue)
+  fastify.post(
+    '/admin/supplement-excel',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const excel = Excel.getInstance();
+        const { jobId, filename } = await excel.queueExcelProcessing(
+          request.parts(),
+          request.clientIp
+        );
+
+        reply.send({
+          success: true,
+          jobId,
+          filename,
+          message: 'Excel processing job queued successfully',
+        });
+      } catch (error: any) {
+        console.error('Error queueing Excel job:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to queue Excel processing',
+        });
+      }
+    }
+  );
+
+  // Get Excel job status
+  fastify.get(
+    '/admin/supplement-excel/status/:jobId',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { jobId } = request.params;
+        const excelQueue = ExcelQueue.getInstance();
+        const jobStatus = await excelQueue.getJobStatus(jobId);
+
+        if (!jobStatus) {
+          reply.status(404).send({
+            success: false,
+            error: 'Job not found',
+          });
+          return;
+        }
+
+        reply.send({
+          success: true,
+          jobId: jobStatus.id,
+          state: jobStatus.state,
+          progress: jobStatus.progress,
+          filename: jobStatus.returnvalue?.filename,
+          error: jobStatus.failedReason,
+        });
+      } catch (error: any) {
+        console.error('Error getting Excel job status:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to get job status',
+        });
+      }
+    }
+  );
+
+  // Download completed Excel file
+  fastify.get(
+    '/admin/supplement-excel/download/:filename',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { filename } = request.params;
+
+        // Validate filename to prevent directory traversal
+        if (filename.includes('..') || filename.includes('/') || filename.includes('\\')) {
+          reply.status(400).send({
+            success: false,
+            error: 'Invalid filename',
+          });
+          return;
+        }
+
+        const publicDir = process.env['PUBLIC_DIR'];
+        if (!publicDir) {
+          reply.status(500).send({
+            success: false,
+            error: 'PUBLIC_DIR not configured',
+          });
+          return;
+        }
+
+        const filePath = path.join(publicDir, 'excel', filename);
+
+        // Check if file exists
+        try {
+          await fs.access(filePath, fs.constants.R_OK);
+        } catch (error) {
+          reply.status(404).send({
+            success: false,
+            error: 'File not found',
+          });
+          return;
+        }
+
+        // Read and send the file
+        const fileBuffer = await fs.readFile(filePath);
+
+        reply
+          .header(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          )
+          .header(
+            'Content-Disposition',
+            `attachment; filename="${filename}"`
+          )
+          .send(fileBuffer);
+      } catch (error: any) {
+        console.error('Error downloading Excel file:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to download file',
         });
       }
     }

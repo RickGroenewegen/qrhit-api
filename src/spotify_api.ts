@@ -812,7 +812,7 @@ class SpotifyApi {
           color.blue.bold(
             `No existing playlist found named "${color.white.bold(
               playlistName
-            )}". Creating new playlist for user ${userId}.`
+            )}". Creating new playlist for user ${color.white.bold(userId)}.`
           )
         );
         const createResult = await this.executeWithRetry(async () => {
@@ -952,6 +952,57 @@ class SpotifyApi {
       return { success: true, data: result };
     } catch (error) {
       return this.handleApiError(error, `fetching user playlists`);
+    }
+  }
+
+  /**
+   * Deletes (unfollows) a playlist from the user's library.
+   * @param playlistId The Spotify playlist ID to delete/unfollow.
+   * @returns {Promise<ApiResult>} Result of the deletion operation.
+   */
+  public async deletePlaylist(playlistId: string): Promise<ApiResult> {
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) {
+      return {
+        success: false,
+        error: 'Spotify authentication required',
+        needsReAuth: true,
+        authUrl: this.getAuthorizationUrl() ?? undefined,
+      };
+    }
+
+    try {
+      const result = await this.executeWithRetry(async () => {
+        await axios.delete(
+          `https://api.spotify.com/v1/playlists/${playlistId}/followers`,
+          {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          }
+        );
+        return { success: true };
+      }, `deleting/unfollowing playlist ${playlistId}`);
+
+      // Check if executeWithRetry returned an ApiResult (error case)
+      if (
+        result &&
+        typeof result === 'object' &&
+        'success' in result &&
+        !(result as any).success
+      ) {
+        return result as ApiResult;
+      }
+
+      this.logger.log(
+        color.green.bold(
+          `Successfully deleted/unfollowed playlist ${color.white.bold(
+            playlistId
+          )}`
+        )
+      );
+
+      return { success: true };
+    } catch (error) {
+      return this.handleApiError(error, `deleting playlist ${playlistId}`);
     }
   }
 }

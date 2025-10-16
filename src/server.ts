@@ -23,6 +23,8 @@ import ipPlugin from './plugins/ipPlugin';
 import { createServer } from 'http';
 import NativeWebSocketServer from './websocket-native';
 import GeneratorQueue from './generatorQueue';
+import MusicFetchQueue from './musicfetchQueue';
+import ExcelQueue from './excelQueue';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -149,6 +151,7 @@ class Server {
     const privateDir = process.env['PRIVATE_DIR']!;
     await this.utils.createDir(`${publicDir}/qr`);
     await this.utils.createDir(`${publicDir}/pdf`);
+    await this.utils.createDir(`${publicDir}/excel`);
     await this.utils.createDir(`${privateDir}/invoice`);
   }
 
@@ -177,11 +180,18 @@ class Server {
           const workerCount = parseInt(process.env['QUEUE_WORKERS'] || '2');
           const generatorQueue = GeneratorQueue.getInstance();
           await generatorQueue.initializeWorkers(workerCount);
+
+          const musicFetchQueue = MusicFetchQueue.getInstance();
+          musicFetchQueue.startWorkers(1);
+
+          const excelQueue = ExcelQueue.getInstance();
+          excelQueue.startWorkers(2);
+
           this.logger.log(
             color.green.bold(
-              `Generator queue workers initialized successfully (${color.white.bold(
+              `Queue workers initialized successfully: ${color.white.bold(
                 workerCount.toString()
-              )} workers on this server)`
+              )} Generator workers, 1 MusicFetch worker, 2 Excel workers`
             )
           );
         } catch (error) {
