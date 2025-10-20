@@ -117,7 +117,7 @@ class PDF {
           LoadLazyContent: 'true', // Load all lazy content including fonts
         } as any;
 
-        if (template === 'printer') {
+        if (template === 'printer' || template === 'printer_vibe') {
           // options['PageSize'] = 'a5';
           // options['PageOrientation'] = 'Landscape';
           options['PageWidth'] = 60;
