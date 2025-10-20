@@ -43,7 +43,7 @@ class Spotify {
   // MusicMatch mapping: key = 'playlistId_trackId', value = spotify track id
   private musicMatchMap: { [key: string]: string } = {};
   // Domain blacklist: URLs from these domains will not be resolved
-  private domainBlacklist: string[] = ['q.me-qr.com'];
+  private domainBlacklist: string[] = ['q.me-qr.com', 'qrto.org'];
 
   constructor() {
     this.getJumboData();
