@@ -145,6 +145,19 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     }
   });
 
+  // Calculate volume discount
+  fastify.post('/order/volume-discount', async (request: any, _reply) => {
+    try {
+      const volumeDiscount = await discount.calculateVolumeDiscount(request.body.cart);
+      return {
+        success: true,
+        volumeDiscount: volumeDiscount,
+      };
+    } catch (e) {
+      return { success: false, volumeDiscount: 0 };
+    }
+  });
+
   // Check discount
   fastify.post('/discount/:code/:digital', async (request: any, reply: any) => {
     const result = await discount.checkDiscount(

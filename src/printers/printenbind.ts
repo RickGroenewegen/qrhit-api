@@ -14,6 +14,7 @@ import Utils from '../utils';
 import cluster from 'cluster';
 import { CronJob } from 'cron';
 import { SingleItemCalculation } from '../interfaces/SingleItemCalculation';
+import Discount from '../discount';
 
 interface PriceResult {
   totalPrice: number;
@@ -30,6 +31,7 @@ class PrintEnBind {
   private data = Data.getInstance();
   private spotify = Spotify.getInstance();
   private utils = new Utils();
+  private discount = new Discount();
   private countryCodes: string[] = [
     'AF',
     'AX',
@@ -951,6 +953,12 @@ class PrintEnBind {
         totalPrice += shipping; // + handling;
       }
 
+      // Calculate volume discount for digital cards
+      const volumeDiscount = await this.discount.calculateVolumeDiscount(params.cart);
+
+      // Subtract volume discount from total price
+      totalPrice -= volumeDiscount;
+
       const result = {
         success: true,
         data: {
@@ -962,6 +970,7 @@ class PrintEnBind {
           taxRate,
           price: totalProductPriceWithoutVAT,
           payment: shipping, // + handling,
+          volumeDiscount, // Add volume discount to result
         },
       };
 

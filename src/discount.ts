@@ -570,6 +570,48 @@ class Discount {
       discountUsed,
     };
   }
+
+  /**
+   * Calculate volume discount for digital cards without creating a discount code
+   * @param cart Cart object containing items
+   * @returns Volume discount amount (0 if no discount applicable)
+   */
+  public async calculateVolumeDiscount(cart: any): Promise<number> {
+    // Import Order class to access calculateDigitalCardPrice
+    const Order = (await import('./order')).default;
+    const order = Order.getInstance();
+
+    // Filter digital card items only
+    const digitalCardItems = cart.items.filter(
+      (item: any) => item.type === 'digital' && item.productType === 'cards'
+    );
+
+    // Need at least 2 digital playlists for volume discount
+    if (digitalCardItems.length < 2) {
+      return 0;
+    }
+
+    // Calculate total cards across all digital playlists
+    const totalCards = digitalCardItems.reduce(
+      (sum: number, item: any) => sum + parseInt(item.numberOfTracks || 0),
+      0
+    );
+
+    // Calculate ideal volume price for total cards
+    const volumePricing = await order.calculateDigitalCardPrice(13, totalCards);
+
+    // Calculate current price (each playlist priced individually at base €13)
+    const currentPrice = digitalCardItems.reduce(
+      (sum: number, item: any) => sum + (item.price * item.amount),
+      0
+    );
+
+    // Calculate discount amount
+    const discountAmount = currentPrice - volumePricing.totalPrice;
+
+    // Return discount only if positive
+    return discountAmount > 0 ? parseFloat(discountAmount.toFixed(2)) : 0;
+  }
 }
 
 export default Discount;
