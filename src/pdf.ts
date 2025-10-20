@@ -74,7 +74,8 @@ class PDF {
       template === 'printer_sheets'
         ? 6
         : 1;
-    const pagesPerTrack = template === 'printer' ? 2 : 1;
+    const pagesPerTrack =
+      template === 'printer' || template === 'printer_vibe' ? 2 : 1;
     const totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
     const maxPagesPerPDF = 100;
 
