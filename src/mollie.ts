@@ -705,7 +705,8 @@ class Mollie {
         description = description.substring(0, 250);
       }
 
-      if (calculateResult.data.total === 0 && discountUsed) {
+      // Handle free orders (with discount) OR vibe orders with low totals
+      if ((calculateResult.data.total === 0 && discountUsed) || (vibe && calculateResult.data.total <= 10)) {
         molliePaymentId = `free_${this.utils.generateRandomString(10)}`;
         molliePaymentAmount = 0;
         molliePaymentStatus = 'paid';
@@ -996,6 +997,7 @@ class Mollie {
           paymentId: molliePaymentId,
           paymentUri: mollieCheckoutUrl,
           userId: userDatabaseId,
+          generationQueued: triggerDirectGeneration, // Flag to indicate generation was already queued
         },
       };
     } catch (e) {

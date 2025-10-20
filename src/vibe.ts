@@ -1894,7 +1894,9 @@ class Vibe {
     mollie: Mollie,
     clientIp: string
   ): Promise<any> {
-    const price = 100;
+    // Price set to €100 (10000 cents) to ensure proper discount calculation
+    // After 100% discount + shipping, total will be ~€3, which triggers vibe free order logic
+    const price = 10000;
 
     // Get the company list details
     let companyList = await this.prisma.companyList.findUnique({
@@ -2082,6 +2084,18 @@ class Vibe {
       true,
       true
     );
+
+    // If generation was already queued by Mollie (for free/vibe orders), return early
+    if (result.data.generationQueued) {
+      this.logger.log(
+        color.green.bold(
+          `PDF generation complete for list ${color.white.bold(
+            companyList.name
+          )} (ID: ${color.white.bold(listId)})`
+        )
+      );
+      return { success: true, message: 'PDF generation queued by payment system' };
+    }
 
     const userId = result.data.userId;
 
@@ -2727,19 +2741,22 @@ class Vibe {
       if (fluidMode && quantity > 100) {
         // Fluid mode: interpolate between tiers
         const tierThresholds = [100, 250, 500, 1000, 2500, 5000];
-        
+
         // Find the two surrounding tiers
         let lowerTier = 100;
         let upperTier = 5000;
-        
+
         for (let i = 0; i < tierThresholds.length - 1; i++) {
-          if (quantity >= tierThresholds[i] && quantity < tierThresholds[i + 1]) {
+          if (
+            quantity >= tierThresholds[i] &&
+            quantity < tierThresholds[i + 1]
+          ) {
             lowerTier = tierThresholds[i];
             upperTier = tierThresholds[i + 1];
             break;
           }
         }
-        
+
         // Handle edge case for quantities >= 5000
         if (quantity >= 5000) {
           tierKey = 5000;
@@ -2749,23 +2766,48 @@ class Vibe {
           // Linear interpolation between tiers
           const lowerTierData = pricingTiers[lowerTier];
           const upperTierData = pricingTiers[upperTier];
-          
+
           // Calculate interpolation factor (0 to 1)
           const factor = (quantity - lowerTier) / (upperTier - lowerTier);
-          
+
           // Interpolate all pricing components
           tierData = {
-            productionCost: lowerTierData.productionCost + (upperTierData.productionCost - lowerTierData.productionCost) * factor,
-            cards: lowerTierData.cards + (upperTierData.cards - lowerTierData.cards) * factor,
-            personalization: lowerTierData.personalization + (upperTierData.personalization - lowerTierData.personalization) * factor,
-            projectManagement: lowerTierData.projectManagement + (upperTierData.projectManagement - lowerTierData.projectManagement) * factor,
-            fulfillment: lowerTierData.fulfillment + (upperTierData.fulfillment - lowerTierData.fulfillment) * factor,
-            shipping: lowerTierData.shipping + (upperTierData.shipping - lowerTierData.shipping) * factor,
-            kickBackFee: lowerTierData.kickBackFee + (upperTierData.kickBackFee - lowerTierData.kickBackFee) * factor,
-            resellerDiscount: lowerTierData.resellerDiscount + (upperTierData.resellerDiscount - lowerTierData.resellerDiscount) * factor,
-            commercialPrice: lowerTierData.commercialPrice + (upperTierData.commercialPrice - lowerTierData.commercialPrice) * factor,
+            productionCost:
+              lowerTierData.productionCost +
+              (upperTierData.productionCost - lowerTierData.productionCost) *
+                factor,
+            cards:
+              lowerTierData.cards +
+              (upperTierData.cards - lowerTierData.cards) * factor,
+            personalization:
+              lowerTierData.personalization +
+              (upperTierData.personalization - lowerTierData.personalization) *
+                factor,
+            projectManagement:
+              lowerTierData.projectManagement +
+              (upperTierData.projectManagement -
+                lowerTierData.projectManagement) *
+                factor,
+            fulfillment:
+              lowerTierData.fulfillment +
+              (upperTierData.fulfillment - lowerTierData.fulfillment) * factor,
+            shipping:
+              lowerTierData.shipping +
+              (upperTierData.shipping - lowerTierData.shipping) * factor,
+            kickBackFee:
+              lowerTierData.kickBackFee +
+              (upperTierData.kickBackFee - lowerTierData.kickBackFee) * factor,
+            resellerDiscount:
+              lowerTierData.resellerDiscount +
+              (upperTierData.resellerDiscount -
+                lowerTierData.resellerDiscount) *
+                factor,
+            commercialPrice:
+              lowerTierData.commercialPrice +
+              (upperTierData.commercialPrice - lowerTierData.commercialPrice) *
+                factor,
           };
-          
+
           // Use interpolated tier for display
           tierKey = lowerTier; // Display the lower tier as reference
           commercialPrice = tierData.commercialPrice;
@@ -2778,7 +2820,7 @@ class Vibe {
         else if (quantity < 2500) tierKey = 1000;
         else if (quantity < 5000) tierKey = 2500;
         else tierKey = 5000;
-        
+
         tierData = pricingTiers[tierKey];
         commercialPrice = tierData.commercialPrice;
       }
@@ -2875,7 +2917,12 @@ class Vibe {
     profitMargin: number;
   }): Promise<any> {
     try {
-      const { quantity, includeStansmestekening, includeStansvorm, profitMargin } = params;
+      const {
+        quantity,
+        includeStansmestekening,
+        includeStansvorm,
+        profitMargin,
+      } = params;
 
       // Validate input
       if (!quantity || quantity < 1) {
@@ -2885,30 +2932,33 @@ class Vibe {
       // Box pricing tiers - these are for "units" (1 unit = 3 physical boxes)
       // From the quote: prices are for the number of box sets (units), not individual boxes
       const boxPricingTiers: { quantity: number; totalPrice: number }[] = [
-        { quantity: 1000, totalPrice: 1165.00 },   // 3,000 boxes / 3 = 1,000 units
-        { quantity: 2500, totalPrice: 1667.50 },   // 7,500 boxes / 3 = 2,500 units
-        { quantity: 5000, totalPrice: 2505.00 },   // 15,000 boxes / 3 = 5,000 units
+        { quantity: 1000, totalPrice: 1165.0 }, // 3,000 boxes / 3 = 1,000 units
+        { quantity: 2500, totalPrice: 1667.5 }, // 7,500 boxes / 3 = 2,500 units
+        { quantity: 5000, totalPrice: 2505.0 }, // 15,000 boxes / 3 = 5,000 units
       ];
 
       // Card set pricing tiers (price for total quantity in EUR)
       // Each set = 200 song cards + 1 cover card
       const cardPricingTiers: { quantity: number; totalPrice: number }[] = [
-        { quantity: 50, totalPrice: 545.00 },
-        { quantity: 100, totalPrice: 840.00 },
-        { quantity: 150, totalPrice: 1135.00 },
-        { quantity: 200, totalPrice: 1430.00 },
-        { quantity: 250, totalPrice: 1725.00 },
-        { quantity: 300, totalPrice: 2020.00 },
-        { quantity: 400, totalPrice: 2610.00 },
-        { quantity: 500, totalPrice: 3200.00 },
-        { quantity: 750, totalPrice: 4675.00 },
-        { quantity: 1000, totalPrice: 6150.00 },
-        { quantity: 2500, totalPrice: 15000.00 },
-        { quantity: 5000, totalPrice: 29750.00 },
+        { quantity: 50, totalPrice: 545.0 },
+        { quantity: 100, totalPrice: 840.0 },
+        { quantity: 150, totalPrice: 1135.0 },
+        { quantity: 200, totalPrice: 1430.0 },
+        { quantity: 250, totalPrice: 1725.0 },
+        { quantity: 300, totalPrice: 2020.0 },
+        { quantity: 400, totalPrice: 2610.0 },
+        { quantity: 500, totalPrice: 3200.0 },
+        { quantity: 750, totalPrice: 4675.0 },
+        { quantity: 1000, totalPrice: 6150.0 },
+        { quantity: 2500, totalPrice: 15000.0 },
+        { quantity: 5000, totalPrice: 29750.0 },
       ];
 
       // Helper function to find the appropriate tier (round down to nearest tier)
-      const findTier = (qty: number, tiers: { quantity: number; totalPrice: number }[]) => {
+      const findTier = (
+        qty: number,
+        tiers: { quantity: number; totalPrice: number }[]
+      ) => {
         // Start from the highest tier and work backwards to find the closest tier <= quantity
         for (let i = tiers.length - 1; i >= 0; i--) {
           if (qty >= tiers[i].quantity) {
@@ -2934,13 +2984,13 @@ class Vibe {
       let extrasTotal = 0;
 
       if (includeStansmestekening) {
-        extras.push({ name: 'Stansmestekening + dummy', price: 150.00 });
-        extrasTotal += 150.00;
+        extras.push({ name: 'Stansmestekening + dummy', price: 150.0 });
+        extrasTotal += 150.0;
       }
 
       if (includeStansvorm) {
-        extras.push({ name: 'Stansvorm', price: 425.00 });
-        extrasTotal += 425.00;
+        extras.push({ name: 'Stansvorm', price: 425.0 });
+        extrasTotal += 425.0;
       }
 
       // Calculate totals
@@ -2949,7 +2999,8 @@ class Vibe {
       // Price per set includes boxes + cards + profit (but NOT extras, as they're one-time costs shown separately)
       const baseCostPerSet = (boxPrice + cardPrice) / quantity;
       const profitPerSet = profitMargin || 0;
-      const pricePerSet = Math.round((baseCostPerSet + profitPerSet) * 100) / 100; // Round to 2 decimals
+      const pricePerSet =
+        Math.round((baseCostPerSet + profitPerSet) * 100) / 100; // Round to 2 decimals
       const clientPrice = trompCost + ourProfit;
 
       // Return calculation results
@@ -2957,10 +3008,16 @@ class Vibe {
         success: true,
         calculation: {
           quantity,
-          boxTierName: `${boxTier.quantity} units (${boxTier.quantity * 3} boxes) @ €${(boxTier.totalPrice / boxTier.quantity).toFixed(2)}/unit`,
+          boxTierName: `${boxTier.quantity} units (${
+            boxTier.quantity * 3
+          } boxes) @ €${(boxTier.totalPrice / boxTier.quantity).toFixed(
+            2
+          )}/unit`,
           boxPricePerUnit: boxPricePerUnit,
           boxPrice: boxPrice,
-          cardTierName: `${cardTier.quantity} sets @ €${(cardTier.totalPrice / cardTier.quantity).toFixed(2)}/set`,
+          cardTierName: `${cardTier.quantity} sets @ €${(
+            cardTier.totalPrice / cardTier.quantity
+          ).toFixed(2)}/set`,
           cardPricePerUnit: cardPricePerUnit,
           cardPrice: cardPrice,
           extras: extras,
@@ -2972,7 +3029,9 @@ class Vibe {
         },
       };
     } catch (error) {
-      this.logger.log(color.red.bold(`Error calculating Tromp pricing: ${error}`));
+      this.logger.log(
+        color.red.bold(`Error calculating Tromp pricing: ${error}`)
+      );
       return { success: false, error: 'Error calculating Tromp pricing' };
     }
   }
@@ -3040,7 +3099,8 @@ class Vibe {
       const htmlUrl = `${baseUrl}/vibe/quotation/${type}/${companyId}/${quotationNumber}`;
 
       this.logger.log(
-        color.blue.bold(`Generating PDF quotation from URL: `) + color.white.bold(htmlUrl)
+        color.blue.bold(`Generating PDF quotation from URL: `) +
+          color.white.bold(htmlUrl)
       );
 
       const options = {
