@@ -156,7 +156,7 @@ class PDF {
           color.blue.bold(`Merged PDF saved: ${color.white.bold(filename)}`)
         );
       }
-      if (template === 'printer') {
+      if (template === 'printer' || template === 'printer_vibe') {
         if (payment.vibe) {
           // Happibox wants a 3% increase in size for the printer
           await this.resizePDFPages(finalPath, 62, 62);
