@@ -15,6 +15,7 @@ import Order from '../order';
 import Suggestion from '../suggestion';
 import Copy from '../copy';
 import Excel from '../excel';
+import Review from '../review';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -35,6 +36,7 @@ export default async function adminRoutes(
   const order = Order.getInstance();
   const suggestion = Suggestion.getInstance();
   const copy = Copy.getInstance();
+  const review = Review.getInstance();
 
   // Create order (admin only)
   fastify.post(
@@ -650,6 +652,16 @@ export default async function adminRoutes(
     async (request: any, reply: any) => {
       data.checkUnfinalizedPayments();
       reply.send({ success: true });
+    }
+  );
+
+  // Process playback counts for review eligibility
+  fastify.post(
+    '/process_playback_counts',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const result = await review.processPlaybackCounts();
+      reply.send(result);
     }
   );
 

@@ -143,6 +143,8 @@ model Payment {
   test                    Boolean              @default(false)
   vibe                    Boolean              @default(false)
   reviewMailSent          Boolean              @default(false)
+  reviewAllowed           Int                  @default(0)
+  reviewAllowedAt         DateTime?
   finalizedAt             DateTime?
   canBeSentToPrinter      Boolean              @default(false)
   canBeSentToPrinterAt    DateTime?
