@@ -21,26 +21,25 @@ class Review {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] != 'development') {
           // Cron job to process playback counts and mark eligible payments
-          // Commented out - can be triggered manually via API route
-          // new CronJob(
-          //   '0 * * * *',
-          //   async () => {
-          //     await this.processPlaybackCounts();
-          //   },
-          //   null,
-          //   true
-          // );
+          // Runs every hour at minute :00
+          new CronJob(
+            '0 * * * *',
+            async () => {
+              await this.processPlaybackCounts();
+            },
+            null,
+            true
+          );
 
-          // Cron job to send review emails (runs 30 minutes after playback counts)
-          // Commented out - can be triggered manually via API route
-          // new CronJob(
-          //   '30 * * * *',
-          //   async () => {
-          //     await this.processReviewEmails();
-          //   },
-          //   null,
-          //   true
-          // );
+          // Cron job to send review emails (runs 5 minutes after playback counts)
+          new CronJob(
+            '5 * * * *',
+            async () => {
+              await this.processReviewEmails();
+            },
+            null,
+            true
+          );
         }
       });
     }
