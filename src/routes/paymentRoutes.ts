@@ -148,7 +148,9 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   // Calculate volume discount
   fastify.post('/order/volume-discount', async (request: any, _reply) => {
     try {
-      const volumeDiscount = await discount.calculateVolumeDiscount(request.body.cart);
+      const volumeDiscount = await discount.calculateVolumeDiscount(
+        request.body.cart
+      );
       return {
         success: true,
         volumeDiscount: volumeDiscount,
@@ -272,6 +274,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
         // Check for specific Treffer email
         if (
+          payment.email.toLowerCase() === 'west14+jam@gmail.com' &&
+          request.params.template === 'printer'
+        ) {
+          template = 'jam_printer';
+        } else if (
           payment.email.toLowerCase() === 'west14+treffer@gmail.com' &&
           request.params.template === 'printer'
         ) {
