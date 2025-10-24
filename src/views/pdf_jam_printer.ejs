@@ -153,7 +153,7 @@
             <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
         <% } %>
         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; position: relative; z-index: 1;">
-            <div class="text" style="font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;">
+            <div class="text" style="font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;max-width: 40mm;">
                 <%= track.artist %>
                 <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
                     <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
