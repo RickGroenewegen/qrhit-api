@@ -100,6 +100,8 @@ class AnalyticsClient {
       },
       where: {
         payment: {
+          vibe: false,
+          test: false,
           user: {
             email: {
               notIn: excludedEmails,
@@ -128,6 +130,8 @@ class AnalyticsClient {
   ): Promise<{ totalPrice: number; totalProfit: number }> {
     const payments = await this.prisma.payment.findMany({
       where: {
+        vibe: false,
+        test: false,
         user: {
           email: {
             notIn: excludedEmails,
