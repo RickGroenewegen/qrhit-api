@@ -259,7 +259,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
             rowIndices.forEach(function(i) { %>
                 <% if (i !== null) { %>
                     <div class="card back" style="position: relative;">
-                        <% if (php.backgroundBack && php.backgroundBack.length) { %>
+                        <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
                             <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
                         <% } %>
                         <div class="text" style="margin-top: 0mm;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;">

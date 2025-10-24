@@ -155,10 +155,6 @@ class Review {
   }
 
   public async processPlaybackCounts() {
-    this.logger.log(
-      color.blue.bold('Processing playback counts for review eligibility')
-    );
-
     try {
       // Get all playback data from Redis
       const ipInfoListKey = 'ipInfoList';
@@ -170,7 +166,6 @@ class Review {
       );
 
       if (ipInfoList.length === 0) {
-        this.logger.log(color.yellow.bold('No playback data found in Redis'));
         return { success: true, data: [] };
       }
 
@@ -192,9 +187,6 @@ class Review {
       }
 
       if (playbackData.length === 0) {
-        this.logger.log(
-          color.yellow.bold('No valid playback data with payment references found')
-        );
         return { success: true, data: [] };
       }
 
@@ -283,10 +275,6 @@ class Review {
           color.blue.bold(
             `Processed ${white.bold(updatedPayments.length)} payments eligible for review`
           )
-        );
-      } else {
-        this.logger.log(
-          color.yellow.bold('No new payments eligible for review')
         );
       }
 
