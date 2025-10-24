@@ -657,7 +657,7 @@ export default async function adminRoutes(
 
   // Process playback counts for review eligibility
   fastify.post(
-    '/process_playback_counts',
+    '/admin/process_playback_counts',
     getAuthHandler(['admin']),
     async (_request: any, reply: any) => {
       const result = await review.processPlaybackCounts();
