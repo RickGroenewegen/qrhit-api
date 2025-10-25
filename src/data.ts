@@ -2154,6 +2154,43 @@ class Data {
     }
   }
 
+  public async updatePlaylistFeatured(
+    playlistId: string,
+    featured: boolean
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const playlist = await this.prisma.playlist.findUnique({
+        where: { playlistId },
+        select: { id: true },
+      });
+
+      if (!playlist) {
+        return { success: false, error: 'Playlist not found' };
+      }
+
+      await this.prisma.playlist.update({
+        where: { playlistId },
+        data: { featured },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Updated featured status for playlist ${color.white.bold(playlistId)} to ${color.white.bold(featured)}`
+        )
+      );
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating featured status for playlist ${color.white.bold(
+            playlistId
+          )}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
   public async translateGenres(): Promise<{
     processed: number;
     updated: number;

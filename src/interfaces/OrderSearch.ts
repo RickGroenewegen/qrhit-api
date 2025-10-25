@@ -5,4 +5,5 @@ export interface OrderSearch {
   itemsPerPage: number;
   textSearch: string;
   printerHold?: boolean;
+  notSubmitted?: boolean;
 }

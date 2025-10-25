@@ -552,6 +552,43 @@ export default async function adminRoutes(
     }
   );
 
+  // Update featured status for playlist
+  fastify.post(
+    '/admin/playlist/:playlistId/featured',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+      const { featured } = request.body;
+
+      if (!playlistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      if (typeof featured !== 'boolean') {
+        reply.status(400).send({
+          success: false,
+          error: 'featured must be a boolean',
+        });
+        return;
+      }
+
+      const result = await data.updatePlaylistFeatured(playlistId, featured);
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Analytics
   fastify.get(
     '/analytics',

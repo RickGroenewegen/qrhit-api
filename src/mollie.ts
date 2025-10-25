@@ -422,6 +422,12 @@ class Mollie {
           }
         : {};
 
+    // Not submitted filter - if true, only include payments with printApiStatus = 'Created'
+    const notSubmittedClause =
+      typeof search.notSubmitted === 'boolean' && search.notSubmitted
+        ? { printApiStatus: 'Created' }
+        : {};
+
     const totalItems = await this.prisma.payment.count({
       where: {
         vibe: false,
@@ -430,6 +436,7 @@ class Mollie {
         ...textSearchClause,
         ...finalizedClause,
         ...printerHoldClause,
+        ...notSubmittedClause,
       },
     });
 
@@ -441,6 +448,7 @@ class Mollie {
         ...textSearchClause,
         ...finalizedClause,
         ...printerHoldClause,
+        ...notSubmittedClause,
       },
       skip: (search.page - 1) * search.itemsPerPage,
       take: search.itemsPerPage,
@@ -531,6 +539,7 @@ class Mollie {
               select: {
                 name: true,
                 playlistId: true,
+                featured: true,
                 _count: {
                   select: {
                     tracks: true,
