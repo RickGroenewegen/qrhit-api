@@ -100,6 +100,7 @@ class Generator {
             PaymentHasPlaylist: {
               select: {
                 suggestionsPending: true,
+                playlistId: true,
               },
             },
           },
@@ -112,16 +113,36 @@ class Generator {
           )
         );
 
-        if (eligiblePayments.length > 0) {
+        // Additionally filter out payments that have any UserSuggestion records for their playlists
+        const paymentsWithoutUserSuggestions = [];
+        for (const payment of eligiblePayments) {
+          const playlistIds = payment.PaymentHasPlaylist.map(
+            (php) => php.playlistId
+          );
+
+          const userSuggestionCount = await this.prisma.userSuggestion.count({
+            where: {
+              playlistId: {
+                in: playlistIds,
+              },
+            },
+          });
+
+          if (userSuggestionCount === 0) {
+            paymentsWithoutUserSuggestions.push(payment);
+          }
+        }
+
+        if (paymentsWithoutUserSuggestions.length > 0) {
           this.logger.log(
             blue.bold(
               `Found ${white.bold(
-                eligiblePayments.length.toString()
+                paymentsWithoutUserSuggestions.length.toString()
               )} payments ready to be sent to printer`
             )
           );
 
-          for (const payment of eligiblePayments) {
+          for (const payment of paymentsWithoutUserSuggestions) {
             try {
               await this.sendToPrinter(payment.paymentId, '');
               this.logger.log(
