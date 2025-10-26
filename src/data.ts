@@ -897,6 +897,7 @@ class Data {
         const dbPlaylist = await this.prisma.playlist.findFirst({
           where: { slug: cartItem.playlistId },
         });
+
         usePlaylistId = dbPlaylist!.playlistId;
       }
 
@@ -2138,7 +2139,9 @@ class Data {
 
       this.logger.log(
         color.blue.bold(
-          `Updated printer hold for payment ${color.white.bold(paymentId)} to ${color.white.bold(printerHold)}`
+          `Updated printer hold for payment ${color.white.bold(
+            paymentId
+          )} to ${color.white.bold(printerHold)}`
         )
       );
       return { success: true };
@@ -2175,7 +2178,9 @@ class Data {
 
       this.logger.log(
         color.blue.bold(
-          `Updated featured status for playlist ${color.white.bold(playlistId)} to ${color.white.bold(featured)}`
+          `Updated featured status for playlist ${color.white.bold(
+            playlistId
+          )} to ${color.white.bold(featured)}`
         )
       );
       return { success: true };

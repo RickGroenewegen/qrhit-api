@@ -422,10 +422,17 @@ class Mollie {
           }
         : {};
 
-    // Not submitted filter - if true, only include payments with printApiStatus = 'Created'
+    // Not submitted filter - if true, only include payments with printApiStatus = 'Created' AND at least one physical playlist
     const notSubmittedClause =
       typeof search.notSubmitted === 'boolean' && search.notSubmitted
-        ? { printApiStatus: 'Created' }
+        ? {
+            printApiStatus: 'Created',
+            PaymentHasPlaylist: {
+              some: {
+                type: 'physical',
+              },
+            },
+          }
         : {};
 
     const totalItems = await this.prisma.payment.count({
