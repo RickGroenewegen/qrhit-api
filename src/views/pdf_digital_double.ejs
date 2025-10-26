@@ -178,7 +178,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
     let endIdx = Math.min(startIdx + cardsPerPage, tracks.length);
 %>
     <!-- Front side page <%= pageNum + 1 %> -->
-    <div class="page">(TEST: <%= php.backOpacity %>)
+    <div class="page">
         <% for(let rowStart = startIdx; rowStart < endIdx; rowStart += 3) { %>
             <div class="row">
                 <% 
