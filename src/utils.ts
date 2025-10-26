@@ -438,6 +438,35 @@ class Utils {
       return null;
     }
   }
+
+  /**
+   * Lighten a hex color by blending it with white
+   * @param hexColor Hex color code (e.g., '#000000' or '000000')
+   * @param amount Amount to lighten (0-1, where 1 is pure white)
+   * @returns Lightened hex color
+   */
+  public lightenColor(hexColor: string | undefined, amount: number): string {
+    if (!hexColor) return '#d8d8d8';
+
+    // Remove # if present
+    const color = hexColor.replace('#', '');
+
+    // Convert to RGB
+    let r = parseInt(color.substring(0, 2), 16);
+    let g = parseInt(color.substring(2, 4), 16);
+    let b = parseInt(color.substring(4, 6), 16);
+
+    // Lighten by blending with white (amount = 0 to 1, where 1 is white)
+    r = Math.round(r + (255 - r) * amount);
+    g = Math.round(g + (255 - g) * amount);
+    b = Math.round(b + (255 - b) * amount);
+
+    // Convert back to hex
+    return '#' + [r, g, b].map(x => {
+      const hex = x.toString(16);
+      return hex.length === 1 ? '0' + hex : hex;
+    }).join('');
+  }
 }
 
 export default Utils;

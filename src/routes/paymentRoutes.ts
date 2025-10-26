@@ -294,7 +294,10 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           subdir,
           payment,
           playlist,
-          php: php[0],
+          php: {
+            ...php[0],
+            batchNumberColor: utils.lightenColor(php[0].fontColor, 0.8),
+          },
           tracks,
           user,
           eco,
