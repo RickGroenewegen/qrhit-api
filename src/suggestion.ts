@@ -448,7 +448,7 @@ class Suggestion {
         JOIN playlists pl ON pl.id = php.playlistId
         JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
         JOIN tracks t ON t.id = pht.trackId
-        JOIN usersuggestions us ON us.trackId = t.id
+        JOIN usersuggestions us ON us.trackId = t.id AND us.userId = u.id
         WHERE p.paymentId = ${paymentId}
         AND u.hash = ${userHash}
         AND pl.playlistId = ${playlistId}
@@ -662,9 +662,7 @@ class Suggestion {
           )
         );
       } else {
-        this.logger.log(
-          color.yellow.bold('No text corrections detected')
-        );
+        this.logger.log(color.yellow.bold('No text corrections detected'));
       }
 
       // Always clear suggestionsPending flag (using the independently queried paymentHasPlaylistId)
