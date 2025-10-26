@@ -120,18 +120,22 @@
         height: 60mm;
         position: relative;
         overflow: hidden;
-        <% if (php.useGradient) {
-            const firstStop = Math.max(0, php.gradientPosition - 50);
-            const secondStop = Math.min(100, php.gradientPosition + 50);
-            const bgColor = php.backgroundBackColor || '#ffffff';
-            const gradColor = php.gradientBackgroundColor || '#ffffff';
-            const degrees = php.gradientDegrees || 180;
-        %>
-        background: linear-gradient(<%= degrees %>deg, <%= bgColor %> <%= firstStop %>%, <%= gradColor %> <%= secondStop %>%);
-        <% } else if (php.backgroundBackColor) { %>
-        background-color: <%= php.backgroundBackColor %>;
+        <% if (php.backgroundBackType === 'solid') { %>
+            <% if (php.useGradient) {
+                const firstStop = Math.max(0, php.gradientPosition - 50);
+                const secondStop = Math.min(100, php.gradientPosition + 50);
+                const bgColor = php.backgroundBackColor || '#ffffff';
+                const gradColor = php.gradientBackgroundColor || '#ffffff';
+                const degrees = php.gradientDegrees || 180;
+            %>
+            background: linear-gradient(<%= degrees %>deg, <%= bgColor %> <%= firstStop %>%, <%= gradColor %> <%= secondStop %>%);
+            <% } else if (php.backgroundBackColor) { %>
+            background-color: <%= php.backgroundBackColor %>;
+            <% } else { %>
+            background-color: #ffffff;
+            <% } %>
         <% } else { %>
-        background-color: #ffffff;
+        background-color: transparent;
         <% } %>
     }
     .background-image-back {
