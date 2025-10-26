@@ -205,16 +205,6 @@ class Spotify {
         const lockAcquired = await this.cache.acquireLock(lockKey, 30); // 30 second TTL
 
         if (!lockAcquired) {
-          // Another request is already fetching this playlist
-          // Wait and retry getting from cache
-          this.logger.log(
-            color.yellow.bold(
-              `Waiting for another request to fetch playlist ${color.white.bold(
-                playlistId
-              )}`
-            )
-          );
-
           // Poll cache every 100ms for up to 10 seconds
           const maxAttempts = 100;
           for (let i = 0; i < maxAttempts; i++) {
@@ -250,6 +240,11 @@ class Spotify {
                   where: { slug: playlistId, featured: true },
                 });
                 if (!dbPlaylist) {
+                  // Cache the failure so other waiting requests don't timeout
+                  const failureResult = JSON.stringify({
+                    error: 'playlistNotFound',
+                  });
+                  await this.cache.set(cacheKey, failureResult, 60); // Cache for 1 minute
                   await this.cache.releaseLock(lockKey);
                   return { success: false, error: 'playlistNotFound' };
                 }
@@ -277,7 +272,21 @@ class Spotify {
             );
 
             if (!result.success) {
+              // Cache the failure so other waiting requests don't timeout
+              const errorToCache =
+                result.error === 'Spotify resource not found'
+                  ? 'playlistNotFound'
+                  : result.error || 'Error getting playlist from API';
+
+              const failureResult = JSON.stringify({
+                error: errorToCache,
+                needsReAuth: result.needsReAuth,
+              });
+
+              // Cache errors for a shorter time (1 minute) since they might be transient
+              await this.cache.set(cacheKey, failureResult, 60);
               await this.cache.releaseLock(lockKey);
+
               // Check if the error indicates a need for re-authentication
               if (result.needsReAuth) {
                 return {
@@ -302,7 +311,13 @@ class Spotify {
 
             // Add check to ensure playlistData exists before accessing its properties
             if (!playlistData) {
+              // Cache the failure so other waiting requests don't timeout
+              const failureResult = JSON.stringify({
+                error: 'Error getting playlist data from API',
+              });
+              await this.cache.set(cacheKey, failureResult, 60);
               await this.cache.releaseLock(lockKey);
+
               this.logger.log(
                 color.red.bold(
                   `Playlist data missing from API response for ${checkPlaylistId}`
@@ -394,8 +409,15 @@ class Spotify {
       }
 
       if (!playlist && cacheResult) {
-        // Parse cached data and extract appropriate description
+        // Parse cached data and check if it's an error result
         const cachedData = JSON.parse(cacheResult);
+
+        // If the cached result is an error, return it immediately
+        if (cachedData.error) {
+          return { success: false, error: cachedData.error };
+        }
+
+        // Otherwise extract appropriate description
         playlist = {
           id: cachedData.id,
           playlistId: cachedData.playlistId,
