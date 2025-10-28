@@ -16,6 +16,7 @@ import Logger from '../logger';
 import Review from '../review';
 import Mollie from '../mollie';
 import Cache from '../cache';
+import Shipping from '../shipping';
 import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
@@ -38,6 +39,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const review = Review.getInstance();
   const mollie = new Mollie();
   const cache = Cache.getInstance();
+  const shipping = Shipping.getInstance();
 
   // Cache for robots.txt content
   let robotsTxtCache: string | null = null;
@@ -515,5 +517,74 @@ export default async function publicRoutes(fastify: FastifyInstance) {
           .send({ success: false, error: 'Failed to translate genres' });
       }
     });
+
+    // Test shipping
+    fastify.get('/test_shipping/:paymentId', async (request: any, reply: any) => {
+      try {
+        const result = await shipping.createShipment(request.params.paymentId);
+        reply.send({ success: true, data: result });
+      } catch (error) {
+        logger.log(
+          `Error in /test_shipping route: ${(error as Error).message}`
+        );
+        reply.status(500).send({
+          success: false,
+          error: (error as Error).message,
+        });
+      }
+    });
+
+    // Test get tracking info
+    fastify.get('/test_tracking/:paymentId', async (request: any, reply: any) => {
+      try {
+        const { result, updatedPayment } = await shipping.getTrackingInfo(request.params.paymentId);
+        reply.send({ success: true, trackingData: result, payment: updatedPayment });
+      } catch (error) {
+        logger.log(
+          `Error in /test_tracking route: ${(error as Error).message}`
+        );
+        reply.status(500).send({
+          success: false,
+          error: (error as Error).message,
+        });
+      }
+    });
+
+    // Development route to manually trigger shipping status updates (cron job)
+    fastify.get('/dev_update_shipping_statuses', async (request: any, reply: any) => {
+      try {
+        logger.log('Manually triggering shipping status updates...');
+        const summary = await shipping.updateAllShippingStatuses();
+        reply.send({
+          success: true,
+          message: 'Shipping status update completed',
+          summary,
+        });
+      } catch (error) {
+        logger.log(
+          `Error in /dev_update_shipping_statuses route: ${(error as Error).message}`
+        );
+        reply.status(500).send({
+          success: false,
+          error: (error as Error).message,
+        });
+      }
+    });
   }
+
+  // Public route to get average delivery times per country (past 2 weeks)
+  fastify.get('/api/tracking/average-delivery-times', async (request: any, reply: any) => {
+    try {
+      const result = await shipping.getAverageDeliveryTimes();
+      reply.send({ success: true, data: result });
+    } catch (error) {
+      logger.log(
+        `Error in /api/tracking/average-delivery-times route: ${(error as Error).message}`
+      );
+      reply.status(500).send({
+        success: false,
+        error: (error as Error).message,
+      });
+    }
+  });
 }

@@ -16,6 +16,7 @@ import Suggestion from '../suggestion';
 import Copy from '../copy';
 import Excel from '../excel';
 import Review from '../review';
+import Shipping from '../shipping';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -37,6 +38,7 @@ export default async function adminRoutes(
   const suggestion = Suggestion.getInstance();
   const copy = Copy.getInstance();
   const review = Review.getInstance();
+  const shipping = Shipping.getInstance();
 
   // Create order (admin only)
   fastify.post(
@@ -1383,6 +1385,108 @@ export default async function adminRoutes(
         reply.status(500).send({
           success: false,
           error: error.message || 'Failed to download file',
+        });
+      }
+    }
+  );
+
+  // Bulk create shipments in TrackingMore
+  fastify.post(
+    '/admin/shipping/create-all',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const result = await shipping.createAllShipments();
+        reply.send({
+          success: true,
+          ...result,
+          message: `Processed ${result.processed} payment(s): ${result.successful} successful, ${result.failed} failed`,
+        });
+      } catch (error: any) {
+        console.error('Error creating bulk shipments:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to create shipments',
+        });
+      }
+    }
+  );
+
+  // Get tracking data for 'In Transit' tab (admin dashboard)
+  fastify.post(
+    '/admin/tracking/in-transit',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { page = 1, itemsPerPage = 100, textSearch } = request.body;
+        const result = await shipping.getTracking('Shipped', page, itemsPerPage, textSearch);
+        reply.send({
+          success: true,
+          ...result,
+        });
+      } catch (error: any) {
+        console.error('Error fetching in-transit tracking:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to fetch tracking data',
+        });
+      }
+    }
+  );
+
+  // Get tracking data for 'Delivered' tab (admin dashboard)
+  fastify.post(
+    '/admin/tracking/delivered',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { page = 1, itemsPerPage = 100, textSearch } = request.body;
+        const result = await shipping.getTracking('Delivered', page, itemsPerPage, textSearch);
+        reply.send({
+          success: true,
+          ...result,
+        });
+      } catch (error: any) {
+        console.error('Error fetching delivered tracking:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to fetch tracking data',
+        });
+      }
+    }
+  );
+
+  // Toggle shippingIgnore status for a payment
+  fastify.post(
+    '/admin/tracking/toggle-ignore',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { paymentId, ignore } = request.body;
+
+        if (!paymentId || typeof ignore !== 'boolean') {
+          reply.status(400).send({
+            success: false,
+            error: 'paymentId and ignore (boolean) are required',
+          });
+          return;
+        }
+
+        const updatedPayment = await shipping.toggleIgnoreStatus(
+          paymentId,
+          ignore
+        );
+
+        reply.send({
+          success: true,
+          data: updatedPayment,
+          message: `Shipment ${ignore ? 'ignored' : 'unignored'} successfully`,
+        });
+      } catch (error: any) {
+        console.error('Error toggling shipping ignore:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to update shipping ignore status',
         });
       }
     }

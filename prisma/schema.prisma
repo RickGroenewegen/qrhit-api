@@ -116,6 +116,15 @@ model Payment {
   shipping                Float?
   taxRate                 Float?
   taxRateShipping         Float?
+  shippingCode            String?
+  shippingCountry         String?
+  shippingPostalCode      String?
+  shippingId              String?
+  shippingStatus          String?
+  shippingMessage         String?
+  shippingStartDateTime   DateTime?
+  shippingDeliveryDateTime DateTime?
+  shippingIgnore          Boolean              @default(false)
   marketingEmails         Boolean              @default(false)
   differentInvoiceAddress Boolean              @default(false)
   invoiceAddress          String?
@@ -172,6 +181,8 @@ model Payment {
   @@index([test])
   @@index([vibe])
   @@index([createdAt])
+  @@index([printApiStatus])
+  @@index([shippingStatus])
   // Composite indexes for common query patterns
   @@index([vibe, test, createdAt])
   @@index([vibe, test, status, createdAt])

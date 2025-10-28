@@ -15,6 +15,7 @@ import cluster from 'cluster';
 import { CronJob } from 'cron';
 import { SingleItemCalculation } from '../interfaces/SingleItemCalculation';
 import Discount from '../discount';
+import Shipping from '../shipping';
 
 interface PriceResult {
   totalPrice: number;
@@ -32,6 +33,7 @@ class PrintEnBind {
   private spotify = Spotify.getInstance();
   private utils = new Utils();
   private discount = new Discount();
+  private shipping = Shipping.getInstance();
   private countryCodes: string[] = [
     'AF',
     'AX',
@@ -1750,6 +1752,7 @@ class PrintEnBind {
                     )} (${color.white.bold(payment.printApiTrackingLink)})`
                   )
                 );
+                await this.shipping.createShipment(payment.paymentId);
               }
             }
           }
