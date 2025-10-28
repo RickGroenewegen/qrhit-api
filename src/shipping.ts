@@ -7,6 +7,7 @@ import PrismaInstance from './prisma';
 import TrackingMore from 'trackingmore-sdk-nodejs';
 import Utils from './utils';
 import Cache from './cache';
+import ExcelJS from 'exceljs';
 
 class Shipping {
   private static instance: Shipping;
@@ -479,11 +480,11 @@ class Shipping {
         },
       });
 
-      this.logger.log(
-        color.blue.bold(
-          `Found ${color.white.bold(shippedPayments.length)} payment(s) with status 'Shipped'`
-        )
-      );
+      // this.logger.log(
+      //   color.blue.bold(
+      //     `Found ${color.white.bold(shippedPayments.length)} payment(s) with status 'Shipped'`
+      //   )
+      // );
 
       if (shippedPayments.length === 0) {
         this.logger.log(
@@ -585,13 +586,15 @@ class Shipping {
    * @param page - Current page number
    * @param itemsPerPage - Number of items per page
    * @param textSearch - Optional text search for customer name
+   * @param countryCode - Optional country code filter
    * @returns Paginated tracking data
    */
   public async getTracking(
     status: 'Shipped' | 'Delivered',
     page: number = 1,
     itemsPerPage: number = 100,
-    textSearch?: string
+    textSearch?: string,
+    countryCode?: string
   ) {
     try {
       // Calculate 3 months ago date
@@ -621,6 +624,11 @@ class Shipping {
         };
       }
 
+      // Add country code filter if provided
+      if (countryCode && countryCode.trim().length > 0) {
+        whereClause.countrycode = countryCode.trim();
+      }
+
       // Determine sort order based on status
       // For in-transit (Shipped): sort by pickup date ascending (oldest/longest in transit first)
       // For delivered: sort by delivery date descending (most recently delivered first)
@@ -643,8 +651,10 @@ class Shipping {
             orderId: true,
             shippingCode: true,
             fullname: true,
+            zipcode: true,
             countrycode: true,
             printApiTrackingLink: true,
+            printApiOrderId: true,
             shippingStatus: true,
             shippingMessage: true,
             shippingStartDateTime: true,
@@ -671,6 +681,202 @@ class Shipping {
         totalPages,
       };
     } catch (error) {
+      throw error;
+    }
+  }
+
+  /**
+   * Get list of available country codes from recent shipments
+   * @returns Array of unique country codes
+   */
+  public async getAvailableCountryCodes(): Promise<string[]> {
+    try {
+      // Get unique country codes from last 3 months of shipped/delivered orders
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+      const payments = await this.prisma.payment.findMany({
+        where: {
+          printApiStatus: {
+            in: ['Shipped', 'Delivered'],
+          },
+          createdAt: {
+            gte: threeMonthsAgo,
+          },
+          countrycode: {
+            not: null,
+          },
+        },
+        select: {
+          countrycode: true,
+        },
+        distinct: ['countrycode'],
+        orderBy: {
+          countrycode: 'asc',
+        },
+      });
+
+      return payments
+        .map(p => p.countrycode)
+        .filter((code): code is string => code !== null)
+        .sort();
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error fetching available country codes: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        )
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Generate Excel export of tracking data
+   * @param status - 'Shipped' or 'Delivered'
+   * @param textSearch - Optional text search for customer name
+   * @param countryCode - Optional country code filter
+   * @returns Excel buffer
+   */
+  public async exportTrackingToExcel(
+    status: 'Shipped' | 'Delivered',
+    textSearch?: string,
+    countryCode?: string
+  ): Promise<Buffer> {
+    try {
+      // Get all matching data (no pagination)
+      const threeMonthsAgo = new Date();
+      threeMonthsAgo.setMonth(threeMonthsAgo.getMonth() - 3);
+
+      const whereClause: any = {
+        printApiStatus: status,
+        createdAt: {
+          gte: threeMonthsAgo,
+        },
+        shippingCode: {
+          not: null,
+        },
+      };
+
+      // Only filter out ignored shipments for "Shipped" status (In Transit tab)
+      if (status === 'Shipped') {
+        whereClause.shippingIgnore = false;
+      }
+
+      // Add text search filter if provided
+      if (textSearch && textSearch.trim().length > 0) {
+        whereClause.fullname = {
+          contains: textSearch.trim(),
+        };
+      }
+
+      // Add country code filter if provided
+      if (countryCode && countryCode.trim().length > 0) {
+        whereClause.countrycode = countryCode.trim();
+      }
+
+      // Determine sort order based on status
+      const orderBy: any = status === 'Shipped'
+        ? [
+            { shippingStartDateTime: 'asc' as const },
+            { createdAt: 'asc' as const }
+          ]
+        : [
+            { shippingDeliveryDateTime: 'desc' as const },
+            { createdAt: 'desc' as const }
+          ];
+
+      // Fetch all matching payments
+      const payments = await this.prisma.payment.findMany({
+        where: whereClause,
+        select: {
+          printApiOrderId: true,
+          fullname: true,
+          shippingStartDateTime: true,
+          shippingDeliveryDateTime: true,
+        },
+        orderBy: orderBy,
+      });
+
+      // Create workbook and worksheet
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet(
+        status === 'Shipped' ? 'In Transit' : 'Delivered'
+      );
+
+      // Add header row
+      worksheet.columns = [
+        { header: 'Print API Order ID', key: 'printApiOrderId', width: 25 },
+        { header: 'Customer', key: 'customer', width: 30 },
+        { header: 'Shipping Start Date', key: 'shippingStartDate', width: 20 },
+        { header: 'Shipping Delivery Date', key: 'shippingDeliveryDate', width: 20 },
+        { header: 'Days', key: 'days', width: 10 },
+      ];
+
+      // Style header row
+      worksheet.getRow(1).font = { bold: true };
+      worksheet.getRow(1).fill = {
+        type: 'pattern',
+        pattern: 'solid',
+        fgColor: { argb: 'FFE0E0E0' },
+      };
+
+      // Add data rows
+      payments.forEach((payment) => {
+        let days: number | null = null;
+
+        if (status === 'Shipped') {
+          // For in-transit: days since pickup
+          if (payment.shippingStartDateTime) {
+            const now = new Date();
+            const startDate = new Date(payment.shippingStartDateTime);
+            const diffInMs = now.getTime() - startDate.getTime();
+            let diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+            days = diffInDays === 0 ? 1 : diffInDays;
+          }
+        } else {
+          // For delivered: delivery time (pickup to delivery)
+          if (payment.shippingStartDateTime && payment.shippingDeliveryDateTime) {
+            const startDate = new Date(payment.shippingStartDateTime);
+            const deliveryDate = new Date(payment.shippingDeliveryDateTime);
+            const diffInMs = deliveryDate.getTime() - startDate.getTime();
+            let diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+            days = diffInDays === 0 ? 1 : diffInDays;
+          }
+        }
+
+        const formatDateTime = (date: Date | null): string => {
+          if (!date) return '-';
+          const d = new Date(date);
+          const day = String(d.getDate()).padStart(2, '0');
+          const month = String(d.getMonth() + 1).padStart(2, '0');
+          const year = d.getFullYear();
+          const hours = String(d.getHours()).padStart(2, '0');
+          const minutes = String(d.getMinutes()).padStart(2, '0');
+          return `${day}-${month}-${year} ${hours}:${minutes}`;
+        };
+
+        worksheet.addRow({
+          printApiOrderId: payment.printApiOrderId || '-',
+          customer: payment.fullname || '-',
+          shippingStartDate: formatDateTime(payment.shippingStartDateTime),
+          shippingDeliveryDate: formatDateTime(payment.shippingDeliveryDateTime),
+          days: days !== null ? days : '-',
+        });
+      });
+
+      // Generate Excel buffer
+      const buffer = await workbook.xlsx.writeBuffer();
+      return Buffer.from(buffer);
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error generating tracking Excel export: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        )
+      );
       throw error;
     }
   }

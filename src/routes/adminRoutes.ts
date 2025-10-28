@@ -1418,8 +1418,8 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const { page = 1, itemsPerPage = 100, textSearch } = request.body;
-        const result = await shipping.getTracking('Shipped', page, itemsPerPage, textSearch);
+        const { page = 1, itemsPerPage = 100, textSearch, countryCode } = request.body;
+        const result = await shipping.getTracking('Shipped', page, itemsPerPage, textSearch, countryCode);
         reply.send({
           success: true,
           ...result,
@@ -1440,8 +1440,8 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const { page = 1, itemsPerPage = 100, textSearch } = request.body;
-        const result = await shipping.getTracking('Delivered', page, itemsPerPage, textSearch);
+        const { page = 1, itemsPerPage = 100, textSearch, countryCode } = request.body;
+        const result = await shipping.getTracking('Delivered', page, itemsPerPage, textSearch, countryCode);
         reply.send({
           success: true,
           ...result,
@@ -1451,6 +1451,68 @@ export default async function adminRoutes(
         reply.status(500).send({
           success: false,
           error: error.message || 'Failed to fetch tracking data',
+        });
+      }
+    }
+  );
+
+  // Get available country codes for filter
+  fastify.get(
+    '/admin/tracking/country-codes',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const countryCodes = await shipping.getAvailableCountryCodes();
+        reply.send({
+          success: true,
+          data: countryCodes,
+        });
+      } catch (error: any) {
+        console.error('Error fetching country codes:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to fetch country codes',
+        });
+      }
+    }
+  );
+
+  // Export tracking data to Excel
+  fastify.post(
+    '/admin/tracking/export',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { status, textSearch, countryCode } = request.body;
+
+        if (!status || (status !== 'Shipped' && status !== 'Delivered')) {
+          reply.status(400).send({
+            success: false,
+            error: 'Invalid status. Must be "Shipped" or "Delivered"',
+          });
+          return;
+        }
+
+        const excelBuffer = await shipping.exportTrackingToExcel(
+          status,
+          textSearch,
+          countryCode
+        );
+
+        const filename = `tracking-${status.toLowerCase()}-${new Date().toISOString().split('T')[0]}.xlsx`;
+
+        reply
+          .header(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          )
+          .header('Content-Disposition', `attachment; filename="${filename}"`)
+          .send(excelBuffer);
+      } catch (error: any) {
+        console.error('Error exporting tracking data:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to export tracking data',
         });
       }
     }
