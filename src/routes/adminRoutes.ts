@@ -45,6 +45,9 @@ export default async function adminRoutes(
     '/create_order',
     getAuthHandler(['admin']),
     async (request: any, _reply) => {
+      // Setup the payment for printer submission (reset status and clear tracking)
+      await generator.setupForPrinter(request.body.paymentId);
+
       return await generator.sendToPrinter(
         request.body.paymentId,
         request.clientIp,

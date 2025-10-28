@@ -842,6 +842,32 @@ class Generator {
     };
   }
 
+  public async setupForPrinter(paymentId: string): Promise<void> {
+    this.logger.log(
+      blue.bold(
+        `Setting up payment ${white.bold(paymentId)} for printer submission`
+      )
+    );
+
+    await this.prisma.payment.update({
+      where: {
+        paymentId,
+      },
+      data: {
+        printApiStatus: 'Submitted',
+        printApiTrackingLink: null,
+      },
+    });
+
+    this.logger.log(
+      color.green.bold(
+        `Payment ${white.bold(
+          paymentId
+        )} set up for printer - status reset to Submitted, tracking link cleared`
+      )
+    );
+  }
+
   public async sendToPrinter(
     paymentId: string,
     clientIp: string,
