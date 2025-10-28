@@ -357,13 +357,13 @@ class Shipping {
         const { data: result } = await axios.request(options);
         return { result, updatedPayment: payment };
       } catch (error) {
-        this.logger.log(
-          color.red.bold(
-            `Error retrieving tracking info: ${
-              error instanceof Error ? error.message : 'Unknown error'
-            }`
-          )
-        );
+        // this.logger.log(
+        //   color.red.bold(
+        //     `Error retrieving tracking info: ${
+        //       error instanceof Error ? error.message : 'Unknown error'
+        //     }`
+        //   )
+        // );
         throw error;
       }
     }
@@ -446,13 +446,13 @@ class Shipping {
         return { result, updatedPayment: payment };
       }
     } catch (error) {
-      this.logger.log(
-        color.red.bold(
-          `Error retrieving tracking info: ${
-            error instanceof Error ? error.message : 'Unknown error'
-          }`
-        )
-      );
+      // this.logger.log(
+      //   color.red.bold(
+      //     `Error retrieving tracking info: ${
+      //       error instanceof Error ? error.message : 'Unknown error'
+      //     }`
+      //   )
+      // );
       throw error;
     }
   }
@@ -463,9 +463,7 @@ class Shipping {
    * If status is 'delivered', also updates printApiStatus to 'Delivered'
    */
   public async updateAllShippingStatuses() {
-    this.logger.log(
-      color.blue.bold('Starting automated shipping status update job...')
-    );
+    
 
     try {
       // Query all payments with printApiStatus = 'Shipped'
@@ -505,14 +503,7 @@ class Shipping {
 
       for (let i = 0; i < shippedPayments.length; i++) {
         const payment = shippedPayments[i];
-        this.logger.log(
-          color.blue.bold(
-            `Processing ${color.white.bold(i + 1)}/${color.white.bold(
-              shippedPayments.length
-            )}: Payment ${color.white.bold(payment.paymentId)}`
-          )
-        );
-
+        
         try {
           const { updatedPayment } = await this.getTrackingInfo(
             payment.paymentId
@@ -527,13 +518,13 @@ class Shipping {
               },
             });
 
-            this.logger.log(
-              color.green.bold(
-                `✓ Payment ${color.white.bold(
-                  payment.paymentId
-                )} marked as Delivered`
-              )
-            );
+            // this.logger.log(
+            //   color.green.bold(
+            //     `✓ Payment ${color.white.bold(
+            //       payment.paymentId
+            //     )} marked as Delivered`
+            //   )
+            // );
             delivered++;
           }
         } catch (error) {
@@ -542,13 +533,13 @@ class Shipping {
             error instanceof Error ? error.message : 'Unknown error'
           }`;
           errors.push(errorMessage);
-          this.logger.log(
-            color.red(
-              `✗ Failed to process payment ${color.white.bold(
-                payment.paymentId
-              )}: ${error instanceof Error ? error.message : 'Unknown error'}`
-            )
-          );
+          // this.logger.log(
+          //   color.red(
+          //     `✗ Failed to process payment ${color.white.bold(
+          //       payment.paymentId
+          //     )}: ${error instanceof Error ? error.message : 'Unknown error'}`
+          //   )
+          // );
         }
 
         // Add 500ms delay between iterations (except for last one)
