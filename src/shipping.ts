@@ -742,10 +742,7 @@ class Shipping {
       const cacheKey = 'average_delivery_times';
       const cachedData = await this.cache.get(cacheKey);
 
-      if (cachedData) {
-        this.logger.log(
-          color.blue.bold('Returning cached average delivery times')
-        );
+      if (cachedData) {       
         return JSON.parse(cachedData);
       }
 
