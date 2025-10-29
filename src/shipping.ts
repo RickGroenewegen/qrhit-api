@@ -556,15 +556,15 @@ class Shipping {
         errors,
       };
 
-      this.logger.log(
-        color.green.bold(
-          `Shipping status update job complete: ${color.white.bold(
-            delivered
-          )} marked as delivered, ${color.white.bold(
-            failed
-          )} failed out of ${color.white.bold(shippedPayments.length)} total`
-        )
-      );
+      // this.logger.log(
+      //   color.green.bold(
+      //     `Shipping status update job complete: ${color.white.bold(
+      //       delivered
+      //     )} marked as delivered, ${color.white.bold(
+      //       failed
+      //     )} failed out of ${color.white.bold(shippedPayments.length)} total`
+      //   )
+      // );
 
       return summary;
     } catch (error) {
