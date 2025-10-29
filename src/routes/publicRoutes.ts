@@ -104,7 +104,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   fastify.get('/cache', async (request: any, _reply) => {
     //cache.flush();
     const userAgent = request.headers['user-agent'] || '';
-    order.updateFeaturedPlaylists(request.clientIp, userAgent);
+    //order.updateFeaturedPlaylists(request.clientIp, userAgent);
     return { success: true };
   });
 
