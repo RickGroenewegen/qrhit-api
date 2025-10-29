@@ -587,4 +587,20 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       });
     }
   });
+
+  // Public route to get shipping information by country (delivery times + costs)
+  fastify.get('/api/shipping/info-by-country', async (request: any, reply: any) => {
+    try {
+      const result = await shipping.getShippingInfoByCountry();
+      reply.send({ success: true, data: result });
+    } catch (error) {
+      logger.log(
+        `Error in /api/shipping/info-by-country route: ${(error as Error).message}`
+      );
+      reply.status(500).send({
+        success: false,
+        error: (error as Error).message,
+      });
+    }
+  });
 }

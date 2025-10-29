@@ -8,6 +8,7 @@ import TrackingMore from 'trackingmore-sdk-nodejs';
 import Utils from './utils';
 import Cache from './cache';
 import ExcelJS from 'exceljs';
+import SiteSettings from './sitesettings';
 
 class Shipping {
   private static instance: Shipping;
@@ -933,7 +934,7 @@ class Shipping {
    * Results are cached in Redis for 1 hour
    * @returns Array of { countryCode, averageDays, orderCount }
    */
-  public async getAverageDeliveryTimes(): Promise<{ countryCode: string; averageDays: number; orderCount: number }[]> {
+  public async getAverageDeliveryTimes(): Promise<{ countryCode: string; averageDays: number; standardDeviation: number; minDays: number; maxDays: number; orderCount: number }[]> {
     try {
       // Check cache first
       const cacheKey = 'average_delivery_times';
@@ -1027,6 +1028,153 @@ class Shipping {
       this.logger.log(
         color.red.bold(
           `Error calculating average delivery times: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        )
+      );
+      throw error;
+    }
+  }
+
+  /**
+   * Get shipping information by country including delivery times and costs
+   * Combines delivery time statistics with shipping costs for all size tiers
+   * @returns Array of shipping info per country with delivery times and costs, plus production days and message
+   */
+  public async getShippingInfoByCountry(): Promise<{
+    productionDays: number;
+    productionMessage: string | null;
+    countries: {
+      countryCode: string;
+      averageDays: number;
+      minDays: number;
+      maxDays: number;
+      orderCount: number;
+      shippingCosts: { size: number; cost: number }[];
+    }[];
+  }> {
+    try {
+      // Check cache first
+      const cacheKey = 'shipping_info_by_country';
+      const cachedData = await this.cache.get(cacheKey);
+
+      if (cachedData) {
+        return JSON.parse(cachedData);
+      }
+
+      // Get production settings
+      const settings = SiteSettings.getInstance();
+      const settingsData = await settings.getSettings();
+      const productionDays = settingsData?.productionDays ?? 3;
+      const productionMessage = settingsData?.productionMessage || null;
+
+      // Get delivery times
+      const deliveryTimes = await this.getAverageDeliveryTimes();
+
+      // Get all shipping costs from database
+      const allShippingCosts = await this.prisma.shippingCostNew.findMany({
+        select: {
+          country: true,
+          size: true,
+          cost: true,
+        },
+        orderBy: [
+          { country: 'asc' },
+          { size: 'asc' },
+        ],
+      });
+
+      // Group shipping costs by country and apply the same logic as calculateOrder
+      const costsByCountry: { [key: string]: { size: number; cost: number }[] } = {};
+      for (const cost of allShippingCosts) {
+        if (!costsByCountry[cost.country]) {
+          costsByCountry[cost.country] = [];
+        }
+
+        // Apply shipping cost adjustments (same logic as calculateOrder in printenbind.ts)
+        let adjustedCost = cost.cost;
+        if (cost.country === 'NL') {
+          // NL shipping is always 2.99
+          adjustedCost = 2.99;
+        } else {
+          // All other countries: deduct 1
+          adjustedCost = cost.cost - 1;
+        }
+
+        costsByCountry[cost.country].push({
+          size: cost.size,
+          cost: adjustedCost,
+        });
+      }
+
+      // Combine delivery times with shipping costs
+      const result = deliveryTimes.map((deliveryTime) => {
+        const shippingCosts = costsByCountry[deliveryTime.countryCode] || [];
+        return {
+          countryCode: deliveryTime.countryCode,
+          averageDays: deliveryTime.averageDays,
+          minDays: deliveryTime.minDays,
+          maxDays: deliveryTime.maxDays,
+          orderCount: deliveryTime.orderCount,
+          shippingCosts,
+        };
+      });
+
+      // Also include countries that have shipping costs but no delivery data yet
+      const countriesWithDeliveryData = new Set(deliveryTimes.map((d) => d.countryCode));
+      for (const [countryCode, shippingCosts] of Object.entries(costsByCountry)) {
+        if (!countriesWithDeliveryData.has(countryCode)) {
+          result.push({
+            countryCode,
+            averageDays: 0,
+            minDays: 0,
+            maxDays: 0,
+            orderCount: 0,
+            shippingCosts,
+          });
+        }
+      }
+
+      // Sort by country code with NL, DE, BE at the top
+      const priorityCountries = ['NL', 'DE', 'BE'];
+      result.sort((a, b) => {
+        const aIndex = priorityCountries.indexOf(a.countryCode);
+        const bIndex = priorityCountries.indexOf(b.countryCode);
+
+        // If both are priority countries, sort by priority order
+        if (aIndex !== -1 && bIndex !== -1) {
+          return aIndex - bIndex;
+        }
+
+        // If only a is priority, it comes first
+        if (aIndex !== -1) {
+          return -1;
+        }
+
+        // If only b is priority, it comes first
+        if (bIndex !== -1) {
+          return 1;
+        }
+
+        // Neither is priority, sort alphabetically
+        return a.countryCode.localeCompare(b.countryCode);
+      });
+
+      // Prepare final response with production days and message
+      const response = {
+        productionDays,
+        productionMessage,
+        countries: result,
+      };
+
+      // Cache for 1 hour (3600 seconds)
+      await this.cache.set(cacheKey, JSON.stringify(response), 3600);
+
+      return response;
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error getting shipping info by country: ${
             error instanceof Error ? error.message : 'Unknown error'
           }`
         )

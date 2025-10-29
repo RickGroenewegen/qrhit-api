@@ -17,6 +17,7 @@ import Copy from '../copy';
 import Excel from '../excel';
 import Review from '../review';
 import Shipping from '../shipping';
+import SiteSettings from '../sitesettings';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -1552,6 +1553,74 @@ export default async function adminRoutes(
         reply.status(500).send({
           success: false,
           error: error.message || 'Failed to update shipping ignore status',
+        });
+      }
+    }
+  );
+
+  // Get site settings
+  fastify.get(
+    '/admin/settings',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const siteSettings = SiteSettings.getInstance();
+        const settings = await siteSettings.getSettings();
+
+        if (!settings) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Settings not found',
+          });
+        }
+
+        return { success: true, data: settings };
+      } catch (error: any) {
+        return reply.status(500).send({
+          success: false,
+          error: error.message,
+        });
+      }
+    }
+  );
+
+  // Update site settings
+  fastify.put(
+    '/admin/settings',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { productionDays, productionMessage } = request.body;
+
+        // Validation
+        if (
+          productionDays !== undefined &&
+          (typeof productionDays !== 'number' || productionDays < 0)
+        ) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid productionDays value',
+          });
+        }
+
+        const siteSettings = SiteSettings.getInstance();
+        const updatedSettings = await siteSettings.updateSettings({
+          productionDays,
+          productionMessage,
+        });
+
+        if (!updatedSettings) {
+          return reply.status(500).send({
+            success: false,
+            error: 'Failed to update settings',
+          });
+        }
+
+        return { success: true, data: updatedSettings };
+      } catch (error: any) {
+        return reply.status(500).send({
+          success: false,
+          error: error.message,
         });
       }
     }
