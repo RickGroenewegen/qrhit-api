@@ -36,7 +36,7 @@ class Spotify {
   private spotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
   private rateLimitManager = RateLimitManager.getInstance(); // Add rate limit manager
 
-  private api = this.spotifyRapidApi; // Default to SpotifyRapidApi
+  private api = this.spotifyApi; // Default to SpotifyApi
 
   // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
   private jumboCardMap: { [key: string]: string } = {};
@@ -267,7 +267,7 @@ class Spotify {
             const result = await this.rateLimitManager.executeWithFallback(
               'getPlaylist',
               [checkPlaylistId],
-              this.spotifyApi,
+              this.api,
               this.spotifyScraper
             );
 
@@ -519,7 +519,7 @@ class Spotify {
         const result = await this.rateLimitManager.executeWithFallback(
           'getTracks',
           [checkPlaylistId],
-          this.spotifyApi,
+          this.api,
           this.spotifyScraper
         );
 
@@ -870,7 +870,7 @@ class Spotify {
       const result = await this.rateLimitManager.executeWithFallback(
         'getTracksByIds',
         [trackIds],
-        this.spotifyApi,
+        this.api,
         this.spotifyScraper
       );
 
@@ -974,7 +974,7 @@ class Spotify {
       const result = await this.rateLimitManager.executeWithFallback(
         'searchTracks',
         [searchTerm, limit, offset],
-        this.spotifyApi,
+        this.api,
         this.spotifyScraper
       );
 
