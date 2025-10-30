@@ -36,7 +36,7 @@ class Spotify {
   private spotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
   private rateLimitManager = RateLimitManager.getInstance(); // Add rate limit manager
 
-  private api = this.spotifyApi; // Default to SpotifyApi
+  private api = this.spotifyRapidApi; // Default to SpotifyRapidApi
 
   // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
   private jumboCardMap: { [key: string]: string } = {};
