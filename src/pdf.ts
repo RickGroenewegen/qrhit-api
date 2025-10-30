@@ -64,7 +64,8 @@ class PDF {
     payment: any,
     template: string,
     subdir: string,
-    eco: boolean = false
+    eco: boolean = false,
+    itemIndex?: number
   ): Promise<string> {
     const numberOfTracks = playlist.numberOfTracks;
 
@@ -96,7 +97,8 @@ class PDF {
           numberOfTracks
         );
 
-        const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}/${subdir}/${ecoInt}/${emptyPages}`;
+        const itemIndexParam = itemIndex !== undefined ? itemIndex : 0;
+        const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}/${subdir}/${ecoInt}/${emptyPages}/${itemIndexParam}`;
 
         this.logger.log(
           color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)

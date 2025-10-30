@@ -231,7 +231,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
   // PDF generation
   fastify.get(
-    '/qr/pdf/:playlistId/:paymentId/:template/:startIndex/:endIndex/:subdir/:eco/:emptyPages',
+    '/qr/pdf/:playlistId/:paymentId/:template/:startIndex/:endIndex/:subdir/:eco/:emptyPages/:itemIndex?',
     async (request: any, reply) => {
       const valid = await mollie.canDownloadPDF(
         request.params.playlistId,
@@ -257,7 +257,14 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       const eco = utils.parseBoolean(request.params.eco);
       const emptyPages = parseInt(request.params.emptyPages);
       const subdir = request.params.subdir;
+      const itemIndex = request.params.itemIndex ? parseInt(request.params.itemIndex) : undefined;
       tracks = tracks.slice(startIndex, endIndex + 1);
+
+      // Construct batch number with item index if provided
+      let batchNumber = php[0].paymentHasPlaylistId.toString();
+      if (itemIndex && itemIndex > 0) {
+        batchNumber = `${php[0].paymentHasPlaylistId}-${itemIndex}`;
+      }
 
       // Check for white label
       const emailDomain = payment.email ? payment.email.split('@')[1] : '';
@@ -299,6 +306,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           user,
           eco,
           emptyPages,
+          batchNumber,
         });
       }
     }

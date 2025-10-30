@@ -280,7 +280,7 @@ for(let pageNum = 0; pageNum < totalPages; pageNum++) {
                             <% } %>
                         </div>
                         <!-- Domain URL removed from back side - always hidden -->
-                        <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 8px; color: <%= php.fontColor || '#000000' %>; opacity: 0.25; font-family: Arial, sans-serif;">#<%= php.paymentHasPlaylistId %></div>
+                        <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 8px; color: <%= php.fontColor || '#000000' %>; opacity: 0.25; font-family: Arial, sans-serif;">#<%= typeof batchNumber !== 'undefined' ? batchNumber : php.paymentHasPlaylistId %></div>
                     </div>
                 <% } else { %>
                     <div class="card back"></div>

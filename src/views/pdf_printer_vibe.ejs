@@ -160,7 +160,7 @@
         </div>
         <!-- Domain URL removed from back side - always hidden -->
         <% if (!payment.vibe) { %>
-            <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 10px; color: <%= php.fontColor || '#909090' %>; font-family: Arial, sans-serif;">#<%= php.paymentHasPlaylistId %></div>
+            <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 10px; color: <%= php.fontColor || '#909090' %>; font-family: Arial, sans-serif;">#<%= typeof batchNumber !== 'undefined' ? batchNumber : php.paymentHasPlaylistId %></div>
         <% } %>
     </div>
     <div style="page-break-after: always;"></div>

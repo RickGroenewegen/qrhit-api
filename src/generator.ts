@@ -620,6 +620,43 @@ class Generator {
             continue;
           }
 
+          // Backward compatibility: Ensure payment_has_playlist_item records exist
+          let items = await this.prisma.paymentHasPlaylistItem.findMany({
+            where: {
+              paymentHasPlaylistId: playlist.paymentHasPlaylistId,
+            },
+            orderBy: {
+              index: 'asc',
+            },
+          });
+
+          // If no items exist, create them based on the amount field
+          if (items.length === 0) {
+            const amount = playlist.amount || 1;
+            const itemsToCreate = [];
+
+            for (let i = 1; i <= amount; i++) {
+              itemsToCreate.push({
+                paymentHasPlaylistId: playlist.paymentHasPlaylistId,
+                index: i,
+              });
+            }
+
+            await this.prisma.paymentHasPlaylistItem.createMany({
+              data: itemsToCreate,
+            });
+
+            // Fetch the newly created items
+            items = await this.prisma.paymentHasPlaylistItem.findMany({
+              where: {
+                paymentHasPlaylistId: playlist.paymentHasPlaylistId,
+              },
+              orderBy: {
+                index: 'asc',
+              },
+            });
+          }
+
           const hash = (
             payment.paymentId +
             '_' +
@@ -638,13 +675,6 @@ class Generator {
             ecoString = '_eco';
           }
 
-          const filename = sanitizeFilename(
-            `${hash}_printer${ecoString}.pdf`.replace(/ /g, '_')
-          ).toLowerCase();
-          const filenameDigital = sanitizeFilename(
-            `${hash}_digital${ecoString}.pdf`.replace(/ /g, '_')
-          ).toLowerCase();
-
           let digitalTemplate = 'digital';
 
           if (playlist.doubleSided == 1) {
@@ -657,43 +687,78 @@ class Generator {
             printerTemplate = 'printer_vibe';
           }
 
-          const [generatedFilenameDigital, generatedFilename] =
-            await Promise.all([
-              this.pdf.generatePDF(
-                filenameDigital,
-                playlist,
-                payment,
-                digitalTemplate,
-                payment.qrSubDir,
-                eco
-              ),
-              playlist.orderType == 'physical'
-                ? this.pdf.generatePDF(
-                    filename,
-                    playlist,
-                    payment,
-                    playlist.subType == 'sheets'
-                      ? 'printer_sheets'
-                      : printerTemplate,
-                    payment.qrSubDir
-                  )
-                : Promise.resolve(''),
-            ]);
+          // Generate PDFs for each item
+          let firstPrinterFilename = '';
+          let firstDigitalFilename = '';
 
-          if (playlist.orderType == 'physical') {
-            physicalPlaylists.push({
-              playlist,
-              filename: generatedFilename,
+          for (const item of items) {
+            const filename = sanitizeFilename(
+              `${hash}_printer${ecoString}_${item.index}.pdf`.replace(/ /g, '_')
+            ).toLowerCase();
+            const filenameDigital = sanitizeFilename(
+              `${hash}_digital${ecoString}_${item.index}.pdf`.replace(/ /g, '_')
+            ).toLowerCase();
+
+            const [generatedFilenameDigital, generatedFilename] =
+              await Promise.all([
+                this.pdf.generatePDF(
+                  filenameDigital,
+                  playlist,
+                  payment,
+                  digitalTemplate,
+                  payment.qrSubDir,
+                  eco,
+                  item.index
+                ),
+                playlist.orderType == 'physical'
+                  ? this.pdf.generatePDF(
+                      filename,
+                      playlist,
+                      payment,
+                      playlist.subType == 'sheets'
+                        ? 'printer_sheets'
+                        : printerTemplate,
+                      payment.qrSubDir,
+                      false,
+                      item.index
+                    )
+                  : Promise.resolve(''),
+              ]);
+
+            // Update item with filenames
+            await this.prisma.paymentHasPlaylistItem.update({
+              where: {
+                id: item.id,
+              },
+              data: {
+                filename: generatedFilename,
+                filenameDigital: generatedFilenameDigital,
+              },
             });
+
+            // Store first filenames for parent record (backward compatibility)
+            if (item.index === 1) {
+              firstPrinterFilename = generatedFilename;
+              firstDigitalFilename = generatedFilenameDigital;
+            }
+
+            if (playlist.orderType == 'physical') {
+              physicalPlaylists.push({
+                playlist,
+                filename: generatedFilename,
+                item: item,
+              });
+            }
           }
 
+          // Update parent record with first item's filenames (backward compatibility)
           await this.prisma.paymentHasPlaylist.update({
             where: {
               id: playlist.paymentHasPlaylistId,
             },
             data: {
-              filename: generatedFilename,
-              filenameDigital: generatedFilenameDigital,
+              filename: firstPrinterFilename,
+              filenameDigital: firstDigitalFilename,
             },
           });
 
@@ -702,8 +767,8 @@ class Generator {
               'digital',
               payment,
               [playlist],
-              generatedFilename,
-              generatedFilenameDigital
+              firstPrinterFilename,
+              firstDigitalFilename
             );
           }
         }

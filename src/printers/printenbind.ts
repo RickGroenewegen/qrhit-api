@@ -590,11 +590,15 @@ class PrintEnBind {
           physicalOrderCreated = true;
 
           if (logging) {
+            // Extract batch number from comment field
+            const batchMatch = items[i].comment?.match(/#([\d-]+)/);
+            const batchNumber = batchMatch ? batchMatch[1] : 'unknown';
+
             this.logger.log(
               color.blue.bold(
                 `Created order: ${color.white.bold(
                   orderId
-                )} and added first article`
+                )} and added first article (Batch: ${color.white.bold(`#${batchNumber}`)})`
               )
             );
           }
@@ -624,11 +628,15 @@ class PrintEnBind {
         }
 
         if (logging) {
+          // Extract batch number from comment field
+          const batchMatch = items[i].comment?.match(/#([\d-]+)/);
+          const batchNumber = batchMatch ? batchMatch[1] : 'unknown';
+
           this.logger.log(
             color.blue.bold(
               `Added article ${color.white.bold(
                 i + 1
-              )} to order ${color.white.bold(orderId)}`
+              )} to order ${color.white.bold(orderId)} (Batch: ${color.white.bold(`#${batchNumber}`)})`
             )
           );
         }
@@ -808,7 +816,8 @@ class PrintEnBind {
   private async createOrderItem(
     numberOfTracks: number,
     fileUrl: string = '',
-    item: any
+    item: any,
+    playlistItem: any = null
   ): Promise<any> {
     let numberOfPages = numberOfTracks * 2;
 
@@ -819,9 +828,18 @@ class PrintEnBind {
     if (item.type == 'digital') {
       return item;
     } else {
+      // Calculate batch number with item index if available
+      const batchNumber = playlistItem
+        ? `${item.paymentHasPlaylistId}-${playlistItem.index}`
+        : item.paymentHasPlaylistId;
+
+      // When playlistItem exists, we're creating one order item per instance (amount=1)
+      // When playlistItem is null (backward compatibility), use original amount
+      const orderAmount = playlistItem ? 1 : item.amount;
+
       let orderObj: any = {
         type: 'physical',
-        amount: item.amount,
+        amount: orderAmount,
         product: 'losbladig',
         number: '1',
         copies: numberOfPages.toString(),
@@ -837,7 +855,7 @@ class PrintEnBind {
         add_file_method: 'url',
         file_overwrite: true,
         file_url: fileUrl,
-        comment: `Batch nummer op de kaartjes (rechts onderin op kant met titel/artiest/jaar) moet #${item.paymentHasPlaylistId} zijn`,
+        comment: `Batch nummer op de kaartjes (rechts onderin op kant met titel/artiest/jaar) moet #${batchNumber} zijn`,
       };
 
       if (item.subType == 'sheets') {
@@ -1190,31 +1208,75 @@ class PrintEnBind {
 
     for (const playlistItem of playlists) {
       const playlist = playlistItem.playlist;
-      const filename = playlistItem.filename;
 
-      const fileUrl = `${process.env['API_URI']}/public/pdf/${filename}`;
+      // Fetch all payment_has_playlist_item records for this playlist
+      const items = await this.prisma.paymentHasPlaylistItem.findMany({
+        where: {
+          paymentHasPlaylistId: playlist.paymentHasPlaylistId,
+        },
+        orderBy: {
+          index: 'asc',
+        },
+      });
 
-      // Add the playlist multiple times based on amount property
-      const amount = playlist.amount || 1; // Default to 1 if amount not specified
-      for (let i = 0; i < amount; i++) {
-        const orderItem = await this.createOrderItem(
-          playlist.numberOfTracks,
-          fileUrl,
-          playlist
-        );
+      // If no items exist (backward compatibility), use the old single-item approach
+      if (items.length === 0) {
+        const filename = playlistItem.filename;
+        const fileUrl = `${process.env['API_URI']}/public/pdf/${filename}`;
 
-        orderItems.push(orderItem);
-        this.logger.log(
-          color.blue.bold(
-            `Adding article to ${color.white.bold(
-              'Print&Bind'
-            )} order. Playlist: ${color.white(
-              playlist.name
-            )} (${color.white.bold(i + 1)}) with ${color.white.bold(
-              playlist.numberOfTracks
-            )} tracks`
-          )
-        );
+        // Add the playlist multiple times based on amount property (old behavior)
+        const amount = playlist.amount || 1;
+        for (let i = 0; i < amount; i++) {
+          const orderItem = await this.createOrderItem(
+            playlist.numberOfTracks,
+            fileUrl,
+            playlist,
+            null
+          );
+
+          orderItems.push(orderItem);
+          this.logger.log(
+            color.blue.bold(
+              `Adding article to ${color.white.bold(
+                'Print&Bind'
+              )} order. Playlist: ${color.white(
+                playlist.name
+              )} (${color.white.bold(i + 1)}) Batch number: ${color.white.bold(
+                playlist.paymentHasPlaylistId
+              )} with ${color.white.bold(
+                playlist.numberOfTracks
+              )} tracks`
+            )
+          );
+        }
+      } else {
+        // New behavior: create one order item per payment_has_playlist_item
+        for (const item of items) {
+          const fileUrl = `${process.env['API_URI']}/public/pdf/${item.filename}`;
+
+          const orderItem = await this.createOrderItem(
+            playlist.numberOfTracks,
+            fileUrl,
+            playlist,
+            item
+          );
+
+          orderItems.push(orderItem);
+          const batchNumber = `${playlist.paymentHasPlaylistId}-${item.index}`;
+          this.logger.log(
+            color.blue.bold(
+              `Adding article to ${color.white.bold(
+                'Print&Bind'
+              )} order. Playlist: ${color.white(
+                playlist.name
+              )} Batch number: ${color.white.bold(
+                batchNumber
+              )} with ${color.white.bold(
+                playlist.numberOfTracks
+              )} tracks`
+            )
+          );
+        }
       }
     }
 

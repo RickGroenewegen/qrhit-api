@@ -525,6 +525,7 @@ model PaymentHasPlaylist {
   frontOpacity           Int       @default(100) // Front background image opacity 0-100 (100% = fully visible by default)
   backOpacity            Int       @default(50) // Back background image opacity 0-100 (default 50%)
   orderType              OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
+  items                  PaymentHasPlaylistItem[]
 
   @@unique([paymentId, playlistId])
   @@index([paymentId])
@@ -532,6 +533,21 @@ model PaymentHasPlaylist {
   @@index([type])
   @@index([paymentId, type])
   @@map("payment_has_playlist")
+}
+
+model PaymentHasPlaylistItem {
+  id                   Int                @id @default(autoincrement())
+  paymentHasPlaylistId Int
+  paymentHasPlaylist   PaymentHasPlaylist @relation(fields: [paymentHasPlaylistId], references: [id], onDelete: Cascade)
+  index                Int                // 1, 2, 3, etc.
+  filename             String?            // printer_hash_1.pdf, printer_hash_2.pdf
+  filenameDigital      String?            // digital_hash_1.pdf, digital_hash_2.pdf
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+
+  @@unique([paymentHasPlaylistId, index])
+  @@index([paymentHasPlaylistId])
+  @@map("payment_has_playlist_item")
 }
 
 model ShippingCost {
