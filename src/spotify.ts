@@ -36,7 +36,7 @@ class Spotify {
   private spotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
   private rateLimitManager = RateLimitManager.getInstance(); // Add rate limit manager
 
-  private api = this.spotifyApi; // Default to SpotifyApi
+  private api = this.spotifyRapidApi; // Default to SpotifyApi
 
   // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
   private jumboCardMap: { [key: string]: string } = {};
@@ -457,6 +457,7 @@ class Spotify {
     userAgent: string = ''
   ): Promise<ApiResult> {
     try {
+
       let cacheKey = `tracks2_${playlistId}`; // Use different prefix for cache key
       let cacheKeyCount = `trackcount2_${playlistId}`;
       let allFormattedTracks: Track[] = []; // Renamed for clarity
@@ -514,6 +515,7 @@ class Spotify {
           }
           checkPlaylistId = dbPlaylist.playlistId;
         }
+
 
         // Use rate limit manager for automatic fallback on 429 errors
         const result = await this.rateLimitManager.executeWithFallback(

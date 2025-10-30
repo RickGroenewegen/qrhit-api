@@ -270,13 +270,13 @@ class SpotifyScraper {
    * @returns {Promise<ApiResult>} Contains an array of track items or error info.
    */
   public async getTracks(playlistId: string): Promise<ApiResult> {
-    // this.logger.log(
-    //   color.blue.bold(
-    //     `Fetching tracks in ${color.white.bold(
-    //       'Scraper API' // Updated to reflect the new API
-    //     )} for playlist ${color.white.bold(playlistId)}`
-    //   )
-    // );
+    this.logger.log(
+      color.blue.bold(
+        `Fetching tracks in ${color.white.bold(
+          'Scraper API' // Updated to reflect the new API
+        )} for playlist ${color.white.bold(playlistId)}`
+      )
+    );
 
     try {
       const options = this.createOptions('/v1/playlist/contents', {
