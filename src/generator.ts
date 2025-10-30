@@ -178,12 +178,19 @@ class Generator {
     skipMainMail: boolean = false,
     onlyProductMail: boolean = false,
     userAgent: string = '',
-    onCompleteData?: {
-      type: 'checkPrinter';
-      paymentId: string;
-      clientIp: string;
-      paymentHasPlaylistId?: number;
-    }
+    onCompleteData?:
+      | {
+          type: 'checkPrinter';
+          paymentId: string;
+          clientIp: string;
+          paymentHasPlaylistId?: number;
+        }
+      | {
+          type: 'sendDigitalEmail';
+          paymentId: string;
+          playlistId: string;
+          userHash: string;
+        }
   ): Promise<string> {
     const queue = this.getGeneratorQueue();
     if (!queue) {

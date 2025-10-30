@@ -605,6 +605,12 @@ class Hitlist {
         return cachedData;
       }
 
+      // Dynamically build description fields select based on available locales
+      const descriptionFields = this.translation.allLocales.reduce((acc, locale) => {
+        acc[`description_${locale}`] = true;
+        return acc;
+      }, {} as Record<string, boolean>);
+
       const companyList = await this.prisma.companyList.findFirst({
         where: { slug },
         // Select specific fields including the new date fields and nested Company fields
@@ -629,16 +635,7 @@ class Hitlist {
             },
           },
           slug: true, // Keep slug if needed elsewhere
-          description_en: true,
-          description_nl: true,
-          description_de: true,
-          description_fr: true,
-          description_es: true,
-          description_it: true,
-          description_pt: true,
-          description_pl: true,
-          description_jp: true,
-          description_cn: true,
+          ...descriptionFields,
         },
       });
 

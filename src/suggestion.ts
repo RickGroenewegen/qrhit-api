@@ -291,6 +291,45 @@ class Suggestion {
         );
 
         return true;
+      } else if (paymentHasPlaylist) {
+        // User approved without text corrections (digital order or other)
+        // Design might have changed, regenerate PDFs to capture changes
+        await this.prisma.payment.update({
+          where: { paymentId },
+          data: {
+            userAgreedToPrinting: true,
+            userAgreedToPrintingAt: new Date(),
+          },
+        });
+
+        // Set suggestionsPending to show "processing" view until email is sent
+        await this.prisma.paymentHasPlaylist.update({
+          where: { id: paymentHasPlaylist.id },
+          data: { suggestionsPending: true },
+        });
+
+        // Clear old PDFs and regenerate (to capture any design changes)
+        await this.mollie.clearPDFs(paymentId);
+
+        const callbackData = {
+          type: 'sendDigitalEmail' as const,
+          paymentId,
+          playlistId,
+          userHash,
+        };
+
+        await this.generator.queueGenerate(
+          paymentId,
+          '',
+          '',
+          true,  // Force finalize
+          true,  // Skip main mail
+          false, // Only product mail
+          '',    // User agent
+          callbackData
+        );
+
+        return true;
       }
 
       return false;
@@ -714,6 +753,27 @@ class Suggestion {
 
         // Clear old PDFs and regenerate
         await this.mollie.clearPDFs(paymentId);
+
+        // Determine callback based on playlist type
+        let callbackData;
+        if (hasPhysicalPlaylists) {
+          // Physical playlists: check printer readiness
+          callbackData = {
+            type: 'checkPrinter' as const,
+            paymentId,
+            clientIp,
+            paymentHasPlaylistId,
+          };
+        } else {
+          // Digital lists: send email after PDF generation
+          callbackData = {
+            type: 'sendDigitalEmail' as const,
+            paymentId,
+            playlistId,
+            userHash,
+          };
+        }
+
         await this.generator.queueGenerate(
           paymentId,
           '',
@@ -722,15 +782,7 @@ class Suggestion {
           true, // Skip main mail
           false, // Only product mail
           '', // User agent
-          // Callback data to check printer readiness after generation completes
-          hasPhysicalPlaylists
-            ? {
-                type: 'checkPrinter',
-                paymentId,
-                clientIp,
-                paymentHasPlaylistId,
-              }
-            : undefined
+          callbackData
         );
       } else {
         // If not sending, just check if ready for printer (for physical orders)

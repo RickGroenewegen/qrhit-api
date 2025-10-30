@@ -5,6 +5,7 @@ import Mollie from './mollie';
 import Redis from 'ioredis';
 import cluster from 'cluster';
 import PrismaInstance from './prisma';
+import Translation from './translation';
 
 interface GenerateJobData {
   paymentId: string;
@@ -14,13 +15,20 @@ interface GenerateJobData {
   skipMainMail?: boolean;
   onlyProductMail?: boolean;
   userAgent?: string;
-  onCompleteData?: {
-    // Instead of callback ID, store the data needed to recreate the callback
-    type: 'checkPrinter';
-    paymentId: string;
-    clientIp: string;
-    paymentHasPlaylistId?: number;
-  };
+  onCompleteData?:
+    | {
+        // Instead of callback ID, store the data needed to recreate the callback
+        type: 'checkPrinter';
+        paymentId: string;
+        clientIp: string;
+        paymentHasPlaylistId?: number;
+      }
+    | {
+        type: 'sendDigitalEmail';
+        paymentId: string;
+        playlistId: string;
+        userHash: string;
+      };
 }
 
 class GeneratorQueue {
@@ -148,6 +156,102 @@ class GeneratorQueue {
       await (suggestion as any).checkIfReadyForPrinter(
         callbackData.paymentId,
         callbackData.clientIp
+      );
+    } else if (callbackData.type === 'sendDigitalEmail') {
+      // Send digital list email after PDF generation completes
+      const Mail = (await import('./mail')).default;
+      const mail = Mail.getInstance();
+      const prisma = PrismaInstance.getInstance();
+
+      // Get payment with user info
+      const payment = await prisma.payment.findFirst({
+        where: { paymentId: callbackData.paymentId },
+        include: {
+          user: {
+            select: { hash: true },
+          },
+        },
+      });
+
+      if (!payment) {
+        this.logger.log(
+          color.red.bold(
+            `Payment not found for digital email: ${callbackData.paymentId}`
+          )
+        );
+        return;
+      }
+
+      // Get playlist info
+      // Dynamically build description fields select based on available locales
+      const allLocales = new Translation().allLocales;
+      const descriptionFields = allLocales.reduce((acc, locale) => {
+        acc[`description_${locale}`] = true;
+        return acc;
+      }, {} as Record<string, boolean>);
+
+      const playlist = await prisma.playlist.findFirst({
+        where: { playlistId: callbackData.playlistId },
+        select: {
+          id: true,
+          playlistId: true,
+          name: true,
+          image: true,
+          numberOfTracks: true,
+          ...descriptionFields,
+        },
+      });
+
+      if (!playlist) {
+        this.logger.log(
+          color.red.bold(
+            `Playlist not found for digital email: ${callbackData.playlistId}`
+          )
+        );
+        return;
+      }
+
+      // Format playlist for email - use locale-specific description or fallback to English
+      const description =
+        (playlist as any)[`description_${payment.locale}`] ||
+        (playlist as any)['description_en'] ||
+        '';
+
+      const playlistForEmail = {
+        id: playlist.id.toString(),
+        playlistId: playlist.playlistId,
+        name: playlist.name,
+        description,
+        image: playlist.image,
+        numberOfTracks: playlist.numberOfTracks,
+      };
+
+      // Send the digital list email
+      await mail.sendEmail('digital', payment, [playlistForEmail], '', '');
+
+      this.logger.log(
+        color.green.bold(
+          `Digital list email sent for payment ${white.bold(
+            callbackData.paymentId
+          )}`
+        )
+      );
+
+      // Clear suggestionsPending flag to allow user to make more changes
+      await prisma.paymentHasPlaylist.updateMany({
+        where: {
+          paymentId: payment.id,
+          playlistId: playlist.id,
+        },
+        data: {
+          suggestionsPending: false,
+        },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Cleared suggestionsPending flag for payment ${callbackData.paymentId} - user can now make more changes`
+        )
       );
     }
   }
