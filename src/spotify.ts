@@ -36,7 +36,8 @@ class Spotify {
   private spotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
   private rateLimitManager = RateLimitManager.getInstance(); // Add rate limit manager
 
-  private api = this.spotifyRapidApi; // Default to SpotifyApi
+  private api = this.spotifyApi; // Default to SpotifyApi
+  private apiFallback = this.spotifyRapidApi; // Default to SpotifyApi
 
   // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
   private jumboCardMap: { [key: string]: string } = {};
@@ -268,7 +269,7 @@ class Spotify {
               'getPlaylist',
               [checkPlaylistId],
               this.api,
-              this.spotifyScraper
+              this.apiFallback
             );
 
             if (!result.success) {
@@ -522,7 +523,7 @@ class Spotify {
           'getTracks',
           [checkPlaylistId],
           this.api,
-          this.spotifyScraper
+          this.apiFallback
         );
 
         if (!result.success) {
@@ -873,7 +874,7 @@ class Spotify {
         'getTracksByIds',
         [trackIds],
         this.api,
-        this.spotifyScraper
+        this.apiFallback
       );
 
       if (!result.success) {
@@ -977,7 +978,7 @@ class Spotify {
         'searchTracks',
         [searchTerm, limit, offset],
         this.api,
-        this.spotifyScraper
+        this.apiFallback
       );
 
       // Determine which API was used for logging

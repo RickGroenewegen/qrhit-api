@@ -25,7 +25,7 @@ class RateLimitManager {
   private logger = new Logger();
 
   // Cache keys for rate limit tracking
-  private readonly RATE_LIMIT_KEY = 'rate_limit_info2';
+  private readonly RATE_LIMIT_KEY = 'rate_limit_info';
   private readonly FALLBACK_DURATION = 5 * 60 * 1000; // 5 minutes base fallback
 
   constructor() {}
