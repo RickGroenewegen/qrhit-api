@@ -712,6 +712,8 @@ class Vibe {
           endAt: true,
           votingBackground: true,
           votingLogo: true,
+          buttonBackgroundColor: true,
+          buttonTextColor: true,
           qrvote: true,
           Company: true,
           downloadLink: true,
@@ -1524,6 +1526,10 @@ class Vibe {
         updateData.qrColor = String(fields.qrColor);
       if (fields.textColor !== undefined)
         updateData.textColor = String(fields.textColor);
+      if (fields.buttonBackgroundColor !== undefined)
+        updateData.buttonBackgroundColor = String(fields.buttonBackgroundColor);
+      if (fields.buttonTextColor !== undefined)
+        updateData.buttonTextColor = String(fields.buttonTextColor);
 
       // Handle languages field (comma separated string)
       if (fields.languages !== undefined) {

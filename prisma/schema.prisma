@@ -664,6 +664,8 @@ model CompanyList {
   endAt                   DateTime?
   votingBackground        String?
   votingLogo              String?
+  buttonBackgroundColor   String    @default("#3b82f6")
+  buttonTextColor         String    @default("#ffffff")
   downloadLink            String?
   reviewLink              String?
   languages               String    @default("nl")

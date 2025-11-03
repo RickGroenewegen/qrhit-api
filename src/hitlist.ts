@@ -625,6 +625,8 @@ class Hitlist {
           numberOfCards: true,
           votingBackground: true,
           votingLogo: true,
+          buttonBackgroundColor: true,
+          buttonTextColor: true,
           qrvote: true,
           startAt: true, // Added startAt
           endAt: true, // Added endAt
@@ -711,6 +713,8 @@ class Hitlist {
           companyName: companyList.Company.name,
           votingBackground: companyList.votingBackground,
           votingLogo: companyList.votingLogo,
+          buttonBackgroundColor: companyList.buttonBackgroundColor,
+          buttonTextColor: companyList.buttonTextColor,
           qrvote: companyList.qrvote,
           languages: companyList.languages,
           showNames: companyList.showNames,
