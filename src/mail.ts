@@ -676,7 +676,8 @@ class Mail {
     payment: any,
     playlists: Playlist[] | [],
     filename: string = '',
-    filenameDigital: string = ''
+    filenameDigital: string = '',
+    invoicePath: string = ''
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -812,6 +813,17 @@ class Mail {
         attachments.push({
           contentType: 'application/pdf',
           filename: 'voucher_printer.pdf',
+          data: fileBase64,
+        });
+      }
+
+      // Attach invoice PDF if provided
+      if (invoicePath.length > 0) {
+        const fileBuffer = await fs.readFile(invoicePath);
+        const fileBase64 = this.wrapBase64(fileBuffer.toString('base64'));
+        attachments.push({
+          contentType: 'application/pdf',
+          filename: 'invoice.pdf',
           data: fileBase64,
         });
       }

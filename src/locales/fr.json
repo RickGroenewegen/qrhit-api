@@ -486,5 +486,13 @@
   "merchant.cards": "cartes",
   "merchant.pdf": "PDF",
   "merchant.sheets": "feuilles",
-  "mail.leaveReviewTrustpilot": "Laisse un avis sur Trustpilot"
+  "mail.leaveReviewTrustpilot": "Laisse un avis sur Trustpilot",
+  "invoice.vatId": "TVA id",
+  "invoice.quantity": "Qté",
+  "invoice.unitPriceExclVAT": "Prix unitaire (HT)",
+  "invoice.totalExclVAT": "Total (HT)",
+  "invoice.subtotalExclVAT": "Sous-total (HT)",
+  "invoice.vat": "TVA",
+  "invoice.over": "sur",
+  "invoice.shipping": "livraison"
 }

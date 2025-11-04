@@ -1805,8 +1805,8 @@ class PrintEnBind {
               });
 
               if (trackingLink && trackingLink.length > 0) {
-                const pdfPath = await this.createInvoice(payment);
-                this.mail.sendTrackingEmail(payment, trackingLink, pdfPath);
+                // Invoice is now sent with confirmation email, not tracking email
+                this.mail.sendTrackingEmail(payment, trackingLink, '');
                 this.logger.log(
                   color.blue.bold(
                     `Sent tracking email for order ${color.white.bold(

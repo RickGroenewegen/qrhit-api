@@ -476,5 +476,13 @@
   "merchant.cards": "卡牌",
   "merchant.pdf": "PDF",
   "merchant.sheets": "シート",
-  "mail.leaveReviewTrustpilot": "去Trustpilot写个评价吧"
+  "mail.leaveReviewTrustpilot": "去Trustpilot写个评价吧",
+  "invoice.vatId": "增值税号",
+  "invoice.quantity": "数量",
+  "invoice.unitPriceExclVAT": "单价（不含税）",
+  "invoice.totalExclVAT": "总计（不含税）",
+  "invoice.subtotalExclVAT": "小计（不含税）",
+  "invoice.vat": "增值税",
+  "invoice.over": "超过",
+  "invoice.shipping": "运送"
 }

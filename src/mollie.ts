@@ -491,6 +491,7 @@ class Mollie {
         housenumber: true,
         printApiShipped: true,
         countrycode: true,
+        isBusinessOrder: true,
         user: {
           select: {
             hash: true,
@@ -1254,6 +1255,9 @@ class Mollie {
         zipcode: true,
         qrSubDir: true,
         countrycode: true,
+        isBusinessOrder: true,
+        companyName: true,
+        vatId: true,
         vibe: true,
         user: {
           select: {

@@ -852,6 +852,99 @@ export default async function adminRoutes(
     }
   );
 
+  // Get payment info
+  fastify.get(
+    '/payment/:paymentId/info',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentId } = request.params;
+
+      try {
+        const payment = await mollie.getPayment(paymentId);
+
+        if (!payment) {
+          reply.code(404).send({ error: 'Payment not found' });
+          return;
+        }
+
+        reply.send({
+          fullname: payment.fullname || '',
+          email: payment.email || '',
+          isBusinessOrder: payment.isBusinessOrder || false,
+          companyName: payment.companyName || '',
+          vatId: payment.vatId || '',
+          address: payment.address || '',
+          housenumber: payment.housenumber || '',
+          city: payment.city || '',
+          zipcode: payment.zipcode || '',
+          countrycode: payment.countrycode || '',
+          differentInvoiceAddress: payment.differentInvoiceAddress || false,
+          invoiceAddress: payment.invoiceAddress || '',
+          invoiceHousenumber: payment.invoiceHousenumber || '',
+          invoiceCity: payment.invoiceCity || '',
+          invoiceZipcode: payment.invoiceZipcode || '',
+          invoiceCountrycode: payment.invoiceCountrycode || '',
+        });
+      } catch (error) {
+        console.error(error);
+        reply.status(500).send({ error: 'Failed to get payment info' });
+      }
+    }
+  );
+
+  // Update payment info
+  fastify.put(
+    '/payment/:paymentId/info',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentId } = request.params;
+      const {
+        fullname,
+        email,
+        isBusinessOrder,
+        companyName,
+        vatId,
+        address,
+        housenumber,
+        city,
+        zipcode,
+        countrycode,
+        differentInvoiceAddress,
+        invoiceAddress,
+        invoiceHousenumber,
+        invoiceCity,
+        invoiceZipcode,
+        invoiceCountrycode,
+      } = request.body;
+
+      try {
+        await order.updatePaymentInfo(paymentId, {
+          fullname,
+          email,
+          isBusinessOrder,
+          companyName,
+          vatId,
+          address,
+          housenumber,
+          city,
+          zipcode,
+          countrycode,
+          differentInvoiceAddress,
+          invoiceAddress,
+          invoiceHousenumber,
+          invoiceCity,
+          invoiceZipcode,
+          invoiceCountrycode,
+        });
+
+        reply.send({ success: true });
+      } catch (error) {
+        console.error(error);
+        reply.status(500).send({ error: 'Failed to update payment info' });
+      }
+    }
+  );
+
   // Update PaymentHasPlaylist
   fastify.post(
     '/php/:paymentHasPlaylistId',

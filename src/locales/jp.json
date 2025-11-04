@@ -477,5 +477,13 @@
   "merchant.cards": "カード",
   "merchant.pdf": "PDF",
   "merchant.sheets": "シート",
-  "mail.leaveReviewTrustpilot": "Trustpilotでレビューしてね"
+  "mail.leaveReviewTrustpilot": "Trustpilotでレビューしてね",
+  "invoice.vatId": "消費税ID",
+  "invoice.quantity": "数量",
+  "invoice.unitPriceExclVAT": "単価（税抜）",
+  "invoice.totalExclVAT": "合計（税抜）",
+  "invoice.subtotalExclVAT": "小計（税抜）",
+  "invoice.vat": "消費税",
+  "invoice.over": "以上",
+  "invoice.shipping": "配送"
 }

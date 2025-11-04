@@ -481,5 +481,13 @@
   "merchant.cards": "karty",
   "merchant.pdf": "PDF",
   "merchant.sheets": "arkusze",
-  "mail.leaveReviewTrustpilot": "Zostaw opinię na Trustpilot"
+  "mail.leaveReviewTrustpilot": "Zostaw opinię na Trustpilot",
+  "invoice.vatId": "NIP",
+  "invoice.quantity": "Ilość",
+  "invoice.unitPriceExclVAT": "Cena jedn. (bez VAT)",
+  "invoice.totalExclVAT": "Suma (bez VAT)",
+  "invoice.subtotalExclVAT": "Suma cząstk. (bez VAT)",
+  "invoice.vat": "VAT",
+  "invoice.over": "na",
+  "invoice.shipping": "wysyłka"
 }

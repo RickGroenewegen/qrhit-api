@@ -144,9 +144,28 @@ class Order {
     const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${invoiceId}.pdf`;
 
     try {
+      // Check if invoice already exists
       await fs.access(pdfPath);
+      this.logger.log(
+        blue.bold(`Invoice already exists at: ${white.bold(pdfPath)}`)
+      );
     } catch (error) {
-      throw new Error('Invoice not found');
+      // Invoice doesn't exist, generate it on-demand
+      this.logger.log(
+        blue.bold(`Invoice not found, generating for: ${white.bold(invoiceId)}`)
+      );
+
+      // Fetch payment data
+      const payment = await this.prisma.payment.findUnique({
+        where: { paymentId: invoiceId },
+      });
+
+      if (!payment) {
+        throw new Error('Payment not found');
+      }
+
+      // Generate invoice
+      await this.createInvoice(payment);
     }
 
     return pdfPath;
@@ -640,6 +659,81 @@ class Order {
     }
 
     return pdfPath;
+  }
+
+  public async updatePaymentInfo(
+    paymentId: string,
+    data: {
+      fullname?: string;
+      email?: string;
+      isBusinessOrder?: boolean;
+      companyName?: string;
+      vatId?: string;
+      address?: string;
+      housenumber?: string;
+      city?: string;
+      zipcode?: string;
+      countrycode?: string;
+      differentInvoiceAddress?: boolean;
+      invoiceAddress?: string;
+      invoiceHousenumber?: string;
+      invoiceCity?: string;
+      invoiceZipcode?: string;
+      invoiceCountrycode?: string;
+    }
+  ): Promise<void> {
+    this.logger.log(
+      blue.bold(`Updating payment info for payment: ${white.bold(paymentId)}`)
+    );
+
+    // Update payment record
+    await this.prisma.payment.update({
+      where: { paymentId },
+      data: {
+        fullname: data.fullname,
+        email: data.email,
+        isBusinessOrder: data.isBusinessOrder,
+        companyName: data.companyName || null,
+        vatId: data.vatId || null,
+        address: data.address || null,
+        housenumber: data.housenumber || null,
+        city: data.city || null,
+        zipcode: data.zipcode || null,
+        countrycode: data.countrycode || null,
+        differentInvoiceAddress: data.differentInvoiceAddress,
+        invoiceAddress: data.invoiceAddress || null,
+        invoiceHousenumber: data.invoiceHousenumber || null,
+        invoiceCity: data.invoiceCity || null,
+        invoiceZipcode: data.invoiceZipcode || null,
+        invoiceCountrycode: data.invoiceCountrycode || null,
+      },
+    });
+
+    // Delete old invoice PDF so it gets regenerated with new info
+    const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${paymentId}.pdf`;
+    try {
+      await fs.unlink(pdfPath);
+      this.logger.log(
+        blue.bold(`Deleted old invoice for regeneration: ${white.bold(pdfPath)}`)
+      );
+    } catch (error) {
+      // File might not exist, that's okay
+      this.logger.log(
+        blue.bold(`No existing invoice to delete for: ${white.bold(paymentId)}`)
+      );
+    }
+
+    // Regenerate invoice with updated info
+    const payment = await this.prisma.payment.findUnique({
+      where: { paymentId },
+    });
+
+    if (payment) {
+      await this.createInvoice(payment);
+      this.logger.log(
+        blue.bold(`Invoice regenerated for: ${white.bold(paymentId)}`)
+      );
+    }
   }
 }
 

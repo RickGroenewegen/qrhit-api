@@ -108,6 +108,9 @@ model Payment {
   updatedAt                DateTime             @updatedAt
   fullname                 String
   email                    String
+  isBusinessOrder          Boolean  @default(false)
+  companyName              String?
+  vatId                    String?
   address                  String?
   housenumber              String?
   city                     String?

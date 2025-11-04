@@ -57,8 +57,8 @@
 				box-sizing: border-box;
 				border: 1px solid #eee;
 				box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
-				font-size: 16px;
-				line-height: 24px;
+				font-size: 12px;
+				line-height: 18px;
 				font-family: 'Helvetica Neue', 'Helvetica', Helvetica, Arial, sans-serif;
 				color: #555;
 				background-color: white;
@@ -76,7 +76,7 @@
 				vertical-align: top;
 			}
 
-			.invoice-box table tr td:nth-child(2) {
+			.invoice-box table tr td:nth-child(n+2) {
 				text-align: right;
 			}
 
@@ -85,8 +85,8 @@
 			}
 
 			.invoice-box table tr.top table td.title {
-				font-size: 45px;
-				line-height: 45px;
+				font-size: 35px;
+				line-height: 35px;
 				color: #333;
 			}
 
@@ -139,11 +139,11 @@
             <!-- (<%= JSON.stringify(payment, null, 2) %>) -->
 			<table border="0">
 				<tr class="top">
-					<td colspan="6">
+					<td colspan="7">
 						<table>
 							<tr>
 								<td class="title">
-									<img src="<%= process.env['API_URI'] %>/assets/images/logo.png" alt="Company logo" style="width: 100%; max-width: 300px" />
+									<img src="<%= process.env['API_URI'] %>/assets/images/logo.png" alt="Company logo" style="width: 100%; max-width: 200px" />
 								</td>
 								<td>
 									<%= translations.invoiceNumber %>: <%= payment.orderId %><br />
@@ -156,7 +156,7 @@
 				</tr>
 
 				<tr class="information">
-					<td colspan="6">
+					<td colspan="7">
 						<table>
 							<tr>
 								<td>
@@ -167,10 +167,18 @@
                                     <%= countries[process.env['PRODUCT_COUNTRY']] %>
 								</td>
 								<td>
-									<%= payment.fullname %><br />
-									<%= payment.invoiceAddress || payment.address %><br/>
+									<% if (payment.isBusinessOrder && payment.companyName) { %>
+										<strong><%= payment.companyName %></strong><br />
+										<%= payment.fullname %><br />
+									<% } else { %>
+										<%= payment.fullname %><br />
+									<% } %>
+									<%= payment.invoiceAddress || payment.address %> <%= payment.invoiceHousenumber || payment.housenumber %><br/>
                                     <%= payment.invoiceZipcode || payment.zipcode %> <%= payment.invoiceCity || payment.city %><br/>
 									<%= countries[payment.invoiceCountrycode || payment.countrycode] %><br/>
+									<% if (payment.isBusinessOrder && payment.vatId) { %>
+										<%= translations.vatId %>: <%= payment.vatId %><br/>
+									<% } %>
 								</td>
 							</tr>
 						</table>
@@ -179,49 +187,78 @@
 
 				<tr class="heading">
 					<td><%= translations.method %></td>
-					<td colspan="5"></td>
+					<td colspan="6"></td>
 				</tr>
 
 				<tr class="details">
 					<td><%= translations[payment.paymentMethod] %></td>
-					<td colspan="5"></td>					
+					<td colspan="6"></td>
 				</tr>
 
 				<tr class="heading">
 					<td><%= translations.product %></td>
-					<td style="text-align:right;"><%= translations.amount %></td>
-					<td style="text-align:right;"><%= translations.pricePerPiece %></td>
+					<td style="text-align:right;"><%= translations.quantity %></td>
+					<td style="text-align:right;"><%= translations.unitPriceExclVAT %></td>
+					<td style="text-align:right;"><%= translations.totalExclVAT %></td>
 					<td style="text-align:right;"><%= translations.taxRate %></td>
 					<td style="text-align:right;"><%= translations.vatAmount %></td>
 					<td style="text-align:right;"><%= translations.totalInclVAT %></td>
 				</tr>
 
-				<% playlists.forEach(function(playlist) { %>
+				<% playlists.forEach(function(playlist) {
+					const totalExclVAT = playlist.price - playlist.priceVAT;
+					const unitPriceExclVAT = totalExclVAT / playlist.amount;
+				%>
 					<tr class="item">
 						<td><%= playlist.productType === 'giftcard' ? translations.giftcard : playlist.name %></td>
 						<td style="text-align:right;"><%= playlist.amount %></td>
-						<td style="text-align:right;"><%= euroFormatter.format(playlist.price / playlist.amount) %></td>
+						<td style="text-align:right;"><%= euroFormatter.format(unitPriceExclVAT) %></td>
+						<td style="text-align:right;"><%= euroFormatter.format(totalExclVAT) %></td>
 						<td style="text-align:right;"><%= payment.taxRate %>%</td>
 						<td style="text-align:right;"><%= euroFormatter.format(playlist.priceVAT) %></td>
 						<td style="text-align:right;"><%= euroFormatter.format(playlist.price) %></td>
 					</tr>
 				<% }); %>
 
-				<% if (orderType != 'digital') { %>
+				<% if (orderType != 'digital') {
+					const shippingExclVAT = payment.shipping - payment.shippingVATPrice;
+				%>
 					<tr class="item">
 						<td><%= translations.shippingAndHandling %></td>
 						<td style="text-align:right;">1</td>
-						<td style="text-align:right;"><%= euroFormatter.format(payment.shipping) %></td>
+						<td style="text-align:right;"><%= euroFormatter.format(shippingExclVAT) %></td>
+						<td style="text-align:right;"><%= euroFormatter.format(shippingExclVAT) %></td>
 						<td style="text-align:right;"><%= payment.taxRateShipping %>%</td>
 						<td style="text-align:right;"><%= euroFormatter.format(payment.shippingVATPrice) %></td>
 						<td style="text-align:right;"><%= euroFormatter.format(payment.shipping) %></td>
 					</tr>
 				<% } %>
 
-				<tr class="total">
-					<td colspan="4"><strong><%= translations.total %>: </strong></td>
-					<td style="text-align:right;"><%= euroFormatter.format(payment.totalVATPrice) %></td>
-					<td style="text-align:right;"><%= euroFormatter.format(payment.totalPrice) %></td>
+				<!-- Subtotal and VAT breakdown -->
+				<% const subtotalExclVAT = payment.totalPrice - payment.totalVATPrice; %>
+
+				<tr style="border-top: 2px solid #eee;">
+					<td colspan="6" style="text-align:right; padding-top: 20px;"><strong><%= translations.subtotalExclVAT %>:</strong></td>
+					<td style="text-align:right; padding-top: 20px;"><strong><%= euroFormatter.format(subtotalExclVAT) %></strong></td>
+				</tr>
+
+				<% if (payment.productVATPrice > 0) { %>
+				<tr>
+					<td colspan="6" style="text-align:right;"><%= translations.vat %> <%= payment.taxRate %>% <%= translations.over %> <%= euroFormatter.format(payment.productPriceWithoutTax) %>:</td>
+					<td style="text-align:right;"><%= euroFormatter.format(payment.productVATPrice) %></td>
+				</tr>
+				<% } %>
+
+				<% if (orderType != 'digital' && payment.shippingVATPrice > 0) { %>
+				<tr>
+					<td colspan="6" style="text-align:right;"><%= translations.vat %> <%= payment.taxRateShipping %>% <%= translations.over %> <%= euroFormatter.format(payment.shippingPriceWithoutTax) %> (<%= translations.shipping %>):</td>
+					<td style="text-align:right;"><%= euroFormatter.format(payment.shippingVATPrice) %></td>
+				</tr>
+				<% } %>
+
+				<tr class="total" style="border-top: 2px solid #333;">
+					<td colspan="6" style="text-align:right; padding-top: 10px;"><strong><%= translations.totalInclVAT %>:</strong></td>
+					<td style="text-align:right; padding-top: 10px;"><strong><%= euroFormatter.format(payment.totalPrice) %></strong></td>
 				</tr>
 			</table>
 		</div>

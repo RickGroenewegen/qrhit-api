@@ -475,5 +475,13 @@
   "qrgames_activation.team": "QRSong!-teamet",
   "qrgames_activation.allRightsReserved": "Alla rättigheter förbehållna",
   "qrgames_activation.visitWebsite": "Besök vår hemsida",
-  "qrgames_activation.contactSupport": "Kontakta support"
+  "qrgames_activation.contactSupport": "Kontakta support",
+  "invoice.vatId": "Moms-id",
+  "invoice.quantity": "Antal",
+  "invoice.unitPriceExclVAT": "Enhetspris (exkl. moms)",
+  "invoice.totalExclVAT": "Totalt (exkl. moms)",
+  "invoice.subtotalExclVAT": "Delsumma (exkl. moms)",
+  "invoice.vat": "Moms",
+  "invoice.over": "över",
+  "invoice.shipping": "frakt"
 }

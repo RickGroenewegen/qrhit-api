@@ -373,7 +373,7 @@
   "mail.reviewRequest": "Bedankt voor je recente QRSong! aankoop. We hopen dat je geniet van je kaarten! We horen graag je feedback. Laat alsjeblieft een recensie achter op onze website.",
   "mail.leaveReview": "Laat een recensie achter",
   "mail.unsubscribe": "Afmelden",
-  "mail.correctionLink": "Corrigeer dit",
+  "mail.correctionLink": "Correcties maken",
   "mail.correctionButton": "Corrigeer dit",
   "mail.weHopeYouHaveFun2": "We hopen dat je veel muzikaal plezier hebt! Als je nog vragen hebt, mail ons via het contactformulier op onze website.",
   "mail.housenumber": "Huisnummer",
@@ -486,5 +486,13 @@
   "product_type.physical": "Fysieke kaarten",
   "merchant.pdf": "PDF",
   "merchant.sheets": "vellen",
-  "mail.leaveReviewTrustpilot": "Laat een review achter op Trustpilot"
+  "mail.leaveReviewTrustpilot": "Laat een review achter op Trustpilot",
+  "invoice.vatId": "btw-id",
+  "invoice.quantity": "Aantal",
+  "invoice.unitPriceExclVAT": "Stukprijs (excl. btw)",
+  "invoice.totalExclVAT": "Totaal (excl. btw)",
+  "invoice.subtotalExclVAT": "Subtotaal (excl. btw)",
+  "invoice.vat": "Btw",
+  "invoice.over": "over",
+  "invoice.shipping": "verzending"
 }

@@ -297,9 +297,18 @@ class Generator {
       }
     }
 
-    // Send the main mail for cards
+    // Generate invoice and send the main mail for cards
     if (productType == 'cards' && !skipMainMail && !onlyProductMail) {
-      await this.mail.sendEmail('main_' + orderType, payment, playlists);
+      let invoicePath = '';
+
+      // Only generate invoice for: physical orders OR digital business orders
+      // Don't generate for: digital personal orders
+      if (orderType !== 'digital' || payment.isBusinessOrder) {
+        invoicePath = await this.order.createInvoice(payment);
+      }
+
+      // Send confirmation email with invoice attached (if generated)
+      await this.mail.sendEmail('main_' + orderType, payment, playlists, '', '', invoicePath);
     }
 
     // Create a random 16 character string for the QR codes directory
@@ -1158,12 +1167,20 @@ class Generator {
       });
     }
 
+    // Generate invoice and send voucher email
+    // Only generate invoice for: physical vouchers OR digital business vouchers
+    let invoicePath = '';
+    if (playlist.orderType !== 'digital' || payment.isBusinessOrder) {
+      invoicePath = await this.order.createInvoice(payment);
+    }
+
     await this.mail.sendEmail(
       'voucher_' + playlist.orderType,
       payment,
       [playlist],
       generatedFilename,
-      generatedFilenameDigital
+      generatedFilenameDigital,
+      invoicePath
     );
   }
 
