@@ -19,6 +19,7 @@ const languages = [
   //'hin',
   'jp',
   'cn',
+  'sv'
   //'ru',
 ];
 const languagesFull = [
@@ -29,10 +30,11 @@ const languagesFull = [
   'Italian',
   'Portuguese',
   'Polish',
-  'Hindi',
+  //'Hindi',
   'Japanese',
   'Chinese', // (Simplified)
-  'Russian',
+  //'Russian',
+  'Swedish',
 ];
 
 // Initialize rate limiter with desired limits

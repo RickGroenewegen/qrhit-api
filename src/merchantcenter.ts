@@ -103,6 +103,7 @@ export class MerchantCenterService {
     pl: 'PL',
     jp: 'JP',
     cn: 'CN',
+    SV: 'SV',
   };
 
   private constructor() {

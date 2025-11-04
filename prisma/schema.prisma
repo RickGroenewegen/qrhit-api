@@ -86,86 +86,86 @@ model OrderType {
 }
 
 model Payment {
-  id                      Int                  @id @default(autoincrement())
-  userId                  Int
-  paymentId               String               @unique
-  orderId                 String               @default("")
-  printApiOrderId         String               @default("")
-  printApiStatus          String               @default("Created")
-  printApiShipped         Boolean              @default(false)
-  printApiOrderRequest    String?              @default("") @db.Text
-  printApiOrderResponse   String?              @default("") @db.Text
-  printApiTrackingLink    String?              @default("")
-  printApiPrice           Float                @default(0)
-  printApiPriceInclVat    Float                @default(0)
-  printApiInvoicePrice    Float                @default(0)
-  printerInvoiceId        Int?
-  clientIp                String?
-  totalPrice              Float
-  totalPriceWithoutTax    Float                @default(0)
-  status                  String
-  createdAt               DateTime             @default(now())
-  updatedAt               DateTime             @updatedAt
-  fullname                String
-  email                   String
-  address                 String?
-  housenumber             String?
-  city                    String?
-  zipcode                 String?
-  countrycode             String?
-  shipping                Float?
-  taxRate                 Float?
-  taxRateShipping         Float?
-  shippingCode            String?
-  shippingCountry         String?
-  shippingPostalCode      String?
-  shippingId              String?
-  shippingStatus          String?
-  shippingMessage         String?
-  shippingStartDateTime   DateTime?
+  id                       Int                  @id @default(autoincrement())
+  userId                   Int
+  paymentId                String               @unique
+  orderId                  String               @default("")
+  printApiOrderId          String               @default("")
+  printApiStatus           String               @default("Created")
+  printApiShipped          Boolean              @default(false)
+  printApiOrderRequest     String?              @default("") @db.Text
+  printApiOrderResponse    String?              @default("") @db.Text
+  printApiTrackingLink     String?              @default("")
+  printApiPrice            Float                @default(0)
+  printApiPriceInclVat     Float                @default(0)
+  printApiInvoicePrice     Float                @default(0)
+  printerInvoiceId         Int?
+  clientIp                 String?
+  totalPrice               Float
+  totalPriceWithoutTax     Float                @default(0)
+  status                   String
+  createdAt                DateTime             @default(now())
+  updatedAt                DateTime             @updatedAt
+  fullname                 String
+  email                    String
+  address                  String?
+  housenumber              String?
+  city                     String?
+  zipcode                  String?
+  countrycode              String?
+  shipping                 Float?
+  taxRate                  Float?
+  taxRateShipping          Float?
+  shippingCode             String?
+  shippingCountry          String?
+  shippingPostalCode       String?
+  shippingId               String?
+  shippingStatus           String?
+  shippingMessage          String?
+  shippingStartDateTime    DateTime?
   shippingDeliveryDateTime DateTime?
-  shippingIgnore          Boolean              @default(false)
-  marketingEmails         Boolean              @default(false)
-  differentInvoiceAddress Boolean              @default(false)
-  invoiceAddress          String?
-  invoiceHousenumber      String?
-  invoiceCity             String?
-  invoiceZipcode          String?
-  invoiceCountrycode      String?
-  paymentMethod           String?
-  productPriceWithoutTax  Float
-  shippingPriceWithoutTax Float
-  productVATPrice         Float
-  shippingVATPrice        Float
-  totalVATPrice           Float
-  profit                  Float                @default(0)
-  discount                Float                @default(0)
-  volumeDiscount          Float                @default(0)
-  locale                  String               @default("en")
-  qrSubDir                String?
-  finalized               Boolean              @default(false)
-  allTracksChecked        Boolean              @default(false)
-  user                    User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
-  PaymentHasPlaylist      PaymentHasPlaylist[]
-  OrderType               OrderType?           @relation(fields: [orderTypeId], references: [id])
-  orderTypeId             Int?
-  test                    Boolean              @default(false)
-  vibe                    Boolean              @default(false)
-  reviewMailSent          Boolean              @default(false)
-  reviewAllowed           Int                  @default(0)
-  reviewAllowedAt         DateTime?
-  finalizedAt             DateTime?
-  canBeSentToPrinter      Boolean              @default(false)
-  canBeSentToPrinterAt    DateTime?
-  userAgreedToPrinting    Boolean              @default(false)
-  userAgreedToPrintingAt  DateTime?
-  sentToPrinter           Boolean              @default(false)
-  sentToPrinterAt         DateTime?
-  fast                    Boolean              @default(false)
-  printerHold             Boolean              @default(true)
-  processedFirstTime      Boolean              @default(false)
-  processedFirstTimeAt    DateTime?
-  printerInvoice          PrinterInvoice?      @relation(fields: [printerInvoiceId], references: [id], onDelete: SetNull)
+  shippingIgnore           Boolean              @default(false)
+  marketingEmails          Boolean              @default(false)
+  differentInvoiceAddress  Boolean              @default(false)
+  invoiceAddress           String?
+  invoiceHousenumber       String?
+  invoiceCity              String?
+  invoiceZipcode           String?
+  invoiceCountrycode       String?
+  paymentMethod            String?
+  productPriceWithoutTax   Float
+  shippingPriceWithoutTax  Float
+  productVATPrice          Float
+  shippingVATPrice         Float
+  totalVATPrice            Float
+  profit                   Float                @default(0)
+  discount                 Float                @default(0)
+  volumeDiscount           Float                @default(0)
+  locale                   String               @default("en")
+  qrSubDir                 String?
+  finalized                Boolean              @default(false)
+  allTracksChecked         Boolean              @default(false)
+  user                     User?                @relation(fields: [userId], references: [id], onDelete: Cascade)
+  PaymentHasPlaylist       PaymentHasPlaylist[]
+  OrderType                OrderType?           @relation(fields: [orderTypeId], references: [id])
+  orderTypeId              Int?
+  test                     Boolean              @default(false)
+  vibe                     Boolean              @default(false)
+  reviewMailSent           Boolean              @default(false)
+  reviewAllowed            Int                  @default(0)
+  reviewAllowedAt          DateTime?
+  finalizedAt              DateTime?
+  canBeSentToPrinter       Boolean              @default(false)
+  canBeSentToPrinterAt     DateTime?
+  userAgreedToPrinting     Boolean              @default(false)
+  userAgreedToPrintingAt   DateTime?
+  sentToPrinter            Boolean              @default(false)
+  sentToPrinterAt          DateTime?
+  fast                     Boolean              @default(false)
+  printerHold              Boolean              @default(true)
+  processedFirstTime       Boolean              @default(false)
+  processedFirstTimeAt     DateTime?
+  printerInvoice           PrinterInvoice?      @relation(fields: [printerInvoiceId], references: [id], onDelete: SetNull)
 
   DiscountCodedUses DiscountCodedUses[]
   Review            Review[]
@@ -296,7 +296,8 @@ model genre {
   name_pt   String
   name_pl   String
   name_jp   String
-  name_cn   String
+  name_cn   String     @default("")
+  name_sv   String     @default("")
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   Playlist  Playlist[]
@@ -321,6 +322,7 @@ model Playlist {
   description_pl       String?              @db.Text
   description_jp       String?              @db.Text
   description_cn       String?              @db.Text
+  description_sv       String?              @db.Text
   createdAt            DateTime             @default(now())
   updatedAt            DateTime             @updatedAt
   featured             Boolean              @default(false)
@@ -494,38 +496,38 @@ model PaymentHasPlaylist {
   priceVAT                   Float
   printApiPrice              Float    @default(0)
 
-  printApiUploaded       Boolean   @default(false)
-  printApiUploadResponse String?   @db.Text
-  printerPageCount       Int       @default(0)
-  suggestionsPending     Boolean   @default(false)
-  eligableForPrinter     Boolean   @default(false)
-  eligableForPrinterAt   DateTime?
-  emoji                  String?
-  background             String?
-  logo                   String?
-  selectedFont           String?   @default("Arial, sans-serif")
-  selectedFontSize       String?   @default("16px")
+  printApiUploaded        Boolean                  @default(false)
+  printApiUploadResponse  String?                  @db.Text
+  printerPageCount        Int                      @default(0)
+  suggestionsPending      Boolean                  @default(false)
+  eligableForPrinter      Boolean                  @default(false)
+  eligableForPrinterAt    DateTime?
+  emoji                   String?
+  background              String?
+  logo                    String?
+  selectedFont            String?                  @default("Arial, sans-serif")
+  selectedFontSize        String?                  @default("16px")
   // Front side color/gradient fields
-  backgroundFrontType    String?   @default("image") // 'solid' or 'image'
-  backgroundFrontColor   String?   @default("#ffffff")
-  useFrontGradient       Boolean   @default(false)
-  gradientFrontColor     String?   @default("#ffffff")
-  gradientFrontDegrees   Int       @default(180)
-  gradientFrontPosition  Int       @default(50)
+  backgroundFrontType     String?                  @default("image") // 'solid' or 'image'
+  backgroundFrontColor    String?                  @default("#ffffff")
+  useFrontGradient        Boolean                  @default(false)
+  gradientFrontColor      String?                  @default("#ffffff")
+  gradientFrontDegrees    Int                      @default(180)
+  gradientFrontPosition   Int                      @default(50)
   // Back side fields
-  backgroundBackType     String?   @default("image") // 'solid' or 'image'
-  backgroundBack         String?
-  backgroundBackColor    String?   @default("#ffffff")
-  fontColor              String?   @default("#000000")
-  useGradient            Boolean   @default(false)
-  gradientBackgroundColor String?  @default("#ffffff")
-  gradientDegrees        Int       @default(180)
-  gradientPosition       Int       @default(50) // 0-100: controls color stop positions
-  sameAsFront            Boolean   @default(false) // Copy front side settings to back
-  frontOpacity           Int       @default(100) // Front background image opacity 0-100 (100% = fully visible by default)
-  backOpacity            Int       @default(50) // Back background image opacity 0-100 (default 50%)
-  orderType              OrderType @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
-  items                  PaymentHasPlaylistItem[]
+  backgroundBackType      String?                  @default("image") // 'solid' or 'image'
+  backgroundBack          String?
+  backgroundBackColor     String?                  @default("#ffffff")
+  fontColor               String?                  @default("#000000")
+  useGradient             Boolean                  @default(false)
+  gradientBackgroundColor String?                  @default("#ffffff")
+  gradientDegrees         Int                      @default(180)
+  gradientPosition        Int                      @default(50) // 0-100: controls color stop positions
+  sameAsFront             Boolean                  @default(false) // Copy front side settings to back
+  frontOpacity            Int                      @default(100) // Front background image opacity 0-100 (100% = fully visible by default)
+  backOpacity             Int                      @default(50) // Back background image opacity 0-100 (default 50%)
+  orderType               OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
+  items                   PaymentHasPlaylistItem[]
 
   @@unique([paymentId, playlistId])
   @@index([paymentId])
@@ -539,9 +541,9 @@ model PaymentHasPlaylistItem {
   id                   Int                @id @default(autoincrement())
   paymentHasPlaylistId Int
   paymentHasPlaylist   PaymentHasPlaylist @relation(fields: [paymentHasPlaylistId], references: [id], onDelete: Cascade)
-  index                Int                // 1, 2, 3, etc.
-  filename             String?            // printer_hash_1.pdf, printer_hash_2.pdf
-  filenameDigital      String?            // digital_hash_1.pdf, digital_hash_2.pdf
+  index                Int // 1, 2, 3, etc.
+  filename             String? // printer_hash_1.pdf, printer_hash_2.pdf
+  filenameDigital      String? // digital_hash_1.pdf, digital_hash_2.pdf
   createdAt            DateTime           @default(now())
   updatedAt            DateTime           @updatedAt
 
@@ -589,6 +591,7 @@ model TrustPilot {
   title_pl    String
   title_jp    String
   title_cn    String
+  title_sv    String   @default("")
   message_en  String   @db.Text
   message_nl  String   @db.Text
   message_de  String   @db.Text
@@ -599,6 +602,7 @@ model TrustPilot {
   message_pl  String   @db.Text
   message_jp  String   @db.Text
   message_cn  String   @db.Text
+  message_sv  String   @default("") @db.Text
   rating      Float
   image       String
   locale      String?
@@ -611,23 +615,23 @@ model TrustPilot {
 }
 
 model Company {
-  id                Int           @id @default(autoincrement())
-  name              String
-  test              Boolean       @default(false)
-  address           String?
-  housenumber       String?
-  city              String?
-  zipcode           String?
-  countrycode       String?
-  contact           String?
-  contactemail      String?
-  contactphone      String?
-  calculation       String?       @db.Text
-  calculationTromp  String?       @db.Text
-  createdAt         DateTime      @default(now())
-  updatedAt         DateTime      @updatedAt
-  CompanyList       CompanyList[]
-  User              User[]
+  id               Int           @id @default(autoincrement())
+  name             String
+  test             Boolean       @default(false)
+  address          String?
+  housenumber      String?
+  city             String?
+  zipcode          String?
+  countrycode      String?
+  contact          String?
+  contactemail     String?
+  contactphone     String?
+  calculation      String?       @db.Text
+  calculationTromp String?       @db.Text
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+  CompanyList      CompanyList[]
+  User             User[]
 
   @@map("companies")
 }
@@ -648,6 +652,7 @@ model CompanyList {
   description_pl          String    @default("")
   description_jp          String    @default("")
   description_cn          String    @default("")
+  description_sv          String    @default("")
   slug                    String
   background              String?
   background2             String?
@@ -793,6 +798,7 @@ model Blog {
   slug_pl            String?  @unique
   slug_jp            String?  @unique
   slug_cn            String?  @unique
+  slug_sv            String?  @unique
   active             Boolean  @default(false)
   image              String?
   image_instructions String?  @db.Text
@@ -806,6 +812,7 @@ model Blog {
   title_pl           String
   title_jp           String
   title_cn           String
+  title_sv           String   @default("")
   content_en         String   @db.Text
   content_nl         String   @db.Text
   content_de         String   @db.Text
@@ -816,6 +823,7 @@ model Blog {
   content_pl         String   @db.Text
   content_jp         String   @db.Text
   content_cn         String   @db.Text
+  content_sv         String   @default("") @db.Text
   summary_en         String?  @db.Text
   summary_nl         String?  @db.Text
   summary_de         String?  @db.Text
@@ -826,6 +834,7 @@ model Blog {
   summary_pl         String?  @db.Text
   summary_jp         String?  @db.Text
   summary_cn         String?  @db.Text
+  summary_sv         String?  @db.Text
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
