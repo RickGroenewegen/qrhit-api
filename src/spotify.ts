@@ -41,6 +41,8 @@ class Spotify {
 
   // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
   private jumboCardMap: { [key: string]: string } = {};
+  // Country card mapping: key = country code (e.g., 'de'), value = { cardNumber -> spotifyId }
+  private countryCardMaps: { [countryCode: string]: { [cardNumber: string]: string } } = {};
   // MusicMatch mapping: key = 'playlistId_trackId', value = spotify track id
   private musicMatchMap: { [key: string]: string } = {};
   // Domain blacklist: URLs from these domains will not be resolved
@@ -49,6 +51,7 @@ class Spotify {
   constructor() {
     this.getJumboData();
     this.loadMusicMatchData();
+    this.loadCountryData();
   }
 
   public static getInstance(): Spotify {
@@ -161,6 +164,96 @@ class Spotify {
     } catch (e: any) {
       this.logger.log(
         color.yellow.bold(`Failed to load MusicMatch data: ${e.message || e}`)
+      );
+    }
+  }
+
+  /**
+   * Loads country card data from JSON files in the _data/jumbo/ directory.
+   * Each file should have structure: { name: "de", cards: { "00001": "spotifyId", ... } }
+   */
+  private async loadCountryData(): Promise<void> {
+    const isPrimary = cluster.isPrimary;
+
+    try {
+      const fs = require('fs').promises;
+      const path = require('path');
+      const appRoot = process.env.APP_ROOT || path.join(__dirname, '..');
+      const dirPath = path.join(appRoot, '_data', 'jumbo');
+
+      // Check if directory exists
+      try {
+        await fs.access(dirPath);
+      } catch {
+        this.logger.log(
+          color.yellow.bold('Country card data directory not found: ' + dirPath)
+        );
+        return;
+      }
+
+      // Read all files in the directory
+      const files = await fs.readdir(dirPath);
+      const jsonFiles = files.filter((file: string) => file.endsWith('.json'));
+
+      let totalCards = 0;
+      for (const file of jsonFiles) {
+        try {
+          const filePath = path.join(dirPath, file);
+          const fileContent = await fs.readFile(filePath, 'utf8');
+          const data = JSON.parse(fileContent);
+
+          if (data && data.name && data.cards && typeof data.cards === 'object') {
+            const countryCode = data.name.toLowerCase();
+            this.countryCardMaps[countryCode] = data.cards;
+
+            const cardCount = Object.keys(data.cards).length;
+            totalCards += cardCount;
+
+            if (isPrimary) {
+              this.utils.isMainServer().then(async (isMainServer) => {
+                if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+                  this.logger.log(
+                    color.green.bold(
+                      `Country card data loaded for ${color.white.bold(
+                        countryCode
+                      )}: ${color.white.bold(cardCount)} cards`
+                    )
+                  );
+                }
+              });
+            }
+          } else {
+            this.logger.log(
+              color.yellow.bold(
+                `Invalid country card data format in ${file}: missing name or cards`
+              )
+            );
+          }
+        } catch (e: any) {
+          this.logger.log(
+            color.yellow.bold(
+              `Failed to load country card data from ${file}: ${e.message || e}`
+            )
+          );
+        }
+      }
+
+      if (isPrimary && jsonFiles.length > 0) {
+        this.utils.isMainServer().then(async (isMainServer) => {
+          if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+            this.logger.log(
+              color.green.bold(
+                `Country card data loaded: ${color.white.bold(
+                  jsonFiles.length
+                )} countries, ${color.white.bold(totalCards)} total cards`
+              )
+            );
+          }
+        });
+      }
+    } catch (e: any) {
+      this.logger.log(
+        color.yellow.bold(`Failed to load country card data: ${e.message || e}`)
       );
     }
   }
@@ -1246,29 +1339,68 @@ class Spotify {
       // Special handling for hitstergame.com links
       if (normalizedUrl.includes('hitstergame.com')) {
         // Try to extract the set_sku and cardnumber from the URL
-        // Example: https://hitstergame.com/nl/aaaa0027/00153
+        // Example: https://hitstergame.com/nl/aaaa0027/00153 (Jumbo SKU with locale)
+        // Example: https://hitstergame.com/nl/de/00054 (Country code with locale)
+        // Example: https://hitstergame.com/de/00075 (Country code without locale)
         const match = normalizedUrl.match(
-          /hitstergame\.com\/[^/]+\/([a-zA-Z0-9]+)\/([0-9]+)/
+          /hitstergame\.com\/(?:[^/]+\/)?([a-zA-Z0-9]+)\/([0-9]+)/
         );
         if (match) {
           const setSku = match[1];
           const cardNumber = match[2];
-          const key = `${setSku}_${cardNumber}`;
-          const spotifyId = this.jumboCardMap[key];
-          if (spotifyId) {
-            const result = {
-              success: true,
-              spotifyUri: `spotify:track:${spotifyId}`,
-            };
-            await this.cache.set(cacheKey, JSON.stringify(result));
-            return { ...result, cached: false };
+
+          // Check if setSku is a pure alphabetic country code (e.g., 'de', 'en', 'nl')
+          const isCountryCode = /^[a-z]+$/i.test(setSku);
+
+          if (isCountryCode) {
+            // Look up in country card maps
+            const countryCode = setSku.toLowerCase();
+            const countryMap = this.countryCardMaps[countryCode];
+
+            if (countryMap) {
+              const spotifyId = countryMap[cardNumber];
+              if (spotifyId) {
+                const result = {
+                  success: true,
+                  spotifyUri: `spotify:track:${spotifyId}`,
+                };
+                await this.cache.set(cacheKey, JSON.stringify(result));
+                return { ...result, cached: false };
+              } else {
+                const result = {
+                  success: false,
+                  error: `No mapping found for country ${countryCode}, card ${cardNumber}`,
+                };
+                await this.cache.set(cacheKey, JSON.stringify(result));
+                return { ...result, cached: false };
+              }
+            } else {
+              const result = {
+                success: false,
+                error: `No country mapping found for ${countryCode}`,
+              };
+              await this.cache.set(cacheKey, JSON.stringify(result));
+              return { ...result, cached: false };
+            }
           } else {
-            const result = {
-              success: false,
-              error: `No mapping found for ${key}`,
-            };
-            await this.cache.set(cacheKey, JSON.stringify(result));
-            return { ...result, cached: false };
+            // Use existing Jumbo SKU logic
+            const key = `${setSku}_${cardNumber}`;
+            const spotifyId = this.jumboCardMap[key];
+            if (spotifyId) {
+              const result = {
+                success: true,
+                spotifyUri: `spotify:track:${spotifyId}`,
+              };
+              await this.cache.set(cacheKey, JSON.stringify(result));
+              return { ...result, cached: false };
+            } else {
+              const result = {
+                success: false,
+                error: `No mapping found for ${key}`,
+              };
+              await this.cache.set(cacheKey, JSON.stringify(result));
+              return { ...result, cached: false };
+            }
           }
         }
       }

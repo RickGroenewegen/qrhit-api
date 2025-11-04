@@ -18,6 +18,7 @@ import Excel from '../excel';
 import Review from '../review';
 import Shipping from '../shipping';
 import SiteSettings from '../sitesettings';
+import Spotify from '../spotify';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -40,6 +41,7 @@ export default async function adminRoutes(
   const copy = Copy.getInstance();
   const review = Review.getInstance();
   const shipping = Shipping.getInstance();
+  const spotify = Spotify.getInstance();
 
   // Create order (admin only)
   fastify.post(
@@ -1743,6 +1745,77 @@ export default async function adminRoutes(
         return reply.status(500).send({
           success: false,
           error: error.message,
+        });
+      }
+    }
+  );
+
+  // Generate playlist JSON
+  fastify.post(
+    '/admin/generate-playlist-json',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { filename, playlistUrl } = request.body;
+
+        if (!filename || !playlistUrl) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Missing required fields: filename and playlistUrl',
+          });
+        }
+
+        // Extract name from filename (e.g., "en.json" -> "en")
+        const name = filename.replace(/\.json$/i, '');
+
+        // Extract playlist ID from Spotify URL
+        const playlistIdMatch = playlistUrl.match(
+          /spotify\.com\/playlist\/([a-zA-Z0-9]+)/
+        );
+        if (!playlistIdMatch) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid Spotify playlist URL',
+          });
+        }
+        const playlistId = playlistIdMatch[1];
+
+        // Fetch tracks from Spotify
+        const tracksResult = await spotify.getTracks(
+          playlistId,
+          false, // Don't use cache
+          '', // No captcha token
+          false, // Don't check captcha
+          false // Not a slug
+        );
+
+        if (!tracksResult.success || !tracksResult.data) {
+          return reply.status(500).send({
+            success: false,
+            error: tracksResult.error || 'Failed to fetch playlist tracks',
+          });
+        }
+
+        // Generate the JSON mapping
+        const cards: { [key: string]: string } = {};
+        const tracks = tracksResult.data.tracks || [];
+
+        tracks.forEach((track: any, index: number) => {
+          // Zero-pad the index to 5 digits (00001, 00002, etc.)
+          const paddedIndex = String(index + 1).padStart(5, '0');
+          cards[paddedIndex] = track.id;
+        });
+
+        const result = {
+          name,
+          cards,
+        };
+
+        return { success: true, data: result };
+      } catch (error: any) {
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Internal server error',
         });
       }
     }
