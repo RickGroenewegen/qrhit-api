@@ -605,6 +605,35 @@ export default async function adminRoutes(
     }
   );
 
+  // Chart data - 30-day moving average
+  fastify.get(
+    '/admin/charts/moving-average',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { days, startDate, endDate } = request.query;
+        const daysNum = days ? parseInt(days as string) : undefined;
+
+        const chartData = await data.getChartMovingAverage(
+          daysNum,
+          startDate as string | undefined,
+          endDate as string | undefined
+        );
+
+        reply.send({
+          success: true,
+          data: chartData
+        });
+      } catch (error: any) {
+        console.error('Error fetching chart data:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to fetch chart data'
+        });
+      }
+    }
+  );
+
   // Search tracks
   fastify.post(
     '/tracks/search',

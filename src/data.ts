@@ -2536,6 +2536,81 @@ class Data {
       };
     }
   }
+
+  /**
+   * Get chart data with 30-day moving averages for sales, profit, orders, and AOV
+   * @param days Number of days to fetch (30, 90, 180, 365)
+   * @param startDate Optional custom start date (YYYY-MM-DD)
+   * @param endDate Optional custom end date (YYYY-MM-DD)
+   * @returns Array of daily data with moving averages
+   */
+  public async getChartMovingAverage(
+    days?: number,
+    startDate?: string,
+    endDate?: string
+  ): Promise<any[]> {
+    let dateFilter = '';
+
+    // Custom date range
+    if (startDate && endDate) {
+      dateFilter = `AND DATE(createdAt) BETWEEN '${startDate}' AND '${endDate}'`;
+    }
+    // Predefined date ranges
+    else if (days) {
+      if (![30, 90, 180, 365].includes(days)) {
+        throw new Error('Invalid days parameter. Must be 30, 90, 180, or 365');
+      }
+      dateFilter = `AND createdAt >= DATE_SUB(CURDATE(), INTERVAL ${days} DAY)`;
+    }
+    // Default to 90 days
+    else {
+      dateFilter = 'AND createdAt >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)';
+    }
+
+    const query = `
+      SELECT
+        date,
+        daily_sales,
+        daily_profit,
+        payment_count,
+        daily_aov,
+        ROUND(AVG(daily_sales) OVER (
+          ORDER BY date
+          ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+        ), 2) as sales_ma_30d,
+        ROUND(AVG(daily_profit) OVER (
+          ORDER BY date
+          ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+        ), 2) as profit_ma_30d,
+        ROUND(AVG(payment_count) OVER (
+          ORDER BY date
+          ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+        ), 2) as orders_ma_30d,
+        ROUND(AVG(daily_aov) OVER (
+          ORDER BY date
+          ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+        ), 2) as aov_ma_30d
+      FROM (
+        SELECT
+          DATE(createdAt) as date,
+          ROUND(SUM(totalPrice), 2) as daily_sales,
+          ROUND(SUM(profit), 2) as daily_profit,
+          COUNT(*) as payment_count,
+          ROUND(AVG(totalPrice), 2) as daily_aov
+        FROM payments
+        WHERE
+          status = 'paid'
+          AND test = FALSE
+          AND vibe = FALSE
+          ${dateFilter}
+        GROUP BY DATE(createdAt)
+      ) daily_data
+      ORDER BY date ASC
+    `;
+
+    const chartData = await this.prisma.$queryRawUnsafe(query);
+    return chartData as any[];
+  }
 }
 
 export default Data;
