@@ -1272,7 +1272,7 @@ class Spotify {
     }
 
     // Calculate cache key outside try block so it's accessible in catch
-    const cacheKey = `qrlink_unknown_result_${crypto
+    const cacheKey = `qrlink2_unknown_result_${crypto
       .createHash('md5')
       .update(normalizedUrl)
       .digest('hex')}`;
