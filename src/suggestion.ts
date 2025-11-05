@@ -33,8 +33,9 @@ class Suggestion {
     });
 
     const tracks = await this.prisma.$queryRaw<any[]>`
-      SELECT 
+      SELECT
         t.id,
+        t.trackId,
         COALESCE(NULLIF(tei.name, ''), t.name) as name,
         COALESCE(NULLIF(tei.artist, ''), t.artist) as artist,
         COALESCE(tei.year, t.year) as year,
