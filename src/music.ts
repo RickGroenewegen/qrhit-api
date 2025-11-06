@@ -2,7 +2,6 @@ import PrismaInstance from './prisma';
 import Logger from './logger';
 import axios, { AxiosInstance } from 'axios';
 import { color } from 'console-log-colors';
-import wiki from 'wikipedia';
 import { ChatGPT } from './chatgpt';
 import Cache from './cache';
 import { OpenPerplex } from './openperplex';
@@ -82,7 +81,7 @@ export class Music {
                     
                     What I found on Wikipedia:
 
-                     ${JSON.stringify(wikiResults)}
+                    ${JSON.stringify(wikiResults)}
 
                     MusicBrainz thinks the release year is ${mbResult.year}
                     Discogs thinks the release year is ${discogsResult.year}
@@ -356,26 +355,54 @@ export class Music {
     title: string
   ): Promise<any[]> {
     const results = [];
+    const query = `${artist} ${title}`;
 
     for (const lang of langs) {
       try {
-        await wiki.setLang(lang);
-        const searchResults = await wiki.search(`${artist} ${title}`);
+        // Search for Wikipedia articles
+        const searchResponse = await axios.get(
+          'https://wikipedia-api2.p.rapidapi.com/search',
+          {
+            params: {
+              query: query,
+              limit: 3,
+            },
+            headers: {
+              'x-rapidapi-host': 'wikipedia-api2.p.rapidapi.com',
+              'x-rapidapi-key': process.env['RAPID_API_KEY'],
+            },
+          }
+        );
 
-        if (searchResults.results.length > 0) {
-          const page = await wiki.page(searchResults.results[0].title);
-          const summary = (await page.summary()).extract;
-          const infobox = await page.infobox();
+        const searchResults = searchResponse.data;
+
+        if (searchResults && searchResults.results && searchResults.results.length > 0) {
+          // Get the summary of the first result
+          const firstResult = searchResults.results[0];
+          const summaryResponse = await axios.get(
+            'https://wikipedia-api2.p.rapidapi.com/summary',
+            {
+              params: {
+                title: firstResult.title,
+              },
+              headers: {
+                'x-rapidapi-host': 'wikipedia-api2.p.rapidapi.com',
+                'x-rapidapi-key': process.env['RAPID_API_KEY'],
+              },
+            }
+          );
+
+          const summary = summaryResponse.data;
 
           results.push({
             lang,
-            summary,
-            infobox,
+            summary: summary.summary || '',
+            infobox: null, // RapidAPI Wikipedia doesn't provide infobox data
           });
         }
-      } catch (error) {
+      } catch (error: any) {
         this.logger.log(
-          color.red(`Error in Wikipedia search for ${lang}: ${error}`)
+          color.red(`Error in Wikipedia RapidAPI search for ${lang}: ${error.message}`)
         );
       }
     }
