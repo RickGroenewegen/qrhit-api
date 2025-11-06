@@ -1079,7 +1079,16 @@ class Generator {
       if (orderData.success) {
         // Send email notification to customer about printing started
         if (payment.user) {
+          // Deduplicate playlists to send only one email per unique playlist (not per copy)
+          const uniquePlaylists = new Map();
           for (const physicalPlaylist of physicalPlaylists) {
+            if (!uniquePlaylists.has(physicalPlaylist.playlist.id)) {
+              uniquePlaylists.set(physicalPlaylist.playlist.id, physicalPlaylist);
+            }
+          }
+
+          // Send email only for unique playlists (first copy only)
+          for (const physicalPlaylist of uniquePlaylists.values()) {
             await this.mail.sendToPrinterMail(
               payment as typeof payment & { user: { hash: string } },
               physicalPlaylist.playlist

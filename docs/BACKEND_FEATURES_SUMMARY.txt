@@ -1,0 +1,502 @@
+╔════════════════════════════════════════════════════════════════════════════╗
+║                 QRSong/QRHit BACKEND API - FEATURE SUMMARY                ║
+║                    Complete Acquisition Inventory Report                   ║
+╚════════════════════════════════════════════════════════════════════════════╝
+
+DOCUMENT LOCATION: /Users/rick/Sites/qrhit-api/BACKEND_INVENTORY_ACQUISITION.md
+GENERATED: 2025-11-06
+CODEBASE: /Users/rick/Sites/qrhit-api
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CORE STATISTICS
+═══════════════════════════════════════════════════════════════════════════════
+Language:           TypeScript
+Framework:          Fastify 5.6.1
+Database:           MySQL (Prisma ORM)
+Queue System:       BullMQ (Redis-based)
+Total Backend Files: 72 TypeScript service classes
+Primary DB Tables:  34+
+Supported Languages: 11
+Total API Endpoints: 150+
+Cron Jobs:          10+
+
+═══════════════════════════════════════════════════════════════════════════════
+
+MAJOR FEATURE CATEGORIES (36 SECTIONS IN FULL DOCUMENT)
+═══════════════════════════════════════════════════════════════════════════════
+
+1. CORE INFRASTRUCTURE & ARCHITECTURE
+   - Fastify HTTP server with TypeScript
+   - MySQL database with Prisma ORM
+   - BullMQ job queue system
+   - Redis caching layer
+   - WebSocket support
+
+2. AUTHENTICATION & AUTHORIZATION
+   - JWT token authentication
+   - Email/password system (PBKDF2 hashing)
+   - Email verification flow
+   - Password reset mechanism
+   - Spotify OAuth integration
+   - 5 user role types
+
+3. PAYMENT PROCESSING (Mollie)
+   - Credit cards, iDEAL, PayPal, SEPA transfers
+   - Apple Pay & Google Pay
+   - Multi-currency support
+   - VAT calculation
+   - Webhook integration
+   - Admin payment management
+
+4. PRODUCT & ORDER MANAGEMENT
+   - Physical cards, digital PDFs, bulk sheets
+   - Quantity-based pricing tiers
+   - Order status tracking
+   - Design customization
+   - Eco-friendly printing options
+
+5. PRINTING & PRODUCTION
+   - Print & Bind API integration
+   - Google Merchant Center syndication
+   - Batch processing for large orders
+   - Design customization (fonts, colors, QR codes)
+   - Supplier invoice management
+
+6. MUSIC DATA & INTEGRATION
+   - Spotify API + OAuth
+   - Multi-source track year detection
+   - ISRC/MusicBrainz/Discogs integration
+   - YouTube Music, Apple Music, Amazon Music, Tidal, Deezer links
+   - Full-text track search
+   - Rate-limited API calls
+
+7. PDF & FILE GENERATION
+   - HTML→PDF conversion (ConvertAPI)
+   - EJS template rendering
+   - Sharp image optimization
+   - Multi-variant document generation
+   - QR code generation
+
+8. SHIPPING & FULFILLMENT
+   - TrackingMore integration
+   - Multi-carrier tracking
+   - Country-based shipping rates
+   - Automatic status updates
+   - Public delivery statistics
+
+9. NOTIFICATION SYSTEMS
+   - AWS SES email (11 language templates)
+   - Firebase push notifications
+   - Broadcast capabilities
+   - Device token management
+   - Newsletter system
+
+10. ANALYTICS & REPORTING
+    - Custom analytics counters
+    - 30-day moving average charts
+    - Daily/monthly/tax reports
+    - Trustpilot review aggregation
+
+11. QUEUE & JOB PROCESSING
+    - Generator queue (PDF generation)
+    - Excel processing queue
+    - MusicFetch queue
+    - Job status monitoring
+    - Failed job recovery
+
+12. BACKGROUND JOBS & SCHEDULING
+    - Hourly: Spotify sync, shipping updates
+    - Daily: Payment sync, Trustpilot fetching, review emails
+    - Weekly: Invoice reconciliation
+    - Monthly: Tax reports
+
+13. REVIEW & RATING SYSTEM
+    - 1-5 star ratings
+    - Trustpilot integration
+    - Review eligibility tracking
+    - Playback-based unlocking
+
+14. DISCOUNT & PROMOTIONS
+    - Discount code management
+    - Date-based activation
+    - Usage tracking
+    - Playlist-specific discounts
+
+15. USER SUGGESTIONS & CROWDSOURCING
+    - Track correction system
+    - Admin review workflow
+    - Bulk apply corrections
+
+16. CARD DESIGNER & CUSTOMIZATION
+    - Background/logo uploads
+    - Font selection
+    - Color & gradient customization
+    - Front/back side design
+    - Opacity control
+
+17. BLOG & CMS
+    - 11-language content management
+    - SEO slug per language
+    - Draft/publish status
+    - AI image descriptions
+
+18. VOTING & SUBMISSION SYSTEM (OnzeVibe)
+    - B2B company voting
+    - Email verification
+    - Survey questions
+    - Result aggregation
+    - PDF generation from votes
+
+19. GAMES SYSTEM
+    - QRSong card games
+    - Playlist-based content
+    - Remote & local play modes
+    - Player scoring
+    - Activation codes
+
+20. HITLIST VOTING SYSTEM
+    - Track voting interface
+    - Email verification
+    - Spotify integration
+    - Result tracking
+
+21. SECURITY & PROTECTION
+    - CAPTCHA verification
+    - Email verification hashes
+    - Password reset validation
+    - Rate limiting
+    - IP tracking
+    - Input sanitization
+
+22. THIRD-PARTY INTEGRATIONS (10+)
+    - Mollie Payments
+    - Spotify API
+    - YouTube Music
+    - Google Merchant Center
+    - AWS services (SES, EC2, Lambda)
+    - Firebase
+    - Trustpilot
+    - ConvertAPI
+    - TrackingMore
+    - MaxMind GeoIP
+
+23. MULTILINGUAL SUPPORT
+    - 11 languages (en, nl, de, fr, es, it, pt, pl, jp, cn, sv)
+    - Auto language detection
+    - Language-specific templates
+
+24. ACCOUNT MANAGEMENT
+    - Profile management
+    - Payment history
+    - Order tracking
+    - Preference settings
+
+25. SYSTEM ADMINISTRATION
+    - Order search & filtering
+    - User management
+    - Analytics dashboard
+    - Queue monitoring
+    - Settings management
+
+26. FILE STORAGE & MANAGEMENT
+    - PDF documents
+    - Images (backgrounds, logos, album art)
+    - Excel files
+    - ZIP archives
+
+27. DEVELOPMENT & TESTING
+    - 14 development endpoints
+    - Test modes for all features
+
+28. DATA MODELS & RELATIONSHIPS
+    - 34+ database tables
+    - Complex relationships
+    - Composite keys & indexes
+    - Full-text search indexes
+
+29. MONITORING & LOGGING
+    - Console logging
+    - Error tracking (Sentry)
+    - User action logging
+    - IP tracking
+
+30. DEPLOYMENT & INFRASTRUCTURE
+    - TypeScript compilation
+    - PM2 process management
+    - Database migrations
+    - Environment configuration
+
+31. PERFORMANCE OPTIMIZATIONS
+    - Redis caching
+    - Database indexing
+    - Rate limiting
+    - Pagination
+
+32. BUSINESS RULES ENCODED
+    - Order processing pipeline
+    - Track year resolution logic
+    - Suggestion workflow
+    - Discount application
+
+33. API RESPONSE PATTERNS
+    - Standardized JSON responses
+    - Error handling
+    - Pagination format
+
+34. NOTABLE TECHNICAL DECISIONS
+    - Fastify for performance
+    - Prisma for type safety
+    - BullMQ for queue management
+
+35. AUDIT & COMPLIANCE
+    - Data tracking (user, payment, order)
+    - Email preferences
+    - CAPTCHA protection
+
+36. TECHNOLOGY STACK
+    - 25+ production dependencies
+    - 15+ development dependencies
+
+═══════════════════════════════════════════════════════════════════════════════
+
+CRITICAL BUSINESS CAPABILITIES
+═══════════════════════════════════════════════════════════════════════════════
+
+REVENUE STREAMS:
+✓ Physical QR card sales
+✓ Digital card sales
+✓ Sheet printing services
+✓ B2B voting system (OnzeVibe)
+✓ Game licensing/subscriptions
+✓ Volume-based discounts
+
+CUSTOMER TOUCHPOINTS:
+✓ Web e-commerce
+✓ Games mobile/web
+✓ Email marketing
+✓ Push notifications
+✓ Voting portal (B2B)
+✓ Hitlist system
+
+DATA ASSETS:
+✓ 1000+ playlist database
+✓ 10,000+ track database with year metadata
+✓ Customer order history
+✓ Review & rating data
+✓ Usage analytics
+✓ Shipping cost tables by country
+
+═══════════════════════════════════════════════════════════════════════════════
+
+KEY INTEGRATIONS PROVIDING COMPETITIVE ADVANTAGE
+═══════════════════════════════════════════════════════════════════════════════
+
+Music Metadata:
+- Spotify (primary music source)
+- YouTube Music (link resolution)
+- Apple Music (link resolution)
+- Amazon Music (link resolution)
+- Deezer (link resolution)
+- Tidal (link resolution)
+- MusicBrainz (year verification)
+- Discogs (year verification)
+- ISRC database (year verification)
+
+Payment Processing:
+- Mollie (European payment gateway)
+- Print & Bind API (fulfillment)
+
+Logistics & Shipping:
+- TrackingMore (multi-carrier tracking)
+- Shipping cost management by country
+
+Marketing & Reviews:
+- Trustpilot (review aggregation)
+- Firebase (push notifications)
+- AWS SES (email)
+
+Infrastructure:
+- AWS EC2 (hosting)
+- AWS Lambda (serverless)
+- Google APIs (Merchant Center)
+- Redis (caching)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+DATABASE SCHEMA HIGHLIGHTS
+═══════════════════════════════════════════════════════════════════════════════
+
+Core Business Models:
+- Payment (with 30+ tracking fields)
+- PaymentHasPlaylist (design customization)
+- Track (multi-source year detection)
+- Playlist (with 11-language descriptions)
+- User (authentication & preferences)
+
+B2B/Enterprise Models:
+- Company (account management)
+- CompanyList (voting campaigns)
+- CompanyListSubmission (individual votes)
+- CompanyListQuestion (survey system)
+
+Fulfillment Models:
+- PaymentHasPlaylistItem (batch tracking)
+- ShippingCost (country-based pricing)
+- PrinterInvoice (supplier billing)
+
+Content Models:
+- Blog (11-language CMS)
+- Genre (taxonomy with translations)
+- Track metadata (artist, album, links)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+SECURITY ARCHITECTURE
+═══════════════════════════════════════════════════════════════════════════════
+
+Authentication:
+- JWT tokens with expiry
+- PBKDF2 password hashing (10,000 iterations)
+- Email verification hashes
+- Password reset tokens with expiry
+
+Authorization:
+- Role-based access control (5 roles)
+- Company-scoped data access
+- Admin/user segregation
+
+Protection:
+- CAPTCHA on forms
+- Rate limiting
+- Input sanitization
+- IP tracking
+- User agent logging
+- CORS configuration
+
+═══════════════════════════════════════════════════════════════════════════════
+
+OPERATIONAL COMPLEXITY METRICS
+═══════════════════════════════════════════════════════════════════════════════
+
+Order Complexity:
+- 10+ stages from creation to delivery
+- 5+ design customization options
+- 3+ document format variants
+- 4 product types
+- 150+ country shipping configurations
+
+Data Complexity:
+- 34+ interconnected database tables
+- Multi-language content (11 languages)
+- Multi-source track metadata
+- Complex relationship queries
+
+Integration Complexity:
+- 10+ third-party APIs
+- Webhook integrations (Mollie, Print API)
+- OAuth flows (Spotify)
+- Email templates
+- Push notifications
+
+Processing Complexity:
+- 3+ job queues
+- 10+ scheduled cron jobs
+- Background PDF generation
+- Async image processing
+- Real-time order tracking
+
+═══════════════════════════════════════════════════════════════════════════════
+
+FILE STRUCTURE OVERVIEW
+═══════════════════════════════════════════════════════════════════════════════
+
+/src/routes/
+├── adminRoutes.ts (1863 lines) - Admin dashboard & management
+├── accountRoutes.ts (499 lines) - User authentication & account
+├── paymentRoutes.ts (352 lines) - Payment & order endpoints
+├── publicRoutes.ts (619 lines) - Public-facing features
+├── musicRoutes.ts (434 lines) - Music/Spotify/track endpoints
+├── gameRoutes.ts (169 lines) - Games system
+└── vibeRoutes.ts (973 lines) - B2B voting system
+
+/src/
+├── mollie.ts (1304 lines) - Payment processing
+├── mail.ts (1724 lines) - Email system
+├── spotify.ts (1698 lines) - Music integration
+├── vibe.ts (3127 lines) - Voting system
+├── data.ts (2812 lines) - Core data operations
+├── generator.ts (1401 lines) - PDF generation
+├── shipping.ts (1187 lines) - Fulfillment
+├── order.ts (740 lines) - Order management
+├── suggestion.ts (1203 lines) - User suggestions
+├── designer.ts - Card customization
+├── auth.ts (952 lines) - Authentication
+├── account.ts - Account management
+├── discount.ts (617 lines) - Promotions
+├── review.ts - Review system
+├── game.ts (679 lines) - Games logic
+├── hitlist.ts (853 lines) - Voting interface
+├── chatgpt.ts (1401 lines) - AI integration
+├── merchantcenter.ts (1382 lines) - Google syndication
+├── trustpilot.ts - Review aggregation
+├── excel.ts (729 lines) - Excel processing
+├── generatorQueue.ts - Job queue management
+├── excelQueue.ts - Async processing
+├── musicfetchQueue.ts - Music link fetching
+├── translation.ts - Localization
+├── utils.ts - Helper functions
+├── cache.ts - Caching layer
+├── analytics.ts - Analytics tracking
+└── [+ 20 more service files]
+
+═══════════════════════════════════════════════════════════════════════════════
+
+ACQUISITION READINESS ASSESSMENT
+═══════════════════════════════════════════════════════════════════════════════
+
+Positive Indicators:
+✓ Well-organized TypeScript codebase
+✓ Professional error handling
+✓ Comprehensive database schema
+✓ Multiple revenue streams
+✓ Established integrations
+✓ Production-grade infrastructure
+✓ Multi-language support
+✓ Enterprise features (B2B system)
+✓ Background job processing
+✓ Analytics & monitoring
+✓ Backup/recovery mechanisms
+✓ Admin dashboard
+✓ Payment processing
+✓ Shipping integration
+
+Areas for Assessment:
+⚠ Large codebase (70+ service files)
+⚠ Complex business logic (10+ systems)
+⚠ Multiple third-party dependencies
+⚠ Database migration requirements
+⚠ API key/credential management
+⚠ Ongoing maintenance (10+ cron jobs)
+
+═══════════════════════════════════════════════════════════════════════════════
+
+TOTAL IMPLEMENTATION ESTIMATE
+═══════════════════════════════════════════════════════════════════════════════
+
+Lines of Code:        33,653+ (backend services alone)
+Database Tables:      34+
+API Endpoints:        150+
+Third-party APIs:     10+
+Scheduled Jobs:       10+
+Service Classes:      72+
+Routes Defined:       150+ endpoints
+Years to Rebuild:     2-3 full-stack engineers, 12-18 months
+
+═══════════════════════════════════════════════════════════════════════════════
+
+For detailed information on each feature, see:
+BACKEND_INVENTORY_ACQUISITION.md (1064 lines)
+
+Generated: 2025-11-06
+Contact: Technical Assessment Team
