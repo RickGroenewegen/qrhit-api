@@ -278,8 +278,8 @@ class Suggestion {
           },
         });
 
-        // Clear old PDFs and regenerate (to capture any design changes)
-        await this.mollie.clearPDFs(paymentId);
+        // Regenerate PDFs (to capture any design changes)
+        // Old PDFs are automatically cleared by generator.generate()
         await this.generator.queueGenerate(
           paymentId,
           '',
@@ -315,9 +315,8 @@ class Suggestion {
           data: { suggestionsPending: true },
         });
 
-        // Clear old PDFs and regenerate (to capture any design changes)
-        await this.mollie.clearPDFs(paymentId);
-
+        // Regenerate PDFs (to capture any design changes)
+        // Old PDFs are automatically cleared by generator.generate()
         const callbackData = {
           type: 'sendDigitalEmail' as const,
           paymentId,
@@ -758,9 +757,7 @@ class Suggestion {
           });
         }
 
-        // Clear old PDFs and regenerate
-        await this.mollie.clearPDFs(paymentId);
-
+        // Regenerate PDFs (old PDFs are automatically cleared by generator.generate())
         // Determine callback based on playlist type
         let callbackData;
         if (hasPhysicalPlaylists) {

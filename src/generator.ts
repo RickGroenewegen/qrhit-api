@@ -297,6 +297,13 @@ class Generator {
       }
     }
 
+    // Clear old PDFs before regeneration (centralized deletion point)
+    // This prevents race conditions by ensuring deletion happens right before generation
+    this.logger.log(
+      blue.bold(`Clearing old PDFs for payment: ${white.bold(paymentId)}`)
+    );
+    await mollie.clearPDFs(paymentId);
+
     // Generate invoice and send the main mail for cards
     if (productType == 'cards' && !skipMainMail && !onlyProductMail) {
       let invoicePath = '';

@@ -176,7 +176,7 @@ export default async function adminRoutes(
     '/regenerate/:paymentId/:email',
     getAuthHandler(['admin']),
     async (request: any, _reply) => {
-      await mollie.clearPDFs(request.params.paymentId);
+      // Old PDFs are automatically cleared by generator.generate()
       const userAgent = request.headers['user-agent'] || '';
       const jobId = await generator.queueGenerate(
         request.params.paymentId,
@@ -196,7 +196,7 @@ export default async function adminRoutes(
     '/regenerate-product-only/:paymentId',
     getAuthHandler(['admin']),
     async (request: any, _reply) => {
-      await mollie.clearPDFs(request.params.paymentId);
+      // Old PDFs are automatically cleared by generator.generate()
       const userAgent = request.headers['user-agent'] || '';
       // This will skip the main "order received" email but still send product emails
       const jobId = await generator.queueGenerate(

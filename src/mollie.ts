@@ -349,15 +349,26 @@ class Mollie {
     const payment = await this.getPayment(paymentId);
     const playlists = payment.PaymentHasPlaylist;
 
+    this.logger.log(
+      color.blue.bold(
+        `Starting PDF deletion for payment ${color.white.bold(paymentId)} (${playlists.length} playlist(s))`
+      )
+    );
+
+    let deletedCount = 0;
+    let failedCount = 0;
+
     const deletePDF = async (filename: string, type: string) => {
-      if (filename !== '') {
+      if (filename && filename !== '' && filename !== 'null') {
         const pdfPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
         try {
           await fs.unlink(pdfPath);
+          deletedCount++;
           this.logger.log(
             color.blue.bold(`Deleted ${type} PDF: ${color.white.bold(pdfPath)}`)
           );
         } catch (e) {
+          failedCount++;
           this.logger.log(
             color.yellow.bold(
               `Failed to delete ${type} PDF: ${color.white.bold(pdfPath)}`
@@ -371,6 +382,14 @@ class Mollie {
       await deletePDF(playlist.filename, 'standard');
       await deletePDF(playlist.filenameDigital, 'digital');
     }
+
+    this.logger.log(
+      color.blue.bold(
+        `PDF deletion complete for payment ${color.white.bold(paymentId)}: ` +
+        color.green.bold(`${deletedCount} deleted`) + `, ` +
+        (failedCount > 0 ? color.yellow.bold(`${failedCount} failed`) : color.green.bold(`${failedCount} failed`))
+      )
+    );
   }
 
   public async getPaymentList(

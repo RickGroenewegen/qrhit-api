@@ -2153,7 +2153,7 @@ class Vibe {
         rankingTrackIds
       );
 
-      await this.mollie.clearPDFs(result.data.paymentId);
+      // Old PDFs are automatically cleared by generator.generate()
       await this.generator.queueGenerate(
         result.data.paymentId,
         clientIp,
