@@ -2921,6 +2921,7 @@ class Vibe {
     includeStansmestekening: boolean;
     includeStansvorm: boolean;
     profitMargin: number;
+    printingType?: string; // 'eigen' or 'voorbedrukt'
   }): Promise<any> {
     try {
       const {
@@ -2928,6 +2929,7 @@ class Vibe {
         includeStansmestekening,
         includeStansvorm,
         profitMargin,
+        printingType = 'eigen', // Default to 'eigen' (own printing)
       } = params;
 
       // Validate input
@@ -2935,55 +2937,27 @@ class Vibe {
         return { success: false, error: 'Invalid quantity' };
       }
 
-      // Box pricing tiers - these are for "units" (1 unit = 3 physical boxes)
-      // From the quote: prices are for the number of box sets (units), not individual boxes
-      const boxPricingTiers: { quantity: number; totalPrice: number }[] = [
-        { quantity: 1000, totalPrice: 1165.0 }, // 3,000 boxes / 3 = 1,000 units
-        { quantity: 2500, totalPrice: 1667.5 }, // 7,500 boxes / 3 = 2,500 units
-        { quantity: 5000, totalPrice: 2505.0 }, // 15,000 boxes / 3 = 5,000 units
-      ];
+      // Calculate prices based on Excel formulas from tromp.xlsx
+      let boxPrice: number;
+      let cardPrice: number;
 
-      // Card set pricing tiers (price for total quantity in EUR)
-      // Each set = 200 song cards + 1 cover card
-      const cardPricingTiers: { quantity: number; totalPrice: number }[] = [
-        { quantity: 50, totalPrice: 545.0 },
-        { quantity: 100, totalPrice: 840.0 },
-        { quantity: 150, totalPrice: 1135.0 },
-        { quantity: 200, totalPrice: 1430.0 },
-        { quantity: 250, totalPrice: 1725.0 },
-        { quantity: 300, totalPrice: 2020.0 },
-        { quantity: 400, totalPrice: 2610.0 },
-        { quantity: 500, totalPrice: 3200.0 },
-        { quantity: 750, totalPrice: 4675.0 },
-        { quantity: 1000, totalPrice: 6150.0 },
-        { quantity: 2500, totalPrice: 15000.0 },
-        { quantity: 5000, totalPrice: 29750.0 },
-      ];
+      if (printingType === 'voorbedrukt') {
+        // Voorbedrukt (pre-printed) - Formula from D9
+        // Boxes: (1165 / 1000) * quantity = 1.165 * quantity
+        boxPrice = 1.165 * quantity;
+      } else {
+        // Eigen bedrukking (own printing) - Formula from B9
+        // Boxes: (quantity * 0.335) + 830
+        boxPrice = (quantity * 0.335) + 830;
+      }
 
-      // Helper function to find the appropriate tier (round down to nearest tier)
-      const findTier = (
-        qty: number,
-        tiers: { quantity: number; totalPrice: number }[]
-      ) => {
-        // Start from the highest tier and work backwards to find the closest tier <= quantity
-        for (let i = tiers.length - 1; i >= 0; i--) {
-          if (qty >= tiers[i].quantity) {
-            return tiers[i];
-          }
-        }
-        // If quantity is less than all tiers, use the lowest tier
-        return tiers[0];
-      };
+      // Cards pricing is the same for both types - Formula from B10/D10
+      // Cards: (quantity * 5.9) + 250
+      cardPrice = (quantity * 5.9) + 250;
 
-      // Calculate box price (quantity is already in "units", where 1 unit = 3 boxes)
-      const boxTier = findTier(quantity, boxPricingTiers);
-      const boxPricePerUnit = boxTier.totalPrice / boxTier.quantity;
-      const boxPrice = boxPricePerUnit * quantity;
-
-      // Calculate card set price (1 set per unit)
-      const cardTier = findTier(quantity, cardPricingTiers);
-      const cardPricePerUnit = cardTier.totalPrice / cardTier.quantity;
-      const cardPrice = cardPricePerUnit * quantity;
+      // Calculate per-unit prices
+      const boxPricePerUnit = boxPrice / quantity;
+      const cardPricePerUnit = cardPrice / quantity;
 
       // Calculate extras
       const extras: { name: string; price: number }[] = [];
@@ -3000,30 +2974,32 @@ class Vibe {
       }
 
       // Calculate totals
-      const trompCost = boxPrice + cardPrice + extrasTotal;
-      const ourProfit = (profitMargin || 0) * quantity;
       // Price per set includes boxes + cards + profit (but NOT extras, as they're one-time costs shown separately)
       const baseCostPerSet = (boxPrice + cardPrice) / quantity;
       const profitPerSet = profitMargin || 0;
       const pricePerSet =
         Math.round((baseCostPerSet + profitPerSet) * 100) / 100; // Round to 2 decimals
-      const clientPrice = trompCost + ourProfit;
+
+      // Calculate totals from the rounded pricePerSet to maintain consistency
+      // This ensures that clientPrice = pricePerSet × quantity (exactly)
+      const subtotalFromRounded = pricePerSet * quantity;
+      const clientPrice = subtotalFromRounded + extrasTotal;
+
+      // Calculate ourProfit and trompCost for display
+      const ourProfit = (profitMargin || 0) * quantity;
+      const trompCostFromRounded = subtotalFromRounded - ourProfit;
+      const trompCost = trompCostFromRounded + extrasTotal;
 
       // Return calculation results
       return {
         success: true,
         calculation: {
           quantity,
-          boxTierName: `${boxTier.quantity} units (${
-            boxTier.quantity * 3
-          } boxes) @ €${(boxTier.totalPrice / boxTier.quantity).toFixed(
-            2
-          )}/unit`,
+          printingType: printingType,
+          boxTierName: `${printingType === 'voorbedrukt' ? 'Voorbedrukt' : 'Eigen bedrukking'} @ €${boxPricePerUnit.toFixed(2)}/unit`,
           boxPricePerUnit: boxPricePerUnit,
           boxPrice: boxPrice,
-          cardTierName: `${cardTier.quantity} sets @ €${(
-            cardTier.totalPrice / cardTier.quantity
-          ).toFixed(2)}/set`,
+          cardTierName: `Cards @ €${cardPricePerUnit.toFixed(2)}/set`,
           cardPricePerUnit: cardPricePerUnit,
           cardPrice: cardPrice,
           extras: extras,
