@@ -46,13 +46,13 @@ class MusicFetch {
       },
     });
 
-    // Initialize rate limiter: 30 requests per minute
-    // That's 1 request every 2 seconds
+    // Initialize rate limiter: 5 requests per minute (safe limit for 6 req/min plan)
+    // That's 1 request every 12 seconds
     this.limiter = new Bottleneck({
-      minTime: 2000, // 2 seconds between requests
+      minTime: 12000, // 12 seconds between requests (60s / 5 requests)
       maxConcurrent: 1, // Process one at a time
-      reservoir: 30, // Start with 30 tokens
-      reservoirRefreshAmount: 30, // Refresh to 30 tokens
+      reservoir: 5, // Start with 5 tokens
+      reservoirRefreshAmount: 5, // Refresh to 5 tokens
       reservoirRefreshInterval: 60 * 1000, // Every 60 seconds
     });
 
