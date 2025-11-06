@@ -560,6 +560,46 @@ export default async function adminRoutes(
     }
   );
 
+  // Update blocked status for playlist
+  fastify.post(
+    '/admin/playlist/:playlistId/blocked',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+      const { blocked } = request.body;
+
+      if (!playlistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      if (typeof blocked !== 'boolean') {
+        reply.status(400).send({
+          success: false,
+          error: 'blocked must be a boolean',
+        });
+        return;
+      }
+
+      const result = await data.updatePlaylistBlocked(
+        parseInt(playlistId, 10),
+        blocked
+      );
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Update featured status for playlist
   fastify.post(
     '/admin/playlist/:playlistId/featured',

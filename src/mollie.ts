@@ -507,6 +507,7 @@ class Mollie {
             background: true,
             logo: true,
             subType: true,
+            blocked: true,
             orderType: {
               select: {
                 name: true,

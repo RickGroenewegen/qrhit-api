@@ -226,16 +226,24 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       request.params.php
     );
     let link = '';
-    let yt = '';
-    let appleMusicLink = '';
+    let yt = null;
+    let ym = null;
+    let am = null;
+    let az = null;
+    let dz = null;
+    let td = null;
 
     if (result.success) {
       link = result.data.link;
-      yt = result.data.youtubeLink;
-      appleMusicLink = result.data.appleMusicLink;
+      yt = result.data.youtubeLink || null;
+      ym = result.data.youtubeMusicLink || null;
+      am = result.data.appleMusicLink || null;
+      az = result.data.amazonMusicLink || null;
+      dz = result.data.deezerLink || null;
+      td = result.data.tidalLink || null;
     }
     const useSpotifyRemote = true; // Default value
-    return { link: link, yt: yt, am: appleMusicLink, r: useSpotifyRemote };
+    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote };
   });
 
   // Hitlist routes

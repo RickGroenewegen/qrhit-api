@@ -31,7 +31,8 @@ import axios, { AxiosInstance } from 'axios';
 import Spotify from './spotify';
 import * as ExcelJS from 'exceljs';
 
-const TRACK_LINKS_CACHE_PREFIX = 'track_links_v2';
+const TRACK_LINKS_CACHE_PREFIX = 'track_links_v3';
+const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
 
 class Data {
   private static instance: Data;
@@ -45,6 +46,8 @@ class Data {
   private analytics = AnalyticsClient.getInstance();
   private pushover = new PushoverClient();
   private axiosInstance: AxiosInstance;
+  private blockedPlaylists: Set<number> = new Set();
+  private blockedPlaylistsInitialized: boolean = false;
 
   private ytmusic: YTMusic;
 
@@ -226,6 +229,7 @@ class Data {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
           this.createSiteMap();
           await this.prefillLinkCache();
+          await this.loadBlocked();
           // Schedule hourly cache refresh
           const job = new CronJob('0 * * * *', async () => {
             await this.prefillLinkCache();
@@ -235,7 +239,23 @@ class Data {
           });
           job.start();
           genreJob.start();
+        } else {
+          // Non-primary servers: load blocked list and sync from Redis hourly
+          await this.loadBlockedFromCache();
+          const blockedSyncJob = new CronJob('5 * * * *', async () => {
+            await this.loadBlockedFromCache();
+          });
+          blockedSyncJob.start();
         }
+      });
+    } else {
+      // Worker processes: load blocked list from Redis cache
+      this.loadBlockedFromCache().then(() => {
+        // Schedule hourly sync from Redis
+        const blockedSyncJob = new CronJob('5 * * * *', async () => {
+          await this.loadBlockedFromCache();
+        });
+        blockedSyncJob.start();
       });
     }
   }
@@ -270,6 +290,90 @@ class Data {
         cacheCount++;
       }
     }
+  }
+
+  private async loadBlocked(): Promise<void> {
+    try {
+      // Query all blocked PaymentHasPlaylist records
+      const blockedRecords = await this.prisma.paymentHasPlaylist.findMany({
+        where: {
+          blocked: true,
+        },
+        select: {
+          id: true,
+        },
+      });
+
+      // Clear existing set and populate with blocked IDs
+      this.blockedPlaylists.clear();
+      for (const record of blockedRecords) {
+        this.blockedPlaylists.add(record.id);
+      }
+
+      // If main/primary server, store in Redis cache and log
+      const isMainServer = await this.utils.isMainServer();
+      if (
+        cluster.isPrimary &&
+        (isMainServer || process.env['ENVIRONMENT'] === 'development')
+      ) {
+        this.logger.log(
+          color.blue.bold(
+            `Loaded ${color.white.bold(
+              this.blockedPlaylists.size
+            )} blocked playlists`
+          )
+        );
+
+        const blockedIds = Array.from(this.blockedPlaylists).map(String);
+
+        // Only store in cache if there are blocked playlists
+        if (blockedIds.length > 0) {
+          await this.cache.setArray(BLOCKED_PLAYLISTS_CACHE_KEY, blockedIds);
+          this.logger.log(
+            color.green.bold(
+              `Stored ${color.white.bold(
+                blockedIds.length
+              )} blocked playlists in Redis cache`
+            )
+          );
+        } else {
+          // Clear cache if no blocked playlists
+          await this.cache.del(BLOCKED_PLAYLISTS_CACHE_KEY);
+        }
+      }
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Error loading blocked playlists: ${error.message}`)
+      );
+    }
+
+    this.blockedPlaylistsInitialized = true;
+  }
+
+  private async loadBlockedFromCache(): Promise<void> {
+    try {
+      const blockedIds = await this.cache.getArray(BLOCKED_PLAYLISTS_CACHE_KEY);
+
+      // Only update if we got data from cache
+      if (blockedIds && blockedIds.length > 0) {
+        this.blockedPlaylists.clear();
+        for (const id of blockedIds) {
+          this.blockedPlaylists.add(parseInt(id, 10));
+        }
+      } else {
+        // If cache is empty, load directly from database (race condition on startup)
+        await this.loadBlocked();
+        return; // loadBlocked sets the initialized flag
+      }
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error loading blocked playlists from cache: ${error.message}`
+        )
+      );
+    }
+
+    this.blockedPlaylistsInitialized = true;
   }
 
   public async verifyPayment(paymentId: string) {
@@ -1469,6 +1573,32 @@ class Data {
       )
     );
 
+    // Wait for blocked playlists to be initialized
+    if (!this.blockedPlaylistsInitialized) {
+      this.logger.log(
+        color.yellow.bold('Waiting for blocked playlists to initialize...')
+      );
+      // Poll until initialized (should be very quick)
+      while (!this.blockedPlaylistsInitialized) {
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+    }
+
+    // Check if the playlist is blocked
+    if (php && this.blockedPlaylists.has(Number(php))) {
+      this.logger.log(
+        color.red.bold(
+          `Blocked playlist access attempt for PaymentHasPlaylist ID ${color.white.bold(
+            php
+          )}`
+        )
+      );
+      return {
+        success: false,
+        error: 'This playlist has been blocked',
+      };
+    }
+
     const cacheKey = `${TRACK_LINKS_CACHE_PREFIX}:${trackId}`;
     const cachedData = await this.cache.get(cacheKey);
 
@@ -1480,7 +1610,7 @@ class Data {
     }
 
     const linkQuery: any[] = await this.prisma.$queryRaw`
-      SELECT spotifyLink, youtubeLink, appleMusicLink
+      SELECT spotifyLink, youtubeLink, youtubeMusicLink, appleMusicLink, amazonMusicLink, deezerLink, tidalLink
       FROM tracks
       WHERE id = ${trackId}`;
 
@@ -1488,7 +1618,11 @@ class Data {
       const data = {
         link: linkQuery[0].spotifyLink,
         youtubeLink: linkQuery[0].youtubeLink,
+        youtubeMusicLink: linkQuery[0].youtubeMusicLink,
         appleMusicLink: linkQuery[0].appleMusicLink,
+        amazonMusicLink: linkQuery[0].amazonMusicLink,
+        deezerLink: linkQuery[0].deezerLink,
+        tidalLink: linkQuery[0].tidalLink,
       };
 
       if (data.link) {
@@ -2150,6 +2284,68 @@ class Data {
         color.red.bold(
           `Error updating printer hold for payment ${color.white.bold(
             paymentId
+          )}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
+  public async updatePlaylistBlocked(
+    playlistId: number,
+    blocked: boolean
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const playlist = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: playlistId },
+        select: { id: true },
+      });
+
+      if (!playlist) {
+        return { success: false, error: 'Playlist not found' };
+      }
+
+      await this.prisma.paymentHasPlaylist.update({
+        where: { id: playlistId },
+        data: { blocked },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Updated blocked status for playlist ${color.white.bold(
+            playlistId
+          )} to ${color.white.bold(blocked)}`
+        )
+      );
+
+      // Update Redis cache (regardless of main/primary status)
+      if (blocked) {
+        this.blockedPlaylists.add(playlistId);
+      } else {
+        this.blockedPlaylists.delete(playlistId);
+      }
+
+      const blockedIds = Array.from(this.blockedPlaylists).map(String);
+
+      // Only update cache if there are blocked playlists, otherwise delete the key
+      if (blockedIds.length > 0) {
+        await this.cache.setArray(BLOCKED_PLAYLISTS_CACHE_KEY, blockedIds);
+        this.logger.log(
+          color.green.bold('Updated blocked playlists in Redis cache')
+        );
+      } else {
+        await this.cache.del(BLOCKED_PLAYLISTS_CACHE_KEY);
+        this.logger.log(
+          color.green.bold('Cleared blocked playlists from Redis cache (no blocked playlists)')
+        );
+      }
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating blocked status for playlist ${color.white.bold(
+            playlistId
           )}: ${error.message}`
         )
       );
