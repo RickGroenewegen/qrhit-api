@@ -249,6 +249,18 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     }
   );
 
+  fastify.post(
+    '/usersuggestions/:paymentId/:userHash/:playlistId/reload',
+    async (request: any, reply) => {
+      const result = await suggestion.reloadPlaylist(
+        request.params.paymentId,
+        request.params.userHash,
+        request.params.playlistId
+      );
+      return result;
+    }
+  );
+
   fastify.delete(
     '/usersuggestions/:paymentId/:userHash/:playlistId/:trackId',
     async (request: any, reply) => {

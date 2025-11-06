@@ -530,6 +530,7 @@ model PaymentHasPlaylist {
   sameAsFront             Boolean                  @default(false) // Copy front side settings to back
   frontOpacity            Int                      @default(100) // Front background image opacity 0-100 (100% = fully visible by default)
   backOpacity             Int                      @default(50) // Back background image opacity 0-100 (default 50%)
+  lastReloadAt            DateTime?                // Timestamp of last playlist reload from Spotify
   orderType               OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                   PaymentHasPlaylistItem[]
 

@@ -6,6 +6,9 @@ import PrismaInstance from './prisma';
 import PushoverClient from './pushover';
 import Mollie from './mollie';
 import Generator from './generator';
+import Spotify from './spotify';
+import Data from './data';
+import Cache from './cache';
 
 class Suggestion {
   private static instance: Suggestion;
@@ -14,6 +17,9 @@ class Suggestion {
   private pushover = new PushoverClient();
   private mollie = new Mollie();
   private generator = Generator.getInstance();
+  private spotify = new Spotify();
+  private data = Data.getInstance();
+  private cache = Cache.getInstance();
 
   private constructor() {}
 
@@ -857,9 +863,9 @@ class Suggestion {
     // See if all physical playlists are ready for printing
     const allPhysicalPlaylistsReady = await this.prisma.$queryRaw<any[]>`
             SELECT COUNT(*) as count,
-                   (SELECT COUNT(*) 
-                    FROM payment_has_playlist 
-                    WHERE paymentId = ${internalPaymentId} 
+                   (SELECT COUNT(*)
+                    FROM payment_has_playlist
+                    WHERE paymentId = ${internalPaymentId}
                     AND type = 'physical') as total
             FROM payment_has_playlist
             WHERE paymentId = ${internalPaymentId}
@@ -895,6 +901,297 @@ class Suggestion {
         color.blue.bold('All physical playlists are ready for printing')
       );
       this.generator.sendToPrinter(paymentId, clientIp);
+    }
+  }
+
+  /**
+   * Validates if a playlist can be reloaded from Spotify based on track count limits.
+   * Users can only reload if the current Spotify playlist has <= tracks than they paid for.
+   */
+  private async validateTrackCountForReload(
+    paymentId: string,
+    userHash: string,
+    playlistId: string
+  ): Promise<{
+    valid: boolean;
+    paidTracks?: number;
+    currentSpotifyTracks?: number;
+    error?: string;
+  }> {
+    try {
+      // Get the number of tracks the user paid for
+      const paymentInfo = await this.prisma.$queryRaw<any[]>`
+        SELECT php.numberOfTracks as paidTracks, pl.id as playlistDbId
+        FROM payments p
+        JOIN users u ON p.userId = u.id
+        JOIN payment_has_playlist php ON php.paymentId = p.id
+        JOIN playlists pl ON pl.id = php.playlistId
+        WHERE p.paymentId = ${paymentId}
+        AND u.hash = ${userHash}
+        AND pl.playlistId = ${playlistId}
+        LIMIT 1
+      `;
+
+      if (paymentInfo.length === 0) {
+        return {
+          valid: false,
+          error: 'Payment or playlist not found',
+        };
+      }
+
+      const paidTracks = paymentInfo[0].paidTracks;
+
+      // Fetch current playlist data from Spotify
+      const spotifyPlaylist = await this.spotify.getPlaylist(playlistId, false, '', false);
+
+      if (!spotifyPlaylist.success || !spotifyPlaylist.data) {
+        return {
+          valid: false,
+          error: 'Failed to fetch playlist from Spotify',
+        };
+      }
+
+      const currentSpotifyTracks = spotifyPlaylist.data.numberOfTracks;
+
+      // Validate: Spotify tracks must be <= paid tracks
+      if (currentSpotifyTracks > paidTracks) {
+        this.logger.log(
+          color.red.bold(
+            `Reload blocked: Spotify has ${currentSpotifyTracks} tracks but user only paid for ${paidTracks}`
+          )
+        );
+        return {
+          valid: false,
+          paidTracks,
+          currentSpotifyTracks,
+          error: 'track_limit_exceeded',
+        };
+      }
+
+      return {
+        valid: true,
+        paidTracks,
+        currentSpotifyTracks,
+      };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error validating track count: ${error}`)
+      );
+      return {
+        valid: false,
+        error: 'Validation error',
+      };
+    }
+  }
+
+  /**
+   * Reloads a playlist from Spotify if the track count is within the paid limit.
+   * This allows users to refresh their playlist data if tracks were removed or metadata changed.
+   * Rate limited to once every 15 minutes (bypassed in development).
+   */
+  public async reloadPlaylist(
+    paymentId: string,
+    userHash: string,
+    playlistId: string
+  ): Promise<{
+    success: boolean;
+    message?: string;
+    paidTracks?: number;
+    currentSpotifyTracks?: number;
+    error?: string;
+    retryAfter?: number;
+    lastReloadAt?: string;
+  }> {
+    try {
+      // Verify payment ownership
+      const { verified } = await this.verifyPaymentOwnership(
+        paymentId,
+        userHash
+      );
+
+      if (!verified) {
+        return {
+          success: false,
+          error: 'Unauthorized',
+        };
+      }
+
+      // Get PaymentHasPlaylist to check rate limit (unless in development)
+      const isDevelopment = process.env.ENVIRONMENT === 'development';
+
+      if (!isDevelopment) {
+        const payment = await this.prisma.payment.findFirst({
+          where: { paymentId },
+          select: { id: true },
+        });
+
+        if (!payment) {
+          return {
+            success: false,
+            error: 'Payment not found',
+          };
+        }
+
+        const playlist = await this.prisma.playlist.findFirst({
+          where: { playlistId },
+          select: { id: true },
+        });
+
+        if (!playlist) {
+          return {
+            success: false,
+            error: 'Playlist not found',
+          };
+        }
+
+        const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findFirst({
+          where: {
+            paymentId: payment.id,
+            playlistId: playlist.id,
+          },
+          select: {
+            lastReloadAt: true,
+          },
+        });
+
+        if (paymentHasPlaylist?.lastReloadAt) {
+          const now = new Date();
+          const lastReload = new Date(paymentHasPlaylist.lastReloadAt);
+          const elapsedMinutes = (now.getTime() - lastReload.getTime()) / (1000 * 60);
+          const rateLimitMinutes = 15;
+
+          if (elapsedMinutes < rateLimitMinutes) {
+            const remainingMinutes = rateLimitMinutes - elapsedMinutes;
+            const remainingSeconds = Math.ceil(remainingMinutes * 60);
+
+            this.logger.log(
+              color.yellow.bold(
+                `Rate limit: Reload blocked for ${paymentId}. Last reload: ${elapsedMinutes.toFixed(1)} minutes ago`
+              )
+            );
+
+            return {
+              success: false,
+              error: 'rate_limit_exceeded',
+              retryAfter: remainingSeconds,
+              lastReloadAt: lastReload.toISOString(),
+            };
+          }
+        }
+      } else {
+        this.logger.log(
+          color.cyan.bold(
+            `Development mode: Rate limiting bypassed for ${paymentId}`
+          )
+        );
+      }
+
+      // Validate track count
+      const validation = await this.validateTrackCountForReload(
+        paymentId,
+        userHash,
+        playlistId
+      );
+
+      if (!validation.valid) {
+        return {
+          success: false,
+          error: validation.error,
+          paidTracks: validation.paidTracks,
+          currentSpotifyTracks: validation.currentSpotifyTracks,
+        };
+      }
+
+      this.logger.log(
+        color.blue.bold(
+          `Reloading playlist ${playlistId} for payment ${paymentId}`
+        )
+      );
+
+      // Get playlist database ID
+      const playlist = await this.prisma.playlist.findFirst({
+        where: { playlistId },
+        select: { id: true, numberOfTracks: true },
+      });
+
+      if (!playlist) {
+        return {
+          success: false,
+          error: 'Playlist not found in database',
+        };
+      }
+
+      // Fetch fresh tracks from Spotify (cache=false to get latest data)
+      const spotifyTracks = await this.spotify.getTracks(playlistId, false, '', false);
+
+      if (!spotifyTracks.success || !spotifyTracks.data || !spotifyTracks.data.tracks) {
+        return {
+          success: false,
+          error: 'Failed to fetch tracks from Spotify',
+        };
+      }
+
+      // Store updated tracks in database
+      await this.data.storeTracks(
+        playlist.id,
+        playlistId,
+        spotifyTracks.data.tracks
+      );
+
+      // Update playlist numberOfTracks to match Spotify
+      await this.prisma.playlist.update({
+        where: { id: playlist.id },
+        data: { numberOfTracks: validation.currentSpotifyTracks },
+      });
+
+      // Clear old cache entries
+      const oldCacheKey = `tracks2_${playlistId}_${playlist.numberOfTracks}`;
+      const newCacheKey = `tracks2_${playlistId}_${validation.currentSpotifyTracks}`;
+      await this.cache.del(oldCacheKey);
+      await this.cache.del(newCacheKey);
+
+      // Update lastReloadAt timestamp
+      const payment = await this.prisma.payment.findFirst({
+        where: { paymentId },
+        select: { id: true },
+      });
+
+      if (payment) {
+        const playlistDbId = playlist.id;
+        await this.prisma.paymentHasPlaylist.updateMany({
+          where: {
+            paymentId: payment.id,
+            playlistId: playlistDbId,
+          },
+          data: {
+            lastReloadAt: new Date(),
+          },
+        });
+      }
+
+      this.logger.log(
+        color.green.bold(
+          `Successfully reloaded playlist ${playlistId} with ${validation.currentSpotifyTracks} tracks`
+        )
+      );
+
+      return {
+        success: true,
+        message:
+          validation.currentSpotifyTracks !== playlist.numberOfTracks
+            ? 'Playlist reloaded successfully with updated track count'
+            : 'Playlist reloaded successfully',
+        paidTracks: validation.paidTracks,
+        currentSpotifyTracks: validation.currentSpotifyTracks,
+      };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error reloading playlist: ${error}`)
+      );
+      return {
+        success: false,
+        error: 'Failed to reload playlist',
+      };
     }
   }
 
