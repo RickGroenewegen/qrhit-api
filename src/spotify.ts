@@ -432,10 +432,11 @@ class Spotify {
             let playlistName = playlistData.name;
             let playlistDescription = playlistData.description;
             let allDescriptions: Record<string, string | null> = {};
+            let playlistDesign: any = null;
 
             if (featured) {
               // Build select object dynamically based on available locales
-              const selectFields: any = { name: true };
+              const selectFields: any = { name: true, design: true };
               for (const lang of this.translate.allLocales) {
                 selectFields[`description_${lang}`] = true;
               }
@@ -447,6 +448,7 @@ class Spotify {
 
               if (dbPlaylist) {
                 playlistName = dbPlaylist.name || playlistName;
+                playlistDesign = dbPlaylist.design || null;
 
                 // Collect all descriptions dynamically
                 for (const lang of this.translate.allLocales) {
@@ -469,6 +471,7 @@ class Spotify {
               descriptions: allDescriptions, // All language descriptions
               numberOfTracks: playlistData.tracks?.total || 0,
               image,
+              design: playlistDesign,
             };
 
             this.cache.set(cacheKey, JSON.stringify(cachedPlaylistData));
@@ -493,6 +496,7 @@ class Spotify {
               description: allDescriptions[locale] || playlistDescription,
               numberOfTracks: cachedPlaylistData.numberOfTracks,
               image,
+              design: playlistDesign,
             };
           } catch (error) {
             // Make sure to release lock in case of any error
@@ -521,6 +525,7 @@ class Spotify {
             cachedData.description,
           numberOfTracks: cachedData.numberOfTracks,
           image: cachedData.image,
+          design: cachedData.design || null,
         };
       }
 

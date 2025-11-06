@@ -5,4 +5,5 @@ export interface Playlist {
   description: string;
   numberOfTracks: number;
   image: string;
+  design?: any;
 }

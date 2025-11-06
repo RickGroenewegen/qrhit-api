@@ -351,6 +351,7 @@ model Playlist {
   decadePercentage0    Int                  @default(0)
   downloads            Int                  @default(0)
   score                Int                  @default(0)
+  design               Json?
   tracks               PlaylistHasTrack[]
   Payment              PaymentHasPlaylist[]
   UserSuggestion       UserSuggestion[]

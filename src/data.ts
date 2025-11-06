@@ -1052,6 +1052,7 @@ class Data {
             giftcardAmount,
             giftcardFrom,
             giftcardMessage,
+            design: cartItem.design || null,
           },
         });
         playlistDatabaseId = playlistCreate.id;
