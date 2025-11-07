@@ -108,19 +108,19 @@
         %>
         <% if (qrBgType === 'square') { %>
             <!-- Square background for QR code using SVG -->
-            <svg style="position: absolute; width: 32mm; height: 32mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1;" xmlns="http://www.w3.org/2000/svg">
+            <svg style="position: absolute; width: 32mm; height: 32mm; top: calc(50% + 2px); left: 50%; transform: translate(-50%, -50%); z-index: 1;" xmlns="http://www.w3.org/2000/svg">
                 <rect x="0" y="0" width="100%" height="100%" fill="<%= qrBgColor %>" />
             </svg>
-            <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" style="position: absolute; width: 28mm; height: 28mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2;">
+            <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" style="position: absolute; width: 28mm; height: 28mm; top: calc(50% + 2px); left: 50%; transform: translate(-50%, -50%); z-index: 2;">
         <% } else if (qrBgType === 'circle') { %>
             <!-- Circle background for QR code using SVG -->
-            <svg style="position: absolute; width: 42mm; height: 42mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1;" xmlns="http://www.w3.org/2000/svg">
+            <svg style="position: absolute; width: 42mm; height: 42mm; top: calc(50% + 2px); left: 50%; transform: translate(-50%, -50%); z-index: 1;" xmlns="http://www.w3.org/2000/svg">
                 <circle cx="50%" cy="50%" r="21mm" fill="<%= qrBgColor %>" />
             </svg>
-            <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" style="position: absolute; width: 32mm; height: 32mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2;">
+            <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" style="position: absolute; width: 32mm; height: 32mm; top: calc(50% + 2px); left: 50%; transform: translate(-50%, -50%); z-index: 2;">
         <% } else { %>
             <!-- No background shape -->
-            <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr" style="width: 50%;">
+            <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr" style="width: 50%; position: relative; top: 2px;">
         <% } %>
         <!-- Domain URL removed - always hidden -->
     </div>
