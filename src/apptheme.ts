@@ -64,6 +64,8 @@ class AppTheme {
         );
       }
 
+      console.log(999, this.appThemes);
+
       this.appThemesInitialized = true;
     } catch (error: any) {
       console.error(`Failed to load app themes: ${error.message}`);
