@@ -2773,19 +2773,19 @@ class Data {
         daily_aov,
         ROUND(AVG(daily_sales) OVER (
           ORDER BY date
-          ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+          ROWS BETWEEN 30 PRECEDING AND 1 PRECEDING
         ), 2) as sales_ma_30d,
         ROUND(AVG(daily_profit) OVER (
           ORDER BY date
-          ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+          ROWS BETWEEN 30 PRECEDING AND 1 PRECEDING
         ), 2) as profit_ma_30d,
         ROUND(AVG(payment_count) OVER (
           ORDER BY date
-          ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+          ROWS BETWEEN 30 PRECEDING AND 1 PRECEDING
         ), 2) as orders_ma_30d,
         ROUND(AVG(daily_aov) OVER (
           ORDER BY date
-          ROWS BETWEEN 29 PRECEDING AND CURRENT ROW
+          ROWS BETWEEN 30 PRECEDING AND 1 PRECEDING
         ), 2) as aov_ma_30d
       FROM (
         SELECT
