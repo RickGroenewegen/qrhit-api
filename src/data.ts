@@ -32,7 +32,7 @@ import Spotify from './spotify';
 import * as ExcelJS from 'exceljs';
 import AppTheme from './apptheme';
 
-const TRACK_LINKS_CACHE_PREFIX = 'track_links_v4';
+const TRACK_LINKS_CACHE_PREFIX = 'track_links_v5';
 const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
 
 class Data {
