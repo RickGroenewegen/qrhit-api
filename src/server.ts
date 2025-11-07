@@ -4,6 +4,7 @@ import accountRoutes from './routes/accountRoutes';
 import adminRoutes from './routes/adminRoutes';
 import vibeRoutes from './routes/vibeRoutes';
 import musicRoutes from './routes/musicRoutes';
+import themeRoutes from './routes/themeRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import publicRoutes from './routes/publicRoutes';
 import gameRoutes from './routes/gameRoutes';
@@ -119,6 +120,9 @@ class Server {
 
     // Register music/spotify routes
     await musicRoutes(this.fastify);
+
+    // Register theme routes
+    await themeRoutes(this.fastify);
 
     // Register payment routes
     await paymentRoutes(this.fastify);

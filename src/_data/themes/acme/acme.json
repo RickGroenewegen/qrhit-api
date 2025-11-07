@@ -1,0 +1,46 @@
+{
+  "id": "acme",
+  "name": "Acme Company",
+  "version": 2,
+  "cacheTTL": 86400,
+  "cssVariables": {
+    "--app-background": "linear-gradient(135deg, #ff6b6b, #ee5a6f)",
+    "--app-text-color": "#ffffff",
+    "--app-text-shadow": "2px 2px 4px rgba(0, 0, 0, 0.3)",
+    "--app-button-background": "rgba(255, 255, 255, 0.25)",
+    "--app-button-text-color": "#ffffff",
+    "--app-button-background-hover": "rgba(255, 255, 255, 0.35)",
+    "--app-button-background-activated": "rgba(255, 255, 255, 0.45)",
+    "--app-button-background-disabled": "rgba(255, 255, 255, 0.1)",
+    "--app-button-text-color-disabled": "rgba(255, 255, 255, 0.4)",
+    "--app-choice-block-background": "rgba(255, 255, 255, 0.15)",
+    "--app-choice-block-background-hover": "rgba(255, 255, 255, 0.25)",
+    "--app-choice-block-background-active": "rgba(255, 255, 255, 0.35)",
+    "--app-choice-block-background-selected": "rgba(255, 255, 255, 0.3)",
+    "--app-choice-block-border-selected": "#ffffff",
+    "--app-choice-block-text-color": "#ffffff",
+    "--app-musical-note-color": "rgba(255, 255, 255, 0.8)",
+    "--app-musical-note-shadow": "0 0 8px rgba(255, 107, 107, 0.5)",
+    "--app-modal-header-background": "#c92a2a",
+    "--app-modal-header-text-color": "#ffffff",
+    "--app-modal-content-background": "linear-gradient(135deg, #ff6b6b, #ee5a6f)",
+    "--app-modal-content-text-color": "#ffffff",
+    "--app-modal-link-color": "#ffe066",
+    "--app-scanner-guide-color": "#ffffff",
+    "--app-flash-button-background-active": "rgba(255, 255, 255, 0.6)",
+    "--app-logo-filter": "brightness(1.1) contrast(1.05)",
+    "--app-vinyl-gradient": "radial-gradient(circle at 30% 30%, #8b2020 40%, #6b1818 70%, #4a1111 100%)",
+    "--app-vinyl-border": "#ffffff",
+    "--app-vinyl-center-background": "#ff6b6b",
+    "--app-vinyl-center-border": "#4a1111"
+  },
+  "assets": {
+    "logo": null,
+    "background": null
+  },
+  "fonts": {
+    "family": "Montserrat, sans-serif",
+    "url": "https://fonts.googleapis.com/css2?family=Montserrat:wght@400;600;700&display=swap"
+  },
+  "helpText": "<h2>🎵 Welcome to Acme Music Mayhem! 🎵</h2><p>Congratulations! You've discovered the <strong>premium</strong> Acme Corporation Music Experience™ - now with 47% more explosions than our competitors!</p><h3>How to Use Your Acme QR Cards:</h3><ol><li><strong>Step 1:</strong> Point your camera at the QR code (Warning: Do not eat the QR code)</li><li><strong>Step 2:</strong> Wait for the music to start (Patience is a virtue, impatience is also acceptable)</li><li><strong>Step 3:</strong> Dance like nobody's watching (Spoiler: The Acme surveillance team is ALWAYS watching 👀)</li><li><strong>Step 4:</strong> Try to guess the song before your friends (Cheating is encouraged, but frowned upon)</li><li><strong>Step 5:</strong> Repeat until your neighbors complain or the police arrive</li></ol><p><em>🎸 Pro Tip:</em> Our Acme QR cards are also excellent coasters for your beverages! Just don't blame us when your drink starts playing music.</p><h3>⚠️ Warning:</h3><p>Side effects may include: uncontrollable toe-tapping, spontaneous air guitar solos, and an overwhelming urge to karaoke at 3 AM.</p><p><strong>Remember:</strong> At Acme Corporation, we don't just deliver products - we deliver <em>experiences</em>. Mostly safe ones. Probably.</p><p style='text-align: center; margin-top: 30px;'><small>Acme Corporation is not responsible for earworms, dance-related injuries, or marriages ruined by terrible music taste.</small></p>"
+}

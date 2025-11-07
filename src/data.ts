@@ -30,6 +30,7 @@ import YTMusic from 'ytmusic-api';
 import axios, { AxiosInstance } from 'axios';
 import Spotify from './spotify';
 import * as ExcelJS from 'exceljs';
+import AppTheme from './apptheme';
 
 const TRACK_LINKS_CACHE_PREFIX = 'track_links_v3';
 const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
@@ -1616,7 +1617,7 @@ class Data {
       WHERE id = ${trackId}`;
 
     if (linkQuery.length > 0) {
-      const data = {
+      const data: any = {
         link: linkQuery[0].spotifyLink,
         youtubeLink: linkQuery[0].youtubeLink,
         youtubeMusicLink: linkQuery[0].youtubeMusicLink,
@@ -1625,6 +1626,13 @@ class Data {
         deezerLink: linkQuery[0].deezerLink,
         tidalLink: linkQuery[0].tidalLink,
       };
+
+      // Get theme from in-memory mapping if php is provided
+      if (php) {
+        const appTheme = AppTheme.getInstance();
+        const theme = appTheme.getTheme(Number(php));
+        data.t = theme;
+      }
 
       if (data.link) {
         await this.cache.set(cacheKey, JSON.stringify(data));

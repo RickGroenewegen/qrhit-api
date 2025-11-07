@@ -232,6 +232,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     let az = null;
     let dz = null;
     let td = null;
+    let t = null;
 
     if (result.success) {
       link = result.data.link;
@@ -241,9 +242,10 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       az = result.data.amazonMusicLink || null;
       dz = result.data.deezerLink || null;
       td = result.data.tidalLink || null;
+      t = result.data.t || null;
     }
     const useSpotifyRemote = true; // Default value
-    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote };
+    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, t };
   });
 
   // Hitlist routes

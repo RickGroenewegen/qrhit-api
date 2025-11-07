@@ -1,0 +1,46 @@
+{
+  "id": "default",
+  "name": "QRSong!",
+  "version": 2,
+  "cacheTTL": 86400,
+  "cssVariables": {
+    "--app-background": "linear-gradient(135deg, #0077be, #00264d)",
+    "--app-text-color": "#ffffff",
+    "--app-text-shadow": "1px 1px 2px rgba(0, 0, 0, 0.2)",
+    "--app-button-background": "rgba(255, 255, 255, 0.2)",
+    "--app-button-text-color": "#ffffff",
+    "--app-button-background-hover": "rgba(255, 255, 255, 0.3)",
+    "--app-button-background-activated": "rgba(255, 255, 255, 0.4)",
+    "--app-button-background-disabled": "rgba(255, 255, 255, 0.1)",
+    "--app-button-text-color-disabled": "rgba(255, 255, 255, 0.5)",
+    "--app-choice-block-background": "rgba(255, 255, 255, 0.1)",
+    "--app-choice-block-background-hover": "rgba(255, 255, 255, 0.2)",
+    "--app-choice-block-background-active": "rgba(255, 255, 255, 0.3)",
+    "--app-choice-block-background-selected": "rgba(255, 255, 255, 0.25)",
+    "--app-choice-block-border-selected": "#ffffff",
+    "--app-choice-block-text-color": "#ffffff",
+    "--app-musical-note-color": "rgba(255, 255, 255, 0.7)",
+    "--app-musical-note-shadow": "0 0 5px rgba(255, 255, 255, 0.3)",
+    "--app-modal-header-background": "#00264d",
+    "--app-modal-header-text-color": "#ffffff",
+    "--app-modal-content-background": "linear-gradient(135deg, #0077be, #00264d)",
+    "--app-modal-content-text-color": "#ffffff",
+    "--app-modal-link-color": "#87cefa",
+    "--app-scanner-guide-color": "#ffffff",
+    "--app-flash-button-background-active": "rgba(255, 255, 255, 0.5)",
+    "--app-logo-filter": "none",
+    "--app-vinyl-gradient": "radial-gradient(circle at 30% 30%, #444 40%, #333 70%, #222 100%)",
+    "--app-vinyl-border": "#ffffff",
+    "--app-vinyl-center-background": "#4a90e2",
+    "--app-vinyl-center-border": "#222222"
+  },
+  "assets": {
+    "logo": null,
+    "background": null
+  },
+  "fonts": {
+    "family": "system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    "url": null
+  },
+  "helpText": null
+}
