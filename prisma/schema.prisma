@@ -352,6 +352,7 @@ model Playlist {
   downloads            Int                  @default(0)
   score                Int                  @default(0)
   design               Json?
+  template             String?
   tracks               PlaylistHasTrack[]
   Payment              PaymentHasPlaylist[]
   UserSuggestion       UserSuggestion[]

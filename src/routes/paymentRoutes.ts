@@ -266,36 +266,9 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         batchNumber = `${php[0].paymentHasPlaylistId}-${itemIndex}`;
       }
 
-      // Check for white label
-      const emailDomain = payment.email ? payment.email.split('@')[1] : '';
-      const whiteLabels = [
-        {
-          domain: 'k7.com',
-          template: 'k7',
-        },
-      ];
-      const whitelabel = whiteLabels.find((wl) => wl.domain === emailDomain);
-
       if (payment.email) {
-        let template = request.params.template;
-
-        // Check for specific Treffer email
-        if (
-          payment.email.toLowerCase() === 'west14+jam@gmail.com' &&
-          request.params.template === 'printer'
-        ) {
-          template = 'jam_printer';
-        } else if (
-          payment.email.toLowerCase() === 'west14+treffer@gmail.com' &&
-          request.params.template === 'printer'
-        ) {
-          template = 'treffer_printer';
-        } else if (
-          whitelabel &&
-          request.params.template.indexOf('digital_double') > -1
-        ) {
-          template = `${request.params.template}_${whitelabel.template}`;
-        }
+        // Use playlist template if set, otherwise use request template
+        const template = playlist.template || request.params.template;
 
         await reply.view(`pdf_${template}.ejs`, {
           subdir,
