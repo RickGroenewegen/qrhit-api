@@ -46,6 +46,7 @@ class Data {
   private openai = new ChatGPT();
   private analytics = AnalyticsClient.getInstance();
   private pushover = new PushoverClient();
+  private appTheme = AppTheme.getInstance();
   private axiosInstance: AxiosInstance;
   private blockedPlaylists: Set<number> = new Set();
   private blockedPlaylistsInitialized: boolean = false;
@@ -1569,7 +1570,7 @@ class Data {
       color.blue.bold(
         `Link called for track ${color.white.bold(
           trackId
-        )} and, ip=${color.white.bold(clientIp)}, userAgent=${color.white.bold(
+        )}${php ? `, php=${color.white.bold(php)}` : ''}, ip=${color.white.bold(clientIp)}, userAgent=${color.white.bold(
           userAgent || 'unknown'
         )}`
       )
@@ -1629,8 +1630,8 @@ class Data {
 
       // Get theme from in-memory mapping if php is provided
       if (php) {
-        const appTheme = AppTheme.getInstance();
-        const theme = appTheme.getTheme(Number(php));
+        const theme = this.appTheme.getTheme(Number(php));
+        console.log(111,theme)
         data.t = theme;
       }
 
