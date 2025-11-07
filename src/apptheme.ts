@@ -1,17 +1,30 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
 import PrismaInstance from './prisma';
+import Utils from './utils';
+import cluster from 'cluster';
 
 class AppTheme {
   private static instance: AppTheme;
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
+  private utils = new Utils();
   private appThemes: Map<number, { s: string; n: string }> = new Map();
   private appThemesInitialized: boolean = false;
 
   private constructor() {
     // Initialize themes on startup
-    this.loadAppThemes();
+    if (cluster.isPrimary) {
+      this.utils.isMainServer().then(async (isMainServer) => {
+        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+          await this.loadAppThemes(true);
+        } else {
+          await this.loadAppThemes(false);
+        }
+      });
+    } else {
+      this.loadAppThemes(false);
+    }
   }
 
   public static getInstance(): AppTheme {
@@ -25,7 +38,7 @@ class AppTheme {
    * Load all app themes from payment_has_playlist into memory
    * This runs on API startup to avoid database queries on every request
    */
-  public async loadAppThemes(): Promise<void> {
+  public async loadAppThemes(shouldLog: boolean = false): Promise<void> {
     try {
       const themes: any[] = await this.prisma.$queryRaw`
         SELECT id, theme, themeName
@@ -40,6 +53,15 @@ class AppTheme {
           s: themeRow.theme,
           n: themeRow.themeName || themeRow.theme,
         });
+      }
+
+      // Only log on main/primary server
+      if (shouldLog) {
+        this.logger.log(
+          color.blue.bold(
+            `Loaded ${color.white.bold(this.appThemes.size)} app themes`
+          )
+        );
       }
 
       this.appThemesInitialized = true;

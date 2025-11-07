@@ -104,6 +104,25 @@ class Cache {
     }
   }
 
+  async delPatternNonBlocking(pattern: string): Promise<number> {
+    let cachePattern = `${this.version}:${pattern}`;
+    let cursor = '0';
+    let deletedCount = 0;
+
+    do {
+      const result = await this.executeCommand('scan', cursor, 'MATCH', cachePattern, 'COUNT', 100);
+      cursor = result[0];
+      const keys = result[1];
+
+      if (keys && keys.length > 0) {
+        await this.executeCommand('del', ...keys);
+        deletedCount += keys.length;
+      }
+    } while (cursor !== '0');
+
+    return deletedCount;
+  }
+
   async setArray(key: string, values: string[]): Promise<void> {
     let cacheKey = `${this.version}:${key}`;
     await this.executeCommand('del', cacheKey); // Ensure the key is empty before setting new values

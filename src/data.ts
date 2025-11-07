@@ -32,7 +32,7 @@ import Spotify from './spotify';
 import * as ExcelJS from 'exceljs';
 import AppTheme from './apptheme';
 
-const TRACK_LINKS_CACHE_PREFIX = 'track_links_v5';
+const TRACK_LINKS_CACHE_PREFIX = 'track_links_v6';
 const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
 
 class Data {
@@ -230,6 +230,7 @@ class Data {
       this.utils.isMainServer().then(async (isMainServer) => {
         if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
           this.createSiteMap();
+
           await this.prefillLinkCache();
           await this.loadBlocked();
           // Schedule hourly cache refresh
@@ -263,6 +264,17 @@ class Data {
   }
 
   private async prefillLinkCache(): Promise<void> {
+    // First, delete all old track_links_v* cache entries using non-blocking SCAN
+    this.logger.log(
+      color.blue.bold('Deleting old track_links_v* cache entries...')
+    );
+    const deletedCount = await this.cache.delPatternNonBlocking('track_links_v*');
+    this.logger.log(
+      color.green.bold(
+        `Deleted ${color.white.bold(deletedCount)} old track_links_v* cache entries`
+      )
+    );
+
     const tracks = await this.prisma.track.findMany({
       select: {
         id: true,
