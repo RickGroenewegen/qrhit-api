@@ -81,6 +81,9 @@ class AppTheme {
       return null;
     }
 
+    console.log(111, this.appThemes);
+    console.log(222,  phpId)
+
     return this.appThemes.get(phpId) || null;
   }
 
