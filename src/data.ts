@@ -1625,48 +1625,48 @@ class Data {
     const cacheKey = `${TRACK_LINKS_CACHE_PREFIX}:${trackId}`;
     const cachedData = await this.cache.get(cacheKey);
 
+    let data: any = null;
+
     if (cachedData && useCache) {
-      return {
-        success: true,
-        data: JSON.parse(cachedData),
-      };
+      data = JSON.parse(cachedData);
+    } else {
+      const linkQuery: any[] = await this.prisma.$queryRaw`
+        SELECT spotifyLink, youtubeLink, youtubeMusicLink, appleMusicLink, amazonMusicLink, deezerLink, tidalLink
+        FROM tracks
+        WHERE id = ${trackId}`;
+
+      if (linkQuery.length > 0) {
+        data = {
+          link: linkQuery[0].spotifyLink,
+          youtubeLink: linkQuery[0].youtubeLink,
+          youtubeMusicLink: linkQuery[0].youtubeMusicLink,
+          appleMusicLink: linkQuery[0].appleMusicLink,
+          amazonMusicLink: linkQuery[0].amazonMusicLink,
+          deezerLink: linkQuery[0].deezerLink,
+          tidalLink: linkQuery[0].tidalLink,
+        };
+
+        if (data.link) {
+          await this.cache.set(cacheKey, JSON.stringify(data));
+        }
+
+        if (!useCache) {
+          this.logger.log(
+            color.blue.bold(
+              `Refreshed cache for track ${color.white.bold(
+                trackId
+              )}: ${color.white.bold(data.link)}`
+            )
+          );
+        }
+      }
     }
 
-    const linkQuery: any[] = await this.prisma.$queryRaw`
-      SELECT spotifyLink, youtubeLink, youtubeMusicLink, appleMusicLink, amazonMusicLink, deezerLink, tidalLink
-      FROM tracks
-      WHERE id = ${trackId}`;
-
-    if (linkQuery.length > 0) {
-      const data: any = {
-        link: linkQuery[0].spotifyLink,
-        youtubeLink: linkQuery[0].youtubeLink,
-        youtubeMusicLink: linkQuery[0].youtubeMusicLink,
-        appleMusicLink: linkQuery[0].appleMusicLink,
-        amazonMusicLink: linkQuery[0].amazonMusicLink,
-        deezerLink: linkQuery[0].deezerLink,
-        tidalLink: linkQuery[0].tidalLink,
-      };
-
+    if (data) {
       // Get theme from in-memory mapping if php is provided
       if (php) {
         const theme = this.appTheme.getTheme(Number(php));
-        console.log(111,theme)
         data.t = theme;
-      }
-
-      if (data.link) {
-        await this.cache.set(cacheKey, JSON.stringify(data));
-      }
-
-      if (!useCache) {
-        this.logger.log(
-          color.blue.bold(
-            `Refreshed cache for track ${color.white.bold(
-              trackId
-            )}: ${color.white.bold(data.link)}`
-          )
-        );
       }
 
       return {
