@@ -507,6 +507,7 @@ model PaymentHasPlaylist {
   suggestionsPending      Boolean                  @default(false)
   eligableForPrinter      Boolean                  @default(false)
   eligableForPrinterAt    DateTime?
+  userConfirmedPrinting   Boolean                  @default(false)
   blocked                 Boolean                  @default(false)
   emoji                   String?
   background              String?

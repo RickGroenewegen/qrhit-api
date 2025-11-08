@@ -280,7 +280,11 @@ class Data {
         id: true,
         spotifyLink: true,
         youtubeLink: true,
+        youtubeMusicLink: true,
         appleMusicLink: true,
+        amazonMusicLink: true,
+        deezerLink: true,
+        tidalLink: true,
       },
       where: {
         spotifyLink: {
@@ -295,7 +299,11 @@ class Data {
         const data = {
           link: track.spotifyLink,
           youtubeLink: track.youtubeLink,
+          youtubeMusicLink: track.youtubeMusicLink,
           appleMusicLink: track.appleMusicLink,
+          amazonMusicLink: track.amazonMusicLink,
+          deezerLink: track.deezerLink,
+          tidalLink: track.tidalLink,
         };
         await this.cache.set(
           `${TRACK_LINKS_CACHE_PREFIX}:${track.id}`,

@@ -56,6 +56,7 @@ class Suggestion {
         us.comment as comment,
         php.eligableForPrinter,
         php.suggestionsPending,
+        php.userConfirmedPrinting,
         CASE 
           WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id AND userId = u.id) > 0 
           THEN 'true' 
@@ -249,7 +250,10 @@ class Suggestion {
 
         await this.prisma.paymentHasPlaylist.update({
           where: { id: paymentHasPlaylist.id },
-          data: { suggestionsPending: true },
+          data: {
+            suggestionsPending: true,
+            userConfirmedPrinting: true,
+          },
         });
 
         this.pushover.sendMessage(
@@ -267,7 +271,10 @@ class Suggestion {
         // Set eligableForPrinter to FALSE first, then regenerate PDFs
         await this.prisma.paymentHasPlaylist.update({
           where: { id: paymentHasPlaylist.id },
-          data: { eligableForPrinter: false },
+          data: {
+            eligableForPrinter: false,
+            userConfirmedPrinting: true,
+          },
         });
 
         await this.prisma.payment.update({
@@ -312,7 +319,10 @@ class Suggestion {
         // Set suggestionsPending to show "processing" view until email is sent
         await this.prisma.paymentHasPlaylist.update({
           where: { id: paymentHasPlaylist.id },
-          data: { suggestionsPending: true },
+          data: {
+            suggestionsPending: true,
+            userConfirmedPrinting: true,
+          },
         });
 
         // Regenerate PDFs (to capture any design changes)

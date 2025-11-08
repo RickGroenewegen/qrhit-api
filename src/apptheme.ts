@@ -64,8 +64,6 @@ class AppTheme {
         );
       }
 
-      console.log(999, this.appThemes);
-
       this.appThemesInitialized = true;
     } catch (error: any) {
       console.error(`Failed to load app themes: ${error.message}`);
@@ -82,10 +80,6 @@ class AppTheme {
       console.warn('App themes not yet initialized, returning null');
       return null;
     }
-
-    console.log(111, this.appThemes);
-    console.log(222,  phpId)
-
     return this.appThemes.get(phpId) || null;
   }
 
