@@ -1,7 +1,8 @@
 {
   "id": "acme",
   "name": "Acme Company",
-  "version": 2,
+  "version": 3,
+  "showMusicalNotes": false,
   "cacheTTL": 86400,
   "cssVariables": {
     "--app-background": "linear-gradient(135deg, #ff6b6b, #ee5a6f)",
