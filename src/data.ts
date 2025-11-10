@@ -39,6 +39,7 @@ import AppTheme from './apptheme';
 
 const TRACK_LINKS_CACHE_PREFIX = 'track_links_v6';
 const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
+const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_';
 
 class Data {
   private static instance: Data;
@@ -927,7 +928,7 @@ class Data {
       locale = 'en';
     }
 
-    const cacheKey = `featuredPlaylists_${today}_${locale}`;
+    const cacheKey = `${CACHE_KEY_FEATURED_PLAYLISTS}${today}_${locale}`;
     const cachedPlaylists = await this.cache.get(cacheKey);
 
     if (!cachedPlaylists) {
@@ -2412,6 +2413,8 @@ class Data {
       await this.cache.delPattern(`${CACHE_KEY_PLAYLIST_DB}${playlistId}*`);
       await this.cache.delPattern(`${CACHE_KEY_TRACKS}${playlistId}*`);
       await this.cache.delPattern(`${CACHE_KEY_TRACK_COUNT}${playlistId}*`);
+      // Clear featured playlists cache across all locales and dates
+      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
 
       this.logger.log(
         color.blue.bold(
