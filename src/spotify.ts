@@ -21,6 +21,16 @@ import RateLimitManager from './rate_limit_manager';
 import cluster from 'cluster';
 import crypto from 'crypto';
 
+// Spotify Cache Key Prefixes
+export const CACHE_KEY_PLAYLIST = 'playlist_';
+export const CACHE_KEY_PLAYLIST_FETCH_LOCK = 'playlist_fetch_';
+export const CACHE_KEY_PLAYLIST_DB = 'playlistdb_';
+export const CACHE_KEY_TRACKS = 'tracks2_';
+export const CACHE_KEY_TRACK_COUNT = 'trackcount2_';
+export const CACHE_KEY_TRACK_INFO = 'trackInfo_';
+export const CACHE_KEY_TRACKS_BY_IDS = 'tracksbyids_';
+export const CACHE_KEY_SEARCH = 'search_';
+
 class Spotify {
   private static instance: Spotify;
   private cache = Cache.getInstance();
@@ -286,9 +296,9 @@ class Spotify {
 
     try {
       // Remove locale from cache key - cache all descriptions together
-      const cacheKey = `playlist_${playlistId}`;
-      const lockKey = `playlist_fetch_${playlistId}`;
-      const dbCacheKey = `playlistdb_${playlistId}`;
+      const cacheKey = `${CACHE_KEY_PLAYLIST}${playlistId}`;
+      const lockKey = `${CACHE_KEY_PLAYLIST_FETCH_LOCK}${playlistId}`;
+      const dbCacheKey = `${CACHE_KEY_PLAYLIST_DB}${playlistId}`;
 
       // Try to get from cache first
       let cacheResult = await this.cache.get(cacheKey);
@@ -478,7 +488,7 @@ class Spotify {
 
             // If this was a slug lookup, also cache with the actual playlist ID
             if (isSlug && checkPlaylistId !== playlistId) {
-              const actualCacheKey = `playlist_${checkPlaylistId}`;
+              const actualCacheKey = `${CACHE_KEY_PLAYLIST}${checkPlaylistId}`;
               this.cache.set(
                 actualCacheKey,
                 JSON.stringify(cachedPlaylistData)
@@ -557,8 +567,8 @@ class Spotify {
   ): Promise<ApiResult> {
     try {
 
-      let cacheKey = `tracks2_${playlistId}`; // Use different prefix for cache key
-      let cacheKeyCount = `trackcount2_${playlistId}`;
+      let cacheKey = `${CACHE_KEY_TRACKS}${playlistId}`; // Use different prefix for cache key
+      let cacheKeyCount = `${CACHE_KEY_TRACK_COUNT}${playlistId}`;
       let allFormattedTracks: Track[] = []; // Renamed for clarity
       const uniqueTrackIds = new Set<string>();
       let maxReached = false;
@@ -587,8 +597,8 @@ class Spotify {
       let checkPlaylistId = playlistData.playlistId;
 
       // Update cache keys with actual ID and track count
-      cacheKey = `tracks2_${checkPlaylistId}_${playlistData.numberOfTracks}`;
-      cacheKeyCount = `trackcount2_${checkPlaylistId}_${playlistData.numberOfTracks}`;
+      cacheKey = `${CACHE_KEY_TRACKS}${checkPlaylistId}_${playlistData.numberOfTracks}`;
+      cacheKeyCount = `${CACHE_KEY_TRACK_COUNT}${checkPlaylistId}_${playlistData.numberOfTracks}`;
 
       const cacheResult = await this.cache.get(cacheKey);
 
@@ -761,7 +771,7 @@ class Spotify {
             .filter((r) => r.year !== null)
             .map((r) =>
               this.cache.set(
-                `trackInfo_${r.trackId}`, // Use consistent trackInfo cache key
+                `${CACHE_KEY_TRACK_INFO}${r.trackId}`, // Use consistent trackInfo cache key
                 JSON.stringify({
                   year: r.year,
                   name: r.name,
@@ -798,7 +808,7 @@ class Spotify {
 
             // Check cache first
             const cachedTrackInfo = await this.cache.get(
-              `trackInfo_${trackId}` // Use consistent trackInfo cache key
+              `${CACHE_KEY_TRACK_INFO}${trackId}` // Use consistent trackInfo cache key
             );
             if (cachedTrackInfo) {
               const trackInfo = JSON.parse(cachedTrackInfo);
@@ -914,8 +924,8 @@ class Spotify {
       };
 
       // Clear old cache entries and set new ones using the correct playlist ID
-      this.cache.delPattern(`tracks2_${checkPlaylistId}*`);
-      this.cache.delPattern(`trackcount2_${checkPlaylistId}*`);
+      this.cache.delPattern(`${CACHE_KEY_TRACKS}${checkPlaylistId}*`);
+      this.cache.delPattern(`${CACHE_KEY_TRACK_COUNT}${checkPlaylistId}*`);
 
       this.cache.set(cacheKeyCount, allFormattedTracks.length.toString());
       this.cache.set(cacheKey, JSON.stringify(finalResult)); // Cache the final processed result
@@ -952,7 +962,7 @@ class Spotify {
       }
 
       // Use a consistent cache key format
-      const cacheKey = `tracksbyids_${trackIds.sort().join('_')}`;
+      const cacheKey = `${CACHE_KEY_TRACKS_BY_IDS}${trackIds.sort().join('_')}`;
       const cacheResult = await this.cache.get(cacheKey);
 
       if (cacheResult) {
@@ -1064,7 +1074,7 @@ class Spotify {
         return { success: false, error: 'Search term too short' };
       }
 
-      const cacheKey = `search_${searchTerm}_${limit}_${offset}`;
+      const cacheKey = `${CACHE_KEY_SEARCH}${searchTerm}_${limit}_${offset}`;
       const cacheResult = await this.cache.get(cacheKey);
 
       if (cacheResult) {

@@ -28,7 +28,12 @@ import PushoverClient from './pushover';
 import { ChatGPT } from './chatgpt';
 import YTMusic from 'ytmusic-api';
 import axios, { AxiosInstance } from 'axios';
-import Spotify from './spotify';
+import Spotify, {
+  CACHE_KEY_PLAYLIST,
+  CACHE_KEY_PLAYLIST_DB,
+  CACHE_KEY_TRACKS,
+  CACHE_KEY_TRACK_COUNT,
+} from './spotify';
 import * as ExcelJS from 'exceljs';
 import AppTheme from './apptheme';
 
@@ -2401,6 +2406,12 @@ class Data {
         where: { playlistId },
         data: { featured },
       });
+
+      // Clear all Spotify cache for this playlist
+      await this.cache.delPattern(`${CACHE_KEY_PLAYLIST}${playlistId}*`);
+      await this.cache.delPattern(`${CACHE_KEY_PLAYLIST_DB}${playlistId}*`);
+      await this.cache.delPattern(`${CACHE_KEY_TRACKS}${playlistId}*`);
+      await this.cache.delPattern(`${CACHE_KEY_TRACK_COUNT}${playlistId}*`);
 
       this.logger.log(
         color.blue.bold(
