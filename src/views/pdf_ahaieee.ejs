@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Your QR Cards</title>
+<!-- Preload fonts to ensure they're loaded before rendering -->
+<link rel="preload" href="<%= process.env['API_URI'] %>/assets/fonts/Moret-Bold.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="<%= process.env['API_URI'] %>/assets/fonts/Moret-BookOblique.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+    /* Moret Font Declarations */
+    @font-face {
+        font-family: 'Moret';
+        src: url('<%= process.env['API_URI'] %>/assets/fonts/Moret-Bold.woff2') format('woff2');
+        font-weight: bold;
+        font-style: normal;
+        font-display: block;
+    }
+
+    @font-face {
+        font-family: 'Moret';
+        src: url('<%= process.env['API_URI'] %>/assets/fonts/Moret-BookOblique.woff2') format('woff2');
+        font-weight: normal;
+        font-style: italic;
+        font-display: block;
+    }
+
+    body {
+        font-family: <%= php.selectedFont || 'Arial, sans-serif' %>;
+        margin: 0;
+        padding: 0;
+    }
+    .card-front, .card-back {
+        width: 60mm;
+        height: 60mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+    }
+    .card-front {
+        overflow: hidden;
+    }
+    .card-front::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        <% if (php.backgroundFrontType !== 'solid') { %>
+            <% if (php.background && php.background.length) { %>
+            background-image: url('<%= process.env['API_URI'] %>/public/background/<%= php.background %>');
+            <% } else { %>
+            background-image: url('<%= process.env['API_URI'] %>/assets/images/background_new.png');
+            <% } %>
+            background-size: cover;
+            background-position: center;
+        <% } %>
+        opacity: <%= (php.frontOpacity || 100) / 100 %>;
+        z-index: 0;
+    }
+    /* White square styling removed - now using SVG */
+    .card-back {
+        position: relative;
+        overflow: hidden;
+        <% if (php.backgroundBackType === 'solid') { %>
+            <% if (php.useGradient) {
+                const firstStop = Math.max(0, php.gradientPosition - 50);
+                const secondStop = Math.min(100, php.gradientPosition + 50);
+                const bgColor = php.backgroundBackColor || '#ffffff';
+                const gradColor = php.gradientBackgroundColor || '#ffffff';
+                const degrees = php.gradientDegrees || 180;
+            %>
+            background: linear-gradient(<%= degrees %>deg, <%= bgColor %> <%= firstStop %>%, <%= gradColor %> <%= secondStop %>%);
+            <% } else if (php.backgroundBackColor) { %>
+            background-color: <%= php.backgroundBackColor %>;
+            <% } else { %>
+            background-color: #ffffff;
+            <% } %>
+        <% } else { %>
+        background-color: transparent;
+        <% } %>
+    }
+    .background-image-back {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 0;
+        opacity: 1;
+    }
+    .qr {
+        width: 60%;
+        height: auto;
+        position: relative;
+        z-index: 3;
+    }
+    .text {
+        text-align: center;
+        padding-top: 2mm;
+        padding-bottom: 2mm;
+    }
+    .text.artist {
+        margin-left: 3mm;
+        margin-right: 3mm;
+        font-size: 18px;
+        overflow-wrap: break-word; /* Prevent breaking mid-word */
+    }
+    .text.year {
+        font-size: 40px;
+        font-weight: bold;
+    }
+    .text.name {
+        margin-left: 3mm;
+        margin-right: 3mm;
+        font-size: 16px;
+        overflow-wrap: break-word; /* Prevent breaking mid-word */
+    }
+    .url, .url-bottom {
+        font-size: 11px;
+        position: absolute;
+        bottom: 13mm;
+        text-align: center;
+        width: 100%;
+        color: #b0b0b0;
+        z-index: 3;
+    }
+    .logo {
+        position: absolute;
+        top: 5mm;
+        max-width: 20mm;
+        max-height: 10mm;
+        z-index: 4;
+    }
+    .url-bottom {
+        bottom: 5mm;
+    }
+</style>
+</head>
+<body>
+<% tracks.forEach((track, index) => { %>
+    <div class="card-front" style="<%= !eco && php.backgroundFrontType === 'solid' ? (php.useFrontGradient ? 'background: linear-gradient(' + (php.gradientFrontDegrees || 180) + 'deg, ' + (php.backgroundFrontColor || '#ffffff') + ' ' + Math.max(0, (php.gradientFrontPosition || 50) - 50) + '%, ' + (php.gradientFrontColor || '#ffffff') + ' ' + Math.min(100, (php.gradientFrontPosition || 50) + 50) + '%);' : 'background: ' + (php.backgroundFrontColor || '#ffffff') + ';') : '' %>">
+        <% if (php.logo && php.logo.length) { %>
+            <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
+        <% } %>
+        <%
+        // Determine QR background type - always circle unless hideCircle is true
+        let qrBgType = php.qrBackgroundType || (php.hideCircle ? 'none' : 'circle');
+        let qrBgColor = php.qrBackgroundColor || '#ffffff';
+        %>
+        <% if (qrBgType === 'circle') { %>
+            <!-- Circle background for QR code using SVG -->
+            <svg style="position: absolute; width: 48mm; height: 48mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1;" xmlns="http://www.w3.org/2000/svg">
+                <circle cx="50%" cy="50%" r="24mm" fill="<%= qrBgColor %>" />
+            </svg>
+            <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" style="position: absolute; width: 36mm; height: 36mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2;">
+        <% } else { %>
+            <!-- No background shape -->
+            <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" class="qr">
+        <% } %>
+        <!-- Domain URL removed - always hidden -->
+    </div>
+    <div style="page-break-after: always;"></div>
+    <div class="card-back" style="position: relative;">
+        <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
+            <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/companydata/backgrounds/<%= php.backgroundBack %>" alt="Card Background">
+        <% } %>
+        <div class="text" style="margin-top: 0mm;font-family: 'Moret';font-weight: bold;font-size:36px;padding: 0 2mm;color: #55351a;position:relative;z-index:1;">
+            <%= track.artist %>
+            <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
+                <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
+            <% } %>
+        </div>
+        <!-- Year display commented out -->
+        <!-- <div class="text" style="margin-top: <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>1mm<% } else { %>5mm<% } %>;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;"><%= track.year %></div> -->
+        <div class="text" style="margin-top: <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>2mm<% } else { %>3mm<% } %>;font-family: 'Moret';font-style: italic;font-size:30px;letter-spacing: -0.04em;padding: 0 2mm;color: #ffffff;position:relative;z-index:1;">
+            <%= track.name %>
+            <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
+                <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
+            <% } %>
+        </div>
+        <!-- Domain URL removed from back side - always hidden -->
+        <% if (!payment.vibe) { %>
+            <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 10px; color: <%= php.fontColor || '#909090' %>; font-family: Arial, sans-serif;">#<%= typeof batchNumber !== 'undefined' ? batchNumber : php.paymentHasPlaylistId %></div>
+        <% } %>
+    </div>
+    <div style="page-break-after: always;"></div>
+<% }); %>
+</body>
+</html>

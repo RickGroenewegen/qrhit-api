@@ -720,6 +720,7 @@ class Vibe {
           reviewLink: true,
           hideCircle: true,
           languages: true,
+          forceTemplate: true,
         };
         // Add all description fields for each locale
         for (const locale of availableLocales) {
@@ -1547,6 +1548,11 @@ class Vibe {
         updateData.showNames = this.utils.parseBoolean(fields.showNames);
       }
 
+      // Handle forceTemplate field
+      if (fields.forceTemplate !== undefined) {
+        updateData.forceTemplate = fields.forceTemplate === '' ? null : String(fields.forceTemplate);
+      }
+
       // Explicitly handle empty string values for background fields to set them to null
       if (fields.background === '') {
         updateData.background = null;
@@ -2019,6 +2025,61 @@ class Vibe {
       }
     }
 
+    let backgroundBack = null;
+
+    // Copy companyList.background2 (backside) to the public directory
+    if (
+      companyList &&
+      companyList.background2 &&
+      companyList.background2.length > 0
+    ) {
+      const companyDataBackgroundPath = `${process.env['PUBLIC_DIR']}/companydata/backgrounds/${companyList.background2}`;
+      // Target directory is now public/background
+      const backgroundBackTargetDir = `${process.env['PUBLIC_DIR']}/background/${companyList.background2}`;
+
+      try {
+        // Copy the background file to the target directory
+        await fs.copyFile(companyDataBackgroundPath, backgroundBackTargetDir);
+
+        // --- Start Image Processing ---
+        // Read the copied file
+        const buffer = await fs.readFile(backgroundBackTargetDir);
+
+        // Resize and process the backside image (no circle needed for backside)
+        const processedBuffer = await sharp(buffer)
+          .resize(1000, 1000, {
+            fit: 'cover',
+          })
+          .png({ compressionLevel: 9, quality: 90 })
+          .toBuffer();
+
+        // Overwrite the file in the target directory with the processed image
+        await fs.writeFile(backgroundBackTargetDir, processedBuffer);
+
+        this.logger.log(
+          color.blue.bold(
+            `Processed background2 (backside) image for list ${color.white.bold(
+              listId
+            )}: ${color.white.bold(backgroundBackTargetDir)}`
+          )
+        );
+        // --- End Image Processing ---
+
+        // Get the filename (already correct)
+        backgroundBack = companyList.background2;
+      } catch (error) {
+        this.logger.log(
+          color.red.bold(
+            `Error copying or processing background2 for list ${color.white.bold(
+              listId
+            )}: ${color.white.bold(error)}`
+          )
+        );
+        // Decide how to handle the error - maybe proceed without background?
+        backgroundBack = null; // Set backgroundBack to null if processing fails
+      }
+    }
+
     const items = [
       {
         productType: 'cards',
@@ -2032,6 +2093,8 @@ class Vibe {
         type: 'physical',
         subType: 'none',
         background,
+        backgroundBack, // Add backside background (processed)
+        backgroundBackType: backgroundBack ? 'image' : 'solid', // Set to image if backgroundBack exists
         image: '',
         doubleSided: false,
         eco: false,
@@ -2091,6 +2154,43 @@ class Vibe {
       true
     );
 
+    // Apply forceTemplate to playlist IMMEDIATELY after creation (before early return)
+    // This ensures the template is set even for free/vibe orders that return early
+    if (companyList.forceTemplate && playlistId) {
+      try {
+        const createdPlaylist = await this.prisma.playlist.findUnique({
+          where: { playlistId: playlistId },
+        });
+
+        if (createdPlaylist) {
+          await this.prisma.playlist.update({
+            where: { id: createdPlaylist.id },
+            data: { template: companyList.forceTemplate },
+          });
+
+          this.logger.log(
+            color.blue.bold(
+              `Applied forced template ${color.white.bold(
+                companyList.forceTemplate
+              )} to playlist for list ${color.white.bold(companyList.name)}`
+            )
+          );
+        } else {
+          this.logger.log(
+            color.yellow.bold(
+              `Could not find playlist ${playlistId} to apply forceTemplate`
+            )
+          );
+        }
+      } catch (error) {
+        this.logger.log(
+          color.red.bold(
+            `Error applying forceTemplate: ${error}`
+          )
+        );
+      }
+    }
+
     // If generation was already queued by Mollie (for free/vibe orders), return early
     if (result.data.generationQueued) {
       this.logger.log(
@@ -2111,11 +2211,27 @@ class Vibe {
     });
 
     // Get the playlist using the playlistId
-    const playlist = await this.prisma.playlist.findUnique({
+    let playlist = await this.prisma.playlist.findUnique({
       where: { playlistId },
     });
 
     if (playlist) {
+      // Fallback: Apply forceTemplate if not already set (for non-free orders)
+      if (companyList.forceTemplate && !playlist.template) {
+        await this.prisma.playlist.update({
+          where: { id: playlist.id },
+          data: { template: companyList.forceTemplate },
+        });
+        playlist.template = companyList.forceTemplate;
+        this.logger.log(
+          color.blue.bold(
+            `Applied forced template ${color.white.bold(
+              companyList.forceTemplate
+            )} to playlist (fallback path)`
+          )
+        );
+      }
+
       // Always add extra track info, passing showNames as a parameter and ranking for position
       this.logger.log(
         color.blue.bold(

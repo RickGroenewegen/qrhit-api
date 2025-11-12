@@ -706,7 +706,10 @@ class Generator {
 
           let printerTemplate = 'printer';
 
-          if (payment.vibe) {
+          // Check if playlist has a forced template override (from CompanyList.forceTemplate)
+          if (playlist.template) {
+            printerTemplate = playlist.template;
+          } else if (payment.vibe) {
             printerTemplate = 'printer_vibe';
           }
 

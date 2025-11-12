@@ -69,14 +69,14 @@ class PDF {
   ): Promise<string> {
     const numberOfTracks = playlist.numberOfTracks;
 
-    let itemsPerPage =
+    // Determine if this is a digital template (multi-item per page) or printer template (single item, front/back)
+    const isDigitalTemplate =
       template === 'digital' ||
       template === 'digital_double' ||
-      template === 'printer_sheets'
-        ? 6
-        : 1;
-    const pagesPerTrack =
-      template === 'printer' || template === 'printer_vibe' ? 2 : 1;
+      template === 'printer_sheets';
+
+    let itemsPerPage = isDigitalTemplate ? 6 : 1;
+    const pagesPerTrack = isDigitalTemplate ? 1 : 2;
     const totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
     const maxPagesPerPDF = 100;
 
@@ -120,9 +120,8 @@ class PDF {
           LoadLazyContent: 'true', // Load all lazy content including fonts
         } as any;
 
-        if (template === 'printer' || template === 'printer_vibe') {
-          // options['PageSize'] = 'a5';
-          // options['PageOrientation'] = 'Landscape';
+        if (!isDigitalTemplate) {
+          // Printer templates (including custom ones) use 60x60mm pages
           options['PageWidth'] = 60;
           options['PageHeight'] = 60;
         }
@@ -159,7 +158,8 @@ class PDF {
           color.blue.bold(`Merged PDF saved: ${color.white.bold(filename)}`)
         );
       }
-      if (template === 'printer' || template === 'printer_vibe') {
+      if (!isDigitalTemplate) {
+        // Printer templates (including custom ones) need resize and bleed
         if (payment.vibe) {
           // Happibox wants a 3% increase in size for the printer
           await this.resizePDFPages(finalPath, 62, 62);
