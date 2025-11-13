@@ -454,6 +454,18 @@ class Mollie {
           }
         : {};
 
+    // Printer type filter - if provided, only include payments with at least one playlist with matching printerType
+    const printerTypeClause =
+      search.printerType && search.printerType.trim() !== ''
+        ? {
+            PaymentHasPlaylist: {
+              some: {
+                printerType: search.printerType,
+              },
+            },
+          }
+        : {};
+
     const totalItems = await this.prisma.payment.count({
       where: {
         vibe: false,
@@ -463,6 +475,7 @@ class Mollie {
         ...finalizedClause,
         ...printerHoldClause,
         ...notSubmittedClause,
+        ...printerTypeClause,
       },
     });
 
@@ -475,6 +488,7 @@ class Mollie {
         ...finalizedClause,
         ...printerHoldClause,
         ...notSubmittedClause,
+        ...printerTypeClause,
       },
       skip: (search.page - 1) * search.itemsPerPage,
       take: search.itemsPerPage,

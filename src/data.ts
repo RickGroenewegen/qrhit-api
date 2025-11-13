@@ -2261,15 +2261,22 @@ class Data {
   public async updatePaymentHasPlaylist(
     paymentHasPlaylistId: number,
     eco: boolean,
-    doubleSided: boolean
+    doubleSided: boolean,
+    printerType?: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
+      const updateData: any = {
+        eco: eco,
+        doubleSided: doubleSided,
+      };
+
+      if (printerType !== undefined) {
+        updateData.printerType = printerType;
+      }
+
       await this.prisma.paymentHasPlaylist.update({
         where: { id: paymentHasPlaylistId },
-        data: {
-          eco: eco,
-          doubleSided: doubleSided,
-        },
+        data: updateData,
       });
       this.logger.log(
         color.blue.bold(

@@ -1025,7 +1025,7 @@ export default async function adminRoutes(
         const paymentHasPlaylistId = parseInt(
           request.params.paymentHasPlaylistId
         );
-        const { eco, doubleSided } = request.body;
+        const { eco, doubleSided, printerType } = request.body;
 
         if (isNaN(paymentHasPlaylistId)) {
           reply
@@ -1043,10 +1043,28 @@ export default async function adminRoutes(
           return;
         }
 
+        // Validate printerType if provided
+        if (printerType !== undefined && typeof printerType !== 'string') {
+          reply.status(400).send({
+            success: false,
+            error: 'Invalid printerType value. Must be string.',
+          });
+          return;
+        }
+
+        if (printerType && !['printnbind', 'tromp'].includes(printerType)) {
+          reply.status(400).send({
+            success: false,
+            error: 'Invalid printerType value. Must be "printnbind" or "tromp".',
+          });
+          return;
+        }
+
         const result = await data.updatePaymentHasPlaylist(
           paymentHasPlaylistId,
           eco,
-          doubleSided
+          doubleSided,
+          printerType
         );
 
         if (!result.success) {
