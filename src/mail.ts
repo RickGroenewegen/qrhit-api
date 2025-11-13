@@ -1134,9 +1134,9 @@ ${attachment.data}
 To: ${params.to}
 ${
   process.env['ENVIRONMENT'] !== 'development' &&
-  process.env['INFO_EMAIL'] &&
+  process.env['BCC_EMAIL'] &&
   sendBCC
-    ? `Bcc: ${process.env['INFO_EMAIL']}\n`
+    ? `Bcc: ${process.env['BCC_EMAIL']}\n`
     : ''
 }Subject: ${params.subject}
 ${replyToHeader}MIME-Version: 1.0
