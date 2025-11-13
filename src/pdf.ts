@@ -67,7 +67,6 @@ class PDF {
     eco: boolean = false,
     printerType: string,
     itemIndex?: number
-    
   ): Promise<string> {
     const numberOfTracks = playlist.numberOfTracks;
 
@@ -169,7 +168,6 @@ class PDF {
           // Resize them to exactly 60x60 mm because convertAPI is slightly off
           await this.resizePDFPages(finalPath, 60, 60);
         }
-
         
         console.log(111, printerType);
 
