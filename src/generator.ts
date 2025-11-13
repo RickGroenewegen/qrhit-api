@@ -734,7 +734,8 @@ class Generator {
                   digitalTemplate,
                   payment.qrSubDir,
                   eco,
-                  item.index
+                  item.index,
+                  playlist.printerType || 'printnbind'
                 ),
                 playlist.orderType == 'physical'
                   ? this.pdf.generatePDF(
@@ -746,7 +747,8 @@ class Generator {
                         : printerTemplate,
                       payment.qrSubDir,
                       false,
-                      item.index
+                      item.index,
+                      playlist.printerType || 'printnbind'
                     )
                   : Promise.resolve(''),
               ]);

@@ -536,6 +536,7 @@ model PaymentHasPlaylist {
   lastReloadAt            DateTime?                // Timestamp of last playlist reload from Spotify
   theme                   String?                  // Theme slug for app theming (e.g., "acme", "coca-cola")
   themeName               String?                  // User-readable theme name (e.g., "Acme Company")
+  printerType             String                   @default("printnbind") // Printer type: "printnbind" or "tromp"
   orderType               OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                   PaymentHasPlaylistItem[]
 
