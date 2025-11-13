@@ -169,8 +169,6 @@ class PDF {
           await this.resizePDFPages(finalPath, 60, 60);
         }
 
-        console.log(111, printerType);
-
         // Add bleed based on printer type
         if (printerType === 'tromp') {
           // True bleed: scale content to extend into bleed area
