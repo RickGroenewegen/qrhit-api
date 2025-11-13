@@ -440,16 +440,6 @@ class PDF {
   }
 
   public async convertToCMYK(inputPath: string): Promise<void> {
-    const { exec } = await import('child_process');
-    const { promisify } = await import('util');
-    const execAsync = promisify(exec);
-
-    // Create a temporary output path
-    const tempOutputPath = `${inputPath}.cmyk.tmp.pdf`;
-
-    // Ghostscript command to convert RGB to CMYK
-    const gsCommand = `gs -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sColorConversionStrategy=CMYK -sColorConversionStrategyForImages=CMYK -sProcessColorModel=DeviceCMYK -dUseCIEColor -sOutputFile="${tempOutputPath}" "${inputPath}"`;
-
     try {
       this.logger.log(
         color.blue.bold(
@@ -457,12 +447,18 @@ class PDF {
         )
       );
 
-      // Execute Ghostscript command
-      await execAsync(gsCommand);
+      // Use ConvertAPI to convert RGB to CMYK
+      const result = await this.convertapi.convert(
+        'pdf',
+        {
+          File: inputPath,
+          ColorSpace: 'CMYK',
+        },
+        'pdf'
+      );
 
-      // Replace original file with CMYK version
-      await fs.unlink(inputPath);
-      await fs.rename(tempOutputPath, inputPath);
+      // Save the converted file back to the original path
+      await result.saveFiles(inputPath);
 
       this.logger.log(
         color.green.bold(
@@ -473,14 +469,6 @@ class PDF {
       this.logger.log(
         color.red.bold(`Error converting PDF to CMYK: ${error}`)
       );
-
-      // Clean up temp file if it exists
-      try {
-        await fs.unlink(tempOutputPath);
-      } catch {
-        // Ignore if temp file doesn't exist
-      }
-
       throw error;
     }
   }
