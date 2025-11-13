@@ -168,13 +168,15 @@ class PDF {
           // Resize them to exactly 60x60 mm because convertAPI is slightly off
           await this.resizePDFPages(finalPath, 60, 60);
         }
-        
+
         console.log(111, printerType);
 
         // Add bleed based on printer type
         if (printerType === 'tromp') {
           // True bleed: scale content to extend into bleed area
           await this.addTrueBleed(finalPath, 3);
+          // Convert to CMYK color space for professional printing
+          await this.convertToCMYK(finalPath);
         } else {
           // Standard bleed: add whitespace around content
           await this.addBleed(finalPath, 3);
@@ -437,6 +439,52 @@ class PDF {
         )}`
       )
     );
+  }
+
+  public async convertToCMYK(inputPath: string): Promise<void> {
+    const { exec } = await import('child_process');
+    const { promisify } = await import('util');
+    const execAsync = promisify(exec);
+
+    // Create a temporary output path
+    const tempOutputPath = `${inputPath}.cmyk.tmp.pdf`;
+
+    // Ghostscript command to convert RGB to CMYK
+    const gsCommand = `gs -dSAFER -dBATCH -dNOPAUSE -sDEVICE=pdfwrite -sColorConversionStrategy=CMYK -sColorConversionStrategyForImages=CMYK -sProcessColorModel=DeviceCMYK -dUseCIEColor -sOutputFile="${tempOutputPath}" "${inputPath}"`;
+
+    try {
+      this.logger.log(
+        color.blue.bold(
+          `Converting PDF to CMYK color space: ${color.white.bold(inputPath)}`
+        )
+      );
+
+      // Execute Ghostscript command
+      await execAsync(gsCommand);
+
+      // Replace original file with CMYK version
+      await fs.unlink(inputPath);
+      await fs.rename(tempOutputPath, inputPath);
+
+      this.logger.log(
+        color.green.bold(
+          `Successfully converted PDF to CMYK: ${color.white.bold(inputPath)}`
+        )
+      );
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error converting PDF to CMYK: ${error}`)
+      );
+
+      // Clean up temp file if it exists
+      try {
+        await fs.unlink(tempOutputPath);
+      } catch {
+        // Ignore if temp file doesn't exist
+      }
+
+      throw error;
+    }
   }
 
   public async resizePDFPages(
