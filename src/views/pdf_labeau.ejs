@@ -10,7 +10,7 @@
     @font-face {
         font-family: 'Aeonik';
         src: url('<%= process.env['API_URI'] %>/assets/fonts/Aeonik-Light.woff2') format('woff2');
-        font-weight: 300;
+        font-weight: normal;
         font-style: normal;
         font-display: block;
     }
@@ -147,7 +147,7 @@
                     <div style="font-family: 'Aeonik', Arial, sans-serif; font-size: 10px; color: #21404b; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
                 <% } %>
             </div>
-            <div class="text" style="margin-top: 3mm; font-family: 'Aeonik', Arial, sans-serif; font-size: 44px; font-weight: bold; padding: 0 2mm; color: #21404b;"><%= track.year %></div>
+            <div class="text" style="margin-top: 3mm; font-family: 'Aeonik', Arial, sans-serif; font-size: 44px; padding: 0 2mm; color: #21404b;"><%= track.year %></div>
             <div class="text" style="margin-top: 3mm; font-family: 'Aeonik', Arial, sans-serif; font-size: 16px; padding: 0 2mm; color: #21404b; overflow-wrap: break-word; word-wrap: break-word;">
                 <%= track.name %>
                 <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
