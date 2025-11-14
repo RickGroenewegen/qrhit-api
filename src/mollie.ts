@@ -454,12 +454,13 @@ class Mollie {
           }
         : {};
 
-    // Printer type filter - if provided, only include payments with at least one playlist with matching printerType
+    // Printer type filter - if provided, only include payments with at least one physical playlist with matching printerType
     const printerTypeClause =
       search.printerType && search.printerType.trim() !== ''
         ? {
             PaymentHasPlaylist: {
               some: {
+                type: 'physical',
                 printerType: search.printerType,
               },
             },
