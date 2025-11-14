@@ -2444,6 +2444,52 @@ class Data {
     }
   }
 
+  public async resetJudgedStatus(
+    paymentHasPlaylistId: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const php = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: paymentHasPlaylistId },
+        select: { id: true, paymentId: true },
+      });
+
+      if (!php) {
+        return { success: false, error: 'PaymentHasPlaylist not found' };
+      }
+
+      // Update both payment_has_playlist.userConfirmedPrinting and payment.userAgreedToPrinting to 0
+      await this.prisma.$transaction([
+        this.prisma.paymentHasPlaylist.update({
+          where: { id: paymentHasPlaylistId },
+          data: { userConfirmedPrinting: false },
+        }),
+        this.prisma.payment.update({
+          where: { id: php.paymentId },
+          data: { userAgreedToPrinting: false },
+        }),
+      ]);
+
+      this.logger.log(
+        color.blue.bold(
+          `Reset judged status for paymentHasPlaylist ${color.white.bold(
+            paymentHasPlaylistId
+          )} and payment ${color.white.bold(php.paymentId)}`
+        )
+      );
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error resetting judged status for paymentHasPlaylist ${color.white.bold(
+            paymentHasPlaylistId
+          )}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
   public async translateGenres(): Promise<{
     processed: number;
     updated: number;

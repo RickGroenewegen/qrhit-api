@@ -542,6 +542,7 @@ class Mollie {
             logo: true,
             subType: true,
             blocked: true,
+            userConfirmedPrinting: true,
             orderType: {
               select: {
                 name: true,

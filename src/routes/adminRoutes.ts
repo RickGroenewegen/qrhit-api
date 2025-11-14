@@ -637,6 +637,36 @@ export default async function adminRoutes(
     }
   );
 
+  // Reset judged status for payment_has_playlist
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/judged',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentHasPlaylistId } = request.params;
+
+      if (!paymentHasPlaylistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'PaymentHasPlaylist ID is required',
+        });
+        return;
+      }
+
+      const result = await data.resetJudgedStatus(
+        parseInt(paymentHasPlaylistId, 10)
+      );
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'PaymentHasPlaylist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Analytics
   fastify.get(
     '/analytics',
