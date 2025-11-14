@@ -6,4 +6,5 @@ export interface OrderSearch {
   textSearch: string;
   printerHold?: boolean;
   notSubmitted?: boolean;
+  printerType?: string;
 }
