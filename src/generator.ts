@@ -632,6 +632,7 @@ class Generator {
           payment.paymentId
         );
         const physicalPlaylists = [];
+        const emailedPlaylistIds = new Set<number>();
 
         for (const playlist of playlists) {
           if (playlist.productType === 'giftcard') {
@@ -791,13 +792,17 @@ class Generator {
           });
 
           if (playlist.orderType == 'digital' && !skipMail) {
-            await this.mail.sendEmail(
-              'digital',
-              payment,
-              [playlist],
-              firstPrinterFilename,
-              firstDigitalFilename
-            );
+            // Only send email if this playlist hasn't been emailed yet
+            if (!emailedPlaylistIds.has(playlist.id)) {
+              await this.mail.sendEmail(
+                'digital',
+                payment,
+                [playlist],
+                firstPrinterFilename,
+                firstDigitalFilename
+              );
+              emailedPlaylistIds.add(playlist.id);
+            }
           }
         }
 
