@@ -139,15 +139,16 @@
     %>
     <div class="card-back" style="position: relative;">
         <img class="background-image-back" src="<%= process.env['API_URI'] %>/assets/images/clients/labeau/<%= backgroundImage %>" alt="Card Background">
-        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; position: relative; z-index: 1;">
-            <div class="text" style="font-family: 'Aeonik', Arial, sans-serif; font-size: 18px; padding: 0 2mm; color: #21404b;">
+        <!-- Safe area container to prevent text from bleeding into trim area -->
+        <div style="position: absolute; top: 5mm; left: 5mm; right: 5mm; bottom: 5mm; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1;">
+            <div class="text" style="font-family: 'Aeonik', Arial, sans-serif; font-size: 18px; padding: 0 2mm; color: #21404b; overflow-wrap: break-word; word-wrap: break-word;">
                 <%= track.artist %>
                 <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
                     <div style="font-family: 'Aeonik', Arial, sans-serif; font-size: 10px; color: #21404b; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
                 <% } %>
             </div>
             <div class="text" style="margin-top: 3mm; font-family: 'Aeonik', Arial, sans-serif; font-size: 44px; font-weight: bold; padding: 0 2mm; color: #21404b;"><%= track.year %></div>
-            <div class="text" style="margin-top: 3mm; font-family: 'Aeonik', Arial, sans-serif; font-size: 16px; padding: 0 2mm; color: #21404b;">
+            <div class="text" style="margin-top: 3mm; font-family: 'Aeonik', Arial, sans-serif; font-size: 16px; padding: 0 2mm; color: #21404b; overflow-wrap: break-word; word-wrap: break-word;">
                 <%= track.name %>
                 <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
                     <div style="font-family: 'Aeonik', Arial, sans-serif; font-size: 10px; color: #21404b; margin-top: 1mm;"><%- track.extraNameAttribute %></div>

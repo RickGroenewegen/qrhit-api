@@ -131,15 +131,16 @@
     const backColor = backColors[index % 5];
     %>
     <div class="card-back" style="position: relative; background-color: <%= backColor %>;">
-        <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; position: relative; z-index: 1;">
-            <div class="text" style="font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:#ffffff;">
+        <!-- Safe area container to prevent text from bleeding into trim area -->
+        <div style="position: absolute; top: 5mm; left: 5mm; right: 5mm; bottom: 5mm; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1;">
+            <div class="text" style="font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:#ffffff; overflow-wrap: break-word; word-wrap: break-word;">
                 <%= track.artist %>
                 <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
                     <div style="font-family: Arial, sans-serif; font-size: 10px; color: #ffffff; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
                 <% } %>
             </div>
             <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding: 0 2mm;color:#ffffff;"><%= track.year %></div>
-            <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:#ffffff;">
+            <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:#ffffff; overflow-wrap: break-word; word-wrap: break-word;">
                 <%= track.name %>
                 <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
                     <div style="font-family: Arial, sans-serif; font-size: 10px; color: #ffffff; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
