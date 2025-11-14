@@ -1,0 +1,47 @@
+{
+  "id": "ahaieee",
+  "name": "Ahaieee - Moluks Muziekspel",
+  "version": 6,
+  "showMusicalNotes": false,
+  "cacheTTL": 86400,
+  "cssVariables": {
+    "--app-background": "linear-gradient(135deg, #451a03, #78350f, #451a03)",
+    "--app-text-color": "#ffffff",
+    "--app-text-shadow": "2px 2px 4px rgba(0, 0, 0, 0.4)",
+    "--app-button-background": "rgba(217, 119, 6, 0.3)",
+    "--app-button-text-color": "#ffffff",
+    "--app-button-background-hover": "rgba(217, 119, 6, 0.45)",
+    "--app-button-background-activated": "rgba(217, 119, 6, 0.6)",
+    "--app-button-background-disabled": "rgba(217, 119, 6, 0.15)",
+    "--app-button-text-color-disabled": "rgba(255, 255, 255, 0.5)",
+    "--app-choice-block-background": "rgba(217, 119, 6, 0.2)",
+    "--app-choice-block-background-hover": "rgba(217, 119, 6, 0.35)",
+    "--app-choice-block-background-active": "rgba(217, 119, 6, 0.5)",
+    "--app-choice-block-background-selected": "rgba(217, 119, 6, 0.4)",
+    "--app-choice-block-border-selected": "#d97706",
+    "--app-choice-block-text-color": "#ffffff",
+    "--app-musical-note-color": "rgba(77, 230, 102, 0.75)",
+    "--app-musical-note-shadow": "0 0 10px rgba(217, 119, 6, 0.6)",
+    "--app-modal-header-background": "#92400e",
+    "--app-modal-header-text-color": "#fef3c7",
+    "--app-modal-content-background": "#d97706",
+    "--app-modal-content-text-color": "#ffffff",
+    "--app-modal-link-color": "#fef3c7",
+    "--app-scanner-guide-color": "#d97706",
+    "--app-flash-button-background-active": "rgba(217, 119, 6, 0.7)",
+    "--app-logo-filter": "brightness(1.05) contrast(1.1)",
+    "--app-vinyl-gradient": "radial-gradient(circle at 30% 30%, #78350f 40%, #451a03 70%, #292524 100%)",
+    "--app-vinyl-border": "#d97706",
+    "--app-vinyl-center-background": "#d97706",
+    "--app-vinyl-center-border": "#451a03"
+  },
+  "assets": {
+    "logo": null,
+    "background": null
+  },
+  "fonts": {
+    "family": "Poppins, Montserrat, system-ui, -apple-system, sans-serif",
+    "url": "https://fonts.googleapis.com/css2?family=Poppins:wght@600;700&family=Montserrat:wght@400&display=swap"
+  },
+  "helpText": "<h2 style='color: #fef3c7;'>Ahaiéee! - Het eerste Molukse muziekspel</h2><p><strong>Gemaakt door en voor onze community.</strong></p><p>Van de <em>Lagu-Lagu</em> van toen tot de klanken van nu: herkenning voor jong en oud.</p><h3 style='color: #fef3c7;'>Hoe werkt het?</h3><ol><li><strong>Kies een kaart:</strong> Pak een QR-kaart uit het spel</li><li><strong>Scan met de app:</strong> Richt je camera op de QR-code</li><li><strong>Luister:</strong> De muziek begint automatisch te spelen</li><li><strong>Raad het nummer:</strong> Herken je de Molukse klassieker?</li><li><strong>Deel een herinnering:</strong> Vertel je verhaal voor bonuspunten</li></ol><h3 style='color: #fef3c7;'>Herkenning, verbinding, trots.</h3><p><strong>HERKENNING</strong><br><em>\"Eindelijk een spel met ónze muziek.\"</em></p><p><strong>VERBINDING</strong><br><em>Het spel opent het gesprek. We luisteren, lachen en vertellen verder.</em></p><p><strong>TROTS</strong><br><em>\"Het is bijzonder dat wij als community bepalen wat erin komt.\"</em></p><h3 style='color: #fef3c7;'>Roots.</h3><p><em>\"We dragen meer mee dan we denken. De geur van eten, de warmte van familie en de muziek van waar we vandaan komen.</em></p><p><em>We zijn opgegroeid met de Lagu-Lagu van vroeger; die liedjes leerden ons hoe we met elkaar omgaan en wat \"thuis\" voor ons betekent.</em></p><p><em>Muziek herinnert, troost en verbindt.\"</em></p><p style='text-align: center; margin-top: 30px;'><strong style='color: #fef3c7;'>\"Voor de cultuur. Door de community.\"</strong></p>"
+}
