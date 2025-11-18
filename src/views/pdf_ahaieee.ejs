@@ -168,7 +168,7 @@
         <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
             <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/companydata/backgrounds/<%= php.backgroundBack %>" alt="Card Background">
         <% } %>
-        <div class="text" style="margin-top: 0mm;font-family: 'Moret';font-weight: bold;font-size:36px;padding: 0 2mm;color: #55351a;position:relative;z-index:1;">
+        <div class="text" style="margin-top: 0mm;font-family: 'Moret';font-weight: bold;font-size:28px;padding: 0 2mm;color: #55351a;position:relative;z-index:1;">
             <%= track.artist %>
             <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
                 <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
@@ -176,7 +176,7 @@
         </div>
         <!-- Year display commented out -->
         <!-- <div class="text" style="margin-top: <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>1mm<% } else { %>5mm<% } %>;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;"><%= track.year %></div> -->
-        <div class="text" style="margin-top: <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>2mm<% } else { %>3mm<% } %>;font-family: 'Moret';font-style: italic;font-size:30px;letter-spacing: -0.04em;padding: 0 2mm;color: #ffffff;position:relative;z-index:1;">
+        <div class="text" style="margin-top: <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>2mm<% } else { %>3mm<% } %>;font-family: 'Moret';font-style: italic;font-size:24px;letter-spacing: -0.04em;padding: 0 2mm;color: #ffffff;position:relative;z-index:1;">
             <%= track.name %>
             <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
                 <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
