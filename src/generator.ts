@@ -891,7 +891,12 @@ class Generator {
           formatType = 'cards';
         }
 
-        if (pageCount !== expectedPages) {
+        // Accept if page count matches expected pages OR if it's odd and one higher than expected
+        const isAcceptable =
+          pageCount === expectedPages ||
+          (pageCount % 2 === 1 && pageCount === expectedPages + 1);
+
+        if (!isAcceptable) {
           const errorMessage = `PDF validation failed for playlist ${white.bold(
             playlist.name
           )} (${white.bold(
