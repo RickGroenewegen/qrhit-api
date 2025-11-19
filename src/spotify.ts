@@ -555,6 +555,408 @@ class Spotify {
     }
   }
 
+  /**
+   * Helper: Build track matching queries for database enrichment
+   * Extracts trackIds, ISRCs, and artist+title pairs from Spotify track data
+   */
+  private buildTrackMatchingQueries(trackItems: any[]): {
+    trackIds: string[];
+    isrcs: string[];
+    artistTitlePairs: Array<{ artist: string; title: string; trackId: string }>;
+  } {
+    const trackIds: string[] = [];
+    const isrcs: string[] = [];
+    const artistTitlePairs: Array<{ artist: string; title: string; trackId: string }> = [];
+
+    trackItems
+      .filter((item: any) => item?.track?.id)
+      .forEach((item: any) => {
+        const trackData = item.track;
+        const trackId = trackData.id;
+
+        // Collect track ID
+        trackIds.push(trackId);
+
+        // Collect ISRC if available
+        if (trackData.external_ids?.isrc) {
+          isrcs.push(trackData.external_ids.isrc);
+        }
+
+        // Collect artist + title for exact matching
+        if (trackData.name && trackData.artists && trackData.artists.length > 0) {
+          const artist = trackData.artists[0].name; // Use primary artist
+          const title = trackData.name;
+          artistTitlePairs.push({
+            artist: artist.toLowerCase().trim(),
+            title: title.toLowerCase().trim(),
+            trackId,
+          });
+        }
+      });
+
+    return { trackIds, isrcs, artistTitlePairs };
+  }
+
+  /**
+   * Helper: Execute database enrichment query with multiple matching strategies
+   * Returns lookup maps for trackId, ISRC, and artist+title matching
+   */
+  private async executeTrackEnrichment(
+    checkPlaylistId: string,
+    trackIds: string[],
+    isrcs: string[],
+    artistTitlePairs: Array<{ artist: string; title: string; trackId: string }>
+  ): Promise<{
+    byTrackId: Map<string, any>;
+    byIsrc: Map<string, any>;
+    byArtistTitle: Map<string, any>;
+  }> {
+    if (trackIds.length === 0) {
+      return {
+        byTrackId: new Map(),
+        byIsrc: new Map(),
+        byArtistTitle: new Map(),
+      };
+    }
+
+    // Get the playlist ID from the database
+    const dbPlaylist = await this.prisma.playlist.findFirst({
+      where: { playlistId: checkPlaylistId },
+      select: { id: true },
+    });
+
+    let yearResults: {
+      trackId: string;
+      isrc: string | null;
+      year: number;
+      name: string;
+      artist: string;
+      extraNameAttribute?: string;
+      extraArtistAttribute?: string;
+      overwriteYear?: number;
+      overwriteName?: string;
+      overwriteArtist?: string;
+    }[] = [];
+
+    // Build WHERE clause parts using Prisma.sql for safety
+    const whereParts: any[] = [];
+
+    // Track ID matching (priority 1)
+    if (trackIds.length > 0) {
+      whereParts.push(Prisma.sql`t.trackId IN (${Prisma.join(trackIds)})`);
+    }
+
+    // ISRC matching (priority 2)
+    if (isrcs.length > 0) {
+      whereParts.push(Prisma.sql`t.isrc IN (${Prisma.join(isrcs)})`);
+    }
+
+    // Artist + Title matching (priority 3)
+    if (artistTitlePairs.length > 0) {
+      const artistTitleConditions = artistTitlePairs.map((pair) => {
+        return Prisma.sql`(LOWER(TRIM(t.artist)) = ${pair.artist} AND LOWER(TRIM(t.name)) = ${pair.title})`;
+      });
+      whereParts.push(Prisma.sql`(${Prisma.join(artistTitleConditions, ' OR ')})`);
+    }
+
+    // Join all WHERE parts with OR
+    const whereClause = Prisma.join(whereParts, ' OR ');
+
+    if (dbPlaylist) {
+      yearResults = await this.prisma.$queryRaw<
+        {
+          trackId: string;
+          isrc: string | null;
+          year: number;
+          name: string;
+          artist: string;
+          extraNameAttribute?: string;
+          extraArtistAttribute?: string;
+          overwriteYear?: number;
+          overwriteName?: string;
+          overwriteArtist?: string;
+        }[]
+      >`
+        SELECT
+          t.trackId,
+          t.isrc,
+          t.year,
+          t.artist,
+          t.name,
+          tei.extraNameAttribute,
+          tei.extraArtistAttribute,
+          tei.artist AS overwriteArtist,
+          tei.name AS overwriteName,
+          tei.year AS overwriteYear
+        FROM
+          tracks t
+        LEFT JOIN
+          (SELECT * FROM trackextrainfo WHERE playlistId = ${dbPlaylist.id}) tei
+          ON t.id = tei.trackId
+        WHERE
+          (${whereClause})
+          AND t.manuallyChecked = 1
+      `;
+    } else {
+      yearResults = await this.prisma.$queryRaw<
+        {
+          trackId: string;
+          isrc: string | null;
+          year: number;
+          name: string;
+          artist: string;
+          extraNameAttribute?: string;
+          extraArtistAttribute?: string;
+        }[]
+      >`
+        SELECT
+          t.trackId,
+          t.isrc,
+          t.year,
+          t.artist,
+          t.name,
+          NULL as extraNameAttribute,
+          NULL as extraArtistAttribute,
+          NULL as overwriteArtist,
+          NULL as overwriteName,
+          NULL as overwriteYear
+        FROM
+          tracks t
+        WHERE
+          (${whereClause})
+          AND t.manuallyChecked = 1
+      `;
+    }
+
+    // Build three lookup maps
+    const byTrackId = new Map();
+    const byIsrc = new Map();
+    const byArtistTitle = new Map();
+
+    yearResults.forEach((r) => {
+      const enrichmentData = {
+        year: r.overwriteYear || r.year,
+        name: r.overwriteName || r.name,
+        artist: r.overwriteArtist || r.artist,
+        extraNameAttribute: r.extraNameAttribute,
+        extraArtistAttribute: r.extraArtistAttribute,
+      };
+
+      // Map by trackId
+      if (r.trackId) {
+        byTrackId.set(r.trackId, enrichmentData);
+      }
+
+      // Map by ISRC
+      if (r.isrc) {
+        byIsrc.set(r.isrc, enrichmentData);
+      }
+
+      // Map by artist + title (lowercase for matching)
+      const key = `${r.artist.toLowerCase().trim()}|||${r.name.toLowerCase().trim()}`;
+      byArtistTitle.set(key, enrichmentData);
+    });
+
+    return { byTrackId, byIsrc, byArtistTitle };
+  }
+
+  /**
+   * Helper: Match track using waterfall strategy
+   * Priority: 1) trackId, 2) ISRC, 3) artist+title, 4) cache fallback
+   */
+  private async matchTrackByStrategy(
+    spotifyTrackId: string,
+    spotifyIsrc: string | undefined,
+    spotifyArtist: string,
+    spotifyTitle: string,
+    byTrackId: Map<string, any>,
+    byIsrc: Map<string, any>,
+    byArtistTitle: Map<string, any>
+  ): Promise<{
+    enrichmentData: any | null;
+    matchType: 'trackId' | 'isrc' | 'artistTitle' | 'cache' | 'none';
+    cacheKey?: string;
+  }> {
+    // Priority 1: Exact trackId match
+    if (byTrackId.has(spotifyTrackId)) {
+      return {
+        enrichmentData: byTrackId.get(spotifyTrackId),
+        matchType: 'trackId',
+        cacheKey: `${CACHE_KEY_TRACK_INFO}${spotifyTrackId}`,
+      };
+    }
+
+    // Priority 2: ISRC match
+    if (spotifyIsrc && byIsrc.has(spotifyIsrc)) {
+      return {
+        enrichmentData: byIsrc.get(spotifyIsrc),
+        matchType: 'isrc',
+        cacheKey: `${CACHE_KEY_TRACK_INFO}isrc_${spotifyIsrc}`,
+      };
+    }
+
+    // Priority 3: Artist + Title exact match (case-insensitive)
+    const artistTitleKey = `${spotifyArtist.toLowerCase().trim()}|||${spotifyTitle.toLowerCase().trim()}`;
+    if (byArtistTitle.has(artistTitleKey)) {
+      // Create a hash for the cache key (to keep it reasonable length)
+      const hash = this.createSimpleHash(artistTitleKey);
+      return {
+        enrichmentData: byArtistTitle.get(artistTitleKey),
+        matchType: 'artistTitle',
+        cacheKey: `${CACHE_KEY_TRACK_INFO}artitle_${hash}`,
+      };
+    }
+
+    // Priority 4: Check cache (for previously matched tracks)
+    const cachedTrackInfo = await this.cache.get(`${CACHE_KEY_TRACK_INFO}${spotifyTrackId}`);
+    if (cachedTrackInfo) {
+      return {
+        enrichmentData: JSON.parse(cachedTrackInfo),
+        matchType: 'cache',
+      };
+    }
+
+    // No match found
+    return {
+      enrichmentData: null,
+      matchType: 'none',
+    };
+  }
+
+  /**
+   * Helper: Create a simple hash for cache keys
+   */
+  private createSimpleHash(str: string): string {
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i);
+      hash = (hash << 5) - hash + char;
+      hash = hash & hash; // Convert to 32bit integer
+    }
+    return Math.abs(hash).toString(36);
+  }
+
+  /**
+   * Helper: Format enriched track object
+   */
+  private formatEnrichedTrack(
+    trackData: any,
+    enrichmentData: any | null,
+    spotifyArtists: any[]
+  ): Track | null {
+    const trackId = trackData.id;
+
+    if (!trackData.name || !spotifyArtists || spotifyArtists.length === 0) {
+      return null;
+    }
+
+    let trueYear: number | undefined;
+    let extraNameAttribute: string | undefined;
+    let extraArtistAttribute: string | undefined;
+    let trueName: string;
+    let trueArtist: string;
+
+    if (enrichmentData) {
+      trueYear = enrichmentData.year;
+      trueName = enrichmentData.name;
+      trueArtist = enrichmentData.artist;
+      extraNameAttribute = enrichmentData.extraNameAttribute;
+      extraArtistAttribute = enrichmentData.extraArtistAttribute;
+    } else {
+      // Fallback to Spotify data
+      trueName = trackData.name;
+
+      // Format multiple artists
+      if (spotifyArtists.length === 1) {
+        trueArtist = spotifyArtists[0].name;
+      } else {
+        const limitedArtists = spotifyArtists.slice(0, 3);
+        const artistNames = limitedArtists.map((artist: { name: string }) => artist.name);
+        const lastArtist = artistNames.pop();
+        trueArtist = artistNames.join(', ') + ' & ' + lastArtist;
+      }
+    }
+
+    const imageUrl =
+      trackData.album?.images?.length > 1
+        ? trackData.album.images[1].url
+        : trackData.album?.images?.length > 0
+        ? trackData.album.images[0].url
+        : null;
+
+    if (!imageUrl) {
+      return null;
+    }
+
+    return {
+      id: trackId,
+      name: this.utils.cleanTrackName(trueName),
+      album: this.utils.cleanTrackName(trackData.album?.name || ''),
+      preview: trackData.preview_url || '',
+      artist: trueArtist,
+      link: trackData.external_urls?.spotify || '',
+      spotifyLink: trackData.external_urls?.spotify || '',
+      isrc: trackData.external_ids?.isrc,
+      image: imageUrl,
+      releaseDate: trackData.album?.release_date
+        ? format(new Date(trackData.album.release_date), 'yyyy-MM-dd')
+        : '',
+      trueYear,
+      extraNameAttribute,
+      extraArtistAttribute,
+    };
+  }
+
+  /**
+   * Helper: Cache track matches with multiple strategies
+   */
+  private async cacheTrackMatches(
+    matches: Array<{
+      spotifyTrackId: string;
+      enrichmentData: any;
+      matchType: 'trackId' | 'isrc' | 'artistTitle' | 'cache' | 'none';
+      cacheKey?: string;
+    }>
+  ): Promise<void> {
+    const cachePromises = matches
+      .filter((m) => m.enrichmentData && m.cacheKey && m.matchType !== 'cache')
+      .map((m) =>
+        this.cache.set(
+          m.cacheKey!,
+          JSON.stringify({
+            year: m.enrichmentData.year,
+            name: m.enrichmentData.name,
+            artist: m.enrichmentData.artist,
+            extraNameAttribute: m.enrichmentData.extraNameAttribute,
+            extraArtistAttribute: m.enrichmentData.extraArtistAttribute,
+          })
+        )
+      );
+
+    // Also cache by primary trackId for backwards compatibility
+    const trackIdCachePromises = matches
+      .filter(
+        (m) =>
+          m.enrichmentData &&
+          m.matchType !== 'trackId' &&
+          m.matchType !== 'cache'
+      )
+      .map((m) =>
+        this.cache.set(
+          `${CACHE_KEY_TRACK_INFO}${m.spotifyTrackId}`,
+          JSON.stringify({
+            year: m.enrichmentData.year,
+            name: m.enrichmentData.name,
+            artist: m.enrichmentData.artist,
+            extraNameAttribute: m.enrichmentData.extraNameAttribute,
+            extraArtistAttribute: m.enrichmentData.extraArtistAttribute,
+          })
+        )
+      );
+
+    await Promise.all([...cachePromises, ...trackIdCachePromises]);
+  }
+
   // New function using this.api.getTracks
   public async getTracks(
     playlistId: string,
@@ -659,136 +1061,31 @@ class Spotify {
           trackItems.length
         ); // Analytics for raw items fetched
 
-        // Get all track IDs from the result
-        const trackIds = trackItems
-          .filter((item: any) => item?.track?.id) // Ensure item and track exist
-          .map((item: any) => item.track.id);
+        // --- Build Track Matching Queries ---
+        const { trackIds, isrcs, artistTitlePairs } =
+          this.buildTrackMatchingQueries(trackItems);
 
-        // --- Database Enrichment ---
-        let yearResults: {
-          trackId: string;
-          year: number;
-          name: string;
-          artist: string;
-          extraNameAttribute?: string;
-          extraArtistAttribute?: string;
-          overwriteYear?: number;
-          overwriteName?: string;
-          overwriteArtist?: string;
-        }[] = [];
+        // --- Database Enrichment with Multiple Matching Strategies ---
+        const { byTrackId, byIsrc, byArtistTitle } =
+          await this.executeTrackEnrichment(
+            checkPlaylistId,
+            trackIds,
+            isrcs,
+            artistTitlePairs
+          );
 
-        if (trackIds.length > 0) {
-          // Get the playlist ID from the database using the actual Spotify ID
-          const dbPlaylist = await this.prisma.playlist.findFirst({
-            where: { playlistId: checkPlaylistId }, // Use actual Spotify ID
-            select: { id: true },
-          });
+        // --- Format Tracks with Waterfall Matching ---
+        const matchResults: Array<{
+          spotifyTrackId: string;
+          enrichmentData: any;
+          matchType: 'trackId' | 'isrc' | 'artistTitle' | 'cache' | 'none';
+          cacheKey?: string;
+        }> = [];
 
-          if (dbPlaylist) {
-            yearResults = await this.prisma.$queryRaw<
-              {
-                trackId: string;
-                year: number;
-                name: string;
-                artist: string;
-                originalName: string; // Keep original columns if needed by query
-                originalArtist: string; // Keep original columns if needed by query
-                extraNameAttribute?: string;
-                extraArtistAttribute?: string;
-              }[]
-            >`
-              SELECT
-                t.trackId,
-                t.year,
-                t.artist,
-                t.name,
-                tei.extraNameAttribute,
-                tei.extraArtistAttribute,
-                tei.artist AS overwriteArtist,
-                tei.name AS overwriteName,
-                tei.year AS overwriteYear
-              FROM
-                tracks t
-              LEFT JOIN
-                (SELECT * FROM trackextrainfo WHERE playlistId = ${
-                  dbPlaylist.id
-                }) tei
-                ON t.id = tei.trackId
-              WHERE
-                t.trackId IN (${Prisma.join(trackIds)})
-                AND t.manuallyChecked = 1
-            `;
-          } else {
-            // If playlist not found in DB, just get the track info without extras
-            yearResults = await this.prisma.$queryRaw<
-              {
-                trackId: string;
-                year: number;
-                name: string;
-                artist: string;
-                originalName: string; // Keep original columns if needed by query
-                originalArtist: string; // Keep original columns if needed by query
-                extraNameAttribute?: string;
-                extraArtistAttribute?: string;
-              }[]
-            >`
-              SELECT
-                t.trackId,
-                t.year,
-                t.artist,
-                t.name,
-                NULL as extraNameAttribute,
-                NULL as extraArtistAttribute,
-                NULL as overwriteArtist,
-                NULL as overwriteName,
-                NULL as overwriteYear
-              FROM
-                tracks t
-              WHERE
-                t.trackId IN (${Prisma.join(trackIds)})
-                AND t.manuallyChecked = 1
-            `;
-          }
-        }
-
-        // Create a map for quick lookup
-        const trackMap = new Map(
-          yearResults.map((r) => [
-            r.trackId,
-            {
-              year: r.overwriteYear || r.year,
-              name: r.overwriteName || r.name,
-              artist: r.overwriteArtist || r.artist,
-              extraNameAttribute: r.extraNameAttribute,
-              extraArtistAttribute: r.extraArtistAttribute,
-            },
-          ])
-        );
-
-        // Cache all track info at once
-        await Promise.all(
-          yearResults
-            .filter((r) => r.year !== null)
-            .map((r) =>
-              this.cache.set(
-                `${CACHE_KEY_TRACK_INFO}${r.trackId}`, // Use consistent trackInfo cache key
-                JSON.stringify({
-                  year: r.year,
-                  name: r.name,
-                  artist: r.artist,
-                  extraNameAttribute: r.extraNameAttribute,
-                  extraArtistAttribute: r.extraArtistAttribute,
-                })
-              )
-            )
-        );
-
-        // --- Format Tracks ---
         const formattedTracksPromises = trackItems
-          .filter((item: any) => item?.track?.id) // Filter out items without a track or id
+          .filter((item: any) => item?.track?.id)
           .map(async (item: any): Promise<Track | null> => {
-            // Return Track or null
-            const trackData = item.track; // Simplify access
+            const trackData = item.track;
             const trackId = trackData.id;
 
             if (
@@ -796,87 +1093,34 @@ class Spotify {
               !trackData.artists ||
               trackData.artists.length === 0
             ) {
-              // Skip tracks with missing essential info from Spotify
               return null;
             }
 
-            let trueYear: number | undefined;
-            let extraNameAttribute: string | undefined;
-            let extraArtistAttribute: string | undefined;
-            let trueName: string | undefined;
-            let trueArtist: string | undefined;
-
-            // Check cache first
-            const cachedTrackInfo = await this.cache.get(
-              `${CACHE_KEY_TRACK_INFO}${trackId}` // Use consistent trackInfo cache key
+            // Use waterfall matching strategy
+            const matchResult = await this.matchTrackByStrategy(
+              trackId,
+              trackData.external_ids?.isrc,
+              trackData.artists[0]?.name || '',
+              trackData.name,
+              byTrackId,
+              byIsrc,
+              byArtistTitle
             );
-            if (cachedTrackInfo) {
-              const trackInfo = JSON.parse(cachedTrackInfo);
-              trueYear = trackInfo.year;
-              trueName = trackInfo.name;
-              trueArtist = trackInfo.artist;
-              extraNameAttribute = trackInfo.extraNameAttribute;
-              extraArtistAttribute = trackInfo.extraArtistAttribute;
-            } else {
-              // Check DB map
-              const trackInfo = trackMap.get(trackId);
-              if (trackInfo) {
-                trueYear = trackInfo.year;
-                trueName = trackInfo.name;
-                trueArtist = trackInfo.artist;
-                extraNameAttribute = trackInfo.extraNameAttribute;
-                extraArtistAttribute = trackInfo.extraArtistAttribute;
-              } else {
-                // Fallback to Spotify data
-                trueName = trackData.name;
-                // Format multiple artists
-                if (trackData.artists.length === 1) {
-                  trueArtist = trackData.artists[0].name;
-                } else {
-                  const limitedArtists = trackData.artists.slice(0, 3);
-                  const artistNames = limitedArtists.map(
-                    (artist: { name: string }) => artist.name
-                  );
-                  const lastArtist = artistNames.pop();
-                  trueArtist = artistNames.join(', ') + ' & ' + lastArtist;
-                }
-              }
-            }
 
-            // Ensure essential fields are present after enrichment attempt
-            if (!trueName || !trueArtist) {
-              return null; // Skip if name or artist couldn't be determined
-            }
+            // Store match result for caching later
+            matchResults.push({
+              spotifyTrackId: trackId,
+              enrichmentData: matchResult.enrichmentData,
+              matchType: matchResult.matchType,
+              cacheKey: matchResult.cacheKey,
+            });
 
-            const imageUrl =
-              trackData.album?.images?.length > 1
-                ? trackData.album.images[1].url // Prefer second image if available
-                : trackData.album?.images?.length > 0
-                ? trackData.album.images[0].url // Fallback to first image
-                : null;
-
-            // Skip if no image is found
-            if (!imageUrl) {
-              return null;
-            }
-
-            return {
-              id: trackId,
-              name: this.utils.cleanTrackName(trueName),
-              album: this.utils.cleanTrackName(trackData.album?.name || ''),
-              preview: trackData.preview_url || '',
-              artist: trueArtist,
-              link: trackData.external_urls?.spotify || '', // Ensure string
-              spotifyLink: trackData.external_urls?.spotify || '', // Add missing required property
-              isrc: trackData.external_ids?.isrc,
-              image: imageUrl,
-              releaseDate: trackData.album?.release_date
-                ? format(new Date(trackData.album.release_date), 'yyyy-MM-dd')
-                : '', // Default to empty string if date is missing
-              trueYear,
-              extraNameAttribute,
-              extraArtistAttribute,
-            };
+            // Format the track using enrichment data (if found)
+            return this.formatEnrichedTrack(
+              trackData,
+              matchResult.enrichmentData,
+              trackData.artists
+            );
           });
 
         // Wait for all formatting promises and filter out nulls
@@ -886,6 +1130,9 @@ class Spotify {
         const validFormattedTracks = formattedTracksNullable.filter(
           (track): track is Track => track !== null
         );
+
+        // Cache all track matches (ISRC, artist+title, and trackId mappings)
+        await this.cacheTrackMatches(matchResults);
 
         // Remove duplicates based on ID and add to the final list
         validFormattedTracks.forEach((track) => {
