@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Your QR Cards</title>
+<!-- Preload fonts to ensure they're loaded before rendering -->
+<link rel="preload" href="<%= process.env['API_URI'] %>/assets/fonts/InterstateRegularCondense.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="<%= process.env['API_URI'] %>/assets/fonts/InterstateBoldCondensed.woff2" as="font" type="font/woff2" crossorigin>
+<link rel="preload" href="<%= process.env['API_URI'] %>/assets/fonts/InterstateRegularItalic.woff2" as="font" type="font/woff2" crossorigin>
+<style>
+    /* Interstate Regular Condense Font Declaration */
+    @font-face {
+        font-family: 'Interstate';
+        src: url('<%= process.env['API_URI'] %>/assets/fonts/InterstateRegularCondense.woff2') format('woff2');
+        font-weight: normal;
+        font-style: normal;
+        font-display: block;
+    }
+
+    /* Interstate Bold Condensed Font Declaration */
+    @font-face {
+        font-family: 'Interstate';
+        src: url('<%= process.env['API_URI'] %>/assets/fonts/InterstateBoldCondensed.woff2') format('woff2');
+        font-weight: bold;
+        font-style: normal;
+        font-display: block;
+    }
+
+    /* Interstate Regular Italic Font Declaration */
+    @font-face {
+        font-family: 'Interstate';
+        src: url('<%= process.env['API_URI'] %>/assets/fonts/InterstateRegularItalic.woff2') format('woff2');
+        font-weight: normal;
+        font-style: italic;
+        font-display: block;
+    }
+
+    body {
+        font-family: 'Interstate', Arial, sans-serif;
+        margin: 0;
+        padding: 0;
+    }
+    .card-front, .card-back {
+        width: 60mm;
+        height: 60mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+    }
+    .card-front {
+        overflow: hidden;
+    }
+    .card-front::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-image: url('<%= process.env['API_URI'] %>/assets/images/clients/wonderfeel/voorkant.png');
+        background-size: cover;
+        background-position: center;
+        opacity: <%= (php.frontOpacity !== undefined ? php.frontOpacity : 100) / 100 %>;
+        z-index: 0;
+    }
+    /* White square styling removed - now using SVG */
+    .card-back {
+        position: relative;
+        overflow: hidden;
+    }
+    .background-image-back {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 0;
+        opacity: <%= (php.backOpacity !== undefined ? php.backOpacity : 50) / 100 %>;
+    }
+    .qr {
+        width: 60%;
+        height: auto;
+        position: relative;
+        z-index: 3;
+    }
+    .text {
+        text-align: center;
+        padding-top: 2mm;
+        padding-bottom: 2mm;
+    }
+    .text.artist {
+        margin-left: 3mm;
+        margin-right: 3mm;
+        font-size: 18px;
+        overflow-wrap: break-word; /* Prevent breaking mid-word */
+    }
+    .text.year {
+        font-size: 40px;
+        font-weight: bold;
+    }
+    .text.name {
+        margin-left: 3mm;
+        margin-right: 3mm;
+        font-size: 16px;
+        overflow-wrap: break-word; /* Prevent breaking mid-word */
+    }
+    .url, .url-bottom {
+        font-size: 11px;
+        position: absolute;
+        bottom: 13mm;
+        text-align: center;
+        width: 100%;
+        color: #b0b0b0;
+        z-index: 3;
+    }
+    .logo {
+        position: absolute;
+        top: 4mm;
+        left: 50%;
+        transform: translateX(-50%);
+        max-height: 2rem;
+        z-index: 4;
+    }
+    .url-bottom {
+        bottom: 5mm;
+    }
+</style>
+</head>
+<body>
+<% tracks.forEach((track, index) => { %>
+    <div class="card-front" style="<%= !eco && php.backgroundFrontType === 'solid' ? (php.useFrontGradient ? 'background: linear-gradient(' + (php.gradientFrontDegrees || 180) + 'deg, ' + (php.backgroundFrontColor || '#ffffff') + ' ' + Math.max(0, (php.gradientFrontPosition || 50) - 50) + '%, ' + (php.gradientFrontColor || '#ffffff') + ' ' + Math.min(100, (php.gradientFrontPosition || 50) + 50) + '%);' : 'background: ' + (php.backgroundFrontColor || '#ffffff') + ';') : '' %>">
+        <% if (php.logo && php.logo.length) { %>
+            <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
+        <% } %>
+        <!-- QR code without background shape - smaller size - rotated 45 degrees -->
+        <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code" style="position: absolute; width: 32mm; height: 32mm; top: 50%; left: 50%; transform: translate(-50%, -50%) rotate(45deg); z-index: 2;">
+        <!-- Domain URL removed - always hidden -->
+    </div>
+    <div style="page-break-after: always;"></div>
+   
+    <div class="card-back" style="position: relative;">
+        <img class="background-image-back" src="<%= process.env['API_URI'] %>/assets/images/clients/wonderfeel/achterkant.png" alt="Card Background">
+        <!-- Safe area container to prevent text from bleeding into trim area -->
+        <div style="position: absolute; top: 5mm; left: 5mm; right: 5mm; bottom: 5mm; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1;">
+            <div class="text" style="font-family: 'Interstate', Arial, sans-serif; font-weight: bold; font-size: 18px; padding: 0 2mm; color: #000000; overflow-wrap: break-word; word-wrap: break-word; text-transform: uppercase;">
+                <%= track.artist %>
+                <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
+                    <div style="font-family: 'Interstate', Arial, sans-serif; font-weight: normal; font-size: 12px; color: #000000; margin-top: 1mm; text-transform: uppercase;"><%= track.extraArtistAttribute %></div>
+                <% } %>
+            </div>
+            <div class="text" style="margin-top: 3mm; font-family: 'Interstate', Arial, sans-serif; font-weight: bold; font-size: 36px; padding: 0 2mm; color: #000000;"><%= track.year %></div>
+            <div class="text" style="margin-top: 3mm; font-family: 'Interstate', Arial, sans-serif; font-weight: normal; font-style: italic; font-size: 12px; padding: 0 2mm; color: #000000; overflow-wrap: break-word; word-wrap: break-word;">
+                <%= track.name %>
+                <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
+                    <div style="font-family: 'Interstate', Arial, sans-serif; font-weight: normal; font-size: 12px; color: #000000; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
+                <% } %>
+            </div>
+        </div>
+        <!-- Domain URL removed from back side - always hidden -->
+    </div>
+    <div style="page-break-after: always;"></div>
+<% }); %>
+</body>
+</html>
