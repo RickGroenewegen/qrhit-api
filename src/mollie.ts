@@ -419,6 +419,15 @@ class Mollie {
                   },
                 },
               },
+              {
+                PaymentHasPlaylist: {
+                  some: {
+                    playlist: {
+                      playlistId: { contains: search.textSearch },
+                    },
+                  },
+                },
+              },
             ],
           }
         : {};
