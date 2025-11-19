@@ -547,6 +547,7 @@ class Mollie {
             filename: true,
             eco: true,
             doubleSided: true,
+            printerType: true,
             background: true,
             logo: true,
             subType: true,
@@ -593,6 +594,7 @@ class Mollie {
                 name: true,
                 playlistId: true,
                 featured: true,
+                template: true,
                 _count: {
                   select: {
                     tracks: true,

@@ -2262,7 +2262,8 @@ class Data {
     paymentHasPlaylistId: number,
     eco: boolean,
     doubleSided: boolean,
-    printerType?: string
+    printerType?: string,
+    template?: string | null
   ): Promise<{ success: boolean; error?: string }> {
     try {
       const updateData: any = {
@@ -2274,10 +2275,30 @@ class Data {
         updateData.printerType = printerType;
       }
 
+      // Get the paymentHasPlaylist to find the related playlistId
+      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: paymentHasPlaylistId },
+        select: { playlistId: true }
+      });
+
+      if (!paymentHasPlaylist) {
+        return { success: false, error: 'PaymentHasPlaylist not found' };
+      }
+
+      // Update PaymentHasPlaylist (eco, doubleSided, printerType)
       await this.prisma.paymentHasPlaylist.update({
         where: { id: paymentHasPlaylistId },
         data: updateData,
       });
+
+      // Update Playlist template if provided
+      if (template !== undefined) {
+        await this.prisma.playlist.update({
+          where: { id: paymentHasPlaylist.playlistId },
+          data: { template: template }
+        });
+      }
+
       this.logger.log(
         color.blue.bold(
           `Updated playlist data for ${color.white.bold(paymentHasPlaylistId)}`

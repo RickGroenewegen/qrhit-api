@@ -1055,7 +1055,7 @@ export default async function adminRoutes(
         const paymentHasPlaylistId = parseInt(
           request.params.paymentHasPlaylistId
         );
-        const { eco, doubleSided, printerType } = request.body;
+        const { eco, doubleSided, printerType, template } = request.body;
 
         if (isNaN(paymentHasPlaylistId)) {
           reply
@@ -1090,11 +1090,21 @@ export default async function adminRoutes(
           return;
         }
 
+        // Validate template if provided
+        if (template !== undefined && template !== null && typeof template !== 'string') {
+          reply.status(400).send({
+            success: false,
+            error: 'Invalid template value. Must be string or null.',
+          });
+          return;
+        }
+
         const result = await data.updatePaymentHasPlaylist(
           paymentHasPlaylistId,
           eco,
           doubleSided,
-          printerType
+          printerType,
+          template
         );
 
         if (!result.success) {
