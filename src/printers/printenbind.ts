@@ -837,6 +837,10 @@ class PrintEnBind {
       // When playlistItem is null (backward compatibility), use original amount
       const orderAmount = playlistItem ? 1 : item.amount;
 
+      if(numberOfPages == 2000) {
+        numberOfPages = 2001;
+      }
+
       let orderObj: any = {
         type: 'physical',
         amount: orderAmount,
