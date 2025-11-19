@@ -147,16 +147,13 @@
         <div style="position: absolute; top: 5mm; left: 5mm; right: 5mm; bottom: 5mm; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1;">
             <div class="text" style="font-family: 'Interstate', Arial, sans-serif; font-weight: bold; font-size: 18px; padding: 0 2mm; color: #000000; overflow-wrap: break-word; word-wrap: break-word; text-transform: uppercase;">
                 <%= track.artist %>
-                <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
-                    <div style="font-family: 'Interstate', Arial, sans-serif; font-weight: normal; font-size: 12px; color: #000000; margin-top: 1mm; text-transform: uppercase;"><%= track.extraArtistAttribute %></div>
-                <% } %>
             </div>
+            <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
+                <div class="text" style="font-family: 'Interstate', Arial, sans-serif; font-weight: normal; font-size: 12px; color: #000000; margin-top: 1mm; text-transform: uppercase;"><%- track.extraNameAttribute %></div>
+            <% } %>
             <div class="text" style="margin-top: 3mm; font-family: 'Interstate', Arial, sans-serif; font-weight: bold; font-size: 36px; padding: 0 2mm; color: #000000;"><%= track.year %></div>
             <div class="text" style="margin-top: 3mm; font-family: 'Interstate', Arial, sans-serif; font-weight: normal; font-style: italic; font-size: 12px; padding: 0 2mm; color: #000000; overflow-wrap: break-word; word-wrap: break-word;">
                 <%= track.name %>
-                <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
-                    <div style="font-family: 'Interstate', Arial, sans-serif; font-weight: normal; font-size: 12px; color: #000000; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
-                <% } %>
             </div>
         </div>
         <!-- Domain URL removed from back side - always hidden -->
