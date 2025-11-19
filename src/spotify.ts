@@ -586,11 +586,13 @@ class Spotify {
         if (trackData.name && trackData.artists && trackData.artists.length > 0) {
           const artist = trackData.artists[0].name; // Use primary artist
           const title = trackData.name;
-          artistTitlePairs.push({
-            artist: artist.toLowerCase().trim(),
-            title: title.toLowerCase().trim(),
-            trackId,
-          });
+          if(artist && title){
+            artistTitlePairs.push({
+              artist: artist.toLowerCase().trim(),
+              title: title.toLowerCase().trim(),
+              trackId,
+            });
+          }
         }
       });
 
