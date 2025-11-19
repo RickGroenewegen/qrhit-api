@@ -872,8 +872,12 @@ class Generator {
         // Count pages in the physical PDF
         const pageCount = await this.pdf.countPDFPages(pdfPath);
 
-        // Get actual track count for this playlist
-        const actualTracks = playlist.numberOfTracks;
+        // Get actual track count from database records
+        const actualTracks = await this.prisma.playlistHasTrack.count({
+          where: {
+            playlistId: playlist.id,
+          },
+        });
 
         // Calculate expected pages based on format
         let expectedPages: number;
