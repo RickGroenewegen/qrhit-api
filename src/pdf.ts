@@ -92,11 +92,12 @@ class PDF {
 
     try {
       for (let i = 0; i < totalPages; i += maxPagesPerPDF) {
+        
         const startIndex = (i * itemsPerPage) / pagesPerTrack;
         const endIndex = Math.min(
           ((i + maxPagesPerPDF) * itemsPerPage) / pagesPerTrack,
           numberOfTracks
-        );
+        ) - 1;
 
         const itemIndexParam = itemIndex !== undefined ? itemIndex : 0;
         const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}/${subdir}/${ecoInt}/${emptyPages}/${itemIndexParam}`;
