@@ -640,32 +640,117 @@ class Spotify {
       overwriteArtist?: string;
     }[] = [];
 
-    // Build WHERE clause parts using Prisma.sql for safety
-    const whereParts: any[] = [];
+    // For large artist+title pairs, we need to split into multiple queries
+    // to avoid creating SQL queries with thousands of OR conditions which hang
+    const MAX_ARTIST_TITLE_CONDITIONS = 100;
 
-    // Track ID matching (priority 1)
-    if (trackIds.length > 0) {
-      whereParts.push(Prisma.sql`t.trackId IN (${Prisma.join(trackIds)})`);
+    if (artistTitlePairs.length > MAX_ARTIST_TITLE_CONDITIONS) {
+      // Split into separate queries: one for trackIds/ISRCs, then batched artist+title queries
+
+      // Query 1: TrackIds and ISRCs only
+      const whereParts1: any[] = [];
+      if (trackIds.length > 0) {
+        whereParts1.push(Prisma.sql`t.trackId IN (${Prisma.join(trackIds)})`);
+      }
+      if (isrcs.length > 0) {
+        whereParts1.push(Prisma.sql`t.isrc IN (${Prisma.join(isrcs)})`);
+      }
+
+      if (whereParts1.length > 0) {
+        const whereClause1 = Prisma.join(whereParts1, ' OR ');
+        const results1 = await this.executeEnrichmentQuery(dbPlaylist, whereClause1);
+        yearResults.push(...results1);
+      }
+
+      // Query 2+: Artist+Title in batches
+      for (let i = 0; i < artistTitlePairs.length; i += MAX_ARTIST_TITLE_CONDITIONS) {
+        const batch = artistTitlePairs.slice(i, i + MAX_ARTIST_TITLE_CONDITIONS);
+        const artistTitleConditions = batch.map((pair) => {
+          return Prisma.sql`(LOWER(TRIM(t.artist)) = ${pair.artist} AND LOWER(TRIM(t.name)) = ${pair.title})`;
+        });
+        const whereClause2 = Prisma.sql`(${Prisma.join(artistTitleConditions, ' OR ')})`;
+        const results2 = await this.executeEnrichmentQuery(dbPlaylist, whereClause2);
+        yearResults.push(...results2);
+      }
+    } else {
+      // Small query - use original single-query approach
+      const whereParts: any[] = [];
+
+      // Track ID matching (priority 1)
+      if (trackIds.length > 0) {
+        whereParts.push(Prisma.sql`t.trackId IN (${Prisma.join(trackIds)})`);
+      }
+
+      // ISRC matching (priority 2)
+      if (isrcs.length > 0) {
+        whereParts.push(Prisma.sql`t.isrc IN (${Prisma.join(isrcs)})`);
+      }
+
+      // Artist + Title matching (priority 3)
+      if (artistTitlePairs.length > 0) {
+        const artistTitleConditions = artistTitlePairs.map((pair) => {
+          return Prisma.sql`(LOWER(TRIM(t.artist)) = ${pair.artist} AND LOWER(TRIM(t.name)) = ${pair.title})`;
+        });
+        whereParts.push(Prisma.sql`(${Prisma.join(artistTitleConditions, ' OR ')})`);
+      }
+
+      // Join all WHERE parts with OR
+      const whereClause = Prisma.join(whereParts, ' OR ');
+      yearResults = await this.executeEnrichmentQuery(dbPlaylist, whereClause);
     }
 
-    // ISRC matching (priority 2)
-    if (isrcs.length > 0) {
-      whereParts.push(Prisma.sql`t.isrc IN (${Prisma.join(isrcs)})`);
-    }
+    // Build three lookup maps
+    const byTrackId = new Map();
+    const byIsrc = new Map();
+    const byArtistTitle = new Map();
 
-    // Artist + Title matching (priority 3)
-    if (artistTitlePairs.length > 0) {
-      const artistTitleConditions = artistTitlePairs.map((pair) => {
-        return Prisma.sql`(LOWER(TRIM(t.artist)) = ${pair.artist} AND LOWER(TRIM(t.name)) = ${pair.title})`;
-      });
-      whereParts.push(Prisma.sql`(${Prisma.join(artistTitleConditions, ' OR ')})`);
-    }
+    yearResults.forEach((r) => {
+      const enrichmentData = {
+        year: r.overwriteYear || r.year,
+        name: r.overwriteName || r.name,
+        artist: r.overwriteArtist || r.artist,
+        extraNameAttribute: r.extraNameAttribute,
+        extraArtistAttribute: r.extraArtistAttribute,
+      };
 
-    // Join all WHERE parts with OR
-    const whereClause = Prisma.join(whereParts, ' OR ');
+      // Map by trackId
+      if (r.trackId) {
+        byTrackId.set(r.trackId, enrichmentData);
+      }
 
+      // Map by ISRC
+      if (r.isrc) {
+        byIsrc.set(r.isrc, enrichmentData);
+      }
+
+      // Map by artist + title (lowercase for matching)
+      const key = `${r.artist.toLowerCase().trim()}|||${r.name.toLowerCase().trim()}`;
+      byArtistTitle.set(key, enrichmentData);
+    });
+
+    return { byTrackId, byIsrc, byArtistTitle };
+  }
+
+  /**
+   * Helper: Execute enrichment query (extracted for reuse in batching)
+   */
+  private async executeEnrichmentQuery(
+    dbPlaylist: { id: number } | null,
+    whereClause: any
+  ): Promise<{
+    trackId: string;
+    isrc: string | null;
+    year: number;
+    name: string;
+    artist: string;
+    extraNameAttribute?: string;
+    extraArtistAttribute?: string;
+    overwriteYear?: number;
+    overwriteName?: string;
+    overwriteArtist?: string;
+  }[]> {
     if (dbPlaylist) {
-      yearResults = await this.prisma.$queryRaw<
+      return await this.prisma.$queryRaw<
         {
           trackId: string;
           isrc: string | null;
@@ -700,7 +785,7 @@ class Spotify {
           AND t.manuallyChecked = 1
       `;
     } else {
-      yearResults = await this.prisma.$queryRaw<
+      return await this.prisma.$queryRaw<
         {
           trackId: string;
           isrc: string | null;
@@ -729,37 +814,6 @@ class Spotify {
           AND t.manuallyChecked = 1
       `;
     }
-
-    // Build three lookup maps
-    const byTrackId = new Map();
-    const byIsrc = new Map();
-    const byArtistTitle = new Map();
-
-    yearResults.forEach((r) => {
-      const enrichmentData = {
-        year: r.overwriteYear || r.year,
-        name: r.overwriteName || r.name,
-        artist: r.overwriteArtist || r.artist,
-        extraNameAttribute: r.extraNameAttribute,
-        extraArtistAttribute: r.extraArtistAttribute,
-      };
-
-      // Map by trackId
-      if (r.trackId) {
-        byTrackId.set(r.trackId, enrichmentData);
-      }
-
-      // Map by ISRC
-      if (r.isrc) {
-        byIsrc.set(r.isrc, enrichmentData);
-      }
-
-      // Map by artist + title (lowercase for matching)
-      const key = `${r.artist.toLowerCase().trim()}|||${r.name.toLowerCase().trim()}`;
-      byArtistTitle.set(key, enrichmentData);
-    });
-
-    return { byTrackId, byIsrc, byArtistTitle };
   }
 
   /**
@@ -1067,13 +1121,14 @@ class Spotify {
         const { trackIds, isrcs, artistTitlePairs } =
           this.buildTrackMatchingQueries(trackItems);
 
+        // TEMPORARY: Disable ISRC and artist+title matching for performance testing
         // --- Database Enrichment with Multiple Matching Strategies ---
         const { byTrackId, byIsrc, byArtistTitle } =
           await this.executeTrackEnrichment(
             checkPlaylistId,
             trackIds,
-            isrcs,
-            artistTitlePairs
+            [], // isrcs - TEMPORARILY DISABLED
+            [] // artistTitlePairs - TEMPORARILY DISABLED
           );
 
         // --- Format Tracks with Waterfall Matching ---

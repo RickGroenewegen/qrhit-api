@@ -3,6 +3,11 @@ import Logger from './logger';
 import Settings from './settings';
 import { color } from 'console-log-colors';
 import { ApiResult } from './interfaces/ApiResult'; // Assuming ApiResult interface exists
+import {
+  SPOTIFY_CONCURRENT_REQUESTS,
+  SPOTIFY_PAGE_LIMIT,
+  SPOTIFY_PAGE_LIMIT_FALLBACK,
+} from './config/constants';
 
 // Define interfaces for expected API responses (can be refined later)
 interface SpotifyTokenResponse {
@@ -487,44 +492,193 @@ class SpotifyApi {
       };
     }
 
-    // this.logger.log(
-    //   color.blue.bold(
-    //     `Fetching tracks in ${color.white.bold(
-    //       'SpotifyAPI'
-    //     )} for playlist ${color.white.bold(playlistId)}`
-    //   )
-    // );
+    const startTime = Date.now();
+    let usedLimit = SPOTIFY_PAGE_LIMIT;
 
+    try {
+      // First, make an initial request to get total count and test if limit=100 works
+      const fieldsParam = 'items(track(id,name,artists(name),album(name,images,release_date),external_urls,external_ids,preview_url)),next,total';
+      const initialUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${SPOTIFY_PAGE_LIMIT}&offset=0&fields=${fieldsParam}`;
+
+      let initialResponse: AxiosResponse<any>;
+      try {
+        initialResponse = await axios.get(initialUrl, {
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+      } catch (error: any) {
+        // If limit=100 fails with 400, try with limit=50
+        if (error.response && error.response.status === 400) {
+          usedLimit = SPOTIFY_PAGE_LIMIT_FALLBACK;
+          const fallbackUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${SPOTIFY_PAGE_LIMIT_FALLBACK}&offset=0&fields=${fieldsParam}`;
+          initialResponse = await axios.get(fallbackUrl, {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+        } else {
+          throw error;
+        }
+      }
+
+      const initialData = initialResponse.data;
+      const total = initialData.total || 0;
+      const validInitialItems = initialData.items.filter(
+        (item: any) => item && item.track
+      );
+
+      // If all tracks fit in the first request, return immediately
+      if (validInitialItems.length >= total) {
+        const elapsed = Date.now() - startTime;
+        this.logger.log(
+          color.green(`Fetched ${total} tracks in ${elapsed}ms (single request)`)
+        );
+        return { success: true, data: { items: validInitialItems } };
+      }
+
+      // Calculate remaining pages needed
+      const remainingTracks = total - validInitialItems.length;
+      const totalPages = Math.ceil(remainingTracks / usedLimit);
+
+      // Create array of page requests (starting from page 2, since we already have page 1)
+      const pageRequests: Array<{ offset: number; pageIndex: number }> = [];
+      for (let i = 1; i <= totalPages; i++) {
+        pageRequests.push({
+          offset: i * usedLimit,
+          pageIndex: i,
+        });
+      }
+
+      // Fetch remaining pages in parallel batches
+      const allItems = [...validInitialItems];
+      const pageResults = await this.fetchTracksInBatches(
+        playlistId,
+        pageRequests,
+        usedLimit,
+        accessToken,
+        fieldsParam
+      );
+
+      // Combine results in order
+      for (const pageResult of pageResults) {
+        if (pageResult.status === 'fulfilled' && pageResult.value.success) {
+          const validItems = pageResult.value.items.filter(
+            (item: any) => item && item.track
+          );
+          allItems.push(...validItems);
+        } else if (pageResult.status === 'rejected' || !pageResult.value.success) {
+          // If any page fails, fall back to sequential fetching for remaining pages
+          this.logger.log(
+            color.yellow(
+              `Parallel fetch failed, falling back to sequential for playlist ${playlistId}`
+            )
+          );
+          return this.getTracksSequential(playlistId, accessToken);
+        }
+      }
+
+      const elapsed = Date.now() - startTime;
+      this.logger.log(
+        color.green(
+          `Fetched ${allItems.length} tracks in ${elapsed}ms (parallel: ${pageRequests.length + 1} requests, limit=${usedLimit})`
+        )
+      );
+
+      return { success: true, data: { items: allItems } };
+    } catch (error) {
+      // On any error, try falling back to sequential
+      this.logger.log(
+        color.yellow(
+          `Parallel fetch error for playlist ${playlistId}, falling back to sequential`
+        )
+      );
+      try {
+        return await this.getTracksSequential(playlistId, accessToken);
+      } catch (fallbackError) {
+        return this.handleApiError(
+          fallbackError,
+          `fetching tracks for playlist ${playlistId}`
+        );
+      }
+    }
+  }
+
+  /**
+   * Fetch tracks in batches with controlled concurrency
+   * Processes requests in groups to respect rate limits
+   */
+  private async fetchTracksInBatches(
+    playlistId: string,
+    pageRequests: Array<{ offset: number; pageIndex: number }>,
+    limit: number,
+    accessToken: string,
+    fieldsParam: string
+  ): Promise<PromiseSettledResult<{ success: boolean; items: any[] }>[]> {
+    const results: PromiseSettledResult<{ success: boolean; items: any[] }>[] = [];
+
+    // Process in batches of SPOTIFY_CONCURRENT_REQUESTS
+    for (let i = 0; i < pageRequests.length; i += SPOTIFY_CONCURRENT_REQUESTS) {
+      const batch = pageRequests.slice(i, i + SPOTIFY_CONCURRENT_REQUESTS);
+
+      const batchPromises = batch.map(async ({ offset, pageIndex }) => {
+        const url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}&fields=${fieldsParam}`;
+
+        // Retry logic for individual page (max 2 retries)
+        for (let attempt = 0; attempt < 3; attempt++) {
+          try {
+            const response: AxiosResponse<any> = await axios.get(url, {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            });
+            return { success: true, items: response.data.items || [] };
+          } catch (error: any) {
+            // If rate limited (429), don't retry - let it fail so we fall back to sequential
+            if (error.response && error.response.status === 429) {
+              throw error;
+            }
+            // For other errors, retry
+            if (attempt === 2) throw error; // Last attempt, throw error
+            await new Promise(resolve => setTimeout(resolve, 1000 * (attempt + 1))); // Exponential backoff
+          }
+        }
+        return { success: false, items: [] };
+      });
+
+      const batchResults = await Promise.allSettled(batchPromises);
+      results.push(...batchResults);
+    }
+
+    return results;
+  }
+
+  /**
+   * Fallback: Sequential track fetching (original implementation)
+   * Used when parallel fetching fails or encounters rate limits
+   */
+  private async getTracksSequential(
+    playlistId: string,
+    accessToken: string
+  ): Promise<ApiResult> {
     let allItems: any[] = [];
-    // Use the fields parameter to potentially reduce response size if needed
     let nextUrl:
       | string
-      | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&fields=items(track(id,name,artists(name),album(name,images,release_date),external_urls,external_ids,preview_url)),next`; // Max limit is 50 for this endpoint with fields
+      | null = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&fields=items(track(id,name,artists(name),album(name,images,release_date),external_urls,external_ids,preview_url)),next`;
 
     try {
       while (nextUrl) {
-        const currentUrl = nextUrl; // Capture for closure
-
-        // Don't use executeWithRetry for rate limits - let RateLimitManager handle it
+        const currentUrl = nextUrl;
         const response: AxiosResponse<any> = await axios.get(currentUrl, {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
         const result = response.data;
 
-        // Filter out null tracks which can sometimes occur
         const validItems = result.items.filter(
           (item: any) => item && item.track
         );
         allItems = allItems.concat(validItems);
         nextUrl = result.next;
       }
-      // Note: The response structure here is slightly different than getPlaylist.
-      // We return the combined 'items' array directly.
       return { success: true, data: { items: allItems } };
     } catch (error) {
       return this.handleApiError(
         error,
-        `fetching tracks for playlist ${playlistId}`
+        `fetching tracks for playlist ${playlistId} (sequential fallback)`
       );
     }
   }
