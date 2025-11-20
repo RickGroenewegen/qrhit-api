@@ -20,6 +20,7 @@ import SpotifyRapidApi2 from './spotify_rapidapi2';
 import RateLimitManager from './rate_limit_manager';
 import cluster from 'cluster';
 import crypto from 'crypto';
+import { CronJob } from 'cron';
 
 // Spotify Cache Key Prefixes
 export const CACHE_KEY_PLAYLIST = 'playlist_';
@@ -30,6 +31,15 @@ export const CACHE_KEY_TRACK_COUNT = 'trackcount2_';
 export const CACHE_KEY_TRACK_INFO = 'trackInfo_';
 export const CACHE_KEY_TRACKS_BY_IDS = 'tracksbyids_';
 export const CACHE_KEY_SEARCH = 'search_';
+
+// Track enrichment data structure
+interface EnrichmentData {
+  year: number;
+  name: string;
+  artist: string;
+  extraNameAttribute?: string;
+  extraArtistAttribute?: string;
+}
 
 class Spotify {
   private static instance: Spotify;
@@ -58,10 +68,31 @@ class Spotify {
   // Domain blacklist: URLs from these domains will not be resolved
   private domainBlacklist: string[] = ['q.me-qr.com', 'qrto.org'];
 
+  // Track enrichment maps for fast in-memory lookups
+  private trackEnrichmentByTrackId: Map<string, EnrichmentData> = new Map();
+  private trackEnrichmentByIsrc: Map<string, EnrichmentData> = new Map();
+  private trackEnrichmentByArtistTitleHash: Map<string, EnrichmentData> = new Map();
+
   constructor() {
     this.getJumboData();
     this.loadMusicMatchData();
     this.loadCountryData();
+    this.loadTrackEnrichmentMaps();
+
+    // Set up hourly cron job to refresh track enrichment maps
+    if (cluster.isPrimary) {
+      this.utils.isMainServer().then(async (isMainServer) => {
+        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+          const enrichmentRefreshJob = new CronJob('0 * * * *', async () => {
+            await this.refreshTrackEnrichmentMaps();
+          });
+          enrichmentRefreshJob.start();
+          this.logger.log(
+            color.green.bold('Track enrichment refresh cron job scheduled (hourly)')
+          );
+        }
+      });
+    }
   }
 
   public static getInstance(): Spotify {
@@ -266,6 +297,92 @@ class Spotify {
         color.yellow.bold(`Failed to load country card data: ${e.message || e}`)
       );
     }
+  }
+
+  /**
+   * Loads track enrichment data from database into in-memory maps.
+   * This eliminates expensive database queries with 1,500+ OR conditions.
+   */
+  private async loadTrackEnrichmentMaps(): Promise<void> {
+    const isPrimary = cluster.isPrimary;
+
+    try {
+      // Query all manually-checked tracks from database
+      const tracks = await this.prisma.track.findMany({
+        where: { manuallyChecked: true },
+        select: {
+          trackId: true,
+          isrc: true,
+          year: true,
+          name: true,
+          artist: true,
+        },
+      });
+
+      // Clear existing maps
+      this.trackEnrichmentByTrackId.clear();
+      this.trackEnrichmentByIsrc.clear();
+      this.trackEnrichmentByArtistTitleHash.clear();
+
+      // Populate all three maps
+      for (const track of tracks) {
+        if (!track.year || !track.name || !track.artist) {
+          continue; // Skip tracks without required data
+        }
+
+        const enrichmentData: EnrichmentData = {
+          year: track.year,
+          name: track.name,
+          artist: track.artist,
+        };
+
+        // Map 1: By trackId
+        if (track.trackId) {
+          this.trackEnrichmentByTrackId.set(track.trackId, enrichmentData);
+        }
+
+        // Map 2: By ISRC
+        if (track.isrc) {
+          this.trackEnrichmentByIsrc.set(track.isrc, enrichmentData);
+        }
+
+        // Map 3: By artist+title hash (normalized, case-insensitive)
+        const artistTitleKey = `${track.artist.toLowerCase().trim()}|||${track.name.toLowerCase().trim()}`;
+        const hash = this.createSimpleHash(artistTitleKey);
+        this.trackEnrichmentByArtistTitleHash.set(hash, enrichmentData);
+      }
+
+      if (isPrimary) {
+        this.utils.isMainServer().then(async (isMainServer) => {
+          if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
+            this.logger.log(
+              color.green.bold(
+                `Track enrichment maps loaded: ${color.white.bold(
+                  this.trackEnrichmentByTrackId.size
+                )} by trackId, ${color.white.bold(
+                  this.trackEnrichmentByIsrc.size
+                )} by ISRC, ${color.white.bold(
+                  this.trackEnrichmentByArtistTitleHash.size
+                )} by artist+title`
+              )
+            );
+          }
+        });
+      }
+    } catch (e: any) {
+      this.logger.log(
+        color.red.bold(`Failed to load track enrichment maps: ${e.message || e}`)
+      );
+    }
+  }
+
+  /**
+   * Public method to refresh track enrichment maps.
+   * Called by cron job to keep maps up-to-date.
+   */
+  public async refreshTrackEnrichmentMaps(): Promise<void> {
+    this.logger.log(color.blue.bold('Refreshing track enrichment maps...'));
+    await this.loadTrackEnrichmentMaps();
   }
 
   public async getPlaylist(
@@ -1117,28 +1234,42 @@ class Spotify {
           trackItems.length
         ); // Analytics for raw items fetched
 
-        // --- Build Track Matching Queries ---
-        const { trackIds, isrcs, artistTitlePairs } =
-          this.buildTrackMatchingQueries(trackItems);
+        // --- Query playlist-specific overrides (trackextrainfo) ---
+        // This is a small, fast query filtered by playlistId
+        const dbPlaylist = await this.prisma.playlist.findFirst({
+          where: { playlistId: checkPlaylistId },
+          select: { id: true },
+        });
 
-        // TEMPORARY: Disable ISRC and artist+title matching for performance testing
-        // --- Database Enrichment with Multiple Matching Strategies ---
-        const { byTrackId, byIsrc, byArtistTitle } =
-          await this.executeTrackEnrichment(
-            checkPlaylistId,
-            trackIds,
-            [], // isrcs - TEMPORARILY DISABLED
-            [] // artistTitlePairs - TEMPORARILY DISABLED
-          );
+        let trackExtraInfoMap = new Map<string, any>();
+        if (dbPlaylist) {
+          const extraInfoRecords = await this.prisma.trackExtraInfo.findMany({
+            where: { playlistId: dbPlaylist.id },
+            select: {
+              track: { select: { trackId: true } },
+              name: true,
+              artist: true,
+              year: true,
+              extraNameAttribute: true,
+              extraArtistAttribute: true,
+            },
+          });
 
-        // --- Format Tracks with Waterfall Matching ---
-        const matchResults: Array<{
-          spotifyTrackId: string;
-          enrichmentData: any;
-          matchType: 'trackId' | 'isrc' | 'artistTitle' | 'cache' | 'none';
-          cacheKey?: string;
-        }> = [];
+          // Build map of trackId -> override data
+          extraInfoRecords.forEach((record) => {
+            if (record.track?.trackId) {
+              trackExtraInfoMap.set(record.track.trackId, {
+                overwriteName: record.name,
+                overwriteArtist: record.artist,
+                overwriteYear: record.year,
+                extraNameAttribute: record.extraNameAttribute,
+                extraArtistAttribute: record.extraArtistAttribute,
+              });
+            }
+          });
+        }
 
+        // --- Format Tracks with In-Memory Map Lookups ---
         const formattedTracksPromises = trackItems
           .filter((item: any) => item?.track?.id)
           .map(async (item: any): Promise<Track | null> => {
@@ -1153,29 +1284,61 @@ class Spotify {
               return null;
             }
 
-            // Use waterfall matching strategy
-            const matchResult = await this.matchTrackByStrategy(
-              trackId,
-              trackData.external_ids?.isrc,
-              trackData.artists[0]?.name || '',
-              trackData.name,
-              byTrackId,
-              byIsrc,
-              byArtistTitle
-            );
+            // Waterfall matching using in-memory maps
+            let enrichmentData: EnrichmentData | undefined = undefined;
 
-            // Store match result for caching later
-            matchResults.push({
-              spotifyTrackId: trackId,
-              enrichmentData: matchResult.enrichmentData,
-              matchType: matchResult.matchType,
-              cacheKey: matchResult.cacheKey,
-            });
+            // Priority 1: Exact trackId match
+            if (this.trackEnrichmentByTrackId.has(trackId)) {
+              enrichmentData = this.trackEnrichmentByTrackId.get(trackId);
+            }
+
+            // Priority 2: ISRC match
+            if (!enrichmentData && trackData.external_ids?.isrc) {
+              const isrc = trackData.external_ids.isrc;
+              if (this.trackEnrichmentByIsrc.has(isrc)) {
+                enrichmentData = this.trackEnrichmentByIsrc.get(isrc);
+              }
+            }
+
+            // Priority 3: Artist + Title match
+            if (!enrichmentData && trackData.artists[0]?.name) {
+              const artist = trackData.artists[0].name.toLowerCase().trim();
+              const title = trackData.name.toLowerCase().trim();
+              const artistTitleKey = `${artist}|||${title}`;
+              const hash = this.createSimpleHash(artistTitleKey);
+              if (this.trackEnrichmentByArtistTitleHash.has(hash)) {
+                enrichmentData = this.trackEnrichmentByArtistTitleHash.get(hash);
+              }
+            }
+
+            // Priority 4: Check for playlist-specific overrides
+            const overrideData = trackExtraInfoMap.get(trackId);
+            if (overrideData) {
+              // Merge override data with enrichment data
+              if (enrichmentData) {
+                enrichmentData = {
+                  year: overrideData.overwriteYear || enrichmentData.year,
+                  name: overrideData.overwriteName || enrichmentData.name,
+                  artist: overrideData.overwriteArtist || enrichmentData.artist,
+                  extraNameAttribute: overrideData.extraNameAttribute || enrichmentData.extraNameAttribute,
+                  extraArtistAttribute: overrideData.extraArtistAttribute || enrichmentData.extraArtistAttribute,
+                };
+              } else {
+                // If no base enrichment, use override data as-is
+                enrichmentData = {
+                  year: overrideData.overwriteYear,
+                  name: overrideData.overwriteName,
+                  artist: overrideData.overwriteArtist,
+                  extraNameAttribute: overrideData.extraNameAttribute,
+                  extraArtistAttribute: overrideData.extraArtistAttribute,
+                };
+              }
+            }
 
             // Format the track using enrichment data (if found)
             return this.formatEnrichedTrack(
               trackData,
-              matchResult.enrichmentData,
+              enrichmentData,
               trackData.artists
             );
           });
@@ -1187,9 +1350,6 @@ class Spotify {
         const validFormattedTracks = formattedTracksNullable.filter(
           (track): track is Track => track !== null
         );
-
-        // Cache all track matches (ISRC, artist+title, and trackId mappings)
-        await this.cacheTrackMatches(matchResults);
 
         // Remove duplicates based on ID and add to the final list
         validFormattedTracks.forEach((track) => {
