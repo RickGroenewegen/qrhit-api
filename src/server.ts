@@ -134,6 +134,14 @@ class Server {
 
     // Register game routes
     await gameRoutes(this.fastify);
+
+    // WebSocket endpoints - return 426 Upgrade Required for non-WebSocket requests
+    this.fastify.get('/chat-ws', async (request, reply) => {
+      reply.status(426).send({ error: 'Upgrade Required', message: 'This endpoint requires a WebSocket connection' });
+    });
+    this.fastify.get('/ws', async (request, reply) => {
+      reply.status(426).send({ error: 'Upgrade Required', message: 'This endpoint requires a WebSocket connection' });
+    });
   }
 
   public init = async () => {
