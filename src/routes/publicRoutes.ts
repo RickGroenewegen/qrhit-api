@@ -17,6 +17,8 @@ import Review from '../review';
 import Mollie from '../mollie';
 import Cache from '../cache';
 import Shipping from '../shipping';
+import { ChatService } from '../chat';
+import PushoverClient from '../pushover';
 import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
@@ -40,6 +42,89 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const mollie = new Mollie();
   const cache = Cache.getInstance();
   const shipping = Shipping.getInstance();
+  const chatService = new ChatService();
+
+  // Chat init endpoint - creates or resumes chat session
+  fastify.post('/chat/init', async (request: any, reply: any) => {
+    try {
+      const { email, recaptchaToken, existingChatId } = request.body;
+
+      // Verify reCAPTCHA
+      const isHuman = await utils.verifyRecaptcha(recaptchaToken);
+      if (!isHuman) {
+        return reply.status(400).send({ success: false, error: 'reCAPTCHA verification failed' });
+      }
+
+      // Validate email
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!email || !emailRegex.test(email)) {
+        return reply.status(400).send({ success: false, error: 'Valid email required' });
+      }
+
+      // If existingChatId provided, try to resume
+      if (existingChatId) {
+        const existingChat = await chatService.getChat(existingChatId);
+        if (existingChat) {
+          const hasMessages = await chatService.chatHasMessages(existingChatId);
+          return reply.send({
+            success: true,
+            chatId: existingChat.id,
+            username: existingChat.username,
+            hasMessages,
+            supportNeeded: existingChat.supportNeeded,
+            hijacked: existingChat.hijacked
+          });
+        }
+      }
+
+      // Create new chat
+      const chatId = await chatService.createChat(email);
+      const username = email.split('@')[0];
+
+      return reply.send({ success: true, chatId, username, hasMessages: false, supportNeeded: false });
+    } catch (error) {
+      logger.log(`Error in /chat/init: ${(error as Error).message}`);
+      return reply.status(500).send({ success: false, error: 'Failed to initialize chat' });
+    }
+  });
+
+  // Clear chat messages for user (soft delete)
+  fastify.post('/chat/clear', async (request: any, reply: any) => {
+    try {
+      const { chatId } = request.body;
+      if (!chatId) {
+        return reply.status(400).send({ success: false, error: 'Chat ID required' });
+      }
+      await chatService.clearChatForUser(chatId);
+      return reply.send({ success: true });
+    } catch (error) {
+      logger.log(`Error in /chat/clear: ${(error as Error).message}`);
+      return reply.status(500).send({ success: false, error: 'Failed to clear chat' });
+    }
+  });
+
+  // Mark chat as needing support
+  fastify.post('/chat/support-needed', async (request: any, reply: any) => {
+    try {
+      const { chatId } = request.body;
+      if (!chatId) {
+        return reply.status(400).send({ success: false, error: 'Chat ID required' });
+      }
+      await chatService.markSupportNeeded(chatId);
+
+      // Send Pushover notification
+      const pushover = new PushoverClient();
+      pushover.sendMessage({
+        title: 'QRSong Chat Support',
+        message: `Chat #${chatId} needs support`,
+      }, request.clientIp);
+
+      return reply.send({ success: true });
+    } catch (error) {
+      logger.log(`Error in /chat/support-needed: ${(error as Error).message}`);
+      return reply.status(500).send({ success: false, error: 'Failed to mark support needed' });
+    }
+  });
 
   // Cache for robots.txt content
   let robotsTxtCache: string | null = null;

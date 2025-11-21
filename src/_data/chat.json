@@ -1,0 +1,750 @@
+{
+    "knowledge": [
+        {
+            "slug": "what-is-qrsong",
+            "title": "What is QRSong?",
+            "description": "QRSong! is a service that generates QR music game cards based on your Spotify playlists. You can create cards from your own playlist or choose from curated selections. The cards link to your music and can be scanned with the free QRSong! companion app to play a music guessing game.",
+            "tags": [
+                "about",
+                "what is",
+                "introduction",
+                "overview"
+            ]
+        },
+        {
+            "slug": "cancel-order",
+            "title": "Can I cancel my order?",
+            "description": "Yes, as long as the order has not been taken into production we can cancel it for you. Please contact support as soon as possible with your order details. Once production has started, we cannot cancel orders due to the custom nature of our products.",
+            "tags": [
+                "cancel",
+                "order",
+                "refund",
+                "policy"
+            ]
+        },
+        {
+            "slug": "broken-link",
+            "title": "What is one of my QR codes broken? What is the Spotify track is no longer available?",
+            "description": "We are able to fix broken QR codes for you free of charge. Please contact support with your order details and the specific tracks that are broken or unavailable. Please also provide a alternative Spotify link if possible. ",
+            "tags": [
+                "broken",
+                "QR code",
+                "Spotify",
+                "track unavailable"
+            ]
+        },
+        {
+            "slug": "digital-version",
+            "title": "What is the digital version? And will I receive one if I order physical cards?",
+            "description": "Yes, if you order physical cards, you will also receive a digital version. The digital version is a PDF with your cards. It is included with your physical purchase at no extra cost.",
+            "tags": [
+                "digital",
+                "pdf",
+                "physical order",
+                "included"
+            ]
+        },
+        {
+            "slug": "box",
+            "title": "Do the cards come in a box?",
+            "description": "No. The cards come in a transport box that fits in most mailboxes. Inside, the cards are neatly tied together with a paper band. We hope to offer gift boxes in the future. But for business orders, we can provide custom branded boxes if the amount of boxes exceeds 50. If its a single person give https://www.dekaartendrukkerij.nl as an option to order boxes.",
+            "tags": [
+                "multiple",
+                "designs",
+                "one playlist",
+                "different"
+            ]
+        },
+        {
+            "slug": "multiple-designs",
+            "title": "Kan ik ook in 1 playlist die ik deel meerdere ontwerpen hebben?",
+            "description": "No, if you would like to do so: Split your Spotify playlist into multiple playlists, each with their own design. Then place multiple orders, one for each design/playlist combination.",
+            "tags": [
+                "multiple",
+                "designs",
+                "one playlist",
+                "different"
+            ]
+        },
+        {
+            "slug": "wrong years",
+            "title": "I'm seeing wrong release years, why?",
+            "description": "In the overview it is possible to see different release years than on the final cards. This is because after purchase  we use an advanced AI algorithm to determine the original release year of songs, which are then double-checked by our team. Spotify's release years aren't always accurate, especially for remasters. We use multiple sources to ensure the correct original release year is printed on your cards. And even then, mistakes can happen. If you find an error you are able to correct it during the review process after purchase.",
+            "tags": [
+                "release year",
+                "wrong",
+                "year",
+                "accuracy",
+                "AI",
+                "verification"
+            ]
+        },
+        {
+            "slug": "missing-songs",
+            "title": "I'm missing songs in the summary list, why?",
+            "description": "If you recently modified your Spotify playlist, QRSong! might have cached your playlist. In the list there is a button at the top to refresh your playlist from Spotify. Click that button to reload your playlist and update the summary list.",
+            "tags": [
+                "missing",
+                "songs",
+                "playlist",
+                "refresh"
+            ]
+        },
+        {
+            "slug": "preview-difference",
+            "title": "There is a difference between the preview and final cards, why?",
+            "description": "The preview is a digital representation of your cards to give you an idea of the design and layout. The final cards are printed in high resolution on quality paper using professional printer  design. The preview may not accurately 100% reflect the true quality of the physical or digital cards you receive. ",
+            "tags": [
+                "preview",
+                "final",
+                "difference",
+                "quality"
+            ]
+        },
+        {
+            "slug": "change-songs",
+            "title": "Can I still change songs after I purchase?",
+            "description": "Yes, after purchase you will receive a link to review and correct your order. You can also reload your playlist from Spotify to update tracks, as long as you don't exceed the number of tracks you paid for. If you need more tracks please contact support and we'll provide you with a discount code that reflects the difference in price.",
+            "tags": [
+                "change",
+                "modify",
+                "update",
+                "reload",
+                "songs"
+            ]
+        },
+        {
+            "slug": "card-dimensions",
+            "title": "What are the dimensions of the cards?",
+            "description": "The cards are 60 x 60 mm (2.36 x 2.36 inches) for both the real and digital cards.",
+            "tags": [
+                "dimensions",
+                "size",
+                "card",
+                "measurements"
+            ]
+        },
+        {
+            "slug": "subscription",
+            "title": "Is QRSong a subscription service?",
+            "description": "No, QRSong! is a one-time purchase. You pay once and own your QR music cards forever. There are no recurring fees, monthly charges, or hidden subscription costs. The price depends only on whether you choose digital PDF or physical cards, and how many tracks are in your playlist.",
+            "tags": [
+                "subscription",
+                "payment",
+                "one-time",
+                "pricing",
+                "cost"
+            ]
+        },
+        {
+            "slug": "spotify-premium",
+            "title": "Do I need Spotify Premium?",
+            "description": "Spotify Premium is recommended but not required. Premium supports 'Hidden mode' which plays songs without showing artist and title. With Spotify Free, songs will still play but you'll see the artist and title after 3 seconds, so you'll need to flip your phone quickly to avoid seeing the answer.",
+            "tags": [
+                "spotify",
+                "premium",
+                "free",
+                "requirements",
+                "hidden mode"
+            ]
+        },
+        {
+            "slug": "app-how-to",
+            "title": "How does the QRSong app work?",
+            "description": "Download the free QRSong! companion app from the App Store or Google Play. Open the app, click the camera icon, and point it at the QR card. The song will start playing automatically and you can start guessing the song and artist!",
+            "tags": [
+                "app",
+                "how to",
+                "scan",
+                "play",
+                "instructions"
+            ]
+        },
+        {
+            "slug": "use-cases",
+            "title": "What can I do with the cards?",
+            "description": "The cards are perfect for game nights, parties, or just for fun! You can play a music quiz with friends, challenge your family to guess songs, or simply enjoy music in a new way. Great for birthdays, holidays, or any special occasion.",
+            "tags": [
+                "use cases",
+                "games",
+                "party",
+                "quiz",
+                "music game"
+            ]
+        },
+        {
+            "slug": "digital-version",
+            "title": "What is the digital version?",
+            "description": "The digital version is a PDF file that you can download, print, and cut out yourself. It's delivered instantly via email and is a cost-effective way to get your QR music cards quickly. You'll need a color printer, thicker paper, and scissors/cutter.",
+            "tags": [
+                "digital",
+                "pdf",
+                "print",
+                "download",
+                "instant"
+            ]
+        },
+        {
+            "slug": "physical-cards",
+            "title": "What are the physical cards like?",
+            "description": "Physical cards are high-quality printed cards (350gsm paper) delivered to your doorstep. They are double-sided and printed in full color. Cards come in a transport box, neatly tied together with a paper band. No assembly required - ready to play right out of the box.",
+            "tags": [
+                "physical",
+                "real cards",
+                "quality",
+                "delivery",
+                "printed"
+            ]
+        },
+        {
+            "slug": "eco-friendly",
+            "title": "What is the eco-friendly version?",
+            "description": "The eco-friendly version replaces the full-color background with a white background on the QR code side. This saves ink while keeping all functionality of the cards and app. Perfect for those who want to save on ink costs.",
+            "tags": [
+                "eco",
+                "eco-friendly",
+                "white background",
+                "ink saving"
+            ]
+        },
+        {
+            "slug": "shipping-time",
+            "title": "How long does shipping take for physical cards?",
+            "description": "Physical cards are normally printed and shipped within 2-3 business days. We ship worldwide from the Netherlands.",
+            "tags": [
+                "shipping",
+                "delivery time",
+                "physical",
+                "express",
+                "worldwide"
+            ]
+        },
+        {
+            "slug": "digital-delivery",
+            "title": "How long does digital delivery take?",
+            "description": "For pre-created playlists, the digital version is delivered immediately. For custom playlists, our AI algorithm determines release years which are double-checked by our team. This takes no longer than 24 hours, and is usually much faster during European office hours.",
+            "tags": [
+                "digital",
+                "delivery",
+                "instant",
+                "email",
+                "pdf"
+            ]
+        },
+        {
+            "slug": "customize-cards",
+            "title": "Can I customize my cards?",
+            "description": "Yes! You can design your own cards by uploading a custom background image and/or logo. You can choose fonts, and customize QR code colors and backgrounds. You can see a preview of your design before finalizing.",
+            "tags": [
+                "customize",
+                "design",
+                "background",
+                "logo",
+                "personalize"
+            ]
+        },
+        {
+            "slug": "modify-data",
+            "title": "Can I modify the data on my cards?",
+            "description": "Yes! After purchase, you receive a correction form where you can review all data and make changes. You can correct song titles, artists, release years, and even add extra information like movie titles, country of origin, or personal messages.",
+            "tags": [
+                "modify",
+                "correct",
+                "edit",
+                "data",
+                "corrections"
+            ]
+        },
+        {
+            "slug": "release-years",
+            "title": "How are release years determined?",
+            "description": "We use an advanced AI algorithm to determine release years, which are then double-checked by our team. We do this because Spotify's release years aren't always accurate (especially for remasters). We use multiple sources to ensure the correct original release year.",
+            "tags": [
+                "release year",
+                "year",
+                "accuracy",
+                "AI",
+                "verification"
+            ]
+        },
+        {
+            "slug": "phone-compatibility",
+            "title": "Is my phone suitable for QRSong?",
+            "description": "Yes! Almost any smartphone with a camera can scan the QR codes. If you have an iOS (12.0+) or Android (6.0+) phone that can scan QR codes, you can use our cards. You'll also need Spotify installed.",
+            "tags": [
+                "phone",
+                "compatible",
+                "requirements",
+                "iOS",
+                "Android"
+            ]
+        },
+        {
+            "slug": "payment-methods",
+            "title": "What payment methods are accepted?",
+            "description": "We accept all major credit cards, PayPal, Apple Pay, and many other payment methods. It's a one-time payment with no subscriptions or recurring fees.",
+            "tags": [
+                "payment",
+                "credit card",
+                "PayPal",
+                "Apple Pay",
+                "methods"
+            ]
+        },
+        {
+            "slug": "maximum-cards",
+            "title": "What is the maximum number of cards?",
+            "description": "For digital orders, the maximum is 500 cards. For physical cards, the maximum is 1000 cards per order. If you need more, you can split your playlist and place multiple orders.",
+            "tags": [
+                "maximum",
+                "limit",
+                "cards",
+                "tracks",
+                "amount"
+            ]
+        },
+        {
+            "slug": "scan-other-cards",
+            "title": "Can the app scan other QR card types?",
+            "description": "Yes! Besides QRSong! cards, the app supports any cards that contain a Spotify URL. It does not support cards with proprietary URLs from other services.",
+            "tags": [
+                "compatibility",
+                "other cards",
+                "scan",
+                "spotify url"
+            ]
+        },
+        {
+            "slug": "return-policy",
+            "title": "What is the return policy?",
+            "description": "Due to the tailor-made nature of our products, we do not accept returns or offer refunds once delivered. For gift cards, refunds may be possible if none of the credit has been used. If there are printing mistakes, we can send a digital replacement.",
+            "tags": [
+                "return",
+                "refund",
+                "policy",
+                "replacement"
+            ]
+        },
+        {
+            "slug": "share-playlist",
+            "title": "How do I share my Spotify playlist?",
+            "description": "Open Spotify, go to your playlist, click the share button, and copy the playlist URL. Paste this URL on our website to create your cards. Make sure your playlist is set to public - we cannot access private playlists.",
+            "tags": [
+                "share",
+                "playlist",
+                "spotify",
+                "url",
+                "how to"
+            ]
+        },
+        {
+            "slug": "gift-cards",
+            "title": "What are gift cards?",
+            "description": "QRSong! gift cards are perfect for music lovers. You can buy digital or physical gift cards starting from 10 euros. The recipient can use the credit to create their own QR music cards from any playlist they choose.",
+            "tags": [
+                "gift card",
+                "gift",
+                "present",
+                "voucher"
+            ]
+        },
+        {
+            "slug": "onzevibe",
+            "title": "What is OnzeVibe?",
+            "description": "OnzeVibe is QRSong!'s corporate music experience. Companies can create personalized QR music cards for employees. Employees vote for their favorite songs, creating a company top 200 playlist, and each employee receives a personalized box of cards.",
+            "tags": [
+                "OnzeVibe",
+                "corporate",
+                "company",
+                "business",
+                "employees"
+            ]
+        },
+        {
+            "slug": "pubquiz-discount",
+            "title": "Do you offer pubquiz discounts?",
+            "description": "Yes! We support pubquiz organizers with special discount pricing for prizes. Your pubquiz must be an established event with online presence, you need to explain QRSong! when announcing prizes, and share winner photos for our socials.",
+            "tags": [
+                "pubquiz",
+                "discount",
+                "prizes",
+                "events"
+            ]
+        },
+        {
+            "slug": "sheets-version",
+            "title": "What is the sheets version?",
+            "description": "The sheets version delivers your cards on A4 sheets printed on the same 350g paper as individual cards. You cut them out yourself. Perfect for those who want professional quality but prefer to cut the cards themselves. No printer needed.",
+            "tags": [
+                "sheets",
+                "A4",
+                "cut",
+                "print",
+                "option"
+            ]
+        },
+        {
+            "slug": "volume-discount",
+            "title": "What is volume discount?",
+            "description": "When you order multiple digital playlists at once, you automatically get volume discounts. No code needed - the discount is applied automatically. The more playlists you add, the more you save!",
+            "tags": [
+                "volume discount",
+                "bulk",
+                "multiple",
+                "savings",
+                "discount"
+            ]
+        },
+        {
+            "slug": "hidden-mode",
+            "title": "What is hidden playback mode?",
+            "description": "Hidden mode is a feature in the QRSong! app (requires Spotify Premium) that plays songs without revealing the artist or title. Perfect for music quizzes and guessing games where you don't want to see the answer immediately.",
+            "tags": [
+                "hidden mode",
+                "hidden playback",
+                "quiz",
+                "game feature"
+            ]
+        },
+        {
+            "slug": "custom-logo",
+            "title": "Can I use my own logo on cards?",
+            "description": "Yes! You can upload your own logo to appear at the top of your cards. Rectangular images work best. This is great for personalizing cards for events, businesses, or special occasions.",
+            "tags": [
+                "logo",
+                "branding",
+                "customize",
+                "upload",
+                "design"
+            ]
+        },
+        {
+            "slug": "fonts",
+            "title": "What fonts can I choose?",
+            "description": "You can select from various font styles for the artist name and song title on the back of your card. This helps match your cards to your personal style or event theme.",
+            "tags": [
+                "font",
+                "text",
+                "style",
+                "customize",
+                "typography"
+            ]
+        },
+        {
+            "slug": "playlist-icons",
+            "title": "What playlist icons are available?",
+            "description": "You can choose from many emoji icons to represent your playlist, including music notes, hearts, stars, party emojis, and more. This icon is printed on your cards and helps you easily recognize different playlists.",
+            "tags": [
+                "emoji",
+                "icon",
+                "playlist icon",
+                "customize"
+            ]
+        },
+        {
+            "slug": "hide-white-circle",
+            "title": "Can I hide the white circle on QR codes?",
+            "description": "Yes, but this is an advanced feature. You need to upload a custom background first. You take full responsibility for ensuring QR codes remain scannable. Use dark QR codes on light backgrounds for proper contrast. No refunds for unscannable cards.",
+            "tags": [
+                "QR code",
+                "white circle",
+                "background",
+                "customize",
+                "advanced"
+            ]
+        },
+        {
+            "slug": "double-sided-pdf",
+            "title": "What is the double-sided PDF option?",
+            "description": "If you have a duplex printer, you can choose the double-sided PDF version which saves time and paper. If you don't have a duplex printer, choose single-sided - it's easier to align cards correctly.",
+            "tags": [
+                "double-sided",
+                "duplex",
+                "printing",
+                "PDF",
+                "single-sided"
+            ]
+        },
+        {
+            "slug": "correction-process",
+            "title": "How does the correction process work?",
+            "description": "After purchase, you receive an email with a link to review your order. You can correct song titles, artists, years, and add extra information. Once satisfied, you approve the order for printing. Physical orders ship only after your approval.",
+            "tags": [
+                "corrections",
+                "review",
+                "approval",
+                "process",
+                "modify"
+            ]
+        },
+        {
+            "slug": "extra-info",
+            "title": "Can I add extra information to cards?",
+            "description": "Yes! You can add personalized details in a smaller font under the artist and song title. Perfect for movie titles, country of origin, personal messages to recipients, or fun facts about songs.",
+            "tags": [
+                "extra info",
+                "personalize",
+                "details",
+                "custom text"
+            ]
+        },
+        {
+            "slug": "duplicates",
+            "title": "What if my playlist has duplicates?",
+            "description": "If your playlist contains duplicate tracks, we'll notify you. You should remove duplicates from your Spotify playlist and click the refresh button to update your order.",
+            "tags": [
+                "duplicates",
+                "playlist",
+                "tracks",
+                "error"
+            ]
+        },
+        {
+            "slug": "reload-playlist",
+            "title": "Can I reload my playlist from Spotify?",
+            "description": "Yes! After purchase, you can reload your playlist from Spotify to update tracks. However, you cannot exceed the number of tracks you paid for. There's also a rate limit on how often you can reload.",
+            "tags": [
+                "reload",
+                "refresh",
+                "update",
+                "spotify",
+                "playlist"
+            ]
+        },
+        {
+            "slug": "competitors",
+            "title": "What sets QRSong apart from competitors?",
+            "description": "Our attention to detail and commitment to quality. We use an advanced AI algorithm for release years instead of just relying on Spotify data. Our team manually verifies songs. We handle remasters and different recordings correctly.",
+            "tags": [
+                "comparison",
+                "competitors",
+                "quality",
+                "difference",
+                "better"
+            ]
+        },
+        {
+            "slug": "free-shipping",
+            "title": "Is free shipping available?",
+            "description": "Shipping in the Netherlands is free for orders over 50 euros. Adding multiple playlists to your order can help you reach free shipping. Same shipping cost applies regardless of how many card sets you order.",
+            "tags": [
+                "free shipping",
+                "shipping",
+                "Netherlands",
+                "delivery"
+            ]
+        },
+        {
+            "slug": "usa-shipping",
+            "title": "Do you ship to the USA?",
+            "description": "Currently we are unable to ship physical products to the USA. US customers can order the digital PDF version instead, or choose a different shipping country.",
+            "tags": [
+                "USA",
+                "United States",
+                "shipping",
+                "international"
+            ]
+        },
+        {
+            "slug": "contact",
+            "title": "How do I contact QRSong?",
+            "description": "You can contact us through the contact form on our website. We'll get back to you as soon as possible. Our email is info@qrsong.io.",
+            "tags": [
+                "contact",
+                "support",
+                "help",
+                "email"
+            ]
+        },
+        {
+            "slug": "qrcaas",
+            "title": "What is QR Cards As A Service?",
+            "description": "QRCaaS is our developer API framework for building custom QR card games. We provide complete API infrastructure, AWS hosting, and can develop white-label versions of the QRSong! app with your branding and custom features.",
+            "tags": [
+                "API",
+                "service",
+                "developer",
+                "white label",
+                "business"
+            ]
+        },
+        {
+            "slug": "languages",
+            "title": "What languages are supported?",
+            "description": "QRSong! supports 12+ languages including English, Dutch, German, French, Spanish, Italian, Portuguese, Polish, Swedish, Japanese, Chinese, Russian, and Hindi.",
+            "tags": [
+                "languages",
+                "translation",
+                "international",
+                "localization"
+            ]
+        },
+        {
+            "slug": "paper-quality",
+            "title": "What paper quality are the physical cards?",
+            "description": "Physical cards are printed on high-quality 350gsm paper, double-sided in full color. They're sturdy, durable, and professionally printed.",
+            "tags": [
+                "quality",
+                "paper",
+                "gsm",
+                "material",
+                "print quality"
+            ]
+        },
+        {
+            "slug": "albums-not-supported",
+            "title": "Can I use albums instead of playlists?",
+            "description": "No, QRSong! only works with Spotify playlists. We cannot process albums, podcasts, or episodes. Make sure you're sharing a playlist URL, not an album.",
+            "tags": [
+                "album",
+                "playlist",
+                "spotify",
+                "not supported"
+            ]
+        },
+        {
+            "slug": "this-is-playlists",
+            "title": "Why can't I import 'This is...' playlists?",
+            "description": "Official Spotify 'This is...' playlists cannot be imported directly. To use them, create a copy by selecting all songs and creating a new playlist in your own account, then import that playlist.",
+            "tags": [
+                "This is",
+                "official playlist",
+                "import",
+                "workaround"
+            ]
+        },
+        {
+            "slug": "random-snippet",
+            "title": "What is random snippet mode?",
+            "description": "Random snippet mode in the app plays different parts of songs for more challenging quizzes. Instead of always starting from the beginning, songs start from random positions.",
+            "tags": [
+                "random snippet",
+                "app feature",
+                "quiz",
+                "difficulty"
+            ]
+        },
+        {
+            "slug": "packaging",
+            "title": "How are the physical cards packaged?",
+            "description": "Cards come in a transport box that fits in most mailboxes. They're neatly tied together with a paper band. Ready to play right out of the box - no assembly required.",
+            "tags": [
+                "packaging",
+                "box",
+                "delivery",
+                "presentation"
+            ]
+        },
+        {
+            "slug": "extension",
+            "title": "Can I request an extension for reviewing my order?",
+            "description": "Yes! If you need more time to review and correct your order before it ships, you can request a 24-hour extension through the review form.",
+            "tags": [
+                "extension",
+                "review",
+                "deadline",
+                "more time"
+            ]
+        },
+        {
+            "slug": "after-payment",
+            "title": "What happens after I pay?",
+            "description": "You'll receive a confirmation email with order details and a link to review/correct your cards. For physical orders, we check release data and design, then you approve before printing. You'll receive tracking when shipped.",
+            "tags": [
+                "after payment",
+                "process",
+                "next steps",
+                "order flow"
+            ]
+        },
+        {
+            "slug": "playlist-public",
+            "title": "Do I need to keep my playlist public?",
+            "description": "Yes, keep your playlist public on Spotify until you receive your tracking email (for physical) or PDF email (for digital). After that, you can make it private again.",
+            "tags": [
+                "public",
+                "private",
+                "playlist",
+                "spotify settings"
+            ]
+        },
+        {
+            "slug": "curated-playlists",
+            "title": "What are curated playlists?",
+            "description": "We offer many pre-created playlists across various genres including disco, dance, rock, rap, and more. These are ready for instant delivery and perfect if you don't have your own playlist or want inspiration.",
+            "tags": [
+                "curated",
+                "featured",
+                "pre-made",
+                "genres",
+                "selection"
+            ]
+        },
+        {
+            "slug": "business-events",
+            "title": "Can I use QRSong for business events?",
+            "description": "Absolutely! QRSong! cards are great for corporate events, team building, and client gifts. Check out OnzeVibe for a complete corporate music experience, or contact us for custom business solutions.",
+            "tags": [
+                "business",
+                "corporate",
+                "events",
+                "team building"
+            ]
+        },
+        {
+            "slug": "review-system",
+            "title": "What is the review system?",
+            "description": "After receiving your order, you can leave feedback about your experience. Positive experiences can be shared on Trustpilot to help others find us. We value all feedback to improve our service.",
+            "tags": [
+                "reviews",
+                "feedback",
+                "Trustpilot",
+                "rating"
+            ]
+        },
+        {
+            "slug": "qr-code-colors",
+            "title": "Can I change QR code colors?",
+            "description": "Yes! You can customize the QR code color and background color. Make sure to maintain good contrast - dark QR codes on light backgrounds work best for reliable scanning.",
+            "tags": [
+                "QR code",
+                "color",
+                "customize",
+                "design"
+            ]
+        },
+        {
+            "slug": "data-error",
+            "title": "What if I find an error in the data?",
+            "description": "If you find an error in release year or other data, let us know! If it's indeed a mistake on our end, we'll correct it and send you the corrected digital version for free.",
+            "tags": [
+                "error",
+                "mistake",
+                "correction",
+                "free fix"
+            ]
+        },
+        {
+            "slug": "playback-timer",
+            "title": "How do playback timer controls work?",
+            "description": "In the QRSong! app, you can set custom playback timers to control how long songs play during your quiz. This helps create the perfect difficulty level for your music game.",
+            "tags": [
+                "timer",
+                "playback",
+                "controls",
+                "app settings"
+            ]
+        },
+        {
+            "slug": "newsletter",
+            "title": "Is there a newsletter?",
+            "description": "Yes! You can sign up for our newsletter to stay updated with announcements, roadmap progress, and exclusive discounts. We respect your privacy and you can unsubscribe anytime.",
+            "tags": [
+                "newsletter",
+                "updates",
+                "discounts",
+                "email"
+            ]
+        }
+    ]
+}

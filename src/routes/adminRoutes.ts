@@ -19,6 +19,9 @@ import Review from '../review';
 import Shipping from '../shipping';
 import SiteSettings from '../sitesettings';
 import Spotify from '../spotify';
+import PrismaInstance from '../prisma';
+import { ChatService } from '../chat';
+import ChatWebSocketServer from '../chat-websocket';
 import path from 'path';
 import fs from 'fs/promises';
 
@@ -1918,4 +1921,233 @@ export default async function adminRoutes(
       }
     }
   );
+
+  // Get all chats for admin dashboard
+  const prisma = PrismaInstance.getInstance();
+
+  fastify.get('/admin/chats', getAuthHandler(['admin']), async (_request: any, reply) => {
+    try {
+      const chats = await prisma.chat.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          _count: {
+            select: { messages: true },
+          },
+        },
+      });
+
+      const formattedChats = chats.map((chat) => ({
+        id: chat.id,
+        email: chat.email,
+        username: chat.username,
+        locale: chat.locale,
+        supportNeeded: chat.supportNeeded,
+        hijacked: chat.hijacked,
+        messageCount: chat._count.messages,
+        createdAt: chat.createdAt,
+      }));
+
+      return { success: true, data: formattedChats };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to fetch chats',
+      });
+    }
+  });
+
+  // Get support needed count for badge
+  fastify.get('/admin/chats/support-count', getAuthHandler(['admin']), async (_request: any, reply) => {
+    try {
+      const count = await prisma.chat.count({
+        where: { supportNeeded: true },
+      });
+
+      return { success: true, count };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to fetch count',
+      });
+    }
+  });
+
+  // Get messages for a specific chat
+  fastify.get('/admin/chats/:id/messages', getAuthHandler(['admin']), async (request: any, reply) => {
+    try {
+      const chatId = parseInt(request.params.id, 10);
+
+      const chat = await prisma.chat.findUnique({
+        where: { id: chatId },
+        include: {
+          messages: {
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+
+      if (!chat) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Chat not found',
+        });
+      }
+
+      return {
+        success: true,
+        data: {
+          id: chat.id,
+          email: chat.email,
+          username: chat.username,
+          locale: chat.locale,
+          supportNeeded: chat.supportNeeded,
+          hijacked: chat.hijacked,
+          createdAt: chat.createdAt,
+          messages: chat.messages.map((m) => ({
+            id: m.id,
+            role: m.role,
+            content: m.content,
+            translatedContent: m.translatedContent,
+            createdAt: m.createdAt,
+          })),
+        },
+      };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to fetch chat messages',
+      });
+    }
+  });
+
+  // Toggle hijack status for a chat
+  fastify.post('/admin/chats/:id/hijack', getAuthHandler(['admin']), async (request: any, reply) => {
+    try {
+      const chatId = parseInt(request.params.id, 10);
+      const { hijacked } = request.body;
+
+      if (typeof hijacked !== 'boolean') {
+        return reply.status(400).send({
+          success: false,
+          error: 'hijacked must be a boolean',
+        });
+      }
+
+      const chatService = new ChatService();
+      await chatService.toggleHijack(chatId, hijacked);
+
+      // Notify connected user about hijack status change via WebSocket
+      const wsServer = ChatWebSocketServer.getInstance();
+      console.log('[hijack] WebSocket server instance:', wsServer ? 'found' : 'NOT FOUND');
+      if (wsServer) {
+        wsServer.broadcastToChat(chatId, { type: 'hijack', hijacked });
+      }
+
+      return { success: true, hijacked };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to toggle hijack status',
+      });
+    }
+  });
+
+  // Send admin message to a chat
+  fastify.post('/admin/chats/:id/message', getAuthHandler(['admin']), async (request: any, reply) => {
+    try {
+      const chatId = parseInt(request.params.id, 10);
+      const { content } = request.body;
+
+      if (!content || typeof content !== 'string') {
+        return reply.status(400).send({
+          success: false,
+          error: 'content is required',
+        });
+      }
+
+      // Get chat to find user's locale
+      const chat = await prisma.chat.findUnique({
+        where: { id: chatId },
+        select: { locale: true },
+      });
+
+      if (!chat) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Chat not found',
+        });
+      }
+
+      const chatService = new ChatService();
+      const { id: messageId, translatedContent } = await chatService.saveAdminMessage(
+        chatId,
+        content,
+        chat.locale || 'en'
+      );
+
+      // Broadcast to user via WebSocket
+      const wsServer = ChatWebSocketServer.getInstance();
+      if (wsServer) {
+        wsServer.broadcastToChat(chatId, {
+          type: 'admin_message',
+          content: translatedContent, // User sees translated content
+          role: 'admin',
+        });
+      }
+
+      return {
+        success: true,
+        message: {
+          id: messageId,
+          content,
+          translatedContent,
+        },
+      };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to send message',
+      });
+    }
+  });
+
+  // Admin typing indicator
+  fastify.post('/admin/chats/:id/typing', getAuthHandler(['admin']), async (request: any, reply) => {
+    const chatId = parseInt(request.params.id, 10);
+    console.log(`[AdminTyping] Received for chatId=${chatId}`);
+    const wsServer = ChatWebSocketServer.getInstance();
+    console.log(`[AdminTyping] wsServer=${wsServer ? 'found' : 'null'}`);
+    if (wsServer) {
+      wsServer.broadcastToChat(chatId, { type: 'admin_typing' });
+    }
+    return { success: true };
+  });
+
+  // Delete a chat
+  fastify.delete('/admin/chats/:id', getAuthHandler(['admin']), async (request: any, reply) => {
+    try {
+      const chatId = parseInt(request.params.id, 10);
+
+      // Delete messages first (due to foreign key constraint)
+      await prisma.chatMessage.deleteMany({
+        where: { chatId },
+      });
+
+      // Delete the chat
+      await prisma.chat.delete({
+        where: { id: chatId },
+      });
+
+      // Invalidate cache
+      const chatService = new ChatService();
+      await chatService.invalidateChatCache(chatId);
+
+      return { success: true };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to delete chat',
+      });
+    }
+  });
 }

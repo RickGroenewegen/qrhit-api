@@ -483,5 +483,7 @@
 	"qrgames_activation.team": "The QRSong! Team",
 	"qrgames_activation.allRightsReserved": "All rights reserved",
 	"qrgames_activation.visitWebsite": "Visit our website",
-	"qrgames_activation.contactSupport": "Contact Support"
+	"qrgames_activation.contactSupport": "Contact Support",
+	"chat.welcome": "👋 Hi! I'm the QRSong! assistant. How can I help you today?",
+	"chat.supportRequested": "The QRSong! support team has been notified and will contact you soon at your email address. Thank you for your patience!"
 }

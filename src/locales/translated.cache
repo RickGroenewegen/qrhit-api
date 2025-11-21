@@ -6709,5 +6709,17 @@
     "jp",
     "cn",
     "sv"
+  ],
+  "chat.welcome": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
   ]
 }

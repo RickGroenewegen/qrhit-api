@@ -475,5 +475,14 @@
   "qrgames_activation.team": "QRSong!-teamet",
   "qrgames_activation.allRightsReserved": "Alla rättigheter förbehållna",
   "qrgames_activation.visitWebsite": "Besök vår hemsida",
-  "qrgames_activation.contactSupport": "Kontakta support"
+  "qrgames_activation.contactSupport": "Kontakta support",
+  "invoice.quantity": "Qty",
+  "invoice.unitPriceExclVAT": "Unit Price (excl. VAT)",
+  "invoice.totalExclVAT": "Total (excl. VAT)",
+  "invoice.subtotalExclVAT": "Subtotal (excl. VAT)",
+  "invoice.vat": "VAT",
+  "invoice.over": "over",
+  "invoice.shipping": "shipping",
+  "invoice.vatId": "VAT ID",
+  "chat.welcome": "👋 Hej! Jag är QRSong!-assistenten. Hur kan jag hjälpa dig?"
 }

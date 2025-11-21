@@ -33,9 +33,8 @@ class NativeWebSocketServer {
   private heartbeatInterval!: NodeJS.Timeout;
 
   constructor(server: HTTPServer) {
-    this.wss = new WebSocketServer({ 
-      server,
-      path: '/ws',
+    this.wss = new WebSocketServer({
+      noServer: true,
       perMessageDeflate: {
         zlibDeflateOptions: {
           chunkSize: 1024,
@@ -744,6 +743,12 @@ class NativeWebSocketServer {
     this.pubClient.disconnect();
     this.subClient.disconnect();
     this.wss.close();
+  }
+
+  public handleUpgrade(request: any, socket: any, head: any) {
+    this.wss.handleUpgrade(request, socket, head, (ws) => {
+      this.wss.emit('connection', ws, request);
+    });
   }
 }
 

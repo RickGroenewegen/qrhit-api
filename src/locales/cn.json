@@ -484,5 +484,6 @@
   "invoice.subtotalExclVAT": "小计（不含税）",
   "invoice.vat": "增值税",
   "invoice.over": "超过",
-  "invoice.shipping": "运送"
+  "invoice.shipping": "运送",
+  "chat.welcome": "👋 嗨！我是QRSong!助手。需要帮忙吗？"
 }

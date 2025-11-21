@@ -494,5 +494,6 @@
   "invoice.subtotalExclVAT": "Zwischensumme (o. MwSt.)",
   "invoice.vat": "MwSt.",
   "invoice.over": "über",
-  "invoice.shipping": "Versand"
+  "invoice.shipping": "Versand",
+  "chat.welcome": "👋 Hi! Ich bin der QRSong! Assistent. Wie kann ich dir helfen?"
 }

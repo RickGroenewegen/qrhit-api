@@ -23,6 +23,7 @@ import fs from 'fs/promises';
 import ipPlugin from './plugins/ipPlugin';
 import { createServer } from 'http';
 import NativeWebSocketServer from './websocket-native';
+import ChatWebSocketServer from './chat-websocket';
 import GeneratorQueue from './generatorQueue';
 import MusicFetchQueue from './musicfetchQueue';
 import ExcelQueue from './excelQueue';
@@ -48,6 +49,7 @@ class Server {
   private version: string = '1.0.0';
   private httpServer: any;
   private wsServer: NativeWebSocketServer | null = null;
+  private chatWsServer: ChatWebSocketServer | null = null;
 
   private constructor() {
     this.fastify = Fastify({
@@ -238,9 +240,24 @@ class Server {
       try {
         await this.fastify.listen({ port: this.port, host: '0.0.0.0' });
 
-        // Initialize WebSocket server on all workers with Redis adapter
+        // Initialize WebSocket servers on all workers
         if (this.fastify.server) {
           this.wsServer = new NativeWebSocketServer(this.fastify.server);
+          this.chatWsServer = new ChatWebSocketServer(this.fastify.server);
+          ChatWebSocketServer.setInstance(this.chatWsServer);
+
+          // Handle WebSocket upgrade routing
+          this.fastify.server.on('upgrade', (request, socket, head) => {
+            const url = request.url || '';
+            const pathname = url.split('?')[0];
+            if (pathname === '/ws' && this.wsServer) {
+              this.wsServer.handleUpgrade(request, socket, head);
+            } else if (pathname === '/chat-ws' && this.chatWsServer) {
+              this.chatWsServer.handleUpgrade(request, socket, head);
+            } else {
+              socket.destroy();
+            }
+          });
         }
 
         this.logger.log(

@@ -485,5 +485,6 @@
   "invoice.subtotalExclVAT": "小計（税抜）",
   "invoice.vat": "消費税",
   "invoice.over": "以上",
-  "invoice.shipping": "配送"
+  "invoice.shipping": "配送",
+  "chat.welcome": "👋 こんにちは！QRSong!アシスタントだよ。どうしたい？"
 }

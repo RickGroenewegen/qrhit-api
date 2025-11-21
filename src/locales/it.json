@@ -489,5 +489,6 @@
   "invoice.subtotalExclVAT": "Subtotale (IVA escl.)",
   "invoice.vat": "IVA",
   "invoice.over": "su",
-  "invoice.shipping": "spedizione"
+  "invoice.shipping": "spedizione",
+  "chat.welcome": "👋 Ciao! Sono l’assistente QRSong! Come posso aiutarti?"
 }
