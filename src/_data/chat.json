@@ -1,6 +1,30 @@
 {
     "knowledge": [
         {
+            "slug": "shipping-status",
+            "title": "Where is my order / package?",
+            "description": "Users can check the real-time shipping status of their order. The system can look up tracking information including current status, location updates, and estimated delivery. For order outside of NL: When the tracking info states it arrived in the destination country we can assure the user that the package is with the local postal service will arrive soon. However, we do not have control over local postal services and cannot provide more detailed tracking updates once it has left the Netherlands.",
+            "tags": [
+                "shipping status",
+                "where is my order",
+                "track order",
+                "package tracking",
+                "delivery status",
+                "order status"
+            ],
+            "tools": [
+                {
+                    "name": "getShippingStatus",
+                    "requiredData": [
+                        {
+                            "name": "orderNumber",
+                            "description": "The order number (like 100002493) that was provided in the confirmation email"
+                        }
+                    ]
+                }
+            ]
+        },
+        {
             "slug": "what-is-qrsong",
             "title": "What is QRSong?",
             "description": "QRSong! is a service that generates QR music game cards based on your Spotify playlists. You can create cards from your own playlist or choose from curated selections. The cards link to your music and can be scanned with the free QRSong! companion app to play a music guessing game.",

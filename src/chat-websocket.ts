@@ -72,20 +72,15 @@ class ChatWebSocketServer {
   }
 
   private handleRedisEvent(event: { chatId: number; type: string; data: any }) {
-    this.logger.log(`[ChatWS] Redis event received: type=${event.type}, chatId=${event.chatId}`);
     // Broadcast to all local connections for this chat
-    let sent = 0;
     this.connections.forEach((connection) => {
       if (connection.chatId === event.chatId && connection.ws.readyState === WebSocket.OPEN) {
         this.sendMessage(connection.ws, { type: event.type, ...event.data });
-        sent++;
       }
     });
-    this.logger.log(`[ChatWS] Sent to ${sent} connections`);
   }
 
   private publishChatEvent(chatId: number, type: string, data: any) {
-    this.logger.log(`[ChatWS] Publishing event: type=${type}, chatId=${chatId}`);
     if (this.pubClient) {
       this.pubClient.publish('chat-events', JSON.stringify({ chatId, type, data }));
     }

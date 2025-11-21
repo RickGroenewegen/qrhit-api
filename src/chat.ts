@@ -6,12 +6,24 @@ import { color } from 'console-log-colors';
 import fs from 'fs';
 import path from 'path';
 import cluster from 'cluster';
+import Shipping from './shipping';
+
+interface RequiredDataItem {
+  name: string;
+  description: string;
+}
+
+interface Tool {
+  name: string;
+  requiredData: RequiredDataItem[];
+}
 
 interface KnowledgeItem {
   slug: string;
   title: string;
   description: string;
   tags: string[];
+  tools?: Tool[];
 }
 
 interface ChatHistoryMessage {
@@ -37,7 +49,7 @@ export class ChatService {
     return `chat:history:${chatId}`;
   }
 
-  private async invalidateChatCache(chatId: number): Promise<void> {
+  public async invalidateChatCache(chatId: number): Promise<void> {
     await this.cache.del(this.getCacheKey(chatId));
   }
 
@@ -389,6 +401,132 @@ If the question is a greeting or general chat, return an empty array.`,
   }
 
   /**
+   * Extract required data from chat history using AI
+   */
+  private async extractRequiredData(
+    requiredData: RequiredDataItem[],
+    chatHistory: ChatHistoryMessage[],
+    currentQuestion: string
+  ): Promise<{ [key: string]: string | null }> {
+    const dataNames = requiredData.map(d => d.name);
+
+    const result = await this.openai.chat.completions.create({
+      model: 'gpt-4o-mini',
+      temperature: 0,
+      messages: [
+        {
+          role: 'system',
+          content: `Extract the following data from the conversation if provided by the user.
+Data to extract: ${requiredData.map(d => `${d.name} (${d.description})`).join(', ')}
+
+Return a JSON object with the data names as keys and extracted values (or null if not found).
+Only extract data that was clearly provided by the user.`,
+        },
+        {
+          role: 'user',
+          content: `Conversation:\n${chatHistory.map(m => `${m.role}: ${m.content}`).join('\n')}\nuser: ${currentQuestion}\n\nExtract: ${dataNames.join(', ')}`,
+        },
+      ],
+      response_format: { type: 'json_object' },
+    });
+
+    try {
+      return JSON.parse(result.choices[0]?.message?.content || '{}');
+    } catch {
+      return {};
+    }
+  }
+
+  /**
+   * Get shipping status by order number
+   */
+  public async getShippingStatus(orderNumber: string): Promise<string> {
+    try {
+      // Find payment by orderId (the order number users receive in their confirmation email)
+      const payment = await this.prisma.payment.findFirst({
+        where: { orderId: orderNumber },
+        select: {
+          paymentId: true,
+          shippingStatus: true,
+          shippingMessage: true,
+          shippingStartDateTime: true,
+          shippingDeliveryDateTime: true,
+          shippingCode: true,
+          printApiStatus: true,
+          printApiShipped: true,
+        },
+      });
+
+      if (!payment) {
+        return `Order ${orderNumber} was not found. Please check if the order number is correct.`;
+      }
+
+      // If no shipping code yet, order might not be shipped
+      if (!payment.shippingCode) {
+        if (payment.printApiStatus === 'Created' || payment.printApiStatus === 'Processing') {
+          return `Order ${orderNumber} is currently being prepared for shipping. It has not been shipped yet.`;
+        }
+        return `Order ${orderNumber} does not have tracking information available yet.`;
+      }
+
+      // Try to get fresh tracking info
+      try {
+        const shipping = Shipping.getInstance();
+        await shipping.getTrackingInfo(payment.paymentId);
+
+        // Refetch updated payment
+        const updated = await this.prisma.payment.findUnique({
+          where: { paymentId: payment.paymentId },
+          select: {
+            shippingStatus: true,
+            shippingMessage: true,
+            shippingStartDateTime: true,
+            shippingDeliveryDateTime: true,
+          },
+        });
+
+        if (updated) {
+          let statusInfo = `Order ${orderNumber} status: ${updated.shippingStatus || 'Unknown'}`;
+          if (updated.shippingMessage) {
+            statusInfo += `\nLatest update: ${updated.shippingMessage}`;
+          }
+          if (updated.shippingDeliveryDateTime) {
+            statusInfo += `\nDelivered on: ${new Date(updated.shippingDeliveryDateTime).toLocaleDateString()}`;
+          } else if (updated.shippingStartDateTime) {
+            statusInfo += `\nShipped on: ${new Date(updated.shippingStartDateTime).toLocaleDateString()}`;
+          }
+          return statusInfo;
+        }
+      } catch (trackingError) {
+        // Use cached data if tracking API fails
+        this.logger.log(color.yellow(`[getShippingStatus] Tracking API error, using cached data`));
+      }
+
+      // Return cached shipping data
+      let statusInfo = `Order ${orderNumber} status: ${payment.shippingStatus || 'Shipped'}`;
+      if (payment.shippingMessage) {
+        statusInfo += `\nLatest update: ${payment.shippingMessage}`;
+      }
+      return statusInfo;
+    } catch (error) {
+      this.logger.log(color.red(`[getShippingStatus] Error: ${error}`));
+      return `Unable to retrieve shipping status for order ${orderNumber}. Please try again later or contact support.`;
+    }
+  }
+
+  /**
+   * Execute a tool and return the result
+   */
+  private async executeTool(toolName: string, data: { [key: string]: string }): Promise<string> {
+    switch (toolName) {
+      case 'getShippingStatus':
+        return this.getShippingStatus(data['orderNumber']);
+      default:
+        return `Unknown tool: ${toolName}`;
+    }
+  }
+
+  /**
    * Stream answer to a question using relevant knowledge
    */
   public async answerQuestion(
@@ -400,6 +538,53 @@ If the question is a greeting or general chat, return an empty array.`,
     this.logger.log(color.cyan.bold(`[answerQuestion] `) + color.cyan(`Generating answer with `) + color.white.bold(`${topicSlugs.length}`) + color.cyan(` topics and `) + color.white.bold(`${chatHistory.length}`) + color.cyan(` history items`));
 
     const relevantKnowledge = this.getKnowledgeBySlug(topicSlugs);
+
+    // Check if any knowledge item has tools
+    let toolContext = '';
+    for (const knowledge of relevantKnowledge) {
+      if (knowledge.tools && knowledge.tools.length > 0) {
+        for (const tool of knowledge.tools) {
+          this.logger.log(color.magenta.bold(`[answerQuestion] `) + color.magenta(`Tool detected: `) + color.white.bold(`${tool.name}`));
+
+          // Extract required data from conversation
+          const extractedData = await this.extractRequiredData(
+            tool.requiredData,
+            chatHistory,
+            question
+          );
+
+          this.logger.log(color.magenta.bold(`[answerQuestion] `) + color.magenta(`Extracted data: `) + color.white.bold(JSON.stringify(extractedData)));
+
+          // Check if all required data is present
+          const missingData = tool.requiredData.filter(
+            (rd) => !extractedData[rd.name]
+          );
+
+          if (missingData.length > 0) {
+            // Missing data - ask user for it
+            const missingDescriptions = missingData
+              .map((d) => `${d.name} (${d.description})`)
+              .join(', ');
+
+            this.logger.log(color.yellow.bold(`[answerQuestion] `) + color.yellow(`Missing data: `) + color.white.bold(missingDescriptions));
+
+            toolContext = `\n\nIMPORTANT: To help the user, you need the following information that they haven't provided yet:\n${missingData.map((d) => `- ${d.name}: ${d.description}`).join('\n')}\n\nPolitely ask the user to provide this information.`;
+          } else {
+            // All data present - execute tool
+            this.logger.log(color.green.bold(`[answerQuestion] `) + color.green(`Executing tool: `) + color.white.bold(`${tool.name}`));
+
+            const toolResult = await this.executeTool(
+              tool.name,
+              extractedData as { [key: string]: string }
+            );
+
+            this.logger.log(color.green.bold(`[answerQuestion] `) + color.green(`Tool result: `) + color.white.bold(toolResult.substring(0, 100)));
+
+            toolContext = `\n\nTOOL RESULT (use this information to answer the user):\n${toolResult}`;
+          }
+        }
+      }
+    }
 
     const knowledgeContext = relevantKnowledge.length > 0
       ? `\n\nRelevant information:\n${relevantKnowledge.map((k) => `**${k.title}**\n${k.description}`).join('\n\n')}`
@@ -420,7 +605,7 @@ IMPORTANT INSTRUCTIONS:
 - If the user greets you, greet them back warmly and ask how you can help
 - SUPPORT BUTTON: If the user appears frustrated, confused, repeats questions, expresses dissatisfaction, seems unhappy with answers, asks about something you cannot help with, or generally is not getting their question answered properly, add the marker [SHOW_SUPPORT_BUTTON] at the END of your response. This shows them a button to request human support.
 
-${knowledgeContext}`,
+${knowledgeContext}${toolContext}`,
       },
     ];
 
