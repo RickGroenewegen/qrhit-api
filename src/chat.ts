@@ -12,6 +12,7 @@ import { CronJob } from 'cron';
 interface RequiredDataItem {
   name: string;
   description: string;
+  userPrompt?: string;
 }
 
 interface Tool {
@@ -573,12 +574,63 @@ Only extract data that was clearly provided by the user.`,
   }
 
   /**
+   * Get shipping times for a specific country
+   */
+  public async getShippingTimes(countryCode: string): Promise<string> {
+    try {
+      const shipping = Shipping.getInstance();
+      const shippingInfo = await shipping.getShippingInfoByCountry();
+
+      // Normalize country code to uppercase
+      const normalizedCode = countryCode.toUpperCase();
+
+      // Find the country in the results
+      const country = shippingInfo.countries.find(
+        (c) => c.countryCode.toUpperCase() === normalizedCode
+      );
+
+      if (!country) {
+        return `We don't have historical shipping data for ${normalizedCode} yet. Shipping times typically vary by country. For more specific information about shipping to ${normalizedCode}, please contact our support team at info@qrsong.io.`;
+      }
+
+      // Build the response
+      let response = `**Shipping estimate for ${normalizedCode}:**\n\n`;
+
+      // Production time
+      response += `**Production:** ${shippingInfo.productionDays} business days\n`;
+      if (shippingInfo.productionMessage) {
+        response += `_${shippingInfo.productionMessage}_\n\n`;
+      } else {
+        response += '\n';
+      }
+
+      // Delivery time
+      if (country.orderCount > 0) {
+        response += `**Delivery:** ${country.minDays}-${country.maxDays} days after shipment\n`;
+        response += `_(Based on ${country.orderCount} recent deliveries)_\n\n`;
+
+        const totalDays = shippingInfo.productionDays + country.averageDays;
+        response += `**Total estimated time:** approximately ${totalDays} days from order placement to delivery`;
+      } else {
+        response += `We don't have enough delivery data for ${normalizedCode} yet. Delivery times will vary based on your location and local postal service.`;
+      }
+
+      return response;
+    } catch (error) {
+      this.logger.log(color.red(`[getShippingTimes] Error: ${error}`));
+      return `Unable to retrieve shipping time estimates at the moment. Please try again later or contact our support team.`;
+    }
+  }
+
+  /**
    * Execute a tool and return the result
    */
   private async executeTool(toolName: string, data: { [key: string]: string }): Promise<string> {
     switch (toolName) {
       case 'getShippingStatus':
         return this.getShippingStatus(data['orderNumber'], data['email']);
+      case 'getShippingTimes':
+        return this.getShippingTimes(data['countryCode']);
       default:
         return `Unknown tool: ${toolName}`;
     }
@@ -626,7 +678,8 @@ Only extract data that was clearly provided by the user.`,
 
             this.logger.log(color.yellow.bold(`[answerQuestion] `) + color.yellow(`Missing data: `) + color.white.bold(missingDescriptions));
 
-            toolContext = `\n\nIMPORTANT: To help the user, you need the following information that they haven't provided yet:\n${missingData.map((d) => `- ${d.name}: ${d.description}`).join('\n')}\n\nPolitely ask the user to provide this information.`;
+            // Use userPrompt for user-facing messages, description for AI data extraction
+            toolContext = `\n\nIMPORTANT: To help the user, you need the following information that they haven't provided yet:\n${missingData.map((d) => `- ${d.userPrompt || d.description}`).join('\n')}\n\nPolitely ask the user to provide this information in a natural, friendly way.`;
           } else {
             // All data present - execute tool
             this.logger.log(color.green.bold(`[answerQuestion] `) + color.green(`Executing tool: `) + color.white.bold(`${tool.name}`));

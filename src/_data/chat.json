@@ -18,11 +18,13 @@
                     "requiredData": [
                         {
                             "name": "orderNumber",
-                            "description": "The order number (like 100002493) that was provided in the confirmation email"
+                            "description": "The order number (like 100002493) that was provided in the confirmation email",
+                            "userPrompt": "your order number (you can find this in your confirmation email)"
                         },
                         {
                             "name": "email",
-                            "description": "The email address used when placing the order"
+                            "description": "The email address used when placing the order",
+                            "userPrompt": "the email address you used when placing your order"
                         }
                     ]
                 }
@@ -238,13 +240,27 @@
         {
             "slug": "shipping-time",
             "title": "How long does shipping take for physical cards?",
-            "description": "Physical cards are normally printed and shipped within 2-3 business days. We ship worldwide from the Netherlands.",
+            "description": "For physical cards, production starts after you approve your playlist in the review/correction form. Once approved, cards are normally printed and shipped within 2-3 business days from the Netherlands. Delivery time varies by country. We can provide estimated delivery times based on historical data for your specific country.",
             "tags": [
                 "shipping",
                 "delivery time",
                 "physical",
                 "express",
-                "worldwide"
+                "worldwide",
+                "how long",
+                "shipping estimate"
+            ],
+            "tools": [
+                {
+                    "name": "getShippingTimes",
+                    "requiredData": [
+                        {
+                            "name": "countryCode",
+                            "description": "The 2-letter ISO country code for the shipping destination. Convert the country name to its ISO code (e.g., 'Deutschland' or 'Germany' → 'DE', 'Netherlands' or 'Nederland' → 'NL', 'France' or 'Frankrijk' → 'FR', 'Spain' or 'España' → 'ES', 'United States' or 'USA' → 'US', 'United Kingdom' or 'UK' → 'GB', etc.)",
+                            "userPrompt": "the country you're shipping to (for example: Germany, Netherlands, United States, etc.)"
+                        }
+                    ]
+                }
             ]
         },
         {
