@@ -864,15 +864,16 @@ model Settings {
 }
 
 model Chat {
-  id            Int           @id @default(autoincrement())
-  email         String?       @db.VarChar(255)
-  username      String?       @db.VarChar(100)
-  locale        String?       @db.VarChar(10)
-  supportNeeded Boolean       @default(false)
-  hijacked      Boolean       @default(false)
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
-  messages      ChatMessage[]
+  id             Int           @id @default(autoincrement())
+  email          String?       @db.VarChar(255)
+  username       String?       @db.VarChar(100)
+  locale         String?       @db.VarChar(10)
+  supportNeeded  Boolean       @default(false)
+  hijacked       Boolean       @default(false)
+  unseenMessages Boolean       @default(true)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  messages       ChatMessage[]
 
   @@map("chats")
 }

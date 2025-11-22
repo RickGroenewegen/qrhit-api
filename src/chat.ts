@@ -225,6 +225,16 @@ export class ChatService {
   }
 
   /**
+   * Mark chat as seen by admin
+   */
+  public async markChatAsSeen(chatId: number): Promise<void> {
+    await this.prisma.chat.update({
+      where: { id: chatId },
+      data: { unseenMessages: false },
+    });
+  }
+
+  /**
    * Check if chat has messages
    */
   public async chatHasMessages(chatId: number): Promise<boolean> {

@@ -1943,6 +1943,7 @@ export default async function adminRoutes(
         locale: chat.locale,
         supportNeeded: chat.supportNeeded,
         hijacked: chat.hijacked,
+        unseenMessages: chat.unseenMessages,
         messageCount: chat._count.messages,
         createdAt: chat.createdAt,
       }));
@@ -1960,7 +1961,7 @@ export default async function adminRoutes(
   fastify.get('/admin/chats/support-count', getAuthHandler(['admin']), async (_request: any, reply) => {
     try {
       const count = await prisma.chat.count({
-        where: { supportNeeded: true },
+        where: { unseenMessages: true },
       });
 
       return { success: true, count };
@@ -2016,6 +2017,23 @@ export default async function adminRoutes(
       return reply.status(500).send({
         success: false,
         error: error.message || 'Failed to fetch chat messages',
+      });
+    }
+  });
+
+  // Mark chat as seen by admin
+  fastify.post('/admin/chats/:id/mark-seen', getAuthHandler(['admin']), async (request: any, reply) => {
+    try {
+      const chatId = parseInt(request.params.id, 10);
+
+      const chatService = new ChatService();
+      await chatService.markChatAsSeen(chatId);
+
+      return { success: true };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to mark chat as seen',
       });
     }
   });
