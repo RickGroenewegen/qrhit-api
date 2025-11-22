@@ -113,7 +113,8 @@ class ChatWebSocketServer {
       // Verify chat exists
       const chat = await this.chatService.getChat(chatId);
       if (!chat) {
-        this.sendError(ws, 'Chat not found');
+        // Send chat_deleted event so client can reset
+        this.sendMessage(ws, { type: 'chat_deleted', data: 'This chat has been deleted' });
         ws.close();
         return;
       }
@@ -196,9 +197,17 @@ class ChatWebSocketServer {
       return;
     }
 
-    // Check if chat is hijacked - if so, only save message, don't process AI response
+    // Check if chat still exists (may have been deleted)
     const chat = await this.chatService.getChat(connection.chatId);
-    if (chat?.hijacked) {
+    if (!chat) {
+      this.sendMessage(connection.ws, { type: 'chat_deleted', data: 'This chat has been deleted' });
+      connection.ws.close();
+      this.connections.delete(connectionId);
+      return;
+    }
+
+    // Check if chat is hijacked - if so, only save message, don't process AI response
+    if (chat.hijacked) {
       // Save user message and broadcast to admin viewers
       const savedMessage = await this.chatService.saveUserMessage(connection.chatId, message);
       this.publishChatEvent(connection.chatId, 'user_message', {

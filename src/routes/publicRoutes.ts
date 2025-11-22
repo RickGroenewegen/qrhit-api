@@ -74,6 +74,13 @@ export default async function publicRoutes(fastify: FastifyInstance) {
             supportNeeded: existingChat.supportNeeded,
             hijacked: existingChat.hijacked
           });
+        } else {
+          // Chat was deleted, inform client to reset
+          return reply.send({
+            success: true,
+            chatDeleted: true,
+            message: 'Previous chat was deleted'
+          });
         }
       }
 

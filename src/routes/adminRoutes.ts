@@ -1928,6 +1928,11 @@ export default async function adminRoutes(
   fastify.get('/admin/chats', getAuthHandler(['admin']), async (_request: any, reply) => {
     try {
       const chats = await prisma.chat.findMany({
+        where: {
+          messages: {
+            some: {}, // Only include chats with at least one message
+          },
+        },
         orderBy: { createdAt: 'desc' },
         include: {
           _count: {

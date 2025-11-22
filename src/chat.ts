@@ -7,6 +7,7 @@ import fs from 'fs';
 import path from 'path';
 import cluster from 'cluster';
 import Shipping from './shipping';
+import { CronJob } from 'cron';
 
 interface RequiredDataItem {
   name: string;
@@ -43,6 +44,7 @@ export class ChatService {
 
   constructor() {
     this.loadKnowledge();
+    this.startCleanupCron();
   }
 
   private getCacheKey(chatId: number): string {
@@ -65,6 +67,46 @@ export class ChatService {
     } catch (error) {
       this.logger.log(color.red.bold(`Failed to load chat knowledge: ${error}`));
       this.knowledge = [];
+    }
+  }
+
+  /**
+   * Start cron job to clean up old empty chats
+   */
+  private startCleanupCron(): void {
+    if (cluster.isPrimary) {
+      // Run every 6 hours
+      new CronJob(
+        '0 */6 * * *',
+        async () => {
+          await this.cleanupOldEmptyChats();
+        },
+        null,
+        true
+      );
+      this.logger.log(color.green(`Chat cleanup cron job started (runs every 6 hours)`));
+    }
+  }
+
+  /**
+   * Clean up chats older than 24 hours with 0 messages
+   */
+  private async cleanupOldEmptyChats(): Promise<void> {
+    try {
+      const cutoffDate = new Date(Date.now() - 24 * 60 * 60 * 1000); // 24 hours ago
+
+      const result = await this.prisma.chat.deleteMany({
+        where: {
+          createdAt: { lt: cutoffDate },
+          messages: { none: {} },
+        },
+      });
+
+      if (result.count > 0) {
+        this.logger.log(color.yellow.bold(`[Chat Cleanup] `) + color.yellow(`Deleted `) + color.white.bold(`${result.count}`) + color.yellow(` old empty chat(s)`));
+      }
+    } catch (error) {
+      this.logger.log(color.red.bold(`[Chat Cleanup] Error: ${error}`));
     }
   }
 
