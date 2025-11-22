@@ -19,6 +19,10 @@
                         {
                             "name": "orderNumber",
                             "description": "The order number (like 100002493) that was provided in the confirmation email"
+                        },
+                        {
+                            "name": "email",
+                            "description": "The email address used when placing the order"
                         }
                     ]
                 }

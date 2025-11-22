@@ -440,13 +440,14 @@ Only extract data that was clearly provided by the user.`,
   /**
    * Get shipping status by order number
    */
-  public async getShippingStatus(orderNumber: string): Promise<string> {
+  public async getShippingStatus(orderNumber: string, email: string): Promise<string> {
     try {
       // Find payment by orderId (the order number users receive in their confirmation email)
       const payment = await this.prisma.payment.findFirst({
         where: { orderId: orderNumber },
         select: {
           paymentId: true,
+          email: true,
           shippingStatus: true,
           shippingMessage: true,
           shippingStartDateTime: true,
@@ -459,6 +460,11 @@ Only extract data that was clearly provided by the user.`,
 
       if (!payment) {
         return `Order ${orderNumber} was not found. Please check if the order number is correct.`;
+      }
+
+      // Verify email matches
+      if (payment.email?.toLowerCase() !== email.toLowerCase()) {
+        return `The email address provided does not match the order. Please verify both the order number and email address.`;
       }
 
       // If no shipping code yet, order might not be shipped
@@ -520,7 +526,7 @@ Only extract data that was clearly provided by the user.`,
   private async executeTool(toolName: string, data: { [key: string]: string }): Promise<string> {
     switch (toolName) {
       case 'getShippingStatus':
-        return this.getShippingStatus(data['orderNumber']);
+        return this.getShippingStatus(data['orderNumber'], data['email']);
       default:
         return `Unknown tool: ${toolName}`;
     }
