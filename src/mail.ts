@@ -1719,6 +1719,114 @@ ${params.html}
       }
     }
   }
+
+  /**
+   * Send a custom email to a customer
+   * @param email The customer's email address
+   * @param fullname The customer's full name
+   * @param subject The email subject (already translated)
+   * @param message The email message (already translated)
+   * @param locale The target locale
+   */
+  public async sendCustomMail(
+    email: string,
+    fullname: string,
+    subject: string,
+    message: string,
+    locale: string = 'en'
+  ): Promise<void> {
+    if (!this.ses) return;
+
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+
+    // Convert line breaks to HTML <br> tags for HTML version
+    const messageHtml = message.replace(/\n/g, '<br>');
+
+    // Determine greeting based on locale
+    const greetings: { [key: string]: string } = {
+      en: 'Hello',
+      de: 'Hallo',
+      fr: 'Bonjour',
+      es: 'Hola',
+      it: 'Ciao',
+      pt: 'Olá',
+      pl: 'Cześć',
+      sv: 'Hej',
+      jp: 'こんにちは',
+      cn: '你好',
+      ru: 'Здравствуйте',
+      hin: 'नमस्ते',
+      nl: 'Hallo',
+    };
+
+    const mailParams = {
+      fullname: fullname || email.split('@')[0],
+      greeting: greetings[locale] || 'Hello',
+      message: messageHtml,
+      messageText: message, // Plain text version with \n preserved
+      productName: process.env['PRODUCT_NAME'],
+      currentYear: new Date().getFullYear(),
+    };
+
+    try {
+      // Read the logo file and convert it to Base64
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+
+      const html = await this.templates.render(
+        'mails/custom_email_html',
+        mailParams
+      );
+      const text = await this.templates.render(
+        'mails/custom_email_text',
+        mailParams
+      );
+
+      const attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+
+      const rawEmail = await this.renderRaw(
+        {
+          from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+          to: email,
+          subject,
+          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+          text,
+          attachments,
+          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+          replyTo: process.env['REPLY_TO_EMAIL'],
+        },
+        true // BCC custom emails
+      );
+
+      const emailBuffer = Buffer.from(rawEmail);
+
+      const command = new SendRawEmailCommand({
+        RawMessage: {
+          Data: emailBuffer,
+        },
+      });
+
+      await this.ses.send(command);
+      this.logger.log(
+        color.blue.bold(`Custom email sent to ${white.bold(email)}`)
+      );
+    } catch (error) {
+      console.error('Error while sending custom email:', error);
+      this.logger.log(
+        color.red.bold(
+          `Failed to send custom email to ${white.bold(email)}: ${error}`
+        )
+      );
+    }
+  }
 }
 
 export default Mail;

@@ -1398,4 +1398,92 @@ ${htmlString}
       return { orders: [] };
     }
   }
+
+  /**
+   * Translate email subject and message to target locale
+   * @param message - Email message in Dutch
+   * @param subject - Email subject in Dutch
+   * @param targetLocale - Target locale code (e.g., 'en', 'de', 'fr')
+   * @returns Object with translated subject and message
+   */
+  public async translateMessage(
+    message: string,
+    subject: string,
+    targetLocale: string
+  ): Promise<{ subject: string; message: string }> {
+    const localeNames: { [key: string]: string } = {
+      en: 'English',
+      de: 'German',
+      fr: 'French',
+      es: 'Spanish',
+      it: 'Italian',
+      pt: 'Portuguese',
+      pl: 'Polish',
+      sv: 'Swedish',
+      jp: 'Japanese',
+      cn: 'Chinese',
+      ru: 'Russian',
+      hin: 'Hindi',
+      nl: 'Dutch',
+    };
+
+    const targetLang = localeNames[targetLocale] || 'English';
+
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.3,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a professional email translator. Translate both the subject and message from Dutch to ${targetLang}. Maintain a professional tone and preserve line breaks.`,
+          },
+          {
+            role: 'user',
+            content: `Subject: ${subject}\n\nMessage: ${message}`,
+          },
+        ],
+        functions: [
+          {
+            name: 'translate_email',
+            description: 'Translate email subject and message to target language',
+            parameters: {
+              type: 'object',
+              properties: {
+                subject: {
+                  type: 'string',
+                  description: 'Translated email subject',
+                },
+                message: {
+                  type: 'string',
+                  description: 'Translated email message with line breaks preserved',
+                },
+              },
+              required: ['subject', 'message'],
+            },
+          },
+        ],
+        function_call: { name: 'translate_email' },
+      });
+
+      const functionCall = response.choices[0]?.message?.function_call;
+
+      if (functionCall && functionCall.arguments) {
+        const parsed = JSON.parse(functionCall.arguments);
+        return {
+          subject: parsed.subject || subject,
+          message: parsed.message || message,
+        };
+      }
+
+      // Fallback if no function call
+      return { subject, message };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`[ChatGPT] Translation error: ${error}`)
+      );
+      // Return original content if translation fails
+      return { subject, message };
+    }
+  }
 }

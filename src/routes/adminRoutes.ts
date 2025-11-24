@@ -22,8 +22,11 @@ import Spotify from '../spotify';
 import PrismaInstance from '../prisma';
 import { ChatService } from '../chat';
 import ChatWebSocketServer from '../chat-websocket';
+import { ChatGPT } from '../chatgpt';
+import Mail from '../mail';
 import path from 'path';
-import fs from 'fs/promises';
+import fs from 'fs';
+import fsPromises from 'fs/promises';
 
 export default async function adminRoutes(
   fastify: FastifyInstance,
@@ -45,6 +48,9 @@ export default async function adminRoutes(
   const review = Review.getInstance();
   const shipping = Shipping.getInstance();
   const spotify = Spotify.getInstance();
+  const chatgpt = new ChatGPT();
+  const mail = Mail.getInstance();
+  const prisma = PrismaInstance.getInstance();
 
   // Create order (admin only)
   fastify.post(
@@ -929,7 +935,7 @@ export default async function adminRoutes(
         const invoicePath = await orderInstance.getInvoice(invoiceId);
         // Ensure the file exists and is readable
         try {
-          await fs.access(invoicePath, fs.constants.R_OK);
+          await fsPromises.access(invoicePath, fs.constants.R_OK);
         } catch (error) {
           reply.code(404).send('File not found.');
           return;
@@ -944,7 +950,7 @@ export default async function adminRoutes(
 
         // Read the file into memory and send it as a buffer
         try {
-          const fileContent = await fs.readFile(invoicePath);
+          const fileContent = await fsPromises.readFile(invoicePath);
           reply.send(fileContent);
         } catch (error) {
           reply.code(500).send('Error reading file.');
@@ -1587,7 +1593,7 @@ export default async function adminRoutes(
 
         // Check if file exists
         try {
-          await fs.access(filePath, fs.constants.R_OK);
+          await fsPromises.access(filePath, fs.constants.R_OK);
         } catch (error) {
           reply.status(404).send({
             success: false,
@@ -1597,7 +1603,7 @@ export default async function adminRoutes(
         }
 
         // Read and send the file
-        const fileBuffer = await fs.readFile(filePath);
+        const fileBuffer = await fsPromises.readFile(filePath);
 
         reply
           .header(
@@ -1923,8 +1929,6 @@ export default async function adminRoutes(
   );
 
   // Get all chats for admin dashboard
-  const prisma = PrismaInstance.getInstance();
-
   fastify.get('/admin/chats', getAuthHandler(['admin']), async (_request: any, reply) => {
     try {
       const chats = await prisma.chat.findMany({
@@ -2173,4 +2177,97 @@ export default async function adminRoutes(
       });
     }
   });
+
+  // Get email templates from mail.json
+  fastify.get(
+    '/admin/email-templates',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const appRoot = process.env['APP_ROOT'] || path.join(__dirname, '..');
+        const mailJsonPath = path.join(appRoot, '_data', 'mail.json');
+        const data = JSON.parse(fs.readFileSync(mailJsonPath, 'utf-8'));
+
+        return reply.send({
+          success: true,
+          templates: data.templates || []
+        });
+      } catch (error: any) {
+        console.error('Error loading email templates:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to load email templates'
+        });
+      }
+    }
+  );
+
+  // Send custom email to customer
+  fastify.post(
+    '/admin/send-custom-email',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { paymentId, subject, message, targetLocale } = request.body;
+
+        // Validate required fields
+        if (!paymentId || !subject || !message) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Missing required fields: paymentId, subject, message'
+          });
+        }
+
+        // Fetch payment with user details
+        const payment = await prisma.payment.findUnique({
+          where: { paymentId },
+          select: {
+            email: true,
+            fullname: true,
+            locale: true
+          }
+        });
+
+        if (!payment) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Payment not found'
+          });
+        }
+
+        // Determine target locale (use provided or fallback to payment locale)
+        const locale = targetLocale || payment.locale || 'en';
+
+        // Translate message if not Dutch
+        let translatedSubject = subject;
+        let translatedMessage = message;
+
+        if (locale !== 'nl') {
+          const translated = await chatgpt.translateMessage(message, subject, locale);
+          translatedSubject = translated.subject;
+          translatedMessage = translated.message;
+        }
+
+        // Send email
+        await mail.sendCustomMail(
+          payment.email,
+          payment.fullname,
+          translatedSubject,
+          translatedMessage,
+          locale
+        );
+
+        return reply.send({
+          success: true,
+          message: 'Email sent successfully'
+        });
+      } catch (error: any) {
+        console.error('Error sending custom email:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to send email'
+        });
+      }
+    }
+  );
 }
