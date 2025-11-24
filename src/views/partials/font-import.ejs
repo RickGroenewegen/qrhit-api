@@ -18,6 +18,7 @@ if (php.selectedFont && php.selectedFont !== 'Arial, sans-serif') {
     else if (fontName.includes('Righteous')) weights += '400';
     else if (fontName.includes('Alfa')) weights += '400';
     else if (fontName.includes('Montserrat')) weights += '400;700';
+    else if (fontName.includes('Ubuntu')) weights += '400;700';
     else weights += '400;700'; // default
     fontImport = `<link href="https://fonts.googleapis.com/css2?family=${googleFontName}${weights}&display=swap" rel="stylesheet">`;
 }
