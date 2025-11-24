@@ -85,20 +85,18 @@
         padding-bottom: 2mm;
     }
     .text.artist {
-        margin-left: 8mm;
-        margin-right: 8mm;
-        font-size: 16px;
-        overflow-wrap: break-word; /* Prevent breaking mid-word */
+        font-size: 12px;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
     }
     .text.year {
-        font-size: 36px;
-        font-weight: 600;
+        font-size: 28px;
+        font-weight: 500;
     }
     .text.name {
-        margin-left: 8mm;
-        margin-right: 8mm;
-        font-size: 14px;
-        overflow-wrap: break-word; /* Prevent breaking mid-word */
+        font-size: 12px;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
     }
     .url, .url-bottom {
         font-size: 11px;
@@ -157,14 +155,14 @@
             <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
         <% } %>
         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; position: relative; z-index: 1;">
-            <div class="text" style="font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;">
+            <div class="text artist" style="padding: 0 13mm;color:<%= php.fontColor || '#000000' %>;">
                 <%= track.artist %>
                 <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
                     <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
                 <% } %>
             </div>
-            <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '42px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '32px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '38px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '36px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '34px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '36px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '40px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '38px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '34px' : php.selectedFont && php.selectedFont.includes('Ubuntu') ? '40px' : '40px' %>;font-weight:600;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;"><%= track.year %></div>
-            <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;">
+            <div class="text year" style="margin-top: 3mm;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '38px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '28px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '34px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '32px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '30px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '32px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '36px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '34px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '30px' : php.selectedFont && php.selectedFont.includes('Ubuntu') ? '36px' : '36px' %>;font-weight:500;padding: 0 13mm;color:<%= php.fontColor || '#000000' %>;"><%= track.year %></div>
+            <div class="text name" style="margin-top: 3mm;padding: 0 13mm;color:<%= php.fontColor || '#000000' %>;">
                 <%= track.name %>
                 <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
                     <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
@@ -172,9 +170,7 @@
             </div>
         </div>
         <!-- Domain URL removed from back side - always hidden -->
-        <% if (!payment.vibe) { %>
-            <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 8px; color: <%= php.fontColor || '#000000' %>; opacity: 0.25; font-family: Arial, sans-serif; z-index: 2;">#<%= typeof batchNumber !== 'undefined' ? batchNumber : php.paymentHasPlaylistId %></div>
-        <% } %>
+        <!-- Batch number removed -->
     </div>
     <div style="page-break-after: always;"></div>
 <% }); %>
