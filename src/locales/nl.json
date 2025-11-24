@@ -495,5 +495,6 @@
   "invoice.vat": "Btw",
   "invoice.over": "over",
   "invoice.shipping": "verzending",
-  "chat.welcome": "👋 Hoi! Ik ben de QRSong! assistent. Hoe kan ik je helpen?"
+  "chat.welcome": "👋 Hoi! Ik ben de QRSong! assistent. Hoe kan ik je helpen?",
+  "chat.supportRequested": "Het QRSong! supportteam is op de hoogte en neemt snel contact met je op via e-mail. Bedankt voor je geduld!"
 }

@@ -471,8 +471,8 @@
   "qrgames_activation.contactSupport": "Contato Suporte",
   "mail.freeDigitalIncluded": "Ao comprar o cartão QR físico, você também ganha a versão digital totalmente GRÁTIS! Baixe agora e use seus cards enquanto os físicos estão a caminho.",
   "mail.downloadDigitalButton": "Baixar Cartas Digitais",
-  "mail.sendToPrinterMailSubject": "Começamos a imprimir os cards da playlist {{ playlist }}!",
-  "mail.printingStarted": "Boa notícia! Já estamos imprimindo seus cards QR. Eles vão ser enviados logo.",
+  "mail.sendToPrinterMailSubject": "Já começámos a imprimir os cartões da playlist {{ playlist }}!",
+  "mail.printingStarted": "Boas notícias! Já estamos a imprimir os teus cartões QR. Vão ser enviados em breve.",
   "mail.downloadDigitalButtonPrinter": "Baixa teu PDF",
   "product_type.digital": "PDF digital",
   "product_type.sheets": "Folhas para imprimir",
@@ -490,5 +490,6 @@
   "invoice.vat": "IVA",
   "invoice.over": "sobre",
   "invoice.shipping": "envio",
-  "chat.welcome": "👋 Oi! Eu sou o assistente QRSong! Como posso te ajudar?"
+  "chat.welcome": "👋 Oi! Eu sou o assistente QRSong! Como posso te ajudar?",
+  "chat.supportRequested": "A equipa de suporte QRSong! já foi avisada e vai contactar-te por email em breve. Obrigado pela paciência!"
 }

@@ -472,7 +472,7 @@
   "mail.freeDigitalIncluded": "Kupując fizyczną kartę QR, dostajesz też wersję cyfrową ZA DARMO! Pobierz ją teraz i korzystaj od razu, zanim fizyczne karty dotrą.",
   "mail.downloadDigitalButton": "Pobierz karty cyfrowe",
   "mail.sendToPrinterMailSubject": "Zaczęliśmy drukować karty do playlisty {{ playlist }}!",
-  "mail.printingStarted": "Dobre wieści! Drukujemy twoje muzyczne karty QR. Wkrótce je wyślemy.",
+  "mail.printingStarted": "Super wieści! Drukujemy już twoje karty QR. Wkrótce je wyślemy.",
   "mail.downloadDigitalButtonPrinter": "Pobierz swój PDF",
   "product_type.digital": "Cyfrowy PDF",
   "product_type.sheets": "Arkusze do druku",
@@ -490,5 +490,6 @@
   "invoice.vat": "VAT",
   "invoice.over": "na",
   "invoice.shipping": "wysyłka",
-  "chat.welcome": "👋 Hej! Jestem asystentem QRSong! Jak mogę ci pomóc?"
+  "chat.welcome": "👋 Hej! Jestem asystentem QRSong! Jak mogę ci pomóc?",
+  "chat.supportRequested": "Zespół wsparcia QRSong! już został powiadomiony i odezwie się do ciebie na maila. Dzięki za cierpliwość!"
 }

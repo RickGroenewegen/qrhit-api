@@ -35,7 +35,7 @@
   "mail.trackingMailSubject": "Din QRSong-beställning {{ orderId }} har skickats!",
   "mail.finalizedMailSubject": "Nu har du möjlighet dig att granska spellistan '{{ playlist }}'",
   "mail.sendToPrinterMailSubject": "Vi har börjat skriva ut korten för spellistan {{ playlist }}!",
-  "mail.printingStarted": "Grymma nyheter! Vi har börjat skriva ut dina QR-musikkort. Dina fysiska kort skickas snart till dig.",
+  "mail.printingStarted": "Goda nyheter! Vi har börjat skriva ut dina QR-musikkort. De skickas snart till dig.",
   "mail.orderShipped": "Grymma nyheter! Din QRSong-beställning har skickats. Vi har bifogat din faktura i detta mejl.",
   "mail.youCanReview": "Grymma nyheter! Din spellista har granskats av vårt team. Nu har även du möjlighet att granska din spellista också. Din beställning behandlas och skickas automatiskt efter 36 timmar. Om du inte vill ändra något kan du också be oss skriva ut & skicka beställningen direkt.",
   "mail.reviewOrder": "Granska din beställning",
@@ -484,5 +484,6 @@
   "invoice.over": "over",
   "invoice.shipping": "shipping",
   "invoice.vatId": "VAT ID",
-  "chat.welcome": "👋 Hej! Jag är QRSong!-assistenten. Hur kan jag hjälpa dig?"
+  "chat.welcome": "👋 Hej! Jag är QRSong!-assistenten. Hur kan jag hjälpa dig?",
+  "chat.supportRequested": "QRSong!-supporten har fått info och kontaktar dig snart på mail. Tack för ditt tålamod!"
 }

@@ -485,5 +485,6 @@
   "invoice.vat": "增值税",
   "invoice.over": "超过",
   "invoice.shipping": "运送",
-  "chat.welcome": "👋 嗨！我是QRSong!助手。需要帮忙吗？"
+  "chat.welcome": "👋 嗨！我是QRSong!助手。需要帮忙吗？",
+  "chat.supportRequested": "QRSong!客服团队已收到通知，很快会通过邮件联系你。感谢你的耐心！"
 }

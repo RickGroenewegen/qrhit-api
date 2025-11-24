@@ -494,5 +494,6 @@
   "invoice.vat": "IVA",
   "invoice.over": "sobre",
   "invoice.shipping": "envío",
-  "chat.welcome": "👋 ¡Hola! Soy el asistente de QRSong. ¿En qué te ayudo?"
+  "chat.welcome": "👋 ¡Hola! Soy el asistente de QRSong. ¿En qué te ayudo?",
+  "chat.supportRequested": "¡El equipo de soporte de QRSong! ya fue avisado y te contactará pronto por email. ¡Gracias por tu paciencia!"
 }

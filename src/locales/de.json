@@ -477,7 +477,7 @@
   "mail.freeDigitalIncluded": "Mit deinem physischen QR-Kartenkauf bekommst du die digitale Version komplett GRATIS dazu! Lade sie jetzt runter und nutze deine Karten sofort, während die physischen Karten verschickt werden.",
   "mail.downloadDigitalButton": "Digitale Karten herunterladen",
   "mail.sendToPrinterMailSubject": "Wir haben angefangen, die Karten für die Playlist {{ playlist }} zu drucken!",
-  "mail.printingStarted": "Gute Nachrichten! Wir drucken jetzt deine QR-Musikkarten. Deine Karten sind bald auf dem Weg.",
+  "mail.printingStarted": "Gute Nachrichten! Wir drucken jetzt deine QR-Musikkarten. Deine Karten werden bald verschickt.",
   "mail.downloadDigitalButtonPrinter": "Lad dir dein PDF runter",
   "product_type.digital": "Digitale PDF",
   "product_type.sheets": "Druckbögen",
@@ -486,7 +486,7 @@
   "merchant.cards": "Karten",
   "merchant.pdf": "PDF",
   "merchant.sheets": "Blätter",
-  "mail.leaveReviewTrustpilot": "Hinterlass ’ne Bewertung auf Trustpilot",
+  "mail.leaveReviewTrustpilot": "Hinterlass doch eine Bewertung auf Trustpilot",
   "invoice.vatId": "USt-Id",
   "invoice.quantity": "Menge",
   "invoice.unitPriceExclVAT": "Stückpreis (o. MwSt.)",
@@ -495,5 +495,6 @@
   "invoice.vat": "MwSt.",
   "invoice.over": "über",
   "invoice.shipping": "Versand",
-  "chat.welcome": "👋 Hi! Ich bin der QRSong! Assistent. Wie kann ich dir helfen?"
+  "chat.welcome": "👋 Hi! Ich bin der QRSong! Assistent. Wie kann ich dir helfen?",
+  "chat.supportRequested": "Das QRSong!-Supportteam wurde benachrichtigt und meldet sich bald per E-Mail. Bedankt für deine Geduld!"
 }

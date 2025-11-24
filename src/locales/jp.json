@@ -468,7 +468,7 @@
   "mail.freeDigitalIncluded": "物理QRカードを買うと、デジタル版も完全無料！今すぐダウンロードして、カードが届くまで即使えるよ。",
   "mail.downloadDigitalButton": "デジタルカードをダウンロード",
   "mail.sendToPrinterMailSubject": "プレイリスト{{ playlist }}のカード印刷を始めたよ！",
-  "mail.printingStarted": "いいニュース！QR音楽カードを印刷中だよ。すぐ発送するね。",
+  "mail.printingStarted": "いいニュース！QR音楽カードの印刷を始めたよ。すぐ発送するね。",
   "mail.downloadDigitalButtonPrinter": "PDFをダウンロード",
   "product_type.digital": "デジタルPDF",
   "product_type.sheets": "印刷用シート",
@@ -486,5 +486,6 @@
   "invoice.vat": "消費税",
   "invoice.over": "以上",
   "invoice.shipping": "配送",
-  "chat.welcome": "👋 こんにちは！QRSong!アシスタントだよ。どうしたい？"
+  "chat.welcome": "👋 こんにちは！QRSong!アシスタントだよ。どうしたい？",
+  "chat.supportRequested": "QRSong!サポートチームに連絡したよ。すぐメールで連絡が来るから、少し待っててね！"
 }
