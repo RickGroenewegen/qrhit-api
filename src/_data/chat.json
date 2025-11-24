@@ -203,6 +203,18 @@
             ]
         },
         {
+            "slug": "costs",
+            "title": "What does it cost?",
+            "description": "The cost depends on whether you choose digital PDF cards or physical printed cards, and how many tracks are in your playlist. Volume discounts are available for digital orders of multiple playlists.",
+            "tags": [
+                "cost",
+                "price",
+                "digital",
+                "physical",
+                "volume discount"
+            ]
+        },
+        {
             "slug": "digital-version",
             "title": "What is the digital version?",
             "description": "The digital version is a PDF file that you can download, print, and cut out yourself. It's delivered instantly via email and is a cost-effective way to get your QR music cards quickly. You'll need a color printer, thicker paper, and scissors/cutter. Important to note: Each physical order also includes the digital version at no extra cost.",
