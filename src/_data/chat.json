@@ -157,7 +157,7 @@
         {
             "slug": "subscription",
             "title": "Is QRSong a subscription service?",
-            "description": "No, QRSong! is a one-time purchase. You pay once and own your QR music cards forever. There are no recurring fees, monthly charges, or hidden subscription costs. The price depends only on whether you choose digital PDF or physical cards, and how many tracks are in your playlist.",
+            "description": "No, QRSong! is a one-time purchase. You pay once and own your QR music cards forever. There are no recurring fees, monthly charges, or hidden subscription costs. The price depends only on whether you choose digital PDF or physical cards, and how many tracks are in your playlist. ",
             "tags": [
                 "subscription",
                 "payment",
@@ -205,7 +205,7 @@
         {
             "slug": "digital-version",
             "title": "What is the digital version?",
-            "description": "The digital version is a PDF file that you can download, print, and cut out yourself. It's delivered instantly via email and is a cost-effective way to get your QR music cards quickly. You'll need a color printer, thicker paper, and scissors/cutter.",
+            "description": "The digital version is a PDF file that you can download, print, and cut out yourself. It's delivered instantly via email and is a cost-effective way to get your QR music cards quickly. You'll need a color printer, thicker paper, and scissors/cutter. Important to note: Each physical order also includes the digital version at no extra cost.",
             "tags": [
                 "digital",
                 "pdf",
@@ -777,6 +777,17 @@
                 "updates",
                 "discounts",
                 "email"
+            ]
+        },
+        {
+            "slug": "change-address",
+            "title": "Can I still change my address after purchase?",
+            "description": "As long as your order hasn't been taken into production, you can change your shipping address. Contact us at info@qrsong.io as soon as possible with the new address details.",
+            "tags": [
+                "change address",
+                "shipping",
+                "update",
+                "contact"
             ]
         }
     ]
