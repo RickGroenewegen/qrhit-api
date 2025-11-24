@@ -524,7 +524,7 @@
         {
             "slug": "extra-info",
             "title": "Can I add extra information to cards?",
-            "description": "Yes! You can add personalized details in a smaller font under the artist and song title. Perfect for movie titles, country of origin, personal messages to recipients, or fun facts about songs.",
+            "description": "Yes! You can add personalized details in a smaller font under the artist and song title. Perfect for movie titles, country of origin, personal messages to recipients, or fun facts about songs. Adding information can be done after puchase. You will receive a link to review and correct your order, but also add extra info there.",
             "tags": [
                 "extra info",
                 "personalize",
@@ -579,17 +579,6 @@
             ]
         },
         {
-            "slug": "usa-shipping",
-            "title": "Do you ship to the USA?",
-            "description": "Currently we are unable to ship physical products to the USA. US customers can order the digital PDF version instead, or choose a different shipping country.",
-            "tags": [
-                "USA",
-                "United States",
-                "shipping",
-                "international"
-            ]
-        },
-        {
             "slug": "contact",
             "title": "How do I contact QRSong?",
             "description": "You can contact us through the contact form on our website. We'll get back to you as soon as possible. Our email is info@qrsong.io.",
@@ -615,7 +604,7 @@
         {
             "slug": "languages",
             "title": "What languages are supported?",
-            "description": "QRSong! supports 12+ languages including English, Dutch, German, French, Spanish, Italian, Portuguese, Polish, Swedish, Japanese, Chinese, Russian, and Hindi.",
+            "description": "QRSong! supports 12+ languages including English, Dutch, German, French, Spanish, Italian, Portuguese, Polish, Swedish, Japanese, Chinese and Swedish.",
             "tags": [
                 "languages",
                 "translation",

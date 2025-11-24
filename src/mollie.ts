@@ -450,7 +450,7 @@ class Mollie {
           }
         : {};
 
-    // Not submitted filter - if true, only include payments with printApiStatus = 'Created' AND at least one physical playlist
+    // Not submitted filter - if true, only include payments with printApiStatus = 'Created' AND at least one physical playlist with userConfirmedPrinting = true (Judged)
     const notSubmittedClause =
       typeof search.notSubmitted === 'boolean' && search.notSubmitted
         ? {
@@ -458,6 +458,7 @@ class Mollie {
             PaymentHasPlaylist: {
               some: {
                 type: 'physical',
+                userConfirmedPrinting: true,
               },
             },
           }
