@@ -155,17 +155,17 @@
             <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
         <% } %>
         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; position: relative; z-index: 1;">
-            <div class="text artist" style="padding: 0 13mm;color:<%= php.fontColor || '#000000' %>;">
+            <div class="text artist" style="padding: 0 13mm;color:device-cmyk(0.78, 0.91, 0.01, 0);">
                 <%= track.artist %>
                 <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
-                    <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
+                    <div style="font-family: Arial, sans-serif; font-size: 10px; color: device-cmyk(0.78, 0.91, 0.01, 0); margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
                 <% } %>
             </div>
-            <div class="text year" style="margin-top: 3mm;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '38px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '28px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '34px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '32px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '30px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '32px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '36px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '34px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '30px' : php.selectedFont && php.selectedFont.includes('Ubuntu') ? '36px' : '36px' %>;font-weight:500;padding: 0 13mm;color:<%= php.fontColor || '#000000' %>;"><%= track.year %></div>
-            <div class="text name" style="margin-top: 3mm;padding: 0 13mm;color:<%= php.fontColor || '#000000' %>;">
+            <div class="text year" style="margin-top: 3mm;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '38px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '28px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '34px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '32px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '30px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '32px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '36px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '34px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '30px' : php.selectedFont && php.selectedFont.includes('Ubuntu') ? '36px' : '36px' %>;font-weight:500;padding: 0 13mm;color:device-cmyk(0.78, 0.91, 0.01, 0);"><%= track.year %></div>
+            <div class="text name" style="margin-top: 3mm;padding: 0 13mm;color:device-cmyk(0.78, 0.91, 0.01, 0);">
                 <%= track.name %>
                 <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
-                    <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
+                    <div style="font-family: Arial, sans-serif; font-size: 10px; color: device-cmyk(0.78, 0.91, 0.01, 0); margin-top: 1mm;"><%- track.extraNameAttribute %></div>
                 <% } %>
             </div>
         </div>
