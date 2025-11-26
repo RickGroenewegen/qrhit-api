@@ -819,9 +819,17 @@ class Generator {
             },
           });
 
-          // Loop over the physical playlists and send them to the printer
+          // Loop over the physical playlists and send finalized mail
           if (!skipMail) {
+            // Deduplicate playlists to send only one email per unique playlist (not per copy)
+            const uniquePhysicalPlaylists = new Map();
             for (const playlistItem of physicalPlaylists) {
+              if (!uniquePhysicalPlaylists.has(playlistItem.playlist.id)) {
+                uniquePhysicalPlaylists.set(playlistItem.playlist.id, playlistItem);
+              }
+            }
+
+            for (const playlistItem of uniquePhysicalPlaylists.values()) {
               const playlist = playlistItem.playlist;
               this.mail.sendFinalizedMail(
                 payment,
