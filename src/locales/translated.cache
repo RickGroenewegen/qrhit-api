@@ -6698,6 +6698,18 @@
     "cn",
     "sv"
   ],
+  "chat.supportRequested": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
   "mail.sendToPrinterMailSubject": [
     "nl",
     "de",
@@ -6711,18 +6723,6 @@
     "sv"
   ],
   "mail.printingStarted": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "jp",
-    "cn",
-    "sv"
-  ],
-  "chat.supportRequested": [
     "nl",
     "de",
     "fr",
