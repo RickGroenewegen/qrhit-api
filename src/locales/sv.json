@@ -485,5 +485,6 @@
   "invoice.shipping": "shipping",
   "invoice.vatId": "VAT ID",
   "chat.welcome": "👋 Hej! Jag är QRSong!-assistenten. Hur kan jag hjälpa dig?",
-  "chat.supportRequested": "QRSong!-supporten har fått info och kontaktar dig snart på mail. Tack för ditt tålamod!"
+  "chat.supportRequested": "QRSong!-supporten har fått info och kontaktar dig snart på mail. Tack för ditt tålamod!",
+  "mail.multipleOrdersInfo": "Du har beställt samma spellista flera gånger. Din beställning kommer i ett paket, men varje set är buntat ihop i en eller flera högar. Kolla batchnumret nere till höger på korten för att se vilka som hör ihop."
 }

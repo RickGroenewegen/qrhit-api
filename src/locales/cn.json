@@ -486,5 +486,6 @@
   "invoice.over": "超过",
   "invoice.shipping": "运送",
   "chat.welcome": "👋 嗨！我是QRSong!助手。需要帮忙吗？",
-  "chat.supportRequested": "QRSong!客服团队已收到通知，很快会通过邮件联系你。感谢你的耐心！"
+  "chat.supportRequested": "QRSong!客服团队已收到通知，很快会通过邮件联系你。感谢你的耐心！",
+  "mail.multipleOrdersInfo": "你多次下单了同一个歌单。你的订单会一起发货，但每套会分成一叠或多叠。看卡片右下角的批次号，就能知道哪些卡属于同一套。"
 }

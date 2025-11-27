@@ -569,6 +569,43 @@ export default async function adminRoutes(
     }
   );
 
+  // Update express status for payment
+  fastify.post(
+    '/payment/:paymentId/express',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentId } = request.params;
+      const { fast } = request.body;
+
+      if (!paymentId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Payment ID is required',
+        });
+        return;
+      }
+
+      if (typeof fast !== 'boolean') {
+        reply.status(400).send({
+          success: false,
+          error: 'fast must be a boolean',
+        });
+        return;
+      }
+
+      const result = await data.updatePaymentExpress(paymentId, fast);
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'Payment not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Update blocked status for playlist
   fastify.post(
     '/admin/playlist/:playlistId/blocked',

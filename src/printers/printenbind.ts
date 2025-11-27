@@ -539,9 +539,9 @@ class PrintEnBind {
     // Add remaining articles
     for (let i = 0; i < items.length; i++) {
       items[i].payment_method = paymentMethod;
-      if (fast) {
-        items[i].production_method = 'fast';
-      }
+      // if (fast) {
+      //   items[i].production_method = 'fast';
+      // }
 
       if (items[i].type == 'physical' && !physicalOrderCreated) {
         if (items[i].type == 'physical') {
@@ -1880,6 +1880,68 @@ class PrintEnBind {
       this.logger.log(
         color.red.bold(`Error updating payments with printApiOrderId: ${error}`)
       );
+    }
+  }
+
+  /**
+   * Updates the production method for an existing PrintEnBind order
+   * @param orderId - The PrintEnBind order ID
+   * @param productionMethod - 'fast' or 'standard'
+   */
+  public async updateProductionMethod(
+    orderId: string,
+    productionMethod: 'fast' | 'standard'
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const authToken = await this.getAuthToken();
+
+      const response = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}`,
+        {
+          method: 'PUT',
+          headers: {
+            Authorization: authToken!,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            production_method: productionMethod,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        this.logger.log(
+          color.red.bold(
+            `Failed to update production method for order ${color.white.bold(
+              orderId
+            )}: ${errorText}`
+          )
+        );
+        return {
+          success: false,
+          error: `Failed to update production method: ${response.statusText}`,
+        };
+      }
+
+      this.logger.log(
+        color.blue.bold(
+          `Updated production method for order ${color.white.bold(
+            orderId
+          )} to ${color.white.bold(productionMethod)}`
+        )
+      );
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating production method for order ${color.white.bold(
+            orderId
+          )}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
     }
   }
 }

@@ -64,6 +64,7 @@
 	"mail.leaveReview": "Leave a Review",
 	"mail.leaveReviewTrustpilot": "Leave a Review on Trustpilot",
 	"mail.unsubscribe": "Unsubscribe",
+	"mail.multipleOrdersInfo": "You've ordered the same playlist multiple times. Your order will arrive in one package, but each individual set will be bundled together in one or more stacks. Look at the batch number in the bottom right corner of the cards to identify which cards belong to the same set.",
 	"portal_welcome.title": "Welcome to your OnzeVibe portal",
 	"portal_welcome.intro": "A portal has been created for",
 	"portal_welcome.intro2": "You can now log in and manage your company list.",

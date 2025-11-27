@@ -491,5 +491,6 @@
   "invoice.over": "na",
   "invoice.shipping": "wysyłka",
   "chat.welcome": "👋 Hej! Jestem asystentem QRSong! Jak mogę ci pomóc?",
-  "chat.supportRequested": "Zespół wsparcia QRSong! już został powiadomiony i odezwie się do ciebie na maila. Dzięki za cierpliwość!"
+  "chat.supportRequested": "Zespół wsparcia QRSong! już został powiadomiony i odezwie się do ciebie na maila. Dzięki za cierpliwość!",
+  "mail.multipleOrdersInfo": "Zamówiłeś tę samą playlistę kilka razy. Twoje zamówienie przyjdzie w jednej paczce, ale każdy zestaw będzie spięty w jedną lub więcej kup. Sprawdź numer partii w prawym dolnym rogu kart, żeby zobaczyć, które należą do tego samego zestawu."
 }

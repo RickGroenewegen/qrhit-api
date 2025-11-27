@@ -5,6 +5,14 @@
 {{ translations.weHopeYouHaveFun }}
 
 {{ translations.weHopeYouHaveFun2 }}
+{{#each playlists}}
+{{#if (gt this.amount 1)}}
+
+---
+{{ ../translations.multipleOrdersInfo }}
+---
+{{/if}}
+{{/each}}
 
 {{ translations.orderInformation }}
 -------------------

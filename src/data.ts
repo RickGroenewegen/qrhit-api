@@ -36,6 +36,7 @@ import Spotify, {
 } from './spotify';
 import * as ExcelJS from 'exceljs';
 import AppTheme from './apptheme';
+import PrintEnBind from './printers/printenbind';
 
 const TRACK_LINKS_CACHE_PREFIX = 'track_links_v6';
 const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
@@ -2348,6 +2349,54 @@ class Data {
       this.logger.log(
         color.red.bold(
           `Error updating printer hold for payment ${color.white.bold(
+            paymentId
+          )}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
+  public async updatePaymentExpress(
+    paymentId: string,
+    fast: boolean
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const payment = await this.prisma.payment.findUnique({
+        where: { paymentId },
+        select: { id: true, printApiOrderId: true },
+      });
+
+      if (!payment) {
+        return { success: false, error: 'Payment not found' };
+      }
+
+      await this.prisma.payment.update({
+        where: { paymentId },
+        data: { fast },
+      });
+
+      // If there's a PrintEnBind order, update the production method
+      if (payment.printApiOrderId && payment.printApiOrderId !== '') {
+        const printenbind = PrintEnBind.getInstance();
+        await printenbind.updateProductionMethod(
+          payment.printApiOrderId,
+          fast ? 'fast' : 'standard'
+        );
+      }
+
+      this.logger.log(
+        color.blue.bold(
+          `Updated express for payment ${color.white.bold(
+            paymentId
+          )} to ${color.white.bold(fast)}`
+        )
+      );
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating express for payment ${color.white.bold(
             paymentId
           )}: ${error.message}`
         )

@@ -42,6 +42,20 @@
                                             <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.greatNews }}</p>
                                             <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.weHopeYouHaveFun }}</p>
                                             <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.weHopeYouHaveFun2 }}</p>
+                                            {{#each playlists}}
+                                            {{#if (gt this.amount 1)}}
+                                            <!-- Info box for multiple quantity orders -->
+                                            <table style="width: 100%; margin-bottom: 24px;" cellpadding="0" cellspacing="0" role="presentation">
+                                                <tr>
+                                                    <td style="padding: 16px; background-color: #ebf8ff; border: 1px solid #90cdf4; border-radius: 4px;">
+                                                        <p style="margin: 0; font-size: 14px; line-height: 22px; color: #2b6cb0;">
+                                                            {{ ../translations.multipleOrdersInfo }}
+                                                        </p>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            {{/if}}
+                                            {{/each}}
                                         </td>
                                     </tr>
                                 </table>

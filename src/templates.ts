@@ -25,6 +25,10 @@ Handlebars.registerHelper(
   }
 );
 
+Handlebars.registerHelper('gt', function (a: number, b: number) {
+  return a > b;
+});
+
 class Templates {
   public async render(templatePath: string, data: any): Promise<string> {
     const fullPath = `${process.env['APP_ROOT']}/templates/${templatePath}.hbs`;

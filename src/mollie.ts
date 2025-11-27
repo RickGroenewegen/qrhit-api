@@ -410,6 +410,7 @@ class Mollie {
               { orderId: { contains: search.textSearch } },
               { printApiOrderId: { contains: search.textSearch } },
               { paymentId: { contains: search.textSearch } },
+              { shippingCode: { contains: search.textSearch } },
               {
                 PaymentHasPlaylist: {
                   some: {

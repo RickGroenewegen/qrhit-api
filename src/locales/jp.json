@@ -487,5 +487,6 @@
   "invoice.over": "以上",
   "invoice.shipping": "配送",
   "chat.welcome": "👋 こんにちは！QRSong!アシスタントだよ。どうしたい？",
-  "chat.supportRequested": "QRSong!サポートチームに連絡したよ。すぐメールで連絡が来るから、少し待っててね！"
+  "chat.supportRequested": "QRSong!サポートチームに連絡したよ。すぐメールで連絡が来るから、少し待っててね！",
+  "mail.multipleOrdersInfo": "同じプレイリストを複数回注文したよ。注文は1つの箱で届くけど、各セットは1つか複数の束でまとめられてる。カード右下のバッチ番号を見れば、どれが同じセットか分かるよ。"
 }

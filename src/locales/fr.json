@@ -496,5 +496,6 @@
   "invoice.over": "sur",
   "invoice.shipping": "livraison",
   "chat.welcome": "👋 Salut ! Je suis l’assistant QRSong ! Comment puis-je t’aider ?",
-  "chat.supportRequested": "L'équipe support QRSong! a été prévenue et te contactera bientôt par mail. Merci de ta patience !"
+  "chat.supportRequested": "L'équipe support QRSong! a été prévenue et te contactera bientôt par mail. Merci de ta patience !",
+  "mail.multipleOrdersInfo": "Tu as commandé la même playlist plusieurs fois. Ta commande arrivera dans un seul colis, mais chaque set sera regroupé en une ou plusieurs piles. Regarde le numéro de lot en bas à droite des cartes pour voir quelles cartes vont ensemble."
 }
