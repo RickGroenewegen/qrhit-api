@@ -7,6 +7,7 @@ import Logger from '../logger';
 import Utils from '../utils';
 import Translation from '../translation';
 import fs from 'fs/promises';
+import QuizCardGame from '../games/quiz-card';
 
 export default async function musicRoutes(fastify: FastifyInstance) {
   const spotify = Spotify.getInstance();
@@ -218,6 +219,15 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   fastify.get('/qrlink2/:trackId/:php', async (request: any, reply) => {
     const headers = request.headers;
     const userAgent = headers['user-agent'] || '';
+    const trackId = Number(request.params.trackId);
+    const phpId = Number(request.params.php);
+
+    // Check and trigger quiz round if active game exists (non-blocking)
+    QuizCardGame.getInstance().handleCardScan(phpId, trackId).catch((err) => {
+      console.error(`[Quiz] handleCardScan error for php=${phpId}, track=${trackId}:`, err);
+    });
+
+    // Continue with normal qrlink2 behavior
     const result = await data.getLink(
       request.params.trackId,
       request.clientIp,
