@@ -42,9 +42,20 @@
             ]
         },
         {
+            "slug": "upgrade-to-real-cards",
+            "title": "I have changed my mind, can I upgrade my digital order to physical cards?",
+            "description": "Yes, you can upgrade your digital order to physical cards. Please contact support with your order details and we will provide you with a discount code for the difference in price. Once you have the discount code, you can place a new order for physical cards using that code at checkout. Note that the original digital order will remain valid and you will still have access to the digital version as well.",
+            "tags": [
+                "upgrade",
+                "digital to physical",
+                "change order",
+                "physical cards"
+            ]
+        },
+        {
             "slug": "cancel-order",
             "title": "Can I cancel my order?",
-            "description": "Yes, as long as the order has not been taken into production we can cancel it for you. Please contact support as soon as possible with your order details. Once production has started, we cannot cancel orders due to the custom nature of our products.",
+            "description": "Yes, as long as the order has not been taken into production we can cancel it for you. Please contact support as soon as possible with your order details. Once production has started, we cannot cancel orders due to the custom nature of our products. If you want to cancel a digital PDF order because you want to upgrade to physical cards instead, we can provide you with a discount code for the difference in price. Please contact support for assistance at info@qrsong.io",
             "tags": [
                 "cancel",
                 "order",
