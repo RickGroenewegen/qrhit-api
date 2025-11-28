@@ -2116,6 +2116,31 @@ export default async function adminRoutes(
     }
   });
 
+  // Toggle support needed status for a chat
+  fastify.post('/admin/chats/:id/support-needed', getAuthHandler(['admin']), async (request: any, reply) => {
+    try {
+      const chatId = parseInt(request.params.id, 10);
+      const { supportNeeded } = request.body;
+
+      if (typeof supportNeeded !== 'boolean') {
+        return reply.status(400).send({
+          success: false,
+          error: 'supportNeeded must be a boolean',
+        });
+      }
+
+      const chatService = new ChatService();
+      await chatService.toggleSupportNeeded(chatId, supportNeeded);
+
+      return { success: true, supportNeeded };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to toggle support needed status',
+      });
+    }
+  });
+
   // Send admin message to a chat
   fastify.post('/admin/chats/:id/message', getAuthHandler(['admin']), async (request: any, reply) => {
     try {

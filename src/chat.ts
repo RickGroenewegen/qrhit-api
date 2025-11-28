@@ -268,6 +268,16 @@ export class ChatService {
   }
 
   /**
+   * Toggle support needed status
+   */
+  public async toggleSupportNeeded(chatId: number, supportNeeded: boolean): Promise<void> {
+    await this.prisma.chat.update({
+      where: { id: chatId },
+      data: { supportNeeded },
+    });
+  }
+
+  /**
    * Mark chat as seen by admin
    */
   public async markChatAsSeen(chatId: number): Promise<void> {
