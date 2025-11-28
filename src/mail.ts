@@ -15,6 +15,8 @@ import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import crypto from 'crypto';
 import cluster from 'cluster';
+import OpenAI from 'openai';
+import { ChatService } from './chat';
 
 const prisma = new PrismaClient();
 
@@ -45,6 +47,7 @@ class Mail {
   private pushover = new PushoverClient();
   private utils = new Utils();
   private logger = new Logger();
+  private openai = new OpenAI({ apiKey: process.env['OPENAI_TOKEN'] });
 
   private constructor() {
     this.initializeSES();
@@ -631,27 +634,57 @@ class Mail {
       )
     );
 
-    const subject = otherData.subject;
+    // Store in database (locale will be detected from message)
+    const contactEmail = await prisma.contactEmail.create({
+      data: {
+        name: otherData.name,
+        email: otherData.email,
+        subject: otherData.subject || null,
+        message: otherData.message,
+        locale: null, // Will be detected by AI
+        ip: ip,
+      },
+    });
 
+    // Run translation, draft generation, email notification, and pushover in background (don't block response)
+    this.processContactFormBackground(contactEmail.id, otherData, data.name, ip);
+  }
+
+  /**
+   * Process contact form background tasks (translation, draft reply, email notification, pushover)
+   * This runs asynchronously after the API response is sent
+   */
+  private async processContactFormBackground(
+    emailId: number,
+    otherData: any,
+    senderName: string,
+    ip: string
+  ): Promise<void> {
+    // Translate message to Dutch
+    this.translateContactEmailToDutch(emailId, otherData.message);
+
+    // Generate draft reply using AI knowledge base (with tool calling support)
+    this.generateDraftReply(emailId, otherData.message, otherData.name, otherData.email);
+
+    // Send notification email to admin
     const message = `
     <p><strong>Name:</strong> ${otherData.name}</p>
     <p><strong>E-mail:</strong> ${otherData.email}</p>
     <p><strong>Message:</strong> ${otherData.message}</p>`;
 
     const rawEmail = await this.renderRaw({
-      from: `${data.name} <${process.env['FROM_EMAIL']}>`,
+      from: `${senderName} <${process.env['FROM_EMAIL']}>`,
       to: process.env['INFO_EMAIL']!,
       subject: `${process.env['PRODUCT_NAME']} Contact form`,
       html: message,
       text: message,
       attachments: [] as Attachment[],
       unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
-      replyTo: data.email,
+      replyTo: otherData.email,
     });
 
     const emailBuffer = Buffer.from(rawEmail);
 
-    // Prepare and send the raw email
     const command = new SendRawEmailCommand({
       RawMessage: {
         Data: emailBuffer,
@@ -659,15 +692,168 @@ class Mail {
     });
 
     if (this.ses) {
-      const result = await this.ses.send(command);
+      await this.ses.send(command);
       this.pushover.sendMessage(
         {
           title: `QRSong! Contactformulier`,
-          message: `Nieuw bericht: van ${data.email}`,
+          message: `Nieuw bericht: van ${otherData.email}`,
           sound: 'incoming',
         },
         ip
       );
+    }
+  }
+
+  /**
+   * Detect language and translate contact email message to Dutch using function calling
+   */
+  private async translateContactEmailToDutch(emailId: number, message: string): Promise<void> {
+    try {
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.3,
+        messages: [
+          {
+            role: 'system',
+            content: 'Detect the language of the text and translate it to Dutch. Use the provided function to return both the detected language code and the Dutch translation.',
+          },
+          { role: 'user', content: message },
+        ],
+        functions: [
+          {
+            name: 'processTranslation',
+            description: 'Process the detected language and Dutch translation of the message',
+            parameters: {
+              type: 'object',
+              properties: {
+                detectedLocale: {
+                  type: 'string',
+                  description: 'ISO 639-1 language code of the detected language (e.g., en, nl, de, fr, es, it, pt, pl, sv, ru, cn, jp, hin)',
+                },
+                dutchTranslation: {
+                  type: 'string',
+                  description: 'The message translated to Dutch. If the original is already in Dutch, return the original text.',
+                },
+              },
+              required: ['detectedLocale', 'dutchTranslation'],
+            },
+          },
+        ],
+        function_call: { name: 'processTranslation' },
+      });
+
+      const functionCall = response.choices[0]?.message?.function_call;
+      if (functionCall?.arguments) {
+        const result = JSON.parse(functionCall.arguments);
+        const { detectedLocale, dutchTranslation } = result;
+
+        await prisma.contactEmail.update({
+          where: { id: emailId },
+          data: {
+            locale: detectedLocale,
+            translatedMessage: dutchTranslation,
+          },
+        });
+        this.logger.log(color.green(`[ContactEmail] Detected locale: ${detectedLocale}, translated message ${emailId} to Dutch`));
+      }
+    } catch (error) {
+      this.logger.log(color.red(`[ContactEmail] Translation error: ${error}`));
+    }
+  }
+
+  /**
+   * Generate a draft reply for a contact email using AI knowledge base (async, doesn't block)
+   * Uses ChatService's processToolsForContext for tool calling (e.g., shipping status lookup)
+   */
+  private async generateDraftReply(emailId: number, message: string, customerName: string, customerEmail: string): Promise<void> {
+    try {
+      // Use ChatService to get relevant topics and process tools
+      const chatService = new ChatService();
+      const topics = await chatService.getTopics(message, []);
+
+      // Process tools with customer email as additional data for tool execution
+      // This allows tools like getShippingStatus to use the customer's email
+      const { toolContext, knowledgeContext } = await chatService.processToolsForContext(
+        message,
+        topics,
+        [], // No chat history for contact form emails
+        { email: customerEmail } // Pass customer email for tool execution
+      );
+
+      // Generate draft reply with knowledge and tool results
+      const response = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.5,
+        messages: [
+          {
+            role: 'system',
+            content: `You are writing a professional, friendly email reply on behalf of Rick from QRSong!.
+Write the reply in Dutch. Be warm and helpful.
+
+IMPORTANT FORMATTING:
+- Start with a friendly greeting using the customer's first name
+- Be thorough and detailed in your response (this is an email, not a chat - be comprehensive)
+- Use proper email formatting with paragraphs
+- End with a friendly closing and sign off with just "Rick," (the email template already adds "QRSong!" below)
+- If you cannot fully answer based on the knowledge provided, include a helpful response anyway and mention that Rick will follow up with more details if needed
+${knowledgeContext}${toolContext}`,
+          },
+          {
+            role: 'user',
+            content: `Customer "${customerName}" (${customerEmail}) sent the following message:\n\n${message}\n\nWrite a helpful email reply in Dutch.`,
+          },
+        ],
+      });
+
+      const draftReply = response.choices[0]?.message?.content;
+      if (draftReply) {
+        await prisma.contactEmail.update({
+          where: { id: emailId },
+          data: { draftReply },
+        });
+        this.logger.log(color.green(`[ContactEmail] Generated draft reply for email ${emailId}`));
+      }
+    } catch (error) {
+      this.logger.log(color.red(`[ContactEmail] Draft reply generation error: ${error}`));
+    }
+  }
+
+  /**
+   * Translate content to a specific locale
+   */
+  public async translateToLocale(content: string, targetLocale: string): Promise<string> {
+    const localeNames: { [key: string]: string } = {
+      en: 'English',
+      de: 'German',
+      fr: 'French',
+      es: 'Spanish',
+      it: 'Italian',
+      pt: 'Portuguese',
+      pl: 'Polish',
+      sv: 'Swedish',
+      jp: 'Japanese',
+      cn: 'Chinese',
+    };
+
+    const targetLang = localeNames[targetLocale] || 'English';
+
+    try {
+      const result = await this.openai.chat.completions.create({
+        model: 'gpt-4o-mini',
+        temperature: 0.3,
+        messages: [
+          {
+            role: 'system',
+            content: `Translate the following Dutch text to ${targetLang}. Keep any formatting intact. Only return the translation, nothing else.`,
+          },
+          { role: 'user', content },
+        ],
+      });
+
+      return result.choices[0]?.message?.content || content;
+    } catch (error) {
+      this.logger.log(color.red(`[translateToLocale] Error: ${error}`));
+      return content;
     }
   }
 

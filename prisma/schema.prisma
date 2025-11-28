@@ -891,3 +891,33 @@ model ChatMessage {
   @@index([chatId])
   @@map("chat_messages")
 }
+
+model ContactEmail {
+  id                Int                 @id @default(autoincrement())
+  name              String              @db.VarChar(255)
+  email             String              @db.VarChar(255)
+  locale            String?             @db.VarChar(10)
+  subject           String?             @db.VarChar(255)
+  message           String              @db.Text
+  translatedMessage String?             @db.Text
+  draftReply        String?             @db.Text
+  ip                String?             @db.VarChar(45)
+  isRead            Boolean             @default(false)
+  createdAt         DateTime            @default(now())
+  updatedAt         DateTime            @updatedAt
+  replies           ContactEmailReply[]
+
+  @@map("contact_emails")
+}
+
+model ContactEmailReply {
+  id                Int          @id @default(autoincrement())
+  contactEmailId    Int
+  content           String       @db.Text
+  translatedContent String?      @db.Text
+  createdAt         DateTime     @default(now())
+  contactEmail      ContactEmail @relation(fields: [contactEmailId], references: [id], onDelete: Cascade)
+
+  @@index([contactEmailId])
+  @@map("contact_email_replies")
+}

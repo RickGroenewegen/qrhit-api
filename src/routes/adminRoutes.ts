@@ -2240,6 +2240,206 @@ export default async function adminRoutes(
     }
   });
 
+  // ============================================
+  // Contact Email Management Endpoints
+  // ============================================
+
+  // Get all contact emails
+  fastify.get('/admin/emails', getAuthHandler(['admin']), async (request: any, reply) => {
+    try {
+      const emails = await prisma.contactEmail.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          replies: {
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+      return { success: true, emails };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to fetch emails',
+      });
+    }
+  });
+
+  // Get unread email count
+  fastify.get('/admin/emails/unread-count', getAuthHandler(['admin']), async (request: any, reply) => {
+    try {
+      const count = await prisma.contactEmail.count({
+        where: { isRead: false },
+      });
+      return { success: true, count };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to count unread emails',
+      });
+    }
+  });
+
+  // Get single contact email with replies
+  fastify.get('/admin/emails/:id', getAuthHandler(['admin']), async (request: any, reply) => {
+    try {
+      const emailId = parseInt(request.params.id, 10);
+      const email = await prisma.contactEmail.findUnique({
+        where: { id: emailId },
+        include: {
+          replies: {
+            orderBy: { createdAt: 'asc' },
+          },
+        },
+      });
+
+      if (!email) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Email not found',
+        });
+      }
+
+      return { success: true, email };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to fetch email',
+      });
+    }
+  });
+
+  // Mark email as read
+  fastify.post('/admin/emails/:id/mark-read', getAuthHandler(['admin']), async (request: any, reply) => {
+    try {
+      const emailId = parseInt(request.params.id, 10);
+      await prisma.contactEmail.update({
+        where: { id: emailId },
+        data: { isRead: true },
+      });
+      return { success: true };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to mark email as read',
+      });
+    }
+  });
+
+  // Update email locale
+  fastify.post('/admin/emails/:id/update-locale', getAuthHandler(['admin']), async (request: any, reply) => {
+    try {
+      const emailId = parseInt(request.params.id, 10);
+      const { locale } = request.body;
+
+      if (!locale || typeof locale !== 'string') {
+        return reply.status(400).send({
+          success: false,
+          error: 'Locale is required',
+        });
+      }
+
+      await prisma.contactEmail.update({
+        where: { id: emailId },
+        data: { locale },
+      });
+      return { success: true };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to update locale',
+      });
+    }
+  });
+
+  // Reply to contact email
+  fastify.post('/admin/emails/:id/reply', getAuthHandler(['admin']), async (request: any, reply) => {
+    try {
+      const emailId = parseInt(request.params.id, 10);
+      const { content } = request.body;
+
+      if (!content || typeof content !== 'string') {
+        return reply.status(400).send({
+          success: false,
+          error: 'Content is required',
+        });
+      }
+
+      // Get the original email to find recipient and locale
+      const contactEmail = await prisma.contactEmail.findUnique({
+        where: { id: emailId },
+      });
+
+      if (!contactEmail) {
+        return reply.status(404).send({
+          success: false,
+          error: 'Email not found',
+        });
+      }
+
+      // Translate Dutch content to user's locale
+      const mailService = Mail.getInstance();
+      const targetLocale = contactEmail.locale || 'en';
+      let translatedContent = content;
+
+      // Only translate if locale is not Dutch
+      if (targetLocale !== 'nl') {
+        translatedContent = await mailService.translateToLocale(content, targetLocale);
+      }
+
+      // Store the reply
+      const replyRecord = await prisma.contactEmailReply.create({
+        data: {
+          contactEmailId: emailId,
+          content: content, // Original Dutch
+          translatedContent: translatedContent, // Translated
+        },
+      });
+
+      // Send the reply email using sendCustomMail
+      const subject = contactEmail.subject
+        ? `Re: ${contactEmail.subject}`
+        : 'Re: Your message to QRSong!';
+
+      await mailService.sendCustomMail(
+        contactEmail.email,
+        contactEmail.name,
+        subject,
+        translatedContent,
+        targetLocale
+      );
+
+      return {
+        success: true,
+        reply: replyRecord,
+      };
+    } catch (error: any) {
+      console.error('Error sending reply:', error);
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to send reply',
+      });
+    }
+  });
+
+  // Delete contact email
+  fastify.delete('/admin/emails/:id', getAuthHandler(['admin']), async (request: any, reply) => {
+    try {
+      const emailId = parseInt(request.params.id, 10);
+
+      // Delete will cascade to replies due to onDelete: Cascade
+      await prisma.contactEmail.delete({
+        where: { id: emailId },
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      return reply.status(500).send({
+        success: false,
+        error: error.message || 'Failed to delete email',
+      });
+    }
+  });
+
   // Get email templates from mail.json
   fastify.get(
     '/admin/email-templates',

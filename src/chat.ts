@@ -459,14 +459,14 @@ If the question is a greeting or general chat, return an empty array.`,
   /**
    * Get full knowledge items by slugs
    */
-  private getKnowledgeBySlug(slugs: string[]): KnowledgeItem[] {
+  public getKnowledgeBySlug(slugs: string[]): KnowledgeItem[] {
     return this.knowledge.filter((item) => slugs.includes(item.slug));
   }
 
   /**
    * Extract required data from chat history using AI
    */
-  private async extractRequiredData(
+  public async extractRequiredData(
     requiredData: RequiredDataItem[],
     chatHistory: ChatHistoryMessage[],
     currentQuestion: string
@@ -635,7 +635,7 @@ Only extract data that was clearly provided by the user.`,
   /**
    * Execute a tool and return the result
    */
-  private async executeTool(toolName: string, data: { [key: string]: string }): Promise<string> {
+  public async executeTool(toolName: string, data: { [key: string]: string }): Promise<string> {
     switch (toolName) {
       case 'getShippingStatus':
         return this.getShippingStatus(data['orderNumber'], data['email']);
@@ -644,6 +644,77 @@ Only extract data that was clearly provided by the user.`,
       default:
         return `Unknown tool: ${toolName}`;
     }
+  }
+
+  /**
+   * Process tools for relevant knowledge and return context with tool results
+   * Can be used by chat, email, or any other system that needs tool execution
+   * @param question The user's question/message
+   * @param topicSlugs The relevant topic slugs
+   * @param chatHistory Optional chat history for context
+   * @param additionalData Optional additional data to use for tool execution (e.g., email from contact form)
+   * @returns Object with toolContext string and knowledge context
+   */
+  public async processToolsForContext(
+    question: string,
+    topicSlugs: string[],
+    chatHistory: ChatHistoryMessage[] = [],
+    additionalData: { [key: string]: string } = {}
+  ): Promise<{ toolContext: string; knowledgeContext: string; missingData: string[] }> {
+    const relevantKnowledge = this.getKnowledgeBySlug(topicSlugs);
+    let toolContext = '';
+    let missingData: string[] = [];
+
+    // Build knowledge context
+    const knowledgeContext = relevantKnowledge.length > 0
+      ? `\n\nRelevant information:\n${relevantKnowledge.map((k) => `**${k.title}**\n${k.description}`).join('\n\n')}`
+      : '';
+
+    // Check if any knowledge item has tools
+    for (const knowledge of relevantKnowledge) {
+      if (knowledge.tools && knowledge.tools.length > 0) {
+        for (const tool of knowledge.tools) {
+          this.logger.log(color.magenta.bold(`[processToolsForContext] `) + color.magenta(`Tool detected: `) + color.white.bold(`${tool.name}`));
+
+          // Extract required data from conversation
+          const extractedData = await this.extractRequiredData(
+            tool.requiredData,
+            chatHistory,
+            question
+          );
+
+          // Merge with additional data (e.g., email from contact form)
+          const mergedData = { ...extractedData, ...additionalData };
+
+          this.logger.log(color.magenta.bold(`[processToolsForContext] `) + color.magenta(`Extracted data: `) + color.white.bold(JSON.stringify(mergedData)));
+
+          // Check if all required data is present
+          const missing = tool.requiredData.filter(
+            (rd) => !mergedData[rd.name]
+          );
+
+          if (missing.length > 0) {
+            missingData = missing.map((d) => d.userPrompt || d.description);
+            this.logger.log(color.yellow.bold(`[processToolsForContext] `) + color.yellow(`Missing data: `) + color.white.bold(missingData.join(', ')));
+            toolContext = `\n\nIMPORTANT: To help the user, you need the following information that they haven't provided yet:\n${missingData.map((d) => `- ${d}`).join('\n')}\n\nPolitely ask the user to provide this information in a natural, friendly way.`;
+          } else {
+            // All data present - execute tool
+            this.logger.log(color.green.bold(`[processToolsForContext] `) + color.green(`Executing tool: `) + color.white.bold(`${tool.name}`));
+
+            const toolResult = await this.executeTool(
+              tool.name,
+              mergedData as { [key: string]: string }
+            );
+
+            this.logger.log(color.green.bold(`[processToolsForContext] `) + color.green(`Tool result: `) + color.white.bold(toolResult.substring(0, 100)));
+
+            toolContext = `\n\nTOOL RESULT (use this information to answer the user):\n${toolResult}`;
+          }
+        }
+      }
+    }
+
+    return { toolContext, knowledgeContext, missingData };
   }
 
   /**
@@ -657,59 +728,12 @@ Only extract data that was clearly provided by the user.`,
   ): Promise<string> {
     this.logger.log(color.cyan.bold(`[answerQuestion] `) + color.cyan(`Generating answer with `) + color.white.bold(`${topicSlugs.length}`) + color.cyan(` topics and `) + color.white.bold(`${chatHistory.length}`) + color.cyan(` history items`));
 
-    const relevantKnowledge = this.getKnowledgeBySlug(topicSlugs);
-
-    // Check if any knowledge item has tools
-    let toolContext = '';
-    for (const knowledge of relevantKnowledge) {
-      if (knowledge.tools && knowledge.tools.length > 0) {
-        for (const tool of knowledge.tools) {
-          this.logger.log(color.magenta.bold(`[answerQuestion] `) + color.magenta(`Tool detected: `) + color.white.bold(`${tool.name}`));
-
-          // Extract required data from conversation
-          const extractedData = await this.extractRequiredData(
-            tool.requiredData,
-            chatHistory,
-            question
-          );
-
-          this.logger.log(color.magenta.bold(`[answerQuestion] `) + color.magenta(`Extracted data: `) + color.white.bold(JSON.stringify(extractedData)));
-
-          // Check if all required data is present
-          const missingData = tool.requiredData.filter(
-            (rd) => !extractedData[rd.name]
-          );
-
-          if (missingData.length > 0) {
-            // Missing data - ask user for it
-            const missingDescriptions = missingData
-              .map((d) => `${d.name} (${d.description})`)
-              .join(', ');
-
-            this.logger.log(color.yellow.bold(`[answerQuestion] `) + color.yellow(`Missing data: `) + color.white.bold(missingDescriptions));
-
-            // Use userPrompt for user-facing messages, description for AI data extraction
-            toolContext = `\n\nIMPORTANT: To help the user, you need the following information that they haven't provided yet:\n${missingData.map((d) => `- ${d.userPrompt || d.description}`).join('\n')}\n\nPolitely ask the user to provide this information in a natural, friendly way.`;
-          } else {
-            // All data present - execute tool
-            this.logger.log(color.green.bold(`[answerQuestion] `) + color.green(`Executing tool: `) + color.white.bold(`${tool.name}`));
-
-            const toolResult = await this.executeTool(
-              tool.name,
-              extractedData as { [key: string]: string }
-            );
-
-            this.logger.log(color.green.bold(`[answerQuestion] `) + color.green(`Tool result: `) + color.white.bold(toolResult.substring(0, 100)));
-
-            toolContext = `\n\nTOOL RESULT (use this information to answer the user):\n${toolResult}`;
-          }
-        }
-      }
-    }
-
-    const knowledgeContext = relevantKnowledge.length > 0
-      ? `\n\nRelevant information:\n${relevantKnowledge.map((k) => `**${k.title}**\n${k.description}`).join('\n\n')}`
-      : '';
+    // Use shared tool processing logic
+    const { toolContext, knowledgeContext } = await this.processToolsForContext(
+      question,
+      topicSlugs,
+      chatHistory
+    );
 
     const messages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
       {
