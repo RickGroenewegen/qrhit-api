@@ -871,6 +871,7 @@ model Chat {
   supportNeeded  Boolean       @default(false)
   hijacked       Boolean       @default(false)
   unseenMessages Boolean       @default(true)
+  lastActivityAt DateTime      @default(now())
   createdAt      DateTime      @default(now())
   updatedAt      DateTime      @updatedAt
   messages       ChatMessage[]

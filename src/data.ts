@@ -1694,7 +1694,29 @@ class Data {
     tracks: any,
     trackOrder?: Map<string, number>
   ): Promise<any> {
-    const providedTrackIds = tracks.map((track: any) => track.id);
+    // Filter out any tracks with null/undefined artists or episode URLs (podcast episodes)
+    const validTracks = tracks.filter((track: any) => {
+      if (!track.artist) {
+        this.logger.log(
+          color.yellow.bold(
+            `Skipping track '${track.name || track.id}' - missing artist`
+          )
+        );
+        return false;
+      }
+      // Filter out podcast episodes
+      if (track.link?.includes('/episode/') || track.spotifyLink?.includes('/episode/')) {
+        this.logger.log(
+          color.yellow.bold(
+            `Skipping episode '${track.name || track.id}' - not a music track`
+          )
+        );
+        return false;
+      }
+      return true;
+    });
+
+    const providedTrackIds = validTracks.map((track: any) => track.id);
 
     this.logger.log(
       color.blue.bold(
@@ -1750,7 +1772,7 @@ class Data {
     const newTracks = [];
     const tracksToUpdate = [];
 
-    for (const track of tracks) {
+    for (const track of validTracks) {
       const existingTrack = existingTrackMap.get(track.id);
       if (existingTrack) {
         // Check if any data has changed

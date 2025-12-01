@@ -1974,7 +1974,10 @@ export default async function adminRoutes(
             some: {}, // Only include chats with at least one message
           },
         },
-        orderBy: { createdAt: 'desc' },
+        orderBy: [
+          { lastActivityAt: 'desc' },
+          { createdAt: 'desc' },
+        ],
         include: {
           _count: {
             select: { messages: true },
@@ -1991,6 +1994,7 @@ export default async function adminRoutes(
         hijacked: chat.hijacked,
         unseenMessages: chat.unseenMessages,
         messageCount: chat._count.messages,
+        lastActivityAt: chat.lastActivityAt,
         createdAt: chat.createdAt,
       }));
 
@@ -2007,7 +2011,12 @@ export default async function adminRoutes(
   fastify.get('/admin/chats/support-count', getAuthHandler(['admin']), async (_request: any, reply) => {
     try {
       const count = await prisma.chat.count({
-        where: { unseenMessages: true },
+        where: {
+          unseenMessages: true,
+          messages: {
+            some: {}, // Only count chats that have at least one message
+          },
+        },
       });
 
       return { success: true, count };

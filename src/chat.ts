@@ -204,6 +204,12 @@ export class ChatService {
       },
     });
 
+    // Update lastActivityAt on the chat
+    await this.prisma.chat.update({
+      where: { id: chatId },
+      data: { lastActivityAt: new Date() },
+    });
+
     await this.invalidateChatCache(chatId);
 
     // Translate to user's locale if not Dutch
@@ -308,6 +314,13 @@ export class ChatService {
         content,
       },
     });
+
+    // Update lastActivityAt on the chat
+    await this.prisma.chat.update({
+      where: { id: chatId },
+      data: { lastActivityAt: new Date() },
+    });
+
     await this.invalidateChatCache(chatId);
     return message.id;
   }

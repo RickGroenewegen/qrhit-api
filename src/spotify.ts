@@ -1023,31 +1023,45 @@ class Spotify {
       return null;
     }
 
+    // Filter out podcast episodes (they have /episode/ in URL instead of /track/)
+    const spotifyUrl = trackData.external_urls?.spotify || '';
+    if (spotifyUrl.includes('/episode/')) {
+      return null;
+    }
+
     let trueYear: number | undefined;
     let extraNameAttribute: string | undefined;
     let extraArtistAttribute: string | undefined;
     let trueName: string;
     let trueArtist: string;
 
+    // Format Spotify artist(s) as fallback
+    let spotifyArtist: string;
+    if (spotifyArtists.length === 1) {
+      spotifyArtist = spotifyArtists[0].name;
+    } else {
+      const limitedArtists = spotifyArtists.slice(0, 3);
+      const artistNames = limitedArtists.map((artist: { name: string }) => artist.name);
+      const lastArtist = artistNames.pop();
+      spotifyArtist = artistNames.join(', ') + ' & ' + lastArtist;
+    }
+
     if (enrichmentData) {
       trueYear = enrichmentData.year;
-      trueName = enrichmentData.name;
-      trueArtist = enrichmentData.artist;
+      trueName = enrichmentData.name || trackData.name;
+      // Fall back to Spotify artist if enrichment data has null/undefined artist
+      trueArtist = enrichmentData.artist || spotifyArtist;
       extraNameAttribute = enrichmentData.extraNameAttribute;
       extraArtistAttribute = enrichmentData.extraArtistAttribute;
     } else {
       // Fallback to Spotify data
       trueName = trackData.name;
+      trueArtist = spotifyArtist;
+    }
 
-      // Format multiple artists
-      if (spotifyArtists.length === 1) {
-        trueArtist = spotifyArtists[0].name;
-      } else {
-        const limitedArtists = spotifyArtists.slice(0, 3);
-        const artistNames = limitedArtists.map((artist: { name: string }) => artist.name);
-        const lastArtist = artistNames.pop();
-        trueArtist = artistNames.join(', ') + ' & ' + lastArtist;
-      }
+    // Final safety check: reject tracks with no valid artist
+    if (!trueArtist) {
+      return null;
     }
 
     const imageUrl =
