@@ -422,24 +422,28 @@ class PrintEnBind {
     if (cachedOrderType) {
       orderType = JSON.parse(cachedOrderType);
     } else {
-      orderType = await this.prisma.orderType.findFirst({
-        where: {
-          type: productType,
-          ...(digital
-            ? {}
-            : {
-                maxCards: {
-                  gte: numberOfTracks,
-                },
-              }),
-          digital: digital,
-        },
-        orderBy: [
-          {
-            maxCards: 'asc',
+        try {
+        orderType = await this.prisma.orderType.findFirst({
+          where: {
+            type: productType,
+            ...(digital
+              ? {}
+              : {
+                  maxCards: {
+                    gte: numberOfTracks,
+                  },
+                }),
+            digital: digital,
           },
-        ],
-      });
+          orderBy: [
+            {
+              maxCards: 'asc',
+            },
+          ],
+        });} catch(e) {
+          console.log(111,numberOfTracks,digital,productType,playlistId, subType);
+          console.log(222, e)
+        }
 
       this.cache.set(cacheKey, JSON.stringify(orderType));
     }
