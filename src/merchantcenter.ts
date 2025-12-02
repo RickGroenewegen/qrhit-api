@@ -12,6 +12,10 @@ import cluster from 'cluster';
 import { CronJob } from 'cron';
 import { blue, red, yellow, white, green } from 'console-log-colors';
 
+// Set to true to delete and re-insert products (required for updating custom labels)
+// Set to false to use PATCH updates (faster but cannot update customAttributes)
+const USE_DELETE_INSERT_FOR_UPDATES = true;
+
 // Genre groupings for PMax campaign segmentation (custom_label_1)
 const GENRE_GROUPS: Record<string, string> = {
   // Pop & Hits
@@ -519,11 +523,9 @@ export class MerchantCenterService {
 
       // Check if product exists
       const existingProduct = await this.getProduct(product.id);
+      const debugMode = process.env['DEBUG_MERCHANT_CENTER'] === 'true';
 
       if (existingProduct) {
-        // Update existing product - properly this time
-        // Debug: Check what ID format Google expects
-        const debugMode = process.env['DEBUG_MERCHANT_CENTER'] === 'true';
         if (debugMode) {
           this.logger.log(blue.bold('🔍 Existing product ID format:'));
           this.logger.log(blue(`  - Our ID: ${white.bold(product.id)}`));
@@ -535,9 +537,22 @@ export class MerchantCenterService {
           );
         }
 
-        // Try update with the ID that Google returned
-        try {
-          await this.updateProduct(product, existingProduct.id || product.id);
+        if (USE_DELETE_INSERT_FOR_UPDATES) {
+          // Delete and re-insert to update custom labels (PATCH cannot update customAttributes)
+          try {
+            await this.deleteProduct(existingProduct.id || product.id);
+            if (debugMode) {
+              this.logger.log(blue(`🗑️ Deleted existing product for re-insert`));
+            }
+          } catch (deleteError: any) {
+            if (debugMode) {
+              this.logger.log(yellow(`Delete warning: ${deleteError.message}`));
+            }
+            // Continue with insert anyway
+          }
+
+          // Re-insert with new custom labels
+          await this.insertProduct(product);
           const progressText = progress ? ` (${progress}%)` : '';
           this.logger.log(
             yellow(
@@ -546,12 +561,24 @@ export class MerchantCenterService {
               )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]${progressText}`
             )
           );
-        } catch (updateError: any) {
-          if (debugMode) {
-            this.logger.log(red(`Update failed: ${updateError.message}`));
+        } else {
+          // Use PATCH update (faster but cannot update customAttributes)
+          try {
+            await this.updateProduct(product, existingProduct.id || product.id);
+            const progressText = progress ? ` (${progress}%)` : '';
+            this.logger.log(
+              yellow(
+                `↻ ${white.bold(variant.slug)} [${white.bold(
+                  variant.type
+                )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]${progressText}`
+              )
+            );
+          } catch (updateError: any) {
+            if (debugMode) {
+              this.logger.log(red(`Update failed: ${updateError.message}`));
+            }
+            throw updateError;
           }
-          // Fallback to insert if update fails
-          throw updateError;
         }
       } else {
         // Insert new product
@@ -1146,7 +1173,7 @@ export class MerchantCenterService {
       }
 
       // For PATCH updates, we need to specify which fields we're updating
-      // Key fields that commonly change and we want to update
+      // Note: customAttributes cannot be updated via PATCH, use USE_DELETE_INSERT_FOR_UPDATES=true instead
       const updateMask = [
         'title',
         'description',
@@ -1159,11 +1186,6 @@ export class MerchantCenterService {
         'productTypes',
         'shipping',
         'shippingLabel',
-        'customLabel0',
-        'customLabel1',
-        'customLabel2',
-        'customLabel3',
-        'customLabel4',
       ].join(',');
 
       // Build the product update payload
@@ -1181,7 +1203,7 @@ export class MerchantCenterService {
         shipping: product.shipping,
         shippingLabel: product.shippingLabel,
         condition: product.condition, // Add condition since it's required
-        customAttributes: product.customAttributes, // Include custom labels for PMax
+        // Note: customAttributes excluded - use USE_DELETE_INSERT_FOR_UPDATES=true to update labels
       };
 
       if (debugMode) {
