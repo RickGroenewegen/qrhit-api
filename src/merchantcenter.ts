@@ -14,7 +14,7 @@ import { blue, red, yellow, white, green } from 'console-log-colors';
 
 // Set to true to delete and re-insert products (required for updating custom labels)
 // Set to false to use PATCH updates (faster but cannot update customAttributes)
-const USE_DELETE_INSERT_FOR_UPDATES = true;
+const USE_DELETE_INSERT_FOR_UPDATES = false;
 
 // Genre groupings for PMax campaign segmentation (custom_label_1)
 const GENRE_GROUPS: Record<string, string> = {
