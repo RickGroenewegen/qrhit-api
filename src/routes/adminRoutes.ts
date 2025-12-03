@@ -805,6 +805,39 @@ export default async function adminRoutes(
     }
   );
 
+  // Edit promotional playlist (name, description, locale)
+  fastify.post(
+    '/admin/promotional/:playlistId/edit',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+      const { name, description, featuredLocale } = request.body;
+
+      if (!playlistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      const result = await data.updatePromotionalPlaylist(playlistId, {
+        name,
+        description,
+        featuredLocale: featuredLocale || null,
+      });
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Reset judged status for payment_has_playlist
   fastify.post(
     '/admin/playlist/:paymentHasPlaylistId/judged',

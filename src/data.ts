@@ -2701,6 +2701,39 @@ class Data {
   }
 
   /**
+   * Update promotional playlist (name, description, locale)
+   */
+  public async updatePromotionalPlaylist(
+    playlistId: string,
+    data: {
+      name: string;
+      description: string;
+      featuredLocale: string | null;
+    }
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      await this.prisma.playlist.update({
+        where: { playlistId },
+        data: {
+          promotionalTitle: data.name,
+          promotionalDescription: data.description,
+          featuredLocale: data.featuredLocale,
+        },
+      });
+
+      // Clear featured playlists cache
+      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Error updating promotional playlist: ${error.message}`)
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
    * Accept a promotional playlist
    */
   public async acceptPromotionalPlaylist(

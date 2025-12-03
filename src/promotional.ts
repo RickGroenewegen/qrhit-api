@@ -90,6 +90,7 @@ class Promotional {
       discountBalance: number;
       slug: string;
       playlistName: string;
+      accepted: boolean;
     };
     error?: string;
   }> {
@@ -111,6 +112,7 @@ class Promotional {
           promotionalTitle: true,
           promotionalDescription: true,
           promotionalActive: true,
+          promotionalAccepted: true,
         },
       });
 
@@ -165,6 +167,7 @@ class Promotional {
           discountBalance,
           slug: playlist.slug,
           playlistName: playlist.name,
+          accepted: playlist.promotionalAccepted || false,
         },
       };
     } catch (error) {
