@@ -2056,7 +2056,8 @@ ${params.html}
     discountCode: string,
     shareLink: string,
     setupLink: string | null,
-    locale: string = 'en'
+    locale: string = 'en',
+    quantity: number = 1
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -2064,7 +2065,7 @@ ${params.html}
 
     // Fetch translations for promotional sale mail
     const translations = this.replaceAmountPlaceholder(
-      await this.translation.getTranslationsByPrefix(locale, 'promotional')
+      await this.translation.getTranslationsByPrefix(locale, 'promotional_email')
     );
 
     const mailParams = {
@@ -2078,6 +2079,7 @@ ${params.html}
       productName: process.env['PRODUCT_NAME'],
       currentYear: new Date().getFullYear(),
       translations,
+      quantity,
     };
 
     try {
@@ -2095,7 +2097,7 @@ ${params.html}
       );
 
       const subject = this.translation.translate(
-        'promotional.email.subject',
+        'promotional_email.subject',
         locale
       );
 
@@ -2135,7 +2137,7 @@ ${params.html}
       await this.ses.send(command);
       this.logger.log(
         color.blue.bold(
-          `Promotional sale email sent to ${white.bold(email)} for playlist "${playlistName}"`
+          `Promotional sale email sent to ${white.bold(email)} for playlist ${white.bold(`"${playlistName}"`)}`
         )
       );
     } catch (error) {

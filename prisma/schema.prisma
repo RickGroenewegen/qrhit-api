@@ -45,14 +45,14 @@ model DiscountCode {
   digital                 Boolean             @default(false)
   playlistId              String?
   promotional             Boolean             @default(false)
-  promotionalPlaylistId   Int?
-  promotionalPlaylist     Playlist?           @relation("PromotionalDiscountCode", fields: [promotionalPlaylistId], references: [id], onDelete: SetNull)
+  promotionalUserId       Int?
+  promotionalUser         User?               @relation("PromotionalDiscountCode", fields: [promotionalUserId], references: [id], onDelete: SetNull)
   createdAt               DateTime            @default(now())
   updatedAt               DateTime            @updatedAt
   DiscountCodedUses       DiscountCodedUses[]
 
   @@index([code])
-  @@index([promotionalPlaylistId])
+  @@index([promotionalUserId])
   @@map("discount_codes")
 }
 
@@ -226,6 +226,7 @@ model User {
   UserSuggestion            UserSuggestion[]
   UserGroupUser             UserInGroup[]
   Company                   Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  PromotionalDiscountCode   DiscountCode[]   @relation("PromotionalDiscountCode")
 
   @@index([hash])
   @@map("users")
@@ -371,7 +372,6 @@ model Playlist {
   PlayListExtraInfo    TrackExtraInfo[]
   genre                genre?               @relation(fields: [genreId], references: [id])
   CompanyList          CompanyList[]
-  PromotionalDiscountCode DiscountCode[]   @relation("PromotionalDiscountCode")
 
   @@index([playlistId])
   @@index([promotionalActive])

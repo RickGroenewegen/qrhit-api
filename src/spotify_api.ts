@@ -529,7 +529,7 @@ class SpotifyApi {
       if (validInitialItems.length >= total) {
         const elapsed = Date.now() - startTime;
         this.logger.log(
-          color.green(`Fetched ${total} tracks in ${elapsed}ms (single request)`)
+          color.blue.bold(`Fetched ${color.white.bold(total)} tracks in ${color.white.bold(elapsed + 'ms')} (single request)`)
         );
         return { success: true, data: { items: validInitialItems } };
       }

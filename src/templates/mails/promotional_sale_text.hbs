@@ -1,24 +1,24 @@
-{{ translations.email.subject }}
+{{ translations.subject }}
 
-{{ translations.email.hello }} {{ fullname }},
+{{ translations.hello }} {{ fullname }},
 
-{{ translations.email.playlistPurchased }} "{{ playlistName }}"!
+{{ translations.playlistPurchased }} {{ quantity }}x "{{ playlistName }}"!
 
-{{ translations.email.credited }}: €{{ creditedAmount }}
-{{ translations.email.totalBalance }}: €{{ totalBalance }}
+{{ translations.credited }}: €{{ creditedAmount }}
+{{ translations.totalBalance }}: €{{ totalBalance }}
 
-{{ translations.email.yourDiscountCode }}: {{ discountCode }}
+{{ translations.yourDiscountCode }}: {{ discountCode }}
 
-{{ translations.email.keepSharing }}
+{{ translations.keepSharing }}
 
-{{ translations.email.viewPlaylist }}: {{ shareLink }}
+{{ translations.viewPlaylist }}: {{ shareLink }}
 
 {{#if setupLink}}
-{{ translations.email.managePlaylist }}: {{ setupLink }}
+{{ translations.managePlaylist }}: {{ setupLink }}
 {{/if}}
 
-{{ translations.email.thanks }},
-{{ translations.email.team }}
+{{ translations.thanks }},
+{{ translations.team }}
 
 ---
 © {{ currentYear }} {{ productName }}. All rights reserved.

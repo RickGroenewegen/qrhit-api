@@ -118,11 +118,11 @@ class Promotional {
         return { success: false, error: 'Playlist not found' };
       }
 
-      // Get discount code balance if exists
+      // Get discount code balance if exists (now user-based, not playlist-based)
       const discountCode = await this.prisma.discountCode.findFirst({
         where: {
           promotional: true,
-          promotionalPlaylistId: playlist.id,
+          promotionalUserId: ownership.userId,
         },
         select: {
           code: true,
@@ -137,7 +137,7 @@ class Promotional {
           where: {
             discountCode: {
               promotional: true,
-              promotionalPlaylistId: playlist.id,
+              promotionalUserId: ownership.userId,
             },
           },
           _sum: { amount: true },
@@ -258,44 +258,59 @@ class Promotional {
         return { success: true, credited: false };
       }
 
-      // Check if a discount code already exists for this promotional playlist
+      // Get the quantity ordered from payment_has_playlist
+      const paymentPlaylist = await this.prisma.paymentHasPlaylist.findFirst({
+        where: {
+          paymentId: purchaserPaymentId,
+          playlistId: playlistDbId,
+        },
+        select: { amount: true },
+      });
+
+      const quantity = paymentPlaylist?.amount || 1;
+      const creditAmount = PROMOTIONAL_CREDIT_AMOUNT * quantity;
+
+      // Check if a discount code already exists for this user (not playlist)
       let discountCode = await this.prisma.discountCode.findFirst({
         where: {
           promotional: true,
-          promotionalPlaylistId: playlist.id,
+          promotionalUserId: creator.id,
         },
       });
 
+      let newTotalAmount: number;
       if (discountCode) {
         // Add to existing discount code balance
+        newTotalAmount = discountCode.amount + creditAmount;
         await this.prisma.discountCode.update({
           where: { id: discountCode.id },
           data: {
-            amount: discountCode.amount + PROMOTIONAL_CREDIT_AMOUNT,
+            amount: newTotalAmount,
           },
         });
       } else {
-        // Create new promotional discount code
+        // Create new promotional discount code for this user
         const code = this.generateDiscountCode();
+        newTotalAmount = creditAmount;
         discountCode = await this.prisma.discountCode.create({
           data: {
             code,
-            amount: PROMOTIONAL_CREDIT_AMOUNT,
-            description: `Promotional discount for playlist: ${playlist.name}`,
+            amount: newTotalAmount,
+            description: `Promotional discount for user: ${creator.displayName || creator.email}`,
             promotional: true,
-            promotionalPlaylistId: playlist.id,
+            promotionalUserId: creator.id,
             general: false,
             digital: false, // Can be used for any order type
           },
         });
       }
 
-      // Calculate new balance
+      // Calculate new balance (total amount minus what's been used)
       const totalUsed = await this.prisma.discountCodedUses.aggregate({
         where: { discountCodeId: discountCode.id },
         _sum: { amount: true },
       });
-      const newBalance = discountCode.amount + PROMOTIONAL_CREDIT_AMOUNT - (totalUsed._sum.amount || 0);
+      const newBalance = newTotalAmount - (totalUsed._sum.amount || 0);
 
       // Generate the promotional setup link - find the original payment via payment_has_playlist
       const paymentLink = await this.prisma.paymentHasPlaylist.findFirst({
@@ -323,16 +338,19 @@ class Promotional {
         creator.email,
         creator.displayName,
         playlist.name,
-        PROMOTIONAL_CREDIT_AMOUNT,
+        creditAmount,
         newBalance,
         discountCode.code,
         `${process.env['FRONTEND_URI']}/${creator.locale || 'en'}/product/${playlist.slug || playlist.playlistId}`,
         setupLink,
-        creator.locale || 'en'
+        creator.locale || 'en',
+        quantity
       );
 
       this.logger.log(
-        `Credited ${PROMOTIONAL_CREDIT_AMOUNT} EUR to promotional discount for playlist ${playlist.name} (code: ${discountCode.code})`
+        color.blue.bold(
+          `Credited ${color.white.bold(creditAmount)} EUR (${color.white.bold(quantity)}x) to promotional discount for playlist ${color.white.bold(playlist.name)} (code: ${color.white.bold(discountCode.code)})`
+        )
       );
 
       return { success: true, credited: true };
@@ -370,7 +388,8 @@ class Promotional {
     discountCode: string,
     shareLink: string,
     setupLink: string | null,
-    locale: string
+    locale: string,
+    quantity: number
   ): Promise<void> {
     try {
       const mail = Mail.getInstance();
@@ -383,7 +402,8 @@ class Promotional {
         discountCode,
         shareLink,
         setupLink,
-        locale
+        locale,
+        quantity
       );
     } catch (error) {
       this.logger.log(`Error sending promotional sale email: ${error}`);
@@ -456,14 +476,16 @@ class Promotional {
             payment = paymentLink?.payment || null;
           }
 
-          // Get discount code info
-          const discountCode = await this.prisma.discountCode.findFirst({
-            where: {
-              promotional: true,
-              promotionalPlaylistId: playlist.id,
-            },
-            select: { code: true, amount: true },
-          });
+          // Get discount code info (now user-based)
+          const discountCode = playlist.promotionalUserId
+            ? await this.prisma.discountCode.findFirst({
+                where: {
+                  promotional: true,
+                  promotionalUserId: playlist.promotionalUserId,
+                },
+                select: { code: true, amount: true },
+              })
+            : null;
 
           let totalSales = 0;
           if (discountCode) {
