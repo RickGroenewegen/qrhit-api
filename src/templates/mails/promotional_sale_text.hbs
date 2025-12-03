@@ -1,0 +1,24 @@
+{{ translations.email.subject }}
+
+{{ translations.email.hello }} {{ fullname }},
+
+{{ translations.email.playlistPurchased }} "{{ playlistName }}"!
+
+{{ translations.email.credited }}: €{{ creditedAmount }}
+{{ translations.email.totalBalance }}: €{{ totalBalance }}
+
+{{ translations.email.yourDiscountCode }}: {{ discountCode }}
+
+{{ translations.email.keepSharing }}
+
+{{ translations.email.viewPlaylist }}: {{ shareLink }}
+
+{{#if setupLink}}
+{{ translations.email.managePlaylist }}: {{ setupLink }}
+{{/if}}
+
+{{ translations.email.thanks }},
+{{ translations.email.team }}
+
+---
+© {{ currentYear }} {{ productName }}. All rights reserved.

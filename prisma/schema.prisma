@@ -33,22 +33,26 @@ model Review {
 }
 
 model DiscountCode {
-  id                Int                 @id @default(autoincrement())
-  code              String              @unique
-  amount            Float
-  description       String?             @db.Text
-  message           String?             @db.VarChar(255)
-  from              String?             @db.VarChar(100)
-  startDate         DateTime?
-  endDate           DateTime?
-  general           Boolean             @default(false)
-  digital           Boolean             @default(false)
-  playlistId        String?
-  createdAt         DateTime            @default(now())
-  updatedAt         DateTime            @updatedAt
-  DiscountCodedUses DiscountCodedUses[]
+  id                      Int                 @id @default(autoincrement())
+  code                    String              @unique
+  amount                  Float
+  description             String?             @db.Text
+  message                 String?             @db.VarChar(255)
+  from                    String?             @db.VarChar(100)
+  startDate               DateTime?
+  endDate                 DateTime?
+  general                 Boolean             @default(false)
+  digital                 Boolean             @default(false)
+  playlistId              String?
+  promotional             Boolean             @default(false)
+  promotionalPlaylistId   Int?
+  promotionalPlaylist     Playlist?           @relation("PromotionalDiscountCode", fields: [promotionalPlaylistId], references: [id], onDelete: SetNull)
+  createdAt               DateTime            @default(now())
+  updatedAt               DateTime            @updatedAt
+  DiscountCodedUses       DiscountCodedUses[]
 
   @@index([code])
+  @@index([promotionalPlaylistId])
   @@map("discount_codes")
 }
 
@@ -353,14 +357,24 @@ model Playlist {
   score                Int                  @default(0)
   design               Json?
   template             String?
+  // Promotional playlist fields
+  promotionalTitle       String?
+  promotionalDescription String?            @db.Text
+  promotionalActive      Boolean            @default(false)
+  promotionalAccepted    Boolean            @default(false)
+  promotionalHide        Boolean            @default(false)
+  promotionalLocale      String?            @db.VarChar(10)
+  promotionalUserId      Int?
   tracks               PlaylistHasTrack[]
   Payment              PaymentHasPlaylist[]
   UserSuggestion       UserSuggestion[]
   PlayListExtraInfo    TrackExtraInfo[]
   genre                genre?               @relation(fields: [genreId], references: [id])
   CompanyList          CompanyList[]
+  PromotionalDiscountCode DiscountCode[]   @relation("PromotionalDiscountCode")
 
   @@index([playlistId])
+  @@index([promotionalActive])
   @@fulltext([name])
   @@map("playlists")
 }

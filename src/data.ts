@@ -934,9 +934,10 @@ class Data {
     const cachedPlaylists = await this.cache.get(cacheKey);
 
     if (!cachedPlaylists) {
-      // Base query
+      // Query for featured playlists
+      // If promotionalActive = 1, then promotionalAccepted must also be 1
       let query = `
-      SELECT 
+      SELECT
         playlists.id,
         playlists.playlistId,
         playlists.name,
@@ -960,13 +961,17 @@ class Data {
         playlists.decadePercentage0,
         playlists.genreId,
         playlists.description_${locale} as description,
-        g.name_${locale} as genreName
-      FROM 
+        g.name_${locale} as genreName,
+        playlists.promotionalActive as isPromotional,
+        playlists.promotionalTitle,
+        playlists.promotionalDescription
+      FROM
         playlists
       LEFT JOIN
         genres g ON playlists.genreId = g.id
-      WHERE 
+      WHERE
         playlists.featured = 1
+        AND (playlists.promotionalActive = 0 OR playlists.promotionalAccepted = 1)
     `;
 
       // Add locale condition
@@ -981,7 +986,7 @@ class Data {
         query += `
         ORDER BY
           CASE
-            WHEN FIND_IN_SET('${locale}', playlists.featuredLocale) > 0 THEN 0
+            WHEN FIND_IN_SET('${locale}', featuredLocale) > 0 THEN 0
             ELSE 1
           END,
           score DESC
@@ -1002,6 +1007,19 @@ class Data {
           // We'll need to fetch this separately since we're already in the map function
           // This is a fallback scenario
           playlist.genreName = playlist.genreName || 'Unknown';
+        }
+
+        // For promotional playlists, use promotional data if available
+        if (playlist.isPromotional === 1) {
+          playlist.isPromotional = true;
+          if (playlist.promotionalTitle) {
+            playlist.name = playlist.promotionalTitle;
+          }
+          if (playlist.promotionalDescription) {
+            playlist.description = playlist.promotionalDescription;
+          }
+        } else {
+          playlist.isPromotional = false;
         }
 
         return {
@@ -1132,16 +1150,18 @@ class Data {
                     payments.invoiceCity,
                     payments.invoiceZipcode,
                     payments.invoiceCountrycode,
-                    CASE 
+                    users.hash AS userHash,
+                    CASE
                       WHEN EXISTS (
-                        SELECT 1 
-                        FROM payment_has_playlist 
-                        WHERE payment_has_playlist.paymentId = payments.id 
+                        SELECT 1
+                        FROM payment_has_playlist
+                        WHERE payment_has_playlist.paymentId = payments.id
                         AND payment_has_playlist.type = 'physical'
                       ) THEN 'physical'
                       ELSE 'digital'
                     END AS orderType
         FROM        payments
+        LEFT JOIN   users ON payments.userId = users.id
         WHERE       payments.paymentId = ${paymentId}`;
 
     const connectedPlaylists: any[] = await this.prisma.$queryRaw`
@@ -1153,7 +1173,8 @@ class Data {
                     payment_has_playlist.subType,
                     playlists.name AS playlistName,
                     playlists.type AS productType,
-                    playlists.giftcardAmount
+                    playlists.giftcardAmount,
+                    playlists.featured
         FROM        payment_has_playlist
         INNER JOIN  playlists ON payment_has_playlist.playlistId = playlists.id
         WHERE       payment_has_playlist.paymentId = ${paymentDetails[0].id}`;
@@ -1161,6 +1182,7 @@ class Data {
     return {
       payment: paymentDetails[0],
       playlists: connectedPlaylists,
+      userHash: paymentDetails[0]?.userHash || null,
     };
   }
 
@@ -2536,6 +2558,225 @@ class Data {
     }
   }
 
+  /**
+   * Get pending promotional playlists (active but not yet accepted, not hidden)
+   */
+  public async getPendingPromotionalPlaylists(): Promise<any[]> {
+    try {
+      const playlists = await this.prisma.playlist.findMany({
+        where: {
+          promotionalActive: true,
+          promotionalAccepted: false,
+          promotionalHide: false,
+        },
+        select: {
+          id: true,
+          playlistId: true,
+          name: true,
+          slug: true,
+          image: true,
+          promotionalTitle: true,
+          promotionalDescription: true,
+          promotionalLocale: true,
+          promotionalUserId: true,
+        },
+        orderBy: { id: 'desc' },
+      });
+
+      // Get user info for each playlist
+      const playlistsWithUsers = await Promise.all(
+        playlists.map(async (p) => {
+          let user = null;
+          if (p.promotionalUserId) {
+            user = await this.prisma.user.findUnique({
+              where: { id: p.promotionalUserId },
+              select: { email: true, displayName: true },
+            });
+          }
+          return {
+            id: p.id,
+            playlistId: p.playlistId,
+            name: p.promotionalTitle || p.name,
+            slug: p.slug,
+            image: p.image,
+            description: p.promotionalDescription || '',
+            locale: p.promotionalLocale,
+            userEmail: user?.email || null,
+            userDisplayName: user?.displayName || null,
+          };
+        })
+      );
+
+      return playlistsWithUsers;
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Error getting pending promotional playlists: ${error.message}`)
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Get accepted promotional playlists
+   */
+  public async getAcceptedPromotionalPlaylists(): Promise<any[]> {
+    try {
+      const playlists = await this.prisma.playlist.findMany({
+        where: {
+          promotionalActive: true,
+          promotionalAccepted: true,
+        },
+        select: {
+          id: true,
+          playlistId: true,
+          name: true,
+          slug: true,
+          image: true,
+          promotionalTitle: true,
+          promotionalDescription: true,
+          promotionalLocale: true,
+          promotionalUserId: true,
+          featuredLocale: true,
+        },
+        orderBy: { id: 'desc' },
+      });
+
+      // Get user info for each playlist
+      const playlistsWithUsers = await Promise.all(
+        playlists.map(async (p) => {
+          let user = null;
+          if (p.promotionalUserId) {
+            user = await this.prisma.user.findUnique({
+              where: { id: p.promotionalUserId },
+              select: { email: true, displayName: true },
+            });
+          }
+          return {
+            id: p.id,
+            playlistId: p.playlistId,
+            name: p.promotionalTitle || p.name,
+            slug: p.slug,
+            image: p.image,
+            description: p.promotionalDescription || '',
+            locale: p.promotionalLocale,
+            featuredLocale: p.featuredLocale,
+            userEmail: user?.email || null,
+            userDisplayName: user?.displayName || null,
+          };
+        })
+      );
+
+      return playlistsWithUsers;
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Error getting accepted promotional playlists: ${error.message}`)
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Update featured locale for a playlist
+   */
+  public async updateFeaturedLocale(
+    playlistId: string,
+    featuredLocale: string | null
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      await this.prisma.playlist.update({
+        where: { playlistId },
+        data: { featuredLocale },
+      });
+
+      // Clear featured playlists cache
+      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Error updating featured locale: ${error.message}`)
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Accept a promotional playlist
+   */
+  public async acceptPromotionalPlaylist(
+    playlistId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const playlist = await this.prisma.playlist.findUnique({
+        where: { playlistId },
+        select: { id: true },
+      });
+
+      if (!playlist) {
+        return { success: false, error: 'Playlist not found' };
+      }
+
+      await this.prisma.playlist.update({
+        where: { playlistId },
+        data: { promotionalAccepted: true },
+      });
+
+      // Clear featured playlists cache
+      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+
+      this.logger.log(
+        color.blue.bold(
+          `Accepted promotional playlist ${color.white.bold(playlistId)}`
+        )
+      );
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error accepting promotional playlist ${playlistId}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Decline a promotional playlist (hide it)
+   */
+  public async declinePromotionalPlaylist(
+    playlistId: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const playlist = await this.prisma.playlist.findUnique({
+        where: { playlistId },
+        select: { id: true },
+      });
+
+      if (!playlist) {
+        return { success: false, error: 'Playlist not found' };
+      }
+
+      await this.prisma.playlist.update({
+        where: { playlistId },
+        data: { promotionalHide: true },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Declined promotional playlist ${color.white.bold(playlistId)}`
+        )
+      );
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error declining promotional playlist ${playlistId}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
   public async resetJudgedStatus(
     paymentHasPlaylistId: number
   ): Promise<{ success: boolean; error?: string }> {
@@ -3000,3 +3241,4 @@ class Data {
 }
 
 export default Data;
+export { CACHE_KEY_FEATURED_PLAYLISTS };

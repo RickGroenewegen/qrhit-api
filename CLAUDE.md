@@ -23,6 +23,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - `tsc` - Compile TypeScript
 - `tsc -w` - Watch mode compilation
 
+## Scripts (_scripts folder)
+
+### Locale/Translation Management
+
+1. **remove-from-cache.sh**
+   - Removes translation keys from translated.cache files (src/locales, build/locales, assets/i18n)
+   - Usage: `./_scripts/remove-from-cache.sh key1 key2 key3 ...`
+   - Example: `./_scripts/remove-from-cache.sh mail.promotionalCtaSubtitle mail.promotionalSaleSubject`
+   - Use this after modifying translation keys in en.json to ensure translations are regenerated
+
+2. **rebuild-locales.sh**
+   - Rebuilds the API to update locale files in the build folder
+   - Usage: `./_scripts/rebuild-locales.sh [key1 key2 ...]`
+   - Keys are optional and just logged for documentation purposes
+
+### Translation Files
+- Translations are stored in `src/locales/*.json` (en.json, nl.json, de.json, etc.)
+- Translation cache files exist at: `src/locales/translated.cache`, `build/locales/translated.cache`, `assets/i18n/translated.cache`
+- After modifying translation keys, run `remove-from-cache.sh` with the changed keys to ensure they get regenerated
+
 ## High-Level Architecture
 
 ### Core Application Structure

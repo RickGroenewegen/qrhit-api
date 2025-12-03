@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="utf-8">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <title>{{ productName }} - {{ translations.email.subject }}</title>
+    <!--[if mso]>
+    <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+    <style>
+      td,th,div,p,a,h1,h2,h3,h4,h5,h6 {font-family: "Segoe UI", sans-serif; mso-line-height-rule: exactly;}
+    </style>
+    <![endif]-->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap');
+    </style>
+</head>
+<body style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #f8fafc;">
+    <div style="display: none;">{{ translations.email.subject }} - {{ productName }}</div>
+    <div role="article" aria-roledescription="email" aria-label="{{ productName }} {{ translations.email.subject }}" lang="en" style="font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc;">
+        <table style="width: 100%; font-family: 'Lato', sans-serif;" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+                <td align="center" style="padding: 24px;">
+                    <table class="container" style="width: 100%; max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" cellpadding="0" cellspacing="0" role="presentation">
+                        <tr>
+                            <td style="padding: 24px;">
+                                <!-- Logo -->
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td align="center" style="padding-bottom: 24px;">
+                                            <img src="cid:logo" alt="{{ productName }} Logo" style="max-width: 200px; height: auto;">
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- Success Banner -->
+                                <table style="width: 100%; background-color: #48bb78; border-radius: 8px; margin-bottom: 24px;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td align="center" style="padding: 20px;">
+                                            <p style="margin: 0; font-size: 24px; color: #ffffff; font-weight: bold;">{{ translations.email.saleMade }}</p>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- Content -->
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td>
+                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.email.hello }} {{ fullname }},</p>
+
+                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #4a5568;">
+                                                {{ translations.email.playlistPurchased }} <strong>"{{ playlistName }}"</strong>!
+                                            </p>
+
+                                            <!-- Credit Info Box -->
+                                            <table style="width: 100%; background-color: #ebf8ff; border-radius: 8px; margin: 24px 0;" cellpadding="0" cellspacing="0" role="presentation">
+                                                <tr>
+                                                    <td style="padding: 20px;">
+                                                        <p style="margin: 0 0 8px; font-size: 16px; color: #2b6cb0;">
+                                                            {{ translations.email.credited }}: <strong>&euro;{{ creditedAmount }}</strong>
+                                                        </p>
+                                                        <p style="margin: 0; font-size: 20px; color: #2b6cb0; font-weight: bold;">
+                                                            {{ translations.email.totalBalance }}: &euro;{{ totalBalance }}
+                                                        </p>
+                                                    </td>
+                                                </tr>
+                                            </table>
+
+                                            <!-- Discount Code Box -->
+                                            <table style="width: 100%; background-color: #faf5ff; border: 2px dashed #9f7aea; border-radius: 8px; margin: 24px 0;" cellpadding="0" cellspacing="0" role="presentation">
+                                                <tr>
+                                                    <td align="center" style="padding: 20px;">
+                                                        <p style="margin: 0 0 8px; font-size: 14px; color: #6b46c1;">{{ translations.email.yourDiscountCode }}:</p>
+                                                        <p style="margin: 0; font-size: 24px; color: #6b46c1; font-weight: bold; letter-spacing: 2px;">{{ discountCode }}</p>
+                                                    </td>
+                                                </tr>
+                                            </table>
+
+                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.email.keepSharing }}</p>
+
+                                            <!-- Share Link Button -->
+                                            <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation" style="margin-top: 24px; margin-bottom: 24px;">
+                                                <tr>
+                                                    <td align="center">
+                                                        <table border="0" cellspacing="0" cellpadding="0" role="presentation">
+                                                            <tr>
+                                                                <td align="center" style="border-radius: 4px;" bgcolor="#4299e1">
+                                                                    <a href="{{ shareLink }}" target="_blank" style="font-size: 16px; font-family: 'Lato', sans-serif; color: #ffffff; text-decoration: none; border-radius: 4px; padding: 12px 24px; border: 1px solid #4299e1; display: inline-block; font-weight: bold;">{{ translations.email.viewPlaylist }}</a>
+                                                                </td>
+                                                            </tr>
+                                                        </table>
+                                                    </td>
+                                                </tr>
+                                            </table>
+
+                                            {{#if setupLink}}
+                                            <p style="margin: 0 0 16px; font-size: 14px; line-height: 20px; color: #718096;">
+                                                {{ translations.email.managePlaylist }}: <a href="{{ setupLink }}" style="color: #4299e1;">{{ translations.email.clickHere }}</a>
+                                            </p>
+                                            {{/if}}
+
+                                            <p style="margin: 24px 0 0; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.email.thanks }},<br>{{ translations.email.team }}</p>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- Footer -->
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td style="padding-top: 32px; border-top: 1px solid #e2e8f0;">
+                                            <p style="margin: 0; font-size: 14px; line-height: 20px; color: #718096; text-align: center;">
+                                                &copy; {{ currentYear }} {{ productName }}. All rights reserved.
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

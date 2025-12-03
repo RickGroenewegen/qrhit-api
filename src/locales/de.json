@@ -497,5 +497,15 @@
   "invoice.shipping": "Versand",
   "chat.welcome": "👋 Hi! Ich bin der QRSong! Assistent. Wie kann ich dir helfen?",
   "chat.supportRequested": "Das QRSong!-Supportteam wurde benachrichtigt und meldet sich bald per E-Mail. Bedankt für deine Geduld!",
-  "mail.multipleOrdersInfo": "Du hast die gleiche Playlist mehrmals bestellt. Deine Bestellung kommt in einem Paket, aber jede einzelne Set wird in einem oder mehreren Stapeln gebündelt. Schau auf die Chargennummer unten rechts auf den Karten, um zu sehen, welche Karten zu welchem Set gehören."
+  "mail.multipleOrdersInfo": "Du hast die gleiche Playlist mehrmals bestellt. Deine Bestellung kommt in einem Paket, aber jede einzelne Set wird in einem oder mehreren Stapeln gebündelt. Schau auf die Chargennummer unten rechts auf den Karten, um zu sehen, welche Karten zu welchem Set gehören.",
+  "mail.promotionalCtaTitle": "Zeig deine Playlist",
+  "mail.promotionalCtaSubtitle": "Lass uns deine Playlist auf unserer Seite zeigen und verdiene 2,50 € jedes Mal, wenn sie jemand kauft!",
+  "mail.promotionalCtaButton": "Jetzt einrichten",
+  "mail.promotionalSaleSubject": "Jemand hat deine vorgestellte Playlist gekauft!",
+  "mail.promotionalSaleGreeting": "Gute Nachrichten! Jemand hat deine vorgestellte Playlist auf unserer Seite entdeckt und gekauft.",
+  "mail.promotionalSaleCredited": "Wir haben dir 2,50 € gutgeschrieben.",
+  "mail.promotionalSaleBalance": "Dein gesamter Rabatt ist jetzt:",
+  "mail.promotionalSaleCode": "Dein Rabattcode:",
+  "mail.promotionalSaleKeepSharing": "Danke, dass wir deine Playlist zeigen dürfen – teile weiter und verdiene noch mehr!",
+  "promotional.email.subject": "promotional.email.subject"
 }

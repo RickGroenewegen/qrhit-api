@@ -6745,5 +6745,77 @@
     "jp",
     "cn",
     "sv"
+  ],
+  "mail.promotionalCtaTitle": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "mail.promotionalCtaButton": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "mail.promotionalSaleBalance": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "mail.promotionalSaleCode": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "mail.promotionalSaleSubject": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "mail.promotionalSaleGreeting": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
   ]
 }
