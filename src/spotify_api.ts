@@ -520,6 +520,7 @@ class SpotifyApi {
 
       const initialData = initialResponse.data;
       const total = initialData.total || 0;
+
       const validInitialItems = initialData.items.filter(
         (item: any) => item && item.track
       );

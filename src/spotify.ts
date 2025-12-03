@@ -41,6 +41,30 @@ interface EnrichmentData {
   extraArtistAttribute?: string;
 }
 
+// Skipped track information for API response
+export type SkipReason = 'unavailable' | 'localFile' | 'podcast' | 'duplicate';
+
+export interface SkippedTrack {
+  position: number;           // Original playlist position (1-indexed)
+  reason: SkipReason;
+  name?: string;              // Track name if available
+  artist?: string;            // Artist name if available
+  duplicateOf?: number;       // Position of first occurrence (for duplicates)
+}
+
+export interface SkipSummary {
+  unavailable: number;        // Track removed/unavailable
+  localFiles: number;         // Local files can't be imported
+  podcasts: number;           // Podcast episodes filtered
+  duplicates: number;         // Same artist+title duplicates
+}
+
+export interface SkippedTracksInfo {
+  total: number;
+  summary: SkipSummary;
+  details: SkippedTrack[];
+}
+
 class Spotify {
   private static instance: Spotify;
   private cache = Cache.getInstance();
@@ -1162,6 +1186,11 @@ class Spotify {
       const uniqueTrackIds = new Set<string>();
       let maxReached = false;
       let maxReachedPhysical = false;
+      let skippedTracksInfo: SkippedTracksInfo = {
+        total: 0,
+        summary: { unavailable: 0, localFiles: 0, podcasts: 0, duplicates: 0 },
+        details: [],
+      };
 
       // Get playlist details first (handles slug, gets track count for cache key)
       const playlistResult = await this.getPlaylist(
@@ -1248,6 +1277,79 @@ class Spotify {
           trackItems.length
         ); // Analytics for raw items fetched
 
+        // Collect skip info for API response (user-actionable reasons only)
+        const skippedDetails: SkippedTrack[] = [];
+        const skipSummary: SkipSummary = {
+          unavailable: 0,
+          localFiles: 0,
+          podcasts: 0,
+          duplicates: 0,
+        };
+
+        // Track artist+title combinations to detect duplicates (like frontend was doing)
+        const artistTitleFirstPosition: Map<string, number> = new Map();
+
+        // Pre-scan to collect skipped tracks info
+        trackItems.forEach((item: any, index: number) => {
+          const position = index + 1;
+          if (!item) {
+            skipSummary.unavailable++;
+            skippedDetails.push({ position, reason: 'unavailable' });
+          } else if (!item.track) {
+            // Null track could be local file or unavailable - check if it's marked as local
+            const isLocal = item.is_local === true;
+            if (isLocal) {
+              skipSummary.localFiles++;
+              skippedDetails.push({ position, reason: 'localFile' });
+            } else {
+              skipSummary.unavailable++;
+              skippedDetails.push({ position, reason: 'unavailable' });
+            }
+          } else if (!item.track.id) {
+            const name = item.track.name || undefined;
+            const artist = item.track.artists?.[0]?.name || undefined;
+            skipSummary.unavailable++;
+            skippedDetails.push({ position, reason: 'unavailable', name, artist });
+          } else if (!item.track.name || !item.track.artists || item.track.artists.length === 0) {
+            skipSummary.unavailable++;
+            skippedDetails.push({ position, reason: 'unavailable' });
+          } else {
+            // Check for podcast
+            const spotifyUrl = item.track.external_urls?.spotify || '';
+            const name = item.track.name;
+            const artist = item.track.artists[0]?.name;
+
+            if (spotifyUrl.includes('/episode/')) {
+              skipSummary.podcasts++;
+              skippedDetails.push({ position, reason: 'podcast', name, artist });
+            } else {
+              // Check for image
+              const hasImage = item.track.album?.images?.length > 0;
+              if (!hasImage) {
+                skipSummary.unavailable++;
+                skippedDetails.push({ position, reason: 'unavailable', name, artist });
+              } else {
+                // Track is valid - check for artist+title duplicates
+                const artistTitleKey = `${artist.toLowerCase().trim()}|||${name.toLowerCase().trim()}`;
+                if (artistTitleFirstPosition.has(artistTitleKey)) {
+                  const firstPosition = artistTitleFirstPosition.get(artistTitleKey)!;
+                  skipSummary.duplicates++;
+                  skippedDetails.push({ position, reason: 'duplicate', name, artist, duplicateOf: firstPosition });
+                } else {
+                  artistTitleFirstPosition.set(artistTitleKey, position);
+                }
+              }
+            }
+          }
+        });
+
+        // Track which positions are duplicates so we can skip them during formatting
+        const duplicatePositions = new Set(
+          skippedDetails
+            .filter(s => s.reason === 'duplicate')
+            .map(s => s.position)
+        );
+
         // --- Query playlist-specific overrides (trackextrainfo) ---
         // This is a small, fast query filtered by playlistId
         const dbPlaylist = await this.prisma.playlist.findFirst({
@@ -1284,9 +1386,11 @@ class Spotify {
         }
 
         // --- Format Tracks with In-Memory Map Lookups ---
+        // Filter out items that were already marked as skipped (including duplicates)
         const formattedTracksPromises = trackItems
-          .filter((item: any) => item?.track?.id)
-          .map(async (item: any): Promise<Track | null> => {
+          .map((item: any, index: number) => ({ item, position: index + 1 }))
+          .filter(({ item, position }: { item: any; position: number }) => item?.track?.id && !duplicatePositions.has(position))
+          .map(async ({ item }: { item: any; position: number }): Promise<Track | null> => {
             const trackData = item.track;
             const trackId = trackData.id;
 
@@ -1366,12 +1470,21 @@ class Spotify {
         );
 
         // Remove duplicates based on ID and add to the final list
+        // (artist+title duplicates are already filtered, this catches any remaining ID duplicates)
         validFormattedTracks.forEach((track) => {
           if (!uniqueTrackIds.has(track.id)) {
             uniqueTrackIds.add(track.id);
             allFormattedTracks.push(track);
           }
         });
+
+        // Build skipped tracks info for API response
+        const totalSkipped = skipSummary.unavailable + skipSummary.localFiles + skipSummary.podcasts + skipSummary.duplicates;
+        skippedTracksInfo = {
+          total: totalSkipped,
+          summary: skipSummary,
+          details: skippedDetails,
+        };
 
         // Check limits after processing all tracks
         if (allFormattedTracks.length > MAX_CARDS) {
@@ -1398,6 +1511,7 @@ class Spotify {
           maxReachedPhysical,
           totalTracks: allFormattedTracks.length,
           tracks: allFormattedTracks,
+          skippedTracks: skippedTracksInfo,
         },
       };
 
