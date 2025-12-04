@@ -528,18 +528,34 @@ class Promotional {
    * 2. Update all description_[locale] fields
    * 3. Set promotionalAccepted = 1
    * 4. Clear featured playlists cache
+   * 5. Return data needed for approval email
    */
   public async acceptPromotionalPlaylist(
     playlistId: string
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    emailData?: {
+      email: string;
+      displayName: string;
+      playlistName: string;
+      discountCode: string;
+      shareLink: string;
+      setupLink: string;
+      locale: string;
+    };
+  }> {
     try {
-      // Get playlist with promotional data
+      // Get playlist with promotional data including user info
       const playlist = await this.prisma.playlist.findUnique({
         where: { playlistId },
         select: {
           id: true,
+          name: true,
+          slug: true,
           promotionalDescription: true,
           promotionalLocale: true,
+          promotionalUserId: true,
         },
       });
 
@@ -550,6 +566,57 @@ class Promotional {
       const description = playlist.promotionalDescription || '';
       const sourceLocale = playlist.promotionalLocale || 'en';
 
+      // Helper to fetch email data for approval notification
+      const fetchEmailData = async () => {
+        if (!playlist.promotionalUserId) return undefined;
+
+        const user = await this.prisma.user.findUnique({
+          where: { id: playlist.promotionalUserId },
+          select: { email: true, displayName: true, hash: true, locale: true },
+        });
+
+        if (!user) return undefined;
+
+        const paymentLink = await this.prisma.paymentHasPlaylist.findFirst({
+          where: {
+            playlistId: playlist.id,
+            payment: {
+              userId: playlist.promotionalUserId,
+              status: 'paid',
+            },
+          },
+          select: {
+            payment: {
+              select: { paymentId: true },
+            },
+          },
+          orderBy: { id: 'asc' },
+        });
+
+        const discountCode = await this.prisma.discountCode.findFirst({
+          where: {
+            promotional: true,
+            promotionalUserId: playlist.promotionalUserId,
+          },
+          select: { code: true },
+        });
+
+        if (!paymentLink?.payment || !discountCode) return undefined;
+
+        const shareLink = `${process.env['FRONTEND_URI']}/en/product/${playlist.slug || playlistId}`;
+        const setupLink = `${process.env['FRONTEND_URI']}/promotional/${paymentLink.payment.paymentId}/${user.hash}/${playlistId}`;
+
+        return {
+          email: user.email,
+          displayName: user.displayName || user.email.split('@')[0],
+          playlistName: playlist.name,
+          discountCode: discountCode.code,
+          shareLink,
+          setupLink,
+          locale: user.locale || sourceLocale || 'en',
+        };
+      };
+
       if (!description.trim()) {
         // No description to translate, just accept
         await this.prisma.playlist.update({
@@ -557,7 +624,9 @@ class Promotional {
           data: { promotionalAccepted: true },
         });
         await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
-        return { success: true };
+
+        const emailData = await fetchEmailData();
+        return { success: true, emailData };
       }
 
       this.logger.log(
@@ -622,7 +691,10 @@ class Promotional {
         )
       );
 
-      return { success: true };
+      // Fetch data needed for approval email
+      const emailData = await fetchEmailData();
+
+      return { success: true, emailData };
     } catch (error: any) {
       this.logger.log(
         color.red.bold(

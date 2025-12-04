@@ -964,7 +964,11 @@ class Data {
         g.name_${locale} as genreName,
         playlists.promotionalActive as isPromotional,
         playlists.promotionalTitle,
-        playlists.promotionalDescription
+        playlists.promotionalDescription,
+        playlists.isStaffPick,
+        playlists.isTrending,
+        playlists.trendingRank,
+        playlists.staffPickOrder
       FROM
         playlists
       LEFT JOIN
