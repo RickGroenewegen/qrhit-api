@@ -2791,7 +2791,10 @@ class Data {
 
       await this.prisma.playlist.update({
         where: { playlistId },
-        data: { promotionalHide: true },
+        data: {
+          promotionalHide: true,
+          promotionalDeclined: true,
+        },
       });
 
       this.logger.log(

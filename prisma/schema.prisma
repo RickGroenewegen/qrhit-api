@@ -363,6 +363,7 @@ model Playlist {
   promotionalDescription String?            @db.Text
   promotionalActive      Boolean            @default(false)
   promotionalAccepted    Boolean            @default(false)
+  promotionalDeclined    Boolean            @default(false)
   promotionalHide        Boolean            @default(false)
   promotionalLocale      String?            @db.VarChar(10)
   promotionalUserId      Int?

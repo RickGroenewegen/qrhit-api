@@ -85,12 +85,14 @@ class Promotional {
       description: string;
       image: string;
       active: boolean;
+      hasSubmitted: boolean;
       shareLink: string;
       discountCode: string | null;
       discountBalance: number;
       slug: string;
       playlistName: string;
       accepted: boolean;
+      declined: boolean;
     };
     error?: string;
   }> {
@@ -113,6 +115,7 @@ class Promotional {
           promotionalDescription: true,
           promotionalActive: true,
           promotionalAccepted: true,
+          promotionalDeclined: true,
         },
       });
 
@@ -150,10 +153,8 @@ class Promotional {
       // Generate share link using existing product page
       const shareLink = `${process.env['FRONTEND_URI']}/en/product/${playlist.slug || playlistId}`;
 
-      // For new setups (where promotionalTitle is null), default active to true
-      // This ensures the checkbox is checked by default on first visit
-      const isFirstTimeSetup = !playlist.promotionalTitle;
-      const activeState = isFirstTimeSetup ? true : playlist.promotionalActive;
+      // Check if this is a first-time setup (user hasn't submitted the form yet)
+      const hasSubmitted = !!playlist.promotionalTitle;
 
       return {
         success: true,
@@ -161,13 +162,15 @@ class Promotional {
           title: playlist.promotionalTitle || playlist.name,
           description: playlist.promotionalDescription || '',
           image: playlist.image,
-          active: activeState,
+          active: hasSubmitted ? !!playlist.promotionalActive : true, // Default checkbox to true for first-time
+          hasSubmitted, // New field to indicate if user has ever submitted
           shareLink,
           discountCode: discountCode?.code || null,
           discountBalance,
           slug: playlist.slug,
           playlistName: playlist.name,
-          accepted: playlist.promotionalAccepted || false,
+          accepted: !!playlist.promotionalAccepted,
+          declined: !!playlist.promotionalDeclined,
         },
       };
     } catch (error) {
@@ -439,6 +442,7 @@ class Promotional {
           promotionalDescription: true,
           promotionalActive: true,
           promotionalAccepted: true,
+          promotionalDeclined: true,
           promotionalLocale: true,
           promotionalUserId: true,
           numberOfTracks: true,
