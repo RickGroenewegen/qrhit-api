@@ -56,15 +56,24 @@ export default async function adminRoutes(
   fastify.post(
     '/create_order',
     getAuthHandler(['admin']),
-    async (request: any, _reply) => {
+    async (request: any, reply) => {
       // Setup the payment for printer submission (reset status and clear tracking)
       await generator.setupForPrinter(request.body.paymentId);
 
-      return await generator.sendToPrinter(
+      const result = await generator.sendToPrinter(
         request.body.paymentId,
         request.clientIp,
         true
       );
+
+      if (!result.success) {
+        return reply.status(409).send({
+          success: false,
+          error: result.reason || 'Order could not be sent',
+        });
+      }
+
+      return result;
     }
   );
 

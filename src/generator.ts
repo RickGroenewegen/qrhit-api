@@ -983,18 +983,33 @@ class Generator {
     paymentId: string,
     clientIp: string,
     force: boolean = false
-  ): Promise<void> {
-    let printApiOrderId = '';
-    let printApiOrderRequest = '';
-    let printApiOrderResponse = '';
+  ): Promise<{ success: boolean; reason?: string }> {
+    // Acquire distributed lock to prevent concurrent processing
+    const lockKey = `printer:${paymentId}`;
+    const lockAcquired = await this.cache.acquireLock(lockKey, 120);
+    if (!lockAcquired) {
+      this.logger.log(
+        color.yellow.bold(
+          `Skipping ${paymentId} - already being processed by another instance`
+        )
+      );
+      return { success: false, reason: 'Already being processed' };
+    }
 
-    // Reset sentToPrinter to false when manually sending to printer
-    await this.prisma.payment.update({
-      where: {
-        paymentId,
-      },
-      data: { sentToPrinter: false },
-    });
+    try {
+      let printApiOrderId = '';
+      let printApiOrderRequest = '';
+      let printApiOrderResponse = '';
+
+      // Only reset sentToPrinter when force=true (admin manual retry)
+      if (force) {
+        await this.prisma.payment.update({
+          where: {
+            paymentId,
+          },
+          data: { sentToPrinter: false },
+        });
+      }
 
     const payment = await this.prisma.payment.findFirst({
       where: {
@@ -1073,7 +1088,7 @@ class Generator {
           )
         );
 
-        return;
+        return { success: false, reason: 'PDF validation errors' };
       }
 
       const orderData = await this.order.createOrder(
@@ -1141,7 +1156,13 @@ class Generator {
             )} to the printer`
           )
         );
+        return { success: false, reason: 'PrintAPI error' };
       }
+      return { success: true };
+    }
+      return { success: false, reason: 'Not eligible for printing' };
+    } finally {
+      await this.cache.releaseLock(lockKey);
     }
   }
 

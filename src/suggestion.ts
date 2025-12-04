@@ -907,7 +907,15 @@ class Suggestion {
       this.logger.log(
         color.blue.bold('All physical playlists are ready for printing')
       );
-      this.generator.sendToPrinter(paymentId, clientIp);
+      try {
+        await this.generator.sendToPrinter(paymentId, clientIp);
+      } catch (error) {
+        this.logger.log(
+          color.red.bold(
+            `Error sending to printer from user approval: ${error}`
+          )
+        );
+      }
     }
   }
 
