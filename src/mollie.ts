@@ -17,6 +17,7 @@ import { CronJob } from 'cron';
 import cluster from 'cluster';
 import { promises as fs } from 'fs';
 import Game from './game';
+import Spotify from './spotify';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -31,6 +32,7 @@ class Mollie {
   private paidPaymentStatus = ['paid'];
   private failedPaymentStatus = ['failed', 'canceled', 'expired'];
   private game = new Game();
+  private spotify = Spotify.getInstance();
 
   constructor() {
     if (cluster.isPrimary) {
@@ -278,6 +280,50 @@ class Mollie {
       }
     } catch (error: any) {
       this.logger.log(color.red.bold('Error cleaning expired payments!'));
+    }
+  }
+
+  private async refreshCartTrackCounts(
+    cart: { items: CartItem[] },
+    locale: string
+  ): Promise<void> {
+    for (const item of cart.items) {
+      if (item.productType !== 'giftcard') {
+        const playlistResult = await this.spotify.getPlaylist(
+          item.playlistId,
+          false, // cache = false to get fresh data
+          '',    // captchaToken
+          false, // checkCaptcha
+          false, // featured
+          item.isSlug || false,
+          locale
+        );
+
+        if (playlistResult.success && playlistResult.data) {
+          const freshTrackCount = playlistResult.data.numberOfTracks;
+          if (freshTrackCount !== item.numberOfTracks) {
+            this.logger.log(
+              color.blue.bold(
+                `Updated track count for playlist ${color.white.bold(item.playlistId)}: ` +
+                `${color.white.bold(item.numberOfTracks.toString())} → ${color.white.bold(freshTrackCount.toString())}`
+              )
+            );
+            item.numberOfTracks = freshTrackCount;
+
+            // Recalculate price based on new track count
+            const orderType = await this.order.getOrderType(
+              freshTrackCount,
+              item.type === 'digital',
+              'cards',
+              item.playlistId,
+              item.subType || 'none'
+            );
+            if (orderType && orderType.amount) {
+              item.price = orderType.amount;
+            }
+          }
+        }
+      }
     }
   }
 
@@ -696,6 +742,9 @@ class Mollie {
       if (params.extraOrderData.vibe) {
         vibe = params.extraOrderData.vibe;
       }
+
+      // Refresh track counts from Spotify API (uncached) before calculating price
+      await this.refreshCartTrackCounts(params.cart, params.locale);
 
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
