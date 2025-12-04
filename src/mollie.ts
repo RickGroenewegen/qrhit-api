@@ -289,18 +289,18 @@ class Mollie {
   ): Promise<void> {
     for (const item of cart.items) {
       if (item.productType !== 'giftcard') {
-        const playlistResult = await this.spotify.getPlaylist(
+        const tracksResult = await this.spotify.getTracks(
           item.playlistId,
           false, // cache = false to get fresh data
           '',    // captchaToken
           false, // checkCaptcha
-          false, // featured
           item.isSlug || false,
+          '',    // userId
           locale
         );
 
-        if (playlistResult.success && playlistResult.data) {
-          const freshTrackCount = playlistResult.data.numberOfTracks;
+        if (tracksResult.success && tracksResult.data) {
+          const freshTrackCount = tracksResult.data.totalTracks;
           if (freshTrackCount !== item.numberOfTracks) {
             this.logger.log(
               color.blue.bold(

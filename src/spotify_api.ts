@@ -577,8 +577,8 @@ class SpotifyApi {
 
       const elapsed = Date.now() - startTime;
       this.logger.log(
-        color.green(
-          `Fetched ${allItems.length} tracks in ${elapsed}ms (parallel: ${pageRequests.length + 1} requests, limit=${usedLimit})`
+        color.blue.bold(
+          `Fetched ${color.white.bold(allItems.length)} tracks in ${color.white.bold(elapsed + 'ms')} (parallel: ${color.white.bold(pageRequests.length + 1)} requests, limit = ${color.white.bold(usedLimit)})`
         )
       );
 
