@@ -2244,7 +2244,7 @@ ${params.html}
           unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
           replyTo: process.env['REPLY_TO_EMAIL'],
         },
-        false // No BCC for promotional approval emails
+        true // Send BCC for promotional approval emails
       );
 
       const emailBuffer = Buffer.from(rawEmail);
