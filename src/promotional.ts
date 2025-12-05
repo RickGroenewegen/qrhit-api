@@ -14,6 +14,7 @@ class Promotional {
   private static instance: Promotional;
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
+  private mail = Mail.getInstance();
   private chatgpt = new ChatGPT();
   private cache = Cache.getInstance();
   private translation = new Translation();
@@ -528,22 +529,13 @@ class Promotional {
    * 2. Update all description_[locale] fields
    * 3. Set promotionalAccepted = 1
    * 4. Clear featured playlists cache
-   * 5. Return data needed for approval email
+   * 5. Send approval email to user
    */
   public async acceptPromotionalPlaylist(
     playlistId: string
   ): Promise<{
     success: boolean;
     error?: string;
-    emailData?: {
-      email: string;
-      displayName: string;
-      playlistName: string;
-      discountCode: string;
-      shareLink: string;
-      setupLink: string;
-      locale: string;
-    };
   }> {
     try {
       // Get playlist with promotional data including user info
@@ -626,7 +618,24 @@ class Promotional {
         await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
 
         const emailData = await fetchEmailData();
-        return { success: true, emailData };
+        if (emailData) {
+          await this.mail.sendPromotionalApprovedEmail(
+            emailData.email,
+            emailData.displayName,
+            emailData.playlistName,
+            emailData.discountCode,
+            emailData.shareLink,
+            emailData.setupLink,
+            emailData.locale
+          );
+        } else {
+          this.logger.log(
+            color.yellow.bold(
+              `Could not send approval email for playlist ${color.white.bold(playlistId)}: missing user/payment/discount data`
+            )
+          );
+        }
+        return { success: true };
       }
 
       this.logger.log(
@@ -691,10 +700,27 @@ class Promotional {
         )
       );
 
-      // Fetch data needed for approval email
+      // Fetch data needed for approval email and send it
       const emailData = await fetchEmailData();
+      if (emailData) {
+        await this.mail.sendPromotionalApprovedEmail(
+          emailData.email,
+          emailData.displayName,
+          emailData.playlistName,
+          emailData.discountCode,
+          emailData.shareLink,
+          emailData.setupLink,
+          emailData.locale
+        );
+      } else {
+        this.logger.log(
+          color.yellow.bold(
+            `Could not send approval email for playlist ${color.white.bold(playlistId)}: missing user/payment/discount data`
+          )
+        );
+      }
 
-      return { success: true, emailData };
+      return { success: true };
     } catch (error: any) {
       this.logger.log(
         color.red.bold(

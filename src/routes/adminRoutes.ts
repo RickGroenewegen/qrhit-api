@@ -724,7 +724,7 @@ export default async function adminRoutes(
     }
   );
 
-  // Accept promotional playlist (translates description to all locales)
+  // Accept promotional playlist (translates description to all locales and sends approval email)
   fastify.post(
     '/admin/promotional/:playlistId/accept',
     getAuthHandler(['admin']),
@@ -739,22 +739,9 @@ export default async function adminRoutes(
         return;
       }
 
-      const promotional = Promotional.getInstance();
       const result = await promotional.acceptPromotionalPlaylist(playlistId);
 
       if (result.success) {
-        // Send approval email if we have the necessary data
-        if (result.emailData) {
-          await mail.sendPromotionalApprovedEmail(
-            result.emailData.email,
-            result.emailData.displayName,
-            result.emailData.playlistName,
-            result.emailData.discountCode,
-            result.emailData.shareLink,
-            result.emailData.setupLink,
-            result.emailData.locale
-          );
-        }
         reply.send({ success: true });
       } else {
         reply.status(result.error === 'Playlist not found' ? 404 : 500).send({

@@ -464,6 +464,7 @@ class Data {
       '/reviews',
       '/blog',
       '/giftcard',
+      '/music-match',
       '/examples',
       '/generate/playlist',
       '/contact',
@@ -473,6 +474,8 @@ class Data {
       '/onzevibe',
       '/qr-cards-as-a-service',
       '/pubquiz',
+      '/shipping-info',
+      '/earn-discount',
     ];
 
     // Get current date in YYYY-MM-DD format for lastmod
