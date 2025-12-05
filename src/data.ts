@@ -850,6 +850,7 @@ class Data {
         payment_has_playlist.backOpacity,
         payment_has_playlist.printerType,
         playlists.numberOfTracks,
+        playlists.featured,
         payment_has_playlist.type AS orderType
       FROM 
         payment_has_playlist

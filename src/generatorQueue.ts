@@ -199,6 +199,7 @@ class GeneratorQueue {
           name: true,
           image: true,
           numberOfTracks: true,
+          featured: true,
           ...descriptionFields,
         },
       });
@@ -225,6 +226,7 @@ class GeneratorQueue {
         description,
         image: playlist.image,
         numberOfTracks: playlist.numberOfTracks,
+        featured: playlist.featured,
       };
 
       // Send the digital list email
