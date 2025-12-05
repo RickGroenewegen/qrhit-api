@@ -376,14 +376,12 @@ model Playlist {
 
   // Curation fields for featured playlists
   isStaffPick          Boolean              @default(false)
-  isTrending           Boolean              @default(false)
-  trendingRank         Int?
   staffPickOrder       Int                  @default(0)
+  featuredHidden       Boolean              @default(false)
 
   @@index([playlistId])
   @@index([promotionalActive])
   @@index([isStaffPick])
-  @@index([isTrending])
   @@fulltext([name])
   @@map("playlists")
 }

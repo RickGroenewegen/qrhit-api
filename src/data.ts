@@ -966,8 +966,6 @@ class Data {
         playlists.promotionalTitle,
         playlists.promotionalDescription,
         playlists.isStaffPick,
-        playlists.isTrending,
-        playlists.trendingRank,
         playlists.staffPickOrder
       FROM
         playlists
@@ -975,6 +973,7 @@ class Data {
         genres g ON playlists.genreId = g.id
       WHERE
         playlists.featured = 1
+        AND playlists.featuredHidden = 0
         AND (playlists.promotionalActive = 0 OR playlists.promotionalAccepted = 1)
     `;
 
@@ -2676,6 +2675,122 @@ class Data {
         color.red.bold(`Error getting accepted promotional playlists: ${error.message}`)
       );
       return [];
+    }
+  }
+
+  /**
+   * Get all featured playlists (featured = 1)
+   */
+  public async getAllFeaturedPlaylists(): Promise<any[]> {
+    try {
+      const playlists = await this.prisma.playlist.findMany({
+        where: {
+          featured: true,
+        },
+        select: {
+          id: true,
+          playlistId: true,
+          name: true,
+          slug: true,
+          image: true,
+          isStaffPick: true,
+          staffPickOrder: true,
+          featuredHidden: true,
+          featuredLocale: true,
+          promotionalActive: true,
+          promotionalAccepted: true,
+          promotionalTitle: true,
+          promotionalDescription: true,
+          promotionalUserId: true,
+        },
+        orderBy: [{ staffPickOrder: 'asc' }, { id: 'desc' }],
+      });
+
+      // Get user info for each playlist
+      const playlistsWithUsers = await Promise.all(
+        playlists.map(async (p) => {
+          let user = null;
+          if (p.promotionalUserId) {
+            user = await this.prisma.user.findUnique({
+              where: { id: p.promotionalUserId },
+              select: { email: true, displayName: true },
+            });
+          }
+          return {
+            id: p.id,
+            playlistId: p.playlistId,
+            name: p.promotionalTitle || p.name,
+            slug: p.slug,
+            image: p.image,
+            description: p.promotionalDescription || '',
+            isStaffPick: p.isStaffPick,
+            staffPickOrder: p.staffPickOrder,
+            featuredHidden: p.featuredHidden,
+            featuredLocale: p.featuredLocale,
+            isPromotional: p.promotionalActive && p.promotionalAccepted,
+            userEmail: user?.email || null,
+            userDisplayName: user?.displayName || null,
+          };
+        })
+      );
+
+      return playlistsWithUsers;
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Error getting all featured playlists: ${error.message}`)
+      );
+      return [];
+    }
+  }
+
+  /**
+   * Update staff pick status for a playlist
+   */
+  public async updateStaffPick(
+    playlistId: string,
+    isStaffPick: boolean,
+    staffPickOrder: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      await this.prisma.playlist.update({
+        where: { playlistId },
+        data: { isStaffPick, staffPickOrder },
+      });
+
+      // Clear featured playlists cache
+      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Error updating staff pick: ${error.message}`)
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Update featured hidden status for a playlist
+   */
+  public async updateFeaturedHidden(
+    playlistId: string,
+    featuredHidden: boolean
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      await this.prisma.playlist.update({
+        where: { playlistId },
+        data: { featuredHidden },
+      });
+
+      // Clear featured playlists cache
+      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Error updating featured hidden: ${error.message}`)
+      );
+      return { success: false, error: error.message };
     }
   }
 
