@@ -132,6 +132,8 @@ model Payment {
   shippingStartDateTime    DateTime?
   shippingDeliveryDateTime DateTime?
   shippingIgnore           Boolean              @default(false)
+  shippingLastTrackedAt    DateTime?
+  shippingLastChangeType   String?
   marketingEmails          Boolean              @default(false)
   differentInvoiceAddress  Boolean              @default(false)
   invoiceAddress           String?
@@ -190,6 +192,7 @@ model Payment {
   @@index([createdAt])
   @@index([printApiStatus])
   @@index([shippingStatus])
+  @@index([shippingLastTrackedAt])
   // Composite indexes for common query patterns
   @@index([vibe, test, createdAt])
   @@index([vibe, test, status, createdAt])

@@ -545,6 +545,7 @@ class Promotional {
           id: true,
           name: true,
           slug: true,
+          promotionalTitle: true,
           promotionalDescription: true,
           promotionalLocale: true,
           promotionalUserId: true,
@@ -610,10 +611,13 @@ class Promotional {
       };
 
       if (!description.trim()) {
-        // No description to translate, just accept
+        // No description to translate, just accept and update name if promotionalTitle exists
         await this.prisma.playlist.update({
           where: { playlistId },
-          data: { promotionalAccepted: true },
+          data: {
+            promotionalAccepted: true,
+            ...(playlist.promotionalTitle && { name: playlist.promotionalTitle }),
+          },
         });
         await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
 
@@ -666,8 +670,10 @@ class Promotional {
       );
 
       // Build update object with all description_[locale] fields
+      // Also update name with promotionalTitle if provided
       const updateData: Record<string, any> = {
         promotionalAccepted: true,
+        ...(playlist.promotionalTitle && { name: playlist.promotionalTitle }),
       };
 
       for (const locale of allLocales) {

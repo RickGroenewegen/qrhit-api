@@ -40,7 +40,7 @@ import PrintEnBind from './printers/printenbind';
 
 const TRACK_LINKS_CACHE_PREFIX = 'track_links_v6';
 const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
-const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v1_';
+const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v2_';
 
 class Data {
   private static instance: Data;
