@@ -23,9 +23,9 @@ import crypto from 'crypto';
 import { CronJob } from 'cron';
 
 // Spotify Cache Key Prefixes
-export const CACHE_KEY_PLAYLIST = 'playlist_';
+export const CACHE_KEY_PLAYLIST = 'playlist2_';
 export const CACHE_KEY_PLAYLIST_FETCH_LOCK = 'playlist_fetch_';
-export const CACHE_KEY_PLAYLIST_DB = 'playlistdb_';
+export const CACHE_KEY_PLAYLIST_DB = 'playlistdb2_';
 export const CACHE_KEY_TRACKS = 'tracks2_';
 export const CACHE_KEY_TRACK_COUNT = 'trackcount2_';
 export const CACHE_KEY_TRACK_INFO = 'trackInfo_';

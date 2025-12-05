@@ -384,6 +384,52 @@ class Promotional {
   }
 
   /**
+   * Replace competitor brand name with QRSong! in text
+   */
+  private sanitizeBrandName(text: string): string {
+    return text.replace(/hitster/gi, 'QRSong!');
+  }
+
+  /**
+   * Convert text to URL-friendly slug
+   */
+  private slugify(text: string): string {
+    return text
+      .toString()
+      .normalize('NFD')
+      .replace(/[\u0300-\u036f]/g, '')
+      .toLowerCase()
+      .trim()
+      .replace(/hitster/g, 'qrsong') // Replace competitor brand in slug
+      .replace(/\s+/g, '-')
+      .replace(/[^\w-]+/g, '')
+      .replace(/--+/g, '-');
+  }
+
+  /**
+   * Generate a unique slug for a playlist, adding -2, -3 etc if duplicate exists
+   */
+  private async generateUniqueSlug(name: string, currentPlaylistId: string): Promise<string> {
+    const baseSlug = this.slugify(name);
+    let slug = baseSlug;
+    let counter = 1;
+
+    while (
+      await this.prisma.playlist.findFirst({
+        where: {
+          slug,
+          playlistId: { not: currentPlaylistId }, // Exclude current playlist
+        },
+      })
+    ) {
+      counter++;
+      slug = `${baseSlug}-${counter}`;
+    }
+
+    return slug;
+  }
+
+  /**
    * Send email notification when promotional playlist is sold
    */
   private async sendPromotionalSaleEmail(
@@ -611,13 +657,16 @@ class Promotional {
       };
 
       if (!description.trim()) {
-        // No description to translate, just accept and update name if promotionalTitle exists
+        // No description to translate, just accept and update name/slug if promotionalTitle exists
+        const updateData: Record<string, any> = { promotionalAccepted: true };
+        if (playlist.promotionalTitle) {
+          const sanitizedName = this.sanitizeBrandName(playlist.promotionalTitle);
+          updateData.name = sanitizedName;
+          updateData.slug = await this.generateUniqueSlug(sanitizedName, playlistId);
+        }
         await this.prisma.playlist.update({
           where: { playlistId },
-          data: {
-            promotionalAccepted: true,
-            ...(playlist.promotionalTitle && { name: playlist.promotionalTitle }),
-          },
+          data: updateData,
         });
         await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
 
@@ -642,6 +691,9 @@ class Promotional {
         return { success: true };
       }
 
+      // Sanitize description before translating (replace competitor brand name)
+      const sanitizedDescription = this.sanitizeBrandName(description);
+
       this.logger.log(
         color.blue.bold(
           `Translating promotional description for playlist ${color.white.bold(
@@ -650,7 +702,7 @@ class Promotional {
         )
       );
       this.logger.log(
-        color.blue.bold(`Description to translate: "${color.white.bold(description.substring(0, 100))}..."`)
+        color.blue.bold(`Description to translate: "${color.white.bold(sanitizedDescription.substring(0, 100))}..."`)
       );
 
       // Get all locales to translate to (including source for grammar/style fix)
@@ -661,7 +713,7 @@ class Promotional {
 
       // Translate to all locales using ChatGPT
       const translations = await this.chatgpt.translateText(
-        description,
+        sanitizedDescription,
         allLocales
       );
 
@@ -670,16 +722,22 @@ class Promotional {
       );
 
       // Build update object with all description_[locale] fields
-      // Also update name with promotionalTitle if provided
+      // Also update name and slug with promotionalTitle if provided
       const updateData: Record<string, any> = {
         promotionalAccepted: true,
-        ...(playlist.promotionalTitle && { name: playlist.promotionalTitle }),
       };
+
+      if (playlist.promotionalTitle) {
+        const sanitizedName = this.sanitizeBrandName(playlist.promotionalTitle);
+        updateData.name = sanitizedName;
+        updateData.slug = await this.generateUniqueSlug(sanitizedName, playlistId);
+      }
 
       for (const locale of allLocales) {
         const translatedText = translations[locale];
         if (translatedText) {
-          updateData[`description_${locale}`] = translatedText;
+          // Sanitize each translated description as well (in case translation preserved brand name)
+          updateData[`description_${locale}`] = this.sanitizeBrandName(translatedText);
         }
       }
 
