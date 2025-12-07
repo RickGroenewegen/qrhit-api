@@ -780,6 +780,34 @@ export default async function adminRoutes(
     }
   );
 
+  // Reload promotional playlist cache (clears cache for already approved playlists)
+  fastify.post(
+    '/admin/promotional/:playlistId/reload',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+
+      if (!playlistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      const result = await promotional.clearPlaylistCache(playlistId);
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Update featured locale for a playlist
   fastify.post(
     '/admin/promotional/:playlistId/locale',

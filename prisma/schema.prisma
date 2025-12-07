@@ -561,6 +561,8 @@ model PaymentHasPlaylist {
   theme                   String?                  // Theme slug for app theming (e.g., "acme", "coca-cola")
   themeName               String?                  // User-readable theme name (e.g., "Acme Company")
   printerType             String                   @default("printnbind") // Printer type: "printnbind" or "tromp"
+  promotionalCredited     Boolean                  @default(false) // Whether promotional discount was credited to creator
+  promotionalCreditedAt   DateTime?                // When the promotional credit was applied
   orderType               OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                   PaymentHasPlaylistItem[]
 

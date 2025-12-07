@@ -18,6 +18,7 @@ import cluster from 'cluster';
 import { promises as fs } from 'fs';
 import Game from './game';
 import Spotify from './spotify';
+import Promotional from './promotional';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -33,6 +34,7 @@ class Mollie {
   private failedPaymentStatus = ['failed', 'canceled', 'expired'];
   private game = new Game();
   private spotify = Spotify.getInstance();
+  private promotional = Promotional.getInstance();
 
   constructor() {
     if (cluster.isPrimary) {
@@ -1245,6 +1247,22 @@ class Mollie {
               color.green.bold('Cleared playlist cache for user: ') +
                 color.white.bold(dbPayment.user.hash)
             );
+          }
+
+          // Credit promotional discount for each playlist in this payment (one-time only)
+          const paymentPlaylists = await this.prisma.paymentHasPlaylist.findMany({
+            where: { paymentId: dbPayment.id },
+            select: { playlistId: true },
+          });
+
+          for (const pp of paymentPlaylists) {
+            try {
+              await this.promotional.creditPromotionalDiscount(pp.playlistId, dbPayment.id);
+            } catch (e) {
+              this.logger.log(
+                color.yellow.bold(`Failed to credit promotional discount for playlist ${pp.playlistId}: ${e}`)
+              );
+            }
           }
 
           this.generator.queueGenerate(

@@ -7,6 +7,7 @@ import Cache from './cache';
 import Translation from './translation';
 import { color } from 'console-log-colors';
 import { CACHE_KEY_FEATURED_PLAYLISTS } from './data';
+import { CACHE_KEY_PLAYLIST, CACHE_KEY_PLAYLIST_DB } from './spotify';
 
 const PROMOTIONAL_CREDIT_AMOUNT = parseFloat(process.env['PROMOTIONAL_CREDIT_AMOUNT'] || '2.5');
 
@@ -265,16 +266,21 @@ class Promotional {
         return { success: true, credited: false };
       }
 
-      // Get the quantity ordered from payment_has_playlist
+      // Get the PaymentHasPlaylist record with idempotency check
       const paymentPlaylist = await this.prisma.paymentHasPlaylist.findFirst({
         where: {
           paymentId: purchaserPaymentId,
           playlistId: playlistDbId,
         },
-        select: { amount: true },
+        select: { id: true, amount: true, promotionalCredited: true },
       });
 
-      const quantity = paymentPlaylist?.amount || 1;
+      // Skip if not found or already credited (idempotency check)
+      if (!paymentPlaylist || paymentPlaylist.promotionalCredited) {
+        return { success: true, credited: false };
+      }
+
+      const quantity = paymentPlaylist.amount || 1;
       const creditAmount = PROMOTIONAL_CREDIT_AMOUNT * quantity;
 
       // Check if a discount code already exists for this user (not playlist)
@@ -311,6 +317,15 @@ class Promotional {
           },
         });
       }
+
+      // Mark as credited to prevent duplicate credits
+      await this.prisma.paymentHasPlaylist.update({
+        where: { id: paymentPlaylist.id },
+        data: {
+          promotionalCredited: true,
+          promotionalCreditedAt: new Date(),
+        },
+      });
 
       // Calculate new balance (total amount minus what's been used)
       const totalUsed = await this.prisma.discountCodedUses.aggregate({
@@ -427,6 +442,44 @@ class Promotional {
     }
 
     return slug;
+  }
+
+  /**
+   * Clear all playlist-related caches for a given playlist
+   * @param playlistId - The Spotify playlist ID
+   * @param oldSlug - Optional old slug to clear (when slug has changed)
+   */
+  public async clearPlaylistCache(playlistId: string, oldSlug?: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get playlist to find the current slug
+      const playlist = await this.prisma.playlist.findUnique({
+        where: { playlistId },
+        select: { slug: true },
+      });
+
+      // Clear all relevant caches
+      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+      await this.cache.del(`${CACHE_KEY_PLAYLIST}${playlistId}`);
+      await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${playlistId}`);
+      if (playlist?.slug) {
+        await this.cache.del(`${CACHE_KEY_PLAYLIST}${playlist.slug}`);
+        await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${playlist.slug}`);
+      }
+      // Clear old slug cache if provided and different from current
+      if (oldSlug && oldSlug !== playlist?.slug) {
+        await this.cache.del(`${CACHE_KEY_PLAYLIST}${oldSlug}`);
+        await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${oldSlug}`);
+      }
+
+      this.logger.log(
+        color.green.bold(`Cleared cache for playlist ${color.white.bold(playlistId)}`)
+      );
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`Error clearing playlist cache: ${error.message}`));
+      return { success: false, error: error.message };
+    }
   }
 
   /**
@@ -664,11 +717,14 @@ class Promotional {
           updateData.name = sanitizedName;
           updateData.slug = await this.generateUniqueSlug(sanitizedName, playlistId);
         }
+        const oldSlug = playlist.slug;
         await this.prisma.playlist.update({
           where: { playlistId },
           data: updateData,
         });
-        await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+
+        // Clear all relevant caches (pass old slug in case it changed)
+        await this.clearPlaylistCache(playlistId, oldSlug || undefined);
 
         const emailData = await fetchEmailData();
         if (emailData) {
@@ -750,13 +806,14 @@ class Promotional {
       );
 
       // Update playlist with translations and accepted status
+      const oldSlug = playlist.slug;
       await this.prisma.playlist.update({
         where: { playlistId },
         data: updateData,
       });
 
-      // Clear featured playlists cache
-      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+      // Clear all relevant caches (pass old slug in case it changed)
+      await this.clearPlaylistCache(playlistId, oldSlug || undefined);
 
       this.logger.log(
         color.green.bold(

@@ -25,7 +25,6 @@ import { ApiResult } from './interfaces/ApiResult';
 import Cache from './cache';
 import archiver from 'archiver';
 import GeneratorQueue from './generatorQueue';
-import Promotional from './promotional';
 
 class Generator {
   private static instance: Generator;
@@ -43,7 +42,6 @@ class Generator {
   private discount = new Discount();
   private cache = Cache.getInstance();
   private generatorQueue: GeneratorQueue | null = null;
-  private promotional = Promotional.getInstance();
 
   private constructor() {
     this.setCron();
@@ -404,17 +402,6 @@ class Generator {
       'turnover',
       parseInt(payment.totalPrice)
     );
-
-    // Credit promotional discount if purchased playlist is promotional
-    if (productType === 'cards') {
-      for (const playlist of playlists) {
-        try {
-          await this.promotional.creditPromotionalDiscount(playlist.id, payment.id);
-        } catch (e) {
-          this.logger.log(color.yellow.bold(`Failed to credit promotional discount for playlist ${playlist.id}: ${e}`));
-        }
-      }
-    }
 
     // Update processedFirstTime fields
     await this.prisma.payment.update({
