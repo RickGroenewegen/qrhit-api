@@ -659,7 +659,8 @@ class Promotional {
       const sourceLocale = playlist.promotionalLocale || 'en';
 
       // Helper to fetch email data for approval notification
-      const fetchEmailData = async () => {
+      // Takes newSlug parameter in case the slug was updated during approval
+      const fetchEmailData = async (newSlug?: string) => {
         if (!playlist.promotionalUserId) return undefined;
 
         const user = await this.prisma.user.findUnique({
@@ -695,7 +696,9 @@ class Promotional {
 
         if (!paymentLink?.payment || !discountCode) return undefined;
 
-        const shareLink = `${process.env['FRONTEND_URI']}/en/product/${playlist.slug || playlistId}`;
+        // Use the new slug if provided (admin may have changed it), otherwise fallback to original
+        const currentSlug = newSlug || playlist.slug || playlistId;
+        const shareLink = `${process.env['FRONTEND_URI']}/en/product/${currentSlug}`;
         const setupLink = `${process.env['FRONTEND_URI']}/promotional/${paymentLink.payment.paymentId}/${user.hash}/${playlistId}`;
 
         return {
@@ -726,7 +729,8 @@ class Promotional {
         // Clear all relevant caches (pass old slug in case it changed)
         await this.clearPlaylistCache(playlistId, oldSlug || undefined);
 
-        const emailData = await fetchEmailData();
+        // Pass the new slug to fetchEmailData so the email contains the correct URL
+        const emailData = await fetchEmailData(updateData.slug);
         if (emailData) {
           await this.mail.sendPromotionalApprovedEmail(
             emailData.email,
@@ -822,7 +826,8 @@ class Promotional {
       );
 
       // Fetch data needed for approval email and send it
-      const emailData = await fetchEmailData();
+      // Pass the new slug to fetchEmailData so the email contains the correct URL
+      const emailData = await fetchEmailData(updateData.slug);
       if (emailData) {
         await this.mail.sendPromotionalApprovedEmail(
           emailData.email,
