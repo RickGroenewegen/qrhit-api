@@ -43,6 +43,18 @@
             ]
         },
         {
+            "slug": "express",
+            "title": "Can I pay extra for express production or shipping?",
+            "description": "Yes and no. For physical orders, we aim to produce and ship within 2-3 business. You can speed this process up with express production. Express production costs an additional 20% extra and ensures your order is prioritized in our production queue. Usually this means if you order before 13:00 PM your order will get printend and shipped the same day. Contact us at info@qrsong.io after you approved your playlist to request express production and we'll send you a payment link. De do NOT offer express shipping options at this time, but we work with reliable carriers to ensure timely delivery.",
+            "tags": [
+                "express",
+                "production",
+                "shipping",
+                "priority",
+                "faster"
+            ]
+        },
+        {
             "slug": "wrong-amount-tracks",
             "title": "The system does not show the correct amount of tracks in my playlist, why?",
             "description": "Did you by any chance change your playlist recently? QRSong! caches your playlist to reduce load on Spotify's servers. If you modified your playlist, click the 'Refresh playlist' button at the top of the summary list to reload it from Spotify.",
