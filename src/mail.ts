@@ -1244,7 +1244,16 @@ ${knowledgeContext}${toolContext}`,
       payment.locale,
       'mail'
     );
-    
+
+    // Interpolate playlist name into printingStarted translation
+    const printingStartedText = this.translation.translate(
+      'mail.printingStarted',
+      payment.locale,
+      { playlist: playlist.name || 'your playlist' }
+    );
+    if (translations) {
+      translations.printingStarted = printingStartedText;
+    }
 
     const mailParams = {
       payment,

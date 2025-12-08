@@ -4423,20 +4423,6 @@
     "ru",
     "sv"
   ],
-  "mail.orderShipped": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp",
-    "cn",
-    "ru",
-    "sv"
-  ],
   "mail.downloadButton": [
     "nl",
     "de",
@@ -6710,30 +6696,6 @@
     "cn",
     "sv"
   ],
-  "mail.sendToPrinterMailSubject": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "jp",
-    "cn",
-    "sv"
-  ],
-  "mail.printingStarted": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "jp",
-    "cn",
-    "sv"
-  ],
   "mail.multipleOrdersInfo": [
     "nl",
     "de",
@@ -6807,18 +6769,6 @@
     "sv"
   ],
   "mail.promotionalSaleGreeting": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "jp",
-    "cn",
-    "sv"
-  ],
-  "mail.promotionalCtaSubtitle": [
     "nl",
     "de",
     "fr",
@@ -7215,6 +7165,54 @@
     "sv"
   ],
   "promotional_approved.shareOnInstagram": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "mail.promotionalCtaSubtitle": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "mail.orderShipped": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "mail.sendToPrinterMailSubject": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "mail.printingStarted": [
     "nl",
     "de",
     "fr",
