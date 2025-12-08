@@ -7,7 +7,7 @@ import Cache from './cache';
 import Translation from './translation';
 import { color } from 'console-log-colors';
 import { CACHE_KEY_FEATURED_PLAYLISTS } from './data';
-import { CACHE_KEY_PLAYLIST, CACHE_KEY_PLAYLIST_DB } from './spotify';
+import { CACHE_KEY_PLAYLIST, CACHE_KEY_PLAYLIST_DB, CACHE_KEY_TRACKS, CACHE_KEY_TRACK_COUNT } from './spotify';
 
 const PROMOTIONAL_CREDIT_AMOUNT = parseFloat(process.env['PROMOTIONAL_CREDIT_AMOUNT'] || '2.5');
 
@@ -495,6 +495,9 @@ class Promotional {
       await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
       await this.cache.del(`${CACHE_KEY_PLAYLIST}${playlistId}`);
       await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${playlistId}`);
+      // Clear tracks and track count caches (use pattern since they include track count in key)
+      await this.cache.delPattern(`${CACHE_KEY_TRACKS}${playlistId}*`);
+      await this.cache.delPattern(`${CACHE_KEY_TRACK_COUNT}${playlistId}*`);
       if (playlist?.slug) {
         await this.cache.del(`${CACHE_KEY_PLAYLIST}${playlist.slug}`);
         await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${playlist.slug}`);
