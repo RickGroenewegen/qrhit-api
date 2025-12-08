@@ -912,39 +912,6 @@ export default async function adminRoutes(
     }
   );
 
-  // Update staff pick status for a playlist
-  fastify.post(
-    '/admin/playlist/:playlistId/staff-pick',
-    getAuthHandler(['admin']),
-    async (request: any, reply: any) => {
-      const { playlistId } = request.params;
-      const { isStaffPick, staffPickOrder } = request.body;
-
-      if (!playlistId) {
-        reply.status(400).send({
-          success: false,
-          error: 'Playlist ID is required',
-        });
-        return;
-      }
-
-      const result = await data.updateStaffPick(
-        playlistId,
-        isStaffPick === true,
-        typeof staffPickOrder === 'number' ? staffPickOrder : 0
-      );
-
-      if (result.success) {
-        reply.send({ success: true });
-      } else {
-        reply.status(500).send({
-          success: false,
-          error: result.error,
-        });
-      }
-    }
-  );
-
   // Update featured hidden status for a playlist
   fastify.post(
     '/admin/playlist/:playlistId/featured-hidden',

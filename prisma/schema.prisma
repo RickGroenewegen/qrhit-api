@@ -378,13 +378,10 @@ model Playlist {
   CompanyList          CompanyList[]
 
   // Curation fields for featured playlists
-  isStaffPick          Boolean              @default(false)
-  staffPickOrder       Int                  @default(0)
   featuredHidden       Boolean              @default(false)
 
   @@index([playlistId])
   @@index([promotionalActive])
-  @@index([isStaffPick])
   @@fulltext([name])
   @@map("playlists")
 }

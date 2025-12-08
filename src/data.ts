@@ -968,9 +968,7 @@ class Data {
         g.name_${locale} as genreName,
         playlists.promotionalActive as isPromotional,
         playlists.promotionalTitle,
-        playlists.promotionalDescription,
-        playlists.isStaffPick,
-        playlists.staffPickOrder
+        playlists.promotionalDescription
       FROM
         playlists
       LEFT JOIN
@@ -2702,8 +2700,6 @@ class Data {
           name: true,
           slug: true,
           image: true,
-          isStaffPick: true,
-          staffPickOrder: true,
           featuredHidden: true,
           featuredLocale: true,
           promotionalActive: true,
@@ -2712,7 +2708,7 @@ class Data {
           promotionalDescription: true,
           promotionalUserId: true,
         },
-        orderBy: [{ staffPickOrder: 'asc' }, { id: 'desc' }],
+        orderBy: [{ id: 'desc' }],
       });
 
       // Get user info for each playlist
@@ -2732,8 +2728,6 @@ class Data {
             slug: p.slug,
             image: p.image,
             description: p.promotionalDescription || '',
-            isStaffPick: p.isStaffPick,
-            staffPickOrder: p.staffPickOrder,
             featuredHidden: p.featuredHidden,
             featuredLocale: p.featuredLocale,
             isPromotional: p.promotionalActive && p.promotionalAccepted,
@@ -2749,32 +2743,6 @@ class Data {
         color.red.bold(`Error getting all featured playlists: ${error.message}`)
       );
       return [];
-    }
-  }
-
-  /**
-   * Update staff pick status for a playlist
-   */
-  public async updateStaffPick(
-    playlistId: string,
-    isStaffPick: boolean,
-    staffPickOrder: number
-  ): Promise<{ success: boolean; error?: string }> {
-    try {
-      await this.prisma.playlist.update({
-        where: { playlistId },
-        data: { isStaffPick, staffPickOrder },
-      });
-
-      // Clear featured playlists cache
-      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
-
-      return { success: true };
-    } catch (error: any) {
-      this.logger.log(
-        color.red.bold(`Error updating staff pick: ${error.message}`)
-      );
-      return { success: false, error: error.message };
     }
   }
 
