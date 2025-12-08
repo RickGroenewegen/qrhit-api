@@ -694,7 +694,8 @@ class Promotional {
           select: { code: true },
         });
 
-        if (!paymentLink?.payment || !discountCode) return undefined;
+        // Only require payment link, discount code is optional (created after first sale)
+        if (!paymentLink?.payment) return undefined;
 
         // Use the new slug if provided (admin may have changed it), otherwise fallback to original
         const currentSlug = newSlug || playlist.slug || playlistId;
@@ -705,7 +706,7 @@ class Promotional {
           email: user.email,
           displayName: user.displayName || user.email.split('@')[0],
           playlistName: playlist.name,
-          discountCode: discountCode.code,
+          discountCode: discountCode?.code || '',
           shareLink,
           setupLink,
           locale: user.locale || sourceLocale || 'en',
@@ -744,7 +745,7 @@ class Promotional {
         } else {
           this.logger.log(
             color.yellow.bold(
-              `Could not send approval email for playlist ${color.white.bold(playlistId)}: missing user/payment/discount data`
+              `Could not send approval email for playlist ${color.white.bold(playlistId)}: missing user or payment data`
             )
           );
         }
@@ -841,7 +842,7 @@ class Promotional {
       } else {
         this.logger.log(
           color.yellow.bold(
-            `Could not send approval email for playlist ${color.white.bold(playlistId)}: missing user/payment/discount data`
+            `Could not send approval email for playlist ${color.white.bold(playlistId)}: missing user or payment data`
           )
         );
       }
@@ -851,6 +852,114 @@ class Promotional {
       this.logger.log(
         color.red.bold(
           `Error accepting promotional playlist ${playlistId}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Resend approval email for an already-approved promotional playlist
+   */
+  public async resendApprovalEmail(
+    playlistId: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      // Get playlist with promotional data
+      const playlist = await this.prisma.playlist.findUnique({
+        where: { playlistId },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          promotionalAccepted: true,
+          promotionalLocale: true,
+          promotionalUserId: true,
+        },
+      });
+
+      if (!playlist) {
+        return { success: false, error: 'Playlist not found' };
+      }
+
+      if (!playlist.promotionalAccepted) {
+        return { success: false, error: 'Playlist is not approved yet' };
+      }
+
+      if (!playlist.promotionalUserId) {
+        return { success: false, error: 'No promotional user associated with this playlist' };
+      }
+
+      const sourceLocale = playlist.promotionalLocale || 'en';
+
+      // Fetch user data
+      const user = await this.prisma.user.findUnique({
+        where: { id: playlist.promotionalUserId },
+        select: { email: true, displayName: true, hash: true, locale: true },
+      });
+
+      if (!user) {
+        return { success: false, error: 'User not found' };
+      }
+
+      // Fetch payment link
+      const paymentLink = await this.prisma.paymentHasPlaylist.findFirst({
+        where: {
+          playlistId: playlist.id,
+          payment: {
+            userId: playlist.promotionalUserId,
+            status: 'paid',
+          },
+        },
+        select: {
+          payment: {
+            select: { paymentId: true },
+          },
+        },
+        orderBy: { id: 'asc' },
+      });
+
+      if (!paymentLink?.payment) {
+        return { success: false, error: 'No paid payment found for this playlist' };
+      }
+
+      // Fetch discount code (optional)
+      const discountCode = await this.prisma.discountCode.findFirst({
+        where: {
+          promotional: true,
+          promotionalUserId: playlist.promotionalUserId,
+        },
+        select: { code: true },
+      });
+
+      const currentSlug = playlist.slug || playlistId;
+      const shareLink = `${process.env['FRONTEND_URI']}/en/product/${currentSlug}`;
+      const setupLink = `${process.env['FRONTEND_URI']}/promotional/${paymentLink.payment.paymentId}/${user.hash}/${playlistId}`;
+
+      await this.mail.sendPromotionalApprovedEmail(
+        user.email,
+        user.displayName || user.email.split('@')[0],
+        playlist.name,
+        discountCode?.code || '',
+        shareLink,
+        setupLink,
+        user.locale || sourceLocale || 'en'
+      );
+
+      this.logger.log(
+        color.green.bold(
+          `Resent approval email for playlist ${color.white.bold(playlistId)} to ${color.white.bold(user.email)}`
+        )
+      );
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error resending approval email for playlist ${playlistId}: ${error.message}`
         )
       );
       return { success: false, error: error.message };

@@ -808,6 +808,34 @@ export default async function adminRoutes(
     }
   );
 
+  // Resend approval email for an approved promotional playlist
+  fastify.post(
+    '/admin/promotional/:playlistId/resend-email',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+
+      if (!playlistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      const result = await promotional.resendApprovalEmail(playlistId);
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Update featured locale for a playlist
   fastify.post(
     '/admin/promotional/:playlistId/locale',

@@ -2690,6 +2690,11 @@ class Data {
       const playlists = await this.prisma.playlist.findMany({
         where: {
           featured: true,
+          // Exclude playlists that are pending promotional approval
+          NOT: {
+            promotionalActive: true,
+            promotionalAccepted: false,
+          },
         },
         select: {
           id: true,
