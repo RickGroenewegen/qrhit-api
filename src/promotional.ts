@@ -283,40 +283,24 @@ class Promotional {
       const quantity = paymentPlaylist.amount || 1;
       const creditAmount = PROMOTIONAL_CREDIT_AMOUNT * quantity;
 
-      // Check if a discount code already exists for this user (not playlist)
-      let discountCode = await this.prisma.discountCode.findFirst({
+      // Get or create discount code for this user
+      const discountCodeData = await this.fetchOrCreateDiscountCode(
+        creator.id,
+        creator.displayName || undefined,
+        creator.email
+      );
+
+      // Add the credit amount to the discount code
+      const newTotalAmount = discountCodeData.amount + creditAmount;
+      await this.prisma.discountCode.updateMany({
         where: {
           promotional: true,
           promotionalUserId: creator.id,
         },
+        data: {
+          amount: newTotalAmount,
+        },
       });
-
-      let newTotalAmount: number;
-      if (discountCode) {
-        // Add to existing discount code balance
-        newTotalAmount = discountCode.amount + creditAmount;
-        await this.prisma.discountCode.update({
-          where: { id: discountCode.id },
-          data: {
-            amount: newTotalAmount,
-          },
-        });
-      } else {
-        // Create new promotional discount code for this user
-        const code = this.generateDiscountCode();
-        newTotalAmount = creditAmount;
-        discountCode = await this.prisma.discountCode.create({
-          data: {
-            code,
-            amount: newTotalAmount,
-            description: `Promotional discount for user: ${creator.displayName || creator.email}`,
-            promotional: true,
-            promotionalUserId: creator.id,
-            general: false,
-            digital: false, // Can be used for any order type
-          },
-        });
-      }
 
       // Mark as credited to prevent duplicate credits
       await this.prisma.paymentHasPlaylist.update({
@@ -329,7 +313,7 @@ class Promotional {
 
       // Calculate new balance (total amount minus what's been used)
       const totalUsed = await this.prisma.discountCodedUses.aggregate({
-        where: { discountCodeId: discountCode.id },
+        where: { discountCodeId: discountCodeData.id },
         _sum: { amount: true },
       });
       const newBalance = newTotalAmount - (totalUsed._sum.amount || 0);
@@ -362,7 +346,7 @@ class Promotional {
         playlist.name,
         creditAmount,
         newBalance,
-        discountCode.code,
+        discountCodeData.code,
         `${process.env['FRONTEND_URI']}/${creator.locale || 'en'}/product/${playlist.slug || playlist.playlistId}`,
         setupLink,
         creator.locale || 'en',
@@ -371,7 +355,7 @@ class Promotional {
 
       this.logger.log(
         color.blue.bold(
-          `Credited ${color.white.bold(creditAmount)} EUR (${color.white.bold(quantity)}x) to promotional discount for playlist ${color.white.bold(playlist.name)} (code: ${color.white.bold(discountCode.code)})`
+          `Credited ${color.white.bold(creditAmount)} EUR (${color.white.bold(quantity)}x) to promotional discount for playlist ${color.white.bold(playlist.name)} (code: ${color.white.bold(discountCodeData.code)})`
         )
       );
 
@@ -396,6 +380,56 @@ class Promotional {
       return result;
     };
     return [generatePart(), generatePart(), generatePart(), generatePart()].join('-');
+  }
+
+  /**
+   * Fetch existing discount code for a user, or create a new one with 0 balance
+   * This ensures promotional users always have a discount code available
+   */
+  public async fetchOrCreateDiscountCode(
+    userId: number,
+    userDisplayName?: string,
+    userEmail?: string
+  ): Promise<{ id: number; code: string; amount: number }> {
+    // Check if a discount code already exists for this user
+    let discountCode = await this.prisma.discountCode.findFirst({
+      where: {
+        promotional: true,
+        promotionalUserId: userId,
+      },
+    });
+
+    if (!discountCode) {
+      // Create new promotional discount code for this user with 0 balance
+      const code = this.generateDiscountCode();
+      const description = userDisplayName || userEmail
+        ? `Promotional discount for user: ${userDisplayName || userEmail}`
+        : `Promotional discount for user ID: ${userId}`;
+
+      discountCode = await this.prisma.discountCode.create({
+        data: {
+          code,
+          amount: 0,
+          description,
+          promotional: true,
+          promotionalUserId: userId,
+          general: false,
+          digital: false,
+        },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Created promotional discount code ${color.white.bold(code)} for user ${color.white.bold(userDisplayName || userEmail || userId.toString())}`
+        )
+      );
+    }
+
+    return {
+      id: discountCode.id,
+      code: discountCode.code,
+      amount: discountCode.amount,
+    };
   }
 
   /**
@@ -686,16 +720,15 @@ class Promotional {
           orderBy: { id: 'asc' },
         });
 
-        const discountCode = await this.prisma.discountCode.findFirst({
-          where: {
-            promotional: true,
-            promotionalUserId: playlist.promotionalUserId,
-          },
-          select: { code: true },
-        });
-
-        // Only require payment link, discount code is optional (created after first sale)
+        // Only require payment link
         if (!paymentLink?.payment) return undefined;
+
+        // Get or create discount code for this user (ensures code is always available)
+        const discountCodeData = await this.fetchOrCreateDiscountCode(
+          playlist.promotionalUserId,
+          user.displayName || undefined,
+          user.email
+        );
 
         // Use the new slug if provided (admin may have changed it), otherwise fallback to original
         const currentSlug = newSlug || playlist.slug || playlistId;
@@ -706,7 +739,7 @@ class Promotional {
           email: user.email,
           displayName: user.displayName || user.email.split('@')[0],
           playlistName: playlist.name,
-          discountCode: discountCode?.code || '',
+          discountCode: discountCodeData.code,
           shareLink,
           setupLink,
           locale: user.locale || sourceLocale || 'en',
@@ -926,14 +959,12 @@ class Promotional {
         return { success: false, error: 'No paid payment found for this playlist' };
       }
 
-      // Fetch discount code (optional)
-      const discountCode = await this.prisma.discountCode.findFirst({
-        where: {
-          promotional: true,
-          promotionalUserId: playlist.promotionalUserId,
-        },
-        select: { code: true },
-      });
+      // Get or create discount code for this user (ensures code is always available)
+      const discountCodeData = await this.fetchOrCreateDiscountCode(
+        playlist.promotionalUserId,
+        user.displayName || undefined,
+        user.email
+      );
 
       const currentSlug = playlist.slug || playlistId;
       const shareLink = `${process.env['FRONTEND_URI']}/en/product/${currentSlug}`;
@@ -943,7 +974,7 @@ class Promotional {
         user.email,
         user.displayName || user.email.split('@')[0],
         playlist.name,
-        discountCode?.code || '',
+        discountCodeData.code,
         shareLink,
         setupLink,
         user.locale || sourceLocale || 'en'

@@ -455,6 +455,7 @@ class Mollie {
         ? {
             OR: [
               { fullname: { contains: search.textSearch } },
+              { email: { contains: search.textSearch } },
               { orderId: { contains: search.textSearch } },
               { printApiOrderId: { contains: search.textSearch } },
               { paymentId: { contains: search.textSearch } },
