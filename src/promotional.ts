@@ -409,7 +409,7 @@ class Promotional {
       discountCode = await this.prisma.discountCode.create({
         data: {
           code,
-          amount: 0,
+          amount: PROMOTIONAL_CREDIT_AMOUNT,
           description,
           promotional: true,
           promotionalUserId: userId,
