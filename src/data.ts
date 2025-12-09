@@ -2229,12 +2229,13 @@ class Data {
     searchTerm: string,
     missingYouTubeLink: boolean = false
   ): Promise<any[]> {
-    // Use FULLTEXT search when there's a search term, otherwise regular query
+    // Use LIKE search on artist or name when there's a search term
     if (searchTerm && searchTerm.trim().length > 0) {
+      const likePattern = `%${searchTerm}%`;
       const tracks = await this.prisma.$queryRaw<any[]>`
         SELECT id, artist, name, year, youtubeLink, spotifyLink
         FROM tracks
-        WHERE MATCH(artist, name) AGAINST (${searchTerm} IN BOOLEAN MODE)
+        WHERE (artist LIKE ${likePattern} OR name LIKE ${likePattern})
         ${
           missingYouTubeLink
             ? Prisma.sql`AND (youtubeLink IS NULL OR youtubeLink = '')`
