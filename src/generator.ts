@@ -935,15 +935,19 @@ class Generator {
           'code' in error &&
           error.code === 'ENOENT';
 
-        // Only log validation errors that are not "file not found" errors
-        if (!isFileNotFound) {
+        if (isFileNotFound) {
+          const errorMessage = `PDF file not found for playlist ${white.bold(
+            playlist.name
+          )} (${white.bold(playlist.playlistId)}): ${pdfPath}`;
+          validationErrors.push(errorMessage);
+          this.logger.log(color.red.bold(errorMessage));
+        } else {
           const errorMessage = `Failed to validate PDF for playlist ${white.bold(
             playlist.name
           )} (${white.bold(playlist.playlistId)}): ${error}`;
           validationErrors.push(errorMessage);
           this.logger.log(color.red.bold(errorMessage));
         }
-        // If file doesn't exist, silently skip validation for this playlist
       }
     }
 
