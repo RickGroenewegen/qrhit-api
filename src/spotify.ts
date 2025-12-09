@@ -726,7 +726,7 @@ class Spotify {
         // Collect artist + title for exact matching
         if (trackData.name && trackData.artists && trackData.artists.length > 0) {
           const artist = trackData.artists[0].name; // Use primary artist
-          const title = trackData.name;
+          const title = this.utils.cleanTrackName(trackData.name);
           if(artist && title){
             artistTitlePairs.push({
               artist: artist.toLowerCase().trim(),
