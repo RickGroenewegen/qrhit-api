@@ -9,14 +9,6 @@ import { CronJob } from 'cron';
 import { ApiResult } from './interfaces/ApiResult';
 import { promises as fs } from 'fs';
 import path from 'path';
-
-interface TrackNeedingYearUpdate {
-  id: number;
-  isrc: string | null;
-  trackId: string;
-  name: string;
-  artist: string;
-}
 import Cache from './cache';
 import Translation from './translation';
 import Utils from './utils';
@@ -28,6 +20,7 @@ import PushoverClient from './pushover';
 import { ChatGPT } from './chatgpt';
 import YTMusic from 'ytmusic-api';
 import axios, { AxiosInstance } from 'axios';
+import Promotional from './promotional';
 import Spotify, {
   CACHE_KEY_PLAYLIST,
   CACHE_KEY_PLAYLIST_DB,
@@ -42,6 +35,14 @@ const TRACK_LINKS_CACHE_PREFIX = 'track_links_v6';
 const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
 const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v2_';
 
+interface TrackNeedingYearUpdate {
+  id: number;
+  isrc: string | null;
+  trackId: string;
+  name: string;
+  artist: string;
+}
+
 class Data {
   private static instance: Data;
   private prisma = PrismaInstance.getInstance();
@@ -54,6 +55,7 @@ class Data {
   private analytics = AnalyticsClient.getInstance();
   private pushover = new PushoverClient();
   private appTheme = AppTheme.getInstance();
+  private promotional = Promotional.getInstance();
   private axiosInstance: AxiosInstance;
   private blockedPlaylists: Set<number> = new Set();
   private blockedPlaylistsInitialized: boolean = false;
@@ -2290,6 +2292,31 @@ class Data {
       // Get the link again, but without the cache
       await this.getLink(id, clientIp, false);
       await this.checkUnfinalizedPayments();
+
+      // Clear cache for any featured playlists containing this track
+      const featuredPlaylistsWithTrack = await this.prisma.playlist.findMany({
+        where: {
+          featured: true,
+          tracks: {
+            some: {
+              trackId: id,
+            },
+          },
+        },
+        select: {
+          playlistId: true,
+        },
+      });
+
+      for (const playlist of featuredPlaylistsWithTrack) {
+        await this.promotional.clearPlaylistCache(playlist.playlistId);
+        this.logger.log(
+          color.blue.bold(
+            `Cleared featured playlist cache for ${playlist.playlistId} after track ${id} update`
+          )
+        );
+      }
+
       return { success: true };
     } catch (error: any) {
       this.logger.log(
