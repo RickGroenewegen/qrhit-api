@@ -4,6 +4,8 @@ import { ChatGPT } from '../src/chatgpt';
 import Translation from '../src/translation';
 import Logger from '../src/logger';
 import { color } from 'console-log-colors';
+import sharp from 'sharp';
+import path from 'path';
 
 export default async function blogRoutes(fastify: FastifyInstance) {
   const blog = Blog.getInstance();
@@ -550,6 +552,114 @@ export default async function blogRoutes(fastify: FastifyInstance) {
         reply.status(500).send({
           success: false,
           error: 'Failed to generate new blog image',
+        });
+      }
+    }
+  );
+
+  // Admin: Upload custom blog image
+  fastify.post(
+    '/admin/blogs/:id/upload-image',
+    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id);
+      if (isNaN(id)) {
+        reply.status(400).send({ success: false, error: 'Invalid blog id' });
+        return;
+      }
+
+      logger.log(
+        color.blue.bold(
+          `[Blog Image Upload] Starting image upload for blog ID: ${color.white.bold(
+            id
+          )}`
+        )
+      );
+
+      // Verify blog exists
+      const existingBlog = await blog.getBlogByIdAdmin(id, 'en');
+      if (!existingBlog.success || !existingBlog.blog) {
+        reply.status(404).send({ success: false, error: 'Blog not found' });
+        return;
+      }
+
+      try {
+        // Get the uploaded file
+        const data = await request.file();
+        if (!data) {
+          reply.status(400).send({ success: false, error: 'No file uploaded' });
+          return;
+        }
+
+        logger.log(
+          color.blue.bold(
+            `[Blog Image Upload] Processing file: ${color.white.bold(
+              data.filename
+            )} (${color.white.bold(data.mimetype)})`
+          )
+        );
+
+        // Get file buffer
+        const buffer = await data.toBuffer();
+
+        // Create blog_images directory if it doesn't exist
+        const blogImagesDir = path.join(
+          process.env['PUBLIC_DIR']!,
+          'blog_images'
+        );
+
+        // Generate filename
+        const timestamp = Date.now();
+        const filename = `blog_${timestamp}.jpg`;
+        const filepath = path.join(blogImagesDir, filename);
+
+        // Process image: resize to 1280x720 with cover fit, convert to JPEG
+        await sharp(buffer)
+          .resize(1280, 720, { fit: 'cover' })
+          .jpeg({ quality: 85, progressive: true })
+          .toFile(filepath);
+
+        logger.log(
+          color.green.bold(
+            `[Blog Image Upload] ✓ Image processed and saved: ${color.white.bold(
+              filename
+            )}`
+          )
+        );
+
+        // Update blog with new image filename (keep image_instructions intact)
+        const result = await blog.updateBlog(id, { image: filename });
+
+        if (result.success) {
+          logger.log(
+            color.green.bold(
+              `[Blog Image Upload] ✓ Blog image updated successfully for ID: ${color.white.bold(
+                id
+              )}`
+            )
+          );
+          reply.send({ success: true, image: filename });
+        } else {
+          logger.log(
+            color.red.bold(
+              `[Blog Image Upload] ✗ Failed to update blog: ${color.white.bold(
+                result.error
+              )}`
+            )
+          );
+          reply.status(500).send(result);
+        }
+      } catch (error) {
+        logger.log(
+          color.red.bold(
+            `[Blog Image Upload] ✗ Error processing image: ${color.white.bold(
+              (error as Error).message
+            )}`
+          )
+        );
+        reply.status(500).send({
+          success: false,
+          error: 'Failed to process uploaded image',
         });
       }
     }
