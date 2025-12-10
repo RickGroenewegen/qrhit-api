@@ -12,6 +12,36 @@ import cluster from 'cluster';
 import { CronJob } from 'cron';
 import { blue, red, yellow, white, green } from 'console-log-colors';
 
+// Set to true to delete and re-insert products (required for updating custom labels)
+// Set to false to use PATCH updates (faster but cannot update customAttributes)
+const USE_DELETE_INSERT_FOR_UPDATES = false;
+
+// Genre groupings for PMax campaign segmentation (custom_label_1)
+const GENRE_GROUPS: Record<string, string> = {
+  // Pop & Hits
+  pop: 'pop_hits',
+  kpop: 'pop_hits',
+  eurovision: 'pop_hits',
+  general: 'pop_hits',
+  // Rock & Metal
+  rock: 'rock_metal',
+  metal: 'rock_metal',
+  // Mood & Emotion
+  love: 'mood_emotion',
+  oldies: 'mood_emotion',
+  classical: 'mood_emotion',
+  // World & Dance
+  hiphop: 'world_dance',
+  electronic: 'world_dance',
+  rnb: 'world_dance',
+  raggae: 'world_dance',
+  // Other
+  jazz: 'other',
+  country: 'other',
+  sountracks: 'other',
+  '80s': 'other',
+};
+
 interface ProductVariant {
   id: number; // Database ID
   playlistId: string;
@@ -25,6 +55,7 @@ interface ProductVariant {
   country: string;
   slug: string;
   genre?: string;
+  genreSlug?: string; // Genre slug for PMax custom labels
 }
 
 interface MerchantProduct {
@@ -444,6 +475,7 @@ export class MerchantCenterService {
           country: country,
           slug: playlist.slug,
           genre: playlist.genre ? playlist.genre[`name_${locale}`] : undefined,
+          genreSlug: playlist.genre?.slug, // For PMax custom labels
         };
 
         const productId = await this.uploadProductVariant(variant, progress);
@@ -491,11 +523,9 @@ export class MerchantCenterService {
 
       // Check if product exists
       const existingProduct = await this.getProduct(product.id);
+      const debugMode = process.env['DEBUG_MERCHANT_CENTER'] === 'true';
 
       if (existingProduct) {
-        // Update existing product - properly this time
-        // Debug: Check what ID format Google expects
-        const debugMode = process.env['DEBUG_MERCHANT_CENTER'] === 'true';
         if (debugMode) {
           this.logger.log(blue.bold('🔍 Existing product ID format:'));
           this.logger.log(blue(`  - Our ID: ${white.bold(product.id)}`));
@@ -507,9 +537,22 @@ export class MerchantCenterService {
           );
         }
 
-        // Try update with the ID that Google returned
-        try {
-          await this.updateProduct(product, existingProduct.id || product.id);
+        if (USE_DELETE_INSERT_FOR_UPDATES) {
+          // Delete and re-insert to update custom labels (PATCH cannot update customAttributes)
+          try {
+            await this.deleteProduct(existingProduct.id || product.id);
+            if (debugMode) {
+              this.logger.log(blue(`🗑️ Deleted existing product for re-insert`));
+            }
+          } catch (deleteError: any) {
+            if (debugMode) {
+              this.logger.log(yellow(`Delete warning: ${deleteError.message}`));
+            }
+            // Continue with insert anyway
+          }
+
+          // Re-insert with new custom labels
+          await this.insertProduct(product);
           const progressText = progress ? ` (${progress}%)` : '';
           this.logger.log(
             yellow(
@@ -518,12 +561,24 @@ export class MerchantCenterService {
               )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]${progressText}`
             )
           );
-        } catch (updateError: any) {
-          if (debugMode) {
-            this.logger.log(red(`Update failed: ${updateError.message}`));
+        } else {
+          // Use PATCH update (faster but cannot update customAttributes)
+          try {
+            await this.updateProduct(product, existingProduct.id || product.id);
+            const progressText = progress ? ` (${progress}%)` : '';
+            this.logger.log(
+              yellow(
+                `↻ ${white.bold(variant.slug)} [${white.bold(
+                  variant.type
+                )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]${progressText}`
+              )
+            );
+          } catch (updateError: any) {
+            if (debugMode) {
+              this.logger.log(red(`Update failed: ${updateError.message}`));
+            }
+            throw updateError;
           }
-          // Fallback to insert if update fails
-          throw updateError;
         }
       } else {
         // Insert new product
@@ -710,6 +765,27 @@ export class MerchantCenterService {
         {
           name: 'playlist_slug',
           value: variant.slug,
+        },
+        // Custom labels for PMax campaign segmentation
+        {
+          name: 'custom_label_0',
+          value: variant.type, // Product type: digital, sheets, physical
+        },
+        {
+          name: 'custom_label_1',
+          value: this.getGenreGroup(variant.genreSlug), // Genre group: pop_hits, rock_metal, etc.
+        },
+        {
+          name: 'custom_label_2',
+          value: variant.genreSlug || 'unknown', // Individual genre slug
+        },
+        {
+          name: 'custom_label_3',
+          value: this.getTrackCountRange(variant.numberOfTracks), // Track count: small, medium, large
+        },
+        {
+          name: 'custom_label_4',
+          value: '', // Reserved for future use
         },
       ],
     };
@@ -994,6 +1070,23 @@ export class MerchantCenterService {
   }
 
   /**
+   * Get the genre group for PMax segmentation (custom_label_1)
+   */
+  private getGenreGroup(genreSlug?: string): string {
+    if (!genreSlug) return 'other';
+    return GENRE_GROUPS[genreSlug.toLowerCase()] || 'other';
+  }
+
+  /**
+   * Get track count range for PMax segmentation (custom_label_3)
+   */
+  private getTrackCountRange(numberOfTracks: number): string {
+    if (numberOfTracks < 100) return 'small';
+    if (numberOfTracks <= 250) return 'medium';
+    return 'large';
+  }
+
+  /**
    * Get a product from Google Merchant Center
    */
   private async getProduct(productId: string): Promise<any> {
@@ -1080,7 +1173,7 @@ export class MerchantCenterService {
       }
 
       // For PATCH updates, we need to specify which fields we're updating
-      // Key fields that commonly change and we want to update (excluding fields that cannot be updated)
+      // Note: customAttributes cannot be updated via PATCH, use USE_DELETE_INSERT_FOR_UPDATES=true instead
       const updateMask = [
         'title',
         'description',
@@ -1093,7 +1186,6 @@ export class MerchantCenterService {
         'productTypes',
         'shipping',
         'shippingLabel',
-        // Note: customAttributes cannot be updated, must exclude from mask
       ].join(',');
 
       // Build the product update payload
@@ -1111,7 +1203,7 @@ export class MerchantCenterService {
         shipping: product.shipping,
         shippingLabel: product.shippingLabel,
         condition: product.condition, // Add condition since it's required
-        // Note: customAttributes excluded from updates
+        // Note: customAttributes excluded - use USE_DELETE_INSERT_FOR_UPDATES=true to update labels
       };
 
       if (debugMode) {

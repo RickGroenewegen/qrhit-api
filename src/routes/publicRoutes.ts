@@ -19,6 +19,7 @@ import Cache from '../cache';
 import Shipping from '../shipping';
 import { ChatService } from '../chat';
 import PushoverClient from '../pushover';
+import Promotional from '../promotional';
 import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
@@ -43,6 +44,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const cache = Cache.getInstance();
   const shipping = Shipping.getInstance();
   const chatService = new ChatService();
+  const promotional = Promotional.getInstance();
 
   // Chat init endpoint - creates or resumes chat session
   fastify.post('/chat/init', async (request: any, reply: any) => {
@@ -190,14 +192,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     }
 
     return { success: true, localIp, version: '1.0.0' };
-  });
-
-  // Cache update
-  fastify.get('/cache', async (request: any, _reply) => {
-    //cache.flush();
-    const userAgent = request.headers['user-agent'] || '';
-    //order.updateFeaturedPlaylists(request.clientIp, userAgent);
-    return { success: true };
   });
 
   // Upload contacts
@@ -707,4 +701,65 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       });
     }
   });
+
+  // =============================================
+  // Promotional playlist routes
+  // =============================================
+
+  // Get promotional setup data for a playlist
+  fastify.get(
+    '/promotional/:paymentId/:userHash/:playlistId',
+    async (request: any, reply) => {
+      const result = await promotional.getPromotionalSetup(
+        request.params.paymentId,
+        request.params.userHash,
+        request.params.playlistId
+      );
+
+      if (!result.success) {
+        reply.status(result.error === 'Unauthorized' ? 401 : 400).send(result);
+        return;
+      }
+
+      return result;
+    }
+  );
+
+  // Save promotional setup data
+  fastify.post(
+    '/promotional/:paymentId/:userHash/:playlistId',
+    async (request: any, reply) => {
+      const { title, description, image, active } = request.body;
+
+      if (!title) {
+        reply.status(400).send({ success: false, error: 'Title is required' });
+        return;
+      }
+
+      if (!description) {
+        reply.status(400).send({ success: false, error: 'Description is required' });
+        return;
+      }
+
+      const result = await promotional.savePromotionalSetup(
+        request.params.paymentId,
+        request.params.userHash,
+        request.params.playlistId,
+        {
+          title,
+          description: description || '',
+          image,
+          active: active !== false,
+        }
+      );
+
+      if (!result.success) {
+        reply.status(result.error === 'Unauthorized' ? 401 : 400).send(result);
+        return;
+      }
+
+      return result;
+    }
+  );
+
 }

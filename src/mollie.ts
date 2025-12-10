@@ -17,6 +17,8 @@ import { CronJob } from 'cron';
 import cluster from 'cluster';
 import { promises as fs } from 'fs';
 import Game from './game';
+import Spotify from './spotify';
+import Promotional from './promotional';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -31,6 +33,8 @@ class Mollie {
   private paidPaymentStatus = ['paid'];
   private failedPaymentStatus = ['failed', 'canceled', 'expired'];
   private game = new Game();
+  private spotify = Spotify.getInstance();
+  private promotional = Promotional.getInstance();
 
   constructor() {
     if (cluster.isPrimary) {
@@ -281,6 +285,50 @@ class Mollie {
     }
   }
 
+  private async refreshCartTrackCounts(
+    cart: { items: CartItem[] },
+    locale: string
+  ): Promise<void> {
+    for (const item of cart.items) {
+      if (item.productType !== 'giftcard') {
+        const tracksResult = await this.spotify.getTracks(
+          item.playlistId,
+          false, // cache = false to get fresh data
+          '',    // captchaToken
+          false, // checkCaptcha
+          item.isSlug || false,
+          '',    // userId
+          locale
+        );
+
+        if (tracksResult.success && tracksResult.data) {
+          const freshTrackCount = tracksResult.data.totalTracks;
+          if (freshTrackCount !== item.numberOfTracks) {
+            this.logger.log(
+              color.blue.bold(
+                `Updated track count for playlist ${color.white.bold(item.playlistId)}: ` +
+                `${color.white.bold(item.numberOfTracks.toString())} → ${color.white.bold(freshTrackCount.toString())}`
+              )
+            );
+            item.numberOfTracks = freshTrackCount;
+
+            // Recalculate price based on new track count
+            const orderType = await this.order.getOrderType(
+              freshTrackCount,
+              item.type === 'digital',
+              'cards',
+              item.playlistId,
+              item.subType || 'none'
+            );
+            if (orderType && orderType.amount) {
+              item.price = orderType.amount;
+            }
+          }
+        }
+      }
+    }
+  }
+
   private getMollieLocaleData(
     locale: string,
     locationCountryCode: string
@@ -407,6 +455,7 @@ class Mollie {
         ? {
             OR: [
               { fullname: { contains: search.textSearch } },
+              { email: { contains: search.textSearch } },
               { orderId: { contains: search.textSearch } },
               { printApiOrderId: { contains: search.textSearch } },
               { paymentId: { contains: search.textSearch } },
@@ -696,6 +745,9 @@ class Mollie {
       if (params.extraOrderData.vibe) {
         vibe = params.extraOrderData.vibe;
       }
+
+      // Refresh track counts from Spotify API (uncached) before calculating price
+      await this.refreshCartTrackCounts(params.cart, params.locale);
 
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
@@ -1196,6 +1248,22 @@ class Mollie {
               color.green.bold('Cleared playlist cache for user: ') +
                 color.white.bold(dbPayment.user.hash)
             );
+          }
+
+          // Credit promotional discount for each playlist in this payment (one-time only)
+          const paymentPlaylists = await this.prisma.paymentHasPlaylist.findMany({
+            where: { paymentId: dbPayment.id },
+            select: { playlistId: true },
+          });
+
+          for (const pp of paymentPlaylists) {
+            try {
+              await this.promotional.creditPromotionalDiscount(pp.playlistId, dbPayment.id);
+            } catch (e) {
+              this.logger.log(
+                color.yellow.bold(`Failed to credit promotional discount for playlist ${pp.playlistId}: ${e}`)
+              );
+            }
           }
 
           this.generator.queueGenerate(

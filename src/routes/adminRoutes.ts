@@ -24,6 +24,7 @@ import { ChatService } from '../chat';
 import ChatWebSocketServer from '../chat-websocket';
 import { ChatGPT } from '../chatgpt';
 import Mail from '../mail';
+import Promotional from '../promotional';
 import path from 'path';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
@@ -51,20 +52,30 @@ export default async function adminRoutes(
   const chatgpt = new ChatGPT();
   const mail = Mail.getInstance();
   const prisma = PrismaInstance.getInstance();
+  const promotional = Promotional.getInstance();
 
   // Create order (admin only)
   fastify.post(
     '/create_order',
     getAuthHandler(['admin']),
-    async (request: any, _reply) => {
+    async (request: any, reply) => {
       // Setup the payment for printer submission (reset status and clear tracking)
       await generator.setupForPrinter(request.body.paymentId);
 
-      return await generator.sendToPrinter(
+      const result = await generator.sendToPrinter(
         request.body.paymentId,
         request.clientIp,
         true
       );
+
+      if (!result.success) {
+        return reply.status(409).send({
+          success: false,
+          error: result.reason || 'Order could not be sent',
+        });
+      }
+
+      return result;
     }
   );
 
@@ -676,6 +687,256 @@ export default async function adminRoutes(
         reply.send({ success: true });
       } else {
         reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
+  // Get pending promotional playlists count (for menu badge)
+  fastify.get(
+    '/admin/promotional/pending-count',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const playlists = await data.getPendingPromotionalPlaylists();
+      reply.send({ success: true, count: playlists.length });
+    }
+  );
+
+  // Get pending promotional playlists
+  fastify.get(
+    '/admin/promotional/pending',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const playlists = await data.getPendingPromotionalPlaylists();
+      reply.send({ success: true, data: playlists });
+    }
+  );
+
+  // Get accepted promotional playlists
+  fastify.get(
+    '/admin/promotional/accepted',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const playlists = await data.getAcceptedPromotionalPlaylists();
+      reply.send({ success: true, data: playlists });
+    }
+  );
+
+  // Accept promotional playlist (translates description to all locales and sends approval email)
+  fastify.post(
+    '/admin/promotional/:playlistId/accept',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+
+      if (!playlistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      const result = await promotional.acceptPromotionalPlaylist(playlistId);
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
+  // Decline promotional playlist
+  fastify.post(
+    '/admin/promotional/:playlistId/decline',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+
+      if (!playlistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      const result = await data.declinePromotionalPlaylist(playlistId);
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
+  // Reload promotional playlist cache (clears cache for already approved playlists)
+  fastify.post(
+    '/admin/promotional/:playlistId/reload',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+
+      if (!playlistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      const result = await promotional.clearPlaylistCache(playlistId);
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
+  // Resend approval email for an approved promotional playlist
+  fastify.post(
+    '/admin/promotional/:playlistId/resend-email',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+
+      if (!playlistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      const result = await promotional.resendApprovalEmail(playlistId);
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
+  // Update featured locale for a playlist
+  fastify.post(
+    '/admin/promotional/:playlistId/locale',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+      const { featuredLocale } = request.body;
+
+      if (!playlistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      // featuredLocale can be null (for "All") or a valid locale string
+      const result = await data.updateFeaturedLocale(
+        playlistId,
+        featuredLocale || null
+      );
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
+  // Edit promotional playlist (name, description, locale)
+  fastify.post(
+    '/admin/promotional/:playlistId/edit',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+      const { name, description, featuredLocale } = request.body;
+
+      if (!playlistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      const result = await data.updatePromotionalPlaylist(playlistId, {
+        name,
+        description,
+        featuredLocale: featuredLocale || null,
+      });
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
+  // Get all featured playlists (featured = 1)
+  fastify.get(
+    '/admin/featured/all',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const playlists = await data.getAllFeaturedPlaylists();
+      reply.send({ success: true, data: playlists });
+    }
+  );
+
+  // Update featured hidden status for a playlist
+  fastify.post(
+    '/admin/playlist/:playlistId/featured-hidden',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+      const { featuredHidden } = request.body;
+
+      if (!playlistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      const result = await data.updateFeaturedHidden(
+        playlistId,
+        featuredHidden === true
+      );
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(500).send({
           success: false,
           error: result.error,
         });
@@ -2537,6 +2798,24 @@ export default async function adminRoutes(
         return reply.status(500).send({
           success: false,
           error: error.message || 'Failed to send email'
+        });
+      }
+    }
+  );
+
+  // Get all promotional playlists (admin dashboard)
+  fastify.get(
+    '/admin/promotional-playlists',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const result = await promotional.getAllPromotionalPlaylists();
+        return reply.send(result);
+      } catch (error: any) {
+        console.error('Error getting promotional playlists:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to get promotional playlists'
         });
       }
     }

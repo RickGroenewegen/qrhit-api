@@ -417,13 +417,33 @@ class Shipping {
         const oldDeliveryTime = payment.shippingDeliveryDateTime?.getTime();
         const newDeliveryTime = shippingDeliveryDateTime?.getTime();
 
-        const dataChanged =
-          payment.shippingStatus !== shippingStatus ||
-          payment.shippingMessage !== shippingMessage ||
-          oldStartTime !== newStartTime ||
-          oldDeliveryTime !== newDeliveryTime;
+        const statusChanged = payment.shippingStatus !== shippingStatus;
+        const messageChanged = payment.shippingMessage !== shippingMessage;
+        const pickupChanged = oldStartTime !== newStartTime;
+        const deliveryChanged = oldDeliveryTime !== newDeliveryTime;
+
+        const dataChanged = statusChanged || messageChanged || pickupChanged || deliveryChanged;
+
+        // Build change type description
+        let changeType: string | null = null;
+        if (dataChanged) {
+          const changes: string[] = [];
+          if (statusChanged && shippingStatus) {
+            changes.push(`${payment.shippingStatus || 'unknown'} → ${shippingStatus}`);
+          }
+          if (deliveryChanged && shippingDeliveryDateTime) {
+            changes.push('delivered');
+          } else if (pickupChanged && shippingStartDateTime) {
+            changes.push('picked up');
+          }
+          if (messageChanged && !statusChanged && !deliveryChanged && !pickupChanged) {
+            changes.push('message');
+          }
+          changeType = changes.join(', ') || 'updated';
+        }
 
         // Update payment with shipping status, message, start date, and delivery date
+        // Also update shippingLastTrackedAt and shippingLastChangeType if data actually changed
         const updatedPayment = await this.prisma.payment.update({
           where: { paymentId },
           data: {
@@ -431,6 +451,7 @@ class Shipping {
             shippingMessage,
             shippingStartDateTime,
             shippingDeliveryDateTime,
+            ...(dataChanged ? { shippingLastTrackedAt: new Date(), shippingLastChangeType: changeType } : {}),
           },
         });
 
@@ -631,12 +652,12 @@ class Shipping {
       }
 
       // Determine sort order based on status
-      // For in-transit (Shipped): sort by pickup date ascending (oldest/longest in transit first)
+      // For in-transit (Shipped): sort by last tracked date descending (most recently updated first, nulls last)
       // For delivered: sort by delivery date descending (most recently delivered first)
       const orderBy: any = status === 'Shipped'
         ? [
-            { shippingStartDateTime: 'asc' as const }, // Oldest pickups first
-            { createdAt: 'asc' as const } // Fallback to creation date if no pickup date
+            { shippingLastTrackedAt: { sort: 'desc' as const, nulls: 'last' as const } }, // Most recently tracked first
+            { createdAt: 'desc' as const } // Fallback to creation date if no tracking yet
           ]
         : [
             { shippingDeliveryDateTime: 'desc' as const }, // Most recently delivered first
@@ -661,6 +682,8 @@ class Shipping {
             shippingStartDateTime: true,
             shippingDeliveryDateTime: true,
             shippingIgnore: true,
+            shippingLastTrackedAt: true,
+            shippingLastChangeType: true,
             createdAt: true,
           },
           orderBy: orderBy,
@@ -780,8 +803,8 @@ class Shipping {
       // Determine sort order based on status
       const orderBy: any = status === 'Shipped'
         ? [
-            { shippingStartDateTime: 'asc' as const },
-            { createdAt: 'asc' as const }
+            { shippingLastTrackedAt: { sort: 'desc' as const, nulls: 'last' as const } },
+            { createdAt: 'desc' as const }
           ]
         : [
             { shippingDeliveryDateTime: 'desc' as const },
@@ -796,6 +819,8 @@ class Shipping {
           fullname: true,
           shippingStartDateTime: true,
           shippingDeliveryDateTime: true,
+          shippingLastTrackedAt: true,
+          shippingLastChangeType: true,
         },
         orderBy: orderBy,
       });
@@ -813,6 +838,8 @@ class Shipping {
         { header: 'Shipping Start Date', key: 'shippingStartDate', width: 20 },
         { header: 'Shipping Delivery Date', key: 'shippingDeliveryDate', width: 20 },
         { header: 'Days', key: 'days', width: 10 },
+        { header: 'Last Tracked', key: 'lastTracked', width: 20 },
+        { header: 'Last Change', key: 'lastChange', width: 25 },
       ];
 
       // Style header row
@@ -864,6 +891,8 @@ class Shipping {
           shippingStartDate: formatDateTime(payment.shippingStartDateTime),
           shippingDeliveryDate: formatDateTime(payment.shippingDeliveryDateTime),
           days: days !== null ? days : '-',
+          lastTracked: formatDateTime(payment.shippingLastTrackedAt),
+          lastChange: payment.shippingLastChangeType || '-',
         });
       });
 

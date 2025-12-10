@@ -1172,8 +1172,8 @@ Write in a professional, informative, and engaging style. The tone should be cle
   ): Promise<Record<string, string>> {
     if (!text || !targetLocales || targetLocales.length === 0) return {};
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5',
-      temperature: 0.5,
+      model: 'o4-mini',
+      temperature: 1,
       messages: [
         {
           role: 'system',

@@ -867,9 +867,73 @@ class Generator {
     }
   }
 
+  /**
+   * Sync track counts before validation - updates playlist.numberOfTracks and
+   * payment_has_playlist.numberOfTracks if the actual track count is lower
+   */
+  private async syncTrackCounts(
+    physicalPlaylists: Array<{ playlist: any; filename: string }>
+  ): Promise<void> {
+    for (const physicalPlaylist of physicalPlaylists) {
+      const { playlist } = physicalPlaylist;
+
+      // Count actual tracks in playlist_has_tracks table
+      const actualTrackCount = await this.prisma.playlistHasTrack.count({
+        where: { playlistId: playlist.id },
+      });
+
+      // Check if actual count is less than stored counts
+      if (
+        actualTrackCount < playlist.numberOfTracks ||
+        actualTrackCount < playlist.paymentHasPlaylistNumberOfTracks
+      ) {
+        this.logger.log(
+          color.yellow.bold(
+            `Track count mismatch for playlist ${white.bold(
+              playlist.name
+            )}: stored=${white.bold(
+              playlist.numberOfTracks.toString()
+            )}, payment_has_playlist=${white.bold(
+              (playlist.paymentHasPlaylistNumberOfTracks || 0).toString()
+            )}, actual=${white.bold(actualTrackCount.toString())}. Updating...`
+          )
+        );
+
+        // Update playlist.numberOfTracks
+        await this.prisma.playlist.update({
+          where: { id: playlist.id },
+          data: { numberOfTracks: actualTrackCount },
+        });
+
+        // Update payment_has_playlist.numberOfTracks
+        if (playlist.paymentHasPlaylistId) {
+          await this.prisma.paymentHasPlaylist.update({
+            where: { id: playlist.paymentHasPlaylistId },
+            data: { numberOfTracks: actualTrackCount },
+          });
+        }
+
+        // Update the local playlist object for subsequent validation
+        playlist.numberOfTracks = actualTrackCount;
+        playlist.paymentHasPlaylistNumberOfTracks = actualTrackCount;
+
+        this.logger.log(
+          color.green.bold(
+            `Updated track counts for playlist ${white.bold(
+              playlist.name
+            )} to ${white.bold(actualTrackCount.toString())}`
+          )
+        );
+      }
+    }
+  }
+
   private async validatePDFPageCounts(
     physicalPlaylists: Array<{ playlist: any; filename: string }>
   ): Promise<{ isValid: boolean; errors: string[] }> {
+    // Sync track counts before validation
+    await this.syncTrackCounts(physicalPlaylists);
+
     const validationErrors: string[] = [];
 
     for (const physicalPlaylist of physicalPlaylists) {
@@ -935,15 +999,19 @@ class Generator {
           'code' in error &&
           error.code === 'ENOENT';
 
-        // Only log validation errors that are not "file not found" errors
-        if (!isFileNotFound) {
+        if (isFileNotFound) {
+          const errorMessage = `PDF file not found for playlist ${white.bold(
+            playlist.name
+          )} (${white.bold(playlist.playlistId)}): ${pdfPath}`;
+          validationErrors.push(errorMessage);
+          this.logger.log(color.red.bold(errorMessage));
+        } else {
           const errorMessage = `Failed to validate PDF for playlist ${white.bold(
             playlist.name
           )} (${white.bold(playlist.playlistId)}): ${error}`;
           validationErrors.push(errorMessage);
           this.logger.log(color.red.bold(errorMessage));
         }
-        // If file doesn't exist, silently skip validation for this playlist
       }
     }
 
@@ -983,18 +1051,33 @@ class Generator {
     paymentId: string,
     clientIp: string,
     force: boolean = false
-  ): Promise<void> {
-    let printApiOrderId = '';
-    let printApiOrderRequest = '';
-    let printApiOrderResponse = '';
+  ): Promise<{ success: boolean; reason?: string }> {
+    // Acquire distributed lock to prevent concurrent processing
+    const lockKey = `printer:${paymentId}`;
+    const lockAcquired = await this.cache.acquireLock(lockKey, 120);
+    if (!lockAcquired) {
+      this.logger.log(
+        color.yellow.bold(
+          `Skipping ${paymentId} - already being processed by another instance`
+        )
+      );
+      return { success: false, reason: 'Already being processed' };
+    }
 
-    // Reset sentToPrinter to false when manually sending to printer
-    await this.prisma.payment.update({
-      where: {
-        paymentId,
-      },
-      data: { sentToPrinter: false },
-    });
+    try {
+      let printApiOrderId = '';
+      let printApiOrderRequest = '';
+      let printApiOrderResponse = '';
+
+      // Only reset sentToPrinter when force=true (admin manual retry)
+      if (force) {
+        await this.prisma.payment.update({
+          where: {
+            paymentId,
+          },
+          data: { sentToPrinter: false },
+        });
+      }
 
     const payment = await this.prisma.payment.findFirst({
       where: {
@@ -1073,7 +1156,7 @@ class Generator {
           )
         );
 
-        return;
+        return { success: false, reason: 'PDF validation errors' };
       }
 
       const orderData = await this.order.createOrder(
@@ -1141,7 +1224,13 @@ class Generator {
             )} to the printer`
           )
         );
+        return { success: false, reason: 'PrintAPI error' };
       }
+      return { success: true };
+    }
+      return { success: false, reason: 'Not eligible for printing' };
+    } finally {
+      await this.cache.releaseLock(lockKey);
     }
   }
 

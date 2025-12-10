@@ -520,6 +520,7 @@ class SpotifyApi {
 
       const initialData = initialResponse.data;
       const total = initialData.total || 0;
+
       const validInitialItems = initialData.items.filter(
         (item: any) => item && item.track
       );
@@ -528,7 +529,7 @@ class SpotifyApi {
       if (validInitialItems.length >= total) {
         const elapsed = Date.now() - startTime;
         this.logger.log(
-          color.green(`Fetched ${total} tracks in ${elapsed}ms (single request)`)
+          color.blue.bold(`Fetched ${color.white.bold(total)} tracks in ${color.white.bold(elapsed + 'ms')} (single request)`)
         );
         return { success: true, data: { items: validInitialItems } };
       }
@@ -576,8 +577,8 @@ class SpotifyApi {
 
       const elapsed = Date.now() - startTime;
       this.logger.log(
-        color.green(
-          `Fetched ${allItems.length} tracks in ${elapsed}ms (parallel: ${pageRequests.length + 1} requests, limit=${usedLimit})`
+        color.blue.bold(
+          `Fetched ${color.white.bold(allItems.length)} tracks in ${color.white.bold(elapsed + 'ms')} (parallel: ${color.white.bold(pageRequests.length + 1)} requests, limit = ${color.white.bold(usedLimit)})`
         )
       );
 

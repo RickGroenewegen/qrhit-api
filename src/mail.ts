@@ -19,6 +19,7 @@ import OpenAI from 'openai';
 import { ChatService } from './chat';
 
 const prisma = new PrismaClient();
+const PROMOTIONAL_CREDIT_AMOUNT = parseFloat(process.env['PROMOTIONAL_CREDIT_AMOUNT'] || '2.5');
 
 interface MailParams {
   to: string | null;
@@ -52,6 +53,26 @@ class Mail {
   private constructor() {
     this.initializeSES();
     this.initializeCron();
+  }
+
+  /**
+   * Format promotional discount amount as Euro string
+   */
+  private getFormattedPromotionalAmount(): string {
+    return `€${PROMOTIONAL_CREDIT_AMOUNT.toFixed(2).replace('.', ',')}`;
+  }
+
+  /**
+   * Replace {{amount}} placeholder in translations with the promotional amount
+   */
+  private replaceAmountPlaceholder(translations: Record<string, string> | null): Record<string, string> | null {
+    if (!translations) return null;
+    const amount = this.getFormattedPromotionalAmount();
+    const result: Record<string, string> = {};
+    for (const key in translations) {
+      result[key] = translations[key].replace(/\{\{amount\}\}/g, amount);
+    }
+    return result;
   }
 
   /**
@@ -876,9 +897,8 @@ ${knowledgeContext}${toolContext}`,
       numberOfTracks += playlist.numberOfTracks;
     }
 
-    const translations = await this.translation.getTranslationsByPrefix(
-      payment.locale,
-      'mail'
+    const translations = this.replaceAmountPlaceholder(
+      await this.translation.getTranslationsByPrefix(payment.locale, 'mail')
     );
 
     const sendPhysicalLink =
@@ -907,7 +927,9 @@ ${knowledgeContext}${toolContext}`,
       digitalDownloadCorrectionLink: `${process.env['FRONTEND_URI']}/${payment.locale}/usersuggestions/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}/1`,
       digitalDownloadLink: `${process.env['API_URI']}/download/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}/digital`,
       downloadLink: `${process.env['API_URI']}/download/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}/printer`,
+      promotionalSetupLink: `${process.env['FRONTEND_URI']}/${payment.locale}/promotional/${payment.paymentId}/${payment.user.hash}/${playlists[0].playlistId}`,
       sendPhysicalLink,
+      showPromotionalCta: !playlists[0]?.featured,
       numberOfTracks,
       productName: process.env['PRODUCT_NAME'],
       translations,
@@ -1131,7 +1153,7 @@ ${knowledgeContext}${toolContext}`,
   }
 
   async sendFinalizedMail(
-    payment: Payment,
+    payment: Payment & { user: { hash: string } },
     reviewLink: string,
     playlist: any
   ): Promise<void> {
@@ -1143,10 +1165,11 @@ ${knowledgeContext}${toolContext}`,
       payment,
       playlist,
       reviewLink,
+      promotionalSetupLink: `${process.env['FRONTEND_URI']}/${payment.locale}/promotional/${payment.paymentId}/${payment.user.hash}/${playlist.playlistId}`,
+      showPromotionalCta: !playlist?.featured,
       productName: process.env['PRODUCT_NAME'],
-      translations: await this.translation.getTranslationsByPrefix(
-        payment.locale,
-        'mail'
+      translations: this.replaceAmountPlaceholder(
+        await this.translation.getTranslationsByPrefix(payment.locale, 'mail')
       ),
     };
 
@@ -1221,7 +1244,16 @@ ${knowledgeContext}${toolContext}`,
       payment.locale,
       'mail'
     );
-    
+
+    // Interpolate playlist name into printingStarted translation
+    const printingStartedText = this.translation.translate(
+      'mail.printingStarted',
+      payment.locale,
+      { playlist: playlist.name || 'your playlist' }
+    );
+    if (translations) {
+      translations.printingStarted = printingStartedText;
+    }
 
     const mailParams = {
       payment,
@@ -2009,6 +2041,242 @@ ${params.html}
       this.logger.log(
         color.red.bold(
           `Failed to send custom email to ${white.bold(email)}: ${error}`
+        )
+      );
+    }
+  }
+
+  /**
+   * Send a promotional sale notification email to the playlist creator.
+   * @param email The creator's email address
+   * @param displayName The creator's display name
+   * @param playlistName The name of the playlist that was sold
+   * @param creditedAmount The amount credited (e.g., 2.50)
+   * @param totalBalance The total discount balance after this credit
+   * @param discountCode The discount code they can use
+   * @param shareLink The link to their playlist
+   * @param setupLink The link to manage their promotional playlist
+   * @param locale The user's locale (default: 'en')
+   */
+  public async sendPromotionalSaleEmail(
+    email: string,
+    displayName: string,
+    playlistName: string,
+    creditedAmount: number,
+    totalBalance: number,
+    discountCode: string,
+    shareLink: string,
+    setupLink: string | null,
+    locale: string = 'en',
+    quantity: number = 1
+  ): Promise<void> {
+    if (!this.ses) return;
+
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+
+    // Fetch translations for promotional sale mail
+    const translations = this.replaceAmountPlaceholder(
+      await this.translation.getTranslationsByPrefix(locale, 'promotional_email')
+    );
+
+    const mailParams = {
+      fullname: displayName || email.split('@')[0],
+      playlistName,
+      creditedAmount: creditedAmount.toFixed(2),
+      totalBalance: totalBalance.toFixed(2),
+      discountCode,
+      shareLink,
+      setupLink,
+      productName: process.env['PRODUCT_NAME'],
+      currentYear: new Date().getFullYear(),
+      translations,
+      quantity,
+    };
+
+    try {
+      // Read the logo file and convert it to Base64
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+
+      const html = await this.templates.render(
+        'mails/promotional_sale_html',
+        mailParams
+      );
+      const text = await this.templates.render(
+        'mails/promotional_sale_text',
+        mailParams
+      );
+
+      const subject = this.translation.translate(
+        'promotional_email.subject',
+        locale
+      );
+
+      const attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+
+      const rawEmail = await this.renderRaw(
+        {
+          from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+          to: email,
+          subject,
+          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+          text,
+          attachments,
+          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+          replyTo: process.env['REPLY_TO_EMAIL'],
+        },
+        false // No BCC for promotional sale emails
+      );
+
+      const emailBuffer = Buffer.from(rawEmail);
+
+      // Prepare and send the raw email
+      const command = new SendRawEmailCommand({
+        RawMessage: {
+          Data: emailBuffer,
+        },
+      });
+
+      await this.ses.send(command);
+      this.logger.log(
+        color.blue.bold(
+          `Promotional sale email sent to ${white.bold(email)} for playlist ${white.bold(`"${playlistName}"`)}`
+        )
+      );
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Failed to send promotional sale email to ${white.bold(email)}: ${error}`
+        )
+      );
+    }
+  }
+
+  /**
+   * Send an email to notify a user that their promotional playlist has been approved
+   * @param email The creator's email address
+   * @param displayName The creator's display name
+   * @param playlistName The name of the approved playlist
+   * @param discountCode The discount code they can use
+   * @param shareLink The link to their playlist
+   * @param setupLink The link to manage their promotional playlist
+   * @param locale The user's locale (default: 'en')
+   */
+  public async sendPromotionalApprovedEmail(
+    email: string,
+    displayName: string,
+    playlistName: string,
+    discountCode: string,
+    shareLink: string,
+    setupLink: string,
+    locale: string = 'en'
+  ): Promise<void> {
+    if (!this.ses) return;
+
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+
+    // Fetch translations for promotional approved mail
+    const translations = this.replaceAmountPlaceholder(
+      await this.translation.getTranslationsByPrefix(locale, 'promotional_approved')
+    );
+
+    // Build share text for social links
+    const shareText = translations?.shareText
+      ? `${translations.shareText} ${shareLink}`
+      : `I created QR Music Quiz cards from my Spotify playlist! Scan the QR codes to hear the songs and guess the title. Check it out: ${shareLink}`;
+    const encodedShareText = encodeURIComponent(shareText);
+
+    // Social share links
+    const whatsappLink = `https://wa.me/?text=${encodedShareText}`;
+    const facebookLink = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareLink)}&quote=${encodedShareText}`;
+    const instagramLink = `https://www.instagram.com/`;
+    const twitterLink = `https://x.com/intent/tweet?text=${encodedShareText}`;
+
+    const mailParams = {
+      fullname: displayName || email.split('@')[0],
+      playlistName,
+      discountCode,
+      shareLink,
+      setupLink,
+      whatsappLink,
+      facebookLink,
+      instagramLink,
+      twitterLink,
+      productName: process.env['PRODUCT_NAME'],
+      currentYear: new Date().getFullYear(),
+      translations,
+    };
+
+    try {
+      // Read the logo file and convert it to Base64
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+
+      const html = await this.templates.render(
+        'mails/promotional_approved_html',
+        mailParams
+      );
+      const text = await this.templates.render(
+        'mails/promotional_approved_text',
+        mailParams
+      );
+
+      const subject = this.translation.translate(
+        'promotional_approved.subject',
+        locale
+      );
+
+      const attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+
+      const rawEmail = await this.renderRaw(
+        {
+          from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+          to: email,
+          subject,
+          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+          text,
+          attachments,
+          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+          replyTo: process.env['REPLY_TO_EMAIL'],
+        },
+        true // Send BCC for promotional approval emails
+      );
+
+      const emailBuffer = Buffer.from(rawEmail);
+
+      // Prepare and send the raw email
+      const command = new SendRawEmailCommand({
+        RawMessage: {
+          Data: emailBuffer,
+        },
+      });
+
+      await this.ses.send(command);
+      this.logger.log(
+        color.green.bold(
+          `Promotional approval email sent to ${white.bold(email)} for playlist ${white.bold(`"${playlistName}"`)}`
+        )
+      );
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Failed to send promotional approval email to ${white.bold(email)}: ${error}`
         )
       );
     }

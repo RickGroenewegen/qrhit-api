@@ -23,9 +23,9 @@ import crypto from 'crypto';
 import { CronJob } from 'cron';
 
 // Spotify Cache Key Prefixes
-export const CACHE_KEY_PLAYLIST = 'playlist_';
+export const CACHE_KEY_PLAYLIST = 'playlist2_';
 export const CACHE_KEY_PLAYLIST_FETCH_LOCK = 'playlist_fetch_';
-export const CACHE_KEY_PLAYLIST_DB = 'playlistdb_';
+export const CACHE_KEY_PLAYLIST_DB = 'playlistdb2_';
 export const CACHE_KEY_TRACKS = 'tracks2_';
 export const CACHE_KEY_TRACK_COUNT = 'trackcount2_';
 export const CACHE_KEY_TRACK_INFO = 'trackInfo_';
@@ -39,6 +39,30 @@ interface EnrichmentData {
   artist: string;
   extraNameAttribute?: string;
   extraArtistAttribute?: string;
+}
+
+// Skipped track information for API response
+export type SkipReason = 'unavailable' | 'localFile' | 'podcast' | 'duplicate';
+
+export interface SkippedTrack {
+  position: number;           // Original playlist position (1-indexed)
+  reason: SkipReason;
+  name?: string;              // Track name if available
+  artist?: string;            // Artist name if available
+  duplicateOf?: number;       // Position of first occurrence (for duplicates)
+}
+
+export interface SkipSummary {
+  unavailable: number;        // Track removed/unavailable
+  localFiles: number;         // Local files can't be imported
+  podcasts: number;           // Podcast episodes filtered
+  duplicates: number;         // Same artist+title duplicates
+}
+
+export interface SkippedTracksInfo {
+  total: number;
+  summary: SkipSummary;
+  details: SkippedTrack[];
 }
 
 class Spotify {
@@ -673,330 +697,6 @@ class Spotify {
   }
 
   /**
-   * Helper: Build track matching queries for database enrichment
-   * Extracts trackIds, ISRCs, and artist+title pairs from Spotify track data
-   */
-  private buildTrackMatchingQueries(trackItems: any[]): {
-    trackIds: string[];
-    isrcs: string[];
-    artistTitlePairs: Array<{ artist: string; title: string; trackId: string }>;
-  } {
-    const trackIds: string[] = [];
-    const isrcs: string[] = [];
-    const artistTitlePairs: Array<{ artist: string; title: string; trackId: string }> = [];
-
-    trackItems
-      .filter((item: any) => item?.track?.id)
-      .forEach((item: any) => {
-        const trackData = item.track;
-        const trackId = trackData.id;
-
-        // Collect track ID
-        trackIds.push(trackId);
-
-        // Collect ISRC if available
-        if (trackData.external_ids?.isrc) {
-          isrcs.push(trackData.external_ids.isrc);
-        }
-
-        // Collect artist + title for exact matching
-        if (trackData.name && trackData.artists && trackData.artists.length > 0) {
-          const artist = trackData.artists[0].name; // Use primary artist
-          const title = trackData.name;
-          if(artist && title){
-            artistTitlePairs.push({
-              artist: artist.toLowerCase().trim(),
-              title: title.toLowerCase().trim(),
-              trackId,
-            });
-          }
-        }
-      });
-
-    return { trackIds, isrcs, artistTitlePairs };
-  }
-
-  /**
-   * Helper: Execute database enrichment query with multiple matching strategies
-   * Returns lookup maps for trackId, ISRC, and artist+title matching
-   */
-  private async executeTrackEnrichment(
-    checkPlaylistId: string,
-    trackIds: string[],
-    isrcs: string[],
-    artistTitlePairs: Array<{ artist: string; title: string; trackId: string }>
-  ): Promise<{
-    byTrackId: Map<string, any>;
-    byIsrc: Map<string, any>;
-    byArtistTitle: Map<string, any>;
-  }> {
-    if (trackIds.length === 0) {
-      return {
-        byTrackId: new Map(),
-        byIsrc: new Map(),
-        byArtistTitle: new Map(),
-      };
-    }
-
-    // Get the playlist ID from the database
-    const dbPlaylist = await this.prisma.playlist.findFirst({
-      where: { playlistId: checkPlaylistId },
-      select: { id: true },
-    });
-
-    let yearResults: {
-      trackId: string;
-      isrc: string | null;
-      year: number;
-      name: string;
-      artist: string;
-      extraNameAttribute?: string;
-      extraArtistAttribute?: string;
-      overwriteYear?: number;
-      overwriteName?: string;
-      overwriteArtist?: string;
-    }[] = [];
-
-    // For large artist+title pairs, we need to split into multiple queries
-    // to avoid creating SQL queries with thousands of OR conditions which hang
-    const MAX_ARTIST_TITLE_CONDITIONS = 100;
-
-    if (artistTitlePairs.length > MAX_ARTIST_TITLE_CONDITIONS) {
-      // Split into separate queries: one for trackIds/ISRCs, then batched artist+title queries
-
-      // Query 1: TrackIds and ISRCs only
-      const whereParts1: any[] = [];
-      if (trackIds.length > 0) {
-        whereParts1.push(Prisma.sql`t.trackId IN (${Prisma.join(trackIds)})`);
-      }
-      if (isrcs.length > 0) {
-        whereParts1.push(Prisma.sql`t.isrc IN (${Prisma.join(isrcs)})`);
-      }
-
-      if (whereParts1.length > 0) {
-        const whereClause1 = Prisma.join(whereParts1, ' OR ');
-        const results1 = await this.executeEnrichmentQuery(dbPlaylist, whereClause1);
-        yearResults.push(...results1);
-      }
-
-      // Query 2+: Artist+Title in batches
-      for (let i = 0; i < artistTitlePairs.length; i += MAX_ARTIST_TITLE_CONDITIONS) {
-        const batch = artistTitlePairs.slice(i, i + MAX_ARTIST_TITLE_CONDITIONS);
-        const artistTitleConditions = batch.map((pair) => {
-          return Prisma.sql`(LOWER(TRIM(t.artist)) = ${pair.artist} AND LOWER(TRIM(t.name)) = ${pair.title})`;
-        });
-        const whereClause2 = Prisma.sql`(${Prisma.join(artistTitleConditions, ' OR ')})`;
-        const results2 = await this.executeEnrichmentQuery(dbPlaylist, whereClause2);
-        yearResults.push(...results2);
-      }
-    } else {
-      // Small query - use original single-query approach
-      const whereParts: any[] = [];
-
-      // Track ID matching (priority 1)
-      if (trackIds.length > 0) {
-        whereParts.push(Prisma.sql`t.trackId IN (${Prisma.join(trackIds)})`);
-      }
-
-      // ISRC matching (priority 2)
-      if (isrcs.length > 0) {
-        whereParts.push(Prisma.sql`t.isrc IN (${Prisma.join(isrcs)})`);
-      }
-
-      // Artist + Title matching (priority 3)
-      if (artistTitlePairs.length > 0) {
-        const artistTitleConditions = artistTitlePairs.map((pair) => {
-          return Prisma.sql`(LOWER(TRIM(t.artist)) = ${pair.artist} AND LOWER(TRIM(t.name)) = ${pair.title})`;
-        });
-        whereParts.push(Prisma.sql`(${Prisma.join(artistTitleConditions, ' OR ')})`);
-      }
-
-      // Join all WHERE parts with OR
-      const whereClause = Prisma.join(whereParts, ' OR ');
-      yearResults = await this.executeEnrichmentQuery(dbPlaylist, whereClause);
-    }
-
-    // Build three lookup maps
-    const byTrackId = new Map();
-    const byIsrc = new Map();
-    const byArtistTitle = new Map();
-
-    yearResults.forEach((r) => {
-      const enrichmentData = {
-        year: r.overwriteYear || r.year,
-        name: r.overwriteName || r.name,
-        artist: r.overwriteArtist || r.artist,
-        extraNameAttribute: r.extraNameAttribute,
-        extraArtistAttribute: r.extraArtistAttribute,
-      };
-
-      // Map by trackId
-      if (r.trackId) {
-        byTrackId.set(r.trackId, enrichmentData);
-      }
-
-      // Map by ISRC
-      if (r.isrc) {
-        byIsrc.set(r.isrc, enrichmentData);
-      }
-
-      // Map by artist + title (lowercase for matching)
-      const key = `${r.artist.toLowerCase().trim()}|||${r.name.toLowerCase().trim()}`;
-      byArtistTitle.set(key, enrichmentData);
-    });
-
-    return { byTrackId, byIsrc, byArtistTitle };
-  }
-
-  /**
-   * Helper: Execute enrichment query (extracted for reuse in batching)
-   */
-  private async executeEnrichmentQuery(
-    dbPlaylist: { id: number } | null,
-    whereClause: any
-  ): Promise<{
-    trackId: string;
-    isrc: string | null;
-    year: number;
-    name: string;
-    artist: string;
-    extraNameAttribute?: string;
-    extraArtistAttribute?: string;
-    overwriteYear?: number;
-    overwriteName?: string;
-    overwriteArtist?: string;
-  }[]> {
-    if (dbPlaylist) {
-      return await this.prisma.$queryRaw<
-        {
-          trackId: string;
-          isrc: string | null;
-          year: number;
-          name: string;
-          artist: string;
-          extraNameAttribute?: string;
-          extraArtistAttribute?: string;
-          overwriteYear?: number;
-          overwriteName?: string;
-          overwriteArtist?: string;
-        }[]
-      >`
-        SELECT
-          t.trackId,
-          t.isrc,
-          t.year,
-          t.artist,
-          t.name,
-          tei.extraNameAttribute,
-          tei.extraArtistAttribute,
-          tei.artist AS overwriteArtist,
-          tei.name AS overwriteName,
-          tei.year AS overwriteYear
-        FROM
-          tracks t
-        LEFT JOIN
-          (SELECT * FROM trackextrainfo WHERE playlistId = ${dbPlaylist.id}) tei
-          ON t.id = tei.trackId
-        WHERE
-          (${whereClause})
-          AND t.manuallyChecked = 1
-      `;
-    } else {
-      return await this.prisma.$queryRaw<
-        {
-          trackId: string;
-          isrc: string | null;
-          year: number;
-          name: string;
-          artist: string;
-          extraNameAttribute?: string;
-          extraArtistAttribute?: string;
-        }[]
-      >`
-        SELECT
-          t.trackId,
-          t.isrc,
-          t.year,
-          t.artist,
-          t.name,
-          NULL as extraNameAttribute,
-          NULL as extraArtistAttribute,
-          NULL as overwriteArtist,
-          NULL as overwriteName,
-          NULL as overwriteYear
-        FROM
-          tracks t
-        WHERE
-          (${whereClause})
-          AND t.manuallyChecked = 1
-      `;
-    }
-  }
-
-  /**
-   * Helper: Match track using waterfall strategy
-   * Priority: 1) trackId, 2) ISRC, 3) artist+title, 4) cache fallback
-   */
-  private async matchTrackByStrategy(
-    spotifyTrackId: string,
-    spotifyIsrc: string | undefined,
-    spotifyArtist: string,
-    spotifyTitle: string,
-    byTrackId: Map<string, any>,
-    byIsrc: Map<string, any>,
-    byArtistTitle: Map<string, any>
-  ): Promise<{
-    enrichmentData: any | null;
-    matchType: 'trackId' | 'isrc' | 'artistTitle' | 'cache' | 'none';
-    cacheKey?: string;
-  }> {
-    // Priority 1: Exact trackId match
-    if (byTrackId.has(spotifyTrackId)) {
-      return {
-        enrichmentData: byTrackId.get(spotifyTrackId),
-        matchType: 'trackId',
-        cacheKey: `${CACHE_KEY_TRACK_INFO}${spotifyTrackId}`,
-      };
-    }
-
-    // Priority 2: ISRC match
-    if (spotifyIsrc && byIsrc.has(spotifyIsrc)) {
-      return {
-        enrichmentData: byIsrc.get(spotifyIsrc),
-        matchType: 'isrc',
-        cacheKey: `${CACHE_KEY_TRACK_INFO}isrc_${spotifyIsrc}`,
-      };
-    }
-
-    // Priority 3: Artist + Title exact match (case-insensitive)
-    const artistTitleKey = `${spotifyArtist.toLowerCase().trim()}|||${spotifyTitle.toLowerCase().trim()}`;
-    if (byArtistTitle.has(artistTitleKey)) {
-      // Create a hash for the cache key (to keep it reasonable length)
-      const hash = this.createSimpleHash(artistTitleKey);
-      return {
-        enrichmentData: byArtistTitle.get(artistTitleKey),
-        matchType: 'artistTitle',
-        cacheKey: `${CACHE_KEY_TRACK_INFO}artitle_${hash}`,
-      };
-    }
-
-    // Priority 4: Check cache (for previously matched tracks)
-    const cachedTrackInfo = await this.cache.get(`${CACHE_KEY_TRACK_INFO}${spotifyTrackId}`);
-    if (cachedTrackInfo) {
-      return {
-        enrichmentData: JSON.parse(cachedTrackInfo),
-        matchType: 'cache',
-      };
-    }
-
-    // No match found
-    return {
-      enrichmentData: null,
-      matchType: 'none',
-    };
-  }
-
-  /**
    * Helper: Create a simple hash for cache keys
    */
   private createSimpleHash(str: string): string {
@@ -1094,56 +794,6 @@ class Spotify {
     };
   }
 
-  /**
-   * Helper: Cache track matches with multiple strategies
-   */
-  private async cacheTrackMatches(
-    matches: Array<{
-      spotifyTrackId: string;
-      enrichmentData: any;
-      matchType: 'trackId' | 'isrc' | 'artistTitle' | 'cache' | 'none';
-      cacheKey?: string;
-    }>
-  ): Promise<void> {
-    const cachePromises = matches
-      .filter((m) => m.enrichmentData && m.cacheKey && m.matchType !== 'cache')
-      .map((m) =>
-        this.cache.set(
-          m.cacheKey!,
-          JSON.stringify({
-            year: m.enrichmentData.year,
-            name: m.enrichmentData.name,
-            artist: m.enrichmentData.artist,
-            extraNameAttribute: m.enrichmentData.extraNameAttribute,
-            extraArtistAttribute: m.enrichmentData.extraArtistAttribute,
-          })
-        )
-      );
-
-    // Also cache by primary trackId for backwards compatibility
-    const trackIdCachePromises = matches
-      .filter(
-        (m) =>
-          m.enrichmentData &&
-          m.matchType !== 'trackId' &&
-          m.matchType !== 'cache'
-      )
-      .map((m) =>
-        this.cache.set(
-          `${CACHE_KEY_TRACK_INFO}${m.spotifyTrackId}`,
-          JSON.stringify({
-            year: m.enrichmentData.year,
-            name: m.enrichmentData.name,
-            artist: m.enrichmentData.artist,
-            extraNameAttribute: m.enrichmentData.extraNameAttribute,
-            extraArtistAttribute: m.enrichmentData.extraArtistAttribute,
-          })
-        )
-      );
-
-    await Promise.all([...cachePromises, ...trackIdCachePromises]);
-  }
-
   // New function using this.api.getTracks
   public async getTracks(
     playlistId: string,
@@ -1162,6 +812,11 @@ class Spotify {
       const uniqueTrackIds = new Set<string>();
       let maxReached = false;
       let maxReachedPhysical = false;
+      let skippedTracksInfo: SkippedTracksInfo = {
+        total: 0,
+        summary: { unavailable: 0, localFiles: 0, podcasts: 0, duplicates: 0 },
+        details: [],
+      };
 
       // Get playlist details first (handles slug, gets track count for cache key)
       const playlistResult = await this.getPlaylist(
@@ -1248,6 +903,79 @@ class Spotify {
           trackItems.length
         ); // Analytics for raw items fetched
 
+        // Collect skip info for API response (user-actionable reasons only)
+        const skippedDetails: SkippedTrack[] = [];
+        const skipSummary: SkipSummary = {
+          unavailable: 0,
+          localFiles: 0,
+          podcasts: 0,
+          duplicates: 0,
+        };
+
+        // Track artist+title combinations to detect duplicates (like frontend was doing)
+        const artistTitleFirstPosition: Map<string, number> = new Map();
+
+        // Pre-scan to collect skipped tracks info
+        trackItems.forEach((item: any, index: number) => {
+          const position = index + 1;
+          if (!item) {
+            skipSummary.unavailable++;
+            skippedDetails.push({ position, reason: 'unavailable' });
+          } else if (!item.track) {
+            // Null track could be local file or unavailable - check if it's marked as local
+            const isLocal = item.is_local === true;
+            if (isLocal) {
+              skipSummary.localFiles++;
+              skippedDetails.push({ position, reason: 'localFile' });
+            } else {
+              skipSummary.unavailable++;
+              skippedDetails.push({ position, reason: 'unavailable' });
+            }
+          } else if (!item.track.id) {
+            const name = item.track.name || undefined;
+            const artist = item.track.artists?.[0]?.name || undefined;
+            skipSummary.unavailable++;
+            skippedDetails.push({ position, reason: 'unavailable', name, artist });
+          } else if (!item.track.name || !item.track.artists || item.track.artists.length === 0) {
+            skipSummary.unavailable++;
+            skippedDetails.push({ position, reason: 'unavailable' });
+          } else {
+            // Check for podcast
+            const spotifyUrl = item.track.external_urls?.spotify || '';
+            const name = item.track.name;
+            const artist = item.track.artists[0]?.name;
+
+            if (spotifyUrl.includes('/episode/')) {
+              skipSummary.podcasts++;
+              skippedDetails.push({ position, reason: 'podcast', name, artist });
+            } else {
+              // Check for image
+              const hasImage = item.track.album?.images?.length > 0;
+              if (!hasImage) {
+                skipSummary.unavailable++;
+                skippedDetails.push({ position, reason: 'unavailable', name, artist });
+              } else {
+                // Track is valid - check for artist+title duplicates
+                const artistTitleKey = `${artist.toLowerCase().trim()}|||${name.toLowerCase().trim()}`;
+                if (artistTitleFirstPosition.has(artistTitleKey)) {
+                  const firstPosition = artistTitleFirstPosition.get(artistTitleKey)!;
+                  skipSummary.duplicates++;
+                  skippedDetails.push({ position, reason: 'duplicate', name, artist, duplicateOf: firstPosition });
+                } else {
+                  artistTitleFirstPosition.set(artistTitleKey, position);
+                }
+              }
+            }
+          }
+        });
+
+        // Track which positions are duplicates so we can skip them during formatting
+        const duplicatePositions = new Set(
+          skippedDetails
+            .filter(s => s.reason === 'duplicate')
+            .map(s => s.position)
+        );
+
         // --- Query playlist-specific overrides (trackextrainfo) ---
         // This is a small, fast query filtered by playlistId
         const dbPlaylist = await this.prisma.playlist.findFirst({
@@ -1284,9 +1012,11 @@ class Spotify {
         }
 
         // --- Format Tracks with In-Memory Map Lookups ---
+        // Filter out items that were already marked as skipped (including duplicates)
         const formattedTracksPromises = trackItems
-          .filter((item: any) => item?.track?.id)
-          .map(async (item: any): Promise<Track | null> => {
+          .map((item: any, index: number) => ({ item, position: index + 1 }))
+          .filter(({ item, position }: { item: any; position: number }) => item?.track?.id && !duplicatePositions.has(position))
+          .map(async ({ item }: { item: any; position: number }): Promise<Track | null> => {
             const trackData = item.track;
             const trackId = trackData.id;
 
@@ -1366,12 +1096,21 @@ class Spotify {
         );
 
         // Remove duplicates based on ID and add to the final list
+        // (artist+title duplicates are already filtered, this catches any remaining ID duplicates)
         validFormattedTracks.forEach((track) => {
           if (!uniqueTrackIds.has(track.id)) {
             uniqueTrackIds.add(track.id);
             allFormattedTracks.push(track);
           }
         });
+
+        // Build skipped tracks info for API response
+        const totalSkipped = skipSummary.unavailable + skipSummary.localFiles + skipSummary.podcasts + skipSummary.duplicates;
+        skippedTracksInfo = {
+          total: totalSkipped,
+          summary: skipSummary,
+          details: skippedDetails,
+        };
 
         // Check limits after processing all tracks
         if (allFormattedTracks.length > MAX_CARDS) {
@@ -1398,6 +1137,7 @@ class Spotify {
           maxReachedPhysical,
           totalTracks: allFormattedTracks.length,
           tracks: allFormattedTracks,
+          skippedTracks: skippedTracksInfo,
         },
       };
 
