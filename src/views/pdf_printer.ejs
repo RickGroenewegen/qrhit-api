@@ -111,7 +111,7 @@
     }
     .logo {
         position: absolute;
-        top: 4mm;
+        top: 6mm;
         left: 50%;
         transform: translateX(-50%);
         max-height: 2rem;
@@ -157,14 +157,14 @@
             <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
         <% } %>
         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; position: relative; z-index: 1;">
-            <div class="text" style="font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;">
+            <div class="text" style="font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 6mm;color:<%= php.fontColor || '#000000' %>;">
                 <%= track.artist %>
                 <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
                     <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
                 <% } %>
             </div>
-            <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;"><%= track.year %></div>
-            <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 2mm;color:<%= php.fontColor || '#000000' %>;">
+            <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding: 0 6mm;color:<%= php.fontColor || '#000000' %>;"><%= track.year %></div>
+            <div class="text" style="margin-top: 3mm;font-size:<%= php.selectedFontSize || '16px' %>;padding: 0 6mm;color:<%= php.fontColor || '#000000' %>;">
                 <%= track.name %>
                 <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
                     <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
@@ -173,7 +173,7 @@
         </div>
         <!-- Domain URL removed from back side - always hidden -->
         <% if (!payment.vibe) { %>
-            <div style="position: absolute; bottom: 3mm; right: 3mm; font-size: 8px; color: <%= php.fontColor || '#000000' %>; opacity: 0.25; font-family: Arial, sans-serif; z-index: 2;">#<%= typeof batchNumber !== 'undefined' ? batchNumber : php.paymentHasPlaylistId %></div>
+            <div style="position: absolute; bottom: 5mm; right: 5mm; font-size: 8px; color: <%= php.fontColor || '#000000' %>; opacity: 0.25; font-family: Arial, sans-serif; z-index: 2;">#<%= typeof batchNumber !== 'undefined' ? batchNumber : php.paymentHasPlaylistId %></div>
         <% } %>
     </div>
     <div style="page-break-after: always;"></div>
