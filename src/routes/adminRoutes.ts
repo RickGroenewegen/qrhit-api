@@ -5,6 +5,7 @@ import GeneratorQueue from '../generatorQueue';
 import ExcelQueue from '../excelQueue';
 import AnalyticsClient from '../analytics';
 import Data from '../data';
+import Charts from '../charts';
 import { OpenPerplex } from '../openperplex';
 import Push from '../push';
 import Discount from '../discount';
@@ -985,6 +986,8 @@ export default async function adminRoutes(
   );
 
   // Chart data - 30-day moving average
+  const charts = Charts.getInstance();
+
   fastify.get(
     '/admin/charts/moving-average',
     getAuthHandler(['admin']),
@@ -993,7 +996,7 @@ export default async function adminRoutes(
         const { days, startDate, endDate } = request.query;
         const daysNum = days ? parseInt(days as string) : undefined;
 
-        const chartData = await data.getChartMovingAverage(
+        const chartData = await charts.getMovingAverage(
           daysNum,
           startDate as string | undefined,
           endDate as string | undefined
@@ -1022,7 +1025,7 @@ export default async function adminRoutes(
         const { days, startDate, endDate } = request.query;
         const daysNum = days ? parseInt(days as string) : undefined;
 
-        const chartData = await data.getChartHourlySales(
+        const chartData = await charts.getHourlySales(
           daysNum,
           startDate as string | undefined,
           endDate as string | undefined
@@ -1051,7 +1054,7 @@ export default async function adminRoutes(
         const { days, startDate, endDate } = request.query;
         const daysNum = days ? parseInt(days as string) : undefined;
 
-        const chartData = await data.getChartDailySales(
+        const chartData = await charts.getDailySales(
           daysNum,
           startDate as string | undefined,
           endDate as string | undefined
