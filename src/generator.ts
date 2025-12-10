@@ -867,9 +867,73 @@ class Generator {
     }
   }
 
+  /**
+   * Sync track counts before validation - updates playlist.numberOfTracks and
+   * payment_has_playlist.numberOfTracks if the actual track count is lower
+   */
+  private async syncTrackCounts(
+    physicalPlaylists: Array<{ playlist: any; filename: string }>
+  ): Promise<void> {
+    for (const physicalPlaylist of physicalPlaylists) {
+      const { playlist } = physicalPlaylist;
+
+      // Count actual tracks in playlist_has_tracks table
+      const actualTrackCount = await this.prisma.playlistHasTrack.count({
+        where: { playlistId: playlist.id },
+      });
+
+      // Check if actual count is less than stored counts
+      if (
+        actualTrackCount < playlist.numberOfTracks ||
+        actualTrackCount < playlist.paymentHasPlaylistNumberOfTracks
+      ) {
+        this.logger.log(
+          color.yellow.bold(
+            `Track count mismatch for playlist ${white.bold(
+              playlist.name
+            )}: stored=${white.bold(
+              playlist.numberOfTracks.toString()
+            )}, payment_has_playlist=${white.bold(
+              (playlist.paymentHasPlaylistNumberOfTracks || 0).toString()
+            )}, actual=${white.bold(actualTrackCount.toString())}. Updating...`
+          )
+        );
+
+        // Update playlist.numberOfTracks
+        await this.prisma.playlist.update({
+          where: { id: playlist.id },
+          data: { numberOfTracks: actualTrackCount },
+        });
+
+        // Update payment_has_playlist.numberOfTracks
+        if (playlist.paymentHasPlaylistId) {
+          await this.prisma.paymentHasPlaylist.update({
+            where: { id: playlist.paymentHasPlaylistId },
+            data: { numberOfTracks: actualTrackCount },
+          });
+        }
+
+        // Update the local playlist object for subsequent validation
+        playlist.numberOfTracks = actualTrackCount;
+        playlist.paymentHasPlaylistNumberOfTracks = actualTrackCount;
+
+        this.logger.log(
+          color.green.bold(
+            `Updated track counts for playlist ${white.bold(
+              playlist.name
+            )} to ${white.bold(actualTrackCount.toString())}`
+          )
+        );
+      }
+    }
+  }
+
   private async validatePDFPageCounts(
     physicalPlaylists: Array<{ playlist: any; filename: string }>
   ): Promise<{ isValid: boolean; errors: string[] }> {
+    // Sync track counts before validation
+    await this.syncTrackCounts(physicalPlaylists);
+
     const validationErrors: string[] = [];
 
     for (const physicalPlaylist of physicalPlaylists) {
