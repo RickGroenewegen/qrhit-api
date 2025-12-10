@@ -3399,6 +3399,106 @@ class Data {
     const chartData = await this.prisma.$queryRawUnsafe(query);
     return chartData as any[];
   }
+
+  /**
+   * Get average sales data grouped by hour of day for charts
+   * @param days Number of days to fetch (30, 90, 180, 365)
+   * @param startDate Optional custom start date (YYYY-MM-DD)
+   * @param endDate Optional custom end date (YYYY-MM-DD)
+   * @returns Array of hourly data with averages (0-23 hours)
+   */
+  public async getChartHourlySales(
+    days?: number,
+    startDate?: string,
+    endDate?: string
+  ): Promise<any[]> {
+    let dateFilter = '';
+
+    // Custom date range
+    if (startDate && endDate) {
+      dateFilter = `AND DATE(createdAt) BETWEEN '${startDate}' AND '${endDate}'`;
+    }
+    // Predefined date ranges
+    else if (days) {
+      if (![30, 90, 180, 365].includes(days)) {
+        throw new Error('Invalid days parameter. Must be 30, 90, 180, or 365');
+      }
+      dateFilter = `AND createdAt >= DATE_SUB(CURDATE(), INTERVAL ${days} DAY)`;
+    }
+    // Default to 90 days
+    else {
+      dateFilter = 'AND createdAt >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)';
+    }
+
+    const query = `
+      SELECT
+        HOUR(createdAt) as hour,
+        ROUND(AVG(totalPrice), 2) as avg_sales,
+        ROUND(AVG(profit), 2) as avg_profit,
+        ROUND(COUNT(*) / COUNT(DISTINCT DATE(createdAt)), 2) as avg_orders
+      FROM payments
+      WHERE
+        status = 'paid'
+        AND test = FALSE
+        AND vibe = FALSE
+        ${dateFilter}
+      GROUP BY HOUR(createdAt)
+      ORDER BY hour ASC
+    `;
+
+    const hourlyData = await this.prisma.$queryRawUnsafe(query);
+    return hourlyData as any[];
+  }
+
+  /**
+   * Get average sales data grouped by day of week for charts
+   * @param days Number of days to fetch (30, 90, 180, 365)
+   * @param startDate Optional custom start date (YYYY-MM-DD)
+   * @param endDate Optional custom end date (YYYY-MM-DD)
+   * @returns Array of daily data with averages (1=Monday to 7=Sunday)
+   */
+  public async getChartDailySales(
+    days?: number,
+    startDate?: string,
+    endDate?: string
+  ): Promise<any[]> {
+    let dateFilter = '';
+
+    // Custom date range
+    if (startDate && endDate) {
+      dateFilter = `AND DATE(createdAt) BETWEEN '${startDate}' AND '${endDate}'`;
+    }
+    // Predefined date ranges
+    else if (days) {
+      if (![30, 90, 180, 365].includes(days)) {
+        throw new Error('Invalid days parameter. Must be 30, 90, 180, or 365');
+      }
+      dateFilter = `AND createdAt >= DATE_SUB(CURDATE(), INTERVAL ${days} DAY)`;
+    }
+    // Default to 90 days
+    else {
+      dateFilter = 'AND createdAt >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)';
+    }
+
+    const query = `
+      SELECT
+        DAYOFWEEK(createdAt) as day_of_week,
+        ROUND(AVG(totalPrice), 2) as avg_sales,
+        ROUND(AVG(profit), 2) as avg_profit,
+        ROUND(COUNT(*) / COUNT(DISTINCT DATE(createdAt)), 2) as avg_orders
+      FROM payments
+      WHERE
+        status = 'paid'
+        AND test = FALSE
+        AND vibe = FALSE
+        ${dateFilter}
+      GROUP BY DAYOFWEEK(createdAt)
+      ORDER BY day_of_week ASC
+    `;
+
+    const dailyData = await this.prisma.$queryRawUnsafe(query);
+    return dailyData as any[];
+  }
 }
 
 export default Data;

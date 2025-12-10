@@ -1013,6 +1013,64 @@ export default async function adminRoutes(
     }
   );
 
+  // Chart data - Hourly sales average
+  fastify.get(
+    '/admin/charts/hourly-sales',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { days, startDate, endDate } = request.query;
+        const daysNum = days ? parseInt(days as string) : undefined;
+
+        const chartData = await data.getChartHourlySales(
+          daysNum,
+          startDate as string | undefined,
+          endDate as string | undefined
+        );
+
+        reply.send({
+          success: true,
+          data: chartData
+        });
+      } catch (error: any) {
+        console.error('Error fetching hourly chart data:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to fetch hourly chart data'
+        });
+      }
+    }
+  );
+
+  // Chart data - Daily sales average (by day of week)
+  fastify.get(
+    '/admin/charts/daily-sales',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { days, startDate, endDate } = request.query;
+        const daysNum = days ? parseInt(days as string) : undefined;
+
+        const chartData = await data.getChartDailySales(
+          daysNum,
+          startDate as string | undefined,
+          endDate as string | undefined
+        );
+
+        reply.send({
+          success: true,
+          data: chartData
+        });
+      } catch (error: any) {
+        console.error('Error fetching daily chart data:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to fetch daily chart data'
+        });
+      }
+    }
+  );
+
   // Search tracks
   fastify.post(
     '/tracks/search',
