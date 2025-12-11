@@ -5047,34 +5047,6 @@
     "ru",
     "sv"
   ],
-  "mail.reviewMailSubject": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp",
-    "cn",
-    "ru",
-    "sv"
-  ],
-  "mail.reviewRequest": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp",
-    "cn",
-    "ru",
-    "sv"
-  ],
   "mail.leaveReview": [
     "nl",
     "de",
@@ -7213,6 +7185,30 @@
     "sv"
   ],
   "mail.printingStarted": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "mail.reviewMailSubject": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "mail.reviewRequest": [
     "nl",
     "de",
     "fr",
