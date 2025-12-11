@@ -3187,10 +3187,9 @@ class Vibe {
       const fileName = `quotation_${quotationNumber}_${Date.now()}.pdf`;
       const filePath = path.join(tempDir, fileName);
 
-      // Generate PDF using ConvertAPI
+      // Generate PDF using Lambda
       const PDF = require('./pdf').default;
       const pdfManager = new PDF();
-      const convertapi = pdfManager['convertapi'];
 
       // Create the URL for the HTML rendering
       const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
@@ -3201,20 +3200,14 @@ class Vibe {
           color.white.bold(htmlUrl)
       );
 
-      const options = {
-        File: htmlUrl,
-        PageSize: 'a4',
-        RespectViewport: 'false',
-        MarginTop: 0,
-        MarginBottom: 0,
-        MarginLeft: 0,
-        MarginRight: 0,
-        ConversionDelay: 3,
-        CompressPDF: 'true',
-      };
-
-      const result = await convertapi.convert('pdf', options, 'htm');
-      await result.saveFiles(filePath);
+      // Generate PDF using Lambda
+      await pdfManager.generateFromUrl(htmlUrl, filePath, {
+        format: 'a4',
+        marginTop: 0,
+        marginBottom: 0,
+        marginLeft: 0,
+        marginRight: 0,
+      });
 
       // Read the generated PDF
       const pdfBuffer = await fs.readFile(filePath);
