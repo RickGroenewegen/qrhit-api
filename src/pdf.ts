@@ -80,7 +80,13 @@ class PDF {
 
     if (result.statusCode !== 200) {
       const errorBody = typeof result.body === 'string' ? JSON.parse(result.body) : result.body;
-      throw new Error(`PDF generation failed: ${errorBody?.message || 'Unknown error'}`);
+      const errorDetails = [
+        errorBody?.message || 'Unknown error',
+        errorBody?.error ? `Error: ${errorBody.error}` : null,
+        errorBody?.errorName ? `Type: ${errorBody.errorName}` : null,
+        errorBody?.errorStack ? `Stack: ${errorBody.errorStack}` : null,
+      ].filter(Boolean).join(' | ');
+      throw new Error(`PDF generation failed: ${errorDetails}`);
     }
 
     // Check if the response contains S3 information (large PDF)
