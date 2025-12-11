@@ -1437,19 +1437,8 @@ class PrintEnBind {
         blue.bold(`Invoice already exists at: ${white.bold(pdfPath)}`)
       );
     } catch (error) {
-      // If the file doesn't exist, create it using ConvertAPI
+      // If the file doesn't exist, create it using Lambda
       const pdfManager = new PDF();
-      const options = {
-        File: invoiceUrl,
-        PageSize: 'a4',
-        RespectViewport: 'false',
-        MarginTop: 0,
-        MarginRight: 0,
-        MarginBottom: 0,
-        MarginLeft: 0,
-        ConversionDelay: 3,
-        CompressPDF: 'true',
-      };
 
       // Create the directory if it doesn't exist
       const dir = `${process.env['PRIVATE_DIR']}/invoice`;
@@ -1459,10 +1448,14 @@ class PrintEnBind {
         await fs.mkdir(dir, { recursive: true });
       }
 
-      // Use the ConvertAPI to generate the PDF
-      const convertapi = pdfManager['convertapi']; // Access the convertapi instance from PDF class
-      const result = await convertapi.convert('pdf', options, 'htm');
-      await result.saveFiles(pdfPath);
+      // Generate PDF using Lambda
+      await pdfManager.generateFromUrl(invoiceUrl, pdfPath, {
+        format: 'a4',
+        marginTop: 0,
+        marginRight: 0,
+        marginBottom: 0,
+        marginLeft: 0,
+      });
 
       // Ensure the PDF is properly sized
       await pdfManager.resizePDFPages(pdfPath, 210, 297); // A4 size in mm

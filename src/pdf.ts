@@ -1,26 +1,135 @@
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import { Playlist } from '@prisma/client';
-import ConvertApi from 'convertapi';
+import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
+import { S3Client, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import AnalyticsClient from './analytics';
 import { promises as fs } from 'fs';
-import path from 'path';
 import { PDFDocument } from 'pdf-lib';
+
+interface LambdaPdfOptions {
+  url: string;
+  options: {
+    format?: string;
+    width?: number;
+    height?: number;
+    marginTop?: number;
+    marginRight?: number;
+    marginBottom?: number;
+    marginLeft?: number;
+    pageRanges?: string;
+    landscape?: boolean;
+  };
+}
 
 class PDF {
   private logger = new Logger();
-  private convertapi = new ConvertApi(process.env['CONVERT_API_KEY']!);
+  private awsRegion = process.env['AWS_LAMBDA_REGION'] || process.env['AWS_REGION'] || 'eu-west-1';
+  private awsCredentials = process.env['AWS_LAMBDA_ACCESS_KEY_ID'] ? {
+    accessKeyId: process.env['AWS_LAMBDA_ACCESS_KEY_ID']!,
+    secretAccessKey: process.env['AWS_LAMBDA_SECRET_KEY_ID']!,
+  } : undefined;
+  private lambdaClient = new LambdaClient({
+    region: this.awsRegion,
+    credentials: this.awsCredentials,
+  });
+  private s3Client = new S3Client({
+    region: this.awsRegion,
+    credentials: this.awsCredentials,
+  });
+  private lambdaFunctionName = process.env['PDF_LAMBDA_FUNCTION'] || 'convertHTMLToPDF';
   private analytics = AnalyticsClient.getInstance();
 
-  public async mergePDFs(filename: string, files: string[]) {
-    const result = await this.convertapi.convert(
-      'merge',
-      {
-        Files: files,
-      },
-      'pdf'
+  /**
+   * Invoke the Lambda function to convert HTML to PDF
+   */
+  private async convertHtmlToPdf(
+    url: string,
+    options: LambdaPdfOptions['options']
+  ): Promise<Buffer> {
+    this.logger.log(
+      color.blue.bold(`Invoking Lambda for URL: ${color.white.bold(url)}`)
     );
-    await result.saveFiles(`${process.env['PUBLIC_DIR']}/pdf/${filename}`);
+
+    const payload: LambdaPdfOptions = {
+      url,
+      options,
+    };
+
+    const command = new InvokeCommand({
+      FunctionName: this.lambdaFunctionName,
+      Payload: JSON.stringify(payload),
+    });
+
+    const response = await this.lambdaClient.send(command);
+
+    if (response.FunctionError) {
+      const errorPayload = response.Payload
+        ? JSON.parse(Buffer.from(response.Payload).toString())
+        : { message: 'Unknown Lambda error' };
+      throw new Error(`Lambda error: ${errorPayload.message || errorPayload.errorMessage}`);
+    }
+
+    if (!response.Payload) {
+      throw new Error('No payload returned from Lambda');
+    }
+
+    const resultString = Buffer.from(response.Payload).toString();
+    const result = JSON.parse(resultString);
+
+    if (result.statusCode !== 200) {
+      const errorBody = typeof result.body === 'string' ? JSON.parse(result.body) : result.body;
+      throw new Error(`PDF generation failed: ${errorBody?.message || 'Unknown error'}`);
+    }
+
+    // Check if the response contains S3 information (large PDF)
+    const bodyContent = typeof result.body === 'string' && result.body.startsWith('{')
+      ? JSON.parse(result.body)
+      : null;
+
+    if (bodyContent?.s3Key) {
+      // Large PDF was uploaded to S3 - download it
+      this.logger.log(
+        color.blue.bold(`PDF stored in S3, downloading from: ${color.white.bold(bodyContent.s3Key)}`)
+      );
+
+      const getCommand = new GetObjectCommand({
+        Bucket: bodyContent.s3Bucket,
+        Key: bodyContent.s3Key,
+      });
+
+      const s3Response = await this.s3Client.send(getCommand);
+      const pdfBuffer = Buffer.from(await s3Response.Body!.transformToByteArray());
+
+      this.logger.log(
+        color.blue.bold(`PDF downloaded from S3, size: ${white.bold(pdfBuffer.length)} bytes`)
+      );
+
+      // Delete from S3 after downloading (lifecycle rule is backup)
+      try {
+        await this.s3Client.send(new DeleteObjectCommand({
+          Bucket: bodyContent.s3Bucket,
+          Key: bodyContent.s3Key,
+        }));
+        this.logger.log(
+          color.blue.bold(`Deleted PDF from S3: ${color.white.bold(bodyContent.s3Key)}`)
+        );
+      } catch (deleteError) {
+        this.logger.log(
+          color.yellow.bold(`Warning: Failed to delete PDF from S3: ${bodyContent.s3Key}`)
+        );
+      }
+
+      return pdfBuffer;
+    }
+
+    // Small PDF - returned directly as base64
+    const pdfBuffer = Buffer.from(result.body, 'base64');
+    this.logger.log(
+      color.blue.bold(`PDF buffer size: ${pdfBuffer.length} bytes, first bytes: ${pdfBuffer.slice(0, 10).toString('hex')}`)
+    );
+
+    return pdfBuffer;
   }
 
   public async getPageDimensions(
@@ -76,11 +185,6 @@ class PDF {
       template === 'digital_double' ||
       template === 'printer_sheets';
 
-    let itemsPerPage = isDigitalTemplate ? 6 : 1;
-    const pagesPerTrack = isDigitalTemplate ? 1 : 2;
-    const totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
-    const maxPagesPerPDF = 100;
-
     let ecoInt = eco ? 1 : 0;
     let emptyPages = 0;
 
@@ -88,129 +192,65 @@ class PDF {
       color.blue.bold('Generating PDF: ') + color.white.bold(template)
     );
 
-    const tempFiles: string[] = [];
+    // Build the URL for the entire PDF (no more pagination needed)
+    const itemIndexParam = itemIndex !== undefined ? itemIndex : 0;
+    const startIndex = 0;
+    const endIndex = numberOfTracks - 1;
+    const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}/${subdir}/${ecoInt}/${emptyPages}/${itemIndexParam}`;
 
-    try {
-      for (let i = 0; i < totalPages; i += maxPagesPerPDF) {
-        
-        const startIndex = (i * itemsPerPage) / pagesPerTrack;
-        const endIndex = Math.min(
-          ((i + maxPagesPerPDF) * itemsPerPage) / pagesPerTrack,
-          numberOfTracks
-        ) - 1;
+    this.logger.log(
+      color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)
+    );
 
-        const itemIndexParam = itemIndex !== undefined ? itemIndex : 0;
-        const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}/${subdir}/${ecoInt}/${emptyPages}/${itemIndexParam}`;
+    const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
 
-        this.logger.log(
-          color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)
-        );
+    // Build Lambda options
+    const options: LambdaPdfOptions['options'] = {
+      marginTop: 0,
+      marginRight: 0,
+      marginBottom: 0,
+      marginLeft: 0,
+    };
 
-        const tempFilename = `temp_${i}_${filename}`;
-        const tempFilePath = `${process.env['PUBLIC_DIR']}/pdf/${tempFilename}`;
+    if (isDigitalTemplate) {
+      options.format = 'a4';
+    } else {
+      // Printer templates (including custom ones) use 60x60mm pages
+      options.width = 60;
+      options.height = 60;
+    }
 
-        let options = {
-          File: url,
-          RespectViewport: 'false',
-          ConversionDelay: 10,
-          PageSize: 'a4',
-          MarginTop: 0,
-          MarginRight: 0,
-          MarginBottom: 0,
-          MarginLeft: 0,
-          CompressPDF: 'true',
-          LoadLazyContent: 'true', // Load all lazy content including fonts
-        } as any;
+    // Convert HTML to PDF using Lambda
+    const pdfBuffer = await this.convertHtmlToPdf(url, options);
+    await fs.writeFile(finalPath, pdfBuffer);
 
-        if (!isDigitalTemplate) {
-          // Printer templates (including custom ones) use 60x60mm pages
-          options['PageWidth'] = 60;
-          options['PageHeight'] = 60;
-        }
+    this.analytics.increaseCounter('pdf', 'generated', 1);
 
-        const result = await this.convertapi.convert('pdf', options, 'htm');
-        await result.saveFiles(tempFilePath);
-        tempFiles.push(tempFilePath);
+    this.logger.log(
+      color.blue.bold(`Generated PDF: ${color.white.bold(filename)}`)
+    );
 
-        this.analytics.increaseCounter('pdf', 'generated', 1);
-
-        this.logger.log(
-          color.blue.bold(
-            `Generated temporary PDF: ${color.white.bold(tempFilename)}`
-          )
-        );
-      }
-
-      const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-
-      if (tempFiles.length === 1) {
-        // If there's only one PDF, rename it instead of merging
-
-        await fs.rename(tempFiles[0], finalPath);
-        this.logger.log(
-          color.blue.bold(`Single PDF renamed: ${color.white.bold(filename)}`)
-        );
-        // Clear the tempFiles array as we've renamed the file
-        tempFiles.length = 0;
+    if (!isDigitalTemplate) {
+      // Printer templates (including custom ones) need resize and bleed
+      if (payment.vibe) {
+        // Happibox wants a 3% increase in size for the printer
+        await this.resizePDFPages(finalPath, 62, 62);
       } else {
-        // Merge all temporary PDFs
-        await this.mergePDFs(filename, tempFiles);
-        this.analytics.increaseCounter('pdf', 'merged', 1);
-        this.logger.log(
-          color.blue.bold(`Merged PDF saved: ${color.white.bold(filename)}`)
-        );
+        // Resize them to exactly 60x60 mm
+        await this.resizePDFPages(finalPath, 60, 60);
       }
-      if (!isDigitalTemplate) {
-        // Printer templates (including custom ones) need resize and bleed
-        if (payment.vibe) {
-          // Happibox wants a 3% increase in size for the printer
-          await this.resizePDFPages(finalPath, 62, 62);
-        } else {
-          // Resize them to exactly 60x60 mm because convertAPI is slightly off
-          await this.resizePDFPages(finalPath, 60, 60);
-        }
 
-        // Add bleed based on printer type
-        if (printerType === 'tromp') {
-          // True bleed: scale content to extend into bleed area
-          await this.addTrueBleed(finalPath, 3);
-         
-        } else {
-          // Standard bleed: add whitespace around content
-          await this.addBleed(finalPath, 3);
-        }
-      } else if (template === 'printer_sheets') {
-        // Resize to A4
-        await this.resizePDFPages(finalPath, 210, 297);
+      // Add bleed based on printer type
+      if (printerType === 'tromp') {
+        // True bleed: scale content to extend into bleed area
+        await this.addTrueBleed(finalPath, 3);
+      } else {
+        // Standard bleed: add whitespace around content
+        await this.addBleed(finalPath, 3);
       }
-    } finally {
-      // Clean up temporary files only if they were merged
-      if (tempFiles.length > 0) {
-        await Promise.all(
-          tempFiles.map(async (tempFile) => {
-            try {
-              await fs.access(tempFile);
-              await fs.unlink(tempFile);
-              this.logger.log(
-                color.blue.bold(
-                  `Deleted temporary file: ${color.white.bold(
-                    path.basename(tempFile)
-                  )}`
-                )
-              );
-            } catch (error) {
-              // File doesn't exist or couldn't be deleted, log the error
-              this.logger.log(
-                color.yellow.bold(
-                  `Failed to delete temporary file: ${color.white.bold(
-                    path.basename(tempFile)
-                  )}`
-                )
-              );
-            }
-          })
-        );
-      }
+    } else if (template === 'printer_sheets') {
+      // Resize to A4
+      await this.resizePDFPages(finalPath, 210, 297);
     }
 
     return filename;
@@ -230,41 +270,35 @@ class PDF {
       color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)
     );
 
-    const tempFilename = `${filename}`;
-    const tempFilePath = `${process.env['PUBLIC_DIR']}/pdf/${tempFilename}`;
+    const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
 
-    let options = {
-      File: url,
-      RespectViewport: 'false',
-      PageSize: 'a4',
-      MarginTop: 0,
-      MarginRight: 0,
-      MarginBottom: 0,
-      MarginLeft: 0,
-      PageRange: '1',
-      CompressPDF: 'true',
-    } as any;
+    // Build Lambda options
+    const options: LambdaPdfOptions['options'] = {
+      format: 'a4',
+      marginTop: 0,
+      marginRight: 0,
+      marginBottom: 0,
+      marginLeft: 0,
+      pageRanges: '1',
+    };
 
     if (template === 'printer') {
-      options['PageSize'] = 'a5';
-      options['PageRange'] = '1-2';
+      options.format = 'a5';
+      options.pageRanges = '1-2';
     }
 
-    const result = await this.convertapi.convert('pdf', options, 'htm');
-    await result.saveFiles(tempFilePath);
+    // Convert HTML to PDF using Lambda
+    const pdfBuffer = await this.convertHtmlToPdf(url, options);
+    await fs.writeFile(finalPath, pdfBuffer);
 
     this.analytics.increaseCounter('pdf', 'generated', 1);
 
     this.logger.log(
-      color.blue.bold(
-        `Generated temporary PDF: ${color.white.bold(tempFilename)}`
-      )
+      color.blue.bold(`Generated PDF: ${color.white.bold(filename)}`)
     );
 
-    const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
-
     if (template === 'printer') {
-      // Resize them to exactly 60x60 mm because convertAPI is slightly off
+      // Resize to A5 dimensions
       await this.resizePDFPages(finalPath, 210, 148);
       // Add a 3 mm bleed for PrintAPI
       await this.addBleed(finalPath, 3);
@@ -276,7 +310,7 @@ class PDF {
   private async mmToPoints(mm: number): Promise<number> {
     return mm * (72 / 25.4);
   }
- 
+
   public async addBleed(inputPath: string, bleed: number) {
     const bleedSizeInPoints = await this.mmToPoints(bleed);
     const existingPdfBytes = await fs.readFile(inputPath);
@@ -366,7 +400,48 @@ class PDF {
     );
   }
 
-  
+  /**
+   * Generate a PDF from a URL and save to file (for invoices, quotations, etc.)
+   */
+  public async generateFromUrl(
+    url: string,
+    outputPath: string,
+    options: {
+      format?: string;
+      width?: number;
+      height?: number;
+      marginTop?: number;
+      marginRight?: number;
+      marginBottom?: number;
+      marginLeft?: number;
+      pageRanges?: string;
+    } = {}
+  ): Promise<void> {
+    const lambdaOptions: LambdaPdfOptions['options'] = {
+      format: options.format || 'a4',
+      marginTop: options.marginTop ?? 0,
+      marginRight: options.marginRight ?? 0,
+      marginBottom: options.marginBottom ?? 0,
+      marginLeft: options.marginLeft ?? 0,
+    };
+
+    if (options.width && options.height) {
+      lambdaOptions.width = options.width;
+      lambdaOptions.height = options.height;
+      delete lambdaOptions.format;
+    }
+
+    if (options.pageRanges) {
+      lambdaOptions.pageRanges = options.pageRanges;
+    }
+
+    const pdfBuffer = await this.convertHtmlToPdf(url, lambdaOptions);
+    await fs.writeFile(outputPath, pdfBuffer);
+
+    this.logger.log(
+      color.blue.bold(`Generated PDF from URL: ${color.white.bold(outputPath)}`)
+    );
+  }
 
   public async resizePDFPages(
     inputPath: string,
@@ -413,8 +488,6 @@ class PDF {
       )
     );
   }
-
-  
 }
 
 export default PDF;
