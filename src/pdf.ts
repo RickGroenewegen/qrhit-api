@@ -199,10 +199,6 @@ class PDF {
     const endIndex = numberOfTracks - 1;
     const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}/${subdir}/${ecoInt}/${emptyPages}/${itemIndexParam}`;
 
-    this.logger.log(
-      color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)
-    );
-
     const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
 
     // Build Lambda options
@@ -261,10 +257,6 @@ class PDF {
     subdir: string
   ): Promise<string> {
     const url = `${process.env['API_URI']}/discount/voucher/${template}/${discount.code}/${payment.paymentId}`;
-
-    this.logger.log(
-      color.blue.bold(`Retrieving PDF from URL: ${color.white.bold(url)}`)
-    );
 
     const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
 
