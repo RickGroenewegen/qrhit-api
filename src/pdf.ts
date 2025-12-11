@@ -270,80 +270,7 @@ class PDF {
   private async mmToPoints(mm: number): Promise<number> {
     return mm * (72 / 25.4);
   }
-
-  private async flattenPdf(inputPath: string): Promise<void> {
-    try {
-      const result = await this.convertapi.convert(
-        'flatten',
-        {
-          File: inputPath,
-        },
-        'pdf'
-      );
-
-      await result.saveFiles(inputPath);
-
-      this.logger.log(
-        color.blue.bold(
-          `PDF flattening successful: ${color.white.bold(inputPath)}`
-        )
-      );
-    } catch (error) {
-      this.logger.log(color.red.bold('Error flattening PDF!'));
-    }
-  }
-
-  /**
-   * Splits a PDF file into multiple parts based on page ranges
-   * @param inputPath Path to the input PDF file
-   * @param ranges Array of objects containing start and end page numbers
-   * @returns Array of paths to the split PDF files
-   */
-  public async splitPdf(
-    inputPath: string,
-    ranges: Array<{ start: number; end: number }>
-  ): Promise<string[]> {
-    try {
-      // Format ranges into the required string format (e.g., "1-54,55-58,59-59")
-      const rangeString = ranges
-        .map((range) => `${range.start}-${range.end}`)
-        .join(',');
-
-      const result = await this.convertapi.convert(
-        'split',
-        {
-          File: inputPath,
-          SplitMode: 'ranges',
-          SplitByCustomRange: rangeString,
-        },
-        'pdf'
-      );
-
-      // Get the directory path from the input file
-      const dir = path.dirname(inputPath);
-      const basename = path.basename(inputPath, '.pdf');
-
-      // Save each split file and collect their paths
-      const outputPaths: string[] = [];
-      for (let i = 0; i < result.files.length; i++) {
-        const outputPath = path.join(dir, `${basename}_part${i + 1}.pdf`);
-        await result.files[i].save(outputPath);
-        outputPaths.push(outputPath);
-
-        this.logger.log(
-          color.blue.bold(
-            `Split PDF part ${i + 1} saved: ${color.white.bold(outputPath)}`
-          )
-        );
-      }
-
-      return outputPaths;
-    } catch (error) {
-      this.logger.log(color.red.bold('Error splitting PDF!'));
-      throw error;
-    }
-  }
-
+ 
   public async addBleed(inputPath: string, bleed: number) {
     const bleedSizeInPoints = await this.mmToPoints(bleed);
     const existingPdfBytes = await fs.readFile(inputPath);
@@ -397,39 +324,7 @@ class PDF {
     );
   }
 
-  public async convertToCMYK(inputPath: string): Promise<void> {
-    try {
-      this.logger.log(
-        color.blue.bold(
-          `Converting PDF to CMYK color space: ${color.white.bold(inputPath)}`
-        )
-      );
-
-      // Use ConvertAPI to convert RGB to CMYK
-      const result = await this.convertapi.convert(
-        'pdf',
-        {
-          File: inputPath,
-          ColorSpace: 'CMYK',
-        },
-        'pdf'
-      );
-
-      // Save the converted file back to the original path
-      await result.saveFiles(inputPath);
-
-      this.logger.log(
-        color.green.bold(
-          `Successfully converted PDF to CMYK: ${color.white.bold(inputPath)}`
-        )
-      );
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(`Error converting PDF to CMYK: ${error}`)
-      );
-      throw error;
-    }
-  }
+  
 
   public async resizePDFPages(
     inputPath: string,
@@ -477,30 +372,7 @@ class PDF {
     );
   }
 
-  public async compressPDF(
-    inputPath: string,
-    outputPath: string
-  ): Promise<void> {
-    try {
-      const result = await this.convertapi.convert(
-        'compress',
-        {
-          File: inputPath,
-        },
-        'pdf'
-      );
-
-      await result.saveFiles(outputPath);
-
-      this.logger.log(
-        color.blue.bold(
-          `PDF compression successful: ${color.white.bold(outputPath)}`
-        )
-      );
-    } catch (error) {
-      this.logger.log(color.red.bold('Error compressing PDF!'));
-    }
-  }
+  
 }
 
 export default PDF;
