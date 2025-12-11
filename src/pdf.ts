@@ -37,7 +37,8 @@ class PDF {
     region: this.awsRegion,
     credentials: this.awsCredentials,
   });
-  private lambdaFunctionName = process.env['PDF_LAMBDA_FUNCTION'] || 'convertHTMLToPDF';
+  private lambdaFunctionName = process.env['PDF_LAMBDA_FUNCTION'] ||
+    (process.env['ENVIRONMENT'] === 'development' ? 'convertHTMLToPDF-dev' : 'convertHTMLToPDF');
   private analytics = AnalyticsClient.getInstance();
 
   /**
@@ -48,7 +49,7 @@ class PDF {
     options: LambdaPdfOptions['options']
   ): Promise<Buffer> {
     this.logger.log(
-      color.blue.bold(`Invoking Lambda for URL: ${color.white.bold(url)}`)
+      color.blue.bold(`Invoking Lambda ${color.white.bold(this.lambdaFunctionName)} for URL: ${color.white.bold(url)}`)
     );
 
     const payload: LambdaPdfOptions = {
