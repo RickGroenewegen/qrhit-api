@@ -1228,7 +1228,15 @@ ${knowledgeContext}${toolContext}`,
 
       await this.ses.send(command);
     } catch (error) {
-      console.error('Error while sending email with attachment', error);
+      console.error('Error while sending finalized email', error);
+      this.pushover.sendMessage(
+        {
+          title: 'Finalized mail failed',
+          message: `Failed to send finalized mail for order ${payment.orderId} (${payment.email}): ${error instanceof Error ? error.message : 'Unknown error'}`,
+          sound: 'falling',
+        },
+        ''
+      );
     }
   }
 
