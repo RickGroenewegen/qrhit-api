@@ -236,13 +236,15 @@ class PDF {
         // Happibox wants a 3% increase in size for the printer
         await this.resizePDFPages(finalPath, 62, 62);
       } else {
-        // Resize them to exactly 60x60 mm
-        await this.resizePDFPages(finalPath, 60, 60);
-         // Add bleed based on printer type
-        await this.addBleed(finalPath, 3);
-      } else if (template === 'printer_sheets') {
-        // Resize to A4
-        await this.resizePDFPages(finalPath, 210, 297);
+        if(template === 'printer') {
+          // Resize them to exactly 60x60 mm
+          await this.resizePDFPages(finalPath, 60, 60);
+          // Add bleed based on printer type
+          await this.addBleed(finalPath, 3);
+        } else if (template === 'printer_sheets') {
+          // Resize to A4
+          await this.resizePDFPages(finalPath, 210, 297);
+        }
       }
     }
 
