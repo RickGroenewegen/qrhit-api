@@ -2,7 +2,7 @@ import { ApiResult } from './interfaces/ApiResult';
 import { createMollieClient, Locale, PaymentMethod } from '@mollie/api-client';
 import { Payment } from '@prisma/client';
 import PrismaInstance from './prisma';
-import { color } from 'console-log-colors';
+import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import Data from './data';
 import Order from './order';
@@ -433,9 +433,8 @@ class Mollie {
 
     this.logger.log(
       color.blue.bold(
-        `PDF deletion complete for payment ${color.white.bold(paymentId)}: ` +
-        color.green.bold(`${deletedCount} deleted`) + `, ` +
-        (failedCount > 0 ? color.yellow.bold(`${failedCount} failed`) : color.green.bold(`${failedCount} failed`))
+        `PDF deletion complete for payment ${color.white.bold(paymentId)}: ${white.bold(deletedCount.toString())} deleted, ` +
+        (failedCount > 0 ? color.yellow.bold(`${failedCount} failed`) : `${white.bold(failedCount.toString())} failed`)
       )
     );
   }
@@ -1245,7 +1244,7 @@ class Mollie {
           if (dbPayment.user?.hash) {
             await this.game.clearUserPlaylistCache(dbPayment.user.hash);
             this.logger.log(
-              color.green.bold('Cleared playlist cache for user: ') +
+              color.blue.bold('Cleared playlist cache for user: ') +
                 color.white.bold(dbPayment.user.hash)
             );
           }
