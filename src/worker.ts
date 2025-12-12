@@ -87,17 +87,20 @@ class QueueWorker {
     try {
       await this.generatorQueue.initializeWorkers(workerCount);
 
-      // Start MusicFetch workers (1 worker to respect rate limits)
-      this.musicFetchQueue.startWorkers(1);
+      // Start MusicFetch workers (1 worker to respect rate limits) - only in production
+      if (process.env['ENVIRONMENT'] === 'production') {
+        this.musicFetchQueue.startWorkers(1);
+      }
 
       // Start Excel workers (2 workers for concurrent Excel processing)
       this.excelQueue.startWorkers(2);
 
+      const musicFetchWorkers = process.env['ENVIRONMENT'] === 'production' ? 1 : 0;
       this.logger.log(
         color.green.bold(
           `Queue workers started successfully with ${white.bold(
             workerCount.toString()
-          )} Generator workers, 1 MusicFetch worker, and 2 Excel workers`
+          )} Generator workers, ${white.bold(musicFetchWorkers.toString())} MusicFetch worker${musicFetchWorkers === 1 ? '' : 's'}, and 2 Excel workers`
         )
       );
 

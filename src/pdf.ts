@@ -22,6 +22,19 @@ interface LambdaPdfOptions {
   };
 }
 
+interface LambdaMergeOptions {
+  operation: 'merge';
+  s3Keys: string[];
+  s3Bucket?: string;
+  deleteAfterMerge?: boolean;
+}
+
+interface S3PdfResult {
+  s3Bucket: string;
+  s3Key: string;
+  size: number;
+}
+
 class PDF {
   private logger = new Logger();
   private awsRegion = process.env['AWS_LAMBDA_REGION'] || process.env['AWS_REGION'] || 'eu-west-1';
@@ -139,6 +152,198 @@ class PDF {
     return pdfBuffer;
   }
 
+  /**
+   * Convert HTML to PDF and keep in S3 (don't download)
+   * Returns S3 key for later merge
+   */
+  private async convertHtmlToPdfToS3(
+    url: string,
+    options: LambdaPdfOptions['options'],
+    logPrefix?: string
+  ): Promise<S3PdfResult> {
+    const prefix = logPrefix ? `${logPrefix} - ` : '';
+    this.logger.log(
+      color.blue.bold(`${prefix}Invoking Lambda ${color.white.bold(this.lambdaFunctionName)} for URL: ${color.white.bold(url)}`)
+    );
+
+    const payload: LambdaPdfOptions = {
+      url,
+      options,
+    };
+
+    const command = new InvokeCommand({
+      FunctionName: this.lambdaFunctionName,
+      Payload: JSON.stringify(payload),
+    });
+
+    const response = await this.lambdaClient.send(command);
+
+    if (response.FunctionError) {
+      const errorPayload = response.Payload
+        ? JSON.parse(Buffer.from(response.Payload).toString())
+        : { message: 'Unknown Lambda error' };
+      throw new Error(`Lambda error: ${errorPayload.message || errorPayload.errorMessage}`);
+    }
+
+    if (!response.Payload) {
+      throw new Error('No payload returned from Lambda');
+    }
+
+    const resultString = Buffer.from(response.Payload).toString();
+    const result = JSON.parse(resultString);
+
+    if (result.statusCode !== 200) {
+      const errorBody = typeof result.body === 'string' ? JSON.parse(result.body) : result.body;
+      const errorDetails = [
+        errorBody?.message || 'Unknown error',
+        errorBody?.error ? `Error: ${errorBody.error}` : null,
+        errorBody?.errorName ? `Type: ${errorBody.errorName}` : null,
+        errorBody?.errorStack ? `Stack: ${errorBody.errorStack}` : null,
+      ].filter(Boolean).join(' | ');
+      throw new Error(`PDF generation failed: ${errorDetails}`);
+    }
+
+    const bodyContent = typeof result.body === 'string' ? JSON.parse(result.body) : result.body;
+
+    if (!bodyContent?.s3Key) {
+      throw new Error('Lambda did not return S3 key');
+    }
+
+    return {
+      s3Bucket: bodyContent.s3Bucket,
+      s3Key: bodyContent.s3Key,
+      size: bodyContent.size,
+    };
+  }
+
+  /**
+   * Merge multiple PDFs via Lambda
+   * Returns the merged PDF as a Buffer
+   */
+  private async mergePdfsViaLambda(s3Keys: string[]): Promise<Buffer> {
+    this.logger.log(
+      color.blue.bold(`Invoking Lambda ${color.white.bold(this.lambdaFunctionName)} to merge ${color.white.bold(s3Keys.length.toString())} PDFs`)
+    );
+
+    const payload: LambdaMergeOptions = {
+      operation: 'merge',
+      s3Keys,
+      deleteAfterMerge: true,
+    };
+
+    const command = new InvokeCommand({
+      FunctionName: this.lambdaFunctionName,
+      Payload: JSON.stringify(payload),
+    });
+
+    const response = await this.lambdaClient.send(command);
+
+    if (response.FunctionError) {
+      const errorPayload = response.Payload
+        ? JSON.parse(Buffer.from(response.Payload).toString())
+        : { message: 'Unknown Lambda error' };
+      throw new Error(`Lambda merge error: ${errorPayload.message || errorPayload.errorMessage}`);
+    }
+
+    if (!response.Payload) {
+      throw new Error('No payload returned from Lambda merge');
+    }
+
+    const resultString = Buffer.from(response.Payload).toString();
+    this.logger.log(
+      color.blue.bold(`Lambda merge response: ${color.white.bold(resultString.substring(0, 500))}`)
+    );
+    const result = JSON.parse(resultString);
+
+    if (result.statusCode !== 200) {
+      const errorBody = typeof result.body === 'string' ? JSON.parse(result.body) : result.body;
+      const errorDetails = [
+        errorBody?.message || 'Unknown error',
+        errorBody?.error ? `Error: ${errorBody.error}` : null,
+        errorBody?.errorName ? `Type: ${errorBody.errorName}` : null,
+        errorBody?.errorStack ? `Stack: ${errorBody.errorStack}` : null,
+      ].filter(Boolean).join(' | ');
+      throw new Error(`PDF merge failed: ${errorDetails}`);
+    }
+
+    const bodyContent = typeof result.body === 'string' ? JSON.parse(result.body) : result.body;
+
+    this.logger.log(
+      color.blue.bold(`Merged PDF stored in S3: ${color.white.bold(bodyContent.s3Key)} (${white.bold(bodyContent.size)} bytes, ${white.bold(bodyContent.pageCount)} pages)`)
+    );
+
+    // Download merged PDF from S3
+    const getCommand = new GetObjectCommand({
+      Bucket: bodyContent.s3Bucket,
+      Key: bodyContent.s3Key,
+    });
+
+    const s3Response = await this.s3Client.send(getCommand);
+    const pdfBuffer = Buffer.from(await s3Response.Body!.transformToByteArray());
+
+    this.logger.log(
+      color.blue.bold(`Downloaded merged PDF from S3, size: ${white.bold(pdfBuffer.length)} bytes`)
+    );
+
+    // Delete merged PDF from S3
+    try {
+      await this.s3Client.send(new DeleteObjectCommand({
+        Bucket: bodyContent.s3Bucket,
+        Key: bodyContent.s3Key,
+      }));
+      this.logger.log(
+        color.blue.bold(`Deleted merged PDF from S3: ${color.white.bold(bodyContent.s3Key)}`)
+      );
+    } catch (deleteError) {
+      this.logger.log(
+        color.yellow.bold(`Warning: Failed to delete merged PDF from S3: ${bodyContent.s3Key}`)
+      );
+    }
+
+    return pdfBuffer;
+  }
+
+  /**
+   * Download a PDF from S3 and return as Buffer
+   */
+  private async downloadFromS3(s3Key: string, s3Bucket: string = 'qrhit-lambda-deployments'): Promise<Buffer> {
+    const getCommand = new GetObjectCommand({
+      Bucket: s3Bucket,
+      Key: s3Key,
+    });
+
+    const s3Response = await this.s3Client.send(getCommand);
+    return Buffer.from(await s3Response.Body!.transformToByteArray());
+  }
+
+  /**
+   * Delete a PDF from S3
+   */
+  private async deleteFromS3(s3Key: string, s3Bucket: string = 'qrhit-lambda-deployments'): Promise<void> {
+    try {
+      await this.s3Client.send(new DeleteObjectCommand({
+        Bucket: s3Bucket,
+        Key: s3Key,
+      }));
+      this.logger.log(
+        color.blue.bold(`Deleted PDF from S3: ${color.white.bold(s3Key)}`)
+      );
+    } catch (deleteError) {
+      this.logger.log(
+        color.yellow.bold(`Warning: Failed to delete PDF from S3: ${s3Key}`)
+      );
+    }
+  }
+
+  /**
+   * Cleanup multiple S3 keys (used for error handling)
+   */
+  private async cleanupS3Keys(s3Keys: string[]): Promise<void> {
+    for (const s3Key of s3Keys) {
+      await this.deleteFromS3(s3Key);
+    }
+  }
+
   public async getPageDimensions(
     filePath: string
   ): Promise<{ width: number; height: number }> {
@@ -192,20 +397,22 @@ class PDF {
       template === 'digital_double' ||
       template === 'printer_sheets';
 
+    // Calculate chunking parameters
+    const itemsPerPage = isDigitalTemplate ? 6 : 1;
+    const pagesPerTrack = isDigitalTemplate ? 1 : 2;
+    const totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
+    const maxPagesPerPDF = 100; // 50 tracks for printer templates (same as convertAPI)
+
     let ecoInt = eco ? 1 : 0;
     let emptyPages = 0;
 
     this.logger.log(
-      color.blue.bold('Generating PDF: ') + color.white.bold(template)
+      color.blue.bold('Generating PDF: ') + color.white.bold(template) +
+      color.blue.bold(` (${white.bold(numberOfTracks.toString())} tracks, ${white.bold(totalPages.toString())} pages)`)
     );
 
-    // Build the URL for the entire PDF (no more pagination needed)
-    const itemIndexParam = itemIndex !== undefined ? itemIndex : 0;
-    const startIndex = 0;
-    const endIndex = numberOfTracks - 1;
-    const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${startIndex}/${endIndex}/${subdir}/${ecoInt}/${emptyPages}/${itemIndexParam}`;
-
     const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
+    const itemIndexParam = itemIndex !== undefined ? itemIndex : 0;
 
     // Build Lambda options
     const options: LambdaPdfOptions['options'] = {
@@ -223,15 +430,94 @@ class PDF {
       options.height = 60;
     }
 
-    // Convert HTML to PDF using Lambda
-    const pdfBuffer = await this.convertHtmlToPdf(url, options);
-    await fs.writeFile(finalPath, pdfBuffer);
+    // Generate PDF in chunks if needed
+    const tempS3Keys: string[] = [];
 
-    this.analytics.increaseCounter('pdf', 'generated', 1);
+    try {
+      // Build all chunk requests
+      const chunkRequests: { startIndex: number; endIndex: number; chunkNumber: number }[] = [];
+      const totalChunks = Math.ceil(totalPages / maxPagesPerPDF);
 
-    this.logger.log(
-      color.blue.bold(`Generated PDF: ${color.white.bold(filename)}`)
-    );
+      for (let i = 0; i < totalPages; i += maxPagesPerPDF) {
+        const startIndex = (i * itemsPerPage) / pagesPerTrack;
+        const endIndex = Math.min(
+          ((i + maxPagesPerPDF) * itemsPerPage) / pagesPerTrack,
+          numberOfTracks
+        ) - 1;
+        const chunkNumber = Math.floor(i / maxPagesPerPDF) + 1;
+        chunkRequests.push({ startIndex, endIndex, chunkNumber });
+      }
+
+      if (chunkRequests.length > 1) {
+        // Multiple chunks: warm up with first chunk, then do rest in parallel
+        const firstChunk = chunkRequests[0];
+        const remainingChunks = chunkRequests.slice(1);
+
+        // First chunk - warm up Lambda
+        const firstUrl = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${firstChunk.startIndex}/${firstChunk.endIndex}/${subdir}/${ecoInt}/${emptyPages}/${itemIndexParam}`;
+        const firstResult = await this.convertHtmlToPdfToS3(firstUrl, options, `Chunk ${white.bold('1')} / ${white.bold(totalChunks.toString())} (warming up)`);
+        tempS3Keys.push(firstResult.s3Key);
+        this.analytics.increaseCounter('pdf', 'generated', 1);
+
+        // Remaining chunks - in parallel
+        this.logger.log(
+          color.blue.bold(`Generating ${white.bold(remainingChunks.length.toString())} remaining chunks in parallel...`)
+        );
+
+        const parallelResults = await Promise.all(
+          remainingChunks.map(async (chunk, index) => {
+            const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${chunk.startIndex}/${chunk.endIndex}/${subdir}/${ecoInt}/${emptyPages}/${itemIndexParam}`;
+            const result = await this.convertHtmlToPdfToS3(url, options, `Chunk ${white.bold(chunk.chunkNumber.toString())} / ${white.bold(totalChunks.toString())}`);
+            this.analytics.increaseCounter('pdf', 'generated', 1);
+            return { index, result };
+          })
+        );
+
+        // Sort by index and add results in correct order
+        parallelResults.sort((a, b) => a.index - b.index);
+        for (const { result } of parallelResults) {
+          tempS3Keys.push(result.s3Key);
+        }
+      } else {
+        // Single chunk - just generate it
+        const chunk = chunkRequests[0];
+        const url = `${process.env['API_URI']}/qr/pdf/${playlist.playlistId}/${payment.paymentId}/${template}/${chunk.startIndex}/${chunk.endIndex}/${subdir}/${ecoInt}/${emptyPages}/${itemIndexParam}`;
+        const s3Result = await this.convertHtmlToPdfToS3(url, options, `Chunk ${white.bold('1')} / ${white.bold('1')}`);
+        tempS3Keys.push(s3Result.s3Key);
+        this.analytics.increaseCounter('pdf', 'generated', 1);
+      }
+
+      let pdfBuffer: Buffer;
+
+      if (tempS3Keys.length === 1) {
+        // Single chunk - download directly
+        this.logger.log(
+          color.blue.bold(`Single chunk, downloading from S3...`)
+        );
+        pdfBuffer = await this.downloadFromS3(tempS3Keys[0]);
+        await this.deleteFromS3(tempS3Keys[0]);
+      } else {
+        // Multiple chunks - merge via Lambda
+        this.logger.log(
+          color.blue.bold(`Merging ${white.bold(tempS3Keys.length.toString())} chunks...`)
+        );
+        pdfBuffer = await this.mergePdfsViaLambda(tempS3Keys);
+        this.analytics.increaseCounter('pdf', 'merged', 1);
+      }
+
+      await fs.writeFile(finalPath, pdfBuffer);
+
+      this.logger.log(
+        color.blue.bold(`Generated PDF: ${color.white.bold(filename)}`)
+      );
+    } catch (error) {
+      // Cleanup any generated chunks on error
+      this.logger.log(
+        color.red.bold(`Error generating PDF, cleaning up ${tempS3Keys.length} chunks...`)
+      );
+      await this.cleanupS3Keys(tempS3Keys);
+      throw error;
+    }
 
     if (!isDigitalTemplate) {
       // Printer templates (including custom ones) need resize and bleed
@@ -239,7 +525,7 @@ class PDF {
         // Happibox wants a 3% increase in size for the printer
         await this.resizePDFPages(finalPath, 62, 62);
       } else {
-        if(template === 'printer') {
+        if (template === 'printer') {
           // Resize them to exactly 60x60 mm
           await this.resizePDFPages(finalPath, 60, 60);
           // Add bleed based on printer type
