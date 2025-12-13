@@ -437,6 +437,9 @@ model Track {
   aiYear                     Int?
   musicBrainzYear            Int?
   openPerplexYear            Int?
+  langgraphYear              Int?
+  musicBrainzLink            String?
+  discogsLink                String?
   googleResults              String?                      @db.Text
   standardDeviation          Float                        @default(0)
   yearSource                 String?

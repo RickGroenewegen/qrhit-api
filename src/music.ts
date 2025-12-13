@@ -2,16 +2,15 @@ import PrismaInstance from './prisma';
 import Logger from './logger';
 import axios, { AxiosInstance } from 'axios';
 import { color } from 'console-log-colors';
-import { ChatGPT } from './chatgpt';
 import Cache from './cache';
-import { OpenPerplex } from './openperplex';
+import { ReleaseYearAgent } from './langgraph';
+import { DuckDuckGoSearch } from './duckduckgo';
 
 export class Music {
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private axiosInstance: AxiosInstance;
-  private openai = new ChatGPT();
-  private openperplex = new OpenPerplex();
+  private langgraphAgent = ReleaseYearAgent.getInstance();
   private readonly mbMaxRetries: number = 5;
   private readonly mbMaxRateLimit: number = 1200;
   private readonly discogsMaxRetries: number = 3;
@@ -19,6 +18,7 @@ export class Music {
   private cache = Cache.getInstance();
   private mbLastRequestTime: number = 0;
   private discogsLastRequestTime: number = 0;
+  private duckDuckGo = DuckDuckGoSearch.getInstance();
 
   constructor() {
     this.axiosInstance = axios.create({
@@ -36,74 +36,27 @@ export class Music {
     title: string,
     spotifyReleaseYear: number
   ): Promise<any> {
-    // Search MusicBrainz
-
-    const [mbResult, discogsResult, openPerplexYear] = await Promise.all([
+    // Search MusicBrainz, Discogs, and LangGraph in parallel
+    const [mbResult, discogsResult, langgraphResult] = await Promise.all([
       this.searchMusicBrainz(isrc, artist, title),
       this.searchDiscogs(artist, title),
-      this.openperplex.ask(artist, title),
+      this.langgraphAgent.research(artist, title),
     ]);
 
-    // Try Google search and extract Wikipedia languages
-    const googleResults = await this.performGoogleSearch(artist, title);
-    const wikiLangs = new Set<string>();
+    const langgraphYear = langgraphResult.year;
 
-    if (Array.isArray(googleResults)) {
-      for (const result of googleResults) {
-        const wikiMatch = result.url.match(
-          /https?:\/\/([a-z]{2})\.wikipedia\.org/
-        );
-        if (wikiMatch) {
-          wikiLangs.add(wikiMatch[1]);
-        }
-      }
-    }
+    // DuckDuckGo search for response data only (not used in weighted calculation)
+    const googleResults = await this.duckDuckGo.searchMusicRelease(artist, title);
 
-    // Add English as default if no Wikipedia results found
-    if (wikiLangs.size === 0) {
-      wikiLangs.add('en');
-    }
-
-    // Try Wikipedia search in all found languages
-    const wikiResults = await this.searchWikipedia(
-      Array.from(wikiLangs),
-      artist,
-      title
-    );
-
-    let prompt = `  I have gathered information about a certain song on the internet: ${artist} - ${title}
-                    Use your own knowledge. I will share all this information with you below. My goal is to find the release year of this song.
-                    If the release date is literally found on Wikipedia, I will use that information.
-                    
-                    What a Google search on the songs artist and title returned:
-
-                    ${JSON.stringify(googleResults)}
-                    
-                    What I found on Wikipedia:
-
-                    ${JSON.stringify(wikiResults)}
-
-                    MusicBrainz thinks the release year is ${mbResult.year}
-                    Discogs thinks the release year is ${discogsResult.year}
-                    OpenPerplex (AI scraping) thinks the release year is ${openPerplexYear}
-
-                    When evaulating a classical song, we are looking for the year of original composition, not the year of release.
-
-                    What is the release you think of this song based on the information above? Also explain on which information you based your answer on.
-                    `;
-
-    const aiResult = await this.openai.ask(prompt);
-
+    // Weights redistributed: LangGraph takes the primary role (previously AI had 0.5)
     const weights = {
-      ai: 0.5,
-      openPerplex: 0.28,
+      langgraph: 0.78,
       mb: 0.11,
       discogs: 0.11,
     };
 
     const sources = {
-      ai: aiResult.year,
-      openPerplex: openPerplexYear,
+      langgraph: langgraphYear,
       mb: mbResult.year,
       discogs: discogsResult.year,
     };
@@ -141,9 +94,8 @@ export class Music {
     if (standardDeviation > 1) {
       if (
         discogsResult.year == 0 &&
-        aiResult.year == 0 &&
         mbResult.year == 0 &&
-        openPerplexYear == 0 &&
+        langgraphYear == 0 &&
         spotifyReleaseYear > 0
       ) {
         // Rule 1: If all years except Spotify are 0, use the Spotify year
@@ -156,8 +108,7 @@ export class Music {
       const nonSpotifyYears = [
         mbResult.year,
         discogsResult.year,
-        openPerplexYear,
-        aiResult.year,
+        langgraphYear,
       ];
       const validNonSpotifyYears = nonSpotifyYears.filter(
         (year) => year && year > 0 && year <= new Date().getFullYear()
@@ -177,25 +128,23 @@ export class Music {
         standardDeviation = 0;
       }
 
-      // Rule 3: If Spotify year is equal to both AI and OpenPerplex years, use Spotify year
+      // Rule 3: If Spotify year equals LangGraph year, use Spotify year (high confidence match)
       if (
         spotifyReleaseYear > 0 &&
-        spotifyReleaseYear == aiResult.year &&
-        spotifyReleaseYear == openPerplexYear
+        spotifyReleaseYear == langgraphYear
       ) {
         finalYear = spotifyReleaseYear;
         standardDeviation = 0;
       }
 
-      // Rule 4: If both OpenPerplex and AI years are equal and smaller than Spotify year, use that year
+      // Rule 4: If LangGraph year is smaller than Spotify year and valid, use LangGraph year
+      // (LangGraph does web research and may find original release dates)
       if (
-        openPerplexYear > 0 &&
-        aiResult.year > 0 &&
-        openPerplexYear == aiResult.year &&
+        langgraphYear > 0 &&
         spotifyReleaseYear > 0 &&
-        openPerplexYear < spotifyReleaseYear
+        langgraphYear < spotifyReleaseYear
       ) {
-        finalYear = openPerplexYear;
+        finalYear = langgraphYear;
         standardDeviation = 0;
       }
     }
@@ -207,9 +156,14 @@ export class Music {
       sources: {
         spotify: spotifyReleaseYear,
         mb: mbResult.year,
-        ai: aiResult.year,
-        openPerplex: openPerplexYear,
+        ai: 0, // Deprecated, kept for backwards compatibility
+        openPerplex: 0, // Deprecated, kept for backwards compatibility
+        langgraph: langgraphYear,
         discogs: discogsResult.year,
+      },
+      links: {
+        mb: mbResult.link,
+        discogs: discogsResult.link,
       },
     };
 
@@ -219,9 +173,7 @@ export class Music {
           mbResult.year
         )}] [DC: ${color.white.bold(
           discogsResult.year
-        )}] [OP: ${color.white.bold(openPerplexYear)}] [AI: ${color.white.bold(
-          aiResult.year
-        )}] for track ${color.white.bold(artist)} - ${color.white.bold(
+        )}] [LG: ${color.white.bold(langgraphYear)}] for track ${color.white.bold(artist)} - ${color.white.bold(
           title
         )} [DV: ${color.white.bold(
           fullResult.standardDeviation
@@ -236,13 +188,7 @@ export class Music {
     isrc: string,
     artist: string,
     title: string
-  ): Promise<{ year: number; source: string }> {
-    let result = await this.prisma.isrc.findUnique({
-      where: {
-        isrc: isrc,
-      },
-    });
-
+  ): Promise<{ year: number; source: string; link: string }> {
     let apiResult = await this.getReleaseDateFromMusicBrainzAPI(
       isrc,
       artist,
@@ -251,10 +197,10 @@ export class Music {
     );
 
     if (apiResult.year > 0) {
-      return { year: apiResult.year, source: 'mb_api_artist_title' };
+      return { year: apiResult.year, source: 'mb_api_artist_title', link: apiResult.link };
     }
 
-    return { year: 0, source: '' };
+    return { year: 0, source: '', link: '' };
   }
 
   private async rateLimitDelay(): Promise<void> {
@@ -274,7 +220,7 @@ export class Music {
     artist: string,
     title: string,
     mode: string = 'isrc'
-  ): Promise<{ year: number; source: string }> {
+  ): Promise<{ year: number; source: string; link: string }> {
     let retryCount = 0;
     while (retryCount < this.mbMaxRetries) {
       await this.rateLimitDelay();
@@ -289,23 +235,24 @@ export class Music {
           (recording: any) => recording.score >= 95
         );
         let earliestDate: string | null = null;
+        let recordingId: string | null = null;
 
         if (recordings && recordings.length > 0) {
-          earliestDate = recordings.reduce(
-            (earliest: string | null, recording: any) => {
-              const releaseDate = recording['first-release-date'] || null;
-              return releaseDate && (!earliest || releaseDate < earliest)
-                ? releaseDate
-                : earliest;
-            },
-            null
-          );
+          // Find the recording with the earliest date
+          for (const recording of recordings) {
+            const releaseDate = recording['first-release-date'] || null;
+            if (releaseDate && (!earliestDate || releaseDate < earliestDate)) {
+              earliestDate = releaseDate;
+              recordingId = recording.id;
+            }
+          }
         }
 
         if (!earliestDate) {
-          return { year: 0, source: '' };
+          return { year: 0, source: '', link: '' };
         }
-        return { year: parseInt(earliestDate.split('-')[0]), source: 'api' };
+        const link = recordingId ? `https://musicbrainz.org/recording/${recordingId}` : '';
+        return { year: parseInt(earliestDate.split('-')[0]), source: 'api', link };
       } catch (error: any) {
         this.logger.log(
           color.yellow(
@@ -316,104 +263,13 @@ export class Music {
         retryCount++;
       }
     }
-    return { year: 0, source: '' };
-  }
-
-  private async performGoogleSearch(
-    artist: string,
-    title: string
-  ): Promise<string> {
-    try {
-      const response = await this.axiosInstance.get(
-        'https://real-time-web-search.p.rapidapi.com/search',
-        {
-          params: {
-            q: `${artist} - ${title} (song) release date`,
-            limit: 10,
-          },
-          headers: {
-            'x-rapidapi-host': 'real-time-web-search.p.rapidapi.com',
-            'x-rapidapi-key': process.env['RAPID_API_KEY'],
-          },
-        }
-      );
-
-      const results = response.data.data;
-
-      return results;
-    } catch (error: any) {
-      this.logger.log(
-        color.red(`Error fetching Google search results: ${error.message}`)
-      );
-      return '';
-    }
-  }
-
-  private async searchWikipedia(
-    langs: string[],
-    artist: string,
-    title: string
-  ): Promise<any[]> {
-    const results = [];
-    const query = `${artist} ${title}`;
-
-    for (const lang of langs) {
-      try {
-        // Search for Wikipedia articles
-        const searchResponse = await axios.get(
-          'https://wikipedia-api2.p.rapidapi.com/search',
-          {
-            params: {
-              query: query,
-              limit: 3,
-            },
-            headers: {
-              'x-rapidapi-host': 'wikipedia-api2.p.rapidapi.com',
-              'x-rapidapi-key': process.env['RAPID_API_KEY'],
-            },
-          }
-        );
-
-        const searchResults = searchResponse.data;
-
-        if (searchResults && searchResults.results && searchResults.results.length > 0) {
-          // Get the summary of the first result
-          const firstResult = searchResults.results[0];
-          const summaryResponse = await axios.get(
-            'https://wikipedia-api2.p.rapidapi.com/summary',
-            {
-              params: {
-                title: firstResult.title,
-              },
-              headers: {
-                'x-rapidapi-host': 'wikipedia-api2.p.rapidapi.com',
-                'x-rapidapi-key': process.env['RAPID_API_KEY'],
-              },
-            }
-          );
-
-          const summary = summaryResponse.data;
-
-          results.push({
-            lang,
-            summary: summary.summary || '',
-            infobox: null, // RapidAPI Wikipedia doesn't provide infobox data
-          });
-        }
-      } catch (error: any) {
-        this.logger.log(
-          color.red(`Error in Wikipedia RapidAPI search for ${lang}: ${error.message}`)
-        );
-      }
-    }
-
-    return results;
+    return { year: 0, source: '', link: '' };
   }
 
   private async searchDiscogs(
     artist: string,
     title: string
-  ): Promise<{ year: number; source: string }> {
+  ): Promise<{ year: number; source: string; link: string }> {
     let retryCount = 0;
     const discogsToken = process.env['DISCOGS_TOKEN'];
 
@@ -421,7 +277,7 @@ export class Music {
       this.logger.log(
         color.red('Discogs token not found in environment variables')
       );
-      return { year: 0, source: '' };
+      return { year: 0, source: '', link: '' };
     }
 
     while (retryCount < this.discogsMaxRetries) {
@@ -446,7 +302,7 @@ export class Music {
               token: discogsToken,
             },
             headers: {
-              'User-Agent': 'QRHit/1.0 (info@rickgroenewegen.nl)',
+              'User-Agent': 'QRSong!/1.0 (info@rickgroenewegen.nl)',
             },
           }
         );
@@ -454,21 +310,28 @@ export class Music {
         this.discogsLastRequestTime = Date.now();
 
         if (response.data.results && response.data.results.length > 0) {
-          // Get all valid years from the results
-          const years = response.data.results
-            .map((release: any) => parseInt(release.year))
-            .filter(
-              (year: number) =>
-                !isNaN(year) && year > 0 && year <= new Date().getFullYear()
-            );
+          // Find the release with the earliest year
+          let earliestYear = Infinity;
+          let earliestRelease: any = null;
 
-          if (years.length > 0) {
-            const earliestYear = Math.min(...years);
-            return { year: earliestYear, source: 'discogs' };
+          for (const release of response.data.results) {
+            const year = parseInt(release.year);
+            if (!isNaN(year) && year > 0 && year <= new Date().getFullYear() && year < earliestYear) {
+              earliestYear = year;
+              earliestRelease = release;
+            }
+          }
+
+          if (earliestRelease) {
+            // Discogs returns resource_url like "https://api.discogs.com/releases/123"
+            // Convert to user-facing URL: "https://www.discogs.com/release/123"
+            const releaseId = earliestRelease.id;
+            const link = releaseId ? `https://www.discogs.com/release/${releaseId}` : '';
+            return { year: earliestYear, source: 'discogs', link };
           }
         }
 
-        return { year: 0, source: '' };
+        return { year: 0, source: '', link: '' };
       } catch (error: any) {
         this.logger.log(
           color.yellow(
@@ -479,6 +342,6 @@ export class Music {
       }
     }
 
-    return { year: 0, source: '' };
+    return { year: 0, source: '', link: '' };
   }
 }

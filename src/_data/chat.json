@@ -43,6 +43,17 @@
             ]
         },
         {
+            "slug": "need-pincode",
+            "title": "I need a pincode to retrieve my package, can you help?",
+            "description": "Yes we can help. Please contact us at info@qrsong.io with your order details and we will provide you with the pincode needed to retrieve your package.",
+            "tags": [
+                "pincode",
+                "package retrieval",
+                "help",
+                "order"
+            ]
+        },
+        {
             "slug": "express",
             "title": "Can I pay extra for express production or shipping?",
             "description": "Yes and no. For physical orders, we aim to produce and ship within 2-3 business. You can speed this process up with express production. Express production costs an additional 20% extra and ensures your order is prioritized in our production queue. Usually this means if you order before 13:00 PM your order will get printend and shipped the same day. Contact us at info@qrsong.io after you approved your playlist to request express production and we'll send you a payment link. De do NOT offer express shipping options at this time, but we work with reliable carriers to ensure timely delivery.",

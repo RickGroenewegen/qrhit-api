@@ -1261,7 +1261,8 @@ class Data {
          AND p.processedFirstTime = true) as totalUnchecked,
         t.id, t.name, t.spotifyLink, t.artist, t.year, t.yearSource,
         t.certainty, t.reasoning, t.spotifyYear, t.discogsYear, t.aiYear,
-        t.musicBrainzYear, t.openPerplexYear, t.standardDeviation, t.googleResults,
+        t.musicBrainzYear, t.openPerplexYear, t.langgraphYear, t.standardDeviation, t.googleResults,
+        t.musicBrainzLink, t.discogsLink,
         pl.id as playlistId
       FROM tracks t
       INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId
@@ -2067,6 +2068,9 @@ class Data {
                   aiYear = ${result.sources.ai},
                   musicBrainzYear = ${result.sources.mb},
                   openPerplexYear = ${result.sources.openPerplex},
+                  langgraphYear = ${result.sources.langgraph},
+                  musicBrainzLink = ${result.links?.mb || null},
+                  discogsLink = ${result.links?.discogs || null},
                   googleResults = ${result.googleResults},
                   standardDeviation = ${result.standardDeviation}
           WHERE   id = ${track.id}`;

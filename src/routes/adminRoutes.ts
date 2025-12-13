@@ -6,7 +6,7 @@ import ExcelQueue from '../excelQueue';
 import AnalyticsClient from '../analytics';
 import Data from '../data';
 import Charts from '../charts';
-import { OpenPerplex } from '../openperplex';
+import { ReleaseYearAgent } from '../langgraph';
 import Push from '../push';
 import Discount from '../discount';
 import PrinterInvoiceService from '../printerinvoice';
@@ -38,7 +38,7 @@ export default async function adminRoutes(
   const generator = Generator.getInstance();
   const analytics = AnalyticsClient.getInstance();
   const data = Data.getInstance();
-  const openperplex = new OpenPerplex();
+  const langgraphAgent = ReleaseYearAgent.getInstance();
   const push = Push.getInstance();
   const discount = new Discount();
   const printerInvoice = PrinterInvoiceService.getInstance();
@@ -144,16 +144,16 @@ export default async function adminRoutes(
     }
   );
 
-  // OpenPerplex AI query
+  // LangGraph AI research query
   fastify.post(
-    '/openperplex',
+    '/langgraph',
     getAuthHandler(['admin']),
     async (request: any, _reply) => {
-      const year = await openperplex.ask(
+      const result = await langgraphAgent.research(
         request.body.artist,
         request.body.title
       );
-      return { success: true, year };
+      return { success: true, year: result.year, confidence: result.confidence, reasoning: result.reasoning };
     }
   );
 
