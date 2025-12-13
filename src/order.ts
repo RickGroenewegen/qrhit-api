@@ -600,8 +600,8 @@ class Order {
     return await this.printer.testOrder();
   }
 
-  public async calculateShippingCosts() {
-    return await this.printer.calculateShippingCosts();
+  public async calculateShippingCosts(countryCodes?: string[]) {
+    return await this.printer.calculateShippingCosts(countryCodes);
   }
 
   public async createOrder(

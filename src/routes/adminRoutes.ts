@@ -2881,4 +2881,48 @@ export default async function adminRoutes(
       }
     }
   );
+
+  // Calculate shipping costs for specified countries
+  fastify.post(
+    '/admin/calculate-shipping-costs',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { countryCodes } = request.body;
+
+        if (!countryCodes || !Array.isArray(countryCodes) || countryCodes.length === 0) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Country codes array required'
+          });
+        }
+
+        // Validate country codes format (2-letter uppercase)
+        const validCodes = countryCodes.filter(
+          (code: string) => typeof code === 'string' && /^[A-Z]{2}$/.test(code)
+        );
+
+        if (validCodes.length === 0) {
+          return reply.status(400).send({
+            success: false,
+            error: 'No valid country codes provided (must be 2-letter uppercase codes like DE, NL, BE)'
+          });
+        }
+
+        // Start calculation in background
+        order.calculateShippingCosts(validCodes);
+
+        return reply.send({
+          success: true,
+          message: `Processing ${validCodes.length} countries: ${validCodes.join(', ')}`
+        });
+      } catch (error: any) {
+        console.error('Error calculating shipping costs:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to calculate shipping costs'
+        });
+      }
+    }
+  );
 }

@@ -550,12 +550,6 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       return { success: true };
     });
 
-    // Calculate shipping
-    fastify.get('/calculate_shipping', async (request: any, _reply) => {
-      order.calculateShippingCosts();
-      return { success: true };
-    });
-
     // Generate order
     fastify.get('/generate/:paymentId', async (request: any, _reply) => {
       const userAgent = request.headers['user-agent'] || '';

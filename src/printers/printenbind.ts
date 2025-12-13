@@ -961,9 +961,8 @@ class PrintEnBind {
           shipping = 0;
         } else if (params.countrycode === 'NL') {
           shipping = 2.99;
-        } else {
-          shipping -= 1;
         }
+        
       } else if (physicalItems > 0 && !shippingResult) {
         totalPrice = 0;
       }
@@ -1475,22 +1474,22 @@ class PrintEnBind {
 
   public async processPrintApiWebhook(printApiOrderId: string) {}
 
-  public async calculateShippingCosts(): Promise<void> {
+  public async calculateShippingCosts(countryCodes?: string[]): Promise<void> {
     const authToken = await this.getAuthToken();
-    let countryCodes = this.countryCodes;
+    const codes = countryCodes || this.countryCodes;
 
     this.logger.log(
       color.blue.bold(
         `Calculating shipping costs for ${color.white.bold(
-          countryCodes.length.toString()
-        )} countries`
+          codes.length.toString()
+        )} countries: ${codes.join(', ')}`
       )
     );
 
     // Process countries in batches of 5
     const batchSize = 5;
-    for (let i = 0; i < countryCodes.length; i += batchSize) {
-      const countryBatch = countryCodes.slice(i, i + batchSize);
+    for (let i = 0; i < codes.length; i += batchSize) {
+      const countryBatch = codes.slice(i, i + batchSize);
 
       await Promise.all(
         countryBatch.map(async (countryCode) => {
@@ -1507,12 +1506,16 @@ class PrintEnBind {
     countryCode: string,
     authToken: string
   ): Promise<void> {
-    const amounts = [80, 405, 1000];
+    const amountConfigs = [
+      { amount: 116, fileUrl: 'https://api.qrsong.io/public/pdf/tr_btmfhy8aerkdijt2ynejj_2149_extra_printer_1.pdf' },
+      { amount: 412, fileUrl: 'https://api.qrsong.io/public/pdf/tr_zadlfwasljqchqeaaycjj_1871_qr_printer_1.pdf' },
+      { amount: 1680, fileUrl: 'https://api.qrsong.io/public/pdf/tr_hcvtkvdmgqe37hujmvfjj_2163_supplies_printer_1.pdf' },
+    ];
 
     try {
       // Process all amounts in parallel for this country
       await Promise.all(
-        amounts.map(async (amount) => {
+        amountConfigs.map(async ({ amount, fileUrl }) => {
           try {
             // Check if record exists
             const existingRecord = await this.prisma.shippingCostNew.findFirst({
@@ -1521,9 +1524,6 @@ class PrintEnBind {
                 size: amount,
               },
             });
-
-            const threeWeeksAgo = new Date();
-            threeWeeksAgo.setDate(threeWeeksAgo.getDate() - 21);
 
             this.logger.log(
               color.blue.bold(
@@ -1534,27 +1534,31 @@ class PrintEnBind {
             );
 
             const orderItems = [];
-            // Create items with 2000 pages each
-            orderItems.push({
+            // Create order item matching actual order structure
+            // delivery_method is always 'post' in order item, 'international' is set in delivery setup
+            const isNL = countryCode === 'NL';
+            const orderItem: any = {
               type: 'physical',
               amount: '1',
               product: 'losbladig',
               number: '1',
-              copies: (amount * 2).toString(),
+              copies: (amount).toString(),
               color: 'all',
               size: 'custom',
               printside: 'double',
               finishing: 'loose',
-              finishing2: 'none',
               papertype: 'card',
               size_custom_width: '60',
               size_custom_height: '60',
               check_doc: 'standard',
               delivery_method: 'post',
               add_file_method: 'url',
-              file_url:
-                'https://api.qrsong.io/public/pdf/f6d1ad6be0c3f5a06fc4d0b8b1776b791f5b7f3d46cc9864d5c4c1ef3380016c_printer.pdf',
-            });
+              file_url: fileUrl,
+            };
+            if (isNL) {
+              orderItem.delivery_option = 'standard';
+            }
+            orderItems.push(orderItem);
 
             // Process the order request
             const result = await this.processOrderRequest(
@@ -1618,12 +1622,12 @@ class PrintEnBind {
               );
             } else {
               this.logger.log(
-                color.blue.bold(
-                  `Skipping ${color.white.bold(
+                color.red.bold(
+                  `Failed to calculate shipping for ${color.white.bold(
                     countryCode
                   )} with ${color.white.bold(
                     amount.toString()
-                  )} items - record is recent enough`
+                  )} items`
                 )
               );
             }
