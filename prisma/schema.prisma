@@ -560,6 +560,26 @@ model PaymentHasPlaylist {
   printerType             String                   @default("printnbind") // Printer type: "printnbind" or "tromp"
   promotionalCredited     Boolean                  @default(false) // Whether promotional discount was credited to creator
   promotionalCreditedAt   DateTime?                // When the promotional credit was applied
+  // Box fields
+  boxEnabled              Boolean                  @default(false) // User opted into boxes
+  boxQuantity             Int                      @default(0) // Number of boxes ordered
+  boxPricePerUnit         Float                    @default(0) // Price per box at time of order
+  boxTotalPrice           Float                    @default(0) // Total box cost
+  // Box insert design (12x12cm window)
+  boxInsertType           String?                  @default("solid") // 'solid' | 'image'
+  boxInsertColor          String?                  @default("#ffffff")
+  boxInsertGradient       Boolean                  @default(false)
+  boxInsertGradientColor  String?                  @default("#ffffff")
+  boxInsertGradientDegrees Int                     @default(180)
+  boxInsertGradientPosition Int                    @default(50)
+  boxInsertImage          String? // Uploaded image filename
+  boxInsertOpacity        Int                      @default(100)
+  boxInsertPreset         String? // Preset background e.g., "background1"
+  // Box back message
+  boxBackMessage          String?                  @db.Text
+  boxBackMessageFont      String?                  @default("Arial, sans-serif")
+  boxBackMessageFontSize  String?                  @default("16px")
+  boxBackMessageColor     String?                  @default("#000000")
   orderType               OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                   PaymentHasPlaylistItem[]
 

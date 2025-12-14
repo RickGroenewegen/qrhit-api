@@ -28,8 +28,10 @@ class Designer {
     try {
       const backgroundDir = `${process.env['PUBLIC_DIR']}/background`;
       const logoDir = `${process.env['PUBLIC_DIR']}/logo`;
+      const boxInsertDir = `${process.env['PUBLIC_DIR']}/box-insert`;
       await this.utils.createDir(backgroundDir);
       await this.utils.createDir(logoDir);
+      await this.utils.createDir(boxInsertDir);
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error initializing directories: ${white.bold(error)}`)
@@ -348,6 +350,98 @@ class Designer {
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error uploading logo image: ${white.bold(error)}`)
+      );
+      return { success: false, error: String(error) };
+    }
+  }
+
+  /**
+   * Uploads a box insert image from a base64 string
+   * Box insert is the 12x12cm customizable sheet visible through the window
+   * @param base64Image The base64 encoded image string
+   * @returns Object with success status, filename and file path
+   */
+  public async uploadBoxInsertImage(
+    base64Image: string
+  ): Promise<{
+    success: boolean;
+    filename?: string;
+    filePath?: string;
+    error?: string;
+  }> {
+    try {
+      // Validate the base64 string
+      if (!base64Image) {
+        return { success: false, error: 'No image provided' };
+      }
+
+      let imageType: string;
+      let base64Data: string;
+
+      // Handle both full data URI and raw base64 string
+      if (base64Image.includes('base64,')) {
+        // Extract the actual base64 data and determine the file type
+        const matches = base64Image.match(
+          /^data:image\/([a-zA-Z]+);base64,(.+)$/
+        );
+        if (!matches || matches.length !== 3) {
+          return { success: false, error: 'Invalid image data format' };
+        }
+        imageType = matches[1];
+        base64Data = matches[2];
+      } else {
+        // Assume it's a raw base64 string and try to determine format from content
+        // Default to png if we can't determine
+        imageType = 'png';
+        base64Data = base64Image;
+      }
+
+      // Generate unique filename using utils.generateRandomString
+      const uniqueId = this.utils.generateRandomString(32);
+      const actualFilename = `${uniqueId}.png`.toLowerCase();
+
+      const filePath = path.join(
+        process.env['PUBLIC_DIR'] as string,
+        'box-insert',
+        actualFilename
+      );
+
+      try {
+        // Create buffer from base64
+        const buffer = Buffer.from(base64Data, 'base64');
+
+        // Process the image with sharp
+        // Resize to 1200x1200 (12cm at 100dpi) and convert to PNG with compression
+        let sharpInstance = sharp(buffer).resize(1200, 1200, { fit: 'cover' });
+
+        const processedBuffer = await sharpInstance
+          .png({ compressionLevel: 9, quality: 90 })
+          .toBuffer();
+
+        // Write the processed file
+        await fs.writeFile(filePath, processedBuffer);
+
+        this.logger.log(
+          color.green.bold(
+            `Box insert image processed and uploaded successfully: ${white.bold(
+              filePath
+            )}`
+          )
+        );
+
+        return {
+          success: true,
+          filename: actualFilename,
+        };
+      } catch (writeError) {
+        this.logger.log(
+          color.red.bold(`Error writing image file: ${white.bold(writeError)}`)
+        );
+        return { success: false, error: `Error writing file: ${writeError}` };
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error uploading box insert image: ${white.bold(error)}`)
       );
       return { success: false, error: String(error) };
     }

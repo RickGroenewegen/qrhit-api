@@ -8,6 +8,7 @@ import themeRoutes from './routes/themeRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import publicRoutes from './routes/publicRoutes';
 import gameRoutes from './routes/gameRoutes';
+import boxRoutes from './routes/boxRoutes';
 import { verifyToken } from './auth';
 import Fastify from 'fastify';
 import replyFrom from '@fastify/reply-from';
@@ -134,6 +135,9 @@ class Server {
 
     // Register game routes
     await gameRoutes(this.fastify);
+
+    // Register box routes
+    await boxRoutes(this.fastify);
 
     // WebSocket endpoints - return 426 Upgrade Required for non-WebSocket requests
     this.fastify.get('/chat-ws', async (request, reply) => {

@@ -982,6 +982,25 @@ class PrintEnBind {
       // Subtract volume discount from total price
       totalPrice -= volumeDiscount;
 
+      // Calculate box pricing
+      const BOX_PRICE_PER_UNIT = 6.90;
+      let boxTotal = 0;
+      let boxQuantity = 0;
+      for (const item of params.cart.items) {
+        if (item.productType === 'cards' && item.boxEnabled && item.boxQuantity > 0) {
+          boxQuantity += item.boxQuantity;
+        }
+      }
+      if (boxQuantity > 0) {
+        boxTotal = parseFloat((boxQuantity * BOX_PRICE_PER_UNIT).toFixed(2));
+        totalPrice += boxTotal;
+        // Add box cost to product price without VAT
+        const boxPriceWithoutVAT = parseFloat(
+          (boxTotal / (1 + (taxRate ?? 0) / 100)).toFixed(2)
+        );
+        totalProductPriceWithoutVAT += boxPriceWithoutVAT;
+      }
+
       const result = {
         success: true,
         data: {
@@ -994,6 +1013,8 @@ class PrintEnBind {
           price: totalProductPriceWithoutVAT,
           payment: shipping, // + handling,
           volumeDiscount, // Add volume discount to result
+          boxTotal, // Add box total to result
+          boxQuantity, // Add box quantity to result
         },
       };
 

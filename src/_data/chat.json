@@ -299,7 +299,7 @@
         {
             "slug": "shipping-time",
             "title": "How long does shipping take for physical cards?",
-            "description": "For physical cards, production starts after you approve your playlist in the review/correction form. Once approved, cards are normally printed and shipped within 2-3 business days from the Netherlands. Delivery time varies by country. We can provide estimated delivery times based on historical data for your specific country.",
+            "description": "For physical cards, production starts after you approve your playlist in the review/correction form. Once approved, cards are normally printed and shipped within 2-3 business days from the Netherlands. Delivery time varies by country. We can provide estimated delivery times based on historical data for your specific country. Note for Germany: We changed shipping methods on December 13th, so delivery times to Germany should now be faster than historical data suggests.",
             "tags": [
                 "shipping",
                 "delivery time",
@@ -307,7 +307,8 @@
                 "express",
                 "worldwide",
                 "how long",
-                "shipping estimate"
+                "shipping estimate",
+                "germany"
             ],
             "tools": [
                 {
