@@ -1138,18 +1138,6 @@ class PrintEnBind {
         // Base margin starts at 50% (1.5)
         let margin = 1.5;
 
-        // Scale down margin based on quantity
-        if (quantity > 400) {
-          // After 400 items, reduce margin more aggressively
-          margin = 1.5 - (0.3 * (quantity - 400)) / 600;
-          // Don't go below 1.2 (20% margin)
-          margin = Math.max(margin, 1.2);
-        } else if (quantity > 100) {
-          // Between 100-400 items, reduce margin gradually
-          margin = 1.5 - (0.1 * (quantity - 100)) / 300;
-        }
-
-        // Calculate price with margin
         let priceWithMargin = basePrice * margin;
 
         // Ensure minimum profit
@@ -1770,6 +1758,7 @@ class PrintEnBind {
           fullname: true,
           email: true,
           createdAt: true,
+
         },
       });
 
