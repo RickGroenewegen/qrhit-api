@@ -2396,6 +2396,87 @@ class Data {
     }
   }
 
+  public async updatePlaylistTrackCount(
+    paymentHasPlaylistId: number,
+    numberOfTracks: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get the paymentHasPlaylist to find the related playlistId
+      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: paymentHasPlaylistId },
+        select: { playlistId: true }
+      });
+
+      if (!paymentHasPlaylist) {
+        return { success: false, error: 'PaymentHasPlaylist not found' };
+      }
+
+      // Update both tables in a transaction
+      await this.prisma.$transaction([
+        this.prisma.paymentHasPlaylist.update({
+          where: { id: paymentHasPlaylistId },
+          data: { numberOfTracks },
+        }),
+        this.prisma.playlist.update({
+          where: { id: paymentHasPlaylist.playlistId },
+          data: { numberOfTracks },
+        }),
+      ]);
+
+      this.logger.log(
+        color.blue.bold(
+          `Updated track count to ${color.white.bold(numberOfTracks)} for paymentHasPlaylist ${color.white.bold(paymentHasPlaylistId)} and playlist ${color.white.bold(paymentHasPlaylist.playlistId)}`
+        )
+      );
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating track count for PaymentHasPlaylist ${color.white.bold(
+            paymentHasPlaylistId
+          )}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
+  public async updatePlaylistAmount(
+    paymentHasPlaylistId: number,
+    amount: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: paymentHasPlaylistId },
+      });
+
+      if (!paymentHasPlaylist) {
+        return { success: false, error: 'PaymentHasPlaylist not found' };
+      }
+
+      await this.prisma.paymentHasPlaylist.update({
+        where: { id: paymentHasPlaylistId },
+        data: { amount },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Updated amount to ${color.white.bold(amount)} for paymentHasPlaylist ${color.white.bold(paymentHasPlaylistId)}`
+        )
+      );
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating amount for PaymentHasPlaylist ${color.white.bold(
+            paymentHasPlaylistId
+          )}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
   public async updatePaymentPrinterHold(
     paymentId: string,
     printerHold: boolean

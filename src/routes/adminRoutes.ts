@@ -975,6 +975,86 @@ export default async function adminRoutes(
     }
   );
 
+  // Update track count for payment_has_playlist and playlist
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/track-count',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentHasPlaylistId } = request.params;
+      const { numberOfTracks } = request.body;
+
+      if (!paymentHasPlaylistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'PaymentHasPlaylist ID is required',
+        });
+        return;
+      }
+
+      if (typeof numberOfTracks !== 'number' || numberOfTracks < 0) {
+        reply.status(400).send({
+          success: false,
+          error: 'Valid numberOfTracks is required',
+        });
+        return;
+      }
+
+      const result = await data.updatePlaylistTrackCount(
+        parseInt(paymentHasPlaylistId, 10),
+        numberOfTracks
+      );
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'PaymentHasPlaylist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
+  // Update amount for payment_has_playlist
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/amount',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentHasPlaylistId } = request.params;
+      const { amount } = request.body;
+
+      if (!paymentHasPlaylistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'PaymentHasPlaylist ID is required',
+        });
+        return;
+      }
+
+      if (typeof amount !== 'number' || amount < 1) {
+        reply.status(400).send({
+          success: false,
+          error: 'Valid amount (minimum 1) is required',
+        });
+        return;
+      }
+
+      const result = await data.updatePlaylistAmount(
+        parseInt(paymentHasPlaylistId, 10),
+        amount
+      );
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'PaymentHasPlaylist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Analytics
   fastify.get(
     '/analytics',
@@ -2877,6 +2957,50 @@ export default async function adminRoutes(
         return reply.status(500).send({
           success: false,
           error: error.message || 'Failed to get promotional playlists'
+        });
+      }
+    }
+  );
+
+  // Calculate shipping costs for specified countries
+  fastify.post(
+    '/admin/calculate-shipping-costs',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { countryCodes } = request.body;
+
+        if (!countryCodes || !Array.isArray(countryCodes) || countryCodes.length === 0) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Country codes array required'
+          });
+        }
+
+        // Validate country codes format (2-letter uppercase)
+        const validCodes = countryCodes.filter(
+          (code: string) => typeof code === 'string' && /^[A-Z]{2}$/.test(code)
+        );
+
+        if (validCodes.length === 0) {
+          return reply.status(400).send({
+            success: false,
+            error: 'No valid country codes provided (must be 2-letter uppercase codes like DE, NL, BE)'
+          });
+        }
+
+        // Start calculation in background
+        order.calculateShippingCosts(validCodes);
+
+        return reply.send({
+          success: true,
+          message: `Processing ${validCodes.length} countries: ${validCodes.join(', ')}`
+        });
+      } catch (error: any) {
+        console.error('Error calculating shipping costs:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to calculate shipping costs'
         });
       }
     }
