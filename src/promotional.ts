@@ -8,6 +8,10 @@ import Translation from './translation';
 import { color } from 'console-log-colors';
 import { CACHE_KEY_FEATURED_PLAYLISTS } from './data';
 import { CACHE_KEY_PLAYLIST, CACHE_KEY_PLAYLIST_DB, CACHE_KEY_TRACKS, CACHE_KEY_TRACK_COUNT } from './spotify';
+import sharp from 'sharp';
+import * as fs from 'fs/promises';
+import * as path from 'path';
+import Utils from './utils';
 
 const PROMOTIONAL_CREDIT_AMOUNT = parseFloat(process.env['PROMOTIONAL_CREDIT_AMOUNT'] || '2.5');
 
@@ -19,6 +23,7 @@ class Promotional {
   private chatgpt = new ChatGPT();
   private cache = Cache.getInstance();
   private translation = new Translation();
+  private utils = new Utils();
 
   private constructor() {}
 
@@ -86,6 +91,7 @@ class Promotional {
       title: string;
       description: string;
       image: string;
+      customImage: string | null;
       active: boolean;
       hasSubmitted: boolean;
       shareLink: string;
@@ -113,6 +119,7 @@ class Promotional {
           name: true,
           slug: true,
           image: true,
+          customImage: true,
           promotionalTitle: true,
           promotionalDescription: true,
           promotionalActive: true,
@@ -164,6 +171,7 @@ class Promotional {
           title: playlist.promotionalTitle || playlist.name,
           description: playlist.promotionalDescription || '',
           image: playlist.image,
+          customImage: playlist.customImage || null,
           active: hasSubmitted ? !!playlist.promotionalActive : true, // Default checkbox to true for first-time
           hasSubmitted, // New field to indicate if user has ever submitted
           shareLink,
@@ -203,24 +211,103 @@ class Promotional {
         return { success: false, error: 'Unauthorized' };
       }
 
+      // Process custom image if provided (base64)
+      let customImagePath: string | undefined;
+      if (data.image && data.image.startsWith('data:image/')) {
+        customImagePath = await this.processBase64Image(data.image, playlistId);
+      }
+
+      // Build update data
+      const updateData: Record<string, any> = {
+        promotionalTitle: data.title,
+        promotionalDescription: data.description,
+        promotionalActive: data.active,
+        promotionalLocale: data.locale || 'en',
+        promotionalUserId: ownership.userId,
+        featured: data.active,
+      };
+
+      // Add custom image if processed
+      if (customImagePath) {
+        updateData.customImage = customImagePath;
+      }
+
       // Update playlist with promotional data
       // Also update 'featured' field which controls visibility on the site
       await this.prisma.playlist.update({
         where: { playlistId },
-        data: {
-          promotionalTitle: data.title,
-          promotionalDescription: data.description,
-          promotionalActive: data.active,
-          promotionalLocale: data.locale || 'en',
-          promotionalUserId: ownership.userId,
-          featured: data.active,
-        },
+        data: updateData,
       });
 
       return { success: true };
     } catch (error) {
       this.logger.log(`Error saving promotional setup: ${error}`);
       return { success: false, error: 'Failed to save promotional setup' };
+    }
+  }
+
+  /**
+   * Process base64 image and save to disk
+   */
+  private async processBase64Image(base64Data: string, playlistId: string): Promise<string | undefined> {
+    try {
+      // Extract base64 content from data URL
+      const matches = base64Data.match(/^data:image\/\w+;base64,(.+)$/);
+      if (!matches || !matches[1]) {
+        this.logger.log('Invalid base64 image format');
+        return undefined;
+      }
+
+      const imageBuffer = Buffer.from(matches[1], 'base64');
+
+      // Create playlist_images directory if it doesn't exist
+      const imagesDir = path.join(process.env['PUBLIC_DIR'] as string, 'playlist_images');
+      await fs.mkdir(imagesDir, { recursive: true });
+
+      // Generate unique filename
+      const uniqueId = this.utils.generateRandomString(32);
+      const filename = `${uniqueId}.png`;
+      const filePath = path.join(imagesDir, filename);
+
+      // Get current playlist to check for existing custom image
+      const currentPlaylist = await this.prisma.playlist.findUnique({
+        where: { playlistId },
+        select: { customImage: true },
+      });
+
+      // Process image with Sharp: resize if larger than 1600px, maintain aspect ratio
+      const processedBuffer = await sharp(imageBuffer)
+        .resize(1600, 1600, {
+          fit: 'inside',
+          withoutEnlargement: true,
+        })
+        .png({ compressionLevel: 9 })
+        .toBuffer();
+
+      // Write the processed file
+      await fs.writeFile(filePath, processedBuffer);
+
+      // Delete old custom image if exists
+      if (currentPlaylist?.customImage) {
+        const oldImagePath = path.join(
+          process.env['PUBLIC_DIR'] as string,
+          currentPlaylist.customImage.replace('/public/', '')
+        );
+        try {
+          await fs.unlink(oldImagePath);
+        } catch {
+          // Ignore if old file doesn't exist
+        }
+      }
+
+      this.logger.log(
+        color.green.bold(`Saved custom image for playlist ${color.white.bold(playlistId)}: ${color.white.bold(filename)}`)
+      );
+
+      return `/public/playlist_images/${filename}`;
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`Error processing base64 image: ${error.message}`));
+      return undefined;
     }
   }
 

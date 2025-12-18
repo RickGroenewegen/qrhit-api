@@ -585,9 +585,10 @@ class Spotify {
             let allDescriptions: Record<string, string | null> = {};
             let playlistDesign: any = null;
 
+            let customImage: string | null = null;
             if (featured) {
               // Build select object dynamically based on available locales
-              const selectFields: any = { name: true, design: true };
+              const selectFields: any = { name: true, design: true, customImage: true };
               for (const lang of this.translate.allLocales) {
                 selectFields[`description_${lang}`] = true;
               }
@@ -598,14 +599,15 @@ class Spotify {
               });
 
               if (dbPlaylist) {
-                playlistName = dbPlaylist.name || playlistName;
-                playlistDesign = dbPlaylist.design || null;
+                const dbPlaylistAny = dbPlaylist as any;
+                playlistName = dbPlaylistAny.name || playlistName;
+                playlistDesign = dbPlaylistAny.design || null;
+                customImage = dbPlaylistAny.customImage || null;
 
                 // Collect all descriptions dynamically
                 for (const lang of this.translate.allLocales) {
-                  const descField =
-                    `description_${lang}` as keyof typeof dbPlaylist;
-                  const descValue = dbPlaylist[descField];
+                  const descField = `description_${lang}`;
+                  const descValue = dbPlaylistAny[descField];
                   if (descValue && typeof descValue === 'string') {
                     allDescriptions[lang] = descValue;
                   }
@@ -622,6 +624,7 @@ class Spotify {
               descriptions: allDescriptions, // All language descriptions
               numberOfTracks: playlistData.tracks?.total || 0,
               image,
+              customImage,
               design: playlistDesign,
             };
 
@@ -647,6 +650,7 @@ class Spotify {
               description: allDescriptions[locale] || playlistDescription,
               numberOfTracks: cachedPlaylistData.numberOfTracks,
               image,
+              customImage,
               design: playlistDesign,
             };
           } catch (error) {
@@ -676,6 +680,7 @@ class Spotify {
             cachedData.description,
           numberOfTracks: cachedData.numberOfTracks,
           image: cachedData.image,
+          customImage: cachedData.customImage || null,
           design: cachedData.design || null,
         };
       }

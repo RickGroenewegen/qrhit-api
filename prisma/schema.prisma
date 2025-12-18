@@ -339,6 +339,7 @@ model Playlist {
   featured             Boolean              @default(false)
   featuredLocale       String?
   image                String
+  customImage          String?              @db.VarChar(255)
   price                Float                @default(0)
   priceDigital         Float                @default(0)
   priceSheets          Float                @default(0)
