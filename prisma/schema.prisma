@@ -612,6 +612,18 @@ model ShippingCostNew {
   @@map("shipping_costs_new")
 }
 
+model CountryShippingConfig {
+  id            Int      @id @default(autoincrement())
+  countryCode   String   @unique
+  minDaysOffset Int      @default(0)
+  maxDaysOffset Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([countryCode])
+  @@map("country_shipping_config")
+}
+
 model TrustPilot {
   id          Int      @id @default(autoincrement())
   name        String

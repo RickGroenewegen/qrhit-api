@@ -9,6 +9,7 @@ import Utils from './utils';
 import Cache from './cache';
 import ExcelJS from 'exceljs';
 import SiteSettings from './sitesettings';
+import ShippingConfig from './shippingconfig';
 
 class Shipping {
   private static instance: Shipping;
@@ -1049,10 +1050,31 @@ class Shipping {
         })
         .sort((a, b) => a.averageDays - b.averageDays);
 
-      // Cache for 1 hour (3600 seconds)
-      await this.cache.set(cacheKey, JSON.stringify(result), 3600);
+      // Apply country-specific offsets
+      const shippingConfigService = ShippingConfig.getInstance();
+      const configs = await shippingConfigService.getAllConfigs();
+      const configMap = new Map(configs.map(c => [c.countryCode.toUpperCase(), c]));
 
-      return result;
+      const adjustedResult = result.map((item) => {
+        const config = configMap.get(item.countryCode.toUpperCase());
+        if (config) {
+          const adjustedMinDays = Math.max(1, item.minDays + config.minDaysOffset);
+          const adjustedMaxDays = Math.max(adjustedMinDays, item.maxDays + config.maxDaysOffset);
+          const adjustedAverageDays = Math.round((adjustedMinDays + adjustedMaxDays) / 2);
+          return {
+            ...item,
+            minDays: adjustedMinDays,
+            maxDays: adjustedMaxDays,
+            averageDays: adjustedAverageDays,
+          };
+        }
+        return item;
+      });
+
+      // Cache for 1 hour (3600 seconds)
+      await this.cache.set(cacheKey, JSON.stringify(adjustedResult), 3600);
+
+      return adjustedResult;
     } catch (error) {
       this.logger.log(
         color.red.bold(

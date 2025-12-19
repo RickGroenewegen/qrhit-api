@@ -19,6 +19,7 @@ import Excel from '../excel';
 import Review from '../review';
 import Shipping from '../shipping';
 import SiteSettings from '../sitesettings';
+import ShippingConfig from '../shippingconfig';
 import Spotify from '../spotify';
 import PrismaInstance from '../prisma';
 import { ChatService } from '../chat';
@@ -2454,6 +2455,107 @@ export default async function adminRoutes(
         }
 
         return { success: true, data: updatedSettings };
+      } catch (error: any) {
+        return reply.status(500).send({
+          success: false,
+          error: error.message,
+        });
+      }
+    }
+  );
+
+  // Get all shipping config offsets
+  fastify.get(
+    '/admin/shipping-config',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const shippingConfig = ShippingConfig.getInstance();
+        const configs = await shippingConfig.getAllConfigs();
+        return { success: true, data: configs };
+      } catch (error: any) {
+        return reply.status(500).send({
+          success: false,
+          error: error.message,
+        });
+      }
+    }
+  );
+
+  // Create or update shipping config offset for a country
+  fastify.put(
+    '/admin/shipping-config/:countryCode',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { countryCode } = request.params;
+        const { minDaysOffset, maxDaysOffset } = request.body;
+
+        // Validation
+        if (!countryCode || countryCode.length !== 2) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid country code. Must be a 2-letter ISO code.',
+          });
+        }
+
+        if (typeof minDaysOffset !== 'number' || typeof maxDaysOffset !== 'number') {
+          return reply.status(400).send({
+            success: false,
+            error: 'minDaysOffset and maxDaysOffset must be numbers',
+          });
+        }
+
+        const shippingConfig = ShippingConfig.getInstance();
+        const config = await shippingConfig.upsertConfig(
+          countryCode,
+          minDaysOffset,
+          maxDaysOffset
+        );
+
+        if (!config) {
+          return reply.status(500).send({
+            success: false,
+            error: 'Failed to update shipping config',
+          });
+        }
+
+        return { success: true, data: config };
+      } catch (error: any) {
+        return reply.status(500).send({
+          success: false,
+          error: error.message,
+        });
+      }
+    }
+  );
+
+  // Delete shipping config offset for a country
+  fastify.delete(
+    '/admin/shipping-config/:countryCode',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { countryCode } = request.params;
+
+        if (!countryCode || countryCode.length !== 2) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid country code. Must be a 2-letter ISO code.',
+          });
+        }
+
+        const shippingConfig = ShippingConfig.getInstance();
+        const success = await shippingConfig.deleteConfig(countryCode);
+
+        if (!success) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Config not found or failed to delete',
+          });
+        }
+
+        return { success: true };
       } catch (error: any) {
         return reply.status(500).send({
           success: false,
