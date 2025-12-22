@@ -339,6 +339,7 @@ model Playlist {
   featured             Boolean              @default(false)
   featuredLocale       String?
   image                String
+  customImage          String?              @db.VarChar(255)
   price                Float                @default(0)
   priceDigital         Float                @default(0)
   priceSheets          Float                @default(0)
@@ -609,6 +610,18 @@ model ShippingCostNew {
 
   @@index([country, size])
   @@map("shipping_costs_new")
+}
+
+model CountryShippingConfig {
+  id            Int      @id @default(autoincrement())
+  countryCode   String   @unique
+  minDaysOffset Int      @default(0)
+  maxDaysOffset Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([countryCode])
+  @@map("country_shipping_config")
 }
 
 model TrustPilot {
