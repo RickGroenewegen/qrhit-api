@@ -2883,9 +2883,7 @@ export default async function adminRoutes(
   // Admin typing indicator
   fastify.post('/admin/chats/:id/typing', getAuthHandler(['admin']), async (request: any, reply) => {
     const chatId = parseInt(request.params.id, 10);
-    console.log(`[AdminTyping] Received for chatId=${chatId}`);
     const wsServer = ChatWebSocketServer.getInstance();
-    console.log(`[AdminTyping] wsServer=${wsServer ? 'found' : 'null'}`);
     if (wsServer) {
       wsServer.broadcastToChat(chatId, { type: 'admin_typing' });
     }
