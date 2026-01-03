@@ -1118,7 +1118,16 @@ class Mollie {
         },
       };
     } catch (e) {
-      console.log(e);
+      this.logger.log(
+        color.red.bold('Payment creation failed: ') +
+          color.white(e instanceof Error ? e.message : String(e))
+      );
+
+      // Log full stack trace for debugging
+      if (e instanceof Error && e.stack) {
+        console.error(e.stack);
+      }
+
       return {
         success: false,
         error: 'Failed to create payment',

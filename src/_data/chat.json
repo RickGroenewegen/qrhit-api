@@ -851,6 +851,17 @@
             ]
         },
         {
+            "slug": "apple-music",
+            "title": "Do you support Apple Music?",
+            "description": "Yes and no. Currently, QRSong! only supports Spotify playlists. However, we the Hitstalt app supports our cards and can play songs via Apple Music if you have an active subscription.",
+            "tags": [
+                "Apple Music",
+                "Spotify",
+                "music",
+                "app support"
+            ]
+        },
+        {
             "slug": "change-address",
             "title": "Can I still change my address after purchase?",
             "description": "As long as your order hasn't been taken into production, you can change your shipping address. Contact us at info@qrsong.io as soon as possible with the new address details.",
