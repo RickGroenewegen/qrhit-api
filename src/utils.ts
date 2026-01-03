@@ -467,6 +467,33 @@ class Utils {
       return hex.length === 1 ? '0' + hex : hex;
     }).join('');
   }
+
+  /**
+   * Replace terms based on a mapping (case-insensitive)
+   * @param text Text to process
+   * @param replacements Optional custom replacement mapping (defaults to brand replacements)
+   * @returns Text with replacements applied
+   */
+  public replaceBrandTerms(
+    text: string | null | undefined,
+    replacements: { [key: string]: string } = {
+      'Hitster': 'QRSong!',
+      'Hitstar': 'QRSong!',
+      'Disney': 'Cartoon'
+    }
+  ): string {
+    if (!text) return '';
+
+    let result = text;
+
+    // Apply each replacement using case-insensitive regex
+    for (const [searchTerm, replacement] of Object.entries(replacements)) {
+      const regex = new RegExp(searchTerm, 'gi');
+      result = result.replace(regex, replacement);
+    }
+
+    return result;
+  }
 }
 
 export default Utils;

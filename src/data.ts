@@ -33,7 +33,7 @@ import PrintEnBind from './printers/printenbind';
 
 const TRACK_LINKS_CACHE_PREFIX = 'track_links_v6';
 const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
-const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v2_';
+const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v3_';
 
 interface TrackNeedingYearUpdate {
   id: number;
@@ -1029,6 +1029,14 @@ class Data {
           }
         } else {
           playlist.isPromotional = false;
+        }
+
+        // Replace brand terms in name and description
+        if (playlist.name) {
+          playlist.name = this.utils.replaceBrandTerms(playlist.name);
+        }
+        if (playlist.description) {
+          playlist.description = this.utils.replaceBrandTerms(playlist.description);
         }
 
         return {
