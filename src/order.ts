@@ -165,6 +165,46 @@ class Order {
     return pdfPath;
   }
 
+  public static getInstance(): Order {
+    if (!Order.instance) {
+      Order.instance = new Order();
+    }
+    return Order.instance;
+  }
+
+  public async getOrderTypes(type: string = 'cards') {
+    let orderTypes = null;
+    let cacheKey = `orderTypes_${type}`;
+    const cachedOrderType = await this.cache.get(cacheKey);
+    if (cachedOrderType) {
+      orderTypes = JSON.parse(cachedOrderType);
+    } else {
+      orderTypes = await this.prisma.orderType.findMany({
+        select: {
+          id: true,
+          name: true,
+          maxCards: true,
+          amountWithMargin: true,
+        },
+        where: {
+          visible: true,
+          type,
+        },
+        orderBy: [
+          {
+            digital: 'desc',
+          },
+          {
+            maxCards: 'asc',
+          },
+        ],
+      });
+      this.cache.set(cacheKey, JSON.stringify(orderTypes));
+    }
+
+    return orderTypes;
+  }
+
   public async getOrderType(
     numberOfTracks: number,
     digital: boolean = false,
