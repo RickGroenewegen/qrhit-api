@@ -646,8 +646,8 @@ class Spotify {
             playlist = {
               id: playlistId,
               playlistId: checkPlaylistId,
-              name: playlistName,
-              description: allDescriptions[locale] || playlistDescription,
+              name: this.utils.replaceBrandTerms(playlistName),
+              description: this.utils.replaceBrandTerms(allDescriptions[locale] || playlistDescription),
               numberOfTracks: cachedPlaylistData.numberOfTracks,
               image,
               customImage,
@@ -674,10 +674,11 @@ class Spotify {
         playlist = {
           id: cachedData.id,
           playlistId: cachedData.playlistId,
-          name: cachedData.name,
-          description:
+          name: this.utils.replaceBrandTerms(cachedData.name),
+          description: this.utils.replaceBrandTerms(
             (cachedData.descriptions && cachedData.descriptions[locale]) ||
-            cachedData.description,
+            cachedData.description
+          ),
           numberOfTracks: cachedData.numberOfTracks,
           image: cachedData.image,
           customImage: cachedData.customImage || null,
