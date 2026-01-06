@@ -6,7 +6,7 @@ import { ChatGPT } from './chatgpt';
 import Cache from './cache';
 import Translation from './translation';
 import { color } from 'console-log-colors';
-import { CACHE_KEY_FEATURED_PLAYLISTS } from './data';
+import Data, { CACHE_KEY_FEATURED_PLAYLISTS } from './data';
 import { CACHE_KEY_PLAYLIST, CACHE_KEY_PLAYLIST_DB, CACHE_KEY_TRACKS, CACHE_KEY_TRACK_COUNT } from './spotify';
 import sharp from 'sharp';
 import * as fs from 'fs/promises';
@@ -24,6 +24,7 @@ class Promotional {
   private cache = Cache.getInstance();
   private translation = new Translation();
   private utils = new Utils();
+  private data = Data.getInstance();
 
   private constructor() {}
 
@@ -853,6 +854,9 @@ class Promotional {
         // Clear all relevant caches (pass old slug in case it changed)
         await this.clearPlaylistCache(playlistId, oldSlug || undefined);
 
+        // Calculate decade percentages for the newly accepted playlist
+        await this.data.calculateSinglePlaylistDecadePercentages(playlist.id);
+
         // Pass the new slug to fetchEmailData so the email contains the correct URL
         const emailData = await fetchEmailData(updateData.slug);
         if (emailData) {
@@ -942,6 +946,9 @@ class Promotional {
 
       // Clear all relevant caches (pass old slug in case it changed)
       await this.clearPlaylistCache(playlistId, oldSlug || undefined);
+
+      // Calculate decade percentages for the newly accepted playlist
+      await this.data.calculateSinglePlaylistDecadePercentages(playlist.id);
 
       this.logger.log(
         color.green.bold(

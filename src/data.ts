@@ -249,13 +249,13 @@ class Data {
           const genreJob = new CronJob('30 1 * * *', async () => {
             await this.translateGenres();
           });
-          // Schedule daily playlist score calculation at 3 AM
-          const playlistScoreJob = new CronJob('0 3 * * *', async () => {
-            await this.calculatePlaylistScores();
+          // Schedule daily playlist stats update at 3 AM (Wilson scores + decade percentages)
+          const playlistStatsJob = new CronJob('0 3 * * *', async () => {
+            await this.updateFeaturedPlaylistStats();
           });
           job.start();
           genreJob.start();
-          playlistScoreJob.start();
+          playlistStatsJob.start();
         } else {
           // Non-primary servers: load blocked list and sync from Redis hourly
           await this.loadBlockedFromCache();
@@ -3590,6 +3590,245 @@ class Data {
         success: false,
         processed: 0,
         updated: [],
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Calculate decade percentages for a single playlist based on track years
+   * @param playlistId The database ID of the playlist
+   * @returns Success status
+   */
+  public async calculateSinglePlaylistDecadePercentages(
+    playlistId: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get all tracks for this playlist with their years
+      const playlistTracks = await this.prisma.playlistHasTrack.findMany({
+        where: { playlistId },
+        include: {
+          track: {
+            select: { year: true },
+          },
+        },
+      });
+
+      const totalTracks = playlistTracks.length;
+      if (totalTracks === 0) {
+        return { success: true };
+      }
+
+      // Count tracks by decade
+      const decadeCounts: Record<string, number> = {
+        '2020': 0,
+        '2010': 0,
+        '2000': 0,
+        '1990': 0,
+        '1980': 0,
+        '1970': 0,
+        '1960': 0,
+        '1950': 0,
+        '1900': 0, // Pre-1950
+        '0': 0, // Unknown/null year
+      };
+
+      for (const pt of playlistTracks) {
+        const year = pt.track.year;
+        if (year === null || year === undefined || year === 0) {
+          decadeCounts['0']++;
+        } else if (year >= 2020) {
+          decadeCounts['2020']++;
+        } else if (year >= 2010) {
+          decadeCounts['2010']++;
+        } else if (year >= 2000) {
+          decadeCounts['2000']++;
+        } else if (year >= 1990) {
+          decadeCounts['1990']++;
+        } else if (year >= 1980) {
+          decadeCounts['1980']++;
+        } else if (year >= 1970) {
+          decadeCounts['1970']++;
+        } else if (year >= 1960) {
+          decadeCounts['1960']++;
+        } else if (year >= 1950) {
+          decadeCounts['1950']++;
+        } else {
+          decadeCounts['1900']++;
+        }
+      }
+
+      // Calculate percentages
+      const decadePercentage2020 = Math.round((decadeCounts['2020'] / totalTracks) * 100);
+      const decadePercentage2010 = Math.round((decadeCounts['2010'] / totalTracks) * 100);
+      const decadePercentage2000 = Math.round((decadeCounts['2000'] / totalTracks) * 100);
+      const decadePercentage1990 = Math.round((decadeCounts['1990'] / totalTracks) * 100);
+      const decadePercentage1980 = Math.round((decadeCounts['1980'] / totalTracks) * 100);
+      const decadePercentage1970 = Math.round((decadeCounts['1970'] / totalTracks) * 100);
+      const decadePercentage1960 = Math.round((decadeCounts['1960'] / totalTracks) * 100);
+      const decadePercentage1950 = Math.round((decadeCounts['1950'] / totalTracks) * 100);
+      const decadePercentage1900 = Math.round((decadeCounts['1900'] / totalTracks) * 100);
+      const decadePercentage0 = Math.round((decadeCounts['0'] / totalTracks) * 100);
+
+      // Update the playlist
+      await this.prisma.playlist.update({
+        where: { id: playlistId },
+        data: {
+          decadePercentage2020,
+          decadePercentage2010,
+          decadePercentage2000,
+          decadePercentage1990,
+          decadePercentage1980,
+          decadePercentage1970,
+          decadePercentage1960,
+          decadePercentage1950,
+          decadePercentage1900,
+          decadePercentage0,
+        },
+      });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error calculating decade percentages for playlist ${playlistId}: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        )
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Calculate and update decade percentages for all featured playlists
+   * @returns Result with processed count
+   */
+  public async calculateDecadePercentages(): Promise<{
+    success: boolean;
+    processed: number;
+    error?: string;
+  }> {
+    try {
+      this.logger.log(
+        color.blue.bold('Starting decade percentage calculation...')
+      );
+
+      // Get all featured playlists
+      const featuredPlaylists = await this.prisma.playlist.findMany({
+        where: {
+          featured: true,
+        },
+        select: {
+          id: true,
+          playlistId: true,
+          name: true,
+        },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Found ${color.white.bold(featuredPlaylists.length)} featured playlists for decade calculation`
+        )
+      );
+
+      let processed = 0;
+
+      for (const playlist of featuredPlaylists) {
+        const result = await this.calculateSinglePlaylistDecadePercentages(playlist.id);
+        if (result.success) {
+          processed++;
+          this.logger.log(
+            color.blue.bold(
+              `Updated decade percentages for ${color.white.bold(playlist.name)}`
+            )
+          );
+        }
+      }
+
+      // Clear featured playlists cache after updating percentages
+      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+
+      this.logger.log(
+        color.green.bold(
+          `Decade percentage calculation complete. Updated ${color.white.bold(processed)} playlists.`
+        )
+      );
+
+      return {
+        success: true,
+        processed,
+      };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error calculating decade percentages: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        )
+      );
+      return {
+        success: false,
+        processed: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Update all featured playlist stats (Wilson scores and decade percentages)
+   * This is the main function called by the cron job and admin bulk action
+   * @returns Combined result from both calculations
+   */
+  public async updateFeaturedPlaylistStats(): Promise<{
+    success: boolean;
+    scoresProcessed: number;
+    decadesProcessed: number;
+    error?: string;
+  }> {
+    try {
+      this.logger.log(
+        color.blue.bold('Starting featured playlist stats update...')
+      );
+
+      // Calculate Wilson scores
+      const scoresResult = await this.calculatePlaylistScores();
+
+      // Calculate decade percentages
+      const decadesResult = await this.calculateDecadePercentages();
+
+      const success = scoresResult.success && decadesResult.success;
+      const errors: string[] = [];
+      if (scoresResult.error) errors.push(`Scores: ${scoresResult.error}`);
+      if (decadesResult.error) errors.push(`Decades: ${decadesResult.error}`);
+
+      this.logger.log(
+        color.green.bold(
+          `Featured playlist stats update complete. Scores: ${color.white.bold(scoresResult.processed)}, Decades: ${color.white.bold(decadesResult.processed)}`
+        )
+      );
+
+      return {
+        success,
+        scoresProcessed: scoresResult.processed,
+        decadesProcessed: decadesResult.processed,
+        error: errors.length > 0 ? errors.join('; ') : undefined,
+      };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating featured playlist stats: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        )
+      );
+      return {
+        success: false,
+        scoresProcessed: 0,
+        decadesProcessed: 0,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }

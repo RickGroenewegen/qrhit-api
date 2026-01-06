@@ -3273,32 +3273,32 @@ export default async function adminRoutes(
     }
   );
 
-  // Calculate playlist scores (Wilson score with time decay)
+  // Update featured playlist stats (Wilson scores + decade percentages)
   fastify.post(
     '/admin/calculate-playlist-scores',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const result = await data.calculatePlaylistScores();
+        const result = await data.updateFeaturedPlaylistStats();
 
         if (!result.success) {
           return reply.status(500).send({
             success: false,
-            error: result.error || 'Failed to calculate playlist scores'
+            error: result.error || 'Failed to update playlist stats'
           });
         }
 
         return reply.send({
           success: true,
-          message: `Updated ${result.processed} featured playlists`,
-          processed: result.processed,
-          playlists: result.updated
+          message: `Updated ${result.scoresProcessed} playlists (scores) and ${result.decadesProcessed} playlists (decades)`,
+          scoresProcessed: result.scoresProcessed,
+          decadesProcessed: result.decadesProcessed
         });
       } catch (error: any) {
-        console.error('Error calculating playlist scores:', error);
+        console.error('Error updating playlist stats:', error);
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to calculate playlist scores'
+          error: error.message || 'Failed to update playlist stats'
         });
       }
     }
