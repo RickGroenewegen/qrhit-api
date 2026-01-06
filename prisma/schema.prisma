@@ -358,6 +358,7 @@ model Playlist {
   decadePercentage1950 Int                  @default(0)
   decadePercentage1900 Int                  @default(0)
   decadePercentage0    Int                  @default(0)
+  decadesCalculated    Boolean              @default(false)
   downloads            Int                  @default(0)
   score                Int                  @default(0)
   design               Json?

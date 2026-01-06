@@ -3598,11 +3598,11 @@ class Data {
   /**
    * Calculate decade percentages for a single playlist based on track years
    * @param playlistId The database ID of the playlist
-   * @returns Success status
+   * @returns Success status and percentages
    */
   public async calculateSinglePlaylistDecadePercentages(
     playlistId: number
-  ): Promise<{ success: boolean; error?: string }> {
+  ): Promise<{ success: boolean; error?: string; percentages?: Record<string, number> }> {
     try {
       // Get all tracks for this playlist with their years
       const playlistTracks = await this.prisma.playlistHasTrack.findMany({
@@ -3616,7 +3616,7 @@ class Data {
 
       const totalTracks = playlistTracks.length;
       if (totalTracks === 0) {
-        return { success: true };
+        return { success: true, percentages: {} };
       }
 
       // Count tracks by decade
@@ -3659,35 +3659,38 @@ class Data {
       }
 
       // Calculate percentages
-      const decadePercentage2020 = Math.round((decadeCounts['2020'] / totalTracks) * 100);
-      const decadePercentage2010 = Math.round((decadeCounts['2010'] / totalTracks) * 100);
-      const decadePercentage2000 = Math.round((decadeCounts['2000'] / totalTracks) * 100);
-      const decadePercentage1990 = Math.round((decadeCounts['1990'] / totalTracks) * 100);
-      const decadePercentage1980 = Math.round((decadeCounts['1980'] / totalTracks) * 100);
-      const decadePercentage1970 = Math.round((decadeCounts['1970'] / totalTracks) * 100);
-      const decadePercentage1960 = Math.round((decadeCounts['1960'] / totalTracks) * 100);
-      const decadePercentage1950 = Math.round((decadeCounts['1950'] / totalTracks) * 100);
-      const decadePercentage1900 = Math.round((decadeCounts['1900'] / totalTracks) * 100);
-      const decadePercentage0 = Math.round((decadeCounts['0'] / totalTracks) * 100);
+      const percentages: Record<string, number> = {
+        '2020s': Math.round((decadeCounts['2020'] / totalTracks) * 100),
+        '2010s': Math.round((decadeCounts['2010'] / totalTracks) * 100),
+        '2000s': Math.round((decadeCounts['2000'] / totalTracks) * 100),
+        '1990s': Math.round((decadeCounts['1990'] / totalTracks) * 100),
+        '1980s': Math.round((decadeCounts['1980'] / totalTracks) * 100),
+        '1970s': Math.round((decadeCounts['1970'] / totalTracks) * 100),
+        '1960s': Math.round((decadeCounts['1960'] / totalTracks) * 100),
+        '1950s': Math.round((decadeCounts['1950'] / totalTracks) * 100),
+        'pre-1950': Math.round((decadeCounts['1900'] / totalTracks) * 100),
+        'unknown': Math.round((decadeCounts['0'] / totalTracks) * 100),
+      };
 
       // Update the playlist
       await this.prisma.playlist.update({
         where: { id: playlistId },
         data: {
-          decadePercentage2020,
-          decadePercentage2010,
-          decadePercentage2000,
-          decadePercentage1990,
-          decadePercentage1980,
-          decadePercentage1970,
-          decadePercentage1960,
-          decadePercentage1950,
-          decadePercentage1900,
-          decadePercentage0,
+          decadePercentage2020: percentages['2020s'],
+          decadePercentage2010: percentages['2010s'],
+          decadePercentage2000: percentages['2000s'],
+          decadePercentage1990: percentages['1990s'],
+          decadePercentage1980: percentages['1980s'],
+          decadePercentage1970: percentages['1970s'],
+          decadePercentage1960: percentages['1960s'],
+          decadePercentage1950: percentages['1950s'],
+          decadePercentage1900: percentages['pre-1950'],
+          decadePercentage0: percentages['unknown'],
+          decadesCalculated: true,
         },
       });
 
-      return { success: true };
+      return { success: true, percentages };
     } catch (error) {
       this.logger.log(
         color.red.bold(
@@ -3717,10 +3720,11 @@ class Data {
         color.blue.bold('Starting decade percentage calculation...')
       );
 
-      // Get all featured playlists
+      // Get all featured playlists that haven't had decades calculated yet
       const featuredPlaylists = await this.prisma.playlist.findMany({
         where: {
           featured: true,
+          decadesCalculated: false,
         },
         select: {
           id: true,
@@ -3731,7 +3735,7 @@ class Data {
 
       this.logger.log(
         color.blue.bold(
-          `Found ${color.white.bold(featuredPlaylists.length)} featured playlists for decade calculation`
+          `Found ${color.white.bold(featuredPlaylists.length)} featured playlists needing decade calculation`
         )
       );
 
@@ -3741,9 +3745,16 @@ class Data {
         const result = await this.calculateSinglePlaylistDecadePercentages(playlist.id);
         if (result.success) {
           processed++;
+          // Format percentages for logging (only show non-zero values)
+          const pctStr = result.percentages
+            ? Object.entries(result.percentages)
+                .filter(([, v]) => v > 0)
+                .map(([k, v]) => `${k}: ${v}%`)
+                .join(', ')
+            : 'no tracks';
           this.logger.log(
             color.blue.bold(
-              `Updated decade percentages for ${color.white.bold(playlist.name)}`
+              `Updated decade percentages for ${color.white.bold(playlist.name)}: ${color.white.bold(pctStr)}`
             )
           );
         }

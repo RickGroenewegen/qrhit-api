@@ -24,7 +24,6 @@ class Promotional {
   private cache = Cache.getInstance();
   private translation = new Translation();
   private utils = new Utils();
-  private data = Data.getInstance();
 
   private constructor() {}
 
@@ -855,7 +854,7 @@ class Promotional {
         await this.clearPlaylistCache(playlistId, oldSlug || undefined);
 
         // Calculate decade percentages for the newly accepted playlist
-        await this.data.calculateSinglePlaylistDecadePercentages(playlist.id);
+        await Data.getInstance().calculateSinglePlaylistDecadePercentages(playlist.id);
 
         // Pass the new slug to fetchEmailData so the email contains the correct URL
         const emailData = await fetchEmailData(updateData.slug);
@@ -948,7 +947,7 @@ class Promotional {
       await this.clearPlaylistCache(playlistId, oldSlug || undefined);
 
       // Calculate decade percentages for the newly accepted playlist
-      await this.data.calculateSinglePlaylistDecadePercentages(playlist.id);
+      await Data.getInstance().calculateSinglePlaylistDecadePercentages(playlist.id);
 
       this.logger.log(
         color.green.bold(
