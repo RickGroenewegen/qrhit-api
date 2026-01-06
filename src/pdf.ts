@@ -436,7 +436,7 @@ class PDF {
     itemIndex?: number
   ): Promise<string> {
     // Determine provider based on payment email
-    const useLambda = payment.email === 'west14@gmail.com';
+    const useLambda = true; // payment.email === 'west14@gmail.com';
 
     if (useLambda) {
       this.logger.log(color.blue.bold('Using Lambda PDF provider'));
