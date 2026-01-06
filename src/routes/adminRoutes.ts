@@ -3272,4 +3272,35 @@ export default async function adminRoutes(
       }
     }
   );
+
+  // Calculate playlist scores (Wilson score with time decay)
+  fastify.post(
+    '/admin/calculate-playlist-scores',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const result = await data.calculatePlaylistScores();
+
+        if (!result.success) {
+          return reply.status(500).send({
+            success: false,
+            error: result.error || 'Failed to calculate playlist scores'
+          });
+        }
+
+        return reply.send({
+          success: true,
+          message: `Updated ${result.processed} featured playlists`,
+          processed: result.processed,
+          playlists: result.updated
+        });
+      } catch (error: any) {
+        console.error('Error calculating playlist scores:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to calculate playlist scores'
+        });
+      }
+    }
+  );
 }

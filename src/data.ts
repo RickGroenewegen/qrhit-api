@@ -249,8 +249,13 @@ class Data {
           const genreJob = new CronJob('30 1 * * *', async () => {
             await this.translateGenres();
           });
+          // Schedule daily playlist score calculation at 3 AM
+          const playlistScoreJob = new CronJob('0 3 * * *', async () => {
+            await this.calculatePlaylistScores();
+          });
           job.start();
           genreJob.start();
+          playlistScoreJob.start();
         } else {
           // Non-primary servers: load blocked list and sync from Redis hourly
           await this.loadBlockedFromCache();
@@ -3416,6 +3421,145 @@ class Data {
       );
       return {
         success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Calculate Wilson score with time decay for a playlist
+   * @param downloads Number of downloads
+   * @param createdAt Date when the playlist was created
+   * @returns Wilson score adjusted with time decay
+   */
+  private calculateWilsonScore(downloads: number, createdAt: Date): number {
+    // Wilson score calculation parameters
+    const z = 1.96; // 95% confidence
+    const n = Math.max(downloads, 1); // Total number of downloads (minimum 1 to avoid division by zero)
+
+    // Calculate time decay factor (1 year = ~365.25 days)
+    const daysSinceCreation = Math.max(
+      1,
+      (new Date().getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const yearsElapsed = daysSinceCreation / 365.25;
+    const decayFactor = Math.exp(-0.5 * yearsElapsed); // Exponential decay with half-life of 1 year
+
+    // Wilson score calculation
+    const phat = n / n; // For downloads, we consider all as positive (proportion = 1)
+    const numerator =
+      phat +
+      (z * z) / (2 * n) -
+      z * Math.sqrt((phat * (1 - phat) + (z * z) / (4 * n)) / n);
+    const denominator = 1 + (z * z) / n;
+    const wilsonScore = numerator / denominator;
+
+    // Apply time decay to the Wilson score
+    const adjustedScore = wilsonScore * decayFactor * 100; // Scale to 0-100 range
+
+    return Math.round(adjustedScore);
+  }
+
+  /**
+   * Calculate and update scores for all featured playlists
+   * Counts purchases from payment_has_playlist and calculates Wilson score
+   * @returns Result with processed count and details
+   */
+  public async calculatePlaylistScores(): Promise<{
+    success: boolean;
+    processed: number;
+    updated: Array<{ playlistId: string; name: string; downloads: number; score: number }>;
+    error?: string;
+  }> {
+    try {
+      this.logger.log(
+        color.blue.bold('Starting playlist score calculation...')
+      );
+
+      // Get all featured playlists
+      const featuredPlaylists = await this.prisma.playlist.findMany({
+        where: {
+          featured: true,
+        },
+        select: {
+          id: true,
+          playlistId: true,
+          name: true,
+          createdAt: true,
+        },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Found ${color.white.bold(featuredPlaylists.length)} featured playlists`
+        )
+      );
+
+      const updated: Array<{ playlistId: string; name: string; downloads: number; score: number }> = [];
+
+      for (const playlist of featuredPlaylists) {
+        // Count purchases from payment_has_playlist where payment is paid
+        const downloadCount = await this.prisma.paymentHasPlaylist.count({
+          where: {
+            playlistId: playlist.id,
+            payment: {
+              status: 'paid',
+            },
+          },
+        });
+
+        // Calculate Wilson score with time decay
+        const score = this.calculateWilsonScore(downloadCount, playlist.createdAt);
+
+        // Update the playlist
+        await this.prisma.playlist.update({
+          where: { id: playlist.id },
+          data: {
+            downloads: downloadCount,
+            score: score,
+          },
+        });
+
+        updated.push({
+          playlistId: playlist.playlistId,
+          name: playlist.name,
+          downloads: downloadCount,
+          score: score,
+        });
+
+        this.logger.log(
+          color.blue.bold(
+            `Updated ${color.white.bold(playlist.name)}: downloads = ${color.white.bold(downloadCount)}, score = ${color.white.bold(score)}`
+          )
+        );
+      }
+
+      // Clear featured playlists cache after updating scores
+      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+
+      this.logger.log(
+        color.green.bold(
+          `Playlist score calculation complete. Updated ${color.white.bold(updated.length)} playlists.`
+        )
+      );
+
+      return {
+        success: true,
+        processed: updated.length,
+        updated,
+      };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error calculating playlist scores: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        )
+      );
+      return {
+        success: false,
+        processed: 0,
+        updated: [],
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
