@@ -705,6 +705,11 @@ class Generator {
             digitalTemplate = 'digital_double';
           }
 
+          // Use US Letter format for US customers
+          if (payment.countrycode === 'US') {
+            digitalTemplate = digitalTemplate + '_us';
+          }
+
           let printerTemplate = 'printer';
 
           // Check if playlist has a forced template override (from CompanyList.forceTemplate)

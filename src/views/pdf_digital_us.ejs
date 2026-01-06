@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Your QR Cards</title>
+<%- include('partials/font-import-inline') %>
+<style>
+    @media print {
+        @page {
+            size: letter;
+            margin: 0;
+        }
+        body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        img {
+            image-rendering: -webkit-optimize-contrast;
+            image-rendering: crisp-edges;
+        }
+    }
+
+    body {
+        font-family: <%= php.selectedFont || 'Arial, sans-serif' %>;
+        margin: 0;
+        padding: 0;
+        page-break-after: always;
+    }
+    .page {
+        width: 215.9mm;
+        height: 279.4mm;
+        box-sizing: border-box;
+        display: flex;
+        flex-wrap: wrap;
+        justify-content: flex-start;
+        align-content: flex-start;
+        padding: 10mm 10mm;
+    }
+    .card-container {
+        width: 60mm;
+        height: 120mm;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid #ccc;
+    }
+    .card {
+        width: 60mm;
+        height: 60mm;
+        box-sizing: border-box;
+    }
+    .front {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: space-between;
+        border-bottom: 2px dashed #ccc;
+        position: relative;
+        overflow: hidden;
+    }
+    .background-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 0;
+        opacity: <%= (php.frontOpacity !== undefined ? php.frontOpacity : 100) / 100 %>;
+    }
+
+    /* White square styling removed - now using SVG */
+    .domain {
+        font-family: Arial, sans-serif !important;
+        font-size: 11px;
+        color: #b0b0b0; /* Lighter gray color */
+        position: absolute;
+        bottom: 13mm;
+        width: 100%;
+        text-align: center;
+        z-index: 2;
+    }
+    .logo {
+        position: absolute;
+        top: 4mm;
+        left: 50%;
+        transform: translateX(-50%);
+        max-height: 2rem;
+        z-index: 3;
+    }
+    .qr {
+        flex: 0 0 80%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        margin: auto;
+        position: relative;
+        z-index: 2;
+    }
+    .qr img {
+        width: 36mm;
+        height: 36mm;
+        object-fit: contain;
+        image-resolution: 300dpi;
+    }
+    .back {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        height: 60mm;
+        position: relative;
+        overflow: hidden;
+        <% if (php.backgroundBackType === 'solid') { %>
+            <% if (php.useGradient) {
+                const firstStop = Math.max(0, php.gradientPosition - 50);
+                const secondStop = Math.min(100, php.gradientPosition + 50);
+                const bgColor = php.backgroundBackColor || '#ffffff';
+                const gradColor = php.gradientBackgroundColor || '#ffffff';
+                const degrees = php.gradientDegrees || 180;
+            %>
+            background: linear-gradient(<%= degrees %>deg, <%= bgColor %> <%= firstStop %>%, <%= gradColor %> <%= secondStop %>%);
+            <% } else if (php.backgroundBackColor) { %>
+            background-color: <%= php.backgroundBackColor %>;
+            <% } else { %>
+            background-color: #ffffff;
+            <% } %>
+        <% } else { %>
+        background-color: transparent;
+        <% } %>
+    }
+    .background-image-back {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 0;
+        opacity: <%= (php.backOpacity !== undefined ? php.backOpacity : 50) / 100 %>;
+    }
+    .text {
+        font-size: 12px;
+        margin-top: 2mm;
+        padding: 0 2mm;
+        max-width: 56mm;
+        overflow: wrap;
+        white-space: normal;
+        word-wrap: break-word;
+    }
+    .text.artist {
+        font-size: 18px;
+    }
+    .text.year {
+        font-size: 36px;
+        font-weight: bold;
+    }
+    .text.name {
+        font-size: 16px;
+        font-style: italic;
+    }
+    .card-container:nth-of-type(6n) {
+        page-break-after: always;
+    }
+</style>
+</head>
+<body>
+<div class="page">
+    <% let index = 0; %>
+    <% tracks.forEach(function(track) { %>
+        <div class="card-container">
+            <div class="card front" style="<%= !eco && php.backgroundFrontType === 'solid' ? (php.useFrontGradient ? 'background: linear-gradient(' + (php.gradientFrontDegrees || 180) + 'deg, ' + (php.backgroundFrontColor || '#ffffff') + ' ' + Math.max(0, (php.gradientFrontPosition || 50) - 50) + '%, ' + (php.gradientFrontColor || '#ffffff') + ' ' + Math.min(100, (php.gradientFrontPosition || 50) + 50) + '%);' : 'background: ' + (php.backgroundFrontColor || '#ffffff') + ';') : '' %>">
+                <% if (!eco && php.backgroundFrontType !== 'solid') { %>
+                    <% if (php.background && php.background.length) { %>
+                        <img class="background-image" src="<%= process.env['API_URI'] %>/public/background/<%= php.background %>" alt="Card Background">
+                    <% } else { %>
+                        <img class="background-image" src="<%= process.env['API_URI'] %>/assets/images/background_new.png" alt="Card Background">
+                    <% } %>
+                <% } %>
+                <% if (php.logo && php.logo.length) { %>
+                    <img class="logo" src="<%= process.env['API_URI'] %>/public/logo/<%= php.logo %>" alt="Logo" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
+                <% } %>
+                <%
+                // Determine QR background type - handle backward compatibility
+                let qrBgType = php.qrBackgroundType || (php.hideCircle ? 'none' : 'square');
+                let qrBgColor = php.qrBackgroundColor || '#ffffff';
+                %>
+                <% if (qrBgType === 'square') { %>
+                    <!-- Square background for QR code using SVG -->
+                    <svg style="position: absolute; width: 36.3mm; height: 36.3mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1;" xmlns="http://www.w3.org/2000/svg">
+                        <rect x="0" y="0" width="100%" height="100%" fill="<%= qrBgColor %>" />
+                    </svg>
+                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="position: absolute; width: 32mm; height: 32mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2;">
+                <% } else if (qrBgType === 'circle') { %>
+                    <!-- Circle background for QR code using SVG -->
+                    <svg style="position: absolute; width: 48mm; height: 48mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 1;" xmlns="http://www.w3.org/2000/svg">
+                        <circle cx="50%" cy="50%" r="24mm" fill="<%= qrBgColor %>" />
+                    </svg>
+                    <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="position: absolute; width: 36mm; height: 36mm; top: 50%; left: 50%; transform: translate(-50%, -50%); z-index: 2;">
+                <% } else { %>
+                    <!-- No background shape -->
+                    <div class="qr">
+                        <img src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= tracks[index].trackId %>.png" alt="QR Code" style="width: 32mm; height: 32mm;">
+                    </div>
+                <% } %>
+                <!-- <div class="title" style="padding-left:2mm;padding-right:2mm;"><%= playlist.name %></div> -->
+                <!-- Domain URL removed - always hidden -->
+            </div>
+            <div class="card back" style="position: relative;">
+                <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
+                    <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
+                <% } %>
+                <div class="text" style="margin-top: 0mm;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;">
+                    <%= track.artist %>
+                    <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
+                        <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
+                    <% } %>
+                </div>
+                <div class="text" style="margin-top: <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>3mm<% } else { %>5mm<% } %>;font-size:<%= php.selectedFont && php.selectedFont.includes('Bebas') ? '46px' : php.selectedFont && php.selectedFont.includes('Pacifico') ? '36px' : php.selectedFont && php.selectedFont.includes('Oswald') ? '42px' : php.selectedFont && php.selectedFont.includes('Playfair') ? '40px' : php.selectedFont && php.selectedFont.includes('Dancing') ? '38px' : php.selectedFont && php.selectedFont.includes('Fredoka') ? '40px' : php.selectedFont && php.selectedFont.includes('Caveat') ? '44px' : php.selectedFont && php.selectedFont.includes('Righteous') ? '42px' : php.selectedFont && php.selectedFont.includes('Alfa') ? '38px' : '44px' %>;font-weight:bold;padding-left:2mm;padding-right:2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;"><%= track.year %></div>
+                <div class="text" style="margin-top: <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>5mm<% } else { %>7mm<% } %>;font-size:<%= php.selectedFontSize || '16px' %>;padding-left:2mm;padding-right:2mm;color:<%= php.fontColor || '#000000' %>;position:relative;z-index:1;">
+                    <%= track.name %>
+                    <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
+                        <div style="font-family: Arial, sans-serif; font-size: 10px; color: <%= php.fontColor || '#666' %>; margin-top: 1mm;"><%= track.extraNameAttribute %></div>
+                    <% } %>
+                </div>
+                <!-- Domain URL removed from back side - always hidden -->
+            </div>
+        </div>
+        <% index++ %>
+    <% }); %>
+</div>
+</body>
+</html>

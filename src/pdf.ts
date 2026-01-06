@@ -466,6 +466,8 @@ class PDF {
     const isDigitalTemplate =
       template === 'digital' ||
       template === 'digital_double' ||
+      template === 'digital_us' ||
+      template === 'digital_double_us' ||
       template === 'printer_sheets';
 
     const itemsPerPage = isDigitalTemplate ? 6 : 1;
@@ -505,11 +507,13 @@ class PDF {
         const tempFilename = `temp_${i}_${filename}`;
         const tempFilePath = `${process.env['PUBLIC_DIR']}/pdf/${tempFilename}`;
 
+        // Determine page size for digital templates (US Letter for _us templates, A4 otherwise)
+        const isUsTemplate = template.endsWith('_us');
+
         let options = {
           File: url,
           RespectViewport: 'false',
           ConversionDelay: 10,
-          PageSize: 'a4',
           MarginTop: 0,
           MarginRight: 0,
           MarginBottom: 0,
@@ -519,8 +523,16 @@ class PDF {
         } as any;
 
         if (!isDigitalTemplate) {
+          // Printer templates use 60x60mm pages
           options['PageWidth'] = 60;
           options['PageHeight'] = 60;
+        } else if (isUsTemplate) {
+          // US Letter: 8.5" x 11" = 215.9mm x 279.4mm
+          options['PageWidth'] = 215.9;
+          options['PageHeight'] = 279.4;
+        } else {
+          // A4: 210mm x 297mm
+          options['PageSize'] = 'a4';
         }
 
         const result = await this.convertapi.convert('pdf', options, 'htm');
@@ -606,6 +618,8 @@ class PDF {
     const isDigitalTemplate =
       template === 'digital' ||
       template === 'digital_double' ||
+      template === 'digital_us' ||
+      template === 'digital_double_us' ||
       template === 'printer_sheets';
 
     // Calculate chunking parameters
@@ -633,8 +647,11 @@ class PDF {
       marginLeft: 0,
     };
 
+    // Determine page size for digital templates (US Letter for _us templates, A4 otherwise)
+    const isUsTemplate = template.endsWith('_us');
+
     if (isDigitalTemplate) {
-      options.format = 'a4';
+      options.format = isUsTemplate ? 'letter' : 'a4';
     } else {
       // Printer templates (including custom ones) use 60x60mm pages
       options.width = 60;
