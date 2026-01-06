@@ -2840,6 +2840,27 @@ class Data {
         orderBy: [{ id: 'desc' }],
       });
 
+      // Get purchase counts for all playlists in one query
+      const playlistIds = playlists.map((p) => p.id);
+      const purchaseCounts = await this.prisma.paymentHasPlaylist.groupBy({
+        by: ['playlistId'],
+        where: {
+          playlistId: { in: playlistIds },
+          payment: {
+            status: 'paid',
+          },
+        },
+        _count: {
+          playlistId: true,
+        },
+      });
+
+      // Create a map for quick lookup
+      const purchaseCountMap = new Map<number, number>();
+      for (const pc of purchaseCounts) {
+        purchaseCountMap.set(pc.playlistId, pc._count.playlistId);
+      }
+
       // Get user info for each playlist
       const playlistsWithUsers = await Promise.all(
         playlists.map(async (p) => {
@@ -2850,6 +2871,14 @@ class Data {
               select: { email: true, displayName: true },
             });
           }
+
+          // Get total purchases and subtract 1 if this is a promotional playlist
+          // (to exclude the original owner's purchase)
+          let purchaseCount = purchaseCountMap.get(p.id) || 0;
+          if (p.promotionalActive && p.promotionalAccepted && purchaseCount > 0) {
+            purchaseCount = Math.max(0, purchaseCount - 1);
+          }
+
           return {
             id: p.id,
             playlistId: p.playlistId,
@@ -2863,6 +2892,7 @@ class Data {
             isPromotional: p.promotionalActive && p.promotionalAccepted,
             userEmail: user?.email || null,
             userDisplayName: user?.displayName || null,
+            purchaseCount,
           };
         })
       );
