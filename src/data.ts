@@ -1241,7 +1241,8 @@ class Data {
         FROM tracks
         INNER JOIN playlist_has_tracks ON tracks.id = playlist_has_tracks.trackId
         LEFT JOIN trackextrainfo tei ON tei.trackId = tracks.id AND tei.playlistId = ${playlistId}
-        WHERE playlist_has_tracks.playlistId = ${playlistId}`;
+        WHERE playlist_has_tracks.playlistId = ${playlistId}
+        ORDER BY playlist_has_tracks.order ASC`;
 
     return tracks;
   }
@@ -1978,9 +1979,28 @@ class Data {
         WHERE trackId IN (${Prisma.join(providedTrackIds)})
       `;
 
+      // Update order for existing tracks (INSERT IGNORE skips these)
+      // Need qualified column names for UPDATE with JOIN
+      const updateOrderCases: Prisma.Sql[] = [];
+      for (const [trackId, order] of trackOrder.entries()) {
+        updateOrderCases.push(
+          Prisma.sql`WHEN t.trackId = ${trackId} THEN ${order}`
+        );
+      }
+      await this.prisma.$executeRaw`
+        UPDATE playlist_has_tracks pht
+        INNER JOIN tracks t ON pht.trackId = t.id
+        SET pht.\`order\` = CASE
+          ${Prisma.join(updateOrderCases, ' ')}
+          ELSE pht.\`order\`
+        END
+        WHERE pht.playlistId = ${playlistDatabaseId}
+          AND t.trackId IN (${Prisma.join(providedTrackIds)})
+      `;
+
       this.logger.log(
         color.green.bold(
-          `Inserted playlist_has_tracks records with Excel row order for ${color.white.bold(
+          `Stored playlist_has_tracks with track order for ${color.white.bold(
             providedTrackIds.length
           )} tracks`
         )

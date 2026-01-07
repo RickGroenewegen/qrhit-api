@@ -1146,11 +1146,16 @@ class Suggestion {
         };
       }
 
-      // Store updated tracks in database
+      // Store updated tracks in database with order from Spotify playlist
+      const trackOrder = new Map<string, number>();
+      spotifyTracks.data.tracks.forEach((track: any, index: number) => {
+        trackOrder.set(track.id, index + 1);
+      });
       await this.data.storeTracks(
         playlist.id,
         playlistId,
-        spotifyTracks.data.tracks
+        spotifyTracks.data.tracks,
+        trackOrder
       );
 
       // Update playlist numberOfTracks to match Spotify

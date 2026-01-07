@@ -502,7 +502,17 @@ class Generator {
       )
     );
 
-    await this.data.storeTracks(playlist.id, playlist.playlistId, tracks);
+    // Create trackOrder map from Spotify array index to preserve playlist order
+    const trackOrder = new Map<string, number>();
+    tracks.forEach((track: any, index: number) => {
+      trackOrder.set(track.id, index + 1);
+    });
+    await this.data.storeTracks(
+      playlist.id,
+      playlist.playlistId,
+      tracks,
+      trackOrder
+    );
 
     // Trigger MusicFetch processing asynchronously (non-blocking)
     this.triggerMusicFetchForPlaylist(playlist.id);
