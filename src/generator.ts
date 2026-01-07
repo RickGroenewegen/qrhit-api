@@ -12,6 +12,7 @@ import * as path from 'path';
 import Data from './data';
 import PushoverClient from './pushover';
 import Spotify from './spotify';
+import { MusicProviderFactory } from './providers';
 import Mail from './mail';
 import QR from './qr';
 import PDF from './pdf';
@@ -34,6 +35,7 @@ class Generator {
   private data = Data.getInstance();
   private pushover = new PushoverClient();
   private spotify = Spotify.getInstance();
+  private musicProviderFactory = MusicProviderFactory.getInstance();
   private mail = Mail.getInstance();
   private qr = new QR();
   private pdf = new PDF();
@@ -454,10 +456,11 @@ class Generator {
     userAgent: string = ''
   ): Promise<void> {
     let exists = true;
+    const serviceType = playlist.serviceType || 'spotify';
 
     this.logger.log(
       blue.bold(
-        `Retrieving tracks for playlist: ${white.bold(playlist.playlistId)}`
+        `Retrieving tracks for playlist: ${white.bold(playlist.playlistId)} (service: ${serviceType})`
       )
     );
 
@@ -472,16 +475,14 @@ class Generator {
       );
     }
 
-    // Retrieve the tracks from Spotify
-    const response = await this.spotify.getTracks(
-      playlist.playlistId,
-      !refreshCache,
-      '',
-      false,
-      false,
-      clientIp,
-      userAgent
-    );
+    // Retrieve tracks using the appropriate provider via factory
+    const provider = this.musicProviderFactory.getProvider(serviceType);
+    const response = await provider.getTracks(playlist.playlistId);
+
+    if (!response.success || !response.data) {
+      throw new Error(`Failed to fetch tracks from ${serviceType}: ${response.error || 'Unknown error'}`);
+    }
+
     const tracks = response.data.tracks;
 
     // If there are more than 500 remove the last tracks
@@ -502,7 +503,7 @@ class Generator {
       )
     );
 
-    // Create trackOrder map from Spotify array index to preserve playlist order
+    // Create trackOrder map from array index to preserve playlist order
     const trackOrder = new Map<string, number>();
     tracks.forEach((track: any, index: number) => {
       trackOrder.set(track.id, index + 1);
@@ -511,7 +512,8 @@ class Generator {
       playlist.id,
       playlist.playlistId,
       tracks,
-      trackOrder
+      trackOrder,
+      serviceType
     );
 
     // Trigger MusicFetch processing asynchronously (non-blocking)

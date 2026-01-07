@@ -814,11 +814,12 @@ class Data {
     playlistId: string | null = null
   ): Promise<any[]> {
     let query = `
-      SELECT 
+      SELECT
         playlists.id,
         playlists.playlistId,
         playlists.name,
         playlists.type AS productType,
+        playlists.serviceType,
         playlists.giftcardAmount,
         playlists.giftcardFrom,
         playlists.giftcardMessage,
@@ -1119,6 +1120,7 @@ class Data {
             price: cartItem.price,
             numberOfTracks: cartItem.numberOfTracks,
             type: cartItem.productType,
+            serviceType: cartItem.serviceType || 'spotify',
             giftcardAmount,
             giftcardFrom,
             giftcardMessage,
@@ -1142,6 +1144,7 @@ class Data {
             price: cartItem.price,
             numberOfTracks: cartItem.numberOfTracks,
             name: cartItem.playlistName,
+            serviceType: cartItem.serviceType || playlist.serviceType || 'spotify',
             resetCache: doResetCache,
           },
         });
@@ -1737,7 +1740,8 @@ class Data {
     playlistDatabaseId: number,
     playlistId: string,
     tracks: any,
-    trackOrder?: Map<string, number>
+    trackOrder?: Map<string, number>,
+    serviceType: string = 'spotify'
   ): Promise<any> {
     // Filter out any tracks with null/undefined artists or episode URLs (podcast episodes)
     const validTracks = tracks.filter((track: any) => {
@@ -1813,6 +1817,17 @@ class Data {
       existingTracks.map((track) => [track.trackId, track])
     );
 
+    // Map service types to their corresponding link field names
+    const serviceLinkFieldMap: Record<string, string> = {
+      spotify: 'spotifyLink',
+      youtube_music: 'youtubeMusicLink',
+      apple_music: 'appleMusicLink',
+      deezer: 'deezerLink',
+      tidal: 'tidalLink',
+      amazon_music: 'amazonMusicLink',
+    };
+    const linkField = serviceLinkFieldMap[serviceType] || 'spotifyLink';
+
     // Step 2: Separate new and existing tracks, and check for changes
     const newTracks = [];
     const tracksToUpdate = [];
@@ -1820,14 +1835,18 @@ class Data {
     for (const track of validTracks) {
       const existingTrack = existingTrackMap.get(track.id);
       if (existingTrack) {
-        // Check if any data has changed
+        // Check if any data has changed (only compare spotifyLink for Spotify tracks)
+        const linkChanged = linkField === 'spotifyLink'
+          ? existingTrack.spotifyLink !== (track.link || track.serviceLink)
+          : false;
+
         if (
           existingTrack.name !== this.utils.cleanTrackName(track.name) ||
           existingTrack.isrc !== track.isrc ||
           existingTrack.album !== this.utils.cleanTrackName(track.album) ||
           existingTrack.preview !== track.preview ||
           existingTrack.artist !== track.artist ||
-          existingTrack.spotifyLink !== track.link
+          linkChanged
         ) {
           if (!existingTrack.manuallyCorrected) {
             tracksToUpdate.push(track);
@@ -1858,12 +1877,16 @@ class Data {
             'artist'
           );
 
+          // Determine the service link from track data
+          const serviceLink = track.serviceLink || track.link;
+
           return {
             trackId: track.id,
             name: sanitizedTitle,
             isrc: track.isrc,
             artist: sanitizedArtist,
-            spotifyLink: track.link,
+            // Store link in the appropriate field based on service type
+            [linkField]: serviceLink,
             album: this.utils.cleanTrackName(track.album),
             preview: track.preview,
           };

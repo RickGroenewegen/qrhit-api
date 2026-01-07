@@ -7,6 +7,9 @@ import Logger from '../logger';
 import Utils from '../utils';
 import Translation from '../translation';
 import fs from 'fs/promises';
+import MusicServiceRegistry from '../services/MusicServiceRegistry';
+import { YouTubeMusicProvider } from '../providers';
+import { ServiceType } from '../enums/ServiceType';
 
 export default async function musicRoutes(fastify: FastifyInstance) {
   const spotify = Spotify.getInstance();
@@ -15,6 +18,8 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   const logger = new Logger();
   const utils = new Utils();
   const translation = new Translation();
+  const musicRegistry = MusicServiceRegistry.getInstance();
+  const ytMusicProvider = YouTubeMusicProvider.getInstance();
 
   // Get Spotify authorization URL
   fastify.get('/spotify/auth-url', async (_request, reply) => {
@@ -51,6 +56,188 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       userAgent
     );
   });
+
+  // ============================================
+  // YouTube Music Routes
+  // ============================================
+
+  // Get YouTube Music playlist info
+  fastify.post('/youtube-music/playlists', async (request: any, reply) => {
+    const { playlistId, url } = request.body;
+
+    let resolvedPlaylistId = playlistId;
+
+    // If URL is provided instead of playlistId, extract the ID
+    if (!resolvedPlaylistId && url) {
+      resolvedPlaylistId = ytMusicProvider.extractPlaylistId(url);
+      if (!resolvedPlaylistId) {
+        return {
+          success: false,
+          error: 'Could not extract playlist ID from URL',
+        };
+      }
+    }
+
+    if (!resolvedPlaylistId) {
+      return {
+        success: false,
+        error: 'Missing playlistId or url parameter',
+      };
+    }
+
+    const result = await ytMusicProvider.getPlaylist(resolvedPlaylistId);
+    return result;
+  });
+
+  // Get YouTube Music playlist tracks
+  fastify.post('/youtube-music/playlists/tracks', async (request: any, reply) => {
+    const { playlistId, url } = request.body;
+
+    let resolvedPlaylistId = playlistId;
+
+    if (!resolvedPlaylistId && url) {
+      resolvedPlaylistId = ytMusicProvider.extractPlaylistId(url);
+      if (!resolvedPlaylistId) {
+        return {
+          success: false,
+          error: 'Could not extract playlist ID from URL',
+        };
+      }
+    }
+
+    if (!resolvedPlaylistId) {
+      return {
+        success: false,
+        error: 'Missing playlistId or url parameter',
+      };
+    }
+
+    const result = await ytMusicProvider.getTracks(resolvedPlaylistId);
+    return result;
+  });
+
+  // Search YouTube Music tracks
+  fastify.post('/youtube-music/search', async (request: any, reply) => {
+    const { query, limit = 20, offset = 0 } = request.body;
+
+    if (!query) {
+      return {
+        success: false,
+        error: 'Missing query parameter',
+      };
+    }
+
+    const result = await ytMusicProvider.searchTracks(query, limit, offset);
+    return result;
+  });
+
+  // ============================================
+  // Unified Music Service Routes (Auto-detect service from URL)
+  // ============================================
+
+  // Get playlist info from any supported service
+  fastify.post('/music/playlists', async (request: any, reply) => {
+    const { url, serviceType, playlistId } = request.body;
+
+    // If URL is provided, auto-detect service
+    if (url) {
+      const result = await musicRegistry.getPlaylistFromUrl(url);
+      return result;
+    }
+
+    // If serviceType and playlistId are provided, use specific provider
+    if (serviceType && playlistId) {
+      const provider = musicRegistry.getProviderByString(serviceType);
+      if (!provider) {
+        return {
+          success: false,
+          error: `Unsupported service type: ${serviceType}`,
+        };
+      }
+      return await provider.getPlaylist(playlistId);
+    }
+
+    return {
+      success: false,
+      error: 'Missing url or (serviceType and playlistId) parameters',
+    };
+  });
+
+  // Get tracks from any supported service
+  fastify.post('/music/playlists/tracks', async (request: any, reply) => {
+    const { url, serviceType, playlistId } = request.body;
+
+    // If URL is provided, auto-detect service
+    if (url) {
+      const result = await musicRegistry.getTracksFromUrl(url);
+      return result;
+    }
+
+    // If serviceType and playlistId are provided, use specific provider
+    if (serviceType && playlistId) {
+      const provider = musicRegistry.getProviderByString(serviceType);
+      if (!provider) {
+        return {
+          success: false,
+          error: `Unsupported service type: ${serviceType}`,
+        };
+      }
+      return await provider.getTracks(playlistId);
+    }
+
+    return {
+      success: false,
+      error: 'Missing url or (serviceType and playlistId) parameters',
+    };
+  });
+
+  // Recognize URL and return service info
+  fastify.post('/music/recognize-url', async (request: any, reply) => {
+    const { url } = request.body;
+
+    if (!url) {
+      return {
+        success: false,
+        error: 'Missing url parameter',
+      };
+    }
+
+    const result = musicRegistry.recognizeUrl(url);
+
+    if (!result.recognized) {
+      return {
+        success: false,
+        error: 'URL not recognized as a supported music service',
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        serviceType: result.serviceType,
+        playlistId: result.playlistId,
+        isValid: result.validation?.isValid,
+        resourceType: result.validation?.resourceType,
+        errorType: result.validation?.errorType,
+        serviceConfig: result.provider?.config,
+      },
+    };
+  });
+
+  // Get list of available music services
+  fastify.get('/music/services', async (_request, reply) => {
+    return {
+      success: true,
+      data: {
+        services: musicRegistry.getAvailableServiceTypes(),
+        configs: musicRegistry.getServiceConfigs(),
+      },
+    };
+  });
+
+  // ============================================
+  // Existing Routes
+  // ============================================
 
   // Resolve Spotify shortlink by following redirects
   fastify.post('/resolve_shortlink', async (request: any, reply: any) => {

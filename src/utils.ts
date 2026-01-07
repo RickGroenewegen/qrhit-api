@@ -79,16 +79,26 @@ class Utils {
     // Remove "(feat. ...)" from the title
     str = str.replace(/\(feat\..*?\)/gi, '').trim();
 
-    // Title can be max. 70 characters. Add "..." if it's longer
-    if (str.length > 70) {
-      str = str.substring(0, 67) + '...';
-    }
-
     // Remove (Remastered) from the title
     str = str.replace(/\(Remastered\)/gi, '').trim();
 
     // Remove (Re-recorded) from the title
     str = str.replace(/\(Re-recorded\)/gi, '').trim();
+
+    // Remove (Classic Version) from the title
+    str = str.replace(/\(Classic Version\)/gi, '').trim();
+
+    // Remove (From "...") from the title (e.g., From "Pretty Woman")
+    str = str.replace(/\(From\s+[""].*?[""]\)/gi, '').trim();
+
+    // Remove video-related tags (Official Video, Official Music Video, Official HD Video, Official 4K Video)
+    str = str.replace(/\(Official\s*(Music\s*)?Video\)/gi, '').trim();
+    str = str.replace(/\(Official\s*(HD|4K)\s*Video\)/gi, '').trim();
+
+    // Title can be max. 70 characters. Add "..." if it's longer (do this last after all cleaning)
+    if (str.length > 70) {
+      str = str.substring(0, 67) + '...';
+    }
 
     return str;
   }

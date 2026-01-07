@@ -237,12 +237,20 @@ export class Music {
     artist: string,
     title: string
   ): Promise<{ year: number; source: string }> {
-    let result = await this.prisma.isrc.findUnique({
-      where: {
-        isrc: isrc,
-      },
-    });
+    // Only do ISRC lookup if we have a valid ISRC
+    if (isrc && isrc.trim()) {
+      let result = await this.prisma.isrc.findUnique({
+        where: {
+          isrc: isrc,
+        },
+      });
 
+      if (result && result.year) {
+        return { year: result.year, source: 'isrc_cache' };
+      }
+    }
+
+    // Fall back to artist/title search
     let apiResult = await this.getReleaseDateFromMusicBrainzAPI(
       isrc,
       artist,
@@ -275,6 +283,11 @@ export class Music {
     title: string,
     mode: string = 'isrc'
   ): Promise<{ year: number; source: string }> {
+    // If mode is 'isrc' but we don't have a valid ISRC, return early
+    if (mode === 'isrc' && (!isrc || !isrc.trim())) {
+      return { year: 0, source: '' };
+    }
+
     let retryCount = 0;
     while (retryCount < this.mbMaxRetries) {
       await this.rateLimitDelay();
