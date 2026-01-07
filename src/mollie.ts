@@ -449,6 +449,10 @@ class Mollie {
         ? { status: { in: search.status } }
         : {};
 
+    // Check if text search is a number (for PaymentHasPlaylist.id search)
+    const textSearchIsNumber =
+      search.textSearch && !isNaN(parseInt(search.textSearch.trim(), 10));
+
     const textSearchClause =
       search.textSearch && search.textSearch.trim() !== ''
         ? {
@@ -477,6 +481,17 @@ class Mollie {
                   },
                 },
               },
+              ...(textSearchIsNumber
+                ? [
+                    {
+                      PaymentHasPlaylist: {
+                        some: {
+                          id: parseInt(search.textSearch.trim(), 10),
+                        },
+                      },
+                    },
+                  ]
+                : []),
             ],
           }
         : {};
