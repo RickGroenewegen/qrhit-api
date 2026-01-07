@@ -198,6 +198,7 @@
             border-bottom-left-radius: 4px;
         }
         
+        thead th:nth-child(2),
         thead th:nth-child(3),
         thead th:nth-child(4) {
             text-align: right;
@@ -223,7 +224,7 @@
         }
         
         tbody td:nth-child(2) {
-            text-align: center;
+            text-align: right;
         }
         
         tbody td:nth-child(3),
@@ -276,6 +277,10 @@
             text-align: right;
             padding-right: 20px;
             color: #666;
+        }
+
+        .totals-table td[colspan] {
+            text-align: right;
         }
         
         .total-row.subtotal td {
@@ -341,6 +346,8 @@
         /* Terms Section */
         .terms-section {
             margin-bottom: 25px;
+            page-break-before: always;
+            padding-top: 15mm;
         }
         
         .section-title {
@@ -383,6 +390,8 @@
         /* Notes Section */
         .notes-section {
             margin-bottom: 40px;
+            page-break-before: always;
+            padding-top: 15mm;
         }
         
         .notes-content {
@@ -527,6 +536,17 @@
                         <td>€&nbsp;<%= calculationResult.pricing.commercialPricePerBox.toFixed(2).replace('.', ',') %></td>
                         <td>€&nbsp;<%= (calculationResult.pricing.commercialPricePerBox * calculation.quantity).toFixed(2).replace('.', ',') %></td>
                     </tr>
+                    <% if (calculationResult.pricing.customAppFee > 0) { %>
+                    <tr>
+                        <td>
+                            <span class="item-description">App in eigen stijl</span>
+                            <span class="item-details">Eenmalige kosten - maatwerk app ontwikkeling</span>
+                        </td>
+                        <td>1</td>
+                        <td>€&nbsp;350,00</td>
+                        <td>€&nbsp;350,00</td>
+                    </tr>
+                    <% } %>
                 </tbody>
             </table>
         </div>
@@ -556,7 +576,27 @@
             </table>
         </div>
         
-        <!-- Terms and Conditions -->
+        <!-- Notes Section (Page 2) -->
+        <div class="notes-section">
+            <h2 class="section-title">Productinformatie</h2>
+            <div class="notes-content">
+                <strong>Wat wordt geleverd:</strong><br>
+                • <%= calculationResult.quantity %> complete HappiBox sets<br>
+                • Elke set bevat: Een doos met <%= calculationResult.cardsPerBox %> QR-muziekkaarten<br>
+                • Totaal: <%= calculationResult.quantity %> dozen en <%= calculationResult.quantity * calculationResult.cardsPerBox %> kaarten<br><br>
+
+                <strong>Specificaties Doosje:</strong><br>
+                • Hoogwaardig karton met full-colour bedrukking<br>
+                • Persoonlijke branding mogelijk<br><br>
+
+                <strong>Specificaties Kaarten:</strong><br>
+                • Dubbelzijdig full-colour geprint<br>
+                • Formaat: 6 x 6 cm<br>
+                • Unieke QR-code per kaart die linkt naar Spotify
+            </div>
+        </div>
+
+        <!-- Terms and Conditions (Page 3) -->
         <div class="terms-section">
             <h2 class="section-title">Algemene Voorwaarden</h2>
             <ol class="terms-list">
@@ -564,6 +604,9 @@
                 <li>Alle bedragen zijn in EUR, betaling via bankoverschrijving.</li>
                 <li>Bij akkoord graag deze offerte ondertekend retour.</li>
                 <li>Deze offerte is geldig tot <%= formatDate(validUntil) %>.</li>
+                <li>De QR-codes linken naar Spotify. Wij streven ernaar links werkend te houden en kunnen deze updaten indien nodig. Echter, als Spotify een nummer volledig verwijdert, is dit buiten onze controle.</li>
+                <li>De app werkt ook zonder Spotify Premium, maar dan ziet de gebruiker na een korte countdown de artiest/titel en speelt een 30-seconden preview. Met Premium blijft alles verborgen tot je raadt.</li>
+                <li>Beperking van Aansprakelijkheid: OnzeVibe is niet aansprakelijk voor indirecte of gevolgschade, fouten in de inhoud, verlies van gegevens, of schade door onjuist gebruik van de kaarten of app.</li>
             </ol>
         </div>
         

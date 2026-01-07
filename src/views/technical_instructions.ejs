@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="nl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <title>Technische Instructies - <%= company.name %></title>
+    <style>
+        @media print {
+            @page {
+                size: A4;
+                margin: 15mm;
+            }
+            body {
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
+            }
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            background: white;
+            font-size: 14px;
+            margin: 0;
+            padding: 0;
+        }
+
+        .container {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 0 auto;
+            padding: 15mm;
+            box-sizing: border-box;
+            background: white;
+            border: 1px solid #eee;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
+        }
+
+        /* Page break handling */
+        .section {
+            page-break-inside: avoid;
+        }
+
+        .instructions-list li {
+            page-break-inside: avoid;
+        }
+
+        .warning-box {
+            page-break-inside: avoid;
+        }
+
+        @media print {
+            .container {
+                border: none;
+                box-shadow: none;
+                width: 100%;
+            }
+        }
+
+        /* Header Section */
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 3px solid #5FBFFF;
+        }
+
+        .header-title {
+            font-size: 36px;
+            color: #5FBFFF;
+            font-weight: 300;
+            letter-spacing: -1px;
+        }
+
+        .header-subtitle {
+            font-size: 14px;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .company-section {
+            text-align: right;
+        }
+
+        .company-section .label {
+            font-size: 10px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 8px;
+        }
+
+        .logo {
+            height: 50px;
+            width: auto;
+            margin-bottom: 8px;
+        }
+
+        .company-details {
+            font-size: 11px;
+            color: #666;
+            line-height: 1.3;
+            text-align: right;
+        }
+
+        /* Client Info */
+        .client-info {
+            background: #f9f9f9;
+            padding: 15px 20px;
+            border-radius: 4px;
+            margin-bottom: 30px;
+            border-left: 4px solid #5FBFFF;
+        }
+
+        .client-info .label {
+            font-size: 10px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 5px;
+        }
+
+        .client-info .name {
+            font-size: 18px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Section Styling */
+        .section {
+            margin-bottom: 20px;
+        }
+
+        .section-title {
+            font-size: 16px;
+            font-weight: 600;
+            color: #5FBFFF;
+            margin-bottom: 10px;
+            padding-bottom: 6px;
+            border-bottom: 2px solid #5FBFFF;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .section-icon {
+            width: 22px;
+            height: 22px;
+            background: #5FBFFF;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            font-size: 12px;
+        }
+
+        /* Instructions List */
+        .instructions-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .instructions-list li {
+            position: relative;
+            padding: 8px 12px 8px 35px;
+            margin-bottom: 5px;
+            background: #fafafa;
+            border-radius: 4px;
+            border-left: 3px solid #5FBFFF;
+            font-size: 12px;
+            line-height: 1.5;
+            color: #444;
+        }
+
+        .instructions-list li:before {
+            content: '';
+            position: absolute;
+            left: 12px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 6px;
+            height: 6px;
+            background: #5FBFFF;
+            border-radius: 50%;
+        }
+
+        .instructions-list li strong {
+            color: #333;
+        }
+
+        .instructions-list li em {
+            color: #666;
+            font-style: normal;
+            background: #e8f4fc;
+            padding: 1px 5px;
+            border-radius: 3px;
+            font-size: 11px;
+        }
+
+        /* Highlight Box */
+        .highlight-box {
+            background: linear-gradient(135deg, #e8f4fc 0%, #d4ecfa 100%);
+            border: 1px solid #5FBFFF;
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin-top: 8px;
+            margin-bottom: 10px;
+        }
+
+        .highlight-box .title {
+            font-weight: 600;
+            color: #2980b9;
+            margin-bottom: 3px;
+            font-size: 12px;
+        }
+
+        .highlight-box .content {
+            color: #444;
+            font-size: 11px;
+            line-height: 1.5;
+        }
+
+        /* Warning Box */
+        .warning-box {
+            background: #fff8e6;
+            border: 1px solid #f0ad4e;
+            border-radius: 6px;
+            padding: 8px 12px;
+            margin-top: 6px;
+            display: flex;
+            align-items: flex-start;
+            gap: 8px;
+        }
+
+        .warning-box .icon {
+            color: #f0ad4e;
+            font-size: 14px;
+            font-weight: bold;
+        }
+
+        .warning-box .text {
+            color: #8a6d3b;
+            font-size: 11px;
+            line-height: 1.4;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e0e0e0;
+            text-align: center;
+        }
+
+        .footer-content {
+            font-size: 12px;
+            color: #666;
+            line-height: 1.6;
+        }
+
+        .footer-content a {
+            color: #5FBFFF;
+            text-decoration: none;
+        }
+
+        .date-generated {
+            font-size: 11px;
+            color: #999;
+            margin-top: 10px;
+        }
+
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div>
+                <h1 class="header-title">Technische Instructies</h1>
+                <p class="header-subtitle">Aanlevering artwork en bestanden</p>
+            </div>
+            <div class="company-section">
+                <div class="label">Document van</div>
+                <img src="<%= baseUrl %>/assets/images/logo.png" alt="QRSong!" class="logo" />
+                <div class="company-details">
+                    QRSong!<br>
+                    info@qrsong.io
+                </div>
+            </div>
+        </div>
+
+        <!-- Client Info -->
+        <div class="client-info">
+            <div class="label">Instructies voor</div>
+            <div class="name"><%= company.name %></div>
+        </div>
+
+        <!-- Section 1: Boxes / AI Files -->
+        <div class="section">
+            <h2 class="section-title">
+                <span class="section-icon">1</span>
+                Instructies Dozen / AI Bestanden
+            </h2>
+
+            <ul class="instructions-list">
+                <li>Aanlevering als <strong>PDF</strong></li>
+                <li><strong>3mm bleed/afloop</strong> aanbrengen bij aflopende druk</li>
+                <li>Stansmestekeningen <strong>niet verschalen</strong></li>
+                <li>Stansmestekeningen op <strong>overdruk laten staan</strong> in de separate lagen (dus niet integreren in de full colour)</li>
+                <li><strong>Geen PMS-kleuren</strong> gebruiken, in full colour opmaken</li>
+                <li><strong>Trimbox laten staan</strong>, niet vergroten/verplaatsen</li>
+                <li>Aanleveren als <strong>drie aparte PDF's</strong> (tenzij de bedrukking voor de kleine doosjes identiek is)</li>
+                <li>Resolutie minimaal <em>150 dpi</em></li>
+            </ul>
+
+            <div class="warning-box">
+                <span class="icon">!</span>
+                <div class="text">
+                    <strong>Let op:</strong> De voorzijde van de kleine doosjes is de zijde met de twee inkepingen.
+                </div>
+            </div>
+
+            <div class="warning-box">
+                <span class="icon">!</span>
+                <div class="text">
+                    <strong>Let op:</strong> Wanneer bij het omdoosje teksten op de zijkant en rug geplaatst worden, controleer dan of deze niet op z'n kop staan na het vouwen.
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Cards -->
+        <div class="section">
+            <h2 class="section-title">
+                <span class="section-icon">2</span>
+                Instructies Kaarten
+            </h2>
+
+            <ul class="instructions-list">
+                <li>QR codes zullen <strong>in het midden van de kaart</strong> geplaatst worden</li>
+                <li>Voor de voor- en achterkant een <strong>vierkante afbeelding</strong> aanleveren van minstens <em>1600x1600 pixels</em>, liefst als PSD</li>
+                <li>De QR scanner werkt het beste met een <strong>donkerdere QR code op een lichtere achtergrond</strong></li>
+                <li>Ontwerp aanleveren als <strong>PSD bestand</strong>, met de QR code in een aparte layer zodat deze uit te zetten is</li>
+                <li>Wanneer er de wens is voor een ander font dient er gekozen te worden uit de <strong>Google Fonts</strong></li>
+            </ul>
+
+            <div class="highlight-box">
+                <div class="title">Tip voor optimale scanbaarheid</div>
+                <div class="content">Zorg voor voldoende contrast tussen de QR code en de achtergrond. Een donkere QR code (zwart, donkerblauw, donkergroen) op een lichte achtergrond (wit, crème, lichtgrijs) geeft de beste resultaten.</div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-content">
+                Vragen over deze instructies? Neem contact op via <a href="mailto:info@qrsong.io">info@qrsong.io</a>
+            </div>
+            <div class="date-generated">
+                Document gegenereerd op <%= formatDate(new Date()) %>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

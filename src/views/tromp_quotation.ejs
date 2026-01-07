@@ -198,6 +198,7 @@
             border-bottom-left-radius: 4px;
         }
 
+        thead th:nth-child(2),
         thead th:nth-child(3),
         thead th:nth-child(4) {
             text-align: right;
@@ -223,7 +224,7 @@
         }
 
         tbody td:nth-child(2) {
-            text-align: center;
+            text-align: right;
         }
 
         tbody td:nth-child(3),
@@ -314,7 +315,7 @@
         .terms-section {
             margin-bottom: 25px;
             page-break-before: always;
-            padding-top: 20px;
+            padding-top: 15mm; /* Match container padding for proper page 2 top margin */
         }
 
         .section-title {
@@ -357,6 +358,8 @@
         /* Notes Section */
         .notes-section {
             margin-bottom: 40px;
+            page-break-before: always;
+            padding-top: 15mm;
         }
 
         .notes-content {
@@ -512,6 +515,17 @@
                         </tr>
                         <% }); %>
                     <% } %>
+                    <% if (calculationResult.customAppFee > 0) { %>
+                    <tr>
+                        <td>
+                            <span class="item-description">App in eigen stijl</span>
+                            <span class="item-details">Eenmalige kosten - maatwerk app ontwikkeling</span>
+                        </td>
+                        <td>1</td>
+                        <td>€&nbsp;350,00</td>
+                        <td>€&nbsp;350,00</td>
+                    </tr>
+                    <% } %>
                 </tbody>
             </table>
         </div>
@@ -523,7 +537,8 @@
             const extrasTotal = calculationResult.extras && calculationResult.extras.length > 0
                 ? calculationResult.extras.reduce((sum, extra) => sum + extra.price, 0)
                 : 0;
-            const subtotal = mainProductTotal + extrasTotal;
+            const customAppFeeTotal = calculationResult.customAppFee || 0;
+            const subtotal = mainProductTotal + extrasTotal + customAppFeeTotal;
             const vat = Math.round(subtotal * 0.21 * 100) / 100; // Round VAT to 2 decimals
             const totalInclVat = subtotal + vat; // Add rounded VAT to subtotal
         %>
@@ -551,19 +566,7 @@
             </table>
         </div>
 
-        <!-- Terms and Conditions -->
-        <div class="terms-section">
-            <h2 class="section-title">Algemene Voorwaarden</h2>
-            <ol class="terms-list">
-                <li>Betaling dient te geschieden binnen 14 dagen na factuurdatum.</li>
-                <li>Alle bedragen zijn in EUR, betaling via bankoverschrijving.</li>
-                <li>Bij akkoord graag deze offerte ondertekend retour.</li>
-                <li>Deze offerte is geldig tot <%= formatDate(validUntil) %>.</li>
-                <li>Leveringstijd: conform bespreking.</li>
-            </ol>
-        </div>
-
-        <!-- Notes Section -->
+        <!-- Notes Section (Page 2) -->
         <div class="notes-section">
             <h2 class="section-title">Productinformatie</h2>
             <div class="notes-content">
@@ -586,6 +589,21 @@
                 • Formaat: 6 x 6 cm<br>
                 • Afwerking: per 2x50 stuks verpakt in doosjes
             </div>
+        </div>
+
+        <!-- Terms and Conditions (Page 3) -->
+        <div class="terms-section">
+            <h2 class="section-title">Algemene Voorwaarden</h2>
+            <ol class="terms-list">
+                <li>Betaling dient te geschieden binnen 14 dagen na factuurdatum.</li>
+                <li>Alle bedragen zijn in EUR, betaling via bankoverschrijving.</li>
+                <li>Bij akkoord graag deze offerte ondertekend retour.</li>
+                <li>Deze offerte is geldig tot <%= formatDate(validUntil) %>.</li>
+                <li>Leveringstijd: conform bespreking.</li>
+                <li>De QR-codes linken naar Spotify. Wij streven ernaar links werkend te houden en kunnen deze updaten indien nodig. Echter, als Spotify een nummer volledig verwijdert, is dit buiten onze controle.</li>
+                <li>De app werkt ook zonder Spotify Premium, maar dan ziet de gebruiker na een korte countdown de artiest/titel en speelt een 30-seconden preview. Met Premium blijft alles verborgen tot je raadt.</li>
+                <li>Beperking van Aansprakelijkheid: QRSong! is niet aansprakelijk voor indirecte of gevolgschade, fouten in de inhoud, verlies van gegevens, of schade door onjuist gebruik van de kaarten of app.</li>
+            </ol>
         </div>
 
         <!-- Footer -->

@@ -112,10 +112,6 @@ class PDF {
 
     if (bodyContent?.s3Key) {
       // Large PDF was uploaded to S3 - download it
-      this.logger.log(
-        color.blue.bold(`PDF stored in S3, downloading from: ${color.white.bold(bodyContent.s3Key)}`)
-      );
-
       const getCommand = new GetObjectCommand({
         Bucket: bodyContent.s3Bucket,
         Key: bodyContent.s3Key,
@@ -124,19 +120,12 @@ class PDF {
       const s3Response = await this.s3Client.send(getCommand);
       const pdfBuffer = Buffer.from(await s3Response.Body!.transformToByteArray());
 
-      this.logger.log(
-        color.blue.bold(`PDF downloaded from S3, size: ${white.bold(pdfBuffer.length)} bytes`)
-      );
-
       // Delete from S3 after downloading (lifecycle rule is backup)
       try {
         await this.s3Client.send(new DeleteObjectCommand({
           Bucket: bodyContent.s3Bucket,
           Key: bodyContent.s3Key,
         }));
-        this.logger.log(
-          color.blue.bold(`Deleted PDF from S3: ${color.white.bold(bodyContent.s3Key)}`)
-        );
       } catch (deleteError) {
         this.logger.log(
           color.yellow.bold(`Warning: Failed to delete PDF from S3: ${bodyContent.s3Key}`)
@@ -436,7 +425,7 @@ class PDF {
     itemIndex?: number
   ): Promise<string> {
     // Determine provider based on payment email
-    const useLambda = payment.email === 'west14@gmail.com';
+    const useLambda = true; // payment.email === 'west14@gmail.com';
 
     if (useLambda) {
       this.logger.log(color.blue.bold('Using Lambda PDF provider'));

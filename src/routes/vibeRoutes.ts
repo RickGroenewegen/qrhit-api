@@ -265,6 +265,7 @@ export default async function vibeRoutes(
             quantity: calculation.quantity || 100,
             includeStansmestekening: calculation.includeStansmestekening || false,
             includeStansvorm: calculation.includeStansvorm || false,
+            includeCustomApp: calculation.includeCustomApp || false,
             profitMargin: calculation.profitMargin || 0,
           });
 
@@ -304,6 +305,7 @@ export default async function vibeRoutes(
             isReseller: calculation.isReseller || false,
             manualDiscount: calculation.manualDiscount || 0,
             fluidMode: calculation.fluidMode || false,
+            includeCustomApp: calculation.includeCustomApp || false,
           });
 
           if (pricingResult.success) {
@@ -396,6 +398,117 @@ export default async function vibeRoutes(
       } catch (error) {
         console.error('Error generating quotation:', error);
         reply.status(500).send({ error: 'Failed to generate quotation' });
+      }
+    }
+  );
+
+  // Technical Instructions HTML View (for PDF generation)
+  fastify.get(
+    '/vibe/technical-instructions/:companyId',
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+
+        // Get company data
+        const companiesResult = await vibe.getAllCompanies();
+        const companies = companiesResult.data.companies;
+        const company = companies.find((c: any) => c.id === companyId);
+
+        if (!company) {
+          reply.status(404).send({ error: 'Company not found' });
+          return;
+        }
+
+        // Date formatting function
+        const formatDate = (date: Date) => {
+          const options: Intl.DateTimeFormatOptions = {
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric',
+          };
+          return date.toLocaleDateString('nl-NL', options);
+        };
+
+        // Get base URL for assets
+        const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
+
+        // Render the EJS template (matches quotation route pattern)
+        await reply.view('technical_instructions.ejs', {
+          company,
+          baseUrl,
+          formatDate,
+        });
+      } catch (error) {
+        console.error('Error rendering technical instructions:', error);
+        reply.status(500).send({ error: 'Failed to render technical instructions: ' + error });
+      }
+    }
+  );
+
+  // Generate Technical Instructions PDF
+  fastify.post(
+    '/vibe/technical-instructions/:companyId',
+    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+
+        if (isNaN(companyId)) {
+          reply.status(400).send({ error: 'Invalid company ID' });
+          return;
+        }
+
+        // Get company data
+        const companiesResult = await vibe.getAllCompanies();
+        const companies = companiesResult.data.companies;
+        const company = companies.find((c: any) => c.id === companyId);
+
+        if (!company) {
+          reply.status(404).send({ error: 'Company not found' });
+          return;
+        }
+
+        // Generate PDF using Lambda
+        const PDF = require('../pdf').default;
+        const pdfManager = new PDF();
+
+        // Prepare file path
+        const path = require('path');
+        const tempDir = '/tmp';
+        const fileName = `technical_instructions_${companyId}_${Date.now()}.pdf`;
+        const filePath = path.join(tempDir, fileName);
+
+        // Create the URL for the HTML rendering
+        const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
+        const htmlUrl = `${baseUrl}/vibe/technical-instructions/${companyId}`;
+
+        // Generate PDF
+        await pdfManager.generateFromUrl(htmlUrl, filePath, {
+          format: 'a4',
+          marginTop: 0,
+          marginBottom: 0,
+          marginLeft: 0,
+          marginRight: 0,
+        });
+
+        // Read the generated PDF
+        const fs = require('fs').promises;
+        const pdfBuffer = await fs.readFile(filePath);
+
+        // Clean up
+        await fs.unlink(filePath).catch(() => {});
+
+        // Generate filename for download
+        const downloadFilename = `Technische_Instructies_${company.name.replace(/[^a-zA-Z0-9]/g, '_')}.pdf`;
+
+        // Set response headers for PDF download
+        reply.header('Content-Type', 'application/pdf');
+        reply.header('Content-Disposition', `attachment; filename="${downloadFilename}"`);
+
+        reply.send(pdfBuffer);
+      } catch (error) {
+        console.error('Error generating technical instructions PDF:', error);
+        reply.status(500).send({ error: 'Failed to generate technical instructions PDF' });
       }
     }
   );
