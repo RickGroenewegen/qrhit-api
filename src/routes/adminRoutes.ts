@@ -3303,4 +3303,45 @@ export default async function adminRoutes(
       }
     }
   );
+
+  // Create Mollie payment link
+  fastify.post(
+    '/admin/create-payment-link',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { amount, description } = request.body;
+
+        if (!amount || typeof amount !== 'number' || amount <= 0) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid amount. Must be a positive number.',
+          });
+        }
+
+        const result = await mollie.createPaymentLink(amount, description);
+
+        if (!result.success) {
+          return reply.status(500).send({
+            success: false,
+            error: result.error || 'Failed to create payment link',
+          });
+        }
+
+        return reply.send({
+          success: true,
+          paymentLink: result.data.paymentLink,
+          paymentLinkId: result.data.paymentLinkId,
+          amount: result.data.amount,
+          description: result.data.description,
+        });
+      } catch (error: any) {
+        console.error('Error creating payment link:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to create payment link',
+        });
+      }
+    }
+  );
 }

@@ -1419,6 +1419,52 @@ class Mollie {
       },
     })) as Payment | null; // Add 'as Payment | null' to explicitly cast the returned object.
   }
+
+  public async createPaymentLink(
+    amount: number,
+    description?: string
+  ): Promise<ApiResult> {
+    try {
+      // Format amount to 2 decimal places
+      const formattedAmount = amount.toFixed(2);
+
+      // Use the live Mollie client for payment links
+      const paymentLink = await this.mollieClient.paymentLinks.create({
+        amount: {
+          currency: 'EUR',
+          value: formattedAmount,
+        },
+        description: description || `QRSong! Custom Payment - EUR ${formattedAmount}`,
+      });
+
+      const paymentUrl = paymentLink.getPaymentUrl();
+
+      this.logger.log(
+        color.green.bold('Created payment link: ') +
+          color.white.bold(paymentUrl || 'No URL')
+      );
+
+      return {
+        success: true,
+        data: {
+          paymentLinkId: paymentLink.id,
+          paymentLink: paymentUrl,
+          amount: formattedAmount,
+          description: paymentLink.description,
+        },
+      };
+    } catch (e) {
+      this.logger.log(
+        color.red.bold('Failed to create payment link: ') +
+          color.white(e instanceof Error ? e.message : String(e))
+      );
+
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : 'Failed to create payment link',
+      };
+    }
+  }
 }
 
 export default Mollie;
