@@ -1,0 +1,568 @@
+# Adding a New Music Service
+
+Complete guide for integrating a new music streaming service into QRSong.
+
+## Quick Reference - All Files to Touch
+
+### Backend (qrhit-api) - 11 files
+
+| # | File | Action |
+|---|------|--------|
+| 1 | `src/enums/ServiceType.ts` | Add enum + display name |
+| 2 | `src/providers/[Service]Provider.ts` | **Create** - implement IMusicProvider |
+| 3 | `src/providers/MusicProviderFactory.ts` | Add switch case |
+| 4 | `src/providers/index.ts` | Export provider |
+| 5 | `src/services/MusicServiceRegistry.ts` | Register in constructor |
+| 6 | `src/[service]_api.ts` | **Create** - API wrapper (if needed) |
+| 7 | `src/routes/musicRoutes.ts` | Add routes |
+| 8 | `src/data.ts` | Add to serviceLinkFieldMap (~line 1852) |
+| 9 | `src/settings.ts` | Add SettingKey types (if OAuth) |
+| 10 | `src/musicfetch.ts` | Add link field mappings |
+| 11 | `.env` | Add credentials |
+
+### Frontend (qrhit) - 15 files
+
+| # | File | Action |
+|---|------|--------|
+| 1 | `src/enums/MusicServiceType.ts` | Add enum + display name |
+| 2 | `src/interfaces/IMusicService.ts` | Add to MUSIC_SERVICE_CONFIGS |
+| 3 | `src/services/[service].service.ts` | **Create** - implement IMusicService |
+| 4 | `src/services/music-service.factory.ts` | Inject & register |
+| 5 | `src/app/[service]-callback/` | **Create** - OAuth callback (if OAuth) |
+| 6 | `src/app/app.routes.ts` | Add callback route (if OAuth) |
+| 7 | `src/app/home/home.component.html` | Add service icon to supported platforms |
+| 8 | `src/app/select-playlist/...html` | Add service logo (light + dark versions) |
+| 9 | `src/app/select-playlist/...ts` | Handle shortlinks (if service has shortlinks) |
+| 10 | `src/app/summary/summary.component.ts` | Add service methods & inject service |
+| 11 | `src/app/year-check/year-check.component.ts` | Add to serviceConfig |
+| 12 | `src/assets/i18n/en.json` | Add translations |
+| 13 | `src/assets/images/service-logos/` | **Create** - logo PNGs (light + dark) |
+| 14 | `src/environments/environment.ts` | Add clientId (if OAuth) |
+| 15 | `src/environments/environment.prod.ts` | Add clientId (if OAuth) |
+
+---
+
+## Step-by-Step Implementation
+
+### BACKEND
+
+#### Step 1: ServiceType Enum
+**File:** `src/enums/ServiceType.ts`
+```typescript
+export enum ServiceType {
+  // existing...
+  NEW_SERVICE = 'new_service',
+}
+
+export const ServiceTypeDisplayNames: Record<ServiceType, string> = {
+  // existing...
+  [ServiceType.NEW_SERVICE]: 'New Service',
+};
+```
+
+#### Step 2: Create Provider
+**File:** `src/providers/NewServiceProvider.ts`
+
+```typescript
+import { ServiceType } from '../enums/ServiceType';
+import { IMusicProvider, MusicProviderConfig, ... } from '../interfaces/IMusicProvider';
+
+class NewServiceProvider implements IMusicProvider {
+  private static instance: NewServiceProvider;
+
+  readonly serviceType = ServiceType.NEW_SERVICE;
+  readonly config: MusicProviderConfig = {
+    serviceType: ServiceType.NEW_SERVICE,
+    displayName: 'New Service',
+    supportsOAuth: true/false,
+    supportsPublicPlaylists: true/false,
+    supportsSearch: true/false,
+    supportsPlaylistCreation: false,
+    brandColor: '#HEXCOLOR',
+    iconClass: 'fa-icon',
+  };
+
+  public static getInstance(): NewServiceProvider {
+    if (!NewServiceProvider.instance) {
+      NewServiceProvider.instance = new NewServiceProvider();
+    }
+    return NewServiceProvider.instance;
+  }
+
+  validateUrl(url: string): UrlValidationResult { /* regex patterns */ }
+  extractPlaylistId(url: string): string | null { /* extract from URL */ }
+  async getPlaylist(playlistId: string): Promise<ApiResult & { data?: ProviderPlaylistData }> { }
+  async getTracks(playlistId: string): Promise<ApiResult & { data?: ProviderTracksResult }> { }
+
+  // OAuth methods (if needed)
+  getAuthorizationUrl(): string | null { }
+  async handleAuthCallback(code: string): Promise<ApiResult & { data?: { accessToken: string } }> { }
+}
+
+export default NewServiceProvider;
+```
+
+#### Step 3: Register in Factory
+**File:** `src/providers/MusicProviderFactory.ts`
+
+```typescript
+import NewServiceProvider from './NewServiceProvider';
+
+getProvider(serviceType?: string): IMusicProvider {
+  switch (serviceType) {
+    // existing cases...
+    case ServiceType.NEW_SERVICE:
+      return NewServiceProvider.getInstance();
+    default:
+      return SpotifyProvider.getInstance();
+  }
+}
+
+isSupported(serviceType: string): boolean {
+  return [...existing, ServiceType.NEW_SERVICE].includes(serviceType as ServiceType);
+}
+```
+
+#### Step 4: Export Provider
+**File:** `src/providers/index.ts`
+```typescript
+export { default as NewServiceProvider } from './NewServiceProvider';
+```
+
+#### Step 5: Register in Registry
+**File:** `src/services/MusicServiceRegistry.ts`
+```typescript
+import { NewServiceProvider } from '../providers';
+
+constructor() {
+  // existing...
+  this.registerProvider(NewServiceProvider.getInstance());
+}
+```
+
+#### Step 6: Add Routes
+**File:** `src/routes/musicRoutes.ts`
+
+```typescript
+// OAuth (if needed)
+fastify.get('/new-service/auth', async () => {
+  return { success: true, authUrl: provider.getAuthorizationUrl() };
+});
+
+fastify.post('/new-service/callback', async (request) => {
+  const { code } = request.body;
+  return await provider.handleAuthCallback(code);
+});
+
+// Data routes
+fastify.post('/new-service/playlists', async (request) => {
+  const { playlistId, url } = request.body;
+  // Extract ID and fetch
+});
+
+fastify.post('/new-service/playlists/tracks', async (request) => {
+  // Similar pattern
+});
+```
+
+#### Step 7: Update Data Layer
+**File:** `src/data.ts` (~line 1852)
+```typescript
+const serviceLinkFieldMap: Record<string, string> = {
+  spotify: 'spotifyLink',
+  youtube_music: 'youtubeMusicLink',
+  tidal: 'tidalLink',
+  new_service: 'newServiceLink',  // ADD
+};
+```
+
+#### Step 8: Update MusicFetch
+**File:** `src/musicfetch.ts`
+
+```typescript
+// Line ~13 - Interface
+interface TrackLinks {
+  // existing...
+  newServiceLink?: string | null;
+}
+
+// Line ~42 - Field map
+const serviceFieldMap = {
+  // existing...
+  newServiceLink: 'newService',
+};
+
+// Line ~52 - Link fields array
+const linkFields = [...existing, 'newServiceLink'];
+
+// Line ~115 - API services param
+services: 'spotify,deezer,youtubeMusic,appleMusic,amazonMusic,tidal,newService',
+
+// Line ~135 - Result mapping
+newServiceLink: services.newService?.link || null,
+
+// Throughout - Add to select/where clauses
+```
+
+#### Step 9: Settings (if OAuth)
+**File:** `src/settings.ts`
+```typescript
+export type SettingKey =
+  // existing...
+  | 'new_service_access_token'
+  | 'new_service_refresh_token'
+  | 'new_service_token_expires_at';
+```
+
+#### Step 10: Environment
+**File:** `.env`
+```
+NEW_SERVICE_CLIENT_ID=xxx
+NEW_SERVICE_CLIENT_SECRET=xxx
+NEW_SERVICE_REDIRECT_URI=https://api.qrsong.io/new-service/callback
+```
+
+---
+
+### FRONTEND
+
+#### Step 11: MusicServiceType Enum
+**File:** `src/enums/MusicServiceType.ts`
+```typescript
+export enum MusicServiceType {
+  // existing...
+  NEW_SERVICE = 'new_service',
+}
+
+export const ServiceTypeDisplayNames = {
+  // existing...
+  [MusicServiceType.NEW_SERVICE]: 'New Service',
+};
+```
+
+#### Step 12: Service Config
+**File:** `src/interfaces/IMusicService.ts`
+```typescript
+export const MUSIC_SERVICE_CONFIGS: Record<MusicServiceType, MusicServiceConfig> = {
+  // existing...
+  [MusicServiceType.NEW_SERVICE]: {
+    serviceType: MusicServiceType.NEW_SERVICE,
+    displayName: 'New Service',
+    requiresOAuth: true/false,
+    brandColor: '#HEXCOLOR',
+    iconClass: 'fa-icon',
+    supportsYearData: true/false,
+  },
+};
+```
+
+#### Step 13: Create Service
+**File:** `src/services/new-service.service.ts`
+
+```typescript
+@Injectable({ providedIn: 'root' })
+export class NewServiceService implements IMusicService {
+  readonly serviceType = MusicServiceType.NEW_SERVICE;
+  readonly config = MUSIC_SERVICE_CONFIGS[MusicServiceType.NEW_SERVICE];
+
+  private readonly urlPatterns = {
+    playlist: /regex-pattern/i,
+    shortlink: /^https?:\/\/(link\.newservice\.com|newservice\.page\.link)\//i, // if service has shortlinks
+  };
+
+  isConnected(): boolean { /* check localStorage */ }
+  validateUrl(url: string): UrlValidationResult { }
+  extractPlaylistId(url: string): string | null { }
+  async getPlaylist(playlistId: string, ...): Promise<Playlist | null> { }
+  async getTracks(playlistId: string, ...): Promise<TracksResult | null> { }
+
+  // Shortlink resolution (if service has shortlinks)
+  async resolveShortlink(url: string): Promise<string | null> {
+    const response = await this.http.post<any>(`${environment.apiEndpoint}/new-service/resolve-shortlink`, { url });
+    return response.data?.resolvedUrl || null;
+  }
+
+  // OAuth methods (if needed)
+  getAuthorizeUri(): string { }
+  async authorize(code: string): Promise<void> { }
+  discardTokens(): void { }
+}
+```
+
+#### Step 14: Register in Factory
+**File:** `src/services/music-service.factory.ts`
+```typescript
+constructor(
+  // existing...
+  private newServiceService: NewServiceService
+) {
+  this.services.set(MusicServiceType.NEW_SERVICE, newServiceService);
+}
+```
+
+#### Step 15: OAuth Callback (if needed)
+**Create:** `src/app/new-service-callback/new-service-callback.component.ts`
+
+```typescript
+@Component({
+  selector: 'app-new-service-callback',
+  template: '<p>Connecting...</p>',
+  standalone: true
+})
+export class NewServiceCallbackComponent implements OnInit {
+  async ngOnInit() {
+    const code = this.route.snapshot.queryParams['code'];
+    if (code) {
+      await this.newServiceService.authorize(code);
+      this.router.navigate(['/', this.lang, 'generate', 'playlist']);
+    }
+  }
+}
+```
+
+#### Step 16: Add Route (if OAuth)
+**File:** `src/app/app.routes.ts`
+```typescript
+{
+  path: 'newservice_callback',
+  loadComponent: () => import('./new-service-callback/new-service-callback.component')
+    .then(m => m.NewServiceCallbackComponent)
+}
+```
+
+#### Step 17: Update Select-Playlist HTML
+**File:** `src/app/select-playlist/select-playlist.component.html`
+```html
+<div class="...">
+  <img src="assets/images/service-logos/newservice.png" alt="New Service" class="h-5 sm:h-6">
+</div>
+```
+
+#### Step 18: Handle Shortlinks in Select-Playlist (if service has shortlinks)
+**File:** `src/app/select-playlist/select-playlist.component.ts`
+
+1. Import the service:
+```typescript
+import { NewServiceService } from '../../services/new-service.service';
+```
+
+2. Inject in constructor:
+```typescript
+constructor(
+  // existing...
+  private newService: NewServiceService,
+) {}
+```
+
+3. Add shortlink handling (after existing Spotify/Deezer shortlink handling):
+```typescript
+// Handle New Service shortlinks that need resolution
+if (!playlistId && serviceType === MusicServiceType.NEW_SERVICE) {
+  try {
+    const parsedUrl = new URL(decodedUrl);
+    if (parsedUrl.hostname === 'link.newservice.com' || parsedUrl.hostname === 'newservice.page.link') {
+      console.log('[new_service] Resolving shortlink:', decodedUrl);
+      const resolvedUrl = await this.newService.resolveShortlink(decodedUrl);
+      if (resolvedUrl) {
+        console.log('[new_service] Shortlink resolved to:', resolvedUrl);
+        const resolvedExtraction = this.musicServiceFactory.extractPlaylistId(resolvedUrl);
+        if (resolvedExtraction) {
+          playlistId = resolvedExtraction.playlistId;
+        }
+      }
+    }
+  } catch (e) {
+    // Not a URL, might be a bare ID
+  }
+}
+```
+
+#### Step 19: Update Summary Component
+**File:** `src/app/summary/summary.component.ts`
+
+1. Import the service:
+```typescript
+import { NewServiceService } from '../../services/new-service.service';
+```
+
+2. Inject in constructor:
+```typescript
+constructor(
+  // existing...
+  private newServiceService: NewServiceService,
+) {}
+```
+
+3. Add service handling to all service methods:
+```typescript
+// In getPlaylistForService()
+if (this.serviceType === MusicServiceType.NEW_SERVICE) {
+  return this.newServiceService.getPlaylist(playlistId, cache, featured, isSlug);
+}
+
+// In getTracksForService()
+if (this.serviceType === MusicServiceType.NEW_SERVICE) {
+  return this.newServiceService.getTracks(playlistId, cache, isSlug);
+}
+
+// In getOrderTypeForService()
+if (this.serviceType === MusicServiceType.NEW_SERVICE) {
+  return this.newServiceService.getOrderType(trackCount, digital, playlistId, subType);
+}
+
+// In constructServicePlaylistUrl()
+if (this.serviceType === MusicServiceType.NEW_SERVICE) {
+  return `https://www.newservice.com/playlist/${this.playlistId}`;
+}
+
+// In getTrackUriScheme()
+if (this.serviceType === MusicServiceType.NEW_SERVICE) {
+  return `https://www.newservice.com/track/${trackId}`;
+}
+```
+
+#### Step 20: Update Year-Check
+**File:** `src/app/year-check/year-check.component.ts`
+```typescript
+private readonly serviceConfig = {
+  // existing...
+  new_service: { icon: 'fas fa-icon', name: 'New Service', color: 'text-color-500' },
+};
+```
+
+#### Step 21: Translations
+**File:** `src/assets/i18n/en.json`
+```json
+{
+  "submit": {
+    "invalidNewServiceUrl": "The link you provided appears to be a [Service] link, but it is not a playlist."
+  }
+}
+```
+
+Then run:
+```bash
+./_scripts/remove-from-cache.sh submit.invalidNewServiceUrl
+```
+
+#### Step 22: Service Logos
+**Create:** `src/assets/images/service-logos/`
+- `newservice.png` - Light mode logo (black text, ~240px width)
+- `newservice-dark.png` - Dark mode logo (white text, same dimensions)
+
+Both logos should have:
+- Transparent background
+- ~240px width (height varies by aspect ratio)
+- Brand colors preserved (only text color changes between versions)
+
+**Update select-playlist.component.html:**
+```html
+<div class="px-4 py-2 bg-white rounded-lg shadow-sm border border-gray-200 dark:bg-gray-800 dark:border-gray-700">
+    <img src="assets/images/service-logos/newservice.png" alt="New Service" class="h-5 sm:h-6 dark:hidden">
+    <img src="assets/images/service-logos/newservice-dark.png" alt="New Service" class="h-5 sm:h-6 hidden dark:block">
+</div>
+```
+
+**Update home.component.html** (add icon to supported platforms section):
+```html
+<i class="fab fa-newservice text-3xl text-[#BRANDCOLOR]" title="New Service"></i>
+<!-- Or use SVG if no FontAwesome icon exists -->
+```
+
+#### Step 23: Environment (if OAuth)
+**Files:** `src/environments/environment.ts` and `environment.prod.ts`
+```typescript
+newServiceClientId: 'your-client-id',
+```
+
+#### Step 24: Update FAQ
+**File:** `src/assets/i18n/en.json`
+
+Update the `faq.supportedPlatformsAnswer` to include the new service:
+```json
+{
+  "faq": {
+    "supportedPlatformsAnswer": "QRSong! supports playlists from <strong>Spotify</strong>, <strong>YouTube Music</strong>, <strong>Tidal</strong>, <strong>Deezer</strong>, and <strong>New Service</strong>. Simply paste the URL of your public playlist from any of these services, and we'll generate your QR music cards. Each service has its own URL format, but our system automatically recognizes and processes them all."
+  }
+}
+```
+
+Then run:
+```bash
+./_scripts/remove-from-cache.sh faq.supportedPlatformsAnswer
+```
+
+---
+
+## Normalized Track Data Format
+
+All providers must return tracks in this format:
+
+```typescript
+{
+  id: string;              // Service-specific track ID
+  name: string;            // Track title (cleaned)
+  artist: string;          // Primary artist name
+  artistsList?: string[];  // All artist names
+  album: string;           // Album name
+  albumImageUrl: string;   // Cover art URL
+  releaseDate: string;     // ISO format (YYYY-MM-DD) or null
+  isrc?: string;           // International Standard Recording Code
+  previewUrl?: string;     // Audio preview URL (if available)
+  duration?: number;       // Duration in milliseconds
+  serviceType: ServiceType;
+  serviceLink: string;     // Direct link to track
+}
+```
+
+---
+
+## Cache Key Patterns
+
+```typescript
+const CACHE_KEY_PLAYLIST = '[service]_playlist_';  // TTL: 3600s (1 hour)
+const CACHE_KEY_TRACKS = '[service]_tracks_';      // TTL: 3600s (1 hour)
+const CACHE_KEY_SEARCH = '[service]_search_';      // TTL: 1800s (30 min)
+```
+
+---
+
+## Checklist
+
+### Backend
+- [ ] Add to `ServiceType` enum
+- [ ] Create Provider class
+- [ ] Add to `MusicProviderFactory` switch
+- [ ] Export from `providers/index.ts`
+- [ ] Register in `MusicServiceRegistry`
+- [ ] Add routes in `musicRoutes.ts`
+- [ ] Update `data.ts` serviceLinkFieldMap
+- [ ] Update `musicfetch.ts` link fields
+- [ ] Add Settings keys (if OAuth)
+- [ ] Add `.env` variables
+
+### Frontend
+- [ ] Add to `MusicServiceType` enum
+- [ ] Add to `MUSIC_SERVICE_CONFIGS`
+- [ ] Create service class (with shortlink patterns if needed)
+- [ ] Register in `music-service.factory.ts`
+- [ ] Create OAuth callback (if OAuth)
+- [ ] Add callback route (if OAuth)
+- [ ] Update `select-playlist.component.html` (add logo)
+- [ ] Handle shortlinks in `select-playlist.component.ts` (if service has shortlinks)
+- [ ] Update `summary.component.ts` (inject service, add to all service methods)
+- [ ] Update `year-check.component.ts`
+- [ ] Add translations
+- [ ] Run `remove-from-cache.sh`
+- [ ] Add service logos (light + dark versions)
+- [ ] Add icon to `home.component.html` supported platforms section
+- [ ] Update FAQ `supportedPlatformsAnswer` in `en.json` to include new service
+
+### Testing
+- [ ] URL validation works for all formats
+- [ ] Playlist metadata loads
+- [ ] Tracks load with all fields
+- [ ] OAuth flow works (if applicable)
+- [ ] Year-check shows correct icon
+- [ ] Payment flow uses correct provider
+- [ ] Caching works correctly

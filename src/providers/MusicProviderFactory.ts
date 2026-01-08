@@ -3,6 +3,7 @@ import { IMusicProvider } from '../interfaces/IMusicProvider';
 import SpotifyProvider from './SpotifyProvider';
 import YouTubeMusicProvider from './YouTubeMusicProvider';
 import TidalProvider from './TidalProvider';
+import DeezerProvider from './DeezerProvider';
 
 /**
  * Factory for creating music provider instances based on service type.
@@ -31,6 +32,8 @@ class MusicProviderFactory {
         return YouTubeMusicProvider.getInstance();
       case ServiceType.TIDAL:
         return TidalProvider.getInstance();
+      case ServiceType.DEEZER:
+        return DeezerProvider.getInstance();
       case ServiceType.SPOTIFY:
       default:
         return SpotifyProvider.getInstance();
@@ -41,7 +44,7 @@ class MusicProviderFactory {
    * Check if a service type is supported
    */
   isSupported(serviceType: string): boolean {
-    return [ServiceType.SPOTIFY, ServiceType.YOUTUBE_MUSIC, ServiceType.TIDAL].includes(serviceType as ServiceType);
+    return [ServiceType.SPOTIFY, ServiceType.YOUTUBE_MUSIC, ServiceType.TIDAL, ServiceType.DEEZER].includes(serviceType as ServiceType);
   }
 }
 

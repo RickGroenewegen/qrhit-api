@@ -156,7 +156,7 @@ class MusicFetch {
         // Handle 429 - rate limit
         if (axiosError.response?.status === 429) {
           this.logger.log(
-            color.red.bold('[MusicFetch] Rate limit exceeded, will retry later')
+            color.red.bold(`[${white.bold('MusicFetch')}] Rate limit exceeded, will retry later`)
           );
           return { success: false, error: 'Rate limit exceeded', rateLimited: true };
         }
@@ -283,7 +283,7 @@ class MusicFetch {
       if (newLinksAdded.length > 0) {
         this.logger.log(
           color.green.bold(
-            `[MusicFetch] Updated "${white.bold(track.artist)} - ${white.bold(track.name)}" with ${white.bold(newLinksAdded.length.toString())} new links: ${white.bold(newLinksAdded.join(', '))}`
+            `[${white.bold('MusicFetch')}] Updated "${white.bold(track.artist)} - ${white.bold(track.name)}" with ${white.bold(newLinksAdded.length.toString())} new links: ${white.bold(newLinksAdded.join(', '))}`
           )
         );
       }
@@ -292,7 +292,7 @@ class MusicFetch {
     } catch (error) {
       this.logger.log(
         color.red.bold(
-          `[MusicFetch] Error updating track ${white.bold(
+          `[${white.bold('MusicFetch')}] Error updating track ${white.bold(
             trackId.toString()
           )}: ${white.bold(
             error instanceof Error ? error.message : 'Unknown error'
@@ -351,7 +351,7 @@ class MusicFetch {
 
       this.logger.log(
         color.blue.bold(
-          `[MusicFetch] Processing ${white.bold(tracksToProcess.length.toString())} tracks for playlist ${white.bold(playlistId.toString())}`
+          `[${white.bold('MusicFetch')}] Processing ${white.bold(tracksToProcess.length.toString())} tracks for playlist ${white.bold(playlistId.toString())}`
         )
       );
 
@@ -365,14 +365,14 @@ class MusicFetch {
       if (successCount > 0) {
         this.logger.log(
           color.green.bold(
-            `[MusicFetch] Playlist ${white.bold(playlistId.toString())} complete: ${white.bold(successCount.toString())}/${white.bold(tracksToProcess.length.toString())} tracks updated`
+            `[${white.bold('MusicFetch')}] Playlist ${white.bold(playlistId.toString())} complete: ${white.bold(successCount.toString())}/${white.bold(tracksToProcess.length.toString())} tracks updated`
           )
         );
       }
     } catch (error) {
       this.logger.log(
         color.red.bold(
-          `[MusicFetch] Error processing playlist ${white.bold(
+          `[${white.bold('MusicFetch')}] Error processing playlist ${white.bold(
             playlistId.toString()
           )}: ${white.bold(
             error instanceof Error ? error.message : 'Unknown error'

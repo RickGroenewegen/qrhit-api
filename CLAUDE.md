@@ -43,6 +43,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Translation cache files exist at: `src/locales/translated.cache`, `build/locales/translated.cache`, `assets/i18n/translated.cache`
 - After modifying translation keys, run `remove-from-cache.sh` with the changed keys to ensure they get regenerated
 
+## Adding New Music Services
+
+See [NEW_MUSIC_SERVICE.md](./NEW_MUSIC_SERVICE.md) for complete documentation on integrating new music streaming services (Spotify, Tidal, YouTube Music, etc.).
+
 ## High-Level Architecture
 
 ### Core Application Structure

@@ -8,7 +8,7 @@ import Utils from '../utils';
 import Translation from '../translation';
 import fs from 'fs/promises';
 import MusicServiceRegistry from '../services/MusicServiceRegistry';
-import { YouTubeMusicProvider, TidalProvider } from '../providers';
+import { YouTubeMusicProvider, TidalProvider, DeezerProvider } from '../providers';
 import { ServiceType } from '../enums/ServiceType';
 import TrackEnrichment from '../trackEnrichment';
 
@@ -22,6 +22,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   const musicRegistry = MusicServiceRegistry.getInstance();
   const ytMusicProvider = YouTubeMusicProvider.getInstance();
   const tidalProvider = TidalProvider.getInstance();
+  const deezerProvider = DeezerProvider.getInstance();
   const trackEnrichment = TrackEnrichment.getInstance();
 
   // Get Spotify authorization URL
@@ -308,6 +309,109 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     const result = await tidalProvider.getTracks(resolvedPlaylistId);
 
     // Tidal provides release dates, but we can still enrich with additional data
+    if (result.success && result.data?.tracks) {
+      result.data.tracks = trackEnrichment.enrichTracksByArtistTitle(result.data.tracks);
+    }
+
+    return result;
+  });
+
+  // ============================================
+  // Deezer Routes (Public API - No OAuth required)
+  // ============================================
+
+  // Helper to resolve Deezer URL (handles shortlinks)
+  async function resolveDeezerUrl(url: string): Promise<{ playlistId: string | null; error?: string }> {
+    // First try to extract directly
+    let playlistId = deezerProvider.extractPlaylistId(url);
+    if (playlistId) {
+      return { playlistId };
+    }
+
+    // Check if it's a shortlink that needs resolution
+    const validation = deezerProvider.validateUrl(url);
+    if (validation.isValid && validation.isServiceUrl && !validation.resourceId) {
+      // It's a shortlink, resolve it
+      const resolved = await deezerProvider.resolveShortlink(url);
+      if (resolved.success && resolved.data?.resolvedUrl) {
+        playlistId = deezerProvider.extractPlaylistId(resolved.data.resolvedUrl);
+        if (playlistId) {
+          return { playlistId };
+        }
+      }
+      return { playlistId: null, error: resolved.error || 'Could not resolve shortlink' };
+    }
+
+    return { playlistId: null, error: 'Could not extract playlist ID from URL' };
+  }
+
+  // Resolve Deezer shortlink
+  fastify.post('/deezer/resolve-shortlink', async (request: any, reply) => {
+    const { url } = request.body;
+
+    if (!url) {
+      return { success: false, error: 'Missing url parameter' };
+    }
+
+    return await deezerProvider.resolveShortlink(url);
+  });
+
+  // Get Deezer playlist info
+  fastify.post('/deezer/playlists', async (request: any, reply) => {
+    const { playlistId, url } = request.body;
+
+    let resolvedPlaylistId = playlistId;
+
+    // If URL is provided instead of playlistId, extract/resolve the ID
+    if (!resolvedPlaylistId && url) {
+      const resolved = await resolveDeezerUrl(url);
+      if (!resolved.playlistId) {
+        return {
+          success: false,
+          error: resolved.error || 'Could not extract playlist ID from URL',
+        };
+      }
+      resolvedPlaylistId = resolved.playlistId;
+    }
+
+    if (!resolvedPlaylistId) {
+      return {
+        success: false,
+        error: 'Missing playlistId or url parameter',
+      };
+    }
+
+    const result = await deezerProvider.getPlaylist(resolvedPlaylistId);
+    return result;
+  });
+
+  // Get Deezer playlist tracks
+  fastify.post('/deezer/playlists/tracks', async (request: any, reply) => {
+    const { playlistId, url } = request.body;
+
+    let resolvedPlaylistId = playlistId;
+
+    if (!resolvedPlaylistId && url) {
+      const resolved = await resolveDeezerUrl(url);
+      if (!resolved.playlistId) {
+        return {
+          success: false,
+          error: resolved.error || 'Could not extract playlist ID from URL',
+        };
+      }
+      resolvedPlaylistId = resolved.playlistId;
+    }
+
+    if (!resolvedPlaylistId) {
+      return {
+        success: false,
+        error: 'Missing playlistId or url parameter',
+      };
+    }
+
+    const result = await deezerProvider.getTracks(resolvedPlaylistId);
+
+    // Enrich tracks with additional data from database
     if (result.success && result.data?.tracks) {
       result.data.tracks = trackEnrichment.enrichTracksByArtistTitle(result.data.tracks);
     }
