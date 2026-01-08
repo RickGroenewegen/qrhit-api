@@ -37,10 +37,12 @@ Complete guide for integrating a new music streaming service into QRSong.
 | 11 | `src/app/year-check/year-check.component.ts` | Add to serviceConfig |
 | 12 | `src/app/tracks/tracks.component.html` | Add service icon column (header + body) |
 | 13 | `src/app/admin-missing-spotify/...html` | Add service icon column (header + body) |
-| 14 | `src/assets/i18n/en.json` | Add translations |
-| 15 | `src/assets/images/service-logos/` | **Create** - logo PNGs (light + dark) |
-| 16 | `src/environments/environment.ts` | Add clientId (if OAuth) |
-| 17 | `src/environments/environment.prod.ts` | Add clientId (if OAuth) |
+| 14 | `src/app/shared/link-coverage/link-coverage.component.ts` | Add service to services array |
+| 15 | `src/app/shared/supported-platforms-table/...ts` | Add service to platforms array |
+| 16 | `src/assets/i18n/en.json` | Add translations |
+| 17 | `src/assets/images/service-logos/` | **Create** - logo PNGs (light + dark) |
+| 18 | `src/environments/environment.ts` | Add clientId (if OAuth) |
+| 19 | `src/environments/environment.prod.ts` | Add clientId (if OAuth) |
 
 ---
 
@@ -501,7 +503,28 @@ platforms = [
 - The "Supported Platforms" modal in `select-playlist.component.html`
 - The dedicated `/supported-platforms` page
 
-#### Step 23: Service Logos
+#### Step 23: Update Link Coverage Component
+**File:** `src/app/shared/link-coverage/link-coverage.component.ts`
+
+Add the new service to the `services` array in the `buildServicesDisplay()` method:
+```typescript
+this.services = [
+  // existing...
+  {
+    key: 'newService',  // must match the API response field name
+    name: 'New Service',
+    logo: 'assets/images/service-logos/newservice.png',
+    logoDark: 'assets/images/service-logos/newservice-dark.png',
+    percentage: this.coverage.newService
+  }
+];
+```
+
+Also update the `LinkCoverage` interface at the top of the file to include the new service field.
+
+**Note:** This component displays the percentage of tracks in a featured playlist that have direct links to each music service. The data comes from the API endpoint `/playlist/:id/link-coverage` which queries the database for link coverage stats.
+
+#### Step 24: Service Logos
 **Create:** `src/assets/images/service-logos/`
 - `newservice.png` - Light mode logo (brand color text on transparent, ~240px width)
 - `newservice-dark.png` - Dark mode logo (white text on transparent, same dimensions)
@@ -657,6 +680,8 @@ const CACHE_KEY_SEARCH = '[service]_search_';      // TTL: 1800s (30 min)
 - [ ] Update `year-check.component.ts`
 - [ ] Update `tracks.component.html` (add icon column + edit modal field)
 - [ ] Update `admin-missing-spotify.component.html` (add icon column + edit modal field)
+- [ ] Update `link-coverage.component.ts` (add service to services array + interface)
+- [ ] Update `supported-platforms-table.component.ts` (add service to platforms array)
 - [ ] Add translations
 - [ ] Run `remove-from-cache.sh`
 - [ ] Add service logos (light + dark versions)

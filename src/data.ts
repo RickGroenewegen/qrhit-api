@@ -1057,6 +1057,87 @@ class Data {
     return returnList;
   }
 
+  /**
+   * Get a playlist by its slug
+   */
+  public async getPlaylistBySlug(slug: string): Promise<{ id: number; playlistId: string } | null> {
+    const playlist = await this.prisma.playlist.findFirst({
+      where: { slug },
+      select: { id: true, playlistId: true },
+    });
+    return playlist;
+  }
+
+  /**
+   * Get link coverage percentages for a playlist
+   * Returns the percentage of tracks that have links for each music service
+   */
+  public async getPlaylistLinkCoverage(playlistId: number): Promise<{
+    spotify: number;
+    appleMusic: number;
+    youtubeMusic: number;
+    tidal: number;
+    deezer: number;
+    totalTracks: number;
+  }> {
+    const cacheKey = `playlist_link_coverage_v1:${playlistId}`;
+    const cachedData = await this.cache.get(cacheKey);
+
+    if (cachedData) {
+      return JSON.parse(cachedData);
+    }
+
+    const result = await this.prisma.$queryRaw<
+      {
+        totalTracks: bigint;
+        spotifyCount: bigint;
+        appleMusicCount: bigint;
+        youtubeMusicCount: bigint;
+        tidalCount: bigint;
+        deezerCount: bigint;
+      }[]
+    >`
+      SELECT
+        COUNT(*) as totalTracks,
+        SUM(CASE WHEN t.spotifyLink IS NOT NULL AND t.spotifyLink != '' THEN 1 ELSE 0 END) as spotifyCount,
+        SUM(CASE WHEN t.appleMusicLink IS NOT NULL AND t.appleMusicLink != '' THEN 1 ELSE 0 END) as appleMusicCount,
+        SUM(CASE WHEN t.youtubeMusicLink IS NOT NULL AND t.youtubeMusicLink != '' THEN 1 ELSE 0 END) as youtubeMusicCount,
+        SUM(CASE WHEN t.tidalLink IS NOT NULL AND t.tidalLink != '' THEN 1 ELSE 0 END) as tidalCount,
+        SUM(CASE WHEN t.deezerLink IS NOT NULL AND t.deezerLink != '' THEN 1 ELSE 0 END) as deezerCount
+      FROM playlist_has_tracks pht
+      JOIN tracks t ON pht.trackId = t.id
+      WHERE pht.playlistId = ${playlistId}
+    `;
+
+    if (!result || result.length === 0) {
+      return {
+        spotify: 0,
+        appleMusic: 0,
+        youtubeMusic: 0,
+        tidal: 0,
+        deezer: 0,
+        totalTracks: 0,
+      };
+    }
+
+    const data = result[0];
+    const totalTracks = Number(data.totalTracks || 0);
+
+    const coverage = {
+      spotify: totalTracks > 0 ? Math.round((Number(data.spotifyCount || 0) / totalTracks) * 100) : 0,
+      appleMusic: totalTracks > 0 ? Math.round((Number(data.appleMusicCount || 0) / totalTracks) * 100) : 0,
+      youtubeMusic: totalTracks > 0 ? Math.round((Number(data.youtubeMusicCount || 0) / totalTracks) * 100) : 0,
+      tidal: totalTracks > 0 ? Math.round((Number(data.tidalCount || 0) / totalTracks) * 100) : 0,
+      deezer: totalTracks > 0 ? Math.round((Number(data.deezerCount || 0) / totalTracks) * 100) : 0,
+      totalTracks,
+    };
+
+    // Cache for 1 hour
+    await this.cache.set(cacheKey, JSON.stringify(coverage), 3600);
+
+    return coverage;
+  }
+
   public async storePlaylists(
     userDatabaseId: number,
     cartItems: CartItem[],

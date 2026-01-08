@@ -714,6 +714,37 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     return { success: true, data: playlists };
   });
 
+  // Get link coverage for a playlist (by database ID)
+  fastify.get('/playlist/:playlistId/link-coverage', async (request: any, reply) => {
+    try {
+      const playlistId = parseInt(request.params.playlistId, 10);
+      if (isNaN(playlistId)) {
+        return reply.status(400).send({ success: false, error: 'Invalid playlist ID' });
+      }
+      const coverage = await data.getPlaylistLinkCoverage(playlistId);
+      return { success: true, data: coverage };
+    } catch (e: any) {
+      logger.log(`Error getting link coverage: ${e.message || e}`);
+      return reply.status(500).send({ success: false, error: 'Failed to get link coverage' });
+    }
+  });
+
+  // Get link coverage for a playlist by slug
+  fastify.get('/playlist/slug/:slug/link-coverage', async (request: any, reply) => {
+    try {
+      const slug = request.params.slug;
+      const playlist = await data.getPlaylistBySlug(slug);
+      if (!playlist) {
+        return reply.status(404).send({ success: false, error: 'Playlist not found' });
+      }
+      const coverage = await data.getPlaylistLinkCoverage(playlist.id);
+      return { success: true, data: coverage };
+    } catch (e: any) {
+      logger.log(`Error getting link coverage by slug: ${e.message || e}`);
+      return reply.status(500).send({ success: false, error: 'Failed to get link coverage' });
+    }
+  });
+
   // QR code routes
   fastify.get('/qr/:trackId', async (request: any, reply) => {
     const locale = utils.parseAcceptLanguage(
