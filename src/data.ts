@@ -1263,6 +1263,7 @@ class Data {
     track: any;
     totalUnchecked: number;
     currentPlaylistId: number | null;
+    serviceType: string | null;
   }> {
     // Use a single optimized query to get both the track and count
     // Only include tracks that are associated with payments where processedFirstTime = true
@@ -1280,7 +1281,8 @@ class Data {
         t.id, t.name, t.spotifyLink, t.artist, t.year, t.yearSource,
         t.certainty, t.reasoning, t.spotifyYear, t.discogsYear, t.aiYear,
         t.musicBrainzYear, t.openPerplexYear, t.standardDeviation, t.googleResults,
-        pl.id as playlistId
+        pl.id as playlistId,
+        pl.serviceType as serviceType
       FROM tracks t
       INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId
       INNER JOIN playlists pl ON pht.playlistId = pl.id
@@ -1294,14 +1296,15 @@ class Data {
     `;
 
     if (result.length === 0) {
-      return { track: null, totalUnchecked: 0, currentPlaylistId: null };
+      return { track: null, totalUnchecked: 0, currentPlaylistId: null, serviceType: null };
     }
 
-    const { totalUnchecked, playlistId, ...track } = result[0];
+    const { totalUnchecked, playlistId, serviceType, ...track } = result[0];
     return {
       track,
       totalUnchecked: Number(totalUnchecked),
       currentPlaylistId: Number(playlistId),
+      serviceType: serviceType || 'spotify',
     };
   }
 

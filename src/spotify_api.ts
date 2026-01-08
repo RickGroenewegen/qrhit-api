@@ -129,16 +129,16 @@ class SpotifyApi {
           'spotify_refresh_token',
           newRefreshToken
         );
-        this.logger.log(color.blue('Stored new Spotify refresh token.'));
+        this.logger.log(color.blue(`[${color.white.bold('spotify')}] Stored new refresh token.`));
       }
 
       this.logger.log(
-        color.green.bold('Successfully refreshed Spotify token.')
+        color.green.bold(`[${color.white.bold('spotify')}] Successfully refreshed token.`)
       );
       return access_token;
     } catch (error) {
       this.logger.log(
-        color.red.bold(`Error refreshing Spotify token: ${error}`)
+        color.red.bold(`[${color.white.bold('spotify')}] Token refresh error: ${error}`)
       );
       // Optionally clear tokens if refresh fails permanently (e.g., invalid refresh token)
       // await this.settings.deleteSetting('spotify_refresh_token');

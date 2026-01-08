@@ -2,6 +2,7 @@ import { ServiceType } from '../enums/ServiceType';
 import { IMusicProvider } from '../interfaces/IMusicProvider';
 import SpotifyProvider from './SpotifyProvider';
 import YouTubeMusicProvider from './YouTubeMusicProvider';
+import TidalProvider from './TidalProvider';
 
 /**
  * Factory for creating music provider instances based on service type.
@@ -21,13 +22,15 @@ class MusicProviderFactory {
 
   /**
    * Get the appropriate music provider for a service type
-   * @param serviceType The service type (spotify, youtube_music, etc.)
+   * @param serviceType The service type (spotify, youtube_music, tidal, etc.)
    * @returns The music provider instance, defaults to Spotify if unknown
    */
   getProvider(serviceType?: string): IMusicProvider {
     switch (serviceType) {
       case ServiceType.YOUTUBE_MUSIC:
         return YouTubeMusicProvider.getInstance();
+      case ServiceType.TIDAL:
+        return TidalProvider.getInstance();
       case ServiceType.SPOTIFY:
       default:
         return SpotifyProvider.getInstance();
@@ -38,7 +41,7 @@ class MusicProviderFactory {
    * Check if a service type is supported
    */
   isSupported(serviceType: string): boolean {
-    return [ServiceType.SPOTIFY, ServiceType.YOUTUBE_MUSIC].includes(serviceType as ServiceType);
+    return [ServiceType.SPOTIFY, ServiceType.YOUTUBE_MUSIC, ServiceType.TIDAL].includes(serviceType as ServiceType);
   }
 }
 

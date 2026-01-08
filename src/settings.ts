@@ -7,7 +7,11 @@ import Cache from './cache';
 export type SettingKey =
   | 'spotify_access_token'
   | 'spotify_refresh_token'
-  | 'spotify_token_expires_at'; // Store expiry time as Unix timestamp (milliseconds)
+  | 'spotify_token_expires_at' // Store expiry time as Unix timestamp (milliseconds)
+  | 'tidal_access_token'
+  | 'tidal_refresh_token'
+  | 'tidal_token_expires_at'
+  | 'tidal_code_verifier'; // PKCE code verifier for OAuth flow
 
 class Settings {
   private static instance: Settings;

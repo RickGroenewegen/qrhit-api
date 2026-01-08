@@ -17,8 +17,8 @@ import { CronJob } from 'cron';
 import cluster from 'cluster';
 import { promises as fs } from 'fs';
 import Game from './game';
-import Spotify from './spotify';
 import Promotional from './promotional';
+import MusicServiceRegistry from './services/MusicServiceRegistry';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -33,8 +33,8 @@ class Mollie {
   private paidPaymentStatus = ['paid'];
   private failedPaymentStatus = ['failed', 'canceled', 'expired'];
   private game = new Game();
-  private spotify = Spotify.getInstance();
   private promotional = Promotional.getInstance();
+  private musicServiceRegistry = MusicServiceRegistry.getInstance();
 
   constructor() {
     if (cluster.isPrimary) {
@@ -291,15 +291,27 @@ class Mollie {
   ): Promise<void> {
     for (const item of cart.items) {
       if (item.productType !== 'giftcard') {
-        const tracksResult = await this.spotify.getTracks(
-          item.playlistId,
-          false, // cache = false to get fresh data
-          '',    // captchaToken
-          false, // checkCaptcha
-          item.isSlug || false,
-          '',    // userId
-          locale
-        );
+        let tracksResult: ApiResult & { data?: { totalTracks: number } };
+
+        // Use the correct provider based on serviceType
+        const serviceType = item.serviceType || 'spotify';
+        const provider = this.musicServiceRegistry.getProviderByString(serviceType);
+
+        if (provider) {
+          const result = await provider.getTracks(item.playlistId);
+          tracksResult = {
+            success: result.success,
+            error: result.error,
+            data: result.data ? { totalTracks: result.data.total } : undefined
+          };
+        } else {
+          this.logger.log(
+            color.yellow.bold(
+              `Unknown service type '${serviceType}' for playlist ${item.playlistId}`
+            )
+          );
+          tracksResult = { success: false, error: 'Unknown service type' };
+        }
 
         if (tracksResult.success && tracksResult.data) {
           const freshTrackCount = tracksResult.data.totalTracks;

@@ -1,3 +1,4 @@
+import { color } from 'console-log-colors';
 import YTMusic from 'ytmusic-api';
 import { ServiceType } from '../enums/ServiceType';
 import {
@@ -204,6 +205,12 @@ class YouTubeMusicProvider implements IMusicProvider {
     try {
       await this.ensureInitialized();
 
+      this.logger.log(
+        color.blue.bold(
+          `[${color.white.bold('ytmusic')}] Fetching playlist from API for ${color.white.bold(playlistId)}`
+        )
+      );
+
       const playlist = await this.ytmusic.getPlaylist(playlistId);
 
       // ytmusic-api returns incorrect videoCount, so fetch actual tracks to get correct count
@@ -260,6 +267,12 @@ class YouTubeMusicProvider implements IMusicProvider {
 
     try {
       await this.ensureInitialized();
+
+      this.logger.log(
+        color.blue.bold(
+          `[${color.white.bold('ytmusic')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}`
+        )
+      );
 
       const videos = await this.ytmusic.getPlaylistVideos(playlistId);
 

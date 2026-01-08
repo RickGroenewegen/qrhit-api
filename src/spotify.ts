@@ -392,7 +392,7 @@ class Spotify {
 
             this.logger.log(
               color.blue.bold(
-                `Fetching playlist from API for ${color.white.bold(
+                `[${color.white.bold('spotify')}] Fetching playlist from API for ${color.white.bold(
                   playlistId
                 )}${ipInfo}${uaInfo}`
               )
@@ -736,7 +736,7 @@ class Spotify {
           : '';
         this.logger.log(
           color.blue.bold(
-            `Fetching tracks from API for playlist ${color.white.bold(
+            `[${color.white.bold('spotify')}] Fetching tracks from API for playlist ${color.white.bold(
               playlistId
             )} (${color.white.bold(playlistData.name)})${ipInfo}${uaInfo}`
           )
@@ -1053,7 +1053,7 @@ class Spotify {
 
       this.logger.log(
         color.blue.bold(
-          `Fetching tracks by ID from API for ${color.white.bold(
+          `[${color.white.bold('spotify')}] Fetching tracks by ID from API for ${color.white.bold(
             trackIds.length
           )} tracks`
         )

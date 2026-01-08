@@ -1383,6 +1383,7 @@ export default async function adminRoutes(
         track: result.track,
         totalUnchecked: result.totalUnchecked,
         currentPlaylistId: result.currentPlaylistId,
+        serviceType: result.serviceType,
       });
     }
   );
