@@ -175,6 +175,9 @@ model Payment {
   processedFirstTime       Boolean              @default(false)
   processedFirstTimeAt     DateTime?
   printerInvoice           PrinterInvoice?      @relation(fields: [printerInvoiceId], references: [id], onDelete: SetNull)
+  refundAmount             Float?
+  refundedAt               DateTime?
+  refundReason             String?
 
   DiscountCodedUses DiscountCodedUses[]
   Review            Review[]

@@ -3303,4 +3303,151 @@ export default async function adminRoutes(
       }
     }
   );
+
+  // Create Mollie payment link
+  fastify.post(
+    '/admin/create-payment-link',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { amount, description } = request.body;
+
+        if (!amount || typeof amount !== 'number' || amount <= 0) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid amount. Must be a positive number.',
+          });
+        }
+
+        const result = await mollie.createPaymentLink(amount, description);
+
+        if (!result.success) {
+          return reply.status(500).send({
+            success: false,
+            error: result.error || 'Failed to create payment link',
+          });
+        }
+
+        return reply.send({
+          success: true,
+          paymentLink: result.data.paymentLink,
+          paymentLinkId: result.data.paymentLinkId,
+          amount: result.data.amount,
+          description: result.data.description,
+        });
+      } catch (error: any) {
+        console.error('Error creating payment link:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to create payment link',
+        });
+      }
+    }
+  );
+
+  // Create Mollie refund for a payment
+  fastify.post(
+    '/admin/payment/:paymentId/refund',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { paymentId } = request.params;
+        const { amount, reason } = request.body;
+
+        if (!paymentId) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Payment ID is required.',
+          });
+        }
+
+        if (!amount || typeof amount !== 'number' || amount <= 0) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid amount. Must be a positive number.',
+          });
+        }
+
+        // Get the payment from database to verify it exists and get Mollie payment ID
+        const payment = await prisma.payment.findUnique({
+          where: { paymentId },
+          select: {
+            id: true,
+            paymentId: true,
+            totalPrice: true,
+            refundAmount: true,
+            status: true,
+          },
+        });
+
+        if (!payment) {
+          return reply.status(404).send({
+            success: false,
+            error: 'Payment not found.',
+          });
+        }
+
+        // Check if payment status allows refund
+        if (payment.status !== 'paid') {
+          return reply.status(400).send({
+            success: false,
+            error: `Cannot refund a payment with status "${payment.status}". Only paid payments can be refunded.`,
+          });
+        }
+
+        // Check if amount exceeds total price
+        if (amount > payment.totalPrice) {
+          return reply.status(400).send({
+            success: false,
+            error: `Refund amount (€${amount.toFixed(2)}) exceeds total payment amount (€${payment.totalPrice.toFixed(2)}).`,
+          });
+        }
+
+        // Check if there's already a refund and the combined amount would exceed the total
+        const existingRefund = payment.refundAmount || 0;
+        if (existingRefund + amount > payment.totalPrice) {
+          return reply.status(400).send({
+            success: false,
+            error: `Combined refund amount would exceed total payment. Already refunded: €${existingRefund.toFixed(2)}, requested: €${amount.toFixed(2)}, total: €${payment.totalPrice.toFixed(2)}.`,
+          });
+        }
+
+        // Create refund via Mollie
+        const result = await mollie.createRefund(payment.paymentId, amount);
+
+        if (!result.success) {
+          return reply.status(500).send({
+            success: false,
+            error: result.error || 'Failed to create refund with Mollie.',
+          });
+        }
+
+        // Update payment in database with refund amount and reason
+        const newRefundAmount = existingRefund + amount;
+        await prisma.payment.update({
+          where: { paymentId },
+          data: {
+            refundAmount: newRefundAmount,
+            refundedAt: new Date(),
+            refundReason: reason || null,
+          },
+        });
+
+        return reply.send({
+          success: true,
+          refundId: result.data.refundId,
+          amount: result.data.amount,
+          status: result.data.status,
+          totalRefunded: newRefundAmount.toFixed(2),
+          isFullRefund: newRefundAmount >= payment.totalPrice,
+        });
+      } catch (error: any) {
+        console.error('Error creating refund:', error);
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to create refund.',
+        });
+      }
+    }
+  );
 }
