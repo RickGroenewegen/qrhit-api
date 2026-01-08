@@ -18,6 +18,7 @@ import SpotifyRapidApi from './spotify_rapidapi';
 import SpotifyScraper from './spotify_scraper';
 import SpotifyRapidApi2 from './spotify_rapidapi2';
 import RateLimitManager from './rate_limit_manager';
+import TrackEnrichment, { EnrichmentData } from './trackEnrichment';
 import cluster from 'cluster';
 import crypto from 'crypto';
 import { CronJob } from 'cron';
@@ -31,15 +32,6 @@ export const CACHE_KEY_TRACK_COUNT = 'trackcount2_';
 export const CACHE_KEY_TRACK_INFO = 'trackInfo_';
 export const CACHE_KEY_TRACKS_BY_IDS = 'tracksbyids_';
 export const CACHE_KEY_SEARCH = 'search_';
-
-// Track enrichment data structure
-interface EnrichmentData {
-  year: number;
-  name: string;
-  artist: string;
-  extraNameAttribute?: string;
-  extraArtistAttribute?: string;
-}
 
 // Skipped track information for API response
 export type SkipReason = 'unavailable' | 'localFile' | 'podcast' | 'duplicate';
@@ -92,31 +84,15 @@ class Spotify {
   // Domain blacklist: URLs from these domains will not be resolved
   private domainBlacklist: string[] = ['q.me-qr.com', 'qrto.org'];
 
-  // Track enrichment maps for fast in-memory lookups
-  private trackEnrichmentByTrackId: Map<string, EnrichmentData> = new Map();
-  private trackEnrichmentByIsrc: Map<string, EnrichmentData> = new Map();
-  private trackEnrichmentByArtistTitleHash: Map<string, EnrichmentData> = new Map();
+  // Track enrichment service (singleton - manages its own maps and refresh)
+  private trackEnrichment: TrackEnrichment;
 
   constructor() {
     this.getJumboData();
     this.loadMusicMatchData();
     this.loadCountryData();
-    this.loadTrackEnrichmentMaps();
-
-    // Set up hourly cron job to refresh track enrichment maps
-    if (cluster.isPrimary) {
-      this.utils.isMainServer().then(async (isMainServer) => {
-        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-          const enrichmentRefreshJob = new CronJob('0 * * * *', async () => {
-            await this.refreshTrackEnrichmentMaps();
-          });
-          enrichmentRefreshJob.start();
-          this.logger.log(
-            color.green.bold('Track enrichment refresh cron job scheduled (hourly)')
-          );
-        }
-      });
-    }
+    // Use the centralized TrackEnrichment service (handles its own maps and refresh)
+    this.trackEnrichment = TrackEnrichment.getInstance();
   }
 
   public static getInstance(): Spotify {
@@ -321,92 +297,6 @@ class Spotify {
         color.yellow.bold(`Failed to load country card data: ${e.message || e}`)
       );
     }
-  }
-
-  /**
-   * Loads track enrichment data from database into in-memory maps.
-   * This eliminates expensive database queries with 1,500+ OR conditions.
-   */
-  private async loadTrackEnrichmentMaps(): Promise<void> {
-    const isPrimary = cluster.isPrimary;
-
-    try {
-      // Query all manually-checked tracks from database
-      const tracks = await this.prisma.track.findMany({
-        where: { manuallyChecked: true },
-        select: {
-          trackId: true,
-          isrc: true,
-          year: true,
-          name: true,
-          artist: true,
-        },
-      });
-
-      // Clear existing maps
-      this.trackEnrichmentByTrackId.clear();
-      this.trackEnrichmentByIsrc.clear();
-      this.trackEnrichmentByArtistTitleHash.clear();
-
-      // Populate all three maps
-      for (const track of tracks) {
-        if (!track.year || !track.name || !track.artist) {
-          continue; // Skip tracks without required data
-        }
-
-        const enrichmentData: EnrichmentData = {
-          year: track.year,
-          name: track.name,
-          artist: track.artist,
-        };
-
-        // Map 1: By trackId
-        if (track.trackId) {
-          this.trackEnrichmentByTrackId.set(track.trackId, enrichmentData);
-        }
-
-        // Map 2: By ISRC
-        if (track.isrc) {
-          this.trackEnrichmentByIsrc.set(track.isrc, enrichmentData);
-        }
-
-        // Map 3: By artist+title hash (normalized, case-insensitive)
-        const artistTitleKey = `${track.artist.toLowerCase().trim()}|||${track.name.toLowerCase().trim()}`;
-        const hash = this.createSimpleHash(artistTitleKey);
-        this.trackEnrichmentByArtistTitleHash.set(hash, enrichmentData);
-      }
-
-      if (isPrimary) {
-        this.utils.isMainServer().then(async (isMainServer) => {
-          if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-            this.logger.log(
-              color.green.bold(
-                `Track enrichment maps loaded: ${color.white.bold(
-                  this.trackEnrichmentByTrackId.size
-                )} by trackId, ${color.white.bold(
-                  this.trackEnrichmentByIsrc.size
-                )} by ISRC, ${color.white.bold(
-                  this.trackEnrichmentByArtistTitleHash.size
-                )} by artist+title`
-              )
-            );
-          }
-        });
-      }
-    } catch (e: any) {
-      this.logger.log(
-        color.red.bold(`Failed to load track enrichment maps: ${e.message || e}`)
-      );
-    }
-  }
-
-  /**
-   * Public method to refresh track enrichment maps.
-   * Called by cron job to keep maps up-to-date.
-   */
-  public async refreshTrackEnrichmentMaps(): Promise<void> {
-    this.logger.log(color.blue.bold('Refreshing track enrichment maps...'));
-    await this.loadTrackEnrichmentMaps();
   }
 
   public async getPlaylist(
@@ -700,19 +590,6 @@ class Spotify {
       }
       return { success: false, error: 'Error getting playlist' };
     }
-  }
-
-  /**
-   * Helper: Create a simple hash for cache keys
-   */
-  private createSimpleHash(str: string): string {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return Math.abs(hash).toString(36);
   }
 
   /**
@@ -1034,32 +911,13 @@ class Spotify {
               return null;
             }
 
-            // Waterfall matching using in-memory maps
-            let enrichmentData: EnrichmentData | undefined = undefined;
-
-            // Priority 1: Exact trackId match
-            if (this.trackEnrichmentByTrackId.has(trackId)) {
-              enrichmentData = this.trackEnrichmentByTrackId.get(trackId);
-            }
-
-            // Priority 2: ISRC match
-            if (!enrichmentData && trackData.external_ids?.isrc) {
-              const isrc = trackData.external_ids.isrc;
-              if (this.trackEnrichmentByIsrc.has(isrc)) {
-                enrichmentData = this.trackEnrichmentByIsrc.get(isrc);
-              }
-            }
-
-            // Priority 3: Artist + Title match
-            if (!enrichmentData && trackData.artists[0]?.name) {
-              const artist = trackData.artists[0].name.toLowerCase().trim();
-              const title = trackData.name.toLowerCase().trim();
-              const artistTitleKey = `${artist}|||${title}`;
-              const hash = this.createSimpleHash(artistTitleKey);
-              if (this.trackEnrichmentByArtistTitleHash.has(hash)) {
-                enrichmentData = this.trackEnrichmentByArtistTitleHash.get(hash);
-              }
-            }
+            // Waterfall matching using TrackEnrichment service (trackId -> ISRC -> artist+title)
+            let enrichmentData: EnrichmentData | undefined = this.trackEnrichment.enrichTrack({
+              id: trackId,
+              isrc: trackData.external_ids?.isrc,
+              name: trackData.name,
+              artist: trackData.artists[0]?.name,
+            });
 
             // Priority 4: Check for playlist-specific overrides
             const overrideData = trackExtraInfoMap.get(trackId);

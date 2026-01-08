@@ -1389,75 +1389,74 @@ class Data {
     isrc: string,
     trackId: number
   ): Promise<{ wasUpdated: boolean; method: string }> {
-    if (!isrc) return { wasUpdated: false, method: '' };
-
-    // First try finding a track with matching ISRC
-    const existingTrackByISRC = await this.prisma.track.findFirst({
-      where: {
-        isrc: isrc,
-        year: {
-          not: null,
-        },
-        manuallyChecked: true,
-      },
-      select: {
-        id: true,
-        year: true,
-        yearSource: true,
-        certainty: true,
-        reasoning: true,
-        deezerLink: true,
-        youtubeMusicLink: true,
-        appleMusicLink: true,
-        amazonMusicLink: true,
-        tidalLink: true,
-      },
-    });
-
-    if (existingTrackByISRC) {
-      await this.prisma.track.update({
-        where: { id: trackId },
-        data: {
-          year: existingTrackByISRC.year,
-          yearSource: 'otherTrack_' + existingTrackByISRC.yearSource,
-          certainty: existingTrackByISRC.certainty,
-          reasoning: existingTrackByISRC.reasoning,
+    // First try finding a track with matching ISRC (only if ISRC is provided)
+    if (isrc) {
+      const existingTrackByISRC = await this.prisma.track.findFirst({
+        where: {
+          isrc: isrc,
+          year: {
+            not: null,
+          },
           manuallyChecked: true,
-          deezerLink: existingTrackByISRC.deezerLink,
-          youtubeMusicLink: existingTrackByISRC.youtubeMusicLink,
-          appleMusicLink: existingTrackByISRC.appleMusicLink,
-          amazonMusicLink: existingTrackByISRC.amazonMusicLink,
-          tidalLink: existingTrackByISRC.tidalLink,
+        },
+        select: {
+          id: true,
+          year: true,
+          yearSource: true,
+          certainty: true,
+          reasoning: true,
+          deezerLink: true,
+          youtubeMusicLink: true,
+          appleMusicLink: true,
+          amazonMusicLink: true,
+          tidalLink: true,
         },
       });
-      return { wasUpdated: true, method: 'isrc' };
+
+      if (existingTrackByISRC) {
+        await this.prisma.track.update({
+          where: { id: trackId },
+          data: {
+            year: existingTrackByISRC.year,
+            yearSource: 'otherTrack_' + existingTrackByISRC.yearSource,
+            certainty: existingTrackByISRC.certainty,
+            reasoning: existingTrackByISRC.reasoning,
+            manuallyChecked: true,
+            deezerLink: existingTrackByISRC.deezerLink,
+            youtubeMusicLink: existingTrackByISRC.youtubeMusicLink,
+            appleMusicLink: existingTrackByISRC.appleMusicLink,
+            amazonMusicLink: existingTrackByISRC.amazonMusicLink,
+            tidalLink: existingTrackByISRC.tidalLink,
+          },
+        });
+        return { wasUpdated: true, method: 'isrc' };
+      }
     }
 
-    // If no ISRC match, try finding tracks with matching artist and title
+    // If no ISRC or no ISRC match, try finding tracks with matching artist and title
     const currentTrack = await this.prisma.track.findUnique({
       where: { id: trackId },
       select: { artist: true, name: true },
     });
 
     if (currentTrack) {
+      // Use case-insensitive matching for artist and title (normalized like TrackEnrichment)
+      const artistLower = currentTrack.artist.toLowerCase().trim();
+      const nameLower = currentTrack.name.toLowerCase().trim();
+
       // First, only fetch IDs and year to minimize data transfer
-      const existingTracksByMetadata = await this.prisma.track.findMany({
-        where: {
-          artist: currentTrack.artist,
-          name: currentTrack.name,
-          year: {
-            not: null,
-          },
-          manuallyChecked: true,
-          id: {
-            not: trackId, // Exclude the current track
-          },
-        },
-        select: {
-          id: true,
-          year: true,
-        },
-      });
+      // Using raw SQL for case-insensitive matching
+      const existingTracksByMetadata = await this.prisma.$queryRaw<
+        { id: number; year: number }[]
+      >`
+        SELECT id, year
+        FROM tracks
+        WHERE LOWER(TRIM(artist)) = ${artistLower}
+          AND LOWER(TRIM(name)) = ${nameLower}
+          AND year IS NOT NULL
+          AND manuallyChecked = true
+          AND id != ${trackId}
+      `;
 
       if (existingTracksByMetadata.length === 1) {
         // Only one match found, fetch full track details
@@ -2072,6 +2071,7 @@ class Data {
         track.isrc ?? '',
         track.id
       );
+
       if (wasUpdated) {
         if (method == 'isrc') {
           this.logger.log(

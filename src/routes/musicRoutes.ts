@@ -10,6 +10,7 @@ import fs from 'fs/promises';
 import MusicServiceRegistry from '../services/MusicServiceRegistry';
 import { YouTubeMusicProvider } from '../providers';
 import { ServiceType } from '../enums/ServiceType';
+import TrackEnrichment from '../trackEnrichment';
 
 export default async function musicRoutes(fastify: FastifyInstance) {
   const spotify = Spotify.getInstance();
@@ -20,6 +21,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   const translation = new Translation();
   const musicRegistry = MusicServiceRegistry.getInstance();
   const ytMusicProvider = YouTubeMusicProvider.getInstance();
+  const trackEnrichment = TrackEnrichment.getInstance();
 
   // Get Spotify authorization URL
   fastify.get('/spotify/auth-url', async (_request, reply) => {
@@ -113,6 +115,12 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     }
 
     const result = await ytMusicProvider.getTracks(resolvedPlaylistId);
+
+    // Enrich tracks with year data from the database using artist+title matching
+    if (result.success && result.data?.tracks) {
+      result.data.tracks = trackEnrichment.enrichTracksByArtistTitle(result.data.tracks);
+    }
+
     return result;
   });
 
@@ -167,14 +175,13 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   fastify.post('/music/playlists/tracks', async (request: any, reply) => {
     const { url, serviceType, playlistId } = request.body;
 
+    let result: any;
+
     // If URL is provided, auto-detect service
     if (url) {
-      const result = await musicRegistry.getTracksFromUrl(url);
-      return result;
-    }
-
-    // If serviceType and playlistId are provided, use specific provider
-    if (serviceType && playlistId) {
+      result = await musicRegistry.getTracksFromUrl(url);
+    } else if (serviceType && playlistId) {
+      // If serviceType and playlistId are provided, use specific provider
       const provider = musicRegistry.getProviderByString(serviceType);
       if (!provider) {
         return {
@@ -182,13 +189,20 @@ export default async function musicRoutes(fastify: FastifyInstance) {
           error: `Unsupported service type: ${serviceType}`,
         };
       }
-      return await provider.getTracks(playlistId);
+      result = await provider.getTracks(playlistId);
+    } else {
+      return {
+        success: false,
+        error: 'Missing url or (serviceType and playlistId) parameters',
+      };
     }
 
-    return {
-      success: false,
-      error: 'Missing url or (serviceType and playlistId) parameters',
-    };
+    // Enrich tracks with year data from the database using artist+title matching
+    if (result?.success && result.data?.tracks) {
+      result.data.tracks = trackEnrichment.enrichTracksByArtistTitle(result.data.tracks);
+    }
+
+    return result;
   });
 
   // Recognize URL and return service info

@@ -103,24 +103,10 @@ class MusicFetch {
     sourceField?: string
   ): Promise<MusicFetchResponse> {
     if (!process.env['MUSICFETCH_API_KEY']) {
-      this.logger.log(
-        color.yellow.bold('MusicFetch API key not configured, skipping')
-      );
       return { success: false, error: 'API key not configured' };
     }
 
-    this.logger.log(
-      color.blue.bold(
-        `[MusicFetch] Fetching links from source: ${white.bold(sourceUrl)} (field: ${white.bold(sourceField || 'unknown')})`
-      )
-    );
-
     try {
-      // Request all services - MusicFetch will resolve from the source URL
-      this.logger.log(
-        color.gray(`[MusicFetch] Making API request to /url...`)
-      );
-
       const response = await this.limiter.schedule(() =>
         this.axiosInstance.get('/url', {
           params: {
@@ -128,10 +114,6 @@ class MusicFetch {
             services: 'spotify,deezer,youtubeMusic,appleMusic,amazonMusic,tidal',
           },
         })
-      );
-
-      this.logger.log(
-        color.gray(`[MusicFetch] API response received, status: ${response.status}`)
       );
 
       // Check if we have result.services in the response
@@ -150,14 +132,6 @@ class MusicFetch {
           tidalLink: services.tidal?.link || null,
         };
 
-        // Log found links
-        const foundLinks = Object.entries(links).filter(([_, v]) => v !== null).map(([k, _]) => k);
-        this.logger.log(
-          color.green.bold(
-            `[MusicFetch] Found ${white.bold(foundLinks.length.toString())} links: ${white.bold(foundLinks.join(', ') || 'none')}`
-          )
-        );
-
         // Don't overwrite the source link field (we already have it)
         if (sourceField && sourceField in links) {
           delete links[sourceField as keyof MusicLinks];
@@ -166,14 +140,6 @@ class MusicFetch {
         return { success: true, links };
       }
 
-      this.logger.log(
-        color.red.bold(
-          `No services found in response for: ${white.bold(
-            sourceUrl
-          )} - Response: ${white.bold(JSON.stringify(response.data))}`
-        )
-      );
-
       return { success: false, error: 'No services in response' };
     } catch (error) {
       if (axios.isAxiosError(error)) {
@@ -181,42 +147,23 @@ class MusicFetch {
 
         // Handle 404 - track not found
         if (axiosError.response?.status === 404) {
-          this.logger.log(
-            color.yellow.bold(
-              `Track not found in MusicFetch: ${white.bold(sourceUrl)}`
-            )
-          );
           return { success: true, notFound: true, links: {} };
         }
 
         // Handle 429 - rate limit
         if (axiosError.response?.status === 429) {
           this.logger.log(
-            color.red.bold('MusicFetch rate limit exceeded, will retry later')
+            color.red.bold('[MusicFetch] Rate limit exceeded, will retry later')
           );
           return { success: false, error: 'Rate limit exceeded', rateLimited: true };
         }
 
-        this.logger.log(
-          color.red.bold(
-            `MusicFetch API error: ${white.bold(
-              axiosError.message
-            )} for ${white.bold(sourceUrl)}`
-          )
-        );
         return {
           success: false,
           error: axiosError.message || 'API request failed',
         };
       }
 
-      this.logger.log(
-        color.red.bold(
-          `Error fetching music links: ${
-            error instanceof Error ? error.message : 'Unknown error'
-          }`
-        )
-      );
       return {
         success: false,
         error: error instanceof Error ? error.message : 'Unknown error',
@@ -248,10 +195,6 @@ class MusicFetch {
    * Update a single track with MusicFetch links using any available source link
    */
   public async updateTrackWithLinks(trackId: number): Promise<boolean> {
-    this.logger.log(
-      color.cyan.bold(`[MusicFetch] === Processing track ID: ${white.bold(trackId.toString())} ===`)
-    );
-
     try {
       // Get track with all link fields
       const track = await this.prisma.track.findUnique({
@@ -270,71 +213,24 @@ class MusicFetch {
       });
 
       if (!track) {
-        this.logger.log(
-          color.red.bold(
-            `[MusicFetch] Track with ID ${white.bold(
-              trackId.toString()
-            )} not found in database`
-          )
-        );
         return false;
       }
 
-      this.logger.log(
-        color.gray(`[MusicFetch] Track: "${track.name}" by ${track.artist}`)
-      );
-      this.logger.log(
-        color.gray(`[MusicFetch] Attempts so far: ${track.musicFetchAttempts}/${this.MAX_ATTEMPTS}`)
-      );
-
-      // Log current link status
-      const existingLinks = MUSIC_LINK_FIELDS.filter(f => track[f as keyof typeof track]);
-      const missingLinks = this.getMissingLinkFields(track);
-      this.logger.log(
-        color.gray(`[MusicFetch] Existing links: ${existingLinks.join(', ') || 'none'}`)
-      );
-      this.logger.log(
-        color.gray(`[MusicFetch] Missing links: ${missingLinks.join(', ') || 'none'}`)
-      );
-
       if (track.musicFetchAttempts >= this.MAX_ATTEMPTS) {
-        this.logger.log(
-          color.yellow.bold(
-            `[MusicFetch] Skipping track ${white.bold(
-              trackId.toString()
-            )} - max attempts (${white.bold(
-              this.MAX_ATTEMPTS.toString()
-            )}) reached`
-          )
-        );
         return false;
       }
 
       // Find any available link to use as source
       const sourceLink = this.findAvailableLink(track);
       if (!sourceLink) {
-        this.logger.log(
-          color.yellow.bold(
-            `[MusicFetch] No source link available for track ${white.bold(trackId.toString())}`
-          )
-        );
         return false;
       }
-
-      this.logger.log(
-        color.blue.bold(`[MusicFetch] Using source: ${white.bold(sourceLink.field)} -> ${white.bold(sourceLink.url)}`)
-      );
 
       // Fetch links from MusicFetch API using the available source
       const result = await this.fetchLinksForTrack(sourceLink.url, sourceLink.field);
 
       // If rate limited, don't increment attempts - just return false
       if (result.rateLimited) {
-        this.logger.log(
-          color.yellow.bold(
-            `[MusicFetch] Rate limited - NOT incrementing attempts for track ${white.bold(trackId.toString())}`
-          )
-        );
         return false;
       }
 
@@ -374,38 +270,28 @@ class MusicFetch {
         }
       }
 
-      this.logger.log(
-        color.green.bold(`[MusicFetch] New links to add: ${white.bold(newLinksAdded.join(', ') || 'none')}`)
-      );
-
       // Update track in database
       await this.prisma.track.update({
         where: { id: trackId },
         data: updateData,
       });
 
-      this.logger.log(
-        color.green.bold(`[MusicFetch] Database updated for track ${white.bold(trackId.toString())}`)
-      );
-
-      if (result.success) {
-        return true;
-      } else {
+      // Only log if we actually added new links
+      if (newLinksAdded.length > 0) {
         this.logger.log(
-          color.yellow.bold(
-            `[MusicFetch] Failed to fetch links for track ${white.bold(
-              trackId.toString()
-            )}: ${white.bold(result.error || 'Unknown error')}`
+          color.green.bold(
+            `[MusicFetch] Updated "${white.bold(track.artist)} - ${white.bold(track.name)}" with ${white.bold(newLinksAdded.length.toString())} new links: ${white.bold(newLinksAdded.join(', '))}`
           )
         );
-        return false;
       }
+
+      return result.success;
     } catch (error) {
       this.logger.log(
         color.red.bold(
           `[MusicFetch] Error updating track ${white.bold(
             trackId.toString()
-          )} with MusicFetch links: ${white.bold(
+          )}: ${white.bold(
             error instanceof Error ? error.message : 'Unknown error'
           )}`
         )
@@ -419,24 +305,6 @@ class MusicFetch {
    * Works with any available music link (Spotify, YouTube Music, Deezer, etc.)
    */
   public async processPlaylistTracks(playlistId: number): Promise<void> {
-    this.logger.log(
-      color.magenta.bold(
-        `\n[MusicFetch] ========================================`
-      )
-    );
-    this.logger.log(
-      color.magenta.bold(
-        `[MusicFetch] Starting playlist processing: ${white.bold(
-          playlistId.toString()
-        )}`
-      )
-    );
-    this.logger.log(
-      color.magenta.bold(
-        `[MusicFetch] ========================================\n`
-      )
-    );
-
     try {
       // Get all tracks from the playlist with all link fields
       const playlistTracks = await this.prisma.playlistHasTrack.findMany({
@@ -459,24 +327,6 @@ class MusicFetch {
         },
       });
 
-      this.logger.log(
-        color.blue.bold(
-          `[MusicFetch] Found ${white.bold(playlistTracks.length.toString())} total tracks in playlist`
-        )
-      );
-
-      // Log each track's status
-      for (const pt of playlistTracks) {
-        const track = pt.track;
-        const existingLinks = MUSIC_LINK_FIELDS.filter(f => track[f as keyof typeof track]);
-        const missingLinks = this.getMissingLinkFields(track);
-        this.logger.log(
-          color.gray(
-            `[MusicFetch] - Track ${track.id}: "${track.name}" | Has: ${existingLinks.length} links | Missing: ${missingLinks.length} | Attempts: ${track.musicFetchAttempts}`
-          )
-        );
-      }
-
       // Filter tracks that need processing:
       // - Must have at least one link (as source)
       // - Must be missing at least one link
@@ -492,96 +342,36 @@ class MusicFetch {
         );
       });
 
-      // Log why tracks were excluded
-      const excludedTracks = playlistTracks.filter((pt) => {
-        const track = pt.track;
-        const hasSourceLink = this.findAvailableLink(track) !== null;
-        const hasMissingLinks = this.getMissingLinkFields(track).length > 0;
-        return !(hasSourceLink && hasMissingLinks && track.musicFetchAttempts < this.MAX_ATTEMPTS);
-      });
-
-      if (excludedTracks.length > 0) {
-        this.logger.log(
-          color.yellow.bold(`\n[MusicFetch] Excluded ${white.bold(excludedTracks.length.toString())} tracks:`)
-        );
-        for (const pt of excludedTracks) {
-          const track = pt.track;
-          const hasSourceLink = this.findAvailableLink(track) !== null;
-          const hasMissingLinks = this.getMissingLinkFields(track).length > 0;
-          let reason = '';
-          if (!hasSourceLink) reason = 'no source link';
-          else if (!hasMissingLinks) reason = 'all links present';
-          else if (track.musicFetchAttempts >= this.MAX_ATTEMPTS) reason = 'max attempts reached';
-          this.logger.log(
-            color.gray(`[MusicFetch]   - Track ${track.id}: ${reason}`)
-          );
-        }
-      }
-
       if (tracksToProcess.length === 0) {
-        this.logger.log(
-          color.blue.bold(
-            `\n[MusicFetch] No tracks to process for playlist ${white.bold(
-              playlistId.toString()
-            )} - all tracks already have links or no source link available`
-          )
-        );
         return;
       }
 
       this.logger.log(
-        color.green.bold(
-          `\n[MusicFetch] Will process ${white.bold(
-            tracksToProcess.length.toString()
-          )} tracks for playlist ${white.bold(playlistId.toString())}`
-        )
-      );
-      this.logger.log(
-        color.gray(
-          `[MusicFetch] Rate limit: ${RATE_LIMIT_PER_MINUTE} requests/minute (${Math.ceil(60 / RATE_LIMIT_PER_MINUTE)} seconds between requests)\n`
+        color.blue.bold(
+          `[MusicFetch] Processing ${white.bold(tracksToProcess.length.toString())} tracks for playlist ${white.bold(playlistId.toString())}`
         )
       );
 
       // Process tracks sequentially with rate limiting
       let successCount = 0;
-      let trackIndex = 0;
       for (const playlistTrack of tracksToProcess) {
-        trackIndex++;
-        this.logger.log(
-          color.cyan.bold(
-            `\n[MusicFetch] --- Track ${trackIndex}/${tracksToProcess.length} ---`
-          )
-        );
         const success = await this.updateTrackWithLinks(playlistTrack.track.id);
         if (success) successCount++;
       }
 
-      this.logger.log(
-        color.magenta.bold(
-          `\n[MusicFetch] ========================================`
-        )
-      );
-      this.logger.log(
-        color.green.bold(
-          `[MusicFetch] Playlist ${white.bold(playlistId.toString())} complete!`
-        )
-      );
-      this.logger.log(
-        color.green.bold(
-          `[MusicFetch] Results: ${white.bold(successCount.toString())} successful / ${white.bold(tracksToProcess.length.toString())} processed`
-        )
-      );
-      this.logger.log(
-        color.magenta.bold(
-          `[MusicFetch] ========================================\n`
-        )
-      );
+      if (successCount > 0) {
+        this.logger.log(
+          color.green.bold(
+            `[MusicFetch] Playlist ${white.bold(playlistId.toString())} complete: ${white.bold(successCount.toString())}/${white.bold(tracksToProcess.length.toString())} tracks updated`
+          )
+        );
+      }
     } catch (error) {
       this.logger.log(
         color.red.bold(
           `[MusicFetch] Error processing playlist ${white.bold(
             playlistId.toString()
-          )} with MusicFetch: ${white.bold(
+          )}: ${white.bold(
             error instanceof Error ? error.message : 'Unknown error'
           )}`
         )
