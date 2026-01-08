@@ -600,6 +600,9 @@ class Mollie {
         printApiShipped: true,
         countrycode: true,
         isBusinessOrder: true,
+        refundAmount: true,
+        refundedAt: true,
+        refundReason: true,
         user: {
           select: {
             hash: true,
@@ -1462,6 +1465,50 @@ class Mollie {
       return {
         success: false,
         error: e instanceof Error ? e.message : 'Failed to create payment link',
+      };
+    }
+  }
+
+  public async createRefund(
+    molliePaymentId: string,
+    amount: number
+  ): Promise<ApiResult> {
+    try {
+      // Format amount to 2 decimal places
+      const formattedAmount = amount.toFixed(2);
+
+      const refund = await this.mollieClient.paymentRefunds.create({
+        paymentId: molliePaymentId,
+        amount: {
+          currency: 'EUR',
+          value: formattedAmount,
+        },
+      });
+
+      this.logger.log(
+        color.green.bold('Created refund: ') +
+          color.white.bold(refund.id) +
+          color.gray(' for ') +
+          color.white.bold(`EUR ${formattedAmount}`)
+      );
+
+      return {
+        success: true,
+        data: {
+          refundId: refund.id,
+          amount: formattedAmount,
+          status: refund.status,
+        },
+      };
+    } catch (e) {
+      this.logger.log(
+        color.red.bold('Failed to create refund: ') +
+          color.white(e instanceof Error ? e.message : String(e))
+      );
+
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : 'Failed to create refund',
       };
     }
   }
