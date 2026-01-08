@@ -445,7 +445,29 @@ Then run:
 ./_scripts/remove-from-cache.sh submit.invalidNewServiceUrl
 ```
 
-#### Step 22: Service Logos
+#### Step 22: Update Supported Platforms Table Component
+**File:** `src/app/shared/supported-platforms-table/supported-platforms-table.component.ts`
+
+Add the new service to the `platforms` array:
+```typescript
+platforms = [
+  // existing...
+  {
+    name: 'New Service',
+    logo: 'assets/images/service-logos/newservice.png',
+    logoDark: 'assets/images/service-logos/newservice-dark.png', // or null if no dark version needed
+    playlists: true,
+    years: true,  // or 'ai' if the service doesn't provide year data
+    hiddenPlayback: false  // only Spotify supports hidden playback currently
+  }
+];
+```
+
+**Note:** This component is used in:
+- The "Supported Platforms" modal in `select-playlist.component.html`
+- The dedicated `/supported-platforms` page
+
+#### Step 23: Service Logos
 **Create:** `src/assets/images/service-logos/`
 - `newservice.png` - Light mode logo (brand color text on transparent, ~240px width)
 - `newservice-dark.png` - Dark mode logo (white text on transparent, same dimensions)
@@ -514,6 +536,29 @@ Update the `faq.supportedPlatformsAnswer` to include the new service:
 Then run:
 ```bash
 ./_scripts/remove-from-cache.sh faq.supportedPlatformsAnswer
+```
+
+#### Step 25: Update Homepage Translations
+**File:** `src/assets/i18n/en.json`
+
+Update the homepage translations that mention music services:
+
+1. **`home.subtitle`** - The hero section description mentions which services are supported
+2. **`home.feat1Desc`** - The "Personalized Music Experience" feature description
+
+Both should list all supported services with a link to the supported platforms page:
+```json
+{
+  "home": {
+    "subtitle": "...Choose your favorite songs from Spotify, Apple Music, YouTube Music <a href='/{{lang}}/supported-platforms' class='underline hover:text-gray-200'>and more</a>...",
+    "feat1Desc": "Create a custom set of up to 3000 cards from your Spotify, Apple Music, YouTube Music, Tidal or Deezer playlists (<a href='/{{lang}}/supported-platforms' class='text-primary-600 hover:text-primary-700 underline'>see all platforms</a>)..."
+  }
+}
+```
+
+Then run:
+```bash
+./_scripts/remove-from-cache.sh home.subtitle home.feat1Desc
 ```
 
 ---

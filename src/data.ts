@@ -2326,25 +2326,25 @@ class Data {
     if (searchTerm && searchTerm.trim().length > 0) {
       const likePattern = `%${searchTerm}%`;
       const tracks = await this.prisma.$queryRaw<any[]>`
-        SELECT id, artist, name, year, youtubeLink, spotifyLink
+        SELECT id, artist, name, year, youtubeLink, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink
         FROM tracks
         WHERE (artist LIKE ${likePattern} OR name LIKE ${likePattern})
         ${
           missingYouTubeLink
-            ? Prisma.sql`AND (youtubeLink IS NULL OR youtubeLink = '')`
+            ? Prisma.sql`AND (youtubeMusicLink IS NULL OR youtubeMusicLink = '')`
             : Prisma.sql``
         }
         LIMIT 100
       `;
       return tracks;
     } else {
-      // If no search term, just return tracks filtered by youtubeLink
+      // If no search term, just return tracks filtered by youtubeMusicLink
       const tracks = await this.prisma.$queryRaw<any[]>`
-        SELECT id, artist, name, year, youtubeLink, spotifyLink
+        SELECT id, artist, name, year, youtubeLink, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink
         FROM tracks
         ${
           missingYouTubeLink
-            ? Prisma.sql`WHERE (youtubeLink IS NULL OR youtubeLink = '')`
+            ? Prisma.sql`WHERE (youtubeMusicLink IS NULL OR youtubeMusicLink = '')`
             : Prisma.sql`WHERE 1=1`
         }
         LIMIT 100
@@ -2353,13 +2353,69 @@ class Data {
     }
   }
 
+  public async getTracksMissingSpotifyLink(
+    searchTerm: string = ''
+  ): Promise<any[]> {
+    if (searchTerm && searchTerm.trim().length > 0) {
+      const likePattern = `%${searchTerm}%`;
+      const tracks = await this.prisma.$queryRaw<any[]>`
+        SELECT id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink
+        FROM tracks
+        WHERE (spotifyLink IS NULL OR spotifyLink = '')
+        AND (artist LIKE ${likePattern} OR name LIKE ${likePattern})
+        ORDER BY id DESC
+        LIMIT 100
+      `;
+      return tracks;
+    } else {
+      const tracks = await this.prisma.$queryRaw<any[]>`
+        SELECT id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink
+        FROM tracks
+        WHERE (spotifyLink IS NULL OR spotifyLink = '')
+        ORDER BY id DESC
+        LIMIT 100
+      `;
+      return tracks;
+    }
+  }
+
+  public async getTracksMissingSpotifyLinkCount(): Promise<number> {
+    const result = await this.prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(*) as count
+      FROM tracks
+      WHERE (spotifyLink IS NULL OR spotifyLink = '')
+    `;
+    return Number(result[0]?.count ?? 0);
+  }
+
+  public async getTrackById(trackId: number): Promise<any> {
+    const track = await this.prisma.track.findUnique({
+      where: { id: trackId },
+      select: {
+        id: true,
+        artist: true,
+        name: true,
+        year: true,
+        spotifyLink: true,
+        youtubeMusicLink: true,
+        appleMusicLink: true,
+        tidalLink: true,
+        deezerLink: true,
+      },
+    });
+    return track;
+  }
+
   public async updateTrack(
     id: number,
     artist: string,
     name: string,
     year: number,
     spotifyLink: string,
-    youtubeLink: string,
+    youtubeMusicLink: string,
+    appleMusicLink: string,
+    tidalLink: string,
+    deezerLink: string,
     clientIp: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -2376,7 +2432,10 @@ class Data {
           name: sanitizedTitle,
           year,
           spotifyLink,
-          youtubeLink,
+          youtubeMusicLink,
+          appleMusicLink,
+          tidalLink,
+          deezerLink,
           manuallyCorrected: true,
         },
       });

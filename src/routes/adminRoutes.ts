@@ -1341,9 +1341,19 @@ export default async function adminRoutes(
     '/tracks/update',
     getAuthHandler(['admin']),
     async (request: any, _reply) => {
-      const { id, artist, name, year, spotifyLink, youtubeLink } = request.body;
+      const {
+        id,
+        artist,
+        name,
+        year,
+        spotifyLink,
+        youtubeMusicLink,
+        appleMusicLink,
+        tidalLink,
+        deezerLink,
+      } = request.body;
 
-      if (!id || !artist || !name || !year || !spotifyLink) {
+      if (!id || !artist || !name || year === undefined || year === null) {
         return { success: false, error: 'Missing required fields' };
       }
       const result = await data.updateTrack(
@@ -1351,11 +1361,82 @@ export default async function adminRoutes(
         artist,
         name,
         year,
-        spotifyLink,
-        youtubeLink || '',
+        spotifyLink || '',
+        youtubeMusicLink || '',
+        appleMusicLink || '',
+        tidalLink || '',
+        deezerLink || '',
         request.clientIp
       );
       return result;
+    }
+  );
+
+  // Get tracks missing Spotify link
+  fastify.post(
+    '/tracks/missing-spotify',
+    getAuthHandler(['admin']),
+    async (request: any, _reply) => {
+      const { searchTerm = '' } = request.body;
+      const tracks = await data.getTracksMissingSpotifyLink(searchTerm);
+      return { success: true, data: tracks };
+    }
+  );
+
+  // Get count of tracks missing Spotify link
+  fastify.get(
+    '/tracks/missing-spotify-count',
+    getAuthHandler(['admin']),
+    async (_request: any, _reply) => {
+      const count = await data.getTracksMissingSpotifyLinkCount();
+      return { success: true, count };
+    }
+  );
+
+  // Force fetch MusicFetch links for a single track (bypasses attempt limit)
+  fastify.post(
+    '/tracks/musicfetch',
+    getAuthHandler(['admin']),
+    async (request: any, _reply) => {
+      const { trackId } = request.body;
+      if (!trackId) {
+        return { success: false, error: 'Missing trackId' };
+      }
+
+      try {
+        const MusicFetch = (await import('../musicfetch')).default;
+        const musicFetch = MusicFetch.getInstance();
+        const success = await musicFetch.updateTrackWithLinks(trackId, true);
+
+        if (success) {
+          // Fetch the updated track data to return
+          const track = await data.getTrackById(trackId);
+          return { success: true, track };
+        } else {
+          return { success: false, error: 'Failed to fetch links - track may not have any existing links to use as source' };
+        }
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    }
+  );
+
+  // Search Spotify tracks (for admin track management)
+  fastify.post(
+    '/tracks/spotify-search',
+    getAuthHandler(['admin']),
+    async (request: any, _reply) => {
+      const { searchTerm, limit = 10 } = request.body;
+      if (!searchTerm || searchTerm.length < 2) {
+        return { success: false, error: 'Search term too short' };
+      }
+
+      try {
+        const result = await spotify.searchTracks(searchTerm, limit, 0);
+        return result;
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
     }
   );
 

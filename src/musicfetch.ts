@@ -196,8 +196,10 @@ class MusicFetch {
 
   /**
    * Update a single track with MusicFetch links using any available source link
+   * @param trackId - The track ID to process
+   * @param forceUpdate - If true, bypasses the max attempts check (for manual fetches)
    */
-  public async updateTrackWithLinks(trackId: number): Promise<boolean> {
+  public async updateTrackWithLinks(trackId: number, forceUpdate: boolean = false): Promise<boolean> {
     try {
       // Get track with all link fields
       const track = await this.prisma.track.findUnique({
@@ -219,7 +221,7 @@ class MusicFetch {
         return false;
       }
 
-      if (track.musicFetchAttempts >= this.MAX_ATTEMPTS) {
+      if (!forceUpdate && track.musicFetchAttempts >= this.MAX_ATTEMPTS) {
         return false;
       }
 
