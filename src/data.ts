@@ -1405,15 +1405,24 @@ class Data {
           yearSource: true,
           certainty: true,
           reasoning: true,
+          spotifyLink: true,
           deezerLink: true,
           youtubeMusicLink: true,
           appleMusicLink: true,
           amazonMusicLink: true,
           tidalLink: true,
+          musicFetchLastAttempt: true,
+          musicFetchAttempts: true,
         },
       });
 
       if (existingTrackByISRC) {
+        // Check if target track has empty spotifyLink
+        const targetTrack = await this.prisma.track.findUnique({
+          where: { id: trackId },
+          select: { spotifyLink: true },
+        });
+
         await this.prisma.track.update({
           where: { id: trackId },
           data: {
@@ -1422,11 +1431,16 @@ class Data {
             certainty: existingTrackByISRC.certainty,
             reasoning: existingTrackByISRC.reasoning,
             manuallyChecked: true,
+            spotifyLink: !targetTrack?.spotifyLink
+              ? existingTrackByISRC.spotifyLink
+              : undefined,
             deezerLink: existingTrackByISRC.deezerLink,
             youtubeMusicLink: existingTrackByISRC.youtubeMusicLink,
             appleMusicLink: existingTrackByISRC.appleMusicLink,
             amazonMusicLink: existingTrackByISRC.amazonMusicLink,
             tidalLink: existingTrackByISRC.tidalLink,
+            musicFetchLastAttempt: existingTrackByISRC.musicFetchLastAttempt,
+            musicFetchAttempts: existingTrackByISRC.musicFetchAttempts,
           },
         });
         return { wasUpdated: true, method: 'isrc' };
@@ -1436,7 +1450,7 @@ class Data {
     // If no ISRC or no ISRC match, try finding tracks with matching artist and title
     const currentTrack = await this.prisma.track.findUnique({
       where: { id: trackId },
-      select: { artist: true, name: true },
+      select: { artist: true, name: true, spotifyLink: true },
     });
 
     if (currentTrack) {
@@ -1467,11 +1481,14 @@ class Data {
             yearSource: true,
             certainty: true,
             reasoning: true,
+            spotifyLink: true,
             deezerLink: true,
             youtubeMusicLink: true,
             appleMusicLink: true,
             amazonMusicLink: true,
             tidalLink: true,
+            musicFetchLastAttempt: true,
+            musicFetchAttempts: true,
           },
         });
 
@@ -1484,11 +1501,16 @@ class Data {
               certainty: matchedTrack.certainty,
               reasoning: matchedTrack.reasoning,
               manuallyChecked: true,
+              spotifyLink: !currentTrack.spotifyLink
+                ? matchedTrack.spotifyLink
+                : undefined,
               deezerLink: matchedTrack.deezerLink,
               youtubeMusicLink: matchedTrack.youtubeMusicLink,
               appleMusicLink: matchedTrack.appleMusicLink,
               amazonMusicLink: matchedTrack.amazonMusicLink,
               tidalLink: matchedTrack.tidalLink,
+              musicFetchLastAttempt: matchedTrack.musicFetchLastAttempt,
+              musicFetchAttempts: matchedTrack.musicFetchAttempts,
             },
           });
           return { wasUpdated: true, method: 'artistTitle' };
@@ -1505,11 +1527,14 @@ class Data {
               yearSource: true,
               certainty: true,
               reasoning: true,
+              spotifyLink: true,
               deezerLink: true,
               youtubeMusicLink: true,
               appleMusicLink: true,
               amazonMusicLink: true,
               tidalLink: true,
+              musicFetchLastAttempt: true,
+              musicFetchAttempts: true,
             },
           });
 
@@ -1523,11 +1548,16 @@ class Data {
                 certainty: matchedTrack.certainty,
                 reasoning: matchedTrack.reasoning,
                 manuallyChecked: true,
+                spotifyLink: !currentTrack.spotifyLink
+                  ? matchedTrack.spotifyLink
+                  : undefined,
                 deezerLink: matchedTrack.deezerLink,
                 youtubeMusicLink: matchedTrack.youtubeMusicLink,
                 appleMusicLink: matchedTrack.appleMusicLink,
                 amazonMusicLink: matchedTrack.amazonMusicLink,
                 tidalLink: matchedTrack.tidalLink,
+                musicFetchLastAttempt: matchedTrack.musicFetchLastAttempt,
+                musicFetchAttempts: matchedTrack.musicFetchAttempts,
               },
             });
             return { wasUpdated: true, method: 'artistTitle_multiple' };
