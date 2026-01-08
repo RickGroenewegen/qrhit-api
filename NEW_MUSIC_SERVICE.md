@@ -20,7 +20,7 @@ Complete guide for integrating a new music streaming service into QRSong.
 | 10 | `src/musicfetch.ts` | Add link field mappings |
 | 11 | `.env` | Add credentials |
 
-### Frontend (qrhit) - 15 files
+### Frontend (qrhit) - 17 files
 
 | # | File | Action |
 |---|------|--------|
@@ -35,10 +35,12 @@ Complete guide for integrating a new music streaming service into QRSong.
 | 9 | `src/app/select-playlist/...ts` | Handle shortlinks (if service has shortlinks) |
 | 10 | `src/app/summary/summary.component.ts` | Add service methods & inject service |
 | 11 | `src/app/year-check/year-check.component.ts` | Add to serviceConfig |
-| 12 | `src/assets/i18n/en.json` | Add translations |
-| 13 | `src/assets/images/service-logos/` | **Create** - logo PNGs (light + dark) |
-| 14 | `src/environments/environment.ts` | Add clientId (if OAuth) |
-| 15 | `src/environments/environment.prod.ts` | Add clientId (if OAuth) |
+| 12 | `src/app/tracks/tracks.component.html` | Add service icon column (header + body) |
+| 13 | `src/app/admin-missing-spotify/...html` | Add service icon column (header + body) |
+| 14 | `src/assets/i18n/en.json` | Add translations |
+| 15 | `src/assets/images/service-logos/` | **Create** - logo PNGs (light + dark) |
+| 16 | `src/environments/environment.ts` | Add clientId (if OAuth) |
+| 17 | `src/environments/environment.prod.ts` | Add clientId (if OAuth) |
 
 ---
 
@@ -430,7 +432,39 @@ private readonly serviceConfig = {
 };
 ```
 
-#### Step 21: Translations
+#### Step 21: Update Admin Tracks Table
+**File:** `src/app/tracks/tracks.component.html`
+
+Add icon column header (after existing service icons):
+```html
+<th class="px-2 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 w-12">
+  <i class="fab fa-newservice fa-lg text-[#BRANDCOLOR]"></i>
+</th>
+```
+
+Add icon column body cell (in the same order as headers):
+```html
+<td class="px-2 py-4 whitespace-nowrap text-center">
+  <i *ngIf="track.newServiceLink" class="fab fa-newservice fa-lg text-[#BRANDCOLOR]"></i>
+  <span *ngIf="!track.newServiceLink" class="text-gray-400">-</span>
+</td>
+```
+
+Also update the Track interface if needed and add the field to the edit modal.
+
+#### Step 22: Update Admin Missing Spotify Table
+**File:** `src/app/admin-missing-spotify/admin-missing-spotify.component.html`
+
+Add icon column header and body cell (same pattern as tracks table above).
+
+**Note:** Both admin tables show which music service links exist for each track. When adding a new service, you need to:
+1. Add the icon column to the table header
+2. Add the icon column to the table body
+3. Update the Track interface to include `newServiceLink`
+4. Add the field to the edit modal form
+5. Update the colspan on "No tracks found" rows if needed
+
+#### Step 23: Translations
 **File:** `src/assets/i18n/en.json`
 ```json
 {
@@ -621,6 +655,8 @@ const CACHE_KEY_SEARCH = '[service]_search_';      // TTL: 1800s (30 min)
 - [ ] Handle shortlinks in `select-playlist.component.ts` (if service has shortlinks)
 - [ ] Update `summary.component.ts` (inject service, add to all service methods)
 - [ ] Update `year-check.component.ts`
+- [ ] Update `tracks.component.html` (add icon column + edit modal field)
+- [ ] Update `admin-missing-spotify.component.html` (add icon column + edit modal field)
 - [ ] Add translations
 - [ ] Run `remove-from-cache.sh`
 - [ ] Add service logos (light + dark versions)
