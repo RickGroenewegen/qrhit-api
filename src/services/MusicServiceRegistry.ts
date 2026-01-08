@@ -1,6 +1,6 @@
 import { ServiceType, isValidServiceType } from '../enums/ServiceType';
 import { IMusicProvider, UrlValidationResult } from '../interfaces/IMusicProvider';
-import { SpotifyProvider, YouTubeMusicProvider, TidalProvider, DeezerProvider } from '../providers';
+import { SpotifyProvider, YouTubeMusicProvider, TidalProvider, DeezerProvider, AppleMusicProvider } from '../providers';
 import Logger from '../logger';
 
 /**
@@ -29,6 +29,7 @@ class MusicServiceRegistry {
     this.registerProvider(YouTubeMusicProvider.getInstance());
     this.registerProvider(TidalProvider.getInstance());
     this.registerProvider(DeezerProvider.getInstance());
+    this.registerProvider(AppleMusicProvider.getInstance());
   }
 
   public static getInstance(): MusicServiceRegistry {

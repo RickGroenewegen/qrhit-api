@@ -447,13 +447,37 @@ Then run:
 
 #### Step 22: Service Logos
 **Create:** `src/assets/images/service-logos/`
-- `newservice.png` - Light mode logo (black text, ~240px width)
-- `newservice-dark.png` - Dark mode logo (white text, same dimensions)
+- `newservice.png` - Light mode logo (brand color text on transparent, ~240px width)
+- `newservice-dark.png` - Dark mode logo (white text on transparent, same dimensions)
 
 Both logos should have:
 - Transparent background
 - ~240px width (height varies by aspect ratio)
-- Brand colors preserved (only text color changes between versions)
+- Light mode: Brand color text (visible on white background)
+- Dark mode: White text (visible on dark background)
+
+**Creating logos with ImageMagick:**
+```bash
+cd src/assets/images/service-logos
+
+# Light mode - brand color text on transparent background
+magick -size 240x50 xc:transparent \
+  -font "Helvetica-Bold" -pointsize 28 \
+  -fill '#BRANDCOLOR' \
+  -gravity center -annotate +0+0 "Service Name" \
+  -trim +repage \
+  newservice.png
+
+# Dark mode - white text on transparent background
+magick -size 240x50 xc:transparent \
+  -font "Helvetica-Bold" -pointsize 28 \
+  -fill '#FFFFFF' \
+  -gravity center -annotate +0+0 "Service Name" \
+  -trim +repage \
+  newservice-dark.png
+```
+
+**Note:** Replace `#BRANDCOLOR` with the service's brand color (e.g., `#FA243C` for Apple Music, `#1DB954` for Spotify).
 
 **Update select-playlist.component.html:**
 ```html

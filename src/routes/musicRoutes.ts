@@ -8,7 +8,7 @@ import Utils from '../utils';
 import Translation from '../translation';
 import fs from 'fs/promises';
 import MusicServiceRegistry from '../services/MusicServiceRegistry';
-import { YouTubeMusicProvider, TidalProvider, DeezerProvider } from '../providers';
+import { YouTubeMusicProvider, TidalProvider, DeezerProvider, AppleMusicProvider } from '../providers';
 import { ServiceType } from '../enums/ServiceType';
 import TrackEnrichment from '../trackEnrichment';
 
@@ -23,6 +23,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   const ytMusicProvider = YouTubeMusicProvider.getInstance();
   const tidalProvider = TidalProvider.getInstance();
   const deezerProvider = DeezerProvider.getInstance();
+  const appleMusicProvider = AppleMusicProvider.getInstance();
   const trackEnrichment = TrackEnrichment.getInstance();
 
   // Get Spotify authorization URL
@@ -410,6 +411,104 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     }
 
     const result = await deezerProvider.getTracks(resolvedPlaylistId);
+
+    // Enrich tracks with additional data from database
+    if (result.success && result.data?.tracks) {
+      result.data.tracks = trackEnrichment.enrichTracksByArtistTitle(result.data.tracks);
+    }
+
+    return result;
+  });
+
+  // ============================================
+  // Apple Music Routes (Public API - Developer Token required)
+  // ============================================
+
+  // Resolve Apple Music shortlink
+  fastify.post('/apple-music/resolve-shortlink', async (request: any, reply) => {
+    const { url } = request.body;
+
+    if (!url) {
+      return { success: false, error: 'Missing url parameter' };
+    }
+
+    return await appleMusicProvider.resolveShortlink(url);
+  });
+
+  // Get Apple Music playlist info
+  fastify.post('/apple-music/playlists', async (request: any, reply) => {
+    const { playlistId, url } = request.body;
+
+    let resolvedPlaylistId = playlistId;
+
+    // If URL is provided instead of playlistId, extract the ID
+    if (!resolvedPlaylistId && url) {
+      // Check for shortlinks first
+      const validation = appleMusicProvider.validateUrl(url);
+      if (validation.isValid && !validation.resourceId) {
+        // It's a shortlink, resolve it
+        const resolved = await appleMusicProvider.resolveShortlink(url);
+        if (resolved.success && resolved.data?.resolvedUrl) {
+          resolvedPlaylistId = appleMusicProvider.extractPlaylistId(resolved.data.resolvedUrl);
+        }
+      } else {
+        resolvedPlaylistId = appleMusicProvider.extractPlaylistId(url);
+      }
+
+      if (!resolvedPlaylistId) {
+        return {
+          success: false,
+          error: 'Could not extract playlist ID from URL',
+        };
+      }
+    }
+
+    if (!resolvedPlaylistId) {
+      return {
+        success: false,
+        error: 'Missing playlistId or url parameter',
+      };
+    }
+
+    const result = await appleMusicProvider.getPlaylist(resolvedPlaylistId);
+    return result;
+  });
+
+  // Get Apple Music playlist tracks
+  fastify.post('/apple-music/playlists/tracks', async (request: any, reply) => {
+    const { playlistId, url } = request.body;
+
+    let resolvedPlaylistId = playlistId;
+
+    if (!resolvedPlaylistId && url) {
+      // Check for shortlinks first
+      const validation = appleMusicProvider.validateUrl(url);
+      if (validation.isValid && !validation.resourceId) {
+        // It's a shortlink, resolve it
+        const resolved = await appleMusicProvider.resolveShortlink(url);
+        if (resolved.success && resolved.data?.resolvedUrl) {
+          resolvedPlaylistId = appleMusicProvider.extractPlaylistId(resolved.data.resolvedUrl);
+        }
+      } else {
+        resolvedPlaylistId = appleMusicProvider.extractPlaylistId(url);
+      }
+
+      if (!resolvedPlaylistId) {
+        return {
+          success: false,
+          error: 'Could not extract playlist ID from URL',
+        };
+      }
+    }
+
+    if (!resolvedPlaylistId) {
+      return {
+        success: false,
+        error: 'Missing playlistId or url parameter',
+      };
+    }
+
+    const result = await appleMusicProvider.getTracks(resolvedPlaylistId);
 
     // Enrich tracks with additional data from database
     if (result.success && result.data?.tracks) {
