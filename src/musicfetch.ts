@@ -85,10 +85,6 @@ class MusicFetch {
       reservoirRefreshAmount: RATE_LIMIT_PER_MINUTE,
       reservoirRefreshInterval: 60 * 1000,
     });
-
-    this.logger.log(
-      color.blue.bold('MusicFetch service initialized with rate limiting')
-    );
   }
 
   public static getInstance(): MusicFetch {
@@ -159,12 +155,6 @@ class MusicFetch {
 
       // Update in-memory cache in ExternalCardService
       await this.externalCardService.updateCardsWithSpotifyIdInCache(spotifyId, newLinks);
-
-      this.logger.log(
-        color.blue.bold(
-          `[${white.bold('MusicFetch')}] Cleared caches for ${white.bold(cards.length.toString())} card(s) with spotifyId ${white.bold(spotifyId)}`
-        )
-      );
     } catch (error) {
       this.logger.log(
         color.yellow.bold(
@@ -807,8 +797,9 @@ class MusicFetch {
    * Updates ALL cards with the same spotifyId, only filling in null/empty fields
    * @param cardId - The external card ID to process (used to get spotifyId)
    * @param forceUpdate - If true, bypasses the max attempts check
+   * @returns Object with success status and number of cards updated
    */
-  public async updateExternalCardWithLinks(cardId: number, forceUpdate: boolean = false): Promise<boolean> {
+  public async updateExternalCardWithLinks(cardId: number, forceUpdate: boolean = false): Promise<{ success: boolean; cardsUpdated: number; servicesAdded: string[] }> {
     try {
       const card = await this.prisma.externalCard.findUnique({
         where: { id: cardId },
@@ -820,17 +811,17 @@ class MusicFetch {
       });
 
       if (!card) {
-        return false;
+        return { success: false, cardsUpdated: 0, servicesAdded: [] };
       }
 
       if (!forceUpdate && card.musicFetchAttempts >= this.MAX_ATTEMPTS) {
-        return false;
+        return { success: false, cardsUpdated: 0, servicesAdded: [] };
       }
 
       // Need a spotify link as source
       const sourceUrl = card.spotifyLink || (card.spotifyId ? `https://open.spotify.com/track/${card.spotifyId}` : null);
       if (!sourceUrl || !card.spotifyId) {
-        return false;
+        return { success: false, cardsUpdated: 0, servicesAdded: [] };
       }
 
       // Fetch links from MusicFetch API
@@ -838,33 +829,27 @@ class MusicFetch {
 
       // If rate limited, don't increment attempts
       if (result.rateLimited) {
-        return false;
+        return { success: false, cardsUpdated: 0, servicesAdded: [] };
       }
 
       // Build links to update - only include non-empty values
       const linksToUpdate: Record<string, string> = {};
-      const newLinksAdded: string[] = [];
 
       if (result.links) {
         if (result.links.deezerLink) {
           linksToUpdate.deezerLink = result.links.deezerLink;
-          newLinksAdded.push('deezerLink');
         }
         if (result.links.youtubeMusicLink) {
           linksToUpdate.youtubeMusicLink = result.links.youtubeMusicLink;
-          newLinksAdded.push('youtubeMusicLink');
         }
         if (result.links.appleMusicLink) {
           linksToUpdate.appleMusicLink = result.links.appleMusicLink;
-          newLinksAdded.push('appleMusicLink');
         }
         if (result.links.amazonMusicLink) {
           linksToUpdate.amazonMusicLink = result.links.amazonMusicLink;
-          newLinksAdded.push('amazonMusicLink');
         }
         if (result.links.tidalLink) {
           linksToUpdate.tidalLink = result.links.tidalLink;
-          newLinksAdded.push('tidalLink');
         }
       }
 
@@ -881,7 +866,9 @@ class MusicFetch {
         },
       });
 
-      let cardsUpdated = 0;
+      // Track which services were actually added (across all cards)
+      const servicesActuallyAdded = new Set<string>();
+      let anyCardReceivedNewLinks = false;
 
       // Update each card, only filling in null/empty fields
       for (const cardToUpdate of cardsToUpdate) {
@@ -893,46 +880,50 @@ class MusicFetch {
         // Only update fields that are currently null/empty AND we have a value for
         if (!cardToUpdate.deezerLink && linksToUpdate.deezerLink) {
           updateData.deezerLink = linksToUpdate.deezerLink;
+          servicesActuallyAdded.add('deezer');
         }
         if (!cardToUpdate.youtubeMusicLink && linksToUpdate.youtubeMusicLink) {
           updateData.youtubeMusicLink = linksToUpdate.youtubeMusicLink;
+          servicesActuallyAdded.add('youtubeMusic');
         }
         if (!cardToUpdate.appleMusicLink && linksToUpdate.appleMusicLink) {
           updateData.appleMusicLink = linksToUpdate.appleMusicLink;
+          servicesActuallyAdded.add('appleMusic');
         }
         if (!cardToUpdate.amazonMusicLink && linksToUpdate.amazonMusicLink) {
           updateData.amazonMusicLink = linksToUpdate.amazonMusicLink;
+          servicesActuallyAdded.add('amazonMusic');
         }
         if (!cardToUpdate.tidalLink && linksToUpdate.tidalLink) {
           updateData.tidalLink = linksToUpdate.tidalLink;
+          servicesActuallyAdded.add('tidal');
+        }
+
+        // If we added at least one new link, mark as processed by batch
+        const addedNewLinks = Object.keys(updateData).length > 2;
+        if (addedNewLinks) {
+          updateData.processedByBatch = true;
+          anyCardReceivedNewLinks = true;
         }
 
         await this.prisma.externalCard.update({
           where: { id: cardToUpdate.id },
           data: updateData,
         });
-
-        // Count if we actually added new links (more than just timestamp fields)
-        if (Object.keys(updateData).length > 2) {
-          cardsUpdated++;
-        }
       }
 
-      // Log if we updated any cards with new links
-      if (cardsUpdated > 0 && newLinksAdded.length > 0) {
-        this.logger.log(
-          color.green.bold(
-            `[${white.bold('MusicFetch')}] Updated ${white.bold(cardsUpdated.toString())} card(s) with spotifyId ${white.bold(card.spotifyId)} - links: ${white.bold(newLinksAdded.join(', '))}`
-          )
-        );
+      // Count all cards with the same spotifyId that were updated
+      const cardsUpdated = anyCardReceivedNewLinks ? cardsToUpdate.length : 0;
 
-        // Clear Redis cache and update in-memory cache
-        if (card.spotifyId) {
-          await this.clearExternalCardCaches(card.spotifyId, linksToUpdate);
-        }
+      // Convert Set to array for the return value
+      const servicesAdded = Array.from(servicesActuallyAdded);
+
+      // Clear Redis cache and update in-memory cache if we updated any cards
+      if (cardsUpdated > 0 && card.spotifyId) {
+        await this.clearExternalCardCaches(card.spotifyId, linksToUpdate);
       }
 
-      return result.success;
+      return { success: result.success, cardsUpdated, servicesAdded };
     } catch (error) {
       this.logger.log(
         color.red.bold(
@@ -943,17 +934,16 @@ class MusicFetch {
           )}`
         )
       );
-      return false;
+      return { success: false, cardsUpdated: 0, servicesAdded: [] };
     }
   }
 
   /**
    * Process external cards to fetch missing music links
    * Similar to processBulkTracks but works with ExternalCard table
+   * Only processes cards with processedByBatch = false
    */
   public async processExternalCards(cardIds?: number[]): Promise<BulkProcessResult> {
-    this.logger.log(color.blue.bold('Starting MusicFetch bulk processing for external cards'));
-
     const result: BulkProcessResult = {
       totalProcessed: 0,
       successful: 0,
@@ -965,6 +955,7 @@ class MusicFetch {
     try {
       let hasMore = true;
       let chunkNumber = 0;
+      let globalTotalCardsUpdated = 0;
 
       while (hasMore) {
         chunkNumber++;
@@ -975,6 +966,7 @@ class MusicFetch {
           cardsToProcess = await this.prisma.externalCard.findMany({
             where: {
               id: { in: cardIds },
+              processedByBatch: false,
               // Must have a spotify link/id as source
               OR: [
                 { spotifyLink: { not: null } },
@@ -996,8 +988,10 @@ class MusicFetch {
           hasMore = false;
         } else {
           // Process all external cards with spotify but missing other links
+          // Only process cards not yet processed by batch
           cardsToProcess = await this.prisma.externalCard.findMany({
             where: {
+              processedByBatch: false,
               musicFetchAttempts: { lt: this.MAX_ATTEMPTS },
               // Must have spotify link
               OR: [
@@ -1037,76 +1031,121 @@ class MusicFetch {
         }
 
         if (cardsToProcess.length === 0) {
-          this.logger.log(
-            color.blue.bold(
-              'No more external cards found to process - all cards have links or max attempts reached'
-            )
-          );
+          if (chunkNumber === 1) {
+            this.logger.log(
+              color.blue.bold(
+                `[${white.bold('MusicFetch')}] No external cards found to process - all cards have links or max attempts reached`
+              )
+            );
+          }
           break;
         }
 
+        const totalInQueue = cardsToProcess.length;
         this.logger.log(
           color.blue.bold(
-            `Processing external card chunk ${white.bold(
-              chunkNumber.toString()
-            )}: ${white.bold(cardsToProcess.length.toString())} cards`
+            `[${white.bold('MusicFetch')}] Starting chunk ${white.bold(chunkNumber.toString())}: ${white.bold(totalInQueue.toString())} tracks to process`
           )
         );
 
         // Process cards sequentially with rate limiting
+        // Track processed spotifyIds within this chunk to skip duplicates
+        const processedSpotifyIds = new Set<string>();
+        let processed = 0;
+        let totalCardsUpdated = 0;
+        let duplicatesSkipped = 0;
+
         for (const card of cardsToProcess) {
-          // Skip if no spotify source
-          if (!card.spotifyLink && !card.spotifyId) {
+          processed++;
+
+          // Skip if we've already processed a card with this spotifyId in this chunk
+          if (card.spotifyId && processedSpotifyIds.has(card.spotifyId)) {
+            duplicatesSkipped++;
             result.skipped++;
             continue;
           }
 
-          if (card.musicFetchAttempts >= this.MAX_ATTEMPTS) {
-            result.skipped++;
-            continue;
+          // Mark this spotifyId as processed
+          if (card.spotifyId) {
+            processedSpotifyIds.add(card.spotifyId);
           }
 
-          const success = await this.updateExternalCardWithLinks(card.id);
+          // Look up track info for logging
+          let trackInfo = '';
+          if (card.spotifyId) {
+            const track = await this.prisma.track.findFirst({
+              where: { trackId: card.spotifyId },
+              select: { artist: true, name: true },
+            });
+            if (track) {
+              trackInfo = `${track.artist} - ${track.name}`;
+            }
+          }
 
-          if (success) {
+          const updateResult = await this.updateExternalCardWithLinks(card.id);
+
+          if (updateResult.success && updateResult.cardsUpdated > 0) {
             result.successful++;
-          } else {
+            // Count: 1 track + all cards updated (cardsUpdated includes all cards with same spotifyId)
+            const totalUpdated = updateResult.cardsUpdated;
+            totalCardsUpdated += totalUpdated;
+            // Log per-track result with services added
+            const servicesStr = updateResult.servicesAdded.length > 0
+              ? ` (${white.bold(updateResult.servicesAdded.join(', '))})`
+              : '';
+            this.logger.log(
+              color.green.bold(
+                `[${white.bold('MusicFetch')}] ${white.bold(processed.toString())}/${white.bold(totalInQueue.toString())} - ` +
+                `${white.bold(trackInfo || card.spotifyId || 'unknown')}: ${white.bold(totalUpdated.toString())} records updated${servicesStr}`
+              )
+            );
+          } else if (!updateResult.success) {
             result.failed++;
             result.errors.push({
               trackId: card.id,
               error: 'Failed to fetch or update links',
             });
+            // Log failed track
+            this.logger.log(
+              color.red.bold(
+                `[${white.bold('MusicFetch')}] ${white.bold(processed.toString())}/${white.bold(totalInQueue.toString())} - ` +
+                `${white.bold(trackInfo || card.spotifyId || 'unknown')}: failed`
+              )
+            );
           }
         }
 
         result.totalProcessed += cardsToProcess.length;
+        globalTotalCardsUpdated += totalCardsUpdated;
 
         this.logger.log(
           color.green.bold(
-            `External card chunk ${white.bold(chunkNumber.toString())} complete: ${white.bold(
+            `[${white.bold('MusicFetch')}] Chunk ${white.bold(chunkNumber.toString())} complete: ${white.bold(
               result.successful.toString()
             )} successful, ${white.bold(
               result.failed.toString()
             )} failed, ${white.bold(
-              result.skipped.toString()
-            )} skipped (Total processed: ${white.bold(
+              duplicatesSkipped.toString()
+            )} duplicates skipped (${white.bold(
               result.totalProcessed.toString()
-            )})`
+            )} processed, ${white.bold(totalCardsUpdated.toString())} cards updated)`
           )
         );
       }
 
       this.logger.log(
         color.green.bold(
-          `External card bulk processing complete: ${white.bold(
+          `[${white.bold('MusicFetch')}] Bulk processing complete: ${white.bold(
             result.successful.toString()
           )} successful, ${white.bold(
             result.failed.toString()
           )} failed, ${white.bold(
             result.skipped.toString()
-          )} skipped across ${white.bold(
+          )} duplicates skipped (${white.bold(
             result.totalProcessed.toString()
-          )} total cards`
+          )} tracks processed, ${white.bold(
+            globalTotalCardsUpdated.toString()
+          )} database records updated)`
         )
       );
 
@@ -1114,7 +1153,7 @@ class MusicFetch {
     } catch (error) {
       this.logger.log(
         color.red.bold(
-          `Error during external card bulk processing: ${white.bold(
+          `[${white.bold('MusicFetch')}] Error during bulk processing: ${white.bold(
             error instanceof Error ? error.message : 'Unknown error'
           )}`
         )

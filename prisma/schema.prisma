@@ -505,6 +505,7 @@ model ExternalCard {
   // MusicFetch tracking
   musicFetchAttempts    Int       @default(0)
   musicFetchLastAttempt DateTime?
+  processedByBatch      Boolean   @default(false)  // Set to true when batch successfully adds links
 
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
