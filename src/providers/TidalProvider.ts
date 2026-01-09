@@ -290,7 +290,7 @@ class TidalProvider implements IMusicProvider {
         offset += limit;
 
         // Safety limit to prevent infinite loops
-        if (allTrackIds.length >= 1000) {
+        if (allTrackIds.length >= 3000) {
           hasMore = false;
         }
       }

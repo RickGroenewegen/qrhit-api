@@ -270,7 +270,7 @@ class DeezerProvider implements IMusicProvider {
         )
       );
 
-      const result = await this.apiRequest<any>(`/playlist/${playlistId}`);
+      const result = await this.apiRequest<any>(`/playlist/${playlistId}?country=NL`);
 
       if (!result.success || !result.data) {
         return { success: false, error: result.error || 'Failed to fetch playlist' };
@@ -321,8 +321,7 @@ class DeezerProvider implements IMusicProvider {
 
       // Deezer API paginates tracks, need to fetch all
       const allTracks: ProviderTrackData[] = [];
-      let nextUrl: string | null = `/playlist/${playlistId}/tracks?limit=100`;
-      let skippedCount = 0;
+      let nextUrl: string | null = `/playlist/${playlistId}/tracks?limit=100&country=NL`;
 
       while (nextUrl) {
         const result: { success: boolean; data?: any; error?: string } = await this.apiRequest<any>(nextUrl);
@@ -337,12 +336,6 @@ class DeezerProvider implements IMusicProvider {
         const tracksData = result.data.data || [];
 
         for (const track of tracksData) {
-          // Skip unavailable tracks
-          if (!track.readable) {
-            skippedCount++;
-            continue;
-          }
-
           allTracks.push({
             id: track.id.toString(),
             name: this.utils.cleanTrackName(track.title_short || track.title),
@@ -361,15 +354,18 @@ class DeezerProvider implements IMusicProvider {
 
         // Check for next page
         if (result.data.next) {
-          // Extract path from full URL
+          // Extract path from full URL and ensure country parameter is preserved
           const nextUrlObj = new URL(result.data.next);
+          if (!nextUrlObj.searchParams.has('country')) {
+            nextUrlObj.searchParams.set('country', 'NL');
+          }
           nextUrl = nextUrlObj.pathname + nextUrlObj.search;
         } else {
           nextUrl = null;
         }
 
         // Safety limit
-        if (allTracks.length >= 1000) {
+        if (allTracks.length >= 3000) {
           break;
         }
       }
@@ -378,9 +374,9 @@ class DeezerProvider implements IMusicProvider {
         tracks: allTracks,
         total: allTracks.length,
         skipped: {
-          total: skippedCount,
+          total: 0,
           summary: {
-            unavailable: skippedCount,
+            unavailable: 0,
             localFiles: 0,
             podcasts: 0,
             duplicates: 0,
