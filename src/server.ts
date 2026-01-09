@@ -27,6 +27,7 @@ import ChatWebSocketServer from './chat-websocket';
 import GeneratorQueue from './generatorQueue';
 import MusicFetchQueue from './musicfetchQueue';
 import ExcelQueue from './excelQueue';
+import ExternalCardService from './externalCardService';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -220,6 +221,9 @@ class Server {
           )
         );
       }
+
+      // Initialize ExternalCardService (starts nightly import cron job)
+      ExternalCardService.getInstance();
 
       const numCPUs = os.cpus().length;
       for (let i = 0; i < numCPUs; i++) {

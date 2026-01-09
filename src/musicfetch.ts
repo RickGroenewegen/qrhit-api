@@ -573,6 +573,296 @@ class MusicFetch {
       return result;
     }
   }
+
+  /**
+   * Update a single external card with MusicFetch links using Spotify as source
+   * @param cardId - The external card ID to process
+   * @param forceUpdate - If true, bypasses the max attempts check
+   */
+  public async updateExternalCardWithLinks(cardId: number, forceUpdate: boolean = false): Promise<boolean> {
+    try {
+      const card = await this.prisma.externalCard.findUnique({
+        where: { id: cardId },
+        select: {
+          spotifyLink: true,
+          spotifyId: true,
+          deezerLink: true,
+          youtubeMusicLink: true,
+          appleMusicLink: true,
+          amazonMusicLink: true,
+          tidalLink: true,
+          musicFetchAttempts: true,
+          cardType: true,
+          sku: true,
+          countryCode: true,
+          playlistId: true,
+          cardNumber: true,
+        },
+      });
+
+      if (!card) {
+        return false;
+      }
+
+      if (!forceUpdate && card.musicFetchAttempts >= this.MAX_ATTEMPTS) {
+        return false;
+      }
+
+      // Need a spotify link as source
+      const sourceUrl = card.spotifyLink || (card.spotifyId ? `https://open.spotify.com/track/${card.spotifyId}` : null);
+      if (!sourceUrl) {
+        return false;
+      }
+
+      // Fetch links from MusicFetch API
+      const result = await this.fetchLinksForTrack(sourceUrl, 'spotifyLink');
+
+      // If rate limited, don't increment attempts
+      if (result.rateLimited) {
+        return false;
+      }
+
+      // Build update data - only update fields that are currently null
+      const updateData: Record<string, any> = {
+        musicFetchLastAttempt: new Date(),
+        musicFetchAttempts: { increment: 1 },
+      };
+
+      const newLinksAdded: string[] = [];
+
+      if (result.links) {
+        if (!card.deezerLink && result.links.deezerLink) {
+          updateData.deezerLink = result.links.deezerLink;
+          newLinksAdded.push('deezerLink');
+        }
+        if (!card.youtubeMusicLink && result.links.youtubeMusicLink) {
+          updateData.youtubeMusicLink = result.links.youtubeMusicLink;
+          newLinksAdded.push('youtubeMusicLink');
+        }
+        if (!card.appleMusicLink && result.links.appleMusicLink) {
+          updateData.appleMusicLink = result.links.appleMusicLink;
+          newLinksAdded.push('appleMusicLink');
+        }
+        if (!card.amazonMusicLink && result.links.amazonMusicLink) {
+          updateData.amazonMusicLink = result.links.amazonMusicLink;
+          newLinksAdded.push('amazonMusicLink');
+        }
+        if (!card.tidalLink && result.links.tidalLink) {
+          updateData.tidalLink = result.links.tidalLink;
+          newLinksAdded.push('tidalLink');
+        }
+      }
+
+      // Update card in database
+      await this.prisma.externalCard.update({
+        where: { id: cardId },
+        data: updateData,
+      });
+
+      // Only log if we actually added new links
+      if (newLinksAdded.length > 0) {
+        const cardIdentifier = card.sku
+          ? `${card.sku}_${card.cardNumber}`
+          : card.countryCode
+          ? `${card.countryCode}_${card.cardNumber}`
+          : `${card.playlistId}_${card.cardNumber}`;
+        this.logger.log(
+          color.green.bold(
+            `[${white.bold('MusicFetch')}] Updated external card "${white.bold(cardIdentifier)}" with ${white.bold(newLinksAdded.length.toString())} new links: ${white.bold(newLinksAdded.join(', '))}`
+          )
+        );
+      }
+
+      return result.success;
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `[${white.bold('MusicFetch')}] Error updating external card ${white.bold(
+            cardId.toString()
+          )}: ${white.bold(
+            error instanceof Error ? error.message : 'Unknown error'
+          )}`
+        )
+      );
+      return false;
+    }
+  }
+
+  /**
+   * Process external cards to fetch missing music links
+   * Similar to processBulkTracks but works with ExternalCard table
+   */
+  public async processExternalCards(cardIds?: number[]): Promise<BulkProcessResult> {
+    this.logger.log(color.blue.bold('Starting MusicFetch bulk processing for external cards'));
+
+    const result: BulkProcessResult = {
+      totalProcessed: 0,
+      successful: 0,
+      failed: 0,
+      skipped: 0,
+      errors: [],
+    };
+
+    try {
+      let hasMore = true;
+      let chunkNumber = 0;
+
+      while (hasMore) {
+        chunkNumber++;
+        let cardsToProcess;
+
+        if (cardIds && cardIds.length > 0) {
+          // Process specific cards (single batch)
+          cardsToProcess = await this.prisma.externalCard.findMany({
+            where: {
+              id: { in: cardIds },
+              // Must have a spotify link/id as source
+              OR: [
+                { spotifyLink: { not: null } },
+                { spotifyId: { not: null } },
+              ],
+            },
+            select: {
+              id: true,
+              spotifyLink: true,
+              spotifyId: true,
+              deezerLink: true,
+              youtubeMusicLink: true,
+              appleMusicLink: true,
+              amazonMusicLink: true,
+              tidalLink: true,
+              musicFetchAttempts: true,
+            },
+          });
+          hasMore = false;
+        } else {
+          // Process all external cards with spotify but missing other links
+          cardsToProcess = await this.prisma.externalCard.findMany({
+            where: {
+              musicFetchAttempts: { lt: this.MAX_ATTEMPTS },
+              // Must have spotify link
+              OR: [
+                { spotifyLink: { not: null } },
+                { spotifyId: { not: null } },
+              ],
+              // Must be missing at least one other link
+              AND: [
+                {
+                  OR: [
+                    { deezerLink: null },
+                    { youtubeMusicLink: null },
+                    { appleMusicLink: null },
+                    { amazonMusicLink: null },
+                    { tidalLink: null },
+                  ],
+                },
+              ],
+            },
+            select: {
+              id: true,
+              spotifyLink: true,
+              spotifyId: true,
+              deezerLink: true,
+              youtubeMusicLink: true,
+              appleMusicLink: true,
+              amazonMusicLink: true,
+              tidalLink: true,
+              musicFetchAttempts: true,
+            },
+            take: 1000,
+          });
+
+          if (cardsToProcess.length < 1000) {
+            hasMore = false;
+          }
+        }
+
+        if (cardsToProcess.length === 0) {
+          this.logger.log(
+            color.blue.bold(
+              'No more external cards found to process - all cards have links or max attempts reached'
+            )
+          );
+          break;
+        }
+
+        this.logger.log(
+          color.blue.bold(
+            `Processing external card chunk ${white.bold(
+              chunkNumber.toString()
+            )}: ${white.bold(cardsToProcess.length.toString())} cards`
+          )
+        );
+
+        // Process cards sequentially with rate limiting
+        for (const card of cardsToProcess) {
+          // Skip if no spotify source
+          if (!card.spotifyLink && !card.spotifyId) {
+            result.skipped++;
+            continue;
+          }
+
+          if (card.musicFetchAttempts >= this.MAX_ATTEMPTS) {
+            result.skipped++;
+            continue;
+          }
+
+          const success = await this.updateExternalCardWithLinks(card.id);
+
+          if (success) {
+            result.successful++;
+          } else {
+            result.failed++;
+            result.errors.push({
+              trackId: card.id,
+              error: 'Failed to fetch or update links',
+            });
+          }
+        }
+
+        result.totalProcessed += cardsToProcess.length;
+
+        this.logger.log(
+          color.green.bold(
+            `External card chunk ${white.bold(chunkNumber.toString())} complete: ${white.bold(
+              result.successful.toString()
+            )} successful, ${white.bold(
+              result.failed.toString()
+            )} failed, ${white.bold(
+              result.skipped.toString()
+            )} skipped (Total processed: ${white.bold(
+              result.totalProcessed.toString()
+            )})`
+          )
+        );
+      }
+
+      this.logger.log(
+        color.green.bold(
+          `External card bulk processing complete: ${white.bold(
+            result.successful.toString()
+          )} successful, ${white.bold(
+            result.failed.toString()
+          )} failed, ${white.bold(
+            result.skipped.toString()
+          )} skipped across ${white.bold(
+            result.totalProcessed.toString()
+          )} total cards`
+        )
+      );
+
+      return result;
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error during external card bulk processing: ${white.bold(
+            error instanceof Error ? error.message : 'Unknown error'
+          )}`
+        )
+      );
+      return result;
+    }
+  }
 }
 
 export default MusicFetch;

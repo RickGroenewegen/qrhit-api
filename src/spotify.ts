@@ -88,9 +88,8 @@ class Spotify {
   private trackEnrichment: TrackEnrichment;
 
   constructor() {
-    this.getJumboData();
-    this.loadMusicMatchData();
-    this.loadCountryData();
+    // External card data is now loaded from database via ExternalCardService
+    // No longer loading from external sources on startup
     // Use the centralized TrackEnrichment service (handles its own maps and refresh)
     this.trackEnrichment = TrackEnrichment.getInstance();
   }
@@ -1353,12 +1352,21 @@ class Spotify {
 
   /**
    * Attempts to resolve a Spotify URI from a given URL by following all known redirect mechanisms.
+   * For external cards (Jumbo, Country, MusicMatch), also returns all available music service links.
    * @param url The URL to resolve.
-   * @returns {Promise<{ success: boolean, spotifyUri?: string, error?: string, cached?: boolean }>}
+   * @returns {Promise<{ success: boolean, spotifyUri?: string, links?: object, error?: string, cached?: boolean }>}
    */
   public async resolveSpotifyUrl(url: string): Promise<{
     success: boolean;
     spotifyUri?: string;
+    links?: {
+      spotifyLink?: string | null;
+      appleMusicLink?: string | null;
+      tidalLink?: string | null;
+      youtubeMusicLink?: string | null;
+      deezerLink?: string | null;
+      amazonMusicLink?: string | null;
+    };
     error?: string;
     cached?: boolean;
   }> {
@@ -1403,13 +1411,24 @@ class Spotify {
       if (musicMatchGameMatch) {
         const paymentHasPlaylistId = musicMatchGameMatch[1];
         const trackId = musicMatchGameMatch[2];
-        const key = `${paymentHasPlaylistId}_${trackId}`;
-        const spotifyId = this.musicMatchMap[key];
 
-        if (spotifyId) {
+        // Use ExternalCardService for lookup
+        const ExternalCardService = (await import('./externalCardService')).default;
+        const externalCardService = ExternalCardService.getInstance();
+        const cardData = await externalCardService.getCardByMusicMatchKey(paymentHasPlaylistId, trackId);
+
+        if (cardData && cardData.spotifyId) {
           const result = {
             success: true,
-            spotifyUri: `spotify:track:${spotifyId}`,
+            spotifyUri: `spotify:track:${cardData.spotifyId}`,
+            links: {
+              spotifyLink: cardData.spotifyLink,
+              appleMusicLink: cardData.appleMusicLink,
+              tidalLink: cardData.tidalLink,
+              youtubeMusicLink: cardData.youtubeMusicLink,
+              deezerLink: cardData.deezerLink,
+              amazonMusicLink: cardData.amazonMusicLink,
+            },
           };
           await this.cache.set(cacheKey, JSON.stringify(result));
           return { ...result, cached: false };
@@ -1446,54 +1465,63 @@ class Spotify {
           const setSku = match[1];
           const cardNumber = match[2];
 
+          // Use ExternalCardService for lookups
+          const ExternalCardService = (await import('./externalCardService')).default;
+          const externalCardService = ExternalCardService.getInstance();
+
           // Check if setSku is a pure alphabetic country code (e.g., 'de', 'en', 'nl')
           const isCountryCode = /^[a-z]+$/i.test(setSku);
 
           if (isCountryCode) {
             // Look up in country card maps
             const countryCode = setSku.toLowerCase();
-            const countryMap = this.countryCardMaps[countryCode];
+            const cardData = await externalCardService.getCardByCountryKey(countryCode, cardNumber);
 
-            if (countryMap) {
-              const spotifyId = countryMap[cardNumber];
-              if (spotifyId) {
-                const result = {
-                  success: true,
-                  spotifyUri: `spotify:track:${spotifyId}`,
-                };
-                await this.cache.set(cacheKey, JSON.stringify(result));
-                return { ...result, cached: false };
-              } else {
-                const result = {
-                  success: false,
-                  error: `No mapping found for country ${countryCode}, card ${cardNumber}`,
-                };
-                await this.cache.set(cacheKey, JSON.stringify(result));
-                return { ...result, cached: false };
-              }
+            if (cardData && cardData.spotifyId) {
+              const result = {
+                success: true,
+                spotifyUri: `spotify:track:${cardData.spotifyId}`,
+                links: {
+                  spotifyLink: cardData.spotifyLink,
+                  appleMusicLink: cardData.appleMusicLink,
+                  tidalLink: cardData.tidalLink,
+                  youtubeMusicLink: cardData.youtubeMusicLink,
+                  deezerLink: cardData.deezerLink,
+                  amazonMusicLink: cardData.amazonMusicLink,
+                },
+              };
+              await this.cache.set(cacheKey, JSON.stringify(result));
+              return { ...result, cached: false };
             } else {
               const result = {
                 success: false,
-                error: `No country mapping found for ${countryCode}`,
+                error: `No mapping found for country ${countryCode}, card ${cardNumber}`,
               };
               await this.cache.set(cacheKey, JSON.stringify(result));
               return { ...result, cached: false };
             }
           } else {
-            // Use existing Jumbo SKU logic
-            const key = `${setSku}_${cardNumber}`;
-            const spotifyId = this.jumboCardMap[key];
-            if (spotifyId) {
+            // Use Jumbo SKU logic
+            const cardData = await externalCardService.getCardByJumboKey(setSku, cardNumber);
+            if (cardData && cardData.spotifyId) {
               const result = {
                 success: true,
-                spotifyUri: `spotify:track:${spotifyId}`,
+                spotifyUri: `spotify:track:${cardData.spotifyId}`,
+                links: {
+                  spotifyLink: cardData.spotifyLink,
+                  appleMusicLink: cardData.appleMusicLink,
+                  tidalLink: cardData.tidalLink,
+                  youtubeMusicLink: cardData.youtubeMusicLink,
+                  deezerLink: cardData.deezerLink,
+                  amazonMusicLink: cardData.amazonMusicLink,
+                },
               };
               await this.cache.set(cacheKey, JSON.stringify(result));
               return { ...result, cached: false };
             } else {
               const result = {
                 success: false,
-                error: `No mapping found for ${key}`,
+                error: `No mapping found for ${setSku}_${cardNumber}`,
               };
               await this.cache.set(cacheKey, JSON.stringify(result));
               return { ...result, cached: false };

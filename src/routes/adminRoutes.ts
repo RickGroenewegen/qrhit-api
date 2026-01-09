@@ -2188,6 +2188,204 @@ export default async function adminRoutes(
     }
   );
 
+  // ============ EXTERNAL CARDS ROUTES ============
+
+  // Import external cards from sources (Jumbo API, country JSON files, MusicMatch JSON)
+  fastify.post(
+    '/admin/external-cards/import',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const ExternalCardService = (await import('../externalCardService')).default;
+        const externalCardService = ExternalCardService.getInstance();
+
+        // Start import in background
+        externalCardService.importAllExternalCards().catch((error) => {
+          console.error('Error in background external card import:', error);
+        });
+
+        reply.send({
+          success: true,
+          message: 'External card import started in background',
+        });
+      } catch (error: any) {
+        console.error('Error starting external card import:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to start external card import',
+        });
+      }
+    }
+  );
+
+  // Fetch music links for external cards via MusicFetch
+  fastify.post(
+    '/admin/external-cards/fetch-music-links',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { cardIds } = request.body;
+
+        const MusicFetch = (await import('../musicfetch')).default;
+        const musicFetch = MusicFetch.getInstance();
+
+        // Start processing in background
+        musicFetch.processExternalCards(cardIds).catch((error) => {
+          console.error('Error in background external card MusicFetch processing:', error);
+        });
+
+        reply.send({
+          success: true,
+          message: 'External card music link fetching started in background',
+        });
+      } catch (error: any) {
+        console.error('Error starting external card music link fetch:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to start external card music link fetch',
+        });
+      }
+    }
+  );
+
+  // Get external cards with search and filters
+  fastify.get(
+    '/admin/external-cards',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { search, missingLink, page = 1, limit = 50 } = request.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // Build where clause
+        const where: any = {};
+
+        // Search filter
+        if (search) {
+          where.OR = [
+            { sku: { contains: search } },
+            { countryCode: { contains: search } },
+            { playlistId: { contains: search } },
+            { cardNumber: { contains: search } },
+            { spotifyId: { contains: search } },
+          ];
+        }
+
+        // Missing link filter
+        if (missingLink) {
+          switch (missingLink) {
+            case 'appleMusic':
+              where.appleMusicLink = null;
+              break;
+            case 'tidal':
+              where.tidalLink = null;
+              break;
+            case 'youtubeMusic':
+              where.youtubeMusicLink = null;
+              break;
+            case 'deezer':
+              where.deezerLink = null;
+              break;
+            case 'amazonMusic':
+              where.amazonMusicLink = null;
+              break;
+          }
+        }
+
+        const [cards, total] = await Promise.all([
+          prisma.externalCard.findMany({
+            where,
+            skip,
+            take: parseInt(limit),
+            orderBy: { id: 'desc' },
+          }),
+          prisma.externalCard.count({ where }),
+        ]);
+
+        reply.send({
+          success: true,
+          cards,
+          total,
+          page: parseInt(page),
+          limit: parseInt(limit),
+          totalPages: Math.ceil(total / parseInt(limit)),
+        });
+      } catch (error: any) {
+        console.error('Error fetching external cards:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to fetch external cards',
+        });
+      }
+    }
+  );
+
+  // Update a single external card
+  fastify.put(
+    '/admin/external-cards/:id',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { id } = request.params;
+        const {
+          spotifyLink,
+          appleMusicLink,
+          tidalLink,
+          youtubeMusicLink,
+          deezerLink,
+          amazonMusicLink,
+        } = request.body;
+
+        const updated = await prisma.externalCard.update({
+          where: { id: parseInt(id) },
+          data: {
+            ...(spotifyLink !== undefined && { spotifyLink }),
+            ...(appleMusicLink !== undefined && { appleMusicLink }),
+            ...(tidalLink !== undefined && { tidalLink }),
+            ...(youtubeMusicLink !== undefined && { youtubeMusicLink }),
+            ...(deezerLink !== undefined && { deezerLink }),
+            ...(amazonMusicLink !== undefined && { amazonMusicLink }),
+          },
+        });
+
+        reply.send({
+          success: true,
+          card: updated,
+        });
+      } catch (error: any) {
+        console.error('Error updating external card:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to update external card',
+        });
+      }
+    }
+  );
+
+  // Get external card statistics
+  fastify.get(
+    '/admin/external-cards/stats',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const ExternalCardService = (await import('../externalCardService')).default;
+        const externalCardService = ExternalCardService.getInstance();
+        const stats = await externalCardService.getStats();
+
+        reply.send({
+          success: true,
+          stats,
+        });
+      } catch (error: any) {
+        console.error('Error fetching external card stats:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to fetch external card stats',
+        });
+      }
+    }
+  );
+
   // Supplement Excel with QRSong links (async via queue)
   fastify.post(
     '/admin/supplement-excel',
