@@ -22,9 +22,7 @@ const CACHE_KEY_DEEZER_PLAYLIST = 'deezer_playlist_';
 const CACHE_KEY_DEEZER_TRACKS = 'deezer_tracks_';
 const CACHE_KEY_DEEZER_SEARCH = 'deezer_search_';
 
-// Cache TTL in seconds
-const CACHE_TTL_PLAYLIST = 3600; // 1 hour
-const CACHE_TTL_TRACKS = 3600; // 1 hour
+// Cache TTL in seconds (only for search - playlist/tracks have no expiry like Spotify)
 const CACHE_TTL_SEARCH = 1800; // 30 minutes
 
 /**
@@ -291,7 +289,7 @@ class DeezerProvider implements IMusicProvider {
       };
 
       // Cache the result
-      await this.cache.set(cacheKey, JSON.stringify(providerData), CACHE_TTL_PLAYLIST);
+      await this.cache.set(cacheKey, JSON.stringify(providerData));
 
       return { success: true, data: providerData };
     } catch (error: any) {
@@ -392,7 +390,7 @@ class DeezerProvider implements IMusicProvider {
       };
 
       // Cache the result
-      await this.cache.set(cacheKey, JSON.stringify(trackResult), CACHE_TTL_TRACKS);
+      await this.cache.set(cacheKey, JSON.stringify(trackResult));
 
       return { success: true, data: trackResult };
     } catch (error: any) {

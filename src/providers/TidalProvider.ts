@@ -18,9 +18,7 @@ import Utils from '../utils';
 const CACHE_KEY_TIDAL_PLAYLIST = 'tidal_playlist_';
 const CACHE_KEY_TIDAL_TRACKS = 'tidal_tracks_';
 
-// Cache TTL in seconds
-const CACHE_TTL_PLAYLIST = 3600; // 1 hour
-const CACHE_TTL_TRACKS = 3600; // 1 hour
+// No TTL for playlist/tracks cache - matches Spotify behavior
 
 /**
  * Tidal provider implementing the IMusicProvider interface.
@@ -225,7 +223,7 @@ class TidalProvider implements IMusicProvider {
       };
 
       // Cache the result
-      await this.cache.set(cacheKey, JSON.stringify(providerData), CACHE_TTL_PLAYLIST);
+      await this.cache.set(cacheKey, JSON.stringify(providerData));
 
       return { success: true, data: providerData };
     } catch (error: any) {
@@ -379,7 +377,7 @@ class TidalProvider implements IMusicProvider {
       };
 
       // Cache the result
-      await this.cache.set(cacheKey, JSON.stringify(result), CACHE_TTL_TRACKS);
+      await this.cache.set(cacheKey, JSON.stringify(result));
 
       return { success: true, data: result };
     } catch (error: any) {

@@ -20,9 +20,7 @@ const APPLE_MUSIC_API_BASE = 'https://api.music.apple.com/v1';
 const CACHE_KEY_APPLE_MUSIC_PLAYLIST = 'apple_music_playlist_';
 const CACHE_KEY_APPLE_MUSIC_TRACKS = 'apple_music_tracks_';
 
-// Cache TTL in seconds
-const CACHE_TTL_PLAYLIST = 3600; // 1 hour
-const CACHE_TTL_TRACKS = 3600; // 1 hour
+// No TTL for playlist/tracks cache - matches Spotify behavior
 
 /**
  * Apple Music provider implementing the IMusicProvider interface.
@@ -300,7 +298,7 @@ class AppleMusicProvider implements IMusicProvider {
       };
 
       // Cache the result
-      await this.cache.set(cacheKey, JSON.stringify(providerData), CACHE_TTL_PLAYLIST);
+      await this.cache.set(cacheKey, JSON.stringify(providerData));
 
       return { success: true, data: providerData };
     } catch (error: any) {
@@ -409,7 +407,7 @@ class AppleMusicProvider implements IMusicProvider {
       };
 
       // Cache the result
-      await this.cache.set(cacheKey, JSON.stringify(trackResult), CACHE_TTL_TRACKS);
+      await this.cache.set(cacheKey, JSON.stringify(trackResult));
 
       return { success: true, data: trackResult };
     } catch (error: any) {

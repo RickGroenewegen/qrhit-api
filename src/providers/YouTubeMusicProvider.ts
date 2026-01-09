@@ -21,14 +21,14 @@ const CACHE_KEY_YT_PLAYLIST = 'yt_playlist_';
 const CACHE_KEY_YT_TRACKS = 'yt_tracks_';
 const CACHE_KEY_YT_SEARCH = 'yt_search_';
 
-// Cache TTL in seconds
-const CACHE_TTL_PLAYLIST = 3600; // 1 hour
-const CACHE_TTL_TRACKS = 3600; // 1 hour
+// Cache TTL in seconds (only for search - playlist/tracks have no expiry like Spotify)
 const CACHE_TTL_SEARCH = 1800; // 30 minutes
 
 // YouTube Music API configuration
 const YT_MUSIC_API_URL = 'https://www.youtube.com/youtubei/v1/browse';
-const YT_MUSIC_API_KEY = 'AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30'; // Public API key
+// Public innertube API key - same as embedded in YouTube Music web client
+// This is intentionally public and not a secret
+const YT_MUSIC_API_KEY = 'AIzaSyC9XL3ZjWddXya6X74dJoCTL-WEYFDNX30';
 
 /**
  * YouTube Music provider implementing the IMusicProvider interface.
@@ -549,7 +549,7 @@ class YouTubeMusicProvider implements IMusicProvider {
         originalUrl: `https://music.youtube.com/playlist?list=${playlistId}`,
       };
 
-      await this.cache.set(cacheKey, JSON.stringify(providerData), CACHE_TTL_PLAYLIST);
+      await this.cache.set(cacheKey, JSON.stringify(providerData));
 
       return { success: true, data: providerData };
     } catch (error: any) {
@@ -614,7 +614,7 @@ class YouTubeMusicProvider implements IMusicProvider {
         },
       };
 
-      await this.cache.set(cacheKey, JSON.stringify(result), CACHE_TTL_TRACKS);
+      await this.cache.set(cacheKey, JSON.stringify(result));
 
       return { success: true, data: result };
     } catch (error: any) {
