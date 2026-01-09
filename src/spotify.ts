@@ -5,6 +5,7 @@ import axios, { AxiosRequestConfig } from 'axios';
 import { ApiResult } from './interfaces/ApiResult';
 import { Playlist } from './interfaces/Playlist';
 import { Track } from './interfaces/Track';
+import { ProgressCallback } from './interfaces/IMusicProvider';
 import Cache from './cache';
 import Data from './data';
 import Utils from './utils';
@@ -684,7 +685,8 @@ class Spotify {
     checkCaptcha: boolean,
     isSlug: boolean = false,
     clientIp: string = '',
-    userAgent: string = ''
+    userAgent: string = '',
+    onProgress?: ProgressCallback
   ): Promise<ApiResult> {
     try {
 
@@ -753,9 +755,10 @@ class Spotify {
 
 
         // Use rate limit manager for automatic fallback on 429 errors
+        // Pass onProgress callback to report progress during batch fetching
         const result = await this.rateLimitManager.executeWithFallback(
           'getTracks',
-          [checkPlaylistId],
+          [checkPlaylistId, onProgress],
           this.api,
           this.apiFallback
         );

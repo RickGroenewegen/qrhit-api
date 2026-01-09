@@ -3,6 +3,7 @@ import { ServiceType } from '../enums/ServiceType';
 import {
   IMusicProvider,
   MusicProviderConfig,
+  ProgressCallback,
   ProviderPlaylistData,
   ProviderTrackData,
   ProviderTracksResult,
@@ -304,7 +305,12 @@ class DeezerProvider implements IMusicProvider {
   /**
    * Get tracks from a Deezer playlist
    */
-  async getTracks(playlistId: string, cache: boolean = true): Promise<ApiResult & { data?: ProviderTracksResult }> {
+  async getTracks(
+    playlistId: string,
+    cache: boolean = true,
+    maxTracks?: number,
+    onProgress?: ProgressCallback
+  ): Promise<ApiResult & { data?: ProviderTracksResult }> {
     // Check cache first (skip if cache=false to force refresh)
     const cacheKey = `${CACHE_KEY_DEEZER_TRACKS}${playlistId}`;
     const cached = await this.cache.get(cacheKey);
@@ -319,9 +325,24 @@ class DeezerProvider implements IMusicProvider {
         )
       );
 
+      // First, get the playlist to know the total track count
+      const playlistResult = await this.apiRequest<any>(`/playlist/${playlistId}`);
+      const totalTracksExpected = playlistResult.data?.nb_tracks || null;
+
       // Deezer API paginates tracks, need to fetch all
       const allTracks: ProviderTrackData[] = [];
       let nextUrl: string | null = `/playlist/${playlistId}/tracks?limit=100&country=NL`;
+
+      // Report initial progress before first API call
+      if (onProgress) {
+        onProgress({
+          stage: 'fetching_ids',
+          current: 0,
+          total: totalTracksExpected,
+          percentage: 1,
+          message: 'progress.loading',
+        });
+      }
 
       while (nextUrl) {
         const result: { success: boolean; data?: any; error?: string } = await this.apiRequest<any>(nextUrl);
@@ -352,6 +373,23 @@ class DeezerProvider implements IMusicProvider {
           });
         }
 
+        // Report progress using linear calculation when total is known
+        if (onProgress) {
+          let percentage: number;
+          if (totalTracksExpected && totalTracksExpected > 0) {
+            percentage = Math.min(99, Math.round((allTracks.length / totalTracksExpected) * 100));
+          } else {
+            percentage = Math.min(95, Math.round(50 * Math.log10(allTracks.length + 10) - 25));
+          }
+          onProgress({
+            stage: 'fetching_metadata',
+            current: allTracks.length,
+            total: totalTracksExpected,
+            percentage: Math.max(1, percentage),
+            message: 'progress.loaded',
+          });
+        }
+
         // Check for next page
         if (result.data.next) {
           // Extract path from full URL and ensure country parameter is preserved
@@ -362,6 +400,12 @@ class DeezerProvider implements IMusicProvider {
           nextUrl = nextUrlObj.pathname + nextUrlObj.search;
         } else {
           nextUrl = null;
+        }
+
+        // Check maxTracks limit
+        if (maxTracks && allTracks.length >= maxTracks) {
+          allTracks.splice(maxTracks);
+          break;
         }
 
         // Safety limit

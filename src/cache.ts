@@ -171,6 +171,32 @@ class Cache {
     const lockKey = `lock:${key}`;
     await this.executeCommand('del', lockKey);
   }
+
+  /**
+   * Distributed rate limiter that ensures minimum delay between requests across all workers/nodes
+   * Uses Redis to track the last request time globally
+   * @param key Unique key for the rate limit (e.g., 'tidal_api')
+   * @param minDelayMs Minimum milliseconds between requests
+   * @returns Promise that resolves when it's safe to make the request
+   */
+  async distributedRateLimit(key: string, minDelayMs: number): Promise<void> {
+    const rateLimitKey = `ratelimit:${key}`;
+    const now = Date.now();
+
+    // Get and set atomically using GETSET
+    const lastRequestTime = await this.executeCommand('getset', rateLimitKey, now.toString());
+
+    // Set expiry to clean up (2x the delay to be safe)
+    await this.executeCommand('expire', rateLimitKey, Math.ceil((minDelayMs * 2) / 1000) + 1);
+
+    if (lastRequestTime) {
+      const elapsed = now - parseInt(lastRequestTime, 10);
+      if (elapsed < minDelayMs) {
+        const waitTime = minDelayMs - elapsed;
+        await new Promise(resolve => setTimeout(resolve, waitTime));
+      }
+    }
+  }
 }
 
 export default Cache;

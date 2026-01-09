@@ -4,6 +4,7 @@ import Cache from './cache'; // Needed for queue implementation details
 import AnalyticsClient from './analytics';
 import { color } from 'console-log-colors';
 import { ApiResult } from './interfaces/ApiResult'; // Assuming ApiResult interface exists
+import { ProgressCallback } from './interfaces/IMusicProvider';
 
 // --- RapidAPI Queue (Copied from spotify.ts for encapsulation) ---
 // In a larger refactor, this might live in its own file.
@@ -236,12 +237,14 @@ class SpotifyRapidApi {
    * @param limit Number of tracks per page (RapidAPI default/max might vary).
    * Fetches all tracks for a playlist from RapidAPI, handling pagination.
    * @param playlistId The Spotify ID of the playlist.
+   * @param onProgress Optional callback for progress updates during pagination.
    * @returns {Promise<ApiResult>} Contains an array of track items or error info.
    */
-  public async getTracks(playlistId: string): Promise<ApiResult> {
+  public async getTracks(playlistId: string, onProgress?: ProgressCallback): Promise<ApiResult> {
     let allItems: any[] = [];
     let offset = 0;
     const limit = 100; // RapidAPI endpoint seems to support 100
+    let totalTracks: number | null = null;
 
     this.logger.log(
       color.blue.bold(
@@ -277,11 +280,33 @@ class SpotifyRapidApi {
           break;
         }
 
+        // Get total from first response if available
+        if (totalTracks === null && response.data.total) {
+          totalTracks = response.data.total;
+        }
+
         // Filter out null tracks if necessary (depends on API behavior)
         const validItems = response.data.items.filter(
           (item: any) => item && item.track
         );
         allItems = allItems.concat(validItems);
+
+        // Report progress after each page
+        if (onProgress) {
+          let percentage: number;
+          if (totalTracks && totalTracks > 0) {
+            percentage = Math.min(99, Math.round((allItems.length / totalTracks) * 100));
+          } else {
+            percentage = Math.min(95, Math.round(50 * Math.log10(allItems.length + 10) - 25));
+          }
+          onProgress({
+            stage: 'fetching_metadata',
+            current: allItems.length,
+            total: totalTracks,
+            percentage: Math.max(1, percentage),
+            message: 'progress.loaded',
+          });
+        }
 
         // Check if the number of items returned is less than the limit, indicating the last page
         if (response.data.items.length < limit) {

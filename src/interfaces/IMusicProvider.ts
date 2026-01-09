@@ -77,6 +77,17 @@ export interface ProviderSearchResult {
 }
 
 /**
+ * Progress callback for long-running track fetches
+ */
+export type ProgressCallback = (progress: {
+  stage: 'fetching_ids' | 'fetching_metadata' | 'enriching';
+  current: number;
+  total: number | null; // null if unknown
+  percentage: number;
+  message?: string;
+}) => void;
+
+/**
  * Configuration for a music provider
  */
 export interface MusicProviderConfig {
@@ -122,8 +133,17 @@ export interface IMusicProvider {
 
   /**
    * Get tracks from a playlist
+   * @param playlistId The playlist ID
+   * @param cache Whether to use cached results (default: true)
+   * @param maxTracks Maximum number of tracks to fetch (optional)
+   * @param onProgress Optional callback for progress updates during long fetches
    */
-  getTracks(playlistId: string): Promise<ApiResult & { data?: ProviderTracksResult }>;
+  getTracks(
+    playlistId: string,
+    cache?: boolean,
+    maxTracks?: number,
+    onProgress?: ProgressCallback
+  ): Promise<ApiResult & { data?: ProviderTracksResult }>;
 
   /**
    * Search for tracks (optional - not all providers may support this)

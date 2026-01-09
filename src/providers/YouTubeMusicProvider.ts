@@ -5,6 +5,7 @@ import { ServiceType } from '../enums/ServiceType';
 import {
   IMusicProvider,
   MusicProviderConfig,
+  ProgressCallback,
   ProviderPlaylistData,
   ProviderTrackData,
   ProviderTracksResult,
@@ -422,13 +423,19 @@ class YouTubeMusicProvider implements IMusicProvider {
                    header?.thumbnail?.croppedSquareThumbnailRenderer?.thumbnail?.thumbnails ||
                    [];
 
-      const subtitleRuns = header?.subtitle?.runs || header?.secondSubtitle?.runs;
-      if (subtitleRuns && Array.isArray(subtitleRuns)) {
-        const subtitleText = subtitleRuns.map((r: any) => r.text).join('');
-        const countMatch = subtitleText.match(/(\d+)\s*(song|track|video)/i);
-        if (countMatch) {
-          trackCount = parseInt(countMatch[1], 10);
-        }
+      // Check multiple possible locations for track count
+      const subtitle = header?.subtitle?.runs ? header.subtitle.runs.map((r: any) => r.text).join('') : '';
+      const secondSubtitle = header?.secondSubtitle?.runs ? header.secondSubtitle.runs.map((r: any) => r.text).join('') : '';
+      const straplineBadges = header?.straplineBadges?.runs ? header.straplineBadges.runs.map((r: any) => r.text).join('') : '';
+
+      // Try all possible text sources
+      const allText = `${subtitle} ${secondSubtitle} ${straplineBadges}`;
+      // Match various formats: "500 songs", "2,000 songs", "1.962 tracks", etc.
+      const countMatch = allText.match(/([\d,.]+)\s*(song|track|video|titel|canciones|chansons|brani|músicas|nummer)/i);
+      if (countMatch) {
+        // Remove commas, dots used as thousands separators
+        const numStr = countMatch[1].replace(/[,.]/g, '');
+        trackCount = parseInt(numStr, 10) || 0;
       }
     }
 
@@ -438,7 +445,10 @@ class YouTubeMusicProvider implements IMusicProvider {
   /**
    * Fetch all playlist videos with pagination
    */
-  private async fetchAllPlaylistVideos(playlistId: string): Promise<{
+  private async fetchAllPlaylistVideos(
+    playlistId: string,
+    onProgress?: ProgressCallback
+  ): Promise<{
     videos: Array<{
       videoId: string;
       title: string;
@@ -475,6 +485,17 @@ class YouTubeMusicProvider implements IMusicProvider {
     let pageCount = 0;
     const maxPages = 50;
 
+    // Report initial progress before first API call
+    if (onProgress) {
+      onProgress({
+        stage: 'fetching_ids',
+        current: 0,
+        total: null,
+        percentage: 1,
+        message: 'progress.loading',
+      });
+    }
+
     // Initial request
     const initialResponse = await this.axiosClient.post(
       `${YT_MUSIC_API_URL}?key=${YT_MUSIC_API_KEY}`,
@@ -486,6 +507,25 @@ class YouTubeMusicProvider implements IMusicProvider {
 
     const initialVideos = this.extractPlaylistVideos(initialData);
     allVideos.push(...initialVideos);
+
+    const totalTracksExpected = metadata.trackCount || null;
+
+    // Report initial progress
+    if (onProgress) {
+      let percentage: number;
+      if (totalTracksExpected && totalTracksExpected > 0) {
+        percentage = Math.min(99, Math.round((allVideos.length / totalTracksExpected) * 100));
+      } else {
+        percentage = Math.min(95, Math.round(50 * Math.log10(allVideos.length + 10) - 25));
+      }
+      onProgress({
+        stage: 'fetching_metadata',
+        current: allVideos.length,
+        total: totalTracksExpected,
+        percentage: Math.max(1, percentage),
+        message: 'progress.loaded',
+      });
+    }
 
     continuationData = this.extractContinuationData(initialData);
 
@@ -511,6 +551,23 @@ class YouTubeMusicProvider implements IMusicProvider {
 
         allVideos.push(...pageVideos);
         continuationData = this.extractContinuationData(continueData);
+
+        // Report progress after each page
+        if (onProgress) {
+          let percentage: number;
+          if (totalTracksExpected && totalTracksExpected > 0) {
+            percentage = Math.min(99, Math.round((allVideos.length / totalTracksExpected) * 100));
+          } else {
+            percentage = Math.min(95, Math.round(50 * Math.log10(allVideos.length + 10) - 25));
+          }
+          onProgress({
+            stage: 'fetching_metadata',
+            current: allVideos.length,
+            total: totalTracksExpected,
+            percentage: Math.max(1, percentage),
+            message: 'progress.loaded',
+          });
+        }
       } catch (e: any) {
         this.logger.log(`ERROR: Failed to fetch continuation page: ${e.message}`);
         break;
@@ -569,7 +626,12 @@ class YouTubeMusicProvider implements IMusicProvider {
   /**
    * Get tracks from a YouTube Music playlist with full pagination support
    */
-  async getTracks(playlistId: string, cache: boolean = true): Promise<ApiResult & { data?: ProviderTracksResult }> {
+  async getTracks(
+    playlistId: string,
+    cache: boolean = true,
+    _maxTracks?: number,
+    onProgress?: ProgressCallback
+  ): Promise<ApiResult & { data?: ProviderTracksResult }> {
     if (this.isRadioPlaylist(playlistId)) {
       this.logger.log(`WARNING: Attempting to fetch radio playlist ${playlistId} - this may fail without cookies`);
     }
@@ -587,7 +649,7 @@ class YouTubeMusicProvider implements IMusicProvider {
         )
       );
 
-      const { videos } = await this.fetchAllPlaylistVideos(playlistId);
+      const { videos } = await this.fetchAllPlaylistVideos(playlistId, onProgress);
 
       const tracks: ProviderTrackData[] = videos.map((video) => ({
         id: video.videoId,

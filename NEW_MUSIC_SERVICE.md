@@ -644,6 +644,191 @@ Then run:
 
 ---
 
+## WebSocket Progress Reporting
+
+For long-running playlist fetches, providers should report progress via WebSocket. This allows the frontend to show a progress indicator when fetching large playlists.
+
+### Provider Implementation
+
+1. **Update getTracks signature** to accept an optional `ProgressCallback`:
+```typescript
+import { ProgressCallback } from '../interfaces/IMusicProvider';
+
+async getTracks(
+  playlistId: string,
+  cache: boolean = true,
+  maxTracks?: number,
+  onProgress?: ProgressCallback
+): Promise<ApiResult & { data?: ProviderTracksResult }> {
+  // ... implementation
+}
+```
+
+2. **Report progress during pagination loops**:
+```typescript
+// For providers with unknown total (use log-scale progress)
+if (onProgress) {
+  const percentage = Math.min(95, Math.round(50 * Math.log10(allTracks.length + 10) - 25));
+  onProgress({
+    stage: 'fetching_metadata',
+    current: allTracks.length,
+    total: null,
+    percentage: Math.max(1, percentage),
+    message: 'progress.loaded',  // Translation key for frontend
+  });
+}
+
+// For providers with known total (use linear progress)
+if (onProgress) {
+  const percentage = Math.round((current / total) * 100);
+  onProgress({
+    stage: 'fetching_metadata',
+    current: current,
+    total: total,
+    percentage: percentage,
+    message: 'progress.loaded',
+  });
+}
+```
+
+3. **For two-step fetches** (like Tidal which gets IDs first, then metadata):
+```typescript
+// Step 1: Fetching IDs (0-30%)
+if (onProgress) {
+  const step1Progress = Math.min(30, Math.round(15 * Math.log10(allIds.length + 10) - 10));
+  onProgress({
+    stage: 'fetching_ids',
+    current: allIds.length,
+    total: null,
+    percentage: Math.max(1, step1Progress),
+    message: 'progress.fetchingIds',
+  });
+}
+
+// Step 2: Fetching metadata (30-100%)
+if (onProgress) {
+  const step2Progress = 30 + Math.round((processed / total) * 70);
+  onProgress({
+    stage: 'fetching_metadata',
+    current: processed,
+    total: total,
+    percentage: step2Progress,
+    message: 'progress.fetchingMetadata',
+  });
+}
+```
+
+### Route Implementation
+
+Update the service route to pass progress callbacks and broadcast via WebSocket:
+
+```typescript
+import ProgressWebSocketServer from '../progress-websocket';
+import { ServiceType } from '../enums/ServiceType';
+
+// In the /playlists/tracks route handler:
+const progressWs = ProgressWebSocketServer.getInstance();
+
+const onProgress = progressWs
+  ? (progress: { stage: string; current: number; total: number | null; percentage: number; message?: string }) => {
+      progressWs.broadcastProgress(playlistId, ServiceType.NEW_SERVICE, {
+        stage: progress.stage as 'fetching_ids' | 'fetching_metadata',
+        percentage: progress.percentage,
+        message: progress.message,
+        current: progress.current,
+        total: progress.total ?? undefined,
+      });
+    }
+  : undefined;
+
+const result = await provider.getTracks(playlistId, cache, undefined, onProgress);
+
+// Broadcast completion or error
+if (progressWs) {
+  if (result.success && result.data) {
+    progressWs.broadcastComplete(playlistId, ServiceType.NEW_SERVICE, {
+      trackCount: result.data.tracks.length,
+    });
+  } else {
+    progressWs.broadcastError(playlistId, ServiceType.NEW_SERVICE, result.error);
+  }
+}
+```
+
+### WebSocket Message Format
+
+The WebSocket server sends messages in this format:
+```typescript
+interface ProgressMessage {
+  type: 'connected' | 'progress' | 'complete' | 'error';
+  playlistId: string;
+  serviceType: string;
+  data: {
+    stage?: 'fetching_ids' | 'fetching_metadata';
+    percentage: number;      // 0-100
+    message?: string;        // Translation key (e.g., 'progress.loaded')
+    current?: number;        // Current count
+    total?: number;          // Total count (if known)
+    trackCount?: number;     // Final count (on complete)
+    error?: string;          // Error message (on error)
+  };
+}
+```
+
+### Frontend Translation Keys
+
+Add these translation keys in `en.json`:
+```json
+{
+  "progress": {
+    "fetchingIds": "Finding tracks...",
+    "fetchingMetadata": "Loading track details...",
+    "loaded": "Loaded {{current}} tracks..."
+  }
+}
+```
+
+---
+
+## Redis Rate Limiting
+
+For services with strict rate limits (like Tidal), use Redis-based rate limiting to coordinate across all workers/nodes. This prevents hitting rate limits when multiple users fetch playlists simultaneously.
+
+### Implementation
+
+1. **Add rate limit constants** in the provider:
+```typescript
+const SERVICE_RATE_LIMIT_KEY = 'new_service_api';
+const SERVICE_MAX_REQUESTS = 25; // Max requests per window
+const SERVICE_WINDOW_MS = 60000; // 1 minute window
+```
+
+2. **Create rate limit helper method**:
+```typescript
+private async applyRateLimit(): Promise<void> {
+  await this.cache.slidingWindowRateLimit(
+    SERVICE_RATE_LIMIT_KEY,
+    SERVICE_MAX_REQUESTS,
+    SERVICE_WINDOW_MS
+  );
+}
+```
+
+3. **Apply before API calls**:
+```typescript
+// Before each API call
+await this.applyRateLimit();
+const result = await this.serviceApi.getData();
+```
+
+The `slidingWindowRateLimit` method in `cache.ts`:
+- Uses Redis sorted sets to track request timestamps
+- Works across all workers/nodes
+- Automatically waits when rate limit is reached
+- Cleans up old entries outside the time window
+
+---
+
 ## Normalized Track Data Format
 
 All providers must return tracks in this format:

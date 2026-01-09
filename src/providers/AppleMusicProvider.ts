@@ -3,6 +3,7 @@ import { ServiceType } from '../enums/ServiceType';
 import {
   IMusicProvider,
   MusicProviderConfig,
+  ProgressCallback,
   ProviderPlaylistData,
   ProviderTrackData,
   ProviderTracksResult,
@@ -316,9 +317,11 @@ class AppleMusicProvider implements IMusicProvider {
    */
   async getTracks(
     playlistId: string,
-    storefront: string = 'us',
-    cache: boolean = true
+    cache: boolean = true,
+    _maxTracks?: number,
+    onProgress?: ProgressCallback
   ): Promise<ApiResult & { data?: ProviderTracksResult }> {
+    const storefront = 'us'; // Default storefront
     // Check cache first (skip if cache=false to force refresh)
     const cacheKey = `${CACHE_KEY_APPLE_MUSIC_TRACKS}${playlistId}`;
     const cached = await this.cache.get(cacheKey);
@@ -333,10 +336,25 @@ class AppleMusicProvider implements IMusicProvider {
         )
       );
 
+      // First, get the playlist to know the total track count
+      const playlistResult = await this.apiRequest<any>(`/playlists/${playlistId}`, storefront);
+      const totalTracksExpected = playlistResult.data?.data?.[0]?.attributes?.trackCount || null;
+
       // Fetch playlist with tracks included
       const allTracks: ProviderTrackData[] = [];
       let nextUrl: string | null = `/playlists/${playlistId}/tracks?limit=100`;
       let skippedCount = 0;
+
+      // Report initial progress before first API call
+      if (onProgress) {
+        onProgress({
+          stage: 'fetching_ids',
+          current: 0,
+          total: totalTracksExpected,
+          percentage: 1,
+          message: 'progress.loading',
+        });
+      }
 
       while (nextUrl) {
         const result: { success: boolean; data?: any; error?: string } = await this.apiRequest<any>(nextUrl, storefront);
@@ -377,6 +395,23 @@ class AppleMusicProvider implements IMusicProvider {
             duration: attributes.durationInMillis || undefined,
             serviceType: ServiceType.APPLE_MUSIC,
             serviceLink: attributes.url || `https://music.apple.com/${storefront}/song/${track.id}`,
+          });
+        }
+
+        // Report progress using linear calculation when total is known
+        if (onProgress) {
+          let percentage: number;
+          if (totalTracksExpected && totalTracksExpected > 0) {
+            percentage = Math.min(99, Math.round((allTracks.length / totalTracksExpected) * 100));
+          } else {
+            percentage = Math.min(95, Math.round(50 * Math.log10(allTracks.length + 10) - 25));
+          }
+          onProgress({
+            stage: 'fetching_metadata',
+            current: allTracks.length,
+            total: totalTracksExpected,
+            percentage: Math.max(1, percentage),
+            message: 'progress.loaded',
           });
         }
 

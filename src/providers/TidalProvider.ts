@@ -3,6 +3,7 @@ import { ServiceType } from '../enums/ServiceType';
 import {
   IMusicProvider,
   MusicProviderConfig,
+  ProgressCallback,
   ProviderPlaylistData,
   ProviderTrackData,
   ProviderTracksResult,
@@ -17,6 +18,11 @@ import Utils from '../utils';
 // Cache key prefixes for Tidal
 const CACHE_KEY_TIDAL_PLAYLIST = 'tidal_playlist_';
 const CACHE_KEY_TIDAL_TRACKS = 'tidal_tracks_';
+
+// Rate limiting constants for Tidal API
+// Minimum delay between requests, coordinated across all workers/nodes via Redis
+const TIDAL_RATE_LIMIT_KEY = 'tidal_api';
+const TIDAL_MIN_DELAY_MS = 250; // 250ms between requests (max ~4 req/sec)
 
 // No TTL for playlist/tracks cache - matches Spotify behavior
 
@@ -77,6 +83,15 @@ class TidalProvider implements IMusicProvider {
       TidalProvider.instance = new TidalProvider();
     }
     return TidalProvider.instance;
+  }
+
+  /**
+   * Apply rate limiting before Tidal API calls
+   * Uses Redis-based distributed rate limiting to coordinate across all workers/nodes
+   * Ensures minimum delay between requests globally
+   */
+  private async applyRateLimit(): Promise<void> {
+    await this.cache.distributedRateLimit(TIDAL_RATE_LIMIT_KEY, TIDAL_MIN_DELAY_MS);
   }
 
   /**
@@ -197,6 +212,8 @@ class TidalProvider implements IMusicProvider {
         )
       );
 
+      // Apply rate limiting before API call
+      await this.applyRateLimit();
       const result = await this.tidalApi.getPlaylist(playlistId);
 
       if (!result.success || !result.data) {
@@ -241,7 +258,9 @@ class TidalProvider implements IMusicProvider {
    */
   async getTracks(
     playlistId: string,
-    cache: boolean = true
+    cache: boolean = true,
+    maxTracks?: number,
+    onProgress?: ProgressCallback
   ): Promise<ApiResult & { data?: ProviderTracksResult }> {
     // Check cache first (skip if cache=false to force refresh)
     const cacheKey = `${CACHE_KEY_TIDAL_TRACKS}${playlistId}`;
@@ -253,18 +272,83 @@ class TidalProvider implements IMusicProvider {
     try {
       this.logger.log(
         color.blue.bold(
-          `[${color.white.bold('tidal')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}`
+          `[${color.white.bold('tidal')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}${maxTracks ? ` (limit: ${maxTracks})` : ''}`
         )
       );
 
-      // First get playlist items (track references)
-      const allTrackIds: string[] = [];
-      let offset = 0;
-      const limit = 100;
+      // Helper function for delay (rate limiting)
+      const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
+
+      // Helper function with retry mechanism (handles both exceptions and API errors like 429)
+      // Also applies Redis-based rate limiting before each API call
+      const fetchWithRetry = async <T extends { success: boolean; error?: string }>(
+        fn: () => Promise<T>,
+        retries: number = 3,
+        delayMs: number = 2000
+      ): Promise<T> => {
+        for (let attempt = 1; attempt <= retries; attempt++) {
+          try {
+            // Apply rate limiting before each API call (coordinates across all workers/nodes)
+            await this.applyRateLimit();
+            const result = await fn();
+
+            // Check for rate limit or transient errors
+            if (!result.success && result.error?.includes('429')) {
+              if (attempt === retries) return result;
+              const backoffDelay = delayMs * attempt;
+              this.logger.log(
+                color.yellow.bold(
+                  `[${color.white.bold('tidal')}] Rate limited (429), retry ${attempt}/${retries} after ${backoffDelay}ms`
+                )
+              );
+              await delay(backoffDelay);
+              continue;
+            }
+
+            return result;
+          } catch (error: any) {
+            if (attempt === retries) throw error;
+            const backoffDelay = delayMs * attempt;
+            this.logger.log(
+              color.yellow.bold(
+                `[${color.white.bold('tidal')}] Retry ${attempt}/${retries} after error: ${error.message}, waiting ${backoffDelay}ms`
+              )
+            );
+            await delay(backoffDelay);
+          }
+        }
+        throw new Error('Max retries exceeded');
+      };
+
+      // First, get the playlist metadata to know the total track count
+      await this.applyRateLimit();
+      const playlistResult = await this.tidalApi.getPlaylist(playlistId);
+      const totalTracksExpected = playlistResult.data?.data?.attributes?.numberOfItems || null;
+
+      // Interleaved approach: fetch a page of IDs, then immediately fetch their metadata
+      // This provides smoother, more linear progress compared to two separate phases
+      const allTracks: ProviderTrackData[] = [];
+      let cursor: string | undefined = undefined;
       let hasMore = true;
+      let pageCount = 0;
+      const metadataBatchSize = 20;
+
+      // Report initial progress before first API call
+      if (onProgress) {
+        onProgress({
+          stage: 'fetching_ids',
+          current: 0,
+          total: totalTracksExpected,
+          percentage: 1,
+          message: 'progress.loading',
+        });
+      }
 
       while (hasMore) {
-        const itemsResult = await this.tidalApi.getPlaylistItems(playlistId, limit, offset);
+        // Step A: Get a page of track IDs
+        const itemsResult = await fetchWithRetry(() =>
+          this.tidalApi.getPlaylistItems(playlistId, 'US', cursor)
+        );
 
         if (!itemsResult.success || !itemsResult.data) {
           if (itemsResult.needsReAuth) {
@@ -274,102 +358,152 @@ class TidalProvider implements IMusicProvider {
               needsReAuth: true,
             };
           }
+          // If we already have some tracks, continue with what we have
+          if (allTracks.length > 0) {
+            this.logger.log(color.yellow(`[tidal] Partial fetch: got ${allTracks.length} tracks before error`));
+            break;
+          }
           return { success: false, error: itemsResult.error || 'Failed to fetch tracks' };
         }
 
         const items = itemsResult.data.data || [];
+        const pageTrackIds: string[] = [];
         for (const item of items) {
           if (item.type === 'tracks') {
-            allTrackIds.push(item.id);
+            pageTrackIds.push(item.id);
           }
         }
 
-        // Check if there are more items
-        const meta = itemsResult.data.meta;
-        hasMore = meta && offset + items.length < meta.total;
-        offset += limit;
+        pageCount++;
 
-        // Safety limit to prevent infinite loops
-        if (allTrackIds.length >= 3000) {
-          hasMore = false;
-        }
-      }
+        // Step B: Immediately fetch metadata for this page's tracks (in batches of 20)
+        for (let i = 0; i < pageTrackIds.length; i += metadataBatchSize) {
+          const batchIds = pageTrackIds.slice(i, i + metadataBatchSize);
 
-      // Now fetch track details in batches
-      const tracks: ProviderTrackData[] = [];
-      const batchSize = 50; // Tidal API limit
+          const tracksResult = await fetchWithRetry(() =>
+            this.tidalApi.getTracks(batchIds)
+          );
 
-      for (let i = 0; i < allTrackIds.length; i += batchSize) {
-        const batchIds = allTrackIds.slice(i, i + batchSize);
-        const tracksResult = await this.tidalApi.getTracks(batchIds);
+          if (tracksResult.success && tracksResult.data) {
+            const trackData = tracksResult.data.data || [];
+            const included = tracksResult.data.included || [];
 
-        if (tracksResult.success && tracksResult.data) {
-          const trackData = tracksResult.data.data || [];
-          const included = tracksResult.data.included || [];
+            const albumsMap = new Map<string, any>();
+            const artistsMap = new Map<string, any>();
 
-          // Create lookup maps for albums and artists from included data
-          const albumsMap = new Map<string, any>();
-          const artistsMap = new Map<string, any>();
-
-          for (const inc of included) {
-            if (inc.type === 'albums') {
-              albumsMap.set(inc.id, inc);
-            } else if (inc.type === 'artists') {
-              artistsMap.set(inc.id, inc);
+            for (const inc of included) {
+              if (inc.type === 'albums') albumsMap.set(inc.id, inc);
+              else if (inc.type === 'artists') artistsMap.set(inc.id, inc);
             }
-          }
 
-          for (const track of trackData) {
-            const attrs = track.attributes || {};
+            // Create a map for quick lookup to preserve order
+            const fetchedTracksMap = new Map<string, ProviderTrackData>();
+            for (const track of trackData) {
+              const attrs = track.attributes || {};
+              const albumRel = track.relationships?.albums?.data?.[0];
+              const album = albumRel ? albumsMap.get(albumRel.id) : null;
+              const albumAttrs = album?.attributes || {};
+              const artistRel = track.relationships?.artists?.data?.[0];
+              const artist = artistRel ? artistsMap.get(artistRel.id) : null;
+              const artistName = artist?.attributes?.name || 'Unknown Artist';
 
-            // Get album info
-            const albumRel = track.relationships?.albums?.data?.[0];
-            const album = albumRel ? albumsMap.get(albumRel.id) : null;
-            const albumAttrs = album?.attributes || {};
+              const artistsList: string[] = [];
+              for (const ar of track.relationships?.artists?.data || []) {
+                const a = artistsMap.get(ar.id);
+                if (a?.attributes?.name) artistsList.push(a.attributes.name);
+              }
 
-            // Get artist info
-            const artistRel = track.relationships?.artists?.data?.[0];
-            const artist = artistRel ? artistsMap.get(artistRel.id) : null;
-            const artistName = artist?.attributes?.name || 'Unknown Artist';
+              fetchedTracksMap.set(track.id, {
+                id: track.id,
+                name: this.utils.cleanTrackName(attrs.title || 'Unknown'),
+                artist: artistName,
+                artistsList: artistsList.length > 0 ? artistsList : [artistName],
+                album: this.utils.cleanTrackName(albumAttrs.title || ''),
+                albumImageUrl: this.getImageUrl(albumAttrs.cover),
+                releaseDate: albumAttrs.releaseDate || null,
+                isrc: attrs.isrc || undefined,
+                previewUrl: null,
+                duration: attrs.duration ? attrs.duration * 1000 : undefined,
+                serviceType: ServiceType.TIDAL,
+                serviceLink: `https://tidal.com/browse/track/${track.id}`,
+              });
+            }
 
-            // Get all artists for artistsList
-            const artistsList: string[] = [];
-            const artistRels = track.relationships?.artists?.data || [];
-            for (const ar of artistRels) {
-              const a = artistsMap.get(ar.id);
-              if (a?.attributes?.name) {
-                artistsList.push(a.attributes.name);
+            // Add tracks in order, with placeholders for any that weren't found
+            for (const trackId of batchIds) {
+              const trackData = fetchedTracksMap.get(trackId);
+              if (trackData) {
+                allTracks.push(trackData);
+              } else {
+                // Placeholder for unavailable track
+                allTracks.push({
+                  id: trackId,
+                  name: '',
+                  artist: '',
+                  artistsList: [],
+                  album: '',
+                  albumImageUrl: null,
+                  releaseDate: null,
+                  isrc: undefined,
+                  previewUrl: null,
+                  duration: undefined,
+                  serviceType: ServiceType.TIDAL,
+                  serviceLink: `https://tidal.com/browse/track/${trackId}`,
+                });
               }
             }
+          }
 
-            // Extract release date and year
-            let releaseDate = albumAttrs.releaseDate || null;
-
-            tracks.push({
-              id: track.id,
-              name: this.utils.cleanTrackName(attrs.title || 'Unknown'),
-              artist: artistName,
-              artistsList: artistsList.length > 0 ? artistsList : [artistName],
-              album: this.utils.cleanTrackName(albumAttrs.title || ''),
-              albumImageUrl: this.getImageUrl(albumAttrs.cover),
-              releaseDate: releaseDate,
-              isrc: attrs.isrc || undefined,
-              previewUrl: null, // Tidal doesn't provide preview URLs via API
-              duration: attrs.duration ? attrs.duration * 1000 : undefined, // Convert to ms
-              serviceType: ServiceType.TIDAL,
-              serviceLink: `https://tidal.com/browse/track/${track.id}`,
+          // Report progress using linear calculation when total is known
+          if (onProgress) {
+            let percentage: number;
+            if (totalTracksExpected && totalTracksExpected > 0) {
+              // Linear progress based on known total
+              percentage = Math.min(99, Math.round((allTracks.length / totalTracksExpected) * 100));
+            } else {
+              // Fallback to log scale if total unknown
+              percentage = Math.min(95, Math.round(50 * Math.log10(allTracks.length + 10) - 25));
+            }
+            onProgress({
+              stage: 'fetching_metadata',
+              current: allTracks.length,
+              total: totalTracksExpected,
+              percentage: Math.max(1, percentage),
+              message: 'progress.loaded',
             });
           }
+
+          // Small delay between metadata batches
+          if (i + metadataBatchSize < pageTrackIds.length) await delay(200);
         }
+
+        // Check for next page
+        const nextCursor = itemsResult.data.links?.meta?.nextCursor;
+        hasMore = !!nextCursor && items.length > 0;
+        cursor = nextCursor;
+
+        // Check limits
+        if (maxTracks && allTracks.length >= maxTracks) {
+          allTracks.splice(maxTracks);
+          hasMore = false;
+        }
+        if (allTracks.length >= 3000 || pageCount >= 200) {
+          hasMore = false;
+        }
+
+        // Delay between pages
+        if (hasMore) await delay(300);
       }
+
+      const tracks = allTracks;
 
       const result: ProviderTracksResult = {
         tracks,
         total: tracks.length,
         skipped: {
-          total: allTrackIds.length - tracks.length,
+          total: 0,
           summary: {
-            unavailable: allTrackIds.length - tracks.length,
+            unavailable: 0,
             localFiles: 0,
             podcasts: 0,
             duplicates: 0,

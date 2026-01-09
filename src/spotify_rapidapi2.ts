@@ -4,6 +4,7 @@ import Cache from './cache'; // Needed for queue implementation details
 import AnalyticsClient from './analytics';
 import { color } from 'console-log-colors';
 import { ApiResult } from './interfaces/ApiResult'; // Assuming ApiResult interface exists
+import { ProgressCallback } from './interfaces/IMusicProvider';
 
 // --- RapidAPI Queue (Copied from spotify_rapidapi.ts for encapsulation) ---
 class RapidAPIQueue {
@@ -209,10 +210,11 @@ class SpotifyRapidApi2 {
     }
   }
 
-  public async getTracks(playlistId: string): Promise<ApiResult> {
+  public async getTracks(playlistId: string, onProgress?: ProgressCallback): Promise<ApiResult> {
     let allItems: any[] = [];
     let offset = 0;
     const limit = 100;
+    let totalTracks: number | null = null;
 
     // this.logger.log(
     //   color.blue.bold(
@@ -246,10 +248,32 @@ class SpotifyRapidApi2 {
           break;
         }
 
+        // Get total from first response if available
+        if (totalTracks === null && response.data.total) {
+          totalTracks = response.data.total;
+        }
+
         const validItems = response.data.items.filter(
           (item: any) => item && item.track
         );
         allItems = allItems.concat(validItems);
+
+        // Report progress after each page
+        if (onProgress) {
+          let percentage: number;
+          if (totalTracks && totalTracks > 0) {
+            percentage = Math.min(99, Math.round((allItems.length / totalTracks) * 100));
+          } else {
+            percentage = Math.min(95, Math.round(50 * Math.log10(allItems.length + 10) - 25));
+          }
+          onProgress({
+            stage: 'fetching_metadata',
+            current: allItems.length,
+            total: totalTracks,
+            percentage: Math.max(1, percentage),
+            message: 'progress.loaded',
+          });
+        }
 
         if (response.data.items.length < limit) {
           break;

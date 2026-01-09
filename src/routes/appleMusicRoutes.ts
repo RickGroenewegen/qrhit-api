@@ -2,6 +2,8 @@ import { FastifyInstance } from 'fastify';
 import { AppleMusicProvider } from '../providers';
 import Utils from '../utils';
 import TrackEnrichment from '../trackEnrichment';
+import ProgressWebSocketServer from '../progress-websocket';
+import { ServiceType } from '../enums/ServiceType';
 
 export default async function appleMusicRoutes(fastify: FastifyInstance) {
   const appleMusicProvider = AppleMusicProvider.getInstance();
@@ -60,7 +62,7 @@ export default async function appleMusicRoutes(fastify: FastifyInstance) {
 
   // Get Apple Music playlist tracks
   fastify.post('/apple-music/playlists/tracks', async (request: any, reply) => {
-    const { playlistId, url, cache } = request.body;
+    const { playlistId, url, cache, requestId } = request.body;
 
     let resolvedPlaylistId = playlistId;
 
@@ -92,7 +94,34 @@ export default async function appleMusicRoutes(fastify: FastifyInstance) {
       };
     }
 
-    const result = await appleMusicProvider.getTracks(resolvedPlaylistId, 'us', utils.parseBoolean(cache));
+    // Get WebSocket server for progress broadcasting
+    const progressWs = ProgressWebSocketServer.getInstance();
+
+    // Create progress callback that broadcasts to WebSocket (only if requestId provided)
+    const onProgress = progressWs && requestId
+      ? (progress: { stage: string; current: number; total: number | null; percentage: number; message?: string }) => {
+          progressWs.broadcastProgress(resolvedPlaylistId, ServiceType.APPLE_MUSIC, requestId, {
+            stage: progress.stage as 'fetching_ids' | 'fetching_metadata',
+            percentage: progress.percentage,
+            message: progress.message,
+            current: progress.current,
+            total: progress.total ?? undefined,
+          });
+        }
+      : undefined;
+
+    const result = await appleMusicProvider.getTracks(resolvedPlaylistId, utils.parseBoolean(cache), undefined, onProgress);
+
+    // Broadcast completion or error (only if requestId provided)
+    if (progressWs && requestId) {
+      if (result.success && result.data) {
+        progressWs.broadcastComplete(resolvedPlaylistId, ServiceType.APPLE_MUSIC, requestId, {
+          trackCount: result.data.tracks.length,
+        });
+      } else {
+        progressWs.broadcastError(resolvedPlaylistId, ServiceType.APPLE_MUSIC, requestId, result.error);
+      }
+    }
 
     // Enrich tracks with additional data from database
     if (result.success && result.data?.tracks) {

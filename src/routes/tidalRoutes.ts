@@ -4,6 +4,8 @@ import { TidalProvider } from '../providers';
 import Logger from '../logger';
 import Utils from '../utils';
 import TrackEnrichment from '../trackEnrichment';
+import ProgressWebSocketServer from '../progress-websocket';
+import { ServiceType } from '../enums/ServiceType';
 
 export default async function tidalRoutes(fastify: FastifyInstance) {
   const tidalProvider = TidalProvider.getInstance();
@@ -151,7 +153,7 @@ export default async function tidalRoutes(fastify: FastifyInstance) {
 
   // Get Tidal playlist tracks
   fastify.post('/tidal/playlists/tracks', async (request: any, reply) => {
-    const { playlistId, url, cache } = request.body;
+    const { playlistId, url, cache, limit, requestId } = request.body;
 
     let resolvedPlaylistId = playlistId;
 
@@ -172,7 +174,34 @@ export default async function tidalRoutes(fastify: FastifyInstance) {
       };
     }
 
-    const result = await tidalProvider.getTracks(resolvedPlaylistId, utils.parseBoolean(cache));
+    // Get WebSocket server for progress broadcasting
+    const progressWs = ProgressWebSocketServer.getInstance();
+
+    // Create progress callback that broadcasts to WebSocket (only if requestId provided)
+    const onProgress = progressWs && requestId
+      ? (progress: { stage: string; current: number; total: number | null; percentage: number; message?: string }) => {
+          progressWs.broadcastProgress(resolvedPlaylistId, ServiceType.TIDAL, requestId, {
+            stage: progress.stage as 'fetching_ids' | 'fetching_metadata',
+            percentage: progress.percentage,
+            message: progress.message,
+            current: progress.current,
+            total: progress.total ?? undefined,
+          });
+        }
+      : undefined;
+
+    const result = await tidalProvider.getTracks(resolvedPlaylistId, utils.parseBoolean(cache), limit, onProgress);
+
+    // Broadcast completion or error (only if requestId provided)
+    if (progressWs && requestId) {
+      if (result.success && result.data) {
+        progressWs.broadcastComplete(resolvedPlaylistId, ServiceType.TIDAL, requestId, {
+          trackCount: result.data.tracks.length,
+        });
+      } else {
+        progressWs.broadcastError(resolvedPlaylistId, ServiceType.TIDAL, requestId, result.error);
+      }
+    }
 
     // Tidal provides release dates, but we can still enrich with additional data
     if (result.success && result.data?.tracks) {

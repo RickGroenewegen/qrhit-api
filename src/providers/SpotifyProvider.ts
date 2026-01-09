@@ -2,6 +2,7 @@ import { ServiceType } from '../enums/ServiceType';
 import {
   IMusicProvider,
   MusicProviderConfig,
+  ProgressCallback,
   ProviderPlaylistData,
   ProviderTrackData,
   ProviderTracksResult,
@@ -215,15 +216,21 @@ class SpotifyProvider implements IMusicProvider {
   /**
    * Get tracks from a Spotify playlist
    */
-  async getTracks(playlistId: string): Promise<ApiResult & { data?: ProviderTracksResult }> {
+  async getTracks(
+    playlistId: string,
+    cache?: boolean,
+    _maxTracks?: number,
+    onProgress?: ProgressCallback
+  ): Promise<ApiResult & { data?: ProviderTracksResult }> {
     const result = await this.spotify.getTracks(
       playlistId,
-      true, // cache
+      cache !== false, // cache
       '', // captchaToken
       false, // checkCaptcha
       false, // isSlug
       '', // clientIp
-      '' // userAgent
+      '', // userAgent
+      onProgress // pass through progress callback
     );
 
     if (!result.success || !result.data) {
