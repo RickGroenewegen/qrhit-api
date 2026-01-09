@@ -255,12 +255,13 @@ class AppleMusicProvider implements IMusicProvider {
    */
   async getPlaylist(
     playlistId: string,
-    storefront: string = 'us'
+    storefront: string = 'us',
+    cache: boolean = true
   ): Promise<ApiResult & { data?: ProviderPlaylistData }> {
-    // Check cache first
+    // Check cache first (skip if cache=false to force refresh)
     const cacheKey = `${CACHE_KEY_APPLE_MUSIC_PLAYLIST}${playlistId}`;
     const cached = await this.cache.get(cacheKey);
-    if (cached) {
+    if (cached && cache) {
       return { success: true, data: JSON.parse(cached) };
     }
 
@@ -315,12 +316,13 @@ class AppleMusicProvider implements IMusicProvider {
    */
   async getTracks(
     playlistId: string,
-    storefront: string = 'us'
+    storefront: string = 'us',
+    cache: boolean = true
   ): Promise<ApiResult & { data?: ProviderTracksResult }> {
-    // Check cache first
+    // Check cache first (skip if cache=false to force refresh)
     const cacheKey = `${CACHE_KEY_APPLE_MUSIC_TRACKS}${playlistId}`;
     const cached = await this.cache.get(cacheKey);
-    if (cached) {
+    if (cached && cache) {
       return { success: true, data: JSON.parse(cached) };
     }
 
@@ -380,13 +382,25 @@ class AppleMusicProvider implements IMusicProvider {
 
         // Check for next page
         if (result.data.next) {
-          nextUrl = result.data.next.replace(APPLE_MUSIC_API_BASE + '/catalog/' + storefront, '');
+          // Apple Music returns next URLs in format: /v1/catalog/{storefront}/playlists/...
+          // We need to extract just the endpoint part after /catalog/{storefront}
+          const nextUrlStr = result.data.next;
+          const catalogPrefix = `/v1/catalog/${storefront}`;
+          if (nextUrlStr.startsWith(catalogPrefix)) {
+            nextUrl = nextUrlStr.substring(catalogPrefix.length);
+          } else if (nextUrlStr.startsWith(APPLE_MUSIC_API_BASE)) {
+            // Handle full URL format just in case
+            nextUrl = nextUrlStr.replace(APPLE_MUSIC_API_BASE + '/catalog/' + storefront, '');
+          } else {
+            // Assume it's already in the correct format
+            nextUrl = nextUrlStr;
+          }
         } else {
           nextUrl = null;
         }
 
-        // Safety limit
-        if (allTracks.length >= 1000) {
+        // Safety limit to prevent infinite loops
+        if (allTracks.length >= 3000) {
           break;
         }
       }

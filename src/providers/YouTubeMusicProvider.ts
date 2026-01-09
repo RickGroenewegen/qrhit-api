@@ -523,10 +523,10 @@ class YouTubeMusicProvider implements IMusicProvider {
   /**
    * Get playlist metadata
    */
-  async getPlaylist(playlistId: string): Promise<ApiResult & { data?: ProviderPlaylistData }> {
+  async getPlaylist(playlistId: string, cache: boolean = true): Promise<ApiResult & { data?: ProviderPlaylistData }> {
     const cacheKey = `${CACHE_KEY_YT_PLAYLIST}${playlistId}`;
     const cached = await this.cache.get(cacheKey);
-    if (cached) {
+    if (cached && cache) {
       return { success: true, data: JSON.parse(cached) };
     }
 
@@ -569,14 +569,14 @@ class YouTubeMusicProvider implements IMusicProvider {
   /**
    * Get tracks from a YouTube Music playlist with full pagination support
    */
-  async getTracks(playlistId: string): Promise<ApiResult & { data?: ProviderTracksResult }> {
+  async getTracks(playlistId: string, cache: boolean = true): Promise<ApiResult & { data?: ProviderTracksResult }> {
     if (this.isRadioPlaylist(playlistId)) {
       this.logger.log(`WARNING: Attempting to fetch radio playlist ${playlistId} - this may fail without cookies`);
     }
 
     const cacheKey = `${CACHE_KEY_YT_TRACKS}${playlistId}`;
     const cached = await this.cache.get(cacheKey);
-    if (cached) {
+    if (cached && cache) {
       return { success: true, data: JSON.parse(cached) };
     }
 

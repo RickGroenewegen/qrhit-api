@@ -180,12 +180,13 @@ class TidalProvider implements IMusicProvider {
    * Get playlist metadata
    */
   async getPlaylist(
-    playlistId: string
+    playlistId: string,
+    cache: boolean = true
   ): Promise<ApiResult & { data?: ProviderPlaylistData }> {
-    // Check cache first
+    // Check cache first (skip if cache=false to force refresh)
     const cacheKey = `${CACHE_KEY_TIDAL_PLAYLIST}${playlistId}`;
     const cached = await this.cache.get(cacheKey);
-    if (cached) {
+    if (cached && cache) {
       return { success: true, data: JSON.parse(cached) };
     }
 
@@ -239,12 +240,13 @@ class TidalProvider implements IMusicProvider {
    * Get tracks from a Tidal playlist
    */
   async getTracks(
-    playlistId: string
+    playlistId: string,
+    cache: boolean = true
   ): Promise<ApiResult & { data?: ProviderTracksResult }> {
-    // Check cache first
+    // Check cache first (skip if cache=false to force refresh)
     const cacheKey = `${CACHE_KEY_TIDAL_TRACKS}${playlistId}`;
     const cached = await this.cache.get(cacheKey);
-    if (cached) {
+    if (cached && cache) {
       return { success: true, data: JSON.parse(cached) };
     }
 

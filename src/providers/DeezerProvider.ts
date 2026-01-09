@@ -255,11 +255,11 @@ class DeezerProvider implements IMusicProvider {
   /**
    * Get playlist metadata
    */
-  async getPlaylist(playlistId: string): Promise<ApiResult & { data?: ProviderPlaylistData }> {
-    // Check cache first
+  async getPlaylist(playlistId: string, cache: boolean = true): Promise<ApiResult & { data?: ProviderPlaylistData }> {
+    // Check cache first (skip if cache=false to force refresh)
     const cacheKey = `${CACHE_KEY_DEEZER_PLAYLIST}${playlistId}`;
     const cached = await this.cache.get(cacheKey);
-    if (cached) {
+    if (cached && cache) {
       return { success: true, data: JSON.parse(cached) };
     }
 
@@ -304,11 +304,11 @@ class DeezerProvider implements IMusicProvider {
   /**
    * Get tracks from a Deezer playlist
    */
-  async getTracks(playlistId: string): Promise<ApiResult & { data?: ProviderTracksResult }> {
-    // Check cache first
+  async getTracks(playlistId: string, cache: boolean = true): Promise<ApiResult & { data?: ProviderTracksResult }> {
+    // Check cache first (skip if cache=false to force refresh)
     const cacheKey = `${CACHE_KEY_DEEZER_TRACKS}${playlistId}`;
     const cached = await this.cache.get(cacheKey);
-    if (cached) {
+    if (cached && cache) {
       return { success: true, data: JSON.parse(cached) };
     }
 
