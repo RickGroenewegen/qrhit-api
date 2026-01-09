@@ -519,6 +519,7 @@ model ExternalCard {
   @@index([sku, cardNumber])
   @@index([countryCode, cardNumber])
   @@index([playlistId, cardNumber])
+  @@index([spotifyId])
 
   @@map("external_cards")
 }

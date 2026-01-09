@@ -4,7 +4,7 @@ Complete guide for integrating a new music streaming service into QRSong.
 
 ## Quick Reference - All Files to Touch
 
-### Backend (qrhit-api) - 11 files
+### Backend (qrhit-api) - 12 files
 
 | # | File | Action |
 |---|------|--------|
@@ -14,11 +14,12 @@ Complete guide for integrating a new music streaming service into QRSong.
 | 4 | `src/providers/index.ts` | Export provider |
 | 5 | `src/services/MusicServiceRegistry.ts` | Register in constructor |
 | 6 | `src/[service]_api.ts` | **Create** - API wrapper (if needed) |
-| 7 | `src/routes/musicRoutes.ts` | Add routes |
-| 8 | `src/data.ts` | Add to serviceLinkFieldMap (~line 1852) |
-| 9 | `src/settings.ts` | Add SettingKey types (if OAuth) |
-| 10 | `src/musicfetch.ts` | Add link field mappings |
-| 11 | `.env` | Add credentials |
+| 7 | `src/routes/musicRoutes.ts` | Add routes + update qrlink_unknown endpoint |
+| 8 | `src/spotify.ts` | Update resolveSpotifyUrl return type |
+| 9 | `src/data.ts` | Add to serviceLinkFieldMap (~line 1852) |
+| 10 | `src/settings.ts` | Add SettingKey types (if OAuth) |
+| 11 | `src/musicfetch.ts` | Add link field mappings |
+| 12 | `.env` | Add credentials |
 
 ### Frontend (qrhit) - 17 files
 
@@ -180,7 +181,30 @@ const serviceLinkFieldMap: Record<string, string> = {
 };
 ```
 
-#### Step 8: Update MusicFetch
+#### Step 8: Update QRLink Unknown Endpoint
+**File:** `src/routes/musicRoutes.ts` (qrlink_unknown endpoint ~line 666)
+
+The `/qrlink_unknown` endpoint is used when scanning QR codes from external cards (Jumbo, Country, MusicMatch). It resolves unknown URLs and returns all available music service links.
+
+When adding a new service, ensure the endpoint returns the new link field:
+```typescript
+// In the qrlink_unknown endpoint response
+reply.send({
+  success: true,
+  spotifyUri: result.spotifyUri,
+  link: result.links?.spotifyLink || null,
+  am: result.links?.appleMusicLink || null,
+  td: result.links?.tidalLink || null,
+  ym: result.links?.youtubeMusicLink || null,
+  dz: result.links?.deezerLink || null,
+  az: result.links?.amazonMusicLink || null,
+  ns: result.links?.newServiceLink || null,  // ADD new service
+});
+```
+
+Also update the `resolveSpotifyUrl` method in `src/spotify.ts` to include the new link field in its return type and mapping.
+
+#### Step 9: Update MusicFetch
 **File:** `src/musicfetch.ts`
 
 ```typescript
@@ -663,6 +687,8 @@ const CACHE_KEY_SEARCH = '[service]_search_';      // TTL: 1800s (30 min)
 - [ ] Register in `MusicServiceRegistry`
 - [ ] Add routes in `musicRoutes.ts`
 - [ ] Update `data.ts` serviceLinkFieldMap
+- [ ] Update `qrlink_unknown` endpoint response in `musicRoutes.ts`
+- [ ] Update `resolveSpotifyUrl` return type in `spotify.ts`
 - [ ] Update `musicfetch.ts` link fields
 - [ ] Add Settings keys (if OAuth)
 - [ ] Add `.env` variables
@@ -687,6 +713,12 @@ const CACHE_KEY_SEARCH = '[service]_search_';      // TTL: 1800s (30 min)
 - [ ] Add service logos (light + dark versions)
 - [ ] Add icon to `home.component.html` supported platforms section
 - [ ] Update FAQ `supportedPlatformsAnswer` in `en.json` to include new service
+
+### External Cards (Admin Dashboard)
+- [ ] Update `admin-external-cards.component.html` - add icon column header and body cell
+- [ ] Update `admin-external-cards.component.ts` - add field to ExternalCard interface
+- [ ] Update `prisma/schema.prisma` - add `newServiceLink` field to ExternalCard model
+- [ ] Update `musicfetch.ts` - add field to `processSingleExternalCard` and `updateExternalCardWithLinks` methods
 
 ### Testing
 - [ ] URL validation works for all formats

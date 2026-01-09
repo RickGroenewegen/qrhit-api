@@ -663,7 +663,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Resolve unknown Spotify URL
+  // Resolve unknown Spotify URL - returns all available music service links
   fastify.post('/qrlink_unknown', async (request: any, reply: any) => {
     const { url } = request.body;
     if (!url || typeof url !== 'string') {
@@ -691,7 +691,18 @@ export default async function musicRoutes(fastify: FastifyInstance) {
         )
       );
       if (result.success) {
-        reply.send({ success: true, spotifyUri: result.spotifyUri });
+        // Return all available music service links
+        reply.send({
+          success: true,
+          spotifyUri: result.spotifyUri,
+          link: result.links?.spotifyLink || null,
+          am: result.links?.appleMusicLink || null,
+          td: result.links?.tidalLink || null,
+          ym: result.links?.youtubeMusicLink || null,
+          dz: result.links?.deezerLink || null,
+          az: result.links?.amazonMusicLink || null,
+          r: true,
+        });
       } else {
         reply.status(404).send({
           success: false,

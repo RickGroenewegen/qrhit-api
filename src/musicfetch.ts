@@ -1,8 +1,11 @@
 import axios, { AxiosInstance, AxiosError } from 'axios';
 import Bottleneck from 'bottleneck';
+import crypto from 'crypto';
 import Logger from './logger';
 import { color, white } from 'console-log-colors';
 import PrismaInstance from './prisma';
+import Cache from './cache';
+import ExternalCardService from './externalCardService';
 
 export interface MusicLinks {
   spotifyLink?: string | null;
@@ -56,6 +59,8 @@ class MusicFetch {
   private static instance: MusicFetch;
   private logger = new Logger();
   private prisma = PrismaInstance.getInstance();
+  private cache = Cache.getInstance();
+  private externalCardService = ExternalCardService.getInstance();
   private axiosInstance: AxiosInstance;
   private limiter: Bottleneck;
   private readonly API_BASE_URL = 'https://api.musicfetch.io';
@@ -91,6 +96,82 @@ class MusicFetch {
       MusicFetch.instance = new MusicFetch();
     }
     return MusicFetch.instance;
+  }
+
+  /**
+   * Clear Redis cache and update in-memory cache for external cards with a given spotifyId
+   * Called after MusicFetch updates links for external cards
+   */
+  private async clearExternalCardCaches(
+    spotifyId: string,
+    newLinks: Partial<{
+      appleMusicLink: string | null;
+      tidalLink: string | null;
+      youtubeMusicLink: string | null;
+      deezerLink: string | null;
+      amazonMusicLink: string | null;
+    }>
+  ): Promise<void> {
+    try {
+      // Get all external cards with this spotifyId to find their URLs
+      const cards = await this.prisma.externalCard.findMany({
+        where: { spotifyId },
+        select: {
+          cardType: true,
+          sku: true,
+          countryCode: true,
+          playlistId: true,
+          cardNumber: true,
+        },
+      });
+
+      // Clear Redis cache for each card's possible URL patterns
+      for (const card of cards) {
+        const urls: string[] = [];
+
+        if (card.cardType === 'jumbo' && card.sku) {
+          // Hitster Jumbo URLs: https://hitstergame.com/{locale}/{sku}/{cardNumber}
+          // We need to cover various locales
+          const locales = ['nl', 'en', 'de', 'fr', 'es', 'it', 'pt', 'pl'];
+          for (const locale of locales) {
+            urls.push(`https://hitstergame.com/${locale}/${card.sku}/${card.cardNumber}`);
+          }
+        } else if (card.cardType === 'country' && card.countryCode) {
+          // Hitster Country URLs: https://hitstergame.com/{locale}/{countryCode}/{cardNumber}
+          const locales = ['nl', 'en', 'de', 'fr', 'es', 'it', 'pt', 'pl'];
+          for (const locale of locales) {
+            urls.push(`https://hitstergame.com/${locale}/${card.countryCode}/${card.cardNumber}`);
+          }
+        } else if (card.cardType === 'musicmatch' && card.playlistId) {
+          // MusicMatch URLs: https://api.musicmatchgame.com/{playlistId}/{cardNumber}
+          urls.push(`https://api.musicmatchgame.com/${card.playlistId}/${card.cardNumber}`);
+        }
+
+        // Delete each URL's cache entry
+        for (const url of urls) {
+          const cacheKey = `qrlink2_unknown_result_${crypto
+            .createHash('md5')
+            .update(url)
+            .digest('hex')}`;
+          await this.cache.del(cacheKey);
+        }
+      }
+
+      // Update in-memory cache in ExternalCardService
+      await this.externalCardService.updateCardsWithSpotifyIdInCache(spotifyId, newLinks);
+
+      this.logger.log(
+        color.blue.bold(
+          `[${white.bold('MusicFetch')}] Cleared caches for ${white.bold(cards.length.toString())} card(s) with spotifyId ${white.bold(spotifyId)}`
+        )
+      );
+    } catch (error) {
+      this.logger.log(
+        color.yellow.bold(
+          `[${white.bold('MusicFetch')}] Warning: Failed to clear caches for spotifyId ${white.bold(spotifyId)}: ${error instanceof Error ? error.message : 'Unknown error'}`
+        )
+      );
+    }
   }
 
   /**
@@ -575,8 +656,156 @@ class MusicFetch {
   }
 
   /**
-   * Update a single external card with MusicFetch links using Spotify as source
-   * @param cardId - The external card ID to process
+   * Process a single external card and return detailed results
+   * Used by the admin UI for single-card MusicFetch action
+   * Updates ALL external cards with the same spotifyId
+   */
+  public async processSingleExternalCard(
+    card: {
+      id: number;
+      spotifyId: string | null;
+      spotifyLink: string | null;
+      appleMusicLink: string | null;
+      tidalLink: string | null;
+      youtubeMusicLink: string | null;
+      deezerLink: string | null;
+      amazonMusicLink: string | null;
+    }
+  ): Promise<{ success: boolean; linksAdded: string[]; cardsUpdated: number; error?: string }> {
+    try {
+      // Need a spotify link as source
+      const sourceUrl = card.spotifyLink || (card.spotifyId ? `https://open.spotify.com/track/${card.spotifyId}` : null);
+      if (!sourceUrl) {
+        return { success: false, linksAdded: [], cardsUpdated: 0, error: 'No Spotify source available' };
+      }
+
+      // Fetch links from MusicFetch API
+      const result = await this.fetchLinksForTrack(sourceUrl, 'spotifyLink');
+
+      if (result.rateLimited) {
+        return { success: false, linksAdded: [], cardsUpdated: 0, error: 'Rate limited, please try again later' };
+      }
+
+      if (!result.success || !result.links) {
+        return { success: false, linksAdded: [], cardsUpdated: 0, error: 'No links found' };
+      }
+
+      // Build update data - only include non-empty values
+      const linksToUpdate: Record<string, string> = {};
+      const linksAdded: string[] = [];
+
+      if (result.links.deezerLink) {
+        linksToUpdate.deezerLink = result.links.deezerLink;
+        linksAdded.push('Deezer');
+      }
+      if (result.links.youtubeMusicLink) {
+        linksToUpdate.youtubeMusicLink = result.links.youtubeMusicLink;
+        linksAdded.push('YouTube Music');
+      }
+      if (result.links.appleMusicLink) {
+        linksToUpdate.appleMusicLink = result.links.appleMusicLink;
+        linksAdded.push('Apple Music');
+      }
+      if (result.links.amazonMusicLink) {
+        linksToUpdate.amazonMusicLink = result.links.amazonMusicLink;
+        linksAdded.push('Amazon Music');
+      }
+      if (result.links.tidalLink) {
+        linksToUpdate.tidalLink = result.links.tidalLink;
+        linksAdded.push('Tidal');
+      }
+
+      if (Object.keys(linksToUpdate).length === 0) {
+        return {
+          success: false,
+          linksAdded: [],
+          cardsUpdated: 0,
+          error: 'No links found from MusicFetch',
+        };
+      }
+
+      // Find all external cards with the same spotifyId
+      const cardsToUpdate = await this.prisma.externalCard.findMany({
+        where: { spotifyId: card.spotifyId },
+        select: {
+          id: true,
+          deezerLink: true,
+          youtubeMusicLink: true,
+          appleMusicLink: true,
+          amazonMusicLink: true,
+          tidalLink: true,
+        },
+      });
+
+      let cardsUpdated = 0;
+
+      // Update each card, only filling in null/empty fields
+      for (const cardToUpdate of cardsToUpdate) {
+        const updateData: Record<string, any> = {
+          musicFetchLastAttempt: new Date(),
+          musicFetchAttempts: { increment: 1 },
+        };
+
+        // Only update fields that are currently null/empty AND we have a value for
+        if (!cardToUpdate.deezerLink && linksToUpdate.deezerLink) {
+          updateData.deezerLink = linksToUpdate.deezerLink;
+        }
+        if (!cardToUpdate.youtubeMusicLink && linksToUpdate.youtubeMusicLink) {
+          updateData.youtubeMusicLink = linksToUpdate.youtubeMusicLink;
+        }
+        if (!cardToUpdate.appleMusicLink && linksToUpdate.appleMusicLink) {
+          updateData.appleMusicLink = linksToUpdate.appleMusicLink;
+        }
+        if (!cardToUpdate.amazonMusicLink && linksToUpdate.amazonMusicLink) {
+          updateData.amazonMusicLink = linksToUpdate.amazonMusicLink;
+        }
+        if (!cardToUpdate.tidalLink && linksToUpdate.tidalLink) {
+          updateData.tidalLink = linksToUpdate.tidalLink;
+        }
+
+        // Only update if there's something new to add
+        if (Object.keys(updateData).length > 2) { // More than just the timestamp fields
+          await this.prisma.externalCard.update({
+            where: { id: cardToUpdate.id },
+            data: updateData,
+          });
+          cardsUpdated++;
+        }
+      }
+
+      if (cardsUpdated > 0) {
+        this.logger.log(
+          color.green.bold(
+            `[${white.bold('MusicFetch')}] Updated ${white.bold(cardsUpdated.toString())} external card(s) with spotifyId ${white.bold(card.spotifyId || 'unknown')} - links: ${white.bold(linksAdded.join(', '))}`
+          )
+        );
+
+        // Clear Redis cache and update in-memory cache
+        if (card.spotifyId) {
+          await this.clearExternalCardCaches(card.spotifyId, linksToUpdate);
+        }
+      }
+
+      return {
+        success: cardsUpdated > 0,
+        linksAdded,
+        cardsUpdated,
+        error: cardsUpdated === 0 ? 'No new links found (all services already linked or unavailable)' : undefined,
+      };
+    } catch (error) {
+      return {
+        success: false,
+        linksAdded: [],
+        cardsUpdated: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Update external cards with MusicFetch links using Spotify as source
+   * Updates ALL cards with the same spotifyId, only filling in null/empty fields
+   * @param cardId - The external card ID to process (used to get spotifyId)
    * @param forceUpdate - If true, bypasses the max attempts check
    */
   public async updateExternalCardWithLinks(cardId: number, forceUpdate: boolean = false): Promise<boolean> {
@@ -586,17 +815,7 @@ class MusicFetch {
         select: {
           spotifyLink: true,
           spotifyId: true,
-          deezerLink: true,
-          youtubeMusicLink: true,
-          appleMusicLink: true,
-          amazonMusicLink: true,
-          tidalLink: true,
           musicFetchAttempts: true,
-          cardType: true,
-          sku: true,
-          countryCode: true,
-          playlistId: true,
-          cardNumber: true,
         },
       });
 
@@ -610,7 +829,7 @@ class MusicFetch {
 
       // Need a spotify link as source
       const sourceUrl = card.spotifyLink || (card.spotifyId ? `https://open.spotify.com/track/${card.spotifyId}` : null);
-      if (!sourceUrl) {
+      if (!sourceUrl || !card.spotifyId) {
         return false;
       }
 
@@ -622,55 +841,95 @@ class MusicFetch {
         return false;
       }
 
-      // Build update data - only update fields that are currently null
-      const updateData: Record<string, any> = {
-        musicFetchLastAttempt: new Date(),
-        musicFetchAttempts: { increment: 1 },
-      };
-
+      // Build links to update - only include non-empty values
+      const linksToUpdate: Record<string, string> = {};
       const newLinksAdded: string[] = [];
 
       if (result.links) {
-        if (!card.deezerLink && result.links.deezerLink) {
-          updateData.deezerLink = result.links.deezerLink;
+        if (result.links.deezerLink) {
+          linksToUpdate.deezerLink = result.links.deezerLink;
           newLinksAdded.push('deezerLink');
         }
-        if (!card.youtubeMusicLink && result.links.youtubeMusicLink) {
-          updateData.youtubeMusicLink = result.links.youtubeMusicLink;
+        if (result.links.youtubeMusicLink) {
+          linksToUpdate.youtubeMusicLink = result.links.youtubeMusicLink;
           newLinksAdded.push('youtubeMusicLink');
         }
-        if (!card.appleMusicLink && result.links.appleMusicLink) {
-          updateData.appleMusicLink = result.links.appleMusicLink;
+        if (result.links.appleMusicLink) {
+          linksToUpdate.appleMusicLink = result.links.appleMusicLink;
           newLinksAdded.push('appleMusicLink');
         }
-        if (!card.amazonMusicLink && result.links.amazonMusicLink) {
-          updateData.amazonMusicLink = result.links.amazonMusicLink;
+        if (result.links.amazonMusicLink) {
+          linksToUpdate.amazonMusicLink = result.links.amazonMusicLink;
           newLinksAdded.push('amazonMusicLink');
         }
-        if (!card.tidalLink && result.links.tidalLink) {
-          updateData.tidalLink = result.links.tidalLink;
+        if (result.links.tidalLink) {
+          linksToUpdate.tidalLink = result.links.tidalLink;
           newLinksAdded.push('tidalLink');
         }
       }
 
-      // Update card in database
-      await this.prisma.externalCard.update({
-        where: { id: cardId },
-        data: updateData,
+      // Find all external cards with the same spotifyId
+      const cardsToUpdate = await this.prisma.externalCard.findMany({
+        where: { spotifyId: card.spotifyId },
+        select: {
+          id: true,
+          deezerLink: true,
+          youtubeMusicLink: true,
+          appleMusicLink: true,
+          amazonMusicLink: true,
+          tidalLink: true,
+        },
       });
 
-      // Only log if we actually added new links
-      if (newLinksAdded.length > 0) {
-        const cardIdentifier = card.sku
-          ? `${card.sku}_${card.cardNumber}`
-          : card.countryCode
-          ? `${card.countryCode}_${card.cardNumber}`
-          : `${card.playlistId}_${card.cardNumber}`;
+      let cardsUpdated = 0;
+
+      // Update each card, only filling in null/empty fields
+      for (const cardToUpdate of cardsToUpdate) {
+        const updateData: Record<string, any> = {
+          musicFetchLastAttempt: new Date(),
+          musicFetchAttempts: { increment: 1 },
+        };
+
+        // Only update fields that are currently null/empty AND we have a value for
+        if (!cardToUpdate.deezerLink && linksToUpdate.deezerLink) {
+          updateData.deezerLink = linksToUpdate.deezerLink;
+        }
+        if (!cardToUpdate.youtubeMusicLink && linksToUpdate.youtubeMusicLink) {
+          updateData.youtubeMusicLink = linksToUpdate.youtubeMusicLink;
+        }
+        if (!cardToUpdate.appleMusicLink && linksToUpdate.appleMusicLink) {
+          updateData.appleMusicLink = linksToUpdate.appleMusicLink;
+        }
+        if (!cardToUpdate.amazonMusicLink && linksToUpdate.amazonMusicLink) {
+          updateData.amazonMusicLink = linksToUpdate.amazonMusicLink;
+        }
+        if (!cardToUpdate.tidalLink && linksToUpdate.tidalLink) {
+          updateData.tidalLink = linksToUpdate.tidalLink;
+        }
+
+        await this.prisma.externalCard.update({
+          where: { id: cardToUpdate.id },
+          data: updateData,
+        });
+
+        // Count if we actually added new links (more than just timestamp fields)
+        if (Object.keys(updateData).length > 2) {
+          cardsUpdated++;
+        }
+      }
+
+      // Log if we updated any cards with new links
+      if (cardsUpdated > 0 && newLinksAdded.length > 0) {
         this.logger.log(
           color.green.bold(
-            `[${white.bold('MusicFetch')}] Updated external card "${white.bold(cardIdentifier)}" with ${white.bold(newLinksAdded.length.toString())} new links: ${white.bold(newLinksAdded.join(', '))}`
+            `[${white.bold('MusicFetch')}] Updated ${white.bold(cardsUpdated.toString())} card(s) with spotifyId ${white.bold(card.spotifyId)} - links: ${white.bold(newLinksAdded.join(', '))}`
           )
         );
+
+        // Clear Redis cache and update in-memory cache
+        if (card.spotifyId) {
+          await this.clearExternalCardCaches(card.spotifyId, linksToUpdate);
+        }
       }
 
       return result.success;

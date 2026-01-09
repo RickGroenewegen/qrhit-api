@@ -49,6 +49,8 @@ class ExternalCardService {
       ExternalCardService.instance = new ExternalCardService();
       // Start the nightly import cron job
       ExternalCardService.instance.startNightlyImportCron();
+      // Load maps from database on startup
+      ExternalCardService.instance.loadMapsFromDatabase();
     }
     return ExternalCardService.instance;
   }
@@ -171,15 +173,91 @@ class ExternalCardService {
     return this.musicMatchMap.get(key) || null;
   }
 
+  /**
+   * Update a card's data in the in-memory cache
+   * Called after MusicFetch updates links for external cards
+   */
+  public async updateCardInCache(
+    cardId: number,
+    cardType: string,
+    keyIdentifier: { sku?: string; countryCode?: string; playlistId?: string; cardNumber: string },
+    newData: Partial<ExternalCardData>
+  ): Promise<void> {
+    await this.ensureMapsLoaded();
+
+    let existingCard: ExternalCardData | undefined;
+    let mapKey: string;
+
+    if (cardType === 'jumbo' && keyIdentifier.sku) {
+      mapKey = `${keyIdentifier.sku}_${keyIdentifier.cardNumber}`;
+      existingCard = this.jumboCardMap.get(mapKey);
+      if (existingCard) {
+        this.jumboCardMap.set(mapKey, { ...existingCard, ...newData });
+      }
+    } else if (cardType === 'country' && keyIdentifier.countryCode) {
+      const countryMap = this.countryCardMaps.get(keyIdentifier.countryCode.toLowerCase());
+      if (countryMap) {
+        existingCard = countryMap.get(keyIdentifier.cardNumber);
+        if (existingCard) {
+          countryMap.set(keyIdentifier.cardNumber, { ...existingCard, ...newData });
+        }
+      }
+    } else if (cardType === 'musicmatch' && keyIdentifier.playlistId) {
+      mapKey = `${keyIdentifier.playlistId}_${keyIdentifier.cardNumber}`;
+      existingCard = this.musicMatchMap.get(mapKey);
+      if (existingCard) {
+        this.musicMatchMap.set(mapKey, { ...existingCard, ...newData });
+      }
+    }
+  }
+
+  /**
+   * Update all cards with a given spotifyId in the in-memory cache
+   * Called after MusicFetch updates links for external cards
+   */
+  public async updateCardsWithSpotifyIdInCache(
+    spotifyId: string,
+    newLinks: Partial<ExternalCardData>
+  ): Promise<void> {
+    await this.ensureMapsLoaded();
+
+    // Update in jumboCardMap
+    for (const [key, card] of this.jumboCardMap) {
+      if (card.spotifyId === spotifyId) {
+        this.jumboCardMap.set(key, { ...card, ...newLinks });
+      }
+    }
+
+    // Update in countryCardMaps
+    for (const [, countryMap] of this.countryCardMaps) {
+      for (const [key, card] of countryMap) {
+        if (card.spotifyId === spotifyId) {
+          countryMap.set(key, { ...card, ...newLinks });
+        }
+      }
+    }
+
+    // Update in musicMatchMap
+    for (const [key, card] of this.musicMatchMap) {
+      if (card.spotifyId === spotifyId) {
+        this.musicMatchMap.set(key, { ...card, ...newLinks });
+      }
+    }
+  }
+
   // ============ IMPORT METHODS ============
 
   /**
-   * Import Jumbo cards from external API (UPSERT)
+   * Import Jumbo cards from external API - Batched insert (skip duplicates)
    */
   public async importJumboCards(): Promise<ImportResult> {
     const result: ImportResult = { total: 0, created: 0, updated: 0, skipped: 0, errors: [] };
+    const BATCH_SIZE = 500;
+
+    this.logger.log(color.blue.bold(`[Jumbo] Starting import...`));
 
     try {
+      this.logger.log(color.blue.bold(`[Jumbo] Fetching data from API...`));
       const url = 'https://hitster.jumboplay.com/hitster-assets/gameset_database.json';
       const response = await axios.get(url, { timeout: 30000 });
       const data = response.data;
@@ -189,11 +267,24 @@ class ExternalCardService {
         return result;
       }
 
+      this.logger.log(color.blue.bold(`[Jumbo] Found ${color.white.bold(data.gamesets.length)} gamesets`));
+
+      // Collect all cards to insert
+      const cardsToInsert: Array<{
+        cardType: 'jumbo';
+        sku: string;
+        cardNumber: string;
+        spotifyId: string;
+        spotifyLink: string;
+        gamesetLanguage: string | null;
+        gamesetName: string | null;
+      }> = [];
+
       for (const gameset of data.gamesets) {
         const sku = gameset.sku;
         const cards = gameset.gameset_data?.cards;
-        const gamesetLanguage = gameset.gameset_data?.language || null;
-        const gamesetName = gameset.gameset_data?.name || null;
+        const gamesetLanguage = gameset.gameset_data?.gameset_language || null;
+        const gamesetName = gameset.gameset_data?.gameset_name || null;
 
         if (!sku || !Array.isArray(cards)) {
           continue;
@@ -208,71 +299,60 @@ class ExternalCardService {
             continue;
           }
 
-          result.total++;
-
-          try {
-            const existing = await this.prisma.externalCard.findFirst({
-              where: {
-                cardType: 'jumbo',
-                sku: sku,
-                cardNumber: cardNumber,
-              },
-            });
-
-            if (existing) {
-              // Update only if spotifyId changed
-              if (existing.spotifyId !== spotifyId) {
-                await this.prisma.externalCard.update({
-                  where: { id: existing.id },
-                  data: {
-                    spotifyId: spotifyId,
-                    spotifyLink: `https://open.spotify.com/track/${spotifyId}`,
-                    gamesetLanguage,
-                    gamesetName,
-                  },
-                });
-                result.updated++;
-              } else {
-                result.skipped++;
-              }
-            } else {
-              await this.prisma.externalCard.create({
-                data: {
-                  cardType: 'jumbo',
-                  sku: sku,
-                  cardNumber: cardNumber,
-                  spotifyId: spotifyId,
-                  spotifyLink: `https://open.spotify.com/track/${spotifyId}`,
-                  gamesetLanguage,
-                  gamesetName,
-                },
-              });
-              result.created++;
-            }
-          } catch (e: any) {
-            result.errors.push(`Jumbo ${sku}_${cardNumber}: ${e.message || e}`);
-          }
+          cardsToInsert.push({
+            cardType: 'jumbo',
+            sku,
+            cardNumber,
+            spotifyId,
+            spotifyLink: `https://open.spotify.com/track/${spotifyId}`,
+            gamesetLanguage,
+            gamesetName,
+          });
         }
       }
 
-      this.logger.log(
-        color.green.bold(
-          `Jumbo import complete: ${result.created} created, ${result.updated} updated, ${result.skipped} skipped`
-        )
-      );
+      result.total = cardsToInsert.length;
+      const totalBatches = Math.ceil(cardsToInsert.length / BATCH_SIZE);
+      this.logger.log(color.blue.bold(`[Jumbo] Collected ${color.white.bold(result.total)} cards in ${color.white.bold(totalBatches)} batches`));
+
+      // Process in batches using createMany with skipDuplicates
+      for (let i = 0; i < cardsToInsert.length; i += BATCH_SIZE) {
+        const batch = cardsToInsert.slice(i, i + BATCH_SIZE);
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+        const progress = Math.round((i + batch.length) / cardsToInsert.length * 100);
+
+        try {
+          const createResult = await this.prisma.externalCard.createMany({
+            data: batch,
+            skipDuplicates: true,
+          });
+
+          result.created += createResult.count;
+          result.skipped += batch.length - createResult.count;
+          this.logger.log(color.blue.bold(`[Jumbo] Batch ${color.white.bold(batchNum + '/' + totalBatches)} (${color.white.bold(progress + '%')}) - ${color.white.bold(createResult.count)} new, ${color.white.bold(batch.length - createResult.count)} skipped`));
+        } catch (e: any) {
+          result.errors.push(`Jumbo batch ${i}-${i + batch.length}: ${e.message || e}`);
+          this.logger.log(color.red.bold(`[Jumbo] Batch ${batchNum} failed: ${e.message || e}`));
+        }
+      }
+
+      this.logger.log(color.blue.bold(`[Jumbo] Complete: ${color.white.bold(result.total)} total, ${color.white.bold(result.created)} created, ${color.white.bold(result.skipped)} skipped`));
     } catch (e: any) {
       result.errors.push(`Failed to fetch Jumbo data: ${e.message || e}`);
-      this.logger.log(color.red.bold(`Jumbo import failed: ${e.message || e}`));
+      this.logger.log(color.red.bold(`[Jumbo] Import failed: ${e.message || e}`));
     }
 
     return result;
   }
 
   /**
-   * Import country cards from JSON files (UPSERT)
+   * Import country cards from JSON files - Batched insert (skip duplicates)
    */
   public async importCountryCards(): Promise<ImportResult> {
     const result: ImportResult = { total: 0, created: 0, updated: 0, skipped: 0, errors: [] };
+    const BATCH_SIZE = 500;
+
+    this.logger.log(color.blue.bold(`[Country] Starting import...`));
 
     try {
       const appRoot = process.env.APP_ROOT || path.join(__dirname, '..');
@@ -283,11 +363,22 @@ class ExternalCardService {
         await fs.access(dirPath);
       } catch {
         result.errors.push(`Country card data directory not found: ${dirPath}`);
+        this.logger.log(color.red.bold(`[Country] Data directory not found: ${dirPath}`));
         return result;
       }
 
       const files = await fs.readdir(dirPath);
       const jsonFiles = files.filter((file: string) => file.endsWith('.json'));
+      this.logger.log(color.blue.bold(`[Country] Found ${color.white.bold(jsonFiles.length)} country files`));
+
+      // Collect all cards to insert
+      const cardsToInsert: Array<{
+        cardType: 'country';
+        countryCode: string;
+        cardNumber: string;
+        spotifyId: string;
+        spotifyLink: string;
+      }> = [];
 
       for (const file of jsonFiles) {
         try {
@@ -301,6 +392,8 @@ class ExternalCardService {
           }
 
           const countryCode = data.name.toLowerCase();
+          const cardCount = Object.keys(data.cards).length;
+          this.logger.log(color.blue.bold(`[Country] Loading ${color.white.bold(cardCount)} cards from ${color.white.bold(countryCode.toUpperCase())}`));
 
           for (const [cardNumber, spotifyId] of Object.entries(data.cards)) {
             if (!spotifyId || typeof spotifyId !== 'string') {
@@ -308,69 +401,62 @@ class ExternalCardService {
               continue;
             }
 
-            result.total++;
-
-            try {
-              const existing = await this.prisma.externalCard.findFirst({
-                where: {
-                  cardType: 'country',
-                  countryCode: countryCode,
-                  cardNumber: cardNumber,
-                },
-              });
-
-              if (existing) {
-                if (existing.spotifyId !== spotifyId) {
-                  await this.prisma.externalCard.update({
-                    where: { id: existing.id },
-                    data: {
-                      spotifyId: spotifyId,
-                      spotifyLink: `https://open.spotify.com/track/${spotifyId}`,
-                    },
-                  });
-                  result.updated++;
-                } else {
-                  result.skipped++;
-                }
-              } else {
-                await this.prisma.externalCard.create({
-                  data: {
-                    cardType: 'country',
-                    countryCode: countryCode,
-                    cardNumber: cardNumber,
-                    spotifyId: spotifyId as string,
-                    spotifyLink: `https://open.spotify.com/track/${spotifyId}`,
-                  },
-                });
-                result.created++;
-              }
-            } catch (e: any) {
-              result.errors.push(`Country ${countryCode}_${cardNumber}: ${e.message || e}`);
-            }
+            cardsToInsert.push({
+              cardType: 'country',
+              countryCode,
+              cardNumber,
+              spotifyId,
+              spotifyLink: `https://open.spotify.com/track/${spotifyId}`,
+            });
           }
         } catch (e: any) {
           result.errors.push(`Failed to process ${file}: ${e.message || e}`);
+          this.logger.log(color.red.bold(`[Country] Failed to process ${file}: ${e.message || e}`));
         }
       }
 
-      this.logger.log(
-        color.green.bold(
-          `Country import complete: ${result.created} created, ${result.updated} updated, ${result.skipped} skipped`
-        )
-      );
+      result.total = cardsToInsert.length;
+      const totalBatches = Math.ceil(cardsToInsert.length / BATCH_SIZE);
+      this.logger.log(color.blue.bold(`[Country] Collected ${color.white.bold(result.total)} cards in ${color.white.bold(totalBatches)} batches`));
+
+      // Process in batches using createMany with skipDuplicates
+      for (let i = 0; i < cardsToInsert.length; i += BATCH_SIZE) {
+        const batch = cardsToInsert.slice(i, i + BATCH_SIZE);
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+        const progress = Math.round((i + batch.length) / cardsToInsert.length * 100);
+
+        try {
+          const createResult = await this.prisma.externalCard.createMany({
+            data: batch,
+            skipDuplicates: true,
+          });
+
+          result.created += createResult.count;
+          result.skipped += batch.length - createResult.count;
+          this.logger.log(color.blue.bold(`[Country] Batch ${color.white.bold(batchNum + '/' + totalBatches)} (${color.white.bold(progress + '%')}) - ${color.white.bold(createResult.count)} new, ${color.white.bold(batch.length - createResult.count)} skipped`));
+        } catch (e: any) {
+          result.errors.push(`Country batch ${i}-${i + batch.length}: ${e.message || e}`);
+          this.logger.log(color.red.bold(`[Country] Batch ${batchNum} failed: ${e.message || e}`));
+        }
+      }
+
+      this.logger.log(color.blue.bold(`[Country] Complete: ${color.white.bold(result.total)} total, ${color.white.bold(result.created)} created, ${color.white.bold(result.skipped)} skipped`));
     } catch (e: any) {
       result.errors.push(`Country import failed: ${e.message || e}`);
-      this.logger.log(color.red.bold(`Country import failed: ${e.message || e}`));
+      this.logger.log(color.red.bold(`[Country] Import failed: ${e.message || e}`));
     }
 
     return result;
   }
 
   /**
-   * Import MusicMatch cards from JSON file (UPSERT)
+   * Import MusicMatch cards from JSON file - Batched insert (skip duplicates)
    */
   public async importMusicMatchCards(): Promise<ImportResult> {
     const result: ImportResult = { total: 0, created: 0, updated: 0, skipped: 0, errors: [] };
+    const BATCH_SIZE = 500;
+
+    this.logger.log(color.blue.bold(`[MusicMatch] Starting import...`));
 
     try {
       const appRoot = process.env.APP_ROOT || path.join(__dirname, '..');
@@ -381,6 +467,7 @@ class ExternalCardService {
         fileContent = await fs.readFile(filePath, 'utf8');
       } catch {
         result.errors.push(`MusicMatch data file not found: ${filePath}`);
+        this.logger.log(color.red.bold(`[MusicMatch] Data file not found: ${filePath}`));
         return result;
       }
 
@@ -388,8 +475,20 @@ class ExternalCardService {
 
       if (!data || !data.p || !Array.isArray(data.p)) {
         result.errors.push('Invalid MusicMatch format: no playlists array');
+        this.logger.log(color.red.bold(`[MusicMatch] Invalid format: no playlists array`));
         return result;
       }
+
+      this.logger.log(color.blue.bold(`[MusicMatch] Found ${color.white.bold(data.p.length)} playlists`));
+
+      // Collect all cards to insert
+      const cardsToInsert: Array<{
+        cardType: 'musicmatch';
+        playlistId: string;
+        cardNumber: string;
+        spotifyId: string;
+        spotifyLink: string;
+      }> = [];
 
       for (const playlist of data.p) {
         const playlistId = playlist.i;
@@ -406,56 +505,45 @@ class ExternalCardService {
             continue;
           }
 
-          result.total++;
-
-          try {
-            const existing = await this.prisma.externalCard.findFirst({
-              where: {
-                cardType: 'musicmatch',
-                playlistId: String(playlistId),
-                cardNumber: String(trackId),
-              },
-            });
-
-            if (existing) {
-              if (existing.spotifyId !== spotifyId) {
-                await this.prisma.externalCard.update({
-                  where: { id: existing.id },
-                  data: {
-                    spotifyId: spotifyId,
-                    spotifyLink: `https://open.spotify.com/track/${spotifyId}`,
-                  },
-                });
-                result.updated++;
-              } else {
-                result.skipped++;
-              }
-            } else {
-              await this.prisma.externalCard.create({
-                data: {
-                  cardType: 'musicmatch',
-                  playlistId: String(playlistId),
-                  cardNumber: String(trackId),
-                  spotifyId: spotifyId,
-                  spotifyLink: `https://open.spotify.com/track/${spotifyId}`,
-                },
-              });
-              result.created++;
-            }
-          } catch (e: any) {
-            result.errors.push(`MusicMatch ${playlistId}_${trackId}: ${e.message || e}`);
-          }
+          cardsToInsert.push({
+            cardType: 'musicmatch',
+            playlistId: String(playlistId),
+            cardNumber: String(trackId),
+            spotifyId,
+            spotifyLink: `https://open.spotify.com/track/${spotifyId}`,
+          });
         }
       }
 
-      this.logger.log(
-        color.green.bold(
-          `MusicMatch import complete: ${result.created} created, ${result.updated} updated, ${result.skipped} skipped`
-        )
-      );
+      result.total = cardsToInsert.length;
+      const totalBatches = Math.ceil(cardsToInsert.length / BATCH_SIZE);
+      this.logger.log(color.blue.bold(`[MusicMatch] Collected ${color.white.bold(result.total)} cards in ${color.white.bold(totalBatches)} batches`));
+
+      // Process in batches using createMany with skipDuplicates
+      for (let i = 0; i < cardsToInsert.length; i += BATCH_SIZE) {
+        const batch = cardsToInsert.slice(i, i + BATCH_SIZE);
+        const batchNum = Math.floor(i / BATCH_SIZE) + 1;
+        const progress = Math.round((i + batch.length) / cardsToInsert.length * 100);
+
+        try {
+          const createResult = await this.prisma.externalCard.createMany({
+            data: batch,
+            skipDuplicates: true,
+          });
+
+          result.created += createResult.count;
+          result.skipped += batch.length - createResult.count;
+          this.logger.log(color.blue.bold(`[MusicMatch] Batch ${color.white.bold(batchNum + '/' + totalBatches)} (${color.white.bold(progress + '%')}) - ${color.white.bold(createResult.count)} new, ${color.white.bold(batch.length - createResult.count)} skipped`));
+        } catch (e: any) {
+          result.errors.push(`MusicMatch batch ${i}-${i + batch.length}: ${e.message || e}`);
+          this.logger.log(color.red.bold(`[MusicMatch] Batch ${batchNum} failed: ${e.message || e}`));
+        }
+      }
+
+      this.logger.log(color.blue.bold(`[MusicMatch] Complete: ${color.white.bold(result.total)} total, ${color.white.bold(result.created)} created, ${color.white.bold(result.skipped)} skipped`));
     } catch (e: any) {
       result.errors.push(`MusicMatch import failed: ${e.message || e}`);
-      this.logger.log(color.red.bold(`MusicMatch import failed: ${e.message || e}`));
+      this.logger.log(color.red.bold(`[MusicMatch] Import failed: ${e.message || e}`));
     }
 
     return result;

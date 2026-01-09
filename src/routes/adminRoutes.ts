@@ -2254,7 +2254,7 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const { search, missingLink, page = 1, limit = 50 } = request.query;
+        const { search, missingLink, cardType, page = 1, limit = 50 } = request.query;
         const skip = (parseInt(page) - 1) * parseInt(limit);
 
         // Build where clause
@@ -2269,6 +2269,11 @@ export default async function adminRoutes(
             { cardNumber: { contains: search } },
             { spotifyId: { contains: search } },
           ];
+        }
+
+        // Card type filter
+        if (cardType) {
+          where.cardType = cardType;
         }
 
         // Missing link filter
@@ -2302,12 +2307,32 @@ export default async function adminRoutes(
           prisma.externalCard.count({ where }),
         ]);
 
+        // Get track info for cards that have spotifyId
+        const spotifyIds = cards
+          .map((c) => c.spotifyId)
+          .filter((id): id is string => id !== null);
+
+        const tracks =
+          spotifyIds.length > 0
+            ? await prisma.track.findMany({
+                where: { trackId: { in: spotifyIds } },
+                select: { trackId: true, artist: true, name: true },
+              })
+            : [];
+
+        const trackMap = new Map(tracks.map((t) => [t.trackId, t]));
+
+        // Merge track info into cards
+        const cardsWithTrackInfo = cards.map((card) => ({
+          ...card,
+          trackArtist: card.spotifyId ? trackMap.get(card.spotifyId)?.artist || null : null,
+          trackName: card.spotifyId ? trackMap.get(card.spotifyId)?.name || null : null,
+        }));
+
         reply.send({
-          success: true,
-          cards,
+          data: cardsWithTrackInfo,
           total,
           page: parseInt(page),
-          limit: parseInt(limit),
           totalPages: Math.ceil(total / parseInt(limit)),
         });
       } catch (error: any) {
@@ -2357,6 +2382,67 @@ export default async function adminRoutes(
         reply.status(500).send({
           success: false,
           error: error.message || 'Failed to update external card',
+        });
+      }
+    }
+  );
+
+  // Fetch music links for a single external card via MusicFetch
+  fastify.post(
+    '/admin/external-cards/:id/musicfetch',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { id } = request.params;
+        const cardId = parseInt(id);
+
+        // Get the card
+        const card = await prisma.externalCard.findUnique({
+          where: { id: cardId },
+        });
+
+        if (!card) {
+          return reply.status(404).send({
+            success: false,
+            error: 'External card not found',
+          });
+        }
+
+        if (!card.spotifyId) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Card has no Spotify ID to search with',
+          });
+        }
+
+        const MusicFetch = (await import('../musicfetch')).default;
+        const musicFetch = MusicFetch.getInstance();
+
+        // Use the processSingleExternalCard method
+        const result = await musicFetch.processSingleExternalCard(card);
+
+        if (result.success) {
+          // Fetch the updated card
+          const updatedCard = await prisma.externalCard.findUnique({
+            where: { id: cardId },
+          });
+
+          reply.send({
+            success: true,
+            card: updatedCard,
+            linksAdded: result.linksAdded,
+          });
+        } else {
+          reply.send({
+            success: false,
+            error: result.error || 'No new links found',
+          });
+        }
+      } catch (error: any) {
+        console.error('Error fetching music links for external card:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to fetch music links',
         });
       }
     }
