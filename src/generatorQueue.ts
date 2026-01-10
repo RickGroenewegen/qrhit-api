@@ -343,11 +343,13 @@ class GeneratorQueue {
 
             return { success: true, paymentId, workerId: i + 1 };
           } catch (error) {
+            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorStack = error instanceof Error ? error.stack : undefined;
             this.logger.log(
               color.red.bold(
                 `Worker ${white.bold(i + 1)} error processing job ${white.bold(
                   job.id || 'unknown'
-                )}: ${error}`
+                )}:\n  Message: ${errorMessage}${errorStack ? `\n  Stack: ${errorStack}` : ''}`
               )
             );
             throw error;

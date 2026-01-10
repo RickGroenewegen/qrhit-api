@@ -1159,18 +1159,6 @@ class PrintEnBind {
         // Base margin starts at 50% (1.5)
         let margin = 1.5;
 
-        // Scale down margin based on quantity
-        if (quantity > 400) {
-          // After 400 items, reduce margin more aggressively
-          margin = 1.5 - (0.3 * (quantity - 400)) / 600;
-          // Don't go below 1.2 (20% margin)
-          margin = Math.max(margin, 1.2);
-        } else if (quantity > 100) {
-          // Between 100-400 items, reduce margin gradually
-          margin = 1.5 - (0.1 * (quantity - 100)) / 300;
-        }
-
-        // Calculate price with margin
         let priceWithMargin = basePrice * margin;
 
         // Ensure minimum profit
@@ -1457,19 +1445,8 @@ class PrintEnBind {
         blue.bold(`Invoice already exists at: ${white.bold(pdfPath)}`)
       );
     } catch (error) {
-      // If the file doesn't exist, create it using ConvertAPI
+      // If the file doesn't exist, create it using Lambda
       const pdfManager = new PDF();
-      const options = {
-        File: invoiceUrl,
-        PageSize: 'a4',
-        RespectViewport: 'false',
-        MarginTop: 0,
-        MarginRight: 0,
-        MarginBottom: 0,
-        MarginLeft: 0,
-        ConversionDelay: 3,
-        CompressPDF: 'true',
-      };
 
       // Create the directory if it doesn't exist
       const dir = `${process.env['PRIVATE_DIR']}/invoice`;
@@ -1479,10 +1456,14 @@ class PrintEnBind {
         await fs.mkdir(dir, { recursive: true });
       }
 
-      // Use the ConvertAPI to generate the PDF
-      const convertapi = pdfManager['convertapi']; // Access the convertapi instance from PDF class
-      const result = await convertapi.convert('pdf', options, 'htm');
-      await result.saveFiles(pdfPath);
+      // Generate PDF using Lambda
+      await pdfManager.generateFromUrl(invoiceUrl, pdfPath, {
+        format: 'a4',
+        marginTop: 0,
+        marginRight: 0,
+        marginBottom: 0,
+        marginLeft: 0,
+      });
 
       // Ensure the PDF is properly sized
       await pdfManager.resizePDFPages(pdfPath, 210, 297); // A4 size in mm
@@ -1791,6 +1772,7 @@ class PrintEnBind {
           fullname: true,
           email: true,
           createdAt: true,
+
         },
       });
 

@@ -29,13 +29,7 @@ class Order {
   private printer = PrintEnBind.getInstance();
 
   private constructor() {
-    if (cluster.isPrimary) {
-      this.utils.isMainServer().then(async (isMainServer) => {
-        if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
-          this.startCron();
-        }
-      });
-    }
+   
   }
 
   /**
@@ -171,372 +165,11 @@ class Order {
     return pdfPath;
   }
 
-  public async updateFeaturedPlaylists(
-    clientIp: string = '',
-    userAgent: string = ''
-  ): Promise<void> {
-    this.logger.log(
-      color.blue.bold(
-        'Refreshing cache and updating featured playlists with decade percentages and descriptions'
-      )
-    );
-
-    try {
-      this.logger.log(color.blue.bold('Retrieving featured playlists from DB'));
-
-      // Get all featured playlists
-      const featuredPlaylists = await this.prisma.playlist.findMany({
-        where: { featured: true },
-        include: {
-          tracks: {
-            include: {
-              track: true,
-            },
-          },
-        },
-      });
-
-      this.logger.log(
-        color.blue.bold(
-          `Found ${color.white.bold(
-            featuredPlaylists.length
-          )} featured playlists`
-        )
-      );
-
-      for (const playlist of featuredPlaylists) {
-        this.logger.log(
-          color.blue.bold(
-            `Reloading playlist: ${color.white.bold(playlist.name)}`
-          )
-        );
-
-        // Get fresh data from Spotify
-        await this.spotify.getPlaylist(
-          playlist.slug,
-          false,
-          '',
-          false,
-          true,
-          true,
-          'en',
-          clientIp,
-          userAgent
-        );
-
-        this.logger.log(
-          color.blue.bold(
-            `Reloading tracks for playlist: ${color.white.bold(playlist.name)}`
-          )
-        );
-
-        await this.spotify.getTracks(
-          playlist.slug,
-          false,
-          '',
-          false,
-          true,
-          clientIp,
-          userAgent
-        );
-
-        // Calculate decade percentages
-        const tracks = playlist.tracks
-          .map((pt) => pt.track)
-          .filter((t) => t.year);
-        const totalTracks = tracks.length;
-
-        if (totalTracks > 0) {
-          const decades = [
-            2020, 2010, 2000, 1990, 1980, 1970, 1960, 1950, 1900, 0,
-          ];
-          const decadeCounts = Object.fromEntries(decades.map((d) => [d, 0]));
-
-          tracks.forEach((track) => {
-            const year = track.year || 0;
-            const decade = decades.find((d) => year >= d) || 0;
-            decadeCounts[decade]++;
-          });
-
-          // Determine which languages need descriptions
-          const languagesToGenerate = [];
-          const translation = new Translation();
-          const descriptionFields = translation.allLocales.map(
-            (locale) => `description_${locale}`
-          );
-
-          for (const field of descriptionFields) {
-            const lang = field.split('_')[1];
-            if (!(playlist as any)[field] || (playlist as any)[field] === '') {
-              languagesToGenerate.push(lang);
-            }
-          }
-
-          // Only generate descriptions if there are missing languages
-          if (languagesToGenerate.length > 0) {
-            const trackData = playlist.tracks.map((pt) => ({
-              artist: pt.track.artist,
-              name: pt.track.name,
-            }));
-
-            this.logger.log(
-              color.blue.bold(
-                `Generating descriptions for playlist: ${color.white.bold(
-                  playlist.name
-                )} in languages: ${color.white.bold(
-                  languagesToGenerate.join(', ')
-                )}`
-              )
-            );
-
-            // Reuse the same ChatGPT instance for both operations
-            const openai = new ChatGPT();
-            const descriptions = await openai.generatePlaylistDescription(
-              playlist.name,
-              trackData,
-              languagesToGenerate
-            );
-
-            // Log the generated descriptions for each language
-            for (const lang of languagesToGenerate) {
-              const fieldName =
-                `description_${lang}` as keyof typeof descriptions;
-              if (descriptions[fieldName]) {
-                this.logger.log(
-                  color.magenta(
-                    `Generated ${color.white.bold(
-                      lang
-                    )} description for ${color.white.bold(playlist.name)}`
-                  )
-                );
-              }
-            }
-
-            // Get all available genres
-            const availableGenres = await this.prisma.genre.findMany({
-              select: {
-                id: true,
-                slug: true,
-              },
-            });
-
-            // Determine genre for the playlist
-            const genreId = await openai.determineGenre(
-              playlist.name,
-              trackData,
-              availableGenres
-            );
-
-            // Prepare update data with decade percentages and genre if applicable
-            const updateData: Record<string, number | string> = {
-              ...Object.fromEntries(
-                decades.map((decade) => [
-                  `decadePercentage${decade}`,
-                  Math.round((decadeCounts[decade] / totalTracks) * 100),
-                ])
-              ),
-            };
-
-            // Only set genreId if a clear match was found
-            if (genreId !== null) {
-              updateData.genreId = genreId;
-            }
-
-            // Add only the generated descriptions to the update data
-            for (const lang of languagesToGenerate) {
-              const fieldName =
-                `description_${lang}` as keyof typeof descriptions;
-              if (descriptions[fieldName]) {
-                updateData[fieldName] = descriptions[fieldName];
-              }
-            }
-
-            // Calculate prices for different product types
-            const numberOfTracks = playlist.tracks.length;
-
-            // Get order types for different product variants
-            const cardsOrderType = await this.getOrderType(
-              numberOfTracks,
-              false,
-              'cards',
-              playlist.playlistId,
-              'none'
-            );
-            const digitalOrderType = await this.getOrderType(
-              numberOfTracks,
-              true,
-              'cards',
-              playlist.playlistId,
-              'none'
-            );
-            const sheetsOrderType = await this.getOrderType(
-              numberOfTracks,
-              false,
-              'cards',
-              playlist.playlistId,
-              'sheets'
-            );
-
-            // Update prices in the updateData object
-            if (cardsOrderType && cardsOrderType.price) {
-              updateData.price = cardsOrderType.price;
-            }
-
-            if (digitalOrderType && digitalOrderType.price) {
-              updateData.priceDigital = digitalOrderType.price;
-            }
-
-            if (sheetsOrderType && sheetsOrderType.price) {
-              updateData.priceSheets = sheetsOrderType.price;
-            }
-
-            // Get download count and calculate Wilson score
-            const downloads = await this.getPlaylistDownloads(
-              playlist.playlistId
-            );
-            const wilsonScore = this.calculateWilsonScore(
-              downloads,
-              playlist.createdAt
-            );
-
-            // Add downloads and score to update data
-            updateData.downloads = downloads;
-            updateData.score = wilsonScore;
-
-            // Update playlist with decade percentages, new descriptions, prices, downloads and Wilson score
-            await this.prisma.playlist.update({
-              where: { id: playlist.id },
-              data: updateData,
-            });
-
-            this.logger.log(
-              color.cyan(
-                `Updated playlist ${white.bold(
-                  playlist.name
-                )} with ${white.bold(
-                  downloads.toString()
-                )} downloads and Wilson score of ${white.bold(
-                  wilsonScore.toString()
-                )}`
-              )
-            );
-          } else {
-            // Calculate prices for different product types
-            const numberOfTracks = playlist.tracks.length;
-
-            // Get order types for different product variants
-            const cardsOrderType = await this.getOrderType(
-              numberOfTracks,
-              false,
-              'cards',
-              playlist.playlistId,
-              'none'
-            );
-            const digitalOrderType = await this.getOrderType(
-              numberOfTracks,
-              true,
-              'cards',
-              playlist.playlistId,
-              'none'
-            );
-            const sheetsOrderType = await this.getOrderType(
-              numberOfTracks,
-              false,
-              'cards',
-              playlist.playlistId,
-              'sheets'
-            );
-
-            // Create update data with decade percentages
-            const updateData = {
-              ...Object.fromEntries(
-                decades.map((decade) => [
-                  `decadePercentage${decade}`,
-                  Math.round((decadeCounts[decade] / totalTracks) * 100),
-                ])
-              ),
-            };
-
-            // Add prices to the update data
-            if (cardsOrderType && cardsOrderType.amount) {
-              updateData.price = cardsOrderType.amount;
-            }
-
-            if (digitalOrderType && digitalOrderType.amount) {
-              updateData.priceDigital = digitalOrderType.amount;
-            }
-
-            if (sheetsOrderType && sheetsOrderType.amount) {
-              updateData.priceSheets = sheetsOrderType.amount;
-            }
-
-            // Get download count and calculate Wilson score
-            const downloads = await this.getPlaylistDownloads(
-              playlist.playlistId
-            );
-            const wilsonScore = this.calculateWilsonScore(
-              downloads,
-              playlist.createdAt
-            );
-
-            // Add downloads and score to update data
-            updateData.downloads = downloads;
-            updateData.score = wilsonScore;
-
-            // Update playlist with decade percentages, prices, downloads and Wilson score
-            await this.prisma.playlist.update({
-              where: { id: playlist.id },
-              data: updateData,
-            });
-
-            this.logger.log(
-              color.cyan(
-                `Updated playlist ${white.bold(
-                  playlist.name
-                )} with ${white.bold(
-                  downloads.toString()
-                )} downloads and Wilson score of ${white.bold(
-                  wilsonScore.toString()
-                )}`
-              )
-            );
-          }
-        }
-
-        this.logger.log(
-          color.magenta(
-            `Reloaded playlist ${white.bold(
-              playlist.name
-            )} into cache with decade percentages and descriptions`
-          )
-        );
-      }
-
-      this.logger.log(
-        color.blue.bold(
-          'Featured playlists updated successfully with decade percentages and descriptions'
-        )
-      );
-    } catch (error) {
-      this.logger.log(
-        color.red.bold(
-          `Error updating featured playlists prices: ${color.white.bold(error)}`
-        )
-      );
-    }
-  }
-
   public static getInstance(): Order {
     if (!Order.instance) {
       Order.instance = new Order();
     }
     return Order.instance;
-  }
-
-  public startCron(): void {
-    new CronJob('0 2 * * *', async () => {
-      //await this.updateFeaturedPlaylists();
-    }).start();
   }
 
   public async getOrderTypes(type: string = 'cards') {
@@ -625,19 +258,8 @@ class Order {
         blue.bold(`Invoice already exists at: ${white.bold(pdfPath)}`)
       );
     } catch (error) {
-      // If the file doesn't exist, create it using ConvertAPI
+      // If the file doesn't exist, create it using Lambda
       const pdfManager = new PDF();
-      const options = {
-        File: invoiceUrl,
-        PageSize: 'a4',
-        RespectViewport: 'false',
-        MarginTop: 0,
-        MarginRight: 0,
-        MarginBottom: 0,
-        MarginLeft: 0,
-        ConversionDelay: 3,
-        CompressPDF: 'true',
-      };
 
       // Create the directory if it doesn't exist
       const dir = `${process.env['PRIVATE_DIR']}/invoice`;
@@ -647,10 +269,14 @@ class Order {
         await fs.mkdir(dir, { recursive: true });
       }
 
-      // Use the ConvertAPI to generate the PDF
-      const convertapi = pdfManager['convertapi']; // Access the convertapi instance from PDF class
-      const result = await convertapi.convert('pdf', options, 'htm');
-      await result.saveFiles(pdfPath);
+      // Generate PDF using Lambda
+      await pdfManager.generateFromUrl(invoiceUrl, pdfPath, {
+        format: 'a4',
+        marginTop: 0,
+        marginRight: 0,
+        marginBottom: 0,
+        marginLeft: 0,
+      });
 
       // Ensure the PDF is properly sized
       await pdfManager.resizePDFPages(pdfPath, 210, 297); // A4 size in mm

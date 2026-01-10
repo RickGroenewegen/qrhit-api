@@ -31,6 +31,18 @@
             ]
         },
         {
+            "slug": "service-continuation",
+            "title": "Will QRSong! continue its service in the future? And what will happen if it discontinues?",
+            "description": "QRSong! is committed to providing a long-term service for creating and using QR music cards. We have plans to continue improving and expanding our offerings. In the unlikely event that we discontinue the service, we will provide ample notice to our users. Digital versions of purchased cards will remain accessible for download, and we will explore options to ensure continued functionality of existing cards, such as open-sourcing parts of the app or partnering with other services.",
+            "tags": [
+                "service continuation",
+                "future plans",
+                "discontinuation",
+                "long-term service",
+                "user assurance"
+            ]
+        },
+        {
             "slug": "digital-bundling",
             "title": "Can I bundle multiple digital playlists into one order to save on costs?",
             "description": "Yes! You can bundle multiple digital playlists into a single order to take advantage of volume discounts. Simply add multiple playlists to your cart before checkout, and the system will automatically apply the appropriate discount based on the number of playlists ordered.",
@@ -837,6 +849,17 @@
                 "updates",
                 "discounts",
                 "email"
+            ]
+        },
+        {
+            "slug": "apple-music",
+            "title": "Do you support Apple Music?",
+            "description": "Yes and no. Currently, QRSong! only supports Spotify playlists. However, we the Hitstalt app supports our cards and can play songs via Apple Music if you have an active subscription.",
+            "tags": [
+                "Apple Music",
+                "Spotify",
+                "music",
+                "app support"
             ]
         },
         {

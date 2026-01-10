@@ -33,7 +33,7 @@ import PrintEnBind from './printers/printenbind';
 
 const TRACK_LINKS_CACHE_PREFIX = 'track_links_v6';
 const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
-const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v2_';
+const CACHE_KEY_FEATURED_PLAYLISTS = 'featuredPlaylists_v3_';
 
 interface TrackNeedingYearUpdate {
   id: number;
@@ -249,8 +249,13 @@ class Data {
           const genreJob = new CronJob('30 1 * * *', async () => {
             await this.translateGenres();
           });
+          // Schedule daily playlist stats update at 3 AM (Wilson scores + decade percentages)
+          const playlistStatsJob = new CronJob('0 3 * * *', async () => {
+            await this.updateFeaturedPlaylistStats();
+          });
           job.start();
           genreJob.start();
+          playlistStatsJob.start();
         } else {
           // Non-primary servers: load blocked list and sync from Redis hourly
           await this.loadBlockedFromCache();
@@ -950,6 +955,7 @@ class Data {
         playlists.name,
         playlists.slug,
         playlists.image,
+        playlists.customImage,
         playlists.score,
         playlists.price,
         playlists.priceDigital,
@@ -1028,6 +1034,14 @@ class Data {
           }
         } else {
           playlist.isPromotional = false;
+        }
+
+        // Replace brand terms in name and description
+        if (playlist.name) {
+          playlist.name = this.utils.replaceBrandTerms(playlist.name);
+        }
+        if (playlist.description) {
+          playlist.description = this.utils.replaceBrandTerms(playlist.description);
         }
 
         return {
@@ -1227,7 +1241,8 @@ class Data {
         FROM tracks
         INNER JOIN playlist_has_tracks ON tracks.id = playlist_has_tracks.trackId
         LEFT JOIN trackextrainfo tei ON tei.trackId = tracks.id AND tei.playlistId = ${playlistId}
-        WHERE playlist_has_tracks.playlistId = ${playlistId}`;
+        WHERE playlist_has_tracks.playlistId = ${playlistId}
+        ORDER BY playlist_has_tracks.order ASC`;
 
     return tracks;
   }
@@ -1964,9 +1979,28 @@ class Data {
         WHERE trackId IN (${Prisma.join(providedTrackIds)})
       `;
 
+      // Update order for existing tracks (INSERT IGNORE skips these)
+      // Need qualified column names for UPDATE with JOIN
+      const updateOrderCases: Prisma.Sql[] = [];
+      for (const [trackId, order] of trackOrder.entries()) {
+        updateOrderCases.push(
+          Prisma.sql`WHEN t.trackId = ${trackId} THEN ${order}`
+        );
+      }
+      await this.prisma.$executeRaw`
+        UPDATE playlist_has_tracks pht
+        INNER JOIN tracks t ON pht.trackId = t.id
+        SET pht.\`order\` = CASE
+          ${Prisma.join(updateOrderCases, ' ')}
+          ELSE pht.\`order\`
+        END
+        WHERE pht.playlistId = ${playlistDatabaseId}
+          AND t.trackId IN (${Prisma.join(providedTrackIds)})
+      `;
+
       this.logger.log(
         color.green.bold(
-          `Inserted playlist_has_tracks records with Excel row order for ${color.white.bold(
+          `Stored playlist_has_tracks with track order for ${color.white.bold(
             providedTrackIds.length
           )} tracks`
         )
@@ -2396,6 +2430,87 @@ class Data {
     }
   }
 
+  public async updatePlaylistTrackCount(
+    paymentHasPlaylistId: number,
+    numberOfTracks: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get the paymentHasPlaylist to find the related playlistId
+      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: paymentHasPlaylistId },
+        select: { playlistId: true }
+      });
+
+      if (!paymentHasPlaylist) {
+        return { success: false, error: 'PaymentHasPlaylist not found' };
+      }
+
+      // Update both tables in a transaction
+      await this.prisma.$transaction([
+        this.prisma.paymentHasPlaylist.update({
+          where: { id: paymentHasPlaylistId },
+          data: { numberOfTracks },
+        }),
+        this.prisma.playlist.update({
+          where: { id: paymentHasPlaylist.playlistId },
+          data: { numberOfTracks },
+        }),
+      ]);
+
+      this.logger.log(
+        color.blue.bold(
+          `Updated track count to ${color.white.bold(numberOfTracks)} for paymentHasPlaylist ${color.white.bold(paymentHasPlaylistId)} and playlist ${color.white.bold(paymentHasPlaylist.playlistId)}`
+        )
+      );
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating track count for PaymentHasPlaylist ${color.white.bold(
+            paymentHasPlaylistId
+          )}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
+  public async updatePlaylistAmount(
+    paymentHasPlaylistId: number,
+    amount: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: paymentHasPlaylistId },
+      });
+
+      if (!paymentHasPlaylist) {
+        return { success: false, error: 'PaymentHasPlaylist not found' };
+      }
+
+      await this.prisma.paymentHasPlaylist.update({
+        where: { id: paymentHasPlaylistId },
+        data: { amount },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Updated amount to ${color.white.bold(amount)} for paymentHasPlaylist ${color.white.bold(paymentHasPlaylistId)}`
+        )
+      );
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating amount for PaymentHasPlaylist ${color.white.bold(
+            paymentHasPlaylistId
+          )}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
   public async updatePaymentPrinterHold(
     paymentId: string,
     printerHold: boolean
@@ -2609,6 +2724,7 @@ class Data {
           name: true,
           slug: true,
           image: true,
+          customImage: true,
           promotionalTitle: true,
           promotionalDescription: true,
           promotionalLocale: true,
@@ -2633,6 +2749,7 @@ class Data {
             name: p.promotionalTitle || p.name,
             slug: p.slug,
             image: p.image,
+            customImage: p.customImage,
             description: p.promotionalDescription || '',
             locale: p.promotionalLocale,
             userEmail: user?.email || null,
@@ -2666,6 +2783,7 @@ class Data {
           name: true,
           slug: true,
           image: true,
+          customImage: true,
           promotionalTitle: true,
           promotionalDescription: true,
           promotionalLocale: true,
@@ -2691,6 +2809,7 @@ class Data {
             name: p.promotionalTitle || p.name,
             slug: p.slug,
             image: p.image,
+            customImage: p.customImage,
             description: p.promotionalDescription || '',
             locale: p.promotionalLocale,
             featuredLocale: p.featuredLocale,
@@ -2729,6 +2848,7 @@ class Data {
           name: true,
           slug: true,
           image: true,
+          customImage: true,
           featuredHidden: true,
           featuredLocale: true,
           promotionalActive: true,
@@ -2740,6 +2860,27 @@ class Data {
         orderBy: [{ id: 'desc' }],
       });
 
+      // Get purchase counts for all playlists in one query
+      const playlistIds = playlists.map((p) => p.id);
+      const purchaseCounts = await this.prisma.paymentHasPlaylist.groupBy({
+        by: ['playlistId'],
+        where: {
+          playlistId: { in: playlistIds },
+          payment: {
+            status: 'paid',
+          },
+        },
+        _count: {
+          playlistId: true,
+        },
+      });
+
+      // Create a map for quick lookup
+      const purchaseCountMap = new Map<number, number>();
+      for (const pc of purchaseCounts) {
+        purchaseCountMap.set(pc.playlistId, pc._count.playlistId);
+      }
+
       // Get user info for each playlist
       const playlistsWithUsers = await Promise.all(
         playlists.map(async (p) => {
@@ -2750,18 +2891,28 @@ class Data {
               select: { email: true, displayName: true },
             });
           }
+
+          // Get total purchases and subtract 1 if this is a promotional playlist
+          // (to exclude the original owner's purchase)
+          let purchaseCount = purchaseCountMap.get(p.id) || 0;
+          if (p.promotionalActive && p.promotionalAccepted && purchaseCount > 0) {
+            purchaseCount = Math.max(0, purchaseCount - 1);
+          }
+
           return {
             id: p.id,
             playlistId: p.playlistId,
             name: p.promotionalTitle || p.name,
             slug: p.slug,
             image: p.image,
+            customImage: p.customImage,
             description: p.promotionalDescription || '',
             featuredHidden: p.featuredHidden,
             featuredLocale: p.featuredLocale,
             isPromotional: p.promotionalActive && p.promotionalAccepted,
             userEmail: user?.email || null,
             userDisplayName: user?.displayName || null,
+            purchaseCount,
           };
         })
       );
@@ -3320,6 +3471,395 @@ class Data {
       );
       return {
         success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Calculate Wilson score with time decay for a playlist
+   * @param downloads Number of downloads
+   * @param createdAt Date when the playlist was created
+   * @returns Wilson score adjusted with time decay
+   */
+  private calculateWilsonScore(downloads: number, createdAt: Date): number {
+    // Wilson score calculation parameters
+    const z = 1.96; // 95% confidence
+    const n = Math.max(downloads, 1); // Total number of downloads (minimum 1 to avoid division by zero)
+
+    // Calculate time decay factor (1 year = ~365.25 days)
+    const daysSinceCreation = Math.max(
+      1,
+      (new Date().getTime() - createdAt.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    const yearsElapsed = daysSinceCreation / 365.25;
+    const decayFactor = Math.exp(-0.5 * yearsElapsed); // Exponential decay with half-life of 1 year
+
+    // Wilson score calculation
+    const phat = n / n; // For downloads, we consider all as positive (proportion = 1)
+    const numerator =
+      phat +
+      (z * z) / (2 * n) -
+      z * Math.sqrt((phat * (1 - phat) + (z * z) / (4 * n)) / n);
+    const denominator = 1 + (z * z) / n;
+    const wilsonScore = numerator / denominator;
+
+    // Apply time decay to the Wilson score
+    const adjustedScore = wilsonScore * decayFactor * 100; // Scale to 0-100 range
+
+    return Math.round(adjustedScore);
+  }
+
+  /**
+   * Calculate and update scores for all featured playlists
+   * Counts purchases from payment_has_playlist and calculates Wilson score
+   * @returns Result with processed count and details
+   */
+  public async calculatePlaylistScores(): Promise<{
+    success: boolean;
+    processed: number;
+    updated: Array<{ playlistId: string; name: string; downloads: number; score: number }>;
+    error?: string;
+  }> {
+    try {
+      this.logger.log(
+        color.blue.bold('Starting playlist score calculation...')
+      );
+
+      // Get all featured playlists
+      const featuredPlaylists = await this.prisma.playlist.findMany({
+        where: {
+          featured: true,
+        },
+        select: {
+          id: true,
+          playlistId: true,
+          name: true,
+          createdAt: true,
+        },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Found ${color.white.bold(featuredPlaylists.length)} featured playlists`
+        )
+      );
+
+      const updated: Array<{ playlistId: string; name: string; downloads: number; score: number }> = [];
+
+      for (const playlist of featuredPlaylists) {
+        // Count purchases from payment_has_playlist where payment is paid
+        const downloadCount = await this.prisma.paymentHasPlaylist.count({
+          where: {
+            playlistId: playlist.id,
+            payment: {
+              status: 'paid',
+            },
+          },
+        });
+
+        // Calculate Wilson score with time decay
+        const score = this.calculateWilsonScore(downloadCount, playlist.createdAt);
+
+        // Update the playlist
+        await this.prisma.playlist.update({
+          where: { id: playlist.id },
+          data: {
+            downloads: downloadCount,
+            score: score,
+          },
+        });
+
+        updated.push({
+          playlistId: playlist.playlistId,
+          name: playlist.name,
+          downloads: downloadCount,
+          score: score,
+        });
+
+        this.logger.log(
+          color.blue.bold(
+            `Updated ${color.white.bold(playlist.name)}: downloads = ${color.white.bold(downloadCount)}, score = ${color.white.bold(score)}`
+          )
+        );
+      }
+
+      // Clear featured playlists cache after updating scores
+      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+
+      this.logger.log(
+        color.green.bold(
+          `Playlist score calculation complete. Updated ${color.white.bold(updated.length)} playlists.`
+        )
+      );
+
+      return {
+        success: true,
+        processed: updated.length,
+        updated,
+      };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error calculating playlist scores: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        )
+      );
+      return {
+        success: false,
+        processed: 0,
+        updated: [],
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Calculate decade percentages for a single playlist based on track years
+   * @param playlistId The database ID of the playlist
+   * @returns Success status and percentages
+   */
+  public async calculateSinglePlaylistDecadePercentages(
+    playlistId: number
+  ): Promise<{ success: boolean; error?: string; percentages?: Record<string, number> }> {
+    try {
+      // Get all tracks for this playlist with their years
+      const playlistTracks = await this.prisma.playlistHasTrack.findMany({
+        where: { playlistId },
+        include: {
+          track: {
+            select: { year: true },
+          },
+        },
+      });
+
+      const totalTracks = playlistTracks.length;
+      if (totalTracks === 0) {
+        return { success: true, percentages: {} };
+      }
+
+      // Count tracks by decade
+      const decadeCounts: Record<string, number> = {
+        '2020': 0,
+        '2010': 0,
+        '2000': 0,
+        '1990': 0,
+        '1980': 0,
+        '1970': 0,
+        '1960': 0,
+        '1950': 0,
+        '1900': 0, // Pre-1950
+        '0': 0, // Unknown/null year
+      };
+
+      for (const pt of playlistTracks) {
+        const year = pt.track.year;
+        if (year === null || year === undefined || year === 0) {
+          decadeCounts['0']++;
+        } else if (year >= 2020) {
+          decadeCounts['2020']++;
+        } else if (year >= 2010) {
+          decadeCounts['2010']++;
+        } else if (year >= 2000) {
+          decadeCounts['2000']++;
+        } else if (year >= 1990) {
+          decadeCounts['1990']++;
+        } else if (year >= 1980) {
+          decadeCounts['1980']++;
+        } else if (year >= 1970) {
+          decadeCounts['1970']++;
+        } else if (year >= 1960) {
+          decadeCounts['1960']++;
+        } else if (year >= 1950) {
+          decadeCounts['1950']++;
+        } else {
+          decadeCounts['1900']++;
+        }
+      }
+
+      // Calculate percentages
+      const percentages: Record<string, number> = {
+        '2020s': Math.round((decadeCounts['2020'] / totalTracks) * 100),
+        '2010s': Math.round((decadeCounts['2010'] / totalTracks) * 100),
+        '2000s': Math.round((decadeCounts['2000'] / totalTracks) * 100),
+        '1990s': Math.round((decadeCounts['1990'] / totalTracks) * 100),
+        '1980s': Math.round((decadeCounts['1980'] / totalTracks) * 100),
+        '1970s': Math.round((decadeCounts['1970'] / totalTracks) * 100),
+        '1960s': Math.round((decadeCounts['1960'] / totalTracks) * 100),
+        '1950s': Math.round((decadeCounts['1950'] / totalTracks) * 100),
+        'pre-1950': Math.round((decadeCounts['1900'] / totalTracks) * 100),
+        'unknown': Math.round((decadeCounts['0'] / totalTracks) * 100),
+      };
+
+      // Update the playlist
+      await this.prisma.playlist.update({
+        where: { id: playlistId },
+        data: {
+          decadePercentage2020: percentages['2020s'],
+          decadePercentage2010: percentages['2010s'],
+          decadePercentage2000: percentages['2000s'],
+          decadePercentage1990: percentages['1990s'],
+          decadePercentage1980: percentages['1980s'],
+          decadePercentage1970: percentages['1970s'],
+          decadePercentage1960: percentages['1960s'],
+          decadePercentage1950: percentages['1950s'],
+          decadePercentage1900: percentages['pre-1950'],
+          decadePercentage0: percentages['unknown'],
+          decadesCalculated: true,
+        },
+      });
+
+      return { success: true, percentages };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error calculating decade percentages for playlist ${playlistId}: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        )
+      );
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Calculate and update decade percentages for all featured playlists
+   * @returns Result with processed count
+   */
+  public async calculateDecadePercentages(): Promise<{
+    success: boolean;
+    processed: number;
+    error?: string;
+  }> {
+    try {
+      this.logger.log(
+        color.blue.bold('Starting decade percentage calculation...')
+      );
+
+      // Get all featured playlists that haven't had decades calculated yet
+      const featuredPlaylists = await this.prisma.playlist.findMany({
+        where: {
+          featured: true,
+          decadesCalculated: false,
+        },
+        select: {
+          id: true,
+          playlistId: true,
+          name: true,
+        },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Found ${color.white.bold(featuredPlaylists.length)} featured playlists needing decade calculation`
+        )
+      );
+
+      let processed = 0;
+
+      for (const playlist of featuredPlaylists) {
+        const result = await this.calculateSinglePlaylistDecadePercentages(playlist.id);
+        if (result.success) {
+          processed++;
+          // Format percentages for logging (only show non-zero values)
+          const pctStr = result.percentages
+            ? Object.entries(result.percentages)
+                .filter(([, v]) => v > 0)
+                .map(([k, v]) => `${k}: ${v}%`)
+                .join(', ')
+            : 'no tracks';
+          this.logger.log(
+            color.blue.bold(
+              `Updated decade percentages for ${color.white.bold(playlist.name)}: ${color.white.bold(pctStr)}`
+            )
+          );
+        }
+      }
+
+      // Clear featured playlists cache after updating percentages
+      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+
+      this.logger.log(
+        color.green.bold(
+          `Decade percentage calculation complete. Updated ${color.white.bold(processed)} playlists.`
+        )
+      );
+
+      return {
+        success: true,
+        processed,
+      };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error calculating decade percentages: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        )
+      );
+      return {
+        success: false,
+        processed: 0,
+        error: error instanceof Error ? error.message : 'Unknown error',
+      };
+    }
+  }
+
+  /**
+   * Update all featured playlist stats (Wilson scores and decade percentages)
+   * This is the main function called by the cron job and admin bulk action
+   * @returns Combined result from both calculations
+   */
+  public async updateFeaturedPlaylistStats(): Promise<{
+    success: boolean;
+    scoresProcessed: number;
+    decadesProcessed: number;
+    error?: string;
+  }> {
+    try {
+      this.logger.log(
+        color.blue.bold('Starting featured playlist stats update...')
+      );
+
+      // Calculate Wilson scores
+      const scoresResult = await this.calculatePlaylistScores();
+
+      // Calculate decade percentages
+      const decadesResult = await this.calculateDecadePercentages();
+
+      const success = scoresResult.success && decadesResult.success;
+      const errors: string[] = [];
+      if (scoresResult.error) errors.push(`Scores: ${scoresResult.error}`);
+      if (decadesResult.error) errors.push(`Decades: ${decadesResult.error}`);
+
+      this.logger.log(
+        color.green.bold(
+          `Featured playlist stats update complete. Scores: ${color.white.bold(scoresResult.processed)}, Decades: ${color.white.bold(decadesResult.processed)}`
+        )
+      );
+
+      return {
+        success,
+        scoresProcessed: scoresResult.processed,
+        decadesProcessed: decadesResult.processed,
+        error: errors.length > 0 ? errors.join('; ') : undefined,
+      };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating featured playlist stats: ${
+            error instanceof Error ? error.message : 'Unknown error'
+          }`
+        )
+      );
+      return {
+        success: false,
+        scoresProcessed: 0,
+        decadesProcessed: 0,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }

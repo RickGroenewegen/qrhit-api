@@ -2,7 +2,7 @@ import { ApiResult } from './interfaces/ApiResult';
 import { createMollieClient, Locale, PaymentMethod } from '@mollie/api-client';
 import { Payment } from '@prisma/client';
 import PrismaInstance from './prisma';
-import { color } from 'console-log-colors';
+import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import Data from './data';
 import Order from './order';
@@ -433,9 +433,8 @@ class Mollie {
 
     this.logger.log(
       color.blue.bold(
-        `PDF deletion complete for payment ${color.white.bold(paymentId)}: ` +
-        color.green.bold(`${deletedCount} deleted`) + `, ` +
-        (failedCount > 0 ? color.yellow.bold(`${failedCount} failed`) : color.green.bold(`${failedCount} failed`))
+        `PDF deletion complete for payment ${color.white.bold(paymentId)}: ${white.bold(deletedCount.toString())} deleted, ` +
+        (failedCount > 0 ? color.yellow.bold(`${failedCount} failed`) : `${white.bold(failedCount.toString())} failed`)
       )
     );
   }
@@ -449,6 +448,10 @@ class Mollie {
       Array.isArray(search.status) && search.status.length > 0
         ? { status: { in: search.status } }
         : {};
+
+    // Check if text search is a number (for PaymentHasPlaylist.id search)
+    const textSearchIsNumber =
+      search.textSearch && !isNaN(parseInt(search.textSearch.trim(), 10));
 
     const textSearchClause =
       search.textSearch && search.textSearch.trim() !== ''
@@ -478,6 +481,17 @@ class Mollie {
                   },
                 },
               },
+              ...(textSearchIsNumber
+                ? [
+                    {
+                      PaymentHasPlaylist: {
+                        some: {
+                          id: parseInt(search.textSearch.trim(), 10),
+                        },
+                      },
+                    },
+                  ]
+                : []),
             ],
           }
         : {};
@@ -586,6 +600,9 @@ class Mollie {
         printApiShipped: true,
         countrycode: true,
         isBusinessOrder: true,
+        refundAmount: true,
+        refundedAt: true,
+        refundReason: true,
         user: {
           select: {
             hash: true,
@@ -1119,7 +1136,16 @@ class Mollie {
         },
       };
     } catch (e) {
-      console.log(e);
+      this.logger.log(
+        color.red.bold('Payment creation failed: ') +
+          color.white(e instanceof Error ? e.message : String(e))
+      );
+
+      // Log full stack trace for debugging
+      if (e instanceof Error && e.stack) {
+        console.error(e.stack);
+      }
+
       return {
         success: false,
         error: 'Failed to create payment',
@@ -1245,7 +1271,7 @@ class Mollie {
           if (dbPayment.user?.hash) {
             await this.game.clearUserPlaylistCache(dbPayment.user.hash);
             this.logger.log(
-              color.green.bold('Cleared playlist cache for user: ') +
+              color.blue.bold('Cleared playlist cache for user: ') +
                 color.white.bold(dbPayment.user.hash)
             );
           }
@@ -1395,6 +1421,96 @@ class Mollie {
         },
       },
     })) as Payment | null; // Add 'as Payment | null' to explicitly cast the returned object.
+  }
+
+  public async createPaymentLink(
+    amount: number,
+    description?: string
+  ): Promise<ApiResult> {
+    try {
+      // Format amount to 2 decimal places
+      const formattedAmount = amount.toFixed(2);
+
+      // Use the live Mollie client for payment links
+      const paymentLink = await this.mollieClient.paymentLinks.create({
+        amount: {
+          currency: 'EUR',
+          value: formattedAmount,
+        },
+        description: description || `QRSong! Custom Payment - EUR ${formattedAmount}`,
+      });
+
+      const paymentUrl = paymentLink.getPaymentUrl();
+
+      this.logger.log(
+        color.green.bold('Created payment link: ') +
+          color.white.bold(paymentUrl || 'No URL')
+      );
+
+      return {
+        success: true,
+        data: {
+          paymentLinkId: paymentLink.id,
+          paymentLink: paymentUrl,
+          amount: formattedAmount,
+          description: paymentLink.description,
+        },
+      };
+    } catch (e) {
+      this.logger.log(
+        color.red.bold('Failed to create payment link: ') +
+          color.white(e instanceof Error ? e.message : String(e))
+      );
+
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : 'Failed to create payment link',
+      };
+    }
+  }
+
+  public async createRefund(
+    molliePaymentId: string,
+    amount: number
+  ): Promise<ApiResult> {
+    try {
+      // Format amount to 2 decimal places
+      const formattedAmount = amount.toFixed(2);
+
+      const refund = await this.mollieClient.paymentRefunds.create({
+        paymentId: molliePaymentId,
+        amount: {
+          currency: 'EUR',
+          value: formattedAmount,
+        },
+      });
+
+      this.logger.log(
+        color.green.bold('Created refund: ') +
+          color.white.bold(refund.id) +
+          color.gray(' for ') +
+          color.white.bold(`EUR ${formattedAmount}`)
+      );
+
+      return {
+        success: true,
+        data: {
+          refundId: refund.id,
+          amount: formattedAmount,
+          status: refund.status,
+        },
+      };
+    } catch (e) {
+      this.logger.log(
+        color.red.bold('Failed to create refund: ') +
+          color.white(e instanceof Error ? e.message : String(e))
+      );
+
+      return {
+        success: false,
+        error: e instanceof Error ? e.message : 'Failed to create refund',
+      };
+    }
   }
 }
 

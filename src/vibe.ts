@@ -2768,6 +2768,7 @@ class Vibe {
     isReseller: boolean;
     manualDiscount: number;
     fluidMode?: boolean;
+    includeCustomApp?: boolean;
   }): Promise<any> {
     try {
       const {
@@ -2778,6 +2779,7 @@ class Vibe {
         isReseller,
         manualDiscount,
         fluidMode = false,
+        includeCustomApp = false,
       } = params;
 
       // Validate input
@@ -2984,11 +2986,17 @@ class Vibe {
       // Our profit is reduced by the manual discount
       const profitPerBox =
         kickBackFee + resellerDiscountForUs - (manualDiscount || 0);
-      const ourProfit = profitPerBox * quantity;
+      const baseOurProfit = profitPerBox * quantity;
       const resellerProfit = isReseller
         ? tierData.resellerDiscount * quantity
         : 0;
-      const clientPrice = commercialPrice * quantity;
+      const baseClientPrice = commercialPrice * quantity;
+
+      // Add custom app fee (one-time) - added to both client price and our profit
+      const customAppFee = includeCustomApp ? 350 : 0;
+      const clientPrice = baseClientPrice + customAppFee;
+      const ourProfit = baseOurProfit + customAppFee;
+
       const happiBoxPayment = clientPrice - ourProfit - resellerProfit;
 
       // Return calculation results
@@ -3009,6 +3017,7 @@ class Vibe {
             adjustedProjectManagement,
             projectManagementDifference,
             fluidMode,
+            includeCustomApp,
           },
           pricing: {
             commercialPricePerBox: commercialPrice,
@@ -3017,6 +3026,7 @@ class Vibe {
             ourProfit,
             resellerProfit,
             happiBoxPayment,
+            customAppFee,
           },
         },
       };
@@ -3036,6 +3046,7 @@ class Vibe {
     quantity: number;
     includeStansmestekening: boolean;
     includeStansvorm: boolean;
+    includeCustomApp?: boolean;
     profitMargin: number;
     printingType?: string; // 'eigen' or 'voorbedrukt'
   }): Promise<any> {
@@ -3044,6 +3055,7 @@ class Vibe {
         quantity,
         includeStansmestekening,
         includeStansvorm,
+        includeCustomApp = false,
         profitMargin,
         printingType = 'eigen', // Default to 'eigen' (own printing)
       } = params;
@@ -3099,12 +3111,17 @@ class Vibe {
       // Calculate totals from the rounded pricePerSet to maintain consistency
       // This ensures that clientPrice = pricePerSet × quantity (exactly)
       const subtotalFromRounded = pricePerSet * quantity;
-      const clientPrice = subtotalFromRounded + extrasTotal;
+      const baseClientPrice = subtotalFromRounded + extrasTotal;
 
       // Calculate ourProfit and trompCost for display
-      const ourProfit = (profitMargin || 0) * quantity;
-      const trompCostFromRounded = subtotalFromRounded - ourProfit;
+      const baseOurProfit = (profitMargin || 0) * quantity;
+      const trompCostFromRounded = subtotalFromRounded - baseOurProfit;
       const trompCost = trompCostFromRounded + extrasTotal;
+
+      // Add custom app fee (one-time) - added to both client price and our profit
+      const customAppFee = includeCustomApp ? 350 : 0;
+      const clientPrice = baseClientPrice + customAppFee;
+      const ourProfit = baseOurProfit + customAppFee;
 
       // Return calculation results
       return {
@@ -3124,6 +3141,7 @@ class Vibe {
           ourProfit: ourProfit,
           pricePerSet: pricePerSet,
           clientPrice: clientPrice,
+          customAppFee: customAppFee,
         },
       };
     } catch (error) {
@@ -3187,10 +3205,9 @@ class Vibe {
       const fileName = `quotation_${quotationNumber}_${Date.now()}.pdf`;
       const filePath = path.join(tempDir, fileName);
 
-      // Generate PDF using ConvertAPI
+      // Generate PDF using Lambda
       const PDF = require('./pdf').default;
       const pdfManager = new PDF();
-      const convertapi = pdfManager['convertapi'];
 
       // Create the URL for the HTML rendering
       const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
@@ -3201,20 +3218,14 @@ class Vibe {
           color.white.bold(htmlUrl)
       );
 
-      const options = {
-        File: htmlUrl,
-        PageSize: 'a4',
-        RespectViewport: 'false',
-        MarginTop: 0,
-        MarginBottom: 0,
-        MarginLeft: 0,
-        MarginRight: 0,
-        ConversionDelay: 3,
-        CompressPDF: 'true',
-      };
-
-      const result = await convertapi.convert('pdf', options, 'htm');
-      await result.saveFiles(filePath);
+      // Generate PDF using Lambda
+      await pdfManager.generateFromUrl(htmlUrl, filePath, {
+        format: 'a4',
+        marginTop: 0,
+        marginBottom: 0,
+        marginLeft: 0,
+        marginRight: 0,
+      });
 
       // Read the generated PDF
       const pdfBuffer = await fs.readFile(filePath);

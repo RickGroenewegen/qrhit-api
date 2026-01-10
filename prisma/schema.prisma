@@ -175,6 +175,9 @@ model Payment {
   processedFirstTime       Boolean              @default(false)
   processedFirstTimeAt     DateTime?
   printerInvoice           PrinterInvoice?      @relation(fields: [printerInvoiceId], references: [id], onDelete: SetNull)
+  refundAmount             Float?
+  refundedAt               DateTime?
+  refundReason             String?
 
   DiscountCodedUses DiscountCodedUses[]
   Review            Review[]
@@ -339,6 +342,7 @@ model Playlist {
   featured             Boolean              @default(false)
   featuredLocale       String?
   image                String
+  customImage          String?              @db.VarChar(255)
   price                Float                @default(0)
   priceDigital         Float                @default(0)
   priceSheets          Float                @default(0)
@@ -357,6 +361,7 @@ model Playlist {
   decadePercentage1950 Int                  @default(0)
   decadePercentage1900 Int                  @default(0)
   decadePercentage0    Int                  @default(0)
+  decadesCalculated    Boolean              @default(false)
   downloads            Int                  @default(0)
   score                Int                  @default(0)
   design               Json?
@@ -629,6 +634,18 @@ model ShippingCostNew {
 
   @@index([country, size])
   @@map("shipping_costs_new")
+}
+
+model CountryShippingConfig {
+  id            Int      @id @default(autoincrement())
+  countryCode   String   @unique
+  minDaysOffset Int      @default(0)
+  maxDaysOffset Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([countryCode])
+  @@map("country_shipping_config")
 }
 
 model TrustPilot {
