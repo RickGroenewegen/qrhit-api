@@ -3,8 +3,9 @@ import crypto from 'crypto';
 import { PrismaClient } from '@prisma/client';
 import Utils from './utils';
 import Mail from './mail';
+import { createPrismaAdapter } from './prisma';
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
 const utils = new Utils();
 const mail = Mail.getInstance();
 

@@ -15,11 +15,12 @@ import Cache from './cache';
 import Translation from './translation';
 import Mail from './mail';
 import PushoverClient from './pushover';
+import { createPrismaAdapter } from './prisma';
 
 class Vibe {
   private static instance: Vibe;
   private translation = new Translation();
-  public prisma = new PrismaClient();
+  public prisma = new PrismaClient({ adapter: createPrismaAdapter() });
   private mail = Mail.getInstance();
   private pushover = new PushoverClient();
 

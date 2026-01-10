@@ -1,4 +1,20 @@
 import { PrismaClient } from '@prisma/client';
+import { PrismaMariaDb } from '@prisma/adapter-mariadb';
+
+function createPrismaAdapter(): PrismaMariaDb {
+  const connectionString = process.env.DATABASE_URL;
+  if (!connectionString) {
+    throw new Error('DATABASE_URL is not set');
+  }
+  const url = new URL(connectionString);
+  return new PrismaMariaDb({
+    host: url.hostname,
+    port: parseInt(url.port) || 3306,
+    user: url.username,
+    password: url.password,
+    database: url.pathname.slice(1),
+  });
+}
 
 class PrismaInstance {
   private static instance: PrismaClient;
@@ -7,10 +23,12 @@ class PrismaInstance {
 
   public static getInstance(): PrismaClient {
     if (!PrismaInstance.instance) {
-      PrismaInstance.instance = new PrismaClient();
+      const adapter = createPrismaAdapter();
+      PrismaInstance.instance = new PrismaClient({ adapter });
     }
     return PrismaInstance.instance;
   }
 }
 
+export { createPrismaAdapter };
 export default PrismaInstance;
