@@ -1831,11 +1831,22 @@ class Data {
       }
     }
 
+
     if (data) {
-      // Get theme from in-memory mapping if php is provided
+      // Get theme and service type from in-memory mapping if php is provided
+
+
+
       if (php) {
-        const theme = this.appTheme.getTheme(Number(php));
-        data.t = theme;
+        const themeData = this.appTheme.getTheme(Number(php));
+
+
+        if (themeData) {
+          if (themeData.s) {
+            data.t = { s: themeData.s, n: themeData.n };
+          }
+          data.st = themeData.st;
+        }
       }
 
       return {

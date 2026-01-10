@@ -1,8 +1,10 @@
 import { PrismaClient } from '@prisma/client';
+import AppTheme from './apptheme';
 
 export default class Copy {
   private static instance: Copy;
   private prisma: PrismaClient;
+  private appTheme = AppTheme.getInstance();
 
   private constructor() {
     this.prisma = new PrismaClient();
@@ -114,6 +116,9 @@ export default class Copy {
           },
         });
       }
+
+      // Reload app theme cache to include new payment_has_playlist entries
+      this.appTheme.reload();
 
       console.log(
         `Successfully duplicated payment ${originalPaymentId} to ${newPaymentId}`

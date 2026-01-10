@@ -343,13 +343,15 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     let link = '';
     let yt = '';
     let appleMusicLink = '';
+    let st = null;
     if (result.success) {
       link = result.data.link;
       yt = result.data.youtubeLink;
       appleMusicLink = result.data.appleMusicLink;
+      st = result.data.st || null;
     }
     const useSpotifyRemote = true; // Default value
-    return { link: link, yt: yt, am: appleMusicLink, r: useSpotifyRemote };
+    return { link: link, yt: yt, am: appleMusicLink, r: useSpotifyRemote, st };
   });
 
   fastify.get('/qrlink2/:trackId/:php', async (request: any, reply) => {
@@ -370,6 +372,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     let dz = null;
     let td = null;
     let t = null;
+    let st = null;
 
     if (result.success) {
       link = result.data.link;
@@ -380,9 +383,10 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       dz = result.data.deezerLink || null;
       td = result.data.tidalLink || null;
       t = result.data.t || null;
+      st = result.data.st || null;
     }
     const useSpotifyRemote = true; // Default value
-    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, t };
+    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, t, st };
   });
 
   // Hitlist routes

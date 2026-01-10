@@ -643,13 +643,14 @@ class YouTubeMusicProvider implements IMusicProvider {
     }
 
     try {
+      const { videos, metadata } = await this.fetchAllPlaylistVideos(playlistId, onProgress);
+      const playlistName = metadata.title || null;
+
       this.logger.log(
         color.blue.bold(
-          `[${color.white.bold('ytmusic')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}`
+          `[${color.white.bold('ytmusic')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}${playlistName ? ` (${color.white.bold(playlistName)})` : ''}`
         )
       );
-
-      const { videos } = await this.fetchAllPlaylistVideos(playlistId, onProgress);
 
       const tracks: ProviderTrackData[] = videos.map((video) => ({
         id: video.videoId,

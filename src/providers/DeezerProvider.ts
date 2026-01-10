@@ -319,15 +319,16 @@ class DeezerProvider implements IMusicProvider {
     }
 
     try {
-      this.logger.log(
-        color.blue.bold(
-          `[${color.white.bold('deezer')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}`
-        )
-      );
-
-      // First, get the playlist to know the total track count
+      // First, get the playlist to know the total track count and name
       const playlistResult = await this.apiRequest<any>(`/playlist/${playlistId}`);
       const totalTracksExpected = playlistResult.data?.nb_tracks || null;
+      const playlistName = playlistResult.data?.title || null;
+
+      this.logger.log(
+        color.blue.bold(
+          `[${color.white.bold('deezer')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}${playlistName ? ` (${color.white.bold(playlistName)})` : ''}`
+        )
+      );
 
       // Deezer API paginates tracks, need to fetch all
       const allTracks: ProviderTrackData[] = [];

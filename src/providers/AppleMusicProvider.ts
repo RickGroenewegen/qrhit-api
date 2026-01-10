@@ -330,15 +330,16 @@ class AppleMusicProvider implements IMusicProvider {
     }
 
     try {
-      this.logger.log(
-        color.blue.bold(
-          `[${color.white.bold('apple_music')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}`
-        )
-      );
-
-      // First, get the playlist to know the total track count
+      // First, get the playlist to know the total track count and name
       const playlistResult = await this.apiRequest<any>(`/playlists/${playlistId}`, storefront);
       const totalTracksExpected = playlistResult.data?.data?.[0]?.attributes?.trackCount || null;
+      const playlistName = playlistResult.data?.data?.[0]?.attributes?.name || null;
+
+      this.logger.log(
+        color.blue.bold(
+          `[${color.white.bold('apple_music')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}${playlistName ? ` (${color.white.bold(playlistName)})` : ''}`
+        )
+      );
 
       // Fetch playlist with tracks included
       const allTracks: ProviderTrackData[] = [];

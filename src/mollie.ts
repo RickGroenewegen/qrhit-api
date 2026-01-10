@@ -19,6 +19,7 @@ import { promises as fs } from 'fs';
 import Game from './game';
 import Promotional from './promotional';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
+import AppTheme from './apptheme';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -26,6 +27,7 @@ class Mollie {
   private data = Data.getInstance();
   private discount = new Discount();
   private order = Order.getInstance();
+  private appTheme = AppTheme.getInstance();
   private translation: Translation = new Translation();
   private utils = new Utils();
   private generator = Generator.getInstance();
@@ -1086,6 +1088,9 @@ class Mollie {
       });
 
       const paymentId = insertResult.id;
+
+      // Reload app theme cache to include new payment_has_playlist entries
+      this.appTheme.reload();
 
       const newOrderId = 100000000 + paymentId;
 

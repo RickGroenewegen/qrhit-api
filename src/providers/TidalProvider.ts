@@ -270,12 +270,6 @@ class TidalProvider implements IMusicProvider {
     }
 
     try {
-      this.logger.log(
-        color.blue.bold(
-          `[${color.white.bold('tidal')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}${maxTracks ? ` (limit: ${maxTracks})` : ''}`
-        )
-      );
-
       // Helper function for delay (rate limiting)
       const delay = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
@@ -320,10 +314,17 @@ class TidalProvider implements IMusicProvider {
         throw new Error('Max retries exceeded');
       };
 
-      // First, get the playlist metadata to know the total track count
+      // First, get the playlist metadata to know the total track count and name
       await this.applyRateLimit();
       const playlistResult = await this.tidalApi.getPlaylist(playlistId);
       const totalTracksExpected = playlistResult.data?.data?.attributes?.numberOfItems || null;
+      const playlistName = playlistResult.data?.data?.attributes?.name || null;
+
+      this.logger.log(
+        color.blue.bold(
+          `[${color.white.bold('tidal')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}${playlistName ? ` (${color.white.bold(playlistName)})` : ''}${maxTracks ? ` (limit: ${maxTracks})` : ''}`
+        )
+      );
 
       // Interleaved approach: fetch a page of IDs, then immediately fetch their metadata
       // This provides smoother, more linear progress compared to two separate phases
