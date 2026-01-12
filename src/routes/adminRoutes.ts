@@ -3816,4 +3816,86 @@ export default async function adminRoutes(
       }
     }
   );
+
+  // ============ HITLIST ROUTES ============
+
+  // Import hitlist data (e.g., Dutch Top 40)
+  fastify.post(
+    '/admin/hitlists/import',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { hitlistType } = request.body;
+
+        if (hitlistType !== 'nl-top40') {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid hitlist type. Supported: nl-top40',
+          });
+        }
+
+        const Top40 = (await import('../top40')).default;
+        const top40 = Top40.getInstance();
+        const result = await top40.importTop40Data();
+
+        reply.send({
+          success: result.success,
+          totalRows: result.totalRows,
+          imported: result.imported,
+          errors: result.errors,
+          error: result.error,
+        });
+      } catch (error: any) {
+        console.error('Error importing hitlist:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to import hitlist',
+        });
+      }
+    }
+  );
+
+  // Get #1 track for a specific date
+  fastify.get(
+    '/admin/hitlists/number-one/:date',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { date } = request.params;
+        const parsedDate = new Date(date);
+
+        if (isNaN(parsedDate.getTime())) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid date format. Use YYYY-MM-DD',
+          });
+        }
+
+        const Top40 = (await import('../top40')).default;
+        const top40 = Top40.getInstance();
+        const result = await top40.getNumberOneOnDate(parsedDate);
+
+        if (!result) {
+          return reply.status(404).send({
+            success: false,
+            error: 'No #1 track found for this date',
+          });
+        }
+
+        reply.send({
+          success: true,
+          artist: result.artist,
+          title: result.title,
+          year: result.year,
+          weekNumber: result.weekNumber,
+        });
+      } catch (error: any) {
+        console.error('Error getting #1 track:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to get #1 track',
+        });
+      }
+    }
+  );
 }

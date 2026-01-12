@@ -1008,3 +1008,25 @@ model ContactEmailReply {
   @@index([contactEmailId])
   @@map("contact_email_replies")
 }
+
+model Top40Chart {
+  id               Int      @id @default(autoincrement())
+  year             Int
+  weekNumber       Int
+  position         Int
+  artist           String
+  title            String
+  previousPosition Int      @default(0)
+  weeksOnChart     Int      @default(1)
+  status           String   @default("")
+  externalId       String
+
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([year, weekNumber, position])
+  @@index([year, weekNumber])
+  @@index([position])
+  @@index([externalId])
+  @@map("top40_chart")
+}
