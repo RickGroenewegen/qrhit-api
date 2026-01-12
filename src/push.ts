@@ -2,7 +2,7 @@ import { PrismaClient, PushToken } from '@prisma/client';
 import admin from 'firebase-admin';
 import { color } from 'console-log-colors';
 import Logger from './logger';
-import { createPrismaAdapter } from './prisma';
+import PrismaInstance from './prisma';
 
 admin.initializeApp({
   credential: admin.credential.cert(
@@ -17,7 +17,7 @@ class Push {
   private static tokenLocks: Map<string, Promise<void> | null> = new Map();
 
   private constructor() {
-    this.prisma = new PrismaClient({ adapter: createPrismaAdapter() });
+    this.prisma = PrismaInstance.getInstance();
   }
 
   public static getInstance(): Push {

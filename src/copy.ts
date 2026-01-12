@@ -1,6 +1,6 @@
 import { PrismaClient } from '@prisma/client';
 import AppTheme from './apptheme';
-import { createPrismaAdapter } from './prisma';
+import PrismaInstance from './prisma';
 
 export default class Copy {
   private static instance: Copy;
@@ -8,7 +8,7 @@ export default class Copy {
   private appTheme = AppTheme.getInstance();
 
   private constructor() {
-    this.prisma = new PrismaClient({ adapter: createPrismaAdapter() });
+    this.prisma = PrismaInstance.getInstance();
   }
 
   public static getInstance(): Copy {

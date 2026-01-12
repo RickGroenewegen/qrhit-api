@@ -2,11 +2,11 @@ import { PrismaClient } from '@prisma/client';
 import Utils from './utils';
 import Cache from './cache';
 import { randomBytes } from 'crypto';
-import { createPrismaAdapter } from './prisma';
+import PrismaInstance from './prisma';
 
 class Discount {
   private cache = Cache.getInstance();
-  private prisma = new PrismaClient({ adapter: createPrismaAdapter() });
+  private prisma = PrismaInstance.getInstance();
   private utils = new Utils();
 
   /**

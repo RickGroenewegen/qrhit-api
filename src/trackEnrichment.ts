@@ -4,7 +4,7 @@ import cluster from 'cluster';
 import { CronJob } from 'cron';
 import Logger from './logger';
 import Utils from './utils';
-import { createPrismaAdapter } from './prisma';
+import PrismaInstance from './prisma';
 
 /**
  * Enrichment data structure for tracks
@@ -39,7 +39,7 @@ class TrackEnrichment {
   private trackEnrichmentByArtistTitleHash: Map<string, EnrichmentData> = new Map();
 
   private constructor() {
-    this.prisma = new PrismaClient({ adapter: createPrismaAdapter() });
+    this.prisma = PrismaInstance.getInstance();
     this.logger = new Logger();
     this.utils = new Utils();
 

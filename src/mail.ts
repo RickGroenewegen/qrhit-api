@@ -17,9 +17,9 @@ import crypto from 'crypto';
 import cluster from 'cluster';
 import OpenAI from 'openai';
 import { ChatService } from './chat';
-import { createPrismaAdapter } from './prisma';
+import PrismaInstance from './prisma';
 
-const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
+const prisma = PrismaInstance.getInstance();
 const PROMOTIONAL_CREDIT_AMOUNT = parseFloat(process.env['PROMOTIONAL_CREDIT_AMOUNT'] || '2.5');
 
 interface MailParams {

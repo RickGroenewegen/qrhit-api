@@ -10,9 +10,9 @@ import {
 import Account from '../account';
 import Mail from '../mail';
 import { PrismaClient } from '@prisma/client';
-import { createPrismaAdapter } from '../prisma';
+import PrismaInstance from '../prisma';
 
-const prisma = new PrismaClient({ adapter: createPrismaAdapter() });
+const prisma = PrismaInstance.getInstance();
 
 export default async function accountRoutes(
   fastify: FastifyInstance,
