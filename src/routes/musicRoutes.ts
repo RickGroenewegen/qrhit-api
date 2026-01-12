@@ -6,7 +6,15 @@ import { color } from 'console-log-colors';
 import Logger from '../logger';
 import Utils from '../utils';
 import Translation from '../translation';
-import fs from 'fs/promises';
+import MusicServiceRegistry from '../services/MusicServiceRegistry';
+import TrackEnrichment from '../trackEnrichment';
+
+// Import service-specific routes
+import spotifyRoutes from './spotifyRoutes';
+import youtubeMusicRoutes from './youtubeMusicRoutes';
+import tidalRoutes from './tidalRoutes';
+import deezerRoutes from './deezerRoutes';
+import appleMusicRoutes from './appleMusicRoutes';
 
 export default async function musicRoutes(fastify: FastifyInstance) {
   const spotify = Spotify.getInstance();
@@ -15,42 +23,129 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   const logger = new Logger();
   const utils = new Utils();
   const translation = new Translation();
+  const musicRegistry = MusicServiceRegistry.getInstance();
+  const trackEnrichment = TrackEnrichment.getInstance();
 
-  // Get Spotify authorization URL
-  fastify.get('/spotify/auth-url', async (_request, reply) => {
-    const authUrl = spotify.getAuthorizationUrl();
-    reply.send({ success: true });
+  // Register service-specific routes
+  await fastify.register(spotifyRoutes);
+  await fastify.register(youtubeMusicRoutes);
+  await fastify.register(tidalRoutes);
+  await fastify.register(deezerRoutes);
+  await fastify.register(appleMusicRoutes);
+
+  // ============================================
+  // Unified Music Service Routes (Auto-detect service from URL)
+  // ============================================
+
+  // Get playlist info from any supported service
+  fastify.post('/music/playlists', async (request: any, reply) => {
+    const { url, serviceType, playlistId } = request.body;
+
+    // If URL is provided, auto-detect service
+    if (url) {
+      const result = await musicRegistry.getPlaylistFromUrl(url);
+      return result;
+    }
+
+    // If serviceType and playlistId are provided, use specific provider
+    if (serviceType && playlistId) {
+      const provider = musicRegistry.getProviderByString(serviceType);
+      if (!provider) {
+        return {
+          success: false,
+          error: `Unsupported service type: ${serviceType}`,
+        };
+      }
+      return await provider.getPlaylist(playlistId);
+    }
+
+    return {
+      success: false,
+      error: 'Missing url or (serviceType and playlistId) parameters',
+    };
   });
 
-  // Get Spotify playlist tracks
-  fastify.post('/spotify/playlists/tracks', async (request: any, _reply) => {
-    const userAgent = request.headers['user-agent'] || '';
-    return await spotify.getTracks(
-      request.body.playlistId,
-      utils.parseBoolean(request.body.cache),
-      request.body.captchaToken,
-      true,
-      utils.parseBoolean(request.body.slug),
-      request.clientIp,
-      userAgent
-    );
+  // Get tracks from any supported service
+  fastify.post('/music/playlists/tracks', async (request: any, reply) => {
+    const { url, serviceType, playlistId } = request.body;
+
+    let result: any;
+
+    // If URL is provided, auto-detect service
+    if (url) {
+      result = await musicRegistry.getTracksFromUrl(url);
+    } else if (serviceType && playlistId) {
+      // If serviceType and playlistId are provided, use specific provider
+      const provider = musicRegistry.getProviderByString(serviceType);
+      if (!provider) {
+        return {
+          success: false,
+          error: `Unsupported service type: ${serviceType}`,
+        };
+      }
+      result = await provider.getTracks(playlistId);
+    } else {
+      return {
+        success: false,
+        error: 'Missing url or (serviceType and playlistId) parameters',
+      };
+    }
+
+    // Enrich tracks with year data from the database using artist+title matching
+    if (result?.success && result.data?.tracks) {
+      result.data.tracks = trackEnrichment.enrichTracksByArtistTitle(result.data.tracks);
+    }
+
+    return result;
   });
 
-  // Get Spotify playlist info
-  fastify.post('/spotify/playlists', async (request: any, _reply) => {
-    const userAgent = request.headers['user-agent'] || '';
-    return await spotify.getPlaylist(
-      request.body.playlistId,
-      utils.parseBoolean(request.body.cache),
-      request.body.captchaToken,
-      true,
-      utils.parseBoolean(request.body.featured),
-      utils.parseBoolean(request.body.slug),
-      request.body.locale,
-      request.clientIp,
-      userAgent
-    );
+  // Recognize URL and return service info
+  fastify.post('/music/recognize-url', async (request: any, reply) => {
+    const { url } = request.body;
+
+    if (!url) {
+      return {
+        success: false,
+        error: 'Missing url parameter',
+      };
+    }
+
+    const result = musicRegistry.recognizeUrl(url);
+
+    if (!result.recognized) {
+      return {
+        success: false,
+        error: 'URL not recognized as a supported music service',
+      };
+    }
+
+    return {
+      success: true,
+      data: {
+        serviceType: result.serviceType,
+        playlistId: result.playlistId,
+        isValid: result.validation?.isValid,
+        resourceType: result.validation?.resourceType,
+        errorType: result.validation?.errorType,
+        serviceConfig: result.provider?.config,
+      },
+    };
   });
+
+  // Get list of available music services
+  fastify.get('/music/services', async (_request, reply) => {
+    return {
+      success: true,
+      data: {
+        services: musicRegistry.getAvailableServiceTypes(),
+        configs: musicRegistry.getServiceConfigs(),
+      },
+    };
+  });
+
+  // ============================================
+  // Shared/Legacy Routes
+  // ============================================
 
   // Resolve Spotify shortlink by following redirects
   fastify.post('/resolve_shortlink', async (request: any, reply: any) => {
@@ -83,7 +178,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Resolve unknown Spotify URL
+  // Resolve unknown Spotify URL - returns all available music service links
   fastify.post('/qrlink_unknown', async (request: any, reply: any) => {
     const { url } = request.body;
     if (!url || typeof url !== 'string') {
@@ -111,7 +206,18 @@ export default async function musicRoutes(fastify: FastifyInstance) {
         )
       );
       if (result.success) {
-        reply.send({ success: true, spotifyUri: result.spotifyUri });
+        // Return all available music service links
+        reply.send({
+          success: true,
+          spotifyUri: result.spotifyUri,
+          link: result.links?.spotifyLink || null,
+          am: result.links?.appleMusicLink || null,
+          td: result.links?.tidalLink || null,
+          ym: result.links?.youtubeMusicLink || null,
+          dz: result.links?.deezerLink || null,
+          az: result.links?.amazonMusicLink || null,
+          r: true,
+        });
       } else {
         reply.status(404).send({
           success: false,
@@ -132,6 +238,37 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   fastify.get('/featured/:locale', async (request: any, _reply) => {
     const playlists = await data.getFeaturedPlaylists(request.params.locale);
     return { success: true, data: playlists };
+  });
+
+  // Get link coverage for a playlist (by database ID)
+  fastify.get('/playlist/:playlistId/link-coverage', async (request: any, reply) => {
+    try {
+      const playlistId = parseInt(request.params.playlistId, 10);
+      if (isNaN(playlistId)) {
+        return reply.status(400).send({ success: false, error: 'Invalid playlist ID' });
+      }
+      const coverage = await data.getPlaylistLinkCoverage(playlistId);
+      return { success: true, data: coverage };
+    } catch (e: any) {
+      logger.log(`Error getting link coverage: ${e.message || e}`);
+      return reply.status(500).send({ success: false, error: 'Failed to get link coverage' });
+    }
+  });
+
+  // Get link coverage for a playlist by slug
+  fastify.get('/playlist/slug/:slug/link-coverage', async (request: any, reply) => {
+    try {
+      const slug = request.params.slug;
+      const playlist = await data.getPlaylistBySlug(slug);
+      if (!playlist) {
+        return reply.status(404).send({ success: false, error: 'Playlist not found' });
+      }
+      const coverage = await data.getPlaylistLinkCoverage(playlist.id);
+      return { success: true, data: coverage };
+    } catch (e: any) {
+      logger.log(`Error getting link coverage by slug: ${e.message || e}`);
+      return reply.status(500).send({ success: false, error: 'Failed to get link coverage' });
+    }
   });
 
   // QR code routes
@@ -206,13 +343,15 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     let link = '';
     let yt = '';
     let appleMusicLink = '';
+    let st = null;
     if (result.success) {
       link = result.data.link;
       yt = result.data.youtubeLink;
       appleMusicLink = result.data.appleMusicLink;
+      st = result.data.st || null;
     }
     const useSpotifyRemote = true; // Default value
-    return { link: link, yt: yt, am: appleMusicLink, r: useSpotifyRemote };
+    return { link: link, yt: yt, am: appleMusicLink, r: useSpotifyRemote, st };
   });
 
   fastify.get('/qrlink2/:trackId/:php', async (request: any, reply) => {
@@ -233,6 +372,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     let dz = null;
     let td = null;
     let t = null;
+    let st = null;
 
     if (result.success) {
       link = result.data.link;
@@ -243,9 +383,10 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       dz = result.data.deezerLink || null;
       td = result.data.tidalLink || null;
       t = result.data.t || null;
+      st = result.data.st || null;
     }
     const useSpotifyRemote = true; // Default value
-    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, t };
+    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, t, st };
   });
 
   // Hitlist routes

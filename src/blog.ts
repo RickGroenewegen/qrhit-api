@@ -3,7 +3,7 @@ import Translation from './translation';
 import Cache from './cache';
 
 const CACHE_PREFIX = 'blog2';
-const SUPPORTED_LOCALES = new Translation().allLocales;
+const SUPPORTED_LOCALES = Translation.ALL_LOCALES;
 
 type BlogInput = {
   [key: string]: any;

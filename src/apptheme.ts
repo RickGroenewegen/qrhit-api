@@ -9,7 +9,7 @@ class AppTheme {
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private utils = new Utils();
-  private appThemes: Map<number, { s: string; n: string }> = new Map();
+  private appThemes: Map<number, { s: string; n: string; st: string }> = new Map();
   private appThemesInitialized: boolean = false;
 
   private constructor() {
@@ -41,17 +41,18 @@ class AppTheme {
   public async loadAppThemes(shouldLog: boolean = false): Promise<void> {
     try {
       const themes: any[] = await this.prisma.$queryRaw`
-        SELECT id, theme, themeName
-        FROM payment_has_playlist
-        WHERE theme IS NOT NULL AND theme != ''
+        SELECT php.id, php.theme, php.themeName, p.serviceType
+        FROM payment_has_playlist php
+        JOIN playlists p ON php.playlistId = p.id
       `;
 
       this.appThemes.clear();
 
       for (const themeRow of themes) {
         this.appThemes.set(themeRow.id, {
-          s: themeRow.theme,
-          n: themeRow.themeName || themeRow.theme,
+          s: themeRow.theme || '',
+          n: themeRow.themeName || themeRow.theme || '',
+          st: themeRow.serviceType || 'spotify',
         });
       }
 
@@ -72,10 +73,10 @@ class AppTheme {
   }
 
   /**
-   * Get theme for a given payment_has_playlist ID
-   * Returns null if no theme is configured
+   * Get theme and service type for a given payment_has_playlist ID
+   * Returns null if not found
    */
-  public getTheme(phpId: number): { s: string; n: string } | null {
+  public getTheme(phpId: number): { s: string; n: string; st: string } | null {
     if (!this.appThemesInitialized) {
       console.warn('App themes not yet initialized, returning null');
       return null;
@@ -101,7 +102,7 @@ class AppTheme {
   /**
    * Get all themes (for debugging)
    */
-  public getAllThemes(): Map<number, { s: string; n: string }> {
+  public getAllThemes(): Map<number, { s: string; n: string; st: string }> {
     return new Map(this.appThemes);
   }
 }

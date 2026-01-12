@@ -11,6 +11,7 @@ import fs from 'fs/promises';
 import cluster from 'cluster';
 import { CronJob } from 'cron';
 import { blue, red, yellow, white, green } from 'console-log-colors';
+import { createPrismaAdapter } from './prisma';
 
 // Set to true to delete and re-insert products (required for updating custom labels)
 // Set to false to use PATCH updates (faster but cannot update customAttributes)
@@ -138,7 +139,7 @@ export class MerchantCenterService {
   };
 
   private constructor() {
-    this.prisma = new PrismaClient();
+    this.prisma = new PrismaClient({ adapter: createPrismaAdapter() });
     this.logger = new Logger();
     this.translate = new Translation();
     this.order = Order.getInstance();

@@ -1341,9 +1341,19 @@ export default async function adminRoutes(
     '/tracks/update',
     getAuthHandler(['admin']),
     async (request: any, _reply) => {
-      const { id, artist, name, year, spotifyLink, youtubeLink } = request.body;
+      const {
+        id,
+        artist,
+        name,
+        year,
+        spotifyLink,
+        youtubeMusicLink,
+        appleMusicLink,
+        tidalLink,
+        deezerLink,
+      } = request.body;
 
-      if (!id || !artist || !name || !year || !spotifyLink) {
+      if (!id || !artist || !name || year === undefined || year === null) {
         return { success: false, error: 'Missing required fields' };
       }
       const result = await data.updateTrack(
@@ -1351,11 +1361,82 @@ export default async function adminRoutes(
         artist,
         name,
         year,
-        spotifyLink,
-        youtubeLink || '',
+        spotifyLink || '',
+        youtubeMusicLink || '',
+        appleMusicLink || '',
+        tidalLink || '',
+        deezerLink || '',
         request.clientIp
       );
       return result;
+    }
+  );
+
+  // Get tracks missing Spotify link
+  fastify.post(
+    '/tracks/missing-spotify',
+    getAuthHandler(['admin']),
+    async (request: any, _reply) => {
+      const { searchTerm = '' } = request.body;
+      const tracks = await data.getTracksMissingSpotifyLink(searchTerm);
+      return { success: true, data: tracks };
+    }
+  );
+
+  // Get count of tracks missing Spotify link
+  fastify.get(
+    '/tracks/missing-spotify-count',
+    getAuthHandler(['admin']),
+    async (_request: any, _reply) => {
+      const count = await data.getTracksMissingSpotifyLinkCount();
+      return { success: true, count };
+    }
+  );
+
+  // Force fetch MusicFetch links for a single track (bypasses attempt limit)
+  fastify.post(
+    '/tracks/musicfetch',
+    getAuthHandler(['admin']),
+    async (request: any, _reply) => {
+      const { trackId } = request.body;
+      if (!trackId) {
+        return { success: false, error: 'Missing trackId' };
+      }
+
+      try {
+        const MusicFetch = (await import('../musicfetch')).default;
+        const musicFetch = MusicFetch.getInstance();
+        const success = await musicFetch.updateTrackWithLinks(trackId, true);
+
+        if (success) {
+          // Fetch the updated track data to return
+          const track = await data.getTrackById(trackId);
+          return { success: true, track };
+        } else {
+          return { success: false, error: 'Failed to fetch links - track may not have any existing links to use as source' };
+        }
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    }
+  );
+
+  // Search Spotify tracks (for admin track management)
+  fastify.post(
+    '/tracks/spotify-search',
+    getAuthHandler(['admin']),
+    async (request: any, _reply) => {
+      const { searchTerm, limit = 10 } = request.body;
+      if (!searchTerm || searchTerm.length < 2) {
+        return { success: false, error: 'Search term too short' };
+      }
+
+      try {
+        const result = await spotify.searchTracks(searchTerm, limit, 0);
+        return result;
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
     }
   );
 
@@ -1383,6 +1464,7 @@ export default async function adminRoutes(
         track: result.track,
         totalUnchecked: result.totalUnchecked,
         currentPlaylistId: result.currentPlaylistId,
+        serviceType: result.serviceType,
       });
     }
   );
@@ -2101,6 +2183,290 @@ export default async function adminRoutes(
         reply.status(500).send({
           success: false,
           error: error.message || 'Failed to start MusicFetch bulk action',
+        });
+      }
+    }
+  );
+
+  // ============ EXTERNAL CARDS ROUTES ============
+
+  // Import external cards from sources (Jumbo API, country JSON files, MusicMatch JSON)
+  fastify.post(
+    '/admin/external-cards/import',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const ExternalCardService = (await import('../externalCardService')).default;
+        const externalCardService = ExternalCardService.getInstance();
+
+        // Start import in background
+        externalCardService.importAllExternalCards().catch((error) => {
+          console.error('Error in background external card import:', error);
+        });
+
+        reply.send({
+          success: true,
+          message: 'External card import started in background',
+        });
+      } catch (error: any) {
+        console.error('Error starting external card import:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to start external card import',
+        });
+      }
+    }
+  );
+
+  // Fetch music links for external cards via MusicFetch
+  fastify.post(
+    '/admin/external-cards/fetch-music-links',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { cardIds } = request.body;
+
+        const MusicFetch = (await import('../musicfetch')).default;
+        const musicFetch = MusicFetch.getInstance();
+
+        // Start processing in background
+        musicFetch.processExternalCards(cardIds).catch((error) => {
+          console.error('Error in background external card MusicFetch processing:', error);
+        });
+
+        reply.send({
+          success: true,
+          message: 'External card music link fetching started in background',
+        });
+      } catch (error: any) {
+        console.error('Error starting external card music link fetch:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to start external card music link fetch',
+        });
+      }
+    }
+  );
+
+  // Get external cards with search and filters
+  fastify.get(
+    '/admin/external-cards',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { search, missingLink, cardType, page = 1, limit = 50 } = request.query;
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+
+        // Build where clause
+        const where: any = {};
+
+        // Search filter
+        if (search) {
+          where.OR = [
+            { sku: { contains: search } },
+            { countryCode: { contains: search } },
+            { playlistId: { contains: search } },
+            { cardNumber: { contains: search } },
+            { spotifyId: { contains: search } },
+          ];
+        }
+
+        // Card type filter
+        if (cardType) {
+          where.cardType = cardType;
+        }
+
+        // Missing link filter
+        if (missingLink) {
+          switch (missingLink) {
+            case 'appleMusic':
+              where.appleMusicLink = null;
+              break;
+            case 'tidal':
+              where.tidalLink = null;
+              break;
+            case 'youtubeMusic':
+              where.youtubeMusicLink = null;
+              break;
+            case 'deezer':
+              where.deezerLink = null;
+              break;
+            case 'amazonMusic':
+              where.amazonMusicLink = null;
+              break;
+          }
+        }
+
+        const [cards, total] = await Promise.all([
+          prisma.externalCard.findMany({
+            where,
+            skip,
+            take: parseInt(limit),
+            orderBy: { id: 'desc' },
+          }),
+          prisma.externalCard.count({ where }),
+        ]);
+
+        // Get track info for cards that have spotifyId
+        const spotifyIds = cards
+          .map((c) => c.spotifyId)
+          .filter((id): id is string => id !== null);
+
+        const tracks =
+          spotifyIds.length > 0
+            ? await prisma.track.findMany({
+                where: { trackId: { in: spotifyIds } },
+                select: { trackId: true, artist: true, name: true },
+              })
+            : [];
+
+        const trackMap = new Map(tracks.map((t) => [t.trackId, t]));
+
+        // Merge track info into cards
+        const cardsWithTrackInfo = cards.map((card) => ({
+          ...card,
+          trackArtist: card.spotifyId ? trackMap.get(card.spotifyId)?.artist || null : null,
+          trackName: card.spotifyId ? trackMap.get(card.spotifyId)?.name || null : null,
+        }));
+
+        reply.send({
+          data: cardsWithTrackInfo,
+          total,
+          page: parseInt(page),
+          totalPages: Math.ceil(total / parseInt(limit)),
+        });
+      } catch (error: any) {
+        console.error('Error fetching external cards:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to fetch external cards',
+        });
+      }
+    }
+  );
+
+  // Update a single external card
+  fastify.put(
+    '/admin/external-cards/:id',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { id } = request.params;
+        const {
+          spotifyLink,
+          appleMusicLink,
+          tidalLink,
+          youtubeMusicLink,
+          deezerLink,
+          amazonMusicLink,
+        } = request.body;
+
+        const updated = await prisma.externalCard.update({
+          where: { id: parseInt(id) },
+          data: {
+            ...(spotifyLink !== undefined && { spotifyLink }),
+            ...(appleMusicLink !== undefined && { appleMusicLink }),
+            ...(tidalLink !== undefined && { tidalLink }),
+            ...(youtubeMusicLink !== undefined && { youtubeMusicLink }),
+            ...(deezerLink !== undefined && { deezerLink }),
+            ...(amazonMusicLink !== undefined && { amazonMusicLink }),
+          },
+        });
+
+        reply.send({
+          success: true,
+          card: updated,
+        });
+      } catch (error: any) {
+        console.error('Error updating external card:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to update external card',
+        });
+      }
+    }
+  );
+
+  // Fetch music links for a single external card via MusicFetch
+  fastify.post(
+    '/admin/external-cards/:id/musicfetch',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { id } = request.params;
+        const cardId = parseInt(id);
+
+        // Get the card
+        const card = await prisma.externalCard.findUnique({
+          where: { id: cardId },
+        });
+
+        if (!card) {
+          return reply.status(404).send({
+            success: false,
+            error: 'External card not found',
+          });
+        }
+
+        if (!card.spotifyId) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Card has no Spotify ID to search with',
+          });
+        }
+
+        const MusicFetch = (await import('../musicfetch')).default;
+        const musicFetch = MusicFetch.getInstance();
+
+        // Use the processSingleExternalCard method
+        const result = await musicFetch.processSingleExternalCard(card);
+
+        if (result.success) {
+          // Fetch the updated card
+          const updatedCard = await prisma.externalCard.findUnique({
+            where: { id: cardId },
+          });
+
+          reply.send({
+            success: true,
+            card: updatedCard,
+            linksAdded: result.linksAdded,
+          });
+        } else {
+          reply.send({
+            success: false,
+            error: result.error || 'No new links found',
+          });
+        }
+      } catch (error: any) {
+        console.error('Error fetching music links for external card:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to fetch music links',
+        });
+      }
+    }
+  );
+
+  // Get external card statistics
+  fastify.get(
+    '/admin/external-cards/stats',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const ExternalCardService = (await import('../externalCardService')).default;
+        const externalCardService = ExternalCardService.getInstance();
+        const stats = await externalCardService.getStats();
+
+        reply.send({
+          success: true,
+          stats,
+        });
+      } catch (error: any) {
+        console.error('Error fetching external card stats:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to fetch external card stats',
         });
       }
     }

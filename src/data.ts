@@ -814,11 +814,12 @@ class Data {
     playlistId: string | null = null
   ): Promise<any[]> {
     let query = `
-      SELECT 
+      SELECT
         playlists.id,
         playlists.playlistId,
         playlists.name,
         playlists.type AS productType,
+        playlists.serviceType,
         playlists.giftcardAmount,
         playlists.giftcardFrom,
         playlists.giftcardMessage,
@@ -1056,6 +1057,87 @@ class Data {
     return returnList;
   }
 
+  /**
+   * Get a playlist by its slug
+   */
+  public async getPlaylistBySlug(slug: string): Promise<{ id: number; playlistId: string } | null> {
+    const playlist = await this.prisma.playlist.findFirst({
+      where: { slug },
+      select: { id: true, playlistId: true },
+    });
+    return playlist;
+  }
+
+  /**
+   * Get link coverage percentages for a playlist
+   * Returns the percentage of tracks that have links for each music service
+   */
+  public async getPlaylistLinkCoverage(playlistId: number): Promise<{
+    spotify: number;
+    appleMusic: number;
+    youtubeMusic: number;
+    tidal: number;
+    deezer: number;
+    totalTracks: number;
+  }> {
+    const cacheKey = `playlist_link_coverage_v1:${playlistId}`;
+    const cachedData = await this.cache.get(cacheKey);
+
+    if (cachedData) {
+      return JSON.parse(cachedData);
+    }
+
+    const result = await this.prisma.$queryRaw<
+      {
+        totalTracks: bigint;
+        spotifyCount: bigint;
+        appleMusicCount: bigint;
+        youtubeMusicCount: bigint;
+        tidalCount: bigint;
+        deezerCount: bigint;
+      }[]
+    >`
+      SELECT
+        COUNT(*) as totalTracks,
+        SUM(CASE WHEN t.spotifyLink IS NOT NULL AND t.spotifyLink != '' THEN 1 ELSE 0 END) as spotifyCount,
+        SUM(CASE WHEN t.appleMusicLink IS NOT NULL AND t.appleMusicLink != '' THEN 1 ELSE 0 END) as appleMusicCount,
+        SUM(CASE WHEN t.youtubeMusicLink IS NOT NULL AND t.youtubeMusicLink != '' THEN 1 ELSE 0 END) as youtubeMusicCount,
+        SUM(CASE WHEN t.tidalLink IS NOT NULL AND t.tidalLink != '' THEN 1 ELSE 0 END) as tidalCount,
+        SUM(CASE WHEN t.deezerLink IS NOT NULL AND t.deezerLink != '' THEN 1 ELSE 0 END) as deezerCount
+      FROM playlist_has_tracks pht
+      JOIN tracks t ON pht.trackId = t.id
+      WHERE pht.playlistId = ${playlistId}
+    `;
+
+    if (!result || result.length === 0) {
+      return {
+        spotify: 0,
+        appleMusic: 0,
+        youtubeMusic: 0,
+        tidal: 0,
+        deezer: 0,
+        totalTracks: 0,
+      };
+    }
+
+    const data = result[0];
+    const totalTracks = Number(data.totalTracks || 0);
+
+    const coverage = {
+      spotify: totalTracks > 0 ? Math.round((Number(data.spotifyCount || 0) / totalTracks) * 100) : 0,
+      appleMusic: totalTracks > 0 ? Math.round((Number(data.appleMusicCount || 0) / totalTracks) * 100) : 0,
+      youtubeMusic: totalTracks > 0 ? Math.round((Number(data.youtubeMusicCount || 0) / totalTracks) * 100) : 0,
+      tidal: totalTracks > 0 ? Math.round((Number(data.tidalCount || 0) / totalTracks) * 100) : 0,
+      deezer: totalTracks > 0 ? Math.round((Number(data.deezerCount || 0) / totalTracks) * 100) : 0,
+      totalTracks,
+    };
+
+    // Cache for 1 hour
+    await this.cache.set(cacheKey, JSON.stringify(coverage), 3600);
+
+    return coverage;
+  }
+
   public async storePlaylists(
     userDatabaseId: number,
     cartItems: CartItem[],
@@ -1119,6 +1201,7 @@ class Data {
             price: cartItem.price,
             numberOfTracks: cartItem.numberOfTracks,
             type: cartItem.productType,
+            serviceType: cartItem.serviceType || 'spotify',
             giftcardAmount,
             giftcardFrom,
             giftcardMessage,
@@ -1142,6 +1225,7 @@ class Data {
             price: cartItem.price,
             numberOfTracks: cartItem.numberOfTracks,
             name: cartItem.playlistName,
+            serviceType: cartItem.serviceType || playlist.serviceType || 'spotify',
             resetCache: doResetCache,
           },
         });
@@ -1260,6 +1344,7 @@ class Data {
     track: any;
     totalUnchecked: number;
     currentPlaylistId: number | null;
+    serviceType: string | null;
   }> {
     // Use a single optimized query to get both the track and count
     // Only include tracks that are associated with payments where processedFirstTime = true
@@ -1277,7 +1362,8 @@ class Data {
         t.id, t.name, t.spotifyLink, t.artist, t.year, t.yearSource,
         t.certainty, t.reasoning, t.spotifyYear, t.discogsYear, t.aiYear,
         t.musicBrainzYear, t.openPerplexYear, t.standardDeviation, t.googleResults,
-        pl.id as playlistId
+        pl.id as playlistId,
+        pl.serviceType as serviceType
       FROM tracks t
       INNER JOIN playlist_has_tracks pht ON t.id = pht.trackId
       INNER JOIN playlists pl ON pht.playlistId = pl.id
@@ -1291,14 +1377,15 @@ class Data {
     `;
 
     if (result.length === 0) {
-      return { track: null, totalUnchecked: 0, currentPlaylistId: null };
+      return { track: null, totalUnchecked: 0, currentPlaylistId: null, serviceType: null };
     }
 
-    const { totalUnchecked, playlistId, ...track } = result[0];
+    const { totalUnchecked, playlistId, serviceType, ...track } = result[0];
     return {
       track,
       totalUnchecked: Number(totalUnchecked),
       currentPlaylistId: Number(playlistId),
+      serviceType: serviceType || 'spotify',
     };
   }
 
@@ -1386,75 +1473,88 @@ class Data {
     isrc: string,
     trackId: number
   ): Promise<{ wasUpdated: boolean; method: string }> {
-    if (!isrc) return { wasUpdated: false, method: '' };
-
-    // First try finding a track with matching ISRC
-    const existingTrackByISRC = await this.prisma.track.findFirst({
-      where: {
-        isrc: isrc,
-        year: {
-          not: null,
-        },
-        manuallyChecked: true,
-      },
-      select: {
-        id: true,
-        year: true,
-        yearSource: true,
-        certainty: true,
-        reasoning: true,
-        deezerLink: true,
-        youtubeMusicLink: true,
-        appleMusicLink: true,
-        amazonMusicLink: true,
-        tidalLink: true,
-      },
-    });
-
-    if (existingTrackByISRC) {
-      await this.prisma.track.update({
-        where: { id: trackId },
-        data: {
-          year: existingTrackByISRC.year,
-          yearSource: 'otherTrack_' + existingTrackByISRC.yearSource,
-          certainty: existingTrackByISRC.certainty,
-          reasoning: existingTrackByISRC.reasoning,
-          manuallyChecked: true,
-          deezerLink: existingTrackByISRC.deezerLink,
-          youtubeMusicLink: existingTrackByISRC.youtubeMusicLink,
-          appleMusicLink: existingTrackByISRC.appleMusicLink,
-          amazonMusicLink: existingTrackByISRC.amazonMusicLink,
-          tidalLink: existingTrackByISRC.tidalLink,
-        },
-      });
-      return { wasUpdated: true, method: 'isrc' };
-    }
-
-    // If no ISRC match, try finding tracks with matching artist and title
-    const currentTrack = await this.prisma.track.findUnique({
-      where: { id: trackId },
-      select: { artist: true, name: true },
-    });
-
-    if (currentTrack) {
-      // First, only fetch IDs and year to minimize data transfer
-      const existingTracksByMetadata = await this.prisma.track.findMany({
+    // First try finding a track with matching ISRC (only if ISRC is provided)
+    if (isrc) {
+      const existingTrackByISRC = await this.prisma.track.findFirst({
         where: {
-          artist: currentTrack.artist,
-          name: currentTrack.name,
+          isrc: isrc,
           year: {
             not: null,
           },
           manuallyChecked: true,
-          id: {
-            not: trackId, // Exclude the current track
-          },
         },
         select: {
           id: true,
           year: true,
+          yearSource: true,
+          certainty: true,
+          reasoning: true,
+          spotifyLink: true,
+          deezerLink: true,
+          youtubeMusicLink: true,
+          appleMusicLink: true,
+          amazonMusicLink: true,
+          tidalLink: true,
+          musicFetchLastAttempt: true,
+          musicFetchAttempts: true,
         },
       });
+
+      if (existingTrackByISRC) {
+        // Check if target track has empty spotifyLink
+        const targetTrack = await this.prisma.track.findUnique({
+          where: { id: trackId },
+          select: { spotifyLink: true },
+        });
+
+        await this.prisma.track.update({
+          where: { id: trackId },
+          data: {
+            year: existingTrackByISRC.year,
+            yearSource: 'otherTrack_' + existingTrackByISRC.yearSource,
+            certainty: existingTrackByISRC.certainty,
+            reasoning: existingTrackByISRC.reasoning,
+            manuallyChecked: true,
+            spotifyLink: !targetTrack?.spotifyLink
+              ? existingTrackByISRC.spotifyLink
+              : undefined,
+            deezerLink: existingTrackByISRC.deezerLink,
+            youtubeMusicLink: existingTrackByISRC.youtubeMusicLink,
+            appleMusicLink: existingTrackByISRC.appleMusicLink,
+            amazonMusicLink: existingTrackByISRC.amazonMusicLink,
+            tidalLink: existingTrackByISRC.tidalLink,
+            musicFetchLastAttempt: existingTrackByISRC.musicFetchLastAttempt,
+            musicFetchAttempts: existingTrackByISRC.musicFetchAttempts,
+          },
+        });
+        return { wasUpdated: true, method: 'isrc' };
+      }
+    }
+
+    // If no ISRC or no ISRC match, try finding tracks with matching artist and title
+    const currentTrack = await this.prisma.track.findUnique({
+      where: { id: trackId },
+      select: { artist: true, name: true, spotifyLink: true },
+    });
+
+    if (currentTrack) {
+      // Use case-insensitive matching for artist and title (normalized like TrackEnrichment)
+      const artistLower = currentTrack.artist.toLowerCase().trim();
+      const nameLower = currentTrack.name.toLowerCase().trim();
+
+      // First, only fetch IDs and year to minimize data transfer
+      // Using raw SQL for case-insensitive matching
+      const existingTracksByMetadata = await this.prisma.$queryRaw<
+        { id: number; year: number }[]
+      >`
+        SELECT id, year
+        FROM tracks
+        WHERE LOWER(TRIM(artist)) = ${artistLower}
+          AND LOWER(TRIM(name)) = ${nameLower}
+          AND year IS NOT NULL
+          AND manuallyChecked = true
+          AND id != ${trackId}
+      `;
 
       if (existingTracksByMetadata.length === 1) {
         // Only one match found, fetch full track details
@@ -1465,11 +1565,14 @@ class Data {
             yearSource: true,
             certainty: true,
             reasoning: true,
+            spotifyLink: true,
             deezerLink: true,
             youtubeMusicLink: true,
             appleMusicLink: true,
             amazonMusicLink: true,
             tidalLink: true,
+            musicFetchLastAttempt: true,
+            musicFetchAttempts: true,
           },
         });
 
@@ -1482,11 +1585,16 @@ class Data {
               certainty: matchedTrack.certainty,
               reasoning: matchedTrack.reasoning,
               manuallyChecked: true,
+              spotifyLink: !currentTrack.spotifyLink
+                ? matchedTrack.spotifyLink
+                : undefined,
               deezerLink: matchedTrack.deezerLink,
               youtubeMusicLink: matchedTrack.youtubeMusicLink,
               appleMusicLink: matchedTrack.appleMusicLink,
               amazonMusicLink: matchedTrack.amazonMusicLink,
               tidalLink: matchedTrack.tidalLink,
+              musicFetchLastAttempt: matchedTrack.musicFetchLastAttempt,
+              musicFetchAttempts: matchedTrack.musicFetchAttempts,
             },
           });
           return { wasUpdated: true, method: 'artistTitle' };
@@ -1503,11 +1611,14 @@ class Data {
               yearSource: true,
               certainty: true,
               reasoning: true,
+              spotifyLink: true,
               deezerLink: true,
               youtubeMusicLink: true,
               appleMusicLink: true,
               amazonMusicLink: true,
               tidalLink: true,
+              musicFetchLastAttempt: true,
+              musicFetchAttempts: true,
             },
           });
 
@@ -1521,11 +1632,16 @@ class Data {
                 certainty: matchedTrack.certainty,
                 reasoning: matchedTrack.reasoning,
                 manuallyChecked: true,
+                spotifyLink: !currentTrack.spotifyLink
+                  ? matchedTrack.spotifyLink
+                  : undefined,
                 deezerLink: matchedTrack.deezerLink,
                 youtubeMusicLink: matchedTrack.youtubeMusicLink,
                 appleMusicLink: matchedTrack.appleMusicLink,
                 amazonMusicLink: matchedTrack.amazonMusicLink,
                 tidalLink: matchedTrack.tidalLink,
+                musicFetchLastAttempt: matchedTrack.musicFetchLastAttempt,
+                musicFetchAttempts: matchedTrack.musicFetchAttempts,
               },
             });
             return { wasUpdated: true, method: 'artistTitle_multiple' };
@@ -1715,11 +1831,22 @@ class Data {
       }
     }
 
+
     if (data) {
-      // Get theme from in-memory mapping if php is provided
+      // Get theme and service type from in-memory mapping if php is provided
+
+
+
       if (php) {
-        const theme = this.appTheme.getTheme(Number(php));
-        data.t = theme;
+        const themeData = this.appTheme.getTheme(Number(php));
+
+
+        if (themeData) {
+          if (themeData.s) {
+            data.t = { s: themeData.s, n: themeData.n };
+          }
+          data.st = themeData.st;
+        }
       }
 
       return {
@@ -1737,7 +1864,8 @@ class Data {
     playlistDatabaseId: number,
     playlistId: string,
     tracks: any,
-    trackOrder?: Map<string, number>
+    trackOrder?: Map<string, number>,
+    serviceType: string = 'spotify'
   ): Promise<any> {
     // Filter out any tracks with null/undefined artists or episode URLs (podcast episodes)
     const validTracks = tracks.filter((track: any) => {
@@ -1813,6 +1941,17 @@ class Data {
       existingTracks.map((track) => [track.trackId, track])
     );
 
+    // Map service types to their corresponding link field names
+    const serviceLinkFieldMap: Record<string, string> = {
+      spotify: 'spotifyLink',
+      youtube_music: 'youtubeMusicLink',
+      apple_music: 'appleMusicLink',
+      deezer: 'deezerLink',
+      tidal: 'tidalLink',
+      amazon_music: 'amazonMusicLink',
+    };
+    const linkField = serviceLinkFieldMap[serviceType] || 'spotifyLink';
+
     // Step 2: Separate new and existing tracks, and check for changes
     const newTracks = [];
     const tracksToUpdate = [];
@@ -1820,14 +1959,18 @@ class Data {
     for (const track of validTracks) {
       const existingTrack = existingTrackMap.get(track.id);
       if (existingTrack) {
-        // Check if any data has changed
+        // Check if any data has changed (only compare spotifyLink for Spotify tracks)
+        const linkChanged = linkField === 'spotifyLink'
+          ? existingTrack.spotifyLink !== (track.link || track.serviceLink)
+          : false;
+
         if (
           existingTrack.name !== this.utils.cleanTrackName(track.name) ||
           existingTrack.isrc !== track.isrc ||
           existingTrack.album !== this.utils.cleanTrackName(track.album) ||
           existingTrack.preview !== track.preview ||
           existingTrack.artist !== track.artist ||
-          existingTrack.spotifyLink !== track.link
+          linkChanged
         ) {
           if (!existingTrack.manuallyCorrected) {
             tracksToUpdate.push(track);
@@ -1858,12 +2001,16 @@ class Data {
             'artist'
           );
 
+          // Determine the service link from track data
+          const serviceLink = track.serviceLink || track.link;
+
           return {
             trackId: track.id,
             name: sanitizedTitle,
             isrc: track.isrc,
             artist: sanitizedArtist,
-            spotifyLink: track.link,
+            // Store link in the appropriate field based on service type
+            [linkField]: serviceLink,
             album: this.utils.cleanTrackName(track.album),
             preview: track.preview,
           };
@@ -2049,6 +2196,7 @@ class Data {
         track.isrc ?? '',
         track.id
       );
+
       if (wasUpdated) {
         if (method == 'isrc') {
           this.logger.log(
@@ -2270,25 +2418,25 @@ class Data {
     if (searchTerm && searchTerm.trim().length > 0) {
       const likePattern = `%${searchTerm}%`;
       const tracks = await this.prisma.$queryRaw<any[]>`
-        SELECT id, artist, name, year, youtubeLink, spotifyLink
+        SELECT id, artist, name, year, youtubeLink, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink
         FROM tracks
         WHERE (artist LIKE ${likePattern} OR name LIKE ${likePattern})
         ${
           missingYouTubeLink
-            ? Prisma.sql`AND (youtubeLink IS NULL OR youtubeLink = '')`
+            ? Prisma.sql`AND (youtubeMusicLink IS NULL OR youtubeMusicLink = '')`
             : Prisma.sql``
         }
         LIMIT 100
       `;
       return tracks;
     } else {
-      // If no search term, just return tracks filtered by youtubeLink
+      // If no search term, just return tracks filtered by youtubeMusicLink
       const tracks = await this.prisma.$queryRaw<any[]>`
-        SELECT id, artist, name, year, youtubeLink, spotifyLink
+        SELECT id, artist, name, year, youtubeLink, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink
         FROM tracks
         ${
           missingYouTubeLink
-            ? Prisma.sql`WHERE (youtubeLink IS NULL OR youtubeLink = '')`
+            ? Prisma.sql`WHERE (youtubeMusicLink IS NULL OR youtubeMusicLink = '')`
             : Prisma.sql`WHERE 1=1`
         }
         LIMIT 100
@@ -2297,13 +2445,69 @@ class Data {
     }
   }
 
+  public async getTracksMissingSpotifyLink(
+    searchTerm: string = ''
+  ): Promise<any[]> {
+    if (searchTerm && searchTerm.trim().length > 0) {
+      const likePattern = `%${searchTerm}%`;
+      const tracks = await this.prisma.$queryRaw<any[]>`
+        SELECT id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink
+        FROM tracks
+        WHERE (spotifyLink IS NULL OR spotifyLink = '')
+        AND (artist LIKE ${likePattern} OR name LIKE ${likePattern})
+        ORDER BY id DESC
+        LIMIT 100
+      `;
+      return tracks;
+    } else {
+      const tracks = await this.prisma.$queryRaw<any[]>`
+        SELECT id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink
+        FROM tracks
+        WHERE (spotifyLink IS NULL OR spotifyLink = '')
+        ORDER BY id DESC
+        LIMIT 100
+      `;
+      return tracks;
+    }
+  }
+
+  public async getTracksMissingSpotifyLinkCount(): Promise<number> {
+    const result = await this.prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(*) as count
+      FROM tracks
+      WHERE (spotifyLink IS NULL OR spotifyLink = '')
+    `;
+    return Number(result[0]?.count ?? 0);
+  }
+
+  public async getTrackById(trackId: number): Promise<any> {
+    const track = await this.prisma.track.findUnique({
+      where: { id: trackId },
+      select: {
+        id: true,
+        artist: true,
+        name: true,
+        year: true,
+        spotifyLink: true,
+        youtubeMusicLink: true,
+        appleMusicLink: true,
+        tidalLink: true,
+        deezerLink: true,
+      },
+    });
+    return track;
+  }
+
   public async updateTrack(
     id: number,
     artist: string,
     name: string,
     year: number,
     spotifyLink: string,
-    youtubeLink: string,
+    youtubeMusicLink: string,
+    appleMusicLink: string,
+    tidalLink: string,
+    deezerLink: string,
     clientIp: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -2320,7 +2524,10 @@ class Data {
           name: sanitizedTitle,
           year,
           spotifyLink,
-          youtubeLink,
+          youtubeMusicLink,
+          appleMusicLink,
+          tidalLink,
+          deezerLink,
           manuallyCorrected: true,
         },
       });

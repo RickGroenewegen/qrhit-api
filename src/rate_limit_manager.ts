@@ -1,11 +1,12 @@
 import { ApiResult } from './interfaces/ApiResult';
+import { ProgressCallback } from './interfaces/IMusicProvider';
 import Logger from './logger';
 import { color } from 'console-log-colors';
 import Cache from './cache';
 
 interface ApiProvider {
   getPlaylist(playlistId: string): Promise<ApiResult>;
-  getTracks(playlistId: string): Promise<ApiResult>;
+  getTracks(playlistId: string, onProgress?: ProgressCallback): Promise<ApiResult>;
   getTracksByIds(trackIds: string[]): Promise<ApiResult>;
   searchTracks(
     searchTerm: string,

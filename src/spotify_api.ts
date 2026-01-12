@@ -3,6 +3,7 @@ import Logger from './logger';
 import Settings from './settings';
 import { color } from 'console-log-colors';
 import { ApiResult } from './interfaces/ApiResult'; // Assuming ApiResult interface exists
+import { ProgressCallback } from './interfaces/IMusicProvider';
 import {
   SPOTIFY_CONCURRENT_REQUESTS,
   SPOTIFY_PAGE_LIMIT,
@@ -129,16 +130,16 @@ class SpotifyApi {
           'spotify_refresh_token',
           newRefreshToken
         );
-        this.logger.log(color.blue('Stored new Spotify refresh token.'));
+        this.logger.log(color.blue(`[${color.white.bold('spotify')}] Stored new refresh token.`));
       }
 
       this.logger.log(
-        color.green.bold('Successfully refreshed Spotify token.')
+        color.green.bold(`[${color.white.bold('spotify')}] Successfully refreshed token.`)
       );
       return access_token;
     } catch (error) {
       this.logger.log(
-        color.red.bold(`Error refreshing Spotify token: ${error}`)
+        color.red.bold(`[${color.white.bold('spotify')}] Token refresh error: ${error}`)
       );
       // Optionally clear tokens if refresh fails permanently (e.g., invalid refresh token)
       // await this.settings.deleteSetting('spotify_refresh_token');
@@ -481,7 +482,7 @@ class SpotifyApi {
    * @param playlistId The Spotify ID of the playlist.
    * @returns {Promise<ApiResult>} Contains an array of track items or error info.
    */
-  public async getTracks(playlistId: string): Promise<ApiResult> {
+  public async getTracks(playlistId: string, onProgress?: ProgressCallback): Promise<ApiResult> {
     const accessToken = await this.getAccessToken();
     if (!accessToken) {
       return {
@@ -525,6 +526,18 @@ class SpotifyApi {
         (item: any) => item && item.track
       );
 
+      // Report initial progress - we have the first batch
+      if (onProgress && total > 0) {
+        const percentage = Math.min(99, Math.round((validInitialItems.length / total) * 100));
+        onProgress({
+          stage: 'fetching_metadata',
+          current: validInitialItems.length,
+          total: total,
+          percentage: Math.max(1, percentage),
+          message: 'progress.loaded',
+        });
+      }
+
       // If all tracks fit in the first request, return immediately
       if (validInitialItems.length >= total) {
         const elapsed = Date.now() - startTime;
@@ -554,7 +567,10 @@ class SpotifyApi {
         pageRequests,
         usedLimit,
         accessToken,
-        fieldsParam
+        fieldsParam,
+        onProgress,
+        total,
+        validInitialItems.length
       );
 
       // Combine results in order
@@ -610,9 +626,13 @@ class SpotifyApi {
     pageRequests: Array<{ offset: number; pageIndex: number }>,
     limit: number,
     accessToken: string,
-    fieldsParam: string
+    fieldsParam: string,
+    onProgress?: ProgressCallback,
+    totalTracks?: number,
+    initialItemsCount?: number
   ): Promise<PromiseSettledResult<{ success: boolean; items: any[] }>[]> {
     const results: PromiseSettledResult<{ success: boolean; items: any[] }>[] = [];
+    let totalFetched = initialItemsCount || 0;
 
     // Process in batches of SPOTIFY_CONCURRENT_REQUESTS
     for (let i = 0; i < pageRequests.length; i += SPOTIFY_CONCURRENT_REQUESTS) {
@@ -643,6 +663,24 @@ class SpotifyApi {
 
       const batchResults = await Promise.allSettled(batchPromises);
       results.push(...batchResults);
+
+      // Report progress after each batch completes
+      if (onProgress && totalTracks && totalTracks > 0) {
+        // Count items from this batch
+        for (const result of batchResults) {
+          if (result.status === 'fulfilled' && result.value.success) {
+            totalFetched += result.value.items.filter((item: any) => item && item.track).length;
+          }
+        }
+        const percentage = Math.min(99, Math.round((totalFetched / totalTracks) * 100));
+        onProgress({
+          stage: 'fetching_metadata',
+          current: totalFetched,
+          total: totalTracks,
+          percentage: Math.max(1, percentage),
+          message: 'progress.loaded',
+        });
+      }
     }
 
     return results;

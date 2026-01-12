@@ -4,10 +4,11 @@ import { color } from 'console-log-colors';
 import fs from 'fs/promises';
 import path from 'path';
 import Utils from './utils';
+import { createPrismaAdapter } from './prisma';
 
 class Account {
   private static instance: Account;
-  private prisma = new PrismaClient();
+  private prisma = new PrismaClient({ adapter: createPrismaAdapter() });
   private logger = new Logger();
   private utils = new Utils();
 

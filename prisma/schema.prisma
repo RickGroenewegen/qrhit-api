@@ -2,13 +2,11 @@
 // learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
-  provider        = "prisma-client-js"
-  previewFeatures = ["fullTextIndex", "fullTextSearch"]
+  provider = "prisma-client-js"
 }
 
 datasource db {
   provider = "mysql"
-  url      = env("DATABASE_URL")
 }
 
 model Isrc {
@@ -324,6 +322,7 @@ model Playlist {
   playlistId           String               @unique
   genreId              Int?
   type                 String               @default("cards")
+  serviceType          String               @default("spotify") // Music service: spotify, youtube_music, apple_music, deezer, tidal
   name                 String
   slug                 String               @default("")
   description_en       String?              @db.Text
@@ -386,6 +385,7 @@ model Playlist {
   featuredHidden       Boolean              @default(false)
 
   @@index([playlistId])
+  @@index([serviceType])
   @@index([promotionalActive])
   @@fulltext([name])
   @@map("playlists")
@@ -473,6 +473,54 @@ model Track {
   @@index([artist, name, manuallyChecked, year, id])
   @@fulltext([artist, name])
   @@map("tracks")
+}
+
+model ExternalCard {
+  id                    Int       @id @default(autoincrement())
+
+  // Card type: 'jumbo' | 'country' | 'musicmatch'
+  cardType              String
+
+  // Identification fields (one set per type)
+  sku                   String?   // Jumbo: gameset SKU (e.g., 'aaaa0027')
+  countryCode           String?   // Country: 'de', 'nl', etc.
+  playlistId            String?   // MusicMatch: payment_has_playlist_id
+  cardNumber            String    // Card number within set
+
+  // Gameset metadata
+  gamesetLanguage       String?
+  gamesetName           String?
+
+  // Music service links (same as Track table)
+  spotifyId             String?   // Spotify track ID only
+  spotifyLink           String?   // Full Spotify URL
+  appleMusicLink        String?   @db.VarChar(500)
+  tidalLink             String?   @db.VarChar(500)
+  youtubeMusicLink      String?   @db.VarChar(500)
+  deezerLink            String?   @db.VarChar(500)
+  amazonMusicLink       String?   @db.VarChar(500)
+
+  // MusicFetch tracking
+  musicFetchAttempts    Int       @default(0)
+  musicFetchLastAttempt DateTime?
+  processedByBatch      Boolean   @default(false)  // Set to true when batch successfully adds links
+
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  // Composite unique constraints for each card type
+  @@unique([cardType, sku, cardNumber], name: "jumbo_unique")
+  @@unique([cardType, countryCode, cardNumber], name: "country_unique")
+  @@unique([cardType, playlistId, cardNumber], name: "musicmatch_unique")
+
+  // Indexes for lookups
+  @@index([cardType])
+  @@index([sku, cardNumber])
+  @@index([countryCode, cardNumber])
+  @@index([playlistId, cardNumber])
+  @@index([spotifyId])
+
+  @@map("external_cards")
 }
 
 model PrinterInvoice {

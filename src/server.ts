@@ -24,9 +24,11 @@ import ipPlugin from './plugins/ipPlugin';
 import { createServer } from 'http';
 import NativeWebSocketServer from './websocket-native';
 import ChatWebSocketServer from './chat-websocket';
+import ProgressWebSocketServer from './progress-websocket';
 import GeneratorQueue from './generatorQueue';
 import MusicFetchQueue from './musicfetchQueue';
 import ExcelQueue from './excelQueue';
+import ExternalCardService from './externalCardService';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -50,6 +52,7 @@ class Server {
   private httpServer: any;
   private wsServer: NativeWebSocketServer | null = null;
   private chatWsServer: ChatWebSocketServer | null = null;
+  private progressWsServer: ProgressWebSocketServer | null = null;
 
   private constructor() {
     this.fastify = Fastify({
@@ -221,6 +224,9 @@ class Server {
         );
       }
 
+      // Initialize ExternalCardService (starts nightly import cron job)
+      ExternalCardService.getInstance();
+
       const numCPUs = os.cpus().length;
       for (let i = 0; i < numCPUs; i++) {
         cluster.fork({
@@ -252,7 +258,9 @@ class Server {
         if (this.fastify.server) {
           this.wsServer = new NativeWebSocketServer(this.fastify.server);
           this.chatWsServer = new ChatWebSocketServer(this.fastify.server);
+          this.progressWsServer = new ProgressWebSocketServer(this.fastify.server);
           ChatWebSocketServer.setInstance(this.chatWsServer);
+          ProgressWebSocketServer.setInstance(this.progressWsServer);
 
           // Handle WebSocket upgrade routing
           this.fastify.server.on('upgrade', (request, socket, head) => {
@@ -262,6 +270,8 @@ class Server {
               this.wsServer.handleUpgrade(request, socket, head);
             } else if (pathname === '/chat-ws' && this.chatWsServer) {
               this.chatWsServer.handleUpgrade(request, socket, head);
+            } else if (pathname === '/progress-ws' && this.progressWsServer) {
+              this.progressWsServer.handleUpgrade(request, socket, head);
             } else {
               socket.destroy();
             }

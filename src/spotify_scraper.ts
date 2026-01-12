@@ -4,6 +4,7 @@ import Cache from './cache'; // Needed for queue implementation details
 import AnalyticsClient from './analytics';
 import { color } from 'console-log-colors';
 import { ApiResult } from './interfaces/ApiResult'; // Assuming ApiResult interface exists
+import { ProgressCallback } from './interfaces/IMusicProvider';
 
 // --- RapidAPI Queue (Copied from spotify.ts for encapsulation) ---
 // In a larger refactor, this might live in its own file.
@@ -267,9 +268,10 @@ class SpotifyScraper {
    * @param limit Number of tracks per page (RapidAPI default/max might vary).
    * Fetches all tracks for a playlist from RapidAPI, handling pagination.
    * @param playlistId The Spotify ID of the playlist.
+   * @param onProgress Optional callback for progress updates.
    * @returns {Promise<ApiResult>} Contains an array of track items or error info.
    */
-  public async getTracks(playlistId: string): Promise<ApiResult> {
+  public async getTracks(playlistId: string, onProgress?: ProgressCallback): Promise<ApiResult> {
     this.logger.log(
       color.blue.bold(
         `Fetching tracks in ${color.white.bold(
@@ -327,6 +329,18 @@ class SpotifyScraper {
               return { track: trackDetails };
             }
           );
+
+          // Report progress after fetching all tracks (Scraper API fetches all at once)
+          if (onProgress) {
+            const totalCount = response.data.contents.totalCount || transformedItems.length;
+            onProgress({
+              stage: 'fetching_metadata',
+              current: transformedItems.length,
+              total: totalCount,
+              percentage: 99,
+              message: 'progress.loaded',
+            });
+          }
 
           // Return data structured similarly to spotify_api.ts, with an 'items' key
           return {

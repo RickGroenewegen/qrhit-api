@@ -27,17 +27,17 @@ export class OpenPerplex {
       });
 
       let llmData: { release_year?: number } = {};
-      if (typeof response.llm_response === 'string') {
+      if (typeof response.answer === 'string') {
         try {
-          llmData = JSON.parse(response.llm_response);
+          llmData = JSON.parse(response.answer);
         } catch {
           llmData = {};
         }
       } else if (
-        typeof response.llm_response === 'object' &&
-        response.llm_response !== null
+        typeof response.answer === 'object' &&
+        response.answer !== null
       ) {
-        llmData = response.llm_response as { release_year?: number };
+        llmData = response.answer as { release_year?: number };
       }
 
       return llmData.release_year ?? 0;

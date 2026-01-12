@@ -9,6 +9,7 @@ export interface CartItem {
   extraPrice?: number;
   image: string;
   productType: string;
+  serviceType?: string; // Music service: spotify, youtube_music, apple_music, deezer, tidal
   fromName?: string;
   personalMessage?: string;
   doubleSided?: boolean;

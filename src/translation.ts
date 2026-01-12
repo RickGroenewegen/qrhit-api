@@ -5,7 +5,7 @@ import path from 'path';
 class Translation {
   private i18n: I18n;
   private memoryCache: Map<string, Record<string, string>> = new Map();
-  public allLocales: string[] = [
+  public static readonly ALL_LOCALES: string[] = [
     'en',
     'nl',
     'de',
@@ -18,9 +18,10 @@ class Translation {
     'cn',
     'sv',
   ];
+  public allLocales: string[] = Translation.ALL_LOCALES;
   constructor() {
     this.i18n = new I18n({
-      locales: this.allLocales,
+      locales: Translation.ALL_LOCALES,
       directory: `${process.env['APP_ROOT']}/locales`,
     });
   }

@@ -11,7 +11,7 @@ export default async function blogRoutes(fastify: FastifyInstance) {
   const blog = Blog.getInstance();
   const openai = new ChatGPT();
   const logger = new Logger();
-  const SUPPORTED_LOCALES = new Translation().allLocales;
+  const SUPPORTED_LOCALES = Translation.ALL_LOCALES;
 
   // Admin: Create a blog post (expects { title_xx, content_xx, summary_xx } for all supported locales)
   fastify.post(
