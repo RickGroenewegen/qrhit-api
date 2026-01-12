@@ -777,6 +777,7 @@ model CompanyList {
   hideCircle              Boolean   @default(false)
   showNames               Boolean   @default(false)
   qrvote                  Boolean   @default(false)
+  addBirthdayNumber1      Boolean   @default(false)
   forceTemplate           String?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
@@ -833,6 +834,7 @@ model CompanyListSubmission {
   marketingEmails  Boolean   @default(false)
   verifiedAt       DateTime?
   locale           String    @default("en")
+  birthDate        DateTime?
   createdAt        DateTime  @default(now())
   updatedAt        DateTime  @updatedAt
 
@@ -864,6 +866,7 @@ model CompanyListSubmissionTrack {
   companyListSubmissionId Int
   trackId                 Int
   position                Int
+  isBirthdayTrack         Boolean  @default(false)
   createdAt               DateTime @default(now())
   updatedAt               DateTime @updatedAt
 

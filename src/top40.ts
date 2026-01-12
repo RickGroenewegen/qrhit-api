@@ -242,6 +242,7 @@ class Top40 {
   /**
    * Get the #1 track for a given date
    * Uses ISO week number to find the matching chart week
+   * Falls back to the most recent previous #1 if the exact week isn't found
    */
   async getNumberOneOnDate(date: Date): Promise<NumberOneResult | null> {
     const year = getISOWeekYear(date);
@@ -254,7 +255,8 @@ class Top40 {
     );
 
     try {
-      const entry = await this.prisma.top40Chart.findFirst({
+      // First try to find the exact week
+      let entry = await this.prisma.top40Chart.findFirst({
         where: {
           year,
           weekNumber,
@@ -277,9 +279,45 @@ class Top40 {
         return entry;
       }
 
+      // Fallback: find the most recent #1 before this date
       this.logger.log(
         color.yellow.bold(
-          `[${white.bold('Top40')}] No #1 found for week ${weekNumber} of ${year}`
+          `[${white.bold('Top40')}] No #1 found for week ${weekNumber} of ${year}, searching for previous...`
+        )
+      );
+
+      entry = await this.prisma.top40Chart.findFirst({
+        where: {
+          position: 1,
+          OR: [
+            { year: { lt: year } },
+            { year, weekNumber: { lt: weekNumber } },
+          ],
+        },
+        orderBy: [
+          { year: 'desc' },
+          { weekNumber: 'desc' },
+        ],
+        select: {
+          artist: true,
+          title: true,
+          year: true,
+          weekNumber: true,
+        },
+      });
+
+      if (entry) {
+        this.logger.log(
+          color.green.bold(
+            `[${white.bold('Top40')}] Found fallback #1 from week ${entry.weekNumber} of ${entry.year}: ${white.bold(entry.artist)} - ${white.bold(entry.title)}`
+          )
+        );
+        return entry;
+      }
+
+      this.logger.log(
+        color.yellow.bold(
+          `[${white.bold('Top40')}] No #1 found before week ${weekNumber} of ${year}`
         )
       );
       return null;

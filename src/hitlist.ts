@@ -66,6 +66,10 @@ class Hitlist {
       const marketingEmails = this.utils.parseBoolean(
         hitlist[0]?.marketingEmails
       ); // Added marketingEmails
+      const birthDate = hitlist[0]?.birthDate
+        ? new Date(hitlist[0].birthDate)
+        : null;
+      const birthdayTrackId = hitlist[0]?.birthdayTrackId || null;
 
       let constructedFullname: string | null = (
         (firstname || '') +
@@ -240,6 +244,7 @@ class Hitlist {
             marketingEmails: marketingEmails,
             locale: locale,
             cardName: cardName,
+            birthDate: birthDate,
           },
         });
 
@@ -264,6 +269,7 @@ class Hitlist {
             verificationHash: verificationHash,
             agreeToUseName: agreeToUseName, // Added agreeToUseName
             marketingEmails: marketingEmails, // Added marketingEmails
+            birthDate: birthDate || submission.birthDate,
           },
         });
         createdOrUpdatedSubmission = true;
@@ -288,7 +294,7 @@ class Hitlist {
       }
 
       // Process the rest of the submission asynchronously
-      this.processSubmissionAsync(hitlist, submission.id);
+      this.processSubmissionAsync(hitlist, submission.id, birthdayTrackId);
 
       return {
         success: true,
@@ -301,7 +307,8 @@ class Hitlist {
 
   private async processSubmissionAsync(
     hitlist: any[],
-    submissionId: number
+    submissionId: number,
+    birthdayTrackId: string | null = null
   ): Promise<void> {
     try {
       if (!hitlist || hitlist.length === 0) {
@@ -518,6 +525,15 @@ class Hitlist {
             )}`
           )
         );
+
+        // Handle birthday track (if provided)
+        if (birthdayTrackId) {
+          await this.processBirthdayTrack(
+            birthdayTrackId,
+            submissionId,
+            parseInt(companyListId)
+          );
+        }
       } else {
         this.logger.log(
           color.red.bold(
@@ -533,6 +549,113 @@ class Hitlist {
           `Error processing submission ${color.white.bold(
             submissionId
           )} asynchronously: ${error}`
+        )
+      );
+    }
+  }
+
+  /**
+   * Process birthday track - look up or create the track and add it to the submission
+   * with isBirthdayTrack: true and position: 0
+   */
+  private async processBirthdayTrack(
+    birthdayTrackId: string,
+    submissionId: number,
+    companyListId: number
+  ): Promise<void> {
+    try {
+      this.logger.log(
+        color.blue.bold(
+          `Processing birthday track ${color.white.bold(
+            birthdayTrackId
+          )} for submission ${color.white.bold(submissionId)}`
+        )
+      );
+
+      // Get track details from Spotify
+      const tracksResult = await this.spotify.getTracksByIds([birthdayTrackId]);
+
+      if (!tracksResult.success || !tracksResult.data || tracksResult.data.length === 0) {
+        this.logger.log(
+          color.yellow.bold(
+            `Could not get details for birthday track ${birthdayTrackId}`
+          )
+        );
+        return;
+      }
+
+      const trackData = tracksResult.data[0];
+
+      // Find or create the track in the database
+      let track = await this.prisma.track.findFirst({
+        where: {
+          artist: trackData.artist,
+          name: trackData.name,
+        },
+      });
+
+      if (!track) {
+        track = await this.prisma.track.findUnique({
+          where: { trackId: trackData.trackId },
+        });
+      }
+
+      if (!track) {
+        // Create the track
+        const spotifyYear = trackData.releaseDate
+          ? parseInt(trackData.releaseDate.substring(0, 4))
+          : null;
+
+        track = await this.prisma.track.create({
+          data: {
+            trackId: trackData.trackId,
+            name: trackData.name,
+            artist: trackData.artist,
+            album: trackData.album,
+            preview: trackData.preview,
+            isrc: trackData.isrc,
+            spotifyYear: spotifyYear,
+            spotifyLink: trackData.link,
+            youtubeLink: '',
+            manuallyChecked: false,
+          },
+        });
+
+        this.logger.log(
+          color.blue.bold(
+            `Created new track for birthday: ${color.white.bold(
+              trackData.artist
+            )} - ${color.white.bold(trackData.name)}`
+          )
+        );
+      }
+
+      // Create the CompanyListSubmissionTrack entry with isBirthdayTrack: true
+      await this.prisma.companyListSubmissionTrack.create({
+        data: {
+          companyListSubmissionId: submissionId,
+          trackId: track.id,
+          position: 0, // Special position for birthday tracks
+          isBirthdayTrack: true,
+        },
+      });
+
+      // Mark the company list for Spotify reload
+      await this.vibe['markSpotifyForReload'](companyListId);
+
+      this.logger.log(
+        color.green.bold(
+          `Added birthday track ${color.white.bold(
+            trackData.artist
+          )} - ${color.white.bold(trackData.name)} for submission ${color.white.bold(
+            submissionId
+          )}`
+        )
+      );
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error processing birthday track ${birthdayTrackId} for submission ${submissionId}: ${error}`
         )
       );
     }
@@ -622,6 +745,7 @@ class Hitlist {
           minimumNumberOfTracks: true,
           languages: true,
           showNames: true,
+          addBirthdayNumber1: true,
           numberOfCards: true,
           votingBackground: true,
           votingLogo: true,
@@ -718,6 +842,7 @@ class Hitlist {
           qrvote: companyList.qrvote,
           languages: companyList.languages,
           showNames: companyList.showNames,
+          addBirthdayNumber1: companyList.addBirthdayNumber1,
           startAt: companyList.startAt,
           endAt: companyList.endAt,
           votingOpen: votingOpen,

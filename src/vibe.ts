@@ -722,6 +722,7 @@ class Vibe {
           hideCircle: true,
           languages: true,
           forceTemplate: true,
+          addBirthdayNumber1: true,
         };
         // Add all description fields for each locale
         for (const locale of availableLocales) {
@@ -1552,6 +1553,11 @@ class Vibe {
       // Handle forceTemplate field
       if (fields.forceTemplate !== undefined) {
         updateData.forceTemplate = fields.forceTemplate === '' ? null : String(fields.forceTemplate);
+      }
+
+      // Handle addBirthdayNumber1 field
+      if (fields.addBirthdayNumber1 !== undefined) {
+        updateData.addBirthdayNumber1 = this.utils.parseBoolean(fields.addBirthdayNumber1);
       }
 
       // Explicitly handle empty string values for background fields to set them to null
@@ -2389,6 +2395,7 @@ class Vibe {
               select: {
                 trackId: true,
                 position: true,
+                isBirthdayTrack: true,
               },
             },
           },
@@ -2429,9 +2436,13 @@ class Vibe {
             });
           }
 
-          // Points = maxPoints - position + 1
+          // Points calculation:
+          // - Birthday tracks (isBirthdayTrack: true) always get maxPoints (same as #1 position)
+          // - Regular tracks: maxPoints - position + 1
           // Example: maxPoints=5 -> pos 1 gets 5, pos 2 gets 4, ..., pos 5 gets 1
-          const points = maxPoints - submissionTrack.position + 1;
+          const points = submissionTrack.isBirthdayTrack
+            ? maxPoints
+            : maxPoints - submissionTrack.position + 1;
 
           if (points > 0) {
             // Ensure only valid positions contribute points

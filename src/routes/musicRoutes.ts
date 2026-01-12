@@ -2,6 +2,7 @@ import { FastifyInstance } from 'fastify';
 import Spotify from '../spotify';
 import Data from '../data';
 import Hitlist from '../hitlist';
+import Top40 from '../top40';
 import { color } from 'console-log-colors';
 import Logger from '../logger';
 import Utils from '../utils';
@@ -409,6 +410,17 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     return await hitlist.searchTracksMusicFetch(searchString);
   });
 
+  // Get the #1 song for a given date (for birthday #1 feature)
+  fastify.get('/hitlist/number-one/:date', async (request: any, reply) => {
+    const { date } = request.params;
+    const top40 = Top40.getInstance();
+    const result = await top40.getNumberOneOnDate(new Date(date));
+    if (!result) {
+      return reply.status(404).send({ error: 'No #1 found for this date' });
+    }
+    return result;
+  });
+
   fastify.post('/hitlist/tracks', async (request: any, _reply) => {
     const { trackIds } = request.body;
 
@@ -430,6 +442,8 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       email,
       agreeToUseName,
       marketingEmails,
+      birthDate,
+      birthdayTrackId,
     } = request.body;
 
     // Add companyListId, submissionHash, firstname, lastname, email, agreeToUseName, and marketingEmails to each track
@@ -443,6 +457,8 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       locale,
       agreeToUseName,
       marketingEmails,
+      birthDate,
+      birthdayTrackId,
     }));
 
     const result = await hitlist.submit(enrichedHitlist);
