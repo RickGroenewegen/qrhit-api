@@ -21,6 +21,7 @@ sudo chmod +x deploy_frontend
 
 sudo npm install --force
 sudo prisma db push
+sudo npx prisma generate
 echo "Repository has been reset and updated."
 
 cd /home/ec2-user/sites/qrsong-frontend
