@@ -153,7 +153,7 @@ class Vibe {
     }
 
     // Captcha check (same as sendContactForm in mail.ts)
-    const isHuman = await this.utils.verifyRecaptcha(captchaToken);
+    const { isHuman } = await this.utils.verifyRecaptcha(captchaToken);
     if (!isHuman) {
       return {
         success: false,

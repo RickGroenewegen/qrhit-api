@@ -332,7 +332,7 @@ class Discount {
     digital: boolean
   ): Promise<any> {
     // Verify reCAPTCHA token
-    const isHuman = await this.utils.verifyRecaptcha(token);
+    const { isHuman } = await this.utils.verifyRecaptcha(token);
 
     if (!isHuman) {
       throw new Error('Request failed');

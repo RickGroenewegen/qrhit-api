@@ -638,7 +638,7 @@ class Mail {
     const { captchaToken, ...otherData } = data;
 
     // Verify reCAPTCHA token
-    const isHuman = await this.utils.verifyRecaptcha(captchaToken);
+    const { isHuman, score } = await this.utils.verifyRecaptcha(captchaToken);
 
     if (!isHuman) {
       throw new Error('reCAPTCHA verification failed');
@@ -646,12 +646,12 @@ class Mail {
 
     // Log contact form submission with user's IP
     this.logger.log(
-      color.cyan.bold(
-        `Contact form submitted by ${white.bold(otherData.email)} from IP ${white.bold(ip)}`
+      color.blue.bold(
+        `Contact form submitted by ${white.bold(otherData.email)} from IP ${white.bold(ip)} (score: ${white.bold(String(score))})`
       )
     );
     this.logger.log(
-      color.cyan(
+      color.blue.bold(
         `  Name: ${white(otherData.name)}, Subject: ${white(otherData.subject || 'N/A')}`
       )
     );
@@ -1486,7 +1486,7 @@ ${params.html}
     captchaToken: string
   ): Promise<boolean> {
     // Verify reCAPTCHA token
-    const isHuman = await this.utils.verifyRecaptcha(captchaToken);
+    const { isHuman } = await this.utils.verifyRecaptcha(captchaToken);
 
     if (!isHuman) {
       throw new Error('Verification failed');

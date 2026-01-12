@@ -52,7 +52,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       const { email, recaptchaToken, existingChatId } = request.body;
 
       // Verify reCAPTCHA
-      const isHuman = await utils.verifyRecaptcha(recaptchaToken);
+      const { isHuman } = await utils.verifyRecaptcha(recaptchaToken);
       if (!isHuman) {
         return reply.status(400).send({ success: false, error: 'reCAPTCHA verification failed' });
       }

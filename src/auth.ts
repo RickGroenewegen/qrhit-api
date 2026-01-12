@@ -405,7 +405,7 @@ export async function resetPassword(
     }
 
     // Verify captcha
-    const isHuman = await utils.verifyRecaptcha(captchaToken);
+    const { isHuman } = await utils.verifyRecaptcha(captchaToken);
     if (!isHuman) {
       return {
         success: false,
@@ -536,7 +536,7 @@ export async function initiatePasswordReset(
     }
 
     // Verify captcha
-    const isHuman = await utils.verifyRecaptcha(captchaToken);
+    const { isHuman } = await utils.verifyRecaptcha(captchaToken);
     if (!isHuman) {
       return {
         success: false,
@@ -630,7 +630,7 @@ export async function registerAccount(
     const userLocale = locale || 'en';
 
     // Verify captcha
-    const isHuman = await utils.verifyRecaptcha(captchaToken);
+    const { isHuman } = await utils.verifyRecaptcha(captchaToken);
     if (!isHuman) {
       return {
         success: false,

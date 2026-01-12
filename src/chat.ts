@@ -398,9 +398,6 @@ export class ChatService {
    * Get relevant topics using function calling
    */
   public async getTopics(question: string, chatHistory: ChatHistoryMessage[]): Promise<string[]> {
-    this.logger.log(color.cyan.bold(`[getTopics] `) + color.cyan(`Question: "`) + color.white.bold(`${question.substring(0, 50)}${question.length > 50 ? '...' : ''}`) + color.cyan(`"`));
-    this.logger.log(color.cyan.bold(`[getTopics] `) + color.cyan(`Chat history items: `) + color.white.bold(`${chatHistory.length}`));
-
     // Build topics summary for function calling
     const topicsSummary = this.knowledge.map((item) => ({
       slug: item.slug,
@@ -456,10 +453,6 @@ If the question is a greeting or general chat, return an empty array.`,
     if (result?.choices[0]?.message?.function_call) {
       try {
         const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
-        this.logger.log(color.green.bold(`[getTopics] `) + color.green(`Selected `) + color.white.bold(`${parsed.slugs?.length || 0}`) + color.green(` topics: `) + color.white.bold(`${(parsed.slugs || []).join(', ')}`));
-        if (parsed.reasoning) {
-          this.logger.log(color.gray(`[getTopics] Reasoning: ${parsed.reasoning}`));
-        }
         return parsed.slugs || [];
       } catch (error) {
         this.logger.log(color.red.bold(`Error parsing topics: ${error}`));

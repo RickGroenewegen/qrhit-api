@@ -103,14 +103,15 @@ class Utils {
     return str;
   }
 
-  public async verifyRecaptcha(token: string): Promise<boolean> {
+  public async verifyRecaptcha(token: string, minScore: number = 0.5): Promise<{ isHuman: boolean; score: number | null }> {
     try {
       const secretKey = process.env['RECAPTCHA_SECRET_KEY'];
       const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
       const response = await axios.post(verifyUrl);
-      return response.data.success;
+      const { success, score } = response.data;
+      return { isHuman: success && score >= minScore, score: score ?? null };
     } catch (error) {
-      return false;
+      return { isHuman: false, score: null };
     }
   }
 
