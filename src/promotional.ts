@@ -1,4 +1,3 @@
-import { PrismaClient } from '@prisma/client';
 import PrismaInstance from './prisma';
 import Logger from './logger';
 import Mail from './mail';
@@ -607,6 +606,53 @@ class Promotional {
   }
 
   /**
+   * Translate a description to all locales and return the translations as update data
+   * This is the core translation logic shared by acceptPromotionalPlaylist and translateDescription
+   */
+  private async translateToAllLocales(
+    playlistId: string,
+    description: string
+  ): Promise<Record<string, string>> {
+    // Sanitize description before translating (replace competitor brand name)
+    const sanitizedDescription = this.sanitizeBrandName(description);
+
+    this.logger.log(
+      color.blue.bold(
+        `Translating description for playlist ${color.white.bold(
+          playlistId
+        )}: "${color.white.bold(sanitizedDescription.substring(0, 100))}..."`
+      )
+    );
+
+    // Get all locales to translate to (including source for grammar/style fix)
+    const allLocales = this.translation.allLocales;
+
+    // Translate to all locales using ChatGPT
+    const translations = await this.chatgpt.translateText(
+      sanitizedDescription,
+      allLocales
+    );
+
+    this.logger.log(
+      color.green.bold(
+        `Translated to ${color.white.bold(Object.keys(translations).length)} locales`
+      )
+    );
+
+    // Build update object with all description_[locale] fields
+    const updateData: Record<string, string> = {};
+    for (const locale of allLocales) {
+      const translatedText = translations[locale];
+      if (translatedText) {
+        // Sanitize each translated description as well (in case translation preserved brand name)
+        updateData[`description_${locale}`] = this.sanitizeBrandName(translatedText);
+      }
+    }
+
+    return updateData;
+  }
+
+  /**
    * Send email notification when promotional playlist is sold
    */
   private async sendPromotionalSaleEmail(
@@ -878,40 +924,13 @@ class Promotional {
         return { success: true };
       }
 
-      // Sanitize description before translating (replace competitor brand name)
-      const sanitizedDescription = this.sanitizeBrandName(description);
+      // Translate description to all locales using shared helper
+      const translationData = await this.translateToAllLocales(playlistId, description);
 
-      this.logger.log(
-        color.blue.bold(
-          `Translating promotional description for playlist ${color.white.bold(
-            playlistId
-          )} from ${color.white.bold(sourceLocale)}`
-        )
-      );
-      this.logger.log(
-        color.blue.bold(`Description to translate: "${color.white.bold(sanitizedDescription.substring(0, 100))}..."`)
-      );
-
-      // Get all locales to translate to (including source for grammar/style fix)
-      const allLocales = this.translation.allLocales;
-      this.logger.log(
-        color.blue.bold(`Target locales: ${color.white.bold(allLocales.join(', '))}`)
-      );
-
-      // Translate to all locales using ChatGPT
-      const translations = await this.chatgpt.translateText(
-        sanitizedDescription,
-        allLocales
-      );
-
-      this.logger.log(
-        color.blue.bold(`Translations received: ${color.white.bold(JSON.stringify(Object.keys(translations)))}`)
-      );
-
-      // Build update object with all description_[locale] fields
-      // Also update name and slug with promotionalTitle if provided
+      // Build update object with translations and additional fields
       const updateData: Record<string, any> = {
         promotionalAccepted: true,
+        ...translationData,
       };
 
       if (playlist.promotionalTitle) {
@@ -919,22 +938,6 @@ class Promotional {
         updateData.name = sanitizedName;
         updateData.slug = await this.generateUniqueSlug(sanitizedName, playlistId);
       }
-
-      for (const locale of allLocales) {
-        const translatedText = translations[locale];
-        if (translatedText) {
-          // Sanitize each translated description as well (in case translation preserved brand name)
-          updateData[`description_${locale}`] = this.sanitizeBrandName(translatedText);
-        }
-      }
-
-      this.logger.log(
-        color.green.bold(
-          `Translated to ${color.white.bold(
-            Object.keys(translations).length
-          )} locales`
-        )
-      );
 
       // Update playlist with translations and accepted status
       const oldSlug = playlist.slug;
@@ -981,6 +984,62 @@ class Promotional {
       this.logger.log(
         color.red.bold(
           `Error accepting promotional playlist ${playlistId}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
+  /**
+   * Retranslate the description for an already-accepted playlist
+   * Used when admin edits the description and wants to regenerate translations
+   */
+  public async translateDescription(
+    playlistId: string
+  ): Promise<{
+    success: boolean;
+    error?: string;
+  }> {
+    try {
+      // Get playlist with description fields
+      const playlist = await this.prisma.playlist.findUnique({
+        where: { playlistId },
+        select: {
+          id: true,
+          name: true,
+          promotionalDescription: true,
+          description_en: true,
+        },
+      });
+
+      if (!playlist) {
+        return { success: false, error: 'Playlist not found' };
+      }
+
+      // Use the English description as source (this is what gets edited in admin)
+      const description = playlist.description_en || playlist.promotionalDescription || '';
+
+      if (!description.trim()) {
+        return { success: false, error: 'No description to translate' };
+      }
+
+      // Translate description to all locales using shared helper
+      const translationData = await this.translateToAllLocales(playlistId, description);
+
+      // Update playlist with translations
+      await this.prisma.playlist.update({
+        where: { playlistId },
+        data: translationData,
+      });
+
+      // Clear cache
+      await this.clearPlaylistCache(playlistId);
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error retranslating description for playlist ${playlistId}: ${error.message}`
         )
       );
       return { success: false, error: error.message };

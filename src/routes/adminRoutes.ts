@@ -839,6 +839,34 @@ export default async function adminRoutes(
     }
   );
 
+  // Retranslate description for a playlist (used after editing description)
+  fastify.post(
+    '/admin/promotional/:playlistId/translate',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { playlistId } = request.params;
+
+      if (!playlistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      const result = await promotional.translateDescription(playlistId);
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Update featured locale for a playlist
   fastify.post(
     '/admin/promotional/:playlistId/locale',
@@ -872,13 +900,13 @@ export default async function adminRoutes(
     }
   );
 
-  // Edit promotional playlist (name, description, locale)
+  // Edit promotional playlist (name, description, locale, slug)
   fastify.post(
     '/admin/promotional/:playlistId/edit',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const { playlistId } = request.params;
-      const { name, description, featuredLocale } = request.body;
+      const { name, description, featuredLocale, slug } = request.body;
 
       if (!playlistId) {
         reply.status(400).send({
@@ -892,12 +920,13 @@ export default async function adminRoutes(
         name,
         description,
         featuredLocale: featuredLocale || null,
+        slug,
       });
 
       if (result.success) {
         reply.send({ success: true });
       } else {
-        reply.status(500).send({
+        reply.status(400).send({
           success: false,
           error: result.error,
         });

@@ -3185,7 +3185,7 @@ class Data {
   }
 
   /**
-   * Update promotional playlist (name, description, locale)
+   * Update promotional playlist (name, description, locale, slug)
    */
   public async updatePromotionalPlaylist(
     playlistId: string,
@@ -3193,20 +3193,65 @@ class Data {
       name: string;
       description: string;
       featuredLocale: string | null;
+      slug?: string;
     }
   ): Promise<{ success: boolean; error?: string }> {
     try {
-      await this.prisma.playlist.update({
+      const updateData: Record<string, any> = {
+        name: data.name,
+        promotionalTitle: data.name,
+        description_en: data.description,
+        promotionalDescription: data.description,
+        featuredLocale: data.featuredLocale,
+      };
+
+      // Handle slug update with duplicate check
+      if (data.slug !== undefined && data.slug !== null) {
+        const trimmedSlug = data.slug.trim().toLowerCase();
+        if (trimmedSlug) {
+          // Check if slug already exists for another playlist
+          const existingPlaylist = await this.prisma.playlist.findFirst({
+            where: {
+              slug: trimmedSlug,
+              playlistId: { not: playlistId },
+            },
+            select: { playlistId: true, name: true },
+          });
+
+          if (existingPlaylist) {
+            return {
+              success: false,
+              error: `Slug "${trimmedSlug}" is already in use by playlist "${existingPlaylist.name}"`,
+            };
+          }
+
+          updateData.slug = trimmedSlug;
+        }
+      }
+
+      // Get old slug before update for cache clearing
+      const oldPlaylist = await this.prisma.playlist.findUnique({
         where: { playlistId },
-        data: {
-          promotionalTitle: data.name,
-          promotionalDescription: data.description,
-          featuredLocale: data.featuredLocale,
-        },
+        select: { slug: true },
       });
 
-      // Clear featured playlists cache
+      await this.prisma.playlist.update({
+        where: { playlistId },
+        data: updateData,
+      });
+
+      // Clear all relevant caches
       await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+      await this.cache.del(`${CACHE_KEY_PLAYLIST}${playlistId}`);
+      await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${playlistId}`);
+      if (oldPlaylist?.slug) {
+        await this.cache.del(`${CACHE_KEY_PLAYLIST}${oldPlaylist.slug}`);
+        await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${oldPlaylist.slug}`);
+      }
+      if (updateData.slug && updateData.slug !== oldPlaylist?.slug) {
+        await this.cache.del(`${CACHE_KEY_PLAYLIST}${updateData.slug}`);
+        await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${updateData.slug}`);
+      }
 
       return { success: true };
     } catch (error: any) {
