@@ -816,7 +816,7 @@ export class ChatGPT {
     instruction: string
   ): Promise<{ title: string; content: string; summary?: string }> {
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5',
+      model: 'gpt-5.2',
       messages: [
         {
           role: 'system',
@@ -879,6 +879,9 @@ Only use these approved internal links (replace [lang] with appropriate language
 - /[lang]/pubquiz (Our music quiz service)
 - /[lang]/qr-cards-as-a-service (QR cards as a service)
 - /[lang]/contact (Our contact page)
+- /[lang]/supported-platforms (See which music platforms are supported)
+- /[lang]/shipping-info (Shipping information)
+- /[lang]/earn-discount (How to earn discounts)
 Do NOT link to any other pages or external sites unless specifically requested.
 
 Write in a professional, informative, and engaging style. The tone should be clear and authoritative, but still accessible to a general audience. Avoid overly casual language, slang, and excessive humor. Focus on providing valuable information about the product and its uses. Avoid corporate jargon and AI-sounding phrases. Use a clear structure with varied sentence lengths for readability. Never use em-dashes (—) as they look very AI-generated - use commas, periods, or parentheses instead. Emojis should be used sparingly and only when they add clear value (e.g., 🎵 for music topics). Return a title, summary, and full content in clean HTML format with proper headers (h2, h3), paragraphs, lists, and simple styling.`,
@@ -944,7 +947,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
     onChunk: (chunk: string) => void
   ): Promise<{ title: string; content: string; summary?: string }> {
     const stream = await this.openai.chat.completions.create({
-      model: 'gpt-5',
+      model: 'gpt-5.2',
       stream: true,
       messages: [
         {
@@ -1002,6 +1005,9 @@ Write in a professional, informative, and engaging style. The tone should be cle
                     - /[lang]/faq (FAQ)
                     - /[lang]/onzevibe (QRSong!, but for companies)
                     - /[lang]/contact (Our contact page)
+                    - /[lang]/supported-platforms (See which music platforms are supported)
+                    - /[lang]/shipping-info (Shipping information)
+                    - /[lang]/earn-discount (How to earn discounts)
                     Do NOT link to any other pages or external sites unless specifically requested.
 
                     Write in a professional, informative, and engaging style. Avoid corporate speak, buzzwords, and AI-sounding phrases like "delve into", "unlock", "harness", "seamlessly", "leverage", "cutting-edge", "game-changer", or "revolutionize". 

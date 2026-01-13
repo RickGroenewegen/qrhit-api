@@ -483,6 +483,7 @@ class Data {
       '/pubquiz',
       '/shipping-info',
       '/earn-discount',
+      '/supported-platforms'
     ];
 
     // Get current date in YYYY-MM-DD format for lastmod
