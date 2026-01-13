@@ -2077,7 +2077,8 @@ ${params.html}
     shareLink: string,
     setupLink: string | null,
     locale: string = 'en',
-    quantity: number = 1
+    quantity: number = 1,
+    referralLink?: string
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -2096,6 +2097,7 @@ ${params.html}
       discountCode,
       shareLink,
       setupLink,
+      referralLink,
       productName: process.env['PRODUCT_NAME'],
       currentYear: new Date().getFullYear(),
       translations,
@@ -2186,7 +2188,8 @@ ${params.html}
     discountCode: string,
     shareLink: string,
     setupLink: string,
-    locale: string = 'en'
+    locale: string = 'en',
+    referralLink?: string
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -2215,6 +2218,7 @@ ${params.html}
       discountCode,
       shareLink,
       setupLink,
+      referralLink,
       whatsappLink,
       facebookLink,
       instagramLink,
@@ -2286,6 +2290,115 @@ ${params.html}
       this.logger.log(
         color.red.bold(
           `Failed to send promotional approval email to ${white.bold(email)}: ${error}`
+        )
+      );
+    }
+  }
+
+  /**
+   * Send an email to notify a user that they earned a referral bonus
+   * @param email The referrer's email address
+   * @param displayName The referrer's display name
+   * @param creditedAmount The amount credited to their discount
+   * @param totalBalance Their new total discount balance
+   * @param discountCode Their discount code
+   * @param referralLink Their referral link to keep sharing
+   * @param locale The user's locale (default: 'en')
+   * @param playlistCount Number of playlists purchased by the referred user
+   */
+  public async sendReferralCreditEmail(
+    email: string,
+    displayName: string,
+    creditedAmount: number,
+    totalBalance: number,
+    discountCode: string,
+    referralLink: string,
+    locale: string = 'en',
+    playlistCount: number = 1
+  ): Promise<void> {
+    if (!this.ses) return;
+
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+
+    // Fetch translations for referral credit email
+    const translations = this.replaceAmountPlaceholder(
+      await this.translation.getTranslationsByPrefix(locale, 'referral_email')
+    );
+
+    const mailParams = {
+      fullname: displayName || email.split('@')[0],
+      creditedAmount: creditedAmount.toFixed(2),
+      totalBalance: totalBalance.toFixed(2),
+      discountCode,
+      referralLink,
+      playlistCount,
+      productName: process.env['PRODUCT_NAME'],
+      currentYear: new Date().getFullYear(),
+      translations,
+    };
+
+    try {
+      // Read the logo file and convert it to Base64
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+
+      const html = await this.templates.render(
+        'mails/referral_credit_html',
+        mailParams
+      );
+      const text = await this.templates.render(
+        'mails/referral_credit_text',
+        mailParams
+      );
+
+      const subject = this.translation.translate(
+        'referral_email.subject',
+        locale
+      );
+
+      const attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+
+      const rawEmail = await this.renderRaw(
+        {
+          from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+          to: email,
+          subject,
+          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+          text,
+          attachments,
+          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+          replyTo: process.env['REPLY_TO_EMAIL'],
+        },
+        true // BCC for referral credit emails
+      );
+
+      const emailBuffer = Buffer.from(rawEmail);
+
+      // Prepare and send the raw email
+      const command = new SendRawEmailCommand({
+        RawMessage: {
+          Data: emailBuffer,
+        },
+      });
+
+      await this.ses.send(command);
+      this.logger.log(
+        color.green.bold(
+          `Referral credit email sent to ${white.bold(email)} for ${white.bold(playlistCount.toString())} playlist(s)`
+        )
+      );
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Failed to send referral credit email to ${white.bold(email)}: ${error}`
         )
       );
     }

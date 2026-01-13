@@ -18,6 +18,7 @@ import cluster from 'cluster';
 import { promises as fs } from 'fs';
 import Game from './game';
 import Promotional from './promotional';
+import Referral from './referral';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
 import AppTheme from './apptheme';
 
@@ -36,6 +37,7 @@ class Mollie {
   private failedPaymentStatus = ['failed', 'canceled', 'expired'];
   private game = new Game();
   private promotional = Promotional.getInstance();
+  private referral = Referral.getInstance();
   private musicServiceRegistry = MusicServiceRegistry.getInstance();
 
   constructor() {
@@ -1082,6 +1084,7 @@ class Mollie {
           profit: totalProfit,
           printApiPrice: 0,
           discount: discountAmount,
+          refCode: params.refCode || null, // Referral code from frontend
           PaymentHasPlaylist: { create: playlists },
           ...params.extraOrderData,
         },
@@ -1307,6 +1310,15 @@ class Mollie {
                 color.yellow.bold(`Failed to credit promotional discount for playlist ${pp.playlistId}: ${e}`)
               );
             }
+          }
+
+          // Credit referrer if this payment used a referral code
+          try {
+            await this.referral.creditReferrer(dbPayment.id);
+          } catch (e) {
+            this.logger.log(
+              color.yellow.bold(`Failed to credit referrer for payment ${dbPayment.id}: ${e}`)
+            );
           }
 
           this.generator.queueGenerate(

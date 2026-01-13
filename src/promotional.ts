@@ -345,6 +345,7 @@ class Promotional {
           displayName: true,
           hash: true,
           locale: true,
+          refCode: true,
         },
       });
 
@@ -424,6 +425,7 @@ class Promotional {
       const setupLink = paymentLink
         ? `${process.env['FRONTEND_URI']}/${creator.locale || 'en'}/promotional/${paymentLink.payment.paymentId}/${creator.hash}/${playlist.playlistId}`
         : null;
+      const referralLink = creator.refCode ? `${process.env['FRONTEND_URI']}?ref=${creator.refCode}` : undefined;
 
       // Send notification email to creator
       await this.sendPromotionalSaleEmail(
@@ -436,7 +438,8 @@ class Promotional {
         `${process.env['FRONTEND_URI']}/${creator.locale || 'en'}/product/${playlist.slug || playlist.playlistId}`,
         setupLink,
         creator.locale || 'en',
-        quantity
+        quantity,
+        referralLink
       );
 
       this.logger.log(
@@ -665,7 +668,8 @@ class Promotional {
     shareLink: string,
     setupLink: string | null,
     locale: string,
-    quantity: number
+    quantity: number,
+    referralLink?: string
   ): Promise<void> {
     try {
       const mail = Mail.getInstance();
@@ -679,7 +683,8 @@ class Promotional {
         shareLink,
         setupLink,
         locale,
-        quantity
+        quantity,
+        referralLink
       );
     } catch (error) {
       this.logger.log(`Error sending promotional sale email: ${error}`);
@@ -835,7 +840,7 @@ class Promotional {
 
         const user = await this.prisma.user.findUnique({
           where: { id: playlist.promotionalUserId },
-          select: { email: true, displayName: true, hash: true, locale: true },
+          select: { email: true, displayName: true, hash: true, locale: true, refCode: true },
         });
 
         if (!user) return undefined;
@@ -870,6 +875,7 @@ class Promotional {
         const currentSlug = newSlug || playlist.slug || playlistId;
         const shareLink = `${process.env['FRONTEND_URI']}/en/product/${currentSlug}`;
         const setupLink = `${process.env['FRONTEND_URI']}/promotional/${paymentLink.payment.paymentId}/${user.hash}/${playlistId}`;
+        const referralLink = user.refCode ? `${process.env['FRONTEND_URI']}?ref=${user.refCode}` : undefined;
 
         return {
           email: user.email,
@@ -878,6 +884,7 @@ class Promotional {
           discountCode: discountCodeData.code,
           shareLink,
           setupLink,
+          referralLink,
           locale: user.locale || sourceLocale || 'en',
         };
       };
@@ -912,7 +919,8 @@ class Promotional {
             emailData.discountCode,
             emailData.shareLink,
             emailData.setupLink,
-            emailData.locale
+            emailData.locale,
+            emailData.referralLink
           );
         } else {
           this.logger.log(
@@ -969,7 +977,8 @@ class Promotional {
           emailData.discountCode,
           emailData.shareLink,
           emailData.setupLink,
-          emailData.locale
+          emailData.locale,
+          emailData.referralLink
         );
       } else {
         this.logger.log(
@@ -1086,7 +1095,7 @@ class Promotional {
       // Fetch user data
       const user = await this.prisma.user.findUnique({
         where: { id: playlist.promotionalUserId },
-        select: { email: true, displayName: true, hash: true, locale: true },
+        select: { email: true, displayName: true, hash: true, locale: true, refCode: true },
       });
 
       if (!user) {
@@ -1124,6 +1133,7 @@ class Promotional {
       const currentSlug = playlist.slug || playlistId;
       const shareLink = `${process.env['FRONTEND_URI']}/en/product/${currentSlug}`;
       const setupLink = `${process.env['FRONTEND_URI']}/promotional/${paymentLink.payment.paymentId}/${user.hash}/${playlistId}`;
+      const referralLink = user.refCode ? `${process.env['FRONTEND_URI']}?ref=${user.refCode}` : undefined;
 
       await this.mail.sendPromotionalApprovedEmail(
         user.email,
@@ -1132,7 +1142,8 @@ class Promotional {
         discountCodeData.code,
         shareLink,
         setupLink,
-        user.locale || sourceLocale || 'en'
+        user.locale || sourceLocale || 'en',
+        referralLink
       );
 
       this.logger.log(

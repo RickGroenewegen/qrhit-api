@@ -20,6 +20,7 @@ import Shipping from '../shipping';
 import { ChatService } from '../chat';
 import PushoverClient from '../pushover';
 import Promotional from '../promotional';
+import Referral from '../referral';
 import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
@@ -45,6 +46,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const shipping = Shipping.getInstance();
   const chatService = new ChatService();
   const promotional = Promotional.getInstance();
+  const referral = Referral.getInstance();
 
   // Chat init endpoint - creates or resumes chat session
   fastify.post('/chat/init', async (request: any, reply: any) => {
@@ -755,5 +757,26 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       return result;
     }
   );
+
+  // =============================================
+  // Referral routes
+  // =============================================
+
+  // Validate a referral code (public - no auth required)
+  fastify.get('/referral/validate/:refCode', async (request: any, reply) => {
+    const { refCode } = request.params;
+
+    if (!refCode || refCode.length < 6) {
+      return reply.status(400).send({ success: false, error: 'Invalid referral code' });
+    }
+
+    const result = await referral.validateRefCode(refCode);
+
+    if (!result.valid) {
+      return reply.status(404).send({ success: false, valid: false, error: 'Referral code not found' });
+    }
+
+    return { success: true, valid: true };
+  });
 
 }

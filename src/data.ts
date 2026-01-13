@@ -1258,6 +1258,7 @@ class Data {
                     payments.invoiceZipcode,
                     payments.invoiceCountrycode,
                     users.hash AS userHash,
+                    users.refCode AS userRefCode,
                     CASE
                       WHEN EXISTS (
                         SELECT 1
@@ -1286,10 +1287,14 @@ class Data {
         INNER JOIN  playlists ON payment_has_playlist.playlistId = playlists.id
         WHERE       payment_has_playlist.paymentId = ${paymentDetails[0].id}`;
 
+    const userRefCode = paymentDetails[0]?.userRefCode || null;
+    const referralLink = userRefCode ? `${process.env['FRONTEND_URI']}?ref=${userRefCode}` : null;
+
     return {
       payment: paymentDetails[0],
       playlists: connectedPlaylists,
       userHash: paymentDetails[0]?.userHash || null,
+      referralLink,
     };
   }
 

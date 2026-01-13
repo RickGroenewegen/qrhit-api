@@ -11,6 +11,7 @@ import Account from '../account';
 import Mail from '../mail';
 import { PrismaClient } from '@prisma/client';
 import PrismaInstance from '../prisma';
+import Referral from '../referral';
 
 const prisma = PrismaInstance.getInstance();
 
@@ -21,6 +22,7 @@ export default async function accountRoutes(
 ) {
   const account = Account.getInstance();
   const mail = Mail.getInstance();
+  const referral = Referral.getInstance();
 
   // User login/validation
   fastify.post('/validate', async (request: any, reply: any) => {
@@ -492,6 +494,38 @@ export default async function accountRoutes(
           details: 'Please try again or contact support if the issue persists',
           validationId,
           timestamp,
+        });
+      }
+    }
+  );
+
+  // Get user's referral code (protected)
+  // Generates a new ref code if user doesn't have one yet (lazy generation)
+  fastify.get(
+    '/account/referral-code',
+    getAuthHandler(['users']),
+    async (request: any, reply: any) => {
+      try {
+        const userId = request.user.id;
+
+        if (!userId) {
+          reply.status(401).send({
+            success: false,
+            error: 'User not authenticated',
+          });
+          return;
+        }
+
+        const result = await referral.getOrCreateRefCode(userId);
+
+        reply.send({
+          success: true,
+          data: result,
+        });
+      } catch (error) {
+        reply.status(500).send({
+          success: false,
+          error: 'Failed to get referral code',
         });
       }
     }

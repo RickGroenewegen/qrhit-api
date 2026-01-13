@@ -68,6 +68,21 @@ model DiscountCodedUses {
   @@map("discount_codes_uses")
 }
 
+model ReferralCredit {
+  id              Int      @id @default(autoincrement())
+  referrerUserId  Int      // User who referred (owns the refCode)
+  paymentId       Int      @unique // Payment that triggered the credit (one credit per payment)
+  amount          Float    // Credit amount (e.g., 2.50 per playlist)
+  playlistCount   Int      // Number of playlists in this payment
+  createdAt       DateTime @default(now())
+
+  referrer        User     @relation("ReferrerCredits", fields: [referrerUserId], references: [id], onDelete: Cascade)
+  payment         Payment  @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([referrerUserId])
+  @@map("referral_credits")
+}
+
 model OrderType {
   id                 Int                  @id @default(autoincrement())
   type               String               @default("cards")
@@ -176,10 +191,12 @@ model Payment {
   refundAmount             Float?
   refundedAt               DateTime?
   refundReason             String?
+  refCode                  String?           // Referral code used for this payment
 
   DiscountCodedUses DiscountCodedUses[]
   Review            Review[]
   CompanyList       CompanyList[]
+  ReferralCredit    ReferralCredit[]
 
   @@index([userId])
   @@index([paymentId])
@@ -211,6 +228,7 @@ model User {
   locale                    String?
   country                   String?
   hash                      String           @unique
+  refCode                   String?          @unique // Unique referral code for referral system
   password                  String?
   salt                      String?
   companyId                 Int?
@@ -231,8 +249,10 @@ model User {
   UserGroupUser             UserInGroup[]
   Company                   Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   PromotionalDiscountCode   DiscountCode[]   @relation("PromotionalDiscountCode")
+  ReferralCreditsGiven      ReferralCredit[] @relation("ReferrerCredits")
 
   @@index([hash])
+  @@index([refCode])
   @@map("users")
 }
 
