@@ -376,11 +376,19 @@ class Blog {
       blog.hasOwnProperty(`content_${locale}`) ||
       blog.hasOwnProperty('content_en')
     ) {
-      transformedBlog.content =
-        blog[`content_${locale}`] || blog.content_en || '';
+      let content = blog[`content_${locale}`] || blog.content_en || '';
+      // Replace [lang] placeholders with the actual locale
+      content = this.replaceLangPlaceholders(content, locale);
+      transformedBlog.content = content;
     }
 
     return transformedBlog;
+  }
+
+  // Helper: replace [lang] placeholders with the actual locale
+  private replaceLangPlaceholders(content: string, locale: string): string {
+    if (!content) return content;
+    return content.replace(/\[lang\]/g, locale);
   }
 }
 
