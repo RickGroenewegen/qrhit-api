@@ -634,14 +634,22 @@ class Mail {
     );
   }
 
-  async sendContactForm(data: any, ip: string): Promise<void> {
+  async sendContactForm(
+    data: any,
+    ip: string
+  ): Promise<{ success: boolean; error?: string }> {
     const { captchaToken, honeypot, ...otherData } = data;
 
     // Verify reCAPTCHA token
     const { isHuman, score } = await this.utils.verifyRecaptcha(captchaToken);
 
     if (!isHuman) {
-      throw new Error('reCAPTCHA verification failed');
+      this.logger.log(
+        color.yellow.bold(
+          `reCAPTCHA failed for contact form from ${white.bold(otherData.email || 'unknown')} (IP: ${white.bold(ip)})`
+        )
+      );
+      return { success: false, error: 'reCAPTCHA verification failed' };
     }
 
     // Check for spam using heuristics
@@ -658,7 +666,7 @@ class Mail {
           `Spam detected from ${white.bold(otherData.email)} (IP: ${white.bold(ip)}): ${white(spamCheck.reason || 'Unknown')}`
         )
       );
-      throw new Error('Message detected as spam');
+      return { success: false, error: 'Message detected as spam' };
     }
 
     // Log contact form submission with user's IP
@@ -673,20 +681,36 @@ class Mail {
       )
     );
 
-    // Store in database (locale will be detected from message)
-    const contactEmail = await prisma.contactEmail.create({
-      data: {
-        name: otherData.name,
-        email: otherData.email,
-        subject: otherData.subject || null,
-        message: otherData.message,
-        locale: null, // Will be detected by AI
-        ip: ip,
-      },
-    });
+    try {
+      // Store in database (locale will be detected from message)
+      const contactEmail = await prisma.contactEmail.create({
+        data: {
+          name: otherData.name,
+          email: otherData.email,
+          subject: otherData.subject || null,
+          message: otherData.message,
+          locale: null, // Will be detected by AI
+          ip: ip,
+        },
+      });
 
-    // Run translation, draft generation, email notification, and pushover in background (don't block response)
-    this.processContactFormBackground(contactEmail.id, otherData, data.name, ip);
+      // Run translation, draft generation, email notification, and pushover in background (don't block response)
+      this.processContactFormBackground(
+        contactEmail.id,
+        otherData,
+        data.name,
+        ip
+      );
+
+      return { success: true };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Failed to process contact form from ${white.bold(otherData.email)} (IP: ${white.bold(ip)}): ${error}`
+        )
+      );
+      return { success: false, error: 'Failed to process contact form' };
+    }
   }
 
   /**
