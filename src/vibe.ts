@@ -814,6 +814,7 @@ class Vibe {
               locale: true,
               agreeToUseName: true,
               createdAt: true,
+              birthDate: true,
               _count: {
                 select: { CompanyListSubmissionTrack: true },
               },
@@ -2431,7 +2432,11 @@ class Vibe {
       const trackScores: { [trackId: number]: number } = {};
       const trackVoteCounts: { [trackId: number]: number } = {}; // To store vote counts
       const trackVotersMap: {
-        [trackId: number]: { name: string; agreeToUseName: boolean }[];
+        [trackId: number]: {
+          name: string;
+          agreeToUseName: boolean;
+          isBirthdayTrack: boolean;
+        }[];
       } = {}; // To store voter objects
       const trackFirstVoteTime: { [trackId: number]: Date } = {}; // To store first vote time
 
@@ -2455,6 +2460,7 @@ class Vibe {
             trackVotersMap[submissionTrack.trackId].push({
               name: voterName,
               agreeToUseName,
+              isBirthdayTrack: !!submissionTrack.isBirthdayTrack,
             });
           }
 
