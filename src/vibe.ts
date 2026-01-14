@@ -1,7 +1,7 @@
 import { PrismaClient, CompanyList } from '@prisma/client'; // Added CompanyList
 import * as auth from './auth';
 import Logger from './logger';
-import { color } from 'console-log-colors';
+import { color, white } from 'console-log-colors';
 import fs from 'fs/promises'; // Added fs
 import path from 'path'; // Added path
 import Utils from './utils'; // Added Utils
@@ -142,6 +142,7 @@ class Vibe {
       password2,
       qrvote,
       marketingEmails,
+      honeypot,
     } = body || {};
 
     if (!fullname || !company || !email) {
@@ -158,6 +159,27 @@ class Vibe {
       return {
         success: false,
         error: 'reCAPTCHA verification failed',
+        statusCode: 400,
+      };
+    }
+
+    // Check for spam using heuristics
+    const spamCheck = this.utils.isSpam({
+      name: fullname,
+      email: email,
+      message: company, // Use company name as message for spam check
+      honeypot: honeypot,
+    });
+
+    if (spamCheck.isSpam) {
+      this.logger.log(
+        color.yellow.bold(
+          `Spam detected in vibe form from ${white.bold(email)} (IP: ${white.bold(clientIp)}): ${white(spamCheck.reason || 'Unknown')}`
+        )
+      );
+      return {
+        success: false,
+        error: 'Message detected as spam',
         statusCode: 400,
       };
     }

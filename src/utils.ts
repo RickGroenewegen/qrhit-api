@@ -480,6 +480,66 @@ class Utils {
   }
 
   /**
+   * Check if form submission appears to be spam based on heuristics
+   * @param data Object containing name, email, message, and optional honeypot field
+   * @returns Object with isSpam boolean and reason string
+   */
+  public isSpam(data: {
+    name?: string;
+    email?: string;
+    message?: string;
+    honeypot?: string;
+  }): { isSpam: boolean; reason: string | null } {
+    const { name, email, message, honeypot } = data;
+
+    // Check honeypot field - if filled, it's a bot
+    if (honeypot && honeypot.trim().length > 0) {
+      return { isSpam: true, reason: 'Honeypot field filled' };
+    }
+
+    // Check name for random string patterns
+    if (name && name.length > 0) {
+      // Low vowel ratio indicates random string (like "vSCqeLSfwSyYpRClYfd")
+      const vowelCount = (name.match(/[aeiouAEIOU]/g) || []).length;
+      const vowelRatio = vowelCount / name.length;
+      if (name.length > 8 && vowelRatio < 0.15) {
+        return { isSpam: true, reason: 'Name appears to be random string (low vowel ratio)' };
+      }
+
+      // Check for alternating case pattern (like "vSCqeLSf")
+      const caseChanges = (name.match(/[a-z][A-Z]|[A-Z][a-z]/g) || []).length;
+      if (name.length > 6 && caseChanges > name.length * 0.4) {
+        return { isSpam: true, reason: 'Name has suspicious case pattern' };
+      }
+
+      // Name is just numbers or special characters
+      if (/^[\d\W_]+$/.test(name)) {
+        return { isSpam: true, reason: 'Name contains only numbers/special characters' };
+      }
+    }
+
+    // Check message for gibberish (high unique character ratio)
+    if (message && message.length > 15) {
+      const cleanMessage = message.replace(/\s/g, '');
+      const uniqueChars = new Set(cleanMessage.toLowerCase()).size;
+      const entropyRatio = uniqueChars / cleanMessage.length;
+
+      // Very high entropy suggests random text
+      if (entropyRatio > 0.8 && cleanMessage.length > 20) {
+        return { isSpam: true, reason: 'Message appears to be random gibberish' };
+      }
+
+      // Check for repeated nonsense patterns
+      const repeatedPattern = /(.{3,})\1{2,}/i;
+      if (repeatedPattern.test(cleanMessage)) {
+        return { isSpam: true, reason: 'Message contains repeated patterns' };
+      }
+    }
+
+    return { isSpam: false, reason: null };
+  }
+
+  /**
    * Replace terms based on a mapping (case-insensitive)
    * @param text Text to process
    * @param replacements Optional custom replacement mapping (defaults to brand replacements)

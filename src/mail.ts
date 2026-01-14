@@ -635,13 +635,30 @@ class Mail {
   }
 
   async sendContactForm(data: any, ip: string): Promise<void> {
-    const { captchaToken, ...otherData } = data;
+    const { captchaToken, honeypot, ...otherData } = data;
 
     // Verify reCAPTCHA token
     const { isHuman, score } = await this.utils.verifyRecaptcha(captchaToken);
 
     if (!isHuman) {
       throw new Error('reCAPTCHA verification failed');
+    }
+
+    // Check for spam using heuristics
+    const spamCheck = this.utils.isSpam({
+      name: otherData.name,
+      email: otherData.email,
+      message: otherData.message,
+      honeypot: honeypot,
+    });
+
+    if (spamCheck.isSpam) {
+      this.logger.log(
+        color.yellow.bold(
+          `Spam detected from ${white.bold(otherData.email)} (IP: ${white.bold(ip)}): ${white(spamCheck.reason || 'Unknown')}`
+        )
+      );
+      throw new Error('Message detected as spam');
     }
 
     // Log contact form submission with user's IP
