@@ -1033,3 +1033,17 @@ model Top40Chart {
   @@index([externalId])
   @@map("top40_chart")
 }
+
+model BrokenLink {
+  id          Int      @id @default(autoincrement())
+  url         String   @db.Text
+  type        String   @db.VarChar(20) // 'invalid' or 'non-retrievable'
+  serviceType String?  @db.VarChar(50) // 'spotify', 'youtube_music', 'apple_music', 'deezer', 'tidal'
+  errorType   String   @db.VarChar(100) // 'no_playlist_id', 'unrecognized_service', 'not_found', 'api_error', etc.
+  userAgent   String?  @db.Text
+  createdAt   DateTime @default(now())
+
+  @@index([createdAt])
+  @@index([type])
+  @@map("broken_links")
+}
