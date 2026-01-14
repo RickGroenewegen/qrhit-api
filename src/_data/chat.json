@@ -43,6 +43,18 @@
             ]
         },
         {
+            "slug": "cards-dont-work",
+            "title": "My cards do not work / The app is playing the wrong songs, what can I do?",
+            "description": "If you encounter issues where the app plays the wrong songs or the QR codes do not work, please first ensure that you are using the latest version of the QRSong! app. And make sure you have Spotify Premium to play songs in hidden mode. If you don't have Spotify premium you can change to any other playback mode in the app settings. We suggest setting it so 'No Spotify mode' or setting the music service to Tidal or Deezer (You won't need a subscription for these services). If the problem persists, please contact our support team with details of the issue, including screenshots if possible. We will investigate and provide assistance to resolve the problem.",
+            "tags": [
+                "cards don't work",
+                "wrong songs",
+                "app issue",
+                "QR code problem",
+                "support"
+            ]
+        },
+        {
             "slug": "digital-bundling",
             "title": "Can I bundle multiple digital playlists into one order to save on costs?",
             "description": "Yes! You can bundle multiple digital playlists into a single order to take advantage of volume discounts. Simply add multiple playlists to your cart before checkout, and the system will automatically apply the appropriate discount based on the number of playlists ordered.",
