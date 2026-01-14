@@ -1419,6 +1419,19 @@ class Mollie {
         companyName: true,
         vatId: true,
         vibe: true,
+        discount: true,
+        volumeDiscount: true,
+        DiscountCodedUses: {
+          select: {
+            amount: true,
+            discountCode: {
+              select: {
+                code: true,
+                description: true,
+              },
+            },
+          },
+        },
         user: {
           select: {
             email: true,

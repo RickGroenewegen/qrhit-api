@@ -746,6 +746,9 @@ class Suggestion {
         )
       `;
 
+      // Clear playlist cache to ensure changes are reflected
+      await this.data.clearPlaylistCache(playlistId);
+
       // ALWAYS regenerate PDFs when andSend=true (even if only design changes, no text corrections)
       if (andSend) {
         this.logger.log(

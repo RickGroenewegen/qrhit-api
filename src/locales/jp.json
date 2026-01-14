@@ -529,5 +529,8 @@
   "promotional_approved.viewSetup": "プレイリストを管理",
   "promotional_approved.thanks": "ありがとう",
   "promotional_approved.team": "QRSong! チーム",
-  "promotional_approved.shareOnInstagram": "インスタグラム"
+  "promotional_approved.shareOnInstagram": "インスタグラム",
+  "invoice.discount": "割引",
+  "invoice.volumeDiscount": "まとめ割",
+  "invoice.discountCode": "割引コード"
 }

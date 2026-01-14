@@ -798,7 +798,7 @@ export default async function adminRoutes(
         return;
       }
 
-      const result = await promotional.clearPlaylistCache(playlistId);
+      const result = await data.clearPlaylistCache(playlistId);
 
       if (result.success) {
         reply.send({ success: true });

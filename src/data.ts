@@ -20,7 +20,6 @@ import PushoverClient from './pushover';
 import { ChatGPT } from './chatgpt';
 import YTMusic from 'ytmusic-api';
 import axios, { AxiosInstance } from 'axios';
-import Promotional from './promotional';
 import Spotify, {
   CACHE_KEY_PLAYLIST,
   CACHE_KEY_PLAYLIST_DB,
@@ -55,7 +54,6 @@ class Data {
   private analytics = AnalyticsClient.getInstance();
   private pushover = new PushoverClient();
   private appTheme = AppTheme.getInstance();
-  private promotional = Promotional.getInstance();
   private axiosInstance: AxiosInstance;
   private blockedPlaylists: Set<number> = new Set();
   private blockedPlaylistsInitialized: boolean = false;
@@ -2552,7 +2550,7 @@ class Data {
       });
 
       for (const playlist of featuredPlaylistsWithTrack) {
-        await this.promotional.clearPlaylistCache(playlist.playlistId);
+        await this.clearPlaylistCache(playlist.playlistId);
         this.logger.log(
           color.blue.bold(
             `Cleared featured playlist cache for ${playlist.playlistId} after track ${id} update`
@@ -3240,18 +3238,8 @@ class Data {
         data: updateData,
       });
 
-      // Clear all relevant caches
-      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
-      await this.cache.del(`${CACHE_KEY_PLAYLIST}${playlistId}`);
-      await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${playlistId}`);
-      if (oldPlaylist?.slug) {
-        await this.cache.del(`${CACHE_KEY_PLAYLIST}${oldPlaylist.slug}`);
-        await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${oldPlaylist.slug}`);
-      }
-      if (updateData.slug && updateData.slug !== oldPlaylist?.slug) {
-        await this.cache.del(`${CACHE_KEY_PLAYLIST}${updateData.slug}`);
-        await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${updateData.slug}`);
-      }
+      // Clear all relevant caches using central function
+      await this.clearPlaylistCache(playlistId, oldPlaylist?.slug || undefined);
 
       return { success: true };
     } catch (error: any) {
@@ -4115,6 +4103,48 @@ class Data {
         decadesProcessed: 0,
         error: error instanceof Error ? error.message : 'Unknown error',
       };
+    }
+  }
+
+  /**
+   * Clear all playlist-related caches for a given playlist
+   * Central function used by updatePromotionalPlaylist, processCorrections, etc.
+   * @param playlistId - The Spotify playlist ID
+   * @param oldSlug - Optional old slug to clear (when slug has changed)
+   */
+  public async clearPlaylistCache(playlistId: string, oldSlug?: string): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Get playlist to find the current slug
+      const playlist = await this.prisma.playlist.findUnique({
+        where: { playlistId },
+        select: { slug: true },
+      });
+
+      // Clear all relevant caches
+      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
+      await this.cache.del(`${CACHE_KEY_PLAYLIST}${playlistId}`);
+      await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${playlistId}`);
+      // Clear tracks and track count caches (use pattern since they include track count in key)
+      await this.cache.delPattern(`${CACHE_KEY_TRACKS}${playlistId}*`);
+      await this.cache.delPattern(`${CACHE_KEY_TRACK_COUNT}${playlistId}*`);
+      if (playlist?.slug) {
+        await this.cache.del(`${CACHE_KEY_PLAYLIST}${playlist.slug}`);
+        await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${playlist.slug}`);
+      }
+      // Clear old slug cache if provided and different from current
+      if (oldSlug && oldSlug !== playlist?.slug) {
+        await this.cache.del(`${CACHE_KEY_PLAYLIST}${oldSlug}`);
+        await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${oldSlug}`);
+      }
+
+      this.logger.log(
+        color.green.bold(`Cleared cache for playlist ${color.white.bold(playlistId)}`)
+      );
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`Error clearing playlist cache: ${error.message}`));
+      return { success: false, error: error.message };
     }
   }
 

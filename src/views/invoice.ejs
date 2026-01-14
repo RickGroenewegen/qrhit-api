@@ -4,7 +4,7 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
 
-		<title>QRSong! Invoice</title>
+		<title><%= process.env['PRODUCT_NAME'] %> - <%= translations.invoice %></title>
 
 		<!-- Favicon -->
 		<link rel="icon" href="./images/favicon.png" type="image/x-icon" />
@@ -253,6 +253,14 @@
 				<tr>
 					<td colspan="6" style="text-align:right;"><%= translations.vat %> <%= payment.taxRateShipping %>% <%= translations.over %> <%= euroFormatter.format(payment.shippingPriceWithoutTax) %> (<%= translations.shipping %>):</td>
 					<td style="text-align:right;"><%= euroFormatter.format(payment.shippingVATPrice) %></td>
+				</tr>
+				<% } %>
+
+				<% if (payment.DiscountCodedUses && payment.DiscountCodedUses.length > 0) { %>
+				<% const totalDiscount = payment.DiscountCodedUses.reduce((sum, use) => sum + use.amount, 0); %>
+				<tr>
+					<td colspan="6" style="text-align:right; color: #2e7d32;"><%= translations.discount %>:</td>
+					<td style="text-align:right; color: #2e7d32;">-<%= euroFormatter.format(totalDiscount) %></td>
 				</tr>
 				<% } %>
 

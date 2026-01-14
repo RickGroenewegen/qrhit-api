@@ -537,5 +537,8 @@
   "promotional_approved.viewSetup": "Gestiona tu playlist",
   "promotional_approved.thanks": "Gracias",
   "promotional_approved.team": "El equipo de QRSong!",
-  "promotional_approved.shareOnInstagram": "Instagram"
+  "promotional_approved.shareOnInstagram": "Instagram",
+  "invoice.discount": "Descuento",
+  "invoice.volumeDiscount": "Descuento por vol.",
+  "invoice.discountCode": "Código descuento"
 }

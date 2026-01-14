@@ -538,5 +538,8 @@
   "promotional_approved.viewSetup": "Beheer je afspeellijst",
   "promotional_approved.thanks": "Thanks",
   "promotional_approved.team": "Het QRSong! Team",
-  "promotional_approved.shareOnInstagram": "Instagram"
+  "promotional_approved.shareOnInstagram": "Instagram",
+  "invoice.discount": "Korting",
+  "invoice.volumeDiscount": "Staffelkorting",
+  "invoice.discountCode": "Kortingscode"
 }

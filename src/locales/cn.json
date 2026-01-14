@@ -528,5 +528,8 @@
   "promotional_approved.viewSetup": "管理你的歌单",
   "promotional_approved.thanks": "谢谢",
   "promotional_approved.team": "QRSong! 团队",
-  "promotional_approved.shareOnInstagram": "Instagram"
+  "promotional_approved.shareOnInstagram": "Instagram",
+  "invoice.discount": "折扣",
+  "invoice.volumeDiscount": "批量折扣",
+  "invoice.discountCode": "优惠码"
 }

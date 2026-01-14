@@ -2,11 +2,9 @@ import PrismaInstance from './prisma';
 import Logger from './logger';
 import Mail from './mail';
 import { ChatGPT } from './chatgpt';
-import Cache from './cache';
 import Translation from './translation';
 import { color } from 'console-log-colors';
-import Data, { CACHE_KEY_FEATURED_PLAYLISTS } from './data';
-import { CACHE_KEY_PLAYLIST, CACHE_KEY_PLAYLIST_DB, CACHE_KEY_TRACKS, CACHE_KEY_TRACK_COUNT } from './spotify';
+import Data from './data';
 import sharp from 'sharp';
 import * as fs from 'fs/promises';
 import * as path from 'path';
@@ -20,7 +18,6 @@ class Promotional {
   private logger = new Logger();
   private mail = Mail.getInstance();
   private chatgpt = new ChatGPT();
-  private cache = Cache.getInstance();
   private translation = new Translation();
   private utils = new Utils();
 
@@ -565,47 +562,6 @@ class Promotional {
   }
 
   /**
-   * Clear all playlist-related caches for a given playlist
-   * @param playlistId - The Spotify playlist ID
-   * @param oldSlug - Optional old slug to clear (when slug has changed)
-   */
-  public async clearPlaylistCache(playlistId: string, oldSlug?: string): Promise<{ success: boolean; error?: string }> {
-    try {
-      // Get playlist to find the current slug
-      const playlist = await this.prisma.playlist.findUnique({
-        where: { playlistId },
-        select: { slug: true },
-      });
-
-      // Clear all relevant caches
-      await this.cache.delPattern(`${CACHE_KEY_FEATURED_PLAYLISTS}*`);
-      await this.cache.del(`${CACHE_KEY_PLAYLIST}${playlistId}`);
-      await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${playlistId}`);
-      // Clear tracks and track count caches (use pattern since they include track count in key)
-      await this.cache.delPattern(`${CACHE_KEY_TRACKS}${playlistId}*`);
-      await this.cache.delPattern(`${CACHE_KEY_TRACK_COUNT}${playlistId}*`);
-      if (playlist?.slug) {
-        await this.cache.del(`${CACHE_KEY_PLAYLIST}${playlist.slug}`);
-        await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${playlist.slug}`);
-      }
-      // Clear old slug cache if provided and different from current
-      if (oldSlug && oldSlug !== playlist?.slug) {
-        await this.cache.del(`${CACHE_KEY_PLAYLIST}${oldSlug}`);
-        await this.cache.del(`${CACHE_KEY_PLAYLIST_DB}${oldSlug}`);
-      }
-
-      this.logger.log(
-        color.green.bold(`Cleared cache for playlist ${color.white.bold(playlistId)}`)
-      );
-
-      return { success: true };
-    } catch (error: any) {
-      this.logger.log(color.red.bold(`Error clearing playlist cache: ${error.message}`));
-      return { success: false, error: error.message };
-    }
-  }
-
-  /**
    * Translate a description to all locales and return the translations as update data
    * This is the core translation logic shared by acceptPromotionalPlaylist and translateDescription
    */
@@ -897,7 +853,7 @@ class Promotional {
         });
 
         // Clear all relevant caches (pass old slug in case it changed)
-        await this.clearPlaylistCache(playlistId, oldSlug || undefined);
+        await Data.getInstance().clearPlaylistCache(playlistId, oldSlug || undefined);
 
         // Calculate decade percentages for the newly accepted playlist
         await Data.getInstance().calculateSinglePlaylistDecadePercentages(playlist.id);
@@ -947,7 +903,7 @@ class Promotional {
       });
 
       // Clear all relevant caches (pass old slug in case it changed)
-      await this.clearPlaylistCache(playlistId, oldSlug || undefined);
+      await Data.getInstance().clearPlaylistCache(playlistId, oldSlug || undefined);
 
       // Calculate decade percentages for the newly accepted playlist
       await Data.getInstance().calculateSinglePlaylistDecadePercentages(playlist.id);
@@ -1033,7 +989,7 @@ class Promotional {
       });
 
       // Clear cache
-      await this.clearPlaylistCache(playlistId);
+      await Data.getInstance().clearPlaylistCache(playlistId);
 
       return { success: true };
     } catch (error: any) {
