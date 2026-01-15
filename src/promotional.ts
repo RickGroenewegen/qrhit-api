@@ -43,13 +43,15 @@ class Promotional {
     playlistDbId?: number;
     userId?: number;
     userEmail?: string;
+    userLocale?: string;
   }> {
     const result = await this.prisma.$queryRaw<any[]>`
       SELECT
         p.id as paymentDbId,
         pl.id as playlistDbId,
         u.id as userId,
-        u.email as userEmail
+        u.email as userEmail,
+        u.locale as userLocale
       FROM payments p
       JOIN users u ON p.userId = u.id
       JOIN payment_has_playlist php ON php.paymentId = p.id
@@ -71,6 +73,7 @@ class Promotional {
       playlistDbId: result[0].playlistDbId,
       userId: result[0].userId,
       userEmail: result[0].userEmail,
+      userLocale: result[0].userLocale || 'en',
     };
   }
 
@@ -155,8 +158,8 @@ class Promotional {
         discountBalance = discountCode.amount - (totalUsed._sum.amount || 0);
       }
 
-      // Generate share link using existing product page
-      const shareLink = `${process.env['FRONTEND_URI']}/en/product/${playlist.slug || playlistId}`;
+      // Generate share link using existing product page (no language prefix - frontend handles redirection)
+      const shareLink = `${process.env['FRONTEND_URI']}/product/${playlist.slug || playlistId}`;
 
       // Check if this is a first-time setup (user hasn't submitted the form yet)
       const hasSubmitted = !!playlist.promotionalTitle;
@@ -824,7 +827,7 @@ class Promotional {
 
         // Use the new slug if provided (admin may have changed it), otherwise fallback to original
         const currentSlug = newSlug || playlist.slug || playlistId;
-        const shareLink = `${process.env['FRONTEND_URI']}/en/product/${currentSlug}`;
+        const shareLink = `${process.env['FRONTEND_URI']}/product/${currentSlug}`;
         const setupLink = `${process.env['FRONTEND_URI']}/promotional/${paymentLink.payment.paymentId}/${user.hash}/${playlistId}`;
 
         return {
@@ -1078,7 +1081,7 @@ class Promotional {
       );
 
       const currentSlug = playlist.slug || playlistId;
-      const shareLink = `${process.env['FRONTEND_URI']}/en/product/${currentSlug}`;
+      const shareLink = `${process.env['FRONTEND_URI']}/product/${currentSlug}`;
       const setupLink = `${process.env['FRONTEND_URI']}/promotional/${paymentLink.payment.paymentId}/${user.hash}/${playlistId}`;
 
       await this.mail.sendPromotionalApprovedEmail(
