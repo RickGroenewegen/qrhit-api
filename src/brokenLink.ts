@@ -113,16 +113,46 @@ class BrokenLink {
   }
 
   /**
-   * Get count of broken links
+   * Get count of broken links (excludes ignored links)
    * @returns Promise with success status and count
    */
   public async getBrokenLinksCount(): Promise<{ success: boolean; count?: number; error?: string }> {
     try {
-      const count = await this.prisma.brokenLink.count();
+      const count = await this.prisma.brokenLink.count({
+        where: { ignored: false },
+      });
       return { success: true, count };
     } catch (error) {
       this.logger.log(`Error counting broken links: ${error}`);
       return { success: false, error: 'Failed to count broken links' };
+    }
+  }
+
+  /**
+   * Toggle ignored status of a broken link
+   * @param id The broken link ID
+   * @returns Promise with success status and new ignored state
+   */
+  public async toggleIgnored(id: number): Promise<{ success: boolean; ignored?: boolean; error?: string }> {
+    try {
+      const link = await this.prisma.brokenLink.findUnique({
+        where: { id },
+        select: { ignored: true },
+      });
+
+      if (!link) {
+        return { success: false, error: 'Broken link not found' };
+      }
+
+      const updated = await this.prisma.brokenLink.update({
+        where: { id },
+        data: { ignored: !link.ignored },
+      });
+
+      return { success: true, ignored: updated.ignored };
+    } catch (error) {
+      this.logger.log(`Error toggling ignored status: ${error}`);
+      return { success: false, error: 'Failed to toggle ignored status' };
     }
   }
 

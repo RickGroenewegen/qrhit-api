@@ -4010,6 +4010,25 @@ export default async function adminRoutes(
     }
   );
 
+  // Toggle ignored status of a broken link (admin only)
+  fastify.patch(
+    '/admin/broken-links/:id/ignore',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id);
+      if (isNaN(id)) {
+        return reply.status(400).send({ success: false, error: 'Invalid id' });
+      }
+
+      const result = await brokenLink.toggleIgnored(id);
+      if (result.success) {
+        return reply.send({ success: true, ignored: result.ignored });
+      } else {
+        return reply.status(500).send({ success: false, error: result.error });
+      }
+    }
+  );
+
   // Delete all broken links (admin only)
   fastify.delete(
     '/admin/broken-links',

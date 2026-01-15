@@ -243,8 +243,22 @@ class Top40 {
    * Get the #1 track for a given date
    * Uses ISO week number to find the matching chart week
    * Falls back to the most recent previous #1 if the exact week isn't found
+   * If the date is before the Top 40 started (January 2, 1965), returns the very first #1
    */
   async getNumberOneOnDate(date: Date): Promise<NumberOneResult | null> {
+    // The Dutch Top 40 started on January 2, 1965
+    const top40StartDate = new Date('1965-01-02');
+
+    // If the date is before the Top 40 started, use the first #1 from 1965
+    if (date < top40StartDate) {
+      this.logger.log(
+        color.blue.bold(
+          `[${white.bold('Top40')}] Date ${white.bold(date.toISOString().split('T')[0])} is before Top 40 started (1965-01-02), returning first #1 ever`
+        )
+      );
+      return this.getFirstNumberOneEver();
+    }
+
     const year = getISOWeekYear(date);
     const weekNumber = getISOWeek(date);
 
@@ -325,6 +339,52 @@ class Top40 {
       const errorMsg = error instanceof Error ? error.message : 'Unknown error';
       this.logger.log(
         color.red.bold(`[${white.bold('Top40')}] Error looking up #1: ${white.bold(errorMsg)}`)
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Get the very first #1 ever in the Top 40 (week 1 of 1965)
+   * Used for people born before the Top 40 started
+   */
+  private async getFirstNumberOneEver(): Promise<NumberOneResult | null> {
+    try {
+      const entry = await this.prisma.top40Chart.findFirst({
+        where: {
+          position: 1,
+        },
+        orderBy: [
+          { year: 'asc' },
+          { weekNumber: 'asc' },
+        ],
+        select: {
+          artist: true,
+          title: true,
+          year: true,
+          weekNumber: true,
+        },
+      });
+
+      if (entry) {
+        this.logger.log(
+          color.green.bold(
+            `[${white.bold('Top40')}] Found first #1 ever (week ${entry.weekNumber} of ${entry.year}): ${white.bold(entry.artist)} - ${white.bold(entry.title)}`
+          )
+        );
+        return entry;
+      }
+
+      this.logger.log(
+        color.yellow.bold(
+          `[${white.bold('Top40')}] No #1 entries found in database`
+        )
+      );
+      return null;
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.log(
+        color.red.bold(`[${white.bold('Top40')}] Error looking up first #1: ${white.bold(errorMsg)}`)
       );
       return null;
     }

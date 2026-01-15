@@ -745,6 +745,7 @@ class Vibe {
           languages: true,
           forceTemplate: true,
           addBirthdayNumber1: true,
+          hideBirthdayNumber1: true,
         };
         // Add all description fields for each locale
         for (const locale of availableLocales) {
@@ -1581,6 +1582,11 @@ class Vibe {
       // Handle addBirthdayNumber1 field
       if (fields.addBirthdayNumber1 !== undefined) {
         updateData.addBirthdayNumber1 = this.utils.parseBoolean(fields.addBirthdayNumber1);
+      }
+
+      // Handle hideBirthdayNumber1 field
+      if (fields.hideBirthdayNumber1 !== undefined) {
+        updateData.hideBirthdayNumber1 = this.utils.parseBoolean(fields.hideBirthdayNumber1);
       }
 
       // Explicitly handle empty string values for background fields to set them to null

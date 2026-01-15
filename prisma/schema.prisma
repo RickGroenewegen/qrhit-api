@@ -778,6 +778,7 @@ model CompanyList {
   showNames               Boolean   @default(false)
   qrvote                  Boolean   @default(false)
   addBirthdayNumber1      Boolean   @default(false)
+  hideBirthdayNumber1     Boolean   @default(false)
   forceTemplate           String?
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
@@ -1042,8 +1043,10 @@ model BrokenLink {
   errorType   String   @db.VarChar(100) // 'no_playlist_id', 'unrecognized_service', 'not_found', 'api_error', etc.
   userAgent   String?  @db.Text
   createdAt   DateTime @default(now())
+  ignored     Boolean  @default(false)
 
   @@index([createdAt])
+  @@index([ignored])
   @@index([type])
   @@map("broken_links")
 }
