@@ -3094,7 +3094,7 @@ class Vibe {
     includeStansvorm: boolean;
     includeCustomApp?: boolean;
     profitMargin: number;
-    printingType?: string; // 'eigen' or 'voorbedrukt'
+    printingType?: string; // 'eigen', 'voorbedrukt', or 'klein'
   }): Promise<any> {
     try {
       const {
@@ -3111,23 +3111,39 @@ class Vibe {
         return { success: false, error: 'Invalid quantity' };
       }
 
-      // Calculate prices based on Excel formulas from tromp.xlsx
+      // Calculate prices based on Excel formulas from doosje QR-song.xlsx
       let boxPrice: number;
       let cardPrice: number;
+      let boxTypeName: string;
+      let cardsPerSet: number;
 
       if (printingType === 'voorbedrukt') {
-        // Voorbedrukt (pre-printed) - Formula from D9
+        // Voorbedrukt doosje met venster (Column D) - Pre-printed box with window
         // Boxes: (1165 / 1000) * quantity = 1.165 * quantity
         boxPrice = 1.165 * quantity;
+        // Cards: (quantity * 5.9) + 250
+        cardPrice = (quantity * 5.9) + 250;
+        boxTypeName = 'Voorbedrukt met venster';
+        cardsPerSet = 200;
+      } else if (printingType === 'klein') {
+        // Klein voorbedrukt doosje met venster (Column F) - Small pre-printed box with 100 cards
+        // Boxes: same as voorbedrukt = 1.165 * quantity
+        boxPrice = 1.165 * quantity;
+        // Cards: ((standardCardPrice - 100) * 0.5) + 100
+        // Where standardCardPrice = (quantity * 5.9) + 250
+        const standardCardPrice = (quantity * 5.9) + 250;
+        cardPrice = ((standardCardPrice - 100) * 0.5) + 100;
+        boxTypeName = 'Klein voorbedrukt met venster';
+        cardsPerSet = 100;
       } else {
-        // Eigen bedrukking (own printing) - Formula from B9
+        // Volledig eigen bedrukking (Column B) - Own printing (default)
         // Boxes: (quantity * 0.335) + 830
         boxPrice = (quantity * 0.335) + 830;
+        // Cards: (quantity * 5.9) + 250
+        cardPrice = (quantity * 5.9) + 250;
+        boxTypeName = 'Volledig eigen bedrukking';
+        cardsPerSet = 200;
       }
-
-      // Cards pricing is the same for both types - Formula from B10/D10
-      // Cards: (quantity * 5.9) + 250
-      cardPrice = (quantity * 5.9) + 250;
 
       // Calculate per-unit prices
       const boxPricePerUnit = boxPrice / quantity;
@@ -3175,10 +3191,12 @@ class Vibe {
         calculation: {
           quantity,
           printingType: printingType,
-          boxTierName: `${printingType === 'voorbedrukt' ? 'Voorbedrukt' : 'Eigen bedrukking'} @ €${boxPricePerUnit.toFixed(2)}/unit`,
+          boxTypeName: boxTypeName,
+          cardsPerSet: cardsPerSet,
+          boxTierName: `${boxTypeName} @ €${boxPricePerUnit.toFixed(2)}/unit`,
           boxPricePerUnit: boxPricePerUnit,
           boxPrice: boxPrice,
-          cardTierName: `Cards @ €${cardPricePerUnit.toFixed(2)}/set`,
+          cardTierName: `${cardsPerSet} kaartjes @ €${cardPricePerUnit.toFixed(2)}/set`,
           cardPricePerUnit: cardPricePerUnit,
           cardPrice: cardPrice,
           extras: extras,
