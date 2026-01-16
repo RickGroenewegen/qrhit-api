@@ -443,6 +443,20 @@ class SpotifyApi {
   }
 
   /**
+   * Checks if a playlist ID belongs to a Spotify-owned playlist.
+   * These playlists often return 404 for users who don't own them.
+   * @param playlistId The Spotify playlist ID to check.
+   * @returns Object with isOwned flag and playlist type if owned.
+   */
+  public isSpotifyOwnedPlaylist(playlistId: string): { isOwned: boolean; type?: string } {
+    if (playlistId.startsWith('37i9dQZF1DX')) return { isOwned: true, type: 'editorial' };
+    if (playlistId.startsWith('37i9dQZF1DZ')) return { isOwned: true, type: 'this_is' };
+    if (playlistId.startsWith('37i9dQZF1E')) return { isOwned: true, type: 'daily_mix' };
+    if (playlistId.startsWith('37i9dQZEVX')) return { isOwned: true, type: 'personalized' };
+    return { isOwned: false };
+  }
+
+  /**
    * Fetches playlist details from the Spotify API.
    * @param playlistId The Spotify ID of the playlist.
    * @returns {Promise<ApiResult>} Contains playlist data or error info.
@@ -466,13 +480,24 @@ class SpotifyApi {
       const response = await axios.get(
         `https://api.spotify.com/v1/playlists/${playlistId}`,
         {
-          params: { fields: fields }, // Add fields parameter
+          params: { fields },
           headers: { Authorization: `Bearer ${accessToken}` },
         }
       );
-      
+
       return { success: true, data: response.data };
     } catch (error) {
+      // Check if this is a 404 for a Spotify-owned playlist
+      if (axios.isAxiosError(error) && error.response?.status === 404) {
+        const ownershipCheck = this.isSpotifyOwnedPlaylist(playlistId);
+        if (ownershipCheck.isOwned) {
+          return {
+            success: false,
+            error: 'spotifyOwnedPlaylist',
+            playlistType: ownershipCheck.type,
+          };
+        }
+      }
       return this.handleApiError(error, `fetching playlist ${playlistId}`);
     }
   }
