@@ -418,8 +418,12 @@ class Spotify {
                 needsReAuth: result.needsReAuth,
               });
 
-              // Cache errors for a shorter time (1 minute) since they might be transient
-              await this.cache.set(cacheKey, failureResult, 60);
+              // Don't cache 404 errors for non-featured playlists - user might make it public
+              const isNotFoundError = errorToCache === 'playlistNotFound';
+              if (featured || !isNotFoundError) {
+                // Cache errors for a shorter time (1 minute) since they might be transient
+                await this.cache.set(cacheKey, failureResult, 60);
+              }
               await this.cache.releaseLock(lockKey);
 
               // Check if the error indicates a need for re-authentication
