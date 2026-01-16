@@ -14,7 +14,6 @@ class Push {
   private static instance: Push;
   private prisma: PrismaClient;
   private logger = new Logger();
-  private static tokenLocks: Map<string, Promise<void> | null> = new Map();
 
   private constructor() {
     this.prisma = PrismaInstance.getInstance();
@@ -28,68 +27,36 @@ class Push {
   }
 
   public async addToken(token: string, type: string): Promise<void> {
-    const lockKey = `push:addToken:${token}`;
-
-    // Simple in-memory lock using a Promise chain per token
-    let release: (() => void) | undefined;
-    let lockPromise = new Promise<void>((resolve) => {
-      release = resolve;
-    });
-
-    // Wait for any existing lock to finish
-    while (Push.tokenLocks.get(lockKey)) {
-      // eslint-disable-next-line no-await-in-loop
-      await Push.tokenLocks.get(lockKey);
-    }
-    // Set our lock
-    Push.tokenLocks.set(lockKey, lockPromise);
-
     try {
-      // Use a transaction to guarantee atomicity at the DB level
-      await this.prisma.$transaction(async (tx) => {
-        const existingToken = await tx.pushToken.findUnique({
-          where: { token },
-        });
-
-        if (existingToken) {
-          await tx.pushToken.update({
-            where: { token },
-            data: { type, valid: true },
-          });
-        } else {
-          await tx.pushToken.create({
-            data: { token, type, valid: true },
-          });
-          this.logger.log(
-            color.green.bold(
-              `Token (${color.white.bold(
-                type
-              )}) created successfully: ${color.white.bold(token)}`
-            )
-          );
-        }
+      const result = await this.prisma.pushToken.upsert({
+        where: { token },
+        update: { type, valid: true },
+        create: { token, type, valid: true },
       });
-    } catch (error: any) {
-      // If unique constraint error, log and ignore (another process/thread created it)
-      if (error.code === 'P2002' && error.meta?.target?.includes('token')) {
-        // Do not log normal duplicate
+
+      // Check if this was a create or update by comparing createdAt and updatedAt
+      const isNew = result.createdAt.getTime() === result.updatedAt.getTime();
+
+      if (isNew) {
+        this.logger.log(
+          color.green.bold(
+            `Token (${color.white.bold(type)}) created: ${color.white.bold(token)}`
+          )
+        );
       } else {
         this.logger.log(
-          color.red.bold(
-            `Error adding or updating push token: ${color.white.bold(token)}`
+          color.blue.bold(
+            `Token (${color.white.bold(type)}) already exists: ${color.white.bold(token)}`
           )
         );
-        this.logger.log(
-          color.red.bold(
-            `Error details: ${color.white.bold((error as Error).message)}`
-          )
-        );
-        throw error;
       }
-    } finally {
-      // Release the lock
-      Push.tokenLocks.delete(lockKey);
-      if (typeof release === 'function') release();
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error adding push token: ${color.white.bold(token)} - ${color.white.bold(error.message)}`
+        )
+      );
+      throw error;
     }
   }
 

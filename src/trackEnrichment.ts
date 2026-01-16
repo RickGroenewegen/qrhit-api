@@ -153,7 +153,6 @@ class TrackEnrichment {
    * Refresh track enrichment maps
    */
   public async refreshTrackEnrichmentMaps(): Promise<void> {
-    this.logger.log(color.blue.bold('[TrackEnrichment] Refreshing maps...'));
     await this.loadTrackEnrichmentMaps();
   }
 
