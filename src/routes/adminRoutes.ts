@@ -4042,4 +4042,131 @@ export default async function adminRoutes(
       }
     }
   );
+
+  // ==================== UNKNOWN LINKS ====================
+
+  // Get unknown links (admin only)
+  fastify.get(
+    '/admin/unknown-links',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { limit = 50, offset = 0 } = request.query;
+
+        const [data, total] = await Promise.all([
+          prisma.unknownLink.findMany({
+            orderBy: { createdAt: 'desc' },
+            take: parseInt(limit),
+            skip: parseInt(offset),
+          }),
+          prisma.unknownLink.count(),
+        ]);
+
+        return reply.send({ success: true, data, total });
+      } catch (error: any) {
+        console.error('Error fetching unknown links:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to fetch unknown links',
+        });
+      }
+    }
+  );
+
+  // Get unknown links count (admin only) - excludes ignored
+  fastify.get(
+    '/admin/unknown-links/count',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const count = await prisma.unknownLink.count({
+          where: { ignored: false },
+        });
+        return reply.send({ success: true, count });
+      } catch (error: any) {
+        console.error('Error counting unknown links:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to count unknown links',
+        });
+      }
+    }
+  );
+
+  // Delete an unknown link (admin only)
+  fastify.delete(
+    '/admin/unknown-links/:id',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id);
+      if (isNaN(id)) {
+        return reply.status(400).send({ success: false, error: 'Invalid id' });
+      }
+
+      try {
+        await prisma.unknownLink.delete({ where: { id } });
+        return reply.send({ success: true });
+      } catch (error: any) {
+        console.error('Error deleting unknown link:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to delete unknown link',
+        });
+      }
+    }
+  );
+
+  // Toggle ignored status of an unknown link (admin only)
+  fastify.patch(
+    '/admin/unknown-links/:id/ignore',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id);
+      if (isNaN(id)) {
+        return reply.status(400).send({ success: false, error: 'Invalid id' });
+      }
+
+      try {
+        const link = await prisma.unknownLink.findUnique({
+          where: { id },
+          select: { ignored: true },
+        });
+
+        if (!link) {
+          return reply.status(404).send({ success: false, error: 'Unknown link not found' });
+        }
+
+        const updated = await prisma.unknownLink.update({
+          where: { id },
+          data: { ignored: !link.ignored },
+        });
+
+        return reply.send({ success: true, ignored: updated.ignored });
+      } catch (error: any) {
+        console.error('Error toggling ignored status:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to toggle ignored status',
+        });
+      }
+    }
+  );
+
+  // Delete all unknown links (admin only)
+  fastify.delete(
+    '/admin/unknown-links',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const result = await prisma.unknownLink.deleteMany();
+        return reply.send({ success: true, deleted: result.count });
+      } catch (error: any) {
+        console.error('Error deleting all unknown links:', error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to delete unknown links',
+        });
+      }
+    }
+  );
 }

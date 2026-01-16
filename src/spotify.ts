@@ -83,7 +83,7 @@ class Spotify {
   // MusicMatch mapping: key = 'playlistId_trackId', value = spotify track id
   private musicMatchMap: { [key: string]: string } = {};
   // Domain blacklist: URLs from these domains will not be resolved
-  private domainBlacklist: string[] = ['q.me-qr.com', 'qrto.org'];
+  private domainBlacklist: string[] = ['q.me-qr.com', 'qrto.org', 'qr.codes', 'qr.link'];
 
   // Track enrichment service (singleton - manages its own maps and refresh)
   private trackEnrichment: TrackEnrichment;

@@ -1050,3 +1050,17 @@ model BrokenLink {
   @@index([type])
   @@map("broken_links")
 }
+
+model UnknownLink {
+  id        Int      @id @default(autoincrement())
+  url       String   @db.Text
+  error     String?  @db.VarChar(255)
+  userAgent String?  @db.Text
+  clientIp  String?  @db.VarChar(45)
+  createdAt DateTime @default(now())
+  ignored   Boolean  @default(false)
+
+  @@index([createdAt])
+  @@index([ignored])
+  @@map("unknown_links")
+}

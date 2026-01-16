@@ -9,6 +9,7 @@ import Utils from '../utils';
 import Translation from '../translation';
 import MusicServiceRegistry from '../services/MusicServiceRegistry';
 import TrackEnrichment from '../trackEnrichment';
+import PrismaInstance from '../prisma';
 
 // Import service-specific routes
 import spotifyRoutes from './spotifyRoutes';
@@ -26,6 +27,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   const translation = new Translation();
   const musicRegistry = MusicServiceRegistry.getInstance();
   const trackEnrichment = TrackEnrichment.getInstance();
+  const prisma = PrismaInstance.getInstance();
 
   // Register service-specific routes
   await fastify.register(spotifyRoutes);
@@ -220,6 +222,21 @@ export default async function musicRoutes(fastify: FastifyInstance) {
           r: true,
         });
       } else {
+        // Log failed scan to database (skip if cached - already logged)
+        if (!result.cached) {
+          const userAgent = request.headers['user-agent'] || null;
+          const clientIp = request.ip || request.headers['x-forwarded-for'] || null;
+          prisma.unknownLink.create({
+            data: {
+              url,
+              error: result.error || 'No Spotify URI found',
+              userAgent,
+              clientIp,
+            },
+          }).catch((err: any) => {
+            logger.log(`Failed to log unknown link: ${err.message}`);
+          });
+        }
         reply.status(404).send({
           success: false,
           error: result.error || 'No Spotify URI found',
@@ -229,6 +246,19 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       logger.log(
         `Error scanning unknown link: url="${url}", error=${e.message || e}`
       );
+      // Log exception to database as well
+      const userAgent = request.headers['user-agent'] || null;
+      const clientIp = request.ip || request.headers['x-forwarded-for'] || null;
+      prisma.unknownLink.create({
+        data: {
+          url,
+          error: e.message || 'Internal error',
+          userAgent,
+          clientIp,
+        },
+      }).catch((err: any) => {
+        logger.log(`Failed to log unknown link: ${err.message}`);
+      });
       reply
         .status(500)
         .send({ success: false, error: e.message || 'Internal error' });
