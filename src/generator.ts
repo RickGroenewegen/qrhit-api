@@ -268,6 +268,11 @@ class Generator {
 
     const paymentStatus = await mollie.checkPaymentStatus(paymentId);
 
+    if (!paymentStatus.success) {
+      this.logger.log(color.red.bold(`Payment not successful: ${paymentStatus.data?.status || 'unknown'}`));
+      return;
+    }
+
     const userId = paymentStatus.data.payment.user.userId;
     let payment = await mollie.getPayment(paymentId);
 
@@ -278,11 +283,6 @@ class Generator {
       this.logger.log(
         color.red.bold('User is not the same as the one who made the payment')
       );
-      return;
-    }
-
-    if (!paymentStatus.success) {
-      this.logger.log(color.red.bold('Payment failed!'));
       return;
     }
 
