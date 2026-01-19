@@ -675,6 +675,7 @@ class Mollie {
               select: {
                 name: true,
                 playlistId: true,
+                serviceType: true,
                 featured: true,
                 template: true,
                 _count: {
