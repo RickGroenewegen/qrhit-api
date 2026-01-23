@@ -991,6 +991,7 @@ class Vibe {
         'contactphone',
         'calculation',
         'calculationTromp',
+        'calculationSchneider',
       ];
 
       // Filter out invalid fields
@@ -3213,6 +3214,136 @@ class Vibe {
         color.red.bold(`Error calculating Tromp pricing: ${error}`)
       );
       return { success: false, error: 'Error calculating Tromp pricing' };
+    }
+  }
+
+  /**
+   * Calculate Schneider pricing for luxury card boxes
+   * Pricing structure:
+   * - 96 cards (2x48 in banderol): Fixed €790 + €2.16 per piece, 2-vaks box
+   * - 144 cards (2x72 in banderol): Fixed €1000 + €2.65 per piece, 2-vaks box
+   * - 192 cards (4x48 in banderol): Fixed €1350 + €3.73 per piece, 4-vaks box
+   * - Stansmes 2-vaks (144 cards): €325 one-time
+   * - Stansmes 4-vaks (192 cards): €375 one-time
+   * @param params Calculation parameters
+   * @returns Object with calculation results
+   */
+  public async calculateSchneiderPricing(params: {
+    quantity: number;
+    cardCount: number; // 96, 144, or 192
+    includeStansmes: boolean;
+    includeCustomApp?: boolean;
+    profitMargin: number;
+  }): Promise<any> {
+    try {
+      const {
+        quantity,
+        cardCount,
+        includeStansmes,
+        includeCustomApp = false,
+        profitMargin,
+      } = params;
+
+      // Validate input
+      if (!quantity || quantity < 1) {
+        return { success: false, error: 'Invalid quantity' };
+      }
+
+      if (![96, 144, 192].includes(cardCount)) {
+        return { success: false, error: 'Invalid card count. Must be 96, 144, or 192' };
+      }
+
+      // Pricing structure based on Schneider quote
+      let fixedCost: number;
+      let pricePerPiece: number;
+      let boxType: string;
+      let stansmesPrice: number;
+
+      switch (cardCount) {
+        case 96:
+          // 96 kaarten (2X 48 in banderol), 2-vaks dekseldoosje
+          fixedCost = 790.0;
+          pricePerPiece = 2.16;
+          boxType = '2-vaks luxe dekseldoosje';
+          stansmesPrice = 0; // No stansmes for 96 cards (uses standard)
+          break;
+        case 144:
+          // 144 kaarten (2X 72 in banderol), 2-vaks dekseldoosje
+          fixedCost = 1000.0;
+          pricePerPiece = 2.65;
+          boxType = '2-vaks luxe dekseldoosje';
+          stansmesPrice = 325.0;
+          break;
+        case 192:
+          // 192 kaarten (4X 48 in banderol), 4-vaks dekseldoosje
+          fixedCost = 1350.0;
+          pricePerPiece = 3.73;
+          boxType = '4-vaks luxe dekseldoosje';
+          stansmesPrice = 375.0;
+          break;
+        default:
+          return { success: false, error: 'Invalid card count' };
+      }
+
+      // Calculate base costs
+      const variableCost = pricePerPiece * quantity;
+      const subtotal = fixedCost + variableCost;
+
+      // Calculate extras
+      const extras: { name: string; price: number }[] = [];
+      let extrasTotal = 0;
+
+      // Stansmes only applies to 144 and 192 cards
+      if (includeStansmes && cardCount !== 96 && stansmesPrice > 0) {
+        extras.push({
+          name: `Stansmes ${cardCount === 192 ? '4' : '2'}-vaks doosje`,
+          price: stansmesPrice
+        });
+        extrasTotal += stansmesPrice;
+      }
+
+      // Calculate cost per box (without extras, as they're one-time)
+      const costPerBox = subtotal / quantity;
+      const profitPerBox = profitMargin || 0;
+      const pricePerBox = Math.round((costPerBox + profitPerBox) * 100) / 100;
+
+      // Calculate totals
+      const schneiderCost = subtotal + extrasTotal;
+      const baseOurProfit = (profitMargin || 0) * quantity;
+
+      // Add custom app fee (one-time)
+      const customAppFee = includeCustomApp ? 350 : 0;
+      if (includeCustomApp) {
+        extras.push({ name: 'App in eigen stijl', price: customAppFee });
+      }
+
+      const clientPrice = (pricePerBox * quantity) + extrasTotal + customAppFee;
+      const ourProfit = baseOurProfit + customAppFee;
+
+      // Return calculation results
+      return {
+        success: true,
+        calculation: {
+          quantity,
+          cardCount,
+          boxType,
+          fixedCost,
+          pricePerPiece,
+          subtotal,
+          extras,
+          extrasTotal: extrasTotal + customAppFee,
+          schneiderCost,
+          ourProfit,
+          pricePerBox,
+          clientPrice,
+          customAppFee,
+        },
+      };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error calculating Schneider pricing: ${error}`)
+      );
+      return { success: false, error: 'Error calculating Schneider pricing' };
     }
   }
 

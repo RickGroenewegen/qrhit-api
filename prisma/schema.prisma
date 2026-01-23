@@ -723,9 +723,10 @@ model Company {
   contact          String?
   contactemail     String?
   contactphone     String?
-  calculation      String?       @db.Text
-  calculationTromp String?       @db.Text
-  createdAt        DateTime      @default(now())
+  calculation          String?       @db.Text
+  calculationTromp     String?       @db.Text
+  calculationSchneider String?       @db.Text
+  createdAt            DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
   CompanyList      CompanyList[]
   User             User[]

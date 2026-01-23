@@ -220,6 +220,34 @@ export default async function vibeRoutes(
     }
   );
 
+  // Update company Schneider calculation
+  fastify.put(
+    '/vibe/companies/:companyId/calculation-schneider',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const { calculationSchneider } = request.body;
+
+      if (isNaN(companyId)) {
+        reply.status(400).send({ error: 'Invalid company ID' });
+        return;
+      }
+
+      const result = await vibe.updateCompany(companyId, { calculationSchneider });
+
+      if (!result.success) {
+        let statusCode = 500;
+        if (result.error === 'Company not found') {
+          statusCode = 404;
+        }
+        reply.status(statusCode).send({ error: result.error });
+        return;
+      }
+
+      reply.send({ success: true, company: result.data.company });
+    }
+  );
+
   // Quotation HTML View (for PDF generation)
   fastify.get(
     '/vibe/quotation/:type/:companyId/:quotationNumber',
@@ -1064,6 +1092,27 @@ export default async function vibeRoutes(
         reply.send(result);
       } catch (error) {
         console.error('Error calculating Tromp pricing:', error);
+        reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  // Calculate Schneider pricing (admin only)
+  fastify.post(
+    '/vibe/calculate-schneider',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const result = await vibe.calculateSchneiderPricing(request.body);
+
+        if (!result.success) {
+          reply.status(400).send({ error: result.error });
+          return;
+        }
+
+        reply.send(result);
+      } catch (error) {
+        console.error('Error calculating Schneider pricing:', error);
         reply.status(500).send({ error: 'Internal server error' });
       }
     }
