@@ -1361,7 +1361,7 @@ class Spotify {
    * Attempts to resolve a Spotify URI from a given URL by following all known redirect mechanisms.
    * For external cards (Jumbo, Country, MusicMatch), also returns all available music service links.
    * @param url The URL to resolve.
-   * @returns {Promise<{ success: boolean, spotifyUri?: string, links?: object, error?: string, cached?: boolean }>}
+   * @returns {Promise<{ success: boolean, spotifyUri?: string, links?: object, error?: string, cached?: boolean, blacklisted?: boolean }>}
    */
   public async resolveSpotifyUrl(url: string): Promise<{
     success: boolean;
@@ -1376,6 +1376,7 @@ class Spotify {
     };
     error?: string;
     cached?: boolean;
+    blacklisted?: boolean;
   }> {
     // Add https:// if missing to normalize URL for domain checking
     let normalizedUrl = url;
@@ -1405,6 +1406,7 @@ class Spotify {
           return {
             success: false,
             error: 'Domain is blacklisted and cannot be resolved',
+            blacklisted: true,
           };
         }
       } catch (e) {

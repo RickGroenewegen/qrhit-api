@@ -222,8 +222,8 @@ export default async function musicRoutes(fastify: FastifyInstance) {
           r: true,
         });
       } else {
-        // Log failed scan to database (skip if cached - already logged)
-        if (!result.cached) {
+        // Log failed scan to database (skip if cached or blacklisted)
+        if (!result.cached && !result.blacklisted) {
           const userAgent = request.headers['user-agent'] || null;
           const clientIp = request.ip || request.headers['x-forwarded-for'] || null;
           prisma.unknownLink.create({

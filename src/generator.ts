@@ -735,12 +735,15 @@ class Generator {
           let firstPrinterFilename = '';
           let firstDigitalFilename = '';
 
+          // Add product type to filename to differentiate cards vs sheets
+          const productTypeString = playlist.subType === 'sheets' ? '_sheets' : '_cards';
+
           for (const item of items) {
             const filename = sanitizeFilename(
-              `${hash}_printer${ecoString}_${item.index}.pdf`.replace(/ /g, '_')
+              `${hash}_printer${productTypeString}${ecoString}_${item.index}.pdf`.replace(/ /g, '_')
             ).toLowerCase();
             const filenameDigital = sanitizeFilename(
-              `${hash}_digital${ecoString}_${item.index}.pdf`.replace(/ /g, '_')
+              `${hash}_digital${productTypeString}${ecoString}_${item.index}.pdf`.replace(/ /g, '_')
             ).toLowerCase();
 
             const [generatedFilenameDigital, generatedFilename] =
