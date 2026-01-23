@@ -1135,6 +1135,8 @@ class Generator {
               where: {
                 paymentId: payment.id,
                 playlistId: playlist.id,
+                type: playlist.orderType,
+                subType: playlist.subType || 'none',
               },
             });
 
