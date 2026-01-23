@@ -614,7 +614,7 @@ model PaymentHasPlaylist {
   orderType               OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                   PaymentHasPlaylistItem[]
 
-  @@unique([paymentId, playlistId])
+  @@unique([paymentId, playlistId, type, subType])
   @@index([paymentId])
   @@index([playlistId])
   @@index([type])

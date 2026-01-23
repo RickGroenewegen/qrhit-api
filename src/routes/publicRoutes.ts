@@ -424,6 +424,8 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     async (request: any, reply) => {
       const { paymentId, userHash, playlistId } = request.params;
       const {
+        type = 'physical',
+        subType = 'none',
         background,
         logo,
         emoji,
@@ -457,6 +459,8 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         paymentId,
         userHash,
         playlistId,
+        type,
+        subType,
         {
           background,
           logo,

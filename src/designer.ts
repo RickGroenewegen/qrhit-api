@@ -446,11 +446,15 @@ class Designer {
   /**
    * Update card design for a payment/playlist combination
    * Validates ownership through paymentId and userHash
+   * @param type - 'physical' or 'digital'
+   * @param subType - 'none' for cards, 'sheets' for sheets
    */
   public async updateCardDesign(
     paymentId: string,
     userHash: string,
     playlistId: string,
+    type: string,
+    subType: string,
     design: {
       background?: string;
       logo?: string;
@@ -517,12 +521,14 @@ class Designer {
         return false;
       }
 
-      // Update the PaymentHasPlaylist record with the new design
+      // Update the specific PaymentHasPlaylist record with the new design
       await this.prisma.paymentHasPlaylist.update({
         where: {
-          paymentId_playlistId: {
+          paymentId_playlistId_type_subType: {
             paymentId: paymentDbId,
             playlistId: playlist.id,
+            type: type,
+            subType: subType,
           },
         },
         data: {
