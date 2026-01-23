@@ -1234,7 +1234,7 @@ class Generator {
         this.pushover.sendMessage(
           {
             title: 'Fout tijdens Print&Bind bestelling',
-            message: `Er is een fout opgetreden bi het maken van een Print&Bind bestelling voor betaling: ${paymentId}`,
+            message: `Er is een fout opgetreden bij het maken van een Print&Bind bestelling voor betaling: ${paymentId}`,
             sound: 'incoming',
           },
           clientIp
