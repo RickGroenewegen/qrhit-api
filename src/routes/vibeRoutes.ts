@@ -1139,11 +1139,17 @@ export default async function vibeRoutes(
       try {
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
 
-        // Get profit settings from query params (passed as JSON)
-        const profitSettingsParam = request.query.profitSettings;
-        const profitSettings: Record<string, { reseller: number; qrsong: number }> = profitSettingsParam
-          ? JSON.parse(decodeURIComponent(profitSettingsParam))
-          : { Tromp: { reseller: 0, qrsong: 0 }, Schneider: { reseller: 0, qrsong: 0 } };
+        // Get profit matrix from query params (passed as JSON)
+        // Structure: productId -> quantity -> { reseller, qrsong }
+        const profitMatrixParam = request.query.profitMatrix;
+        const profitMatrix: Record<string, Record<number, { reseller: number; qrsong: number }>> = profitMatrixParam
+          ? JSON.parse(decodeURIComponent(profitMatrixParam))
+          : {};
+
+        // Helper to get profit for a specific product and quantity
+        const getProfit = (productId: string, qty: number): { reseller: number; qrsong: number } => {
+          return profitMatrix[productId]?.[qty] || { reseller: 0, qrsong: 0 };
+        };
 
         // Format helpers
         const formatCurrency = (value: number) => {
@@ -1177,13 +1183,13 @@ export default async function vibeRoutes(
             ],
           },
           {
-            name: 'Tromp',
+            name: 'Standaard',
             products: [
               { id: 'tromp-eigen', name: 'Eigen druk', printingType: 'eigen' },
             ],
           },
           {
-            name: 'Schneider',
+            name: 'Luxe',
             products: [
               { id: 'schneider-96', name: '96 kaarten', cardCount: 96 },
               { id: 'schneider-192', name: '192 kaarten', cardCount: 192 },
@@ -1231,8 +1237,9 @@ export default async function vibeRoutes(
 
                     prices[product.id][qty] = { resellerPrice, retailPrice, qrsongProfitPercent, resellerProfitPercent };
                   }
-                } else if (group.name === 'Tromp') {
-                  const settings = profitSettings['Tromp'] || { reseller: 0, qrsong: 0 };
+                } else if (group.name === 'Standaard') {
+                  // Get per-product, per-tier profit settings
+                  const settings = getProfit(product.id, qty);
                   const result = await vibe.calculateTrompPricing({
                     quantity: qty,
                     printingType: (product as any).printingType,
@@ -1257,8 +1264,9 @@ export default async function vibeRoutes(
                       resellerProfitPercent: settings.reseller.toFixed(1) + '%',
                     };
                   }
-                } else if (group.name === 'Schneider') {
-                  const settings = profitSettings['Schneider'] || { reseller: 0, qrsong: 0 };
+                } else if (group.name === 'Luxe') {
+                  // Get per-product, per-tier profit settings
+                  const settings = getProfit(product.id, qty);
                   const result = await vibe.calculateSchneiderPricing({
                     quantity: qty,
                     cardCount: (product as any).cardCount,
@@ -1296,7 +1304,7 @@ export default async function vibeRoutes(
           groups,
           quantities,
           prices,
-          profitSettings,
+          profitMatrix,
           formatCurrency,
           formatNumber,
           formatDate,
@@ -1321,19 +1329,19 @@ export default async function vibeRoutes(
         const path = require('path');
         const fs = require('fs').promises;
 
-        // Get profit settings from request body
-        const { profitSettings } = request.body || {};
+        // Get profit matrix from request body (per-product, per-tier percentages)
+        const { profitMatrix } = request.body || {};
 
         const tempDir = '/tmp';
         const fileName = `reseller_pricing_${Date.now()}.pdf`;
         const filePath = path.join(tempDir, fileName);
 
-        // Create the URL for the HTML rendering with profit settings
+        // Create the URL for the HTML rendering with profit matrix
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-        const profitSettingsParam = profitSettings
-          ? `?profitSettings=${encodeURIComponent(JSON.stringify(profitSettings))}`
+        const profitMatrixParam = profitMatrix
+          ? `?profitMatrix=${encodeURIComponent(JSON.stringify(profitMatrix))}`
           : '';
-        const htmlUrl = `${baseUrl}/vibe/reseller-pricing${profitSettingsParam}`;
+        const htmlUrl = `${baseUrl}/vibe/reseller-pricing${profitMatrixParam}`;
 
         // Generate PDF with landscape orientation
         await pdfManager.generateFromUrl(htmlUrl, filePath, {
