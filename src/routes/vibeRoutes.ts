@@ -1131,4 +1131,241 @@ export default async function vibeRoutes(
       appDomain: process.env['APP_DOMAIN'],
     });
   });
+
+  // Reseller pricing HTML view (for PDF generation)
+  fastify.get(
+    '/vibe/reseller-pricing',
+    async (request: any, reply: any) => {
+      try {
+        const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
+
+        // Get profit settings from query params (passed as JSON)
+        const profitSettingsParam = request.query.profitSettings;
+        const profitSettings: Record<string, { reseller: number; qrsong: number }> = profitSettingsParam
+          ? JSON.parse(decodeURIComponent(profitSettingsParam))
+          : { Tromp: { reseller: 0, qrsong: 0 }, Schneider: { reseller: 0, qrsong: 0 } };
+
+        // Format helpers
+        const formatCurrency = (value: number) => {
+          return new Intl.NumberFormat('nl-NL', {
+            style: 'currency',
+            currency: 'EUR',
+          }).format(value);
+        };
+
+        const formatNumber = (value: number) => {
+          return new Intl.NumberFormat('nl-NL').format(value);
+        };
+
+        const formatDate = (date: Date) => {
+          return new Intl.DateTimeFormat('nl-NL', {
+            day: '2-digit',
+            month: 'long',
+            year: 'numeric',
+          }).format(date);
+        };
+
+        // Product configurations
+        const quantities = [100, 150, 200, 250, 300, 400, 500, 750, 1000, 1500, 2000, 2500, 5000, 10000];
+
+        const groups = [
+          {
+            name: 'OnzeVibe',
+            products: [
+              { id: 'onzevibe', name: 'Box', includePersonalization: false },
+              { id: 'onzevibe-pers', name: 'Incl. personalisatie', includePersonalization: true },
+            ],
+          },
+          {
+            name: 'Tromp',
+            products: [
+              { id: 'tromp-eigen', name: 'Eigen druk', printingType: 'eigen' },
+            ],
+          },
+          {
+            name: 'Schneider',
+            products: [
+              { id: 'schneider-96', name: '96 kaarten', cardCount: 96 },
+              { id: 'schneider-192', name: '192 kaarten', cardCount: 192 },
+            ],
+          },
+        ];
+
+        // Calculate prices for all products and quantities
+        const prices: Record<string, Record<number, { resellerPrice: number; retailPrice: number; qrsongProfitPercent: string; resellerProfitPercent: string }>> = {};
+
+        for (const group of groups) {
+          for (const product of group.products) {
+            prices[product.id] = {};
+
+            for (const qty of quantities) {
+              try {
+                if (group.name === 'OnzeVibe') {
+                  const result = await vibe.calculatePricing({
+                    quantity: qty,
+                    soldBy: 'onzevibe',
+                    includePersonalization: (product as any).includePersonalization,
+                    shipmentOnLocation: true,
+                    isReseller: true,
+                    manualDiscount: 0,
+                    fluidMode: false,
+                    includeCustomApp: false,
+                  });
+
+                  if (result.success && result.calculation) {
+                    const pricing = result.calculation.pricing;
+                    const commercialPricePerBox = pricing.commercialPricePerBox;
+                    const profitPerBox = pricing.profitPerBox;
+                    const resellerProfitPerBox = pricing.resellerProfit / qty;
+
+                    // Retail = commercialPricePerBox (what end client pays)
+                    // Reseller = retail - resellerProfit (what reseller pays)
+                    // Inkoop = retail - resellerProfit - ourProfit
+                    const retailPrice = commercialPricePerBox;
+                    const resellerPrice = commercialPricePerBox - resellerProfitPerBox;
+                    const purchasePrice = commercialPricePerBox - resellerProfitPerBox - profitPerBox;
+
+                    // Calculate percentages based on purchase price
+                    const qrsongProfitPercent = purchasePrice > 0 ? ((profitPerBox / purchasePrice) * 100).toFixed(1) + '%' : '0.0%';
+                    const resellerProfitPercent = purchasePrice > 0 ? ((resellerProfitPerBox / purchasePrice) * 100).toFixed(1) + '%' : '0.0%';
+
+                    prices[product.id][qty] = { resellerPrice, retailPrice, qrsongProfitPercent, resellerProfitPercent };
+                  }
+                } else if (group.name === 'Tromp') {
+                  const settings = profitSettings['Tromp'] || { reseller: 0, qrsong: 0 };
+                  const result = await vibe.calculateTrompPricing({
+                    quantity: qty,
+                    printingType: (product as any).printingType,
+                    includeStansmestekening: false,
+                    includeStansvorm: false,
+                    includeCustomApp: false,
+                    profitMargin: 0,
+                  });
+
+                  if (result.success && result.calculation) {
+                    const pricePerSet = result.calculation.pricePerSet;
+                    // Apply profit percentages
+                    const qrsongProfit = pricePerSet * (settings.qrsong / 100);
+                    const resellerProfit = pricePerSet * (settings.reseller / 100);
+                    const resellerPrice = pricePerSet + qrsongProfit;
+                    const retailPrice = pricePerSet + qrsongProfit + resellerProfit;
+
+                    prices[product.id][qty] = {
+                      resellerPrice,
+                      retailPrice,
+                      qrsongProfitPercent: settings.qrsong.toFixed(1) + '%',
+                      resellerProfitPercent: settings.reseller.toFixed(1) + '%',
+                    };
+                  }
+                } else if (group.name === 'Schneider') {
+                  const settings = profitSettings['Schneider'] || { reseller: 0, qrsong: 0 };
+                  const result = await vibe.calculateSchneiderPricing({
+                    quantity: qty,
+                    cardCount: (product as any).cardCount,
+                    includeStansmes: false,
+                    includeCustomApp: false,
+                    profitMargin: 0,
+                  });
+
+                  if (result.success && result.calculation) {
+                    const pricePerBox = result.calculation.pricePerBox;
+                    // Apply profit percentages
+                    const qrsongProfit = pricePerBox * (settings.qrsong / 100);
+                    const resellerProfit = pricePerBox * (settings.reseller / 100);
+                    const resellerPrice = pricePerBox + qrsongProfit;
+                    const retailPrice = pricePerBox + qrsongProfit + resellerProfit;
+
+                    prices[product.id][qty] = {
+                      resellerPrice,
+                      retailPrice,
+                      qrsongProfitPercent: settings.qrsong.toFixed(1) + '%',
+                      resellerProfitPercent: settings.reseller.toFixed(1) + '%',
+                    };
+                  }
+                }
+              } catch (error) {
+                console.error(`Error calculating price for ${product.id} qty ${qty}:`, error);
+              }
+            }
+          }
+        }
+
+        const version = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
+
+        await reply.view('reseller_pricing.ejs', {
+          groups,
+          quantities,
+          prices,
+          profitSettings,
+          formatCurrency,
+          formatNumber,
+          formatDate,
+          baseUrl,
+          version,
+        });
+      } catch (error) {
+        console.error('Error rendering reseller pricing view:', error);
+        reply.status(500).send({ error: 'Failed to render reseller pricing' });
+      }
+    }
+  );
+
+  // Generate reseller pricing PDF
+  fastify.post(
+    '/vibe/reseller-pricing/pdf',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const PDF = require('../pdf').default;
+        const pdfManager = new PDF();
+        const path = require('path');
+        const fs = require('fs').promises;
+
+        // Get profit settings from request body
+        const { profitSettings } = request.body || {};
+
+        const tempDir = '/tmp';
+        const fileName = `reseller_pricing_${Date.now()}.pdf`;
+        const filePath = path.join(tempDir, fileName);
+
+        // Create the URL for the HTML rendering with profit settings
+        const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
+        const profitSettingsParam = profitSettings
+          ? `?profitSettings=${encodeURIComponent(JSON.stringify(profitSettings))}`
+          : '';
+        const htmlUrl = `${baseUrl}/vibe/reseller-pricing${profitSettingsParam}`;
+
+        // Generate PDF with landscape orientation
+        await pdfManager.generateFromUrl(htmlUrl, filePath, {
+          width: 297,
+          height: 210,
+          marginTop: 0,
+          marginBottom: 0,
+          marginLeft: 0,
+          marginRight: 0,
+        });
+
+        // Read the generated PDF
+        const pdfBuffer = await fs.readFile(filePath);
+
+        // Clean up temp file
+        try {
+          await fs.unlink(filePath);
+        } catch (unlinkError) {
+          console.warn('Failed to delete temp file:', unlinkError);
+        }
+
+        const downloadFilename = `Reseller_Prijslijst_${new Date().toISOString().slice(0, 10)}.pdf`;
+
+        // Set response headers for PDF download
+        reply.header('Content-Type', 'application/pdf');
+        reply.header('Content-Disposition', `attachment; filename="${downloadFilename}"`);
+
+        reply.send(pdfBuffer);
+      } catch (error) {
+        console.error('Error generating reseller pricing PDF:', error);
+        reply.status(500).send({ error: 'Failed to generate reseller pricing PDF' });
+      }
+    }
+  );
 }
