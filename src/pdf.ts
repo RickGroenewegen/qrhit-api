@@ -21,6 +21,7 @@ interface LambdaPdfOptions {
     marginLeft?: number;
     pageRanges?: string;
     landscape?: boolean;
+    preferCSSPageSize?: boolean;
   };
 }
 

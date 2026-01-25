@@ -2803,7 +2803,7 @@ class Vibe {
   }
 
   /**
-   * Calculate pricing for HappiBox orders
+   * Calculate pricing for QRSong! HappiBox orders
    * @param params Calculation parameters
    * @returns Object with calculation results
    */
@@ -3220,6 +3220,7 @@ class Vibe {
   /**
    * Calculate Schneider pricing for luxury card boxes
    * Pricing structure:
+   * - 48 cards (1x48 in banderol): Tiered pricing per unit, 1-vaks box
    * - 96 cards (2x48 in banderol): Fixed €790 + €2.16 per piece, 2-vaks box
    * - 144 cards (2x72 in banderol): Fixed €1000 + €2.65 per piece, 2-vaks box
    * - 192 cards (4x48 in banderol): Fixed €1350 + €3.73 per piece, 4-vaks box
@@ -3230,7 +3231,7 @@ class Vibe {
    */
   public async calculateSchneiderPricing(params: {
     quantity: number;
-    cardCount: number; // 96, 144, or 192
+    cardCount: number; // 48, 96, 144, or 192
     includeStansmes: boolean;
     includeCustomApp?: boolean;
     profitMargin: number;
@@ -3249,8 +3250,8 @@ class Vibe {
         return { success: false, error: 'Invalid quantity' };
       }
 
-      if (![96, 144, 192].includes(cardCount)) {
-        return { success: false, error: 'Invalid card count. Must be 96, 144, or 192' };
+      if (![48, 96, 144, 192].includes(cardCount)) {
+        return { success: false, error: 'Invalid card count. Must be 48, 96, 144, or 192' };
       }
 
       // Pricing structure based on Schneider quote
@@ -3258,43 +3259,112 @@ class Vibe {
       let pricePerPiece: number;
       let boxType: string;
       let stansmesPrice: number;
+      let subtotal: number;
 
-      switch (cardCount) {
-        case 96:
-          // 96 kaarten (2X 48 in banderol), 2-vaks dekseldoosje
-          fixedCost = 790.0;
-          pricePerPiece = 2.16;
-          boxType = '2-vaks luxe dekseldoosje';
-          stansmesPrice = 0; // No stansmes for 96 cards (uses standard)
-          break;
-        case 144:
-          // 144 kaarten (2X 72 in banderol), 2-vaks dekseldoosje
-          fixedCost = 1000.0;
-          pricePerPiece = 2.65;
-          boxType = '2-vaks luxe dekseldoosje';
-          stansmesPrice = 325.0;
-          break;
-        case 192:
-          // 192 kaarten (4X 48 in banderol), 4-vaks dekseldoosje
-          fixedCost = 1350.0;
-          pricePerPiece = 3.73;
-          boxType = '4-vaks luxe dekseldoosje';
-          stansmesPrice = 375.0;
-          break;
-        default:
-          return { success: false, error: 'Invalid card count' };
+      // 48 cards uses tiered pricing with 30% reseller discount applied
+      if (cardCount === 48) {
+        // Original tiered pricing for 48 cards (before 30% reseller discount)
+        const priceTiers: { qty: number; price: number }[] = [
+          { qty: 75, price: 5.99 },
+          { qty: 100, price: 5.31 },
+          { qty: 125, price: 4.72 },
+          { qty: 150, price: 4.27 },
+          { qty: 200, price: 3.61 },
+          { qty: 250, price: 3.18 },
+          { qty: 300, price: 2.87 },
+          { qty: 400, price: 2.46 },
+          { qty: 500, price: 2.21 },
+          { qty: 600, price: 2.03 },
+          { qty: 700, price: 1.90 },
+          { qty: 800, price: 1.80 },
+          { qty: 900, price: 1.73 },
+          { qty: 1000, price: 1.66 },
+          { qty: 1250, price: 1.54 },
+          { qty: 1500, price: 1.46 },
+          { qty: 2000, price: 1.35 },
+          { qty: 2500, price: 1.28 },
+          { qty: 3000, price: 1.22 },
+          { qty: 4000, price: 1.14 },
+          { qty: 5000, price: 1.07 },
+          { qty: 6000, price: 1.02 },
+          { qty: 7000, price: 0.97 },
+          { qty: 7500, price: 0.94 },
+          { qty: 8000, price: 0.92 },
+          { qty: 9000, price: 0.88 },
+          { qty: 10000, price: 0.83 },
+        ];
+
+        // Reseller discount rate
+        const resellerDiscount = 0.30;
+
+        // Find the applicable price tier (use next higher tier or interpolate)
+        let tierPrice: number;
+        if (quantity <= priceTiers[0].qty) {
+          tierPrice = priceTiers[0].price;
+        } else if (quantity >= priceTiers[priceTiers.length - 1].qty) {
+          tierPrice = priceTiers[priceTiers.length - 1].price;
+        } else {
+          // Find the two tiers to interpolate between
+          let lowerTier = priceTiers[0];
+          let upperTier = priceTiers[1];
+          for (let i = 0; i < priceTiers.length - 1; i++) {
+            if (quantity >= priceTiers[i].qty && quantity < priceTiers[i + 1].qty) {
+              lowerTier = priceTiers[i];
+              upperTier = priceTiers[i + 1];
+              break;
+            }
+          }
+          // Linear interpolation
+          const ratio = (quantity - lowerTier.qty) / (upperTier.qty - lowerTier.qty);
+          tierPrice = lowerTier.price + ratio * (upperTier.price - lowerTier.price);
+        }
+
+        // Apply 30% reseller discount
+        const discountedPrice = tierPrice * (1 - resellerDiscount);
+
+        fixedCost = 0;
+        pricePerPiece = Math.round(discountedPrice * 1000) / 1000;
+        boxType = '1-vaks luxe dekseldoosje';
+        stansmesPrice = 0; // No stansmes for 48 cards
+        subtotal = pricePerPiece * quantity;
+      } else {
+        switch (cardCount) {
+          case 96:
+            // 96 kaarten (2X 48 in banderol), 2-vaks dekseldoosje
+            fixedCost = 790.0;
+            pricePerPiece = 2.16;
+            boxType = '2-vaks luxe dekseldoosje';
+            stansmesPrice = 0; // No stansmes for 96 cards (uses standard)
+            break;
+          case 144:
+            // 144 kaarten (2X 72 in banderol), 2-vaks dekseldoosje
+            fixedCost = 1000.0;
+            pricePerPiece = 2.65;
+            boxType = '2-vaks luxe dekseldoosje';
+            stansmesPrice = 325.0;
+            break;
+          case 192:
+            // 192 kaarten (4X 48 in banderol), 4-vaks dekseldoosje
+            fixedCost = 1350.0;
+            pricePerPiece = 3.73;
+            boxType = '4-vaks luxe dekseldoosje';
+            stansmesPrice = 375.0;
+            break;
+          default:
+            return { success: false, error: 'Invalid card count' };
+        }
+
+        // Calculate base costs for non-48 card products
+        const variableCost = pricePerPiece * quantity;
+        subtotal = fixedCost + variableCost;
       }
-
-      // Calculate base costs
-      const variableCost = pricePerPiece * quantity;
-      const subtotal = fixedCost + variableCost;
 
       // Calculate extras
       const extras: { name: string; price: number }[] = [];
       let extrasTotal = 0;
 
       // Stansmes only applies to 144 and 192 cards
-      if (includeStansmes && cardCount !== 96 && stansmesPrice > 0) {
+      if (includeStansmes && cardCount !== 48 && cardCount !== 96 && stansmesPrice > 0) {
         extras.push({
           name: `Stansmes ${cardCount === 192 ? '4' : '2'}-vaks doosje`,
           price: stansmesPrice

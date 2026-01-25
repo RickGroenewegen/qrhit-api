@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Informatie & Prijzen (Resellers) - <%= formatDate(new Date()) %></title>
+    <title>Informatie & Prijzen - <%= formatDate(new Date()) %></title>
     <style>
         @media print {
             @page {
@@ -70,9 +70,9 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-bottom: 8px;
-            padding-bottom: 6px;
-            border-bottom: 2px solid #214b53;
+            margin-bottom: 12px;
+            padding-bottom: 8px;
+            border-bottom: 3px solid #2d8a4e;
         }
 
         .header-left {
@@ -82,13 +82,13 @@
         }
 
         .logo {
-            height: 30px;
+            height: 35px;
             width: auto;
         }
 
         .header-title {
             font-size: 24px;
-            color: #214b53;
+            color: #2d8a4e;
             font-weight: 600;
         }
 
@@ -105,7 +105,7 @@
 
         .header-date {
             font-weight: 600;
-            color: #214b53;
+            color: #2d8a4e;
             font-size: 14px;
         }
 
@@ -113,38 +113,38 @@
         .pricing-table {
             width: 100%;
             border-collapse: collapse;
-            font-size: 10px;
+            font-size: 11px;
             table-layout: fixed;
         }
 
         .pricing-table thead th {
-            padding: 3px 5px;
+            padding: 4px 6px;
             text-align: center;
             font-weight: 600;
             color: white;
-            background: #214b53;
-            border: 1px solid #1a3d44;
-            font-size: 10px;
+            background: #2d8a4e;
+            border: 1px solid #246b3d;
+            font-size: 11px;
             line-height: 1.1;
             white-space: nowrap;
         }
 
         .pricing-table thead th.qty-header {
             text-align: center;
-            width: 45px;
-            background: #1a3d44;
-            padding: 5px 4px;
+            width: 50px;
+            background: #246b3d;
+            padding: 8px 5px;
         }
 
         .pricing-table thead th.product-header {
-            background: #2d6a76;
-            font-size: 10px;
+            background: #3da862;
+            font-size: 12px;
             font-weight: 500;
         }
 
         .pricing-table thead th .group-name {
             display: block;
-            font-size: 9px;
+            font-size: 10px;
             font-weight: 400;
             opacity: 0.85;
             margin-bottom: 2px;
@@ -153,19 +153,19 @@
         .pricing-table thead th .product-name {
             display: block;
             font-weight: 600;
-            font-size: 10px;
+            font-size: 11px;
         }
 
-        .pricing-table > tbody > tr {
+        .pricing-table tbody tr {
             border-bottom: 1px solid #e0e0e0;
         }
 
-        .pricing-table > tbody > tr:nth-child(even) {
+        .pricing-table tbody tr:nth-child(even) {
             background: #f8f8f8;
         }
 
         .pricing-table td {
-            padding: 2px 4px;
+            padding: 3px 6px;
             text-align: center;
             border-left: 1px solid #e0e0e0;
             vertical-align: middle;
@@ -182,114 +182,33 @@
         .pricing-table td.qty-cell {
             text-align: right;
             font-weight: 600;
-            color: #214b53;
+            color: #2d8a4e;
             background: #f0f0f0;
-            padding: 2px 5px;
-            vertical-align: middle;
-            font-size: 11px;
-            width: 50px;
+            padding: 3px 6px;
+            font-size: 14px;
+            width: 55px;
         }
 
         .pricing-table td.price-cell {
             font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-            font-size: 9px;
-            line-height: 1.1;
-            padding: 1px 3px;
+            font-size: 15px;
+            font-weight: 600;
+            color: #2d8a4e;
+            padding: 3px 5px;
         }
 
         .pricing-table td.group-separator {
-            border-left: 2px solid #214b53;
+            border-left: 2px solid #2d8a4e;
         }
 
         .pricing-table td.cell-disabled {
             background: repeating-linear-gradient(
                 -45deg,
-                #f0f7f8,
-                #f0f7f8 2px,
-                #dbeaed 2px,
-                #dbeaed 4px
+                #f8faf8,
+                #f8faf8 2px,
+                #eef3ee 2px,
+                #eef3ee 4px
             ) !important;
-        }
-
-        .price-table {
-            width: 100%;
-            border-collapse: collapse;
-            border: none;
-            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-            font-size: 10px;
-        }
-
-        .price-table tr {
-            border: none !important;
-            border-bottom: none !important;
-            background: transparent !important;
-        }
-
-        .price-table tr:nth-child(even) {
-            background: transparent !important;
-        }
-
-        .price-table td {
-            padding: 0;
-            border: none !important;
-            border-bottom: none !important;
-            vertical-align: middle;
-            background: transparent !important;
-            line-height: 1.1;
-        }
-
-        .price-table .price-label {
-            text-align: left;
-            font-size: 8px;
-            font-weight: 400;
-            color: #666;
-            width: 36px;
-        }
-
-        .price-table .price-value {
-            text-align: right;
-            font-weight: 600;
-        }
-
-        .price-table .price-pct {
-            text-align: left;
-            padding-left: 3px;
-            width: 40px;
-            font-size: 7px;
-            color: #aaa;
-            font-weight: 400;
-        }
-
-        .price-reseller {
-            color: #214b53;
-        }
-
-        .price-retail {
-            color: #2d8a4e;
-        }
-
-        .price-margin {
-            color: #888;
-        }
-
-        .price-value.reseller {
-            color: #214b53;
-        }
-
-        .price-value.retail {
-            color: #2d8a4e;
-            font-weight: 600;
-        }
-
-        .price-value.margin {
-            color: #999;
-            font-weight: 500;
-        }
-
-        .price-percent {
-            color: #999;
-            font-size: 8px;
-            margin-left: 3px;
         }
 
         /* Table Footer */
@@ -297,46 +216,16 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            margin-top: 8px;
-            padding: 6px 10px;
+            margin-top: 10px;
+            padding: 8px 12px;
             background: #f5f5f5;
             border-radius: 3px;
-            font-size: 9px;
+            font-size: 10px;
             color: #666;
         }
 
         .table-footer-left {
-            color: #214b53;
-        }
-
-        .table-footer-legend {
-            display: flex;
-            gap: 15px;
-        }
-
-        .table-footer-legend .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .legend-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 2px;
-            display: inline-block;
-        }
-
-        .legend-dot.reseller {
-            background: #214b53;
-        }
-
-        .legend-dot.retail {
-            background: #2d8a4e;
-        }
-
-        .legend-dot.margin {
-            background: #999;
+            color: #2d8a4e;
         }
 
         .table-footer-right {
@@ -360,18 +249,18 @@
 
         .contact-content {
             text-align: center;
-            max-width: 400px;
+            max-width: 500px;
         }
 
         .contact-logo {
-            width: 120px;
+            width: 150px;
             margin-bottom: 30px;
         }
 
         .contact-title {
-            font-size: 28px;
+            font-size: 24px;
             font-weight: 700;
-            color: #214b53;
+            color: #2d8a4e;
             margin-bottom: 10px;
         }
 
@@ -395,7 +284,7 @@
         .contact-method-icon {
             width: 50px;
             height: 50px;
-            background: #214b53;
+            background: #2d8a4e;
             border-radius: 50%;
             display: flex;
             align-items: center;
@@ -433,25 +322,26 @@
         }
 
         .cta-button.primary {
-            background: #214b53;
+            background: #2d8a4e;
             color: white;
         }
 
         .cta-button.secondary {
             background: white;
-            color: #214b53;
-            border: 2px solid #214b53;
+            color: #2d8a4e;
+            border: 2px solid #2d8a4e;
         }
     </style>
 </head>
 <body>
-    <!-- Page 1: Front Page (Portrait) -->
+    <!-- Page 1: Front Page -->
     <%
-        var accentColor = '#214b53';
-        var gradientStart = '#214b53';
-        var gradientEnd = '#1a3d44';
+        var accentColor = '#2d8a4e';
+        var gradientStart = '#2d8a4e';
+        var gradientEnd = '#246b3d';
         var title = 'Informatie & Prijzen';
-        var subtitle = 'Reseller Editie';
+        var subtitle = '';
+        var version = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
     %>
     <%- include('partials/front_page', {
         baseUrl: baseUrl,
@@ -463,13 +353,15 @@
         version: version
     }) %>
 
-    <!-- Pages 2-3: Product Information (Portrait) -->
-    <%- include('partials/product_info', {
-        baseUrl: baseUrl,
-        accentColor: accentColor
-    }) %>
+    <!-- Page 2: Product Information -->
+    <div class="product-page" style="width: 210mm; min-height: 297mm; padding: 12mm 15mm; box-sizing: border-box; background: white; page-break-before: always;">
+        <%- include('partials/product_info', {
+            baseUrl: baseUrl,
+            accentColor: accentColor
+        }) %>
+    </div>
 
-    <!-- Page 4: Pricing Table (Rotated Landscape on Portrait) -->
+    <!-- Page 3: Pricing Table (Rotated Landscape on Portrait) -->
     <div class="rotated-landscape-page">
         <div class="rotated-content">
 
@@ -500,25 +392,7 @@
                         %>
                         <td class="price-cell <%= isFirstInGroup ? 'group-separator' : '' %> <%= isDisabled ? 'cell-disabled' : '' %>">
                             <% if (!isDisabled && priceData) { %>
-                            <% const margin = priceData.retailPrice - priceData.resellerPrice; %>
-                            <% const marginPercent = ((margin / priceData.retailPrice) * 100).toFixed(1); %>
-                            <table class="price-table">
-                                <tr class="price-reseller">
-                                    <td class="price-label">Inkoop</td>
-                                    <td class="price-value"><%= formatCurrency(priceData.resellerPrice) %></td>
-                                    <td></td>
-                                </tr>
-                                <tr class="price-retail">
-                                    <td class="price-label">Advies</td>
-                                    <td class="price-value"><%= formatCurrency(priceData.retailPrice) %></td>
-                                    <td></td>
-                                </tr>
-                                <tr class="price-margin">
-                                    <td class="price-label">Marge</td>
-                                    <td class="price-value"><%= formatCurrency(margin) %></td>
-                                    <td class="price-pct">(<%= marginPercent %>%)</td>
-                                </tr>
-                            </table>
+                            <%= formatCurrency(priceData.retailPrice) %>
                             <% } else if (!isDisabled) { %>
                             <span style="color: #ccc;">-</span>
                             <% } %>
@@ -530,15 +404,10 @@
             </tbody>
         </table>
 
-        <!-- Footer with legend -->
+        <!-- Footer -->
         <div class="table-footer">
             <div class="table-footer-left">
-                <strong>Reseller Prijslijst</strong> | <%= formatDate(new Date()) %>
-            </div>
-            <div class="table-footer-legend">
-                <span class="legend-item"><span class="legend-dot reseller"></span> Inkoop</span>
-                <span class="legend-item"><span class="legend-dot retail"></span> Advies</span>
-                <span class="legend-item"><span class="legend-dot margin"></span> Marge</span>
+                <strong>Prijslijst</strong> | <%= formatDate(new Date()) %>
             </div>
             <div class="table-footer-right">
                 Prijzen excl. BTW, incl. verzending | www.qrsong.io
@@ -547,7 +416,7 @@
         </div><!-- end rotated-content -->
     </div><!-- end rotated-landscape-page -->
 
-    <!-- Page 5: Contact (Portrait) -->
+    <!-- Page 4: Contact -->
     <div class="contact-page">
         <div class="contact-content">
             <img src="<%= baseUrl %>/assets/images/logo_white.png" alt="QRSong!" class="contact-logo" />
