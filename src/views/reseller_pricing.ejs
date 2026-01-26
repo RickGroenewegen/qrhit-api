@@ -501,7 +501,7 @@
                         <td class="price-cell <%= isFirstInGroup ? 'group-separator' : '' %> <%= isDisabled ? 'cell-disabled' : '' %>">
                             <% if (!isDisabled && priceData) { %>
                             <% const margin = priceData.retailPrice - priceData.resellerPrice; %>
-                            <% const marginPercent = ((margin / priceData.retailPrice) * 100).toFixed(1); %>
+                            <% const marginPercent = priceData.resellerPrice > 0 ? ((margin / priceData.resellerPrice) * 100).toFixed(1) : '0.0'; %>
                             <table class="price-table">
                                 <tr class="price-reseller">
                                     <td class="price-label">Inkoop</td>
