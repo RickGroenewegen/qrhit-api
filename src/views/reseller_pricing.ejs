@@ -43,28 +43,6 @@
             page-break-before: avoid;
         }
 
-        /* Rotated landscape content on portrait page */
-        .rotated-landscape-page {
-            width: 210mm;
-            height: 297mm;
-            padding: 0;
-            page-break-before: always;
-            position: relative;
-            overflow: hidden;
-        }
-
-        .rotated-content {
-            width: 297mm;
-            height: 210mm;
-            padding: 15mm 12mm;
-            transform: rotate(-90deg) translateX(-297mm);
-            transform-origin: top left;
-            position: absolute;
-            top: 0;
-            left: 0;
-            box-sizing: border-box;
-        }
-
         /* Header */
         .header {
             display: flex;
@@ -458,8 +436,8 @@
         var accentColor = '#214b53';
         var gradientStart = '#214b53';
         var gradientEnd = '#1a3d44';
-        var title = 'Informatie & Prijzen';
-        var subtitle = 'Reseller Editie';
+        var title = 'Reseller Informatie & Prijzen';
+        var subtitle = '';
     %>
     <%- include('partials/front_page', {
         baseUrl: baseUrl,
@@ -477,22 +455,31 @@
         accentColor: accentColor
     }) %>
 
-    <!-- Page 4: Pricing Table (Rotated Landscape on Portrait) -->
-    <div class="rotated-landscape-page">
-        <div class="rotated-content">
+    <!-- Page 4: QRSong! Box Pricing Table (Portrait) -->
+    <% const boxGroup = groups.find(g => g.name === 'QRSong! Box'); %>
+    <% if (boxGroup) { %>
+    <div class="page">
+        <div class="header">
+            <div class="header-left">
+                <img src="<%= baseUrl %>/assets/images/logo_green.png" alt="QRSong!" class="logo" />
+                <div>
+                    <div class="header-title">QRSong! Box</div>
+                    <div class="header-subtitle">Reseller Prijslijst</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="header-date"><%= formatDate(new Date()) %></div>
+            </div>
+        </div>
 
-        <!-- Single big table with integrated header -->
         <table class="pricing-table">
             <thead>
                 <tr>
                     <th class="qty-header">Aantal</th>
-                    <% groups.forEach((group, gIdx) => { %>
-                        <% group.products.forEach((product, pIdx) => { %>
-                        <th class="product-header">
-                            <span class="group-name"><%= group.name %></span>
-                            <span class="product-name"><%= product.name %></span>
-                        </th>
-                        <% }); %>
+                    <% boxGroup.products.forEach((product, pIdx) => { %>
+                    <th class="product-header">
+                        <span class="product-name"><%= product.name %></span>
+                    </th>
                     <% }); %>
                 </tr>
             </thead>
@@ -500,48 +487,43 @@
                 <% quantities.forEach((qty, qIdx) => { %>
                 <tr>
                     <td class="qty-cell"><%= formatNumber(qty) %></td>
-                    <% groups.forEach((group, gIdx) => { %>
-                        <% group.products.forEach((product, pIdx) => {
-                            const priceData = prices[product.id]?.[qty];
-                            const isFirstInGroup = pIdx === 0;
-                            const isDisabled = group.name === 'QRSong! HappiBox' && [100, 150, 200].includes(qty);
-                        %>
-                        <td class="price-cell <%= isFirstInGroup ? 'group-separator' : '' %> <%= isDisabled ? 'cell-disabled' : '' %>">
-                            <% if (!isDisabled && priceData) { %>
-                            <% const margin = priceData.retailPrice - priceData.resellerPrice; %>
-                            <% const marginPercent = priceData.resellerPrice > 0 ? ((margin / priceData.resellerPrice) * 100).toFixed(1) : '0.0'; %>
-                            <table class="price-table">
-                                <tr class="price-reseller">
-                                    <td class="price-label">Inkoop</td>
-                                    <td class="price-value"><%= formatCurrency(priceData.resellerPrice) %></td>
-                                    <td></td>
-                                </tr>
-                                <tr class="price-retail">
-                                    <td class="price-label">Advies</td>
-                                    <td class="price-value"><%= formatCurrency(priceData.retailPrice) %></td>
-                                    <td></td>
-                                </tr>
-                                <tr class="price-margin">
-                                    <td class="price-label">Marge</td>
-                                    <td class="price-value"><%= formatCurrency(margin) %></td>
-                                    <td class="price-pct">(<%= marginPercent %>%)</td>
-                                </tr>
-                            </table>
-                            <% } else if (!isDisabled) { %>
-                            <span style="color: #ccc;">-</span>
-                            <% } %>
-                        </td>
-                        <% }); %>
+                    <% boxGroup.products.forEach((product, pIdx) => {
+                        const priceData = prices[product.id]?.[qty];
+                    %>
+                    <td class="price-cell">
+                        <% if (priceData) { %>
+                        <% const margin = priceData.retailPrice - priceData.resellerPrice; %>
+                        <% const marginPercent = priceData.resellerPrice > 0 ? ((margin / priceData.resellerPrice) * 100).toFixed(1) : '0.0'; %>
+                        <table class="price-table">
+                            <tr class="price-reseller">
+                                <td class="price-label">Inkoop</td>
+                                <td class="price-value"><%= formatCurrency(priceData.resellerPrice) %></td>
+                                <td></td>
+                            </tr>
+                            <tr class="price-retail">
+                                <td class="price-label">Advies</td>
+                                <td class="price-value"><%= formatCurrency(priceData.retailPrice) %></td>
+                                <td></td>
+                            </tr>
+                            <tr class="price-margin">
+                                <td class="price-label">Marge</td>
+                                <td class="price-value"><%= formatCurrency(margin) %></td>
+                                <td class="price-pct">(<%= marginPercent %>%)</td>
+                            </tr>
+                        </table>
+                        <% } else { %>
+                        <span style="color: #ccc;">-</span>
+                        <% } %>
+                    </td>
                     <% }); %>
                 </tr>
                 <% }); %>
             </tbody>
         </table>
 
-        <!-- Footer with legend -->
         <div class="table-footer">
             <div class="table-footer-left">
-                <strong>Reseller Prijslijst</strong> | <%= formatDate(new Date()) %>
+                <strong>QRSong! Box - Reseller Prijslijst</strong>
             </div>
             <div class="table-footer-legend">
                 <span class="legend-item"><span class="legend-dot reseller"></span> Inkoop</span>
@@ -549,27 +531,113 @@
                 <span class="legend-item"><span class="legend-dot margin"></span> Marge</span>
             </div>
             <div class="table-footer-right">
-                Prijzen excl. BTW, incl. verzending | www.qrsong.io
+                Prijzen excl. 21% BTW, incl. verzending
             </div>
         </div>
         <div class="table-disclaimer">
             Prijzen onder voorbehoud van wijzigingen. Druk- en zetfouten voorbehouden.
         </div>
-        </div><!-- end rotated-content -->
-    </div><!-- end rotated-landscape-page -->
+    </div>
+    <% } %>
+
+    <!-- Page 5: QRSong! HappiBox Pricing Table (Portrait) -->
+    <% const happiBoxGroup = groups.find(g => g.name === 'QRSong! HappiBox'); %>
+    <% if (happiBoxGroup) { %>
+    <div class="page">
+        <div class="header">
+            <div class="header-left">
+                <img src="<%= baseUrl %>/assets/images/logo_green.png" alt="QRSong!" class="logo" />
+                <div>
+                    <div class="header-title">QRSong! HappiBox</div>
+                    <div class="header-subtitle">Reseller Prijslijst</div>
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="header-date"><%= formatDate(new Date()) %></div>
+            </div>
+        </div>
+
+        <table class="pricing-table">
+            <thead>
+                <tr>
+                    <th class="qty-header">Aantal</th>
+                    <% happiBoxGroup.products.forEach((product, pIdx) => { %>
+                    <th class="product-header">
+                        <span class="product-name"><%= product.name %></span>
+                    </th>
+                    <% }); %>
+                </tr>
+            </thead>
+            <tbody>
+                <% const happiBoxQuantities = quantities.filter(qty => ![100, 150, 200].includes(qty)); %>
+                <% happiBoxQuantities.forEach((qty, qIdx) => { %>
+                <tr>
+                    <td class="qty-cell"><%= formatNumber(qty) %></td>
+                    <% happiBoxGroup.products.forEach((product, pIdx) => {
+                        const priceData = prices[product.id]?.[qty];
+                    %>
+                    <td class="price-cell">
+                        <% if (priceData) { %>
+                        <% const margin = priceData.retailPrice - priceData.resellerPrice; %>
+                        <% const marginPercent = priceData.resellerPrice > 0 ? ((margin / priceData.resellerPrice) * 100).toFixed(1) : '0.0'; %>
+                        <table class="price-table">
+                            <tr class="price-reseller">
+                                <td class="price-label">Inkoop</td>
+                                <td class="price-value"><%= formatCurrency(priceData.resellerPrice) %></td>
+                                <td></td>
+                            </tr>
+                            <tr class="price-retail">
+                                <td class="price-label">Advies</td>
+                                <td class="price-value"><%= formatCurrency(priceData.retailPrice) %></td>
+                                <td></td>
+                            </tr>
+                            <tr class="price-margin">
+                                <td class="price-label">Marge</td>
+                                <td class="price-value"><%= formatCurrency(margin) %></td>
+                                <td class="price-pct">(<%= marginPercent %>%)</td>
+                            </tr>
+                        </table>
+                        <% } else { %>
+                        <span style="color: #ccc;">-</span>
+                        <% } %>
+                    </td>
+                    <% }); %>
+                </tr>
+                <% }); %>
+            </tbody>
+        </table>
+
+        <div class="table-footer">
+            <div class="table-footer-left">
+                <strong>QRSong! HappiBox - Reseller Prijslijst</strong>
+            </div>
+            <div class="table-footer-legend">
+                <span class="legend-item"><span class="legend-dot reseller"></span> Inkoop</span>
+                <span class="legend-item"><span class="legend-dot retail"></span> Advies</span>
+                <span class="legend-item"><span class="legend-dot margin"></span> Marge</span>
+            </div>
+            <div class="table-footer-right">
+                Prijzen excl. 21% BTW, incl. verzending
+            </div>
+        </div>
+        <div class="table-disclaimer">
+            Prijzen onder voorbehoud van wijzigingen. Druk- en zetfouten voorbehouden.
+        </div>
+    </div>
+    <% } %>
 
     <!-- Page 5: Contact (Portrait) -->
     <div class="contact-page">
         <div class="contact-content">
             <img src="<%= baseUrl %>/assets/images/logo_white.png" alt="QRSong!" class="contact-logo" />
             <div class="contact-title">Interesse?</div>
-            <div class="contact-subtitle">Neem contact met ons op voor een offerte op maat of vraag een demo aan.</div>
+            <div class="contact-subtitle">Neem contact met ons op voor een offerte op maat of vraag proefboxen aan.</div>
 
             <div class="contact-methods">
                 <div class="contact-method">
                     <div class="contact-method-icon">@</div>
                     <div class="contact-method-label">E-mail</div>
-                    <div class="contact-method-value">info@qrsong.io</div>
+                    <div class="contact-method-value">zakelijk@qrsong.io</div>
                 </div>
                 <div class="contact-method">
                     <div class="contact-method-icon">www</div>
@@ -578,10 +646,6 @@
                 </div>
             </div>
 
-            <div class="cta-buttons">
-                <div class="cta-button primary">Offerte aanvragen</div>
-                <div class="cta-button secondary">Demo aanvragen</div>
-            </div>
         </div>
     </div>
 </body>
