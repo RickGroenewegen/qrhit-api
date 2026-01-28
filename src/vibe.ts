@@ -3426,7 +3426,8 @@ class Vibe {
    * @param userId The user making the request
    * @param userGroups The user's groups
    * @param userCompanyId The user's company ID (for companyadmin validation)
-   * @param type The quotation type ('onzevibe' or 'qrsong')
+   * @param type The quotation type ('onzevibe', 'qrsong', or 'schneider')
+   * @param pricingOptions Optional pricing options from frontend (isReseller, profitMargins, calculatedPrices)
    * @returns Buffer with PDF data or error
    */
   public async generateQuotationPDF(
@@ -3434,7 +3435,21 @@ class Vibe {
     userId: number,
     userGroups: string[],
     userCompanyId?: number,
-    type: string = 'onzevibe'
+    type: string = 'onzevibe',
+    pricingOptions?: {
+      isReseller?: boolean;
+      profitMargins?: { qrsong: number; reseller: number };
+      calculatedPrices?: {
+        printerCost: number;
+        qrsongProfitAmount: number;
+        resellerPrice: number;
+        resellerProfitAmount: number;
+        retailPrice: number;
+        ourTotalProfit: number;
+        clientPricePerUnit: number;
+        clientPaysTotal: number;
+      };
+    }
   ): Promise<{
     success: boolean;
     data?: Buffer;
@@ -3464,8 +3479,8 @@ class Vibe {
         return { success: false, error: 'Company not found' };
       }
 
-      // Generate unique quotation number
-      const prefix = type === 'qrsong' ? 'QRS' : 'ONZ';
+      // Generate unique quotation number - use QRS for both qrsong and schneider (no printer names)
+      const prefix = type === 'onzevibe' ? 'ONZ' : 'QRS';
       const quotationNumber = `${prefix}${Date.now().toString().slice(-8)}`;
 
       // Prepare file path
@@ -3479,7 +3494,21 @@ class Vibe {
 
       // Create the URL for the HTML rendering
       const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-      const htmlUrl = `${baseUrl}/vibe/quotation/${type}/${companyId}/${quotationNumber}`;
+
+      // Build query string with pricing options if provided
+      const queryParams = new URLSearchParams();
+      if (pricingOptions?.isReseller !== undefined) {
+        queryParams.set('isReseller', String(pricingOptions.isReseller));
+      }
+      if (pricingOptions?.profitMargins) {
+        queryParams.set('profitMargins', JSON.stringify(pricingOptions.profitMargins));
+      }
+      if (pricingOptions?.calculatedPrices) {
+        queryParams.set('calculatedPrices', JSON.stringify(pricingOptions.calculatedPrices));
+      }
+
+      const queryString = queryParams.toString();
+      const htmlUrl = `${baseUrl}/vibe/quotation/${type}/${companyId}/${quotationNumber}${queryString ? '?' + queryString : ''}`;
 
       this.logger.log(
         color.blue.bold(`Generating PDF quotation from URL: `) +
@@ -3501,7 +3530,7 @@ class Vibe {
       // Clean up
       await fs.unlink(filePath).catch(() => {}); // Ignore unlink errors
 
-      // Generate filename for download
+      // Generate filename for download - never include printer names like 'tromp' or 'schneider'
       const downloadFilename = `Offerte_${company.name.replace(
         /[^a-zA-Z0-9]/g,
         '_'

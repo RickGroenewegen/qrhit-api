@@ -255,9 +255,30 @@ export default async function vibeRoutes(
     '/vibe/quotation/:type/:companyId/:quotationNumber',
     async (request: any, reply: any) => {
       try {
-        const type = request.params.type; // 'onzevibe' or 'qrsong'
+        const type = request.params.type; // 'onzevibe', 'qrsong', or 'schneider'
         const companyId = parseInt(request.params.companyId);
         const quotationNumber = request.params.quotationNumber;
+
+        // Extract pricing options from query parameters
+        const isReseller = request.query.isReseller === 'true';
+        let profitMargins = null;
+        let calculatedPrices = null;
+
+        if (request.query.profitMargins) {
+          try {
+            profitMargins = JSON.parse(request.query.profitMargins);
+          } catch (e) {
+            console.error('Error parsing profitMargins:', e);
+          }
+        }
+
+        if (request.query.calculatedPrices) {
+          try {
+            calculatedPrices = JSON.parse(request.query.calculatedPrices);
+          } catch (e) {
+            console.error('Error parsing calculatedPrices:', e);
+          }
+        }
 
         // Get company data directly from database
         const companiesResult = await vibe.getAllCompanies();
@@ -271,6 +292,8 @@ export default async function vibeRoutes(
 
         let calculation: any = {};
         let calculationResult: any = {};
+        let productDescription = '';
+        let productDetails = '';
 
         if (type === 'qrsong') {
           // Tromp calculation
@@ -301,6 +324,64 @@ export default async function vibeRoutes(
 
           if (pricingResult.success) {
             calculationResult = pricingResult.calculation;
+          }
+
+          // Set product description for Tromp (48 cards per box, 2 smaller boxes = 96 cards total)
+          productDescription = 'QRSong! muziekkaarten set';
+          productDetails = 'Een doos met 2 kleinere doosjes met ieder 48 kaarten (totaal 96 kaarten)';
+        } else if (type === 'schneider') {
+          // Schneider calculation
+          calculation = {
+            quantity: 100,
+            cardCount: 48,
+            includeStansmes: false,
+            includeCustomApp: false,
+            profitMargin: 0,
+          };
+
+          if (company.calculationSchneider) {
+            try {
+              const storedCalc = JSON.parse(company.calculationSchneider);
+              calculation = storedCalc;
+            } catch (e) {
+              console.error('Error parsing company Schneider calculation:', e);
+            }
+          }
+
+          // Use the Vibe calculateSchneiderPricing method
+          const pricingResult = await vibe.calculateSchneiderPricing({
+            quantity: calculation.quantity || 100,
+            cardCount: calculation.cardCount || 48,
+            includeStansmes: calculation.includeStansmes || false,
+            includeCustomApp: calculation.includeCustomApp || false,
+            profitMargin: calculation.profitMargin || 0,
+          });
+
+          if (pricingResult.success) {
+            calculationResult = pricingResult.calculation;
+            // Map Schneider fields to match Tromp template expectations
+            calculationResult.pricePerSet = calculationResult.pricePerBox;
+          }
+
+          // Set product description based on card count
+          const cardCount = calculation.cardCount || 48;
+          productDescription = `QRSong! Box - ${cardCount} kaarten`;
+
+          switch (cardCount) {
+            case 48:
+              productDetails = 'Luxe doos met 1 vakje, 48 kaarten';
+              break;
+            case 96:
+              productDetails = 'Luxe doos met 2 vakjes, 2x 48 kaarten';
+              break;
+            case 144:
+              productDetails = 'Luxe doos met 2 vakjes, 2x 72 kaarten';
+              break;
+            case 192:
+              productDetails = 'Luxe doos met 4 vakjes, 4x 48 kaarten';
+              break;
+            default:
+              productDetails = `Luxe doos met ${cardCount} kaarten`;
           }
         } else {
           // OnzeVibe calculation
@@ -341,6 +422,9 @@ export default async function vibeRoutes(
           if (pricingResult.success) {
             calculationResult = pricingResult.calculation;
           }
+
+          productDescription = 'QRSong! HappiBox';
+          productDetails = 'Doos en kaarten in eigen stijl';
         }
 
         // Date formatting functions
@@ -364,8 +448,8 @@ export default async function vibeRoutes(
         const validUntil = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
 
-        // Use the appropriate template
-        const template = type === 'qrsong' ? 'tromp_quotation.ejs' : 'vibe_quotation.ejs';
+        // Use the appropriate template - use tromp_quotation for both qrsong and schneider
+        const template = (type === 'qrsong' || type === 'schneider') ? 'tromp_quotation.ejs' : 'vibe_quotation.ejs';
 
         await reply.view(template, {
           company,
@@ -376,6 +460,13 @@ export default async function vibeRoutes(
           formatCurrency,
           formatDate,
           baseUrl,
+          // New fields for pricing with reseller toggle
+          isReseller,
+          profitMargins,
+          calculatedPrices,
+          productDescription,
+          productDetails,
+          productType: type,
         });
       } catch (error) {
         console.error('Error rendering quotation view:', error);
@@ -391,7 +482,7 @@ export default async function vibeRoutes(
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
-        const { type } = request.body; // 'onzevibe' or 'qrsong'
+        const { type, isReseller, profitMargins, calculatedPrices } = request.body; // 'onzevibe', 'qrsong', or 'schneider'
 
         if (isNaN(companyId)) {
           reply.status(400).send({ error: 'Invalid company ID' });
@@ -404,7 +495,8 @@ export default async function vibeRoutes(
           request.user.userId,
           request.user.userGroups,
           request.user.companyId,
-          type || 'onzevibe'
+          type || 'onzevibe',
+          { isReseller, profitMargins, calculatedPrices }
         );
 
         if (!result.success) {

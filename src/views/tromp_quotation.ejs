@@ -488,17 +488,25 @@
                     </tr>
                 </thead>
                 <tbody>
+                    <%
+                        // Determine the price per unit to use
+                        const pricePerUnit = calculatedPrices && calculatedPrices.clientPricePerUnit
+                            ? calculatedPrices.clientPricePerUnit
+                            : calculationResult.pricePerSet;
+                        const quantity = calculationResult.quantity;
+                        const lineTotal = pricePerUnit * quantity;
+                    %>
                     <!-- Main product line -->
                     <tr>
                         <td>
-                            <span class="item-description">QRSong! muziekkaarten set</span>
+                            <span class="item-description"><%= productDescription || 'QRSong! muziekkaarten set' %></span>
                             <span class="item-details">
-                                Een doos met 2 kleinere doosjes met ieder 100 kaarten
+                                <%= productDetails || 'Een doos met 2 kleinere doosjes met ieder 48 kaarten' %>
                             </span>
                         </td>
-                        <td><%= calculationResult.quantity %></td>
-                        <td>€&nbsp;<%= calculationResult.pricePerSet.toFixed(2).replace('.', ',') %></td>
-                        <td>€&nbsp;<%= (calculationResult.pricePerSet * calculationResult.quantity).toFixed(2).replace('.', ',') %></td>
+                        <td><%= quantity %></td>
+                        <td>€&nbsp;<%= pricePerUnit.toFixed(2).replace('.', ',') %></td>
+                        <td>€&nbsp;<%= lineTotal.toFixed(2).replace('.', ',') %></td>
                     </tr>
 
                     <!-- Extras -->
@@ -532,8 +540,10 @@
 
         <!-- Totals -->
         <%
-            // Calculate subtotal from line items
-            const mainProductTotal = calculationResult.pricePerSet * calculationResult.quantity;
+            // Calculate subtotal from line items - use calculatedPrices when available
+            const mainProductTotal = calculatedPrices && calculatedPrices.clientPricePerUnit
+                ? calculatedPrices.clientPricePerUnit * calculationResult.quantity
+                : calculationResult.pricePerSet * calculationResult.quantity;
             const extrasTotal = calculationResult.extras && calculationResult.extras.length > 0
                 ? calculationResult.extras.reduce((sum, extra) => sum + extra.price, 0)
                 : 0;
@@ -570,24 +580,57 @@
         <div class="notes-section">
             <h2 class="section-title">Productinformatie</h2>
             <div class="notes-content">
-                <strong>Wat wordt geleverd:</strong><br>
-                • <%= calculationResult.quantity %> complete sets<br>
-                • Elke set bevat: Een doos, met 2 kleinere doosjes die ieder 100 kaarten bevatten (Totaal 200 kaarten)<br>
-                • Totaal: <%= calculationResult.quantity %> dozen en <%= calculationResult.quantity * 200 %> kaarten<br><br>
+                <% if (productType === 'schneider') { %>
+                    <%
+                        const cardCount = calculation.cardCount || 48;
+                        const totalCards = calculationResult.quantity * cardCount;
+                    %>
+                    <strong>Wat wordt geleverd:</strong><br>
+                    • <%= calculationResult.quantity %> QRSong! Box<%= calculationResult.quantity > 1 ? 'en' : '' %><br>
+                    • Elke doos bevat <%= cardCount %> muziekkaarten<br>
+                    • Totaal: <%= calculationResult.quantity %> dozen en <%= totalCards %> kaarten<br><br>
 
-                <strong>Specificaties Doosjes:</strong><br>
-                • Materiaal: incada excel (gc2), wit, 325 grs/m²<br>
-                • Bedrukking: 5/0 Voorzijde full-colour + all over glanzend dispersielak<br>
-                • Formaat: 17,5 x 19,1 cm<br>
-                • Afwerking: stansen, rillen en uitbreken, kaartspeldoosjes langsnaadplakken<br>
-                • Twee kaartdoosjes (fefco0210): plano 175x191mm, inhoudmaat 62x16x122mm<br>
-                • Verzameldoosje (fefco0427): plano 227x338mm, inhoudsmaat 123x123x18mm<br><br>
+                    <strong>Specificaties Doos:</strong><br>
+                    <% if (cardCount === 48) { %>
+                    • Gelamineerde doos met zijklepje<br>
+                    • Volledig bedrukbaar in eigen stijl<br>
+                    <% } else if (cardCount === 96) { %>
+                    • 2x48 kaarten in banderol, 2-vaks doos met los dekseltje<br>
+                    • Stevig SK2 karton, binnen & buiten bedrukbaar<br>
+                    <% } else if (cardCount === 144) { %>
+                    • 2x72 kaarten in banderol, 2-vaks doos met los dekseltje<br>
+                    • Stevig SK2 karton, binnen & buiten bedrukbaar<br>
+                    <% } else { %>
+                    • 4x48 kaarten in banderol, 4-vaks doos met los dekseltje<br>
+                    • Stevig SK2 karton, binnen & buiten bedrukbaar<br>
+                    <% } %>
+                    <br>
 
-                <strong>Specificaties Kaarten:</strong><br>
-                • Materiaal: tweezijdig gesteken sulfaatkarton, wit, 300 grs/m²<br>
-                • Bedrukking: 4/4 tweezijdig full colour in digidruk<br>
-                • Formaat: 6 x 6 cm<br>
-                • Afwerking: per 2x50 stuks verpakt in doosjes
+                    <strong>Specificaties Kaarten:</strong><br>
+                    • Formaat: 56 x 56 mm, afgeronde hoeken<br>
+                    • Materiaal: 350 grams karton met glanslaminaat<br>
+                    • Bedrukking: tweezijdig full colour<br>
+                    • QR-code gelinkt aan muziek
+                <% } else { %>
+                    <strong>Wat wordt geleverd:</strong><br>
+                    • <%= calculationResult.quantity %> complete sets<br>
+                    • Elke set bevat: Een doos, met 2 kleinere doosjes die ieder 48 kaarten bevatten (Totaal 96 kaarten)<br>
+                    • Totaal: <%= calculationResult.quantity %> dozen en <%= calculationResult.quantity * 96 %> kaarten<br><br>
+
+                    <strong>Specificaties Doosjes:</strong><br>
+                    • Materiaal: incada excel (gc2), wit, 325 grs/m²<br>
+                    • Bedrukking: 5/0 Voorzijde full-colour + all over glanzend dispersielak<br>
+                    • Formaat: 17,5 x 19,1 cm<br>
+                    • Afwerking: stansen, rillen en uitbreken, kaartspeldoosjes langsnaadplakken<br>
+                    • Twee kaartdoosjes (fefco0210): plano 175x191mm, inhoudmaat 62x16x122mm<br>
+                    • Verzameldoosje (fefco0427): plano 227x338mm, inhoudsmaat 123x123x18mm<br><br>
+
+                    <strong>Specificaties Kaarten:</strong><br>
+                    • Materiaal: tweezijdig gesteken sulfaatkarton, wit, 300 grs/m²<br>
+                    • Bedrukking: 4/4 tweezijdig full colour in digidruk<br>
+                    • Formaat: 6 x 6 cm<br>
+                    • Afwerking: per 2x48 stuks verpakt in doosjes
+                <% } %>
             </div>
         </div>
 
@@ -602,6 +645,7 @@
                 <li>Leveringstijd: conform bespreking.</li>
                 <li>De QR-codes linken naar Spotify. Wij streven ernaar links werkend te houden en kunnen deze updaten indien nodig. Echter, als Spotify een nummer volledig verwijdert, is dit buiten onze controle.</li>
                 <li>De app werkt ook zonder Spotify Premium, maar dan ziet de gebruiker na een korte countdown de artiest/titel en speelt een 30-seconden preview. Met Premium blijft alles verborgen tot je raadt.</li>
+                <li>Afhankelijkheid van Derden: QRSong! streeft naar continue beschikbaarheid van de digitale diensten. De werking van het product is echter afhankelijk van externe dienstverleners, waaronder maar niet beperkt tot muziekstreamingdiensten (Spotify, Apple Music, YouTube Music, Deezer, Tidal), hosting- en infrastructuurproviders. QRSong! kan niet aansprakelijk worden gesteld voor storingen, wijzigingen in functionaliteit, of beëindiging van diensten door deze derden. Bij substantiële wijzigingen zal QRSong! zich inspannen om een passend alternatief te bieden, zonder dat hieraan rechten kunnen worden ontleend.</li>
                 <li>Beperking van Aansprakelijkheid: QRSong! is niet aansprakelijk voor indirecte of gevolgschade, fouten in de inhoud, verlies van gegevens, of schade door onjuist gebruik van de kaarten of app.</li>
             </ol>
         </div>
