@@ -3585,6 +3585,36 @@ class Vibe {
   }
 
   /**
+   * Update a company event
+   */
+  public async updateCompanyEvent(
+    companyId: number,
+    eventId: number,
+    content: string
+  ): Promise<any> {
+    try {
+      const event = await this.prisma.companyEvent.findFirst({
+        where: { id: eventId, companyId },
+      });
+
+      if (!event) {
+        return { success: false, error: 'Event not found' };
+      }
+
+      const updatedEvent = await this.prisma.companyEvent.update({
+        where: { id: eventId },
+        data: { content: content.trim() },
+        include: { User: true },
+      });
+
+      return { success: true, data: updatedEvent };
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`Error updating company event: ${error}`));
+      return { success: false, error: 'Failed to update event' };
+    }
+  }
+
+  /**
    * Delete a company event
    */
   public async deleteCompanyEvent(

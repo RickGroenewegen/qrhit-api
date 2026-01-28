@@ -1672,6 +1672,40 @@ export default async function vibeRoutes(
     }
   );
 
+  // Update company event
+  fastify.put(
+    '/vibe/companies/:companyId/events/:eventId',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+        const eventId = parseInt(request.params.eventId);
+        const { content } = request.body;
+
+        if (isNaN(companyId) || isNaN(eventId)) {
+          reply.status(400).send({ error: 'Invalid company or event ID' });
+          return;
+        }
+
+        if (!content || !content.trim()) {
+          reply.status(400).send({ error: 'Content is required' });
+          return;
+        }
+
+        const result = await vibe.updateCompanyEvent(companyId, eventId, content);
+        if (!result.success) {
+          reply.status(result.error === 'Event not found' ? 404 : 500).send({ error: result.error });
+          return;
+        }
+
+        reply.send({ success: true, event: result.data });
+      } catch (error) {
+        console.error('Error updating company event:', error);
+        reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
   // Delete company event
   fastify.delete(
     '/vibe/companies/:companyId/events/:eventId',

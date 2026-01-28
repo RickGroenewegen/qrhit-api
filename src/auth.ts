@@ -45,18 +45,22 @@ export function verifyPassword(
 
 /**
  * Generates a JWT token for a user
- * @param userId The user ID to include in the token
+ * @param userId The user ID (email) to include in the token
  * @param userGroups Optional array of user group names
  * @param companyId Optional company ID the user belongs to
+ * @param id Optional numeric user ID from database
+ * @param displayName Optional display name of the user
  * @returns A JWT token
  */
 export function generateToken(
   userId: string,
   userGroups: string[] = [],
-  companyId?: number
+  companyId?: number,
+  id?: number,
+  displayName?: string
 ): string {
   const secret = process.env.JWT_SECRET!;
-  return jwt.sign({ userId, userGroups, companyId }, secret, {
+  return jwt.sign({ userId, userGroups, companyId, id, displayName }, secret, {
     expiresIn: '1y',
   });
 }
@@ -148,7 +152,9 @@ export async function authenticateUser(
     const token = generateToken(
       user.userId,
       userGroups,
-      user.companyId || undefined
+      user.companyId || undefined,
+      user.id,
+      user.displayName || undefined
     );
 
     return {
@@ -313,7 +319,9 @@ export async function verifyUser(verificationHash: string): Promise<{
     const token = generateToken(
       user.userId,
       userGroups,
-      user.companyId || undefined
+      user.companyId || undefined,
+      user.id,
+      user.displayName || undefined
     );
 
     return {
