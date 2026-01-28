@@ -3630,15 +3630,43 @@ class Vibe {
     userId: number
   ): Promise<any> {
     try {
-      const XLSX = require('xlsx');
-      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
-      const sheetName = workbook.SheetNames[0];
-      const sheet = workbook.Sheets[sheetName];
-      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+      const ExcelJS = require('exceljs');
+      const workbook = new ExcelJS.Workbook();
+      await workbook.xlsx.load(fileBuffer);
+      const worksheet = workbook.worksheets[0];
 
-      if (rows.length < 2) {
+      if (!worksheet || worksheet.rowCount < 2) {
         return { success: false, error: 'Excel file is empty or has no data rows' };
       }
+
+      // Helper to extract text value from exceljs cell
+      const getCellText = (cell: any): string => {
+        if (cell.value === null || cell.value === undefined) return '';
+        // Rich text cells have a 'richText' property
+        if (cell.value.richText) {
+          return cell.value.richText.map((r: any) => r.text).join('');
+        }
+        // Hyperlink cells have a 'text' property
+        if (cell.value.text) {
+          return cell.value.text;
+        }
+        // Formula cells have a 'result' property
+        if (cell.value.result !== undefined) {
+          return String(cell.value.result);
+        }
+        // Regular values
+        return String(cell.value);
+      };
+
+      // Convert worksheet to array of arrays
+      const rows: any[][] = [];
+      worksheet.eachRow((row: any, rowNumber: number) => {
+        const rowValues: any[] = [];
+        row.eachCell({ includeEmpty: true }, (cell: any, colNumber: number) => {
+          rowValues[colNumber - 1] = getCellText(cell);
+        });
+        rows.push(rowValues);
+      });
 
       // Skip header row
       const dataRows = rows.slice(1);
