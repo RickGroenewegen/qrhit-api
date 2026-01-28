@@ -231,6 +231,7 @@ model User {
   UserGroupUser             UserInGroup[]
   Company                   Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   PromotionalDiscountCode   DiscountCode[]   @relation("PromotionalDiscountCode")
+  CompanyEvent              CompanyEvent[]
 
   @@index([hash])
   @@map("users")
@@ -715,6 +716,7 @@ model Company {
   id               Int           @id @default(autoincrement())
   name             String
   test             Boolean       @default(false)
+  followUp         Boolean       @default(false)
   address          String?
   housenumber      String?
   city             String?
@@ -730,8 +732,25 @@ model Company {
   updatedAt        DateTime      @updatedAt
   CompanyList      CompanyList[]
   User             User[]
+  CompanyEvent     CompanyEvent[]
 
   @@map("companies")
+}
+
+model CompanyEvent {
+  id            Int       @id @default(autoincrement())
+  companyId     Int
+  userId        Int?
+  type          String    @default("comment") // comment, status_change, file_upload, etc.
+  content       String    @db.Text
+  attachmentUrl String?
+  createdAt     DateTime  @default(now())
+
+  Company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  User          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@index([companyId])
+  @@map("company_events")
 }
 
 model CompanyList {

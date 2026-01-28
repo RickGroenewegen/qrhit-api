@@ -108,6 +108,7 @@ export default async function vibeRoutes(
       const {
         name,
         test,
+        followUp,
         address,
         housenumber,
         city,
@@ -130,6 +131,7 @@ export default async function vibeRoutes(
       const result = await vibe.updateCompany(companyId, {
         name,
         test,
+        followUp,
         address,
         housenumber,
         city,
@@ -803,6 +805,7 @@ export default async function vibeRoutes(
         const {
           name,
           test,
+          followUp,
           address,
           housenumber,
           city,
@@ -821,6 +824,7 @@ export default async function vibeRoutes(
         const result = await vibe.createCompany({
           name,
           test,
+          followUp,
           address,
           housenumber,
           city,
@@ -1569,6 +1573,174 @@ export default async function vibeRoutes(
       } catch (error) {
         console.error('Error generating retail pricing PDF:', error);
         reply.status(500).send({ error: 'Failed to generate retail pricing PDF' });
+      }
+    }
+  );
+
+  // ============================================
+  // Company Events
+  // ============================================
+
+  // Get company events
+  fastify.get(
+    '/vibe/companies/:companyId/events',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+        if (isNaN(companyId)) {
+          reply.status(400).send({ error: 'Invalid company ID' });
+          return;
+        }
+
+        const result = await vibe.getCompanyEvents(companyId);
+        if (!result.success) {
+          reply.status(500).send({ error: result.error });
+          return;
+        }
+
+        reply.send({ success: true, events: result.data });
+      } catch (error) {
+        console.error('Error getting company events:', error);
+        reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  // Create company event
+  fastify.post(
+    '/vibe/companies/:companyId/events',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+        if (isNaN(companyId)) {
+          reply.status(400).send({ error: 'Invalid company ID' });
+          return;
+        }
+
+        const userId = request.user.id;
+        let content = '';
+        let attachmentUrl: string | null = null;
+
+        // Handle multipart form data for file uploads
+        const contentType = request.headers['content-type'] || '';
+        if (contentType.includes('multipart/form-data')) {
+          const parts = request.parts();
+          for await (const part of parts) {
+            if (part.type === 'file' && part.fieldname === 'attachment') {
+              // Save the file
+              const filename = `event_${companyId}_${Date.now()}_${part.filename}`;
+              const uploadDir = `${process.env['PUBLIC_DIR']}/company-events`;
+              const fs = require('fs').promises;
+              const path = require('path');
+
+              // Ensure directory exists
+              await fs.mkdir(uploadDir, { recursive: true });
+
+              const filePath = path.join(uploadDir, filename);
+              const buffer = await part.toBuffer();
+              await fs.writeFile(filePath, buffer);
+
+              attachmentUrl = `/public/company-events/${filename}`;
+            } else if (part.fieldname === 'content') {
+              // For non-file fields, use part.value
+              content = part.value || '';
+            }
+          }
+        } else {
+          // JSON body
+          content = request.body.content || '';
+        }
+
+        if (!content.trim()) {
+          reply.status(400).send({ error: 'Content is required' });
+          return;
+        }
+
+        const result = await vibe.createCompanyEvent(companyId, userId, content, attachmentUrl);
+        if (!result.success) {
+          reply.status(500).send({ error: result.error });
+          return;
+        }
+
+        reply.send({ success: true, event: result.data });
+      } catch (error) {
+        console.error('Error creating company event:', error);
+        reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  // Delete company event
+  fastify.delete(
+    '/vibe/companies/:companyId/events/:eventId',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+        const eventId = parseInt(request.params.eventId);
+
+        if (isNaN(companyId) || isNaN(eventId)) {
+          reply.status(400).send({ error: 'Invalid company or event ID' });
+          return;
+        }
+
+        const result = await vibe.deleteCompanyEvent(companyId, eventId);
+        if (!result.success) {
+          reply.status(result.error === 'Event not found' ? 404 : 500).send({ error: result.error });
+          return;
+        }
+
+        reply.send({ success: true });
+      } catch (error) {
+        console.error('Error deleting company event:', error);
+        reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  // ============================================
+  // Bulk Import Companies from Excel
+  // ============================================
+
+  fastify.post(
+    '/vibe/companies/import',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      try {
+        const userId = request.user.id;
+        let fileBuffer: Buffer | null = null;
+
+        // Handle multipart form data
+        const parts = request.parts();
+        for await (const part of parts) {
+          if (part.type === 'file' && part.fieldname === 'file') {
+            fileBuffer = await part.toBuffer();
+          }
+        }
+
+        if (!fileBuffer) {
+          reply.status(400).send({ error: 'No file uploaded' });
+          return;
+        }
+
+        const result = await vibe.importCompaniesFromExcel(fileBuffer, userId);
+        if (!result.success) {
+          reply.status(400).send({ error: result.error });
+          return;
+        }
+
+        reply.send({
+          success: true,
+          imported: result.data.imported,
+          skipped: result.data.skipped,
+          errors: result.data.errors,
+          details: result.data.details
+        });
+      } catch (error) {
+        console.error('Error importing companies:', error);
+        reply.status(500).send({ error: 'Internal server error' });
       }
     }
   );

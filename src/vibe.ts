@@ -981,6 +981,7 @@ class Vibe {
       const validFields = [
         'name',
         'test',
+        'followUp',
         'address',
         'housenumber',
         'city',
@@ -1117,6 +1118,7 @@ class Vibe {
   public async createCompany(companyData: {
     name: string;
     test?: boolean;
+    followUp?: boolean;
     address?: string;
     housenumber?: string;
     city?: string;
@@ -1147,6 +1149,7 @@ class Vibe {
         data: {
           name: companyData.name.trim(), // Trim whitespace
           test: companyData.test || false, // Store the test property
+          followUp: companyData.followUp || false,
           address: companyData.address,
           housenumber: companyData.housenumber,
           city: companyData.city,
@@ -3512,6 +3515,340 @@ class Vibe {
     } catch (error: any) {
       this.logger.log(color.red.bold(`Error generating quotation: ${error}`));
       return { success: false, error: 'Failed to generate quotation' };
+    }
+  }
+
+  // ============================================
+  // Company Events
+  // ============================================
+
+  /**
+   * Get all events for a company
+   */
+  public async getCompanyEvents(companyId: number): Promise<any> {
+    try {
+      const events = await this.prisma.companyEvent.findMany({
+        where: { companyId },
+        include: {
+          User: {
+            select: {
+              id: true,
+              displayName: true,
+              email: true,
+            },
+          },
+        },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      return { success: true, data: events };
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`Error getting company events: ${error}`));
+      return { success: false, error: 'Failed to get company events' };
+    }
+  }
+
+  /**
+   * Create a new company event
+   */
+  public async createCompanyEvent(
+    companyId: number,
+    userId: number,
+    content: string,
+    attachmentUrl: string | null
+  ): Promise<any> {
+    try {
+      const event = await this.prisma.companyEvent.create({
+        data: {
+          companyId,
+          userId,
+          type: 'comment',
+          content,
+          attachmentUrl,
+        },
+        include: {
+          User: {
+            select: {
+              id: true,
+              displayName: true,
+              email: true,
+            },
+          },
+        },
+      });
+
+      return { success: true, data: event };
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`Error creating company event: ${error}`));
+      return { success: false, error: 'Failed to create company event' };
+    }
+  }
+
+  /**
+   * Delete a company event
+   */
+  public async deleteCompanyEvent(
+    companyId: number,
+    eventId: number
+  ): Promise<any> {
+    try {
+      const event = await this.prisma.companyEvent.findFirst({
+        where: { id: eventId, companyId },
+      });
+
+      if (!event) {
+        return { success: false, error: 'Event not found' };
+      }
+
+      // Delete attachment file if exists
+      if (event.attachmentUrl) {
+        const filePath = `${process.env['PUBLIC_DIR']}${event.attachmentUrl}`;
+        await fs.unlink(filePath).catch(() => {});
+      }
+
+      await this.prisma.companyEvent.delete({
+        where: { id: eventId },
+      });
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`Error deleting company event: ${error}`));
+      return { success: false, error: 'Failed to delete company event' };
+    }
+  }
+
+  // ============================================
+  // Bulk Import Companies from Excel
+  // ============================================
+
+  /**
+   * Import companies from Excel file
+   * Excel columns: Bedrijfsnaam, E-mail, Voornaam, Achternaam, Telefoonnummer, Adres, Plaats, Land, zipcode, Categorie, Opmerking
+   */
+  public async importCompaniesFromExcel(
+    fileBuffer: Buffer,
+    userId: number
+  ): Promise<any> {
+    try {
+      const XLSX = require('xlsx');
+      const workbook = XLSX.read(fileBuffer, { type: 'buffer' });
+      const sheetName = workbook.SheetNames[0];
+      const sheet = workbook.Sheets[sheetName];
+      const rows = XLSX.utils.sheet_to_json(sheet, { header: 1 }) as any[][];
+
+      if (rows.length < 2) {
+        return { success: false, error: 'Excel file is empty or has no data rows' };
+      }
+
+      // Skip header row
+      const dataRows = rows.slice(1);
+
+      // Country code mapping
+      const countryMap: { [key: string]: string } = {
+        nederland: 'NL',
+        netherlands: 'NL',
+        belgium: 'BE',
+        belgie: 'BE',
+        belgië: 'BE',
+        germany: 'DE',
+        duitsland: 'DE',
+        france: 'FR',
+        frankrijk: 'FR',
+        uk: 'GB',
+        'united kingdom': 'GB',
+        usa: 'US',
+        'united states': 'US',
+      };
+
+      // Group rows by company name
+      const companiesMap = new Map<string, any[]>();
+      for (const row of dataRows) {
+        const companyName = row[0]?.toString()?.trim();
+        if (!companyName) continue;
+
+        if (!companiesMap.has(companyName)) {
+          companiesMap.set(companyName, []);
+        }
+        companiesMap.get(companyName)!.push(row);
+      }
+
+      let imported = 0;
+      let skipped = 0;
+      const errors: string[] = [];
+      const details: any[] = [];
+
+      // Get companyadmin user group
+      const companyAdminGroup = await this.prisma.userGroup.findUnique({
+        where: { name: 'companyadmin' },
+      });
+
+      if (!companyAdminGroup) {
+        return { success: false, error: 'companyadmin user group not found' };
+      }
+
+      for (const [companyName, companyRows] of companiesMap) {
+        try {
+          // Check if company already exists
+          const existingCompany = await this.prisma.company.findFirst({
+            where: { name: { equals: companyName } },
+          });
+
+          if (existingCompany) {
+            skipped++;
+            details.push({ company: companyName, status: 'skipped', reason: 'Company already exists' });
+            continue;
+          }
+
+          // Use first row for company data
+          const firstRow = companyRows[0];
+
+          // Extract house number from address
+          const fullAddress = firstRow[5]?.toString()?.trim() || '';
+          const addressMatch = fullAddress.match(/^(.+?)\s+(\d+\s*\w*)$/);
+          let address = fullAddress;
+          let housenumber = '';
+          if (addressMatch) {
+            address = addressMatch[1].trim();
+            housenumber = addressMatch[2].trim();
+          }
+
+          // Convert country to code
+          const countryRaw = firstRow[7]?.toString()?.trim()?.toLowerCase() || '';
+          const countrycode = countryMap[countryRaw] || firstRow[7]?.toString()?.trim() || '';
+
+          // Combine first and last name for contact
+          const firstName = firstRow[2]?.toString()?.trim() || '';
+          const lastName = firstRow[3]?.toString()?.trim() || '';
+          const contact = [firstName, lastName].filter(Boolean).join(' ');
+
+          // Format phone number
+          let phone = firstRow[4]?.toString()?.trim() || '';
+          if (phone && !phone.startsWith('+')) {
+            // Add Dutch country code if not present
+            if (phone.startsWith('0')) {
+              phone = '+31' + phone.substring(1);
+            } else if (phone.startsWith('6')) {
+              phone = '+316' + phone.substring(1);
+            } else {
+              phone = '+31' + phone;
+            }
+          }
+
+          // Create company (as lead)
+          const newCompany = await this.prisma.company.create({
+            data: {
+              name: companyName,
+              test: true, // Lead
+              followUp: false,
+              address,
+              housenumber,
+              city: firstRow[6]?.toString()?.trim() || '',
+              zipcode: firstRow[8]?.toString()?.trim() || '',
+              countrycode,
+              contact,
+              contactemail: firstRow[1]?.toString()?.trim() || '',
+              contactphone: phone,
+            },
+          });
+
+          // Create company event from Opmerking if present
+          const opmerking = firstRow[10]?.toString()?.trim();
+          if (opmerking) {
+            await this.prisma.companyEvent.create({
+              data: {
+                companyId: newCompany.id,
+                userId,
+                type: 'comment',
+                content: opmerking,
+              },
+            });
+          }
+
+          // Create users for each contact row
+          let usersCreated = 0;
+          for (const row of companyRows) {
+            const email = row[1]?.toString()?.trim()?.toLowerCase();
+            if (!email) continue;
+
+            // Check if user already exists
+            const existingUser = await this.prisma.user.findUnique({
+              where: { email },
+            });
+
+            if (existingUser) {
+              // If user exists but has no company, link them
+              if (!existingUser.companyId) {
+                await this.prisma.user.update({
+                  where: { id: existingUser.id },
+                  data: { companyId: newCompany.id },
+                });
+                usersCreated++;
+              }
+              continue;
+            }
+
+            // Create new user
+            const userFirstName = row[2]?.toString()?.trim() || '';
+            const userLastName = row[3]?.toString()?.trim() || '';
+            const displayName = [userFirstName, userLastName].filter(Boolean).join(' ') || email.split('@')[0];
+
+            // Generate unique hash and userId
+            const userHash = require('crypto').randomBytes(8).toString('hex').slice(0, 16);
+            const userIdStr = `user_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+
+            const newUser = await this.prisma.user.create({
+              data: {
+                userId: userIdStr,
+                email,
+                displayName,
+                hash: userHash,
+                companyId: newCompany.id,
+                verified: false,
+              },
+            });
+
+            // Add user to companyadmin group
+            await this.prisma.userInGroup.create({
+              data: {
+                userId: newUser.id,
+                groupId: companyAdminGroup.id,
+              },
+            });
+
+            usersCreated++;
+          }
+
+          imported++;
+          details.push({
+            company: companyName,
+            status: 'imported',
+            companyId: newCompany.id,
+            usersCreated,
+          });
+        } catch (error: any) {
+          errors.push(`${companyName}: ${error.message}`);
+          details.push({ company: companyName, status: 'error', error: error.message });
+        }
+      }
+
+      this.logger.log(
+        color.green.bold(
+          `Imported ${imported} companies, skipped ${skipped}, errors: ${errors.length}`
+        )
+      );
+
+      return {
+        success: true,
+        data: {
+          imported,
+          skipped,
+          errors,
+          details,
+        },
+      };
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`Error importing companies: ${error}`));
+      return { success: false, error: `Failed to import companies: ${error.message}` };
     }
   }
 }
