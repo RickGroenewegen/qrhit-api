@@ -589,9 +589,17 @@ class PrintEnBind {
         }
 
         // Try to get orderId from header first, fallback to response body
-        orderId = response.headers.get('location')?.split('/')[1]
-          || firstResponse.order?.toString()
-          || firstResponse.location?.split('/')[1];
+        const headerLocation = response.headers.get('location');
+        const bodyOrder = firstResponse.order;
+        const bodyLocation = firstResponse.location;
+
+        console.log('OrderId extraction:', { headerLocation, bodyOrder, bodyLocation });
+
+        orderId = headerLocation?.split('/')[1]
+          || bodyOrder?.toString()
+          || bodyLocation?.split('/')[1];
+
+        console.log('OrderId resolved to:', orderId);
 
         if (orderId) {
           physicalOrderCreated = true;
@@ -610,6 +618,8 @@ class PrintEnBind {
             );
           }
           totalItemsSuccess++;
+        } else {
+          console.log('Failed to extract orderId!', { status: response.status, body: firstResponse });
         }
       } else if (items[i].type == 'physical' && physicalOrderCreated) {
         const articleResponse = await fetch(
