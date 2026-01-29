@@ -460,6 +460,11 @@ export default async function vibeRoutes(
           }).format(value);
         };
 
+        // Format number with Dutch locale (dot as thousand separator, comma as decimal)
+        const formatEuro = (value: number) => {
+          return value.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
         const today = new Date();
         const validUntil = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
@@ -475,6 +480,7 @@ export default async function vibeRoutes(
           validUntil,
           formatCurrency,
           formatDate,
+          formatEuro,
           baseUrl,
           // New fields for pricing with reseller toggle
           isReseller,

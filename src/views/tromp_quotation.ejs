@@ -289,7 +289,6 @@
         }
 
         .total-row.vat td {
-            padding: 6px 20px;
             color: #666;
             font-style: italic;
             font-size: 13px;
@@ -298,6 +297,7 @@
         .total-row.vat td:last-child {
             font-weight: 600;
             font-style: normal;
+            text-align: right;
         }
 
         .total-row.grand-total-incl td {
@@ -506,8 +506,8 @@
                             </span>
                         </td>
                         <td><%= quantity %></td>
-                        <td>€&nbsp;<%= pricePerUnit.toFixed(2).replace('.', ',') %></td>
-                        <td>€&nbsp;<%= lineTotal.toFixed(2).replace('.', ',') %></td>
+                        <td>€&nbsp;<%= formatEuro(pricePerUnit) %></td>
+                        <td>€&nbsp;<%= formatEuro(lineTotal) %></td>
                     </tr>
 
                     <!-- Extras (filter out custom app as it's shown separately) -->
@@ -519,8 +519,8 @@
                                 <span class="item-details">Eenmalige kosten</span>
                             </td>
                             <td>1</td>
-                            <td>€&nbsp;<%= extra.price.toFixed(2).replace('.', ',') %></td>
-                            <td>€&nbsp;<%= extra.price.toFixed(2).replace('.', ',') %></td>
+                            <td>€&nbsp;<%= formatEuro(extra.price) %></td>
+                            <td>€&nbsp;<%= formatEuro(extra.price) %></td>
                         </tr>
                         <% }); %>
                     <% } %>
@@ -564,29 +564,29 @@
             <table class="totals-table">
                 <tr class="total-row subtotal">
                     <td colspan="3">Subtotaal</td>
-                    <td>€&nbsp;<%= subtotal.toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= formatEuro(subtotal) %></td>
                 </tr>
 
                 <% if (manualDiscountPct > 0) { %>
                 <tr class="total-row discount">
                     <td colspan="3">Korting (<%= manualDiscountPct %>%)</td>
-                    <td>-€&nbsp;<%= discountAmount.toFixed(2).replace('.', ',') %></td>
+                    <td>-€&nbsp;<%= formatEuro(discountAmount) %></td>
                 </tr>
                 <% } %>
 
                 <tr class="total-row grand-total">
                     <td colspan="3">Totaal excl. BTW</td>
-                    <td>€&nbsp;<%= totalAfterDiscount.toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= formatEuro(totalAfterDiscount) %></td>
                 </tr>
 
                 <tr class="total-row vat">
                     <td colspan="3">BTW 21%</td>
-                    <td>€&nbsp;<%= vat.toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= formatEuro(vat) %></td>
                 </tr>
 
                 <tr class="total-row grand-total-incl">
                     <td colspan="3">Totaal incl. BTW</td>
-                    <td>€&nbsp;<%= totalInclVat.toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= formatEuro(totalInclVat) %></td>
                 </tr>
             </table>
         </div>
