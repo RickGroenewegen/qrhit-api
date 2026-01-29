@@ -717,6 +717,7 @@ model Company {
   name             String
   test             Boolean       @default(false)
   followUp         Boolean       @default(false)
+  onlyForAdmin     Boolean       @default(false)
   address          String?
   housenumber      String?
   city             String?

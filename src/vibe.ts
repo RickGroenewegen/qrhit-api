@@ -982,6 +982,7 @@ class Vibe {
         'name',
         'test',
         'followUp',
+        'onlyForAdmin',
         'address',
         'housenumber',
         'city',
@@ -1072,13 +1073,19 @@ class Vibe {
 
   /**
    * Get all companies
+   * @param userGroups Optional array of user groups to filter companies (admin sees all)
    * @returns Object with success status and array of companies
    */
-  public async getAllCompanies(): Promise<any> {
+  public async getAllCompanies(userGroups?: string[]): Promise<any> {
     try {
+      // Check if user is admin
+      const isAdmin = userGroups?.includes('admin');
+
       // Fetch companies and include a count of their lists and the "test" property
       // Order: test=false first, then by name
+      // Filter out onlyForAdmin companies for non-admin users
       const companiesWithListCount = await this.prisma.company.findMany({
+        where: isAdmin ? {} : { onlyForAdmin: false },
         orderBy: [
           { test: 'asc' }, // false (0) first, then true (1)
           { name: 'asc' },
@@ -1119,6 +1126,7 @@ class Vibe {
     name: string;
     test?: boolean;
     followUp?: boolean;
+    onlyForAdmin?: boolean;
     address?: string;
     housenumber?: string;
     city?: string;
@@ -1150,6 +1158,7 @@ class Vibe {
           name: companyData.name.trim(), // Trim whitespace
           test: companyData.test || false, // Store the test property
           followUp: companyData.followUp || false,
+          onlyForAdmin: companyData.onlyForAdmin || false,
           address: companyData.address,
           housenumber: companyData.housenumber,
           city: companyData.city,

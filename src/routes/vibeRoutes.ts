@@ -17,7 +17,8 @@ export default async function vibeRoutes(
     getAuthHandler(['admin', 'vibeadmin']),
     async (request: any, reply: any) => {
       try {
-        const result = await vibe.getAllCompanies();
+        // Pass user groups to filter companies based on onlyForAdmin flag
+        const result = await vibe.getAllCompanies(request.user?.userGroups);
 
         if (!result.success) {
           reply.status(500).send({ error: result.error });
@@ -109,6 +110,7 @@ export default async function vibeRoutes(
         name,
         test,
         followUp,
+        onlyForAdmin,
         address,
         housenumber,
         city,
@@ -132,6 +134,7 @@ export default async function vibeRoutes(
         name,
         test,
         followUp,
+        onlyForAdmin,
         address,
         housenumber,
         city,
@@ -898,6 +901,7 @@ export default async function vibeRoutes(
           name,
           test,
           followUp,
+          onlyForAdmin,
           address,
           housenumber,
           city,
@@ -917,6 +921,7 @@ export default async function vibeRoutes(
           name,
           test,
           followUp,
+          onlyForAdmin,
           address,
           housenumber,
           city,
