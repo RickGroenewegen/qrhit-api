@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:v="urn:schemas-microsoft-com:vml" xmlns:o="urn:schemas-microsoft-com:office:office">
+<head>
+    <meta charset="utf-8">
+    <meta name="x-apple-disable-message-reformatting">
+    <meta http-equiv="x-ua-compatible" content="ie=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="format-detection" content="telephone=no, date=no, address=no, email=no">
+    <title>{{ productName }} - Verification Code</title>
+    <!--[if mso]>
+    <xml><o:OfficeDocumentSettings><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml>
+    <style>
+      td,th,div,p,a,h1,h2,h3,h4,h5,h6 {font-family: "Segoe UI", sans-serif; mso-line-height-rule: exactly;}
+    </style>
+    <![endif]-->
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Lato:wght@400;700&display=swap');
+    </style>
+</head>
+<body style="margin: 0; padding: 0; width: 100%; word-break: break-word; -webkit-font-smoothing: antialiased; background-color: #f8fafc;">
+    <div style="display: none;">{{ translations.subject }} - {{ productName }}</div>
+    <div role="article" aria-roledescription="email" aria-label="{{ productName }} Verification" lang="en" style="font-family: 'Lato', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; background-color: #f8fafc;">
+        <table style="width: 100%; font-family: 'Lato', sans-serif;" cellpadding="0" cellspacing="0" role="presentation">
+            <tr>
+                <td align="center" style="padding: 24px;">
+                    <table class="container" style="width: 100%; max-width: 600px; background-color: #ffffff; border-radius: 8px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);" cellpadding="0" cellspacing="0" role="presentation">
+                        <tr>
+                            <td style="padding: 24px;">
+                                <!-- Logo -->
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td align="center" style="padding-bottom: 24px;">
+                                            <img src="cid:logo" alt="{{ productName }} Logo" style="max-width: 200px; height: auto;">
+                                        </td>
+                                    </tr>
+                                </table>
+                                <!-- Content -->
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td>
+                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.greeting }} {{fullname}},</p>
+                                            <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.intro }}</p>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- Verification Code Section -->
+                                <table style="width: 100%; margin: 0 0 24px 0;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td align="center" style="background-color: #f8fafc; padding: 32px; border-radius: 8px; border: 2px solid #4299e1;">
+                                            <h2 style="margin: 0 0 8px; font-size: 20px; font-weight: 700; color: #2d3748;">{{ translations.yourCode }}</h2>
+                                            <div style="background-color: #ffffff; border: 3px solid #4299e1; border-radius: 12px; padding: 24px; margin: 16px 0;">
+                                                <p style="margin: 0; font-size: 36px; font-weight: 700; color: #4299e1; letter-spacing: 8px; font-family: monospace;">{{pincode}}</p>
+                                            </div>
+                                            <p style="margin: 8px 0 0; font-size: 14px; color: #718096;">{{ translations.codeExpires }}</p>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- Instructions -->
+                                <table style="width: 100%; margin-top: 16px;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td style="text-align: center; padding: 16px;">
+                                            <p style="margin: 0; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.instructions }}</p>
+                                        </td>
+                                    </tr>
+                                </table>
+
+                                <!-- Closing -->
+                                <table style="width: 100%;" cellpadding="0" cellspacing="0" role="presentation">
+                                    <tr>
+                                        <td style="padding-top: 32px;">
+                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.ignoreMessage }}</p>
+                                            <p style="margin: 0; font-size: 16px; line-height: 24px; color: #4a5568;">
+                                                {{ translations.thanks }}<br>
+                                                {{ translations.team }}
+                                            </p>
+                                        </td>
+                                    </tr>
+                                </table>
+                            </td>
+                        </tr>
+                    </table>
+                    <!-- Footer -->
+                    <table style="width: 100%; max-width: 600px;" cellpadding="0" cellspacing="0" role="presentation">
+                        <tr>
+                            <td style="padding: 24px; text-align: center; font-size: 12px; color: #718096;">
+                                <p style="margin: 0 0 8px;">&copy; {{ currentYear }} {{ productName }}. {{ translations.allRightsReserved }}</p>
+                                <p style="margin: 0;">
+                                    <a href="https://qrsong.io" style="color: #4299e1; text-decoration: none;">{{ translations.visitWebsite }}</a> |
+                                    <a href="mailto:support@qrsong.io" style="color: #4299e1; text-decoration: none;">{{ translations.contactSupport }}</a>
+                                </p>
+                            </td>
+                        </tr>
+                    </table>
+                </td>
+            </tr>
+        </table>
+    </div>
+</body>
+</html>

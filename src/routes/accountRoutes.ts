@@ -6,11 +6,16 @@ import {
   resetPassword,
   checkPasswordResetToken,
   authenticateUser,
+  hashPassword,
+  generateSalt,
+  verifyPassword,
+  generateToken,
 } from '../auth';
 import Account from '../account';
 import Mail from '../mail';
 import { PrismaClient } from '@prisma/client';
 import PrismaInstance from '../prisma';
+import crypto from 'crypto';
 
 const prisma = PrismaInstance.getInstance();
 
@@ -367,7 +372,7 @@ export default async function accountRoutes(
       const { code } = request.body;
       const validationId = Math.random().toString(36).substring(7);
       const timestamp = new Date().toISOString();
-      
+
       console.log(`[${validationId}] Activation validation request received at ${timestamp}`);
       console.log(`[${validationId}] Code provided: ${code?.substring(0, 3)}***`);
 
@@ -386,7 +391,7 @@ export default async function accountRoutes(
 
       try {
         console.log(`[${validationId}] Looking up activation code in database...`);
-        
+
         // Find user with this activation code
         const user = await prisma.user.findFirst({
           where: {
@@ -428,11 +433,11 @@ export default async function accountRoutes(
         const expiryDate = new Date(user.gamesActivationCodeExpiry);
         const currentDate = new Date();
         const timeRemaining = expiryDate.getTime() - currentDate.getTime();
-        
+
         if (timeRemaining <= 0) {
           console.log(`[${validationId}] Code expired - Expired at: ${user.gamesActivationCodeExpiry}, Current time: ${currentDate.toISOString()}`);
           console.log(`[${validationId}] Time since expiry: ${Math.abs(timeRemaining / 1000 / 60).toFixed(2)} minutes`);
-          
+
           // Clear expired code
           await prisma.user.update({
             where: { id: user.id },
@@ -441,7 +446,7 @@ export default async function accountRoutes(
               gamesActivationCodeExpiry: null,
             },
           });
-          
+
           console.log(`[${validationId}] Expired code cleared from user record`);
 
           reply.status(400).send({
@@ -467,7 +472,7 @@ export default async function accountRoutes(
             gamesActivationCodeExpiry: null,
           },
         });
-        
+
         console.log(`[${validationId}] Activation code cleared after successful validation`);
         console.log(`[${validationId}] User ${user.hash?.substring(0, 8)}... successfully activated`);
 
@@ -484,7 +489,7 @@ export default async function accountRoutes(
         console.error(`[${validationId}] Error type:`, (error as Error).name);
         console.error(`[${validationId}] Error message:`, (error as Error).message);
         console.error(`[${validationId}] Stack trace:`, (error as Error).stack);
-        
+
         reply.status(500).send({
           success: false,
           error: 'validationFailed',
@@ -492,6 +497,537 @@ export default async function accountRoutes(
           details: 'Please try again or contact support if the issue persists',
           validationId,
           timestamp,
+        });
+      }
+    }
+  );
+
+  // ==========================================
+  // CUSTOMER ACCOUNT ENDPOINTS
+  // ==========================================
+
+  // Customer registration request - send pincode to email if they have orders
+  fastify.post(
+    '/api/account/customer-register-request',
+    async (request: any, reply: any) => {
+      const { email, locale } = request.body;
+
+      // Validate email
+      if (!email || !email.includes('@')) {
+        reply.status(400).send({
+          success: false,
+          error: 'invalidEmail',
+        });
+        return;
+      }
+
+      try {
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // Check if this email has any paid orders
+        const payment = await prisma.payment.findFirst({
+          where: {
+            email: normalizedEmail,
+            status: 'paid',
+          },
+          include: {
+            user: true,
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+        // Always return success to prevent email enumeration
+        if (!payment || !payment.user) {
+          reply.send({
+            success: true,
+            message: 'customerPincodeEmailSent',
+          });
+          return;
+        }
+
+        // Check if user already has a password set (already registered)
+        if (payment.user.password && payment.user.salt && payment.user.verified) {
+          reply.status(400).send({
+            success: false,
+            error: 'accountAlreadyExists',
+          });
+          return;
+        }
+
+        // Generate a 6-digit pincode
+        const pincode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Store the pincode with 15 minute expiry (reusing gamesActivationCode fields)
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+        await prisma.user.update({
+          where: { id: payment.user.id },
+          data: {
+            gamesActivationCode: pincode,
+            gamesActivationCodeExpiry: expiresAt,
+          },
+        });
+
+        // Send pincode email
+        const userLocale = locale || payment.locale || 'en';
+        await mail.sendCustomerRegistrationPincode(
+          normalizedEmail,
+          payment.fullname || payment.user.displayName,
+          pincode,
+          userLocale
+        );
+
+        reply.send({
+          success: true,
+          message: 'customerPincodeEmailSent',
+        });
+      } catch (error) {
+        console.error('Error in customer register request:', error);
+        reply.status(500).send({
+          success: false,
+          error: 'internalServerError',
+        });
+      }
+    }
+  );
+
+  // Verify customer pincode and return verification token
+  fastify.post(
+    '/api/account/customer-verify-pincode',
+    async (request: any, reply: any) => {
+      const { email, pincode } = request.body;
+
+      if (!email || !pincode || pincode.length !== 6) {
+        reply.status(400).send({
+          success: false,
+          error: 'invalidPincode',
+        });
+        return;
+      }
+
+      try {
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // Find user with this email and pincode
+        const user = await prisma.user.findFirst({
+          where: {
+            email: normalizedEmail,
+            gamesActivationCode: pincode,
+          },
+        });
+
+        if (!user) {
+          reply.status(400).send({
+            success: false,
+            error: 'invalidPincode',
+          });
+          return;
+        }
+
+        // Check if pincode is expired
+        if (!user.gamesActivationCodeExpiry || user.gamesActivationCodeExpiry < new Date()) {
+          // Clear expired pincode
+          await prisma.user.update({
+            where: { id: user.id },
+            data: {
+              gamesActivationCode: null,
+              gamesActivationCodeExpiry: null,
+            },
+          });
+
+          reply.status(400).send({
+            success: false,
+            error: 'pincodeExpired',
+          });
+          return;
+        }
+
+        // Generate a verification token for setting password
+        const verificationToken = crypto.randomBytes(32).toString('hex');
+
+        // Store verification token temporarily (reuse passwordResetToken fields)
+        const tokenExpiry = new Date(Date.now() + 30 * 60 * 1000); // 30 minutes
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            passwordResetToken: verificationToken,
+            passwordResetExpiry: tokenExpiry,
+            gamesActivationCode: null,
+            gamesActivationCodeExpiry: null,
+          },
+        });
+
+        reply.send({
+          success: true,
+          verificationToken,
+          displayName: user.displayName,
+        });
+      } catch (error) {
+        console.error('Error in customer verify pincode:', error);
+        reply.status(500).send({
+          success: false,
+          error: 'internalServerError',
+        });
+      }
+    }
+  );
+
+  // Set customer password using verification token
+  fastify.post(
+    '/api/account/customer-set-password',
+    async (request: any, reply: any) => {
+      const { verificationToken, password1, password2 } = request.body;
+
+      if (!verificationToken || !password1 || !password2) {
+        reply.status(400).send({
+          success: false,
+          error: 'missingRequiredFields',
+        });
+        return;
+      }
+
+      if (password1 !== password2) {
+        reply.status(400).send({
+          success: false,
+          error: 'passwordsDoNotMatch',
+        });
+        return;
+      }
+
+      // Validate password strength
+      if (password1.length < 8) {
+        reply.status(400).send({ success: false, error: 'passwordTooShort' });
+        return;
+      }
+      if (!/[A-Z]/.test(password1)) {
+        reply.status(400).send({ success: false, error: 'passwordNeedsUppercase' });
+        return;
+      }
+      if (!/[a-z]/.test(password1)) {
+        reply.status(400).send({ success: false, error: 'passwordNeedsLowercase' });
+        return;
+      }
+      if (!/[0-9]/.test(password1)) {
+        reply.status(400).send({ success: false, error: 'passwordNeedsNumber' });
+        return;
+      }
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password1)) {
+        reply.status(400).send({ success: false, error: 'passwordNeedsSpecialCharacter' });
+        return;
+      }
+
+      try {
+        // Find user with this verification token
+        const user = await prisma.user.findFirst({
+          where: {
+            passwordResetToken: verificationToken,
+          },
+          include: {
+            UserGroupUser: {
+              include: {
+                UserGroup: true,
+              },
+            },
+          },
+        });
+
+        if (!user) {
+          reply.status(400).send({
+            success: false,
+            error: 'invalidOrExpiredToken',
+          });
+          return;
+        }
+
+        // Check if token is expired
+        if (!user.passwordResetExpiry || user.passwordResetExpiry < new Date()) {
+          reply.status(400).send({
+            success: false,
+            error: 'invalidOrExpiredToken',
+          });
+          return;
+        }
+
+        // Hash password and update user
+        const salt = generateSalt();
+        const hashedPassword = hashPassword(password1, salt);
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            password: hashedPassword,
+            salt,
+            verified: true,
+            verifiedAt: new Date(),
+            upgraded: true,
+            passwordResetToken: null,
+            passwordResetExpiry: null,
+          },
+        });
+
+        // Ensure user is in 'users' group
+        let usersGroup = await prisma.userGroup.findUnique({
+          where: { name: 'users' },
+        });
+
+        if (!usersGroup) {
+          usersGroup = await prisma.userGroup.create({
+            data: { name: 'users' },
+          });
+        }
+
+        const existingGroupConnection = await prisma.userInGroup.findFirst({
+          where: {
+            userId: user.id,
+            groupId: usersGroup.id,
+          },
+        });
+
+        if (!existingGroupConnection) {
+          await prisma.userInGroup.create({
+            data: {
+              userId: user.id,
+              groupId: usersGroup.id,
+            },
+          });
+        }
+
+        // Generate auth token
+        const userGroups = [...user.UserGroupUser.map((ugu) => ugu.UserGroup.name), 'users'];
+        const uniqueGroups = [...new Set(userGroups)];
+
+        const token = generateToken(
+          user.userId,
+          uniqueGroups,
+          user.companyId || undefined,
+          user.id,
+          user.displayName || undefined
+        );
+
+        reply.send({
+          success: true,
+          token,
+          userId: user.userId,
+          userGroups: uniqueGroups,
+          displayName: user.displayName,
+        });
+      } catch (error) {
+        console.error('Error in customer set password:', error);
+        reply.status(500).send({
+          success: false,
+          error: 'internalServerError',
+        });
+      }
+    }
+  );
+
+  // Customer login (for regular users, not admins)
+  fastify.post(
+    '/api/account/customer-login',
+    async (request: any, reply: any) => {
+      const { email, password } = request.body;
+
+      if (!email || !password) {
+        reply.status(400).send({
+          success: false,
+          error: 'missingRequiredFields',
+        });
+        return;
+      }
+
+      try {
+        const normalizedEmail = email.toLowerCase().trim();
+
+        const user = await prisma.user.findUnique({
+          where: { email: normalizedEmail },
+          include: {
+            UserGroupUser: {
+              include: {
+                UserGroup: true,
+              },
+            },
+          },
+        });
+
+        if (!user || !user.password || !user.salt) {
+          reply.status(401).send({
+            success: false,
+            error: 'invalidCredentials',
+          });
+          return;
+        }
+
+        if (!user.verified) {
+          reply.status(401).send({
+            success: false,
+            error: 'accountNotVerified',
+          });
+          return;
+        }
+
+        const isValid = verifyPassword(password, user.password, user.salt);
+
+        if (!isValid) {
+          reply.status(401).send({
+            success: false,
+            error: 'invalidCredentials',
+          });
+          return;
+        }
+
+        const userGroups = user.UserGroupUser.map((ugu) => ugu.UserGroup.name);
+
+        const token = generateToken(
+          user.userId,
+          userGroups,
+          user.companyId || undefined,
+          user.id,
+          user.displayName || undefined
+        );
+
+        reply.send({
+          success: true,
+          token,
+          userId: user.userId,
+          userGroups,
+          displayName: user.displayName,
+        });
+      } catch (error) {
+        console.error('Error in customer login:', error);
+        reply.status(500).send({
+          success: false,
+          error: 'internalServerError',
+        });
+      }
+    }
+  );
+
+  // Get customer profile (protected)
+  fastify.get(
+    '/api/account/customer-profile',
+    getAuthHandler(['users']),
+    async (request: any, reply: any) => {
+      try {
+        const user = await prisma.user.findUnique({
+          where: { userId: request.user.userId },
+          select: {
+            id: true,
+            email: true,
+            displayName: true,
+            locale: true,
+            createdAt: true,
+          },
+        });
+
+        if (!user) {
+          reply.status(404).send({
+            success: false,
+            error: 'userNotFound',
+          });
+          return;
+        }
+
+        reply.send({
+          success: true,
+          user,
+        });
+      } catch (error) {
+        console.error('Error in customer profile:', error);
+        reply.status(500).send({
+          success: false,
+          error: 'internalServerError',
+        });
+      }
+    }
+  );
+
+  // Get customer purchase history (protected)
+  fastify.get(
+    '/api/account/customer-purchases',
+    getAuthHandler(['users']),
+    async (request: any, reply: any) => {
+      try {
+        const user = await prisma.user.findUnique({
+          where: { userId: request.user.userId },
+        });
+
+        if (!user) {
+          reply.status(404).send({
+            success: false,
+            error: 'userNotFound',
+          });
+          return;
+        }
+
+        // Get all paid orders for this user with their playlists
+        const payments = await prisma.payment.findMany({
+          where: {
+            userId: user.id,
+            status: 'paid',
+          },
+          include: {
+            PaymentHasPlaylist: {
+              include: {
+                playlist: {
+                  select: {
+                    playlistId: true,
+                    name: true,
+                    image: true,
+                  },
+                },
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        });
+
+        const purchases = payments.map((payment) => {
+          // Determine if downloads are available
+          // For digital orders: available when filenameDigital exists
+          // For physical orders: available when sentToPrinter is true (they receive digital copy)
+          const isPhysicalOrder = payment.PaymentHasPlaylist.some((php) => php.type === 'physical' || php.type === 'sheets');
+
+          return {
+            orderId: payment.orderId,
+            paymentId: payment.paymentId,
+            userHash: user.hash,
+            createdAt: payment.createdAt,
+            amount: payment.totalPrice,
+            status: payment.status,
+            type: payment.PaymentHasPlaylist.length > 0 ? payment.PaymentHasPlaylist[0].type : 'digital',
+            // For physical orders, download is available after sentToPrinter
+            // For digital orders, download is available when filenameDigital exists
+            downloadAvailable: isPhysicalOrder
+              ? payment.sentToPrinter === true
+              : payment.PaymentHasPlaylist.some((php) => !!php.filenameDigital),
+            playlists: payment.PaymentHasPlaylist.map((php) => ({
+              playlistId: php.playlist.playlistId,
+              name: php.playlist.name,
+              image: php.playlist.image,
+              numberOfTracks: php.numberOfTracks,
+              type: php.type,
+              // Individual playlist download availability
+              canDownload: php.type === 'digital'
+                ? !!php.filenameDigital
+                : payment.sentToPrinter === true && !!php.filenameDigital,
+            })),
+          };
+        });
+
+        reply.send({
+          success: true,
+          purchases,
+        });
+      } catch (error) {
+        console.error('Error in customer purchases:', error);
+        reply.status(500).send({
+          success: false,
+          error: 'internalServerError',
         });
       }
     }

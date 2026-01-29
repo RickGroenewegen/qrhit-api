@@ -947,6 +947,51 @@ class PDF {
       )
     );
   }
+
+  /**
+   * Generate a PDF from a URL and return as Buffer (for bingo, etc.)
+   */
+  public async generatePdfFromUrl(
+    url: string,
+    options: {
+      format?: string;
+      width?: number;
+      height?: number;
+      marginTop?: number;
+      marginRight?: number;
+      marginBottom?: number;
+      marginLeft?: number;
+      pageRanges?: string;
+      preferCSSPageSize?: boolean;
+    } = {}
+  ): Promise<Buffer> {
+    const lambdaOptions: LambdaPdfOptions['options'] = {
+      format: options.format || 'a4',
+      marginTop: options.marginTop ?? 0,
+      marginRight: options.marginRight ?? 0,
+      marginBottom: options.marginBottom ?? 0,
+      marginLeft: options.marginLeft ?? 0,
+      preferCSSPageSize: options.preferCSSPageSize ?? false,
+    };
+
+    if (options.width && options.height) {
+      lambdaOptions.width = options.width;
+      lambdaOptions.height = options.height;
+      delete lambdaOptions.format;
+    }
+
+    if (options.pageRanges) {
+      lambdaOptions.pageRanges = options.pageRanges;
+    }
+
+    const pdfBuffer = await this.convertHtmlToPdf(url, lambdaOptions);
+
+    this.logger.log(
+      color.blue.bold(`Generated PDF buffer from URL (${white.bold(pdfBuffer.length.toString())} bytes)`)
+    );
+
+    return pdfBuffer;
+  }
 }
 
 export default PDF;

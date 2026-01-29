@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Music Bingo - QRSong!</title>
+<style>
+    @media print {
+        @page {
+            size: A4;
+            margin: 0;
+        }
+        body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .page {
+            page-break-after: always;
+        }
+        .page:last-child {
+            page-break-after: auto;
+        }
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        background: #ffffff;
+    }
+
+    .page {
+        width: 210mm;
+        height: 297mm;
+        padding: 10mm;
+        display: flex;
+        flex-direction: column;
+        position: relative;
+    }
+
+    .header {
+        text-align: center;
+        margin-bottom: 8mm;
+    }
+
+    .header h1 {
+        font-size: 24px;
+        color: #7c3aed;
+        margin-bottom: 2mm;
+        font-weight: 700;
+    }
+
+    .header .subtitle {
+        font-size: 14px;
+        color: #666;
+    }
+
+    .header .round-info {
+        font-size: 16px;
+        color: #333;
+        font-weight: 600;
+        margin-top: 2mm;
+    }
+
+    .bingo-grid {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        grid-template-rows: repeat(5, 1fr);
+        gap: 2mm;
+        flex: 1;
+        max-width: 190mm;
+        max-height: 220mm;
+        margin: 0 auto;
+        width: 100%;
+    }
+
+    .bingo-cell {
+        border: 1.5px solid #7c3aed;
+        border-radius: 4px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        padding: 3mm;
+        background: #faf5ff;
+        overflow: hidden;
+        min-height: 38mm;
+    }
+
+    .bingo-cell.free-space {
+        background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
+        color: white;
+    }
+
+    .bingo-cell .song-title {
+        font-size: 11px;
+        font-weight: 600;
+        color: #1f2937;
+        margin-bottom: 2mm;
+        line-height: 1.2;
+        max-height: 2.4em;
+        overflow: hidden;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+    }
+
+    .bingo-cell .artist {
+        font-size: 10px;
+        color: #4b5563;
+        margin-bottom: 2mm;
+        line-height: 1.2;
+        max-height: 1.2em;
+        overflow: hidden;
+        white-space: nowrap;
+        text-overflow: ellipsis;
+        width: 100%;
+    }
+
+    .bingo-cell .year {
+        font-size: 18px;
+        font-weight: 700;
+        color: #7c3aed;
+    }
+
+    .bingo-cell.free-space .star {
+        font-size: 28px;
+        margin-bottom: 1mm;
+    }
+
+    .bingo-cell.free-space .free-text {
+        font-size: 14px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    .bingo-cell.free-space .free-label {
+        font-size: 10px;
+        text-transform: uppercase;
+        margin-top: 1mm;
+        opacity: 0.9;
+    }
+
+    .footer {
+        text-align: center;
+        margin-top: 5mm;
+        padding-top: 3mm;
+        border-top: 1px solid #e5e7eb;
+    }
+
+    .footer .branding {
+        font-size: 11px;
+        color: #9ca3af;
+    }
+
+    .footer .branding a {
+        color: #7c3aed;
+        text-decoration: none;
+    }
+
+    .sheet-number {
+        position: absolute;
+        top: 10mm;
+        right: 10mm;
+        font-size: 10px;
+        color: #9ca3af;
+        background: #f3f4f6;
+        padding: 1mm 3mm;
+        border-radius: 3px;
+    }
+</style>
+</head>
+<body>
+<% sheets.forEach(function(sheet, index) { %>
+<div class="page">
+    <div class="sheet-number">Sheet #<%= (sheet.round - 1) * contestants + sheet.sheetNumber %></div>
+
+    <div class="header">
+        <h1>QRSong! Music Bingo</h1>
+        <div class="subtitle"><%= playlistName %></div>
+        <div class="round-info">Round <%= sheet.round %> - Card <%= sheet.sheetNumber %></div>
+    </div>
+
+    <div class="bingo-grid">
+        <% sheet.grid.forEach(function(row) { %>
+            <% row.forEach(function(cell) { %>
+                <% if (cell.isFreeSpace) { %>
+                    <div class="bingo-cell free-space">
+                        <div class="star">&#9733;</div>
+                        <div class="free-text"><%= freeSpaceText %></div>
+                        <div class="free-label"><%= freeLabel %></div>
+                    </div>
+                <% } else if (cell.track) { %>
+                    <div class="bingo-cell">
+                        <div class="song-title"><%= cell.track.name %></div>
+                        <div class="artist"><%= cell.track.artist %></div>
+                        <div class="year"><%= cell.track.year %></div>
+                    </div>
+                <% } else { %>
+                    <div class="bingo-cell">
+                        <div class="song-title">-</div>
+                    </div>
+                <% } %>
+            <% }); %>
+        <% }); %>
+    </div>
+
+    <div class="footer">
+        <div class="branding">
+            Created with <a href="https://qrsong.com">QRSong!</a> - Music Bingo Generator
+        </div>
+    </div>
+</div>
+<% }); %>
+</body>
+</html>

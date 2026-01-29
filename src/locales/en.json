@@ -529,5 +529,17 @@
 	"promotional_approved.shareOnTwitter": "X",
 	"promotional_approved.viewSetup": "Manage Your Playlist",
 	"promotional_approved.thanks": "Thanks",
-	"promotional_approved.team": "The QRSong! Team"
+	"promotional_approved.team": "The QRSong! Team",
+	"customer_pincode.subject": "Your QRSong! Verification Code",
+	"customer_pincode.greeting": "Hi",
+	"customer_pincode.intro": "You're setting up your QRSong! account. Here's your verification code:",
+	"customer_pincode.yourCode": "Your Verification Code",
+	"customer_pincode.codeExpires": "This code expires in 15 minutes",
+	"customer_pincode.instructions": "Enter this code on the registration page to continue setting up your account.",
+	"customer_pincode.ignoreMessage": "If you did not request this code, you can safely ignore this email.",
+	"customer_pincode.thanks": "Thanks",
+	"customer_pincode.team": "The QRSong! Team",
+	"customer_pincode.allRightsReserved": "All rights reserved",
+	"customer_pincode.visitWebsite": "Visit our website",
+	"customer_pincode.contactSupport": "Contact Support"
 }
