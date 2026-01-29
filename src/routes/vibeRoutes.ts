@@ -17,7 +17,8 @@ export default async function vibeRoutes(
     getAuthHandler(['admin', 'vibeadmin']),
     async (request: any, reply: any) => {
       try {
-        const result = await vibe.getAllCompanies();
+        // Pass user groups to filter companies based on onlyForAdmin flag
+        const result = await vibe.getAllCompanies(request.user?.userGroups);
 
         if (!result.success) {
           reply.status(500).send({ error: result.error });
@@ -109,6 +110,7 @@ export default async function vibeRoutes(
         name,
         test,
         followUp,
+        onlyForAdmin,
         address,
         housenumber,
         city,
@@ -132,6 +134,7 @@ export default async function vibeRoutes(
         name,
         test,
         followUp,
+        onlyForAdmin,
         address,
         housenumber,
         city,
@@ -197,7 +200,7 @@ export default async function vibeRoutes(
   // Update company Tromp calculation
   fastify.put(
     '/vibe/companies/:companyId/calculation-tromp',
-    getAuthHandler(['admin', 'vibeadmin']),
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const { calculationTromp } = request.body;
@@ -225,7 +228,7 @@ export default async function vibeRoutes(
   // Update company Schneider calculation
   fastify.put(
     '/vibe/companies/:companyId/calculation-schneider',
-    getAuthHandler(['admin', 'vibeadmin']),
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const { calculationSchneider } = request.body;
@@ -280,8 +283,8 @@ export default async function vibeRoutes(
           }
         }
 
-        // Get company data directly from database
-        const companiesResult = await vibe.getAllCompanies();
+        // Get company data directly from database - pass ['admin'] to include onlyForAdmin companies
+        const companiesResult = await vibe.getAllCompanies(['admin']);
         const companies = companiesResult.data.companies;
         const company = companies.find((c: any) => c.id === companyId);
 
@@ -295,6 +298,17 @@ export default async function vibeRoutes(
         let productDescription = '';
         let productDetails = '';
 
+        // Load company-wide discount from main calculation field
+        let companyDiscountPercent = 0;
+        if (company.calculation) {
+          try {
+            const mainCalc = JSON.parse(company.calculation);
+            companyDiscountPercent = mainCalc.manualDiscountPercent || 0;
+          } catch (e) {
+            console.error('Error parsing main calculation for discount:', e);
+          }
+        }
+
         if (type === 'qrsong') {
           // Tromp calculation
           calculation = {
@@ -302,12 +316,13 @@ export default async function vibeRoutes(
             includeStansmestekening: false,
             includeStansvorm: false,
             profitMargin: 0,
+            manualDiscountPercent: companyDiscountPercent,
           };
 
           if (company.calculationTromp) {
             try {
               const storedCalc = JSON.parse(company.calculationTromp);
-              calculation = storedCalc;
+              calculation = { ...storedCalc, manualDiscountPercent: companyDiscountPercent };
             } catch (e) {
               console.error('Error parsing company Tromp calculation:', e);
             }
@@ -337,12 +352,13 @@ export default async function vibeRoutes(
             includeStansmes: false,
             includeCustomApp: false,
             profitMargin: 0,
+            manualDiscountPercent: companyDiscountPercent,
           };
 
           if (company.calculationSchneider) {
             try {
               const storedCalc = JSON.parse(company.calculationSchneider);
-              calculation = storedCalc;
+              calculation = { ...storedCalc, manualDiscountPercent: companyDiscountPercent };
             } catch (e) {
               console.error('Error parsing company Schneider calculation:', e);
             }
@@ -444,6 +460,11 @@ export default async function vibeRoutes(
           }).format(value);
         };
 
+        // Format number with Dutch locale (dot as thousand separator, comma as decimal)
+        const formatEuro = (value: number) => {
+          return value.toLocaleString('nl-NL', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        };
+
         const today = new Date();
         const validUntil = new Date(today.getTime() + 30 * 24 * 60 * 60 * 1000);
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
@@ -459,6 +480,7 @@ export default async function vibeRoutes(
           validUntil,
           formatCurrency,
           formatDate,
+          formatEuro,
           baseUrl,
           // New fields for pricing with reseller toggle
           isReseller,
@@ -478,8 +500,9 @@ export default async function vibeRoutes(
   // Generate quotation PDF
   fastify.post(
     '/vibe/quotation/:companyId',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
+
       try {
         const companyId = parseInt(request.params.companyId);
         const { type, isReseller, profitMargins, calculatedPrices } = request.body; // 'onzevibe', 'qrsong', or 'schneider'
@@ -531,8 +554,8 @@ export default async function vibeRoutes(
       try {
         const companyId = parseInt(request.params.companyId);
 
-        // Get company data
-        const companiesResult = await vibe.getAllCompanies();
+        // Get company data - pass ['admin'] to include onlyForAdmin companies
+        const companiesResult = await vibe.getAllCompanies(['admin']);
         const companies = companiesResult.data.companies;
         const company = companies.find((c: any) => c.id === companyId);
 
@@ -580,8 +603,8 @@ export default async function vibeRoutes(
           return;
         }
 
-        // Get company data
-        const companiesResult = await vibe.getAllCompanies();
+        // Get company data - pass ['admin'] to include onlyForAdmin companies
+        const companiesResult = await vibe.getAllCompanies(['admin']);
         const companies = companiesResult.data.companies;
         const company = companies.find((c: any) => c.id === companyId);
 
@@ -898,6 +921,7 @@ export default async function vibeRoutes(
           name,
           test,
           followUp,
+          onlyForAdmin,
           address,
           housenumber,
           city,
@@ -917,6 +941,7 @@ export default async function vibeRoutes(
           name,
           test,
           followUp,
+          onlyForAdmin,
           address,
           housenumber,
           city,

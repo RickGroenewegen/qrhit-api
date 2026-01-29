@@ -36,20 +36,20 @@
             width: 210mm;
             height: 297mm;
             margin: 0 auto;
-            padding: 15mm;
+            padding: 12mm 15mm;
             box-sizing: border-box;
             background: white;
             border: 1px solid #eee;
             box-shadow: 0 0 10px rgba(0, 0, 0, 0.15);
         }
-        
+
         /* Header Section */
         .header {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 25px;
-            padding-bottom: 20px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
         }
         
         .quotation-title {
@@ -89,19 +89,19 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 50px;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
-        
+
         .info-box {
             position: relative;
         }
-        
+
         .info-label {
             font-size: 11px;
             color: #999;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             padding-left: 15px;
             position: relative;
         }
@@ -150,14 +150,14 @@
         /* Quotation Details Box */
         .quotation-details {
             background: #f9f9f9;
-            padding: 20px;
+            padding: 12px 15px;
             border-radius: 4px;
         }
-        
+
         .quotation-details .detail-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 12px;
+            margin-bottom: 6px;
             font-size: 13px;
         }
         
@@ -172,25 +172,26 @@
         
         /* Table Section */
         .table-container {
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
-        
+
         table {
             width: 100%;
             border-collapse: separate;
             border-spacing: 0;
         }
-        
+
         thead {
             background: #214b53;
             color: white;
         }
-        
+
         thead th {
-            padding: 12px 20px;
+            padding: 8px 15px;
             text-align: left;
             font-weight: 500;
             font-size: 13px;
+            white-space: nowrap;
         }
         
         thead th:first-child {
@@ -218,7 +219,7 @@
         }
         
         tbody td {
-            padding: 12px 20px;
+            padding: 8px 15px;
             font-size: 13px;
             color: #333;
         }
@@ -253,16 +254,16 @@
         /* Totals Section */
         .totals-container {
             margin-top: -1px;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
-        
+
         .totals-table {
             width: 100%;
             margin-top: -1px;
         }
-        
+
         .totals-table td {
-            padding: 6px 20px;
+            padding: 4px 15px;
             font-size: 13px;
         }
         
@@ -305,15 +306,15 @@
         }
         
         .total-row.vat td {
-            padding: 6px 20px;
             color: #666;
             font-style: italic;
             font-size: 13px;
         }
-        
+
         .total-row.vat td:last-child {
             font-weight: 600;
             font-style: normal;
+            text-align: right;
         }
         
         .total-row.grand-total-incl td {
@@ -533,8 +534,8 @@
                             </span>
                         </td>
                         <td><%= calculation.quantity %></td>
-                        <td>€&nbsp;<%= calculationResult.pricing.commercialPricePerBox.toFixed(2).replace('.', ',') %></td>
-                        <td>€&nbsp;<%= (calculationResult.pricing.commercialPricePerBox * calculation.quantity).toFixed(2).replace('.', ',') %></td>
+                        <td>€&nbsp;<%= formatEuro(calculationResult.pricing.commercialPricePerBox) %></td>
+                        <td>€&nbsp;<%= formatEuro(calculationResult.pricing.commercialPricePerBox * calculation.quantity) %></td>
                     </tr>
                     <% if (calculationResult.pricing.customAppFee > 0) { %>
                     <tr>
@@ -552,30 +553,61 @@
         </div>
         
         <!-- Totals -->
+        <%
+            const subtotalExclVat = calculationResult.pricing.clientPrice;
+            const manualDiscountPct = calculation.manualDiscountPercent || 0;
+            const discountAmount = subtotalExclVat * (manualDiscountPct / 100);
+            const totalAfterDiscount = subtotalExclVat - discountAmount;
+            const vatAmount = totalAfterDiscount * 0.21;
+            const totalInclVatFinal = totalAfterDiscount + vatAmount;
+        %>
         <div class="totals-container">
             <table class="totals-table">
                 <tr class="total-row subtotal">
                     <td colspan="3">Subtotaal</td>
-                    <td>€&nbsp;<%= calculationResult.pricing.clientPrice.toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= formatEuro(subtotalExclVat) %></td>
                 </tr>
-                
+
+                <% if (manualDiscountPct > 0) { %>
+                <tr class="total-row discount">
+                    <td colspan="3">Korting (<%= manualDiscountPct %>%)</td>
+                    <td>-€&nbsp;<%= formatEuro(discountAmount) %></td>
+                </tr>
+                <% } %>
+
                 <tr class="total-row grand-total">
                     <td colspan="3">Totaal excl. BTW</td>
-                    <td>€&nbsp;<%= calculationResult.pricing.clientPrice.toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= formatEuro(totalAfterDiscount) %></td>
                 </tr>
-                
+
                 <tr class="total-row vat">
                     <td colspan="3">BTW 21%</td>
-                    <td>€&nbsp;<%= (calculationResult.pricing.clientPrice * 0.21).toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= formatEuro(vatAmount) %></td>
                 </tr>
-                
+
                 <tr class="total-row grand-total-incl">
                     <td colspan="3">Totaal incl. BTW</td>
-                    <td>€&nbsp;<%= (calculationResult.pricing.clientPrice * 1.21).toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= formatEuro(totalInclVatFinal) %></td>
                 </tr>
             </table>
         </div>
-        
+
+        <!-- Signature Section -->
+        <div style="margin-top: 12px;">
+            <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px; width: 50%;">
+                <div style="font-size: 11px; color: #666; margin-bottom: 4px;">Voor akkoord namens <%= company.name %></div>
+                <div style="border-bottom: 1px solid #ccc; height: 30px;"></div>
+            </div>
+        </div>
+
+        <!-- Deposit Notice -->
+        <div class="deposit-notice" style="margin-top: 10px; padding: 10px; background: #f0f7f9; border-left: 4px solid #214b53; border-radius: 4px;">
+            <strong style="color: #214b53; font-size: 12px;">Aanbetaling</strong>
+            <p style="margin: 4px 0 0 0; font-size: 11px; color: #666; line-height: 1.3;">
+                Bij akkoord op deze offerte wordt een aanbetaling van 30% van het totaalbedrag gefactureerd. Na ontvangst van de aanbetaling wordt de order in behandeling genomen en de productie/uitvoering ingepland.
+            </p>
+        </div>
+
         <!-- Notes Section (Page 2) -->
         <div class="notes-section">
             <h2 class="section-title">Productinformatie</h2>
@@ -600,10 +632,16 @@
         <div class="terms-section">
             <h2 class="section-title">Algemene Voorwaarden</h2>
             <ol class="terms-list">
+                <li>Aanbetaling: Bij akkoord op deze offerte wordt een aanbetaling van 30% van het totaalbedrag gefactureerd. Na ontvangst van de aanbetaling wordt de order in behandeling genomen en de productie/uitvoering ingepland.</li>
                 <li>Betaling dient te geschieden binnen 14 dagen na factuurdatum.</li>
                 <li>Alle bedragen zijn in EUR, betaling via bankoverschrijving.</li>
                 <li>Bij akkoord graag deze offerte ondertekend retour.</li>
                 <li>Deze offerte is geldig tot <%= formatDate(validUntil) %>.</li>
+                <li>Indicatieve levertijd: Opgegeven levertijden zijn indicatief en gelden niet als fatale termijnen, tenzij uitdrukkelijk schriftelijk anders is overeengekomen.</li>
+                <li>Startmoment levertijd: Levertijden gaan in nadat de overeenkomst tot stand is gekomen én alle voor uitvoering noodzakelijke informatie, bestanden, goedkeuringen (zoals een drukproef) en eventuele (aan)betalingen door Opdrachtnemer zijn ontvangen.</li>
+                <li>Vertraging en ingebrekestelling: Bij overschrijding van een levertijd informeert Opdrachtnemer Opdrachtgever zo spoedig mogelijk. Opdrachtgever kan de overeenkomst pas ontbinden nadat Opdrachtnemer schriftelijk in gebreke is gesteld en een redelijke termijn voor nakoming is geboden, en nakoming binnen die termijn uitblijft.</li>
+                <li>Aansprakelijkheid bij vertraging: Opdrachtnemer is niet aansprakelijk voor schade als gevolg van overschrijding van levertijden, behoudens opzet of bewuste roekeloosheid. Eventuele aansprakelijkheid is in ieder geval beperkt tot het factuurbedrag van het betreffende deel van de opdracht.</li>
+                <li>Overmacht: In geval van overmacht wordt de levertijd opgeschort voor de duur van de overmachtssituatie. Onder overmacht wordt mede verstaan: niet-tijdige levering door toeleveranciers, transportproblemen, storingen, ziekte, brand, overheidsmaatregelen en andere omstandigheden buiten de invloedssfeer van Opdrachtnemer.</li>
                 <li>De QR-codes linken naar Spotify. Wij streven ernaar links werkend te houden en kunnen deze updaten indien nodig. Echter, als Spotify een nummer volledig verwijdert, is dit buiten onze controle.</li>
                 <li>De app werkt ook zonder Spotify Premium, maar dan ziet de gebruiker na een korte countdown de artiest/titel en speelt een 30-seconden preview. Met Premium blijft alles verborgen tot je raadt.</li>
                 <li>Beperking van Aansprakelijkheid: OnzeVibe is niet aansprakelijk voor indirecte of gevolgschade, fouten in de inhoud, verlies van gegevens, of schade door onjuist gebruik van de kaarten of app.</li>

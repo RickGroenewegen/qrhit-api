@@ -36,7 +36,7 @@
             width: 210mm;
             height: 297mm;
             margin: 0 auto;
-            padding: 15mm;
+            padding: 12mm 15mm;
             box-sizing: border-box;
             background: white;
             border: 1px solid #eee;
@@ -48,8 +48,8 @@
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
-            margin-bottom: 25px;
-            padding-bottom: 20px;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
         }
 
         .quotation-title {
@@ -89,7 +89,7 @@
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 50px;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
 
         .info-box {
@@ -101,7 +101,7 @@
             color: #999;
             text-transform: uppercase;
             letter-spacing: 0.5px;
-            margin-bottom: 10px;
+            margin-bottom: 6px;
             padding-left: 15px;
             position: relative;
         }
@@ -150,14 +150,14 @@
         /* Quotation Details Box */
         .quotation-details {
             background: #f9f9f9;
-            padding: 20px;
+            padding: 12px 15px;
             border-radius: 4px;
         }
 
         .quotation-details .detail-row {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 12px;
+            margin-bottom: 6px;
             font-size: 13px;
         }
 
@@ -172,7 +172,7 @@
 
         /* Table Section */
         .table-container {
-            margin-bottom: 20px;
+            margin-bottom: 12px;
         }
 
         table {
@@ -187,10 +187,11 @@
         }
 
         thead th {
-            padding: 12px 20px;
+            padding: 8px 15px;
             text-align: left;
             font-weight: 500;
             font-size: 13px;
+            white-space: nowrap;
         }
 
         thead th:first-child {
@@ -218,7 +219,7 @@
         }
 
         tbody td {
-            padding: 12px 20px;
+            padding: 8px 15px;
             font-size: 13px;
             color: #333;
         }
@@ -248,7 +249,7 @@
         /* Totals Section */
         .totals-container {
             margin-top: -1px;
-            margin-bottom: 30px;
+            margin-bottom: 15px;
         }
 
         .totals-table {
@@ -257,7 +258,7 @@
         }
 
         .totals-table td {
-            padding: 6px 20px;
+            padding: 4px 15px;
             font-size: 13px;
         }
 
@@ -288,7 +289,6 @@
         }
 
         .total-row.vat td {
-            padding: 6px 20px;
             color: #666;
             font-style: italic;
             font-size: 13px;
@@ -297,6 +297,7 @@
         .total-row.vat td:last-child {
             font-weight: 600;
             font-style: normal;
+            text-align: right;
         }
 
         .total-row.grand-total-incl td {
@@ -411,7 +412,7 @@
                     Box A3821<br>
                     Keurenplein 41<br>
                     1069CD Amsterdam<br>
-                    info@qrsong.io<br>
+                    zakelijk@qrsong.io<br>
                     KVK: 99311917<br>
                     BTW: 8689.27.764.B.01
                 </div>
@@ -505,21 +506,21 @@
                             </span>
                         </td>
                         <td><%= quantity %></td>
-                        <td>€&nbsp;<%= pricePerUnit.toFixed(2).replace('.', ',') %></td>
-                        <td>€&nbsp;<%= lineTotal.toFixed(2).replace('.', ',') %></td>
+                        <td>€&nbsp;<%= formatEuro(pricePerUnit) %></td>
+                        <td>€&nbsp;<%= formatEuro(lineTotal) %></td>
                     </tr>
 
-                    <!-- Extras -->
+                    <!-- Extras (filter out custom app as it's shown separately) -->
                     <% if (calculationResult.extras && calculationResult.extras.length > 0) { %>
-                        <% calculationResult.extras.forEach(function(extra) { %>
+                        <% calculationResult.extras.filter(extra => !extra.name.toLowerCase().includes('app')).forEach(function(extra) { %>
                         <tr>
                             <td>
                                 <span class="item-description"><%= extra.name %></span>
                                 <span class="item-details">Eenmalige kosten</span>
                             </td>
                             <td>1</td>
-                            <td>€&nbsp;<%= extra.price.toFixed(2).replace('.', ',') %></td>
-                            <td>€&nbsp;<%= extra.price.toFixed(2).replace('.', ',') %></td>
+                            <td>€&nbsp;<%= formatEuro(extra.price) %></td>
+                            <td>€&nbsp;<%= formatEuro(extra.price) %></td>
                         </tr>
                         <% }); %>
                     <% } %>
@@ -544,36 +545,66 @@
             const mainProductTotal = calculatedPrices && calculatedPrices.clientPricePerUnit
                 ? calculatedPrices.clientPricePerUnit * calculationResult.quantity
                 : calculationResult.pricePerSet * calculationResult.quantity;
+            // Filter out app from extras to avoid double counting (custom app is shown separately)
             const extrasTotal = calculationResult.extras && calculationResult.extras.length > 0
-                ? calculationResult.extras.reduce((sum, extra) => sum + extra.price, 0)
+                ? calculationResult.extras.filter(extra => !extra.name.toLowerCase().includes('app')).reduce((sum, extra) => sum + extra.price, 0)
                 : 0;
             const customAppFeeTotal = calculationResult.customAppFee || 0;
             const subtotal = mainProductTotal + extrasTotal + customAppFeeTotal;
-            const vat = Math.round(subtotal * 0.21 * 100) / 100; // Round VAT to 2 decimals
-            const totalInclVat = subtotal + vat; // Add rounded VAT to subtotal
+
+            // Apply manual discount percentage
+            const manualDiscountPct = calculation.manualDiscountPercent || 0;
+            const discountAmount = subtotal * (manualDiscountPct / 100);
+            const totalAfterDiscount = subtotal - discountAmount;
+
+            const vat = Math.round(totalAfterDiscount * 0.21 * 100) / 100; // Round VAT to 2 decimals
+            const totalInclVat = totalAfterDiscount + vat; // Add rounded VAT to subtotal
         %>
         <div class="totals-container">
             <table class="totals-table">
                 <tr class="total-row subtotal">
                     <td colspan="3">Subtotaal</td>
-                    <td>€&nbsp;<%= subtotal.toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= formatEuro(subtotal) %></td>
                 </tr>
+
+                <% if (manualDiscountPct > 0) { %>
+                <tr class="total-row discount">
+                    <td colspan="3">Korting (<%= manualDiscountPct %>%)</td>
+                    <td>-€&nbsp;<%= formatEuro(discountAmount) %></td>
+                </tr>
+                <% } %>
 
                 <tr class="total-row grand-total">
                     <td colspan="3">Totaal excl. BTW</td>
-                    <td>€&nbsp;<%= subtotal.toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= formatEuro(totalAfterDiscount) %></td>
                 </tr>
 
                 <tr class="total-row vat">
                     <td colspan="3">BTW 21%</td>
-                    <td>€&nbsp;<%= vat.toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= formatEuro(vat) %></td>
                 </tr>
 
                 <tr class="total-row grand-total-incl">
                     <td colspan="3">Totaal incl. BTW</td>
-                    <td>€&nbsp;<%= totalInclVat.toFixed(2).replace('.', ',') %></td>
+                    <td>€&nbsp;<%= formatEuro(totalInclVat) %></td>
                 </tr>
             </table>
+        </div>
+
+        <!-- Signature Section -->
+        <div style="margin-top: 12px;">
+            <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px; width: 50%;">
+                <div style="font-size: 11px; color: #666; margin-bottom: 4px;">Voor akkoord namens <%= company.name %></div>
+                <div style="border-bottom: 1px solid #ccc; height: 30px;"></div>
+            </div>
+        </div>
+
+        <!-- Deposit Notice -->
+        <div class="deposit-notice" style="margin-top: 10px; padding: 10px; background: #f0f8ff; border-left: 4px solid #5FBFFF; border-radius: 4px;">
+            <strong style="color: #5FBFFF; font-size: 12px;">Aanbetaling</strong>
+            <p style="margin: 4px 0 0 0; font-size: 11px; color: #666; line-height: 1.3;">
+                Bij akkoord op deze offerte wordt een aanbetaling van 30% van het totaalbedrag gefactureerd. Na ontvangst van de aanbetaling wordt de order in behandeling genomen en de productie/uitvoering ingepland.
+            </p>
         </div>
 
         <!-- Notes Section (Page 2) -->
@@ -638,11 +669,16 @@
         <div class="terms-section">
             <h2 class="section-title">Algemene Voorwaarden</h2>
             <ol class="terms-list">
+                <li>Aanbetaling: Bij akkoord op deze offerte wordt een aanbetaling van 30% van het totaalbedrag gefactureerd. Na ontvangst van de aanbetaling wordt de order in behandeling genomen en de productie/uitvoering ingepland.</li>
                 <li>Betaling dient te geschieden binnen 14 dagen na factuurdatum.</li>
                 <li>Alle bedragen zijn in EUR, betaling via bankoverschrijving.</li>
                 <li>Bij akkoord graag deze offerte ondertekend retour.</li>
                 <li>Deze offerte is geldig tot <%= formatDate(validUntil) %>.</li>
-                <li>Leveringstijd: conform bespreking.</li>
+                <li>Indicatieve levertijd: Opgegeven levertijden zijn indicatief en gelden niet als fatale termijnen, tenzij uitdrukkelijk schriftelijk anders is overeengekomen.</li>
+                <li>Startmoment levertijd: Levertijden gaan in nadat de overeenkomst tot stand is gekomen én alle voor uitvoering noodzakelijke informatie, bestanden, goedkeuringen (zoals een drukproef) en eventuele (aan)betalingen door Opdrachtnemer zijn ontvangen.</li>
+                <li>Vertraging en ingebrekestelling: Bij overschrijding van een levertijd informeert Opdrachtnemer Opdrachtgever zo spoedig mogelijk. Opdrachtgever kan de overeenkomst pas ontbinden nadat Opdrachtnemer schriftelijk in gebreke is gesteld en een redelijke termijn voor nakoming is geboden, en nakoming binnen die termijn uitblijft.</li>
+                <li>Aansprakelijkheid bij vertraging: Opdrachtnemer is niet aansprakelijk voor schade als gevolg van overschrijding van levertijden, behoudens opzet of bewuste roekeloosheid. Eventuele aansprakelijkheid is in ieder geval beperkt tot het factuurbedrag van het betreffende deel van de opdracht.</li>
+                <li>Overmacht: In geval van overmacht wordt de levertijd opgeschort voor de duur van de overmachtssituatie. Onder overmacht wordt mede verstaan: niet-tijdige levering door toeleveranciers, transportproblemen, storingen, ziekte, brand, overheidsmaatregelen en andere omstandigheden buiten de invloedssfeer van Opdrachtnemer.</li>
                 <li>De QR-codes linken naar Spotify. Wij streven ernaar links werkend te houden en kunnen deze updaten indien nodig. Echter, als Spotify een nummer volledig verwijdert, is dit buiten onze controle.</li>
                 <li>De app werkt ook zonder Spotify Premium, maar dan ziet de gebruiker na een korte countdown de artiest/titel en speelt een 30-seconden preview. Met Premium blijft alles verborgen tot je raadt.</li>
                 <li>Afhankelijkheid van Derden: QRSong! streeft naar continue beschikbaarheid van de digitale diensten. De werking van het product is echter afhankelijk van externe dienstverleners, waaronder maar niet beperkt tot muziekstreamingdiensten (Spotify, Apple Music, YouTube Music, Deezer, Tidal), hosting- en infrastructuurproviders. QRSong! kan niet aansprakelijk worden gesteld voor storingen, wijzigingen in functionaliteit, of beëindiging van diensten door deze derden. Bij substantiële wijzigingen zal QRSong! zich inspannen om een passend alternatief te bieden, zonder dat hieraan rechten kunnen worden ontleend.</li>
@@ -653,7 +689,7 @@
         <!-- Footer -->
         <div class="footer">
             <div class="footer-content">
-                Voor vragen over deze offerte kunt u contact opnemen via <a href="mailto:info@qrsong.io">info@qrsong.io</a>
+                Voor vragen over deze offerte kunt u contact opnemen via <a href="mailto:zakelijk@qrsong.io">zakelijk@qrsong.io</a>
             </div>
         </div>
     </div>

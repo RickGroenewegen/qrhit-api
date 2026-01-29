@@ -1230,6 +1230,10 @@ class Generator {
           )
         );
       } else {
+
+
+        console.log(111, JSON.stringify(orderData, null, 2))
+
         // Pushover
         this.pushover.sendMessage(
           {

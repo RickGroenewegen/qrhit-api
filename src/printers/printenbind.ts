@@ -588,7 +588,18 @@ class PrintEnBind {
           });
         }
 
-        orderId = response.headers.get('location')?.split('/')[1];
+        // Try to get orderId from header first, fallback to response body
+        const headerLocation = response.headers.get('location');
+        const bodyOrder = firstResponse.order;
+        const bodyLocation = firstResponse.location;
+
+        console.log('OrderId extraction:', { headerLocation, bodyOrder, bodyLocation });
+
+        orderId = headerLocation?.split('/')[1]
+          || bodyOrder?.toString()
+          || bodyLocation?.split('/')[1];
+
+        console.log('OrderId resolved to:', orderId);
 
         if (orderId) {
           physicalOrderCreated = true;
@@ -607,6 +618,8 @@ class PrintEnBind {
             );
           }
           totalItemsSuccess++;
+        } else {
+          console.log('Failed to extract orderId!', { status: response.status, body: firstResponse });
         }
       } else if (items[i].type == 'physical' && physicalOrderCreated) {
         const articleResponse = await fetch(
@@ -1068,6 +1081,25 @@ class PrintEnBind {
         responseBody,
       });
 
+      console.log('finishOrder response:', { status: response.status, ok: response.ok, body: responseBody });
+
+      if (!response.ok) {
+        console.log('finishOrder FAILED:', { orderId, status: response.status, body: responseBody });
+        this.logger.log(
+          color.red.bold(
+            `Print&Bind order ${color.white.bold(orderId)} failed to finish: ${response.status}`
+          )
+        );
+        return {
+          success: false,
+          data: {
+            orderId,
+          },
+          apiCalls: [...(apiCalls || []), ...finishApiCalls],
+        };
+      }
+
+      console.log('finishOrder SUCCESS:', { orderId, status: response.status });
       this.logger.log(
         color.green.bold(
           `Print&Bind order ${color.white.bold(orderId)} finished successfully`
@@ -1289,13 +1321,18 @@ class PrintEnBind {
 
     let finalApiCalls = result.apiCalls || [];
 
+    console.log('createOrder result:', { success: result.success, orderId: result.data?.orderId, environment: process.env['ENVIRONMENT'] });
+
     if (result.success) {
       if (process.env['ENVIRONMENT'] === 'production') {
+        console.log('Calling finishOrder for orderId:', result.data.orderId);
         const finishResult = await this.finishOrder(
           result.data.orderId,
           finalApiCalls
         );
         finalApiCalls = finishResult.apiCalls || [];
+      } else {
+        console.log('SKIPPING finishOrder - not in production environment:', process.env['ENVIRONMENT']);
       }
 
       this.logger.log(
@@ -1336,6 +1373,7 @@ class PrintEnBind {
         },
       };
     } else {
+      console.log('SKIPPING finishOrder - result.success is false:', { orderId: result.data?.orderId, result });
       return {
         success: false,
         request: '',
