@@ -51,6 +51,16 @@ class Push {
         );
       }
     } catch (error: any) {
+      // Handle race condition: if unique constraint fails, the token already exists
+      // This can happen when two concurrent requests try to upsert the same token
+      if (error.code === 'P2002') {
+        this.logger.log(
+          color.blue.bold(
+            `Token (${color.white.bold(type)}) already exists (concurrent): ${color.white.bold(token)}`
+          )
+        );
+        return;
+      }
       this.logger.log(
         color.red.bold(
           `Error adding push token: ${color.white.bold(token)} - ${color.white.bold(error.message)}`
