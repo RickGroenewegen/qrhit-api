@@ -298,6 +298,17 @@ export default async function vibeRoutes(
         let productDescription = '';
         let productDetails = '';
 
+        // Load company-wide discount from main calculation field
+        let companyDiscountPercent = 0;
+        if (company.calculation) {
+          try {
+            const mainCalc = JSON.parse(company.calculation);
+            companyDiscountPercent = mainCalc.manualDiscountPercent || 0;
+          } catch (e) {
+            console.error('Error parsing main calculation for discount:', e);
+          }
+        }
+
         if (type === 'qrsong') {
           // Tromp calculation
           calculation = {
@@ -305,12 +316,13 @@ export default async function vibeRoutes(
             includeStansmestekening: false,
             includeStansvorm: false,
             profitMargin: 0,
+            manualDiscountPercent: companyDiscountPercent,
           };
 
           if (company.calculationTromp) {
             try {
               const storedCalc = JSON.parse(company.calculationTromp);
-              calculation = storedCalc;
+              calculation = { ...storedCalc, manualDiscountPercent: companyDiscountPercent };
             } catch (e) {
               console.error('Error parsing company Tromp calculation:', e);
             }
@@ -340,12 +352,13 @@ export default async function vibeRoutes(
             includeStansmes: false,
             includeCustomApp: false,
             profitMargin: 0,
+            manualDiscountPercent: companyDiscountPercent,
           };
 
           if (company.calculationSchneider) {
             try {
               const storedCalc = JSON.parse(company.calculationSchneider);
-              calculation = storedCalc;
+              calculation = { ...storedCalc, manualDiscountPercent: companyDiscountPercent };
             } catch (e) {
               console.error('Error parsing company Schneider calculation:', e);
             }
