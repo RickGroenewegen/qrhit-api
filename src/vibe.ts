@@ -3276,59 +3276,44 @@ class Vibe {
       // 48 cards uses tiered pricing with 30% reseller discount applied
       if (cardCount === 48) {
         // Original tiered pricing for 48 cards (before 30% reseller discount)
+        // Tiers must match frontend QUANTITIES for profit margin lookup
         const priceTiers: { qty: number; price: number }[] = [
-          { qty: 75, price: 5.99 },
           { qty: 100, price: 5.31 },
-          { qty: 125, price: 4.72 },
           { qty: 150, price: 4.27 },
           { qty: 200, price: 3.61 },
           { qty: 250, price: 3.18 },
           { qty: 300, price: 2.87 },
           { qty: 400, price: 2.46 },
           { qty: 500, price: 2.21 },
-          { qty: 600, price: 2.03 },
-          { qty: 700, price: 1.90 },
-          { qty: 800, price: 1.80 },
-          { qty: 900, price: 1.73 },
+          { qty: 750, price: 1.90 },
           { qty: 1000, price: 1.66 },
-          { qty: 1250, price: 1.54 },
           { qty: 1500, price: 1.46 },
           { qty: 2000, price: 1.35 },
           { qty: 2500, price: 1.28 },
-          { qty: 3000, price: 1.22 },
-          { qty: 4000, price: 1.14 },
           { qty: 5000, price: 1.07 },
-          { qty: 6000, price: 1.02 },
-          { qty: 7000, price: 0.97 },
-          { qty: 7500, price: 0.94 },
-          { qty: 8000, price: 0.92 },
-          { qty: 9000, price: 0.88 },
           { qty: 10000, price: 0.83 },
         ];
 
         // Reseller discount rate
         const resellerDiscount = 0.30;
 
-        // Find the applicable price tier (use next higher tier or interpolate)
+        // Find the applicable price tier (use the highest tier that quantity qualifies for)
         let tierPrice: number;
         if (quantity <= priceTiers[0].qty) {
           tierPrice = priceTiers[0].price;
         } else if (quantity >= priceTiers[priceTiers.length - 1].qty) {
           tierPrice = priceTiers[priceTiers.length - 1].price;
         } else {
-          // Find the two tiers to interpolate between
-          let lowerTier = priceTiers[0];
-          let upperTier = priceTiers[1];
-          for (let i = 0; i < priceTiers.length - 1; i++) {
-            if (quantity >= priceTiers[i].qty && quantity < priceTiers[i + 1].qty) {
-              lowerTier = priceTiers[i];
-              upperTier = priceTiers[i + 1];
+          // Find the highest tier the quantity qualifies for (no interpolation)
+          let applicableTier = priceTiers[0];
+          for (const tier of priceTiers) {
+            if (quantity >= tier.qty) {
+              applicableTier = tier;
+            } else {
               break;
             }
           }
-          // Linear interpolation
-          const ratio = (quantity - lowerTier.qty) / (upperTier.qty - lowerTier.qty);
-          tierPrice = lowerTier.price + ratio * (upperTier.price - lowerTier.price);
+          tierPrice = applicableTier.price;
         }
 
         // Apply 30% reseller discount
