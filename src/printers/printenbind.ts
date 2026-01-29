@@ -588,7 +588,10 @@ class PrintEnBind {
           });
         }
 
-        orderId = response.headers.get('location')?.split('/')[1];
+        // Try to get orderId from header first, fallback to response body
+        orderId = response.headers.get('location')?.split('/')[1]
+          || firstResponse.order?.toString()
+          || firstResponse.location?.split('/')[1];
 
         if (orderId) {
           physicalOrderCreated = true;
