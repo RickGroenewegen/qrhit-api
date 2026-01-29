@@ -3475,8 +3475,8 @@ class Vibe {
         };
       }
 
-      // Get company details
-      const companiesResult = await this.getAllCompanies();
+      // Get company details - pass userGroups to include onlyForAdmin companies for admins
+      const companiesResult = await this.getAllCompanies(userGroups);
       if (!companiesResult.success || !companiesResult.data?.companies) {
         return { success: false, error: 'Failed to fetch companies' };
       }

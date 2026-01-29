@@ -200,7 +200,7 @@ export default async function vibeRoutes(
   // Update company Tromp calculation
   fastify.put(
     '/vibe/companies/:companyId/calculation-tromp',
-    getAuthHandler(['admin', 'vibeadmin']),
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const { calculationTromp } = request.body;
@@ -228,7 +228,7 @@ export default async function vibeRoutes(
   // Update company Schneider calculation
   fastify.put(
     '/vibe/companies/:companyId/calculation-schneider',
-    getAuthHandler(['admin', 'vibeadmin']),
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const companyId = parseInt(request.params.companyId);
       const { calculationSchneider } = request.body;
@@ -283,8 +283,8 @@ export default async function vibeRoutes(
           }
         }
 
-        // Get company data directly from database
-        const companiesResult = await vibe.getAllCompanies();
+        // Get company data directly from database - pass ['admin'] to include onlyForAdmin companies
+        const companiesResult = await vibe.getAllCompanies(['admin']);
         const companies = companiesResult.data.companies;
         const company = companies.find((c: any) => c.id === companyId);
 
@@ -481,8 +481,9 @@ export default async function vibeRoutes(
   // Generate quotation PDF
   fastify.post(
     '/vibe/quotation/:companyId',
-    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    getAuthHandler(['admin']),
     async (request: any, reply: any) => {
+
       try {
         const companyId = parseInt(request.params.companyId);
         const { type, isReseller, profitMargins, calculatedPrices } = request.body; // 'onzevibe', 'qrsong', or 'schneider'
@@ -534,8 +535,8 @@ export default async function vibeRoutes(
       try {
         const companyId = parseInt(request.params.companyId);
 
-        // Get company data
-        const companiesResult = await vibe.getAllCompanies();
+        // Get company data - pass ['admin'] to include onlyForAdmin companies
+        const companiesResult = await vibe.getAllCompanies(['admin']);
         const companies = companiesResult.data.companies;
         const company = companies.find((c: any) => c.id === companyId);
 
@@ -583,8 +584,8 @@ export default async function vibeRoutes(
           return;
         }
 
-        // Get company data
-        const companiesResult = await vibe.getAllCompanies();
+        // Get company data - pass ['admin'] to include onlyForAdmin companies
+        const companiesResult = await vibe.getAllCompanies(['admin']);
         const companies = companiesResult.data.companies;
         const company = companies.find((c: any) => c.id === companyId);
 
