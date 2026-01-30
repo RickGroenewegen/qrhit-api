@@ -933,16 +933,16 @@ class Data {
     return taxRates[0].rate;
   }
 
-  public async getFeaturedPlaylists(locale: string): Promise<any> {
+  public async getFeaturedPlaylists(locale: string, skipLocaleFilter: boolean = false): Promise<any> {
     let returnList: any[] = [];
     const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
 
-    // Check if locale is valid, otherwise default to English
+    // Validate locale for column names, default to 'en' if invalid
     if (!this.translate.isValidLocale(locale)) {
       locale = 'en';
     }
 
-    const cacheKey = `${CACHE_KEY_FEATURED_PLAYLISTS}${today}_${locale}`;
+    const cacheKey = `${CACHE_KEY_FEATURED_PLAYLISTS}${today}_${locale}${skipLocaleFilter ? '_all' : ''}`;
     const cachedPlaylists = await this.cache.get(cacheKey);
 
     if (!cachedPlaylists) {
@@ -988,15 +988,16 @@ class Data {
         AND (playlists.promotionalActive = 0 OR playlists.promotionalAccepted = 1)
     `;
 
-      // Add locale condition
-      if (locale) {
+      // Add locale condition (skip if skipLocaleFilter is true to return all playlists)
+      if (!skipLocaleFilter && locale) {
         query += ` AND (FIND_IN_SET('${locale}', playlists.featuredLocale) > 0 OR playlists.featuredLocale IS NULL)`;
-      } else {
+      } else if (!skipLocaleFilter && !locale) {
         query += ` AND playlists.featuredLocale IS NULL`;
       }
+      // When skipLocaleFilter is true, no locale filtering is applied
 
       // Add ordering: prioritize matching locale, then sort by score
-      if (locale) {
+      if (!skipLocaleFilter && locale) {
         query += `
         ORDER BY
           CASE
@@ -1005,6 +1006,8 @@ class Data {
           END,
           score DESC
       `;
+      } else {
+        query += ` ORDER BY score DESC`;
       }
 
       returnList = await this.prisma.$queryRawUnsafe(query);

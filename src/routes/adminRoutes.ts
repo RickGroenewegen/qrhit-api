@@ -2106,6 +2106,21 @@ export default async function adminRoutes(
     }
   );
 
+  // Handle tracking mails - check shipped orders and send tracking emails
+  fastify.post(
+    '/admin/printenbind/handle-tracking-mails',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const PrintEnBind = (await import('../printers/printenbind')).default;
+      const printEnBind = PrintEnBind.getInstance();
+      printEnBind.handleTrackingMails();
+      reply.send({
+        success: true,
+        message: 'Tracking mail handler started in background',
+      });
+    }
+  );
+
   // Google Merchant Center routes
   fastify.post(
     '/admin/merchant-center/upload-featured',
