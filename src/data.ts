@@ -4151,6 +4151,40 @@ class Data {
     }
   }
 
+  /**
+   * Clear cache for all non-featured playlists
+   * This helps free up Redis memory by removing caches for user playlists that have TTL
+   * @returns Result with count of playlists processed
+   */
+  public async clearNonFeaturedPlaylistCaches(): Promise<{ success: boolean; processed: number; error?: string }> {
+    try {
+      // Get all non-featured playlists that have been accessed (have cache entries)
+      const nonFeaturedPlaylists = await this.prisma.playlist.findMany({
+        where: {
+          featured: false,
+        },
+        select: {
+          playlistId: true,
+          slug: true,
+        },
+      });
+
+      let processed = 0;
+      for (const playlist of nonFeaturedPlaylists) {
+        await this.clearPlaylistCache(playlist.playlistId, playlist.slug || undefined);
+        processed++;
+      }
+
+      this.logger.log(
+        color.green.bold(`Cleared cache for ${color.white.bold(processed)} non-featured playlists`)
+      );
+
+      return { success: true, processed };
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`Error clearing non-featured playlist caches: ${error.message}`));
+      return { success: false, processed: 0, error: error.message };
+    }
+  }
 }
 
 export default Data;

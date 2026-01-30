@@ -384,7 +384,8 @@ class Spotify {
                   return { success: false, error: 'playlistNotFound' };
                 }
                 checkPlaylistId = dbPlaylist.playlistId;
-                this.cache.set(dbCacheKey, checkPlaylistId);
+                // Featured playlists cache forever, others expire in 24 hours
+                this.cache.set(dbCacheKey, checkPlaylistId, featured ? undefined : 86400);
               } else {
                 checkPlaylistId = dbCacheResult;
               }
@@ -522,14 +523,17 @@ class Spotify {
               design: playlistDesign,
             };
 
-            this.cache.set(cacheKey, JSON.stringify(cachedPlaylistData));
+            // Featured playlists cache forever, others expire in 24 hours
+            const playlistCacheTTL = featured ? undefined : 86400;
+            this.cache.set(cacheKey, JSON.stringify(cachedPlaylistData), playlistCacheTTL);
 
             // If this was a slug lookup, also cache with the actual playlist ID
             if (isSlug && checkPlaylistId !== playlistId) {
               const actualCacheKey = `${CACHE_KEY_PLAYLIST}${checkPlaylistId}`;
               this.cache.set(
                 actualCacheKey,
-                JSON.stringify(cachedPlaylistData)
+                JSON.stringify(cachedPlaylistData),
+                playlistCacheTTL
               );
             }
 
@@ -1015,8 +1019,10 @@ class Spotify {
       this.cache.delPattern(`${CACHE_KEY_TRACKS}${checkPlaylistId}*`);
       this.cache.delPattern(`${CACHE_KEY_TRACK_COUNT}${checkPlaylistId}*`);
 
-      this.cache.set(cacheKeyCount, allFormattedTracks.length.toString());
-      this.cache.set(cacheKey, JSON.stringify(finalResult)); // Cache the final processed result
+      // Featured playlists (accessed via slug) cache forever, others expire in 24 hours
+      const cacheTTL = isSlug ? undefined : 86400;
+      this.cache.set(cacheKeyCount, allFormattedTracks.length.toString(), cacheTTL);
+      this.cache.set(cacheKey, JSON.stringify(finalResult), cacheTTL);
 
       // Track analytics for tracks retrieval
       this.analytics.increaseCounter(
@@ -1135,7 +1141,7 @@ class Spotify {
       };
 
       // Cache the final processed result for 1 hour
-      await this.cache.set(cacheKey, JSON.stringify(finalResult));
+      await this.cache.set(cacheKey, JSON.stringify(finalResult), 3600);
 
       return finalResult;
     } catch (error: any) {
