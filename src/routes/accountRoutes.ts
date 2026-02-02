@@ -977,6 +977,99 @@ export default async function accountRoutes(
     }
   );
 
+  // Change password (protected - for logged in users)
+  fastify.post(
+    '/api/account/customer-change-password',
+    getAuthHandler(['users']),
+    async (request: any, reply: any) => {
+      const { currentPassword, newPassword1, newPassword2 } = request.body;
+
+      if (!currentPassword || !newPassword1 || !newPassword2) {
+        reply.status(400).send({
+          success: false,
+          error: 'missingRequiredFields',
+        });
+        return;
+      }
+
+      if (newPassword1 !== newPassword2) {
+        reply.status(400).send({
+          success: false,
+          error: 'passwordsDoNotMatch',
+        });
+        return;
+      }
+
+      // Validate password strength
+      if (newPassword1.length < 8) {
+        reply.status(400).send({ success: false, error: 'passwordTooShort' });
+        return;
+      }
+      if (!/[A-Z]/.test(newPassword1)) {
+        reply.status(400).send({ success: false, error: 'passwordNeedsUppercase' });
+        return;
+      }
+      if (!/[a-z]/.test(newPassword1)) {
+        reply.status(400).send({ success: false, error: 'passwordNeedsLowercase' });
+        return;
+      }
+      if (!/[0-9]/.test(newPassword1)) {
+        reply.status(400).send({ success: false, error: 'passwordNeedsNumber' });
+        return;
+      }
+      if (!/[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(newPassword1)) {
+        reply.status(400).send({ success: false, error: 'passwordNeedsSpecialCharacter' });
+        return;
+      }
+
+      try {
+        const user = await prisma.user.findUnique({
+          where: { userId: request.user.userId },
+        });
+
+        if (!user || !user.password || !user.salt) {
+          reply.status(400).send({
+            success: false,
+            error: 'invalidCredentials',
+          });
+          return;
+        }
+
+        // Verify current password
+        const isValid = verifyPassword(currentPassword, user.password, user.salt);
+        if (!isValid) {
+          reply.status(400).send({
+            success: false,
+            error: 'currentPasswordIncorrect',
+          });
+          return;
+        }
+
+        // Hash and save new password
+        const salt = generateSalt();
+        const hashedPassword = hashPassword(newPassword1, salt);
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            password: hashedPassword,
+            salt,
+          },
+        });
+
+        reply.send({
+          success: true,
+        });
+      } catch (error) {
+        console.error('Error in change password:', error);
+        reply.status(500).send({
+          success: false,
+          error: 'internalServerError',
+        });
+      }
+    }
+  );
+
   // Get customer profile (protected)
   fastify.get(
     '/api/account/customer-profile',
