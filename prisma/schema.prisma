@@ -614,6 +614,7 @@ model PaymentHasPlaylist {
   promotionalCreditedAt   DateTime? // When the promotional credit was applied
   orderType               OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                   PaymentHasPlaylistItem[]
+  bingoFiles              BingoFile[]
 
   @@unique([paymentId, playlistId, type, subType])
   @@index([paymentId])
@@ -636,6 +637,20 @@ model PaymentHasPlaylistItem {
   @@unique([paymentHasPlaylistId, index])
   @@index([paymentHasPlaylistId])
   @@map("payment_has_playlist_item")
+}
+
+model BingoFile {
+  id                   Int                @id @default(autoincrement())
+  paymentHasPlaylistId Int
+  paymentHasPlaylist   PaymentHasPlaylist @relation(fields: [paymentHasPlaylistId], references: [id], onDelete: Cascade)
+  filename             String
+  contestants          Int
+  rounds               Int
+  trackCount           Int
+  createdAt            DateTime           @default(now())
+
+  @@index([paymentHasPlaylistId])
+  @@map("bingo_files")
 }
 
 model ShippingCost {

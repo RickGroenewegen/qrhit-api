@@ -43,14 +43,13 @@
 
     .header {
         text-align: center;
-        margin-bottom: 8mm;
+        margin-bottom: 5mm;
     }
 
-    .header h1 {
-        font-size: 24px;
-        color: #7c3aed;
+    .header .logo {
+        height: 12mm;
+        width: auto;
         margin-bottom: 2mm;
-        font-weight: 700;
     }
 
     .header .subtitle {
@@ -60,7 +59,6 @@
 
     .header .round-info {
         font-size: 16px;
-        color: #333;
         font-weight: 600;
         margin-top: 2mm;
     }
@@ -70,37 +68,27 @@
         grid-template-columns: repeat(5, 1fr);
         grid-template-rows: repeat(5, 1fr);
         gap: 2mm;
-        flex: 1;
-        max-width: 190mm;
-        max-height: 220mm;
+        width: 190mm;
+        height: 190mm;
         margin: 0 auto;
-        width: 100%;
     }
 
     .bingo-cell {
-        border: 1.5px solid #7c3aed;
         border-radius: 4px;
         display: flex;
         flex-direction: column;
         justify-content: center;
         align-items: center;
         text-align: center;
-        padding: 3mm;
-        background: #faf5ff;
+        padding: 2mm;
         overflow: hidden;
-        min-height: 38mm;
-    }
-
-    .bingo-cell.free-space {
-        background: linear-gradient(135deg, #7c3aed 0%, #a855f7 100%);
-        color: white;
     }
 
     .bingo-cell .song-title {
-        font-size: 11px;
+        font-size: 10px;
         font-weight: 600;
         color: #1f2937;
-        margin-bottom: 2mm;
+        margin-bottom: 1mm;
         line-height: 1.2;
         max-height: 2.4em;
         overflow: hidden;
@@ -110,9 +98,9 @@
     }
 
     .bingo-cell .artist {
-        font-size: 10px;
+        font-size: 9px;
         color: #4b5563;
-        margin-bottom: 2mm;
+        margin-bottom: 1mm;
         line-height: 1.2;
         max-height: 1.2em;
         overflow: hidden;
@@ -121,29 +109,11 @@
         width: 100%;
     }
 
-    .bingo-cell .year {
-        font-size: 18px;
-        font-weight: 700;
-        color: #7c3aed;
-    }
-
-    .bingo-cell.free-space .star {
-        font-size: 28px;
-        margin-bottom: 1mm;
-    }
-
-    .bingo-cell.free-space .free-text {
-        font-size: 14px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-    }
-
-    .bingo-cell.free-space .free-label {
-        font-size: 10px;
-        text-transform: uppercase;
-        margin-top: 1mm;
-        opacity: 0.9;
+    .bingo-cell.free-space .logo {
+        width: 24mm;
+        height: auto;
+        max-height: 24mm;
+        object-fit: contain;
     }
 
     .footer {
@@ -159,31 +129,87 @@
     }
 
     .footer .branding a {
-        color: #7c3aed;
         text-decoration: none;
     }
 
-    .sheet-number {
-        position: absolute;
-        top: 10mm;
-        right: 10mm;
-        font-size: 10px;
-        color: #9ca3af;
-        background: #f3f4f6;
-        padding: 1mm 3mm;
-        border-radius: 3px;
-    }
+    /* Round 1: Blue (classic bingo) */
+    .round-1 .bingo-cell { border: 1.5px solid #1e40af; background: rgba(219, 234, 254, 0.5); }
+    .round-1 .bingo-cell .year { color: #1e40af; font-size: 16px; font-weight: 700; }
+    .round-1 .bingo-cell.free-space { background: #1e40af; }
+    .round-1 .header .round-info { color: #1e40af; }
+    .round-1 .footer .branding a { color: #1e40af; }
+
+    /* Round 2: Red */
+    .round-2 .bingo-cell { border: 1.5px solid #b91c1c; background: rgba(254, 226, 226, 0.5); }
+    .round-2 .bingo-cell .year { color: #b91c1c; font-size: 16px; font-weight: 700; }
+    .round-2 .bingo-cell.free-space { background: #b91c1c; }
+    .round-2 .header .round-info { color: #b91c1c; }
+    .round-2 .footer .branding a { color: #b91c1c; }
+
+    /* Round 3: Green */
+    .round-3 .bingo-cell { border: 1.5px solid #15803d; background: rgba(220, 252, 231, 0.5); }
+    .round-3 .bingo-cell .year { color: #15803d; font-size: 16px; font-weight: 700; }
+    .round-3 .bingo-cell.free-space { background: #15803d; }
+    .round-3 .header .round-info { color: #15803d; }
+    .round-3 .footer .branding a { color: #15803d; }
+
+    /* Round 4: Yellow/Gold */
+    .round-4 .bingo-cell { border: 1.5px solid #a16207; background: rgba(254, 249, 195, 0.5); }
+    .round-4 .bingo-cell .year { color: #a16207; font-size: 16px; font-weight: 700; }
+    .round-4 .bingo-cell.free-space { background: #a16207; }
+    .round-4 .header .round-info { color: #a16207; }
+    .round-4 .footer .branding a { color: #a16207; }
+
+    /* Round 5: Orange */
+    .round-5 .bingo-cell { border: 1.5px solid #c2410c; background: rgba(255, 237, 213, 0.5); }
+    .round-5 .bingo-cell .year { color: #c2410c; font-size: 16px; font-weight: 700; }
+    .round-5 .bingo-cell.free-space { background: #c2410c; }
+    .round-5 .header .round-info { color: #c2410c; }
+    .round-5 .footer .branding a { color: #c2410c; }
+
+    /* Round 6: Purple */
+    .round-6 .bingo-cell { border: 1.5px solid #7e22ce; background: rgba(243, 232, 255, 0.5); }
+    .round-6 .bingo-cell .year { color: #7e22ce; font-size: 16px; font-weight: 700; }
+    .round-6 .bingo-cell.free-space { background: #7e22ce; }
+    .round-6 .header .round-info { color: #7e22ce; }
+    .round-6 .footer .branding a { color: #7e22ce; }
+
+    /* Round 7: Pink */
+    .round-7 .bingo-cell { border: 1.5px solid #be185d; background: rgba(252, 231, 243, 0.5); }
+    .round-7 .bingo-cell .year { color: #be185d; font-size: 16px; font-weight: 700; }
+    .round-7 .bingo-cell.free-space { background: #be185d; }
+    .round-7 .header .round-info { color: #be185d; }
+    .round-7 .footer .branding a { color: #be185d; }
+
+    /* Round 8: Teal */
+    .round-8 .bingo-cell { border: 1.5px solid #0f766e; background: rgba(204, 251, 241, 0.5); }
+    .round-8 .bingo-cell .year { color: #0f766e; font-size: 16px; font-weight: 700; }
+    .round-8 .bingo-cell.free-space { background: #0f766e; }
+    .round-8 .header .round-info { color: #0f766e; }
+    .round-8 .footer .branding a { color: #0f766e; }
+
+    /* Round 9: Brown */
+    .round-9 .bingo-cell { border: 1.5px solid #78350f; background: rgba(254, 243, 199, 0.5); }
+    .round-9 .bingo-cell .year { color: #78350f; font-size: 16px; font-weight: 700; }
+    .round-9 .bingo-cell.free-space { background: #78350f; }
+    .round-9 .header .round-info { color: #78350f; }
+    .round-9 .footer .branding a { color: #78350f; }
+
+    /* Round 10: Gray */
+    .round-10 .bingo-cell { border: 1.5px solid #374151; background: rgba(243, 244, 246, 0.5); }
+    .round-10 .bingo-cell .year { color: #374151; font-size: 16px; font-weight: 700; }
+    .round-10 .bingo-cell.free-space { background: #374151; }
+    .round-10 .header .round-info { color: #374151; }
+    .round-10 .footer .branding a { color: #374151; }
 </style>
 </head>
 <body>
 <% sheets.forEach(function(sheet, index) { %>
-<div class="page">
-    <div class="sheet-number">Sheet #<%= (sheet.round - 1) * contestants + sheet.sheetNumber %></div>
-
+<div class="page round-<%= sheet.round %>">
     <div class="header">
-        <h1>QRSong! Music Bingo</h1>
+        <img src="<%= apiUri %>/public/images/logo.png" alt="QRSong!" class="logo" />
         <div class="subtitle"><%= playlistName %></div>
-        <div class="round-info">Round <%= sheet.round %> - Card <%= sheet.sheetNumber %></div>
+        <div class="round-info"><%= t.roundInfo(sheet.round) %></div>
     </div>
 
     <div class="bingo-grid">
@@ -191,9 +217,7 @@
             <% row.forEach(function(cell) { %>
                 <% if (cell.isFreeSpace) { %>
                     <div class="bingo-cell free-space">
-                        <div class="star">&#9733;</div>
-                        <div class="free-text"><%= freeSpaceText %></div>
-                        <div class="free-label"><%= freeLabel %></div>
+                        <img src="<%= apiUri %>/public/images/logo_white.png" alt="QRSong!" class="logo" />
                     </div>
                 <% } else if (cell.track) { %>
                     <div class="bingo-cell">
@@ -212,7 +236,7 @@
 
     <div class="footer">
         <div class="branding">
-            Created with <a href="https://qrsong.com">QRSong!</a> - Music Bingo Generator
+            <%= t.footerBranding %> <a href="https://qrsong.com">QRSong!</a> - <%= t.footerGenerator %>
         </div>
     </div>
 </div>

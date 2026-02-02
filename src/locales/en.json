@@ -541,5 +541,11 @@
 	"customer_pincode.team": "The QRSong! Team",
 	"customer_pincode.allRightsReserved": "All rights reserved",
 	"customer_pincode.visitWebsite": "Visit our website",
-	"customer_pincode.contactSupport": "Contact Support"
+	"customer_pincode.contactSupport": "Contact Support",
+	"bingo_pdf.title": "QRSong! Music Bingo",
+	"bingo_pdf.roundInfo": "Round {{round}}",
+	"bingo_pdf.footerBranding": "Created with",
+	"bingo_pdf.footerGenerator": "Music Bingo Generator",
+	"bingo_pdf.bingoCardsFilename": "Bingo Cards",
+	"bingo_pdf.hostCardsFilename": "Host Cards"
 }
