@@ -555,5 +555,17 @@
   "bingo_pdf.footerBranding": "Feito com",
   "bingo_pdf.footerGenerator": "Gerador de Bingo Musical",
   "bingo_pdf.bingoCardsFilename": "Cartas Bingo",
-  "bingo_pdf.hostCardsFilename": "Cartas Host"
+  "bingo_pdf.hostCardsFilename": "Cartas Host",
+  "forgot_password_pincode.subject": "Esqueci PIN da senha",
+  "forgot_password_pincode.greeting": "Oi",
+  "forgot_password_pincode.intro": "Você pediu para redefinir sua senha. Use este código para continuar:",
+  "forgot_password_pincode.yourCode": "Seu código de reset",
+  "forgot_password_pincode.codeExpires": "Este código expira em 15 minutos",
+  "forgot_password_pincode.instructions": "Digite este código na página de reset para criar uma nova senha.",
+  "forgot_password_pincode.ignoreMessage": "Se não pediu o reset, pode ignorar este e-mail. Sua senha não muda.",
+  "forgot_password_pincode.thanks": "Valeu",
+  "forgot_password_pincode.team": "Time QRSong!",
+  "forgot_password_pincode.allRightsReserved": "Todos os direitos reservados",
+  "forgot_password_pincode.visitWebsite": "Visite nosso site",
+  "forgot_password_pincode.contactSupport": "Falar com suporte"
 }

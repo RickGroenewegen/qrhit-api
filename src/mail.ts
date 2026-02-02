@@ -383,6 +383,106 @@ class Mail {
   }
 
   /**
+   * Send a forgot password pincode email for password reset.
+   * @param email The user's email address
+   * @param fullname The user's full name
+   * @param pincode The 6-digit verification pincode
+   * @param locale The user's locale (default: 'en')
+   */
+  public async sendForgotPasswordPincode(
+    email: string,
+    fullname: string,
+    pincode: string,
+    locale: string = 'en'
+  ): Promise<void> {
+    if (!this.ses) return;
+
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+
+    // Fetch translations for forgot password pincode mail
+    const translations = await this.translation.getTranslationsByPrefix(
+      locale,
+      'forgot_password_pincode'
+    );
+
+    const mailParams = {
+      fullname: fullname || email.split('@')[0],
+      pincode,
+      productName: process.env['PRODUCT_NAME'],
+      currentYear: new Date().getFullYear(),
+      translations,
+    };
+
+    try {
+      // Read the logo file and convert it to Base64
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+
+      const html = await this.templates.render(
+        'mails/forgot_password_pincode_html',
+        mailParams
+      );
+      const text = await this.templates.render(
+        'mails/forgot_password_pincode_text',
+        mailParams
+      );
+
+      const subject = this.translation.translate(
+        'forgot_password_pincode.subject',
+        locale
+      );
+
+      const attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+
+      const rawEmail = await this.renderRaw(
+        {
+          from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+          to: email,
+          subject,
+          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+          text,
+          attachments,
+          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+          replyTo: process.env['REPLY_TO_EMAIL'],
+        },
+        false // No BCC for pincode emails
+      );
+
+      const emailBuffer = Buffer.from(rawEmail);
+
+      // Prepare and send the raw email
+      const command = new SendRawEmailCommand({
+        RawMessage: {
+          Data: emailBuffer,
+        },
+      });
+
+      await this.ses.send(command);
+      this.logger.log(
+        color.blue.bold(
+          `Forgot password pincode email sent to ${white.bold(email)}`
+        )
+      );
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Failed to send forgot password pincode email to ${white.bold(
+            email
+          )}: ${error}`
+        )
+      );
+    }
+  }
+
+  /**
    * Send a QRSong verification email to a user for account verification.
    * @param email The user's email address
    * @param fullname The user's full name

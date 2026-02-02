@@ -560,5 +560,17 @@
   "bingo_pdf.footerBranding": "Gemaakt met",
   "bingo_pdf.footerGenerator": "Muziek Bingo Generator",
   "bingo_pdf.bingoCardsFilename": "Bingo Kaarten",
-  "bingo_pdf.hostCardsFilename": "Host Kaarten"
+  "bingo_pdf.hostCardsFilename": "Host Kaarten",
+  "forgot_password_pincode.subject": "Wachtwoord vergeten pincode",
+  "forgot_password_pincode.greeting": "Hoi",
+  "forgot_password_pincode.intro": "Je hebt gevraagd je wachtwoord te resetten. Gebruik deze code om verder te gaan:",
+  "forgot_password_pincode.yourCode": "Je resetcode",
+  "forgot_password_pincode.codeExpires": "Deze code verloopt over 15 minuten",
+  "forgot_password_pincode.instructions": "Voer deze code in op de resetpagina om een nieuw wachtwoord te kiezen.",
+  "forgot_password_pincode.ignoreMessage": "Als je geen reset hebt aangevraagd, kun je deze mail negeren. Je wachtwoord blijft hetzelfde.",
+  "forgot_password_pincode.thanks": "Bedankt",
+  "forgot_password_pincode.team": "Het QRSong! Team",
+  "forgot_password_pincode.allRightsReserved": "Alle rechten voorbehouden",
+  "forgot_password_pincode.visitWebsite": "Bezoek onze website",
+  "forgot_password_pincode.contactSupport": "Contact Support"
 }

@@ -550,5 +550,17 @@
   "bingo_pdf.footerBranding": "由...创建",
   "bingo_pdf.footerGenerator": "音乐宾果生成器",
   "bingo_pdf.bingoCardsFilename": "宾果卡",
-  "bingo_pdf.hostCardsFilename": "主持卡"
+  "bingo_pdf.hostCardsFilename": "主持卡",
+  "forgot_password_pincode.subject": "忘记密码PIN码",
+  "forgot_password_pincode.greeting": "嗨",
+  "forgot_password_pincode.intro": "你请求重置密码。用这个验证码继续：",
+  "forgot_password_pincode.yourCode": "你的重置码",
+  "forgot_password_pincode.codeExpires": "此验证码15分钟后失效",
+  "forgot_password_pincode.instructions": "在重置页面输入此验证码设置新密码。",
+  "forgot_password_pincode.ignoreMessage": "如果你没请求重置，直接忽略这封邮件。你的密码不会变。",
+  "forgot_password_pincode.thanks": "谢谢",
+  "forgot_password_pincode.team": "QRSong! 团队",
+  "forgot_password_pincode.allRightsReserved": "版权所有",
+  "forgot_password_pincode.visitWebsite": "访问我们的网站",
+  "forgot_password_pincode.contactSupport": "联系支持"
 }

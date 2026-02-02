@@ -551,5 +551,17 @@
   "bingo_pdf.footerBranding": "作成：",
   "bingo_pdf.footerGenerator": "ミュージックビンゴ生成器",
   "bingo_pdf.bingoCardsFilename": "ビンゴカード",
-  "bingo_pdf.hostCardsFilename": "ホストカード"
+  "bingo_pdf.hostCardsFilename": "ホストカード",
+  "forgot_password_pincode.subject": "パスワードPIN忘れた",
+  "forgot_password_pincode.greeting": "やあ",
+  "forgot_password_pincode.intro": "パスワードリセットをリクエストしたね。このコードを使って続けてね：",
+  "forgot_password_pincode.yourCode": "リセットコード",
+  "forgot_password_pincode.codeExpires": "このコードは15分で切れるよ",
+  "forgot_password_pincode.instructions": "リセットページでこのコードを入力して新しいパスワードを設定してね。",
+  "forgot_password_pincode.ignoreMessage": "リセットを頼んでないなら、このメールは無視してOK。パスワードは変わらないよ。",
+  "forgot_password_pincode.thanks": "ありがとう",
+  "forgot_password_pincode.team": "QRSong! チーム",
+  "forgot_password_pincode.allRightsReserved": "All rights reserved",
+  "forgot_password_pincode.visitWebsite": "ウェブサイトを見てね",
+  "forgot_password_pincode.contactSupport": "サポートに連絡"
 }

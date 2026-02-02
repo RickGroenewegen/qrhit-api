@@ -555,5 +555,17 @@
   "bingo_pdf.footerBranding": "Creato con",
   "bingo_pdf.footerGenerator": "Generatore Music Bingo",
   "bingo_pdf.bingoCardsFilename": "Carte Bingo",
-  "bingo_pdf.hostCardsFilename": "Carte Host"
+  "bingo_pdf.hostCardsFilename": "Carte Host",
+  "forgot_password_pincode.subject": "PIN dimenticato password",
+  "forgot_password_pincode.greeting": "Ciao",
+  "forgot_password_pincode.intro": "Hai richiesto il reset della password. Usa questo codice per continuare:",
+  "forgot_password_pincode.yourCode": "Il tuo codice reset",
+  "forgot_password_pincode.codeExpires": "Questo codice scade tra 15 minuti",
+  "forgot_password_pincode.instructions": "Inserisci questo codice nella pagina di reset per impostare una nuova password.",
+  "forgot_password_pincode.ignoreMessage": "Se non hai richiesto il reset, ignora pure questa mail. La tua password non cambia.",
+  "forgot_password_pincode.thanks": "Grazie",
+  "forgot_password_pincode.team": "Il team QRSong!",
+  "forgot_password_pincode.allRightsReserved": "Tutti i diritti riservati",
+  "forgot_password_pincode.visitWebsite": "Visita il nostro sito",
+  "forgot_password_pincode.contactSupport": "Contatta supporto"
 }

@@ -593,6 +593,78 @@ export default async function accountRoutes(
     }
   );
 
+  // Forgot password request - send pincode to email for password reset
+  fastify.post(
+    '/api/account/forgot-password-request',
+    async (request: any, reply: any) => {
+      const { email, locale } = request.body;
+
+      // Validate email
+      if (!email || typeof email !== 'string' || !email.includes('@')) {
+        reply.status(400).send({
+          success: false,
+          error: 'invalidEmail',
+        });
+        return;
+      }
+
+      try {
+        const normalizedEmail = email.toLowerCase().trim();
+
+        // Find user with password set (existing account)
+        const user = await prisma.user.findFirst({
+          where: {
+            email: normalizedEmail,
+            password: { not: null },
+          },
+        });
+
+        // Always return success to prevent email enumeration
+        if (!user) {
+          reply.send({
+            success: true,
+            message: 'forgotPasswordEmailSent',
+          });
+          return;
+        }
+
+        // Generate a 6-digit pincode
+        const pincode = Math.floor(100000 + Math.random() * 900000).toString();
+
+        // Store the pincode with 15 minute expiry (reusing gamesActivationCode fields)
+        const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
+
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            gamesActivationCode: pincode,
+            gamesActivationCodeExpiry: expiresAt,
+          },
+        });
+
+        // Send pincode email
+        const userLocale = locale || user.locale || 'en';
+        await mail.sendForgotPasswordPincode(
+          normalizedEmail,
+          user.displayName || normalizedEmail,
+          pincode,
+          userLocale
+        );
+
+        reply.send({
+          success: true,
+          message: 'forgotPasswordEmailSent',
+        });
+      } catch (error) {
+        console.error('Error in forgot password request:', error);
+        reply.status(500).send({
+          success: false,
+          error: 'internalServerError',
+        });
+      }
+    }
+  );
+
   // Verify customer pincode and return verification token
   fastify.post(
     '/api/account/customer-verify-pincode',

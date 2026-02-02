@@ -549,5 +549,17 @@
   "bingo_pdf.footerBranding": "Skapad med",
   "bingo_pdf.footerGenerator": "Musikbingogenerator",
   "bingo_pdf.bingoCardsFilename": "Bingokort",
-  "bingo_pdf.hostCardsFilename": "Värdkort"
+  "bingo_pdf.hostCardsFilename": "Värdkort",
+  "forgot_password_pincode.subject": "Glömt lösenord PIN-kod",
+  "forgot_password_pincode.greeting": "Hej",
+  "forgot_password_pincode.intro": "Du bad om att återställa ditt lösenord. Använd den här koden för att fortsätta:",
+  "forgot_password_pincode.yourCode": "Din resetkod",
+  "forgot_password_pincode.codeExpires": "Koden går ut om 15 minuter",
+  "forgot_password_pincode.instructions": "Skriv in koden på återställningssidan för att välja nytt lösenord.",
+  "forgot_password_pincode.ignoreMessage": "Om du inte bad om återställning kan du bara ignorera mailet. Ditt lösenord ändras inte.",
+  "forgot_password_pincode.thanks": "Tack",
+  "forgot_password_pincode.team": "QRSong!-teamet",
+  "forgot_password_pincode.allRightsReserved": "Alla rättigheter förbehållna",
+  "forgot_password_pincode.visitWebsite": "Besök vår hemsida",
+  "forgot_password_pincode.contactSupport": "Kontakta support"
 }
