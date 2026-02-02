@@ -267,7 +267,8 @@ export default async function musicRoutes(fastify: FastifyInstance) {
 
   // Get featured playlists
   fastify.get('/featured/:locale', async (request: any, _reply) => {
-    const playlists = await data.getFeaturedPlaylists(request.params.locale);
+    const skipLocaleFilter = request.query.all === 'true';
+    const playlists = await data.getFeaturedPlaylists(request.params.locale, skipLocaleFilter);
     return { success: true, data: playlists };
   });
 

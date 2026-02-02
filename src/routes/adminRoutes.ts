@@ -978,6 +978,24 @@ export default async function adminRoutes(
     }
   );
 
+  // Clear cache for all non-featured playlists (to free Redis memory)
+  fastify.post(
+    '/admin/playlists/clear-non-featured-cache',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const result = await data.clearNonFeaturedPlaylistCaches();
+
+      if (result.success) {
+        reply.send({ success: true, processed: result.processed });
+      } else {
+        reply.status(500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Upload custom image for a featured playlist
   fastify.post(
     '/admin/featured/:playlistId/upload-image',
@@ -2102,6 +2120,21 @@ export default async function adminRoutes(
       reply.send({
         success: true,
         message: 'Updated all payments with printApiOrderId',
+      });
+    }
+  );
+
+  // Handle tracking mails - check shipped orders and send tracking emails
+  fastify.post(
+    '/admin/printenbind/handle-tracking-mails',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const PrintEnBind = (await import('../printers/printenbind')).default;
+      const printEnBind = PrintEnBind.getInstance();
+      printEnBind.handleTrackingMails();
+      reply.send({
+        success: true,
+        message: 'Tracking mail handler started in background',
       });
     }
   );
