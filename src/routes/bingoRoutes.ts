@@ -30,7 +30,10 @@ interface PlaylistInfoRow {
   qrSubDir: string | null;
 }
 
-export default async function bingoRoutes(fastify: FastifyInstance) {
+export default async function bingoRoutes(
+  fastify: FastifyInstance,
+  getAuthHandler?: any
+) {
   const bingo = Bingo.getInstance();
   const pdf = new PDF();
   const logger = new Logger();
@@ -38,6 +41,10 @@ export default async function bingoRoutes(fastify: FastifyInstance) {
   const translation = new Translation();
   const utils = new Utils();
   const cache = CacheInstance.getInstance();
+
+  // Daily generation limit (disabled in development)
+  const DAILY_GENERATION_LIMIT = 5;
+  const isDevelopment = process.env['NODE_ENV'] !== 'production';
 
   /**
    * Verify payment ownership and get playlist info including QR subdir
@@ -70,6 +77,59 @@ export default async function bingoRoutes(fastify: FastifyInstance) {
     }
 
     return { success: true, playlistInfo: result[0] };
+  }
+
+  /**
+   * Count today's bingo generations for a user (by userHash)
+   */
+  async function getTodayGenerationCount(userHash: string): Promise<number> {
+    // Get start of today (UTC)
+    const today = new Date();
+    today.setUTCHours(0, 0, 0, 0);
+
+    const result = await prisma.$queryRaw<{ count: bigint }[]>`
+      SELECT COUNT(*) as count
+      FROM bingo_files bf
+      JOIN payment_has_playlist php ON php.id = bf.paymentHasPlaylistId
+      JOIN payments p ON p.id = php.paymentId
+      JOIN users u ON u.id = p.userId
+      WHERE u.hash = ${userHash}
+      AND bf.createdAt >= ${today}
+    `;
+
+    return Number(result[0]?.count || 0);
+  }
+
+  /**
+   * Verify user owns a bingo file and can delete it
+   */
+  async function verifyBingoFileOwnership(
+    filename: string,
+    userId: number
+  ): Promise<{ success: boolean; bingoFile?: any; error?: string }> {
+    const bingoFile = await prisma.bingoFile.findFirst({
+      where: {
+        filename,
+      },
+      include: {
+        paymentHasPlaylist: {
+          include: {
+            payment: true,
+          },
+        },
+      },
+    });
+
+    if (!bingoFile) {
+      return { success: false, error: 'Bingo file not found' };
+    }
+
+    // Check if the user owns this bingo file (through the payment)
+    if (bingoFile.paymentHasPlaylist.payment.userId !== userId) {
+      return { success: false, error: 'Unauthorized' };
+    }
+
+    return { success: true, bingoFile };
   }
 
   /**
@@ -255,6 +315,18 @@ export default async function bingoRoutes(fastify: FastifyInstance) {
         });
       }
 
+      // Check daily generation limit (skip in development)
+      if (!isDevelopment) {
+        const todayCount = await getTodayGenerationCount(userHash);
+        if (todayCount >= DAILY_GENERATION_LIMIT) {
+          return reply.status(429).send({
+            success: false,
+            error: `dailyLimitReached`,
+            limit: DAILY_GENERATION_LIMIT,
+          });
+        }
+      }
+
       // Verify access to the playlist
       const { success, playlistInfo, error } = await verifyAndGetPlaylist(
         paymentId,
@@ -382,6 +454,8 @@ export default async function bingoRoutes(fastify: FastifyInstance) {
       }
 
       // Store the bingo file in database for future downloads
+      // Save the trackIds that were used so the host screen can filter to just these tracks
+      const usedTrackIds = bingoTracks.map((t) => t.trackId);
       await prisma.bingoFile.create({
         data: {
           paymentHasPlaylistId: playlistInfo.paymentHasPlaylistId,
@@ -389,6 +463,7 @@ export default async function bingoRoutes(fastify: FastifyInstance) {
           contestants,
           rounds,
           trackCount: bingoTracks.length,
+          selectedTrackIds: usedTrackIds,
         },
       });
 
@@ -453,11 +528,23 @@ export default async function bingoRoutes(fastify: FastifyInstance) {
           bingoTracks = bingoTracks.filter((track) => selectedSet.has(track.trackId));
         }
 
+        // Add bingo numbers to tracks (1-based index)
+        bingoTracks = bingoTracks.map((track, index) => ({
+          ...track,
+          bingoNumber: index + 1,
+        }));
+
         const contestantCount = parseInt(contestants) || 10;
         const roundCount = parseInt(rounds) || 3;
 
         // Generate bingo sheets
         const sheets = bingo.generateSheets(bingoTracks, contestantCount, roundCount);
+
+        // Generate QR data for each sheet
+        const sheetsWithQR = sheets.map((sheet) => ({
+          ...sheet,
+          qrData: bingo.generateQRData(sheet),
+        }));
 
         // API URI for assets
         const apiUri = process.env['API_URI'] || 'http://localhost:3004';
@@ -474,7 +561,7 @@ export default async function bingoRoutes(fastify: FastifyInstance) {
 
         // Render EJS template
         return reply.view('pdf_bingo', {
-          sheets,
+          sheets: sheetsWithQR,
           playlistName: playlistInfo.playlistName,
           contestants: contestantCount,
           rounds: roundCount,
@@ -527,6 +614,12 @@ export default async function bingoRoutes(fastify: FastifyInstance) {
           bingoTracks = bingoTracks.filter((track) => selectedSet.has(track.trackId));
         }
 
+        // Add bingo numbers to tracks (1-based index)
+        bingoTracks = bingoTracks.map((track, index) => ({
+          ...track,
+          bingoNumber: index + 1,
+        }));
+
         // Get QR code URLs for each track using the payment's qrSubDir
         const apiUri = process.env['API_URI'] || 'http://localhost:3004';
         const qrSubDir = playlistInfo.qrSubDir;
@@ -552,4 +645,173 @@ export default async function bingoRoutes(fastify: FastifyInstance) {
       }
     }
   );
+
+  /**
+   * GET /api/bingo/host/:filename
+   * Get host data for bingo verification (tracks with bingoNumbers)
+   */
+  if (getAuthHandler) {
+    fastify.get(
+      '/api/bingo/host/:filename',
+      getAuthHandler(['users']),
+      async (request: any, reply: any) => {
+        try {
+          const { filename } = request.params;
+          const userIdString = request.user?.userId;
+
+          if (!filename || !userIdString) {
+            return reply.status(400).send({
+              success: false,
+              error: 'Missing required parameters',
+            });
+          }
+
+          // Look up user to get database ID
+          const user = await prisma.user.findUnique({
+            where: { userId: userIdString },
+          });
+
+          if (!user) {
+            return reply.status(401).send({
+              success: false,
+              error: 'User not found',
+            });
+          }
+
+          // Verify ownership of the bingo file
+          const { success, bingoFile, error } = await verifyBingoFileOwnership(
+            filename,
+            user.id
+          );
+
+          if (!success || !bingoFile) {
+            return reply.status(401).send({
+              success: false,
+              error: error || 'Unauthorized',
+            });
+          }
+
+          // Get playlist info through the payment has playlist relation
+          const playlistDbId = bingoFile.paymentHasPlaylist.playlistId;
+
+          // Get playlist name
+          const playlist = await prisma.playlist.findUnique({
+            where: { id: playlistDbId },
+            select: { name: true },
+          });
+
+          // Get tracks for the playlist
+          let bingoTracks = await getPlaylistTracks(playlistDbId);
+
+          // Filter to only the tracks that were used in this bingo game
+          const selectedTrackIds = bingoFile.selectedTrackIds as string[] | null;
+          if (selectedTrackIds && Array.isArray(selectedTrackIds) && selectedTrackIds.length > 0) {
+            const selectedSet = new Set(selectedTrackIds);
+            bingoTracks = bingoTracks.filter((track) => selectedSet.has(track.trackId));
+          }
+
+          // Add bingo numbers to tracks (1-based index)
+          const tracksWithNumbers = bingoTracks.map((track, index) => ({
+            ...track,
+            bingoNumber: index + 1,
+          }));
+
+          return reply.send({
+            success: true,
+            playlistName: playlist?.name || 'Unknown Playlist',
+            tracks: tracksWithNumbers,
+            rounds: bingoFile.rounds,
+            contestants: bingoFile.contestants,
+            trackCount: bingoFile.trackCount,
+          });
+        } catch (error: any) {
+          logger.log(color.red.bold(`Error in GET /api/bingo/host: ${error.message}`));
+          return reply.status(500).send({
+            success: false,
+            error: 'Failed to get host data',
+          });
+        }
+      }
+    );
+  }
+
+  /**
+   * DELETE /api/bingo/file/:filename
+   * Delete a bingo file (requires authentication)
+   */
+  if (getAuthHandler) {
+    fastify.delete(
+      '/api/bingo/file/:filename',
+      getAuthHandler(['users']),
+      async (request: any, reply: any) => {
+        try {
+          const { filename } = request.params;
+          const userIdString = request.user?.userId;
+
+          if (!filename || !userIdString) {
+            return reply.status(400).send({
+              success: false,
+              error: 'Missing required parameters',
+            });
+          }
+
+          // Look up user to get database ID
+          const user = await prisma.user.findUnique({
+            where: { userId: userIdString },
+          });
+
+          if (!user) {
+            return reply.status(401).send({
+              success: false,
+              error: 'User not found',
+            });
+          }
+
+          // Verify ownership
+          const { success, bingoFile, error } = await verifyBingoFileOwnership(
+            filename,
+            user.id
+          );
+
+          if (!success || !bingoFile) {
+            return reply.status(401).send({
+              success: false,
+              error: error || 'Unauthorized',
+            });
+          }
+
+          // Delete the file from disk
+          const publicDir = process.env['PUBLIC_DIR'] || '/tmp';
+          const filePath = path.join(publicDir, 'bingo', filename);
+
+          try {
+            await fs.unlink(filePath);
+            logger.log(color.blue.bold(`Deleted bingo file: ${white.bold(filename)}`));
+          } catch (unlinkError: any) {
+            // File might not exist on disk, but we still delete from DB
+            if (unlinkError.code !== 'ENOENT') {
+              logger.log(color.yellow.bold(`Warning: Could not delete file ${filename}: ${unlinkError.message}`));
+            }
+          }
+
+          // Delete from database
+          await prisma.bingoFile.delete({
+            where: {
+              id: bingoFile.id,
+            },
+          });
+
+          return reply.send({
+            success: true,
+          });
+        } catch (error: any) {
+          logger.log(color.red.bold(`Error in DELETE /api/bingo/file: ${error.message}`));
+          return reply.status(500).send({
+            success: false,
+            error: 'Failed to delete bingo file',
+          });
+        }
+      }
+    );
+  }
 }

@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>Music Bingo - QRSong!</title>
+<script src="https://cdn.jsdelivr.net/npm/qrcode-generator@1.4.4/qrcode.min.js"></script>
 <style>
     @media print {
         @page {
@@ -42,7 +43,7 @@
     }
 
     .header {
-        text-align: center;
+        text-align: left;
         margin-bottom: 5mm;
     }
 
@@ -70,7 +71,7 @@
         gap: 2mm;
         width: 190mm;
         height: 190mm;
-        margin: 0 auto;
+        margin: 5mm auto 0 auto;
     }
 
     .bingo-cell {
@@ -82,6 +83,19 @@
         text-align: center;
         padding: 2mm;
         overflow: hidden;
+    }
+
+    .bingo-cell {
+        position: relative;
+    }
+
+    .bingo-cell .track-number {
+        position: absolute;
+        top: 1mm;
+        left: 1.5mm;
+        font-size: 10px;
+        font-weight: 700;
+        opacity: 0.6;
     }
 
     .bingo-cell .song-title {
@@ -130,6 +144,36 @@
 
     .footer .branding a {
         text-decoration: none;
+    }
+
+    /* QR Code positioning */
+    .qr-container {
+        position: absolute;
+        top: 4mm;
+        right: 4mm;
+        width: 38mm;
+        height: 38mm;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .qr-container img {
+        width: 34mm;
+        height: 34mm;
+    }
+
+    .qr-container .card-id {
+        font-size: 9px;
+        color: #666;
+        margin-top: 1mm;
+        text-align: center;
+        font-weight: 600;
+    }
+
+    /* Add padding to header to avoid QR overlap */
+    .header {
+        padding-right: 45mm;
     }
 
     /* Round 1: Blue (classic bingo) */
@@ -206,6 +250,12 @@
 <body>
 <% sheets.forEach(function(sheet, index) { %>
 <div class="page round-<%= sheet.round %>">
+    <!-- QR Code for host verification -->
+    <div class="qr-container">
+        <div id="qr-<%= index %>"></div>
+        <div class="card-id">R<%= sheet.round %> #<%= sheet.sheetNumber %></div>
+    </div>
+
     <div class="header">
         <img src="<%= apiUri %>/public/images/logo.png" alt="QRSong!" class="logo" />
         <div class="subtitle"><%= playlistName %></div>
@@ -221,6 +271,7 @@
                     </div>
                 <% } else if (cell.track) { %>
                     <div class="bingo-cell">
+                        <div class="track-number"><%= cell.track.bingoNumber %></div>
                         <div class="song-title"><%= cell.track.name %></div>
                         <div class="artist"><%= cell.track.artist %></div>
                         <div class="year"><%= cell.track.year %></div>
@@ -241,5 +292,26 @@
     </div>
 </div>
 <% }); %>
+
+<script>
+// Generate QR codes for each sheet
+document.addEventListener('DOMContentLoaded', function() {
+    var qrData = [
+        <% sheets.forEach(function(sheet, index) { %>
+        "<%= sheet.qrData %>"<%= index < sheets.length - 1 ? ',' : '' %>
+        <% }); %>
+    ];
+
+    qrData.forEach(function(data, index) {
+        var qr = qrcode(0, 'M');
+        qr.addData(data);
+        qr.make();
+        var container = document.getElementById('qr-' + index);
+        if (container) {
+            container.innerHTML = qr.createImgTag(3, 0);
+        }
+    });
+});
+</script>
 </body>
 </html>

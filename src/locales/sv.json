@@ -544,7 +544,7 @@
   "customer_pincode.visitWebsite": "Besök vår hemsida",
   "customer_pincode.contactSupport": "Kontakta support",
   "bingo_pdf.title": "QRSong! Musikbingo",
-  "bingo_pdf.roundInfo": "Runda {{round}} - Kort {{card}}",
+  "bingo_pdf.roundInfo": "Runda {{round}}",
   "bingo_pdf.sheetNumber": "Blad #{{number}}",
   "bingo_pdf.footerBranding": "Skapad med",
   "bingo_pdf.footerGenerator": "Musikbingogenerator",

@@ -60,12 +60,26 @@
         align-items: center;
         padding: 2mm;
         background: #f8fafc;
+        position: relative;
     }
 
     .host-card .qr-section img {
-        width: 28mm;
-        height: 28mm;
+        width: 32mm;
+        height: 32mm;
         object-fit: contain;
+    }
+
+    .host-card .track-number {
+        position: absolute;
+        top: 1mm;
+        left: 1mm;
+        font-size: 11px;
+        font-weight: 700;
+        color: #2563eb;
+        background: white;
+        padding: 0.5mm 1.5mm;
+        border-radius: 2px;
+        border: 1px solid #2563eb;
     }
 
     .host-card .info-section {
@@ -118,6 +132,7 @@ for (let page = 0; page < totalPages; page++) {
     <% pageCards.forEach(function(track) { %>
     <div class="host-card">
         <div class="qr-section">
+            <div class="track-number"><%= track.bingoNumber %></div>
             <img src="<%= track.qrUrl %>" alt="QR Code">
         </div>
         <div class="info-section">

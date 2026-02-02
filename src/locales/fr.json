@@ -555,7 +555,7 @@
   "customer_pincode.visitWebsite": "Visite notre site",
   "customer_pincode.contactSupport": "Contacte le support",
   "bingo_pdf.title": "QRSong! Bingo Musical",
-  "bingo_pdf.roundInfo": "Manche {{round}} - Carte {{card}}",
+  "bingo_pdf.roundInfo": "Manche {{round}}",
   "bingo_pdf.sheetNumber": "Feuille #{{number}}",
   "bingo_pdf.footerBranding": "Créé avec",
   "bingo_pdf.footerGenerator": "Générateur de Bingo Musical",

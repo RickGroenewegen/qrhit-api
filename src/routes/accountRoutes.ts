@@ -978,6 +978,11 @@ export default async function accountRoutes(
                     image: true,
                   },
                 },
+                bingoFiles: {
+                  orderBy: {
+                    createdAt: 'desc',
+                  },
+                },
               },
             },
           },
@@ -985,6 +990,8 @@ export default async function accountRoutes(
             createdAt: 'desc',
           },
         });
+
+        const apiUri = process.env['API_URI'] || 'http://localhost:3004';
 
         const purchases = payments.map((payment) => {
           // Determine if downloads are available
@@ -1015,6 +1022,15 @@ export default async function accountRoutes(
               canDownload: php.type === 'digital'
                 ? !!php.filenameDigital
                 : payment.sentToPrinter === true && !!php.filenameDigital,
+              // Bingo files for this playlist
+              bingoFiles: php.bingoFiles.map((bf: any) => ({
+                filename: bf.filename,
+                contestants: bf.contestants,
+                rounds: bf.rounds,
+                trackCount: bf.trackCount,
+                createdAt: bf.createdAt,
+                downloadUrl: `${apiUri}/public/bingo/${bf.filename}`,
+              })),
             })),
           };
         });

@@ -546,7 +546,7 @@
   "customer_pincode.visitWebsite": "ウェブサイトへ行こう",
   "customer_pincode.contactSupport": "サポートに連絡",
   "bingo_pdf.title": "QRSong! ミュージックビンゴ",
-  "bingo_pdf.roundInfo": "ラウンド{{round}} - カード{{card}}",
+  "bingo_pdf.roundInfo": "ラウンド{{round}}",
   "bingo_pdf.sheetNumber": "シート#{{number}}",
   "bingo_pdf.footerBranding": "作成：",
   "bingo_pdf.footerGenerator": "ミュージックビンゴ生成器",

@@ -647,6 +647,7 @@ model BingoFile {
   contestants          Int
   rounds               Int
   trackCount           Int
+  selectedTrackIds     Json?              // Array of trackIds used in this bingo game
   createdAt            DateTime           @default(now())
 
   @@index([paymentHasPlaylistId])

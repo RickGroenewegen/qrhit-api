@@ -555,7 +555,7 @@
   "customer_pincode.visitWebsite": "Bezoek onze website",
   "customer_pincode.contactSupport": "Contact Support",
   "bingo_pdf.title": "QRSong! Muziek Bingo",
-  "bingo_pdf.roundInfo": "Ronde {{round}} - Kaart {{card}}",
+  "bingo_pdf.roundInfo": "Ronde {{round}}",
   "bingo_pdf.sheetNumber": "Blad #{{number}}",
   "bingo_pdf.footerBranding": "Gemaakt met",
   "bingo_pdf.footerGenerator": "Muziek Bingo Generator",

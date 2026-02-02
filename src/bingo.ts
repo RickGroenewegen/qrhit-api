@@ -7,6 +7,7 @@ export interface BingoTrack {
   name: string;
   artist: string;
   year: number;
+  bingoNumber?: number;
 }
 
 export interface BingoCell {
@@ -134,9 +135,9 @@ class Bingo {
    * Generate all bingo sheets for the given configuration
    *
    * Algorithm:
-   * - For each round, we use a pool of tracks
-   * - Tracks are shuffled for each sheet to ensure variety
-   * - Each contestant gets a unique arrangement
+   * - Each card randomly selects 24 tracks from ALL available tracks
+   * - This ensures variety: different contestants have different songs
+   * - The shuffle ensures each card has a unique combination
    */
   public generateSheets(
     tracks: BingoTrack[],
@@ -148,46 +149,22 @@ class Bingo {
 
     this.logger.log(
       color.blue.bold(
-        `Generating ${white.bold((contestants * rounds).toString())} bingo sheets for ${white.bold(contestants.toString())} contestants over ${white.bold(rounds.toString())} rounds`
+        `Generating ${white.bold((contestants * rounds).toString())} bingo sheets for ${white.bold(contestants.toString())} contestants over ${white.bold(rounds.toString())} rounds (pool of ${white.bold(tracks.length.toString())} tracks)`
       )
     );
 
     for (let round = 1; round <= rounds; round++) {
-      // For each round, we'll use a shuffled pool of tracks
-      // If we have enough tracks, use different tracks per round
-      // Otherwise, reshuffle the same pool
-      const roundStartIndex = ((round - 1) * tracksPerSheet) % tracks.length;
-
-      // Create a working pool for this round
-      let roundTracks: BingoTrack[];
-
-      if (tracks.length >= rounds * tracksPerSheet) {
-        // We have enough tracks for unique songs per round
-        // Use a slice of tracks for this round
-        const endIndex = roundStartIndex + tracksPerSheet;
-        if (endIndex <= tracks.length) {
-          roundTracks = tracks.slice(roundStartIndex, endIndex);
-        } else {
-          // Wrap around if needed
-          roundTracks = [
-            ...tracks.slice(roundStartIndex),
-            ...tracks.slice(0, endIndex - tracks.length),
-          ];
-        }
-      } else {
-        // Not enough tracks for unique per round, use all and shuffle
-        roundTracks = this.shuffle(tracks).slice(0, Math.min(tracksPerSheet, tracks.length));
-      }
-
       // Generate sheets for each contestant in this round
       for (let contestant = 1; contestant <= contestants; contestant++) {
         const grid = this.createEmptyGrid();
 
-        // Shuffle tracks for this specific sheet
-        const shuffledTracks = this.shuffle(roundTracks);
+        // Shuffle ALL tracks and pick the first 24 for this card
+        // This ensures each card gets a random selection from the entire pool
+        const shuffledTracks = this.shuffle(tracks);
+        const cardTracks = shuffledTracks.slice(0, tracksPerSheet);
 
         // Fill the grid
-        this.fillGrid(grid, shuffledTracks);
+        this.fillGrid(grid, cardTracks);
 
         sheets.push({
           round,
@@ -217,6 +194,70 @@ class Bingo {
       }
     }
     return positions;
+  }
+
+  /**
+   * Generate QR code data string for a bingo sheet.
+   * Compact format: BINGO:R{round}S{sheet}:{num1,num2,...,num24}
+   * - Numbers are in position order (0-10, then 13-24, skipping position 12 which is free space)
+   * - num: Track's bingoNumber (1-based index in track pool)
+   * Example: BINGO:R1S5:42,17,89,... (24 numbers total)
+   */
+  public generateQRData(sheet: BingoSheet): string {
+    const numbers: number[] = [];
+
+    // Iterate through grid in order, collecting bingoNumbers
+    for (let row = 0; row < 5; row++) {
+      for (let col = 0; col < 5; col++) {
+        const cell = sheet.grid[row][col];
+        if (!cell.isFreeSpace && cell.track && cell.track.bingoNumber) {
+          numbers.push(cell.track.bingoNumber);
+        }
+      }
+    }
+
+    return `BINGO:R${sheet.round}S${sheet.sheetNumber}:${numbers.join(',')}`;
+  }
+
+  /**
+   * Parse QR code data string back into structured data.
+   * Returns null if the format is invalid.
+   */
+  public parseQRData(
+    data: string
+  ): { round: number; sheet: number; positions: Map<number, number> } | null {
+    // Validate prefix
+    if (!data.startsWith('BINGO:')) {
+      return null;
+    }
+
+    // Parse format: BINGO:R{round}S{sheet}:{numbers}
+    const match = data.match(/^BINGO:R(\d+)S(\d+):(.+)$/);
+    if (!match) {
+      return null;
+    }
+
+    const round = parseInt(match[1], 10);
+    const sheet = parseInt(match[2], 10);
+    const numbersStr = match[3];
+
+    // Parse numbers array
+    const numbers = numbersStr.split(',').map((n) => parseInt(n, 10));
+
+    // Validate we have 24 numbers
+    if (numbers.length !== 24 || numbers.some(isNaN)) {
+      return null;
+    }
+
+    // Map numbers to positions (0-10, skip 12, then 13-24)
+    const positions = new Map<number, number>();
+    let numIndex = 0;
+    for (let pos = 0; pos < 25; pos++) {
+      if (pos === 12) continue; // Skip free space
+      positions.set(pos, numbers[numIndex++]);
+    }
+
+    return { round, sheet, positions };
   }
 }
 

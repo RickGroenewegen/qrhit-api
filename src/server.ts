@@ -118,6 +118,7 @@ class Server {
     await accountRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
     await adminRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
     await vibeRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
+    await bingoRoutes(this.fastify, getAuthHandler);
   };
 
   public async addRoutes() {
@@ -138,9 +139,6 @@ class Server {
 
     // Register game routes
     await gameRoutes(this.fastify);
-
-    // Register bingo routes
-    await bingoRoutes(this.fastify);
 
     // WebSocket endpoints - return 426 Upgrade Required for non-WebSocket requests
     this.fastify.get('/chat-ws', async (request, reply) => {

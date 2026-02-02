@@ -550,7 +550,7 @@
   "customer_pincode.visitWebsite": "Odwiedź naszą stronę",
   "customer_pincode.contactSupport": "Skontaktuj się z pomocą",
   "bingo_pdf.title": "QRSong! Muzyczne Bingo",
-  "bingo_pdf.roundInfo": "Runda {{round}} - Karta {{card}}",
+  "bingo_pdf.roundInfo": "Runda {{round}}",
   "bingo_pdf.sheetNumber": "Arkusz #{{number}}",
   "bingo_pdf.footerBranding": "Stworzone z",
   "bingo_pdf.footerGenerator": "Generator Muzycznego Bingo",
