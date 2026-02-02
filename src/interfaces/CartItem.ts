@@ -43,4 +43,5 @@ export interface CartItem {
   frontOpacity?: number; // Front background image opacity 0-100 (default 100% fully visible)
   backOpacity?: number; // Back background image opacity 0-100 (default 50%)
   design?: any; // Complete design object from localStorage (saved to database for new playlists)
+  bingoEnabled?: boolean; // Whether bingo is included (default: true for digital)
 }

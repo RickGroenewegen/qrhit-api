@@ -989,6 +989,16 @@ class PrintEnBind {
       // Subtract volume discount from total price
       totalPrice -= volumeDiscount;
 
+      // Bingo fee: €5 for card items with bingo enabled
+      const BINGO_FEE = 5.00;
+      let bingoFee = 0;
+      for (const item of orderItems) {
+        if (item.productType === 'cards' && item.bingoEnabled === true) {
+          bingoFee += BINGO_FEE;
+        }
+      }
+      totalPrice += bingoFee;
+
       const result = {
         success: true,
         data: {
@@ -1001,6 +1011,7 @@ class PrintEnBind {
           price: totalProductPriceWithoutVAT,
           payment: shipping, // + handling,
           volumeDiscount, // Add volume discount to result
+          bingoFee, // Add bingo fee to result
         },
       };
 

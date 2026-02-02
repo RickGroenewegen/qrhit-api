@@ -1022,6 +1022,8 @@ export default async function accountRoutes(
               canDownload: php.type === 'digital'
                 ? !!php.filenameDigital
                 : payment.sentToPrinter === true && !!php.filenameDigital,
+              // Whether bingo is enabled for this playlist
+              bingoEnabled: php.bingoEnabled,
               // Bingo files for this playlist
               bingoFiles: php.bingoFiles.map((bf: any) => ({
                 filename: bf.filename,

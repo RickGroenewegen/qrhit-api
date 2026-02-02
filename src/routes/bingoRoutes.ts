@@ -341,6 +341,16 @@ export default async function bingoRoutes(
         });
       }
 
+      // Check if bingo is enabled for this order
+      const php = await prisma.paymentHasPlaylist.findFirst({
+        where: { id: playlistInfo.paymentHasPlaylistId },
+        select: { bingoEnabled: true }
+      });
+
+      if (php?.bingoEnabled === false) {
+        return reply.status(403).send({ success: false, error: 'bingoNotEnabled' });
+      }
+
       // Get tracks for the playlist
       let bingoTracks = await getPlaylistTracks(playlistInfo.playlistDbId);
 

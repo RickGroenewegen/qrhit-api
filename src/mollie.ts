@@ -1030,6 +1030,9 @@ class Mollie {
             frontOpacity:
               item.frontOpacity !== undefined ? item.frontOpacity : 100,
             backOpacity: item.backOpacity !== undefined ? item.backOpacity : 50,
+            // Bingo enabled flag and price
+            bingoEnabled: item.productType === 'cards' ? (item.bingoEnabled === true) : false,
+            bingoPrice: (item.productType === 'cards' && item.bingoEnabled === true) ? 5.00 : 0,
           };
         })
       );
