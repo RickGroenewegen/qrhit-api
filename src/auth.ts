@@ -9,6 +9,10 @@ const prisma = PrismaInstance.getInstance();
 const utils = new Utils();
 const mail = Mail.getInstance();
 
+// PBKDF2 iteration constants
+const CURRENT_ITERATIONS = 600000;
+const LEGACY_ITERATIONS = 10000;
+
 /**
  * Generates a random salt for password hashing
  * @returns A random salt string
@@ -21,10 +25,17 @@ export function generateSalt(): string {
  * Hashes a password with the given salt
  * @param password The password to hash
  * @param salt The salt to use
+ * @param iterations Number of PBKDF2 iterations (defaults to CURRENT_ITERATIONS)
  * @returns The hashed password
  */
-export function hashPassword(password: string, salt: string): string {
-  return crypto.pbkdf2Sync(password, salt, 10000, 64, 'sha512').toString('hex');
+export function hashPassword(
+  password: string,
+  salt: string,
+  iterations: number = CURRENT_ITERATIONS
+): string {
+  return crypto
+    .pbkdf2Sync(password, salt, iterations, 64, 'sha512')
+    .toString('hex');
 }
 
 /**
@@ -32,14 +43,16 @@ export function hashPassword(password: string, salt: string): string {
  * @param password The password to verify
  * @param hash The stored hash
  * @param salt The stored salt
+ * @param iterations Number of PBKDF2 iterations used for the stored hash
  * @returns True if the password is correct, false otherwise
  */
 export function verifyPassword(
   password: string,
   hash: string,
-  salt: string
+  salt: string,
+  iterations: number = LEGACY_ITERATIONS
 ): boolean {
-  const hashedPassword = hashPassword(password, salt);
+  const hashedPassword = hashPassword(password, salt, iterations);
   return hashedPassword === hash;
 }
 
@@ -140,10 +153,40 @@ export async function authenticateUser(
       return null;
     }
 
-    const isValid = verifyPassword(password, user.password, user.salt);
+    // Get the iteration count used for this user's password (default to legacy)
+    const storedIterations = user.passwordIterations || LEGACY_ITERATIONS;
+
+    const isValid = verifyPassword(
+      password,
+      user.password,
+      user.salt,
+      storedIterations
+    );
 
     if (!isValid) {
       return null;
+    }
+
+    // Lazy rehashing: upgrade to current iterations if using legacy
+    if (storedIterations < CURRENT_ITERATIONS) {
+      try {
+        const newSalt = generateSalt();
+        const newHash = hashPassword(password, newSalt, CURRENT_ITERATIONS);
+        await prisma.user.update({
+          where: { id: user.id },
+          data: {
+            password: newHash,
+            salt: newSalt,
+            passwordIterations: CURRENT_ITERATIONS,
+          },
+        });
+        console.log(
+          `Upgraded password hash for user ${user.id} to ${CURRENT_ITERATIONS} iterations`
+        );
+      } catch (rehashError) {
+        // Log but don't fail the login if rehashing fails
+        console.error('Failed to rehash password:', rehashError);
+      }
     }
 
     // Extract user group names
@@ -458,9 +501,9 @@ export async function resetPassword(
       };
     }
 
-    // Generate new password hash
+    // Generate new password hash with current iteration count
     const salt = generateSalt();
-    const hashedPassword = hashPassword(password1, salt);
+    const hashedPassword = hashPassword(password1, salt, CURRENT_ITERATIONS);
 
     // Update user's password and clear reset token
     await prisma.user.update({
@@ -468,6 +511,7 @@ export async function resetPassword(
       data: {
         password: hashedPassword,
         salt: salt,
+        passwordIterations: CURRENT_ITERATIONS,
         passwordResetToken: null,
         passwordResetExpiry: null,
       },
@@ -701,7 +745,7 @@ export async function registerAccount(
       } else {
         // User exists but not upgraded, update the user
         const salt = generateSalt();
-        const hashedPassword = hashPassword(password1, salt);
+        const hashedPassword = hashPassword(password1, salt, CURRENT_ITERATIONS);
         const verificationHash = crypto.randomBytes(16).toString('hex');
 
         const updatedUser = await prisma.user.update({
@@ -710,6 +754,7 @@ export async function registerAccount(
             displayName,
             password: hashedPassword,
             salt,
+            passwordIterations: CURRENT_ITERATIONS,
             upgraded: true,
             locale: userLocale,
             verified: false,
@@ -737,7 +782,7 @@ export async function registerAccount(
     } else {
       // Create new user with verification hash
       const salt = generateSalt();
-      const hashedPassword = hashPassword(password1, salt);
+      const hashedPassword = hashPassword(password1, salt, CURRENT_ITERATIONS);
       const userHash = crypto.randomBytes(16).toString('hex');
       const verificationHash = crypto.randomBytes(16).toString('hex');
 
@@ -748,6 +793,7 @@ export async function registerAccount(
           displayName,
           password: hashedPassword,
           salt,
+          passwordIterations: CURRENT_ITERATIONS,
           hash: userHash,
           locale: userLocale,
           marketingEmails: false,
@@ -870,23 +916,24 @@ export async function createOrUpdateAdminUser(
       let salt = existingUser.salt;
       if (password) {
         salt = generateSalt();
-        hashedPassword = hashPassword(password, salt);
+        hashedPassword = hashPassword(password, salt, CURRENT_ITERATIONS);
         updatePassword = true;
       }
 
       // Never overwrite companyId when editing a user
       if (updatePassword) {
         await prisma.$executeRaw`
-          UPDATE users 
-          SET password = ${hashedPassword}, 
-              salt = ${salt}, 
+          UPDATE users
+          SET password = ${hashedPassword},
+              salt = ${salt},
+              passwordIterations = ${CURRENT_ITERATIONS},
               displayName = ${displayName},
               email = ${email}
           WHERE id = ${existingUser.id}
         `;
       } else {
         await prisma.$executeRaw`
-          UPDATE users 
+          UPDATE users
           SET displayName = ${displayName},
               email = ${email}
           WHERE id = ${existingUser.id}
@@ -916,9 +963,9 @@ export async function createOrUpdateAdminUser(
         throw new Error('Password is required when creating a new user');
       }
       const salt = generateSalt();
-      const hashedPassword = hashPassword(password, salt);
+      const hashedPassword = hashPassword(password, salt, CURRENT_ITERATIONS);
       await prisma.$executeRaw`
-        INSERT INTO users (userId, email, displayName, hash, password, salt, marketingEmails, sync, createdAt, updatedAt, companyId, verified)
+        INSERT INTO users (userId, email, displayName, hash, password, salt, passwordIterations, marketingEmails, sync, createdAt, updatedAt, companyId, verified)
         VALUES (
           ${userId},
           ${email},
@@ -926,6 +973,7 @@ export async function createOrUpdateAdminUser(
           ${userHash},
           ${hashedPassword},
           ${salt},
+          ${CURRENT_ITERATIONS},
           0,
           0,
           NOW(),

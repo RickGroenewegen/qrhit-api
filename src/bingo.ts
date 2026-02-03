@@ -1,5 +1,16 @@
 import Logger from './logger';
 import { color, white } from 'console-log-colors';
+import PrismaInstance from './prisma';
+import PDF from './pdf';
+import Translation from './translation';
+import Utils from './utils';
+import CacheInstance from './cache';
+import PushoverClient from './pushover';
+import * as fs from 'fs/promises';
+import { createWriteStream } from 'fs';
+import * as path from 'path';
+import crypto from 'crypto';
+import archiver from 'archiver';
 
 export interface BingoTrack {
   id: number;
@@ -35,9 +46,30 @@ export interface BingoGenerateConfig {
   duration?: number; // Optional, for display purposes
 }
 
+export interface BingoGenerateResult {
+  success: boolean;
+  downloadUrl?: string;
+  error?: string;
+}
+
+interface TrackRow {
+  id: number;
+  trackId: string;
+  name: string;
+  artist: string;
+  year: number | null;
+  trackOrder: number;
+}
+
 class Bingo {
   private static instance: Bingo;
   private logger = new Logger();
+  private prisma = PrismaInstance.getInstance();
+  private pdf = new PDF();
+  private translation = new Translation();
+  private utils = new Utils();
+  private cache = CacheInstance.getInstance();
+  private pushover = new PushoverClient();
 
   private constructor() {}
 
@@ -258,6 +290,245 @@ class Bingo {
     }
 
     return { round, sheet, positions };
+  }
+
+  /**
+   * Get tracks for a playlist
+   */
+  private async getPlaylistTracks(playlistDbId: number): Promise<BingoTrack[]> {
+    const tracks = await this.prisma.$queryRaw<TrackRow[]>`
+      SELECT
+        t.id,
+        t.trackId,
+        COALESCE(NULLIF(tei.name, ''), t.name) as name,
+        COALESCE(NULLIF(tei.artist, ''), t.artist) as artist,
+        COALESCE(tei.year, t.year) as year,
+        pht.\`order\` as trackOrder
+      FROM playlist_has_tracks pht
+      JOIN tracks t ON t.id = pht.trackId
+      LEFT JOIN trackextrainfo tei ON tei.trackId = t.id AND tei.playlistId = pht.playlistId
+      WHERE pht.playlistId = ${playlistDbId}
+      ORDER BY pht.\`order\` ASC
+    `;
+
+    return tracks.map((track) => ({
+      id: track.id,
+      trackId: track.trackId,
+      name: track.name,
+      artist: track.artist,
+      year: track.year || 0,
+    }));
+  }
+
+  /**
+   * Create a ZIP file containing bingo PDFs
+   */
+  private async createBingoZip(
+    zipPath: string,
+    bingoPdfPath: string,
+    hostCardsPdfPath: string | null,
+    playlistName: string,
+    bingoCardsLabel: string,
+    hostCardsLabel: string
+  ): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const output = createWriteStream(zipPath);
+      const archive = archiver('zip', {
+        zlib: { level: 9 },
+      });
+
+      output.on('close', () => {
+        resolve();
+      });
+
+      archive.on('error', (err) => {
+        reject(err);
+      });
+
+      archive.pipe(output);
+
+      // Add bingo sheets PDF
+      archive.file(bingoPdfPath, { name: `${playlistName} - ${bingoCardsLabel}.pdf` });
+
+      // Add host cards PDF if exists
+      if (hostCardsPdfPath) {
+        archive.file(hostCardsPdfPath, { name: `${playlistName} - ${hostCardsLabel}.pdf` });
+      }
+
+      archive.finalize();
+    });
+  }
+
+  /**
+   * Generate a default bingo set for an order
+   * This is called automatically when an order with bingoEnabled=true is processed
+   * Default: 20 contestants, 5 rounds, with host cards
+   */
+  public async generateDefaultBingo(
+    paymentId: string,
+    userHash: string,
+    playlistId: string,
+    playlistDbId: number,
+    playlistName: string,
+    qrSubDir: string,
+    locale: string,
+    paymentHasPlaylistId: number
+  ): Promise<BingoGenerateResult> {
+    const DEFAULT_CONTESTANTS = 20;
+    const DEFAULT_ROUNDS = 5;
+    const MINIMUM_TRACKS = 40;
+
+    try {
+      // Get tracks for the playlist
+      let bingoTracks = await this.getPlaylistTracks(playlistDbId);
+
+      // Check minimum track requirement
+      if (bingoTracks.length < MINIMUM_TRACKS) {
+        this.logger.log(
+          color.yellow.bold(
+            `Skipping bingo generation for playlist ${white.bold(playlistName)}: only ${bingoTracks.length} tracks (minimum ${MINIMUM_TRACKS})`
+          )
+        );
+        return { success: false, error: `Insufficient tracks: ${bingoTracks.length} < ${MINIMUM_TRACKS}` };
+      }
+
+      // Add bingo numbers to tracks (1-based index)
+      bingoTracks = bingoTracks.map((track, index) => ({
+        ...track,
+        bingoNumber: index + 1,
+      }));
+
+      // Generate bingo sheets
+      const sheets = this.generateSheets(bingoTracks, DEFAULT_CONTESTANTS, DEFAULT_ROUNDS);
+
+      // Generate unique filenames
+      const hash = crypto.randomBytes(8).toString('hex');
+      const publicDir = process.env['PUBLIC_DIR'] || '/tmp';
+      const bingoDir = path.join(publicDir, 'bingo');
+      const apiUri = process.env['API_URI'] || 'http://localhost:3004';
+
+      // Ensure directory exists
+      await fs.mkdir(bingoDir, { recursive: true });
+
+      // File paths
+      const bingoPdfFilename = `bingo_${hash}.pdf`;
+      const hostCardsPdfFilename = `hostcards_${hash}.pdf`;
+      const sanitizedPlaylistName = this.utils.generateFilename(playlistName).substring(0, 50);
+      const zipFilename = `${paymentId}_${sanitizedPlaylistName}_bingo.zip`;
+
+      const bingoPdfPath = path.join(bingoDir, bingoPdfFilename);
+      const hostCardsPdfPath = path.join(bingoDir, hostCardsPdfFilename);
+      const zipPath = path.join(bingoDir, zipFilename);
+
+      // Store bingo config in cache to avoid long URLs (expires in 5 minutes)
+      const configId = hash;
+      const bingoConfig = {
+        paymentId,
+        userHash,
+        playlistId,
+        contestants: DEFAULT_CONTESTANTS,
+        rounds: DEFAULT_ROUNDS,
+        locale: locale || 'en',
+        selectedTracks: [],
+      };
+      await this.cache.set(`bingo_config:${configId}`, JSON.stringify(bingoConfig), 300);
+
+      // Generate bingo cards PDF
+      const htmlUrl = `${apiUri}/bingo/render/${configId}`;
+      this.logger.log(color.blue.bold(`[Auto-Bingo] Generating bingo PDF from: ${white.bold(htmlUrl)}`));
+
+      const pdfBuffer = await this.pdf.generatePdfFromUrl(htmlUrl, {
+        format: 'A4',
+        marginTop: 0,
+        marginRight: 0,
+        marginBottom: 0,
+        marginLeft: 0,
+        preferCSSPageSize: true,
+      });
+
+      await fs.writeFile(bingoPdfPath, pdfBuffer);
+
+      this.logger.log(
+        color.green.bold(`[Auto-Bingo] Bingo PDF generated: ${white.bold(bingoPdfFilename)} (${sheets.length} sheets)`)
+      );
+
+      // Generate host cards PDF
+      const hostCardsHtmlUrl = `${apiUri}/bingo/render-hostcards/${configId}`;
+      this.logger.log(color.blue.bold(`[Auto-Bingo] Generating host cards PDF from: ${white.bold(hostCardsHtmlUrl)}`));
+
+      const hostCardsPdfBuffer = await this.pdf.generatePdfFromUrl(hostCardsHtmlUrl, {
+        format: 'A4',
+        marginTop: 0,
+        marginRight: 0,
+        marginBottom: 0,
+        marginLeft: 0,
+        preferCSSPageSize: true,
+      });
+
+      await fs.writeFile(hostCardsPdfPath, hostCardsPdfBuffer);
+
+      this.logger.log(
+        color.green.bold(`[Auto-Bingo] Host cards PDF generated: ${white.bold(hostCardsPdfFilename)} (${bingoTracks.length} cards)`)
+      );
+
+      // Clean up config from cache
+      await this.cache.del(`bingo_config:${configId}`);
+
+      // Create ZIP file with translated file names
+      const validLocale = this.translation.isValidLocale(locale) ? locale : 'en';
+      const bingoCardsLabel = this.translation.translate('bingo_pdf.bingoCardsFilename', validLocale);
+      const hostCardsLabel = this.translation.translate('bingo_pdf.hostCardsFilename', validLocale);
+      await this.createBingoZip(zipPath, bingoPdfPath, hostCardsPdfPath, playlistName, bingoCardsLabel, hostCardsLabel);
+
+      this.logger.log(color.green.bold(`[Auto-Bingo] Bingo ZIP created: ${white.bold(zipFilename)}`));
+
+      // Clean up individual PDF files (keep only ZIP)
+      await fs.unlink(bingoPdfPath).catch(() => {});
+      await fs.unlink(hostCardsPdfPath).catch(() => {});
+
+      // Store the bingo file in database for future downloads
+      const usedTrackIds = bingoTracks.map((t) => t.trackId);
+      await this.prisma.bingoFile.create({
+        data: {
+          paymentHasPlaylistId,
+          filename: zipFilename,
+          contestants: DEFAULT_CONTESTANTS,
+          rounds: DEFAULT_ROUNDS,
+          trackCount: bingoTracks.length,
+          selectedTrackIds: usedTrackIds,
+        },
+      });
+
+      // Return download URL
+      const downloadUrl = `${apiUri}/public/bingo/${zipFilename}`;
+
+      this.logger.log(
+        color.green.bold(`[Auto-Bingo] Successfully generated default bingo for playlist ${white.bold(playlistName)}`)
+      );
+
+      return {
+        success: true,
+        downloadUrl,
+      };
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`[Auto-Bingo] Error generating bingo: ${error.message}`));
+      console.error(error);
+
+      // Send pushover notification about the error
+      this.pushover.sendMessage(
+        {
+          title: 'Auto-Bingo Generation Failed',
+          message: `Failed to generate bingo for payment ${paymentId}: ${error.message}`,
+          sound: 'falling',
+        },
+        ''
+      );
+
+      return {
+        success: false,
+        error: error.message,
+      };
+    }
   }
 }
 

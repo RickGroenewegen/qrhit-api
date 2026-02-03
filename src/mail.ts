@@ -1126,7 +1126,8 @@ ${knowledgeContext}${toolContext}`,
     playlists: Playlist[] | [],
     filename: string = '',
     filenameDigital: string = '',
-    invoicePath: string = ''
+    invoicePath: string = '',
+    bingoDownloadUrl?: string
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -1179,6 +1180,8 @@ ${knowledgeContext}${toolContext}`,
         payment.locale,
         'countries'
       ),
+      bingoDownloadUrl,
+      hasBingo: !!bingoDownloadUrl,
     };
 
     try {
@@ -1484,7 +1487,8 @@ ${knowledgeContext}${toolContext}`,
 
   async sendToPrinterMail(
     payment: Payment & { user: { hash: string } },
-    playlist: any
+    playlist: any,
+    bingoDownloadUrl?: string
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -1514,6 +1518,8 @@ ${knowledgeContext}${toolContext}`,
       productName: process.env['PRODUCT_NAME'],
       currentYear: new Date().getFullYear(),
       translations,
+      bingoDownloadUrl,
+      hasBingo: !!bingoDownloadUrl,
     };
 
     try {

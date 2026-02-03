@@ -10,6 +10,7 @@ import publicRoutes from './routes/publicRoutes';
 import gameRoutes from './routes/gameRoutes';
 import bingoRoutes from './routes/bingoRoutes';
 import { verifyToken } from './auth';
+import { getTokenFromRequest } from './cookieAuth';
 import Fastify from 'fastify';
 import replyFrom from '@fastify/reply-from';
 import Logger from './logger';
@@ -77,7 +78,8 @@ class Server {
       reply: any,
       allowedGroups: string[] = []
     ) => {
-      const token = request.headers.authorization?.split(' ')[1];
+      // Get token from cookie or Authorization header
+      const token = getTokenFromRequest(request);
       const decoded = verifyToken(token || '');
 
       if (!decoded) {
@@ -307,13 +309,55 @@ class Server {
     await this.fastify.register(require('@fastify/formbody'));
     await this.fastify.register(ipPlugin);
     await this.fastify.register(replyFrom);
+    // Allowed origins for CORS (with credentials)
+    const isProduction = process.env['ENVIRONMENT'] === 'production';
+    const productionOrigins = [
+      'https://www.qrsong.io',
+      'https://qrsong.io',
+      'https://onzevibe.nl',
+      'https://www.onzevibe.nl',
+      'https://stem.onzevibe.nl',
+    ];
+    const developmentOrigins = [
+      'http://localhost:4200',
+      'http://localhost:5000',
+    ];
+    const allowedOrigins = isProduction
+      ? productionOrigins
+      : [...productionOrigins, ...developmentOrigins];
+
     await this.fastify.register(require('@fastify/cors'), {
-      origin: '*',
-      methods: 'GET, POST, OPTIONS, PUT, PATCH, DELETE',
-      allowedHeaders:
-        'x-user-agent, Origin, X-Requested-With, Content-Type, Accept, sentry-trace, baggage, Authorization',
+      origin: (origin: string | undefined, callback: (err: Error | null, allow: boolean) => void) => {
+        // Allow requests with no origin (mobile apps, Postman, etc.)
+        if (!origin) {
+          callback(null, true);
+          return;
+        }
+        // Check if origin is in allowed list
+        if (allowedOrigins.includes(origin)) {
+          callback(null, true);
+        } else {
+          // Allow but log unexpected origins for monitoring
+          console.log(`CORS: Allowing request from origin: ${origin}`);
+          callback(null, true);
+        }
+      },
+      methods: ['GET', 'POST', 'OPTIONS', 'PUT', 'PATCH', 'DELETE'],
+      allowedHeaders: [
+        'x-user-agent',
+        'Origin',
+        'X-Requested-With',
+        'Content-Type',
+        'Accept',
+        'sentry-trace',
+        'baggage',
+        'Authorization',
+      ],
       credentials: true,
     });
+
+    // Register cookie plugin for HttpOnly cookie authentication
+    await this.fastify.register(require('@fastify/cookie'));
 
     // Add security headers
     this.fastify.addHook('onSend', (_request, reply, _payload, done) => {

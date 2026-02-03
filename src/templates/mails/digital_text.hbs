@@ -12,6 +12,17 @@
 {{ translation.physicalDownloadLink }}: {{ downloadLink }}
 {{/if}}
 
+{{#if hasBingo}}
+-------------------
+🎵🎱 {{ translations.bingoSectionTitle }}
+
+{{ translations.bingoSectionDescription }}
+
+{{ translations.bingoDownloadButton }}: {{ bingoDownloadUrl }}
+
+{{ translations.bingoMoreInfo }}
+{{/if}}
+
 {{ translation.orderInformation }}
 -------------------
 {{ translation.orderNumber }}: {{ orderId }}

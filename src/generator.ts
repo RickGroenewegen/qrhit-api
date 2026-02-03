@@ -26,6 +26,7 @@ import { ApiResult } from './interfaces/ApiResult';
 import Cache from './cache';
 import archiver from 'archiver';
 import GeneratorQueue from './generatorQueue';
+import Bingo from './bingo';
 
 class Generator {
   private static instance: Generator;
@@ -44,6 +45,7 @@ class Generator {
   private discount = new Discount();
   private cache = Cache.getInstance();
   private generatorQueue: GeneratorQueue | null = null;
+  private bingo = Bingo.getInstance();
 
   private constructor() {
     this.setCron();
@@ -814,12 +816,32 @@ class Generator {
           if (playlist.orderType == 'digital' && !skipMail) {
             // Only send email if this playlist hasn't been emailed yet
             if (!emailedPlaylistIds.has(playlist.id)) {
+              // Check if bingo is enabled and generate bingo files
+              let bingoDownloadUrl: string | undefined;
+              if (playlist.bingoEnabled) {
+                const bingoResult = await this.bingo.generateDefaultBingo(
+                  payment.paymentId,
+                  payment.user.hash,
+                  playlist.playlistId,
+                  playlist.id,
+                  playlist.name,
+                  payment.qrSubDir,
+                  payment.locale,
+                  playlist.paymentHasPlaylistId
+                );
+                if (bingoResult.success && bingoResult.downloadUrl) {
+                  bingoDownloadUrl = bingoResult.downloadUrl;
+                }
+              }
+
               await this.mail.sendEmail(
                 'digital',
                 payment,
                 [playlist],
                 firstPrinterFilename,
-                firstDigitalFilename
+                firstDigitalFilename,
+                '',
+                bingoDownloadUrl
               );
               emailedPlaylistIds.add(playlist.id);
             }
@@ -1217,9 +1239,28 @@ class Generator {
 
           // Send email only for unique playlists (first copy only)
           for (const physicalPlaylist of uniquePlaylists.values()) {
+            // Check if bingo is enabled and generate bingo files
+            let bingoDownloadUrl: string | undefined;
+            if (physicalPlaylist.playlist.bingoEnabled && payment.qrSubDir) {
+              const bingoResult = await this.bingo.generateDefaultBingo(
+                payment.paymentId,
+                payment.user.hash,
+                physicalPlaylist.playlist.playlistId,
+                physicalPlaylist.playlist.id,
+                physicalPlaylist.playlist.name,
+                payment.qrSubDir,
+                payment.locale,
+                physicalPlaylist.playlist.paymentHasPlaylistId
+              );
+              if (bingoResult.success && bingoResult.downloadUrl) {
+                bingoDownloadUrl = bingoResult.downloadUrl;
+              }
+            }
+
             await this.mail.sendToPrinterMail(
               payment as typeof payment & { user: { hash: string } },
-              physicalPlaylist.playlist
+              physicalPlaylist.playlist,
+              bingoDownloadUrl
             );
           }
         }

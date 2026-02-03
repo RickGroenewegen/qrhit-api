@@ -8,5 +8,16 @@
 
 {{ translations.thankYou }}
 
+{{#if hasBingo}}
+-------------------
+🎵🎱 {{ translations.bingoSectionTitle }}
+
+{{ translations.bingoSectionDescription }}
+
+{{ translations.bingoDownloadButton }}: {{ bingoDownloadUrl }}
+
+{{ translations.bingoMoreInfo }}
+{{/if}}
+
 {{ translations.greetings }},
 {{ productName }}

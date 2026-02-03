@@ -16,8 +16,11 @@ import Mail from '../mail';
 import { PrismaClient } from '@prisma/client';
 import PrismaInstance from '../prisma';
 import crypto from 'crypto';
+import LoginRateLimiter from '../loginRateLimiter';
+import { setAuthCookie, clearAuthCookie } from '../cookieAuth';
 
 const prisma = PrismaInstance.getInstance();
+const rateLimiter = LoginRateLimiter.getInstance();
 
 export default async function accountRoutes(
   fastify: FastifyInstance,
@@ -37,11 +40,31 @@ export default async function accountRoutes(
     // For backward compatibility, check if using old username field
     const username = request.body.username;
     const loginEmail = email || username;
+    const clientIp = request.clientIp || request.ip || '0.0.0.0';
+
+    // Check rate limit
+    const rateLimitCheck = await rateLimiter.checkRateLimit(clientIp, loginEmail);
+    if (!rateLimitCheck.allowed) {
+      reply
+        .status(429)
+        .header('Retry-After', rateLimitCheck.retryAfter?.toString() || '1800')
+        .send({
+          error: 'Too many login attempts. Please try again later.',
+          retryAfter: rateLimitCheck.retryAfter,
+        });
+      return;
+    }
 
     // First try DB authentication
     const authResult = await authenticateUser(loginEmail, password);
 
     if (authResult) {
+      // Clear rate limit counters on successful login
+      await rateLimiter.recordSuccessfulLogin(clientIp, loginEmail);
+
+      // Set HttpOnly cookie
+      setAuthCookie(reply, authResult.token);
+
       reply.send({
         token: authResult.token,
         userId: authResult.userId,
@@ -50,6 +73,8 @@ export default async function accountRoutes(
       });
       return;
     } else {
+      // Record failed attempt
+      await rateLimiter.recordFailedAttempt(clientIp, loginEmail);
       reply.status(401).send({ error: 'Invalid credentials' });
     }
   });
@@ -82,7 +107,11 @@ export default async function accountRoutes(
 
     const result = await verifyUser(verificationHash);
 
-    if (result.success) {
+    if (result.success && result.token) {
+      // Set HttpOnly cookie on successful verification
+      setAuthCookie(reply, result.token);
+      reply.send(result);
+    } else if (result.success) {
       reply.send(result);
     } else {
       const statusCode =
@@ -98,6 +127,24 @@ export default async function accountRoutes(
     '/account/reset-password-request',
     async (request: any, reply: any) => {
       const { email, captchaToken } = request.body;
+      const clientIp = request.clientIp || request.ip || '0.0.0.0';
+
+      // Check rate limit (use email or 'reset' as identifier)
+      const rateLimitCheck = await rateLimiter.checkRateLimit(
+        clientIp,
+        email || 'password-reset'
+      );
+      if (!rateLimitCheck.allowed) {
+        reply
+          .status(429)
+          .header('Retry-After', rateLimitCheck.retryAfter?.toString() || '1800')
+          .send({
+            success: false,
+            error: 'tooManyAttempts',
+            retryAfter: rateLimitCheck.retryAfter,
+          });
+        return;
+      }
 
       const result = await initiatePasswordReset(email, captchaToken);
 
@@ -608,8 +655,27 @@ export default async function accountRoutes(
         return;
       }
 
+      const clientIp = request.clientIp || request.ip || '0.0.0.0';
+      const normalizedEmail = email.toLowerCase().trim();
+
+      // Check rate limit
+      const rateLimitCheck = await rateLimiter.checkRateLimit(
+        clientIp,
+        normalizedEmail
+      );
+      if (!rateLimitCheck.allowed) {
+        reply
+          .status(429)
+          .header('Retry-After', rateLimitCheck.retryAfter?.toString() || '1800')
+          .send({
+            success: false,
+            error: 'tooManyAttempts',
+            retryAfter: rateLimitCheck.retryAfter,
+          });
+        return;
+      }
+
       try {
-        const normalizedEmail = email.toLowerCase().trim();
 
         // Find user with password set (existing account)
         const user = await prisma.user.findFirst({
@@ -879,6 +945,9 @@ export default async function accountRoutes(
           user.displayName || undefined
         );
 
+        // Set HttpOnly cookie
+        setAuthCookie(reply, token);
+
         reply.send({
           success: true,
           token,
@@ -910,9 +979,27 @@ export default async function accountRoutes(
         return;
       }
 
-      try {
-        const normalizedEmail = email.toLowerCase().trim();
+      const clientIp = request.clientIp || request.ip || '0.0.0.0';
+      const normalizedEmail = email.toLowerCase().trim();
 
+      // Check rate limit
+      const rateLimitCheck = await rateLimiter.checkRateLimit(
+        clientIp,
+        normalizedEmail
+      );
+      if (!rateLimitCheck.allowed) {
+        reply
+          .status(429)
+          .header('Retry-After', rateLimitCheck.retryAfter?.toString() || '1800')
+          .send({
+            success: false,
+            error: 'tooManyAttempts',
+            retryAfter: rateLimitCheck.retryAfter,
+          });
+        return;
+      }
+
+      try {
         const user = await prisma.user.findUnique({
           where: { email: normalizedEmail },
           include: {
@@ -925,6 +1012,7 @@ export default async function accountRoutes(
         });
 
         if (!user || !user.password || !user.salt) {
+          await rateLimiter.recordFailedAttempt(clientIp, normalizedEmail);
           reply.status(401).send({
             success: false,
             error: 'invalidCredentials',
@@ -940,15 +1028,44 @@ export default async function accountRoutes(
           return;
         }
 
-        const isValid = verifyPassword(password, user.password, user.salt);
+        // Get stored iteration count (default to legacy for old passwords)
+        const storedIterations = user.passwordIterations || 10000;
+        const isValid = verifyPassword(
+          password,
+          user.password,
+          user.salt,
+          storedIterations
+        );
 
         if (!isValid) {
+          await rateLimiter.recordFailedAttempt(clientIp, normalizedEmail);
           reply.status(401).send({
             success: false,
             error: 'invalidCredentials',
           });
           return;
         }
+
+        // Lazy rehashing: upgrade to current iterations if using legacy
+        if (storedIterations < 600000) {
+          try {
+            const newSalt = generateSalt();
+            const newHash = hashPassword(password, newSalt, 600000);
+            await prisma.user.update({
+              where: { id: user.id },
+              data: {
+                password: newHash,
+                salt: newSalt,
+                passwordIterations: 600000,
+              },
+            });
+          } catch (rehashError) {
+            console.error('Failed to rehash password:', rehashError);
+          }
+        }
+
+        // Clear rate limit counters on successful login
+        await rateLimiter.recordSuccessfulLogin(clientIp, normalizedEmail);
 
         const userGroups = user.UserGroupUser.map((ugu) => ugu.UserGroup.name);
 
@@ -959,6 +1076,9 @@ export default async function accountRoutes(
           user.id,
           user.displayName || undefined
         );
+
+        // Set HttpOnly cookie
+        setAuthCookie(reply, token);
 
         reply.send({
           success: true,
@@ -1215,4 +1335,10 @@ export default async function accountRoutes(
       }
     }
   );
+
+  // Logout endpoint - clears the HttpOnly auth cookie
+  fastify.post('/api/account/logout', async (request: any, reply: any) => {
+    clearAuthCookie(reply);
+    reply.send({ success: true });
+  });
 }
