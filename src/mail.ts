@@ -877,7 +877,7 @@ class Mail {
     );
     this.logger.log(
       color.blue.bold(
-        `  Name: ${white(otherData.name)}, Subject: ${white(otherData.subject || 'N/A')}`
+        `  Name: ${white(otherData.name)}, Subject: ${white(otherData.subject || 'N/A')}, Type: ${white(otherData.inquiryType || 'N/A')}`
       )
     );
 
@@ -899,7 +899,8 @@ class Mail {
         contactEmail.id,
         otherData,
         data.name,
-        ip
+        ip,
+        otherData.inquiryType
       );
 
       return { success: true };
@@ -921,7 +922,8 @@ class Mail {
     emailId: number,
     otherData: any,
     senderName: string,
-    ip: string
+    ip: string,
+    inquiryType?: string
   ): Promise<void> {
     // Translate message to Dutch
     this.translateContactEmailToDutch(emailId, otherData.message);
@@ -931,14 +933,25 @@ class Mail {
 
     // Send notification email to admin
     const message = `
+    <p><strong>Type:</strong> ${inquiryType === 'business' ? 'Business' : 'Private'}</p>
     <p><strong>Name:</strong> ${otherData.name}</p>
     <p><strong>E-mail:</strong> ${otherData.email}</p>
     <p><strong>Message:</strong> ${otherData.message}</p>`;
 
+    const toEmail = inquiryType === 'business' && process.env['BUSINESS_CONTACT_EMAIL']
+      ? process.env['BUSINESS_CONTACT_EMAIL']
+      : process.env['INFO_EMAIL']!;
+
+    this.logger.log(
+      color.blue.bold(
+        `Contact form routing: inquiryType="${inquiryType}", BUSINESS_CONTACT_EMAIL="${process.env['BUSINESS_CONTACT_EMAIL'] || 'not set'}", sending to: ${white.bold(toEmail)}`
+      )
+    );
+
     const rawEmail = await this.renderRaw({
       from: `${senderName} <${process.env['FROM_EMAIL']}>`,
-      to: process.env['INFO_EMAIL']!,
-      subject: `${process.env['PRODUCT_NAME']} Contact form`,
+      to: toEmail,
+      subject: `${process.env['PRODUCT_NAME']} Contact form${inquiryType === 'business' ? ' (Business)' : ''}`,
       html: message,
       text: message,
       attachments: [] as Attachment[],
