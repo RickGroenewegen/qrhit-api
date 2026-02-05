@@ -572,8 +572,8 @@
   "forgot_password_pincode.allRightsReserved": "Todos los derechos reservados",
   "forgot_password_pincode.visitWebsite": "Visita nuestra web",
   "forgot_password_pincode.contactSupport": "Contactar soporte",
-  "mail.bingoSectionTitle": "¡Bingo musical incluido!",
-  "mail.bingoSectionDescription": "¡Hemos creado un set inicial de bingo musical con 20 hojas y 5 rondas para ti!",
-  "mail.bingoDownloadButton": "Descargar archivos de bingo",
-  "mail.bingoMoreInfo": "¿Quieres organizar, crear más hojas o personalizar? Crea una cuenta en tu panel de pedidos."
+  "mail.bingoSectionTitle": "¡Bingo musical incluido! 🎉",
+  "mail.bingoSectionDescription": "¡Buenas noticias! Puedes crear cartas de bingo ilimitadas para esta playlist. Solo ve a tu cuenta para generarlas y descargarlas cuando quieras.",
+  "mail.bingoDownloadButton": "Ir a Mi Cuenta",
+  "mail.bingoMoreInfo": "Genera todas las cartas que necesites y usa nuestra pantalla de host en vivo con verificación automática de ganadores."
 }

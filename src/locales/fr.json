@@ -573,8 +573,8 @@
   "forgot_password_pincode.allRightsReserved": "Tous droits réservés",
   "forgot_password_pincode.visitWebsite": "Va sur notre site",
   "forgot_password_pincode.contactSupport": "Contacter le support",
-  "mail.bingoSectionTitle": "Music Bingo inclus !",
-  "mail.bingoSectionDescription": "On a généré un kit bingo musical avec 20 feuilles et 5 manches pour toi !",
-  "mail.bingoDownloadButton": "Télécharger les fichiers bingo",
-  "mail.bingoMoreInfo": "Tu veux animer, générer plus de feuilles ou personnaliser ? Crée un compte dans ton tableau de bord !"
+  "mail.bingoSectionTitle": "Bingo musical inclus ! 🎉",
+  "mail.bingoSectionDescription": "Bonne nouvelle ! Tu peux créer autant de cartes bingo que tu veux pour cette playlist. Va sur ton compte pour les générer et télécharger quand tu veux.",
+  "mail.bingoDownloadButton": "Aller à Mon Compte",
+  "mail.bingoMoreInfo": "Génère autant de cartes que tu veux et utilise notre écran d’animation live avec vérif auto des gagnants !"
 }
