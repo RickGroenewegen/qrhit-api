@@ -121,6 +121,7 @@ class Server {
     await adminRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
     await vibeRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
     await bingoRoutes(this.fastify, getAuthHandler);
+    await gameRoutes(this.fastify, getAuthHandler);
   };
 
   public async addRoutes() {
@@ -138,9 +139,6 @@ class Server {
 
     // Register public routes
     await publicRoutes(this.fastify);
-
-    // Register game routes
-    await gameRoutes(this.fastify);
 
     // WebSocket endpoints - return 426 Upgrade Required for non-WebSocket requests
     this.fastify.get('/chat-ws', async (request, reply) => {
@@ -337,8 +335,7 @@ class Server {
         if (allowedOrigins.includes(origin)) {
           callback(null, true);
         } else {
-          // Allow but log unexpected origins for monitoring
-          console.log(`CORS: Allowing request from origin: ${origin}`);
+          // Allow all origins (mobile app, dev servers, etc.)
           callback(null, true);
         }
       },

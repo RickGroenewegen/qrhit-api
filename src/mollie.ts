@@ -16,7 +16,7 @@ import Discount from './discount';
 import { CronJob } from 'cron';
 import cluster from 'cluster';
 import { promises as fs } from 'fs';
-import Game from './game';
+import Cache from './cache';
 import Promotional from './promotional';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
 import AppTheme from './apptheme';
@@ -34,7 +34,7 @@ class Mollie {
   private openPaymentStatus = ['open', 'pending', 'authorized'];
   private paidPaymentStatus = ['paid'];
   private failedPaymentStatus = ['failed', 'canceled', 'expired'];
-  private game = new Game();
+  private cache = Cache.getInstance();
   private promotional = Promotional.getInstance();
   private musicServiceRegistry = MusicServiceRegistry.getInstance();
 
@@ -1290,7 +1290,8 @@ class Mollie {
 
           // Clear the playlist cache for this user since they may have purchased new playlists
           if (dbPayment.user?.hash) {
-            await this.game.clearUserPlaylistCache(dbPayment.user.hash);
+            // Clear the user's playlist cache
+            await this.cache.del(`playlists:user:${dbPayment.user.hash}`);
             this.logger.log(
               color.blue.bold('Cleared playlist cache for user: ') +
                 color.white.bold(dbPayment.user.hash)

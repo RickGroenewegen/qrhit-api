@@ -230,10 +230,12 @@ class Bingo {
 
   /**
    * Generate QR code data string for a bingo sheet.
-   * Compact format: BINGO:R{round}S{sheet}:{num1,num2,...,num24}
+   * New format: QRSSM:BC:R{round}S{sheet}:{num1,num2,...,num24}
+   * - QRSSM prefix allows mobile app to recognize it as a system message
+   * - BC = Bingo Check message type
    * - Numbers are in position order (0-10, then 13-24, skipping position 12 which is free space)
    * - num: Track's bingoNumber (1-based index in track pool)
-   * Example: BINGO:R1S5:42,17,89,... (24 numbers total)
+   * Example: QRSSM:BC:R1S5:42,17,89,... (24 numbers total)
    */
   public generateQRData(sheet: BingoSheet): string {
     const numbers: number[] = [];
@@ -248,23 +250,34 @@ class Bingo {
       }
     }
 
-    return `BINGO:R${sheet.round}S${sheet.sheetNumber}:${numbers.join(',')}`;
+    return `QRSSM:BC:R${sheet.round}S${sheet.sheetNumber}:${numbers.join(',')}`;
   }
 
   /**
    * Parse QR code data string back into structured data.
+   * Accepts both old format (BINGO:R...) and new format (QRSSM:BC:R...) for backwards compatibility.
    * Returns null if the format is invalid.
    */
   public parseQRData(
     data: string
   ): { round: number; sheet: number; positions: Map<number, number> } | null {
+    // Support both old and new formats
+    // Old: BINGO:R{round}S{sheet}:{numbers}
+    // New: QRSSM:BC:R{round}S{sheet}:{numbers}
+    let normalizedData = data;
+
+    if (data.startsWith('QRSSM:BC:')) {
+      // Strip QRSSM:BC: prefix and add BINGO: for unified parsing
+      normalizedData = 'BINGO:' + data.substring(9);
+    }
+
     // Validate prefix
-    if (!data.startsWith('BINGO:')) {
+    if (!normalizedData.startsWith('BINGO:')) {
       return null;
     }
 
     // Parse format: BINGO:R{round}S{sheet}:{numbers}
-    const match = data.match(/^BINGO:R(\d+)S(\d+):(.+)$/);
+    const match = normalizedData.match(/^BINGO:R(\d+)S(\d+):(.+)$/);
     if (!match) {
       return null;
     }

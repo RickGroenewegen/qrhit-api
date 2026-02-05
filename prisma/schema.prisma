@@ -234,6 +234,7 @@ model User {
   Company                   Company?         @relation(fields: [companyId], references: [id], onDelete: Cascade)
   PromotionalDiscountCode   DiscountCode[]   @relation("PromotionalDiscountCode")
   CompanyEvent              CompanyEvent[]
+  GameRoom                  GameRoom[]
 
   @@index([hash])
   @@map("users")
@@ -1104,4 +1105,20 @@ model UnknownLink {
   @@index([createdAt])
   @@index([ignored])
   @@map("unknown_links")
+}
+
+model GameRoom {
+  id        Int       @id @default(autoincrement())
+  uuid      String    @unique
+  type      String    @default("bingo")
+  userId    Int
+  state     String    @default("created")
+  createdAt DateTime  @default(now())
+  endedAt   DateTime?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([uuid])
+  @@index([userId])
+  @@map("game_rooms")
 }

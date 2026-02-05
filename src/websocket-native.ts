@@ -2,58 +2,53 @@ import { Server as HTTPServer } from 'http';
 import { WebSocketServer, WebSocket } from 'ws';
 import { parse } from 'url';
 import Redis from 'ioredis';
-import { GameAdapter } from './game-adapter';
 import Logger from './logger';
+import { color, white } from 'console-log-colors';
+import { BaseRoomState } from './game-plugins';
 
 interface WebSocketMessage {
   type: string;
   data?: any;
 }
 
-interface PlayerConnection {
+interface RoomConnection {
   id: string;
   ws: WebSocket;
-  gameId: string;
-  playerName: string;
-  playerAvatar?: string;
+  roomId: string;
   isHost: boolean;
   isAlive: boolean;
 }
 
 class NativeWebSocketServer {
   private wss: WebSocketServer;
-  private connections: Map<string, PlayerConnection> = new Map();
-  private gameConnections: Map<string, Set<string>> = new Map();
-  private gameAdapter: GameAdapter;
+  private connections: Map<string, RoomConnection> = new Map();
+  private roomConnections: Map<string, Set<string>> = new Map();
   private logger: Logger;
   private redis: Redis;
   private pubClient: Redis;
   private subClient: Redis;
-  private playerAvatars: Map<string, Map<string, string>> = new Map();
   private heartbeatInterval!: NodeJS.Timeout;
 
-  constructor(server: HTTPServer) {
+  constructor(_server: HTTPServer) {
     this.wss = new WebSocketServer({
       noServer: true,
       perMessageDeflate: {
         zlibDeflateOptions: {
           chunkSize: 1024,
           memLevel: 7,
-          level: 3
+          level: 3,
         },
         zlibInflateOptions: {
-          chunkSize: 10 * 1024
+          chunkSize: 10 * 1024,
         },
         clientNoContextTakeover: true,
         serverNoContextTakeover: true,
         serverMaxWindowBits: 10,
         concurrencyLimit: 10,
-        threshold: 1024
-      }
+        threshold: 1024,
+      },
     });
 
-    // Initialize services
-    this.gameAdapter = new GameAdapter();
     this.logger = new Logger();
 
     // Set up Redis for distributed support
@@ -62,9 +57,9 @@ class NativeWebSocketServer {
       throw new Error('REDIS_URL environment variable is not defined');
     }
 
-    // Initialize Redis clients
-    this.redis = new Redis(redisUrl);
-    this.pubClient = new Redis(redisUrl);
+    // Initialize Redis clients - use DB 1 for game rooms (same as gameRoutes.ts)
+    this.redis = new Redis(redisUrl, { db: 1 });
+    this.pubClient = new Redis(redisUrl, { db: 1 });
     this.subClient = this.pubClient.duplicate();
 
     // Set up Redis pub/sub for cross-server communication
@@ -78,54 +73,47 @@ class NativeWebSocketServer {
   }
 
   private setupRedisPubSub() {
-    // Subscribe to game events from other servers
-    this.subClient.subscribe('game-events', (err) => {
+    // Subscribe to game room events
+    this.subClient.subscribe('game-room-events', (err) => {
       if (err) {
-        this.logger.log(`Failed to subscribe to game-events: ${err.message}`);
+        this.logger.logDev(`Failed to subscribe to game-room-events: ${err.message}`);
       }
     });
 
     this.subClient.on('message', async (channel, message) => {
-      if (channel === 'game-events') {
+      if (channel === 'game-room-events') {
         try {
           const event = JSON.parse(message);
           await this.handleRedisEvent(event);
         } catch (error) {
-          this.logger.log(`Error handling Redis event: ${error}`);
+          this.logger.logDev(`Error handling Redis event: ${error}`);
         }
       }
     });
   }
 
   private async handleRedisEvent(event: any) {
-    const { gameId, type, data, excludeConnectionId } = event;
-    
-    // Broadcast to all connections in the game except the sender
-    const gameConnectionIds = this.gameConnections.get(gameId);
-    if (gameConnectionIds) {
-      for (const connectionId of gameConnectionIds) {
-        if (connectionId !== excludeConnectionId) {
-          const connection = this.connections.get(connectionId);
-          if (connection && connection.ws.readyState === WebSocket.OPEN) {
-            this.sendMessage(connection.ws, { type, data });
-          }
+    const { type, roomId, ...data } = event;
+
+    // Broadcast to all connections in the room
+    const roomConnectionIds = this.roomConnections.get(roomId);
+    if (roomConnectionIds) {
+      for (const connectionId of roomConnectionIds) {
+        const connection = this.connections.get(connectionId);
+        if (connection && connection.ws.readyState === WebSocket.OPEN) {
+          this.sendMessage(connection.ws, { type, data });
         }
       }
     }
   }
 
-  private publishRedisEvent(gameId: string, type: string, data: any, excludeConnectionId?: string) {
-    const event = { gameId, type, data, excludeConnectionId };
-    this.pubClient.publish('game-events', JSON.stringify(event));
-  }
-
   private initializeHandlers() {
     this.wss.on('connection', (ws: WebSocket, request) => {
       const connectionId = this.generateConnectionId();
-      
+
       // Parse query parameters
       const { query } = parse(request.url || '', true);
-      const gameId = query.gameId as string;
+      const queryRoomId = query.roomId as string | undefined;
 
       // Set up ping/pong for connection health
       ws.on('pong', () => {
@@ -138,9 +126,9 @@ class NativeWebSocketServer {
       ws.on('message', async (message: Buffer) => {
         try {
           const data = JSON.parse(message.toString()) as WebSocketMessage;
-          await this.handleMessage(connectionId, ws, data);
+          await this.handleMessage(connectionId, ws, data, queryRoomId);
         } catch (error) {
-          this.logger.log(`Error processing message: ${error}`);
+          this.logger.logDev(`Error processing message: ${error}`);
           this.sendError(ws, 'Invalid message format');
         }
       });
@@ -150,7 +138,7 @@ class NativeWebSocketServer {
       });
 
       ws.on('error', (error) => {
-        this.logger.log(`WebSocket error for ${connectionId}: ${error}`);
+        this.logger.logDev(`WebSocket error for ${connectionId}: ${error}`);
       });
 
       // Send initial connection acknowledgment
@@ -158,494 +146,175 @@ class NativeWebSocketServer {
     });
   }
 
-  private async handleMessage(connectionId: string, ws: WebSocket, message: WebSocketMessage) {
+  private async handleMessage(
+    connectionId: string,
+    ws: WebSocket,
+    message: WebSocketMessage,
+    queryRoomId?: string
+  ) {
     const { type, data } = message;
 
     switch (type) {
-      case 'joinGame':
-        await this.handleJoinGame(connectionId, ws, data);
+      case 'joinRoom':
+        await this.handleJoinRoom(connectionId, ws, data);
         break;
-      case 'rejoinGame':
-        await this.handleRejoinGame(connectionId, ws, data);
+      case 'updatePluginData':
+        await this.handleUpdatePluginData(connectionId, data);
         break;
-      case 'startGame':
-        await this.handleStartGame(connectionId, data);
-        break;
-      case 'requestQuestion':
-        await this.handleRequestQuestion(connectionId, data);
-        break;
-      case 'submitAnswer':
-        await this.handleSubmitAnswer(connectionId, data);
-        break;
-      case 'showLeaderboard':
-        await this.handleShowLeaderboard(connectionId, data);
-        break;
-      case 'startNextRound':
-        await this.handleStartNextRound(connectionId, data);
-        break;
-      case 'showFinalResults':
-        await this.handleShowFinalResults(connectionId, data);
-        break;
-      case 'restartGame':
-        await this.handleRestartGame(connectionId, data);
-        break;
-      case 'extendTimer':
-        await this.handleExtendTimer(connectionId, data);
-        break;
-      case 'overrideAnswer':
-        await this.handleOverrideAnswer(connectionId, data);
+      case 'endRoom':
+        await this.handleEndRoom(connectionId, data);
         break;
       case 'ping':
         this.sendMessage(ws, { type: 'pong' });
         break;
       default:
-        this.sendError(ws, `Unknown message type: ${type}`);
+        // Unknown message types are ignored (plugins may add their own)
+        this.logger.logDev(`[WS] Unknown message type: ${type}`);
     }
   }
 
-  private async handleJoinGame(connectionId: string, ws: WebSocket, data: any) {
-    const { gameId, playerName, playerAvatar, isHost } = data;
+  private async handleJoinRoom(connectionId: string, ws: WebSocket, data: any) {
+    const { roomId, isHost } = data;
+
+    // Verify room exists
+    const roomData = await this.redis.get(`room:${roomId}`);
+    if (!roomData) {
+      this.sendError(ws, 'Room not found');
+      return;
+    }
+
+    const room: BaseRoomState = JSON.parse(roomData);
+
+    // Clean up from any previous room this connection was in
+    const existingConnection = this.connections.get(connectionId);
+    if (existingConnection && existingConnection.roomId !== roomId) {
+      const oldRoomConnections = this.roomConnections.get(existingConnection.roomId);
+      if (oldRoomConnections) {
+        oldRoomConnections.delete(connectionId);
+        if (oldRoomConnections.size === 0) {
+          this.roomConnections.delete(existingConnection.roomId);
+        }
+      }
+    }
 
     // Store connection info
-    const connection: PlayerConnection = {
+    const connection: RoomConnection = {
       id: connectionId,
       ws,
-      gameId,
-      playerName,
-      playerAvatar,
-      isHost,
-      isAlive: true
+      roomId,
+      isHost: isHost || false,
+      isAlive: true,
     };
     this.connections.set(connectionId, connection);
 
-    // Add to game connections
-    if (!this.gameConnections.has(gameId)) {
-      this.gameConnections.set(gameId, new Set());
+    // Add to room connections
+    if (!this.roomConnections.has(roomId)) {
+      this.roomConnections.set(roomId, new Set());
     }
-    this.gameConnections.get(gameId)!.add(connectionId);
+    this.roomConnections.get(roomId)!.add(connectionId);
 
-    // Store avatar if provided
-    if (playerAvatar) {
-      await this.storePlayerAvatar(gameId, connectionId, playerAvatar);
-    }
-
-    try {
-      // Add player to game
-      const players = await this.gameAdapter.addPlayer(gameId, connectionId, playerName, isHost);
-      
-      // Get game data
-      const gameData = await this.gameAdapter.getGameData(gameId);
-      const avatars = await this.getGameAvatars(gameId);
-
-
-      // Calculate totalRounds with logging
-      const totalRounds = gameData?.settings?.numberOfRounds || 3;
-      
-      // Prepare game data
-      const gameDataToSend = {
-        players,
-        currentRound: gameData?.currentRound || 1,
-        totalRounds: totalRounds,
-        roundCountdown: gameData?.settings?.roundCountdown || 30,
-        avatars: Object.fromEntries(avatars)
-      };
-      
-      
-      // Send game data to the new player
-      this.sendMessage(ws, {
-        type: 'gameData',
-        data: gameDataToSend
-      });
-
-      // Notify all other players
-      this.broadcastToGame(gameId, 'playerJoined', { players }, connectionId);
-    } catch (error: any) {
-      this.sendError(ws, error.message);
-    }
-  }
-
-  private async handleRejoinGame(connectionId: string, ws: WebSocket, data: any) {
-    const { gameId, playerName } = data;
-
-    // Find existing player in game
-    const players = await this.gameAdapter.getPlayers(gameId);
-    const existingPlayer = players.find((p: any) => p.name === playerName);
-
-    if (!existingPlayer) {
-      this.sendError(ws, 'Player not found in game');
-      return;
-    }
-
-    // Update connection mapping
-    const oldConnectionId = existingPlayer.id;
-    
-    // Remove old connection if it exists
-    const oldConnection = this.connections.get(oldConnectionId);
-    if (oldConnection) {
-      this.connections.delete(oldConnectionId);
-      const gameConnections = this.gameConnections.get(gameId);
-      if (gameConnections) {
-        gameConnections.delete(oldConnectionId);
-      }
-    }
-
-    // Create new connection
-    const connection: PlayerConnection = {
-      id: connectionId,
-      ws,
-      gameId,
-      playerName,
-      playerAvatar: existingPlayer.avatar,
-      isHost: existingPlayer.isHost,
-      isAlive: true
-    };
-    this.connections.set(connectionId, connection);
-
-    // Add to game connections
-    if (!this.gameConnections.has(gameId)) {
-      this.gameConnections.set(gameId, new Set());
-    }
-    this.gameConnections.get(gameId)!.add(connectionId);
-
-    // Update player ID in game
-    await this.gameAdapter.updatePlayerId(gameId, oldConnectionId, connectionId);
-
-    // Get updated game data and players after ID update
-    const gameData = await this.gameAdapter.getGameData(gameId);
-    const updatedPlayers = await this.gameAdapter.getPlayers(gameId);
-    const avatars = await this.getGameAvatars(gameId);
-
-    // Calculate totalRounds with logging
-    const totalRounds = gameData?.settings?.numberOfRounds || 3;
-    
-    // Prepare game data
-    const gameDataToSend = {
-      players: updatedPlayers,
-      currentRound: gameData?.currentRound || 1,
-      totalRounds: totalRounds,
-      roundCountdown: gameData?.settings?.roundCountdown || 30,
-      avatars: Object.fromEntries(avatars)
-    };
-    
-    
-    // Send game data to the rejoined player
-    this.sendMessage(ws, {
-      type: 'gameData',
-      data: gameDataToSend
-    });
-  }
-
-  private async handleStartGame(connectionId: string, data: any) {
-    const { gameId } = data;
-    const connection = this.connections.get(connectionId);
-    
-    if (!connection || !connection.isHost) {
-      return;
-    }
-
-    try {
-      await this.gameAdapter.startGame(gameId);
-      
-      // Get updated game data
-      const gameData = await this.gameAdapter.getGameData(gameId);
-      
-      // Notify all players with game data
-      const gameStartedData = {
-        totalRounds: gameData?.settings?.numberOfRounds || 3,
-        currentRound: gameData?.currentRound || 1,
-        roundCountdown: gameData?.settings?.roundCountdown || 30
-      };
-      this.broadcastToGame(gameId, 'gameStarted', gameStartedData);
-      
-      // Start first round after a delay
-      setTimeout(async () => {
-        const questionType = await this.gameAdapter.getNextQuestionType(gameId);
-        this.broadcastToGame(gameId, 'roundStarting', { round: 1, questionType });
-      }, 1000);
-    } catch (error: any) {
-      this.sendError(connection.ws, error.message);
-    }
-  }
-
-  private async handleRequestQuestion(connectionId: string, data: any) {
-    const { gameId, round } = data;
-    const connection = this.connections.get(connectionId);
-    
-    if (!connection || !connection.isHost) {
-      return;
-    }
-
-    try {
-      // Get question from party game
-      const questionData = await this.gameAdapter.getRandomQuestion(gameId);
-      
-      // Store current question
-      await this.storeCurrentQuestion(gameId, questionData.question, questionData.track);
-      
-      // Clear previous answers
-      await this.clearPlayerAnswers(gameId);
-      
-      // Broadcast question to all players
-      this.broadcastToGame(gameId, 'questionStart', {
-        question: questionData.question,
-        trackInfo: questionData.track
-      });
-    } catch (error: any) {
-      this.sendError(connection.ws, error.message);
-    }
-  }
-
-  private async handleSubmitAnswer(connectionId: string, data: any) {
-    const { gameId, answer, questionType } = data;
-    const connection = this.connections.get(connectionId);
-    
-    if (!connection) {
-      return;
-    }
-
-    try {
-      // Store answer
-      await this.storePlayerAnswer(gameId, connectionId, answer);
-      
-      // Notify all players that this player submitted
-      this.broadcastToGame(gameId, 'playerSubmitted', { playerId: connectionId });
-      
-      // Check if all players have submitted
-      const players = await this.gameAdapter.getPlayers(gameId);
-      const answers = await this.getPlayerAnswers(gameId);
-      
-      if (answers.size === players.length) {
-        // All answers submitted, calculate results
-        await this.calculateAndShowResults(gameId);
-      }
-    } catch (error: any) {
-      this.sendError(connection.ws, error.message);
-    }
-  }
-
-  private async calculateAndShowResults(gameId: string) {
-    const currentQuestion = await this.getCurrentQuestion(gameId);
-    if (!currentQuestion) return;
-
-    const answers = await this.getPlayerAnswers(gameId);
-    const players = await this.gameAdapter.getPlayers(gameId);
-    
-    // Get game data for current round
-    const gameData = await this.gameAdapter.getGameData(gameId);
-    const currentRound = gameData?.currentRound || 1;
-    
-    // Calculate results
-    const results = await this.gameAdapter.calculateResults(
-      gameId,
-      currentQuestion.question,
-      currentQuestion.track,
-      Object.fromEntries(answers)
+    this.logger.logDev(
+      color.green.bold(
+        `[Game WS] ${isHost ? 'Host' : 'Player'} joined ${white.bold(room.type)} room ${white.bold(roomId)}`
+      )
     );
 
-    // Store answer results for each player (for potential overrides)
-    for (const answerData of results.answers) {
-      const answerKey = `answer:${gameId}:${currentRound}:${answerData.playerId}`;
-      await this.redis.set(answerKey, JSON.stringify({
-        answer: answerData.answer,
-        isCorrect: answerData.isCorrect,
-        points: answerData.points
-      }), 'EX', 3600); // Expire after 1 hour
-    }
-
-    // Update scores
-    for (const [playerId, points] of Object.entries(results.scores)) {
-      await this.gameAdapter.updatePlayerScore(gameId, playerId, points as number);
-    }
-
-    // Get updated leaderboard
-    const leaderboard = await this.gameAdapter.getLeaderboard(gameId);
-
-    // Broadcast results
-    this.broadcastToGame(gameId, 'showResults', {
-      answers: results.answers,
-      correctAnswer: results.correctAnswer
+    // Send room state to the new connection
+    this.sendMessage(ws, {
+      type: 'roomJoined',
+      data: {
+        roomId: room.uuid,
+        type: room.type,
+        state: room.state,
+        pluginData: room.pluginData,
+      },
     });
   }
 
-  private async handleShowLeaderboard(connectionId: string, data: any) {
-    const { gameId } = data;
+  private async handleUpdatePluginData(connectionId: string, data: any) {
     const connection = this.connections.get(connectionId);
-    
     if (!connection || !connection.isHost) {
       return;
     }
 
-    const leaderboard = await this.gameAdapter.getLeaderboard(gameId);
-    this.broadcastToGame(gameId, 'showLeaderboard', { leaderboard });
+    const { roomId, pluginData } = data;
+
+    // Update room state in Redis
+    const roomData = await this.redis.get(`room:${roomId}`);
+    if (!roomData) return;
+
+    const room: BaseRoomState = JSON.parse(roomData);
+    room.pluginData = { ...room.pluginData, ...pluginData };
+    room.lastActivity = Date.now();
+    await this.redis.set(`room:${roomId}`, JSON.stringify(room), 'EX', 4 * 60 * 60);
+
+    // Broadcast to room
+    this.broadcastToRoom(roomId, 'pluginDataChanged', { pluginData: room.pluginData });
   }
 
-  private async handleStartNextRound(connectionId: string, data: any) {
-    const { gameId } = data;
+  private async handleEndRoom(connectionId: string, data: any) {
     const connection = this.connections.get(connectionId);
-    
     if (!connection || !connection.isHost) {
       return;
     }
 
-    const gameData = await this.gameAdapter.getGameData(gameId);
-    const nextRound = (gameData?.currentRound || 1) + 1;
-    
-    await this.gameAdapter.updateGameRound(gameId, nextRound);
-    const questionType = await this.gameAdapter.getNextQuestionType(gameId);
-    this.broadcastToGame(gameId, 'roundStarting', { round: nextRound, questionType });
-  }
+    const { roomId } = data;
 
-  private async handleShowFinalResults(connectionId: string, data: any) {
-    const { gameId } = data;
-    const connection = this.connections.get(connectionId);
-    
-    if (!connection || !connection.isHost) {
-      return;
-    }
+    // Update room state in Redis
+    const roomData = await this.redis.get(`room:${roomId}`);
+    if (!roomData) return;
 
-    const topPlayers = await this.gameAdapter.getTopPlayers(gameId, 3);
-    this.broadcastToGame(gameId, 'gameFinished', { topPlayers });
-  }
+    const room: BaseRoomState = JSON.parse(roomData);
+    room.state = 'ended';
+    room.lastActivity = Date.now();
+    await this.redis.set(`room:${roomId}`, JSON.stringify(room), 'EX', 4 * 60 * 60);
 
-  private async handleRestartGame(connectionId: string, data: any) {
-    const { gameId } = data;
-    const connection = this.connections.get(connectionId);
-    
-    if (!connection || !connection.isHost) {
-      return;
-    }
+    // Broadcast to room
+    this.broadcastToRoom(roomId, 'roomEnded', {});
 
-    await this.gameAdapter.resetGame(gameId);
-    this.broadcastToGame(gameId, 'gameRestarted', {});
-  }
-
-  private async handleExtendTimer(connectionId: string, data: any) {
-    const { gameId, seconds } = data;
-    const connection = this.connections.get(connectionId);
-    
-    // Only allow host to extend timer
-    if (!connection || !connection.isHost) {
-      return;
-    }
-
-    // Broadcast timer extension to all players in the game (including the host)
-    // The host needs to receive this too to update their timer
-    this.broadcastToGame(gameId, 'timerExtended', { seconds: seconds || 10 });
-  }
-
-  private async handleOverrideAnswer(connectionId: string, data: any) {
-    const { gameId, playerId, isCorrect } = data;
-    
-    const connection = this.connections.get(connectionId);
-    
-    // Only allow host to override answers
-    if (!connection || !connection.isHost) {
-      console.log('Not host, ignoring override request');
-      return;
-    }
-
-    // Get the game data
-    const gameData = await this.gameAdapter.getGameData(gameId);
-    if (!gameData) {
-      return;
-    }
-
-    // Find the player
-    const player = gameData.players.find(p => p.id === playerId);
-    if (!player) {
-      return;
-    }
-
-    // Calculate points difference and update score
-    const oldScore = player.score || 0;
-    const pointsToAdd = isCorrect ? 1 : 0;
-    const pointsToRemove = !isCorrect ? 1 : 0;
-    
-    // Get current round answer data from Redis if available
-    const currentAnswerKey = `answer:${gameId}:${gameData.currentRound}:${playerId}`;
-    const previousAnswer = await this.redis.get(currentAnswerKey);
-    
-    let pointsDifference = 0;
-    if (previousAnswer) {
-      const answerData = JSON.parse(previousAnswer);
-      const wasCorrect = answerData.isCorrect;
-      
-      // Calculate the difference
-      if (wasCorrect && !isCorrect) {
-        // Was correct, now incorrect: remove 1 point
-        pointsDifference = -1;
-      } else if (!wasCorrect && isCorrect) {
-        // Was incorrect, now correct: add 1 point
-        pointsDifference = 1;
-      }
-      
-      // Update the stored answer data
-      answerData.isCorrect = isCorrect;
-      answerData.points = isCorrect ? 1 : 0;
-      await this.redis.set(currentAnswerKey, JSON.stringify(answerData));
-    }
-
-    // Update player score
-    if (pointsDifference !== 0) {
-      await this.gameAdapter.updatePlayerScore(gameId, playerId, pointsDifference);
-    }
-
-    // Broadcast the override to all players
-    this.broadcastToGame(gameId, 'answerOverridden', { 
-      playerId, 
-      isCorrect,
-      points: isCorrect ? 1 : 0,
-      pointsDifference
-    });
+    this.logger.logDev(color.blue.bold(`[Game WS] Room ${white.bold(roomId)} ended by host`));
   }
 
   private handleDisconnect(connectionId: string) {
     const connection = this.connections.get(connectionId);
     if (!connection) return;
 
-    const { gameId, isHost } = connection;
+    const { roomId, isHost } = connection;
 
     // Remove from connections
     this.connections.delete(connectionId);
-    
-    // Remove from game connections
-    const gameConnections = this.gameConnections.get(gameId);
-    if (gameConnections) {
-      gameConnections.delete(connectionId);
-      
-      // If no more connections for this game, clean up
-      if (gameConnections.size === 0) {
-        this.gameConnections.delete(gameId);
+
+    // Remove from room connections
+    const roomConnections = this.roomConnections.get(roomId);
+    if (roomConnections) {
+      roomConnections.delete(connectionId);
+
+      // If no more connections for this room, clean up
+      if (roomConnections.size === 0) {
+        this.roomConnections.delete(roomId);
       }
     }
 
-    // Handle player leaving
-    this.handlePlayerLeave(gameId, connectionId, isHost);
-  }
-
-  private async handlePlayerLeave(gameId: string, playerId: string, isHost: boolean) {
-    try {
-      if (isHost) {
-        // Host left, end the game
-        this.broadcastToGame(gameId, 'hostLeft', {});
-        await this.gameAdapter.endGame(gameId);
-      } else {
-        // Regular player left
-        const players = await this.gameAdapter.removePlayer(gameId, playerId);
-        this.broadcastToGame(gameId, 'playerLeft', { players });
-      }
-    } catch (error) {
-      this.logger.log(`Error handling player leave: ${error}`);
+    if (isHost) {
+      this.logger.logDev(
+        color.yellow.bold(`[Game WS] Host disconnected from room ${white.bold(roomId)}`)
+      );
+      // Note: We don't end the room on host disconnect - they might reconnect
     }
   }
 
-  private broadcastToGame(gameId: string, type: string, data: any, excludeConnectionId?: string) {
+  private broadcastToRoom(
+    roomId: string,
+    type: string,
+    data: any,
+    excludeConnectionId?: string
+  ) {
     const message = { type, data };
-    
+
     // Broadcast to local connections
-    const gameConnectionIds = this.gameConnections.get(gameId);
-    if (gameConnectionIds) {
-      for (const connectionId of gameConnectionIds) {
+    const roomConnectionIds = this.roomConnections.get(roomId);
+    if (roomConnectionIds) {
+      for (const connectionId of roomConnectionIds) {
         if (connectionId !== excludeConnectionId) {
           const connection = this.connections.get(connectionId);
           if (connection && connection.ws.readyState === WebSocket.OPEN) {
@@ -656,7 +325,10 @@ class NativeWebSocketServer {
     }
 
     // Publish to Redis for other servers
-    this.publishRedisEvent(gameId, type, data, excludeConnectionId);
+    this.pubClient.publish(
+      'game-room-events',
+      JSON.stringify({ type, roomId, ...data })
+    );
   }
 
   private sendMessage(ws: WebSocket, message: WebSocketMessage) {
@@ -685,56 +357,7 @@ class NativeWebSocketServer {
   }
 
   private generateConnectionId(): string {
-    return `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-  }
-
-  // Helper methods for Redis storage
-  private async storePlayerAnswer(gameId: string, playerId: string, answer: string): Promise<void> {
-    await this.redis.hset(`game:${gameId}:answers`, playerId, answer);
-    await this.redis.expire(`game:${gameId}:answers`, 60 * 60 * 4);
-  }
-
-  private async getPlayerAnswers(gameId: string): Promise<Map<string, string>> {
-    const answers = await this.redis.hgetall(`game:${gameId}:answers`);
-    const map = new Map<string, string>();
-    for (const [playerId, answer] of Object.entries(answers)) {
-      map.set(playerId, answer);
-    }
-    return map;
-  }
-
-  private async clearPlayerAnswers(gameId: string): Promise<void> {
-    await this.redis.del(`game:${gameId}:answers`);
-  }
-
-  private async storeCurrentQuestion(gameId: string, question: any, track: any): Promise<void> {
-    const data = JSON.stringify({ question, track });
-    await this.redis.setex(`game:${gameId}:currentQuestion`, 60 * 60 * 4, data);
-  }
-
-  private async getCurrentQuestion(gameId: string): Promise<{ question: any; track: any } | null> {
-    const data = await this.redis.get(`game:${gameId}:currentQuestion`);
-    if (!data) return null;
-    return JSON.parse(data);
-  }
-
-  private async storePlayerAvatar(gameId: string, playerId: string, avatar: string): Promise<void> {
-    if (!this.playerAvatars.has(gameId)) {
-      this.playerAvatars.set(gameId, new Map());
-    }
-    this.playerAvatars.get(gameId)!.set(playerId, avatar);
-    
-    await this.redis.hset(`game:${gameId}:avatars`, playerId, avatar);
-    await this.redis.expire(`game:${gameId}:avatars`, 60 * 60 * 4);
-  }
-
-  private async getGameAvatars(gameId: string): Promise<Map<string, string>> {
-    const avatars = await this.redis.hgetall(`game:${gameId}:avatars`);
-    const map = new Map<string, string>();
-    for (const [playerId, avatar] of Object.entries(avatars)) {
-      map.set(playerId, avatar);
-    }
-    return map;
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 11)}`;
   }
 
   public close() {
