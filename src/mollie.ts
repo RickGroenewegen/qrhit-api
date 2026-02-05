@@ -20,6 +20,7 @@ import Cache from './cache';
 import Promotional from './promotional';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
 import AppTheme from './apptheme';
+import Bingo from './bingo';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -37,6 +38,7 @@ class Mollie {
   private cache = Cache.getInstance();
   private promotional = Promotional.getInstance();
   private musicServiceRegistry = MusicServiceRegistry.getInstance();
+  private bingo = Bingo.getInstance();
 
   constructor() {
     if (cluster.isPrimary) {
@@ -671,6 +673,8 @@ class Mollie {
             // Opacity
             frontOpacity: true,
             backOpacity: true,
+            // Bingo
+            bingoEnabled: true,
             playlist: {
               select: {
                 name: true,
@@ -1230,6 +1234,22 @@ class Mollie {
         payment = await this.mollieClient.payments.get(params.id);
       } catch (e) {
         payment = await this.mollieClientTest.payments.get(params.id);
+      }
+
+      // Check if this is a bingo upgrade payment (special handling - not a regular order)
+      const metadata = payment.metadata as any;
+      if (metadata?.type === 'bingo_upgrade' && payment.status === 'paid') {
+        // Handle both old single ID format and new multiple IDs format
+        const paymentHasPlaylistIds = metadata.paymentHasPlaylistIds || metadata.paymentHasPlaylistId;
+        const userId = parseInt(metadata.userId);
+        const pricePerPlaylist = metadata.pricePerPlaylist ? parseFloat(metadata.pricePerPlaylist) : undefined;
+
+        if (paymentHasPlaylistIds && userId) {
+          const result = await this.bingo.processBingoUpgradePayment(paymentHasPlaylistIds, userId, pricePerPlaylist);
+          return result.success
+            ? { success: true }
+            : { success: false, error: result.error || 'Failed to process bingo upgrade' };
+        }
       }
 
       const dbPayment = await this.prisma.payment.findUnique({

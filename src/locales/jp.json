@@ -563,5 +563,9 @@
   "forgot_password_pincode.team": "QRSong! チーム",
   "forgot_password_pincode.allRightsReserved": "All rights reserved",
   "forgot_password_pincode.visitWebsite": "ウェブサイトを見てね",
-  "forgot_password_pincode.contactSupport": "サポートに連絡"
+  "forgot_password_pincode.contactSupport": "サポートに連絡",
+  "mail.bingoSectionTitle": "ミュージックビンゴ付き！",
+  "mail.bingoSectionDescription": "スターター用のミュージックビンゴ（20枚・5ラウンド）を用意したよ！",
+  "mail.bingoDownloadButton": "ビンゴファイルをダウンロード",
+  "mail.bingoMoreInfo": "主催やシート追加、カスタムしたい？注文ダッシュボードでアカウント作ろう！"
 }

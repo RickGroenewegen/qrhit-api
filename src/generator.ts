@@ -816,23 +816,10 @@ class Generator {
           if (playlist.orderType == 'digital' && !skipMail) {
             // Only send email if this playlist hasn't been emailed yet
             if (!emailedPlaylistIds.has(playlist.id)) {
-              // Check if bingo is enabled and generate bingo files
-              let bingoDownloadUrl: string | undefined;
-              if (playlist.bingoEnabled) {
-                const bingoResult = await this.bingo.generateDefaultBingo(
-                  payment.paymentId,
-                  payment.user.hash,
-                  playlist.playlistId,
-                  playlist.id,
-                  playlist.name,
-                  payment.qrSubDir,
-                  payment.locale,
-                  playlist.paymentHasPlaylistId
-                );
-                if (bingoResult.success && bingoResult.downloadUrl) {
-                  bingoDownloadUrl = bingoResult.downloadUrl;
-                }
-              }
+              // If bingo is enabled, link to My Account where users can create their own bingo cards
+              const bingoDownloadUrl = playlist.bingoEnabled
+                ? `${process.env['FRONTEND_URI']}/${payment.locale}/my-account`
+                : undefined;
 
               await this.mail.sendEmail(
                 'digital',
@@ -1238,24 +1225,12 @@ class Generator {
           }
 
           // Send email only for unique playlists (first copy only)
+          // Note: Bingo is not auto-generated - users create their own bingo from My Account
           for (const physicalPlaylist of uniquePlaylists.values()) {
-            // Check if bingo is enabled and generate bingo files
-            let bingoDownloadUrl: string | undefined;
-            if (physicalPlaylist.playlist.bingoEnabled && payment.qrSubDir) {
-              const bingoResult = await this.bingo.generateDefaultBingo(
-                payment.paymentId,
-                payment.user.hash,
-                physicalPlaylist.playlist.playlistId,
-                physicalPlaylist.playlist.id,
-                physicalPlaylist.playlist.name,
-                payment.qrSubDir,
-                payment.locale,
-                physicalPlaylist.playlist.paymentHasPlaylistId
-              );
-              if (bingoResult.success && bingoResult.downloadUrl) {
-                bingoDownloadUrl = bingoResult.downloadUrl;
-              }
-            }
+            // If bingo is enabled, link to My Account where users can create their own bingo cards
+            const bingoDownloadUrl = physicalPlaylist.playlist.bingoEnabled
+              ? `${process.env['FRONTEND_URI']}/${payment.locale}/my-account`
+              : undefined;
 
             await this.mail.sendToPrinterMail(
               payment as typeof payment & { user: { hash: string } },

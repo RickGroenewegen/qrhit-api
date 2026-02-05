@@ -567,5 +567,9 @@
   "forgot_password_pincode.team": "Time QRSong!",
   "forgot_password_pincode.allRightsReserved": "Todos os direitos reservados",
   "forgot_password_pincode.visitWebsite": "Visite nosso site",
-  "forgot_password_pincode.contactSupport": "Falar com suporte"
+  "forgot_password_pincode.contactSupport": "Falar com suporte",
+  "mail.bingoSectionTitle": "Bingo musical incluso!",
+  "mail.bingoSectionDescription": "Geramos um kit inicial de bingo musical com 20 folhas e 5 rodadas pra você!",
+  "mail.bingoDownloadButton": "Baixar arquivos de bingo",
+  "mail.bingoMoreInfo": "Quer hospedar, gerar mais folhas ou personalizar? Crie uma conta no seu painel de pedidos!"
 }

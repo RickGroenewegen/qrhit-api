@@ -79,20 +79,7 @@
                                         </td>
                                     </tr>
                                 </table>
-                                {{#if hasBingo}}
-                                <!-- Music Bingo Section -->
-                                <table style="width: 100%; margin-top: 24px;" cellpadding="0" cellspacing="0" role="presentation">
-                                    <tr>
-                                        <td style="padding: 24px; background: linear-gradient(135deg, #667eea 0%, #f093fb 100%); border-radius: 8px; text-align: center; color: #ffffff;">
-                                            <p style="margin: 0 0 8px; font-size: 24px;">🎵🎱</p>
-                                            <p style="margin: 0 0 8px; font-size: 20px; font-weight: 700; color: #ffffff;">{{ translations.bingoSectionTitle }}</p>
-                                            <p style="margin: 0 0 16px; font-size: 14px; color: #ffffff;">{{ translations.bingoSectionDescription }}</p>
-                                            <a href="{{ bingoDownloadUrl }}" style="display: inline-block; padding: 12px 24px; background-color: #ffffff; color: #667eea; font-weight: 600; text-decoration: none; border-radius: 6px;">{{ translations.bingoDownloadButton }}</a>
-                                            <p style="margin: 16px 0 0; font-size: 12px; color: #ffffff; opacity: 0.9;">{{ translations.bingoMoreInfo }}</p>
-                                        </td>
-                                    </tr>
-                                </table>
-                                {{/if}}
+                                {{> bingo-section}}
                                 <!-- Order Information Table -->
                                 <table style="width: 100%; border-collapse: collapse; margin-top: 7px;" cellpadding="0" cellspacing="0" role="presentation">
                                     <tr>

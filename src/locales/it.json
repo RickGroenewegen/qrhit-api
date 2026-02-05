@@ -567,5 +567,9 @@
   "forgot_password_pincode.team": "Il team QRSong!",
   "forgot_password_pincode.allRightsReserved": "Tutti i diritti riservati",
   "forgot_password_pincode.visitWebsite": "Visita il nostro sito",
-  "forgot_password_pincode.contactSupport": "Contatta supporto"
+  "forgot_password_pincode.contactSupport": "Contatta supporto",
+  "mail.bingoSectionTitle": "Music Bingo incluso!",
+  "mail.bingoSectionDescription": "Abbiamo creato un set iniziale di music bingo con 20 schede e 5 round per te!",
+  "mail.bingoDownloadButton": "Scarica i file bingo",
+  "mail.bingoMoreInfo": "Vuoi ospitare, creare più schede o personalizzare? Crea un account nel tuo pannello ordini!"
 }

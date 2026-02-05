@@ -572,5 +572,9 @@
   "forgot_password_pincode.team": "Het QRSong! Team",
   "forgot_password_pincode.allRightsReserved": "Alle rechten voorbehouden",
   "forgot_password_pincode.visitWebsite": "Bezoek onze website",
-  "forgot_password_pincode.contactSupport": "Contact Support"
+  "forgot_password_pincode.contactSupport": "Contact Support",
+  "mail.bingoSectionTitle": "Muziekbingo inbegrepen!",
+  "mail.bingoSectionDescription": "We hebben een startset muziekbingo met 20 blaadjes en 5 rondes voor je gemaakt!",
+  "mail.bingoDownloadButton": "Download bingobestanden",
+  "mail.bingoMoreInfo": "Wil je hosten, meer blaadjes maken of aanpassen? Maak een account aan in je dashboard!"
 }

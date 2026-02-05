@@ -561,5 +561,9 @@
   "forgot_password_pincode.team": "QRSong!-teamet",
   "forgot_password_pincode.allRightsReserved": "Alla rättigheter förbehållna",
   "forgot_password_pincode.visitWebsite": "Besök vår hemsida",
-  "forgot_password_pincode.contactSupport": "Kontakta support"
+  "forgot_password_pincode.contactSupport": "Kontakta support",
+  "mail.bingoSectionTitle": "Musikbingo ingår!",
+  "mail.bingoSectionDescription": "Vi har fixat ett startkit musikbingo med 20 blad och 5 rundor till dig!",
+  "mail.bingoDownloadButton": "Ladda ner bingofiler",
+  "mail.bingoMoreInfo": "Vill du vara värd, skapa fler blad eller anpassa? Skapa ett konto i din orderpanel!"
 }

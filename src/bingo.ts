@@ -12,6 +12,47 @@ import * as path from 'path';
 import crypto from 'crypto';
 import archiver from 'archiver';
 
+// Bingo upgrade price in EUR
+export const BINGO_UPGRADE_PRICE = 5.00;
+
+// Discount tiers for multiple playlist upgrades
+export const BINGO_DISCOUNT_TIERS = [
+  { minCount: 4, discount: 0.30 },  // 30% off for 4+
+  { minCount: 3, discount: 0.20 },  // 20% off for 3
+  { minCount: 2, discount: 0.10 },  // 10% off for 2
+];
+
+// Calculate price per playlist based on quantity
+export function calculateBingoUpgradePrice(quantity: number): {
+  pricePerPlaylist: number;
+  totalPrice: number;
+  originalTotal: number;
+  discount: number;
+  savings: number;
+} {
+  const originalTotal = quantity * BINGO_UPGRADE_PRICE;
+
+  let discount = 0;
+  for (const tier of BINGO_DISCOUNT_TIERS) {
+    if (quantity >= tier.minCount) {
+      discount = tier.discount;
+      break;
+    }
+  }
+
+  const pricePerPlaylist = BINGO_UPGRADE_PRICE * (1 - discount);
+  const totalPrice = quantity * pricePerPlaylist;
+  const savings = originalTotal - totalPrice;
+
+  return {
+    pricePerPlaylist: Math.round(pricePerPlaylist * 100) / 100,
+    totalPrice: Math.round(totalPrice * 100) / 100,
+    originalTotal: Math.round(originalTotal * 100) / 100,
+    discount: discount * 100,
+    savings: Math.round(savings * 100) / 100,
+  };
+}
+
 export interface BingoTrack {
   id: number;
   trackId: string;
@@ -541,6 +582,70 @@ class Bingo {
         success: false,
         error: error.message,
       };
+    }
+  }
+
+  /**
+   * Process a successful bingo upgrade payment.
+   * Updates the PaymentHasPlaylist record(s) to enable bingo and clears user cache.
+   *
+   * @param paymentHasPlaylistIds Single ID, array of IDs, or comma-separated string of IDs
+   * @param userId The ID of the user who made the purchase
+   * @param pricePerPlaylist Optional price per playlist (recalculated for security if not provided)
+   * @returns Success status
+   */
+  public async processBingoUpgradePayment(
+    paymentHasPlaylistIds: number | number[] | string,
+    userId: number,
+    pricePerPlaylist?: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      // Normalize to array of numbers
+      let ids: number[];
+      if (typeof paymentHasPlaylistIds === 'string') {
+        ids = paymentHasPlaylistIds.split(',').map((id) => parseInt(id.trim())).filter((id) => !isNaN(id));
+      } else if (Array.isArray(paymentHasPlaylistIds)) {
+        ids = paymentHasPlaylistIds;
+      } else {
+        ids = [paymentHasPlaylistIds];
+      }
+
+      if (ids.length === 0) {
+        return { success: false, error: 'No valid playlist IDs provided' };
+      }
+
+      // Calculate price per playlist if not provided (recalculate for security)
+      const pricing = calculateBingoUpgradePrice(ids.length);
+      const finalPricePerPlaylist = pricePerPlaylist ?? pricing.pricePerPlaylist;
+
+      // Update all PaymentHasPlaylist records to enable bingo
+      await this.prisma.paymentHasPlaylist.updateMany({
+        where: { id: { in: ids } },
+        data: {
+          bingoEnabled: true,
+          bingoPrice: finalPricePerPlaylist,
+        },
+      });
+
+      // Clear user cache so dashboard reflects changes
+      const user = await this.prisma.user.findUnique({
+        where: { id: userId },
+        select: { hash: true },
+      });
+      if (user?.hash) {
+        await this.cache.del(`playlists:user:${user.hash}`);
+      }
+
+      this.logger.log(
+        color.green.bold(`Bingo upgrade completed for ${white.bold(ids.length.toString())} playlist(s): ${white.bold(ids.join(', '))}`)
+      );
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Failed to process bingo upgrade: ${error.message}`)
+      );
+      return { success: false, error: error.message };
     }
   }
 }

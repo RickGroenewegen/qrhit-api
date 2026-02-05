@@ -1298,6 +1298,7 @@ export default async function accountRoutes(
               ? payment.sentToPrinter === true
               : payment.PaymentHasPlaylist.some((php) => !!php.filenameDigital),
             playlists: payment.PaymentHasPlaylist.map((php) => ({
+              paymentHasPlaylistId: php.id, // Needed for bingo upgrade payment
               playlistId: php.playlist.playlistId,
               name: php.playlist.name,
               image: php.playlist.image,
@@ -1328,6 +1329,125 @@ export default async function accountRoutes(
         });
       } catch (error) {
         console.error('Error in customer purchases:', error);
+        reply.status(500).send({
+          success: false,
+          error: 'internalServerError',
+        });
+      }
+    }
+  );
+
+  // Get last order info for pre-filling checkout form (protected)
+  // Query param: ?preferPhysical=true - when ordering physical products, prefer a physical order with full address
+  fastify.get(
+    '/api/account/customer-last-order',
+    getAuthHandler(['users']),
+    async (request: any, reply: any) => {
+      try {
+        const preferPhysical = request.query.preferPhysical === 'true';
+
+        const user = await prisma.user.findUnique({
+          where: { userId: request.user.userId },
+        });
+
+        if (!user) {
+          reply.status(404).send({
+            success: false,
+            error: 'userNotFound',
+          });
+          return;
+        }
+
+        const selectFields = {
+          fullname: true,
+          email: true,
+          isBusinessOrder: true,
+          companyName: true,
+          vatId: true,
+          address: true,
+          housenumber: true,
+          city: true,
+          zipcode: true,
+          countrycode: true,
+        };
+
+        let lastPayment = null;
+
+        if (preferPhysical) {
+          // For physical orders: first try to find a physical order with address
+          lastPayment = await prisma.payment.findFirst({
+            where: {
+              userId: user.id,
+              status: 'paid',
+              address: { not: '' },
+              PaymentHasPlaylist: {
+                some: {
+                  type: 'physical',
+                },
+              },
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            select: selectFields,
+          });
+
+          // If no physical order with address, fall back to any order for name+email+country
+          if (!lastPayment) {
+            lastPayment = await prisma.payment.findFirst({
+              where: {
+                userId: user.id,
+                status: 'paid',
+              },
+              orderBy: {
+                createdAt: 'desc',
+              },
+              select: selectFields,
+            });
+          }
+        } else {
+          // For digital orders: just get the most recent order
+          lastPayment = await prisma.payment.findFirst({
+            where: {
+              userId: user.id,
+              status: 'paid',
+            },
+            orderBy: {
+              createdAt: 'desc',
+            },
+            select: selectFields,
+          });
+        }
+
+        if (!lastPayment) {
+          // No previous orders, return user's basic info
+          reply.send({
+            success: true,
+            orderInfo: {
+              fullname: user.displayName || '',
+              email: user.email,
+            },
+          });
+          return;
+        }
+
+        reply.send({
+          success: true,
+          orderInfo: {
+            fullname: lastPayment.fullname || '',
+            email: lastPayment.email || user.email,
+            isBusinessOrder: lastPayment.isBusinessOrder || false,
+            companyName: lastPayment.companyName || '',
+            vatId: lastPayment.vatId || '',
+            address: lastPayment.address || '',
+            housenumber: lastPayment.housenumber || '',
+            city: lastPayment.city || '',
+            zipcode: lastPayment.zipcode || '',
+            countrycode: lastPayment.countrycode || '',
+          },
+        });
+      } catch (error) {
+        console.error('Error in customer last order:', error);
         reply.status(500).send({
           success: false,
           error: 'internalServerError',

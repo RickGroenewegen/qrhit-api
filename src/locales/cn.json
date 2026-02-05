@@ -562,5 +562,9 @@
   "forgot_password_pincode.team": "QRSong! 团队",
   "forgot_password_pincode.allRightsReserved": "版权所有",
   "forgot_password_pincode.visitWebsite": "访问我们的网站",
-  "forgot_password_pincode.contactSupport": "联系支持"
+  "forgot_password_pincode.contactSupport": "联系支持",
+  "mail.bingoSectionTitle": "含音乐宾果！",
+  "mail.bingoSectionDescription": "我们为你生成了20张表和5轮的音乐宾果入门套装！",
+  "mail.bingoDownloadButton": "下载宾果文件",
+  "mail.bingoMoreInfo": "想主持、生成更多表格或自定义？在订单面板创建账号吧！"
 }

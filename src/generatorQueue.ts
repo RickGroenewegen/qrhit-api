@@ -229,8 +229,24 @@ class GeneratorQueue {
         featured: playlist.featured,
       };
 
+      // Check if bingo is enabled for this payment/playlist
+      const paymentHasPlaylist = await prisma.paymentHasPlaylist.findFirst({
+        where: {
+          paymentId: payment.id,
+          playlistId: playlist.id,
+        },
+        select: {
+          bingoEnabled: true,
+        },
+      });
+
+      // If bingo is enabled, provide URL to My Account page where they can create bingo cards
+      const bingoDownloadUrl = paymentHasPlaylist?.bingoEnabled
+        ? `${process.env['FRONTEND_URI']}/${payment.locale}/my-account`
+        : undefined;
+
       // Send the digital list email
-      await mail.sendEmail('digital', payment, [playlistForEmail], '', '');
+      await mail.sendEmail('digital', payment, [playlistForEmail], '', '', '', bingoDownloadUrl);
 
       this.logger.log(
         color.green.bold(
