@@ -9,6 +9,7 @@ import paymentRoutes from './routes/paymentRoutes';
 import publicRoutes from './routes/publicRoutes';
 import gameRoutes from './routes/gameRoutes';
 import bingoRoutes from './routes/bingoRoutes';
+import quizRoutes from './routes/quizRoutes';
 import { verifyToken } from './auth';
 import { getTokenFromRequest } from './cookieAuth';
 import Fastify from 'fastify';
@@ -121,6 +122,7 @@ class Server {
     await adminRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
     await vibeRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
     await bingoRoutes(this.fastify, getAuthHandler);
+    await quizRoutes(this.fastify, getAuthHandler);
     await gameRoutes(this.fastify, getAuthHandler);
   };
 

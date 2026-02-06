@@ -567,5 +567,11 @@
   "mail.bingoSectionTitle": "ミュージックビンゴ付き！🎉",
   "mail.bingoSectionDescription": "いいニュース！このプレイリスト用に無制限でビンゴカードを作れるよ。アカウントに行って、好きな時に作ってダウンロードしてね。",
   "mail.bingoDownloadButton": "マイアカウントへ",
-  "mail.bingoMoreInfo": "好きなだけカードを作って、ライブホスト画面で自動勝者チェックも使えるよ！"
+  "mail.bingoMoreInfo": "好きなだけカードを作って、ライブホスト画面で自動勝者チェックも使えるよ！",
+  "quiz.yearQuestion": "この曲は何年にリリースされた？",
+  "quiz.artistQuestion": "この曲のアーティストは誰？",
+  "quiz.missingWordQuestion": "タイトルに足りない単語は？",
+  "quiz.releaseOrderQuestion": "この曲を正しい順番に並べて",
+  "quiz.decadeQuestion": "この曲は何年代のもの？",
+  "quiz.titleQuestion": "この曲のタイトルは？"
 }

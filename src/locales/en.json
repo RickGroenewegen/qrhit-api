@@ -563,5 +563,11 @@
 	"forgot_password_pincode.team": "The QRSong! Team",
 	"forgot_password_pincode.allRightsReserved": "All rights reserved",
 	"forgot_password_pincode.visitWebsite": "Visit our website",
-	"forgot_password_pincode.contactSupport": "Contact Support"
+	"forgot_password_pincode.contactSupport": "Contact Support",
+	"quiz.yearQuestion": "In which year was this song released?",
+	"quiz.artistQuestion": "Who is the artist of this song?",
+	"quiz.missingWordQuestion": "Which word is missing from the title?",
+	"quiz.releaseOrderQuestion": "Place this song in the correct chronological order",
+	"quiz.decadeQuestion": "In which decade was this song released?",
+	"quiz.titleQuestion": "What is the title of this song?"
 }

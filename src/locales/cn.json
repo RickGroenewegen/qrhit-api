@@ -566,5 +566,11 @@
   "mail.bingoSectionTitle": "音乐宾果已包含！🎉",
   "mail.bingoSectionDescription": "好消息！你可以为这个歌单生成无限张宾果卡。只需去你的账户，随时生成和下载。",
   "mail.bingoDownloadButton": "前往我的账户",
-  "mail.bingoMoreInfo": "随便生成卡片，还能用我们的直播主持屏幕自动验证赢家！"
+  "mail.bingoMoreInfo": "随便生成卡片，还能用我们的直播主持屏幕自动验证赢家！",
+  "quiz.yearQuestion": "这首歌是哪年出的？",
+  "quiz.artistQuestion": "这首歌的歌手是谁？",
+  "quiz.missingWordQuestion": "标题里少了哪个词？",
+  "quiz.releaseOrderQuestion": "把这首歌按正确顺序放好",
+  "quiz.decadeQuestion": "这首歌是哪个年代的？",
+  "quiz.titleQuestion": "这首歌的名字是什么？"
 }

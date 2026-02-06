@@ -571,5 +571,11 @@
   "mail.bingoSectionTitle": "Muzyczne bingo w zestawie! 🎉",
   "mail.bingoSectionDescription": "Dobre wieści! Możesz tworzyć nielimitowane karty bingo do tej playlisty. Po prostu wejdź na swoje konto, żeby je generować i pobierać kiedy chcesz.",
   "mail.bingoDownloadButton": "Przejdź do Mojego Konta",
-  "mail.bingoMoreInfo": "Generuj tyle kart, ile chcesz i korzystaj z naszego ekranu hosta na żywo z automatyczną weryfikacją zwycięzców!"
+  "mail.bingoMoreInfo": "Generuj tyle kart, ile chcesz i korzystaj z naszego ekranu hosta na żywo z automatyczną weryfikacją zwycięzców!",
+  "quiz.yearQuestion": "W którym roku wyszła ta piosenka?",
+  "quiz.artistQuestion": "Kto jest autorem tej piosenki?",
+  "quiz.missingWordQuestion": "Jakiego słowa brakuje w tytule?",
+  "quiz.releaseOrderQuestion": "Ułóż tę piosenkę we właściwej kolejności",
+  "quiz.decadeQuestion": "Z której dekady jest ta piosenka?",
+  "quiz.titleQuestion": "Jaki jest tytuł tej piosenki?"
 }

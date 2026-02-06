@@ -571,5 +571,11 @@
   "mail.bingoSectionTitle": "Bingo musicale incluso! 🎉",
   "mail.bingoSectionDescription": "Ottime notizie! Puoi creare tutte le cartelle bingo che vuoi per questa playlist. Vai sul tuo account per generarle e scaricarle quando vuoi.",
   "mail.bingoDownloadButton": "Vai al Mio Account",
-  "mail.bingoMoreInfo": "Genera tutte le cartelle che vuoi e usa il nostro schermo host live con verifica automatica dei vincitori!"
+  "mail.bingoMoreInfo": "Genera tutte le cartelle che vuoi e usa il nostro schermo host live con verifica automatica dei vincitori!",
+  "quiz.yearQuestion": "In che anno è uscita questa canzone?",
+  "quiz.artistQuestion": "Chi è l’artista di questa canzone?",
+  "quiz.missingWordQuestion": "Quale parola manca nel titolo?",
+  "quiz.releaseOrderQuestion": "Metti questa canzone nell’ordine giusto",
+  "quiz.decadeQuestion": "Di quale decennio è questa canzone?",
+  "quiz.titleQuestion": "Qual è il titolo di questa canzone?"
 }

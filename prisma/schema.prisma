@@ -620,6 +620,7 @@ model PaymentHasPlaylist {
   orderType               OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                   PaymentHasPlaylistItem[]
   bingoFiles              BingoFile[]
+  quizzes                 Quiz[]
 
   @@unique([paymentId, playlistId, type, subType])
   @@index([paymentId])
@@ -657,6 +658,40 @@ model BingoFile {
 
   @@index([paymentHasPlaylistId])
   @@map("bingo_files")
+}
+
+model Quiz {
+  id                   Int                @id @default(autoincrement())
+  paymentHasPlaylistId Int
+  paymentHasPlaylist   PaymentHasPlaylist @relation(fields: [paymentHasPlaylistId], references: [id], onDelete: Cascade)
+  name                 String             @default("")
+  timerSeconds         Int                @default(20)
+  listeningSeconds     Int                @default(8)
+  locale               String             @default("en")
+  useAi                Boolean            @default(false)
+  createdAt            DateTime           @default(now())
+  updatedAt            DateTime           @updatedAt
+  questions            QuizQuestion[]
+
+  @@index([paymentHasPlaylistId])
+  @@map("quizzes")
+}
+
+model QuizQuestion {
+  id            Int      @id @default(autoincrement())
+  quizId        Int
+  quiz          Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
+  trackId       Int
+  order         Int      @default(0)
+  type          String   // "year", "trivia", "artist"
+  question      String   @db.Text
+  options       Json? // string[] for MC types; null for "year"
+  correctAnswer String   @db.Text
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([quizId])
+  @@map("quiz_questions")
 }
 
 model ShippingCost {

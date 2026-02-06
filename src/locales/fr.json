@@ -576,5 +576,11 @@
   "mail.bingoSectionTitle": "Bingo musical inclus ! 🎉",
   "mail.bingoSectionDescription": "Bonne nouvelle ! Tu peux créer autant de cartes bingo que tu veux pour cette playlist. Va sur ton compte pour les générer et télécharger quand tu veux.",
   "mail.bingoDownloadButton": "Aller à Mon Compte",
-  "mail.bingoMoreInfo": "Génère autant de cartes que tu veux et utilise notre écran d’animation live avec vérif auto des gagnants !"
+  "mail.bingoMoreInfo": "Génère autant de cartes que tu veux et utilise notre écran d’animation live avec vérif auto des gagnants !",
+  "quiz.yearQuestion": "En quelle année est sortie cette chanson ?",
+  "quiz.artistQuestion": "C’est qui l’artiste de cette chanson ?",
+  "quiz.missingWordQuestion": "Quel mot manque dans le titre ?",
+  "quiz.releaseOrderQuestion": "Mets cette chanson dans le juiste volgorde",
+  "quiz.decadeQuestion": "De quelle décennie vient cette chanson ?",
+  "quiz.titleQuestion": "Quel est le titre de cette chanson ?"
 }

@@ -10,6 +10,7 @@ import {
   BaseRoomState,
   MessageContext,
 } from '../game-plugins';
+import CacheInstance from '../cache';
 
 // Redis client for game rooms (separate from cache)
 let redis: Redis | null = null;
@@ -86,7 +87,8 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
   // Built-in message handler: RS (Room Start / Join Room)
   async function handleRoomStart(
     data: string,
-    _context: MessageContext
+    _context: MessageContext,
+    request?: any
   ): Promise<SystemMessageResponse> {
     const roomUuid = data;
     const room = await getRoom(roomUuid);
@@ -111,6 +113,35 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
     await broadcastToRoom(roomUuid, 'gameStarted', {
       roomState: room.state,
     });
+
+    // For quiz rooms, return connectAsHostApp action with wsUrl
+    if (room.type === 'quiz') {
+      // Derive wsUrl: env var > request host > production default
+      let wsUrl = process.env['WS_URL'] || '';
+      if (!wsUrl && request) {
+        const host = request.headers['host'] || '';
+        if (host) {
+          const proto = request.headers['x-forwarded-proto'] || request.protocol || 'https';
+          const wsProto = proto === 'https' ? 'wss' : 'ws';
+          wsUrl = `${wsProto}://${host}`;
+        }
+      }
+      if (!wsUrl) {
+        wsUrl = 'wss://api.qrsong.io';
+      }
+
+      return {
+        success: true,
+        action: 'connectAsHostApp',
+        storeRoomId: roomUuid,
+        data: {
+          roomId: roomUuid,
+          type: room.type,
+          wsUrl,
+          quizName: room.pluginData?.quizName,
+        },
+      };
+    }
 
     return {
       success: true,
@@ -194,8 +225,14 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
       return { success: false, error: 'Room has ended' };
     }
 
-    // Data is now trackId, look up bingo number from cached mapping
     const trackId = data;
+
+    // Handle quiz rooms differently
+    if (room.type === 'quiz') {
+      return handleQuizTrackScanned(trackId, room, roomId!, context);
+    }
+
+    // Data is now trackId, look up bingo number from cached mapping
     let trackMapping = getTrackMapping(room);
 
     // Fallback: load mapping if not cached (for rooms created before this feature)
@@ -249,6 +286,78 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
       data: {
         bingoNumber: bingoNum,
         playedCount: playedTrackIds.length,
+      },
+    };
+  }
+
+  // Quiz: handle track scanned - validate it matches the expected question's track
+  async function handleQuizTrackScanned(
+    trackId: string,
+    room: BaseRoomState,
+    roomId: string,
+    context: MessageContext
+  ): Promise<SystemMessageResponse> {
+    const { pluginData } = room;
+
+    if (pluginData.phase !== 'scanning') {
+      return { success: false, error: 'Not in scanning phase' };
+    }
+
+    const currentIdx = pluginData.currentQuestionIndex;
+    if (currentIdx < 0) {
+      return { success: false, error: 'No current question' };
+    }
+
+    // Get quiz data from cache
+    const cache = CacheInstance.getInstance();
+    const quizCacheData = await cache.get(pluginData.quizCacheKey, false);
+    if (!quizCacheData) {
+      return { success: false, error: 'Quiz data not found in cache' };
+    }
+
+    const quizData = JSON.parse(quizCacheData);
+    const currentQuestion = quizData.questions[currentIdx];
+    if (!currentQuestion) {
+      return { success: false, error: 'Question not found' };
+    }
+
+    // Check if scanned track matches the expected track
+    // trackId is the database ID from the QR code
+    if (String(currentQuestion.trackId) !== String(trackId)) {
+      // Wrong track scanned
+      await broadcastToRoom(roomId, 'wrongTrackScanned', {
+        scannedTrackId: trackId,
+      });
+      return {
+        success: false,
+        error: 'Wrong track scanned',
+        data: { wrongTrack: true },
+      };
+    }
+
+    // Correct track! Advance to listening phase
+    room.pluginData.phase = 'listening';
+    room.lastActivity = Date.now();
+    await saveRoom(room);
+
+    await broadcastToRoom(roomId, 'quizListening', {
+      questionIndex: currentIdx,
+      total: quizData.questions.length,
+      listeningSeconds: pluginData.listeningSeconds,
+    });
+
+    logger.logDev(
+      color.green.bold(
+        `[Quiz] Correct track scanned for question ${currentIdx + 1}: ${white.bold(currentQuestion.trackName)}`
+      )
+    );
+
+    return {
+      success: true,
+      data: {
+        phase: 'listening',
+        questionIndex: currentIdx,
+        listeningSeconds: pluginData.listeningSeconds,
       },
     };
   }
@@ -327,7 +436,7 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
 
       // Handle built-in message types first
       if (messageType === 'RS') {
-        const result = await handleRoomStart(messageData, context);
+        const result = await handleRoomStart(messageData, context, request);
         return reply.send(result);
       }
 

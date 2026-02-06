@@ -23,6 +23,7 @@ export class ChatGPT {
   private prisma = PrismaInstance.getInstance();
 
   private logger = new Logger();
+  private translation = new Translation();
 
   public async verifyList(
     userId: number,
@@ -1491,5 +1492,869 @@ ${htmlString}
       // Return original content if translation fails
       return { subject, message };
     }
+  }
+
+  /**
+   * Generate quiz questions for tracks in batch.
+   * Handles trivia and artist question types via LLM.
+   * Year questions are generated locally (no LLM needed).
+   * @param tracks Array of { trackId, name, artist, year, type }
+   * @returns Array of generated questions with options and correct answers
+   */
+  private getLanguageName(locale: string): string {
+    const map: Record<string, string> = {
+      en: 'English', nl: 'Dutch', de: 'German', fr: 'French',
+      es: 'Spanish', it: 'Italian', pt: 'Portuguese', pl: 'Polish',
+      jp: 'Japanese', cn: 'Chinese', sv: 'Swedish',
+    };
+    return map[locale] || 'English';
+  }
+
+  public async generateQuizQuestions(
+    tracks: Array<{
+      trackId: number;
+      name: string;
+      artist: string;
+      year: number;
+      type: 'year' | 'trivia' | 'artist' | 'missing_word' | 'title';
+    }>,
+    locale: string = 'en',
+    onProgress?: (progress: { step: string; detail: string; questionsGenerated: number }) => void,
+  ): Promise<
+    Array<{
+      trackId: number;
+      type: string;
+      question: string;
+      options: string[] | null;
+      correctAnswer: string;
+    }>
+  > {
+    const results: Array<{
+      trackId: number;
+      type: string;
+      question: string;
+      options: string[] | null;
+      correctAnswer: string;
+    }> = [];
+
+    const languageName = this.getLanguageName(locale);
+    this.logger.logDev(
+      color.cyan.bold(`[Quiz] Starting question generation for ${tracks.length} tracks in ${languageName} (${locale})`)
+    );
+    this.logger.logDev(
+      color.cyan(`[Quiz] Breakdown: ${tracks.filter((t) => t.type === 'year').length} year, ${tracks.filter((t) => t.type === 'trivia').length} trivia, ${tracks.filter((t) => t.type === 'artist').length} artist, ${tracks.filter((t) => t.type === 'missing_word').length} missing_word, ${tracks.filter((t) => t.type === 'title').length} title`)
+    );
+
+    const yearQuestionText = this.translation.translate('quiz.yearQuestion', locale);
+    const artistQuestionText = this.translation.translate('quiz.artistQuestion', locale);
+    const titleQuestionText = this.translation.translate('quiz.titleQuestion', locale);
+
+    // Handle year questions locally (no LLM)
+    const yearTracks = tracks.filter((t) => t.type === 'year');
+    onProgress?.({ step: 'year', detail: 'quiz.gen_year', questionsGenerated: results.length });
+    for (const track of yearTracks) {
+      this.logger.logDev(
+        color.cyan(`[Quiz] Year question: "${track.name}" by ${track.artist} → ${track.year}`)
+      );
+      results.push({
+        trackId: track.trackId,
+        type: 'year',
+        question: yearQuestionText,
+        options: null,
+        correctAnswer: String(track.year),
+      });
+    }
+
+    // Handle trivia questions via LLM in batches
+    const triviaTracks = tracks.filter((t) => t.type === 'trivia');
+    if (triviaTracks.length > 0) {
+      const batchSize = 10;
+      for (let i = 0; i < triviaTracks.length; i += batchSize) {
+        const batch = triviaTracks.slice(i, i + batchSize);
+
+        this.logger.log(
+          color.blue.bold(
+            `[Quiz] Generating trivia questions batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(triviaTracks.length / batchSize)}`
+          )
+        );
+
+        const tracksPrompt = batch
+          .map((t, idx) => `${idx + 1}. "${t.name}" by ${t.artist} (${t.year})`)
+          .join('\n');
+
+        this.logger.logDev(
+          color.cyan(`[Quiz] Trivia prompt tracks:\n${tracksPrompt}`)
+        );
+
+        const result = await this.openai.chat.completions.create({
+          model: 'gpt-5-mini',
+          temperature: 1,
+          messages: [
+            {
+              role: 'system',
+              content: `You are a fun music quiz master. Generate interesting, entertaining trivia questions about songs. Each question should have 4 options: 1 correct and 3 wrong but plausible. Questions can be about the song's history, lyrics themes, chart performance, cultural impact, album it appeared on, or fun facts. Keep questions accessible and fun. IMPORTANT: Generate all questions and answer options in ${languageName}.`,
+            },
+            {
+              role: 'user',
+              content: `Generate a trivia question for each of these songs (respond in ${languageName}):\n${tracksPrompt}`,
+            },
+          ],
+          function_call: { name: 'generateTriviaQuestions' },
+          functions: [
+            {
+              name: 'generateTriviaQuestions',
+              parameters: {
+                type: 'object',
+                properties: {
+                  questions: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        index: {
+                          type: 'integer',
+                          description: 'The 1-based index of the song from the list',
+                        },
+                        question: {
+                          type: 'string',
+                          description: 'The trivia question about the song',
+                        },
+                        correctAnswer: {
+                          type: 'string',
+                          description: 'The correct answer',
+                        },
+                        wrongOptions: {
+                          type: 'array',
+                          items: { type: 'string' },
+                          description: '3 wrong but plausible options',
+                        },
+                      },
+                      required: ['index', 'question', 'correctAnswer', 'wrongOptions'],
+                    },
+                  },
+                },
+                required: ['questions'],
+              },
+            },
+          ],
+        });
+
+        if (result?.choices[0]?.message?.function_call) {
+          try {
+            const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+            this.logger.logDev(
+              color.cyan(`[Quiz] Trivia batch returned ${parsed.questions?.length || 0} questions`)
+            );
+            for (const q of parsed.questions) {
+              const track = batch[q.index - 1];
+              if (track) {
+                const allOptions = [q.correctAnswer, ...q.wrongOptions.slice(0, 3)];
+                // Shuffle options
+                for (let j = allOptions.length - 1; j > 0; j--) {
+                  const k = Math.floor(Math.random() * (j + 1));
+                  [allOptions[j], allOptions[k]] = [allOptions[k], allOptions[j]];
+                }
+                this.logger.logDev(
+                  color.green(`[Quiz] Trivia: "${track.name}" by ${track.artist} → Q: "${q.question}" | Correct: "${q.correctAnswer}" | Options: [${allOptions.join(', ')}]`)
+                );
+                results.push({
+                  trackId: track.trackId,
+                  type: 'trivia',
+                  question: q.question,
+                  options: allOptions,
+                  correctAnswer: q.correctAnswer,
+                });
+              } else {
+                this.logger.logDev(
+                  color.yellow(`[Quiz] Trivia: skipped question with index ${q.index} (no matching track in batch)`)
+                );
+              }
+            }
+          } catch (error) {
+            this.logger.log(color.red.bold(`[Quiz] Error parsing trivia response: ${error}`));
+          }
+        } else {
+          this.logger.logDev(
+            color.yellow(`[Quiz] Trivia batch returned no function_call response`)
+          );
+        }
+        onProgress?.({ step: 'trivia', detail: 'quiz.gen_trivia', questionsGenerated: results.length });
+      }
+    }
+
+    // Handle artist questions via LLM in batches
+    const artistTracks = tracks.filter((t) => t.type === 'artist');
+    if (artistTracks.length > 0) {
+      const batchSize = 10;
+      for (let i = 0; i < artistTracks.length; i += batchSize) {
+        const batch = artistTracks.slice(i, i + batchSize);
+
+        this.logger.log(
+          color.blue.bold(
+            `[Quiz] Generating artist alternatives batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(artistTracks.length / batchSize)}`
+          )
+        );
+
+        const tracksPrompt = batch
+          .map((t, idx) => `${idx + 1}. "${t.name}" by ${t.artist} (genre/style context)`)
+          .join('\n');
+
+        this.logger.logDev(
+          color.cyan(`[Quiz] Artist prompt tracks:\n${tracksPrompt}`)
+        );
+
+        const result = await this.openai.chat.completions.create({
+          model: 'gpt-5-mini',
+          temperature: 1,
+          messages: [
+            {
+              role: 'system',
+              content: `You are a music expert. For each song, generate 3 alternative artist names that are from the same genre or style as the real artist. The alternatives should be plausible but wrong. Pick artists that listeners might confuse with the real one.`,
+            },
+            {
+              role: 'user',
+              content: `For each song, provide 3 alternative artist names (same genre/style, plausible but wrong). Use real artist names, do not translate them:\n${tracksPrompt}`,
+            },
+          ],
+          function_call: { name: 'generateArtistAlternatives' },
+          functions: [
+            {
+              name: 'generateArtistAlternatives',
+              parameters: {
+                type: 'object',
+                properties: {
+                  tracks: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        index: {
+                          type: 'integer',
+                          description: 'The 1-based index of the song from the list',
+                        },
+                        alternatives: {
+                          type: 'array',
+                          items: { type: 'string' },
+                          description: '3 alternative artist names from the same genre/style',
+                        },
+                      },
+                      required: ['index', 'alternatives'],
+                    },
+                  },
+                },
+                required: ['tracks'],
+              },
+            },
+          ],
+        });
+
+        if (result?.choices[0]?.message?.function_call) {
+          try {
+            const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+            this.logger.logDev(
+              color.cyan(`[Quiz] Artist batch returned ${parsed.tracks?.length || 0} items`)
+            );
+            for (const item of parsed.tracks) {
+              const track = batch[item.index - 1];
+              if (track) {
+                const allOptions = [track.artist, ...item.alternatives.slice(0, 3)];
+                // Shuffle options
+                for (let j = allOptions.length - 1; j > 0; j--) {
+                  const k = Math.floor(Math.random() * (j + 1));
+                  [allOptions[j], allOptions[k]] = [allOptions[k], allOptions[j]];
+                }
+                this.logger.logDev(
+                  color.green(`[Quiz] Artist: "${track.name}" → Correct: "${track.artist}" | Alternatives: [${item.alternatives.join(', ')}]`)
+                );
+                results.push({
+                  trackId: track.trackId,
+                  type: 'artist',
+                  question: artistQuestionText,
+                  options: allOptions,
+                  correctAnswer: track.artist,
+                });
+              } else {
+                this.logger.logDev(
+                  color.yellow(`[Quiz] Artist: skipped item with index ${item.index} (no matching track in batch)`)
+                );
+              }
+            }
+          } catch (error) {
+            this.logger.log(color.red.bold(`[Quiz] Error parsing artist response: ${error}`));
+          }
+        } else {
+          this.logger.logDev(
+            color.yellow(`[Quiz] Artist batch returned no function_call response`)
+          );
+        }
+        onProgress?.({ step: 'artist', detail: 'quiz.gen_artist', questionsGenerated: results.length });
+      }
+    }
+
+    // Handle missing_word questions via LLM in batches
+    const missingWordTracks = tracks.filter((t) => t.type === 'missing_word');
+    if (missingWordTracks.length > 0) {
+      const missingWordQuestionText = this.translation.translate('quiz.missingWordQuestion', locale);
+      const batchSize = 10;
+      for (let i = 0; i < missingWordTracks.length; i += batchSize) {
+        const batch = missingWordTracks.slice(i, i + batchSize);
+
+        this.logger.log(
+          color.blue.bold(
+            `[Quiz] Generating missing word questions batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(missingWordTracks.length / batchSize)}`
+          )
+        );
+
+        const tracksPrompt = batch
+          .map((t, idx) => `${idx + 1}. "${t.name}" by ${t.artist}`)
+          .join('\n');
+
+        this.logger.logDev(
+          color.cyan(`[Quiz] Missing word prompt tracks:\n${tracksPrompt}`)
+        );
+
+        const result = await this.openai.chat.completions.create({
+          model: 'gpt-5-mini',
+          temperature: 1,
+          messages: [
+            {
+              role: 'system',
+              content: `You are a music quiz designer. For each song title, pick one interesting word to blank out and generate 3 wrong alternatives. The alternatives must be completely different words (not spelling variations!) that could plausibly fit in the same position in the title and still form a believable song title. For example, if the title is "Crazy In Love" and the missing word is "Crazy", good alternatives would be "Lost", "Deep", "Back" — NOT "Craze", "Crazy", "Crazed". The alternatives should be in the same language as the original word.`,
+            },
+            {
+              role: 'user',
+              content: `For each song title, pick a word to blank out and provide 3 wrong alternatives (different words that could plausibly fit in the title):\n${tracksPrompt}`,
+            },
+          ],
+          function_call: { name: 'generateMissingWordQuestions' },
+          functions: [
+            {
+              name: 'generateMissingWordQuestions',
+              parameters: {
+                type: 'object',
+                properties: {
+                  tracks: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        index: {
+                          type: 'integer',
+                          description: 'The 1-based index of the song from the list',
+                        },
+                        missingWord: {
+                          type: 'string',
+                          description: 'The word that is blanked out from the title',
+                        },
+                        titleWithBlank: {
+                          type: 'string',
+                          description: 'The song title with the missing word replaced by _____',
+                        },
+                        alternatives: {
+                          type: 'array',
+                          items: { type: 'string' },
+                          description: '3 wrong alternatives — different real words that could plausibly fit in the same position in the title',
+                        },
+                      },
+                      required: ['index', 'missingWord', 'titleWithBlank', 'alternatives'],
+                    },
+                  },
+                },
+                required: ['tracks'],
+              },
+            },
+          ],
+        });
+
+        if (result?.choices[0]?.message?.function_call) {
+          try {
+            const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+            this.logger.logDev(
+              color.cyan(`[Quiz] Missing word batch returned ${parsed.tracks?.length || 0} items`)
+            );
+            for (const item of parsed.tracks) {
+              const track = batch[item.index - 1];
+              if (track) {
+                const allOptions = [item.missingWord, ...item.alternatives.slice(0, 3)];
+                // Shuffle options
+                for (let j = allOptions.length - 1; j > 0; j--) {
+                  const k = Math.floor(Math.random() * (j + 1));
+                  [allOptions[j], allOptions[k]] = [allOptions[k], allOptions[j]];
+                }
+                this.logger.logDev(
+                  color.green(`[Quiz] Missing word: "${track.name}" → "${item.titleWithBlank}" | Correct: "${item.missingWord}" | Alternatives: [${item.alternatives.join(', ')}]`)
+                );
+                results.push({
+                  trackId: track.trackId,
+                  type: 'missing_word',
+                  question: `${item.titleWithBlank}\n${missingWordQuestionText}`,
+                  options: allOptions,
+                  correctAnswer: item.missingWord,
+                });
+              } else {
+                this.logger.logDev(
+                  color.yellow(`[Quiz] Missing word: skipped item with index ${item.index} (no matching track in batch)`)
+                );
+              }
+            }
+          } catch (error) {
+            this.logger.log(color.red.bold(`[Quiz] Error parsing missing word response: ${error}`));
+          }
+        } else {
+          this.logger.logDev(
+            color.yellow(`[Quiz] Missing word batch returned no function_call response`)
+          );
+        }
+        onProgress?.({ step: 'missingWord', detail: 'quiz.gen_missingWord', questionsGenerated: results.length });
+      }
+    }
+
+    // Handle title questions via LLM in batches
+    const titleTracks = tracks.filter((t) => t.type === 'title');
+    if (titleTracks.length > 0) {
+      const batchSize = 10;
+      for (let i = 0; i < titleTracks.length; i += batchSize) {
+        const batch = titleTracks.slice(i, i + batchSize);
+
+        this.logger.log(
+          color.blue.bold(
+            `[Quiz] Generating title alternatives batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(titleTracks.length / batchSize)}`
+          )
+        );
+
+        const tracksPrompt = batch
+          .map((t, idx) => `${idx + 1}. "${t.name}" by ${t.artist} (${t.year})`)
+          .join('\n');
+
+        this.logger.logDev(
+          color.cyan(`[Quiz] Title prompt tracks:\n${tracksPrompt}`)
+        );
+
+        const result = await this.openai.chat.completions.create({
+          model: 'gpt-5-mini',
+          temperature: 1,
+          messages: [
+            {
+              role: 'system',
+              content: `You are a music expert. For each song, generate 3 alternative song titles that are plausible but wrong. The alternatives should be real or realistic-sounding song titles from the same genre or era that a player might confuse with the real title. Use real song titles when possible. Do not translate song titles.`,
+            },
+            {
+              role: 'user',
+              content: `For each song, provide 3 alternative song titles (same genre/era, plausible but wrong). Use real song titles when possible:\n${tracksPrompt}`,
+            },
+          ],
+          function_call: { name: 'generateTitleAlternatives' },
+          functions: [
+            {
+              name: 'generateTitleAlternatives',
+              parameters: {
+                type: 'object',
+                properties: {
+                  tracks: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        index: {
+                          type: 'integer',
+                          description: 'The 1-based index of the song from the list',
+                        },
+                        alternatives: {
+                          type: 'array',
+                          items: { type: 'string' },
+                          description: '3 alternative song titles from the same genre/era',
+                        },
+                      },
+                      required: ['index', 'alternatives'],
+                    },
+                  },
+                },
+                required: ['tracks'],
+              },
+            },
+          ],
+        });
+
+        if (result?.choices[0]?.message?.function_call) {
+          try {
+            const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+            this.logger.logDev(
+              color.cyan(`[Quiz] Title batch returned ${parsed.tracks?.length || 0} items`)
+            );
+            for (const item of parsed.tracks) {
+              const track = batch[item.index - 1];
+              if (track) {
+                const allOptions = [track.name, ...item.alternatives.slice(0, 3)];
+                // Shuffle options
+                for (let j = allOptions.length - 1; j > 0; j--) {
+                  const k = Math.floor(Math.random() * (j + 1));
+                  [allOptions[j], allOptions[k]] = [allOptions[k], allOptions[j]];
+                }
+                this.logger.logDev(
+                  color.green(`[Quiz] Title: "${track.name}" → Alternatives: [${item.alternatives.join(', ')}]`)
+                );
+                results.push({
+                  trackId: track.trackId,
+                  type: 'title',
+                  question: titleQuestionText,
+                  options: allOptions,
+                  correctAnswer: track.name,
+                });
+              } else {
+                this.logger.logDev(
+                  color.yellow(`[Quiz] Title: skipped item with index ${item.index} (no matching track in batch)`)
+                );
+              }
+            }
+          } catch (error) {
+            this.logger.log(color.red.bold(`[Quiz] Error parsing title response: ${error}`));
+          }
+        } else {
+          this.logger.logDev(
+            color.yellow(`[Quiz] Title batch returned no function_call response`)
+          );
+        }
+        onProgress?.({ step: 'title', detail: 'quiz.gen_title', questionsGenerated: results.length });
+      }
+    }
+
+    this.logger.log(
+      color.green.bold(`[Quiz] Generated ${results.length} questions for ${tracks.length} tracks`)
+    );
+    this.logger.logDev(
+      color.cyan(`[Quiz] Results breakdown: ${results.filter((r) => r.type === 'year').length} year, ${results.filter((r) => r.type === 'trivia').length} trivia, ${results.filter((r) => r.type === 'artist').length} artist, ${results.filter((r) => r.type === 'missing_word').length} missing_word, ${results.filter((r) => r.type === 'title').length} title`)
+    );
+
+    return results;
+  }
+
+  /**
+   * Regenerate a single quiz question via LLM.
+   * @param track Track info
+   * @param type Question type
+   * @returns Single generated question
+   */
+  public async regenerateQuizQuestion(
+    track: { name: string; artist: string; year: number },
+    type: 'year' | 'trivia' | 'artist' | 'missing_word' | 'title',
+    locale: string = 'en'
+  ): Promise<{
+    question: string;
+    options: string[] | null;
+    correctAnswer: string;
+  }> {
+    const languageName = this.getLanguageName(locale);
+    this.logger.logDev(
+      color.cyan(`[Quiz] Regenerating ${type} question for "${track.name}" by ${track.artist} (${track.year}) in ${languageName}`)
+    );
+
+    if (type === 'year') {
+      this.logger.logDev(color.green(`[Quiz] Regenerated year question → ${track.year}`));
+      return {
+        question: this.translation.translate('quiz.yearQuestion', locale),
+        options: null,
+        correctAnswer: String(track.year),
+      };
+    }
+
+    if (type === 'trivia') {
+      const result = await this.openai.chat.completions.create({
+        model: 'gpt-5-mini',
+        temperature: 1,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a fun music quiz master. Generate an interesting, entertaining trivia question about a song. The question should have 4 options: 1 correct and 3 wrong but plausible. Make it different from common/obvious questions. IMPORTANT: Generate the question and all answer options in ${languageName}.`,
+          },
+          {
+            role: 'user',
+            content: `Generate a trivia question about "${track.name}" by ${track.artist} (${track.year}). Respond in ${languageName}.`,
+          },
+        ],
+        function_call: { name: 'generateTriviaQuestion' },
+        functions: [
+          {
+            name: 'generateTriviaQuestion',
+            parameters: {
+              type: 'object',
+              properties: {
+                question: { type: 'string' },
+                correctAnswer: { type: 'string' },
+                wrongOptions: {
+                  type: 'array',
+                  items: { type: 'string' },
+                },
+              },
+              required: ['question', 'correctAnswer', 'wrongOptions'],
+            },
+          },
+        ],
+      });
+
+      if (result?.choices[0]?.message?.function_call) {
+        try {
+          const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+          const allOptions = [parsed.correctAnswer, ...parsed.wrongOptions.slice(0, 3)];
+          for (let j = allOptions.length - 1; j > 0; j--) {
+            const k = Math.floor(Math.random() * (j + 1));
+            [allOptions[j], allOptions[k]] = [allOptions[k], allOptions[j]];
+          }
+          this.logger.logDev(
+            color.green(`[Quiz] Regenerated trivia: Q: "${parsed.question}" | Correct: "${parsed.correctAnswer}" | Options: [${allOptions.join(', ')}]`)
+          );
+          return {
+            question: parsed.question,
+            options: allOptions,
+            correctAnswer: parsed.correctAnswer,
+          };
+        } catch (error) {
+          this.logger.log(color.red.bold(`[Quiz] Error regenerating trivia: ${error}`));
+        }
+      } else {
+        this.logger.logDev(color.yellow(`[Quiz] Trivia regeneration returned no function_call response`));
+      }
+    }
+
+    if (type === 'artist') {
+      const result = await this.openai.chat.completions.create({
+        model: 'gpt-5-mini',
+        temperature: 1,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a music expert. Generate 3 alternative artist names from the same genre/style as the given artist. They should be plausible but wrong.`,
+          },
+          {
+            role: 'user',
+            content: `Generate 3 alternative artist names for "${track.name}" by ${track.artist}.`,
+          },
+        ],
+        function_call: { name: 'generateAlternatives' },
+        functions: [
+          {
+            name: 'generateAlternatives',
+            parameters: {
+              type: 'object',
+              properties: {
+                alternatives: {
+                  type: 'array',
+                  items: { type: 'string' },
+                },
+              },
+              required: ['alternatives'],
+            },
+          },
+        ],
+      });
+
+      if (result?.choices[0]?.message?.function_call) {
+        try {
+          const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+          const allOptions = [track.artist, ...parsed.alternatives.slice(0, 3)];
+          for (let j = allOptions.length - 1; j > 0; j--) {
+            const k = Math.floor(Math.random() * (j + 1));
+            [allOptions[j], allOptions[k]] = [allOptions[k], allOptions[j]];
+          }
+          this.logger.logDev(
+            color.green(`[Quiz] Regenerated artist: Correct: "${track.artist}" | Alternatives: [${parsed.alternatives.join(', ')}]`)
+          );
+          return {
+            question: this.translation.translate('quiz.artistQuestion', locale),
+            options: allOptions,
+            correctAnswer: track.artist,
+          };
+        } catch (error) {
+          this.logger.log(color.red.bold(`[Quiz] Error regenerating artist: ${error}`));
+        }
+      } else {
+        this.logger.logDev(color.yellow(`[Quiz] Artist regeneration returned no function_call response`));
+      }
+    }
+
+    if (type === 'missing_word') {
+      const missingWordQuestionText = this.translation.translate('quiz.missingWordQuestion', locale);
+
+      const result = await this.openai.chat.completions.create({
+        model: 'gpt-5-mini',
+        temperature: 1,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a music quiz designer. For the given song title, pick one interesting word to blank out and generate 3 wrong alternatives. The alternatives must be completely different words (not spelling variations!) that could plausibly fit in the same position in the title and still form a believable song title. For example, if the missing word is "Crazy", good alternatives would be "Lost", "Deep", "Back" — NOT "Craze", "Crazed", "Crasy". The alternatives should be in the same language as the original word.`,
+          },
+          {
+            role: 'user',
+            content: `For the song "${track.name}" by ${track.artist}, pick a word to blank out and provide 3 wrong alternatives (different words that could plausibly fit in the title).`,
+          },
+        ],
+        function_call: { name: 'generateMissingWordQuestion' },
+        functions: [
+          {
+            name: 'generateMissingWordQuestion',
+            parameters: {
+              type: 'object',
+              properties: {
+                missingWord: {
+                  type: 'string',
+                  description: 'The word that is blanked out from the title',
+                },
+                titleWithBlank: {
+                  type: 'string',
+                  description: 'The song title with the missing word replaced by _____',
+                },
+                alternatives: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description: '3 wrong alternatives — different real words that could plausibly fit in the same position in the title',
+                },
+              },
+              required: ['missingWord', 'titleWithBlank', 'alternatives'],
+            },
+          },
+        ],
+      });
+
+      if (result?.choices[0]?.message?.function_call) {
+        try {
+          const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+          const allOptions = [parsed.missingWord, ...parsed.alternatives.slice(0, 3)];
+          for (let j = allOptions.length - 1; j > 0; j--) {
+            const k = Math.floor(Math.random() * (j + 1));
+            [allOptions[j], allOptions[k]] = [allOptions[k], allOptions[j]];
+          }
+          this.logger.logDev(
+            color.green(`[Quiz] Regenerated missing word: "${track.name}" → "${parsed.titleWithBlank}" | Correct: "${parsed.missingWord}"`)
+          );
+          return {
+            question: `${parsed.titleWithBlank}\n${missingWordQuestionText}`,
+            options: allOptions,
+            correctAnswer: parsed.missingWord,
+          };
+        } catch (error) {
+          this.logger.log(color.red.bold(`[Quiz] Error regenerating missing word: ${error}`));
+        }
+      } else {
+        this.logger.logDev(color.yellow(`[Quiz] Missing word regeneration returned no function_call response`));
+      }
+    }
+
+    if (type === 'title') {
+      const result = await this.openai.chat.completions.create({
+        model: 'gpt-5-mini',
+        temperature: 1,
+        messages: [
+          {
+            role: 'system',
+            content: `You are a music expert. Generate 3 alternative song titles from the same genre or era as the given song. The alternatives should be real or realistic-sounding song titles that a player might confuse with the real title. Use real song titles when possible. Do not translate song titles.`,
+          },
+          {
+            role: 'user',
+            content: `Generate 3 alternative song titles for "${track.name}" by ${track.artist} (${track.year}).`,
+          },
+        ],
+        function_call: { name: 'generateAlternatives' },
+        functions: [
+          {
+            name: 'generateAlternatives',
+            parameters: {
+              type: 'object',
+              properties: {
+                alternatives: {
+                  type: 'array',
+                  items: { type: 'string' },
+                },
+              },
+              required: ['alternatives'],
+            },
+          },
+        ],
+      });
+
+      if (result?.choices[0]?.message?.function_call) {
+        try {
+          const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+          const allOptions = [track.name, ...parsed.alternatives.slice(0, 3)];
+          for (let j = allOptions.length - 1; j > 0; j--) {
+            const k = Math.floor(Math.random() * (j + 1));
+            [allOptions[j], allOptions[k]] = [allOptions[k], allOptions[j]];
+          }
+          this.logger.logDev(
+            color.green(`[Quiz] Regenerated title: Correct: "${track.name}" | Alternatives: [${parsed.alternatives.join(', ')}]`)
+          );
+          return {
+            question: this.translation.translate('quiz.titleQuestion', locale),
+            options: allOptions,
+            correctAnswer: track.name,
+          };
+        } catch (error) {
+          this.logger.log(color.red.bold(`[Quiz] Error regenerating title: ${error}`));
+        }
+      } else {
+        this.logger.logDev(color.yellow(`[Quiz] Title regeneration returned no function_call response`));
+      }
+    }
+
+    // Fallback
+    this.logger.logDev(color.yellow(`[Quiz] Falling back to year question for "${track.name}"`));
+    return {
+      question: this.translation.translate('quiz.yearQuestion', locale),
+      options: null,
+      correctAnswer: String(track.year),
+    };
+  }
+
+  public async generateWrongOptions(
+    question: string,
+    correctAnswer: string,
+    track: { name: string; artist: string },
+    locale: string = 'en'
+  ): Promise<string[]> {
+    const languageName = this.getLanguageName(locale);
+    this.logger.logDev(
+      color.cyan(`[Quiz] Generating wrong options for "${question}" (correct: "${correctAnswer}") in ${languageName}`)
+    );
+
+    const result = await this.openai.chat.completions.create({
+      model: 'gpt-5-mini',
+      temperature: 1,
+      messages: [
+        {
+          role: 'system',
+          content: `You are a music quiz designer. Given a question and the correct answer about a song, generate 3 wrong but plausible answer options. The wrong options should be believable but clearly incorrect. IMPORTANT: Generate all options in ${languageName}.`,
+        },
+        {
+          role: 'user',
+          content: `Song: "${track.name}" by ${track.artist}\nQuestion: ${question}\nCorrect answer: ${correctAnswer}\n\nGenerate 3 plausible wrong answers in ${languageName}.`,
+        },
+      ],
+      function_call: { name: 'generateWrongOptions' },
+      functions: [
+        {
+          name: 'generateWrongOptions',
+          parameters: {
+            type: 'object',
+            properties: {
+              wrongOptions: {
+                type: 'array',
+                items: { type: 'string' },
+                description: '3 plausible but incorrect answer options',
+              },
+            },
+            required: ['wrongOptions'],
+          },
+        },
+      ],
+    });
+
+    if (result?.choices[0]?.message?.function_call) {
+      try {
+        const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+        return (parsed.wrongOptions || []).slice(0, 3);
+      } catch (error) {
+        this.logger.log(color.red.bold(`[Quiz] Error parsing wrong options: ${error}`));
+      }
+    }
+
+    return ['Option B', 'Option C', 'Option D'];
   }
 }

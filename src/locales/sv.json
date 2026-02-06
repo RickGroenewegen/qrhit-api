@@ -565,5 +565,11 @@
   "mail.bingoSectionTitle": "Musikbingo ingår! 🎉",
   "mail.bingoSectionDescription": "Goda nyheter! Du kan skapa obegränsat med bingobrickor för den här spellistan. Gå bara till ditt konto för att skapa och ladda ner dem när du vill.",
   "mail.bingoDownloadButton": "Gå till Mitt Konto",
-  "mail.bingoMoreInfo": "Skapa så många brickor du vill och använd vår livevärd-skärm med automatisk vinnarkoll!"
+  "mail.bingoMoreInfo": "Skapa så många brickor du vill och använd vår livevärd-skärm med automatisk vinnarkoll!",
+  "quiz.yearQuestion": "Vilket år släpptes den här låten?",
+  "quiz.artistQuestion": "Vem är artisten till den här låten?",
+  "quiz.missingWordQuestion": "Vilket ord saknas i titeln?",
+  "quiz.releaseOrderQuestion": "Placera låten i rätt ordning",
+  "quiz.decadeQuestion": "Vilket decennium släpptes låten?",
+  "quiz.titleQuestion": "Vad heter den här låten?"
 }

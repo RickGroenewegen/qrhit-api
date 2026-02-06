@@ -576,5 +576,11 @@
   "mail.bingoSectionTitle": "Muziekbingo inbegrepen! 🎉",
   "mail.bingoSectionDescription": "Goed nieuws! Je kunt onbeperkt bingokaarten maken voor deze playlist. Ga gewoon naar je account om ze te genereren en downloaden wanneer je wilt.",
   "mail.bingoDownloadButton": "Ga naar Mijn Account",
-  "mail.bingoMoreInfo": "Genereer zoveel kaarten als je wilt en gebruik ons live host-scherm met automatische winnaarcheck!"
+  "mail.bingoMoreInfo": "Genereer zoveel kaarten als je wilt en gebruik ons live host-scherm met automatische winnaarcheck!",
+  "quiz.yearQuestion": "In welk jaar kwam dit nummer uit?",
+  "quiz.artistQuestion": "Wie is de artiest van dit nummer?",
+  "quiz.missingWordQuestion": "Welk woord mist er in de titel?",
+  "quiz.releaseOrderQuestion": "Zet dit nummer in de juiste volgorde",
+  "quiz.decadeQuestion": "Uit welk decennium komt dit nummer?",
+  "quiz.titleQuestion": "Wat is de titel van dit nummer?"
 }
