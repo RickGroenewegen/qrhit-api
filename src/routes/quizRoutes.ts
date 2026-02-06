@@ -236,7 +236,7 @@ export default async function quizRoutes(
                     order: index,
                     type: q.type,
                     question: q.question,
-                    options: q.options ?? Prisma.JsonNull,
+                    options: (q.options as any) ?? Prisma.JsonNull,
                     correctAnswer: q.correctAnswer,
                   })),
                 },
@@ -498,7 +498,7 @@ export default async function quizRoutes(
             where: { id: parseInt(questionId) },
             data: {
               question: regenerated.question,
-              options: regenerated.options ?? Prisma.JsonNull,
+              options: (regenerated.options as any) ?? Prisma.JsonNull,
               correctAnswer: regenerated.correctAnswer,
             },
           });
@@ -785,13 +785,21 @@ export default async function quizRoutes(
           listeningSeconds: quiz.listeningSeconds,
           questions: quiz.questions.map((q: any) => {
             const track = trackMap.get(q.trackId);
+            // For release_order, options are stored as {label, year}[] objects
+            let options = q.options;
+            let optionYears: number[] | undefined;
+            if (q.type === 'release_order' && Array.isArray(q.options) && q.options.length > 0 && typeof q.options[0] === 'object') {
+              options = q.options.map((o: any) => o.label);
+              optionYears = q.options.map((o: any) => o.year);
+            }
             return {
               id: q.id,
               trackId: q.trackId,
               trackDbId: track?.trackId, // Spotify/external ID for QR matching
               type: q.type,
               question: q.question,
-              options: q.options,
+              options,
+              optionYears,
               correctAnswer: q.correctAnswer,
               trackName: track?.name || 'Unknown',
               trackArtist: track?.artist || 'Unknown',

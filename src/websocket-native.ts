@@ -174,6 +174,9 @@ class NativeWebSocketServer {
       case 'quizJoinPlayer':
         await this.handleQuizJoinPlayer(connectionId, ws, data);
         break;
+      case 'quizRejoinPlayer':
+        await this.handleQuizRejoinPlayer(connectionId, ws, data);
+        break;
       case 'quizAnswer':
         await this.handleQuizAnswer(connectionId, ws, data);
         break;
@@ -374,6 +377,157 @@ class NativeWebSocketServer {
     });
   }
 
+  private async handleQuizRejoinPlayer(connectionId: string, ws: WebSocket, data: any) {
+    const { roomId, playerName } = data;
+
+    if (!roomId || !playerName) {
+      this.sendError(ws, 'roomId and playerName required');
+      return;
+    }
+
+    const roomData = await this.redis.get(`room:${roomId}`);
+    if (!roomData) {
+      this.sendError(ws, 'Room not found');
+      return;
+    }
+
+    const room: BaseRoomState = JSON.parse(roomData);
+    if (room.type !== 'quiz') {
+      this.sendError(ws, 'Not a quiz room');
+      return;
+    }
+
+    // Find the existing player by name
+    let oldConnectionId: string | null = null;
+    for (const [id, player] of Object.entries(room.pluginData.players) as [string, any][]) {
+      if (player.name === playerName) {
+        oldConnectionId = id;
+        break;
+      }
+    }
+
+    if (!oldConnectionId) {
+      this.sendError(ws, 'Player not found in this room');
+      return;
+    }
+
+    // Remap player data from old connectionId to new connectionId
+    const playerData = room.pluginData.players[oldConnectionId];
+    const playerAnswers = room.pluginData.answers[oldConnectionId] || [];
+
+    // Remove old entries
+    delete room.pluginData.players[oldConnectionId];
+    delete room.pluginData.answers[oldConnectionId];
+
+    // Store under new connectionId
+    playerData.connected = true;
+    room.pluginData.players[connectionId] = playerData;
+    room.pluginData.answers[connectionId] = playerAnswers;
+
+    // Update connection info
+    const connection: RoomConnection = {
+      id: connectionId,
+      ws,
+      roomId,
+      isHost: false,
+      role: 'player',
+      isAlive: true,
+    };
+    this.connections.set(connectionId, connection);
+
+    if (!this.roomConnections.has(roomId)) {
+      this.roomConnections.set(roomId, new Set());
+    }
+    this.roomConnections.get(roomId)!.add(connectionId);
+
+    // Clean up old connection if it still exists
+    const oldConn = this.connections.get(oldConnectionId);
+    if (oldConn) {
+      this.connections.delete(oldConnectionId);
+      const roomConns = this.roomConnections.get(roomId);
+      if (roomConns) roomConns.delete(oldConnectionId);
+    }
+
+    room.lastActivity = Date.now();
+    await this.redis.set(`room:${roomId}`, JSON.stringify(room), 'EX', 4 * 60 * 60);
+
+    // Get quiz data from cache for question details
+    let totalQuestions = 0;
+    let questionData: any = null;
+    try {
+      const cache = CacheInstance.getInstance();
+      const quizCacheData = await cache.get(room.pluginData.quizCacheKey, false);
+      if (quizCacheData) {
+        const quizData = JSON.parse(quizCacheData);
+        totalQuestions = quizData.questions?.length || 0;
+        const qi = room.pluginData.currentQuestionIndex;
+        if (qi >= 0 && qi < totalQuestions) {
+          questionData = quizData.questions[qi];
+        }
+      }
+    } catch {}
+
+    // Build phase-specific data for the rejoin response
+    const phase = room.pluginData.phase;
+    let phaseData: any = {};
+
+    if (phase === 'question' && questionData) {
+      // Calculate remaining timer
+      const elapsed = (Date.now() - (room.pluginData.questionStartedAt || Date.now())) / 1000;
+      const timerSeconds = room.pluginData.timerSeconds || 20;
+      const remainingSeconds = Math.max(0, timerSeconds - elapsed);
+
+      // Check if this player already answered this question
+      const alreadyAnswered = playerAnswers.length > room.pluginData.currentQuestionIndex;
+
+      phaseData = {
+        type: questionData.type,
+        question: questionData.question,
+        options: questionData.options,
+        timerSeconds,
+        remainingSeconds,
+        alreadyAnswered,
+        currentTrackIndex: questionData.type === 'release_order' ? parseInt(questionData.correctAnswer) : undefined,
+      };
+    } else if (phase === 'announce' && questionData) {
+      phaseData = {
+        type: questionData.type,
+      };
+    }
+
+    this.logger.logDev(
+      color.green.bold(`[Quiz WS] Player "${white.bold(playerName)}" rejoined room ${white.bold(roomId)} (${oldConnectionId} → ${connectionId}) phase=${phase}`)
+    );
+
+    // Send current game state back to the player
+    this.sendMessage(ws, {
+      type: 'quizRejoinedConfirm',
+      data: {
+        connectionId,
+        playerName,
+        phase,
+        currentQuestionIndex: room.pluginData.currentQuestionIndex ?? -1,
+        totalQuestions,
+        totalScore: playerData.score,
+        ...phaseData,
+      },
+    });
+
+    // Broadcast updated player count
+    const connectedCount = Object.values(room.pluginData.players).filter(
+      (p: any) => p.connected
+    ).length;
+    this.broadcastToRoom(roomId, 'quizPlayerJoined', {
+      playerName,
+      playerCount: connectedCount,
+      players: Object.entries(room.pluginData.players).map(([id, p]: [string, any]) => ({
+        id,
+        name: p.name,
+        score: p.score,
+      })),
+    });
+  }
+
   private async handleQuizAnswer(connectionId: string, ws: WebSocket, data: any) {
     const { roomId, questionIndex, answer } = data;
 
@@ -414,17 +568,21 @@ class NativeWebSocketServer {
     };
 
     if (question.type === 'year') {
-      // Year: proximity scoring — each year off loses 10%, more than 10 off = 0
+      // Year: proximity scoring — exact = 1000, 0 at 15 years off
+      // Light speed bonus: up to 20% extra (vs 50% for normal questions)
+      const maxYearsOff = 15;
       const diff = Math.abs(parseInt(answer) - parseInt(question.correctAnswer));
       correct = diff === 0;
-      const proximityFactor = Math.max(0, 1 - diff / 10);
-      if (proximityFactor > 0) {
-        score = kahootScore(Math.round(pointsPossible * proximityFactor));
+      if (diff < maxYearsOff) {
+        const proximityScore = pointsPossible * (1 - diff / maxYearsOff);
+        const speedFactor = elapsed < 0.5 ? 1 : 1 - (elapsed / timerSeconds * 0.2);
+        score = Math.round(proximityScore * Math.max(0.8, speedFactor));
       }
     } else if (question.type === 'release_order') {
-      // Release order: correctAnswer is an index, answer is the option text
-      const selectedIndex = (question.options || []).indexOf(answer);
-      correct = selectedIndex === parseInt(question.correctAnswer);
+      // Release order: both answer and correctAnswer are position indices
+      const playerPosition = parseInt(answer);
+      const correctPosition = parseInt(question.correctAnswer);
+      correct = !isNaN(playerPosition) && playerPosition === correctPosition;
       if (correct) {
         score = kahootScore(pointsPossible);
       }
@@ -549,6 +707,7 @@ class NativeWebSocketServer {
           question: q.question,
           options: q.options,
           timerSeconds: room.pluginData.timerSeconds,
+          currentTrackIndex: q.type === 'release_order' ? parseInt(q.correctAnswer) : undefined,
         });
         break;
       }
@@ -571,11 +730,34 @@ class NativeWebSocketServer {
           for (const [, playerAnswers] of Object.entries(room.pluginData.answers) as [string, any[]][]) {
             if (playerAnswers && playerAnswers[qi2]) {
               const ans = playerAnswers[qi2].answer;
-              if (ans in answerCounts) {
-                answerCounts[ans]++;
+              if (q2.type === 'release_order') {
+                // Player submitted a position index — map back to option text
+                const idx = parseInt(ans);
+                const optText = q2.options?.[idx];
+                if (optText && optText in answerCounts) answerCounts[optText]++;
+              } else {
+                if (ans in answerCounts) {
+                  answerCounts[ans]++;
+                }
               }
             }
           }
+        }
+
+        // Compute top 5 closest guesses for year questions
+        let closestGuesses: Array<{ name: string; guess: number; diff: number; score: number }> = [];
+        if (q2.type === 'year') {
+          const correctYear = parseInt(q2.correctAnswer);
+          for (const [connId, answers] of Object.entries(room.pluginData.answers) as [string, any[]][]) {
+            const a = answers?.[qi2];
+            if (!a) continue;
+            const guess = parseInt(a.answer);
+            if (isNaN(guess)) continue;
+            const playerName = room.pluginData.players[connId]?.name || '?';
+            closestGuesses.push({ name: playerName, guess, diff: Math.abs(guess - correctYear), score: a.score });
+          }
+          closestGuesses.sort((a, b) => a.diff - b.diff);
+          closestGuesses = closestGuesses.slice(0, 5);
         }
 
         // Tell the app to stop playback when answer is revealed
@@ -588,7 +770,9 @@ class NativeWebSocketServer {
           trackYear: q2.trackYear,
           type: q2.type,
           options: q2.options,
+          optionYears: q2.optionYears,
           answerCounts,
+          closestGuesses: closestGuesses.length > 0 ? closestGuesses : undefined,
         });
         break;
       }

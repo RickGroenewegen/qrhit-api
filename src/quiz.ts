@@ -16,11 +16,16 @@ export interface TrackWithType {
   type: QuestionType;
 }
 
+export interface ReleaseOrderOption {
+  label: string;
+  year: number;
+}
+
 export interface GeneratedQuestion {
   trackId: number;
   type: string;
   question: string;
-  options: string[] | null;
+  options: string[] | ReleaseOrderOption[] | null;
   correctAnswer: string;
 }
 
@@ -238,7 +243,7 @@ class Quiz {
     entries.sort((a, b) => a.year - b.year);
 
     const correctIndex = entries.findIndex((e) => e.isCurrent);
-    const options = entries.map((e) => e.label);
+    const options: ReleaseOrderOption[] = entries.map((e) => ({ label: e.label, year: e.year }));
 
     return {
       trackId: track.trackId,

@@ -1936,11 +1936,11 @@ ${htmlString}
           messages: [
             {
               role: 'system',
-              content: `You are a music expert. For each song, generate 3 alternative song titles that are plausible but wrong. The alternatives should be real or realistic-sounding song titles from the same genre or era that a player might confuse with the real title. Use real song titles when possible. Do not translate song titles.`,
+              content: `You are a music expert. For each song, generate 3 alternative song titles that are plausible but wrong. The alternatives should be real or realistic-sounding song titles from the same genre or era that a player might confuse with the real title. Use real song titles when possible. You can also use well-known phrases or lyrics from the song that people often mistakenly think is the title (e.g. "You Can Be My Bodyguard" for a song actually called "You Can Call Me Al"). Do not translate song titles.`,
             },
             {
               role: 'user',
-              content: `For each song, provide 3 alternative song titles (same genre/era, plausible but wrong). Use real song titles when possible:\n${tracksPrompt}`,
+              content: `For each song, provide 3 alternative song titles (same genre/era, plausible but wrong). Use real song titles or well-known lyrics/phrases from the song that are often mistaken for the title:\n${tracksPrompt}`,
             },
           ],
           function_call: { name: 'generateTitleAlternatives' },
@@ -1962,7 +1962,7 @@ ${htmlString}
                         alternatives: {
                           type: 'array',
                           items: { type: 'string' },
-                          description: '3 alternative song titles from the same genre/era',
+                          description: '3 alternative song titles from the same genre/era, or well-known lyrics/phrases often mistaken for the title',
                         },
                       },
                       required: ['index', 'alternatives'],
@@ -2245,11 +2245,11 @@ ${htmlString}
         messages: [
           {
             role: 'system',
-            content: `You are a music expert. Generate 3 alternative song titles from the same genre or era as the given song. The alternatives should be real or realistic-sounding song titles that a player might confuse with the real title. Use real song titles when possible. Do not translate song titles.`,
+            content: `You are a music expert. Generate 3 alternative song titles from the same genre or era as the given song. The alternatives should be real or realistic-sounding song titles that a player might confuse with the real title. Use real song titles when possible. You can also use well-known phrases or lyrics from the song that people often mistakenly think is the title (e.g. "You Can Be My Bodyguard" for a song actually called "You Can Call Me Al"). Do not translate song titles.`,
           },
           {
             role: 'user',
-            content: `Generate 3 alternative song titles for "${track.name}" by ${track.artist} (${track.year}).`,
+            content: `Generate 3 alternative song titles for "${track.name}" by ${track.artist} (${track.year}). You may use famous lyrics or phrases from the song that are commonly mistaken for the title.`,
           },
         ],
         function_call: { name: 'generateAlternatives' },
