@@ -993,7 +993,7 @@ class PrintEnBind {
       const BINGO_FEE = 5.00;
       let bingoFee = 0;
       for (const item of orderItems) {
-        if (item.productType === 'cards' && item.bingoEnabled === true) {
+        if (item.productType === 'cards' && item.gamesEnabled === true) {
           bingoFee += BINGO_FEE;
         }
       }

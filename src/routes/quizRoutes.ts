@@ -65,7 +65,7 @@ export default async function quizRoutes(
       AND u.hash = ${userHash}
       AND pl.playlistId = ${playlistId}
       AND p.status = 'paid'
-      AND php.bingoEnabled = 1
+      AND php.gamesEnabled = 1
       LIMIT 1
     `;
 

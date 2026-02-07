@@ -674,7 +674,7 @@ class Mollie {
             frontOpacity: true,
             backOpacity: true,
             // Bingo
-            bingoEnabled: true,
+            gamesEnabled: true,
             playlist: {
               select: {
                 name: true,
@@ -1035,8 +1035,8 @@ class Mollie {
               item.frontOpacity !== undefined ? item.frontOpacity : 100,
             backOpacity: item.backOpacity !== undefined ? item.backOpacity : 50,
             // Bingo enabled flag and price
-            bingoEnabled: item.productType === 'cards' ? (item.bingoEnabled === true) : false,
-            bingoPrice: (item.productType === 'cards' && item.bingoEnabled === true) ? 5.00 : 0,
+            gamesEnabled: item.productType === 'cards' ? (item.gamesEnabled === true) : false,
+            gamesPrice: (item.productType === 'cards' && item.gamesEnabled === true) ? 5.00 : 0,
           };
         })
       );

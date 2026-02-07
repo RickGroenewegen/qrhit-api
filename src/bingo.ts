@@ -415,7 +415,7 @@ class Bingo {
 
   /**
    * Generate a default bingo set for an order
-   * This is called automatically when an order with bingoEnabled=true is processed
+   * This is called automatically when an order with gamesEnabled=true is processed
    * Default: 20 contestants, 5 rounds, with host cards
    */
   public async generateDefaultBingo(
@@ -622,8 +622,8 @@ class Bingo {
       await this.prisma.paymentHasPlaylist.updateMany({
         where: { id: { in: ids } },
         data: {
-          bingoEnabled: true,
-          bingoPrice: finalPricePerPlaylist,
+          gamesEnabled: true,
+          gamesPrice: finalPricePerPlaylist,
         },
       });
 

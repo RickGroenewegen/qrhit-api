@@ -1309,7 +1309,7 @@ export default async function accountRoutes(
                 ? !!php.filenameDigital
                 : payment.sentToPrinter === true && !!php.filenameDigital,
               // Whether bingo is enabled for this playlist
-              bingoEnabled: php.bingoEnabled,
+              gamesEnabled: php.gamesEnabled,
               // Bingo files for this playlist
               bingoFiles: php.bingoFiles.map((bf: any) => ({
                 filename: bf.filename,

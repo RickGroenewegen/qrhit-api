@@ -817,7 +817,7 @@ class Generator {
             // Only send email if this playlist hasn't been emailed yet
             if (!emailedPlaylistIds.has(playlist.id)) {
               // If bingo is enabled, link to My Account where users can create their own bingo cards
-              const bingoDownloadUrl = playlist.bingoEnabled
+              const bingoDownloadUrl = playlist.gamesEnabled
                 ? `${process.env['FRONTEND_URI']}/${payment.locale}/my-account`
                 : undefined;
 
@@ -1228,7 +1228,7 @@ class Generator {
           // Note: Bingo is not auto-generated - users create their own bingo from My Account
           for (const physicalPlaylist of uniquePlaylists.values()) {
             // If bingo is enabled, link to My Account where users can create their own bingo cards
-            const bingoDownloadUrl = physicalPlaylist.playlist.bingoEnabled
+            const bingoDownloadUrl = physicalPlaylist.playlist.gamesEnabled
               ? `${process.env['FRONTEND_URI']}/${payment.locale}/my-account`
               : undefined;
 

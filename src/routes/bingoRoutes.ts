@@ -345,10 +345,10 @@ export default async function bingoRoutes(
       // Check if bingo is enabled for this order
       const php = await prisma.paymentHasPlaylist.findFirst({
         where: { id: playlistInfo.paymentHasPlaylistId },
-        select: { bingoEnabled: true }
+        select: { gamesEnabled: true }
       });
 
-      if (php?.bingoEnabled === false) {
+      if (php?.gamesEnabled === false) {
         return reply.status(403).send({ success: false, error: 'bingoNotEnabled' });
       }
 
@@ -884,7 +884,7 @@ export default async function bingoRoutes(
                 error: 'Unauthorized access to one or more playlists',
               });
             }
-            if (php.bingoEnabled) {
+            if (php.gamesEnabled) {
               return reply.status(400).send({
                 success: false,
                 error: `Bingo is already enabled for playlist: ${php.playlist.name}`,
@@ -983,7 +983,7 @@ export default async function bingoRoutes(
                 error: 'Unauthorized',
               });
             }
-            if (php.bingoEnabled) {
+            if (php.gamesEnabled) {
               return reply.status(400).send({
                 success: false,
                 error: `Bingo is already enabled for playlist: ${php.playlist.name}`,

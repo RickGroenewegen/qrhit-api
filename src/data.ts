@@ -856,7 +856,7 @@ class Data {
         payment_has_playlist.frontOpacity,
         payment_has_playlist.backOpacity,
         payment_has_playlist.printerType,
-        payment_has_playlist.bingoEnabled,
+        payment_has_playlist.gamesEnabled,
         playlists.numberOfTracks,
         payment_has_playlist.numberOfTracks AS paymentHasPlaylistNumberOfTracks,
         playlists.featured,

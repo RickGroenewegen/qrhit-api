@@ -236,12 +236,12 @@ class GeneratorQueue {
           playlistId: playlist.id,
         },
         select: {
-          bingoEnabled: true,
+          gamesEnabled: true,
         },
       });
 
       // If bingo is enabled, provide URL to My Account page where they can create bingo cards
-      const bingoDownloadUrl = paymentHasPlaylist?.bingoEnabled
+      const bingoDownloadUrl = paymentHasPlaylist?.gamesEnabled
         ? `${process.env['FRONTEND_URI']}/${payment.locale}/my-account`
         : undefined;
 

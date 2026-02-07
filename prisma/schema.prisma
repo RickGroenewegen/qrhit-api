@@ -615,8 +615,8 @@ model PaymentHasPlaylist {
   printerType             String                   @default("printnbind") // Printer type: "printnbind" or "tromp"
   promotionalCredited     Boolean                  @default(false) // Whether promotional discount was credited to creator
   promotionalCreditedAt   DateTime? // When the promotional credit was applied
-  bingoEnabled            Boolean                  @default(false) // Whether bingo is enabled for this playlist
-  bingoPrice              Float                    @default(0) // Price charged for bingo (€3 when enabled)
+  gamesEnabled            Boolean                  @default(false) // Whether games (bingo/quiz) are enabled for this playlist
+  gamesPrice              Float                    @default(0) // Price charged for games (€3 when enabled)
   orderType               OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                   PaymentHasPlaylistItem[]
   bingoFiles              BingoFile[]
