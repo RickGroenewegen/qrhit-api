@@ -15,6 +15,7 @@ import { Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
 import Translation from './translation';
 import SpotifyApi from './spotify_api';
+import SpotifyApi2 from './spotify_api2';
 import SpotifyRapidApi from './spotify_rapidapi';
 import SpotifyScraper from './spotify_scraper';
 import SpotifyRapidApi2 from './spotify_rapidapi2';
@@ -68,13 +69,14 @@ class Spotify {
   private translate = new Translation();
   private logger = new Logger(); // Add logger instance
   private spotifyApi = new SpotifyApi(); // Instantiate SpotifyApi
+  private spotifyApi2 = new SpotifyApi2(); // Instantiate SpotifyApi2 (post-March-2026 format)
   private spotifyRapidApi = new SpotifyRapidApi(); // Instantiate SpotifyRapidApi
   private spotifyScraper = new SpotifyScraper(); // Instantiate SpotifyScraper if needed
   private spotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
   private rateLimitManager = RateLimitManager.getInstance(); // Add rate limit manager
 
   private api = this.spotifyApi; // Default to SpotifyApi
-  private apiFallback = this.spotifyRapidApi; // Default to SpotifyApi
+  private apiFallback = this.spotifyScraper; // Fallback to scraper (RapidAPI proxies will also break)
 
   // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
   private jumboCardMap: { [key: string]: string } = {};
@@ -100,6 +102,16 @@ class Spotify {
       Spotify.instance = new Spotify();
     }
     return Spotify.instance;
+  }
+
+  /**
+   * Returns the active API provider based on the Redis toggle.
+   * When 'spotify_use_api2' is 'true', uses SpotifyApi2 (post-March-2026 format).
+   * Otherwise uses the default SpotifyApi.
+   */
+  private async getActiveApi(): Promise<SpotifyApi | SpotifyApi2> {
+    const useApi2 = await this.cache.get('spotify_use_api2');
+    return useApi2 === 'true' ? this.spotifyApi2 : this.spotifyApi;
   }
 
   /**
@@ -400,10 +412,11 @@ class Spotify {
             );
 
             // Use rate limit manager for automatic fallback on 429 errors
+            const api = await this.getActiveApi();
             const result = await this.rateLimitManager.executeWithFallback(
               'getPlaylist',
               [checkPlaylistId],
-              this.api,
+              api,
               this.apiFallback
             );
 
@@ -764,10 +777,11 @@ class Spotify {
 
         // Use rate limit manager for automatic fallback on 429 errors
         // Pass onProgress callback to report progress during batch fetching
+        const api = await this.getActiveApi();
         const result = await this.rateLimitManager.executeWithFallback(
           'getTracks',
           [checkPlaylistId, onProgress],
-          this.api,
+          api,
           this.apiFallback
         );
 
@@ -1072,10 +1086,11 @@ class Spotify {
       );
 
       // Use rate limit manager for automatic fallback on 429 errors
+      const api = await this.getActiveApi();
       const result = await this.rateLimitManager.executeWithFallback(
         'getTracksByIds',
         [trackIds],
-        this.api,
+        api,
         this.apiFallback
       );
 
@@ -1176,10 +1191,11 @@ class Spotify {
       }
 
       // Use rate limit manager for automatic fallback on 429 errors
+      const api = await this.getActiveApi();
       const result = await this.rateLimitManager.executeWithFallback(
         'searchTracks',
         [searchTerm, limit, offset],
-        this.api,
+        api,
         this.apiFallback
       );
 

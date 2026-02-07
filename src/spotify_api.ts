@@ -1,6 +1,7 @@
 import axios, { AxiosError, AxiosResponse } from 'axios'; // Import AxiosResponse
 import Logger from './logger';
 import Settings from './settings';
+import Cache from './cache';
 import { color } from 'console-log-colors';
 import { ApiResult } from './interfaces/ApiResult'; // Assuming ApiResult interface exists
 import { ProgressCallback } from './interfaces/IMusicProvider';
@@ -485,6 +486,17 @@ class SpotifyApi {
         }
       );
 
+      // Auto-detect if Spotify has switched to the new API format
+      if (response.data.items && !response.data.tracks) {
+        const cache = Cache.getInstance();
+        await cache.set('spotify_use_api2', 'true');
+        this.logger.log(
+          color.yellow.bold(
+            `[${color.white.bold('spotify')}] API format change detected (items instead of tracks) — switching to spotify_api2`
+          )
+        );
+      }
+
       return { success: true, data: response.data };
     } catch (error) {
       // Check if this is a 404 for a Spotify-owned playlist
@@ -900,17 +912,11 @@ class SpotifyApi {
       };
     }
 
-    // Fetch User ID internally
-    const userId = await this.getUserId(accessToken);
-    if (!userId) {
-      return this.handleApiError(
-        new Error('Failed to fetch user ID'),
-        'fetching user ID for playlist creation'
-      );
-    }
-
     const trackUris = trackIds.map((id) => `spotify:track:${id}`);
     const playlistDescription = `Created automatically.`; // Simple description
+
+    // Fetch User ID for ownership check when looking for existing playlists
+    const userId = await this.getUserId(accessToken);
 
     try {
       // --- Check for existing playlist ---
@@ -956,7 +962,7 @@ class SpotifyApi {
 
           const userPlaylists = userPlaylistsResponse.data.items || []; // Ensure it's an array
           const foundPlaylist = userPlaylists.find(
-            (p: any) => p.name === playlistName && p.owner.id === userId
+            (p: any) => p.name === playlistName && (userId ? p.owner.id === userId : true)
           );
 
           if (foundPlaylist) {
@@ -1030,12 +1036,12 @@ class SpotifyApi {
           color.blue.bold(
             `No existing playlist found named "${color.white.bold(
               playlistName
-            )}". Creating new playlist for user ${color.white.bold(userId)}.`
+            )}". Creating new playlist.`
           )
         );
         const createResult = await this.executeWithRetry(async () => {
           const response = await axios.post(
-            `https://api.spotify.com/v1/users/${userId}/playlists`,
+            `https://api.spotify.com/v1/me/playlists`,
             JSON.stringify({
               name: playlistName,
               description: playlistDescription,
