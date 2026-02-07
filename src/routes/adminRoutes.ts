@@ -21,6 +21,7 @@ import Shipping from '../shipping';
 import SiteSettings from '../sitesettings';
 import ShippingConfig from '../shippingconfig';
 import Spotify from '../spotify';
+import Cache from '../cache';
 import PrismaInstance from '../prisma';
 import { ChatService } from '../chat';
 import ChatWebSocketServer from '../chat-websocket';
@@ -4198,6 +4199,51 @@ export default async function adminRoutes(
         return reply.status(500).send({
           success: false,
           error: 'Failed to delete unknown links',
+        });
+      }
+    }
+  );
+
+  // ============ SPOTIFY API PROVIDER TOGGLE ============
+
+  // Get current Spotify API provider status
+  fastify.get(
+    '/admin/spotify/provider-status',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const cache = Cache.getInstance();
+        const useApi2 = await cache.get('spotify_use_api2');
+        return reply.send({ success: true, useApi2: useApi2 === 'true' });
+      } catch (error: any) {
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to get provider status',
+        });
+      }
+    }
+  );
+
+  // Toggle Spotify API provider (v1 ↔ v2)
+  fastify.post(
+    '/admin/spotify/toggle-provider',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { useApi2 } = request.body;
+        const cache = Cache.getInstance();
+
+        if (useApi2) {
+          await cache.set('spotify_use_api2', 'true');
+        } else {
+          await cache.del('spotify_use_api2');
+        }
+
+        return reply.send({ success: true, useApi2: !!useApi2 });
+      } catch (error: any) {
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to toggle provider',
         });
       }
     }
