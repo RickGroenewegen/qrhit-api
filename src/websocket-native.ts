@@ -1018,6 +1018,16 @@ class NativeWebSocketServer {
         break;
       }
 
+      case 'addTime': {
+        if (room.pluginData.phase !== 'question') break;
+        // Shift questionStartedAt back by 10s to effectively add 10 seconds
+        room.pluginData.questionStartedAt -= 10000;
+        room.pluginData.timerSeconds += 10;
+        await this.redis.set(`room:${roomId}`, JSON.stringify(room), 'EX', 4 * 60 * 60);
+        this.broadcastToRoom(roomId, 'quizAddTime', { seconds: 10 });
+        break;
+      }
+
       case 'endQuiz': {
         room.state = 'ended';
         room.lastActivity = Date.now();
