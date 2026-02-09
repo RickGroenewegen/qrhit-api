@@ -1592,7 +1592,7 @@ ${htmlString}
           messages: [
             {
               role: 'system',
-              content: `You are a fun music quiz master. Generate interesting, entertaining trivia questions about songs. Each question should have 4 options: 1 correct and 3 wrong but plausible. Questions can be about the song's history, lyrics themes, chart performance, cultural impact, album it appeared on, or fun facts. Keep questions accessible and fun. IMPORTANT: Generate all questions and answer options in ${languageName}.`,
+              content: `You are a fun music quiz master. Generate interesting, entertaining trivia questions about songs. Each question should have 4 options: 1 correct and 3 wrong but plausible. Questions can be about the song's history, lyrics themes, chart performance, cultural impact, album it appeared on, or fun facts. Keep questions accessible and fun. IMPORTANT: Generate all questions and answer options in ${languageName}. However, when referring to specific song lyrics, keep them in their original language — never translate lyrics.`,
             },
             {
               role: 'user',
@@ -1819,7 +1819,7 @@ ${htmlString}
           messages: [
             {
               role: 'system',
-              content: `You are a music quiz designer. For each song title, pick one interesting word to blank out and generate 3 wrong alternatives. The alternatives must be completely different words (not spelling variations!) that could plausibly fit in the same position in the title and still form a believable song title. For example, if the title is "Crazy In Love" and the missing word is "Crazy", good alternatives would be "Lost", "Deep", "Back" — NOT "Craze", "Crazy", "Crazed". The alternatives should be in the same language as the original word.`,
+              content: `You are a music quiz designer. For each song title, pick one interesting word to blank out and generate 3 wrong alternatives. The alternatives must be completely different words (not spelling variations!) that could plausibly fit in the same position in the title and still form a believable song title. For example, if the title is "Crazy In Love" and the missing word is "Crazy", good alternatives would be "Lost", "Deep", "Back" — NOT "Craze", "Crazy", "Crazed". IMPORTANT: Never translate song titles or lyrics. Keep the original title as-is and pick a word from the original language. The alternatives should also be in the same language as the original word.`,
             },
             {
               role: 'user',
@@ -2037,7 +2037,8 @@ ${htmlString}
   public async regenerateQuizQuestion(
     track: { name: string; artist: string; year: number },
     type: 'year' | 'trivia' | 'artist' | 'missing_word' | 'title',
-    locale: string = 'en'
+    locale: string = 'en',
+    currentQuestion?: string
   ): Promise<{
     question: string;
     options: string[] | null;
@@ -2068,7 +2069,7 @@ ${htmlString}
           },
           {
             role: 'user',
-            content: `Generate a trivia question about "${track.name}" by ${track.artist} (${track.year}). Respond in ${languageName}.`,
+            content: `Generate a trivia question about "${track.name}" by ${track.artist} (${track.year}). Respond in ${languageName}.${currentQuestion ? `\n\nIMPORTANT: The previous question was: "${currentQuestion}". Generate a DIFFERENT question — do not repeat or rephrase this.` : ''}`,
           },
         ],
         function_call: { name: 'generateTriviaQuestion' },
@@ -2126,7 +2127,7 @@ ${htmlString}
           },
           {
             role: 'user',
-            content: `Generate 3 alternative artist names for "${track.name}" by ${track.artist}.`,
+            content: `Generate 3 alternative artist names for "${track.name}" by ${track.artist}.${currentQuestion ? `\n\nThe previous question was: "${currentQuestion}". Generate different alternatives than before.` : ''}`,
           },
         ],
         function_call: { name: 'generateAlternatives' },
@@ -2184,7 +2185,7 @@ ${htmlString}
           },
           {
             role: 'user',
-            content: `For the song "${track.name}" by ${track.artist}, pick a word to blank out and provide 3 wrong alternatives (different words that could plausibly fit in the title).`,
+            content: `For the song "${track.name}" by ${track.artist}, pick a word to blank out and provide 3 wrong alternatives (different words that could plausibly fit in the title).${currentQuestion ? `\n\nIMPORTANT: The previous question was: "${currentQuestion}". Pick a DIFFERENT word to blank out this time.` : ''}`,
           },
         ],
         function_call: { name: 'generateMissingWordQuestion' },
@@ -2249,7 +2250,7 @@ ${htmlString}
           },
           {
             role: 'user',
-            content: `Generate 3 alternative song titles for "${track.name}" by ${track.artist} (${track.year}). You may use famous lyrics or phrases from the song that are commonly mistaken for the title.`,
+            content: `Generate 3 alternative song titles for "${track.name}" by ${track.artist} (${track.year}). You may use famous lyrics or phrases from the song that are commonly mistaken for the title.${currentQuestion ? `\n\nThe previous question was: "${currentQuestion}". Generate different alternatives than before.` : ''}`,
           },
         ],
         function_call: { name: 'generateAlternatives' },
@@ -2307,12 +2308,17 @@ ${htmlString}
     question: string,
     correctAnswer: string,
     track: { name: string; artist: string },
-    locale: string = 'en'
+    locale: string = 'en',
+    currentWrongOptions?: string[]
   ): Promise<string[]> {
     const languageName = this.getLanguageName(locale);
     this.logger.logDev(
       color.cyan(`[Quiz] Generating wrong options for "${question}" (correct: "${correctAnswer}") in ${languageName}`)
     );
+
+    const avoidText = currentWrongOptions?.length
+      ? `\n\nIMPORTANT: The previous wrong options were: ${currentWrongOptions.map(o => `"${o}"`).join(', ')}. Generate DIFFERENT options — do not reuse any of these.`
+      : '';
 
     const result = await this.openai.chat.completions.create({
       model: 'gpt-5-mini',
@@ -2324,7 +2330,7 @@ ${htmlString}
         },
         {
           role: 'user',
-          content: `Song: "${track.name}" by ${track.artist}\nQuestion: ${question}\nCorrect answer: ${correctAnswer}\n\nGenerate 3 plausible wrong answers in ${languageName}.`,
+          content: `Song: "${track.name}" by ${track.artist}\nQuestion: ${question}\nCorrect answer: ${correctAnswer}\n\nGenerate 3 plausible wrong answers in ${languageName}.${avoidText}`,
         },
       ],
       function_call: { name: 'generateWrongOptions' },

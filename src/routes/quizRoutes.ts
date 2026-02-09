@@ -1,6 +1,10 @@
 import { FastifyInstance } from 'fastify';
 import { v4 as uuidv4 } from 'uuid';
+import crypto from 'crypto';
+import fs from 'fs/promises';
+import path from 'path';
 import Redis from 'ioredis';
+import sharp from 'sharp';
 import PrismaInstance from '../prisma';
 import Logger from '../logger';
 import { color, white } from 'console-log-colors';
@@ -42,6 +46,30 @@ export default async function quizRoutes(
   const chatgpt = new ChatGPT();
   const quizHelper = Quiz.getInstance();
   const cache = CacheInstance.getInstance();
+  const isDev = process.env['ENVIRONMENT'] === 'development';
+  const MAX_AI_USES_PER_DAY = 10;
+
+  /**
+   * Check and increment daily AI usage for quiz editing (regenerate question / fill options).
+   * Returns { allowed, used, max } — if not allowed, the user has exceeded the limit.
+   * Unlimited in development.
+   */
+  async function checkAiRateLimit(userId: string): Promise<{ allowed: boolean; used: number; max: number }> {
+    if (isDev) return { allowed: true, used: 0, max: MAX_AI_USES_PER_DAY };
+
+    const today = new Date().toISOString().slice(0, 10);
+    const key = `quiz_ai_usage:${userId}:${today}`;
+    const r = getRedis();
+    const current = parseInt(await r.get(key) || '0', 10);
+
+    if (current >= MAX_AI_USES_PER_DAY) {
+      return { allowed: false, used: current, max: MAX_AI_USES_PER_DAY };
+    }
+
+    await r.incr(key);
+    await r.expire(key, 86400);
+    return { allowed: true, used: current + 1, max: MAX_AI_USES_PER_DAY };
+  }
 
   /**
    * Verify payment ownership and get playlist info
@@ -75,6 +103,50 @@ export default async function quizRoutes(
 
     return { success: true, playlistInfo: result[0] };
   }
+
+  /**
+   * POST /api/quiz/avatar
+   * Upload a player avatar (no auth required — players aren't logged in)
+   */
+  fastify.post('/api/quiz/avatar', async (request: any, reply: any) => {
+    try {
+      const { image } = request.body || {};
+      if (!image || typeof image !== 'string') {
+        return reply.status(400).send({ success: false, error: 'image (base64 data URI) is required' });
+      }
+
+      // Validate base64 data URI format
+      const match = image.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/);
+      if (!match) {
+        return reply.status(400).send({ success: false, error: 'Invalid image format. Expected base64 data URI.' });
+      }
+
+      const imageBuffer = Buffer.from(match[2], 'base64');
+
+      // Limit size (5MB raw)
+      if (imageBuffer.length > 5 * 1024 * 1024) {
+        return reply.status(400).send({ success: false, error: 'Image too large' });
+      }
+
+      // Resize to 612x612 PNG
+      const resized = await sharp(imageBuffer)
+        .resize(612, 612, { fit: 'cover' })
+        .png()
+        .toBuffer();
+
+      // Generate 36-char filename
+      const filename = crypto.randomUUID().replace(/-/g, '').slice(0, 36) + '.png';
+      const publicDir = process.env['PUBLIC_DIR']!;
+      const filePath = path.join(publicDir, 'avatars', filename);
+
+      await fs.writeFile(filePath, resized);
+
+      return reply.send({ success: true, filename });
+    } catch (error: any) {
+      logger.log(color.red.bold(`[Quiz] Error uploading avatar: ${error.message}`));
+      return reply.status(500).send({ success: false, error: 'Failed to upload avatar' });
+    }
+  });
 
   if (!getAuthHandler) return;
 
@@ -445,6 +517,15 @@ export default async function quizRoutes(
     async (request: any, reply: any) => {
       try {
         const { quizId, questionId } = request.params;
+        const userId = request.user?.userId;
+
+        // Rate limit AI usage
+        if (userId) {
+          const { allowed, used, max } = await checkAiRateLimit(userId);
+          if (!allowed) {
+            return reply.status(429).send({ success: false, error: `AI limit reached (${used}/${max} today)` });
+          }
+        }
 
         const existing = await prisma.quizQuestion.findUnique({
           where: { id: parseInt(questionId), quizId: parseInt(quizId) },
@@ -505,10 +586,13 @@ export default async function quizRoutes(
           return reply.send({ success: true, question: updated });
         }
 
+        const { currentQuestion } = (request.body as any) || {};
+
         const regenerated = await chatgpt.regenerateQuizQuestion(
           track[0],
           questionType as 'year' | 'trivia' | 'artist' | 'missing_word' | 'title',
-          existing.quiz.locale || 'en'
+          existing.quiz.locale || 'en',
+          currentQuestion || undefined
         );
 
         const updated = await prisma.quizQuestion.update({
@@ -538,7 +622,16 @@ export default async function quizRoutes(
     async (request: any, reply: any) => {
       try {
         const { quizId, questionId } = request.params;
-        const { question, correctAnswer } = request.body;
+        const { question, correctAnswer, currentWrongOptions } = request.body;
+        const userId = request.user?.userId;
+
+        // Rate limit AI usage
+        if (userId) {
+          const { allowed, used, max } = await checkAiRateLimit(userId);
+          if (!allowed) {
+            return reply.status(429).send({ success: false, error: `AI limit reached (${used}/${max} today)` });
+          }
+        }
 
         if (!question || !correctAnswer) {
           return reply.status(400).send({ success: false, error: 'question and correctAnswer are required' });
@@ -565,7 +658,8 @@ export default async function quizRoutes(
           question,
           correctAnswer,
           track[0],
-          existing.quiz.locale || 'en'
+          existing.quiz.locale || 'en',
+          currentWrongOptions || undefined
         );
 
         return reply.send({ success: true, wrongOptions });

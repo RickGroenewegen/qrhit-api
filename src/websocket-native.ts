@@ -183,6 +183,9 @@ class NativeWebSocketServer {
       case 'quizHostAction':
         await this.handleQuizHostAction(connectionId, data);
         break;
+      case 'quizRejoinHost':
+        await this.handleQuizRejoinHost(connectionId, ws, data);
+        break;
       case 'quizJoinHostApp':
         await this.handleQuizJoinHostApp(connectionId, ws, data);
         break;
@@ -298,10 +301,66 @@ class NativeWebSocketServer {
     this.logger.logDev(color.blue.bold(`[Game WS] Room ${white.bold(roomId)} ended by host`));
   }
 
+  // --- Quiz Helper Functions ---
+
+  private computeAnswerCounts(question: any, answers: Record<string, any[]>, questionIndex: number): Record<string, number> {
+    const answerCounts: Record<string, number> = {};
+    if (question.options && question.options.length > 0) {
+      for (const opt of question.options) {
+        answerCounts[opt] = 0;
+      }
+      for (const [, playerAnswers] of Object.entries(answers) as [string, any[]][]) {
+        if (playerAnswers && playerAnswers[questionIndex]) {
+          const ans = playerAnswers[questionIndex].answer;
+          if (question.type === 'release_order') {
+            const idx = parseInt(ans);
+            const optText = question.options?.[idx];
+            if (optText && optText in answerCounts) answerCounts[optText]++;
+          } else {
+            if (ans in answerCounts) {
+              answerCounts[ans]++;
+            }
+          }
+        }
+      }
+    }
+    return answerCounts;
+  }
+
+  private computeClosestGuesses(question: any, answers: Record<string, any[]>, players: Record<string, any>, questionIndex: number): Array<{ name: string; guess: number; diff: number; score: number }> {
+    if (question.type !== 'year') return [];
+    const correctYear = parseInt(question.correctAnswer);
+    let closestGuesses: Array<{ name: string; guess: number; diff: number; score: number }> = [];
+    for (const [connId, playerAnswers] of Object.entries(answers) as [string, any[]][]) {
+      const a = playerAnswers?.[questionIndex];
+      if (!a) continue;
+      const guess = parseInt(a.answer);
+      if (isNaN(guess)) continue;
+      const playerName = players[connId]?.name || '?';
+      closestGuesses.push({ name: playerName, guess, diff: Math.abs(guess - correctYear), score: a.score });
+    }
+    closestGuesses.sort((a, b) => a.diff - b.diff);
+    return closestGuesses.slice(0, 5);
+  }
+
+  private computeRankings(players: Record<string, any>, answers: Record<string, any[]>): Array<{ id: string; name: string; score: number; streak: number; avatar: string }> {
+    return Object.entries(players)
+      .map(([id, p]: [string, any]) => {
+        const playerAnswers = answers[id] || [];
+        let streak = 0;
+        for (let i = playerAnswers.length - 1; i >= 0; i--) {
+          if (playerAnswers[i].correct) streak++;
+          else break;
+        }
+        return { id, name: p.name, score: p.score, streak, avatar: p.avatar || '' };
+      })
+      .sort((a, b) => b.score - a.score);
+  }
+
   // --- Quiz WebSocket Handlers ---
 
   private async handleQuizJoinPlayer(connectionId: string, ws: WebSocket, data: any) {
-    const { roomId, playerName } = data;
+    const { roomId, playerName, avatar } = data;
 
     if (!roomId || !playerName) {
       this.sendError(ws, 'roomId and playerName required');
@@ -343,11 +402,28 @@ class NativeWebSocketServer {
     }
     this.roomConnections.get(roomId)!.add(connectionId);
 
+    // Remove any existing entry with the same name (player left and rejoined)
+    for (const [oldId, p] of Object.entries(room.pluginData.players) as [string, any][]) {
+      if (p.name === playerName && oldId !== connectionId) {
+        delete room.pluginData.players[oldId];
+        delete room.pluginData.answers[oldId];
+        // Clean up old connection tracking
+        const oldConn = this.connections.get(oldId);
+        if (oldConn) {
+          this.connections.delete(oldId);
+          const roomConns = this.roomConnections.get(roomId);
+          if (roomConns) roomConns.delete(oldId);
+        }
+        break;
+      }
+    }
+
     // Add player to room state
     room.pluginData.players[connectionId] = {
       name: playerName,
       score: 0,
       connected: true,
+      avatar: avatar || '',
     };
     room.pluginData.answers[connectionId] = [];
     room.lastActivity = Date.now();
@@ -357,6 +433,7 @@ class NativeWebSocketServer {
       id,
       name: p.name,
       score: p.score,
+      avatar: p.avatar || '',
     }));
 
     this.logger.logDev(
@@ -478,7 +555,8 @@ class NativeWebSocketServer {
       const remainingSeconds = Math.max(0, timerSeconds - elapsed);
 
       // Check if this player already answered this question
-      const alreadyAnswered = playerAnswers.length > room.pluginData.currentQuestionIndex;
+      const qi = room.pluginData.currentQuestionIndex;
+      const alreadyAnswered = playerAnswers.length > qi;
 
       phaseData = {
         type: questionData.type,
@@ -489,10 +567,46 @@ class NativeWebSocketServer {
         alreadyAnswered,
         currentTrackIndex: questionData.type === 'release_order' ? parseInt(questionData.correctAnswer) : undefined,
       };
+
+      // Include answer result if already answered
+      if (alreadyAnswered && playerAnswers[qi]) {
+        phaseData.lastAnswerCorrect = playerAnswers[qi].correct;
+        phaseData.lastAnswerScore = playerAnswers[qi].score;
+      }
     } else if (phase === 'announce' && questionData) {
       phaseData = {
         type: questionData.type,
       };
+    } else if (phase === 'reveal' && questionData) {
+      phaseData = {
+        type: questionData.type,
+        correctAnswer: questionData.correctAnswer,
+        trackName: questionData.trackName,
+        trackArtist: questionData.trackArtist,
+        options: questionData.options,
+        optionYears: questionData.optionYears,
+      };
+      // Include the player's answer result for this question
+      const qi = room.pluginData.currentQuestionIndex;
+      if (playerAnswers[qi]) {
+        phaseData.lastAnswerCorrect = playerAnswers[qi].correct;
+        phaseData.lastAnswerScore = playerAnswers[qi].score;
+      }
+    } else if (phase === 'ranking') {
+      const rankings = this.computeRankings(room.pluginData.players, room.pluginData.answers);
+      const previousRankings = room.pluginData.previousRankings || [];
+      phaseData = { rankings, previousRankings };
+      // Include the player's last answer result
+      const qi = room.pluginData.currentQuestionIndex;
+      if (playerAnswers[qi]) {
+        phaseData.lastAnswerCorrect = playerAnswers[qi].correct;
+        phaseData.lastAnswerScore = playerAnswers[qi].score;
+      }
+    } else if (phase === 'final') {
+      const finalRankings = Object.entries(room.pluginData.players)
+        .map(([id, p]: [string, any]) => ({ id, name: p.name, score: p.score, avatar: p.avatar || '' }))
+        .sort((a, b) => b.score - a.score);
+      phaseData = { rankings: finalRankings };
     }
 
     this.logger.logDev(
@@ -524,7 +638,124 @@ class NativeWebSocketServer {
         id,
         name: p.name,
         score: p.score,
+        avatar: p.avatar || '',
       })),
+    });
+  }
+
+  private async handleQuizRejoinHost(connectionId: string, ws: WebSocket, data: any) {
+    const { roomId } = data;
+
+    if (!roomId) {
+      this.sendError(ws, 'roomId required');
+      return;
+    }
+
+    const roomData = await this.redis.get(`room:${roomId}`);
+    if (!roomData) {
+      this.sendError(ws, 'Room not found');
+      return;
+    }
+
+    const room: BaseRoomState = JSON.parse(roomData);
+    if (room.type !== 'quiz') {
+      this.sendError(ws, 'Not a quiz room');
+      return;
+    }
+
+    // Get quiz data from cache
+    let quizData: any = null;
+    let questionData: any = null;
+    try {
+      const cache = CacheInstance.getInstance();
+      const quizCacheData = await cache.get(room.pluginData.quizCacheKey, false);
+      if (quizCacheData) {
+        quizData = JSON.parse(quizCacheData);
+        const qi = room.pluginData.currentQuestionIndex;
+        if (qi >= 0 && qi < (quizData.questions?.length || 0)) {
+          questionData = quizData.questions[qi];
+        }
+      }
+    } catch {}
+
+    const phase = room.pluginData.phase;
+    const qi = room.pluginData.currentQuestionIndex ?? -1;
+    const totalQuestions = quizData?.questions?.length || 0;
+
+    // Base response data
+    const responseData: any = {
+      phase,
+      currentQuestionIndex: qi,
+      totalQuestions,
+      quizName: room.pluginData.quizName || '',
+      timerSeconds: room.pluginData.timerSeconds || 20,
+      listeningSeconds: room.pluginData.listeningSeconds || 8,
+      hostAppConnected: room.pluginData.hostAppConnected || false,
+      players: Object.entries(room.pluginData.players).map(([id, p]: [string, any]) => ({
+        id,
+        name: p.name,
+        score: p.score,
+        connected: p.connected !== false,
+        avatar: p.avatar || '',
+      })),
+      playerCount: Object.values(room.pluginData.players).filter((p: any) => p.connected).length,
+    };
+
+    // Phase-specific data
+    if (phase === 'announce' && questionData) {
+      const announceStartedAt = room.pluginData.announceStartedAt || Date.now();
+      const elapsed = (Date.now() - announceStartedAt) / 1000;
+      const remainingCountdown = Math.max(0, Math.ceil(5 - elapsed));
+      responseData.type = questionData.type;
+      responseData.trackName = questionData.trackName;
+      responseData.trackArtist = questionData.trackArtist;
+      responseData.announceCountdown = remainingCountdown;
+    } else if (phase === 'question' && questionData) {
+      const elapsed = (Date.now() - (room.pluginData.questionStartedAt || Date.now())) / 1000;
+      const timerSec = room.pluginData.timerSeconds || 20;
+      const remainingSeconds = Math.max(0, timerSec - elapsed);
+
+      const answeredCount = Object.keys(room.pluginData.answers).filter(
+        (id) => (room.pluginData.answers[id]?.length || 0) > qi
+      ).length;
+
+      responseData.type = questionData.type;
+      responseData.question = questionData.question;
+      responseData.options = questionData.options;
+      responseData.remainingSeconds = remainingSeconds;
+      responseData.answeredCount = answeredCount;
+      responseData.currentTrackIndex = questionData.type === 'release_order' ? parseInt(questionData.correctAnswer) : undefined;
+    } else if (phase === 'reveal' && questionData) {
+      const answerCounts = this.computeAnswerCounts(questionData, room.pluginData.answers, qi);
+      const closestGuesses = this.computeClosestGuesses(questionData, room.pluginData.answers, room.pluginData.players, qi);
+      responseData.correctAnswer = questionData.correctAnswer;
+      responseData.trackName = questionData.trackName;
+      responseData.trackArtist = questionData.trackArtist;
+      responseData.trackYear = questionData.trackYear;
+      responseData.type = questionData.type;
+      responseData.options = questionData.options;
+      responseData.optionYears = questionData.optionYears;
+      responseData.answerCounts = answerCounts;
+      responseData.closestGuesses = closestGuesses.length > 0 ? closestGuesses : undefined;
+      responseData.question = questionData.question;
+    } else if (phase === 'ranking') {
+      const rankings = this.computeRankings(room.pluginData.players, room.pluginData.answers);
+      responseData.rankings = rankings;
+      responseData.previousRankings = room.pluginData.previousRankings || [];
+    } else if (phase === 'final') {
+      const finalRankings = Object.entries(room.pluginData.players)
+        .map(([id, p]: [string, any]) => ({ id, name: p.name, score: p.score, avatar: p.avatar || '' }))
+        .sort((a, b) => b.score - a.score);
+      responseData.rankings = finalRankings;
+    }
+
+    this.logger.logDev(
+      color.green.bold(`[Quiz WS] Host rejoined room ${white.bold(roomId)} phase=${phase}`)
+    );
+
+    this.sendMessage(ws, {
+      type: 'quizHostRejoinedConfirm',
+      data: responseData,
     });
   }
 
@@ -666,6 +897,7 @@ class NativeWebSocketServer {
       case 'startQuiz': {
         room.pluginData.phase = 'announce';
         room.pluginData.currentQuestionIndex = 0;
+        room.pluginData.announceStartedAt = Date.now();
         const nextQ = quizData.questions[0];
         room.lastActivity = Date.now();
         await this.redis.set(`room:${roomId}`, JSON.stringify(room), 'EX', 4 * 60 * 60);
@@ -719,46 +951,8 @@ class NativeWebSocketServer {
         room.lastActivity = Date.now();
         await this.redis.set(`room:${roomId}`, JSON.stringify(room), 'EX', 4 * 60 * 60);
 
-        // Compute answer distribution for MC/release_order questions
-        const answerCounts: Record<string, number> = {};
-        if (q2.options && q2.options.length > 0) {
-          // Initialize all options to 0
-          for (const opt of q2.options) {
-            answerCounts[opt] = 0;
-          }
-          // Count player answers for this question
-          for (const [, playerAnswers] of Object.entries(room.pluginData.answers) as [string, any[]][]) {
-            if (playerAnswers && playerAnswers[qi2]) {
-              const ans = playerAnswers[qi2].answer;
-              if (q2.type === 'release_order') {
-                // Player submitted a position index — map back to option text
-                const idx = parseInt(ans);
-                const optText = q2.options?.[idx];
-                if (optText && optText in answerCounts) answerCounts[optText]++;
-              } else {
-                if (ans in answerCounts) {
-                  answerCounts[ans]++;
-                }
-              }
-            }
-          }
-        }
-
-        // Compute top 5 closest guesses for year questions
-        let closestGuesses: Array<{ name: string; guess: number; diff: number; score: number }> = [];
-        if (q2.type === 'year') {
-          const correctYear = parseInt(q2.correctAnswer);
-          for (const [connId, answers] of Object.entries(room.pluginData.answers) as [string, any[]][]) {
-            const a = answers?.[qi2];
-            if (!a) continue;
-            const guess = parseInt(a.answer);
-            if (isNaN(guess)) continue;
-            const playerName = room.pluginData.players[connId]?.name || '?';
-            closestGuesses.push({ name: playerName, guess, diff: Math.abs(guess - correctYear), score: a.score });
-          }
-          closestGuesses.sort((a, b) => a.diff - b.diff);
-          closestGuesses = closestGuesses.slice(0, 5);
-        }
+        const answerCounts = this.computeAnswerCounts(q2, room.pluginData.answers, qi2);
+        const closestGuesses = this.computeClosestGuesses(q2, room.pluginData.answers, room.pluginData.players, qi2);
 
         // Tell the app to stop playback when answer is revealed
         this.broadcastToRoom(roomId, 'quizStopTrack', { trackDbId: q2.trackId });
@@ -779,20 +973,9 @@ class NativeWebSocketServer {
 
       case 'showRanking': {
         const previousRankings = room.pluginData.previousRankings || [];
-        const rankings = Object.entries(room.pluginData.players)
-          .map(([id, p]: [string, any]) => {
-            // Calculate streak from answers
-            const answers = room.pluginData.answers[id] || [];
-            let streak = 0;
-            for (let i = answers.length - 1; i >= 0; i--) {
-              if (answers[i].correct) streak++;
-              else break;
-            }
-            return { id, name: p.name, score: p.score, streak };
-          })
-          .sort((a, b) => b.score - a.score);
+        const rankings = this.computeRankings(room.pluginData.players, room.pluginData.answers);
 
-        room.pluginData.previousRankings = rankings.map((r: any) => ({ id: r.id, name: r.name, score: r.score }));
+        room.pluginData.previousRankings = rankings.map((r: any) => ({ id: r.id, name: r.name, score: r.score, avatar: r.avatar || '' }));
         room.pluginData.phase = 'ranking';
         room.lastActivity = Date.now();
         await this.redis.set(`room:${roomId}`, JSON.stringify(room), 'EX', 4 * 60 * 60);
@@ -807,14 +990,17 @@ class NativeWebSocketServer {
           // Final
           room.pluginData.phase = 'final';
           const finalRankings = Object.entries(room.pluginData.players)
-            .map(([id, p]: [string, any]) => ({ id, name: p.name, score: p.score }))
+            .map(([id, p]: [string, any]) => ({ id, name: p.name, score: p.score, avatar: p.avatar || '' }))
             .sort((a, b) => b.score - a.score);
           room.lastActivity = Date.now();
           await this.redis.set(`room:${roomId}`, JSON.stringify(room), 'EX', 4 * 60 * 60);
+          // Play "The Winner Takes It All" for the final screen
+          this.broadcastToRoom(roomId, 'quizAnnounce', { trackDbId: 8701 });
           this.broadcastToRoom(roomId, 'quizFinal', { rankings: finalRankings });
         } else {
           room.pluginData.phase = 'announce';
           room.pluginData.currentQuestionIndex = nextIdx;
+          room.pluginData.announceStartedAt = Date.now();
           const nextQ = quizData.questions[nextIdx];
           room.lastActivity = Date.now();
           await this.redis.set(`room:${roomId}`, JSON.stringify(room), 'EX', 4 * 60 * 60);

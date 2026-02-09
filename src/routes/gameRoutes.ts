@@ -11,6 +11,8 @@ import {
   MessageContext,
 } from '../game-plugins';
 import CacheInstance from '../cache';
+import { QRGAMES_UPGRADE_PRICE, calculateGamesUpgradePrice } from '../game';
+import { createMollieClient, Locale } from '@mollie/api-client';
 
 // Redis client for game rooms (separate from cache)
 let redis: Redis | null = null;
@@ -56,11 +58,6 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
 
   // Register all game plugins on startup
   registerGamePlugins();
-  logger.log(
-    color.blue.bold(
-      `[Game Routes] Registered ${GamePluginRegistry.getAllPlugins().length} game plugins`
-    )
-  );
 
   // Helper: Get room from Redis
   async function getRoom(uuid: string): Promise<BaseRoomState | null> {
@@ -755,6 +752,231 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
   // TS:{trackId} - Track Scanned (trackId is looked up to get bingoNumber)
   // RV - Room Validate
 
+  /**
+   * POST /api/game/calculate-price
+   * Calculate price for enabling QRGames on multiple playlists (with volume discounts)
+   * Requires authentication
+   */
+  if (getAuthHandler) {
+    fastify.post(
+      '/api/game/calculate-price',
+      getAuthHandler(['users']),
+      async (request: any, reply: any) => {
+        try {
+          const { paymentHasPlaylistIds } = request.body;
+          const userIdString = request.user?.userId;
+
+          if (!paymentHasPlaylistIds || !Array.isArray(paymentHasPlaylistIds) || paymentHasPlaylistIds.length === 0) {
+            return reply.status(400).send({
+              success: false,
+              error: 'Missing required parameters: paymentHasPlaylistIds array',
+            });
+          }
+
+          // Look up user to get database ID
+          const user = await prisma.user.findUnique({
+            where: { userId: userIdString },
+          });
+
+          if (!user) {
+            return reply.status(401).send({
+              success: false,
+              error: 'User not found',
+            });
+          }
+
+          // Validate all playlist IDs belong to user
+          const phpIds = paymentHasPlaylistIds.map((id: any) => parseInt(id));
+          const playlists = await prisma.paymentHasPlaylist.findMany({
+            where: { id: { in: phpIds } },
+            include: {
+              payment: true,
+              playlist: true,
+            },
+          });
+
+          // Verify all playlists exist and belong to user
+          if (playlists.length !== phpIds.length) {
+            return reply.status(404).send({
+              success: false,
+              error: 'One or more playlists not found',
+            });
+          }
+
+          for (const php of playlists) {
+            if (php.payment.userId !== user.id) {
+              return reply.status(403).send({
+                success: false,
+                error: 'Unauthorized access to one or more playlists',
+              });
+            }
+            if (php.gamesEnabled) {
+              return reply.status(400).send({
+                success: false,
+                error: `QRGames is already enabled for playlist: ${php.playlist.name}`,
+              });
+            }
+          }
+
+          // Calculate pricing with volume discount
+          const pricing = calculateGamesUpgradePrice(playlists.length);
+
+          return reply.send({
+            success: true,
+            count: playlists.length,
+            basePrice: QRGAMES_UPGRADE_PRICE,
+            ...pricing,
+            playlists: playlists.map((php) => ({
+              paymentHasPlaylistId: php.id,
+              playlistName: php.playlist.name,
+              playlistImage: php.playlist.image,
+              numberOfTracks: php.numberOfTracks,
+            })),
+          });
+        } catch (error: any) {
+          logger.log(color.red.bold(`Error in POST /api/game/calculate-price: ${error.message}`));
+          return reply.status(500).send({
+            success: false,
+            error: 'Failed to calculate price',
+          });
+        }
+      }
+    );
+
+    /**
+     * POST /api/game/enable-payment
+     * Create a Mollie payment to enable QRGames on multiple playlists (with volume discounts)
+     * Requires authentication
+     */
+    fastify.post(
+      '/api/game/enable-payment',
+      getAuthHandler(['users']),
+      async (request: any, reply: any) => {
+        try {
+          const { paymentHasPlaylistIds, locale } = request.body;
+          const userIdString = request.user?.userId;
+
+          if (!paymentHasPlaylistIds || !Array.isArray(paymentHasPlaylistIds) || paymentHasPlaylistIds.length === 0) {
+            return reply.status(400).send({
+              success: false,
+              error: 'Missing required parameters: paymentHasPlaylistIds array',
+            });
+          }
+
+          // Look up user to get database ID
+          const user = await prisma.user.findUnique({
+            where: { userId: userIdString },
+          });
+
+          if (!user) {
+            return reply.status(401).send({
+              success: false,
+              error: 'User not found',
+            });
+          }
+
+          // Validate all playlist IDs belong to user
+          const phpIds = paymentHasPlaylistIds.map((id: any) => parseInt(id));
+          const playlists = await prisma.paymentHasPlaylist.findMany({
+            where: { id: { in: phpIds } },
+            include: {
+              payment: true,
+              playlist: true,
+            },
+          });
+
+          // Verify all playlists exist and belong to user
+          if (playlists.length !== phpIds.length) {
+            return reply.status(404).send({
+              success: false,
+              error: 'One or more playlists not found',
+            });
+          }
+
+          const playlistNames: string[] = [];
+          for (const php of playlists) {
+            if (php.payment.userId !== user.id) {
+              return reply.status(403).send({
+                success: false,
+                error: 'Unauthorized',
+              });
+            }
+            if (php.gamesEnabled) {
+              return reply.status(400).send({
+                success: false,
+                error: `QRGames is already enabled for playlist: ${php.playlist.name}`,
+              });
+            }
+            playlistNames.push(php.playlist.name);
+          }
+
+          // Calculate pricing with volume discount
+          const pricing = calculateGamesUpgradePrice(playlists.length);
+
+          // Create Mollie payment for QRGames upgrade
+          const mollieClient = createMollieClient({
+            apiKey: process.env['MOLLIE_API_KEY']!,
+          });
+
+          // Get locale mapping
+          const localeMap: { [key: string]: string } = {
+            en: 'en_US',
+            nl: 'nl_NL',
+            de: 'de_DE',
+            fr: 'fr_FR',
+            es: 'es_ES',
+            it: 'it_IT',
+            pt: 'pt_PT',
+            pl: 'pl_PL',
+          };
+          const mollieLocale = (localeMap[locale || 'en'] || 'en_US') as Locale;
+          const userLocale = locale || 'en';
+
+          // Build description
+          const description = playlists.length === 1
+            ? `QRGames - ${playlistNames[0]}`
+            : `QRGames - ${playlists.length} playlists`;
+
+          const payment = await mollieClient.payments.create({
+            amount: {
+              currency: 'EUR',
+              value: pricing.totalPrice.toFixed(2),
+            },
+            metadata: {
+              type: 'bingo_upgrade',
+              paymentHasPlaylistIds: phpIds.join(','),
+              userId: user.id.toString(),
+              pricePerPlaylist: pricing.pricePerPlaylist.toString(),
+            },
+            description,
+            redirectUrl: `${process.env['FRONTEND_URI']}/${userLocale}/my-account?games_enabled=1`,
+            webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
+            locale: mollieLocale,
+          });
+
+          const checkoutUrl = payment.getCheckoutUrl();
+
+          logger.log(
+            color.blue.bold(`Created QRGames upgrade payment: ${white.bold(payment.id)} for ${white.bold(playlists.length.toString())} playlists (${white.bold('€' + pricing.totalPrice.toFixed(2))})`)
+          );
+
+          return reply.send({
+            success: true,
+            paymentUrl: checkoutUrl,
+            paymentId: payment.id,
+          });
+        } catch (error: any) {
+          logger.log(color.red.bold(`Error in POST /api/game/enable-payment: ${error.message}`));
+          console.error(error);
+          return reply.status(500).send({
+            success: false,
+            error: 'Failed to create QRGames upgrade payment',
+          });
+        }
+      }
+    );
+  }
+
   // Cleanup inactive rooms from Redis (runs every 15 minutes)
   const CLEANUP_INTERVAL_MS = 15 * 60 * 1000; // 15 minutes
   const ROOM_INACTIVE_THRESHOLD_MS = 4 * 60 * 60 * 1000; // 4 hours
@@ -811,7 +1033,6 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
 
   // Start cleanup interval
   setInterval(cleanupInactiveRooms, CLEANUP_INTERVAL_MS);
-  logger.logDev(color.green.bold('[Game Room Cleanup] Started cleanup task (every 15 minutes)'));
 };
 
 export default gameRoutes;
