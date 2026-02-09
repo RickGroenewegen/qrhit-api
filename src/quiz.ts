@@ -27,6 +27,7 @@ export interface GeneratedQuestion {
   question: string;
   options: string[] | ReleaseOrderOption[] | null;
   correctAnswer: string;
+  imageFilename?: string;
 }
 
 export interface TrackRow {

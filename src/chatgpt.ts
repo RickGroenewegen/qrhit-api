@@ -6,6 +6,8 @@ import { color } from 'console-log-colors';
 import Translation from './translation';
 import { GenreId } from './interfaces/Genre';
 import { TrustPilot } from '@prisma/client';
+import axios from 'axios';
+import crypto from 'crypto';
 import fs from 'fs/promises';
 import path from 'path';
 import sharp from 'sharp';
@@ -1527,6 +1529,7 @@ ${htmlString}
       question: string;
       options: string[] | null;
       correctAnswer: string;
+      imageFilename?: string;
     }>
   > {
     const results: Array<{
@@ -1535,6 +1538,7 @@ ${htmlString}
       question: string;
       options: string[] | null;
       correctAnswer: string;
+      imageFilename?: string;
     }> = [];
 
     const languageName = this.getLanguageName(locale);
@@ -2018,11 +2022,116 @@ ${htmlString}
       }
     }
 
+    // Attach Wikimedia artist photos to trivia questions
+    const triviaResults = results.filter((r) => r.type === 'trivia');
+    if (triviaResults.length > 0) {
+      const publicDir = process.env['PUBLIC_DIR']!;
+      const wikiHeaders = { 'User-Agent': 'QRSong/1.0 (https://qrsong.io; info@qrsong.io)' };
+      const allowedLicenses = [
+        'cc-by', 'cc-by-sa', 'cc-by-2.0', 'cc-by-sa-2.0', 'cc-by-2.5', 'cc-by-sa-2.5',
+        'cc-by-3.0', 'cc-by-sa-3.0', 'cc-by-4.0', 'cc-by-sa-4.0',
+        'cc0', 'public domain', 'pd', 'pd-us', 'pd-old',
+      ];
+
+      // Cache artist images to avoid duplicate fetches for same artist
+      const artistImageCache = new Map<string, string | null>();
+
+      this.logger.log(color.blue.bold(`[Quiz] Fetching artist images for ${triviaResults.length} trivia questions`));
+      onProgress?.({ step: 'image', detail: 'quiz.gen_image', questionsGenerated: results.length });
+
+      for (const result of triviaResults) {
+        const track = tracks.find((t) => t.trackId === result.trackId);
+        if (!track) continue;
+
+        // Check cache first
+        if (artistImageCache.has(track.artist)) {
+          const cached = artistImageCache.get(track.artist);
+          if (cached) result.imageFilename = cached;
+          continue;
+        }
+
+        try {
+          const searchQueries = [
+            `${track.artist} musician`,
+            `${track.artist} band`,
+            `${track.artist} concert`,
+            track.artist,
+          ];
+
+          let imageFilename: string | null = null;
+
+          for (const query of searchQueries) {
+            if (imageFilename) break;
+
+            const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&format=json&srnamespace=6&srlimit=10`;
+            const searchResp = await axios.get(searchUrl, { timeout: 10000, headers: wikiHeaders });
+            const searchResults = searchResp.data?.query?.search || [];
+
+            for (const sr of searchResults) {
+              const title = sr.title as string;
+              if (!title) continue;
+
+              const titleLower = title.toLowerCase();
+              if (/\.(svg|gif)$/i.test(titleLower)) continue;
+              if (/logo|icon|flag|map|diagram|chart|coat of arms|signature/i.test(titleLower)) continue;
+
+              const detailUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo|categories&iiprop=url|extmetadata|mime&format=json&cllimit=20`;
+              const detailResp = await axios.get(detailUrl, { timeout: 10000, headers: wikiHeaders });
+              const pages = detailResp.data?.query?.pages;
+              const pageId = Object.keys(pages || {})[0];
+              if (!pageId || !pages[pageId]?.imageinfo?.[0]) continue;
+
+              const imageinfo = pages[pageId].imageinfo[0];
+              const mime = (imageinfo.mime || '') as string;
+              if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime)) continue;
+
+              const categories = (pages[pageId].categories || []).map((c: any) => (c.title || '').toLowerCase());
+              const isPainting = categories.some((c: string) => /painting|portrait.*\d{2,4}|oil on canvas|fresco|altarpiece|religious art/i.test(c));
+              if (isPainting) continue;
+
+              const license = (imageinfo.extmetadata?.LicenseShortName?.value || '').toLowerCase();
+              if (!allowedLicenses.some((l) => license.includes(l))) continue;
+
+              const imageUrl = imageinfo.url as string;
+              if (!imageUrl) continue;
+
+              try {
+                const imgResp = await axios.get(imageUrl, { responseType: 'arraybuffer', timeout: 15000, headers: wikiHeaders });
+                const resized = await sharp(Buffer.from(imgResp.data))
+                  .resize(800, 600, { fit: 'inside', withoutEnlargement: true })
+                  .png()
+                  .toBuffer();
+
+                const fname = crypto.randomUUID().replace(/-/g, '').slice(0, 32) + '.png';
+                await fs.writeFile(path.join(publicDir, 'quiz_images', fname), resized);
+                imageFilename = fname;
+                this.logger.logDev(color.green(`[Quiz] Artist image for "${track.artist}": ${title.replace(/^File:/, '')}`));
+                break;
+              } catch (dlErr: any) {
+                this.logger.logDev(color.yellow(`[Quiz] Failed to download image ${imageUrl}: ${dlErr.message}`));
+                continue;
+              }
+            }
+          }
+
+          artistImageCache.set(track.artist, imageFilename);
+          if (imageFilename) {
+            result.imageFilename = imageFilename;
+          } else {
+            this.logger.logDev(color.yellow(`[Quiz] No Wikimedia image found for artist "${track.artist}"`));
+          }
+        } catch (err: any) {
+          this.logger.logDev(color.yellow(`[Quiz] Error fetching image for "${track.artist}": ${err.message}`));
+          artistImageCache.set(track.artist, null);
+        }
+      }
+    }
+
     this.logger.log(
       color.green.bold(`[Quiz] Generated ${results.length} questions for ${tracks.length} tracks`)
     );
     this.logger.logDev(
-      color.cyan(`[Quiz] Results breakdown: ${results.filter((r) => r.type === 'year').length} year, ${results.filter((r) => r.type === 'trivia').length} trivia, ${results.filter((r) => r.type === 'artist').length} artist, ${results.filter((r) => r.type === 'missing_word').length} missing_word, ${results.filter((r) => r.type === 'title').length} title`)
+      color.cyan(`[Quiz] Results breakdown: ${results.filter((r) => r.type === 'year').length} year, ${results.filter((r) => r.type === 'trivia').length} trivia, ${results.filter((r) => r.type === 'artist').length} artist, ${results.filter((r) => r.type === 'missing_word').length} missing_word, ${results.filter((r) => r.type === 'title').length} title, ${results.filter((r) => r.imageFilename).length} with images`)
     );
 
     return results;

@@ -683,10 +683,11 @@ model QuizQuestion {
   quiz          Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
   trackId       Int
   order         Int      @default(0)
-  type          String   // "year", "trivia", "artist"
+  type          String   // "year", "trivia", "artist", "image", etc.
   question      String   @db.Text
   options       Json? // string[] for MC types; null for "year"
   correctAnswer String   @db.Text
+  imageFilename String?  // e.g. "a1b2c3d4e5f6...png" in quiz_images dir
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 

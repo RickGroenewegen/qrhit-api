@@ -5,6 +5,7 @@ import fs from 'fs/promises';
 import path from 'path';
 import Redis from 'ioredis';
 import sharp from 'sharp';
+import axios from 'axios';
 import PrismaInstance from '../prisma';
 import Logger from '../logger';
 import { color, white } from 'console-log-colors';
@@ -310,6 +311,7 @@ export default async function quizRoutes(
                     question: q.question,
                     options: (q.options as any) ?? Prisma.JsonNull,
                     correctAnswer: q.correctAnswer,
+                    ...(q.imageFilename && { imageFilename: q.imageFilename }),
                   })),
                 },
               },
@@ -458,7 +460,7 @@ export default async function quizRoutes(
     async (request: any, reply: any) => {
       try {
         const { quizId, questionId } = request.params;
-        const { question, options, correctAnswer, type } = request.body;
+        const { question, options, correctAnswer, type, imageFilename } = request.body;
 
         const updated = await prisma.quizQuestion.update({
           where: {
@@ -470,6 +472,7 @@ export default async function quizRoutes(
             ...(options !== undefined && { options }),
             ...(correctAnswer !== undefined && { correctAnswer }),
             ...(type !== undefined && { type }),
+            ...(imageFilename !== undefined && { imageFilename }),
           },
         });
 
@@ -666,6 +669,107 @@ export default async function quizRoutes(
       } catch (error: any) {
         logger.log(color.red.bold(`[Quiz] Error generating AI options: ${error.message}`));
         return reply.status(500).send({ success: false, error: 'Failed to generate options' });
+      }
+    }
+  );
+
+  /**
+   * POST /api/quiz/:quizId/question/:questionId/upload-image
+   * Upload an image for an image question
+   */
+  fastify.post(
+    '/api/quiz/:quizId/question/:questionId/upload-image',
+    getAuthHandler(['users']),
+    async (request: any, reply: any) => {
+      try {
+        const { quizId, questionId } = request.params;
+        const { image } = request.body || {};
+
+        if (!image || typeof image !== 'string') {
+          return reply.status(400).send({ success: false, error: 'image (base64 data URI) is required' });
+        }
+
+        const match = image.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/);
+        if (!match) {
+          return reply.status(400).send({ success: false, error: 'Invalid image format. Expected base64 data URI.' });
+        }
+
+        const imageBuffer = Buffer.from(match[2], 'base64');
+        if (imageBuffer.length > 5 * 1024 * 1024) {
+          return reply.status(400).send({ success: false, error: 'Image too large (max 5MB)' });
+        }
+
+        const existing = await prisma.quizQuestion.findUnique({
+          where: { id: parseInt(questionId), quizId: parseInt(quizId) },
+        });
+
+        if (!existing) {
+          return reply.status(404).send({ success: false, error: 'Question not found' });
+        }
+
+        const resized = await sharp(imageBuffer)
+          .resize(800, 600, { fit: 'inside', withoutEnlargement: true })
+          .png()
+          .toBuffer();
+
+        const publicDir = process.env['PUBLIC_DIR']!;
+        const filename = crypto.randomUUID().replace(/-/g, '').slice(0, 32) + '.png';
+        const filePath = path.join(publicDir, 'quiz_images', filename);
+        await fs.writeFile(filePath, resized);
+
+        // Delete old image if exists
+        if (existing.imageFilename) {
+          const oldPath = path.join(publicDir, 'quiz_images', existing.imageFilename);
+          await fs.unlink(oldPath).catch(() => {});
+        }
+
+        await prisma.quizQuestion.update({
+          where: { id: parseInt(questionId) },
+          data: { imageFilename: filename },
+        });
+
+        return reply.send({ success: true, filename });
+      } catch (error: any) {
+        logger.log(color.red.bold(`[Quiz] Error uploading question image: ${error.message}`));
+        return reply.status(500).send({ success: false, error: 'Failed to upload image' });
+      }
+    }
+  );
+
+  /**
+   * DELETE /api/quiz/:quizId/question/:questionId/image
+   * Delete the image from an image question
+   */
+  fastify.delete(
+    '/api/quiz/:quizId/question/:questionId/image',
+    getAuthHandler(['users']),
+    async (request: any, reply: any) => {
+      try {
+        const { quizId, questionId } = request.params;
+
+        const existing = await prisma.quizQuestion.findUnique({
+          where: { id: parseInt(questionId), quizId: parseInt(quizId) },
+        });
+
+        if (!existing) {
+          return reply.status(404).send({ success: false, error: 'Question not found' });
+        }
+
+        if (existing.imageFilename) {
+          const publicDir = process.env['PUBLIC_DIR']!;
+          const filePath = path.join(publicDir, 'quiz_images', existing.imageFilename);
+          await fs.unlink(filePath).catch(() => {});
+        }
+
+        await prisma.quizQuestion.update({
+          where: { id: parseInt(questionId) },
+          data: { imageFilename: null },
+        });
+
+        return reply.send({ success: true });
+      } catch (error: any) {
+        logger.log(color.red.bold(`[Quiz] Error deleting question image: ${error.message}`));
+        return reply.status(500).send({ success: false, error: 'Failed to delete image' });
       }
     }
   );
@@ -898,6 +1002,7 @@ export default async function quizRoutes(
               trackName: track?.name || 'Unknown',
               trackArtist: track?.artist || 'Unknown',
               trackYear: track?.year || null,
+              imageFilename: q.imageFilename || null,
             };
           }),
         };
@@ -970,6 +1075,134 @@ export default async function quizRoutes(
       } catch (error: any) {
         logger.log(color.red.bold(`[Quiz] Error creating room: ${error.message}`));
         return reply.status(500).send({ success: false, error: 'Failed to create room' });
+      }
+    }
+  );
+
+  /**
+   * GET /api/wikimedia/search?q={query}
+   * Search Wikimedia Commons for images
+   */
+  const wikiHeaders = { 'User-Agent': 'QRSong/1.0 (https://qrsong.io; info@qrsong.io)' };
+  const allowedLicenses = [
+    'cc-by', 'cc-by-sa', 'cc-by-2.0', 'cc-by-sa-2.0', 'cc-by-2.5', 'cc-by-sa-2.5',
+    'cc-by-3.0', 'cc-by-sa-3.0', 'cc-by-4.0', 'cc-by-sa-4.0',
+    'cc0', 'public domain', 'pd', 'pd-us', 'pd-old',
+  ];
+
+  fastify.get(
+    '/api/wikimedia/search',
+    getAuthHandler(['users']),
+    async (request: any, reply: any) => {
+      try {
+        const { q } = request.query;
+        if (!q || typeof q !== 'string') {
+          return reply.status(400).send({ success: false, error: 'q query parameter is required' });
+        }
+
+        const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(q + ' filetype:bitmap')}&format=json&srnamespace=6&srlimit=20`;
+        const searchResp = await axios.get(searchUrl, { timeout: 10000, headers: wikiHeaders });
+        const searchResults = searchResp.data?.query?.search || [];
+
+        const results: { title: string; thumbUrl: string; fullUrl: string; license: string }[] = [];
+
+        for (const sr of searchResults) {
+          if (results.length >= 12) break;
+
+          const title = sr.title as string;
+          if (!title) continue;
+
+          const titleLower = title.toLowerCase();
+          if (/\.(svg|gif)$/i.test(titleLower)) continue;
+          if (/logo|icon|flag|map|diagram|chart|coat of arms|signature/i.test(titleLower)) continue;
+
+          const detailUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(title)}&prop=imageinfo|categories&iiprop=url|extmetadata|mime|thumbmime&iiurlwidth=300&format=json&cllimit=20`;
+          const detailResp = await axios.get(detailUrl, { timeout: 10000, headers: wikiHeaders });
+          const pages = detailResp.data?.query?.pages;
+          const pageId = Object.keys(pages || {})[0];
+          if (!pageId || !pages[pageId]?.imageinfo?.[0]) continue;
+
+          const imageinfo = pages[pageId].imageinfo[0];
+          const mime = (imageinfo.mime || '') as string;
+          if (!['image/jpeg', 'image/png', 'image/webp'].includes(mime)) continue;
+
+          const categories = (pages[pageId].categories || []).map((c: any) => (c.title || '').toLowerCase());
+          const isPainting = categories.some((c: string) => /painting|portrait.*\d{2,4}|oil on canvas|fresco|altarpiece|religious art/i.test(c));
+          if (isPainting) continue;
+
+          const license = (imageinfo.extmetadata?.LicenseShortName?.value || '').toLowerCase().replace(/\s+/g, '-');
+          if (!allowedLicenses.some((l) => license.includes(l))) continue;
+
+          const fullUrl = imageinfo.url as string;
+          const thumbUrl = imageinfo.thumburl as string;
+          if (!fullUrl || !thumbUrl) continue;
+
+          results.push({
+            title: title.replace(/^File:/, ''),
+            thumbUrl,
+            fullUrl,
+            license: imageinfo.extmetadata?.LicenseShortName?.value || '',
+          });
+        }
+
+        return reply.send({ success: true, results });
+      } catch (error: any) {
+        logger.log(color.red.bold(`[Wikimedia] Error searching: ${error.message}`));
+        return reply.status(500).send({ success: false, error: 'Failed to search Wikimedia' });
+      }
+    }
+  );
+
+  /**
+   * POST /api/quiz/:quizId/question/:questionId/wikimedia-image
+   * Download and attach a Wikimedia image to a question
+   */
+  fastify.post(
+    '/api/quiz/:quizId/question/:questionId/wikimedia-image',
+    getAuthHandler(['users']),
+    async (request: any, reply: any) => {
+      try {
+        const { quizId, questionId } = request.params;
+        const { url } = request.body || {};
+
+        if (!url || typeof url !== 'string') {
+          return reply.status(400).send({ success: false, error: 'url is required' });
+        }
+
+        const existing = await prisma.quizQuestion.findUnique({
+          where: { id: parseInt(questionId), quizId: parseInt(quizId) },
+        });
+
+        if (!existing) {
+          return reply.status(404).send({ success: false, error: 'Question not found' });
+        }
+
+        const imgResp = await axios.get(url, { responseType: 'arraybuffer', timeout: 15000, headers: wikiHeaders });
+        const resized = await sharp(Buffer.from(imgResp.data))
+          .resize(800, 600, { fit: 'inside', withoutEnlargement: true })
+          .png()
+          .toBuffer();
+
+        const publicDir = process.env['PUBLIC_DIR']!;
+        const filename = crypto.randomUUID().replace(/-/g, '').slice(0, 32) + '.png';
+        const filePath = path.join(publicDir, 'quiz_images', filename);
+        await fs.writeFile(filePath, resized);
+
+        // Delete old image if exists
+        if (existing.imageFilename) {
+          const oldPath = path.join(publicDir, 'quiz_images', existing.imageFilename);
+          await fs.unlink(oldPath).catch(() => {});
+        }
+
+        await prisma.quizQuestion.update({
+          where: { id: parseInt(questionId) },
+          data: { imageFilename: filename },
+        });
+
+        return reply.send({ success: true, filename });
+      } catch (error: any) {
+        logger.log(color.red.bold(`[Wikimedia] Error downloading image: ${error.message}`));
+        return reply.status(500).send({ success: false, error: 'Failed to download image' });
       }
     }
   );

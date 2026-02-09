@@ -725,6 +725,7 @@ class NativeWebSocketServer {
       responseData.remainingSeconds = remainingSeconds;
       responseData.answeredCount = answeredCount;
       responseData.currentTrackIndex = questionData.type === 'release_order' ? parseInt(questionData.correctAnswer) : undefined;
+      responseData.imageFilename = questionData.imageFilename || null;
     } else if (phase === 'reveal' && questionData) {
       const answerCounts = this.computeAnswerCounts(questionData, room.pluginData.answers, qi);
       const closestGuesses = this.computeClosestGuesses(questionData, room.pluginData.answers, room.pluginData.players, qi);
@@ -738,6 +739,7 @@ class NativeWebSocketServer {
       responseData.answerCounts = answerCounts;
       responseData.closestGuesses = closestGuesses.length > 0 ? closestGuesses : undefined;
       responseData.question = questionData.question;
+      responseData.imageFilename = questionData.imageFilename || null;
     } else if (phase === 'ranking') {
       const rankings = this.computeRankings(room.pluginData.players, room.pluginData.answers);
       responseData.rankings = rankings;
@@ -940,6 +942,7 @@ class NativeWebSocketServer {
           options: q.options,
           timerSeconds: room.pluginData.timerSeconds,
           currentTrackIndex: q.type === 'release_order' ? parseInt(q.correctAnswer) : undefined,
+          imageFilename: q.imageFilename || null,
         });
         break;
       }
@@ -967,6 +970,7 @@ class NativeWebSocketServer {
           optionYears: q2.optionYears,
           answerCounts,
           closestGuesses: closestGuesses.length > 0 ? closestGuesses : undefined,
+          imageFilename: q2.imageFilename || null,
         });
         break;
       }

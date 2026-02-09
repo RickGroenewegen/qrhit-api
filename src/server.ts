@@ -174,6 +174,7 @@ class Server {
     await this.utils.createDir(`${publicDir}/pdf`);
     await this.utils.createDir(`${publicDir}/excel`);
     await this.utils.createDir(`${publicDir}/avatars`);
+    await this.utils.createDir(`${publicDir}/quiz_images`);
     await this.utils.createDir(`${privateDir}/invoice`);
   }
 
