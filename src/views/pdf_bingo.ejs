@@ -147,7 +147,7 @@
     .qr-container {
         position: absolute;
         top: 4mm;
-        right: 4mm;
+        right: 7mm;
         width: 38mm;
         height: 38mm;
         display: flex;
@@ -254,7 +254,7 @@
     </div>
 
     <div class="header">
-        <img src="<%= apiUri %>/public/images/logo.png" alt="QRSong!" class="logo" />
+        <img src="<%= apiUri %>/assets/images/logo.png" alt="QRSong!" class="logo" />
         <div class="subtitle"><%= playlistName %></div>
         <div class="round-info"><%= t.roundInfo(sheet.round) %></div>
     </div>
@@ -264,7 +264,7 @@
             <% row.forEach(function(cell) { %>
                 <% if (cell.isFreeSpace) { %>
                     <div class="bingo-cell free-space">
-                        <img src="<%= apiUri %>/public/images/logo_white.png" alt="QRSong!" class="logo" />
+                        <img src="<%= apiUri %>/assets/images/logo_white.png" alt="QRSong!" class="logo" />
                     </div>
                 <% } else if (cell.track) { %>
                     <div class="bingo-cell">

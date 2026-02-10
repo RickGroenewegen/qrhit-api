@@ -77,7 +77,7 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
   async function broadcastToRoom(roomId: string, type: string, data: any): Promise<void> {
     await getPubClient().publish(
       'game-room-events',
-      JSON.stringify({ type, roomId, ...data })
+      JSON.stringify({ type, roomId, data })
     );
   }
 
