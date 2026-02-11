@@ -261,7 +261,7 @@ export default async function quizRoutes(
               questions = quizHelper.generateStandardQuestions(tracksWithTypes, tracks);
               setProgress({ status: 'generating', step: 'nonAi', current: questions.length, total: tracksWithTypes.length });
             } else {
-              logger.log(
+              logger.logDev(
                 color.blue.bold(
                   `[Quiz] Generating questions for ${white.bold(String(aiTracks.length))} AI tracks + ${white.bold(String(nonAiTracks.length))} standard tracks`
                 )
@@ -322,7 +322,7 @@ export default async function quizRoutes(
               },
             });
 
-            logger.log(
+            logger.logDev(
               color.green.bold(
                 `[Quiz] Created quiz ${white.bold(String(quiz.id))} with ${white.bold(String((quiz as any).questions?.length ?? 0))} questions`
               )
@@ -1058,7 +1058,7 @@ export default async function quizRoutes(
         await getRedis().set(`room:${roomUuid}`, JSON.stringify(roomState), 'EX', ROOM_TTL_SECONDS);
         await getRedis().sadd('rooms:active', roomUuid);
 
-        logger.log(
+        logger.logDev(
           color.green.bold(
             `[Quiz] Created room ${white.bold(roomUuid)} for quiz ${white.bold(String(quiz.id))}`
           )

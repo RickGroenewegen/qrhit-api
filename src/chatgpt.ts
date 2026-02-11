@@ -1576,7 +1576,7 @@ ${htmlString}
       for (let i = 0; i < triviaTracks.length; i += batchSize) {
         const batch = triviaTracks.slice(i, i + batchSize);
 
-        this.logger.log(
+        this.logger.logDev(
           color.blue.bold(
             `[Quiz] Generating trivia questions batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(triviaTracks.length / batchSize)}`
           )
@@ -1693,7 +1693,7 @@ ${htmlString}
       for (let i = 0; i < artistTracks.length; i += batchSize) {
         const batch = artistTracks.slice(i, i + batchSize);
 
-        this.logger.log(
+        this.logger.logDev(
           color.blue.bold(
             `[Quiz] Generating artist alternatives batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(artistTracks.length / batchSize)}`
           )
@@ -1803,7 +1803,7 @@ ${htmlString}
       for (let i = 0; i < missingWordTracks.length; i += batchSize) {
         const batch = missingWordTracks.slice(i, i + batchSize);
 
-        this.logger.log(
+        this.logger.logDev(
           color.blue.bold(
             `[Quiz] Generating missing word questions batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(missingWordTracks.length / batchSize)}`
           )
@@ -1920,7 +1920,7 @@ ${htmlString}
       for (let i = 0; i < titleTracks.length; i += batchSize) {
         const batch = titleTracks.slice(i, i + batchSize);
 
-        this.logger.log(
+        this.logger.logDev(
           color.blue.bold(
             `[Quiz] Generating title alternatives batch ${Math.floor(i / batchSize) + 1} of ${Math.ceil(titleTracks.length / batchSize)}`
           )
@@ -2036,7 +2036,7 @@ ${htmlString}
       // Cache artist images to avoid duplicate fetches for same artist
       const artistImageCache = new Map<string, string | null>();
 
-      this.logger.log(color.blue.bold(`[Quiz] Fetching artist images for ${triviaResults.length} trivia questions`));
+      this.logger.logDev(color.blue.bold(`[Quiz] Fetching artist images for ${triviaResults.length} trivia questions`));
       onProgress?.({ step: 'image', detail: 'quiz.gen_image', questionsGenerated: results.length });
 
       for (const result of triviaResults) {
@@ -2127,7 +2127,7 @@ ${htmlString}
       }
     }
 
-    this.logger.log(
+    this.logger.logDev(
       color.green.bold(`[Quiz] Generated ${results.length} questions for ${tracks.length} tracks`)
     );
     this.logger.logDev(

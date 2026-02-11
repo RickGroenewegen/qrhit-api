@@ -373,17 +373,26 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       userAgent
     );
     let link = '';
-    let yt = '';
-    let appleMusicLink = '';
+    let yt = null;
+    let ym = null;
+    let am = null;
+    let az = null;
+    let dz = null;
+    let td = null;
     let st = null;
+
     if (result.success) {
       link = result.data.link;
-      yt = result.data.youtubeLink;
-      appleMusicLink = result.data.appleMusicLink;
+      yt = result.data.youtubeLink || null;
+      ym = result.data.youtubeMusicLink || null;
+      am = result.data.appleMusicLink || null;
+      az = result.data.amazonMusicLink || null;
+      dz = result.data.deezerLink || null;
+      td = result.data.tidalLink || null;
       st = result.data.st || null;
     }
     const useSpotifyRemote = true; // Default value
-    return { link: link, yt: yt, am: appleMusicLink, r: useSpotifyRemote, st };
+    return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, st };
   });
 
   fastify.get('/qrlink2/:trackId/:php', async (request: any, reply) => {

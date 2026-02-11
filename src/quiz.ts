@@ -144,7 +144,7 @@ class Quiz {
    * - trivia: empty question/answer for user to fill in
    */
   public generateStandardQuestions(tracks: TrackWithType[], allTracks?: TrackRow[], locale: string = 'en'): GeneratedQuestion[] {
-    this.logger.log(
+    this.logger.logDev(
       color.blue.bold(
         `[Quiz] Quick-generating ${white.bold(String(tracks.length))} questions (no AI)`
       )
