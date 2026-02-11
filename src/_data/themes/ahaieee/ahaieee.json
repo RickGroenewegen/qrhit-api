@@ -3,6 +3,7 @@
   "name": "Ahaieee - Moluks Muziekspel",
   "version": 6,
   "showMusicalNotes": false,
+  "showRecord": true,
   "cacheTTL": 86400,
   "cssVariables": {
     "--app-background": "linear-gradient(135deg, #451a03, #78350f, #451a03)",

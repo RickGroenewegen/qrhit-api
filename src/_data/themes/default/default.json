@@ -3,6 +3,7 @@
   "name": "QRSong!",
   "version": 3,
   "showMusicalNotes": true,
+  "showRecord": true,
   "cacheTTL": 86400,
   "cssVariables": {
     "--app-background": "linear-gradient(135deg, #0077be, #00264d)",

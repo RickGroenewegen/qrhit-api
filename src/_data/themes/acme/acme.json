@@ -3,6 +3,7 @@
   "name": "Acme Company",
   "version": 3,
   "showMusicalNotes": false,
+  "showRecord": true,
   "cacheTTL": 86400,
   "cssVariables": {
     "--app-background": "linear-gradient(135deg, #ff6b6b, #ee5a6f)",
