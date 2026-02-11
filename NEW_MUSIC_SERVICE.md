@@ -458,25 +458,67 @@ private readonly serviceConfig = {
 };
 ```
 
-#### Step 21: Update Admin Tracks Table
-**File:** `src/app/tracks/tracks.component.html`
+#### Step 21: Update Admin Tracks Component
+**Files:**
+- `src/app/tracks/tracks.component.ts`
+- `src/app/tracks/tracks.component.html`
 
-Add icon column header (after existing service icons):
+The tracks component (`/dashboard/tracks`) has:
+- A table with per-service icon columns (header + body cells with search buttons)
+- A service search modal that searches each provider's API
+- Filter chips to show tracks missing links for a specific service
+- An edit modal with URL fields for each service
+
+**tracks.component.ts** - Update these sections:
+
+1. Add to `serviceFilters` array:
+```typescript
+serviceFilters = [
+  // existing...
+  { key: 'newservice', icon: 'fab fa-newservice', color: '#BRANDCOLOR', label: 'New Service' },
+];
+```
+
+2. Add to `searchableServices` array (if the provider supports search):
+```typescript
+private searchableServices = ['spotify', 'youtube', 'deezer', 'apple', 'tidal', 'newservice'];
+```
+
+3. Add to `serviceColumnMap`:
+```typescript
+private serviceColumnMap: Record<string, keyof Track> = {
+  // existing...
+  newservice: 'newServiceLink',
+};
+```
+
+4. Add `newServiceLink` to the `Track` interface.
+
+**tracks.component.html** - Update these sections:
+
+1. Add icon column header (after existing service icons):
 ```html
 <th class="px-2 py-3 text-center text-xs font-medium text-gray-500 dark:text-gray-400 w-12">
   <i class="fab fa-newservice fa-lg text-[#BRANDCOLOR]"></i>
 </th>
 ```
 
-Add icon column body cell (in the same order as headers):
+2. Add icon column body cell with search button:
 ```html
 <td class="px-2 py-4 whitespace-nowrap text-center">
   <i *ngIf="track.newServiceLink" class="fab fa-newservice fa-lg text-[#BRANDCOLOR]"></i>
-  <span *ngIf="!track.newServiceLink" class="text-gray-400">-</span>
+  <button *ngIf="!track.newServiceLink"
+    (click)="openServiceSearchModal(track, 'newservice'); $event.stopPropagation()"
+    class="w-8 h-8 inline-flex items-center justify-center rounded border border-gray-300 dark:border-gray-600 text-gray-400 hover:text-[#BRANDCOLOR] hover:border-[#BRANDCOLOR] transition-colors"
+    title="Search New Service">
+    <i class="fas fa-search text-xs"></i>
+  </button>
 </td>
 ```
 
-Also update the Track interface if needed and add the field to the edit modal.
+3. Add the URL field to the edit modal form.
+4. Update the `colspan` on the "No tracks found" row.
+5. Add the field to `validateUrls()` and `saveTrack()` payload.
 
 #### Step 22: Update Admin Missing Spotify Table
 **File:** `src/app/admin-missing-spotify/admin-missing-spotify.component.html`
@@ -871,6 +913,7 @@ const CACHE_KEY_SEARCH = '[service]_search_';      // TTL: 1800s (30 min)
 - [ ] Export from `providers/index.ts`
 - [ ] Register in `MusicServiceRegistry`
 - [ ] Add routes in `musicRoutes.ts`
+- [ ] Add to `serviceTypeMap` in `adminRoutes.ts` `/tracks/service-search` route (if provider supports search)
 - [ ] Update `data.ts` serviceLinkFieldMap
 - [ ] Update `qrlink_unknown` endpoint response in `musicRoutes.ts`
 - [ ] Update `resolveSpotifyUrl` return type in `spotify.ts`
@@ -889,7 +932,8 @@ const CACHE_KEY_SEARCH = '[service]_search_';      // TTL: 1800s (30 min)
 - [ ] Handle shortlinks in `select-playlist.component.ts` (if service has shortlinks)
 - [ ] Update `summary.component.ts` (inject service, add to all service methods)
 - [ ] Update `year-check.component.ts`
-- [ ] Update `tracks.component.html` (add icon column + edit modal field)
+- [ ] Update `tracks.component.ts` (add to serviceFilters, searchableServices, serviceColumnMap, Track interface)
+- [ ] Update `tracks.component.html` (add icon column with search button + edit modal field)
 - [ ] Update `admin-missing-spotify.component.html` (add icon column + edit modal field)
 - [ ] Update `link-coverage.component.ts` (add service to services array + interface)
 - [ ] Update `supported-platforms-table.component.ts` (add service to platforms array)

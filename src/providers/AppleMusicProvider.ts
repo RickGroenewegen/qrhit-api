@@ -5,6 +5,7 @@ import {
   MusicProviderConfig,
   ProgressCallback,
   ProviderPlaylistData,
+  ProviderSearchResult,
   ProviderTrackData,
   ProviderTracksResult,
   UrlValidationResult,
@@ -20,6 +21,8 @@ const APPLE_MUSIC_API_BASE = 'https://api.music.apple.com/v1';
 // Cache key prefixes for Apple Music
 const CACHE_KEY_APPLE_MUSIC_PLAYLIST = 'apple_music_playlist_';
 const CACHE_KEY_APPLE_MUSIC_TRACKS = 'apple_music_tracks_';
+const CACHE_KEY_APPLE_MUSIC_SEARCH = 'apple_music_search_';
+const CACHE_TTL_SEARCH = 3600; // 1 hour
 
 // No TTL for playlist/tracks cache - matches Spotify behavior
 
@@ -47,7 +50,7 @@ class AppleMusicProvider implements IMusicProvider {
     displayName: 'Apple Music',
     supportsOAuth: false, // We use Developer Token, not user OAuth
     supportsPublicPlaylists: true,
-    supportsSearch: false, // Not implemented yet
+    supportsSearch: true,
     supportsPlaylistCreation: false,
     brandColor: '#FA243C',
     iconClass: 'fa-apple',
@@ -465,6 +468,72 @@ class AppleMusicProvider implements IMusicProvider {
       return {
         success: false,
         error: error.message || 'Failed to fetch tracks',
+      };
+    }
+  }
+
+  /**
+   * Search for tracks on Apple Music
+   */
+  async searchTracks(
+    query: string,
+    limit: number = 20,
+    offset: number = 0
+  ): Promise<ApiResult & { data?: ProviderSearchResult }> {
+    const cacheKey = `${CACHE_KEY_APPLE_MUSIC_SEARCH}${query}_${limit}_${offset}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) {
+      return { success: true, data: JSON.parse(cached) };
+    }
+
+    try {
+      const encodedQuery = encodeURIComponent(query);
+      const result = await this.apiRequest<any>(
+        `/search?term=${encodedQuery}&types=songs&limit=${limit}&offset=${offset}`,
+        'us'
+      );
+
+      if (!result.success || !result.data) {
+        return { success: false, error: result.error || 'Failed to search tracks' };
+      }
+
+      const songsData = result.data.results?.songs?.data || [];
+
+      const tracks: ProviderTrackData[] = songsData.map((track: any) => {
+        const attributes = track.attributes || {};
+        const artwork = attributes.artwork;
+        return {
+          id: track.id,
+          name: this.utils.cleanTrackName(attributes.name || 'Unknown'),
+          artist: attributes.artistName || 'Unknown Artist',
+          artistsList: [attributes.artistName || 'Unknown Artist'],
+          album: this.utils.cleanTrackName(attributes.albumName || ''),
+          albumImageUrl: artwork
+            ? artwork.url.replace('{w}', '300').replace('{h}', '300')
+            : null,
+          releaseDate: attributes.releaseDate || null,
+          isrc: attributes.isrc || undefined,
+          previewUrl: attributes.previews?.[0]?.url || null,
+          duration: attributes.durationInMillis || undefined,
+          serviceType: ServiceType.APPLE_MUSIC,
+          serviceLink: attributes.url || `https://music.apple.com/us/song/${track.id}`,
+        };
+      });
+
+      const searchResult: ProviderSearchResult = {
+        tracks,
+        total: result.data.results?.songs?.total || tracks.length,
+        hasMore: result.data.results?.songs?.next !== undefined,
+      };
+
+      await this.cache.set(cacheKey, JSON.stringify(searchResult), CACHE_TTL_SEARCH);
+
+      return { success: true, data: searchResult };
+    } catch (error: any) {
+      this.logger.log(`ERROR: Apple Music error searching for "${query}": ${error.message}`);
+      return {
+        success: false,
+        error: error.message || 'Failed to search tracks',
       };
     }
   }

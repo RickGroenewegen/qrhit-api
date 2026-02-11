@@ -5,6 +5,7 @@ import {
   MusicProviderConfig,
   ProgressCallback,
   ProviderPlaylistData,
+  ProviderSearchResult,
   ProviderTrackData,
   ProviderTracksResult,
   UrlValidationResult,
@@ -18,6 +19,8 @@ import Utils from '../utils';
 // Cache key prefixes for Tidal
 const CACHE_KEY_TIDAL_PLAYLIST = 'tidal_playlist_';
 const CACHE_KEY_TIDAL_TRACKS = 'tidal_tracks_';
+const CACHE_KEY_TIDAL_SEARCH = 'tidal_search_';
+const CACHE_TTL_SEARCH = 3600; // 1 hour
 
 // Rate limiting constants for Tidal API
 // Minimum delay between requests, coordinated across all workers/nodes via Redis
@@ -49,7 +52,7 @@ class TidalProvider implements IMusicProvider {
     displayName: 'Tidal',
     supportsOAuth: true,
     supportsPublicPlaylists: false, // Requires OAuth for all playlists
-    supportsSearch: false, // Not implemented yet
+    supportsSearch: true,
     supportsPlaylistCreation: false, // Tidal API doesn't support this yet
     brandColor: '#000000',
     iconClass: 'fa-music', // Tidal doesn't have a FontAwesome icon
@@ -525,6 +528,138 @@ class TidalProvider implements IMusicProvider {
         success: false,
         error: error.message || 'Failed to fetch tracks',
       };
+    }
+  }
+
+  /**
+   * Search for tracks on Tidal
+   */
+  async searchTracks(
+    query: string,
+    limit: number = 10,
+    offset: number = 0
+  ): Promise<ApiResult & { data?: ProviderSearchResult }> {
+    const cacheKey = `${CACHE_KEY_TIDAL_SEARCH}${query}_${limit}_${offset}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) {
+      return { success: true, data: JSON.parse(cached) };
+    }
+
+    try {
+      // Step 1: Search to get track IDs (search endpoint doesn't include artist/album data)
+      await this.applyRateLimit();
+      const searchResponse = await this.tidalApi.searchTracks(query, 'US', limit);
+
+      if (!searchResponse.success || !searchResponse.data) {
+        if (searchResponse.needsReAuth) {
+          return { success: false, error: 'Please connect your Tidal account first', needsReAuth: true };
+        }
+        return { success: false, error: searchResponse.error || 'Failed to search tracks' };
+      }
+
+      // Extract track IDs from included array
+      const included = searchResponse.data.included || [];
+      const trackIds: string[] = [];
+      for (const inc of included) {
+        if (inc.type === 'tracks') trackIds.push(inc.id);
+      }
+
+      if (trackIds.length === 0) {
+        return { success: true, data: { tracks: [], total: 0, hasMore: false } };
+      }
+
+      // Step 2: Fetch full track details with albums & artists via getTracks
+      this.logger.log(
+        color.blue.bold(
+          `[${color.white.bold('tidal')}] Search found ${trackIds.length} track IDs, fetching details...`
+        )
+      );
+      await this.applyRateLimit();
+      const detailsResult = await this.tidalApi.getTracks(trackIds);
+
+      if (!detailsResult.success || !detailsResult.data) {
+        return { success: false, error: detailsResult.error || 'Failed to fetch track details' };
+      }
+
+      const trackData = detailsResult.data.data || [];
+      const detailsIncluded = detailsResult.data.included || [];
+
+      const albumsMap = new Map<string, any>();
+      const artistsMap = new Map<string, any>();
+      for (const inc of detailsIncluded) {
+        if (inc.type === 'albums') albumsMap.set(inc.id, inc);
+        else if (inc.type === 'artists') artistsMap.set(inc.id, inc);
+      }
+
+      // Build tracks preserving search order
+      const fetchedMap = new Map<string, any>();
+      for (const track of trackData) {
+        fetchedMap.set(track.id, track);
+      }
+
+      const tracks: ProviderTrackData[] = [];
+      for (const id of trackIds) {
+        const track = fetchedMap.get(id);
+        if (!track) continue;
+
+        const attrs = track.attributes || {};
+        const albumRel = track.relationships?.albums?.data?.[0];
+        const album = albumRel ? albumsMap.get(albumRel.id) : null;
+        const albumAttrs = album?.attributes || {};
+        const artistRel = track.relationships?.artists?.data?.[0];
+        const artist = artistRel ? artistsMap.get(artistRel.id) : null;
+        const artistName = artist?.attributes?.name || 'Unknown Artist';
+
+        const artistsList: string[] = [];
+        for (const ar of track.relationships?.artists?.data || []) {
+          const a = artistsMap.get(ar.id);
+          if (a?.attributes?.name) artistsList.push(a.attributes.name);
+        }
+
+        // Parse ISO 8601 duration (PT2M55S) to milliseconds
+        let durationMs: number | undefined;
+        if (attrs.duration && typeof attrs.duration === 'string') {
+          const match = attrs.duration.match(/PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?/);
+          if (match) {
+            const hours = parseInt(match[1] || '0', 10);
+            const minutes = parseInt(match[2] || '0', 10);
+            const seconds = parseInt(match[3] || '0', 10);
+            durationMs = (hours * 3600 + minutes * 60 + seconds) * 1000;
+          }
+        } else if (typeof attrs.duration === 'number') {
+          durationMs = attrs.duration * 1000;
+        }
+
+        const tidalLink = attrs.externalLinks?.find((l: any) => l.meta?.type === 'TIDAL_SHARING')?.href
+          || `https://tidal.com/browse/track/${track.id}`;
+
+        tracks.push({
+          id: track.id,
+          name: this.utils.cleanTrackName(attrs.title || 'Unknown'),
+          artist: artistName,
+          artistsList: artistsList.length > 0 ? artistsList : [artistName],
+          album: this.utils.cleanTrackName(albumAttrs.title || ''),
+          albumImageUrl: this.getImageUrl(albumAttrs.cover),
+          releaseDate: albumAttrs.releaseDate || null,
+          isrc: attrs.isrc || undefined,
+          previewUrl: null,
+          duration: durationMs,
+          serviceType: ServiceType.TIDAL,
+          serviceLink: tidalLink,
+        });
+      }
+
+      const result: ProviderSearchResult = {
+        tracks,
+        total: tracks.length,
+        hasMore: false,
+      };
+
+      await this.cache.set(cacheKey, JSON.stringify(result), CACHE_TTL_SEARCH);
+      return { success: true, data: result };
+    } catch (error: any) {
+      this.logger.log(`ERROR: Tidal search error: ${error.message}`);
+      return { success: false, error: error.message || 'Failed to search tracks' };
     }
   }
 

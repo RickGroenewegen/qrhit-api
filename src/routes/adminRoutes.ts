@@ -1377,12 +1377,21 @@ export default async function adminRoutes(
     '/tracks/search',
     getAuthHandler(['admin']),
     async (request: any, _reply) => {
-      const { searchTerm = '', missingYouTubeLink } = request.body;
-      const tracks = await data.searchTracks(
+      const { searchTerm = '', missingService, playlistItemId, page = 1, limit = 50 } = request.body;
+      const result = await data.searchTracks(
         searchTerm,
-        utils.parseBoolean(missingYouTubeLink)
+        missingService || undefined,
+        playlistItemId ? Number(playlistItemId) : undefined,
+        Number(page),
+        Number(limit)
       );
-      return { success: true, data: tracks };
+      return {
+        success: true,
+        data: result.tracks,
+        total: result.total,
+        page: result.page,
+        totalPages: result.totalPages,
+      };
     }
   );
 
@@ -1401,6 +1410,7 @@ export default async function adminRoutes(
         appleMusicLink,
         tidalLink,
         deezerLink,
+        amazonMusicLink,
       } = request.body;
 
       if (!id || !artist || !name || year === undefined || year === null) {
@@ -1416,6 +1426,7 @@ export default async function adminRoutes(
         appleMusicLink || '',
         tidalLink || '',
         deezerLink || '',
+        amazonMusicLink || '',
         request.clientIp
       );
       return result;
@@ -1484,6 +1495,58 @@ export default async function adminRoutes(
       try {
         const result = await spotify.searchTracks(searchTerm, limit, 0);
         return result;
+      } catch (error) {
+        return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
+      }
+    }
+  );
+
+  // Generic service search for admin track management
+  fastify.post(
+    '/tracks/service-search',
+    getAuthHandler(['admin']),
+    async (request: any, _reply) => {
+      const { service, searchTerm, limit = 10 } = request.body;
+      if (!searchTerm || searchTerm.length < 2) {
+        return { success: false, error: 'Search term too short' };
+      }
+
+      const serviceTypeMap: Record<string, string> = {
+        spotify: 'spotify',
+        youtube: 'youtube_music',
+        deezer: 'deezer',
+        apple: 'apple_music',
+        tidal: 'tidal',
+      };
+      const serviceType = serviceTypeMap[service];
+      if (!serviceType) {
+        return { success: false, error: 'Unsupported service for search' };
+      }
+
+      try {
+        const { default: MusicProviderFactory } = await import('../providers/MusicProviderFactory');
+        const factory = MusicProviderFactory.getInstance();
+        const provider = factory.getProvider(serviceType);
+
+        if (!provider.config.supportsSearch || !provider.searchTracks) {
+          return { success: false, error: `${provider.config.displayName} does not support search` };
+        }
+
+        const result = await provider.searchTracks(searchTerm, limit, 0);
+        if (!result.success || !result.data) {
+          return { success: false, error: result.error || 'Search failed' };
+        }
+
+        const tracks = result.data.tracks.map((t: any) => ({
+          id: t.id,
+          trackId: t.id,
+          name: t.name,
+          artist: t.artist,
+          image: t.albumImageUrl || '',
+          serviceLink: t.serviceLink,
+        }));
+
+        return { success: true, data: { tracks } };
       } catch (error) {
         return { success: false, error: error instanceof Error ? error.message : 'Unknown error' };
       }

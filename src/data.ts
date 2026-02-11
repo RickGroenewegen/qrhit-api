@@ -2415,37 +2415,72 @@ class Data {
 
   public async searchTracks(
     searchTerm: string,
-    missingYouTubeLink: boolean = false
-  ): Promise<any[]> {
-    // Use LIKE search on artist or name when there's a search term
-    if (searchTerm && searchTerm.trim().length > 0) {
+    missingService?: string,
+    playlistItemId?: number,
+    page: number = 1,
+    limit: number = 50
+  ): Promise<{ tracks: any[]; total: number; page: number; totalPages: number }> {
+    const serviceColumnMap: Record<string, string> = {
+      spotify: 'spotifyLink',
+      apple: 'appleMusicLink',
+      youtube: 'youtubeMusicLink',
+      deezer: 'deezerLink',
+      tidal: 'tidalLink',
+      amazon: 'amazonMusicLink',
+    };
+
+    const conditions: Prisma.Sql[] = [];
+    const hasSearch = searchTerm && searchTerm.trim().length > 0;
+    const validService = missingService && serviceColumnMap[missingService];
+    const safePlaylistItemId = playlistItemId ? Number(playlistItemId) : 0;
+
+    if (hasSearch) {
       const likePattern = `%${searchTerm}%`;
-      const tracks = await this.prisma.$queryRaw<any[]>`
-        SELECT id, artist, name, year, youtubeLink, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink
-        FROM tracks
-        WHERE (artist LIKE ${likePattern} OR name LIKE ${likePattern})
-        ${
-          missingYouTubeLink
-            ? Prisma.sql`AND (youtubeMusicLink IS NULL OR youtubeMusicLink = '')`
-            : Prisma.sql``
-        }
-        LIMIT 100
-      `;
-      return tracks;
-    } else {
-      // If no search term, just return tracks filtered by youtubeMusicLink
-      const tracks = await this.prisma.$queryRaw<any[]>`
-        SELECT id, artist, name, year, youtubeLink, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink
-        FROM tracks
-        ${
-          missingYouTubeLink
-            ? Prisma.sql`WHERE (youtubeMusicLink IS NULL OR youtubeMusicLink = '')`
-            : Prisma.sql`WHERE 1=1`
-        }
-        LIMIT 100
-      `;
-      return tracks;
+      conditions.push(Prisma.sql`(t.artist LIKE ${likePattern} OR t.name LIKE ${likePattern})`);
     }
+
+    if (validService) {
+      const col = serviceColumnMap[missingService!];
+      conditions.push(Prisma.sql`(${Prisma.raw(`t.${col}`)} IS NULL OR ${Prisma.raw(`t.${col}`)} = '')`);
+    }
+
+    let joinFragment = Prisma.sql``;
+    if (safePlaylistItemId) {
+      joinFragment = Prisma.sql`JOIN playlist_has_tracks pht ON pht.trackId = t.id
+        AND pht.playlistId = (SELECT playlistId FROM payment_has_playlist WHERE id = ${safePlaylistItemId})`;
+    }
+
+    const whereFragment = conditions.length > 0
+      ? Prisma.sql`WHERE ${Prisma.join(conditions, ' AND ')}`
+      : Prisma.sql``;
+
+    const offset = (page - 1) * limit;
+
+    const [tracks, countResult] = await Promise.all([
+      this.prisma.$queryRaw<any[]>`
+        SELECT DISTINCT t.id, t.artist, t.name, t.year, t.youtubeLink, t.spotifyLink, t.youtubeMusicLink, t.appleMusicLink, t.tidalLink, t.deezerLink, t.amazonMusicLink
+        FROM tracks t
+        ${joinFragment}
+        ${whereFragment}
+        ORDER BY t.id DESC
+        LIMIT ${limit} OFFSET ${offset}
+      `,
+      this.prisma.$queryRaw<any[]>`
+        SELECT COUNT(DISTINCT t.id) as total
+        FROM tracks t
+        ${joinFragment}
+        ${whereFragment}
+      `,
+    ]);
+
+    const total = Number(countResult[0]?.total || 0);
+
+    return {
+      tracks,
+      total,
+      page,
+      totalPages: Math.ceil(total / limit),
+    };
   }
 
   public async getTracksMissingSpotifyLink(
@@ -2496,6 +2531,7 @@ class Data {
         appleMusicLink: true,
         tidalLink: true,
         deezerLink: true,
+        amazonMusicLink: true,
       },
     });
     return track;
@@ -2511,6 +2547,7 @@ class Data {
     appleMusicLink: string,
     tidalLink: string,
     deezerLink: string,
+    amazonMusicLink: string,
     clientIp: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
@@ -2531,6 +2568,7 @@ class Data {
           appleMusicLink,
           tidalLink,
           deezerLink,
+          amazonMusicLink,
           manuallyCorrected: true,
         },
       });

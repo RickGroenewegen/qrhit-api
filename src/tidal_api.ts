@@ -444,6 +444,22 @@ class TidalApi {
   }
 
   /**
+   * Search for tracks using the V2 API
+   * Endpoint: GET /searchResults/{query}?countryCode=US&include=tracks
+   */
+  async searchTracks(query: string, countryCode: string = 'US', limit: number = 10): Promise<{
+    success: boolean;
+    data?: any;
+    error?: string;
+    needsReAuth?: boolean;
+  }> {
+    const encodedQuery = encodeURIComponent(query);
+    return this.apiRequest(
+      `/searchResults/${encodedQuery}?countryCode=${countryCode}&include=tracks`
+    );
+  }
+
+  /**
    * Get track details by ID
    */
   async getTrack(trackId: string, countryCode: string = 'US'): Promise<{
