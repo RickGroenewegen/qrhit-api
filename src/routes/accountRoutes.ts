@@ -900,6 +900,7 @@ export default async function accountRoutes(
           data: {
             password: hashedPassword,
             salt,
+            passwordIterations: 600000,
             verified: true,
             verifiedAt: new Date(),
             upgraded: true,
