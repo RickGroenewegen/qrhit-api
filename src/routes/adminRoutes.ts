@@ -4311,4 +4311,25 @@ export default async function adminRoutes(
       }
     }
   );
+
+  // ============ DATABASE MAINTENANCE ============
+
+  // Flush blocked hosts (unblocks IPs blocked by too many connection errors)
+  fastify.post(
+    '/admin/db/flush-hosts',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const PrismaInstance = (await import('../prisma')).default;
+        const prisma = PrismaInstance.getInstance();
+        await prisma.$executeRawUnsafe('FLUSH HOSTS');
+        reply.send({ success: true, message: 'FLUSH HOSTS executed successfully' });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to flush hosts',
+        });
+      }
+    }
+  );
 }
