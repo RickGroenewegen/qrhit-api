@@ -79,9 +79,18 @@ class Quiz {
   }
 
   /**
-   * Assign question types to tracks, cycling through the given types
-   * while avoiding consecutive duplicates and ensuring missing_word
-   * only applies to titles with 3+ words.
+   * Check if a track is eligible for the given question type.
+   */
+  private isEligible(track: TrackRow, type: QuestionType): boolean {
+    if (type === 'missing_word' && track.name.trim().split(/\s+/).length < 3) return false;
+    if ((type === 'release_order' || type === 'decade') && !track.year) return false;
+    return true;
+  }
+
+  /**
+   * Assign question types to tracks, respecting the desired distribution
+   * from the questionTypes array while ensuring each type is only assigned
+   * to eligible tracks.
    */
   public assignQuestionTypes(
     tracks: TrackRow[],
@@ -92,48 +101,95 @@ class Quiz {
         ? (questionTypes as QuestionType[])
         : ['year', 'trivia', 'artist', 'title', 'missing_word', 'release_order', 'decade'];
 
-    let typeIndex = 0;
-    let lastType: string | null = null;
+    // Count desired proportion per type from the questionTypes array
+    const typeCounts = new Map<QuestionType, number>();
+    for (const t of types) {
+      typeCounts.set(t as QuestionType, (typeCounts.get(t as QuestionType) || 0) + 1);
+    }
 
-    return tracks.map((track) => {
-      let type = types[typeIndex % types.length];
-      typeIndex++;
+    // Calculate target count per type based on proportions
+    const totalWeight = types.length;
+    const targets = new Map<QuestionType, number>();
+    let assigned = 0;
+    const uniqueTypes = Array.from(typeCounts.keys());
 
-      // missing_word requires at least 3 words in the title
-      if (type === 'missing_word' && track.name.trim().split(/\s+/).length < 3) {
-        for (let attempt = 0; attempt < types.length; attempt++) {
-          const candidate = types[(typeIndex + attempt) % types.length];
-          if (candidate !== 'missing_word' && candidate !== lastType) {
-            type = candidate;
+    for (let i = 0; i < uniqueTypes.length; i++) {
+      const type = uniqueTypes[i];
+      if (i === uniqueTypes.length - 1) {
+        // Last type gets the remainder to ensure exact total
+        targets.set(type, tracks.length - assigned);
+      } else {
+        const count = Math.round((typeCounts.get(type)! / totalWeight) * tracks.length);
+        targets.set(type, count);
+        assigned += count;
+      }
+    }
+
+    // Sort types by eligibility constraint (most constrained first)
+    const constrainedOrder = [...uniqueTypes].sort((a, b) => {
+      const aEligible = tracks.filter((t) => this.isEligible(t, a)).length;
+      const bEligible = tracks.filter((t) => this.isEligible(t, b)).length;
+      return aEligible - bEligible;
+    });
+
+    // Assign types: process most constrained types first
+    const assignments = new Map<TrackRow, QuestionType>();
+    const assignedTracks = new Set<TrackRow>();
+
+    for (const type of constrainedOrder) {
+      const target = targets.get(type)!;
+      const eligible = this.shuffle(
+        tracks.filter((t) => !assignedTracks.has(t) && this.isEligible(t, type))
+      );
+
+      const toAssign = Math.min(target, eligible.length);
+      for (let i = 0; i < toAssign; i++) {
+        assignments.set(eligible[i], type);
+        assignedTracks.add(eligible[i]);
+      }
+    }
+
+    // Any unassigned tracks (due to eligibility issues) get a fallback type
+    for (const track of tracks) {
+      if (!assignedTracks.has(track)) {
+        const fallback = uniqueTypes.find((t) => this.isEligible(track, t)) || 'trivia';
+        assignments.set(track, fallback);
+        assignedTracks.add(track);
+      }
+    }
+
+    // Build result in original track order, then shuffle to avoid
+    // predictable patterns while respecting the distribution
+    const result: TrackWithType[] = tracks.map((track) => ({
+      trackId: track.id,
+      name: track.name,
+      artist: track.artist,
+      year: track.year || 2000,
+      type: assignments.get(track)!,
+    }));
+
+    // Shuffle to break any ordering patterns, then fix consecutive duplicates
+    const shuffled = this.shuffle(result);
+    this.fixConsecutiveDuplicates(shuffled);
+
+    return shuffled;
+  }
+
+  /**
+   * Swap elements to avoid consecutive duplicate question types.
+   */
+  private fixConsecutiveDuplicates(items: TrackWithType[]): void {
+    for (let i = 1; i < items.length; i++) {
+      if (items[i].type === items[i - 1].type) {
+        // Find a later item to swap with
+        for (let j = i + 1; j < items.length; j++) {
+          if (items[j].type !== items[i].type && items[j].type !== items[i - 1].type) {
+            [items[i], items[j]] = [items[j], items[i]];
             break;
           }
         }
-        if (type === 'missing_word') type = 'trivia';
       }
-
-      // release_order and decade require a valid year
-      if ((type === 'release_order' || type === 'decade') && !track.year) {
-        type = types.find((t) => t !== 'release_order' && t !== 'decade' && t !== lastType) || 'trivia';
-      }
-
-      // Avoid consecutive duplicates
-      if (type === lastType && types.length > 1) {
-        type = types[typeIndex % types.length];
-        typeIndex++;
-        if (type === 'missing_word' && track.name.trim().split(/\s+/).length < 3) {
-          type = types.find((t) => t !== 'missing_word' && t !== lastType) || 'trivia';
-        }
-      }
-
-      lastType = type;
-      return {
-        trackId: track.id,
-        name: track.name,
-        artist: track.artist,
-        year: track.year || 2000,
-        type,
-      };
-    });
+    }
   }
 
   /**
