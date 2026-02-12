@@ -16,6 +16,7 @@ import { CronJob } from 'cron';
 import { SingleItemCalculation } from '../interfaces/SingleItemCalculation';
 import Discount from '../discount';
 import Shipping from '../shipping';
+import { QRGAMES_UPGRADE_PRICE } from '../game';
 
 interface PriceResult {
   totalPrice: number;
@@ -989,15 +990,15 @@ class PrintEnBind {
       // Subtract volume discount from total price
       totalPrice -= volumeDiscount;
 
-      // Bingo fee: €5 for card items with bingo enabled
-      const BINGO_FEE = 5.00;
-      let bingoFee = 0;
+      // Games fee for card items with games enabled
+      const GAMES_FEE = QRGAMES_UPGRADE_PRICE;
+      let gamesFee = 0;
       for (const item of orderItems) {
         if (item.productType === 'cards' && item.gamesEnabled === true) {
-          bingoFee += BINGO_FEE;
+          gamesFee += GAMES_FEE;
         }
       }
-      totalPrice += bingoFee;
+      totalPrice += gamesFee;
 
       const result = {
         success: true,
@@ -1011,7 +1012,8 @@ class PrintEnBind {
           price: totalProductPriceWithoutVAT,
           payment: shipping, // + handling,
           volumeDiscount, // Add volume discount to result
-          bingoFee, // Add bingo fee to result
+          gamesFee, // Add games fee to result
+          qrgamesUnitPrice: QRGAMES_UPGRADE_PRICE, // Per-playlist QRGames price
         },
       };
 

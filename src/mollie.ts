@@ -18,6 +18,7 @@ import cluster from 'cluster';
 import { promises as fs } from 'fs';
 import Cache from './cache';
 import Promotional from './promotional';
+import { QRGAMES_UPGRADE_PRICE } from './game';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
 import AppTheme from './apptheme';
 import Bingo from './bingo';
@@ -1036,7 +1037,7 @@ class Mollie {
             backOpacity: item.backOpacity !== undefined ? item.backOpacity : 50,
             // Bingo enabled flag and price
             gamesEnabled: item.productType === 'cards' ? (item.gamesEnabled === true) : false,
-            gamesPrice: (item.productType === 'cards' && item.gamesEnabled === true) ? 5.00 : 0,
+            gamesPrice: (item.productType === 'cards' && item.gamesEnabled === true) ? QRGAMES_UPGRADE_PRICE : 0,
           };
         })
       );

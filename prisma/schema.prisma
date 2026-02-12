@@ -148,7 +148,7 @@ model Payment {
   profit                   Float                @default(0)
   discount                 Float                @default(0)
   volumeDiscount           Float                @default(0)
-  bingoFee                 Float                @default(0)
+  gamesFee                 Float                @default(0) @map("bingoFee")
   locale                   String               @default("en")
   qrSubDir                 String?
   finalized                Boolean              @default(false)

@@ -360,7 +360,7 @@ class NativeWebSocketServer {
   // --- Quiz WebSocket Handlers ---
 
   private async handleQuizJoinPlayer(connectionId: string, ws: WebSocket, data: any) {
-    const { roomId, playerName, avatar } = data;
+    const { roomId, playerName, avatar, deviceId } = data;
 
     if (!roomId || !playerName) {
       this.sendError(ws, 'roomId and playerName required');
@@ -402,9 +402,9 @@ class NativeWebSocketServer {
     }
     this.roomConnections.get(roomId)!.add(connectionId);
 
-    // Remove any existing entry with the same name (player left and rejoined)
+    // Remove any existing entry with the same name or device (player left and rejoined, or same device different name)
     for (const [oldId, p] of Object.entries(room.pluginData.players) as [string, any][]) {
-      if (p.name === playerName && oldId !== connectionId) {
+      if ((p.name === playerName || (deviceId && p.deviceId === deviceId)) && oldId !== connectionId) {
         delete room.pluginData.players[oldId];
         delete room.pluginData.answers[oldId];
         // Clean up old connection tracking
@@ -424,6 +424,7 @@ class NativeWebSocketServer {
       score: 0,
       connected: true,
       avatar: avatar || '',
+      deviceId: deviceId || '',
     };
     room.pluginData.answers[connectionId] = [];
     room.lastActivity = Date.now();
@@ -455,7 +456,7 @@ class NativeWebSocketServer {
   }
 
   private async handleQuizRejoinPlayer(connectionId: string, ws: WebSocket, data: any) {
-    const { roomId, playerName } = data;
+    const { roomId, playerName, deviceId } = data;
 
     if (!roomId || !playerName) {
       this.sendError(ws, 'roomId and playerName required');
@@ -498,6 +499,7 @@ class NativeWebSocketServer {
 
     // Store under new connectionId
     playerData.connected = true;
+    if (deviceId) playerData.deviceId = deviceId;
     room.pluginData.players[connectionId] = playerData;
     room.pluginData.answers[connectionId] = playerAnswers;
 
@@ -856,14 +858,19 @@ class NativeWebSocketServer {
     const totalPlayers = Object.keys(room.pluginData.players).filter(
       (id) => room.pluginData.players[id].connected
     ).length;
-    const answeredCount = Object.keys(room.pluginData.answers).filter(
+    const answeredIds = Object.keys(room.pluginData.answers).filter(
       (id) => (room.pluginData.answers[id]?.length || 0) > questionIndex
-    ).length;
+    );
+    const answeredCount = answeredIds.length;
+    const answeredPlayerNames = answeredIds
+      .map((id) => room.pluginData.players[id]?.name)
+      .filter(Boolean);
 
     // Broadcast answer count to all
     this.broadcastToRoom(roomId, 'quizAnswerCount', {
       answeredCount,
       totalPlayers,
+      answeredPlayerNames,
     });
 
     // All players answered — notify host to auto-reveal
