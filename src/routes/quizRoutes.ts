@@ -111,18 +111,35 @@ export default async function quizRoutes(
    */
   fastify.post('/api/quiz/avatar', async (request: any, reply: any) => {
     try {
-      const { image } = request.body || {};
-      if (!image || typeof image !== 'string') {
-        return reply.status(400).send({ success: false, error: 'image (base64 data URI) is required' });
-      }
+      let imageBuffer: Buffer;
 
-      // Validate base64 data URI format
-      const match = image.match(/^data:image\/(png|jpeg|jpg|webp);base64,(.+)$/);
-      if (!match) {
-        return reply.status(400).send({ success: false, error: 'Invalid image format. Expected base64 data URI.' });
+      const contentType = request.headers['content-type'] || '';
+      if (contentType.includes('multipart/form-data')) {
+        // Handle FormData upload
+        const parts = request.parts();
+        let fileBuffer: Buffer | null = null;
+        for await (const part of parts) {
+          if (part.type === 'file' && part.fieldname === 'avatar') {
+            fileBuffer = await part.toBuffer();
+            break;
+          }
+        }
+        if (!fileBuffer || fileBuffer.length === 0) {
+          return reply.status(400).send({ success: false, error: 'avatar file is required' });
+        }
+        imageBuffer = fileBuffer;
+      } else {
+        // Handle base64 JSON upload (backward compat)
+        const { image } = request.body || {};
+        if (!image || typeof image !== 'string') {
+          return reply.status(400).send({ success: false, error: 'image (base64 data URI) is required' });
+        }
+        const match = image.match(/^data:image\/(png|jpeg|jpg|webp|heic|heif);base64,(.+)$/i);
+        if (!match) {
+          return reply.status(400).send({ success: false, error: 'Invalid image format. Expected base64 data URI.' });
+        }
+        imageBuffer = Buffer.from(match[2], 'base64');
       }
-
-      const imageBuffer = Buffer.from(match[2], 'base64');
 
       // Limit size (5MB raw)
       if (imageBuffer.length > 5 * 1024 * 1024) {

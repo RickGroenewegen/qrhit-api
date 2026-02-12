@@ -43,11 +43,11 @@ export default async function accountRoutes(
     const clientIp = request.clientIp || request.ip || '0.0.0.0';
 
     // Check rate limit
-    const rateLimitCheck = await rateLimiter.checkRateLimit(clientIp, loginEmail);
+    const rateLimitCheck = await rateLimiter.checkRateLimit(clientIp, loginEmail, 'login');
     if (!rateLimitCheck.allowed) {
       reply
         .status(429)
-        .header('Retry-After', rateLimitCheck.retryAfter?.toString() || '1800')
+        .header('Retry-After', rateLimitCheck.retryAfter?.toString() || '600')
         .send({
           error: 'Too many login attempts. Please try again later.',
           retryAfter: rateLimitCheck.retryAfter,
@@ -60,7 +60,7 @@ export default async function accountRoutes(
 
     if (authResult) {
       // Clear rate limit counters on successful login
-      await rateLimiter.recordSuccessfulLogin(clientIp, loginEmail);
+      await rateLimiter.recordSuccessfulLogin(clientIp, loginEmail, 'login');
 
       // Set HttpOnly cookie
       setAuthCookie(reply, authResult.token);
@@ -74,7 +74,7 @@ export default async function accountRoutes(
       return;
     } else {
       // Record failed attempt
-      await rateLimiter.recordFailedAttempt(clientIp, loginEmail);
+      await rateLimiter.recordFailedAttempt(clientIp, loginEmail, 'login');
       reply.status(401).send({ error: 'Invalid credentials' });
     }
   });
@@ -132,12 +132,13 @@ export default async function accountRoutes(
       // Check rate limit (use email or 'reset' as identifier)
       const rateLimitCheck = await rateLimiter.checkRateLimit(
         clientIp,
-        email || 'password-reset'
+        email || 'password-reset',
+        'password-reset'
       );
       if (!rateLimitCheck.allowed) {
         reply
           .status(429)
-          .header('Retry-After', rateLimitCheck.retryAfter?.toString() || '1800')
+          .header('Retry-After', rateLimitCheck.retryAfter?.toString() || '900')
           .send({
             success: false,
             error: 'tooManyAttempts',
@@ -661,12 +662,13 @@ export default async function accountRoutes(
       // Check rate limit
       const rateLimitCheck = await rateLimiter.checkRateLimit(
         clientIp,
-        normalizedEmail
+        normalizedEmail,
+        'password-reset'
       );
       if (!rateLimitCheck.allowed) {
         reply
           .status(429)
-          .header('Retry-After', rateLimitCheck.retryAfter?.toString() || '1800')
+          .header('Retry-After', rateLimitCheck.retryAfter?.toString() || '900')
           .send({
             success: false,
             error: 'tooManyAttempts',
@@ -985,12 +987,13 @@ export default async function accountRoutes(
       // Check rate limit
       const rateLimitCheck = await rateLimiter.checkRateLimit(
         clientIp,
-        normalizedEmail
+        normalizedEmail,
+        'login'
       );
       if (!rateLimitCheck.allowed) {
         reply
           .status(429)
-          .header('Retry-After', rateLimitCheck.retryAfter?.toString() || '1800')
+          .header('Retry-After', rateLimitCheck.retryAfter?.toString() || '600')
           .send({
             success: false,
             error: 'tooManyAttempts',
@@ -1012,7 +1015,7 @@ export default async function accountRoutes(
         });
 
         if (!user || !user.password || !user.salt) {
-          await rateLimiter.recordFailedAttempt(clientIp, normalizedEmail);
+          await rateLimiter.recordFailedAttempt(clientIp, normalizedEmail, 'login');
           reply.status(401).send({
             success: false,
             error: 'invalidCredentials',
@@ -1038,7 +1041,7 @@ export default async function accountRoutes(
         );
 
         if (!isValid) {
-          await rateLimiter.recordFailedAttempt(clientIp, normalizedEmail);
+          await rateLimiter.recordFailedAttempt(clientIp, normalizedEmail, 'login');
           reply.status(401).send({
             success: false,
             error: 'invalidCredentials',
@@ -1065,7 +1068,7 @@ export default async function accountRoutes(
         }
 
         // Clear rate limit counters on successful login
-        await rateLimiter.recordSuccessfulLogin(clientIp, normalizedEmail);
+        await rateLimiter.recordSuccessfulLogin(clientIp, normalizedEmail, 'login');
 
         const userGroups = user.UserGroupUser.map((ugu) => ugu.UserGroup.name);
 

@@ -1,18 +1,42 @@
 import Cache from './cache';
 
+export type RateLimitFlow = 'login' | 'pincode' | 'password-reset';
+
+interface FlowConfig {
+  maxAttemptsPerIpEmail: number;
+  maxAttemptsPerIp: number;
+  windowSeconds: number;
+  lockoutSeconds: number;
+}
+
+const FLOW_CONFIGS: Record<RateLimitFlow, FlowConfig> = {
+  login: {
+    maxAttemptsPerIpEmail: 10,
+    maxAttemptsPerIp: 50,
+    windowSeconds: 900, // 15 minute window
+    lockoutSeconds: 600, // 10 minute lockout
+  },
+  pincode: {
+    maxAttemptsPerIpEmail: 10,
+    maxAttemptsPerIp: 30,
+    windowSeconds: 900,
+    lockoutSeconds: 600,
+  },
+  'password-reset': {
+    maxAttemptsPerIpEmail: 5,
+    maxAttemptsPerIp: 15,
+    windowSeconds: 900,
+    lockoutSeconds: 900,
+  },
+};
+
 /**
- * Rate limiter for login attempts using Redis-based cache.
- * Tracks failed login attempts per IP+email combination and per IP.
+ * Rate limiter for account actions using Redis-based cache.
+ * Supports separate limits for login, pincode, and password-reset flows.
  */
 class LoginRateLimiter {
   private static instance: LoginRateLimiter;
   private cache = Cache.getInstance();
-
-  // Rate limit configuration
-  private readonly MAX_ATTEMPTS_PER_IP_EMAIL = 5; // Max attempts per IP+email combo
-  private readonly MAX_ATTEMPTS_PER_IP = 20; // Max total attempts per IP
-  private readonly WINDOW_SECONDS = 900; // 15 minute window
-  private readonly LOCKOUT_SECONDS = 1800; // 30 minute lockout
 
   private constructor() {}
 
@@ -23,39 +47,32 @@ class LoginRateLimiter {
     return LoginRateLimiter.instance;
   }
 
-  /**
-   * Generate cache key for IP+email combination
-   */
-  private getIpEmailKey(ip: string, email: string): string {
+  private getIpEmailKey(flow: RateLimitFlow, ip: string, email: string): string {
     const normalizedEmail = email.toLowerCase().trim();
-    return `ratelimit:login:ip_email:${ip}:${normalizedEmail}`;
+    return `ratelimit:${flow}:ip_email:${ip}:${normalizedEmail}`;
   }
 
-  /**
-   * Generate cache key for IP-only tracking
-   */
-  private getIpKey(ip: string): string {
-    return `ratelimit:login:ip:${ip}`;
+  private getIpKey(flow: RateLimitFlow, ip: string): string {
+    return `ratelimit:${flow}:ip:${ip}`;
   }
 
-  /**
-   * Generate cache key for lockout status
-   */
-  private getLockoutKey(ip: string, email: string): string {
+  private getLockoutKey(flow: RateLimitFlow, ip: string, email: string): string {
     const normalizedEmail = email.toLowerCase().trim();
-    return `ratelimit:lockout:${ip}:${normalizedEmail}`;
+    return `ratelimit:${flow}:lockout:${ip}:${normalizedEmail}`;
   }
 
   /**
-   * Check if login attempt is allowed
-   * @returns Object with allowed status and retryAfter in seconds if rate limited
+   * Check if an attempt is allowed for the given flow.
    */
   async checkRateLimit(
     ip: string,
-    email: string
+    email: string,
+    flow: RateLimitFlow = 'login'
   ): Promise<{ allowed: boolean; retryAfter?: number }> {
+    const config = FLOW_CONFIGS[flow];
+
     // Check if currently locked out
-    const lockoutKey = this.getLockoutKey(ip, email);
+    const lockoutKey = this.getLockoutKey(flow, ip, email);
     const lockoutExpiry = await this.cache.get(lockoutKey, false);
     if (lockoutExpiry) {
       const expiryTime = parseInt(lockoutExpiry, 10);
@@ -69,22 +86,22 @@ class LoginRateLimiter {
     }
 
     // Check IP+email attempt count
-    const ipEmailKey = this.getIpEmailKey(ip, email);
+    const ipEmailKey = this.getIpEmailKey(flow, ip, email);
     const ipEmailCount = await this.cache.get(ipEmailKey, false);
-    if (ipEmailCount && parseInt(ipEmailCount, 10) >= this.MAX_ATTEMPTS_PER_IP_EMAIL) {
+    if (ipEmailCount && parseInt(ipEmailCount, 10) >= config.maxAttemptsPerIpEmail) {
       return {
         allowed: false,
-        retryAfter: this.LOCKOUT_SECONDS,
+        retryAfter: config.lockoutSeconds,
       };
     }
 
     // Check total IP attempt count
-    const ipKey = this.getIpKey(ip);
+    const ipKey = this.getIpKey(flow, ip);
     const ipCount = await this.cache.get(ipKey, false);
-    if (ipCount && parseInt(ipCount, 10) >= this.MAX_ATTEMPTS_PER_IP) {
+    if (ipCount && parseInt(ipCount, 10) >= config.maxAttemptsPerIp) {
       return {
         allowed: false,
-        retryAfter: this.LOCKOUT_SECONDS,
+        retryAfter: config.lockoutSeconds,
       };
     }
 
@@ -92,11 +109,16 @@ class LoginRateLimiter {
   }
 
   /**
-   * Record a failed login attempt
+   * Record a failed attempt for the given flow.
    */
-  async recordFailedAttempt(ip: string, email: string): Promise<void> {
-    const ipEmailKey = this.getIpEmailKey(ip, email);
-    const ipKey = this.getIpKey(ip);
+  async recordFailedAttempt(
+    ip: string,
+    email: string,
+    flow: RateLimitFlow = 'login'
+  ): Promise<void> {
+    const config = FLOW_CONFIGS[flow];
+    const ipEmailKey = this.getIpEmailKey(flow, ip, email);
+    const ipKey = this.getIpKey(flow, ip);
 
     // Increment IP+email counter
     const currentIpEmailCount = await this.cache.get(ipEmailKey, false);
@@ -106,42 +128,44 @@ class LoginRateLimiter {
     await this.cache.set(
       ipEmailKey,
       newIpEmailCount.toString(),
-      this.WINDOW_SECONDS
+      config.windowSeconds
     );
 
     // Increment IP counter
     const currentIpCount = await this.cache.get(ipKey, false);
     const newIpCount = currentIpCount ? parseInt(currentIpCount, 10) + 1 : 1;
-    await this.cache.set(ipKey, newIpCount.toString(), this.WINDOW_SECONDS);
+    await this.cache.set(ipKey, newIpCount.toString(), config.windowSeconds);
 
     // If exceeded limits, set lockout
     if (
-      newIpEmailCount >= this.MAX_ATTEMPTS_PER_IP_EMAIL ||
-      newIpCount >= this.MAX_ATTEMPTS_PER_IP
+      newIpEmailCount >= config.maxAttemptsPerIpEmail ||
+      newIpCount >= config.maxAttemptsPerIp
     ) {
-      const lockoutKey = this.getLockoutKey(ip, email);
-      const lockoutExpiry = Date.now() + this.LOCKOUT_SECONDS * 1000;
+      const lockoutKey = this.getLockoutKey(flow, ip, email);
+      const lockoutExpiry = Date.now() + config.lockoutSeconds * 1000;
       await this.cache.set(
         lockoutKey,
         lockoutExpiry.toString(),
-        this.LOCKOUT_SECONDS
+        config.lockoutSeconds
       );
     }
   }
 
   /**
-   * Clear rate limit counters after successful login
+   * Clear rate limit counters after successful action.
    */
-  async recordSuccessfulLogin(ip: string, email: string): Promise<void> {
-    const ipEmailKey = this.getIpEmailKey(ip, email);
-    const lockoutKey = this.getLockoutKey(ip, email);
+  async recordSuccessfulLogin(
+    ip: string,
+    email: string,
+    flow: RateLimitFlow = 'login'
+  ): Promise<void> {
+    const ipEmailKey = this.getIpEmailKey(flow, ip, email);
+    const lockoutKey = this.getLockoutKey(flow, ip, email);
+    const ipKey = this.getIpKey(flow, ip);
 
-    // Clear the IP+email counter and lockout
     await this.cache.del(ipEmailKey);
     await this.cache.del(lockoutKey);
-
-    // Note: We don't clear the IP-only counter to prevent
-    // attackers from using successful logins to reset limits
+    await this.cache.del(ipKey);
   }
 }
 
