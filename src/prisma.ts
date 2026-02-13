@@ -13,7 +13,7 @@ function createPrismaAdapter(): PrismaMariaDb {
     user: url.username,
     password: url.password,
     database: url.pathname.slice(1),
-    connectionLimit: 5,
+    connectionLimit: process.env.NODE_ENV === 'development' ? 1 : 5,
   });
 }
 
@@ -26,13 +26,6 @@ class PrismaInstance {
     if (!PrismaInstance.instance) {
       const adapter = createPrismaAdapter();
       PrismaInstance.instance = new PrismaClient({ adapter });
-
-      // Graceful shutdown - close pool cleanly so MySQL doesn't count aborted connections as errors
-      const shutdown = async () => {
-        await PrismaInstance.instance.$disconnect();
-      };
-      process.on('SIGTERM', shutdown);
-      process.on('SIGINT', shutdown);
     }
     return PrismaInstance.instance;
   }
