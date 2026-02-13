@@ -6,6 +6,7 @@ import Discount from '../discount';
 import Review from '../review';
 import Translation from '../translation';
 import Utils from '../utils';
+import { getYearFontSize, getGoogleFontWeights } from '../fonts';
 import fs from 'fs/promises';
 import { color } from 'console-log-colors';
 import Formatters from '../formatters';
@@ -280,6 +281,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           eco,
           emptyPages,
           batchNumber,
+          getYearFontSize,
+          getGoogleFontWeights,
         });
       }
     }

@@ -1,0 +1,588 @@
+{
+  "info": {
+    "name": "QRSong! Reseller API",
+    "description": "API for third-party resellers to create card orders and download printer PDFs.\n\n## Authentication\nAll requests require an API key in the Authorization header:\n```\nAuthorization: Bearer rk_your_api_key_here\n```\n\n## Workflow\n1. Upload media (optional) - Upload background/logo images\n2. Create order - Submit playlist URL + design JSON\n3. Poll for status - Check until status is \"done\"\n4. Download PDF - Use the pdfUrl from the response",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{api_key}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:3004",
+      "type": "string"
+    },
+    {
+      "key": "api_key",
+      "value": "rk_abc123",
+      "type": "string"
+    },
+    {
+      "key": "order_id",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "background_media_id",
+      "value": "null",
+      "type": "string"
+    },
+    {
+      "key": "background_back_media_id",
+      "value": "null",
+      "type": "string"
+    },
+    {
+      "key": "logo_media_id",
+      "value": "null",
+      "type": "string"
+    },
+    {
+      "key": "preview_token",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Media",
+      "description": "Upload images for use in card designs",
+      "item": [
+        {
+          "name": "Upload Background Image",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.success && json.data) {",
+                  "        pm.collectionVariables.set('background_media_id', json.data.mediaId);",
+                  "        pm.test('Background uploaded successfully', () => {",
+                  "            pm.expect(json.data.type).to.eql('background');",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "",
+                  "description": "Image file (PNG, JPG, etc.). Backgrounds are resized to 1000x1000px."
+                },
+                {
+                  "key": "type",
+                  "value": "background",
+                  "type": "text",
+                  "description": "Media type: background, background_back, or logo"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/reseller/media/upload",
+              "host": ["{{base_url}}"],
+              "path": ["reseller", "media", "upload"]
+            },
+            "description": "Upload a front background image. Backgrounds are automatically resized to 1000x1000px PNG.\n\nThe returned `mediaId` can be used in the `design.background` field when creating orders."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"mediaId\": 1,\n    \"type\": \"background\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Upload Back Background Image",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.success && json.data) {",
+                  "        pm.collectionVariables.set('background_back_media_id', json.data.mediaId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "",
+                  "description": "Image file (PNG, JPG, etc.). Backgrounds are resized to 1000x1000px."
+                },
+                {
+                  "key": "type",
+                  "value": "background_back",
+                  "type": "text",
+                  "description": "Media type: background, background_back, or logo"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/reseller/media/upload",
+              "host": ["{{base_url}}"],
+              "path": ["reseller", "media", "upload"]
+            },
+            "description": "Upload a back background image. Backgrounds are automatically resized to 1000x1000px PNG.\n\nThe returned `mediaId` can be used in the `design.backgroundBack` field when creating orders."
+          }
+        },
+        {
+          "name": "Upload Logo Image",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.success && json.data) {",
+                  "        pm.collectionVariables.set('logo_media_id', json.data.mediaId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "image",
+                  "type": "file",
+                  "src": "",
+                  "description": "Image file (PNG, JPG, etc.). Logos are stored in original format."
+                },
+                {
+                  "key": "type",
+                  "value": "logo",
+                  "type": "text",
+                  "description": "Media type: background, background_back, or logo"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/reseller/media/upload",
+              "host": ["{{base_url}}"],
+              "path": ["reseller", "media", "upload"]
+            },
+            "description": "Upload a logo image. Logos are stored in their original format (not resized).\n\nThe returned `mediaId` can be used in the `design.logo` field when creating orders."
+          }
+        }
+      ]
+    },
+    {
+      "name": "Orders",
+      "description": "Create and track card orders",
+      "item": [
+        {
+          "name": "Create Order (Minimal Design)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.success && json.data) {",
+                  "        pm.collectionVariables.set('order_id', json.data.orderId);",
+                  "        pm.test('Order created successfully', () => {",
+                  "            pm.expect(json.data.status).to.eql('processing');",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playlistUrl\": \"https://open.spotify.com/playlist/5WxLJfgeVeifVtyX0cIFZY?si=a8b67c9564e44c90\",\n  \"design\": {}\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/reseller/orders",
+              "host": ["{{base_url}}"],
+              "path": ["reseller", "orders"]
+            },
+            "description": "Create an order with default design (no custom images, default colors).\n\nThe orderId from the response is automatically saved for use in the \"Get Order Status\" request."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"orderId\": \"100000042\",\n    \"status\": \"processing\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Order (Full Design)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.success && json.data) {",
+                  "        pm.collectionVariables.set('order_id', json.data.orderId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playlistUrl\": \"https://open.spotify.com/playlist/5WxLJfgeVeifVtyX0cIFZY?si=a8b67c9564e44c90\",\n  \"design\": {\n    \"background\": {{background_media_id}},\n    \"backgroundBack\": {{background_back_media_id}},\n    \"logo\": {{logo_media_id}},\n\n    \"backgroundFrontType\": \"image\",\n    \"backgroundFrontColor\": \"#ffffff\",\n    \"useFrontGradient\": false,\n    \"gradientFrontColor\": \"#ffffff\",\n    \"gradientFrontDegrees\": 180,\n    \"gradientFrontPosition\": 50,\n    \"frontOpacity\": 100,\n\n    \"backgroundBackType\": \"image\",\n    \"backgroundBackColor\": \"#ffffff\",\n    \"fontColor\": \"#000000\",\n    \"useGradient\": false,\n    \"gradientBackgroundColor\": \"#ffffff\",\n    \"gradientDegrees\": 180,\n    \"gradientPosition\": 50,\n    \"backOpacity\": 50,\n\n    \"qrColor\": \"#000000\",\n    \"qrBackgroundColor\": \"#ffffff\",\n    \"qrBackgroundType\": \"square\",\n\n    \"emoji\": \"\\ud83c\\udfb5\",\n    \"selectedFont\": \"Pacifico\",\n    \"selectedFontSize\": \"14px\",\n\n    \"doubleSided\": false,\n    \"eco\": false\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/reseller/orders",
+              "host": ["{{base_url}}"],
+              "path": ["reseller", "orders"]
+            },
+            "description": "Create an order with a fully customized design.\n\nThis example uses media IDs from previous upload requests (run the upload requests first).\n\n## Design Fields\n\n### Images (media ID or filename)\n- **background** - Front card background image\n- **backgroundBack** - Back card background image\n- **logo** - Logo overlay on front\n\n### Front Side\n- **backgroundFrontType** - \"image\" or \"solid\"\n- **backgroundFrontColor** - Hex color for solid background\n- **useFrontGradient** - Enable front gradient\n- **gradientFrontColor** - Second gradient color\n- **gradientFrontDegrees** - Gradient angle (0-360)\n- **gradientFrontPosition** - Gradient stop (0-100)\n- **frontOpacity** - Image opacity (0-100)\n\n### Back Side\n- **backgroundBackType** - \"image\" or \"solid\"\n- **backgroundBackColor** - Hex color for solid background\n- **fontColor** - Text color for track info\n- **useGradient** - Enable back gradient\n- **gradientBackgroundColor** - Second gradient color\n- **gradientDegrees** - Gradient angle (0-360)\n- **gradientPosition** - Gradient stop (0-100)\n- **backOpacity** - Image opacity (0-100)\n\n### QR Code\n- **qrColor** - QR dot color\n- **qrBackgroundColor** - QR area background\n- **qrBackgroundType** - \"none\", \"circle\", or \"square\"\n\n### Typography\n- **emoji** - Front card emoji\n- **selectedFont** - CSS font family\n- **selectedFontSize** - CSS font size\n\n### Options\n- **doubleSided** - Double-sided cards\n- **eco** - Eco mode (reduced ink)"
+          }
+        },
+        {
+          "name": "Create Order (Solid Colors, No Images)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.success && json.data) {",
+                  "        pm.collectionVariables.set('order_id', json.data.orderId);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playlistUrl\": \"https://open.spotify.com/playlist/5WxLJfgeVeifVtyX0cIFZY?si=a8b67c9564e44c90\",\n  \"design\": {\n    \"backgroundFrontType\": \"solid\",\n    \"backgroundFrontColor\": \"#1DB954\",\n    \"backgroundBackType\": \"solid\",\n    \"backgroundBackColor\": \"#191414\",\n    \"fontColor\": \"#ffffff\",\n    \"qrColor\": \"#1DB954\",\n    \"qrBackgroundColor\": \"#191414\",\n    \"qrBackgroundType\": \"square\",\n    \"emoji\": \"\\ud83c\\udfb6\",\n    \"selectedFont\": \"Oswald\",\n    \"selectedFontSize\": \"14px\"\n  }\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/reseller/orders",
+              "host": ["{{base_url}}"],
+              "path": ["reseller", "orders"]
+            },
+            "description": "Create an order using only solid colors (no uploaded images needed).\n\nThis is the simplest way to create a styled order - just specify colors."
+          }
+        },
+        {
+          "name": "Get Order Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "const json = pm.response.json();",
+                  "if (json.success && json.data) {",
+                  "    pm.test('Status is valid', () => {",
+                  "        pm.expect(['processing', 'finalizing', 'done', 'failed']).to.include(json.data.status);",
+                  "    });",
+                  "    if (json.data.status === 'done') {",
+                  "        pm.test('PDF URL is present', () => {",
+                  "            pm.expect(json.data.pdfUrl).to.be.a('string');",
+                  "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/reseller/orders/{{order_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["reseller", "orders", "{{order_id}}"]
+            },
+            "description": "Check the status of an order.\n\n**Status values:**\n- `processing` - PDF is being generated\n- `finalizing` - Almost done\n- `done` - PDF ready, includes `pdfUrl`\n- `failed` - Order failed\n\nPoll every 5-10 seconds until status is `done`."
+          },
+          "response": [
+            {
+              "name": "Processing",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"orderId\": \"100000042\",\n    \"status\": \"processing\",\n    \"createdAt\": \"2026-02-12T10:30:00.000Z\"\n  }\n}"
+            },
+            {
+              "name": "Done",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"orderId\": \"100000042\",\n    \"status\": \"done\",\n    \"createdAt\": \"2026-02-12T10:30:00.000Z\",\n    \"pdfUrl\": \"https://api.qrsong.io/public/pdf/reseller_abc123_printer_cards_1.pdf\"\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Preview",
+      "description": "Preview card designs before placing an order",
+      "item": [
+        {
+          "name": "Create Preview (Solid Colors)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.success && json.data) {",
+                  "        pm.collectionVariables.set('preview_token', json.data.token);",
+                  "        pm.test('Preview created successfully', () => {",
+                  "            pm.expect(json.data.previewUrlFront).to.be.a('string');",
+                                    "        });",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"design\": {\n    \"backgroundFrontType\": \"solid\",\n    \"backgroundFrontColor\": \"#1DB954\",\n    \"backgroundBackType\": \"solid\",\n    \"backgroundBackColor\": \"#191414\",\n    \"fontColor\": \"#ffffff\",\n    \"qrColor\": \"#1DB954\",\n    \"qrBackgroundColor\": \"#191414\",\n    \"qrBackgroundType\": \"square\",\n    \"emoji\": \"\\ud83c\\udfb5\",\n    \"selectedFont\": \"Oswald\",\n    \"selectedFontSize\": \"16px\"\n  },\n  \"sampleTrackName\": \"Bohemian Rhapsody\",\n  \"sampleTrackArtist\": \"Queen\",\n  \"sampleTrackYear\": \"1975\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/reseller/preview",
+              "host": ["{{base_url}}"],
+              "path": ["reseller", "preview"]
+            },
+            "description": "Create a preview of a card design using solid colors.\n\nReturns `previewUrlFront` and `previewUrlBack` URLs that can be opened in a browser (or embedded in iframes) to see the front and back of the card.\n\nThe preview expires after 24 hours."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"previewUrlFront\": \"https://qrsong.io/en/card-preview-front/abc123def456\",\n    \"previewUrlBack\": \"https://qrsong.io/en/card-preview-back/abc123def456\",\n    \"token\": \"abc123def456\"\n  }\n}"
+            }
+          ]
+        },
+        {
+          "name": "Create Preview (With Media)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const json = pm.response.json();",
+                  "    if (json.success && json.data) {",
+                  "        pm.collectionVariables.set('preview_token', json.data.token);",
+                  "    }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"design\": {\n    \"background\": {{background_media_id}},\n    \"backgroundBack\": {{background_back_media_id}},\n    \"logo\": {{logo_media_id}},\n    \"backgroundFrontType\": \"image\",\n    \"frontOpacity\": 100,\n    \"backgroundBackType\": \"image\",\n    \"backOpacity\": 50,\n    \"fontColor\": \"#000000\",\n    \"qrColor\": \"#000000\",\n    \"qrBackgroundColor\": \"#ffffff\",\n    \"qrBackgroundType\": \"square\",\n    \"emoji\": \"\\ud83c\\udfb5\",\n    \"selectedFont\": \"\",\n    \"selectedFontSize\": \"16px\",\n    \"doubleSided\": true\n  },\n  \"sampleTrackName\": \"Hotel California\",\n  \"sampleTrackArtist\": \"Eagles\",\n  \"sampleTrackYear\": \"1977\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/reseller/preview",
+              "host": ["{{base_url}}"],
+              "path": ["reseller", "preview"]
+            },
+            "description": "Create a preview using uploaded media images.\n\nRun the media upload requests first to get valid media IDs."
+          }
+        },
+        {
+          "name": "Get Preview Data",
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/reseller/preview/{{preview_token}}",
+              "host": ["{{base_url}}"],
+              "path": ["reseller", "preview", "{{preview_token}}"]
+            },
+            "description": "Retrieve the design data for a preview token.\n\nThis endpoint is **public** (no authentication required) - it's used by the frontend to render the preview page.\n\nReturns 404 if the token has expired or is invalid."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"backgroundFrontType\": \"solid\",\n    \"backgroundFrontColor\": \"#1DB954\",\n    \"backgroundBackType\": \"solid\",\n    \"backgroundBackColor\": \"#191414\",\n    \"fontColor\": \"#ffffff\",\n    \"qrColor\": \"#1DB954\",\n    \"qrBackgroundColor\": \"#191414\",\n    \"qrBackgroundType\": \"square\",\n    \"emoji\": \"\\ud83c\\udfb5\",\n    \"selectedFont\": \"Oswald\",\n    \"selectedFontSize\": \"16px\",\n    \"background\": \"\",\n    \"backgroundBack\": \"\",\n    \"logo\": \"\",\n    \"sampleTrackName\": \"Bohemian Rhapsody\",\n    \"sampleTrackArtist\": \"Queen\",\n    \"sampleTrackYear\": \"1975\"\n  }\n}"
+            },
+            {
+              "name": "Expired/Not Found",
+              "status": "Not Found",
+              "code": 404,
+              "body": "{\n  \"success\": false,\n  \"error\": \"Preview not found or expired\"\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Backgrounds",
+      "description": "Retrieve available preset background images for card designs",
+      "item": [
+        {
+          "name": "Get Available Backgrounds",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/reseller/backgrounds",
+              "host": ["{{base_url}}"],
+              "path": ["reseller", "backgrounds"]
+            },
+            "description": "Returns all available preset background images that can be used in card designs.\n\nEach background includes:\n- **id** - Background ID (1-20)\n- **filename** - Background filename\n- **mediaId** - Media ID to pass as `design.background` or `design.backgroundBack` when creating orders\n- **thumbnail** - Full URL to the thumbnail image (150x150px)\n- **full** - Full URL to the background image (1000x1000px)\n\nResponse is cached for 24 hours."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"mediaId\": 42,\n      \"thumbnail\": \"https://www.qrsong.io/assets/images/card_backgrounds/thumbnails/background1_thumb.png\",\n      \"full\": \"https://www.qrsong.io/assets/images/card_backgrounds/background1.png\"\n    },\n    {\n      \"mediaId\": 43,\n      \"thumbnail\": \"https://www.qrsong.io/assets/images/card_backgrounds/thumbnails/background2_thumb.png\",\n      \"full\": \"https://www.qrsong.io/assets/images/card_backgrounds/background2.png\"\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "Fonts",
+      "description": "Retrieve available font options for card designs",
+      "item": [
+        {
+          "name": "Get Available Fonts",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{base_url}}/reseller/fonts",
+              "host": ["{{base_url}}"],
+              "path": ["reseller", "fonts"]
+            },
+            "description": "Returns all available fonts that can be used in the `design.selectedFont` field when creating orders.\n\nEach font includes:\n- **family** - CSS font-family string (use this in `design.selectedFont`)\n- **displayName** - Human-readable name\n- **defaultSize** - Recommended size (use this in `design.selectedFontSize`)\n- **yearSize** - Size used for the year display on cards\n- **googleFontName** - Google Fonts name (empty for system fonts)\n- **googleFontWeights** - Font weights available\n\nResponse is cached for 24 hours."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": [\n    {\n      \"id\": \"\",\n      \"displayName\": \"Arial (Classic)\"\n    },\n    {\n      \"id\": \"Oswald\",\n      \"displayName\": \"Oswald (Modern)\"\n    }\n  ]\n}"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

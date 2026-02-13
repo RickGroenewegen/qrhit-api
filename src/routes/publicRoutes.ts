@@ -21,6 +21,8 @@ import { ChatService } from '../chat';
 import PushoverClient from '../pushover';
 import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
+import { FONTS } from '../fonts';
+import { BACKGROUNDS } from '../backgrounds';
 import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
@@ -807,6 +809,18 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         error: 'Failed to log broken link',
       });
     }
+  });
+
+  // -- GET /fonts (public, no auth) --
+  fastify.get('/fonts', async (_request, reply) => {
+    reply.header('Cache-Control', 'public, max-age=86400');
+    return { success: true, data: FONTS };
+  });
+
+  // -- GET /backgrounds (public, no auth) --
+  fastify.get('/backgrounds', async (_request, reply) => {
+    reply.header('Cache-Control', 'public, max-age=86400');
+    return { success: true, data: BACKGROUNDS };
   });
 
 }

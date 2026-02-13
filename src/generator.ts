@@ -87,6 +87,11 @@ class Generator {
             sentToPrinter: false,
             printerHold: false,
             vibe: false,
+            PaymentHasPlaylist: {
+              none: {
+                printerType: 'reseller',
+              },
+            },
             OR: [
               {
                 canBeSentToPrinter: true,

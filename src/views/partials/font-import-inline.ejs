@@ -1,42 +1,37 @@
-<% 
+<%
 // Font embedding for reliable PDF conversion
 let fontStyles = '';
 if (php.selectedFont && php.selectedFont !== 'Arial, sans-serif') {
     // Extract the font name before the comma
     let fontName = php.selectedFont.split(',')[0].trim().replace(/["']/g, '');
-    
-    // Create inline styles with Google Fonts and fallbacks
+    let googleFontName = fontName.replace(/ /g, '+');
+    let weights = typeof getGoogleFontWeights === 'function' ? getGoogleFontWeights(php.selectedFont) : '400;700';
+
     fontStyles = `
     <style>
-        /* Import Google Font with multiple methods for better compatibility */
-        @import url('https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@400;700&display=swap');
-        
-        /* Fallback font stack */
+        @import url('https://fonts.googleapis.com/css2?family=${googleFontName}:wght@${weights}&display=swap');
+
         body {
             font-family: '${fontName}', ${php.selectedFont.split(',').slice(1).join(',')}, Arial, sans-serif !important;
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
-        
-        /* Apply to all text elements with important flag */
+
         .text, .text.artist, .text.year, .text.name {
             font-family: '${fontName}', ${php.selectedFont.split(',').slice(1).join(',')}, Arial, sans-serif !important;
         }
-        
-        /* Special handling for year text with custom font sizes */
+
         .text.year {
             font-family: '${fontName}', ${php.selectedFont.split(',').slice(1).join(',')}, Arial, sans-serif !important;
             font-weight: bold !important;
         }
     </style>
-    
-    <!-- Preload font for faster loading -->
+
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=${fontName.replace(/ /g, '+')}:wght@400;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=${googleFontName}:wght@${weights}&display=swap" rel="stylesheet">
     `;
 } else {
-    // Default to Arial
     fontStyles = `
     <style>
         body, .text, .text.artist, .text.year, .text.name {

@@ -226,6 +226,7 @@ model User {
   passwordResetExpiry       DateTime?
   gamesActivationCode       String?          @unique
   gamesActivationCodeExpiry DateTime?
+  apiKey                    String?          @unique
   upgraded                  Boolean          @default(false)
   createdAt                 DateTime         @default(now())
   updatedAt                 DateTime         @updatedAt
@@ -235,6 +236,7 @@ model User {
   PromotionalDiscountCode   DiscountCode[]   @relation("PromotionalDiscountCode")
   CompanyEvent              CompanyEvent[]
   GameRoom                  GameRoom[]
+  ResellerMedia             ResellerMedia[]
 
   @@index([hash])
   @@map("users")
@@ -1157,4 +1159,16 @@ model GameRoom {
   @@index([uuid])
   @@index([userId])
   @@map("game_rooms")
+}
+
+model ResellerMedia {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  mediaType String   @db.VarChar(20)
+  filename  String   @db.VarChar(255)
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@map("reseller_media")
 }

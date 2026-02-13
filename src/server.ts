@@ -7,6 +7,7 @@ import musicRoutes from './routes/musicRoutes';
 import themeRoutes from './routes/themeRoutes';
 import paymentRoutes from './routes/paymentRoutes';
 import publicRoutes from './routes/publicRoutes';
+import resellerRoutes from './routes/resellerRoutes';
 import gameRoutes from './routes/gameRoutes';
 import bingoRoutes from './routes/bingoRoutes';
 import quizRoutes from './routes/quizRoutes';
@@ -141,6 +142,9 @@ class Server {
 
     // Register public routes
     await publicRoutes(this.fastify);
+
+    // Register reseller API routes
+    await resellerRoutes(this.fastify);
 
     // WebSocket endpoints - return 426 Upgrade Required for non-WebSocket requests
     this.fastify.get('/chat-ws', async (request, reply) => {

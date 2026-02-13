@@ -1039,6 +1039,14 @@ class NativeWebSocketServer {
         break;
       }
 
+      case 'restartTrack': {
+        if (room.pluginData.phase !== 'question') break;
+        const qi5 = room.pluginData.currentQuestionIndex;
+        const q5 = quizData.questions[qi5];
+        this.broadcastToRoom(roomId, 'quizRestartTrack', { trackDbId: q5.trackId });
+        break;
+      }
+
       case 'endQuiz': {
         room.state = 'ended';
         room.lastActivity = Date.now();
