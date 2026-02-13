@@ -231,6 +231,118 @@ class Discount {
     }
   }
 
+  /**
+   * Search discounts with pagination and filtering.
+   */
+  public async searchDiscounts(params: {
+    searchTerm?: string;
+    filter?: string;
+    balanceFilter?: string;
+    page?: number;
+    limit?: number;
+  }): Promise<{ success: boolean; discounts?: any[]; total?: number; page?: number; totalPages?: number; error?: string }> {
+    try {
+      const { searchTerm = '', filter = '', balanceFilter = '', page = 1, limit = 12 } = params;
+      const offset = (page - 1) * limit;
+
+      // Build where conditions using Prisma filtering
+      const where: any = {};
+
+      // Text search on code and description
+      if (searchTerm && searchTerm.trim().length > 0) {
+        const term = searchTerm.trim();
+        where.OR = [
+          { code: { contains: term } },
+          { description: { contains: term } },
+        ];
+      }
+
+      // Type filter
+      if (filter === 'promotional') {
+        where.promotional = true;
+      } else if (filter === 'general') {
+        where.general = true;
+      } else if (filter === 'digital') {
+        where.digital = true;
+      }
+
+      // Fetch discounts with where conditions
+      const [discounts, total] = await Promise.all([
+        this.prisma.discountCode.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+          skip: offset,
+          take: limit,
+        }),
+        this.prisma.discountCode.count({ where }),
+      ]);
+
+      // Calculate spent/remaining for each discount
+      let discountsWithBalance = await Promise.all(
+        discounts.map(async (discount) => {
+          const totalUsed = await this.prisma.discountCodedUses.aggregate({
+            where: { discountCodeId: discount.id },
+            _sum: { amount: true },
+          });
+          const totalSpent = totalUsed._sum.amount || 0;
+          const amountLeft = discount.amount - totalSpent;
+          return { ...discount, totalSpent, amountLeft };
+        })
+      );
+
+      // Balance filter (applied after calculation since it depends on aggregated data)
+      // If balanceFilter is set, we need to re-query with adjusted pagination
+      if (balanceFilter) {
+        // For balance filtering, we need to fetch all matching records, filter, then paginate
+        const allDiscounts = await this.prisma.discountCode.findMany({
+          where,
+          orderBy: { createdAt: 'desc' },
+        });
+
+        const allWithBalance = await Promise.all(
+          allDiscounts.map(async (discount) => {
+            const totalUsed = await this.prisma.discountCodedUses.aggregate({
+              where: { discountCodeId: discount.id },
+              _sum: { amount: true },
+            });
+            const totalSpent = totalUsed._sum.amount || 0;
+            const amountLeft = discount.amount - totalSpent;
+            return { ...discount, totalSpent, amountLeft };
+          })
+        );
+
+        const filtered = allWithBalance.filter((d) => {
+          const pct = d.amount === 0 ? 0 : Math.min(100, (d.totalSpent / d.amount) * 100);
+          if (balanceFilter === 'unused') return pct === 0;
+          if (balanceFilter === 'partial') return pct > 0 && pct < 100;
+          if (balanceFilter === 'empty') return pct >= 100;
+          return true;
+        });
+
+        const filteredTotal = filtered.length;
+        const paged = filtered.slice(offset, offset + limit);
+
+        return {
+          success: true,
+          discounts: paged,
+          total: filteredTotal,
+          page,
+          totalPages: Math.ceil(filteredTotal / limit),
+        };
+      }
+
+      return {
+        success: true,
+        discounts: discountsWithBalance,
+        total,
+        page,
+        totalPages: Math.ceil(total / limit),
+      };
+    } catch (error) {
+      return { success: false, error: 'Failed to search discounts' };
+    }
+  }
+
   public async createDiscountCode(
     amount: number,
     from: string,

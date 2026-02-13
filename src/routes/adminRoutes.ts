@@ -2016,6 +2016,32 @@ export default async function adminRoutes(
     }
   );
 
+  fastify.post(
+    '/admin/discount/search',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { searchTerm = '', filter = '', balanceFilter = '', page = 1, limit = 12 } = request.body;
+      const result = await discount.searchDiscounts({
+        searchTerm,
+        filter,
+        balanceFilter,
+        page: Number(page),
+        limit: Number(limit),
+      });
+      if (result.success) {
+        reply.send({
+          success: true,
+          discounts: result.discounts,
+          total: result.total,
+          page: result.page,
+          totalPages: result.totalPages,
+        });
+      } else {
+        reply.status(500).send({ success: false, error: result.error });
+      }
+    }
+  );
+
   fastify.delete(
     '/admin/discount/:id',
     getAuthHandler(['admin']),
