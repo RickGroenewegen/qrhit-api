@@ -7,6 +7,38 @@ import DeezerProvider from './DeezerProvider';
 import AppleMusicProvider from './AppleMusicProvider';
 
 /**
+ * Maps short service names (used in API requests) to database column names
+ */
+export const serviceColumnMap: Record<string, string> = {
+  spotify: 'spotifyLink',
+  youtube: 'youtubeMusicLink',
+  deezer: 'deezerLink',
+  apple: 'appleMusicLink',
+  tidal: 'tidalLink',
+  amazon: 'amazonMusicLink',
+};
+
+export const serviceCheckedColumnMap: Record<string, string> = {
+  spotify: 'spotifyCheckedBySearch',
+  youtube: 'youtubeCheckedBySearch',
+  deezer: 'deezerCheckedBySearch',
+  apple: 'appleCheckedBySearch',
+  tidal: 'tidalCheckedBySearch',
+  amazon: 'amazonCheckedBySearch',
+};
+
+/**
+ * Maps short service names (used in API requests) to ServiceType enum values
+ */
+export const serviceTypeMap: Record<string, string> = {
+  spotify: 'spotify',
+  youtube: 'youtube_music',
+  deezer: 'deezer',
+  apple: 'apple_music',
+  tidal: 'tidal',
+};
+
+/**
  * Factory for creating music provider instances based on service type.
  * Uses singleton pattern to ensure only one instance of each provider exists.
  */

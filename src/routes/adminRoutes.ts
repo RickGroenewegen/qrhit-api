@@ -1,4 +1,6 @@
 import { FastifyInstance } from 'fastify';
+import Logger from '../logger';
+import { color } from 'console-log-colors';
 import { createOrUpdateAdminUser, deleteUserById } from '../auth';
 import Generator from '../generator';
 import GeneratorQueue from '../generatorQueue';
@@ -29,6 +31,7 @@ import { ChatGPT } from '../chatgpt';
 import Mail from '../mail';
 import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
+import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
 import path from 'path';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
@@ -59,6 +62,7 @@ export default async function adminRoutes(
   const prisma = PrismaInstance.getInstance();
   const promotional = Promotional.getInstance();
   const brokenLink = BrokenLink.getInstance();
+  const logger = new Logger();
 
   // Create order (admin only)
   fastify.post(
@@ -1511,20 +1515,12 @@ export default async function adminRoutes(
         return { success: false, error: 'Search term too short' };
       }
 
-      const serviceTypeMap: Record<string, string> = {
-        spotify: 'spotify',
-        youtube: 'youtube_music',
-        deezer: 'deezer',
-        apple: 'apple_music',
-        tidal: 'tidal',
-      };
       const serviceType = serviceTypeMap[service];
       if (!serviceType) {
         return { success: false, error: 'Unsupported service for search' };
       }
 
       try {
-        const { default: MusicProviderFactory } = await import('../providers/MusicProviderFactory');
         const factory = MusicProviderFactory.getInstance();
         const provider = factory.getProvider(serviceType);
 
@@ -4389,6 +4385,27 @@ export default async function adminRoutes(
           error: error.message || 'Failed to flush hosts',
         });
       }
+    }
+  );
+
+  // ============ FIND MISSING SERVICE LINKS ============
+
+  fastify.post(
+    '/admin/tracks/find-missing-service-links',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { service } = request.body || {};
+
+      if (!service) {
+        return reply.status(400).send({ success: false, error: 'Service is required' });
+      }
+
+      // Run in background — respond immediately so CloudFront doesn't time out
+      data.findMissingServiceLinks(service).catch((error: any) => {
+        logger.log(color.red.bold(`[${color.white.bold('find-links')}] Background task failed for ${color.white.bold(service)}: ${error.message}`));
+      });
+
+      reply.send({ success: true, message: `Finding missing ${service} links started in background` });
     }
   );
 }

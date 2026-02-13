@@ -128,6 +128,25 @@ isSupported(serviceType: string): boolean {
 }
 ```
 
+**Also update the centralized provider maps** in the same file:
+
+`MusicProviderFactory.ts` exports two centralized maps used across the API for service lookups. When adding a new service, add entries to both:
+
+- **`serviceColumnMap`** — maps short service names (`spotify`, `youtube`, `deezer`, `apple`, `tidal`, `amazon`) to their database column names (`spotifyLink`, `youtubeMusicLink`, etc.). Used by admin routes and data layer to resolve which DB column stores a service's link.
+- **`serviceTypeMap`** — maps short service names to `ServiceType` enum values (`spotify` → `'spotify'`, `youtube` → `'youtube_music'`, etc.). Used by search and admin routes to resolve the correct provider.
+
+```typescript
+export const serviceColumnMap: Record<string, string> = {
+  // existing...
+  newservice: 'newServiceLink',
+};
+
+export const serviceTypeMap: Record<string, string> = {
+  // existing...
+  newservice: 'new_service',
+};
+```
+
 #### Step 4: Export Provider
 **File:** `src/providers/index.ts`
 ```typescript

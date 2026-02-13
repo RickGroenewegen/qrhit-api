@@ -29,6 +29,7 @@ import Spotify, {
 import * as ExcelJS from 'exceljs';
 import AppTheme from './apptheme';
 import PrintEnBind from './printers/printenbind';
+import { serviceColumnMap, serviceCheckedColumnMap, serviceTypeMap } from './providers/MusicProviderFactory';
 
 const TRACK_LINKS_CACHE_PREFIX = 'track_links_v6';
 const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
@@ -2420,15 +2421,6 @@ class Data {
     page: number = 1,
     limit: number = 50
   ): Promise<{ tracks: any[]; total: number; page: number; totalPages: number }> {
-    const serviceColumnMap: Record<string, string> = {
-      spotify: 'spotifyLink',
-      apple: 'appleMusicLink',
-      youtube: 'youtubeMusicLink',
-      deezer: 'deezerLink',
-      tidal: 'tidalLink',
-      amazon: 'amazonMusicLink',
-    };
-
     const conditions: Prisma.Sql[] = [];
     const hasSearch = searchTerm && searchTerm.trim().length > 0;
     const validService = missingService && serviceColumnMap[missingService];
@@ -3801,6 +3793,110 @@ class Data {
         error: error instanceof Error ? error.message : 'Unknown error',
       };
     }
+  }
+
+  public async findMissingServiceLinks(
+    service: string
+  ): Promise<{ success: boolean; total: number; found: number; results: any[]; error?: string }> {
+    const columnName = serviceColumnMap[service];
+    const serviceType = serviceTypeMap[service];
+    const checkedColumn = serviceCheckedColumnMap[service];
+
+    if (!columnName || !serviceType || !checkedColumn) {
+      return { success: false, total: 0, found: 0, results: [], error: 'Invalid service. Must be one of: spotify, youtube, deezer, apple, tidal' };
+    }
+
+    const tracks: any[] = await this.prisma.$queryRawUnsafe(
+      `SELECT id, artist, name FROM tracks WHERE ${checkedColumn} = 0 AND (${columnName} IS NULL OR ${columnName} = '')`
+    );
+
+    if (tracks.length === 0) {
+      return { success: true, total: 0, found: 0, results: [] };
+    }
+
+    const { default: MusicProviderFactory } = await import('./providers/MusicProviderFactory');
+    const factory = MusicProviderFactory.getInstance();
+    const provider = factory.getProvider(serviceType);
+
+    if (!provider.config.supportsSearch || !provider.searchTracks) {
+      return { success: false, total: 0, found: 0, results: [], error: `${provider.config.displayName} does not support search` };
+    }
+
+    const results: { trackId: number; artist: string; title: string; found: boolean; link?: string }[] = [];
+    let foundCount = 0;
+
+    this.logger.log(
+      color.blue.bold(
+        `[${color.white.bold(service)}] Starting search for ${color.white.bold(String(tracks.length))} tracks with missing links`
+      )
+    );
+
+    for (let i = 0; i < tracks.length; i++) {
+      const track = tracks[i];
+
+      this.logger.log(
+        color.blue.bold(
+          `[${color.white.bold(service)}] (${color.white.bold(String(i + 1))} / ${color.white.bold(String(tracks.length))}) Searching for ${color.white.bold(track.artist)} - ${color.white.bold(track.name)}`
+        )
+      );
+
+      try {
+        const searchResult = await provider.searchTracks(track.artist + ' ' + track.name, 10, 0);
+
+        if (searchResult.success && searchResult.data) {
+          const match = searchResult.data.tracks.find((t: any) =>
+            t.name.toLowerCase().trim() === track.name.toLowerCase().trim() &&
+            t.artist.toLowerCase().trim() === track.artist.toLowerCase().trim()
+          );
+
+          if (match) {
+            await this.prisma.track.update({
+              where: { id: track.id },
+              data: { [columnName]: match.serviceLink, [checkedColumn]: true },
+            });
+            foundCount++;
+            results.push({ trackId: track.id, artist: track.artist, title: track.name, found: true, link: match.serviceLink });
+            this.logger.log(
+              color.green.bold(
+                `[${color.white.bold(service)}] Found link for ${color.white.bold(track.artist)} - ${color.white.bold(track.name)}: ${color.white.bold(match.serviceLink)}`
+              )
+            );
+          } else {
+            await this.prisma.track.update({ where: { id: track.id }, data: { [checkedColumn]: true } });
+            results.push({ trackId: track.id, artist: track.artist, title: track.name, found: false });
+          }
+        } else {
+          await this.prisma.track.update({ where: { id: track.id }, data: { [checkedColumn]: true } });
+          results.push({ trackId: track.id, artist: track.artist, title: track.name, found: false });
+          this.logger.log(
+            color.yellow.bold(
+              `[${color.white.bold(service)}] Search failed for ${color.white.bold(track.artist)} - ${color.white.bold(track.name)}`
+            )
+          );
+        }
+      } catch (searchError) {
+        await this.prisma.track.update({ where: { id: track.id }, data: { [checkedColumn]: true } }).catch(() => {});
+        results.push({ trackId: track.id, artist: track.artist, title: track.name, found: false });
+        this.logger.log(
+          color.red.bold(
+            `[${color.white.bold(service)}] Error searching for ${color.white.bold(track.artist)} - ${color.white.bold(track.name)}: ${(searchError as Error).message}`
+          )
+        );
+      }
+
+      // 1-second delay between searches
+      if (i < tracks.length - 1) {
+        await new Promise(resolve => setTimeout(resolve, 1000));
+      }
+    }
+
+    this.logger.log(
+      color.blue.bold(
+        `[${color.white.bold(service)}] Done! Found ${color.white.bold(String(foundCount))}/${color.white.bold(String(tracks.length))} missing links`
+      )
+    );
+
+    return { success: true, total: tracks.length, found: foundCount, results };
   }
 
   /**

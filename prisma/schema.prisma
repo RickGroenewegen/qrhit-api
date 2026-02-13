@@ -463,6 +463,12 @@ model Track {
   appleMusicLink             String?
   amazonMusicLink            String?
   tidalLink                  String?
+  spotifyCheckedBySearch     Boolean                      @default(false)
+  youtubeCheckedBySearch     Boolean                      @default(false)
+  deezerCheckedBySearch      Boolean                      @default(false)
+  appleCheckedBySearch       Boolean                      @default(false)
+  tidalCheckedBySearch       Boolean                      @default(false)
+  amazonCheckedBySearch      Boolean                      @default(false)
   musicFetchLastAttempt      DateTime?
   musicFetchAttempts         Int                          @default(0)
   createdAt                  DateTime                     @default(now())
