@@ -208,6 +208,47 @@
       ]
     },
     {
+      "name": "Playlist",
+      "description": "Fetch playlist info and tracks from a music service URL",
+      "item": [
+        {
+          "name": "Get Playlist Info",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"playlistUrl\": \"https://open.spotify.com/playlist/5WxLJfgeVeifVtyX0cIFZY?si=a8b67c9564e44c90\"\n}",
+              "options": {
+                "raw": {
+                  "language": "json"
+                }
+              }
+            },
+            "url": {
+              "raw": "{{base_url}}/reseller/playlist",
+              "host": ["{{base_url}}"],
+              "path": ["reseller", "playlist"]
+            },
+            "description": "Fetch playlist metadata and track listing from a music service URL.\n\nUse this to validate a playlist and display its contents before placing an order.\n\nSupported music services: Spotify, YouTube Music, Apple Music, Deezer, Tidal."
+          },
+          "response": [
+            {
+              "name": "Success",
+              "status": "OK",
+              "code": 200,
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"serviceType\": \"spotify\",\n    \"playlist\": {\n      \"id\": \"5WxLJfgeVeifVtyX0cIFZY\",\n      \"name\": \"My Playlist\",\n      \"description\": \"A great playlist\",\n      \"imageUrl\": \"https://i.scdn.co/image/ab67616d00001e02...\",\n      \"trackCount\": 25\n    },\n    \"tracks\": [\n      {\n        \"name\": \"Bohemian Rhapsody\",\n        \"artist\": \"Queen\",\n        \"album\": \"A Night at the Opera\",\n        \"releaseDate\": \"1975-10-31\",\n        \"duration\": 354320\n      }\n    ]\n  }\n}"
+            }
+          ]
+        }
+      ]
+    },
+    {
       "name": "Orders",
       "description": "Create and track card orders",
       "item": [
@@ -381,7 +422,7 @@
               "host": ["{{base_url}}"],
               "path": ["reseller", "orders", "{{order_id}}"]
             },
-            "description": "Check the status of an order.\n\n**Status values:**\n- `processing` - PDF is being generated\n- `finalizing` - Almost done\n- `done` - PDF ready, includes `pdfUrl`\n- `failed` - Order failed\n\nPoll every 5-10 seconds until status is `done`."
+            "description": "Check the status of an order.\n\n**Status values:**\n- `processing` - PDF is being generated\n- `finalizing` - Almost done\n- `done` - PDF ready, includes `pdfUrl`\n- `failed` - Order failed\n\nThe response may include a `comment` field with additional context (e.g. when track years are being manually verified).\n\nPoll every 5-10 seconds until status is `done`."
           },
           "response": [
             {

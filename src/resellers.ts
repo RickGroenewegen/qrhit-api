@@ -47,9 +47,6 @@ class Resellers {
     try {
       await this.loadAdminUserId();
       await this.ensurePresetBackgroundsRegistered();
-      this.logger.log(
-        color.green.bold(`[${white.bold('Reseller')}] Preset backgrounds registered (admin user ID ${white.bold(this.systemUserId!.toString())})`)
-      );
     } catch (error: any) {
       this.logger.log(
         color.red.bold(`[${white.bold('Reseller')}] Failed to register preset backgrounds: ${error.message}`)
@@ -155,7 +152,7 @@ class Resellers {
       },
     });
 
-    this.logger.log(
+    this.logger.logDev(
       color.green.bold(
         `[${white.bold('Reseller')}] Media uploaded: ID ${white.bold(record.id.toString())} (${white.bold(mediaType)}) → ${white.bold(uploadResult.filename)} for user ${white.bold(userId.toString())}`
       )
@@ -177,7 +174,7 @@ class Resellers {
   ): Promise<{ success: boolean; data?: { orderId: string; status: string }; error?: string }> {
     const { playlistUrl, design } = params;
 
-    this.logger.log(
+    this.logger.logDev(
       color.blue.bold(`[${white.bold('Reseller')}] Creating order for user ${white.bold(resellerUser.id.toString())} (${white.bold(resellerUser.displayName)})`)
     );
     this.logger.logDev(
@@ -187,7 +184,7 @@ class Resellers {
     // Validate and parse playlist URL
     const recognition = this.musicServiceRegistry.recognizeUrl(playlistUrl);
     if (!recognition.recognized) {
-      this.logger.log(
+      this.logger.logDev(
         color.yellow.bold(`[${white.bold('Reseller')}] URL not recognized: ${white.bold(playlistUrl)}`)
       );
       return { success: false, error: 'URL not recognized as a supported music service' };
@@ -225,7 +222,7 @@ class Resellers {
       );
       const media = await this.resolveMedia(resellerUser.id, design.background, 'background');
       if (!media) {
-        this.logger.log(
+        this.logger.logDev(
           color.yellow.bold(`[${white.bold('Reseller')}] Invalid background media ID ${white.bold(design.background.toString())} for user ${white.bold(resellerUser.id.toString())}`)
         );
         return { success: false, error: `Invalid background media ID: ${design.background}` };
@@ -242,7 +239,7 @@ class Resellers {
       );
       const media = await this.resolveMedia(resellerUser.id, design.backgroundBack, 'background_back');
       if (!media) {
-        this.logger.log(
+        this.logger.logDev(
           color.yellow.bold(`[${white.bold('Reseller')}] Invalid backgroundBack media ID ${white.bold(design.backgroundBack.toString())} for user ${white.bold(resellerUser.id.toString())}`)
         );
         return { success: false, error: `Invalid backgroundBack media ID: ${design.backgroundBack}` };
@@ -259,7 +256,7 @@ class Resellers {
       );
       const media = await this.resolveMedia(resellerUser.id, design.logo, 'logo');
       if (!media) {
-        this.logger.log(
+        this.logger.logDev(
           color.yellow.bold(`[${white.bold('Reseller')}] Invalid logo media ID ${white.bold(design.logo.toString())} for user ${white.bold(resellerUser.id.toString())}`)
         );
         return { success: false, error: `Invalid logo media ID: ${design.logo}` };
@@ -423,7 +420,7 @@ class Resellers {
       false
     );
 
-    this.logger.log(
+    this.logger.logDev(
       color.green.bold(
         `[${white.bold('Reseller')}] Order created: ${white.bold(newOrderId)} (payment: ${white.bold(molliePaymentId)}, ${white.bold(playlistData.trackCount.toString())} tracks, user: ${white.bold(resellerUser.id.toString())})`
       )
@@ -449,7 +446,7 @@ class Resellers {
   ): Promise<{ success: boolean; data?: { previewUrlFront: string; previewUrlBack: string; token: string }; error?: string }> {
     const { design } = params;
 
-    this.logger.log(
+    this.logger.logDev(
       color.blue.bold(`[${white.bold('Reseller')}] Creating preview for user ${white.bold(resellerUser.id.toString())} (${white.bold(resellerUser.displayName)})`)
     );
 
@@ -504,7 +501,7 @@ class Resellers {
     const previewUrlFront = `${process.env['FRONTEND_URI']}/en/card-preview-front/${token}`;
     const previewUrlBack = `${process.env['FRONTEND_URI']}/en/card-preview-back/${token}`;
 
-    this.logger.log(
+    this.logger.logDev(
       color.green.bold(
         `[${white.bold('Reseller')}] Preview created: ${white.bold(token.substring(0, 8))}... for user ${white.bold(resellerUser.id.toString())} (expires in ${white.bold('24h')})`
       )
@@ -542,6 +539,7 @@ class Resellers {
         paymentId: true,
         status: true,
         finalized: true,
+        processedFirstTime: true,
         createdAt: true,
         PaymentHasPlaylist: {
           select: {
@@ -572,11 +570,19 @@ class Resellers {
 
     let status: string;
     let pdfUrl: string | undefined;
+    let comment = '';
 
     if (payment.status !== 'paid') {
       status = 'failed';
     } else if (!payment.finalized) {
       status = 'processing';
+      // Check if tracks are stored but waiting on manual year verification
+      if (payment.processedFirstTime) {
+        const allChecked = await this.data.areAllTracksManuallyChecked(payment.paymentId);
+        if (!allChecked) {
+          comment = 'Order years are being manually checked';
+        }
+      }
     } else {
       const php = payment.PaymentHasPlaylist[0];
       if (!php?.filename) {
@@ -598,6 +604,50 @@ class Resellers {
         status,
         createdAt: payment.createdAt,
         ...(pdfUrl && { pdfUrl }),
+        ...(comment && { comment }),
+      },
+    };
+  }
+
+  public async getPlaylistInfo(
+    playlistUrl: string,
+  ): Promise<{ success: boolean; data?: any; error?: string }> {
+    const playlistResult = await this.musicServiceRegistry.getPlaylistFromUrl(playlistUrl);
+
+    if (!playlistResult.success || !playlistResult.data) {
+      return { success: false, error: playlistResult.error || 'Failed to fetch playlist' };
+    }
+
+    const tracksResult = await this.musicServiceRegistry.getTracksFromUrl(playlistUrl);
+
+    if (!tracksResult.success || !tracksResult.data) {
+      return { success: false, error: tracksResult.error || 'Failed to fetch tracks' };
+    }
+
+    const playlist = playlistResult.data;
+    const tracks = tracksResult.data.tracks.map((t) => ({
+      name: t.name,
+      artist: t.artist,
+      album: t.album,
+      releaseDate: t.releaseDate,
+      duration: t.duration,
+    }));
+
+    return {
+      success: true,
+      data: {
+        serviceType: playlistResult.serviceType,
+        playlist: {
+          id: playlist.id,
+          name: playlist.name,
+          description: playlist.description,
+          imageUrl: playlist.imageUrl,
+          trackCount: playlist.trackCount,
+        },
+        tracks,
+        ...(tracksResult.data.skipped && tracksResult.data.skipped.total > 0 && {
+          skipped: tracksResult.data.skipped,
+        }),
       },
     };
   }

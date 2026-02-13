@@ -207,6 +207,7 @@ export default async function resellerRoutes(fastify: FastifyInstance) {
           { name: 'Backgrounds', description: 'Available preset background images for card designs' },
           { name: 'Fonts', description: 'Available font options for card designs' },
           { name: 'Media', description: 'Upload images for card designs' },
+          { name: 'Playlist', description: 'Fetch playlist info and tracks from a music service URL' },
           { name: 'Orders', description: 'Create and track orders' },
           { name: 'Preview', description: 'Preview card designs before ordering' },
         ],
@@ -291,6 +292,94 @@ export default async function resellerRoutes(fastify: FastifyInstance) {
           base64Image,
           type as 'background' | 'background_back' | 'logo'
         );
+
+        if (!result.success) {
+          reply.status(400);
+        }
+
+        return result;
+      } catch (error: any) {
+        logger.log(color.red.bold(`[${white.bold('Reseller')}] ${error.message || error}`));
+        reply.status(500);
+        return { success: false, error: 'Internal server error' };
+      }
+    }
+  );
+
+  // -- POST /reseller/playlist --
+  fastify.post(
+    '/reseller/playlist',
+    {
+      preHandler: verifyResellerApiKey,
+      schema: {
+        tags: ['Playlist'],
+        summary: 'Get playlist info and tracks',
+        description:
+          'Fetch playlist metadata and track listing from a music service URL. ' +
+          'Use this to validate a playlist and display its contents before placing an order.\n\n' +
+          'Supported music services: Spotify, YouTube Music, Apple Music, Deezer, Tidal.',
+        body: {
+          type: 'object',
+          required: ['playlistUrl'],
+          properties: {
+            playlistUrl: {
+              type: 'string',
+              description: 'Full URL of a playlist from any supported music service.',
+            },
+          },
+        },
+        response: {
+          200: {
+            type: 'object',
+            properties: {
+              success: { type: 'boolean' },
+              data: {
+                type: 'object',
+                properties: {
+                  serviceType: { type: 'string', description: 'Detected music service.' },
+                  playlist: {
+                    type: 'object',
+                    properties: {
+                      id: { type: 'string' },
+                      name: { type: 'string' },
+                      description: { type: 'string' },
+                      imageUrl: { type: 'string', nullable: true },
+                      trackCount: { type: 'integer' },
+                    },
+                  },
+                  tracks: {
+                    type: 'array',
+                    items: {
+                      type: 'object',
+                      properties: {
+                        name: { type: 'string' },
+                        artist: { type: 'string' },
+                        album: { type: 'string' },
+                        releaseDate: { type: 'string', nullable: true },
+                        duration: { type: 'integer', nullable: true, description: 'Duration in milliseconds.' },
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          400: ErrorResponse,
+          401: ErrorResponse,
+          403: ErrorResponse,
+        },
+      },
+    },
+    async (request: any, reply: any) => {
+      try {
+        const { playlistUrl } = request.body;
+
+        if (!playlistUrl) {
+          reply.status(400);
+          return { success: false, error: 'Missing required field: playlistUrl' };
+        }
+
+        const result = await resellers.getPlaylistInfo(playlistUrl);
 
         if (!result.success) {
           reply.status(400);

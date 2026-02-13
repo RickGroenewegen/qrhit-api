@@ -48,11 +48,12 @@ When `status` is `"done"`, download the PDF from `pdfUrl`.
 ## Workflow
 
 1. **Browse available assets** (optional) — Fetch fonts and preset backgrounds to offer in your UI
-2. **Upload custom media** (optional) — Upload your own background images or logos
-3. **Preview** (optional) — Generate a preview URL to visualize the card design (embeddable in iframes)
-4. **Create order** — Submit a playlist URL + design configuration
-5. **Poll for status** — Check order progress until status is `done`
-6. **Download PDF** — Use the `pdfUrl` from the response
+2. **Fetch playlist** (optional) — Validate a playlist URL and display its tracks before ordering
+3. **Upload custom media** (optional) — Upload your own background images or logos
+4. **Preview** (optional) — Generate a preview URL to visualize the card design (embeddable in iframes)
+5. **Create order** — Submit a playlist URL + design configuration
+6. **Poll for status** — Check order progress until status is `done`
+7. **Download PDF** — Use the `pdfUrl` from the response
 
 ---
 
@@ -112,6 +113,53 @@ Returns the 20 preset background images that can optionally be used in card desi
 - **thumbnail** — 150x150px preview image, suitable for displaying in a picker
 - **full** — 1000x1000px full-size image
 - **mediaId** — Pass this as `design.background` or `design.backgroundBack` when creating orders
+
+---
+
+### Playlist
+
+#### `POST /reseller/playlist`
+
+Fetch playlist metadata and track listing from a music service URL. Use this to validate a playlist and display its contents before placing an order.
+
+**Supported music services:** Spotify, YouTube Music, Apple Music, Deezer, Tidal.
+
+**Request body:**
+
+```json
+{
+  "playlistUrl": "https://open.spotify.com/playlist/5WxLJfgeVeifVtyX0cIFZY"
+}
+```
+
+**Response:**
+
+```json
+{
+  "success": true,
+  "data": {
+    "serviceType": "spotify",
+    "playlist": {
+      "id": "5WxLJfgeVeifVtyX0cIFZY",
+      "name": "My Playlist",
+      "description": "A great playlist",
+      "imageUrl": "https://i.scdn.co/image/ab67616d00001e02...",
+      "trackCount": 25
+    },
+    "tracks": [
+      {
+        "name": "Bohemian Rhapsody",
+        "artist": "Queen",
+        "album": "A Night at the Opera",
+        "releaseDate": "1975-10-31",
+        "duration": 354320
+      }
+    ]
+  }
+}
+```
+
+If any tracks were skipped (unavailable, local files, podcasts, duplicates), a `skipped` object is included with details.
 
 ---
 
@@ -203,6 +251,8 @@ Poll this endpoint to check order progress. You can only retrieve orders you cre
 | `failed` | Order failed |
 
 Recommended polling interval: every 5–10 seconds.
+
+The response may include a `comment` field with additional information. For example, if track years need manual verification before the PDF can be generated, the comment will say `"Order years are being manually checked"`. This means the order is waiting on our team — no action required on your end.
 
 **Response (done):**
 
