@@ -612,20 +612,20 @@ class Resellers {
   public async getPlaylistInfo(
     playlistUrl: string,
   ): Promise<{ success: boolean; data?: any; error?: string }> {
-    const playlistResult = await this.musicServiceRegistry.getPlaylistFromUrl(playlistUrl);
+    const playlistResult = await this.musicServiceRegistry.getPlaylistFromUrl(playlistUrl) as any;
 
     if (!playlistResult.success || !playlistResult.data) {
       return { success: false, error: playlistResult.error || 'Failed to fetch playlist' };
     }
 
-    const tracksResult = await this.musicServiceRegistry.getTracksFromUrl(playlistUrl);
+    const tracksResult = await this.musicServiceRegistry.getTracksFromUrl(playlistUrl) as any;
 
     if (!tracksResult.success || !tracksResult.data) {
       return { success: false, error: tracksResult.error || 'Failed to fetch tracks' };
     }
 
     const playlist = playlistResult.data;
-    const tracks = tracksResult.data.tracks.map((t) => ({
+    const tracks = tracksResult.data.tracks.map((t: any) => ({
       name: t.name,
       artist: t.artist,
       album: t.album,
