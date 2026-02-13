@@ -4338,6 +4338,39 @@ export default async function adminRoutes(
     }
   );
 
+  // Delete a playlist from an order (only if order has more than 1 playlist)
+  fastify.delete(
+    '/admin/playlist/:paymentHasPlaylistId',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentHasPlaylistId } = request.params;
+
+      if (!paymentHasPlaylistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'PaymentHasPlaylist ID is required',
+        });
+        return;
+      }
+
+      const result = await data.deletePlaylistFromOrder(
+        parseInt(paymentHasPlaylistId, 10)
+      );
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        const status = result.error === 'PaymentHasPlaylist not found' ? 404
+          : result.error === 'Cannot delete the last playlist from an order' ? 400
+          : 500;
+        reply.status(status).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // ============ DATABASE MAINTENANCE ============
 
   // Flush blocked hosts (unblocks IPs blocked by too many connection errors)

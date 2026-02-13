@@ -2723,6 +2723,50 @@ class Data {
     }
   }
 
+  public async deletePlaylistFromOrder(
+    paymentHasPlaylistId: number
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: paymentHasPlaylistId },
+        select: { paymentId: true, playlistId: true },
+      });
+
+      if (!paymentHasPlaylist) {
+        return { success: false, error: 'PaymentHasPlaylist not found' };
+      }
+
+      // Count how many playlists this payment has
+      const playlistCount = await this.prisma.paymentHasPlaylist.count({
+        where: { paymentId: paymentHasPlaylist.paymentId },
+      });
+
+      if (playlistCount <= 1) {
+        return { success: false, error: 'Cannot delete the last playlist from an order' };
+      }
+
+      await this.prisma.paymentHasPlaylist.delete({
+        where: { id: paymentHasPlaylistId },
+      });
+
+      this.logger.log(
+        color.red.bold(
+          `Deleted paymentHasPlaylist ${color.white.bold(paymentHasPlaylistId)} from payment ${color.white.bold(paymentHasPlaylist.paymentId)}`
+        )
+      );
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error deleting PaymentHasPlaylist ${color.white.bold(
+            paymentHasPlaylistId
+          )}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
   public async updatePlaylistAmount(
     paymentHasPlaylistId: number,
     amount: number
