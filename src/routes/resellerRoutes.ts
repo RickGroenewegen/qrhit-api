@@ -167,61 +167,70 @@ const DesignObject = {
 // -- Route definitions --
 
 export default async function resellerRoutes(fastify: FastifyInstance) {
-  // Register Swagger docs only in development
-  if (process.env['ENVIRONMENT'] === 'development') {
-    await fastify.register(swagger, {
-      openapi: {
-        info: {
-          title: 'QRSong! Reseller API',
-          description:
-            'API for third-party resellers to create card orders and download printer PDFs.\n\n' +
-            '## Authentication\n' +
-            'All endpoints require an API key passed as a Bearer token:\n' +
-            '```\nAuthorization: Bearer rk_your_api_key_here\n```\n\n' +
-            '## Workflow\n' +
-            '1. **Upload media** (optional) - Upload background/logo images via `POST /reseller/media/upload`\n' +
-            '2. **Create order** - Submit a playlist URL + design JSON via `POST /reseller/orders`\n' +
-            '3. **Poll for status** - Check order progress via `GET /reseller/orders/:orderId` until status is `done`\n' +
-            '4. **Download PDF** - Use the `pdfUrl` from the status response to download the printer-ready PDF\n\n' +
-            '## Design JSON\n' +
-            'The `design` object controls the visual appearance of the cards. Key concepts:\n' +
-            '- **Front side**: The side with the QR code and optional logo\n' +
-            '- **Back side**: The side with the track name, artist, and year\n' +
-            '- **Media IDs**: Upload images first, then reference them by their returned `mediaId` (integer)\n' +
-            '- **Colors**: All colors are CSS hex strings (e.g. `#ff0000`)\n' +
-            '- **Gradients**: Optional gradient overlays on front/back with configurable angle and position',
-          version: '1.0.0',
-        },
-        components: {
-          securitySchemes: {
-            apiKey: {
-              type: 'http',
-              scheme: 'bearer',
-              bearerFormat: 'API Key',
-              description: 'API key starting with rk_',
-            },
+  // Register Swagger docs (protected by API key like all reseller routes)
+  await fastify.register(swagger, {
+    openapi: {
+      info: {
+        title: 'QRSong! Reseller API',
+        description:
+          'API for third-party resellers to create card orders and download printer PDFs.\n\n' +
+          '## Authentication\n' +
+          'All endpoints require an API key passed as a Bearer token:\n' +
+          '```\nAuthorization: Bearer rk_your_api_key_here\n```\n\n' +
+          '## Workflow\n' +
+          '1. **Upload media** (optional) - Upload background/logo images via `POST /reseller/media/upload`\n' +
+          '2. **Create order** - Submit a playlist URL + design JSON via `POST /reseller/orders`\n' +
+          '3. **Poll for status** - Check order progress via `GET /reseller/orders/:orderId` until status is `done`\n' +
+          '4. **Download PDF** - Use the `pdfUrl` from the status response to download the printer-ready PDF\n\n' +
+          '## Design JSON\n' +
+          'The `design` object controls the visual appearance of the cards. Key concepts:\n' +
+          '- **Front side**: The side with the QR code and optional logo\n' +
+          '- **Back side**: The side with the track name, artist, and year\n' +
+          '- **Media IDs**: Upload images first, then reference them by their returned `mediaId` (integer)\n' +
+          '- **Colors**: All colors are CSS hex strings (e.g. `#ff0000`)\n' +
+          '- **Gradients**: Optional gradient overlays on front/back with configurable angle and position',
+        version: '1.0.0',
+      },
+      components: {
+        securitySchemes: {
+          apiKey: {
+            type: 'http',
+            scheme: 'bearer',
+            bearerFormat: 'API Key',
+            description: 'API key starting with rk_',
           },
         },
-        security: [{ apiKey: [] }],
-        tags: [
-          { name: 'Backgrounds', description: 'Available preset background images for card designs' },
-          { name: 'Fonts', description: 'Available font options for card designs' },
-          { name: 'Media', description: 'Upload images for card designs' },
-          { name: 'Playlist', description: 'Fetch playlist info and tracks from a music service URL' },
-          { name: 'Orders', description: 'Create and track orders' },
-          { name: 'Preview', description: 'Preview card designs before ordering' },
-        ],
       },
-    });
+      security: [{ apiKey: [] }],
+      tags: [
+        { name: 'Backgrounds', description: 'Available preset background images for card designs' },
+        { name: 'Fonts', description: 'Available font options for card designs' },
+        { name: 'Media', description: 'Upload images for card designs' },
+        { name: 'Playlist', description: 'Fetch playlist info and tracks from a music service URL' },
+        { name: 'Orders', description: 'Create and track orders' },
+        { name: 'Preview', description: 'Preview card designs before ordering' },
+      ],
+    },
+  });
 
-    await fastify.register(swaggerUi, {
-      routePrefix: '/reseller/docs',
-      uiConfig: {
-        docExpansion: 'list',
-        deepLinking: true,
-      },
-    });
-  }
+  await fastify.register(swaggerUi, {
+    routePrefix: '/reseller/docs',
+    uiConfig: {
+      docExpansion: 'list',
+      deepLinking: true,
+    },
+  });
+
+  // Protect Swagger docs — accept API key as ?key= query param
+  fastify.addHook('onRequest', async (request: any, reply: any) => {
+    if (request.url.startsWith('/reseller/docs')) {
+      const key = request.query?.key;
+      if (key) {
+        request.headers = { ...request.headers, authorization: `Bearer ${key}` };
+      }
+      await verifyResellerApiKey(request, reply);
+    }
+  });
 
   const resellers = Resellers.getInstance();
   await resellers.init();

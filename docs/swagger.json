@@ -1,0 +1,1107 @@
+{
+    "openapi": "3.0.3",
+    "info": {
+        "title": "QRSong! Reseller API",
+        "description": "API for third-party resellers to create card orders and download printer PDFs.\n\n## Authentication\nAll endpoints require an API key passed as a Bearer token:\n```\nAuthorization: Bearer rk_your_api_key_here\n```\n\n## Workflow\n1. **Upload media** (optional) - Upload background/logo images via `POST /reseller/media/upload`\n2. **Create order** - Submit a playlist URL + design JSON via `POST /reseller/orders`\n3. **Poll for status** - Check order progress via `GET /reseller/orders/:orderId` until status is `done`\n4. **Download PDF** - Use the `pdfUrl` from the status response to download the printer-ready PDF\n\n## Design JSON\nThe `design` object controls the visual appearance of the cards. Key concepts:\n- **Front side**: The side with the QR code and optional logo\n- **Back side**: The side with the track name, artist, and year\n- **Media IDs**: Upload images first, then reference them by their returned `mediaId` (integer)\n- **Colors**: All colors are CSS hex strings (e.g. `#ff0000`)\n- **Gradients**: Optional gradient overlays on front/back with configurable angle and position",
+        "version": "1.0.0"
+    },
+    "components": {
+        "securitySchemes": {
+            "apiKey": {
+                "type": "http",
+                "scheme": "bearer",
+                "bearerFormat": "API Key",
+                "description": "API key starting with rk_"
+            }
+        },
+        "schemas": {}
+    },
+    "paths": {
+        "/reseller/media/upload": {
+            "post": {
+                "summary": "Upload a media image",
+                "tags": [
+                    "Media"
+                ],
+                "description": "Upload a background, back background, or logo image for use in card designs. Send as `multipart/form-data` with an `image` file field and a `type` text field. Returns a `mediaId` that can be referenced in the design JSON when creating orders.",
+                "responses": {
+                    "200": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "mediaId": {
+                                                    "type": "integer",
+                                                    "description": "Use this ID in the design JSON when creating orders."
+                                                },
+                                                "type": {
+                                                    "type": "string"
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reseller/playlist": {
+            "post": {
+                "summary": "Get playlist info and tracks",
+                "tags": [
+                    "Playlist"
+                ],
+                "description": "Fetch playlist metadata and track listing from a music service URL. Use this to validate a playlist and display its contents before placing an order.\n\nSupported music services: Spotify, YouTube Music, Apple Music, Deezer, Tidal.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "playlistUrl"
+                                ],
+                                "properties": {
+                                    "playlistUrl": {
+                                        "type": "string",
+                                        "description": "Full URL of a playlist from any supported music service."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "serviceType": {
+                                                    "type": "string",
+                                                    "description": "Detected music service."
+                                                },
+                                                "playlist": {
+                                                    "type": "object",
+                                                    "properties": {
+                                                        "id": {
+                                                            "type": "string"
+                                                        },
+                                                        "name": {
+                                                            "type": "string"
+                                                        },
+                                                        "description": {
+                                                            "type": "string"
+                                                        },
+                                                        "imageUrl": {
+                                                            "type": "string",
+                                                            "nullable": true
+                                                        },
+                                                        "trackCount": {
+                                                            "type": "integer"
+                                                        }
+                                                    }
+                                                },
+                                                "tracks": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object",
+                                                        "properties": {
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "artist": {
+                                                                "type": "string"
+                                                            },
+                                                            "album": {
+                                                                "type": "string"
+                                                            },
+                                                            "releaseDate": {
+                                                                "type": "string",
+                                                                "nullable": true
+                                                            },
+                                                            "duration": {
+                                                                "type": "integer",
+                                                                "nullable": true,
+                                                                "description": "Duration in milliseconds."
+                                                            }
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reseller/orders": {
+            "post": {
+                "summary": "Create a new card order",
+                "tags": [
+                    "Orders"
+                ],
+                "description": "Create a physical card order from a music playlist URL. The order is processed asynchronously - poll `GET /reseller/orders/:orderId` to track progress and get the printer PDF URL when done.\n\nSupported music services: Spotify, YouTube Music, Apple Music, Deezer, Tidal.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "playlistUrl",
+                                    "design"
+                                ],
+                                "properties": {
+                                    "playlistUrl": {
+                                        "type": "string",
+                                        "description": "Full URL of a playlist from any supported music service (e.g. https://open.spotify.com/playlist/5WxLJfgeVeifVtyX0cIFZY)."
+                                    },
+                                    "serviceType": {
+                                        "type": "string",
+                                        "enum": [
+                                            "spotify",
+                                            "youtube_music",
+                                            "apple_music",
+                                            "deezer",
+                                            "tidal"
+                                        ],
+                                        "description": "Music service type. Auto-detected from the URL if not provided."
+                                    },
+                                    "design": {
+                                        "type": "object",
+                                        "description": "Card design configuration. Image fields (background, backgroundBack, logo) accept either a numeric media ID (from /reseller/media/upload) or a filename string.",
+                                        "properties": {
+                                            "background": {
+                                                "description": "Front background image. Pass a media ID (integer from upload endpoint, type=background) or a filename string. Leave empty for solid color."
+                                            },
+                                            "backgroundBack": {
+                                                "description": "Back background image. Pass a media ID (integer from upload endpoint, type=background_back) or a filename string. Leave empty for solid color."
+                                            },
+                                            "logo": {
+                                                "description": "Logo image overlaid on the front of the card. Pass a media ID (integer from upload endpoint, type=logo) or a filename string."
+                                            },
+                                            "backgroundFrontType": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "solid",
+                                                    "image"
+                                                ],
+                                                "default": "image",
+                                                "description": "Front background type. \"image\" uses the background image, \"solid\" uses backgroundFrontColor."
+                                            },
+                                            "backgroundFrontColor": {
+                                                "type": "string",
+                                                "default": "#ffffff",
+                                                "description": "Solid color for the front background (used when backgroundFrontType is \"solid\")."
+                                            },
+                                            "useFrontGradient": {
+                                                "type": "boolean",
+                                                "default": false,
+                                                "description": "Enable gradient overlay on the front side."
+                                            },
+                                            "gradientFrontColor": {
+                                                "type": "string",
+                                                "default": "#ffffff",
+                                                "description": "Second color for the front gradient."
+                                            },
+                                            "gradientFrontDegrees": {
+                                                "type": "integer",
+                                                "default": 180,
+                                                "minimum": 0,
+                                                "maximum": 360,
+                                                "description": "Gradient angle in degrees for the front side."
+                                            },
+                                            "gradientFrontPosition": {
+                                                "type": "integer",
+                                                "default": 50,
+                                                "minimum": 0,
+                                                "maximum": 100,
+                                                "description": "Gradient color stop position (0-100) for the front side."
+                                            },
+                                            "frontOpacity": {
+                                                "type": "integer",
+                                                "default": 100,
+                                                "minimum": 0,
+                                                "maximum": 100,
+                                                "description": "Front background image opacity (0 = transparent, 100 = fully visible)."
+                                            },
+                                            "backgroundBackType": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "solid",
+                                                    "image"
+                                                ],
+                                                "default": "image",
+                                                "description": "Back background type. \"image\" uses the backgroundBack image, \"solid\" uses backgroundBackColor."
+                                            },
+                                            "backgroundBackColor": {
+                                                "type": "string",
+                                                "default": "#ffffff",
+                                                "description": "Solid color for the back background (used when backgroundBackType is \"solid\")."
+                                            },
+                                            "fontColor": {
+                                                "type": "string",
+                                                "default": "#000000",
+                                                "description": "Text color for the back side (track name, artist, year)."
+                                            },
+                                            "useGradient": {
+                                                "type": "boolean",
+                                                "default": false,
+                                                "description": "Enable gradient overlay on the back side."
+                                            },
+                                            "gradientBackgroundColor": {
+                                                "type": "string",
+                                                "default": "#ffffff",
+                                                "description": "Second color for the back gradient."
+                                            },
+                                            "gradientDegrees": {
+                                                "type": "integer",
+                                                "default": 180,
+                                                "minimum": 0,
+                                                "maximum": 360,
+                                                "description": "Gradient angle in degrees for the back side."
+                                            },
+                                            "gradientPosition": {
+                                                "type": "integer",
+                                                "default": 50,
+                                                "minimum": 0,
+                                                "maximum": 100,
+                                                "description": "Gradient color stop position (0-100) for the back side."
+                                            },
+                                            "backOpacity": {
+                                                "type": "integer",
+                                                "default": 50,
+                                                "minimum": 0,
+                                                "maximum": 100,
+                                                "description": "Back background image opacity (0 = transparent, 100 = fully visible)."
+                                            },
+                                            "qrColor": {
+                                                "type": "string",
+                                                "default": "#000000",
+                                                "description": "Color of the QR code dots."
+                                            },
+                                            "qrBackgroundColor": {
+                                                "type": "string",
+                                                "default": "#ffffff",
+                                                "description": "Background color of the QR code area."
+                                            },
+                                            "qrBackgroundType": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "none",
+                                                    "circle",
+                                                    "square"
+                                                ],
+                                                "default": "square",
+                                                "description": "Shape of the background behind the QR code. \"none\" for transparent, \"circle\" or \"square\" for a colored shape."
+                                            },
+                                            "hideCircle": {
+                                                "type": "boolean",
+                                                "default": false,
+                                                "description": "Legacy field. When true, sets qrBackgroundType to \"none\"."
+                                            },
+                                            "selectedFont": {
+                                                "type": "string",
+                                                "default": "",
+                                                "description": "Google Font name for the back side text (e.g. \"Oswald\", \"Caveat\"). Leave empty for Arial. See GET /reseller/fonts for available options."
+                                            },
+                                            "selectedFontSize": {
+                                                "type": "string",
+                                                "default": "16px",
+                                                "description": "CSS font size for the back side text."
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "orderId": {
+                                                    "type": "string",
+                                                    "description": "Unique order ID for tracking."
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "processing"
+                                                    ]
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reseller/orders/{orderId}": {
+            "get": {
+                "summary": "Get order status",
+                "tags": [
+                    "Orders"
+                ],
+                "description": "Poll this endpoint to check order progress. Status transitions:\n\n- **processing** - PDF is being generated\n- **finalizing** - PDF generation almost complete\n- **done** - PDF is ready, `pdfUrl` is included\n- **failed** - Order failed\n\nRecommended polling interval: every 5-10 seconds.",
+                "parameters": [
+                    {
+                        "schema": {
+                            "type": "string"
+                        },
+                        "in": "path",
+                        "name": "orderId",
+                        "required": true,
+                        "description": "The orderId returned from POST /reseller/orders."
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "orderId": {
+                                                    "type": "string"
+                                                },
+                                                "status": {
+                                                    "type": "string",
+                                                    "enum": [
+                                                        "processing",
+                                                        "finalizing",
+                                                        "done",
+                                                        "failed"
+                                                    ]
+                                                },
+                                                "createdAt": {
+                                                    "type": "string",
+                                                    "format": "date-time"
+                                                },
+                                                "pdfUrl": {
+                                                    "type": "string",
+                                                    "description": "URL to download the printer-ready PDF. Only present when status is \"done\"."
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reseller/preview": {
+            "post": {
+                "summary": "Create a card design preview",
+                "tags": [
+                    "Preview"
+                ],
+                "description": "Generate a preview URL to visualize a card design before creating an order. The preview shows the front and back of the card with the specified design settings. Preview URLs expire after 24 hours.",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object",
+                                "required": [
+                                    "design"
+                                ],
+                                "properties": {
+                                    "design": {
+                                        "type": "object",
+                                        "description": "Card design configuration. Image fields (background, backgroundBack, logo) accept either a numeric media ID (from /reseller/media/upload) or a filename string.",
+                                        "properties": {
+                                            "background": {
+                                                "description": "Front background image. Pass a media ID (integer from upload endpoint, type=background) or a filename string. Leave empty for solid color."
+                                            },
+                                            "backgroundBack": {
+                                                "description": "Back background image. Pass a media ID (integer from upload endpoint, type=background_back) or a filename string. Leave empty for solid color."
+                                            },
+                                            "logo": {
+                                                "description": "Logo image overlaid on the front of the card. Pass a media ID (integer from upload endpoint, type=logo) or a filename string."
+                                            },
+                                            "backgroundFrontType": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "solid",
+                                                    "image"
+                                                ],
+                                                "default": "image",
+                                                "description": "Front background type. \"image\" uses the background image, \"solid\" uses backgroundFrontColor."
+                                            },
+                                            "backgroundFrontColor": {
+                                                "type": "string",
+                                                "default": "#ffffff",
+                                                "description": "Solid color for the front background (used when backgroundFrontType is \"solid\")."
+                                            },
+                                            "useFrontGradient": {
+                                                "type": "boolean",
+                                                "default": false,
+                                                "description": "Enable gradient overlay on the front side."
+                                            },
+                                            "gradientFrontColor": {
+                                                "type": "string",
+                                                "default": "#ffffff",
+                                                "description": "Second color for the front gradient."
+                                            },
+                                            "gradientFrontDegrees": {
+                                                "type": "integer",
+                                                "default": 180,
+                                                "minimum": 0,
+                                                "maximum": 360,
+                                                "description": "Gradient angle in degrees for the front side."
+                                            },
+                                            "gradientFrontPosition": {
+                                                "type": "integer",
+                                                "default": 50,
+                                                "minimum": 0,
+                                                "maximum": 100,
+                                                "description": "Gradient color stop position (0-100) for the front side."
+                                            },
+                                            "frontOpacity": {
+                                                "type": "integer",
+                                                "default": 100,
+                                                "minimum": 0,
+                                                "maximum": 100,
+                                                "description": "Front background image opacity (0 = transparent, 100 = fully visible)."
+                                            },
+                                            "backgroundBackType": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "solid",
+                                                    "image"
+                                                ],
+                                                "default": "image",
+                                                "description": "Back background type. \"image\" uses the backgroundBack image, \"solid\" uses backgroundBackColor."
+                                            },
+                                            "backgroundBackColor": {
+                                                "type": "string",
+                                                "default": "#ffffff",
+                                                "description": "Solid color for the back background (used when backgroundBackType is \"solid\")."
+                                            },
+                                            "fontColor": {
+                                                "type": "string",
+                                                "default": "#000000",
+                                                "description": "Text color for the back side (track name, artist, year)."
+                                            },
+                                            "useGradient": {
+                                                "type": "boolean",
+                                                "default": false,
+                                                "description": "Enable gradient overlay on the back side."
+                                            },
+                                            "gradientBackgroundColor": {
+                                                "type": "string",
+                                                "default": "#ffffff",
+                                                "description": "Second color for the back gradient."
+                                            },
+                                            "gradientDegrees": {
+                                                "type": "integer",
+                                                "default": 180,
+                                                "minimum": 0,
+                                                "maximum": 360,
+                                                "description": "Gradient angle in degrees for the back side."
+                                            },
+                                            "gradientPosition": {
+                                                "type": "integer",
+                                                "default": 50,
+                                                "minimum": 0,
+                                                "maximum": 100,
+                                                "description": "Gradient color stop position (0-100) for the back side."
+                                            },
+                                            "backOpacity": {
+                                                "type": "integer",
+                                                "default": 50,
+                                                "minimum": 0,
+                                                "maximum": 100,
+                                                "description": "Back background image opacity (0 = transparent, 100 = fully visible)."
+                                            },
+                                            "qrColor": {
+                                                "type": "string",
+                                                "default": "#000000",
+                                                "description": "Color of the QR code dots."
+                                            },
+                                            "qrBackgroundColor": {
+                                                "type": "string",
+                                                "default": "#ffffff",
+                                                "description": "Background color of the QR code area."
+                                            },
+                                            "qrBackgroundType": {
+                                                "type": "string",
+                                                "enum": [
+                                                    "none",
+                                                    "circle",
+                                                    "square"
+                                                ],
+                                                "default": "square",
+                                                "description": "Shape of the background behind the QR code. \"none\" for transparent, \"circle\" or \"square\" for a colored shape."
+                                            },
+                                            "hideCircle": {
+                                                "type": "boolean",
+                                                "default": false,
+                                                "description": "Legacy field. When true, sets qrBackgroundType to \"none\"."
+                                            },
+                                            "selectedFont": {
+                                                "type": "string",
+                                                "default": "",
+                                                "description": "Google Font name for the back side text (e.g. \"Oswald\", \"Caveat\"). Leave empty for Arial. See GET /reseller/fonts for available options."
+                                            },
+                                            "selectedFontSize": {
+                                                "type": "string",
+                                                "default": "16px",
+                                                "description": "CSS font size for the back side text."
+                                            }
+                                        }
+                                    },
+                                    "sampleTrackName": {
+                                        "type": "string",
+                                        "default": "Sample Track",
+                                        "description": "Track name displayed on the back side of the preview card."
+                                    },
+                                    "sampleTrackArtist": {
+                                        "type": "string",
+                                        "default": "Sample Artist",
+                                        "description": "Artist name displayed on the back side of the preview card."
+                                    },
+                                    "sampleTrackYear": {
+                                        "type": "string",
+                                        "default": "2025",
+                                        "description": "Year displayed on the back side of the preview card."
+                                    }
+                                }
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "properties": {
+                                                "previewUrlFront": {
+                                                    "type": "string",
+                                                    "description": "URL to view the front side of the card preview."
+                                                },
+                                                "previewUrlBack": {
+                                                    "type": "string",
+                                                    "description": "URL to view the back side of the card preview."
+                                                },
+                                                "token": {
+                                                    "type": "string",
+                                                    "description": "Preview token (can also be used with GET /reseller/preview/:token)."
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "400": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "403": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reseller/preview/{token}": {
+            "get": {
+                "summary": "Get preview design data",
+                "tags": [
+                    "Preview"
+                ],
+                "description": "Retrieve the design data for a preview. This endpoint is public (no authentication required) and is used by the frontend to render the card preview page. Returns 404 if the token has expired.",
+                "parameters": [
+                    {
+                        "schema": {
+                            "type": "string"
+                        },
+                        "in": "path",
+                        "name": "token",
+                        "required": true,
+                        "description": "Preview token from POST /reseller/preview."
+                    }
+                ],
+                "security": [],
+                "responses": {
+                    "200": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "object",
+                                            "additionalProperties": true,
+                                            "description": "The resolved design JSON with full image URLs and sample track data."
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "404": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "error": {
+                                            "type": "string"
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reseller/fonts": {
+            "get": {
+                "summary": "List available fonts",
+                "tags": [
+                    "Fonts"
+                ],
+                "description": "Returns all available fonts that can be used in the `design.selectedFont` field when creating orders. Pass the `googleFontName` value as `design.selectedFont`. Use an empty string for the default font (Arial).",
+                "responses": {
+                    "200": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "string",
+                                                        "description": "Value to use in design.selectedFont (empty string = Arial)."
+                                                    },
+                                                    "displayName": {
+                                                        "type": "string",
+                                                        "description": "Human-readable font name."
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        },
+        "/reseller/backgrounds": {
+            "get": {
+                "summary": "List available preset backgrounds",
+                "tags": [
+                    "Backgrounds"
+                ],
+                "description": "Returns all available preset background images that can be used in card designs. Each background includes full URLs to the thumbnail and full-size image, plus a `mediaId` that can be passed directly as `design.background` or `design.backgroundBack` when creating orders.",
+                "responses": {
+                    "200": {
+                        "description": "Default Response",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "properties": {
+                                        "success": {
+                                            "type": "boolean"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "type": "object",
+                                                "properties": {
+                                                    "mediaId": {
+                                                        "type": "integer",
+                                                        "description": "Media ID usable in design.background or design.backgroundBack when creating orders."
+                                                    },
+                                                    "thumbnail": {
+                                                        "type": "string",
+                                                        "description": "Full URL to the thumbnail image (150x150px)."
+                                                    },
+                                                    "full": {
+                                                        "type": "string",
+                                                        "description": "Full URL to the background image (1000x1000px)."
+                                                    }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "security": [
+        {
+            "apiKey": []
+        }
+    ],
+    "tags": [
+        {
+            "name": "Backgrounds",
+            "description": "Available preset background images for card designs"
+        },
+        {
+            "name": "Fonts",
+            "description": "Available font options for card designs"
+        },
+        {
+            "name": "Media",
+            "description": "Upload images for card designs"
+        },
+        {
+            "name": "Playlist",
+            "description": "Fetch playlist info and tracks from a music service URL"
+        },
+        {
+            "name": "Orders",
+            "description": "Create and track orders"
+        },
+        {
+            "name": "Preview",
+            "description": "Preview card designs before ordering"
+        }
+    ]
+}
