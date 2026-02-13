@@ -167,7 +167,7 @@ class Promotional {
       return {
         success: true,
         data: {
-          title: playlist.promotionalTitle || playlist.name,
+          title: playlist.promotionalTitle || '',
           description: playlist.promotionalDescription || '',
           image: playlist.image,
           customImage: playlist.customImage || null,
@@ -216,6 +216,10 @@ class Promotional {
         customImagePath = await this.processBase64Image(data.image, playlistId);
       }
 
+      // Generate slug from the user-provided title
+      const sanitizedName = this.sanitizeBrandName(data.title);
+      const slug = await this.generateUniqueSlug(sanitizedName, playlistId);
+
       // Build update data
       const updateData: Record<string, any> = {
         promotionalTitle: data.title,
@@ -224,12 +228,21 @@ class Promotional {
         promotionalLocale: data.locale || 'en',
         promotionalUserId: ownership.userId,
         featured: data.active,
+        name: sanitizedName,
+        slug,
       };
 
       // Add custom image if processed
       if (customImagePath) {
         updateData.customImage = customImagePath;
       }
+
+      // Get old slug before update for cache clearing
+      const currentPlaylist = await this.prisma.playlist.findUnique({
+        where: { playlistId },
+        select: { slug: true },
+      });
+      const oldSlug = currentPlaylist?.slug;
 
       // Update playlist with promotional data
       // Also update 'featured' field which controls visibility on the site
@@ -238,10 +251,54 @@ class Promotional {
         data: updateData,
       });
 
+      // Clear cache for old slug if it changed
+      if (oldSlug && oldSlug !== slug) {
+        await Data.getInstance().clearPlaylistCache(playlistId, oldSlug);
+      }
+
       return { success: true };
     } catch (error) {
       this.logger.log(`Error saving promotional setup: ${error}`);
       return { success: false, error: 'Failed to save promotional setup' };
+    }
+  }
+
+  /**
+   * Check if a title/slug is available for a promotional playlist
+   */
+  public async checkSlugAvailability(
+    paymentId: string,
+    userHash: string,
+    playlistId: string,
+    title: string
+  ): Promise<{ success: boolean; available: boolean; slug: string; error?: string }> {
+    try {
+      const ownership = await this.verifyOwnership(paymentId, userHash, playlistId);
+
+      if (!ownership.verified) {
+        return { success: false, available: false, slug: '', error: 'Unauthorized' };
+      }
+
+      const sanitizedName = this.sanitizeBrandName(title);
+      const baseSlug = this.slugify(sanitizedName);
+
+      // Check if slug already exists for another playlist
+      const existingPlaylist = await this.prisma.playlist.findFirst({
+        where: {
+          slug: baseSlug,
+          playlistId: { not: playlistId },
+        },
+        select: { playlistId: true },
+      });
+
+      return {
+        success: true,
+        available: !existingPlaylist,
+        slug: baseSlug,
+      };
+    } catch (error) {
+      this.logger.log(`Error checking slug availability: ${error}`);
+      return { success: false, available: false, slug: '', error: 'Failed to check slug availability' };
     }
   }
 

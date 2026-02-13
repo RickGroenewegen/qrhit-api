@@ -731,7 +731,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   fastify.post(
     '/promotional/:paymentId/:userHash/:playlistId',
     async (request: any, reply) => {
-      const { title, description, image, active } = request.body;
+      const { title, description, image, active, locale } = request.body;
 
       if (!title) {
         reply.status(400).send({ success: false, error: 'Title is required' });
@@ -752,7 +752,35 @@ export default async function publicRoutes(fastify: FastifyInstance) {
           description: description || '',
           image,
           active: active !== false,
+          locale: locale || 'en',
         }
+      );
+
+      if (!result.success) {
+        reply.status(result.error === 'Unauthorized' ? 401 : 400).send(result);
+        return;
+      }
+
+      return result;
+    }
+  );
+
+  // Check if promotional title/slug already exists
+  fastify.post(
+    '/promotional/:paymentId/:userHash/:playlistId/check-slug',
+    async (request: any, reply) => {
+      const { title } = request.body;
+
+      if (!title) {
+        reply.status(400).send({ success: false, error: 'Title is required' });
+        return;
+      }
+
+      const result = await promotional.checkSlugAvailability(
+        request.params.paymentId,
+        request.params.userHash,
+        request.params.playlistId,
+        title
       );
 
       if (!result.success) {
