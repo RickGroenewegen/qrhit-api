@@ -338,8 +338,8 @@ class Resellers {
       numberOfTracks: playlistData.trackCount,
       type: 'physical',
       subType: 'none',
-      doubleSided: design.doubleSided || false,
-      eco: design.eco || false,
+      doubleSided: true,
+      eco: false,
       qrColor: design.qrColor || '#000000',
       qrBackgroundColor: design.qrBackgroundColor || '#ffffff',
       hideCircle: design.hideCircle || false,
@@ -348,7 +348,7 @@ class Resellers {
       priceWithoutVAT: 0,
       priceVAT: 0,
       printApiPrice: 0,
-      emoji: design.emoji || '',
+      emoji: '',
       background: resolvedBackground,
       logo: resolvedLogo,
       selectedFont: this.resolveFont(design.selectedFont).family,
@@ -486,8 +486,9 @@ class Resellers {
     const expiresIn = 86400;
 
     const resolvedFont = this.resolveFont(design.selectedFont);
+    const { emoji: _emoji, doubleSided: _ds, eco: _eco, ...cleanDesign } = design;
     const previewData = {
-      ...design,
+      ...cleanDesign,
       background: resolvedBackground,
       backgroundBack: resolvedBackgroundBack,
       logo: resolvedLogo,

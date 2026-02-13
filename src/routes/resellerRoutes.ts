@@ -151,11 +151,6 @@ const DesignObject = {
     },
 
     // -- Typography --
-    emoji: {
-      type: 'string',
-      default: '',
-      description: 'Emoji displayed on the front of the card (e.g. "🎵").',
-    },
     selectedFont: {
       type: 'string',
       default: '',
@@ -165,18 +160,6 @@ const DesignObject = {
       type: 'string',
       default: '16px',
       description: 'CSS font size for the back side text.',
-    },
-
-    // -- Card options --
-    doubleSided: {
-      type: 'boolean',
-      default: false,
-      description: 'Generate double-sided cards (front + back). When false, only front is generated.',
-    },
-    eco: {
-      type: 'boolean',
-      default: false,
-      description: 'Eco mode - reduces ink usage by simplifying the design.',
     },
   },
 } as const;
@@ -202,7 +185,7 @@ export default async function resellerRoutes(fastify: FastifyInstance) {
             '4. **Download PDF** - Use the `pdfUrl` from the status response to download the printer-ready PDF\n\n' +
             '## Design JSON\n' +
             'The `design` object controls the visual appearance of the cards. Key concepts:\n' +
-            '- **Front side**: The side with the QR code and optional emoji/logo\n' +
+            '- **Front side**: The side with the QR code and optional logo\n' +
             '- **Back side**: The side with the track name, artist, and year\n' +
             '- **Media IDs**: Upload images first, then reference them by their returned `mediaId` (integer)\n' +
             '- **Colors**: All colors are CSS hex strings (e.g. `#ff0000`)\n' +

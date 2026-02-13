@@ -293,7 +293,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"playlistUrl\": \"https://open.spotify.com/playlist/5WxLJfgeVeifVtyX0cIFZY?si=a8b67c9564e44c90\",\n  \"design\": {\n    \"background\": {{background_media_id}},\n    \"backgroundBack\": {{background_back_media_id}},\n    \"logo\": {{logo_media_id}},\n\n    \"backgroundFrontType\": \"image\",\n    \"backgroundFrontColor\": \"#ffffff\",\n    \"useFrontGradient\": false,\n    \"gradientFrontColor\": \"#ffffff\",\n    \"gradientFrontDegrees\": 180,\n    \"gradientFrontPosition\": 50,\n    \"frontOpacity\": 100,\n\n    \"backgroundBackType\": \"image\",\n    \"backgroundBackColor\": \"#ffffff\",\n    \"fontColor\": \"#000000\",\n    \"useGradient\": false,\n    \"gradientBackgroundColor\": \"#ffffff\",\n    \"gradientDegrees\": 180,\n    \"gradientPosition\": 50,\n    \"backOpacity\": 50,\n\n    \"qrColor\": \"#000000\",\n    \"qrBackgroundColor\": \"#ffffff\",\n    \"qrBackgroundType\": \"square\",\n\n    \"emoji\": \"\\ud83c\\udfb5\",\n    \"selectedFont\": \"Pacifico\",\n    \"selectedFontSize\": \"14px\",\n\n    \"doubleSided\": false,\n    \"eco\": false\n  }\n}",
+              "raw": "{\n  \"playlistUrl\": \"https://open.spotify.com/playlist/5WxLJfgeVeifVtyX0cIFZY?si=a8b67c9564e44c90\",\n  \"design\": {\n    \"background\": {{background_media_id}},\n    \"backgroundBack\": {{background_back_media_id}},\n    \"logo\": {{logo_media_id}},\n\n    \"backgroundFrontType\": \"image\",\n    \"backgroundFrontColor\": \"#ffffff\",\n    \"useFrontGradient\": false,\n    \"gradientFrontColor\": \"#ffffff\",\n    \"gradientFrontDegrees\": 180,\n    \"gradientFrontPosition\": 50,\n    \"frontOpacity\": 100,\n\n    \"backgroundBackType\": \"image\",\n    \"backgroundBackColor\": \"#ffffff\",\n    \"useGradient\": false,\n    \"gradientBackgroundColor\": \"#ffffff\",\n    \"gradientDegrees\": 180,\n    \"gradientPosition\": 50,\n    \"backOpacity\": 50,\n\n    \"qrColor\": \"#000000\",\n    \"qrBackgroundColor\": \"#ffffff\",\n    \"qrBackgroundType\": \"square\",\n\n    \"selectedFont\": \"Pacifico\",\n    \"selectedFontSize\": \"14px\",\n    \"fontColor\": \"#000000\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -305,7 +305,7 @@
               "host": ["{{base_url}}"],
               "path": ["reseller", "orders"]
             },
-            "description": "Create an order with a fully customized design.\n\nThis example uses media IDs from previous upload requests (run the upload requests first).\n\n## Design Fields\n\n### Images (media ID or filename)\n- **background** - Front card background image\n- **backgroundBack** - Back card background image\n- **logo** - Logo overlay on front\n\n### Front Side\n- **backgroundFrontType** - \"image\" or \"solid\"\n- **backgroundFrontColor** - Hex color for solid background\n- **useFrontGradient** - Enable front gradient\n- **gradientFrontColor** - Second gradient color\n- **gradientFrontDegrees** - Gradient angle (0-360)\n- **gradientFrontPosition** - Gradient stop (0-100)\n- **frontOpacity** - Image opacity (0-100)\n\n### Back Side\n- **backgroundBackType** - \"image\" or \"solid\"\n- **backgroundBackColor** - Hex color for solid background\n- **fontColor** - Text color for track info\n- **useGradient** - Enable back gradient\n- **gradientBackgroundColor** - Second gradient color\n- **gradientDegrees** - Gradient angle (0-360)\n- **gradientPosition** - Gradient stop (0-100)\n- **backOpacity** - Image opacity (0-100)\n\n### QR Code\n- **qrColor** - QR dot color\n- **qrBackgroundColor** - QR area background\n- **qrBackgroundType** - \"none\", \"circle\", or \"square\"\n\n### Typography\n- **emoji** - Front card emoji\n- **selectedFont** - CSS font family\n- **selectedFontSize** - CSS font size\n\n### Options\n- **doubleSided** - Double-sided cards\n- **eco** - Eco mode (reduced ink)"
+            "description": "Create an order with a fully customized design.\n\nThis example uses media IDs from previous upload requests (run the upload requests first).\n\n## Design Fields\n\n### Images (media ID or filename)\n- **background** - Front card background image\n- **backgroundBack** - Back card background image\n- **logo** - Logo overlay on front\n\n### Front Side\n- **backgroundFrontType** - \"image\" or \"solid\"\n- **backgroundFrontColor** - Hex color for solid background\n- **useFrontGradient** - Enable front gradient\n- **gradientFrontColor** - Second gradient color\n- **gradientFrontDegrees** - Gradient angle (0-360)\n- **gradientFrontPosition** - Gradient stop (0-100)\n- **frontOpacity** - Image opacity (0-100)\n\n### Back Side\n- **backgroundBackType** - \"image\" or \"solid\"\n- **backgroundBackColor** - Hex color for solid background\n- **useGradient** - Enable back gradient\n- **gradientBackgroundColor** - Second gradient color\n- **gradientDegrees** - Gradient angle (0-360)\n- **gradientPosition** - Gradient stop (0-100)\n- **backOpacity** - Image opacity (0-100)\n\n### QR Code\n- **qrColor** - QR dot color\n- **qrBackgroundColor** - QR area background\n- **qrBackgroundType** - \"none\", \"circle\", or \"square\"\n\n### Typography\n- **selectedFont** - Google Font name\n- **selectedFontSize** - CSS font size\n- **fontColor** - Text color for track info"
           }
         },
         {
@@ -336,7 +336,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"playlistUrl\": \"https://open.spotify.com/playlist/5WxLJfgeVeifVtyX0cIFZY?si=a8b67c9564e44c90\",\n  \"design\": {\n    \"backgroundFrontType\": \"solid\",\n    \"backgroundFrontColor\": \"#1DB954\",\n    \"backgroundBackType\": \"solid\",\n    \"backgroundBackColor\": \"#191414\",\n    \"fontColor\": \"#ffffff\",\n    \"qrColor\": \"#1DB954\",\n    \"qrBackgroundColor\": \"#191414\",\n    \"qrBackgroundType\": \"square\",\n    \"emoji\": \"\\ud83c\\udfb6\",\n    \"selectedFont\": \"Oswald\",\n    \"selectedFontSize\": \"14px\"\n  }\n}",
+              "raw": "{\n  \"playlistUrl\": \"https://open.spotify.com/playlist/5WxLJfgeVeifVtyX0cIFZY?si=a8b67c9564e44c90\",\n  \"design\": {\n    \"backgroundFrontType\": \"solid\",\n    \"backgroundFrontColor\": \"#1DB954\",\n    \"backgroundBackType\": \"solid\",\n    \"backgroundBackColor\": \"#191414\",\n    \"qrColor\": \"#1DB954\",\n    \"qrBackgroundColor\": \"#191414\",\n    \"qrBackgroundType\": \"square\",\n    \"selectedFont\": \"Oswald\",\n    \"selectedFontSize\": \"14px\",\n    \"fontColor\": \"#ffffff\"\n  }\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -435,7 +435,7 @@
             ],
             "body": {
               "mode": "raw",
-              "raw": "{\n  \"design\": {\n    \"backgroundFrontType\": \"solid\",\n    \"backgroundFrontColor\": \"#1DB954\",\n    \"backgroundBackType\": \"solid\",\n    \"backgroundBackColor\": \"#191414\",\n    \"fontColor\": \"#ffffff\",\n    \"qrColor\": \"#1DB954\",\n    \"qrBackgroundColor\": \"#191414\",\n    \"qrBackgroundType\": \"square\",\n    \"emoji\": \"\\ud83c\\udfb5\",\n    \"selectedFont\": \"Oswald\",\n    \"selectedFontSize\": \"16px\"\n  },\n  \"sampleTrackName\": \"Bohemian Rhapsody\",\n  \"sampleTrackArtist\": \"Queen\",\n  \"sampleTrackYear\": \"1975\"\n}",
+              "raw": "{\n  \"design\": {\n    \"backgroundFrontType\": \"solid\",\n    \"backgroundFrontColor\": \"#1DB954\",\n    \"backgroundBackType\": \"solid\",\n    \"backgroundBackColor\": \"#191414\",\n    \"qrColor\": \"#1DB954\",\n    \"qrBackgroundColor\": \"#191414\",\n    \"qrBackgroundType\": \"square\",\n    \"selectedFont\": \"Oswald\",\n    \"selectedFontSize\": \"16px\",\n    \"fontColor\": \"#ffffff\"\n  },\n  \"sampleTrackName\": \"Bohemian Rhapsody\",\n  \"sampleTrackArtist\": \"Queen\",\n  \"sampleTrackYear\": \"1975\"\n}",
               "options": {
                 "raw": {
                   "language": "json"
@@ -520,7 +520,7 @@
               "name": "Success",
               "status": "OK",
               "code": 200,
-              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"backgroundFrontType\": \"solid\",\n    \"backgroundFrontColor\": \"#1DB954\",\n    \"backgroundBackType\": \"solid\",\n    \"backgroundBackColor\": \"#191414\",\n    \"fontColor\": \"#ffffff\",\n    \"qrColor\": \"#1DB954\",\n    \"qrBackgroundColor\": \"#191414\",\n    \"qrBackgroundType\": \"square\",\n    \"emoji\": \"\\ud83c\\udfb5\",\n    \"selectedFont\": \"Oswald\",\n    \"selectedFontSize\": \"16px\",\n    \"background\": \"\",\n    \"backgroundBack\": \"\",\n    \"logo\": \"\",\n    \"sampleTrackName\": \"Bohemian Rhapsody\",\n    \"sampleTrackArtist\": \"Queen\",\n    \"sampleTrackYear\": \"1975\"\n  }\n}"
+              "body": "{\n  \"success\": true,\n  \"data\": {\n    \"backgroundFrontType\": \"solid\",\n    \"backgroundFrontColor\": \"#1DB954\",\n    \"backgroundBackType\": \"solid\",\n    \"backgroundBackColor\": \"#191414\",\n    \"qrColor\": \"#1DB954\",\n    \"qrBackgroundColor\": \"#191414\",\n    \"qrBackgroundType\": \"square\",\n    \"selectedFont\": \"Oswald\",\n    \"selectedFontSize\": \"16px\",\n    \"fontColor\": \"#ffffff\",\n    \"background\": \"\",\n    \"backgroundBack\": \"\",\n    \"logo\": \"\",\n    \"sampleTrackName\": \"Bohemian Rhapsody\",\n    \"sampleTrackArtist\": \"Queen\",\n    \"sampleTrackYear\": \"1975\"\n  }\n}"
             },
             {
               "name": "Expired/Not Found",
@@ -571,7 +571,7 @@
               "host": ["{{base_url}}"],
               "path": ["reseller", "fonts"]
             },
-            "description": "Returns all available fonts that can be used in the `design.selectedFont` field when creating orders.\n\nEach font includes:\n- **family** - CSS font-family string (use this in `design.selectedFont`)\n- **displayName** - Human-readable name\n- **defaultSize** - Recommended size (use this in `design.selectedFontSize`)\n- **yearSize** - Size used for the year display on cards\n- **googleFontName** - Google Fonts name (empty for system fonts)\n- **googleFontWeights** - Font weights available\n\nResponse is cached for 24 hours."
+            "description": "Returns all available fonts that can be used in the `design.selectedFont` field when creating orders.\n\nEach font includes:\n- **id** - Value to pass as `design.selectedFont` (empty string = Arial)\n- **displayName** - Human-readable name\n\nTo render fonts in their true look, load them from Google Fonts using the `id` as the family name.\n\nResponse is cached for 24 hours."
           },
           "response": [
             {

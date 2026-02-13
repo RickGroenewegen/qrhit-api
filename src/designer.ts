@@ -323,8 +323,13 @@ class Designer {
         // Create buffer from base64
         const buffer = Buffer.from(base64Data, 'base64');
 
-        // Write the file
-        await fs.writeFile(filePath, buffer);
+        // Resize to max 800x800 while keeping aspect ratio
+        const processedBuffer = await sharp(buffer)
+          .resize(800, 800, { fit: 'inside', withoutEnlargement: true })
+          .toBuffer();
+
+        // Write the processed file
+        await fs.writeFile(filePath, processedBuffer);
 
         this.logger.log(
           color.green.bold(
