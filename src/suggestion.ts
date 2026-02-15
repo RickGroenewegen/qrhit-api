@@ -7,6 +7,7 @@ import PushoverClient from './pushover';
 import Mollie from './mollie';
 import Generator from './generator';
 import Spotify from './spotify';
+import MusicServiceRegistry from './services/MusicServiceRegistry';
 import Data from './data';
 import Cache from './cache';
 
@@ -18,6 +19,7 @@ class Suggestion {
   private mollie = new Mollie();
   private generator = Generator.getInstance();
   private spotify = new Spotify();
+  private musicRegistry = MusicServiceRegistry.getInstance();
   private data = Data.getInstance();
   private cache = Cache.getInstance();
 
@@ -36,6 +38,11 @@ class Suggestion {
       where: {
         paymentId,
       },
+    });
+
+    const playlist = await this.prisma.playlist.findFirst({
+      where: { playlistId },
+      select: { serviceType: true },
     });
 
     const tracks = await this.prisma.$queryRaw<any[]>`
@@ -57,10 +64,10 @@ class Suggestion {
         php.eligableForPrinter,
         php.suggestionsPending,
         php.userConfirmedPrinting,
-        CASE 
-          WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id AND userId = u.id) > 0 
-          THEN 'true' 
-          ELSE 'false' 
+        CASE
+          WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id AND userId = u.id) > 0
+          THEN 'true'
+          ELSE 'false'
         END as hasSuggestion
       FROM payments p
       JOIN users u ON p.userId = u.id
@@ -77,7 +84,7 @@ class Suggestion {
     `;
     return {
       suggestions: tracks,
-      metadata: { payment },
+      metadata: { payment, serviceType: playlist?.serviceType ?? 'spotify' },
     };
   }
 
@@ -923,8 +930,8 @@ class Suggestion {
   }
 
   /**
-   * Validates if a playlist can be reloaded from Spotify based on track count limits.
-   * Users can only reload if the current Spotify playlist has <= tracks than they paid for.
+   * Validates if a playlist can be reloaded from its music service based on track count limits.
+   * Users can only reload if the current playlist has <= tracks than they paid for.
    */
   private async validateTrackCountForReload(
     paymentId: string,
@@ -933,13 +940,14 @@ class Suggestion {
   ): Promise<{
     valid: boolean;
     paidTracks?: number;
-    currentSpotifyTracks?: number;
+    currentTracks?: number;
+    serviceType?: string;
     error?: string;
   }> {
     try {
-      // Get the number of tracks the user paid for
+      // Get the number of tracks the user paid for and the service type
       const paymentInfo = await this.prisma.$queryRaw<any[]>`
-        SELECT php.numberOfTracks as paidTracks, pl.id as playlistDbId
+        SELECT php.numberOfTracks as paidTracks, pl.id as playlistDbId, pl.serviceType
         FROM payments p
         JOIN users u ON p.userId = u.id
         JOIN payment_has_playlist php ON php.paymentId = p.id
@@ -958,30 +966,41 @@ class Suggestion {
       }
 
       const paidTracks = paymentInfo[0].paidTracks;
+      const serviceType = paymentInfo[0].serviceType || 'spotify';
 
-      // Fetch current playlist data from Spotify
-      const spotifyPlaylist = await this.spotify.getPlaylist(playlistId, false, '', false);
-
-      if (!spotifyPlaylist.success || !spotifyPlaylist.data) {
+      // Get the correct provider for this service type
+      const provider = this.musicRegistry.getProviderByString(serviceType);
+      if (!provider) {
         return {
           valid: false,
-          error: 'Failed to fetch playlist from Spotify',
+          error: `Unsupported music service: ${serviceType}`,
         };
       }
 
-      const currentSpotifyTracks = spotifyPlaylist.data.numberOfTracks;
+      // Fetch current playlist data from the music service
+      const playlistData = await provider.getPlaylist(playlistId);
 
-      // Validate: Spotify tracks must be <= paid tracks
-      if (currentSpotifyTracks > paidTracks) {
+      if (!playlistData.success || !playlistData.data) {
+        return {
+          valid: false,
+          error: `Failed to fetch playlist from ${serviceType}`,
+        };
+      }
+
+      const currentTracks = playlistData.data.trackCount;
+
+      // Validate: service tracks must be <= paid tracks
+      if (currentTracks > paidTracks) {
         this.logger.log(
           color.red.bold(
-            `Reload blocked: Spotify has ${currentSpotifyTracks} tracks but user only paid for ${paidTracks}`
+            `Reload blocked: ${serviceType} has ${currentTracks} tracks but user only paid for ${paidTracks}`
           )
         );
         return {
           valid: false,
           paidTracks,
-          currentSpotifyTracks,
+          currentTracks,
+          serviceType,
           error: 'track_limit_exceeded',
         };
       }
@@ -989,7 +1008,8 @@ class Suggestion {
       return {
         valid: true,
         paidTracks,
-        currentSpotifyTracks,
+        currentTracks,
+        serviceType,
       };
     } catch (error) {
       this.logger.log(
@@ -1003,7 +1023,7 @@ class Suggestion {
   }
 
   /**
-   * Reloads a playlist from Spotify if the track count is within the paid limit.
+   * Reloads a playlist from its music service if the track count is within the paid limit.
    * This allows users to refresh their playlist data if tracks were removed or metadata changed.
    * Rate limited to once every 15 minutes (bypassed in development).
    */
@@ -1015,7 +1035,7 @@ class Suggestion {
     success: boolean;
     message?: string;
     paidTracks?: number;
-    currentSpotifyTracks?: number;
+    currentTracks?: number;
     error?: string;
     retryAfter?: number;
     lastReloadAt?: string;
@@ -1116,13 +1136,15 @@ class Suggestion {
           success: false,
           error: validation.error,
           paidTracks: validation.paidTracks,
-          currentSpotifyTracks: validation.currentSpotifyTracks,
+          currentTracks: validation.currentTracks,
         };
       }
 
+      const serviceType = validation.serviceType || 'spotify';
+
       this.logger.log(
         color.blue.bold(
-          `Reloading playlist ${playlistId} for payment ${paymentId}`
+          `Reloading playlist ${playlistId} (${serviceType}) for payment ${paymentId}`
         )
       );
 
@@ -1139,37 +1161,47 @@ class Suggestion {
         };
       }
 
-      // Fetch fresh tracks from Spotify (cache=false to get latest data)
-      const spotifyTracks = await this.spotify.getTracks(playlistId, false, '', false);
-
-      if (!spotifyTracks.success || !spotifyTracks.data || !spotifyTracks.data.tracks) {
+      // Get the correct provider for this service type
+      const provider = this.musicRegistry.getProviderByString(serviceType);
+      if (!provider) {
         return {
           success: false,
-          error: 'Failed to fetch tracks from Spotify',
+          error: `Unsupported music service: ${serviceType}`,
         };
       }
 
-      // Store updated tracks in database with order from Spotify playlist
+      // Fetch fresh tracks from the music service (cache=false to get latest data)
+      const serviceTracks = await provider.getTracks(playlistId, false);
+
+      if (!serviceTracks.success || !serviceTracks.data || !serviceTracks.data.tracks) {
+        return {
+          success: false,
+          error: `Failed to fetch tracks from ${serviceType}`,
+        };
+      }
+
+      // Store updated tracks in database with order from playlist
       const trackOrder = new Map<string, number>();
-      spotifyTracks.data.tracks.forEach((track: any, index: number) => {
+      serviceTracks.data.tracks.forEach((track: any, index: number) => {
         trackOrder.set(track.id, index + 1);
       });
       await this.data.storeTracks(
         playlist.id,
         playlistId,
-        spotifyTracks.data.tracks,
-        trackOrder
+        serviceTracks.data.tracks,
+        trackOrder,
+        serviceType
       );
 
-      // Update playlist numberOfTracks to match Spotify
+      // Update playlist numberOfTracks to match service
       await this.prisma.playlist.update({
         where: { id: playlist.id },
-        data: { numberOfTracks: validation.currentSpotifyTracks },
+        data: { numberOfTracks: validation.currentTracks },
       });
 
       // Clear old cache entries
       const oldCacheKey = `tracks2_${playlistId}_${playlist.numberOfTracks}`;
-      const newCacheKey = `tracks2_${playlistId}_${validation.currentSpotifyTracks}`;
+      const newCacheKey = `tracks2_${playlistId}_${validation.currentTracks}`;
       await this.cache.del(oldCacheKey);
       await this.cache.del(newCacheKey);
 
@@ -1194,18 +1226,18 @@ class Suggestion {
 
       this.logger.log(
         color.green.bold(
-          `Successfully reloaded playlist ${playlistId} with ${validation.currentSpotifyTracks} tracks`
+          `Successfully reloaded playlist ${playlistId} with ${validation.currentTracks} tracks`
         )
       );
 
       return {
         success: true,
         message:
-          validation.currentSpotifyTracks !== playlist.numberOfTracks
+          validation.currentTracks !== playlist.numberOfTracks
             ? 'Playlist reloaded successfully with updated track count'
             : 'Playlist reloaded successfully',
         paidTracks: validation.paidTracks,
-        currentSpotifyTracks: validation.currentSpotifyTracks,
+        currentTracks: validation.currentTracks,
       };
     } catch (error) {
       this.logger.log(
