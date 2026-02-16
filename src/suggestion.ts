@@ -1226,7 +1226,7 @@ class Suggestion {
 
       this.logger.log(
         color.green.bold(
-          `Successfully reloaded playlist ${playlistId} with ${validation.currentTracks} tracks`
+          `Successfully reloaded playlist ${color.white.bold(playlistId)} with ${color.white.bold(validation.currentTracks)} tracks`
         )
       );
 
