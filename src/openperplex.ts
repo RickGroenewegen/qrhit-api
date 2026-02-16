@@ -18,7 +18,7 @@ export class OpenPerplex {
     try {
       const response = await client.answer({
         query: prompt,
-        model: 'openai/gpt-4o-mini',
+        model: 'llmlayer-web',
         temperature: 0.2,
         answer_type: 'json',
         json_schema: JSON.stringify({
