@@ -31,6 +31,7 @@ export const FONTS: FontConfig[] = [
   { family: '"Fira Sans", Arial, sans-serif', displayName: 'Fira Sans (Extra Bold)', defaultSize: '15px', yearSize: '42px', googleFontName: 'Fira Sans', googleFontWeights: '400;700' },
   { family: 'Ubuntu, Arial, sans-serif', displayName: 'Ubuntu (Clean)', defaultSize: '16px', yearSize: '44px', googleFontName: 'Ubuntu', googleFontWeights: '400;700' },
   { family: 'Teko, Arial, sans-serif', displayName: 'Teko (Athletic)', defaultSize: '18px', yearSize: '44px', googleFontName: 'Teko', googleFontWeights: '300;400;500;600;700' },
+  { family: 'Montserrat, Arial, sans-serif', displayName: 'Montserrat (Geometric)', defaultSize: '15px', yearSize: '42px', googleFontName: 'Montserrat', googleFontWeights: '400;700' },
 ];
 
 /**
