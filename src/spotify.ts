@@ -494,9 +494,17 @@ class Spotify {
             let playlistDesign: any = null;
 
             let customImage: string | null = null;
+            let decadePercentages: Record<string, number> = {};
             if (featured) {
               // Build select object dynamically based on available locales
-              const selectFields: any = { name: true, design: true, customImage: true };
+              const selectFields: any = {
+                name: true, design: true, customImage: true,
+                decadePercentage0: true, decadePercentage1900: true,
+                decadePercentage1950: true, decadePercentage1960: true,
+                decadePercentage1970: true, decadePercentage1980: true,
+                decadePercentage1990: true, decadePercentage2000: true,
+                decadePercentage2010: true, decadePercentage2020: true,
+              };
               for (const lang of this.translate.allLocales) {
                 selectFields[`description_${lang}`] = true;
               }
@@ -511,6 +519,20 @@ class Spotify {
                 playlistName = dbPlaylistAny.name || playlistName;
                 playlistDesign = dbPlaylistAny.design || null;
                 customImage = dbPlaylistAny.customImage || null;
+
+                // Collect decade percentages
+                decadePercentages = {
+                  decadePercentage0: dbPlaylistAny.decadePercentage0 || 0,
+                  decadePercentage1900: dbPlaylistAny.decadePercentage1900 || 0,
+                  decadePercentage1950: dbPlaylistAny.decadePercentage1950 || 0,
+                  decadePercentage1960: dbPlaylistAny.decadePercentage1960 || 0,
+                  decadePercentage1970: dbPlaylistAny.decadePercentage1970 || 0,
+                  decadePercentage1980: dbPlaylistAny.decadePercentage1980 || 0,
+                  decadePercentage1990: dbPlaylistAny.decadePercentage1990 || 0,
+                  decadePercentage2000: dbPlaylistAny.decadePercentage2000 || 0,
+                  decadePercentage2010: dbPlaylistAny.decadePercentage2010 || 0,
+                  decadePercentage2020: dbPlaylistAny.decadePercentage2020 || 0,
+                };
 
                 // Collect all descriptions dynamically
                 for (const lang of this.translate.allLocales) {
@@ -534,6 +556,7 @@ class Spotify {
               image,
               customImage,
               design: playlistDesign,
+              ...decadePercentages,
             };
 
             // Featured playlists cache forever, others expire in 24 hours
@@ -563,6 +586,7 @@ class Spotify {
               image,
               customImage,
               design: playlistDesign,
+              ...decadePercentages,
             };
           } catch (error) {
             // Make sure to release lock in case of any error
@@ -594,6 +618,16 @@ class Spotify {
           image: cachedData.image,
           customImage: cachedData.customImage || null,
           design: cachedData.design || null,
+          decadePercentage0: cachedData.decadePercentage0 || 0,
+          decadePercentage1900: cachedData.decadePercentage1900 || 0,
+          decadePercentage1950: cachedData.decadePercentage1950 || 0,
+          decadePercentage1960: cachedData.decadePercentage1960 || 0,
+          decadePercentage1970: cachedData.decadePercentage1970 || 0,
+          decadePercentage1980: cachedData.decadePercentage1980 || 0,
+          decadePercentage1990: cachedData.decadePercentage1990 || 0,
+          decadePercentage2000: cachedData.decadePercentage2000 || 0,
+          decadePercentage2010: cachedData.decadePercentage2010 || 0,
+          decadePercentage2020: cachedData.decadePercentage2020 || 0,
         };
       }
 

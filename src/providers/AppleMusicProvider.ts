@@ -26,6 +26,23 @@ const CACHE_TTL_SEARCH = 3600; // 1 hour
 
 // No TTL for playlist/tracks cache - matches Spotify behavior
 
+// Map frontend locale codes to Apple Music storefront country codes
+const LOCALE_TO_STOREFRONT: Record<string, string> = {
+  'en': 'us',
+  'nl': 'nl',
+  'de': 'de',
+  'fr': 'fr',
+  'es': 'es',
+  'it': 'it',
+  'pt': 'pt',
+  'pl': 'pl',
+  'jp': 'jp',
+  'cn': 'cn',
+  'sv': 'se',
+};
+
+const DEFAULT_STOREFRONT = 'nl';
+
 /**
  * Apple Music provider implementing the IMusicProvider interface.
  * Uses Apple Music API with Developer Token authentication.
@@ -94,11 +111,11 @@ class AppleMusicProvider implements IMusicProvider {
   }
 
   /**
-   * Extract storefront (country code) from URL, default to 'us'
+   * Map a frontend locale code to an Apple Music storefront code
    */
-  private extractStorefront(url: string): string {
-    const match = url.match(/music\.apple\.com\/([a-z]{2})\//i);
-    return match ? match[1].toLowerCase() : 'us';
+  public getStorefrontForLocale(locale?: string): string {
+    if (!locale) return DEFAULT_STOREFRONT;
+    return LOCALE_TO_STOREFRONT[locale.toLowerCase()] || DEFAULT_STOREFRONT;
   }
 
   /**
@@ -209,7 +226,7 @@ class AppleMusicProvider implements IMusicProvider {
    */
   private async apiRequest<T>(
     endpoint: string,
-    storefront: string = 'us'
+    storefront: string = DEFAULT_STOREFRONT
   ): Promise<{ success: boolean; data?: T; error?: string }> {
     const token = this.getDeveloperToken();
     if (!token) {
@@ -259,7 +276,7 @@ class AppleMusicProvider implements IMusicProvider {
    */
   async getPlaylist(
     playlistId: string,
-    storefront: string = 'us',
+    storefront: string = DEFAULT_STOREFRONT,
     cache: boolean = true
   ): Promise<ApiResult & { data?: ProviderPlaylistData }> {
     // Check cache first (skip if cache=false to force refresh)
@@ -272,7 +289,7 @@ class AppleMusicProvider implements IMusicProvider {
     try {
       this.logger.log(
         color.blue.bold(
-          `[${color.white.bold('apple_music')}] Fetching playlist from API for ${color.white.bold(playlistId)}`
+          `[${color.white.bold('apple_music')}] Fetching playlist from API for ${color.white.bold(playlistId)} (storefront: ${color.white.bold(storefront)})`
         )
       );
 
@@ -322,11 +339,11 @@ class AppleMusicProvider implements IMusicProvider {
     playlistId: string,
     cache: boolean = true,
     _maxTracks?: number,
-    onProgress?: ProgressCallback
+    onProgress?: ProgressCallback,
+    storefront: string = DEFAULT_STOREFRONT
   ): Promise<ApiResult & { data?: ProviderTracksResult }> {
-    const storefront = 'us'; // Default storefront
     // Check cache first (skip if cache=false to force refresh)
-    const cacheKey = `${CACHE_KEY_APPLE_MUSIC_TRACKS}${playlistId}`;
+    const cacheKey = `${CACHE_KEY_APPLE_MUSIC_TRACKS}${storefront}_${playlistId}`;
     const cached = await this.cache.get(cacheKey);
     if (cached && cache) {
       return { success: true, data: JSON.parse(cached) };
@@ -340,7 +357,7 @@ class AppleMusicProvider implements IMusicProvider {
 
       this.logger.log(
         color.blue.bold(
-          `[${color.white.bold('apple_music')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}${playlistName ? ` (${color.white.bold(playlistName)})` : ''}`
+          `[${color.white.bold('apple_music')}] Fetching tracks from API for playlist ${color.white.bold(playlistId)}${playlistName ? ` (${color.white.bold(playlistName)})` : ''} (storefront: ${color.white.bold(storefront)})`
         )
       );
 
@@ -478,9 +495,10 @@ class AppleMusicProvider implements IMusicProvider {
   async searchTracks(
     query: string,
     limit: number = 20,
-    offset: number = 0
+    offset: number = 0,
+    storefront: string = DEFAULT_STOREFRONT
   ): Promise<ApiResult & { data?: ProviderSearchResult }> {
-    const cacheKey = `${CACHE_KEY_APPLE_MUSIC_SEARCH}${query}_${limit}_${offset}`;
+    const cacheKey = `${CACHE_KEY_APPLE_MUSIC_SEARCH}${storefront}_${query}_${limit}_${offset}`;
     const cached = await this.cache.get(cacheKey);
     if (cached) {
       return { success: true, data: JSON.parse(cached) };
@@ -490,7 +508,7 @@ class AppleMusicProvider implements IMusicProvider {
       const encodedQuery = encodeURIComponent(query);
       const result = await this.apiRequest<any>(
         `/search?term=${encodedQuery}&types=songs&limit=${limit}&offset=${offset}`,
-        'us'
+        storefront
       );
 
       if (!result.success || !result.data) {
@@ -516,7 +534,7 @@ class AppleMusicProvider implements IMusicProvider {
           previewUrl: attributes.previews?.[0]?.url || null,
           duration: attributes.durationInMillis || undefined,
           serviceType: ServiceType.APPLE_MUSIC,
-          serviceLink: attributes.url || `https://music.apple.com/us/song/${track.id}`,
+          serviceLink: attributes.url || `https://music.apple.com/${storefront}/song/${track.id}`,
         };
       });
 

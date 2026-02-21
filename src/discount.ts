@@ -260,6 +260,8 @@ class Discount {
       // Type filter
       if (filter === 'promotional') {
         where.promotional = true;
+      } else if (filter === 'non-promotional') {
+        where.promotional = false;
       } else if (filter === 'general') {
         where.general = true;
       } else if (filter === 'digital') {

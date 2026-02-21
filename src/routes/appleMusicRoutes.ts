@@ -106,7 +106,8 @@ export default async function appleMusicRoutes(fastify: FastifyInstance) {
       };
     }
 
-    const result = await appleMusicProvider.getPlaylist(resolvedPlaylistId, 'us', utils.parseBoolean(cache));
+    const storefront = appleMusicProvider.getStorefrontForLocale(request.body.locale);
+    const result = await appleMusicProvider.getPlaylist(resolvedPlaylistId, storefront, utils.parseBoolean(cache));
     return result;
   });
 
@@ -160,7 +161,8 @@ export default async function appleMusicRoutes(fastify: FastifyInstance) {
         }
       : undefined;
 
-    const result = await appleMusicProvider.getTracks(resolvedPlaylistId, utils.parseBoolean(cache), undefined, onProgress);
+    const storefront = appleMusicProvider.getStorefrontForLocale(request.body.locale);
+    const result = await appleMusicProvider.getTracks(resolvedPlaylistId, utils.parseBoolean(cache), undefined, onProgress, storefront);
 
     // Broadcast completion or error (only if requestId provided)
     if (progressWs && requestId) {
