@@ -302,8 +302,8 @@ Generate a preview to visualize a card design before placing an order. Preview U
 {
   "success": true,
   "data": {
-    "previewUrlFront": "https://qrsong.io/en/card-preview-front/abc123def456",
-    "previewUrlBack": "https://qrsong.io/en/card-preview-back/abc123def456",
+    "previewUrlFront": "https://www.qrsong.io/en/card-preview-front/abc123def456",
+    "previewUrlBack": "https://www.qrsong.io/en/card-preview-back/abc123def456",
     "token": "abc123def456"
   }
 }
@@ -315,7 +315,7 @@ The preview URLs can be opened in a browser or embedded in iframes on your own s
 
 ```html
 <iframe
-  src="https://qrsong.io/en/card-preview-front/abc123def456"
+  src="https://www.qrsong.io/en/card-preview-front/abc123def456"
   width="350"
   height="350"
   style="border: none;"
