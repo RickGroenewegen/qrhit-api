@@ -87,7 +87,7 @@
     "uninstall": "^0.0.0",
     "wikipedia": "^2.4.2",
     "ws": "^8.19.0",
-    "ytmusic-api": "^5.3.0"
+    "ytmusic-api": "^5.3.1"
   },
   "devDependencies": {
     "@types/accept-language-parser": "^1.5.8",

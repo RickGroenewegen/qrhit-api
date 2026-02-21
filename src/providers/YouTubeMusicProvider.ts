@@ -101,6 +101,15 @@ class YouTubeMusicProvider implements IMusicProvider {
     }
   }
 
+  /**
+   * Force re-initialization of the YTMusic client (e.g., after a stale config 400 error)
+   */
+  private async reinitialize(): Promise<void> {
+    this.initialized = false;
+    this.ytmusic = new YTMusic();
+    await this.ensureInitialized();
+  }
+
   public static getInstance(): YouTubeMusicProvider {
     if (!YouTubeMusicProvider.instance) {
       YouTubeMusicProvider.instance = new YouTubeMusicProvider();
@@ -711,7 +720,19 @@ class YouTubeMusicProvider implements IMusicProvider {
     try {
       await this.ensureInitialized();
 
-      const songs = await this.ytmusic.searchSongs(query);
+      let songs;
+      try {
+        songs = await this.ytmusic.searchSongs(query);
+      } catch (error: any) {
+        if (error.message?.includes('400')) {
+          this.logger.log(`YouTube Music search got 400, re-initializing and retrying...`);
+          await this.reinitialize();
+          songs = await this.ytmusic.searchSongs(query);
+        } else {
+          throw error;
+        }
+      }
+
       const sliced = songs.slice(offset, offset + limit);
 
       const tracks: ProviderTrackData[] = sliced.map((song) => ({
