@@ -2145,15 +2145,30 @@ ${params.html}
             // Wait 250ms before the next request to respect rate limiting
             await new Promise((resolve) => setTimeout(resolve, 250));
           } catch (err: any) {
-            // Log individual contact errors but continue with others
-            this.logger.log(
-              color.red(
-                `[${white.bold(listDescription)}] Error uploading ${white.bold(
-                  contact.email
-                )}: ${white.bold(err.message)}`
-              )
-            );
-            console.log(err);
+            if (err.response?.status === 422) {
+              // Invalid email or unprocessable content - log cleanly and mark as processed to stop retrying
+              this.logger.log(
+                color.yellow(
+                  `[${white.bold(
+                    listDescription
+                  )}] Skipping invalid contact ${white.bold(
+                    contact.email
+                  )}: ${white.bold(err.response?.data?.detail || 'Unprocessable content')}`
+                )
+              );
+              processedEmails.add(contact.email);
+            } else {
+              // Log other errors but continue with others
+              this.logger.log(
+                color.red(
+                  `[${white.bold(
+                    listDescription
+                  )}] Error uploading ${white.bold(
+                    contact.email
+                  )}: ${white.bold(err.message)}`
+                )
+              );
+            }
 
             // Also wait after errors to avoid hitting rate limits
             await new Promise((resolve) => setTimeout(resolve, 250));
