@@ -337,7 +337,7 @@ class SpotifyApi2 {
     try {
       // New API: track → item, no external_ids
       const fieldsParam = 'items(item(id,name,artists(name),album(name,images,release_date),external_urls,preview_url)),next,total';
-      const initialUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${SPOTIFY_PAGE_LIMIT}&offset=0&fields=${fieldsParam}`;
+      const initialUrl = `https://api.spotify.com/v1/playlists/${playlistId}/items?limit=${SPOTIFY_PAGE_LIMIT}&offset=0&fields=${fieldsParam}`;
 
       let initialResponse: AxiosResponse<any>;
       try {
@@ -347,7 +347,7 @@ class SpotifyApi2 {
       } catch (error: any) {
         if (error.response && error.response.status === 400) {
           usedLimit = SPOTIFY_PAGE_LIMIT_FALLBACK;
-          const fallbackUrl = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${SPOTIFY_PAGE_LIMIT_FALLBACK}&offset=0&fields=${fieldsParam}`;
+          const fallbackUrl = `https://api.spotify.com/v1/playlists/${playlistId}/items?limit=${SPOTIFY_PAGE_LIMIT_FALLBACK}&offset=0&fields=${fieldsParam}`;
           initialResponse = await axios.get(fallbackUrl, {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
@@ -463,7 +463,7 @@ class SpotifyApi2 {
       const batch = pageRequests.slice(i, i + SPOTIFY_CONCURRENT_REQUESTS);
 
       const batchPromises = batch.map(async ({ offset }) => {
-        const url = `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=${limit}&offset=${offset}&fields=${fieldsParam}`;
+        const url = `https://api.spotify.com/v1/playlists/${playlistId}/items?limit=${limit}&offset=${offset}&fields=${fieldsParam}`;
 
         for (let attempt = 0; attempt < 3; attempt++) {
           try {
@@ -518,7 +518,7 @@ class SpotifyApi2 {
     let allItems: any[] = [];
     // New API: item instead of track, no external_ids
     let nextUrl: string | null =
-      `https://api.spotify.com/v1/playlists/${playlistId}/tracks?limit=50&fields=items(item(id,name,artists(name),album(name,images,release_date),external_urls,preview_url)),next`;
+      `https://api.spotify.com/v1/playlists/${playlistId}/items?limit=50&fields=items(item(id,name,artists(name),album(name,images,release_date),external_urls,preview_url)),next`;
 
     try {
       while (nextUrl) {
@@ -676,7 +676,7 @@ class SpotifyApi2 {
           const updateResult = await this.executeWithRetry(async () => {
             await axios({
               method,
-              url: `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+              url: `https://api.spotify.com/v1/playlists/${playlistId}/items`,
               headers: {
                 Authorization: `Bearer ${accessToken}`,
                 'Content-Type': 'application/json',
@@ -726,7 +726,7 @@ class SpotifyApi2 {
 
           const addResult = await this.executeWithRetry(async () => {
             await axios.post(
-              `https://api.spotify.com/v1/playlists/${playlistId}/tracks`,
+              `https://api.spotify.com/v1/playlists/${playlistId}/items`,
               JSON.stringify({ uris: chunk }),
               {
                 headers: {
