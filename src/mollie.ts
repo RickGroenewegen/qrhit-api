@@ -110,6 +110,77 @@ class Mollie {
     return dailyReport.sort((a, b) => b.day.localeCompare(a.day));
   }
 
+  public async getSalesReport(groupBy: 'day' | 'month', filter: string = 'all'): Promise<any> {
+    const ignoreEmails = process.env['ENVIRONMENT'] === 'production'
+      ? ['west14@gmail.com', 'info@rickgroenewegen.nl']
+      : [];
+
+    const emailFilter = ignoreEmails.length
+      ? `AND p.email NOT IN (${ignoreEmails.map(e => `'${e}'`).join(',')})`
+      : '';
+
+    const dateExpr = groupBy === 'day'
+      ? "DATE_FORMAT(p.createdAt, '%Y-%m-%d')"
+      : "DATE_FORMAT(p.createdAt, '%Y-%m')";
+
+    if (filter === 'all') {
+      const results: any[] = await this.prisma.$queryRawUnsafe(`
+        SELECT
+          ${dateExpr} as period,
+          COUNT(*) as numberOfSales,
+          COALESCE(SUM(p.totalPrice), 0) as totalPrice,
+          COALESCE(SUM(p.totalPriceWithoutTax), 0) as totalPriceWithoutTax
+        FROM payments p
+        WHERE p.status = 'paid'
+          AND p.vibe = 0
+          AND p.createdAt > '2024-12-05'
+          ${emailFilter}
+        GROUP BY ${dateExpr}
+        ORDER BY period DESC
+      `);
+
+      return results.map(r => ({
+        period: r.period,
+        numberOfSales: Number(r.numberOfSales),
+        totalPrice: Number(r.totalPrice) || 0,
+        totalPriceWithoutTax: Number(r.totalPriceWithoutTax) || 0,
+      }));
+    }
+
+    let typeFilter = '';
+    if (filter === 'digital') {
+      typeFilter = "AND php.type = 'digital'";
+    } else if (filter === 'sheets') {
+      typeFilter = "AND php.type = 'physical' AND php.subType = 'sheets'";
+    } else if (filter === 'cards') {
+      typeFilter = "AND php.type = 'physical' AND (php.subType = 'none' OR php.subType IS NULL)";
+    }
+
+    const results: any[] = await this.prisma.$queryRawUnsafe(`
+      SELECT
+        ${dateExpr} as period,
+        COUNT(DISTINCT p.id) as numberOfSales,
+        COALESCE(SUM(php.price), 0) as totalPrice,
+        COALESCE(SUM(php.priceWithoutVAT), 0) as totalPriceWithoutTax
+      FROM payment_has_playlist php
+      JOIN payments p ON php.paymentId = p.id
+      WHERE p.status = 'paid'
+        AND p.vibe = 0
+        AND p.createdAt > '2024-12-05'
+        ${emailFilter}
+        ${typeFilter}
+      GROUP BY ${dateExpr}
+      ORDER BY period DESC
+    `);
+
+    return results.map(r => ({
+      period: r.period,
+      numberOfSales: Number(r.numberOfSales),
+      totalPrice: Number(r.totalPrice) || 0,
+      totalPriceWithoutTax: Number(r.totalPriceWithoutTax) || 0,
+    }));
+  }
+
   public async getPaymentsByMonth(
     startDate: Date,
     endDate: Date

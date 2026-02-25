@@ -11,6 +11,7 @@ import Charts from '../charts';
 import { OpenPerplex } from '../openperplex';
 import Push from '../push';
 import Discount from '../discount';
+import Printer from '../printer';
 import PrinterInvoiceService from '../printerinvoice';
 import Utils from '../utils';
 import Mollie from '../mollie';
@@ -1672,8 +1673,23 @@ export default async function adminRoutes(
   fastify.get(
     '/day_report',
     getAuthHandler(['admin']),
-    async (_request: any, reply: any) => {
-      const report = await mollie.getPaymentsByDay();
+    async (request: any, reply: any) => {
+      const filter = request.query?.filter || 'all';
+      const report = await mollie.getSalesReport('day', filter);
+      reply.send({
+        success: true,
+        data: report,
+      });
+    }
+  );
+
+  // Monthly report
+  fastify.get(
+    '/monthly_report',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const filter = request.query?.filter || 'all';
+      const report = await mollie.getSalesReport('month', filter);
       reply.send({
         success: true,
         data: report,
@@ -4385,6 +4401,19 @@ export default async function adminRoutes(
           error: error.message || 'Failed to flush hosts',
         });
       }
+    }
+  );
+
+  // ============ PRINTER COST CALCULATOR ============
+
+  const printer = Printer.getInstance();
+
+  fastify.post(
+    '/admin/printer-costs/calculate',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { inputs, result } = await printer.calculate(request.body || {});
+      reply.send({ success: true, data: result, inputs });
     }
   );
 
