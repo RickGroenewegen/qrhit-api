@@ -4305,17 +4305,24 @@ export default async function adminRoutes(
     }
   );
 
-  // ============ SPOTIFY TRACKS PROVIDER TOGGLE ============
+  // ============ SPOTIFY PROVIDER TOGGLES ============
 
-  // Get current Spotify tracks provider (v1, v2, or scraper)
+  // Get current Spotify provider status (playlist + tracks)
   fastify.get(
     '/admin/spotify/provider-status',
     getAuthHandler(['admin']),
     async (_request: any, reply: any) => {
       try {
         const cache = Cache.getInstance();
-        const provider = await cache.get('spotify_tracks_provider');
-        return reply.send({ success: true, provider: provider || 'v1' });
+        const playlistProvider = await cache.get('spotify_playlist_provider');
+        const tracksProvider = await cache.get('spotify_tracks_provider');
+        const searchProvider = await cache.get('spotify_search_provider');
+        return reply.send({
+          success: true,
+          playlistProvider: playlistProvider || 'v1',
+          tracksProvider: tracksProvider || 'v1',
+          searchProvider: searchProvider || 'v1',
+        });
       } catch (error: any) {
         return reply.status(500).send({
           success: false,
@@ -4325,14 +4332,22 @@ export default async function adminRoutes(
     }
   );
 
-  // Set Spotify tracks provider (v1, v2, scraper, or graphql)
+  // Set a Spotify provider (playlist or tracks)
   fastify.post(
     '/admin/spotify/toggle-provider',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const { provider } = request.body;
+        const { provider, target } = request.body;
         const validProviders = ['v1', 'v2', 'scraper', 'graphql'];
+        const validTargets = ['playlist', 'tracks', 'search'];
+
+        if (!validTargets.includes(target)) {
+          return reply.status(400).send({
+            success: false,
+            error: `Invalid target. Must be one of: ${validTargets.join(', ')}`,
+          });
+        }
 
         if (!validProviders.includes(provider)) {
           return reply.status(400).send({
@@ -4342,14 +4357,15 @@ export default async function adminRoutes(
         }
 
         const cache = Cache.getInstance();
+        const cacheKey = `spotify_${target}_provider`;
 
         if (provider === 'v1') {
-          await cache.del('spotify_tracks_provider');
+          await cache.del(cacheKey);
         } else {
-          await cache.set('spotify_tracks_provider', provider);
+          await cache.set(cacheKey, provider);
         }
 
-        return reply.send({ success: true, provider });
+        return reply.send({ success: true, provider, target });
       } catch (error: any) {
         return reply.status(500).send({
           success: false,

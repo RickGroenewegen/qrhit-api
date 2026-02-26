@@ -107,9 +107,18 @@ class Spotify {
   }
 
   /**
+   * Returns the active playlist provider based on the Redis toggle.
+   * 'v2' → SpotifyApi2, 'scraper' → SpotifyScraper, 'graphql' → SpotifyGraphqlScraper
+   * default ('v1') → SpotifyApi
+   */
+  private async getActivePlaylistProvider(): Promise<string> {
+    const provider = await this.cache.get('spotify_playlist_provider');
+    return provider || 'v1';
+  }
+
+  /**
    * Returns the active tracks provider based on the Redis toggle.
-   * 'v2' → SpotifyApi2 (post-March-2026 format)
-   * 'scraper' → SpotifyScraper (RapidAPI proxy)
+   * 'v2' → SpotifyApi2, 'scraper' → SpotifyScraper, 'graphql' → SpotifyGraphqlScraper
    * default ('v1') → SpotifyApi
    */
   private async getActiveTracksProvider(): Promise<string> {
@@ -118,12 +127,17 @@ class Spotify {
   }
 
   /**
-   * Returns the active API provider based on the Redis toggle.
-   * When 'spotify_tracks_provider' is 'v2', uses SpotifyApi2 (post-March-2026 format).
-   * Otherwise uses the default SpotifyApi.
+   * Returns the active search provider based on the Redis toggle.
    */
-  private async getActiveApi(): Promise<SpotifyApi | SpotifyApi2> {
-    const provider = await this.getActiveTracksProvider();
+  private async getActiveSearchProvider(): Promise<string> {
+    const provider = await this.cache.get('spotify_search_provider');
+    return provider || 'v1';
+  }
+
+  /**
+   * Returns the active API instance for a given provider string.
+   */
+  private getApiForProvider(provider: string): SpotifyApi | SpotifyApi2 {
     return provider === 'v2' ? this.spotifyApi2 : this.spotifyApi;
   }
 
@@ -416,22 +430,32 @@ class Spotify {
               }
             }
 
+            // Use rate limit manager for automatic fallback on 429 errors
+            const playlistProvider = await this.getActivePlaylistProvider();
+
+            const playlistTag = playlistProvider === 'v1' ? 'spotify' : `spotify-${playlistProvider}`;
             this.logger.log(
               color.blue.bold(
-                `[${color.white.bold('spotify')}] Fetching playlist from API for ${color.white.bold(
+                `[${color.white.bold(playlistTag)}] Fetching playlist for ${color.white.bold(
                   playlistId
                 )}${ipInfo}${uaInfo}`
               )
             );
+            let result;
 
-            // Use rate limit manager for automatic fallback on 429 errors
-            const api = await this.getActiveApi();
-            const result = await this.rateLimitManager.executeWithFallback(
-              'getPlaylist',
-              [checkPlaylistId],
-              api,
-              this.apiFallback
-            );
+            if (playlistProvider === 'scraper') {
+              result = await this.spotifyScraper.getPlaylist(checkPlaylistId);
+            } else if (playlistProvider === 'graphql') {
+              result = await this.spotifyGraphqlScraper.getPlaylist(checkPlaylistId);
+            } else {
+              const api = this.getApiForProvider(playlistProvider);
+              result = await this.rateLimitManager.executeWithFallback(
+                'getPlaylist',
+                [checkPlaylistId],
+                api,
+                this.apiFallback
+              );
+            }
 
             if (!result.success) {
               // Cache the failure so other waiting requests don't timeout
@@ -804,9 +828,10 @@ class Spotify {
         const uaInfo = userAgent
           ? ` with User-Agent: ${color.white.bold(userAgent)}`
           : '';
+        const tracksTag = tracksProvider === 'v1' ? 'spotify' : `spotify-${tracksProvider}`;
         this.logger.log(
           color.blue.bold(
-            `[${color.white.bold('spotify')}] Fetching tracks from API for playlist ${color.white.bold(
+            `[${color.white.bold(tracksTag)}] Fetching tracks for playlist ${color.white.bold(
               playlistId
             )} (${color.white.bold(playlistData.name)})${ipInfo}${uaInfo}`
           )
@@ -834,7 +859,7 @@ class Spotify {
           // GraphQL scraper forced via admin toggle
           result = await this.spotifyGraphqlScraper.getTracks(checkPlaylistId, onProgress);
         } else {
-          const api = await this.getActiveApi();
+          const api = this.getApiForProvider(tracksProvider);
           result = await this.rateLimitManager.executeWithFallback(
             'getTracks',
             [checkPlaylistId, onProgress],
@@ -1160,7 +1185,8 @@ class Spotify {
       );
 
       // Use rate limit manager for automatic fallback on 429 errors
-      const api = await this.getActiveApi();
+      const tracksProvider = await this.getActiveTracksProvider();
+      const api = this.getApiForProvider(tracksProvider);
       const result = await this.rateLimitManager.executeWithFallback(
         'getTracksByIds',
         [trackIds],
@@ -1265,13 +1291,22 @@ class Spotify {
       }
 
       // Use rate limit manager for automatic fallback on 429 errors
-      const api = await this.getActiveApi();
-      const result = await this.rateLimitManager.executeWithFallback(
-        'searchTracks',
-        [searchTerm, limit, offset],
-        api,
-        this.apiFallback
-      );
+      const searchProvider = await this.getActiveSearchProvider();
+      let result;
+
+      if (searchProvider === 'scraper') {
+        result = await this.spotifyScraper.searchTracks(searchTerm, limit, offset);
+      } else if (searchProvider === 'graphql') {
+        result = await this.spotifyGraphqlScraper.searchTracks(searchTerm, limit, offset);
+      } else {
+        const api = this.getApiForProvider(searchProvider);
+        result = await this.rateLimitManager.executeWithFallback(
+          'searchTracks',
+          [searchTerm, limit, offset],
+          api,
+          this.apiFallback
+        );
+      }
 
       // Determine which API was used for logging
       const rateLimitStatus = await this.rateLimitManager.getRateLimitStatus();

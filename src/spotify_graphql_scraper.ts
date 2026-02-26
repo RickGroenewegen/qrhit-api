@@ -4,6 +4,8 @@ import { color } from 'console-log-colors';
 import { ApiResult } from './interfaces/ApiResult';
 import { ProgressCallback } from './interfaces/IMusicProvider';
 
+const TAG = `[${color.white.bold('spotify-graphql')}]`;
+
 class SpotifyGraphqlScraper {
   private logger = new Logger();
   private baseUrl = process.env['SPOTIFY_SCRAPER_URL'] || 'http://localhost:3050';
@@ -20,12 +22,6 @@ class SpotifyGraphqlScraper {
    * Fetch playlist metadata (first page of tracks only).
    */
   public async getPlaylist(playlistId: string): Promise<ApiResult> {
-    this.logger.log(
-      color.blue.bold(
-        `Fetching playlist in ${color.white.bold('GraphQL Scraper')} for ${color.white.bold(playlistId)}`
-      )
-    );
-
     try {
       const response = await axios.post(
         `${this.baseUrl}/playlist`,
@@ -48,16 +44,12 @@ class SpotifyGraphqlScraper {
           tracks: { total: d.totalSongs || 0 },
         };
 
-        this.logger.log(
-          color.green(`GraphQL Scraper getPlaylist: "${d.name}" — ${d.totalSongs} tracks`)
-        );
-
         return { success: true, data: transformedData };
       }
 
       const errorMessage = response.data?.error || 'Unexpected response from GraphQL Scraper';
       this.logger.log(
-        color.yellow(`GraphQL Scraper getPlaylist for ${playlistId} failed: ${errorMessage}`)
+        color.yellow(`${TAG} getPlaylist for ${playlistId} failed: ${errorMessage}`)
       );
       return { success: false, error: `GraphQL Scraper error: ${errorMessage}` };
     } catch (error) {
@@ -66,7 +58,7 @@ class SpotifyGraphqlScraper {
       const message = axiosError.message;
       this.logger.log(
         color.red.bold(
-          `Error fetching GraphQL Scraper playlist ${playlistId}: ${status} - ${message}`
+          `${TAG} Error fetching playlist ${playlistId}: ${status} - ${message}`
         )
       );
 
@@ -86,13 +78,8 @@ class SpotifyGraphqlScraper {
    * expected by spotify.ts.
    */
   public async getTracks(playlistId: string, onProgress?: ProgressCallback): Promise<ApiResult> {
-    this.logger.log(
-      color.blue.bold(
-        `Fetching tracks in ${color.white.bold('GraphQL Scraper')} for playlist ${color.white.bold(playlistId)}`
-      )
-    );
-
     try {
+      const start = Date.now();
       const response = await axios.post(
         `${this.baseUrl}/playlist/tracks`,
         { playlistId },
@@ -102,6 +89,7 @@ class SpotifyGraphqlScraper {
       if (response.data?.success && response.data?.data) {
         const d = response.data.data;
         const tracks = d.tracks || [];
+        const elapsed = Date.now() - start;
 
         const transformedItems = tracks.map((t: any) => {
           return {
@@ -132,8 +120,8 @@ class SpotifyGraphqlScraper {
         }
 
         this.logger.log(
-          color.green(
-            `GraphQL Scraper getTracks: "${d.name}" — ${transformedItems.length}/${d.totalSongs} tracks`
+          color.blue.bold(
+            `${TAG} Fetched ${color.white.bold(transformedItems.length)} tracks in ${color.white.bold(elapsed + 'ms')}`
           )
         );
 
@@ -147,7 +135,7 @@ class SpotifyGraphqlScraper {
 
       const errorMessage = response.data?.error || 'Unexpected response from GraphQL Scraper';
       this.logger.log(
-        color.yellow(`GraphQL Scraper getTracks for ${playlistId} failed: ${errorMessage}`)
+        color.yellow(`${TAG} getTracks for ${playlistId} failed: ${errorMessage}`)
       );
       return { success: false, error: `GraphQL Scraper error: ${errorMessage}` };
     } catch (error) {
@@ -156,7 +144,7 @@ class SpotifyGraphqlScraper {
       const message = axiosError.message;
       this.logger.log(
         color.red.bold(
-          `Error fetching GraphQL Scraper tracks for ${playlistId}: ${status} - ${message}`
+          `${TAG} Error fetching tracks for ${playlistId}: ${status} - ${message}`
         )
       );
 
@@ -171,10 +159,70 @@ class SpotifyGraphqlScraper {
   }
 
   /**
-   * Not supported by GraphQL Scraper — returns failure.
+   * Fetch track details by IDs via the GraphQL Scraper.
    */
-  public async getTracksByIds(_trackIds: string[]): Promise<ApiResult> {
-    return { success: false, error: 'getTracksByIds not supported by GraphQL Scraper' };
+  public async getTracksByIds(trackIds: string[]): Promise<ApiResult> {
+    try {
+      const response = await axios.post(
+        `${this.baseUrl}/tracks`,
+        { trackIds },
+        { headers: this.headers, timeout: 120000 }
+      );
+
+      if (response.data?.success && response.data?.data) {
+        const d = response.data.data;
+        const tracks = d.tracks || [];
+        const failed = d.failed || [];
+
+        const transformedTracks = tracks.map((t: any) => ({
+          id: t.trackId,
+          name: t.title,
+          artists: (t.artists || []).map((a: any) => ({ name: a.name })),
+          album: {
+            name: t.album?.name || '',
+            images: t.coverArt ? [{ url: t.coverArt }] : [],
+            release_date: t.releaseDate || '',
+          },
+          external_urls: { spotify: t.shareUrl || `https://open.spotify.com/track/${t.trackId}` },
+          duration_ms: t.durationMs || 0,
+          explicit: t.explicit || false,
+          popularity: t.playcount || 0,
+        }));
+
+        this.logger.log(
+          color.blue.bold(
+            `${TAG} getTracksByIds: ${color.white.bold(`${transformedTracks.length}/${trackIds.length}`)} succeeded, ${color.white.bold(`${failed.length}`)} failed`
+          )
+        );
+
+        return {
+          success: true,
+          data: {
+            tracks: transformedTracks,
+            failed,
+          },
+        };
+      }
+
+      const errorMessage = response.data?.error || 'Unexpected response from GraphQL Scraper';
+      this.logger.log(
+        color.yellow.bold(`${TAG} getTracksByIds failed: ${errorMessage}`)
+      );
+      return { success: false, error: `GraphQL Scraper error: ${errorMessage}` };
+    } catch (error) {
+      const axiosError = error as AxiosError;
+      const status = axiosError.response?.status;
+      const message = axiosError.message;
+      this.logger.log(
+        color.red.bold(
+          `${TAG} Error fetching tracks by IDs: ${color.white.bold(`${status} - ${message}`)}`
+        )
+      );
+      return {
+        success: false,
+        error: `GraphQL Scraper error fetching tracks by IDs: ${status || message}`,
+      };
+    }
   }
 
   /**
@@ -185,12 +233,6 @@ class SpotifyGraphqlScraper {
     limit: number = 10,
     offset: number = 0
   ): Promise<ApiResult> {
-    this.logger.log(
-      color.blue.bold(
-        `Searching tracks in ${color.white.bold('GraphQL Scraper')} for ${color.white.bold(`"${searchTerm}"`)}`
-      )
-    );
-
     try {
       const response = await axios.post(
         `${this.baseUrl}/search`,
@@ -216,7 +258,7 @@ class SpotifyGraphqlScraper {
 
         this.logger.log(
           color.blue.bold(
-            `GraphQL Scraper search: ${color.white.bold(`"${searchTerm}"`)} — ${color.white.bold(`${transformedItems.length}/${total}`)} results`
+            `${TAG} Search ${color.white.bold(`"${searchTerm}"`)} — ${color.white.bold(`${transformedItems.length}/${total}`)} results`
           )
         );
 
@@ -233,7 +275,7 @@ class SpotifyGraphqlScraper {
 
       const errorMessage = response.data?.error || 'Unexpected response from GraphQL Scraper';
       this.logger.log(
-        color.yellow.bold(`GraphQL Scraper searchTracks for "${searchTerm}" failed: ${errorMessage}`)
+        color.yellow.bold(`${TAG} searchTracks for "${searchTerm}" failed: ${errorMessage}`)
       );
       return { success: false, error: `GraphQL Scraper error: ${errorMessage}` };
     } catch (error) {
@@ -242,7 +284,7 @@ class SpotifyGraphqlScraper {
       const message = axiosError.message;
       this.logger.log(
         color.red.bold(
-          `Error searching GraphQL Scraper for "${searchTerm}": ${status} - ${message}`
+          `${TAG} Error searching for "${searchTerm}": ${status} - ${message}`
         )
       );
       return {
