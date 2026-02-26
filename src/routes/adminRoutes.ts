@@ -4305,17 +4305,17 @@ export default async function adminRoutes(
     }
   );
 
-  // ============ SPOTIFY API PROVIDER TOGGLE ============
+  // ============ SPOTIFY TRACKS PROVIDER TOGGLE ============
 
-  // Get current Spotify API provider status
+  // Get current Spotify tracks provider (v1, v2, or scraper)
   fastify.get(
     '/admin/spotify/provider-status',
     getAuthHandler(['admin']),
     async (_request: any, reply: any) => {
       try {
         const cache = Cache.getInstance();
-        const useApi2 = await cache.get('spotify_use_api2');
-        return reply.send({ success: true, useApi2: useApi2 === 'true' });
+        const provider = await cache.get('spotify_tracks_provider');
+        return reply.send({ success: true, provider: provider || 'v1' });
       } catch (error: any) {
         return reply.status(500).send({
           success: false,
@@ -4325,26 +4325,35 @@ export default async function adminRoutes(
     }
   );
 
-  // Toggle Spotify API provider (v1 ↔ v2)
+  // Set Spotify tracks provider (v1, v2, scraper, or graphql)
   fastify.post(
     '/admin/spotify/toggle-provider',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       try {
-        const { useApi2 } = request.body;
-        const cache = Cache.getInstance();
+        const { provider } = request.body;
+        const validProviders = ['v1', 'v2', 'scraper', 'graphql'];
 
-        if (useApi2) {
-          await cache.set('spotify_use_api2', 'true');
-        } else {
-          await cache.del('spotify_use_api2');
+        if (!validProviders.includes(provider)) {
+          return reply.status(400).send({
+            success: false,
+            error: `Invalid provider. Must be one of: ${validProviders.join(', ')}`,
+          });
         }
 
-        return reply.send({ success: true, useApi2: !!useApi2 });
+        const cache = Cache.getInstance();
+
+        if (provider === 'v1') {
+          await cache.del('spotify_tracks_provider');
+        } else {
+          await cache.set('spotify_tracks_provider', provider);
+        }
+
+        return reply.send({ success: true, provider });
       } catch (error: any) {
         return reply.status(500).send({
           success: false,
-          error: error.message || 'Failed to toggle provider',
+          error: error.message || 'Failed to set provider',
         });
       }
     }

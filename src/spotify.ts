@@ -18,6 +18,7 @@ import SpotifyApi from './spotify_api';
 import SpotifyApi2 from './spotify_api2';
 import SpotifyRapidApi from './spotify_rapidapi';
 import SpotifyScraper from './spotify_scraper';
+import SpotifyGraphqlScraper from './spotify_graphql_scraper';
 import SpotifyRapidApi2 from './spotify_rapidapi2';
 import RateLimitManager from './rate_limit_manager';
 import TrackEnrichment, { EnrichmentData } from './trackEnrichment';
@@ -72,11 +73,12 @@ class Spotify {
   private spotifyApi2 = new SpotifyApi2(); // Instantiate SpotifyApi2 (post-March-2026 format)
   private spotifyRapidApi = new SpotifyRapidApi(); // Instantiate SpotifyRapidApi
   private spotifyScraper = new SpotifyScraper(); // Instantiate SpotifyScraper if needed
+  private spotifyGraphqlScraper = new SpotifyGraphqlScraper(); // Instantiate GraphQL Scraper
   private spotifyRapidApi2 = new SpotifyRapidApi2(); // Instantiate SpotifyRapidApi for fallback
   private rateLimitManager = RateLimitManager.getInstance(); // Add rate limit manager
 
   private api = this.spotifyApi; // Default to SpotifyApi
-  private apiFallback = this.spotifyScraper; // Fallback to scraper (RapidAPI proxies will also break)
+  private apiFallback = this.spotifyGraphqlScraper; // Fallback to GraphQL scraper
 
   // Jumbo card mapping: key = '[set_sku]_[cardnumber]', value = spotify id
   private jumboCardMap: { [key: string]: string } = {};
@@ -105,13 +107,24 @@ class Spotify {
   }
 
   /**
+   * Returns the active tracks provider based on the Redis toggle.
+   * 'v2' → SpotifyApi2 (post-March-2026 format)
+   * 'scraper' → SpotifyScraper (RapidAPI proxy)
+   * default ('v1') → SpotifyApi
+   */
+  private async getActiveTracksProvider(): Promise<string> {
+    const provider = await this.cache.get('spotify_tracks_provider');
+    return provider || 'v1';
+  }
+
+  /**
    * Returns the active API provider based on the Redis toggle.
-   * When 'spotify_use_api2' is 'true', uses SpotifyApi2 (post-March-2026 format).
+   * When 'spotify_tracks_provider' is 'v2', uses SpotifyApi2 (post-March-2026 format).
    * Otherwise uses the default SpotifyApi.
    */
   private async getActiveApi(): Promise<SpotifyApi | SpotifyApi2> {
-    const useApi2 = await this.cache.get('spotify_use_api2');
-    return useApi2 === 'true' ? this.spotifyApi2 : this.spotifyApi;
+    const provider = await this.getActiveTracksProvider();
+    return provider === 'v2' ? this.spotifyApi2 : this.spotifyApi;
   }
 
   /**
@@ -784,6 +797,7 @@ class Spotify {
       cacheKeyCount = `${CACHE_KEY_TRACK_COUNT}${checkPlaylistId}_${playlistData.numberOfTracks}`;
 
       const cacheResult = await this.cache.get(cacheKey);
+      const tracksProvider = await this.getActiveTracksProvider();
 
       if (!cacheResult || !cache) {
         const ipInfo = clientIp ? ` from IP ${color.white.bold(clientIp)}` : '';
@@ -811,29 +825,53 @@ class Spotify {
 
         // Use rate limit manager for automatic fallback on 429 errors
         // Pass onProgress callback to report progress during batch fetching
-        const api = await this.getActiveApi();
-        const result = await this.rateLimitManager.executeWithFallback(
-          'getTracks',
-          [checkPlaylistId, onProgress],
-          api,
-          this.apiFallback
-        );
+        let result;
+
+        if (tracksProvider === 'scraper') {
+          // RapidAPI scraper forced via admin toggle
+          result = await this.spotifyScraper.getTracks(checkPlaylistId, onProgress);
+        } else if (tracksProvider === 'graphql') {
+          // GraphQL scraper forced via admin toggle
+          result = await this.spotifyGraphqlScraper.getTracks(checkPlaylistId, onProgress);
+        } else {
+          const api = await this.getActiveApi();
+          result = await this.rateLimitManager.executeWithFallback(
+            'getTracks',
+            [checkPlaylistId, onProgress],
+            api,
+            this.apiFallback
+          );
+        }
 
         if (!result.success) {
-          // Handle errors, including potential re-authentication needs
-          if (result.needsReAuth) {
-            return { success: false, error: result.error, needsReAuth: true };
+          // /tracks endpoint removed — retry immediately with spotify_api2
+          if (result.error === 'spotify_api2_switch') {
+            this.logger.log(
+              color.yellow.bold(
+                `[${color.white.bold('spotify')}] Retrying getTracks with spotify_api2 for ${color.white.bold(checkPlaylistId)}`
+              )
+            );
+            const api2Result = await this.spotifyApi2.getTracks(checkPlaylistId, onProgress);
+            if (!api2Result.success) {
+              return { success: false, error: api2Result.error || 'Error getting tracks from API' };
+            }
+            result = api2Result;
+          } else {
+            // Handle errors, including potential re-authentication needs
+            if (result.needsReAuth) {
+              return { success: false, error: result.error, needsReAuth: true };
+            }
+            if (
+              result.error === 'Spotify resource not found' ||
+              result.error === 'playlistNotFound' // Assuming getTracks might return this
+            ) {
+              return { success: false, error: 'playlistNotFound' };
+            }
+            return {
+              success: false,
+              error: result.error || 'Error getting tracks from API',
+            };
           }
-          if (
-            result.error === 'Spotify resource not found' ||
-            result.error === 'playlistNotFound' // Assuming getTracks might return this
-          ) {
-            return { success: false, error: 'playlistNotFound' };
-          }
-          return {
-            success: false,
-            error: result.error || 'Error getting tracks from API',
-          };
         }
 
         // API call successful, process the items
@@ -1052,6 +1090,7 @@ class Spotify {
       }
 
       // --- Prepare and Cache Final Result ---
+      const supportsYearData = tracksProvider !== 'scraper' && tracksProvider !== 'graphql';
       const finalResult = {
         success: true,
         data: {
@@ -1060,6 +1099,7 @@ class Spotify {
           totalTracks: allFormattedTracks.length,
           tracks: allFormattedTracks,
           skippedTracks: skippedTracksInfo,
+          supportsYearData,
         },
       };
 

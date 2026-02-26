@@ -489,7 +489,7 @@ class SpotifyApi {
       // Auto-detect if Spotify has switched to the new API format
       if (response.data.items && !response.data.tracks) {
         const cache = Cache.getInstance();
-        await cache.set('spotify_use_api2', 'true');
+        await cache.set('spotify_tracks_provider', 'v2');
         this.logger.log(
           color.yellow.bold(
             `[${color.white.bold('spotify')}] API format change detected (items instead of tracks) — switching to spotify_api2`
@@ -544,6 +544,17 @@ class SpotifyApi {
           headers: { Authorization: `Bearer ${accessToken}` },
         });
       } catch (error: any) {
+        // If /tracks endpoint returns 403, Spotify has removed it — switch to api2
+        if (error.response && error.response.status === 403) {
+          const cache = Cache.getInstance();
+          await cache.set('spotify_tracks_provider', 'v2');
+          this.logger.log(
+            color.yellow.bold(
+              `[${color.white.bold('spotify')}] /tracks endpoint returned 403 — switching to spotify_api2`
+            )
+          );
+          return { success: false, error: 'spotify_api2_switch', needsReAuth: false };
+        }
         // If limit=100 fails with 400, try with limit=50
         if (error.response && error.response.status === 400) {
           usedLimit = SPOTIFY_PAGE_LIMIT_FALLBACK;
