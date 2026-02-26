@@ -1281,6 +1281,7 @@ class Data {
                     payment_has_playlist.amount,
                     payment_has_playlist.type,
                     payment_has_playlist.subType,
+                    payment_has_playlist.gamesEnabled,
                     playlists.name AS playlistName,
                     playlists.type AS productType,
                     playlists.giftcardAmount,

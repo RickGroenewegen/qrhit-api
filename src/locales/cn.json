@@ -572,5 +572,15 @@
   "quiz.missingWordQuestion": "标题里少了哪个词？",
   "quiz.releaseOrderQuestion": "把这首歌按正确顺序放好",
   "quiz.decadeQuestion": "这首歌是哪个年代的？",
-  "quiz.titleQuestion": "这首歌的名字是什么？"
+  "quiz.titleQuestion": "这首歌的名字是什么？",
+  "mail.gamesSectionTitle": "QRGames！已包含 🎉",
+  "mail.gamesSectionDescription": "你的订单包含QRGames！— 两种有趣方式玩你的歌单。登录账号开始吧。",
+  "mail.gamesBingoTitle": "音乐宾果",
+  "mail.gamesBingoDesc": "生成无限宾果卡，大屏幕主持，扫码立刻验证赢家。",
+  "mail.gamesQuizTitle": "音乐问答",
+  "mail.gamesQuizDesc": "做Kahoot风格音乐问答，7种题型。手机加入，无需App。",
+  "mail.gamesGoToAccount": "前往我的账户",
+  "mail.gamesMoreInfo": "两个游戏都包含在QRGames! 插件里。账号内无限制作宾果和问答。",
+  "mail.gamesTimelineTitle": "音乐时间线",
+  "mail.gamesTimelineDesc": "单人游戏——扫码听歌，把歌曲按时间顺序排好。"
 }

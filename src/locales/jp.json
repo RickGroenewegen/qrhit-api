@@ -573,5 +573,15 @@
   "quiz.missingWordQuestion": "タイトルに足りない単語は？",
   "quiz.releaseOrderQuestion": "この曲を正しい順番に並べて",
   "quiz.decadeQuestion": "この曲は何年代のもの？",
-  "quiz.titleQuestion": "この曲のタイトルは？"
+  "quiz.titleQuestion": "この曲のタイトルは？",
+  "mail.gamesSectionTitle": "QRGames! 付き 🎉",
+  "mail.gamesSectionDescription": "注文にQRGames! が付いてるよ！プレイリストで2つの遊び方。ログインして始めよう。",
+  "mail.gamesBingoTitle": "ミュージックビンゴ",
+  "mail.gamesBingoDesc": "無制限にビンゴカード作成、大画面で進行、QRで即勝者チェック！",
+  "mail.gamesQuizTitle": "ミュージッククイズ",
+  "mail.gamesQuizDesc": "Kahoot風の音楽クイズを7種類の問題で作成。スマホで参加、アプリ不要！",
+  "mail.gamesGoToAccount": "マイアカウントへ",
+  "mail.gamesMoreInfo": "両方のゲームがQRGames! アドオンに入ってる。アカウントから無制限にビンゴやクイズ作成OK！",
+  "mail.gamesTimelineTitle": "音楽タイムライン",
+  "mail.gamesTimelineDesc": "1人用ゲーム — QRをスキャンして曲を聴き、順番に並べよう。"
 }

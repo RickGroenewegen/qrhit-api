@@ -582,5 +582,15 @@
   "quiz.missingWordQuestion": "Welk woord mist er in de titel?",
   "quiz.releaseOrderQuestion": "Zet dit nummer in de juiste volgorde",
   "quiz.decadeQuestion": "Uit welk decennium komt dit nummer?",
-  "quiz.titleQuestion": "Wat is de titel van dit nummer?"
+  "quiz.titleQuestion": "Wat is de titel van dit nummer?",
+  "mail.gamesSectionTitle": "QRGames! Inbegrepen 🎉",
+  "mail.gamesSectionDescription": "Je bestelling bevat QRGames! — twee toffe manieren om met je playlist te spelen. Log in om te beginnen.",
+  "mail.gamesBingoTitle": "Muziek Bingo",
+  "mail.gamesBingoDesc": "Genereer onbeperkt bingokaarten, host het spel op groot scherm en check winnaars direct met QR-codes.",
+  "mail.gamesQuizTitle": "Muziek Quiz",
+  "mail.gamesQuizDesc": "Maak Kahoot-achtige muziekquizzen met 7 vraagtypes. Iedereen doet mee via mobiel — geen app nodig.",
+  "mail.gamesGoToAccount": "Ga naar Mijn Account",
+  "mail.gamesMoreInfo": "Beide spellen zitten bij je QRGames! add-on. Maak onbeperkt bingo en quizzen vanuit je account.",
+  "mail.gamesTimelineTitle": "Muziek Tijdlijn",
+  "mail.gamesTimelineDesc": "Een singleplayer spel — zet nummers op volgorde door QR-codes te scannen en te luisteren."
 }

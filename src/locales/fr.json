@@ -582,5 +582,15 @@
   "quiz.missingWordQuestion": "Quel mot manque dans le titre ?",
   "quiz.releaseOrderQuestion": "Mets cette chanson dans le juiste volgorde",
   "quiz.decadeQuestion": "De quelle décennie vient cette chanson ?",
-  "quiz.titleQuestion": "Quel est le titre de cette chanson ?"
+  "quiz.titleQuestion": "Quel est le titre de cette chanson ?",
+  "mail.gamesSectionTitle": "QRGames ! Inclus 🎉",
+  "mail.gamesSectionDescription": "Ta commande inclut QRGames ! — deux façons fun de jouer avec ta playlist. Connecte-toi pour commencer.",
+  "mail.gamesBingoTitle": "Bingo Musical",
+  "mail.gamesBingoDesc": "Génère des cartes bingo à l’infini, anime sur grand écran et vérifie les gagnants direct avec les QR codes.",
+  "mail.gamesQuizTitle": "Quiz Musical",
+  "mail.gamesQuizDesc": "Crée des quiz musicaux façon Kahoot avec 7 types de questions. Les joueurs rejoignent sur leur tel — pas d’appli.",
+  "mail.gamesGoToAccount": "Aller à Mon Compte",
+  "mail.gamesMoreInfo": "Les deux jeux sont inclus avec ton add-on QRGames ! Crée bingo et quiz illimités depuis ton compte.",
+  "mail.gamesTimelineTitle": "Frise musicale",
+  "mail.gamesTimelineDesc": "Un jeu solo — range les chansons dans l’ordre en scannant les QR codes et en écoutant."
 }

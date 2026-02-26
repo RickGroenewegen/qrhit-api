@@ -571,5 +571,15 @@
   "quiz.missingWordQuestion": "Vilket ord saknas i titeln?",
   "quiz.releaseOrderQuestion": "Placera låten i rätt ordning",
   "quiz.decadeQuestion": "Vilket decennium släpptes låten?",
-  "quiz.titleQuestion": "Vad heter den här låten?"
+  "quiz.titleQuestion": "Vad heter den här låten?",
+  "mail.gamesSectionTitle": "QRGames! Ingår 🎉",
+  "mail.gamesSectionDescription": "Din beställning innehåller QRGames! — två roliga sätt att leka med din spellista. Logga in för att börja.",
+  "mail.gamesBingoTitle": "Musikbingo",
+  "mail.gamesBingoDesc": "Skapa obegränsat med bingobrickor, visa spelet på stor skärm och kolla vinnare direkt med QR-koder.",
+  "mail.gamesQuizTitle": "Musikquiz",
+  "mail.gamesQuizDesc": "Skapa Kahoot-liknande musikquiz med 7 frågetyper. Alla spelar på mobilen — ingen app behövs.",
+  "mail.gamesGoToAccount": "Gå till Mitt Konto",
+  "mail.gamesMoreInfo": "Båda spelen ingår i ditt QRGames!-tillägg. Skapa obegränsat med bingo och quiz från ditt konto.",
+  "mail.gamesTimelineTitle": "Musiktidslinje",
+  "mail.gamesTimelineDesc": "Ett solospel – ordna låtar genom att scanna QR och lyssna."
 }

@@ -746,6 +746,81 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
         }
       }
     );
+
+    /**
+     * GET /api/game/timeline/:paymentHasPlaylistId
+     * Get tracks with year data for the timeline game
+     */
+    fastify.get(
+      '/api/game/timeline/:paymentHasPlaylistId',
+      getAuthHandler(['users']),
+      async (request: any, reply: any) => {
+        try {
+          const { paymentHasPlaylistId } = request.params;
+          const userIdString = request.user?.userId;
+
+          const user = await prisma.user.findUnique({
+            where: { userId: userIdString },
+          });
+
+          if (!user) {
+            return reply.status(401).send({ success: false, error: 'User not found' });
+          }
+
+          const phpId = parseInt(paymentHasPlaylistId);
+          if (isNaN(phpId)) {
+            return reply.status(400).send({ success: false, error: 'Invalid playlist ID' });
+          }
+
+          // Validate ownership and gamesEnabled
+          const php = await prisma.paymentHasPlaylist.findUnique({
+            where: { id: phpId },
+            include: {
+              payment: true,
+              playlist: true,
+            },
+          });
+
+          if (!php) {
+            return reply.status(404).send({ success: false, error: 'Playlist not found' });
+          }
+
+          if (php.payment.userId !== user.id) {
+            return reply.status(403).send({ success: false, error: 'Not authorized' });
+          }
+
+          if (!php.gamesEnabled) {
+            return reply.status(403).send({ success: false, error: 'QRGames not enabled for this playlist' });
+          }
+
+          // Fetch tracks with year data
+          const tracks = await prisma.$queryRaw<
+            { id: number; trackId: string; name: string; artist: string; year: number }[]
+          >`
+            SELECT t.id, t.trackId,
+                   COALESCE(NULLIF(tei.name,''), t.name) as name,
+                   COALESCE(NULLIF(tei.artist,''), t.artist) as artist,
+                   COALESCE(tei.year, t.year) as year
+            FROM playlist_has_tracks pht
+            JOIN tracks t ON t.id = pht.trackId
+            LEFT JOIN trackextrainfo tei ON tei.trackId = t.id AND tei.playlistId = pht.playlistId
+            WHERE pht.playlistId = ${php.playlistId}
+              AND COALESCE(tei.year, t.year) IS NOT NULL
+              AND COALESCE(tei.year, t.year) > 0
+            ORDER BY pht.\`order\` ASC
+          `;
+
+          return reply.send({
+            success: true,
+            tracks,
+            playlistName: php.playlist.name,
+          });
+        } catch (error: any) {
+          logger.log(color.red.bold(`Error in GET /api/game/timeline: ${error.message}`));
+          return reply.status(500).send({ success: false, error: 'Failed to load timeline tracks' });
+        }
+      }
+    );
   }
 
   // Note: Track scanning and room validation are handled via generic /api/game/message endpoint
