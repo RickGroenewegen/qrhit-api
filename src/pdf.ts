@@ -513,9 +513,10 @@ class PDF {
         } as any;
 
         if (!isDigitalTemplate) {
-          // Printer templates use 60x60mm pages
-          options['PageWidth'] = 60;
-          options['PageHeight'] = 60;
+          // Printer templates - determine page size based on template
+          const pageSize = template === 'schneiders' ? 56 : 60;
+          options['PageWidth'] = pageSize;
+          options['PageHeight'] = pageSize;
         } else if (isUsTemplate) {
           // US Letter: 8.5" x 11" = 215.9mm x 279.4mm
           options['PageWidth'] = 215.9;
@@ -559,7 +560,8 @@ class PDF {
         if (payment.vibe) {
           await this.resizePDFPages(finalPath, 62, 62);
         } else {
-          await this.resizePDFPages(finalPath, 60, 60);
+          const pageSize = template === 'schneiders' ? 56 : 60;
+          await this.resizePDFPages(finalPath, pageSize, pageSize);
           await this.addBleed(finalPath, 3);
         }
       } else if (template === 'printer_sheets') {
@@ -643,9 +645,10 @@ class PDF {
     if (isDigitalTemplate) {
       options.format = isUsTemplate ? 'letter' : 'a4';
     } else {
-      // Printer templates (including custom ones) use 60x60mm pages
-      options.width = 60;
-      options.height = 60;
+      // Printer templates - determine page size based on template
+      const pageSize = template === 'schneiders' ? 56 : 60;
+      options.width = pageSize;
+      options.height = pageSize;
     }
 
     // Generate PDF in chunks if needed
@@ -742,7 +745,8 @@ class PDF {
       if (payment.vibe) {
         await this.resizePDFPages(finalPath, 62, 62);
       } else {
-        await this.resizePDFPages(finalPath, 60, 60);
+        const pageSize = template === 'schneiders' ? 56 : 60;
+        await this.resizePDFPages(finalPath, pageSize, pageSize);
         await this.addBleed(finalPath, 3);
       }
     } else if (template === 'printer_sheets') {

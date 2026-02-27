@@ -1198,6 +1198,46 @@ export default async function adminRoutes(
     }
   );
 
+  // Toggle gamesEnabled for payment_has_playlist
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/games-enabled',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentHasPlaylistId } = request.params;
+      const { gamesEnabled } = request.body;
+
+      if (!paymentHasPlaylistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'PaymentHasPlaylist ID is required',
+        });
+        return;
+      }
+
+      if (typeof gamesEnabled !== 'boolean') {
+        reply.status(400).send({
+          success: false,
+          error: 'gamesEnabled must be a boolean',
+        });
+        return;
+      }
+
+      const result = await data.updateGamesEnabled(
+        parseInt(paymentHasPlaylistId, 10),
+        gamesEnabled
+      );
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Update track count for payment_has_playlist and playlist
   fastify.post(
     '/admin/playlist/:paymentHasPlaylistId/track-count',
@@ -1905,10 +1945,10 @@ export default async function adminRoutes(
           return;
         }
 
-        if (printerType && !['printnbind', 'tromp'].includes(printerType)) {
+        if (printerType && !['printnbind', 'tromp', 'schneiders'].includes(printerType)) {
           reply.status(400).send({
             success: false,
-            error: 'Invalid printerType value. Must be "printnbind" or "tromp".',
+            error: 'Invalid printerType value. Must be "printnbind", "tromp", or "schneiders".',
           });
           return;
         }

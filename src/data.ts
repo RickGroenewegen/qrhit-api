@@ -2945,6 +2945,46 @@ class Data {
     }
   }
 
+  public async updateGamesEnabled(
+    paymentHasPlaylistId: number,
+    gamesEnabled: boolean
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const php = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: paymentHasPlaylistId },
+        select: { id: true },
+      });
+
+      if (!php) {
+        return { success: false, error: 'Playlist not found' };
+      }
+
+      await this.prisma.paymentHasPlaylist.update({
+        where: { id: paymentHasPlaylistId },
+        data: { gamesEnabled },
+      });
+
+      this.logger.log(
+        color.blue.bold(
+          `Updated gamesEnabled for playlist ${color.white.bold(
+            paymentHasPlaylistId
+          )} to ${color.white.bold(gamesEnabled)}`
+        )
+      );
+
+      return { success: true };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `Error updating gamesEnabled for playlist ${color.white.bold(
+            paymentHasPlaylistId
+          )}: ${error.message}`
+        )
+      );
+      return { success: false, error: error.message };
+    }
+  }
+
   public async updatePlaylistFeatured(
     playlistId: string,
     featured: boolean

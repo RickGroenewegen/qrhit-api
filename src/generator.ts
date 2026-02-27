@@ -736,6 +736,8 @@ class Generator {
             printerTemplate = playlist.template;
           } else if (payment.vibe) {
             printerTemplate = 'printer_vibe';
+          } else if (playlist.printerType === 'schneiders') {
+            printerTemplate = 'schneiders';
           }
 
           // Generate PDFs for each item
