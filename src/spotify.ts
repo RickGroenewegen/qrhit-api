@@ -1592,6 +1592,26 @@ class Spotify {
         }
       }
 
+      // Check if URL is a native music service link (Deezer, YouTube Music, Tidal, Apple Music)
+      const nativeServiceLink = this.extractNativeMusicServiceLink(normalizedUrl);
+      if (nativeServiceLink) {
+        const result = {
+          success: true,
+          spotifyUri: undefined,
+          nativeLink: nativeServiceLink,
+          links: {
+            spotifyLink: null,
+            appleMusicLink: nativeServiceLink.service === 'apple-music' ? normalizedUrl : null,
+            tidalLink: nativeServiceLink.service === 'tidal' ? normalizedUrl : null,
+            youtubeMusicLink: nativeServiceLink.service === 'youtube-music' ? normalizedUrl : null,
+            deezerLink: nativeServiceLink.service === 'deezer' ? normalizedUrl : null,
+            amazonMusicLink: null,
+          },
+        };
+        await this.cache.set(cacheKey, JSON.stringify(result));
+        return { ...result, cached: false };
+      }
+
       // Special handling for hitstergame.com links
       if (normalizedUrl.includes('hitstergame.com')) {
         // Try to extract the set_sku and cardnumber from the URL
@@ -1954,6 +1974,40 @@ class Spotify {
     const spotifyUrlMatch = input.match(/spotify:\/\/track\/([a-zA-Z0-9]+)/);
     if (spotifyUrlMatch) {
       return `spotify:track:${spotifyUrlMatch[1]}`;
+    }
+
+    return null;
+  }
+
+  /**
+   * Detects if a URL is a native music service link (Deezer, YouTube Music, Tidal, Apple Music).
+   * Returns the service name and the track ID if detected.
+   */
+  private extractNativeMusicServiceLink(url: string): { service: string; trackId: string } | null {
+    if (!url) return null;
+
+    // Deezer: https://www.deezer.com/track/{id} or https://www.deezer.com/{locale}/track/{id}
+    const deezerMatch = url.match(/https?:\/\/(?:www\.)?deezer\.com\/(?:[a-z]{2}\/)?track\/(\d+)/i);
+    if (deezerMatch) {
+      return { service: 'deezer', trackId: deezerMatch[1] };
+    }
+
+    // YouTube Music: https://music.youtube.com/watch?v={id}
+    const ytMusicMatch = url.match(/https?:\/\/music\.youtube\.com\/watch\?v=([a-zA-Z0-9_-]+)/i);
+    if (ytMusicMatch) {
+      return { service: 'youtube-music', trackId: ytMusicMatch[1] };
+    }
+
+    // Tidal: https://tidal.com/track/{id} or https://tidal.com/browse/track/{id}
+    const tidalMatch = url.match(/https?:\/\/(?:www\.)?(?:tidal\.com|listen\.tidal\.com)\/(?:browse\/)?track\/(\d+)/i);
+    if (tidalMatch) {
+      return { service: 'tidal', trackId: tidalMatch[1] };
+    }
+
+    // Apple Music: https://music.apple.com/{locale}/song/{name}/{id} or https://music.apple.com/song/{id}
+    const appleMusicMatch = url.match(/https?:\/\/music\.apple\.com\/(?:[a-z]{2}\/)?(?:song|album)\/(?:[^/]+\/)?(\d+)/i);
+    if (appleMusicMatch) {
+      return { service: 'apple-music', trackId: appleMusicMatch[1] };
     }
 
     return null;
