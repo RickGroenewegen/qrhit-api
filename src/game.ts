@@ -1,5 +1,5 @@
 // QRGames upgrade price in EUR
-export const QRGAMES_UPGRADE_PRICE = 9.00;
+export const QRGAMES_UPGRADE_PRICE = 5.00;
 
 // Discount tiers for multiple playlist upgrades
 export const QRGAMES_DISCOUNT_TIERS = [
