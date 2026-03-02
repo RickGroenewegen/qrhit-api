@@ -41,20 +41,21 @@ export function clearAuthCookie(reply: any): void {
 
 /**
  * Get authentication token from request
- * Checks cookie first, then falls back to Authorization header
+ * Checks Authorization header first, then falls back to cookie
+ * Header takes priority so explicit Bearer tokens (e.g. impersonation) override ambient cookies
  * Uses `any` type since @fastify/cookie adds properties dynamically
  */
 export function getTokenFromRequest(request: any): string | null {
-  // Check cookie first
-  const cookies = request.cookies;
-  if (cookies && cookies[COOKIE_NAME]) {
-    return cookies[COOKIE_NAME];
-  }
-
-  // Fall back to Authorization header (for mobile apps and API clients)
+  // Check Authorization header first (explicit token takes priority)
   const authHeader = request.headers?.authorization;
   if (authHeader && authHeader.startsWith('Bearer ')) {
     return authHeader.substring(7);
+  }
+
+  // Fall back to cookie
+  const cookies = request.cookies;
+  if (cookies && cookies[COOKIE_NAME]) {
+    return cookies[COOKIE_NAME];
   }
 
   return null;

@@ -1,7 +1,7 @@
 import { FastifyInstance } from 'fastify';
 import Logger from '../logger';
 import { color } from 'console-log-colors';
-import { createOrUpdateAdminUser, deleteUserById } from '../auth';
+import { createOrUpdateAdminUser, deleteUserById, generateToken } from '../auth';
 import Generator from '../generator';
 import GeneratorQueue from '../generatorQueue';
 import ExcelQueue from '../excelQueue';
@@ -4500,6 +4500,58 @@ export default async function adminRoutes(
       });
 
       reply.send({ success: true, message: `Finding missing ${service} links started in background` });
+    }
+  );
+
+  // Impersonate a customer (admin only)
+  fastify.post(
+    '/admin/impersonate',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { email } = request.body || {};
+
+      if (!email) {
+        return reply.status(400).send({ success: false, error: 'Email is required' });
+      }
+
+      const user = await prisma.user.findFirst({
+        where: { email: email.toLowerCase().trim() },
+        include: {
+          UserGroupUser: {
+            include: {
+              UserGroup: true,
+            },
+          },
+        },
+      });
+
+      if (!user) {
+        return reply.status(404).send({ success: false, error: 'User not found' });
+      }
+
+      const rawGroups = user.UserGroupUser.map((ugu: any) => ugu.UserGroup.name);
+
+      if (rawGroups.includes('admin') || rawGroups.includes('vibeadmin')) {
+        return reply.status(403).send({ success: false, error: 'Cannot impersonate admin users' });
+      }
+
+      const userGroups = [...new Set([...rawGroups, 'users'])];
+
+      const token = generateToken(
+        user.userId,
+        userGroups,
+        user.companyId || undefined,
+        user.id,
+        user.displayName || undefined
+      );
+
+      return reply.send({
+        success: true,
+        token,
+        userGroups,
+        displayName: user.displayName || '',
+        email: user.email,
+      });
     }
   );
 }
