@@ -510,9 +510,9 @@
                         <td>€&nbsp;<%= formatEuro(lineTotal) %></td>
                     </tr>
 
-                    <!-- Extras (filter out custom app as it's shown separately) -->
+                    <!-- Extras (filter out custom app and voting portal as they're shown separately) -->
                     <% if (calculationResult.extras && calculationResult.extras.length > 0) { %>
-                        <% calculationResult.extras.filter(extra => !extra.name.toLowerCase().includes('app')).forEach(function(extra) { %>
+                        <% calculationResult.extras.filter(extra => !extra.name.toLowerCase().includes('app') && !extra.name.toLowerCase().includes('voting')).forEach(function(extra) { %>
                         <tr>
                             <td>
                                 <span class="item-description"><%= extra.name %></span>
@@ -535,6 +535,17 @@
                         <td>€&nbsp;350,00</td>
                     </tr>
                     <% } %>
+                    <% if (calculationResult.votingPortalFee > 0) { %>
+                    <tr>
+                        <td>
+                            <span class="item-description">Voting Portal</span>
+                            <span class="item-details">Eenmalige kosten - Gebruik stemportaal</span>
+                        </td>
+                        <td>1</td>
+                        <td>€&nbsp;500,00</td>
+                        <td>€&nbsp;500,00</td>
+                    </tr>
+                    <% } %>
                 </tbody>
             </table>
         </div>
@@ -545,12 +556,13 @@
             const mainProductTotal = calculatedPrices && calculatedPrices.clientPricePerUnit
                 ? calculatedPrices.clientPricePerUnit * calculationResult.quantity
                 : calculationResult.pricePerSet * calculationResult.quantity;
-            // Filter out app from extras to avoid double counting (custom app is shown separately)
+            // Filter out app and voting portal from extras to avoid double counting (they're shown separately)
             const extrasTotal = calculationResult.extras && calculationResult.extras.length > 0
-                ? calculationResult.extras.filter(extra => !extra.name.toLowerCase().includes('app')).reduce((sum, extra) => sum + extra.price, 0)
+                ? calculationResult.extras.filter(extra => !extra.name.toLowerCase().includes('app') && !extra.name.toLowerCase().includes('voting')).reduce((sum, extra) => sum + extra.price, 0)
                 : 0;
             const customAppFeeTotal = calculationResult.customAppFee || 0;
-            const subtotal = mainProductTotal + extrasTotal + customAppFeeTotal;
+            const votingPortalFeeTotal = calculationResult.votingPortalFee || 0;
+            const subtotal = mainProductTotal + extrasTotal + customAppFeeTotal + votingPortalFeeTotal;
 
             // Apply manual discount percentage
             const manualDiscountPct = calculation.manualDiscountPercent || 0;

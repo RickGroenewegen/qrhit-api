@@ -2828,6 +2828,7 @@ class Vibe {
     manualDiscount: number;
     fluidMode?: boolean;
     includeCustomApp?: boolean;
+    includeVotingPortal?: boolean;
   }): Promise<any> {
     try {
       const {
@@ -2839,6 +2840,7 @@ class Vibe {
         manualDiscount,
         fluidMode = false,
         includeCustomApp = false,
+        includeVotingPortal = false,
       } = params;
 
       // Validate input
@@ -3053,8 +3055,9 @@ class Vibe {
 
       // Add custom app fee (one-time) - added to both client price and our profit
       const customAppFee = includeCustomApp ? 350 : 0;
-      const clientPrice = baseClientPrice + customAppFee;
-      const ourProfit = baseOurProfit + customAppFee;
+      const votingPortalFee = includeVotingPortal ? 500 : 0;
+      const clientPrice = baseClientPrice + customAppFee + votingPortalFee;
+      const ourProfit = baseOurProfit + customAppFee + votingPortalFee;
 
       const happiBoxPayment = clientPrice - ourProfit - resellerProfit;
 
@@ -3077,6 +3080,7 @@ class Vibe {
             projectManagementDifference,
             fluidMode,
             includeCustomApp,
+            includeVotingPortal,
           },
           pricing: {
             commercialPricePerBox: commercialPrice,
@@ -3086,6 +3090,7 @@ class Vibe {
             resellerProfit,
             happiBoxPayment,
             customAppFee,
+            votingPortalFee,
           },
         },
       };
@@ -3106,6 +3111,7 @@ class Vibe {
     includeStansmestekening: boolean;
     includeStansvorm: boolean;
     includeCustomApp?: boolean;
+    includeVotingPortal?: boolean;
     profitMargin: number;
     printingType?: string; // 'eigen', 'voorbedrukt', or 'klein'
   }): Promise<any> {
@@ -3115,6 +3121,7 @@ class Vibe {
         includeStansmestekening,
         includeStansvorm,
         includeCustomApp = false,
+        includeVotingPortal = false,
         profitMargin,
         printingType = 'eigen', // Default to 'eigen' (own printing)
       } = params;
@@ -3193,10 +3200,11 @@ class Vibe {
       const trompCostFromRounded = subtotalFromRounded - baseOurProfit;
       const trompCost = trompCostFromRounded + extrasTotal;
 
-      // Add custom app fee (one-time) - added to both client price and our profit
+      // Add custom app fee and voting portal fee (one-time) - added to both client price and our profit
       const customAppFee = includeCustomApp ? 350 : 0;
-      const clientPrice = baseClientPrice + customAppFee;
-      const ourProfit = baseOurProfit + customAppFee;
+      const votingPortalFee = includeVotingPortal ? 500 : 0;
+      const clientPrice = baseClientPrice + customAppFee + votingPortalFee;
+      const ourProfit = baseOurProfit + customAppFee + votingPortalFee;
 
       // Return calculation results
       return {
@@ -3219,6 +3227,7 @@ class Vibe {
           pricePerSet: pricePerSet,
           clientPrice: clientPrice,
           customAppFee: customAppFee,
+          votingPortalFee: votingPortalFee,
         },
       };
     } catch (error) {
@@ -3246,6 +3255,7 @@ class Vibe {
     cardCount: number; // 48, 96, 144, or 192
     includeStansmes: boolean;
     includeCustomApp?: boolean;
+    includeVotingPortal?: boolean;
     profitMargin: number;
   }): Promise<any> {
     try {
@@ -3254,6 +3264,7 @@ class Vibe {
         cardCount,
         includeStansmes,
         includeCustomApp = false,
+        includeVotingPortal = false,
         profitMargin,
       } = params;
 
@@ -3384,8 +3395,14 @@ class Vibe {
         extras.push({ name: 'App in eigen stijl', price: customAppFee });
       }
 
-      const clientPrice = (pricePerBox * quantity) + extrasTotal + customAppFee;
-      const ourProfit = baseOurProfit + customAppFee;
+      // Add voting portal fee (one-time)
+      const votingPortalFee = includeVotingPortal ? 500 : 0;
+      if (includeVotingPortal) {
+        extras.push({ name: 'Voting Portal', price: votingPortalFee });
+      }
+
+      const clientPrice = (pricePerBox * quantity) + extrasTotal + customAppFee + votingPortalFee;
+      const ourProfit = baseOurProfit + customAppFee + votingPortalFee;
 
       // Return calculation results
       return {
@@ -3398,12 +3415,13 @@ class Vibe {
           pricePerPiece,
           subtotal,
           extras,
-          extrasTotal: extrasTotal + customAppFee,
+          extrasTotal: extrasTotal + customAppFee + votingPortalFee,
           schneiderCost,
           ourProfit,
           pricePerBox,
           clientPrice,
           customAppFee,
+          votingPortalFee,
         },
       };
     } catch (error) {

@@ -334,6 +334,7 @@ export default async function vibeRoutes(
             includeStansmestekening: calculation.includeStansmestekening || false,
             includeStansvorm: calculation.includeStansvorm || false,
             includeCustomApp: calculation.includeCustomApp || false,
+            includeVotingPortal: calculation.includeVotingPortal || false,
             profitMargin: calculation.profitMargin || 0,
           });
 
@@ -370,6 +371,7 @@ export default async function vibeRoutes(
             cardCount: calculation.cardCount || 48,
             includeStansmes: calculation.includeStansmes || false,
             includeCustomApp: calculation.includeCustomApp || false,
+            includeVotingPortal: calculation.includeVotingPortal || false,
             profitMargin: calculation.profitMargin || 0,
           });
 
@@ -433,6 +435,7 @@ export default async function vibeRoutes(
             manualDiscount: calculation.manualDiscount || 0,
             fluidMode: calculation.fluidMode || false,
             includeCustomApp: calculation.includeCustomApp || false,
+            includeVotingPortal: calculation.includeVotingPortal || false,
           });
 
           if (pricingResult.success) {
