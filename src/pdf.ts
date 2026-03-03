@@ -628,6 +628,10 @@ class PDF {
       color.blue.bold(` (${white.bold(numberOfTracks.toString())} tracks, ${white.bold(totalPages.toString())} pages)`)
     );
 
+    if (numberOfTracks === 0) {
+      throw new Error(`Cannot generate PDF: playlist has 0 tracks`);
+    }
+
     const finalPath = `${process.env['PUBLIC_DIR']}/pdf/${filename}`;
     const itemIndexParam = itemIndex !== undefined ? itemIndex : 0;
 
