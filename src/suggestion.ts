@@ -8,6 +8,7 @@ import Mollie from './mollie';
 import Generator from './generator';
 import Spotify from './spotify';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
+import AppleMusicProvider from './providers/AppleMusicProvider';
 import Data from './data';
 import Cache from './cache';
 
@@ -942,12 +943,13 @@ class Suggestion {
     paidTracks?: number;
     currentTracks?: number;
     serviceType?: string;
+    locale?: string;
     error?: string;
   }> {
     try {
-      // Get the number of tracks the user paid for and the service type
+      // Get the number of tracks the user paid for, the service type, and the payment locale
       const paymentInfo = await this.prisma.$queryRaw<any[]>`
-        SELECT php.numberOfTracks as paidTracks, pl.id as playlistDbId, pl.serviceType
+        SELECT php.numberOfTracks as paidTracks, pl.id as playlistDbId, pl.serviceType, p.locale
         FROM payments p
         JOIN users u ON p.userId = u.id
         JOIN payment_has_playlist php ON php.paymentId = p.id
@@ -967,6 +969,7 @@ class Suggestion {
 
       const paidTracks = paymentInfo[0].paidTracks;
       const serviceType = paymentInfo[0].serviceType || 'spotify';
+      const locale = paymentInfo[0].locale || 'en';
 
       // Get the correct provider for this service type
       const provider = this.musicRegistry.getProviderByString(serviceType);
@@ -978,7 +981,10 @@ class Suggestion {
       }
 
       // Fetch current playlist data from the music service
-      const playlistData = await provider.getPlaylist(playlistId);
+      // For Apple Music, use the payment's locale to determine the storefront
+      const playlistData = serviceType === 'apple_music'
+        ? await (provider as any).getPlaylist(playlistId, AppleMusicProvider.getInstance().getStorefrontForLocale(locale))
+        : await provider.getPlaylist(playlistId);
 
       if (!playlistData.success || !playlistData.data) {
         return {
@@ -1010,6 +1016,7 @@ class Suggestion {
         paidTracks,
         currentTracks,
         serviceType,
+        locale,
       };
     } catch (error) {
       this.logger.log(
@@ -1171,7 +1178,10 @@ class Suggestion {
       }
 
       // Fetch fresh tracks from the music service (cache=false to get latest data)
-      const serviceTracks = await provider.getTracks(playlistId, false);
+      // For Apple Music, use the payment's locale to determine the storefront
+      const serviceTracks = serviceType === 'apple_music'
+        ? await (provider as any).getTracks(playlistId, false, undefined, undefined, AppleMusicProvider.getInstance().getStorefrontForLocale(validation.locale))
+        : await provider.getTracks(playlistId, false);
 
       if (!serviceTracks.success || !serviceTracks.data || !serviceTracks.data.tracks) {
         return {
