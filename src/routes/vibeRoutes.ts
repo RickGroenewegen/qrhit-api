@@ -556,6 +556,7 @@ export default async function vibeRoutes(
     async (request: any, reply: any) => {
       try {
         const companyId = parseInt(request.params.companyId);
+        const printer = request.query.printer || 'tromp';
 
         // Get company data - pass ['admin'] to include onlyForAdmin companies
         const companiesResult = await vibe.getAllCompanies(['admin']);
@@ -585,6 +586,7 @@ export default async function vibeRoutes(
           company,
           baseUrl,
           formatDate,
+          printer,
         });
       } catch (error) {
         console.error('Error rendering technical instructions:', error);
@@ -628,7 +630,8 @@ export default async function vibeRoutes(
 
         // Create the URL for the HTML rendering
         const baseUrl = process.env['API_URI'] || 'http://localhost:3004';
-        const htmlUrl = `${baseUrl}/vibe/technical-instructions/${companyId}`;
+        const printer = request.body?.printer || 'tromp';
+        const htmlUrl = `${baseUrl}/vibe/technical-instructions/${companyId}?printer=${printer}`;
 
         // Generate PDF
         await pdfManager.generateFromUrl(htmlUrl, filePath, {

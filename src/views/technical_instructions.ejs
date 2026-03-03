@@ -321,7 +321,9 @@
                 <li>Stansmestekeningen op <strong>overdruk laten staan</strong> in de separate lagen (dus niet integreren in de full colour)</li>
                 <li><strong>Geen PMS-kleuren</strong> gebruiken, in full colour opmaken</li>
                 <li><strong>Trimbox laten staan</strong>, niet vergroten/verplaatsen</li>
+                <% if (printer === 'tromp') { %>
                 <li>Aanleveren als <strong>drie aparte PDF's</strong> (tenzij de bedrukking voor de kleine doosjes identiek is)</li>
+                <% } %>
                 <li>Resolutie minimaal <em>150 dpi</em></li>
             </ul>
 
