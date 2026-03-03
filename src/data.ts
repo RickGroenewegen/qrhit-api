@@ -2451,7 +2451,7 @@ class Data {
 
     const [tracks, countResult] = await Promise.all([
       this.prisma.$queryRaw<any[]>`
-        SELECT DISTINCT t.id, t.artist, t.name, t.year, t.youtubeLink, t.spotifyLink, t.youtubeMusicLink, t.appleMusicLink, t.tidalLink, t.deezerLink, t.amazonMusicLink
+        SELECT DISTINCT t.id, t.artist, t.name, t.year, t.youtubeLink, t.spotifyLink, t.youtubeMusicLink, t.appleMusicLink, t.tidalLink, t.deezerLink, t.amazonMusicLink, t.spotifyLinkIgnored
         FROM tracks t
         ${joinFragment}
         ${whereFragment}
@@ -2482,9 +2482,10 @@ class Data {
     if (searchTerm && searchTerm.trim().length > 0) {
       const likePattern = `%${searchTerm}%`;
       const tracks = await this.prisma.$queryRaw<any[]>`
-        SELECT id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink
+        SELECT id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink, spotifyLinkIgnored
         FROM tracks
         WHERE (spotifyLink IS NULL OR spotifyLink = '')
+        AND spotifyLinkIgnored = false
         AND (artist LIKE ${likePattern} OR name LIKE ${likePattern})
         ORDER BY id DESC
         LIMIT 100
@@ -2492,9 +2493,10 @@ class Data {
       return tracks;
     } else {
       const tracks = await this.prisma.$queryRaw<any[]>`
-        SELECT id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink
+        SELECT id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink, spotifyLinkIgnored
         FROM tracks
         WHERE (spotifyLink IS NULL OR spotifyLink = '')
+        AND spotifyLinkIgnored = false
         ORDER BY id DESC
         LIMIT 100
       `;
@@ -2507,8 +2509,20 @@ class Data {
       SELECT COUNT(*) as count
       FROM tracks
       WHERE (spotifyLink IS NULL OR spotifyLink = '')
+      AND spotifyLinkIgnored = false
     `;
     return Number(result[0]?.count ?? 0);
+  }
+
+  public async toggleSpotifyLinkIgnored(trackId: number): Promise<{ spotifyLinkIgnored: boolean }> {
+    const track = await this.prisma.track.findUnique({ where: { id: trackId }, select: { spotifyLinkIgnored: true } });
+    if (!track) throw new Error('Track not found');
+    const updated = await this.prisma.track.update({
+      where: { id: trackId },
+      data: { spotifyLinkIgnored: !track.spotifyLinkIgnored },
+      select: { spotifyLinkIgnored: true },
+    });
+    return updated;
   }
 
   public async getTrackById(trackId: number): Promise<any> {

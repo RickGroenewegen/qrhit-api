@@ -1499,6 +1499,24 @@ export default async function adminRoutes(
     }
   );
 
+  // Toggle spotifyLinkIgnored flag on a track
+  fastify.post(
+    '/tracks/toggle-spotify-ignored',
+    getAuthHandler(['admin']),
+    async (request: any, reply) => {
+      const { id } = request.body;
+      if (!id) {
+        return reply.status(400).send({ success: false, error: 'Missing track id' });
+      }
+      try {
+        const result = await data.toggleSpotifyLinkIgnored(Number(id));
+        return { success: true, spotifyLinkIgnored: result.spotifyLinkIgnored };
+      } catch (error: any) {
+        return reply.status(404).send({ success: false, error: error.message });
+      }
+    }
+  );
+
   // Force fetch MusicFetch links for a single track (bypasses attempt limit)
   fastify.post(
     '/tracks/musicfetch',

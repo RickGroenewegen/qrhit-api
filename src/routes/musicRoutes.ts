@@ -193,6 +193,19 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     try {
       const result = await spotify.resolveSpotifyUrl(url);
 
+      // Build the response payload
+      const responsePayload = result.success ? {
+        success: true,
+        spotifyUri: result.spotifyUri || null,
+        link: result.links?.spotifyLink || null,
+        am: result.links?.appleMusicLink || null,
+        td: result.links?.tidalLink || null,
+        ym: result.links?.youtubeMusicLink || null,
+        dz: result.links?.deezerLink || null,
+        az: result.links?.amazonMusicLink || null,
+        r: true,
+      } : null;
+
       // Log the unknown link scan, indicate if cached
       logger.log(
         color.blue.bold(
@@ -200,9 +213,8 @@ export default async function musicRoutes(fastify: FastifyInstance) {
             color.white.bold(`url="${url}"`) +
             color.blue.bold(', result=') +
             color.white.bold(
-              JSON.stringify({
+              JSON.stringify(responsePayload || {
                 success: result.success,
-                spotifyUri: result.spotifyUri,
                 error: result.error,
               })
             )
@@ -210,17 +222,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       );
       if (result.success) {
         // Return all available music service links
-        reply.send({
-          success: true,
-          spotifyUri: result.spotifyUri,
-          link: result.links?.spotifyLink || null,
-          am: result.links?.appleMusicLink || null,
-          td: result.links?.tidalLink || null,
-          ym: result.links?.youtubeMusicLink || null,
-          dz: result.links?.deezerLink || null,
-          az: result.links?.amazonMusicLink || null,
-          r: true,
-        });
+        reply.send(responsePayload);
       } else {
         // Log failed scan to database (skip if cached or blacklisted)
         if (!result.cached && !result.blacklisted) {

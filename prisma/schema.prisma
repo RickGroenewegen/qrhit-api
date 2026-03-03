@@ -469,6 +469,7 @@ model Track {
   appleCheckedBySearch       Boolean                      @default(false)
   tidalCheckedBySearch       Boolean                      @default(false)
   amazonCheckedBySearch      Boolean                      @default(false)
+  spotifyLinkIgnored         Boolean                      @default(false)
   musicFetchLastAttempt      DateTime?
   musicFetchAttempts         Int                          @default(0)
   createdAt                  DateTime                     @default(now())
@@ -482,6 +483,7 @@ model Track {
   @@index([isrc])
   @@index([manuallyChecked, year, id])
   @@index([youtubeLink])
+  @@index([spotifyLinkIgnored])
   @@index([artist, name, manuallyChecked, year, id])
   @@fulltext([artist, name])
   @@map("tracks")
