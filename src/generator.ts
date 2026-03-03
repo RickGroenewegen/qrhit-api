@@ -536,11 +536,6 @@ class Generator {
     const dbTracks = await this.data.getTracks(playlist.id);
     playlist.numberOfTracks = dbTracks.length;
 
-    // Persist numberOfTracks to database so finalizeOrder (which re-fetches from DB) has the correct count
-    await this.data.updatePlaylistTrackCount(
-      playlist.paymentHasPlaylistId,
-      dbTracks.length
-    );
   }
 
   /**
