@@ -19,20 +19,21 @@ class Charts {
   /**
    * Build date filter for chart queries
    */
-  private buildDateFilter(days?: number, startDate?: string, endDate?: string): string {
+  private buildDateFilter(days?: number, startDate?: string, endDate?: string, tableAlias?: string): string {
+    const col = tableAlias ? `${tableAlias}.createdAt` : 'createdAt';
     // Custom date range
     if (startDate && endDate) {
-      return `AND DATE(createdAt) BETWEEN '${startDate}' AND '${endDate}'`;
+      return `AND DATE(${col}) BETWEEN '${startDate}' AND '${endDate}'`;
     }
     // Predefined date ranges
     if (days) {
       if (![30, 90, 180, 365].includes(days)) {
         throw new Error('Invalid days parameter. Must be 30, 90, 180, or 365');
       }
-      return `AND createdAt >= DATE_SUB(CURDATE(), INTERVAL ${days} DAY)`;
+      return `AND ${col} >= DATE_SUB(CURDATE(), INTERVAL ${days} DAY)`;
     }
     // Default to 90 days
-    return 'AND createdAt >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)';
+    return `AND ${col} >= DATE_SUB(CURDATE(), INTERVAL 90 DAY)`;
   }
 
   /**
@@ -47,7 +48,7 @@ class Charts {
     startDate?: string,
     endDate?: string
   ): Promise<any[]> {
-    const dateFilter = this.buildDateFilter(days, startDate, endDate);
+    const dateFilter = this.buildDateFilter(days, startDate, endDate, 'p');
 
     const query = `
       SELECT
@@ -74,18 +75,21 @@ class Charts {
         ), 2) as aov_ma_30d
       FROM (
         SELECT
-          DATE(createdAt) as date,
-          ROUND(SUM(totalPrice), 2) as daily_sales,
-          ROUND(SUM(profit), 2) as daily_profit,
+          DATE(p.createdAt) as date,
+          ROUND(SUM(p.totalPrice), 2) as daily_sales,
+          ROUND(SUM(p.profit) + COALESCE((
+            SELECT SUM(gp.totalPrice) FROM games_purchases gp
+            WHERE DATE(gp.createdAt) = DATE(p.createdAt)
+          ), 0), 2) as daily_profit,
           COUNT(*) as payment_count,
-          ROUND(AVG(totalPrice), 2) as daily_aov
-        FROM payments
+          ROUND(AVG(p.totalPrice), 2) as daily_aov
+        FROM payments p
         WHERE
-          status = 'paid'
-          AND test = FALSE
-          AND vibe = FALSE
+          p.status = 'paid'
+          AND p.test = FALSE
+          AND p.vibe = FALSE
           ${dateFilter}
-        GROUP BY DATE(createdAt)
+        GROUP BY DATE(p.createdAt)
       ) daily_data
       ORDER BY date ASC
     `;

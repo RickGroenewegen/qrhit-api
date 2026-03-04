@@ -153,6 +153,14 @@ class AnalyticsClient {
       { totalPrice: 0, totalProfit: 0 }
     );
 
+    // Add QRGames revenue (pure profit)
+    const gamesTotal = await this.prisma.gamesPurchase.aggregate({
+      _sum: { totalPrice: true },
+    });
+    const gamesRevenue = gamesTotal._sum.totalPrice || 0;
+    totals.totalPrice += gamesRevenue;
+    totals.totalProfit += gamesRevenue;
+
     return totals;
   }
 }

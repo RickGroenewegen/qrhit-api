@@ -120,7 +120,7 @@ class ExternalCardService {
         this.utils.isMainServer().then(async (isMainServer) => {
           if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
             this.logger.log(
-              color.green.bold(
+              color.blue.bold(
                 `External cards loaded from database: ${color.white.bold(jumboCount)} Jumbo, ${color.white.bold(countryCount)} Country, ${color.white.bold(musicMatchCount)} MusicMatch`
               )
             );
@@ -613,7 +613,7 @@ class ExternalCardService {
           });
           importJob.start();
           this.logger.log(
-            color.green.bold('External card nightly import cron scheduled for 2 AM')
+            color.blue.bold(`External card nightly import cron scheduled for ${color.white.bold('2 AM')}`)
           );
         }
       });

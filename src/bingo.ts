@@ -588,6 +588,37 @@ class Bingo {
         },
       });
 
+      // Look up country/taxRate from the Payment linked to the first PaymentHasPlaylist
+      let countrycode: string | null = null;
+      let taxRate: number | null = null;
+      const firstPhp = await this.prisma.paymentHasPlaylist.findUnique({
+        where: { id: ids[0] },
+        select: { paymentId: true },
+      });
+      if (firstPhp) {
+        const linkedPayment = await this.prisma.payment.findUnique({
+          where: { id: firstPhp.paymentId },
+          select: { countrycode: true, taxRate: true },
+        });
+        if (linkedPayment) {
+          countrycode = linkedPayment.countrycode;
+          taxRate = linkedPayment.taxRate;
+        }
+      }
+
+      // Log GamesPurchase for the upgrade
+      await this.prisma.gamesPurchase.create({
+        data: {
+          userId,
+          totalPrice: ids.length * finalPricePerPlaylist,
+          playlistCount: ids.length,
+          pricePerPlaylist: finalPricePerPlaylist,
+          type: 'upgrade',
+          countrycode,
+          taxRate,
+        },
+      });
+
       // Clear user cache so dashboard reflects changes
       const user = await this.prisma.user.findUnique({
         where: { id: userId },

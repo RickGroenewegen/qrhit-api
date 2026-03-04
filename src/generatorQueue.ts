@@ -388,7 +388,7 @@ class GeneratorQueue {
     }
 
     this.logger.log(
-      color.green.bold(
+      color.blue.bold(
         `Successfully initialized ${white.bold(
           concurrency.toString()
         )} BullMQ workers`

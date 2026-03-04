@@ -265,7 +265,7 @@ class ExcelQueue {
     }
 
     this.logger.log(
-      color.green.bold(
+      color.blue.bold(
         `Started ${white.bold(concurrency.toString())} Excel worker(s)`
       )
     );

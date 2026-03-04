@@ -249,7 +249,7 @@ class MusicFetchQueue {
     }
 
     this.logger.log(
-      color.green.bold(
+      color.blue.bold(
         `Started ${white.bold(concurrency.toString())} MusicFetch worker(s)`
       )
     );

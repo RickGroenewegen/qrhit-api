@@ -129,8 +129,8 @@ class TrackEnrichment {
         this.utils.isMainServer().then(async (isMainServer) => {
           if (isMainServer || process.env['ENVIRONMENT'] === 'development') {
             this.logger.log(
-              color.green.bold(
-                `[TrackEnrichment] Maps loaded: ${color.white.bold(
+              color.blue.bold(
+                `[${color.white.bold('TrackEnrichment')}] Maps loaded: ${color.white.bold(
                   this.trackEnrichmentByTrackId.size
                 )} by trackId, ${color.white.bold(
                   this.trackEnrichmentByIsrc.size

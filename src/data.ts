@@ -283,7 +283,7 @@ class Data {
     );
     const deletedCount = await this.cache.delPatternNonBlocking('track_links_v*');
     this.logger.log(
-      color.green.bold(
+      color.blue.bold(
         `Deleted ${color.white.bold(deletedCount)} old track_links_v* cache entries`
       )
     );

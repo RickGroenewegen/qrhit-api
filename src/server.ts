@@ -215,10 +215,10 @@ class Server {
           excelQueue.startWorkers(2);
 
           this.logger.log(
-            color.green.bold(
+            color.blue.bold(
               `Queue workers initialized successfully: ${color.white.bold(
                 workerCount.toString()
-              )} Generator workers, 1 MusicFetch worker, 2 Excel workers`
+              )} Generator workers, ${color.white.bold('1')} MusicFetch worker, ${color.white.bold('2')} Excel workers`
             )
           );
         } catch (error) {

@@ -63,7 +63,7 @@ export class ChatService {
       const data = JSON.parse(fs.readFileSync(chatJsonPath, 'utf-8'));
       this.knowledge = data.knowledge;
       if (cluster.isPrimary) {
-        this.logger.log(color.green(`Loaded `) + color.white.bold(`${this.knowledge.length}`) + color.green(` knowledge items for chat`));
+        this.logger.log(color.blue.bold(`Loaded ${color.white.bold(this.knowledge.length)} knowledge items for chat`));
       }
     } catch (error) {
       this.logger.log(color.red.bold(`Failed to load chat knowledge: ${error}`));
@@ -85,7 +85,7 @@ export class ChatService {
         null,
         true
       );
-      this.logger.log(color.green(`Chat cleanup cron job started (runs every 6 hours)`));
+      this.logger.log(color.blue.bold(`Chat cleanup cron job started (runs every ${color.white.bold('6')} hours)`));
     }
   }
 

@@ -237,6 +237,7 @@ model User {
   CompanyEvent              CompanyEvent[]
   GameRoom                  GameRoom[]
   ResellerMedia             ResellerMedia[]
+  GamesPurchase             GamesPurchase[]
 
   @@index([hash])
   @@map("users")
@@ -1179,4 +1180,22 @@ model ResellerMedia {
 
   @@index([userId])
   @@map("reseller_media")
+}
+
+model GamesPurchase {
+  id               Int      @id @default(autoincrement())
+  userId           Int
+  totalPrice       Float
+  playlistCount    Int
+  pricePerPlaylist Float
+  type             String   @db.VarChar(20)
+  countrycode      String?  @db.VarChar(10)
+  taxRate          Float?
+  molliePaymentId  String?  @db.VarChar(255)
+  createdAt        DateTime @default(now())
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([createdAt])
+  @@map("games_purchases")
 }

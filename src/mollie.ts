@@ -123,6 +123,10 @@ class Mollie {
       ? "DATE_FORMAT(p.createdAt, '%Y-%m-%d')"
       : "DATE_FORMAT(p.createdAt, '%Y-%m')";
 
+    const gamesDateExpr = groupBy === 'day'
+      ? "DATE_FORMAT(gp.createdAt, '%Y-%m-%d')"
+      : "DATE_FORMAT(gp.createdAt, '%Y-%m')";
+
     if (filter === 'all') {
       const results: any[] = await this.prisma.$queryRawUnsafe(`
         SELECT
@@ -139,11 +143,26 @@ class Mollie {
         ORDER BY period DESC
       `);
 
+      // Query games purchases grouped by the same period
+      const gamesResults: any[] = await this.prisma.$queryRawUnsafe(`
+        SELECT
+          ${gamesDateExpr} as period,
+          COUNT(*) as gamesAmount,
+          COALESCE(SUM(gp.totalPrice), 0) as gamesTotal
+        FROM games_purchases gp
+        WHERE gp.createdAt > '2024-12-05'
+        GROUP BY ${gamesDateExpr}
+      `);
+
+      const gamesMap = new Map(gamesResults.map(g => [g.period, g]));
+
       return results.map(r => ({
         period: r.period,
         numberOfSales: Number(r.numberOfSales),
         totalPrice: Number(r.totalPrice) || 0,
         totalPriceWithoutTax: Number(r.totalPriceWithoutTax) || 0,
+        gamesAmount: Number(gamesMap.get(r.period)?.gamesAmount) || 0,
+        gamesTotal: Number(gamesMap.get(r.period)?.gamesTotal) || 0,
       }));
     }
 
@@ -178,6 +197,8 @@ class Mollie {
       numberOfSales: Number(r.numberOfSales),
       totalPrice: Number(r.totalPrice) || 0,
       totalPriceWithoutTax: Number(r.totalPriceWithoutTax) || 0,
+      gamesAmount: 0,
+      gamesTotal: 0,
     }));
   }
 
@@ -224,6 +245,22 @@ class Mollie {
       },
     });
 
+    // Query games purchases grouped by countrycode for this date range
+    const gamesByCountry = await this.prisma.gamesPurchase.groupBy({
+      by: ['countrycode'],
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      _count: { _all: true },
+      _sum: { totalPrice: true },
+    });
+    const gamesMap = new Map<string, { amount: number; total: number }>(
+      gamesByCountry.map(g => [g.countrycode || 'Unknown', { amount: g._count._all, total: g._sum.totalPrice || 0 }])
+    );
+
     const detailedReport = await Promise.all(
       report.map(async (entry) => {
         const payments = await this.prisma.payment.findMany({
@@ -250,13 +287,18 @@ class Mollie {
           totalPlaylistsSold += playlistsCount;
         }
 
+        const countryKey = entry.countrycode || 'Unknown';
+        const gamesData = gamesMap.get(countryKey);
+
         return {
-          country: entry.countrycode || 'Unknown',
+          country: countryKey,
           numberOfSales: entry._count._all,
           totalPrice: entry._sum.totalPrice || 0,
           totalPriceWithoutTax: entry._sum.totalPriceWithoutTax,
           taxRate: entry._max.taxRate,
           totalPlaylists: totalPlaylistsSold,
+          gamesAmount: gamesData?.amount || 0,
+          gamesTotal: gamesData?.total || 0,
         };
       })
     );
@@ -305,13 +347,35 @@ class Mollie {
       },
     });
 
-    const detailedReport = report.map((entry) => ({
-      taxRate: entry.taxRate || 0,
-      numberOfSales: entry._count._all,
-      totalPrice: entry._sum.totalPrice || 0,
-      totalPriceWithoutTax: entry._sum.totalPriceWithoutTax || 0,
-      totalVAT: entry._sum.productVATPrice || 0,
-    }));
+    // Query games purchases grouped by taxRate for this date range
+    const gamesByTaxRate = await this.prisma.gamesPurchase.groupBy({
+      by: ['taxRate'],
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      _count: { _all: true },
+      _sum: { totalPrice: true },
+    });
+    const gamesTaxMap = new Map<number, { amount: number; total: number }>(
+      gamesByTaxRate.map(g => [g.taxRate || 0, { amount: g._count._all, total: g._sum.totalPrice || 0 }])
+    );
+
+    const detailedReport = report.map((entry) => {
+      const taxKey = entry.taxRate || 0;
+      const gamesData = gamesTaxMap.get(taxKey);
+      return {
+        taxRate: taxKey,
+        numberOfSales: entry._count._all,
+        totalPrice: entry._sum.totalPrice || 0,
+        totalPriceWithoutTax: entry._sum.totalPriceWithoutTax || 0,
+        totalVAT: entry._sum.productVATPrice || 0,
+        gamesAmount: gamesData?.amount || 0,
+        gamesTotal: gamesData?.total || 0,
+      };
+    });
 
     return detailedReport.sort((a, b) => b.totalPrice - a.totalPrice);
   }
@@ -1168,6 +1232,23 @@ class Mollie {
       });
 
       const paymentId = insertResult.id;
+
+      // Log QRGames purchase if any playlists have gamesEnabled
+      const gamesPlaylists = playlists.filter((p: any) => p.gamesEnabled === true);
+      if (gamesPlaylists.length > 0) {
+        await this.prisma.gamesPurchase.create({
+          data: {
+            userId: userDatabaseId,
+            totalPrice: gamesPlaylists.length * QRGAMES_UPGRADE_PRICE,
+            playlistCount: gamesPlaylists.length,
+            pricePerPlaylist: QRGAMES_UPGRADE_PRICE,
+            type: 'initial',
+            countrycode: params.extraOrderData.countrycode || null,
+            taxRate: calculateResult.data.taxRate || null,
+            molliePaymentId,
+          },
+        });
+      }
 
       // Reload app theme cache to include new payment_has_playlist entries
       this.appTheme.reload();
