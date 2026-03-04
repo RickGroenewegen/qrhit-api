@@ -1743,7 +1743,7 @@ class PrintEnBind {
 
       return await response.json();
     } catch (error) {
-      this.logger.log(color.red.bold(`Error getting order status: ${error}`));
+      this.logger.log(color.red.bold(`Error getting order status for order ID ${orderId}: ${error}`));
       return null;
     }
   }
@@ -1801,6 +1801,11 @@ class PrintEnBind {
             const orderStatus = await this.getOrderStatus(
               order.printApiOrderId
             );
+
+            if (!orderStatus) {
+              this.logger.log(color.red.bold(`Skipping order ID ${order.printApiOrderId} (paymentId: ${order.paymentId}): failed to get order status`));
+              continue;
+            }
 
             if (orderStatus.status == 'Verzonden') {
               this.logger.log(
