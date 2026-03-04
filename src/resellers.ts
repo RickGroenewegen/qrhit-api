@@ -73,17 +73,17 @@ class Resellers {
     });
 
     const existingFilenames = new Set(existing.map((m) => m.filename));
+    const missing = BACKGROUNDS.filter((bg) => !existingFilenames.has(bg.filename));
 
-    for (const bg of BACKGROUNDS) {
-      if (!existingFilenames.has(bg.filename)) {
-        await this.prisma.resellerMedia.create({
-          data: {
-            userId: this.systemUserId!,
-            mediaType: 'preset_background',
-            filename: bg.filename,
-          },
-        });
-      }
+    if (missing.length > 0) {
+      await this.prisma.resellerMedia.createMany({
+        data: missing.map((bg) => ({
+          userId: this.systemUserId!,
+          mediaType: 'preset_background',
+          filename: bg.filename,
+        })),
+        skipDuplicates: true,
+      });
     }
   }
 
@@ -100,7 +100,6 @@ class Resellers {
     }
 
     await this.loadAdminUserId();
-    await this.ensurePresetBackgroundsRegistered();
 
     const presetMedia = await this.prisma.resellerMedia.findMany({
       where: { userId: this.systemUserId!, mediaType: 'preset_background' },
