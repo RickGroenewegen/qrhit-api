@@ -980,11 +980,11 @@ class Suggestion {
         };
       }
 
-      // Fetch current playlist data from the music service
+      // Fetch current playlist data from the music service (bypass cache to get fresh track count)
       // For Apple Music, use the payment's locale to determine the storefront
       const playlistData = serviceType === 'apple_music'
-        ? await (provider as any).getPlaylist(playlistId, AppleMusicProvider.getInstance().getStorefrontForLocale(locale))
-        : await provider.getPlaylist(playlistId);
+        ? await (provider as any).getPlaylist(playlistId, AppleMusicProvider.getInstance().getStorefrontForLocale(locale), false)
+        : await provider.getPlaylist(playlistId, false);
 
       if (!playlistData.success || !playlistData.data) {
         return {

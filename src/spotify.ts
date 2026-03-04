@@ -1728,6 +1728,25 @@ class Spotify {
             await this.cache.set(cacheKey, JSON.stringify(result));
             return { ...result, cached: false };
           }
+          // Check if the redirect location is a native music service link
+          const nativeLink = this.extractNativeMusicServiceLink(lastLocation);
+          if (nativeLink) {
+            const result = {
+              success: true,
+              spotifyUri: undefined,
+              nativeLink,
+              links: {
+                spotifyLink: null,
+                appleMusicLink: nativeLink.service === 'apple-music' ? lastLocation : null,
+                tidalLink: nativeLink.service === 'tidal' ? lastLocation : null,
+                youtubeMusicLink: nativeLink.service === 'youtube-music' ? lastLocation : null,
+                deezerLink: nativeLink.service === 'deezer' ? lastLocation : null,
+                amazonMusicLink: null,
+              },
+            };
+            await this.cache.set(cacheKey, JSON.stringify(result));
+            return { ...result, cached: false };
+          }
           currentUrl = lastLocation;
         } else {
           // Not a redirect, break and check content
@@ -1740,6 +1759,25 @@ class Spotify {
         const spotifyUri = this.extractSpotifyUri(lastLocation);
         if (spotifyUri) {
           const result = { success: true, spotifyUri };
+          await this.cache.set(cacheKey, JSON.stringify(result));
+          return { ...result, cached: false };
+        }
+        // Check if the final URL is a native music service link
+        const finalNativeLink = this.extractNativeMusicServiceLink(lastLocation);
+        if (finalNativeLink) {
+          const result = {
+            success: true,
+            spotifyUri: undefined,
+            nativeLink: finalNativeLink,
+            links: {
+              spotifyLink: null,
+              appleMusicLink: finalNativeLink.service === 'apple-music' ? lastLocation : null,
+              tidalLink: finalNativeLink.service === 'tidal' ? lastLocation : null,
+              youtubeMusicLink: finalNativeLink.service === 'youtube-music' ? lastLocation : null,
+              deezerLink: finalNativeLink.service === 'deezer' ? lastLocation : null,
+              amazonMusicLink: null,
+            },
+          };
           await this.cache.set(cacheKey, JSON.stringify(result));
           return { ...result, cached: false };
         }

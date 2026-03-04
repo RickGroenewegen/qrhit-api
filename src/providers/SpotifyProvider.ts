@@ -178,10 +178,10 @@ class SpotifyProvider implements IMusicProvider {
   /**
    * Get playlist metadata from Spotify
    */
-  async getPlaylist(playlistId: string): Promise<ApiResult & { data?: ProviderPlaylistData }> {
+  async getPlaylist(playlistId: string, cache: boolean = true): Promise<ApiResult & { data?: ProviderPlaylistData }> {
     const result = await this.spotify.getPlaylist(
       playlistId,
-      true, // cache
+      cache,
       '', // captchaToken
       false, // checkCaptcha
       false, // featured

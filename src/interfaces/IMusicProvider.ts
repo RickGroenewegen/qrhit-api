@@ -129,7 +129,7 @@ export interface IMusicProvider {
   /**
    * Get playlist metadata
    */
-  getPlaylist(playlistId: string): Promise<ApiResult & { data?: ProviderPlaylistData }>;
+  getPlaylist(playlistId: string, ...args: any[]): Promise<ApiResult & { data?: ProviderPlaylistData }>;
 
   /**
    * Get tracks from a playlist
