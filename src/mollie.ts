@@ -143,7 +143,7 @@ class Mollie {
         ORDER BY period DESC
       `);
 
-      // Query games purchases grouped by the same period
+      // Query only upgrade-type games (initial games are already in payment totals)
       const gamesResults: any[] = await this.prisma.$queryRawUnsafe(`
         SELECT
           ${gamesDateExpr} as period,
@@ -151,6 +151,7 @@ class Mollie {
           COALESCE(SUM(gp.totalPrice), 0) as gamesTotal
         FROM games_purchases gp
         WHERE gp.createdAt > '2024-12-05'
+          AND gp.type = 'upgrade'
         GROUP BY ${gamesDateExpr}
       `);
 
@@ -245,10 +246,11 @@ class Mollie {
       },
     });
 
-    // Query games purchases grouped by countrycode for this date range
+    // Query only upgrade-type games (initial games are already in payment totals)
     const gamesByCountry = await this.prisma.gamesPurchase.groupBy({
       by: ['countrycode'],
       where: {
+        type: 'upgrade',
         createdAt: {
           gte: startDate,
           lte: endDate,
@@ -347,10 +349,11 @@ class Mollie {
       },
     });
 
-    // Query games purchases grouped by taxRate for this date range
+    // Query only upgrade-type games (initial games are already in payment totals)
     const gamesByTaxRate = await this.prisma.gamesPurchase.groupBy({
       by: ['taxRate'],
       where: {
+        type: 'upgrade',
         createdAt: {
           gte: startDate,
           lte: endDate,

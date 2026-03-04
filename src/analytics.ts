@@ -158,7 +158,15 @@ class AnalyticsClient {
       _sum: { totalPrice: true },
     });
     const gamesRevenue = gamesTotal._sum.totalPrice || 0;
-    totals.totalPrice += gamesRevenue;
+
+    // Only upgrade games add to turnover (initial games already in payment totals)
+    const upgradeGamesTotal = await this.prisma.gamesPurchase.aggregate({
+      where: { type: 'upgrade' },
+      _sum: { totalPrice: true },
+    });
+    const upgradeGamesRevenue = upgradeGamesTotal._sum.totalPrice || 0;
+
+    totals.totalPrice += upgradeGamesRevenue;
     totals.totalProfit += gamesRevenue;
 
     return totals;
