@@ -824,7 +824,7 @@ class Generator {
           // Generate box insert PDF if box is enabled
           if (playlist.boxEnabled && playlist.boxQuantity > 0) {
             const boxFilename = `box_${payment.paymentId}_${playlist.paymentHasPlaylistId}.pdf`;
-            const boxOutputPath = `${process.env['PRIVATE_DIR']}/${payment.qrSubDir}/${boxFilename}`;
+            const boxOutputPath = `${process.env['PUBLIC_DIR']}/box-insert/${boxFilename}`;
             const boxUrl = `${process.env['API_URI']}/qr/pdf-box/${playlist.paymentHasPlaylistId}/${payment.paymentId}`;
 
             await this.pdf.generateFromUrl(boxUrl, boxOutputPath, {
