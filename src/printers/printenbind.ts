@@ -1,5 +1,5 @@
 import Log from '../logger';
-import { MAX_CARDS, MAX_CARDS_PHYSICAL } from '../config/constants';
+import { MAX_CARDS, MAX_CARDS_PHYSICAL, BOX_PRICE } from '../config/constants';
 import PrismaInstance from '../prisma';
 import Cache from '../cache';
 import { ApiResult } from '../interfaces/ApiResult';
@@ -1000,6 +1000,15 @@ class PrintEnBind {
       }
       totalPrice += gamesFee;
 
+      // Box fee for physical/sheets items with box enabled
+      let boxFee = 0;
+      for (const item of orderItems) {
+        if ((item.type === 'physical' || item.type === 'sheets') && item.boxEnabled === true) {
+          boxFee += (item.boxQuantity || 0) * BOX_PRICE;
+        }
+      }
+      totalPrice += boxFee;
+
       const result = {
         success: true,
         data: {
@@ -1014,6 +1023,8 @@ class PrintEnBind {
           volumeDiscount, // Add volume discount to result
           gamesFee, // Add games fee to result
           qrgamesUnitPrice: QRGAMES_UPGRADE_PRICE, // Per-playlist QRGames price
+          boxFee, // Add box fee to result
+          boxUnitPrice: BOX_PRICE, // Per-box price
         },
       };
 

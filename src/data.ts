@@ -287,6 +287,12 @@ class Data {
     return playlistsModule.updateGamesEnabled(this.deps, paymentHasPlaylistId, gamesEnabled);
   }
 
+  public async getPaymentHasPlaylistById(paymentHasPlaylistId: number) {
+    return this.deps.prisma.paymentHasPlaylist.findUnique({
+      where: { id: paymentHasPlaylistId },
+    });
+  }
+
   public async resetJudgedStatus(paymentHasPlaylistId: number) {
     return playlistsModule.resetJudgedStatus(this.deps, paymentHasPlaylistId);
   }

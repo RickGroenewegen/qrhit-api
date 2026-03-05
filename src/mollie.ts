@@ -19,6 +19,7 @@ import { promises as fs } from 'fs';
 import Cache from './cache';
 import Promotional from './promotional';
 import { QRGAMES_UPGRADE_PRICE } from './game';
+import { BOX_PRICE } from './config/constants';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
 import AppTheme from './apptheme';
 import Bingo from './bingo';
@@ -1176,6 +1177,32 @@ class Mollie {
             // Bingo enabled flag and price
             gamesEnabled: item.productType === 'cards' ? (item.gamesEnabled === true) : false,
             gamesPrice: (item.productType === 'cards' && item.gamesEnabled === true) ? QRGAMES_UPGRADE_PRICE : 0,
+            // Box add-on
+            boxEnabled: item.boxEnabled === true,
+            boxQuantity: item.boxQuantity || 0,
+            boxPrice: (item.boxQuantity || 0) * BOX_PRICE,
+            // Box front design
+            boxFrontBackgroundType: item.boxFrontBackgroundType || 'image',
+            boxFrontBackground: item.boxFrontBackground || '',
+            boxFrontBackgroundColor: item.boxFrontBackgroundColor || '#ffffff',
+            boxFrontUseFrontGradient: item.boxFrontUseFrontGradient || false,
+            boxFrontGradientColor: item.boxFrontGradientColor || '#ffffff',
+            boxFrontGradientDegrees: item.boxFrontGradientDegrees || 180,
+            boxFrontGradientPosition: item.boxFrontGradientPosition || 50,
+            boxFrontOpacity: item.boxFrontOpacity !== undefined ? item.boxFrontOpacity : 100,
+            boxFrontLogo: item.boxFrontLogo || '',
+            boxFrontEmoji: item.boxFrontEmoji || '',
+            // Box back design
+            boxBackBackgroundType: item.boxBackBackgroundType || 'solid',
+            boxBackBackground: item.boxBackBackground || '',
+            boxBackBackgroundColor: item.boxBackBackgroundColor || '#ffffff',
+            boxBackFontColor: item.boxBackFontColor || '#000000',
+            boxBackUseGradient: item.boxBackUseGradient || false,
+            boxBackGradientColor: item.boxBackGradientColor || '#ffffff',
+            boxBackGradientDegrees: item.boxBackGradientDegrees || 180,
+            boxBackGradientPosition: item.boxBackGradientPosition || 50,
+            boxBackOpacity: item.boxBackOpacity !== undefined ? item.boxBackOpacity : 50,
+            boxBackText: item.boxBackText || '',
           };
         })
       );

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Box Insert - QRSong!</title>
+<style>
+    @media print {
+        @page {
+            size: 120mm 120mm;
+            margin: 0;
+        }
+        body {
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+        .page {
+            page-break-after: always;
+        }
+        .page:last-child {
+            page-break-after: auto;
+        }
+    }
+
+    * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+    }
+
+    body {
+        width: 120mm;
+        font-family: Arial, sans-serif;
+    }
+
+    .page {
+        width: 120mm;
+        height: 120mm;
+        position: relative;
+        overflow: hidden;
+    }
+
+    .background {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .background-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .background-color {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+    }
+
+    .content {
+        position: relative;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 1;
+    }
+
+    .logo-image {
+        max-width: 60mm;
+        max-height: 40mm;
+        object-fit: contain;
+    }
+
+    .emoji {
+        font-size: 48px;
+        margin-top: 8px;
+    }
+
+    .back-text {
+        padding: 15mm;
+        text-align: center;
+        font-size: 14px;
+        line-height: 1.5;
+        word-wrap: break-word;
+        white-space: pre-wrap;
+    }
+</style>
+</head>
+<body>
+<!-- Page 1: Front side (visible through window) -->
+<div class="page">
+    <div class="background">
+        <% if (php.boxFrontBackgroundType === 'image' && php.boxFrontBackground) { %>
+            <img class="background-image" src="<%= process.env['API_URI'] %>/public/background/<%= php.boxFrontBackground %>"
+                 style="opacity: <%= (php.boxFrontOpacity || 100) / 100 %>;" />
+        <% } %>
+        <% if (php.boxFrontBackgroundType === 'solid' || !php.boxFrontBackground) { %>
+            <% if (php.boxFrontUseFrontGradient) { %>
+                <div class="background-color" style="background: linear-gradient(<%= php.boxFrontGradientDegrees || 180 %>deg, <%= php.boxFrontBackgroundColor || '#ffffff' %> <%= php.boxFrontGradientPosition || 50 %>%, <%= php.boxFrontGradientColor || '#ffffff' %> 100%);"></div>
+            <% } else { %>
+                <div class="background-color" style="background-color: <%= php.boxFrontBackgroundColor || '#ffffff' %>;"></div>
+            <% } %>
+        <% } %>
+        <% if (php.boxFrontBackgroundType === 'image' && php.boxFrontBackground && php.boxFrontUseFrontGradient) { %>
+            <div class="background-color" style="background: linear-gradient(<%= php.boxFrontGradientDegrees || 180 %>deg, <%= php.boxFrontBackgroundColor || '#ffffff' %> <%= php.boxFrontGradientPosition || 50 %>%, <%= php.boxFrontGradientColor || '#ffffff' %> 100%); opacity: 0.5;"></div>
+        <% } %>
+    </div>
+    <div class="content">
+        <% if (php.boxFrontLogo) { %>
+            <img class="logo-image" src="<%= process.env['API_URI'] %>/public/logo/<%= php.boxFrontLogo %>" />
+        <% } %>
+        <% if (php.boxFrontEmoji) { %>
+            <div class="emoji"><%= php.boxFrontEmoji %></div>
+        <% } %>
+    </div>
+</div>
+
+<!-- Page 2: Back side -->
+<div class="page">
+    <div class="background">
+        <% if (php.boxBackBackgroundType === 'image' && php.boxBackBackground) { %>
+            <img class="background-image" src="<%= process.env['API_URI'] %>/public/background/<%= php.boxBackBackground %>"
+                 style="opacity: <%= (php.boxBackOpacity || 50) / 100 %>;" />
+        <% } %>
+        <% if (php.boxBackBackgroundType === 'solid' || !php.boxBackBackground) { %>
+            <% if (php.boxBackUseGradient) { %>
+                <div class="background-color" style="background: linear-gradient(<%= php.boxBackGradientDegrees || 180 %>deg, <%= php.boxBackBackgroundColor || '#ffffff' %> <%= php.boxBackGradientPosition || 50 %>%, <%= php.boxBackGradientColor || '#ffffff' %> 100%);"></div>
+            <% } else { %>
+                <div class="background-color" style="background-color: <%= php.boxBackBackgroundColor || '#ffffff' %>;"></div>
+            <% } %>
+        <% } %>
+        <% if (php.boxBackBackgroundType === 'image' && php.boxBackBackground && php.boxBackUseGradient) { %>
+            <div class="background-color" style="background: linear-gradient(<%= php.boxBackGradientDegrees || 180 %>deg, <%= php.boxBackBackgroundColor || '#ffffff' %> <%= php.boxBackGradientPosition || 50 %>%, <%= php.boxBackGradientColor || '#ffffff' %> 100%); opacity: 0.5;"></div>
+        <% } %>
+    </div>
+    <div class="content">
+        <% if (php.boxBackText) { %>
+            <div class="back-text" style="color: <%= php.boxBackFontColor || '#000000' %>;">
+                <%= php.boxBackText %>
+            </div>
+        <% } %>
+    </div>
+</div>
+</body>
+</html>

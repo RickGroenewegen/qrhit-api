@@ -821,6 +821,27 @@ class Generator {
             },
           });
 
+          // Generate box insert PDF if box is enabled
+          if (playlist.boxEnabled && playlist.boxQuantity > 0) {
+            const boxFilename = `box_${payment.paymentId}_${playlist.paymentHasPlaylistId}.pdf`;
+            const boxOutputPath = `${process.env['PRIVATE_DIR']}/${payment.qrSubDir}/${boxFilename}`;
+            const boxUrl = `${process.env['API_URI']}/qr/pdf-box/${playlist.paymentHasPlaylistId}/${payment.paymentId}`;
+
+            await this.pdf.generateFromUrl(boxUrl, boxOutputPath, {
+              width: 120,
+              height: 120,
+            });
+
+            await this.prisma.paymentHasPlaylist.update({
+              where: { id: playlist.paymentHasPlaylistId },
+              data: { boxFilename },
+            });
+
+            this.logger.log(
+              color.green.bold(`Generated box insert PDF: ${boxFilename}`)
+            );
+          }
+
           if (playlist.orderType == 'digital' && !skipMail) {
             // Only send email if this playlist hasn't been emailed yet
             if (!emailedPlaylistIds.has(playlist.id)) {

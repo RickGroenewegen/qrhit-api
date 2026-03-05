@@ -288,6 +288,32 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     }
   );
 
+  // Box insert PDF
+  fastify.get(
+    '/qr/pdf-box/:paymentHasPlaylistId/:paymentId',
+    async (request: any, reply) => {
+      const payment = await mollie.getPayment(request.params.paymentId);
+      if (!payment) {
+        reply.status(403).send({ error: 'Forbidden' });
+        return;
+      }
+
+      const php = await data.getPaymentHasPlaylistById(
+        parseInt(request.params.paymentHasPlaylistId)
+      );
+
+      if (!php || php.paymentId !== payment.id) {
+        reply.status(404).send({ error: 'Not found' });
+        return;
+      }
+
+      await reply.view('pdf_box_insert.ejs', {
+        payment,
+        php,
+      });
+    }
+  );
+
   // Reviews
   fastify.get('/review/:paymentId', async (request: any, _reply) => {
     return await reviewObj.checkReview(request.params.paymentId);

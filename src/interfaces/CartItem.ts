@@ -44,4 +44,29 @@ export interface CartItem {
   backOpacity?: number; // Back background image opacity 0-100 (default 50%)
   design?: any; // Complete design object from localStorage (saved to database for new playlists)
   gamesEnabled?: boolean; // Whether games (bingo/quiz) are included (default: true for digital)
+  // Box add-on
+  boxEnabled?: boolean;
+  boxQuantity?: number;
+  // Box front design (separate from QR card design)
+  boxFrontBackgroundType?: 'solid' | 'image';
+  boxFrontBackground?: string;
+  boxFrontBackgroundColor?: string;
+  boxFrontUseFrontGradient?: boolean;
+  boxFrontGradientColor?: string;
+  boxFrontGradientDegrees?: number;
+  boxFrontGradientPosition?: number;
+  boxFrontOpacity?: number;
+  boxFrontLogo?: string;
+  boxFrontEmoji?: string;
+  // Box back design
+  boxBackBackgroundType?: 'solid' | 'image';
+  boxBackBackground?: string;
+  boxBackBackgroundColor?: string;
+  boxBackFontColor?: string;
+  boxBackUseGradient?: boolean;
+  boxBackGradientColor?: string;
+  boxBackGradientDegrees?: number;
+  boxBackGradientPosition?: number;
+  boxBackOpacity?: number;
+  boxBackText?: string;
 }

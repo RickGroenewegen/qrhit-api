@@ -628,6 +628,33 @@ model PaymentHasPlaylist {
   promotionalCreditedAt   DateTime? // When the promotional credit was applied
   gamesEnabled            Boolean                  @default(false) // Whether games (bingo/quiz) are enabled for this playlist
   gamesPrice              Float                    @default(0) // Price charged for games (€3 when enabled)
+  // Box add-on
+  boxEnabled              Boolean                  @default(false)
+  boxQuantity             Int                      @default(0)
+  boxPrice                Float                    @default(0)
+  boxFilename             String?
+  // Box front design
+  boxFrontBackgroundType  String?                  @default("image")
+  boxFrontBackground      String?
+  boxFrontBackgroundColor String?                  @default("#ffffff")
+  boxFrontUseFrontGradient Boolean                 @default(false)
+  boxFrontGradientColor   String?                  @default("#ffffff")
+  boxFrontGradientDegrees Int                      @default(180)
+  boxFrontGradientPosition Int                     @default(50)
+  boxFrontOpacity         Int                      @default(100)
+  boxFrontLogo            String?
+  boxFrontEmoji           String?
+  // Box back design
+  boxBackBackgroundType   String?                  @default("solid")
+  boxBackBackground       String?
+  boxBackBackgroundColor  String?                  @default("#ffffff")
+  boxBackFontColor        String?                  @default("#000000")
+  boxBackUseGradient      Boolean                  @default(false)
+  boxBackGradientColor    String?                  @default("#ffffff")
+  boxBackGradientDegrees  Int                      @default(180)
+  boxBackGradientPosition Int                      @default(50)
+  boxBackOpacity          Int                      @default(50)
+  boxBackText             String?                  @db.Text
   orderType               OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                   PaymentHasPlaylistItem[]
   bingoFiles              BingoFile[]
