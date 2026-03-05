@@ -1002,9 +1002,12 @@ class PrintEnBind {
 
       // Box fee for physical/sheets items with box enabled
       let boxFee = 0;
+      let totalBoxCount = 0;
       for (const item of orderItems) {
         if ((item.type === 'physical' || item.type === 'sheets') && item.boxEnabled === true) {
-          boxFee += (item.boxQuantity || 0) * BOX_PRICE;
+          const qty = item.boxQuantity || 0;
+          totalBoxCount += qty;
+          boxFee += qty * BOX_PRICE;
         }
       }
       totalPrice += boxFee;
@@ -1023,8 +1026,9 @@ class PrintEnBind {
           volumeDiscount, // Add volume discount to result
           gamesFee, // Add games fee to result
           qrgamesUnitPrice: QRGAMES_UPGRADE_PRICE, // Per-playlist QRGames price
-          boxFee, // Add box fee to result
-          boxUnitPrice: BOX_PRICE, // Per-box price
+          boxFee,
+          boxUnitPrice: BOX_PRICE,
+          totalBoxCount,
         },
       };
 
