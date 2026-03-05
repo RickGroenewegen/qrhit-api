@@ -1189,8 +1189,10 @@ class Mollie {
             boxFrontGradientColor: item.boxFrontGradientColor || '#ffffff',
             boxFrontGradientDegrees: item.boxFrontGradientDegrees || 180,
             boxFrontGradientPosition: item.boxFrontGradientPosition || 50,
-            boxFrontOpacity: item.boxFrontOpacity !== undefined ? item.boxFrontOpacity : 100,
             boxFrontLogo: item.boxFrontLogo || '',
+            boxFrontLogoScale: item.boxFrontLogoScale ?? 50,
+            boxFrontLogoPositionX: item.boxFrontLogoPositionX ?? 50,
+            boxFrontLogoPositionY: item.boxFrontLogoPositionY ?? 50,
             boxFrontEmoji: item.boxFrontEmoji || '',
             // Box back design
             boxBackBackgroundType: item.boxBackBackgroundType || 'solid',

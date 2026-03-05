@@ -55,8 +55,10 @@ export interface CartItem {
   boxFrontGradientColor?: string;
   boxFrontGradientDegrees?: number;
   boxFrontGradientPosition?: number;
-  boxFrontOpacity?: number;
   boxFrontLogo?: string;
+  boxFrontLogoScale?: number;
+  boxFrontLogoPositionX?: number;
+  boxFrontLogoPositionY?: number;
   boxFrontEmoji?: string;
   // Box back design
   boxBackBackgroundType?: 'solid' | 'image';

@@ -149,6 +149,7 @@ model Payment {
   discount                 Float                @default(0)
   volumeDiscount           Float                @default(0)
   gamesFee                 Float                @default(0) @map("bingoFee")
+  boxFee                   Float                @default(0)
   locale                   String               @default("en")
   qrSubDir                 String?
   finalized                Boolean              @default(false)
@@ -643,6 +644,9 @@ model PaymentHasPlaylist {
   boxFrontGradientPosition Int                     @default(50)
   boxFrontOpacity         Int                      @default(100)
   boxFrontLogo            String?
+  boxFrontLogoScale       Int                      @default(50)
+  boxFrontLogoPositionX   Int                      @default(50)
+  boxFrontLogoPositionY   Int                      @default(50)
   boxFrontEmoji           String?
   // Box back design
   boxBackBackgroundType   String?                  @default("solid")
