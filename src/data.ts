@@ -3266,6 +3266,213 @@ class Data {
   }
 
   /**
+   * Search featured playlists with pagination, filtering, and sorting.
+   * Returns pending and approved playlists separately.
+   */
+  public async searchFeaturedPlaylists(
+    searchTerm: string = '',
+    locale: string | null = null,
+    page: number = 1,
+    limit: number = 20,
+    sortColumn: string = 'id',
+    sortDirection: string = 'desc'
+  ): Promise<{
+    pending: any[];
+    approved: { data: any[]; total: number; page: number; totalPages: number };
+  }> {
+    try {
+      const hasSearch = searchTerm && searchTerm.trim().length > 0;
+
+      // --- Pending playlists (no pagination, always return all) ---
+      const pendingWhere: any = {
+        promotionalActive: true,
+        promotionalAccepted: false,
+        promotionalHide: false,
+      };
+      if (hasSearch) {
+        pendingWhere.OR = [
+          { name: { contains: searchTerm } },
+          { promotionalTitle: { contains: searchTerm } },
+        ];
+      }
+      if (locale) {
+        pendingWhere.featuredLocale = locale;
+      }
+
+      const pendingPlaylists = await this.prisma.playlist.findMany({
+        where: pendingWhere,
+        select: {
+          id: true,
+          playlistId: true,
+          name: true,
+          slug: true,
+          image: true,
+          customImage: true,
+          promotionalTitle: true,
+          promotionalDescription: true,
+          promotionalLocale: true,
+          promotionalUserId: true,
+        },
+        orderBy: { id: 'desc' },
+      });
+
+      const pendingWithUsers = await Promise.all(
+        pendingPlaylists.map(async (p) => {
+          let user = null;
+          if (p.promotionalUserId) {
+            user = await this.prisma.user.findUnique({
+              where: { id: p.promotionalUserId },
+              select: { email: true, displayName: true },
+            });
+          }
+          return {
+            id: p.id,
+            playlistId: p.playlistId,
+            name: p.promotionalTitle || p.name,
+            slug: p.slug,
+            image: p.image,
+            customImage: p.customImage,
+            description: p.promotionalDescription || '',
+            locale: p.promotionalLocale,
+            userEmail: user?.email || null,
+            userDisplayName: user?.displayName || null,
+          };
+        })
+      );
+
+      // --- Approved playlists (paginated) ---
+      const approvedWhere: any = {
+        featured: true,
+        NOT: {
+          promotionalActive: true,
+          promotionalAccepted: false,
+        },
+      };
+      if (hasSearch) {
+        approvedWhere.OR = [
+          { name: { contains: searchTerm } },
+          { promotionalTitle: { contains: searchTerm } },
+        ];
+      }
+      if (locale) {
+        approvedWhere.featuredLocale = locale;
+      }
+
+      // Build orderBy
+      const allowedSortColumns: Record<string, string> = {
+        id: 'id',
+        name: 'name',
+      };
+      const safeColumn = allowedSortColumns[sortColumn] || 'id';
+      const safeDirection = sortDirection === 'asc' ? 'asc' : 'desc';
+
+      const offset = (page - 1) * limit;
+
+      const [approvedPlaylists, totalCount] = await Promise.all([
+        this.prisma.playlist.findMany({
+          where: approvedWhere,
+          select: {
+            id: true,
+            playlistId: true,
+            name: true,
+            slug: true,
+            image: true,
+            customImage: true,
+            featuredHidden: true,
+            featuredLocale: true,
+            promotionalActive: true,
+            promotionalAccepted: true,
+            promotionalTitle: true,
+            promotionalDescription: true,
+            promotionalUserId: true,
+          },
+          orderBy: { [safeColumn]: safeDirection },
+          skip: offset,
+          take: limit,
+        }),
+        this.prisma.playlist.count({ where: approvedWhere }),
+      ]);
+
+      // Get purchase counts
+      const playlistIds = approvedPlaylists.map((p) => p.id);
+      const purchaseCounts = playlistIds.length > 0
+        ? await this.prisma.paymentHasPlaylist.groupBy({
+            by: ['playlistId'],
+            where: {
+              playlistId: { in: playlistIds },
+              payment: { status: 'paid' },
+            },
+            _count: { playlistId: true },
+          })
+        : [];
+
+      const purchaseCountMap = new Map<number, number>();
+      for (const pc of purchaseCounts) {
+        purchaseCountMap.set(pc.playlistId, pc._count.playlistId);
+      }
+
+      // Sort by purchaseCount requires post-processing since it's a computed field
+      let approvedWithUsers = await Promise.all(
+        approvedPlaylists.map(async (p) => {
+          let user = null;
+          if (p.promotionalUserId) {
+            user = await this.prisma.user.findUnique({
+              where: { id: p.promotionalUserId },
+              select: { email: true, displayName: true },
+            });
+          }
+          let purchaseCount = purchaseCountMap.get(p.id) || 0;
+          if (p.promotionalActive && p.promotionalAccepted && purchaseCount > 0) {
+            purchaseCount = Math.max(0, purchaseCount - 1);
+          }
+          return {
+            id: p.id,
+            playlistId: p.playlistId,
+            name: p.promotionalTitle || p.name,
+            slug: p.slug,
+            image: p.image,
+            customImage: p.customImage,
+            description: p.promotionalDescription || '',
+            featuredHidden: p.featuredHidden,
+            featuredLocale: p.featuredLocale,
+            isPromotional: p.promotionalActive && p.promotionalAccepted,
+            userEmail: user?.email || null,
+            userDisplayName: user?.displayName || null,
+            purchaseCount,
+          };
+        })
+      );
+
+      // If sorting by purchaseCount, we need to handle it in-memory
+      // since it's a computed field (not a direct DB column)
+      if (sortColumn === 'purchaseCount') {
+        approvedWithUsers.sort((a, b) => {
+          const diff = a.purchaseCount - b.purchaseCount;
+          return safeDirection === 'asc' ? diff : -diff;
+        });
+      }
+
+      return {
+        pending: pendingWithUsers,
+        approved: {
+          data: approvedWithUsers,
+          total: totalCount,
+          page,
+          totalPages: Math.ceil(totalCount / limit),
+        },
+      };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Error searching featured playlists: ${error.message}`)
+      );
+      return {
+        pending: [],
+        approved: { data: [], total: 0, page: 1, totalPages: 1 },
+      };
+    }
+  }
+
+  /**
    * Update featured hidden status for a playlist
    */
   public async updateFeaturedHidden(

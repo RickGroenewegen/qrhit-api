@@ -952,6 +952,32 @@ export default async function adminRoutes(
     }
   );
 
+  // Search featured playlists with pagination, filtering, and sorting
+  fastify.post(
+    '/admin/featured/search',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const {
+        searchTerm = '',
+        locale = null,
+        page = 1,
+        limit = 20,
+        sortColumn = 'id',
+        sortDirection = 'desc',
+      } = request.body || {};
+
+      const result = await data.searchFeaturedPlaylists(
+        searchTerm,
+        locale,
+        page,
+        limit,
+        sortColumn,
+        sortDirection
+      );
+      reply.send({ success: true, ...result });
+    }
+  );
+
   // Update featured hidden status for a playlist
   fastify.post(
     '/admin/playlist/:playlistId/featured-hidden',

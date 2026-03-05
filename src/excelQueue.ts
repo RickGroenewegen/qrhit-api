@@ -40,7 +40,7 @@ class ExcelQueue {
     });
 
     this.queue = new Queue<ExcelJobData>('excel-supplement', {
-      connection: this.connection,
+      connection: this.connection as any,
       defaultJobOptions: {
         removeOnComplete: {
           count: 50,
@@ -61,7 +61,7 @@ class ExcelQueue {
     // Only set up event listeners on the primary process
     if (cluster.isPrimary || !cluster.isWorker) {
       this.queueEvents = new QueueEvents('excel-supplement', {
-        connection: this.connection.duplicate(),
+        connection: this.connection.duplicate() as any,
       });
 
       this.setupEventListeners();
@@ -236,7 +236,7 @@ class ExcelQueue {
           }
         },
         {
-          connection: this.connection.duplicate(),
+          connection: this.connection.duplicate() as any,
           concurrency: 1, // Process one job at a time per worker
         }
       );

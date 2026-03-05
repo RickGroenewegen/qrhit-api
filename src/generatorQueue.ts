@@ -49,7 +49,7 @@ class GeneratorQueue {
     });
 
     this.queue = new Queue<GenerateJobData>('generator', {
-      connection: this.connection,
+      connection: this.connection as any,
       defaultJobOptions: {
         removeOnComplete: {
           count: 100,
@@ -71,7 +71,7 @@ class GeneratorQueue {
     // to avoid duplicate logging from all cluster workers
     if (cluster.isPrimary || !cluster.isWorker) {
       this.queueEvents = new QueueEvents('generator', {
-        connection: this.connection.duplicate(),
+        connection: this.connection.duplicate() as any,
       });
 
       this.setupEventListeners();
@@ -372,7 +372,7 @@ class GeneratorQueue {
           }
         },
         {
-          connection: this.connection.duplicate(),
+          connection: this.connection.duplicate() as any,
           concurrency: 1,
           autorun: true,
         }
