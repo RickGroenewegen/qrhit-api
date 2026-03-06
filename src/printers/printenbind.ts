@@ -1423,11 +1423,19 @@ class PrintEnBind {
 
       const order = await orderResponse.json();
 
-      printApiPrice = parseFloat(order.amount);
+      if (!orderResponse.ok) {
+        this.logger.log(
+          color.red.bold(
+            `Failed to fetch order ${printApiOrderId}: ${orderResponse.status} ${JSON.stringify(order)}`
+          )
+        );
+        return;
+      }
+
+      printApiPrice = parseFloat(order.amount) || 0;
+      const amountTax = parseFloat(order.amount_tax_standard) || 0;
       printApiPriceInclVat = parseFloat(
-        (
-          parseFloat(order.amount) + parseFloat(order.amount_tax_standard)
-        ).toFixed(2)
+        (printApiPrice + amountTax).toFixed(2)
       );
 
       const newProfit = totalPriceWithoutTax - printApiPrice;
