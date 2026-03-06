@@ -191,7 +191,6 @@ export async function getFirstUncheckedTrack(deps: DataDeps): Promise<{
        INNER JOIN payment_has_playlist php ON pl.id = php.playlistId
        INNER JOIN payments p ON php.paymentId = p.id
        WHERE t.manuallyChecked = false
-       AND t.year > 0
        AND p.processedFirstTime = true) as totalUnchecked,
       t.id, t.name, t.spotifyLink, t.artist, t.year, t.yearSource,
       t.certainty, t.reasoning, t.spotifyYear, t.discogsYear, t.aiYear,
@@ -204,7 +203,6 @@ export async function getFirstUncheckedTrack(deps: DataDeps): Promise<{
     INNER JOIN payment_has_playlist php ON pl.id = php.playlistId
     INNER JOIN payments p ON php.paymentId = p.id
     WHERE t.manuallyChecked = false
-    AND t.year > 0
     AND p.processedFirstTime = true
     ORDER BY t.id ASC
     LIMIT 1
@@ -249,7 +247,6 @@ export async function getYearCheckQueue(deps: DataDeps): Promise<
     INNER JOIN payment_has_playlist php ON pl.id = php.playlistId
     INNER JOIN payments p ON php.paymentId = p.id
     WHERE t.manuallyChecked = false
-    AND t.year > 0
     AND p.processedFirstTime = true
     GROUP BY pl.id, pl.name, p.fullname, p.paymentId, p.totalPrice, p.createdAt
     ORDER BY p.createdAt ASC, pl.id ASC
