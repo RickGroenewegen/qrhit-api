@@ -883,6 +883,122 @@
                 "update",
                 "contact"
             ]
+        },
+        {
+            "slug": "qrgames-overview",
+            "title": "What is QRGames?",
+            "description": "QRGames! is an add-on for your QRSong! playlists that unlocks three interactive music games: Music Quiz, Music Bingo, and Music Timeline. It costs €5 per playlist (with volume discounts for multiple playlists: 10% off for 2+, 20% off for 3+, 30% off for 4+). Once enabled, you can host games directly from your dashboard using any playlist you own.",
+            "tags": [
+                "QRGames",
+                "games",
+                "music games",
+                "quiz",
+                "bingo",
+                "timeline",
+                "what is QRGames",
+                "game modes"
+            ]
+        },
+        {
+            "slug": "qrgames-music-quiz",
+            "title": "How does the Music Quiz game work?",
+            "description": "Music Quiz is a real-time multiplayer music quiz game (like Kahoot! but for music). The host displays questions on a big screen while players join by scanning a QR code with their phone. Players answer questions on their devices during a timer. There are multiple question types: guess the artist, guess the release year, guess the song title, fill in the missing word, trivia questions, order tracks by release date, and guess the decade. The host controls the game flow: playing tracks, showing questions, and revealing answers. Scores are calculated based on speed and correctness, with streak bonuses for consecutive correct answers. A live leaderboard is shown after each question. You can create quizzes with AI-generated questions or write your own. You need at least 5 tracks to create a quiz.",
+            "tags": [
+                "music quiz",
+                "quiz",
+                "multiplayer",
+                "kahoot",
+                "trivia",
+                "host",
+                "game night",
+                "quiz game"
+            ]
+        },
+        {
+            "slug": "qrgames-music-bingo",
+            "title": "How does Music Bingo work?",
+            "description": "Music Bingo is a music-themed bingo game. After purchasing QRGames for a playlist, bingo cards are automatically generated as a downloadable PDF/ZIP. You print the cards and hand them out to contestants. The host plays songs from the playlist and marks them on a host screen. Players listen and check off songs on their printed bingo card. Players can verify their card by scanning the QR code on their bingo card with their phone. The system supports four win modes: horizontal line, vertical line, diagonal line, or full card. You need at least 75 tracks in your playlist for bingo. Default generation creates cards for 20 contestants across 5 rounds.",
+            "tags": [
+                "music bingo",
+                "bingo",
+                "bingo cards",
+                "print",
+                "game night",
+                "party game"
+            ]
+        },
+        {
+            "slug": "qrgames-music-timeline",
+            "title": "How does Music Timeline work?",
+            "description": "Music Timeline is a solo game where you arrange songs in chronological order by release year. The game picks random tracks from your playlist (you can choose 5, 10, 15, or 20 tracks) and you drag and drop them into the correct timeline order. After each placement you see whether you got it right or wrong. It's a fun way to test your music knowledge on your own. No other players needed - you play directly in your browser.",
+            "tags": [
+                "music timeline",
+                "timeline",
+                "solo game",
+                "chronological",
+                "release year",
+                "drag and drop"
+            ]
+        },
+        {
+            "slug": "qrgames-pricing",
+            "title": "How much does QRGames cost?",
+            "description": "QRGames costs €5 per playlist. Volume discounts apply when you enable games for multiple playlists at once: 10% off for 2+ playlists, 20% off for 3+ playlists, and 30% off for 4+ playlists. This is a one-time purchase - no subscription needed. Once enabled, you can play all three games (Quiz, Bingo, and Timeline) unlimited times with that playlist.",
+            "tags": [
+                "QRGames price",
+                "games cost",
+                "pricing",
+                "volume discount",
+                "how much"
+            ]
+        },
+        {
+            "slug": "qrgames-how-to-enable",
+            "title": "How do I enable QRGames for my playlist?",
+            "description": "Go to your dashboard and find the playlist you want to enable games for. Click the games option and complete the payment. Once purchased, you'll have access to all three games (Music Quiz, Music Bingo, and Music Timeline) for that playlist. Bingo cards are automatically generated after purchase.",
+            "tags": [
+                "enable games",
+                "activate",
+                "purchase games",
+                "get started",
+                "how to"
+            ]
+        },
+        {
+            "slug": "qrgames-hosting-quiz",
+            "title": "How do I host a Music Quiz?",
+            "description": "First create a quiz from your playlist in the dashboard. You can use AI to generate questions or write your own. Then click 'Host Quiz' to start a game room. A QR code and room link appear on screen for players to join. Players scan the QR code with their phone to connect. Once everyone has joined, you control the game: play the track, show the question, reveal the answer, and display the leaderboard. Display the host screen on a big screen or TV for the best experience.",
+            "tags": [
+                "host quiz",
+                "start quiz",
+                "create quiz",
+                "room",
+                "QR code join",
+                "big screen"
+            ]
+        },
+        {
+            "slug": "qrgames-join-quiz",
+            "title": "How do players join a Music Quiz?",
+            "description": "Players join by scanning the QR code displayed on the host screen with their phone's camera, or by navigating to the room link directly. No account or app download is needed - it works in any mobile browser. Players pick an avatar and wait in the lobby until the host starts the game.",
+            "tags": [
+                "join quiz",
+                "player",
+                "scan QR",
+                "no app needed",
+                "mobile browser"
+            ]
+        },
+        {
+            "slug": "qrgames-bingo-requirements",
+            "title": "How many tracks do I need for Music Bingo?",
+            "description": "You need at least 75 tracks in your playlist to play Music Bingo. This ensures enough variety for the bingo cards. Each card contains 24 random tracks from your playlist (plus a free center space), so having more tracks creates more unique cards for players.",
+            "tags": [
+                "bingo requirements",
+                "minimum tracks",
+                "75 tracks",
+                "bingo cards"
+            ]
         }
     ]
 }

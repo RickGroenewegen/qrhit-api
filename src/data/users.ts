@@ -125,6 +125,10 @@ export async function getPayment(deps: DataDeps, paymentId: string, playlistId: 
       LEFT JOIN   users ON payments.userId = users.id
       WHERE       payments.paymentId = ${paymentId}`;
 
+  if (!paymentDetails.length) {
+    return null;
+  }
+
   const connectedPlaylists: any[] = await deps.prisma.$queryRaw`
       SELECT      playlists.id,
                   playlists.playlistId,

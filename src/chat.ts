@@ -754,7 +754,7 @@ IMPORTANT INSTRUCTIONS:
 - Use markdown formatting for better readability
 - Be friendly and conversational
 - If the user greets you, greet them back warmly and ask how you can help
-- SUPPORT BUTTON: If the user appears frustrated, confused, repeats questions, expresses dissatisfaction, seems unhappy with answers, asks about something you cannot help with, or generally is not getting their question answered properly, add the marker [SHOW_SUPPORT_BUTTON] at the END of your response. This shows them a button to request human support.
+- CONTACT FORM: If the user appears frustrated, confused, repeats questions, expresses dissatisfaction, seems unhappy with answers, asks about something you cannot help with, or generally is not getting their question answered properly, let them know they can reach us at info@qrsong.io and add the marker [SHOW_SUPPORT_BUTTON] at the END of your response. This shows them a button to go to the contact form.
 
 ${knowledgeContext}${toolContext}`,
       },

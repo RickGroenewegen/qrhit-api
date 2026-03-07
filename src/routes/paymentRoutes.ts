@@ -46,6 +46,9 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         request.params.paymentId,
         request.params.playlistId
       );
+      if (!data) {
+        return { success: false, error: 'Payment not found' };
+      }
       return {
         success: true,
         data,
