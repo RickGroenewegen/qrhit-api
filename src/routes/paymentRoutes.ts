@@ -310,6 +310,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       await reply.view('pdf_box_insert.ejs', {
         payment,
         php,
+        getGoogleFontWeights,
       });
     }
   );

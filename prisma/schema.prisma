@@ -659,6 +659,8 @@ model PaymentHasPlaylist {
   boxBackGradientPosition Int                      @default(50)
   boxBackOpacity          Int                      @default(50)
   boxBackText             String?                  @db.Text
+  boxBackSelectedFont     String?                  @default("Arial, sans-serif")
+  boxBackSelectedFontSize String?                  @default("14px")
   orderType               OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                   PaymentHasPlaylistItem[]
   bingoFiles              BingoFile[]

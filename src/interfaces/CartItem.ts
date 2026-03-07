@@ -71,4 +71,6 @@ export interface CartItem {
   boxBackGradientPosition?: number;
   boxBackOpacity?: number;
   boxBackText?: string;
+  boxBackSelectedFont?: string;
+  boxBackSelectedFontSize?: string;
 }

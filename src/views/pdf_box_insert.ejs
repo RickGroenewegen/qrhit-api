@@ -89,12 +89,33 @@
     .back-text {
         padding: 15mm;
         text-align: center;
-        font-size: 14px;
+        font-size: <%= php.boxBackSelectedFontSize || '14px' %>;
+        font-family: <%= php.boxBackSelectedFont || 'Arial, sans-serif' %>;
         line-height: 1.5;
         word-wrap: break-word;
         white-space: pre-wrap;
     }
 </style>
+<%
+// Font embedding for box back text
+let boxFontStyles = '';
+const boxFont = php.boxBackSelectedFont || 'Arial, sans-serif';
+if (boxFont && boxFont !== 'Arial, sans-serif') {
+    let fontName = boxFont.split(',')[0].trim().replace(/["']/g, '');
+    let googleFontName = fontName.replace(/ /g, '+');
+    let weights = typeof getGoogleFontWeights === 'function' ? getGoogleFontWeights(boxFont) : '400;700';
+
+    boxFontStyles = `
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=${googleFontName}:wght@${weights}&display=swap');
+    </style>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=${googleFontName}:wght@${weights}&display=swap" rel="stylesheet">
+    `;
+}
+%>
+<%- boxFontStyles %>
 </head>
 <body>
 <!-- Page 1: Front side (visible through window) -->
