@@ -884,6 +884,42 @@ class PrintEnBind {
     }
   }
 
+  private createBoxOrderCardItem(
+    fileUrl: string,
+    playlist: any,
+    quantity: number
+  ): any {
+    return {
+      type: 'physical',
+      amount: quantity,
+      product: 'losbladig',
+      number: '1',
+      copies: '2',
+      color: 'all',
+      size: 'custom',
+      printside: 'double',
+      finishing: 'loose',
+      papertype: 'card',
+      size_custom_width: '120',
+      size_custom_height: '120',
+      check_doc: 'standard',
+      delivery_method: 'post',
+      add_file_method: 'url',
+      file_overwrite: true,
+      file_url: fileUrl,
+      comment: `Box insert for playlist ${playlist.name}`,
+    };
+  }
+
+  private createBoxOrderBoxItem(totalBoxQuantity: number): any {
+    return {
+      type: 'qrsong_box',
+      amount: totalBoxQuantity,
+      delivery_method: 'post',
+      comment: 'Foldable QRSong boxes',
+    };
+  }
+
   public async calculateOrder(params: any): Promise<any> {
     let countrySelected = false;
     let totalNumberOfTracks = 0;
@@ -1320,6 +1356,45 @@ class PrintEnBind {
           );
         }
       }
+    }
+
+    // Add box insert articles for playlists with boxes enabled
+    for (const playlistItem of playlists) {
+      const playlist = playlistItem.playlist;
+      if (playlist.boxEnabled && playlist.boxQuantity > 0 && playlist.boxFilename) {
+        const boxFileUrl = `${process.env['API_URI']}/public/box-insert/${playlist.boxFilename}`;
+        const boxOrderItem = this.createBoxOrderCardItem(boxFileUrl, playlist, playlist.boxQuantity);
+        orderItems.push(boxOrderItem);
+        this.logger.log(
+          color.blue.bold(
+            `Adding box insert article to ${color.white.bold(
+              'Print&Bind'
+            )} order. Playlist: ${color.white(
+              playlist.name
+            )} Quantity: ${color.white.bold(playlist.boxQuantity)}`
+          )
+        );
+      }
+    }
+
+    // Add box packaging article if any playlists have boxes
+    let totalBoxQuantity = 0;
+    for (const playlistItem of playlists) {
+      const playlist = playlistItem.playlist;
+      if (playlist.boxEnabled && playlist.boxQuantity > 0) {
+        totalBoxQuantity += playlist.boxQuantity;
+      }
+    }
+    if (totalBoxQuantity > 0) {
+      const boxOrderBoxItem = this.createBoxOrderBoxItem(totalBoxQuantity);
+      orderItems.push(boxOrderBoxItem);
+      this.logger.log(
+        color.blue.bold(
+          `Adding box packaging article to ${color.white.bold(
+            'Print&Bind'
+          )} order. Total quantity: ${color.white.bold(totalBoxQuantity)}`
+        )
+      );
     }
 
     const result = await this.processOrderRequest(
