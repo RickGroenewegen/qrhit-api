@@ -1206,7 +1206,7 @@ class Mollie {
             boxBackOpacity: item.boxBackOpacity !== undefined ? item.boxBackOpacity : 50,
             boxBackText: item.boxBackText || '',
             boxBackSelectedFont: item.boxBackSelectedFont || 'Arial, sans-serif',
-            boxBackSelectedFontSize: item.boxBackSelectedFontSize || '14px',
+            boxBackSelectedFontSize: item.boxBackFontSize ? `${item.boxBackFontSize}px` : (item.boxBackSelectedFontSize || '14px'),
           };
         })
       );

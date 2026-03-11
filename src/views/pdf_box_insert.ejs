@@ -89,7 +89,7 @@
     .back-text {
         padding: 15mm;
         text-align: center;
-        font-size: <%= php.boxBackSelectedFontSize || '14px' %>;
+        font-size: <%= parseFloat(php.boxBackSelectedFontSize || '14') * 1.47 %>px;
         font-family: <%= php.boxBackSelectedFont || 'Arial, sans-serif' %>;
         line-height: 1.5;
         word-wrap: break-word;
@@ -167,9 +167,7 @@ if (boxFont && boxFont !== 'Arial, sans-serif') {
     </div>
     <div class="content">
         <% if (php.boxBackText) { %>
-            <div class="back-text" style="color: <%= php.boxBackFontColor || '#000000' %>;">
-                <%= php.boxBackText %>
-            </div>
+            <div class="back-text" style="color: <%= php.boxBackFontColor || '#000000' %>;"><%= php.boxBackText %></div>
         <% } %>
     </div>
 </div>
