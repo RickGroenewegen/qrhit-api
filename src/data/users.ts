@@ -232,7 +232,7 @@ export async function areAllTracksManuallyChecked(
     JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
     JOIN tracks t ON t.id = pht.trackId
     WHERE p.paymentId = ${paymentId}
-    AND (t.manuallyChecked = false OR t.spotifyLink IS NULL)
+    AND (t.manuallyChecked = false OR t.year = 0 OR (t.spotifyLink IS NULL AND t.spotifyLinkIgnored = false))
   `;
 
   deps.logger.log(

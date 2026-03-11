@@ -351,6 +351,17 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     }
   );
 
+  fastify.post(
+    '/usersuggestions/:paymentId/:userHash/regenerate',
+    async (request: any, reply) => {
+      const result = await suggestion.regenerateAndMail(
+        request.params.paymentId,
+        request.params.userHash
+      );
+      return result;
+    }
+  );
+
   fastify.delete(
     '/usersuggestions/:paymentId/:userHash/:playlistId/:trackId',
     async (request: any, reply) => {

@@ -1032,7 +1032,7 @@ class Suggestion {
   /**
    * Reloads a playlist from its music service if the track count is within the paid limit.
    * This allows users to refresh their playlist data if tracks were removed or metadata changed.
-   * Rate limited to once every 15 minutes (bypassed in development).
+   * Rate limited to once every 1 minute (bypassed in development).
    */
   public async reloadPlaylist(
     paymentId: string,
@@ -1103,7 +1103,7 @@ class Suggestion {
           const now = new Date();
           const lastReload = new Date(paymentHasPlaylist.lastReloadAt);
           const elapsedMinutes = (now.getTime() - lastReload.getTime()) / (1000 * 60);
-          const rateLimitMinutes = 15;
+          const rateLimitMinutes = 1;
 
           if (elapsedMinutes < rateLimitMinutes) {
             const remainingMinutes = rateLimitMinutes - elapsedMinutes;
@@ -1257,6 +1257,42 @@ class Suggestion {
         success: false,
         error: 'Failed to reload playlist',
       };
+    }
+  }
+
+  /**
+   * Regenerates PDFs and sends the download mail for a digital order.
+   */
+  public async regenerateAndMail(
+    paymentId: string,
+    userHash: string
+  ): Promise<{ success: boolean; error?: string }> {
+    try {
+      const { verified } = await this.verifyPaymentOwnership(paymentId, userHash);
+
+      if (!verified) {
+        return { success: false, error: 'Unauthorized' };
+      }
+
+      this.logger.log(
+        color.blue.bold(
+          `Regenerating PDFs and sending mail for payment ${paymentId}`
+        )
+      );
+
+      // Fire and forget - regenerate PDFs and send digital mail
+      this.generator.finalizeOrder(paymentId, this.mollie, true).catch((err) => {
+        this.logger.log(
+          color.red.bold(`Error regenerating PDFs: ${err}`)
+        );
+      });
+
+      return { success: true };
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error in regenerateAndMail: ${error}`)
+      );
+      return { success: false, error: 'Failed to regenerate PDFs' };
     }
   }
 
