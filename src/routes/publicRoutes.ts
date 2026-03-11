@@ -23,6 +23,8 @@ import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
 import { FONTS } from '../fonts';
 import { BACKGROUNDS } from '../backgrounds';
+import { BOX_PRICE, BOX_MAX_CARDS } from '../config/constants';
+import { QRGAMES_UPGRADE_PRICE } from '../game';
 import path from 'path';
 import fs from 'fs/promises';
 import os from 'os';
@@ -49,6 +51,15 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const chatService = new ChatService();
   const promotional = Promotional.getInstance();
   const brokenLink = BrokenLink.getInstance();
+
+  // Pricing constants endpoint
+  fastify.get('/api/pricing', async (_request: any, reply: any) => {
+    reply.send({
+      boxUnitPrice: BOX_PRICE,
+      boxMaxCards: BOX_MAX_CARDS,
+      gamesUnitPrice: QRGAMES_UPGRADE_PRICE,
+    });
+  });
 
   // Chat init endpoint - creates or resumes chat session
   fastify.post('/chat/init', async (request: any, reply: any) => {
