@@ -65,6 +65,9 @@ class Suggestion {
         php.eligableForPrinter,
         php.suggestionsPending,
         php.userConfirmedPrinting,
+        php.artistOnlyForMe,
+        php.titleOnlyForMe,
+        php.yearOnlyForMe,
         CASE
           WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id AND userId = u.id) > 0
           THEN 'true'
@@ -825,10 +828,13 @@ class Suggestion {
         this.logger.log(color.yellow.bold('No text corrections detected'));
       }
 
-      // Always clear suggestionsPending flag (using the independently queried paymentHasPlaylistId)
+      // Always clear suggestionsPending flag and persist onlyForMe checkbox states
       await this.prisma.$executeRaw`
         UPDATE payment_has_playlist
-        SET suggestionsPending = false
+        SET suggestionsPending = false,
+            artistOnlyForMe = ${artistOnlyForMe},
+            titleOnlyForMe = ${titleOnlyForMe},
+            yearOnlyForMe = ${yearOnlyForMe}
         WHERE id = ${paymentHasPlaylistId}
       `;
 
