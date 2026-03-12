@@ -580,8 +580,14 @@
 	"quiz.releaseOrderQuestion": "Place this song in the correct chronological order",
 	"quiz.decadeQuestion": "In which decade was this song released?",
 	"quiz.titleQuestion": "What is the title of this song?",
-	"mail.boxUpgrade.subject": "Your Gift Box for '{{ playlist }}' is on its way!",
-	"mail.boxUpgrade.greeting": "Hi",
-	"mail.boxUpgrade.body": "Great news! Your Gift Box order for your playlist has been confirmed. We're sending your custom box design to our printer and it will be shipped to you shortly.",
-	"mail.boxUpgrade.sentToPrinter": "Your Gift Box is being prepared for printing and will be shipped to your address."
+	"mail.boxUpgradeSubject": "Your Gift Box for '{{ playlist }}' is on its way!",
+	"mail.boxUpgradeGreeting": "Hi",
+	"mail.boxUpgradeBody": "Great news! Your Gift Box order for your playlist has been confirmed. We're sending your custom box design to our printer and it will be shipped to you shortly.",
+	"mail.boxUpgradeSentToPrinter": "Your Gift Box is being prepared for printing and will be shipped to your address.",
+	"mail.boxUpgradeOrderDetails": "Order details",
+	"mail.boxUpgradePlaylist": "Playlist",
+	"mail.boxUpgradeGiftBox": "Gift Box",
+	"mail.boxUpgradeShipping": "Shipping",
+	"mail.boxUpgradeTotal": "Total",
+	"mail.boxUpgradeThankYou": "Your custom Gift Box is being printed and will be shipped to the address below. If you have any questions, don't hesitate to contact us at info@qrsong.io"
 }

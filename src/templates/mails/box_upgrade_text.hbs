@@ -2,9 +2,27 @@
 
 {{ translations.boxUpgradeBody }}
 
-{{ playlist.name }}
+{{ translations.boxUpgradeThankYou }}
 
-{{ translations.thankYou }}
+--- {{ translations.boxUpgradeOrderDetails }} ---
+
+{{ translations.boxUpgradePlaylist }}: {{ playlist.name }}
+{{ translations.boxUpgradeGiftBox }}: €{{ boxPriceFormatted }}
+{{ translations.boxUpgradeShipping }}: €{{ shippingCost }}
+{{ translations.boxUpgradeTotal }}: €{{ totalPrice }}
+
+--- {{ translations.yourInformation }} ---
+
+{{ translations.fullname }}: {{ fullname }}
+{{ translations.email }}: {{ email }}
+
+--- {{ translations.shippingAddress }} ---
+
+{{ translations.address }}: {{ address }}
+{{ translations.housenumber }}: {{ housenumber }}
+{{ translations.city }}: {{ city }}
+{{ translations.zipcode }}: {{ zipcode }}
+{{ translations.country }}: {{ lookup countries country }}
 
 {{ translations.greetings }},
 {{ productName }}

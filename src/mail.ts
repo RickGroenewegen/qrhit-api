@@ -1594,7 +1594,7 @@ ${knowledgeContext}${toolContext}`,
     }
   }
 
-  async sendBoxUpgradeConfirmationEmail(paymentHasPlaylistId: number): Promise<void> {
+  async sendBoxUpgradeConfirmationEmail(paymentHasPlaylistId: number, boxPrice: number = 6.99, shippingCost: number = 0): Promise<void> {
     if (!this.ses) return;
 
     const php = await prisma.paymentHasPlaylist.findUnique({
@@ -1613,12 +1613,26 @@ ${knowledgeContext}${toolContext}`,
 
     const translations = await this.translation.getTranslationsByPrefix(locale, 'mail');
 
+    const countries = await this.translation.getTranslationsByPrefix(locale, 'countries');
+
     const mailParams = {
       payment,
       playlist: php.playlist,
+      php,
       productName: process.env['PRODUCT_NAME'],
       translations,
+      countries,
       currentYear: new Date().getFullYear(),
+      fullname: payment.fullname,
+      email: payment.email,
+      address: payment.address,
+      housenumber: payment.housenumber,
+      city: payment.city,
+      zipcode: payment.zipcode,
+      country: payment.countrycode,
+      boxPriceFormatted: boxPrice.toFixed(2),
+      shippingCost: shippingCost.toFixed(2),
+      totalPrice: (boxPrice + shippingCost).toFixed(2),
     };
 
     try {
@@ -1628,7 +1642,7 @@ ${knowledgeContext}${toolContext}`,
       const html = await this.templates.render('mails/box_upgrade_html', mailParams);
       const text = await this.templates.render('mails/box_upgrade_text', mailParams);
 
-      const subject = this.translation.translate('mail.boxUpgrade.subject', locale, {
+      const subject = this.translation.translate('mail.boxUpgradeSubject', locale, {
         playlist: php.playlist.name,
       });
 
