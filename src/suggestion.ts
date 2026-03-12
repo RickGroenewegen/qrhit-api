@@ -570,7 +570,8 @@ class Suggestion {
       const phpInfo = await this.prisma.$queryRaw<any[]>`
         SELECT
           php.id AS paymentHasPlaylistId,
-          php.type AS playlistType
+          php.type AS playlistType,
+          p.id AS paymentDbId
         FROM payments p
         JOIN users u ON p.userId = u.id
         JOIN payment_has_playlist php ON php.paymentId = p.id
@@ -590,6 +591,7 @@ class Suggestion {
 
       const paymentHasPlaylistId = phpInfo[0].paymentHasPlaylistId;
       const playlistType = phpInfo[0].playlistType;
+      const paymentDbId = phpInfo[0].paymentDbId;
       const hasPhysicalPlaylists = playlistType === 'physical';
 
       // Get all suggestions for this payment/playlist combination
@@ -837,6 +839,19 @@ class Suggestion {
             yearOnlyForMe = ${yearOnlyForMe}
         WHERE id = ${paymentHasPlaylistId}
       `;
+
+      // For digital playlists, reset judged status so user can start new suggestions immediately
+      if (!hasPhysicalPlaylists) {
+        await this.prisma.$executeRaw`
+          UPDATE payment_has_playlist
+          SET userConfirmedPrinting = false
+          WHERE id = ${paymentHasPlaylistId}
+        `;
+        await this.prisma.payment.update({
+          where: { id: paymentDbId },
+          data: { userAgreedToPrinting: false },
+        });
+      }
 
       // Delete all user suggestions for this payment (if any exist)
       await this.prisma.$executeRaw`
