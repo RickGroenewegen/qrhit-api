@@ -1447,7 +1447,7 @@ class Mollie {
       if (metadata?.type === 'box_upgrade' && payment.status === 'paid') {
         const paymentHasPlaylistId = parseInt(metadata.paymentHasPlaylistId);
         const userId = parseInt(metadata.userId);
-        const originalPaymentId = parseInt(metadata.originalPaymentId);
+        const originalPaymentId = metadata.originalPaymentId as string;
 
         if (paymentHasPlaylistId && userId && originalPaymentId) {
           try {
@@ -1462,16 +1462,7 @@ class Mollie {
 
             // Generate box insert card PDF
             try {
-              const pdfResponse = await axios.get(
-                `${process.env['API_URI']}/qr/pdf-box/${paymentHasPlaylistId}/${originalPaymentId}`,
-                { timeout: 120000 }
-              );
-              if (pdfResponse.data?.filename) {
-                await this.prisma.paymentHasPlaylist.update({
-                  where: { id: paymentHasPlaylistId },
-                  data: { boxFilename: pdfResponse.data.filename },
-                });
-              }
+              await this.generator.generateBoxInsertPdf(paymentHasPlaylistId, originalPaymentId);
             } catch (pdfError) {
               this.logger.log(
                 color.yellow.bold(`Failed to generate box PDF for PHP ${paymentHasPlaylistId}: ${pdfError}`)
@@ -1489,7 +1480,9 @@ class Mollie {
 
             // Send confirmation email
             try {
-              await this.mail.sendBoxUpgradeConfirmationEmail(paymentHasPlaylistId);
+              const shippingCost = metadata.shippingCost ? parseFloat(metadata.shippingCost) : 0;
+              const boxPrice = metadata.boxPrice ? parseFloat(metadata.boxPrice) : 6.99;
+              await this.mail.sendBoxUpgradeConfirmationEmail(paymentHasPlaylistId, boxPrice, shippingCost);
             } catch (mailError) {
               this.logger.log(
                 color.yellow.bold(`Failed to send box upgrade email for PHP ${paymentHasPlaylistId}: ${mailError}`)

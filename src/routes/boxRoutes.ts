@@ -88,12 +88,6 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           });
         }
 
-        if (php.boxEnabled) {
-          return reply.status(400).send({
-            success: false,
-            error: 'Gift box is already enabled for this order',
-          });
-        }
 
         return reply.send({
           success: true,
@@ -186,12 +180,6 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           });
         }
 
-        if (php.boxEnabled) {
-          return reply.status(400).send({
-            success: false,
-            error: 'Gift box is already enabled for this order',
-          });
-        }
 
         // Calculate shipping costs
         const countryCode = php.payment.countrycode || 'NL';
@@ -307,12 +295,6 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           });
         }
 
-        if (php.boxEnabled) {
-          return reply.status(400).send({
-            success: false,
-            error: 'Gift box is already enabled for this order',
-          });
-        }
 
         // Calculate shipping server-side
         const countryCode = php.payment.countrycode || 'NL';
@@ -394,7 +376,7 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
             type: 'box_upgrade',
             paymentHasPlaylistId: phpId.toString(),
             userId: user.id.toString(),
-            originalPaymentId: php.payment.id.toString(),
+            originalPaymentId: php.payment.paymentId,
             shippingCost: shipping.toString(),
             boxPrice: BOX_UPGRADE_PRICE.toString(),
           },
