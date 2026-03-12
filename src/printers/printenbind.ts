@@ -654,6 +654,30 @@ class PrintEnBind {
         }
 
         totalItemsSuccess++;
+      } else if (items[i].type == 'qrsong_box' && physicalOrderCreated) {
+        const boxResponse = await fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+          {
+            method: 'POST',
+            headers: {
+              Authorization: authToken!,
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(items[i]),
+          }
+        );
+
+        if (logging) {
+          apiCalls.push({
+            method: 'POST',
+            url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
+            body: items[i],
+            statusCode: boxResponse.status,
+            responseBody: await boxResponse.clone().json(),
+          });
+        }
+
+        totalItemsSuccess++;
       } else if (items[i].type == 'digital') {
         const orderType = await this.getOrderType(
           items[i].numberOfTracks,
@@ -921,6 +945,8 @@ class PrintEnBind {
   }
 
   public async createBoxUpgradeOrder(paymentHasPlaylistId: number): Promise<any> {
+    this.logger.log(color.blue.bold(`Starting box upgrade Print&Bind order for PHP ${paymentHasPlaylistId}`));
+
     const php = await this.prisma.paymentHasPlaylist.findUnique({
       where: { id: paymentHasPlaylistId },
       include: {
@@ -934,21 +960,26 @@ class PrintEnBind {
     }
 
     const payment = php.payment;
+    this.logger.log(color.blue.bold(`Box upgrade for playlist: ${color.white.bold(php.playlist.name)}, customer: ${color.white.bold(payment.fullname)}`));
 
     // Build box insert card file URL
     const boxFileUrl = php.boxFilename
-      ? `${process.env['API_URI']}/public/box/${php.boxFilename}`
+      ? `${process.env['API_URI']}/public/box-insert/${php.boxFilename}`
       : null;
 
     const items: any[] = [];
 
     // Add box insert card item (if PDF was generated)
     if (boxFileUrl) {
+      this.logger.log(color.blue.bold(`Box insert card PDF: ${color.white.bold(boxFileUrl)}`));
       items.push(this.createBoxOrderCardItem(boxFileUrl, php.playlist, 1));
+    } else {
+      this.logger.log(color.yellow.bold(`No box insert card PDF found for PHP ${paymentHasPlaylistId}, ordering box without insert card`));
     }
 
     // Add box item
     items.push(this.createBoxOrderBoxItem(1));
+    this.logger.log(color.blue.bold(`Order items: ${items.length} (${boxFileUrl ? 'box + insert card' : 'box only'})`));
 
     if (items.length === 0) {
       throw new Error('No items to order');
@@ -964,19 +995,24 @@ class PrintEnBind {
       countrycode: payment.countrycode || 'NL',
     };
 
+    this.logger.log(color.blue.bold(`Shipping to: ${color.white.bold(`${customerInfo.address} ${customerInfo.housenumber}, ${customerInfo.zipcode} ${customerInfo.city}, ${customerInfo.countrycode}`)}`));
+
     const result = await this.processOrderRequest(items, customerInfo);
 
     if (result.success && result.data?.orderId) {
       // Finish order in production
       if (process.env['ENVIRONMENT'] === 'production') {
+        this.logger.log(color.blue.bold(`Finishing order ${color.white.bold(result.data.orderId)} in production`));
         await this.finishOrder(result.data.orderId, result.apiCalls);
       }
 
       this.logger.log(
-        color.blue.bold(`Created box upgrade Print&Bind order: `) +
+        color.green.bold(`Successfully created box upgrade Print&Bind order: `) +
           color.white.bold(result.data.orderId) +
-          color.blue.bold(` for PHP ${paymentHasPlaylistId}`)
+          color.green.bold(` for PHP ${paymentHasPlaylistId}`)
       );
+    } else {
+      this.logger.log(color.red.bold(`Failed to create box upgrade Print&Bind order for PHP ${paymentHasPlaylistId}: ${JSON.stringify(result)}`));
     }
 
     return result;

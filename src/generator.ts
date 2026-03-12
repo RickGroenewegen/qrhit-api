@@ -823,23 +823,7 @@ class Generator {
 
           // Generate box insert PDF if box is enabled
           if (playlist.boxEnabled && playlist.boxQuantity > 0) {
-            const boxFilename = `box_${payment.paymentId}_${playlist.paymentHasPlaylistId}.pdf`;
-            const boxOutputPath = `${process.env['PUBLIC_DIR']}/box-insert/${boxFilename}`;
-            const boxUrl = `${process.env['API_URI']}/qr/pdf-box/${playlist.paymentHasPlaylistId}/${payment.paymentId}`;
-
-            await this.pdf.generateFromUrl(boxUrl, boxOutputPath, {
-              width: 120,
-              height: 120,
-            });
-
-            await this.prisma.paymentHasPlaylist.update({
-              where: { id: playlist.paymentHasPlaylistId },
-              data: { boxFilename },
-            });
-
-            this.logger.log(
-              color.green.bold(`Generated box insert PDF: ${boxFilename}`)
-            );
+            await this.generateBoxInsertPdf(playlist.paymentHasPlaylistId, payment.paymentId);
           }
 
           if (playlist.orderType == 'digital' && !skipMail) {
@@ -1587,6 +1571,28 @@ class Generator {
       console.error(error);
       throw error;
     }
+  }
+
+  public async generateBoxInsertPdf(paymentHasPlaylistId: number, paymentId: string): Promise<string> {
+    const boxFilename = `box_${paymentId}_${paymentHasPlaylistId}.pdf`;
+    const boxOutputPath = `${process.env['PUBLIC_DIR']}/box-insert/${boxFilename}`;
+    const boxUrl = `${process.env['API_URI']}/qr/pdf-box/${paymentHasPlaylistId}/${paymentId}`;
+
+    await this.pdf.generateFromUrl(boxUrl, boxOutputPath, {
+      width: 120,
+      height: 120,
+    });
+
+    await this.prisma.paymentHasPlaylist.update({
+      where: { id: paymentHasPlaylistId },
+      data: { boxFilename },
+    });
+
+    this.logger.log(
+      color.green.bold(`Generated box insert PDF: ${boxFilename}`)
+    );
+
+    return boxFilename;
   }
 }
 
