@@ -339,6 +339,19 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   );
 
   fastify.post(
+    '/usersuggestions/:paymentId/:userHash/:playlistId/apply-design',
+    async (request: any, reply) => {
+      const success = await suggestion.applyDesignChanges(
+        request.params.paymentId,
+        request.params.userHash,
+        request.params.playlistId,
+        request.clientIp
+      );
+      return { success };
+    }
+  );
+
+  fastify.post(
     '/usersuggestions/:paymentId/:userHash/:playlistId/extend',
     async (request: any, reply) => {
       const success = await suggestion.extendPrinterDeadline(

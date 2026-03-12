@@ -252,10 +252,8 @@ class Suggestion {
         },
       });
 
-      // Only proceed if there are actual suggestions
+      // Only proceed if there are actual track suggestions
       if (suggestionCount > 0 && paymentHasPlaylist) {
-        // Get the payment
-
         await this.prisma.paymentHasPlaylist.update({
           where: { id: paymentHasPlaylist.id },
           data: {
@@ -359,6 +357,104 @@ class Suggestion {
       return false;
     } catch (error) {
       console.error('Error submitting user suggestions:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Apply design-only changes without entering admin review queue.
+   * Regenerates PDFs and sends email (digital) or queues for printer (physical).
+   */
+  public async applyDesignChanges(
+    paymentId: string,
+    userHash: string,
+    playlistId: string,
+    clientIp: string
+  ): Promise<boolean> {
+    try {
+      const { verified } = await this.verifyPaymentOwnership(
+        paymentId,
+        userHash
+      );
+
+      if (!verified) {
+        return false;
+      }
+
+      const payment = await this.prisma.payment.findFirst({
+        where: { paymentId },
+      });
+
+      const playlist = await this.prisma.playlist.findFirst({
+        where: { playlistId },
+      });
+
+      const paymentHasPlaylist = await this.prisma.paymentHasPlaylist.findFirst({
+        where: {
+          paymentId: payment?.id,
+          playlistId: playlist?.id,
+        },
+      });
+
+      if (!paymentHasPlaylist) {
+        return false;
+      }
+
+      if (paymentHasPlaylist.type === 'physical') {
+        // Physical order: regenerate PDFs and send to printer
+        await this.prisma.paymentHasPlaylist.update({
+          where: { id: paymentHasPlaylist.id },
+          data: {
+            eligableForPrinter: false,
+            userConfirmedPrinting: true,
+          },
+        });
+
+        await this.prisma.payment.update({
+          where: { paymentId },
+          data: {
+            userAgreedToPrinting: true,
+            userAgreedToPrintingAt: new Date(),
+          },
+        });
+
+        await this.generator.queueGenerate(
+          paymentId,
+          '',
+          '',
+          true,
+          true,
+          false,
+          '',
+          {
+            type: 'checkPrinter',
+            paymentId,
+            clientIp,
+            paymentHasPlaylistId: paymentHasPlaylist.id,
+          }
+        );
+      } else {
+        // Digital order: regenerate PDFs and send email — no pending review state
+        await this.generator.queueGenerate(
+          paymentId,
+          '',
+          '',
+          true,
+          true,
+          false,
+          '',
+          {
+            type: 'sendDigitalEmail' as const,
+            paymentId,
+            playlistId,
+            userHash,
+          }
+        );
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error applying design changes:', error);
       return false;
     }
   }
