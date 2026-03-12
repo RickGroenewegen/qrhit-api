@@ -1285,7 +1285,7 @@ export default async function accountRoutes(
         const purchases = payments.map((payment) => {
           // Determine if downloads are available
           // For digital orders: available when filenameDigital exists
-          // For physical orders: available when sentToPrinter is true (they receive digital copy)
+          // For physical orders: available when finalized (they receive digital copy)
           const isPhysicalOrder = payment.PaymentHasPlaylist.some((php) => php.type === 'physical' || php.type === 'sheets');
 
           return {
@@ -1296,10 +1296,10 @@ export default async function accountRoutes(
             amount: payment.totalPrice,
             status: payment.status,
             type: payment.PaymentHasPlaylist.length > 0 ? payment.PaymentHasPlaylist[0].type : 'digital',
-            // For physical orders, download is available after sentToPrinter
+            // For physical orders, download is available after finalized
             // For digital orders, download is available when filenameDigital exists
             downloadAvailable: isPhysicalOrder
-              ? payment.sentToPrinter === true
+              ? payment.finalized === true
               : payment.PaymentHasPlaylist.some((php) => !!php.filenameDigital),
             playlists: payment.PaymentHasPlaylist.map((php) => ({
               paymentHasPlaylistId: php.id, // Needed for bingo upgrade payment
@@ -1311,7 +1311,7 @@ export default async function accountRoutes(
               // Individual playlist download availability
               canDownload: php.type === 'digital'
                 ? !!php.filenameDigital
-                : payment.sentToPrinter === true && !!php.filenameDigital,
+                : payment.finalized === true && !!php.filenameDigital,
               // Whether bingo is enabled for this playlist
               gamesEnabled: php.gamesEnabled,
               // Bingo files for this playlist
