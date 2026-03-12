@@ -118,6 +118,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       if (pdfFile && pdfFile.filePath) {
         try {
           await fs.access(pdfFile.filePath, fs.constants.R_OK);
+          reply.header('Cache-Control', 'no-store, no-cache, must-revalidate');
           reply.header(
             'Content-Disposition',
             'attachment; filename=' + pdfFile.fileName
