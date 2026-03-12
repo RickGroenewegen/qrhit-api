@@ -23,6 +23,8 @@ import { BOX_PRICE } from './config/constants';
 import MusicServiceRegistry from './services/MusicServiceRegistry';
 import AppTheme from './apptheme';
 import Bingo from './bingo';
+import PrintEnBind from './printers/printenbind';
+import Mail from './mail';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -41,6 +43,8 @@ class Mollie {
   private promotional = Promotional.getInstance();
   private musicServiceRegistry = MusicServiceRegistry.getInstance();
   private bingo = Bingo.getInstance();
+  private printenbind = PrintEnBind.getInstance();
+  private mail = Mail.getInstance();
 
   constructor() {
     if (cluster.isPrimary) {
@@ -1436,6 +1440,83 @@ class Mollie {
           return result.success
             ? { success: true }
             : { success: false, error: result.error || 'Failed to process bingo upgrade' };
+        }
+      }
+
+      // Check if this is a box upgrade payment
+      if (metadata?.type === 'box_upgrade' && payment.status === 'paid') {
+        const paymentHasPlaylistId = parseInt(metadata.paymentHasPlaylistId);
+        const userId = parseInt(metadata.userId);
+        const originalPaymentId = parseInt(metadata.originalPaymentId);
+
+        if (paymentHasPlaylistId && userId && originalPaymentId) {
+          try {
+            // Set boxEnabled and boxPrice on PaymentHasPlaylist
+            await this.prisma.paymentHasPlaylist.update({
+              where: { id: paymentHasPlaylistId },
+              data: {
+                boxEnabled: true,
+                boxPrice: metadata.boxPrice ? parseFloat(metadata.boxPrice) : 6.99,
+              },
+            });
+
+            // Generate box insert card PDF
+            try {
+              const pdfResponse = await axios.get(
+                `${process.env['API_URI']}/qr/pdf-box/${paymentHasPlaylistId}/${originalPaymentId}`,
+                { timeout: 120000 }
+              );
+              if (pdfResponse.data?.filename) {
+                await this.prisma.paymentHasPlaylist.update({
+                  where: { id: paymentHasPlaylistId },
+                  data: { boxFilename: pdfResponse.data.filename },
+                });
+              }
+            } catch (pdfError) {
+              this.logger.log(
+                color.yellow.bold(`Failed to generate box PDF for PHP ${paymentHasPlaylistId}: ${pdfError}`)
+              );
+            }
+
+            // Create Print&Bind box-only order
+            try {
+              await this.printenbind.createBoxUpgradeOrder(paymentHasPlaylistId);
+            } catch (printError) {
+              this.logger.log(
+                color.yellow.bold(`Failed to create box Print&Bind order for PHP ${paymentHasPlaylistId}: ${printError}`)
+              );
+            }
+
+            // Send confirmation email
+            try {
+              await this.mail.sendBoxUpgradeConfirmationEmail(paymentHasPlaylistId);
+            } catch (mailError) {
+              this.logger.log(
+                color.yellow.bold(`Failed to send box upgrade email for PHP ${paymentHasPlaylistId}: ${mailError}`)
+              );
+            }
+
+            // Clear user cache
+            const phpRecord = await this.prisma.paymentHasPlaylist.findUnique({
+              where: { id: paymentHasPlaylistId },
+              include: { payment: { include: { user: { select: { hash: true } } } } },
+            });
+            if (phpRecord?.payment?.user?.hash) {
+              await this.cache.del(`playlists:user:${phpRecord.payment.user.hash}`);
+            }
+
+            this.logger.log(
+              color.blue.bold('Processed box upgrade payment for PHP: ') +
+                color.white.bold(paymentHasPlaylistId.toString())
+            );
+
+            return { success: true };
+          } catch (error: any) {
+            this.logger.log(
+              color.red.bold(`Error processing box upgrade: ${error.message}`)
+            );
+            return { success: false, error: 'Failed to process box upgrade' };
+          }
         }
       }
 

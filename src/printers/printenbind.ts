@@ -920,6 +920,68 @@ class PrintEnBind {
     };
   }
 
+  public async createBoxUpgradeOrder(paymentHasPlaylistId: number): Promise<any> {
+    const php = await this.prisma.paymentHasPlaylist.findUnique({
+      where: { id: paymentHasPlaylistId },
+      include: {
+        payment: true,
+        playlist: true,
+      },
+    });
+
+    if (!php || !php.payment) {
+      throw new Error(`PaymentHasPlaylist ${paymentHasPlaylistId} not found`);
+    }
+
+    const payment = php.payment;
+
+    // Build box insert card file URL
+    const boxFileUrl = php.boxFilename
+      ? `${process.env['API_URI']}/public/box/${php.boxFilename}`
+      : null;
+
+    const items: any[] = [];
+
+    // Add box insert card item (if PDF was generated)
+    if (boxFileUrl) {
+      items.push(this.createBoxOrderCardItem(boxFileUrl, php.playlist, 1));
+    }
+
+    // Add box item
+    items.push(this.createBoxOrderBoxItem(1));
+
+    if (items.length === 0) {
+      throw new Error('No items to order');
+    }
+
+    const customerInfo = {
+      fullname: payment.fullname || undefined,
+      email: payment.email,
+      address: payment.address || undefined,
+      housenumber: payment.housenumber || undefined,
+      zipcode: payment.zipcode || undefined,
+      city: payment.city || undefined,
+      countrycode: payment.countrycode || 'NL',
+    };
+
+    const result = await this.processOrderRequest(items, customerInfo);
+
+    if (result.success && result.data?.orderId) {
+      // Finish order in production
+      if (process.env['ENVIRONMENT'] === 'production') {
+        await this.finishOrder(result.data.orderId, result.apiCalls);
+      }
+
+      this.logger.log(
+        color.blue.bold(`Created box upgrade Print&Bind order: `) +
+          color.white.bold(result.data.orderId) +
+          color.blue.bold(` for PHP ${paymentHasPlaylistId}`)
+      );
+    }
+
+    return result;
+  }
+
   public async calculateOrder(params: any): Promise<any> {
     let countrySelected = false;
     let totalNumberOfTracks = 0;

@@ -1314,6 +1314,7 @@ export default async function accountRoutes(
                 : payment.finalized === true && !!php.filenameDigital,
               // Whether bingo is enabled for this playlist
               gamesEnabled: php.gamesEnabled,
+              boxEnabled: php.boxEnabled,
               // Bingo files for this playlist
               bingoFiles: php.bingoFiles.map((bf: any) => ({
                 filename: bf.filename,

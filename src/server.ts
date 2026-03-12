@@ -9,6 +9,7 @@ import paymentRoutes from './routes/paymentRoutes';
 import publicRoutes from './routes/publicRoutes';
 import resellerRoutes from './routes/resellerRoutes';
 import gameRoutes from './routes/gameRoutes';
+import boxRoutes from './routes/boxRoutes';
 import bingoRoutes from './routes/bingoRoutes';
 import quizRoutes from './routes/quizRoutes';
 import { verifyToken } from './auth';
@@ -125,6 +126,7 @@ class Server {
     await bingoRoutes(this.fastify, getAuthHandler);
     await quizRoutes(this.fastify, getAuthHandler);
     await gameRoutes(this.fastify, getAuthHandler);
+    await boxRoutes(this.fastify, getAuthHandler);
   };
 
   public async addRoutes() {
