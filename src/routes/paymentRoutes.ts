@@ -106,6 +106,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/download/:paymentId/:userHash/:playlistId/:type',
     async (request: any, reply) => {
+      if (!request.query.cb) {
+        const url = request.url + (request.url.includes('?') ? '&' : '?') + 'cb=' + Date.now();
+        return reply.redirect(url);
+      }
+
       const pdfFile = await data.getPDFFilepath(
         request.clientIp,
         request.params.paymentId,
@@ -116,6 +121,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       if (pdfFile && pdfFile.filePath) {
         try {
           await fs.access(pdfFile.filePath, fs.constants.R_OK);
+          reply.header('Cache-Control', 'no-store, no-cache, must-revalidate');
           reply.header(
             'Content-Disposition',
             'attachment; filename=' + pdfFile.fileName

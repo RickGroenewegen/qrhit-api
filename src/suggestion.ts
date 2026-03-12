@@ -65,6 +65,9 @@ class Suggestion {
         php.eligableForPrinter,
         php.suggestionsPending,
         php.userConfirmedPrinting,
+        php.artistOnlyForMe,
+        php.titleOnlyForMe,
+        php.yearOnlyForMe,
         CASE
           WHEN (SELECT COUNT(*) FROM usersuggestions WHERE trackId = t.id AND userId = u.id) > 0
           THEN 'true'
@@ -567,7 +570,8 @@ class Suggestion {
       const phpInfo = await this.prisma.$queryRaw<any[]>`
         SELECT
           php.id AS paymentHasPlaylistId,
-          php.type AS playlistType
+          php.type AS playlistType,
+          p.id AS paymentDbId
         FROM payments p
         JOIN users u ON p.userId = u.id
         JOIN payment_has_playlist php ON php.paymentId = p.id
@@ -587,15 +591,16 @@ class Suggestion {
 
       const paymentHasPlaylistId = phpInfo[0].paymentHasPlaylistId;
       const playlistType = phpInfo[0].playlistType;
+      const paymentDbId = phpInfo[0].paymentDbId;
       const hasPhysicalPlaylists = playlistType === 'physical';
 
       // Get all suggestions for this payment/playlist combination
       const suggestions = await this.prisma.$queryRaw<any[]>`
         SELECT
           t.id as trackId,
-          t.name as originalName,
-          t.artist as originalArtist,
-          t.year as originalYear,
+          COALESCE(NULLIF(tei.name, ''), t.name) as originalName,
+          COALESCE(NULLIF(tei.artist, ''), t.artist) as originalArtist,
+          COALESCE(tei.year, t.year) as originalYear,
           us.name as suggestedName,
           us.artist as suggestedArtist,
           us.year as suggestedYear,
@@ -608,6 +613,7 @@ class Suggestion {
         JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
         JOIN tracks t ON t.id = pht.trackId
         JOIN usersuggestions us ON us.trackId = t.id AND us.userId = u.id
+        LEFT JOIN trackextrainfo tei ON tei.trackId = t.id AND tei.playlistId = pl.id
         WHERE p.paymentId = ${paymentId}
         AND u.hash = ${userHash}
         AND pl.playlistId = ${playlistId}
@@ -824,12 +830,28 @@ class Suggestion {
         this.logger.log(color.yellow.bold('No text corrections detected'));
       }
 
-      // Always clear suggestionsPending flag (using the independently queried paymentHasPlaylistId)
+      // Always clear suggestionsPending flag and persist onlyForMe checkbox states
       await this.prisma.$executeRaw`
         UPDATE payment_has_playlist
-        SET suggestionsPending = false
+        SET suggestionsPending = false,
+            artistOnlyForMe = ${artistOnlyForMe},
+            titleOnlyForMe = ${titleOnlyForMe},
+            yearOnlyForMe = ${yearOnlyForMe}
         WHERE id = ${paymentHasPlaylistId}
       `;
+
+      // For digital playlists, reset judged status so user can start new suggestions immediately
+      if (!hasPhysicalPlaylists) {
+        await this.prisma.$executeRaw`
+          UPDATE payment_has_playlist
+          SET userConfirmedPrinting = false
+          WHERE id = ${paymentHasPlaylistId}
+        `;
+        await this.prisma.payment.update({
+          where: { id: paymentDbId },
+          data: { userAgreedToPrinting: false },
+        });
+      }
 
       // Delete all user suggestions for this payment (if any exist)
       await this.prisma.$executeRaw`

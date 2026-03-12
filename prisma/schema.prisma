@@ -593,6 +593,9 @@ model PaymentHasPlaylist {
   printApiUploadResponse  String?                  @db.Text
   printerPageCount        Int                      @default(0)
   suggestionsPending      Boolean                  @default(false)
+  artistOnlyForMe         Boolean                  @default(false)
+  titleOnlyForMe          Boolean                  @default(false)
+  yearOnlyForMe           Boolean                  @default(false)
   eligableForPrinter      Boolean                  @default(false)
   eligableForPrinterAt    DateTime?
   userConfirmedPrinting   Boolean                  @default(false)
