@@ -605,7 +605,9 @@ class Suggestion {
           us.artist as suggestedArtist,
           us.year as suggestedYear,
           us.extraNameAttribute as suggestedExtraNameAttribute,
-          us.extraArtistAttribute as suggestedExtraArtistAttribute
+          us.extraArtistAttribute as suggestedExtraArtistAttribute,
+          tei.extraNameAttribute as originalExtraNameAttribute,
+          tei.extraArtistAttribute as originalExtraArtistAttribute
         FROM payments p
         JOIN users u ON p.userId = u.id
         JOIN payment_has_playlist php ON php.paymentId = p.id
@@ -653,20 +655,28 @@ class Suggestion {
           );
           hasChanges = true;
         }
-        if (suggestion.suggestedExtraNameAttribute) {
-          changes.push(
-            `Extra name attribute added: '${color.white.bold(
-              suggestion.suggestedExtraNameAttribute
-            )}'`
-          );
+        if (suggestion.suggestedExtraNameAttribute !== null && suggestion.suggestedExtraNameAttribute !== suggestion.originalExtraNameAttribute) {
+          if (suggestion.suggestedExtraNameAttribute) {
+            changes.push(
+              `Extra name attribute ${suggestion.originalExtraNameAttribute ? 'changed' : 'added'}: '${color.white.bold(
+                suggestion.suggestedExtraNameAttribute
+              )}'`
+            );
+          } else {
+            changes.push(`Extra name attribute cleared (was: '${color.white.bold(suggestion.originalExtraNameAttribute)}')`);
+          }
           hasChanges = true;
         }
-        if (suggestion.suggestedExtraArtistAttribute) {
-          changes.push(
-            `Extra artist attribute added: '${color.white.bold(
-              suggestion.suggestedExtraArtistAttribute
-            )}'`
-          );
+        if (suggestion.suggestedExtraArtistAttribute !== null && suggestion.suggestedExtraArtistAttribute !== suggestion.originalExtraArtistAttribute) {
+          if (suggestion.suggestedExtraArtistAttribute) {
+            changes.push(
+              `Extra artist attribute ${suggestion.originalExtraArtistAttribute ? 'changed' : 'added'}: '${color.white.bold(
+                suggestion.suggestedExtraArtistAttribute
+              )}'`
+            );
+          } else {
+            changes.push(`Extra artist attribute cleared (was: '${color.white.bold(suggestion.originalExtraArtistAttribute)}')`);
+          }
           hasChanges = true;
         }
 
@@ -727,14 +737,14 @@ class Suggestion {
             extraInfoModifications.year = suggestion.suggestedYear;
             requiresExtraInfoUpdate = true;
           }
-          if (suggestion.suggestedExtraNameAttribute) {
+          if (suggestion.suggestedExtraNameAttribute !== null && suggestion.suggestedExtraNameAttribute !== suggestion.originalExtraNameAttribute) {
             extraInfoModifications.extraNameAttribute =
-              suggestion.suggestedExtraNameAttribute;
+              suggestion.suggestedExtraNameAttribute || null;
             requiresExtraInfoUpdate = true;
           }
-          if (suggestion.suggestedExtraArtistAttribute) {
+          if (suggestion.suggestedExtraArtistAttribute !== null && suggestion.suggestedExtraArtistAttribute !== suggestion.originalExtraArtistAttribute) {
             extraInfoModifications.extraArtistAttribute =
-              suggestion.suggestedExtraArtistAttribute;
+              suggestion.suggestedExtraArtistAttribute || null;
             requiresExtraInfoUpdate = true;
           }
 
