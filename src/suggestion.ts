@@ -593,9 +593,9 @@ class Suggestion {
       const suggestions = await this.prisma.$queryRaw<any[]>`
         SELECT
           t.id as trackId,
-          t.name as originalName,
-          t.artist as originalArtist,
-          t.year as originalYear,
+          COALESCE(NULLIF(tei.name, ''), t.name) as originalName,
+          COALESCE(NULLIF(tei.artist, ''), t.artist) as originalArtist,
+          COALESCE(tei.year, t.year) as originalYear,
           us.name as suggestedName,
           us.artist as suggestedArtist,
           us.year as suggestedYear,
@@ -608,6 +608,7 @@ class Suggestion {
         JOIN playlist_has_tracks pht ON pht.playlistId = pl.id
         JOIN tracks t ON t.id = pht.trackId
         JOIN usersuggestions us ON us.trackId = t.id AND us.userId = u.id
+        LEFT JOIN trackextrainfo tei ON tei.trackId = t.id AND tei.playlistId = pl.id
         WHERE p.paymentId = ${paymentId}
         AND u.hash = ${userHash}
         AND pl.playlistId = ${playlistId}
