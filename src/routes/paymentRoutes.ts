@@ -103,6 +103,11 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   fastify.get(
     '/download/:paymentId/:userHash/:playlistId/:type',
     async (request: any, reply) => {
+      if (!request.query.cb) {
+        const url = request.url + (request.url.includes('?') ? '&' : '?') + 'cb=' + Date.now();
+        return reply.redirect(url);
+      }
+
       const pdfFile = await data.getPDFFilepath(
         request.clientIp,
         request.params.paymentId,
