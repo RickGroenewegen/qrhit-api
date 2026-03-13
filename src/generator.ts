@@ -1589,7 +1589,7 @@ class Generator {
     });
 
     this.logger.log(
-      color.green.bold(`Generated box insert PDF: ${boxFilename}`)
+      color.green.bold(`Generated box insert PDF: `) + color.white.bold(boxFilename)
     );
 
     return boxFilename;
