@@ -1270,7 +1270,7 @@ export default async function adminRoutes(
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
       const { paymentHasPlaylistId } = request.params;
-      const { numberOfTracks } = request.body;
+      const { numberOfTracks, appleStoreFront } = request.body;
 
       if (!paymentHasPlaylistId) {
         reply.status(400).send({
@@ -1288,9 +1288,10 @@ export default async function adminRoutes(
         return;
       }
 
-      const result = await data.updatePlaylistTrackCount(
+      const result = await data.updatePlaylistDetails(
         parseInt(paymentHasPlaylistId, 10),
-        numberOfTracks
+        numberOfTracks,
+        appleStoreFront !== undefined ? appleStoreFront : undefined
       );
 
       if (result.success) {

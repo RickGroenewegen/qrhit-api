@@ -814,6 +814,7 @@ class Mollie {
             backOpacity: true,
             // Bingo
             gamesEnabled: true,
+            appleStoreFront: true,
             playlist: {
               select: {
                 name: true,

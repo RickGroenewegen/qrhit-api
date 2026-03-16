@@ -271,8 +271,8 @@ class Data {
     return playlistsModule.updatePaymentHasPlaylist(this.deps, paymentHasPlaylistId, eco, doubleSided, printerType, template);
   }
 
-  public async updatePlaylistTrackCount(paymentHasPlaylistId: number, numberOfTracks: number) {
-    return playlistsModule.updatePlaylistTrackCount(this.deps, paymentHasPlaylistId, numberOfTracks);
+  public async updatePlaylistDetails(paymentHasPlaylistId: number, numberOfTracks: number, appleStoreFront?: string | null) {
+    return playlistsModule.updatePlaylistDetails(this.deps, paymentHasPlaylistId, numberOfTracks, appleStoreFront);
   }
 
   public async deletePlaylistFromOrder(paymentHasPlaylistId: number) {
