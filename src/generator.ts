@@ -27,6 +27,7 @@ import Cache from './cache';
 import archiver from 'archiver';
 import GeneratorQueue from './generatorQueue';
 import Bingo from './bingo';
+import AppleStorefront from './appleStorefront';
 
 class Generator {
   private static instance: Generator;
@@ -522,6 +523,25 @@ class Generator {
       trackOrder,
       serviceType
     );
+
+    // Extract and store Apple Music storefront from track URLs
+    if (serviceType === 'apple_music' && tracks.length > 0 && playlist.paymentHasPlaylistId) {
+      const sampleLink = tracks[0].serviceLink || '';
+      const sfMatch = sampleLink.match(/music\.apple\.com\/([a-z]{2})\//i);
+      if (sfMatch) {
+        const appleStoreFront = sfMatch[1].toLowerCase();
+        this.logger.log(
+          blue.bold(
+            `Storing Apple Music storefront ${white.bold(appleStoreFront)} for php ${white.bold(playlist.paymentHasPlaylistId)}`
+          )
+        );
+        await this.prisma.paymentHasPlaylist.update({
+          where: { id: playlist.paymentHasPlaylistId },
+          data: { appleStoreFront },
+        });
+        AppleStorefront.getInstance().setStorefront(playlist.paymentHasPlaylistId, appleStoreFront);
+      }
+    }
 
     // Trigger MusicFetch processing asynchronously (non-blocking)
     this.triggerMusicFetchForPlaylist(playlist.id);

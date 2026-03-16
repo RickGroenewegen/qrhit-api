@@ -10,6 +10,8 @@ import Translation from '../translation';
 import MusicServiceRegistry from '../services/MusicServiceRegistry';
 import TrackEnrichment from '../trackEnrichment';
 import PrismaInstance from '../prisma';
+import { AppleMusicProvider } from '../providers';
+import AppleStorefront from '../appleStorefront';
 
 // Import service-specific routes
 import spotifyRoutes from './spotifyRoutes';
@@ -28,6 +30,8 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   const musicRegistry = MusicServiceRegistry.getInstance();
   const trackEnrichment = TrackEnrichment.getInstance();
   const prisma = PrismaInstance.getInstance();
+  const appleMusicProvider = AppleMusicProvider.getInstance();
+  const appleStorefront = AppleStorefront.getInstance();
 
   // Register service-specific routes
   await fastify.register(spotifyRoutes);
@@ -427,6 +431,12 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       td = result.data.tidalLink || null;
       t = result.data.t || null;
       st = result.data.st || null;
+
+      // Resolve Apple Music link to the playlist's storefront if stored
+      const storefront = await appleStorefront.getStorefront(Number(request.params.php));
+      if (am && storefront) {
+        am = await appleMusicProvider.resolveSongToStorefront(am, storefront);
+      }
     }
     const useSpotifyRemote = true; // Default value
     return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, t, st };
