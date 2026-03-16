@@ -288,10 +288,11 @@ export async function updatePaymentHasPlaylist(
   }
 }
 
-export async function updatePlaylistTrackCount(
+export async function updatePlaylistDetails(
   deps: DataDeps,
   paymentHasPlaylistId: number,
-  numberOfTracks: number
+  numberOfTracks: number,
+  appleStoreFront?: string | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
     // Get the paymentHasPlaylist to find the related playlistId
@@ -304,11 +305,16 @@ export async function updatePlaylistTrackCount(
       return { success: false, error: 'PaymentHasPlaylist not found' };
     }
 
+    const phpData: any = { numberOfTracks };
+    if (appleStoreFront !== undefined) {
+      phpData.appleStoreFront = appleStoreFront;
+    }
+
     // Update both tables in a transaction
     await deps.prisma.$transaction([
       deps.prisma.paymentHasPlaylist.update({
         where: { id: paymentHasPlaylistId },
-        data: { numberOfTracks },
+        data: phpData,
       }),
       deps.prisma.playlist.update({
         where: { id: paymentHasPlaylist.playlistId },

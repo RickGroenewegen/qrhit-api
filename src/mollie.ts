@@ -819,6 +819,7 @@ class Mollie {
             backOpacity: true,
             // Bingo
             gamesEnabled: true,
+            appleStoreFront: true,
             playlist: {
               select: {
                 name: true,
@@ -913,7 +914,6 @@ class Mollie {
       let totalCards = 0;
       let molliePaymentId = '';
       let mollieCheckoutUrl = '';
-      let mollieTest = false;
       let molliePaymentStatus = 'noMollie';
       let molliePaymentAmount = 0;
       let discountAmount = 0;
@@ -954,7 +954,6 @@ class Mollie {
 
       const paymentClientResult = await this.getClient(clientIp);
       const paymentClient = paymentClientResult.client;
-      mollieTest = paymentClientResult.test;
 
       const translations = await this.translation.getTranslationsByPrefix(
         params.locale,
@@ -1058,7 +1057,6 @@ class Mollie {
         });
 
         molliePaymentId = payment.id;
-        mollieTest = payment.mode == 'test';
         molliePaymentAmount = parseFloat(payment.amount.value);
         molliePaymentStatus = payment.status;
         mollieCheckoutUrl = payment.getCheckoutUrl()!;
@@ -1260,7 +1258,7 @@ class Mollie {
           shippingVATPrice,
           totalVATPrice,
           clientIp,
-          test: mollieTest,
+          test: false,
           profit: totalProfit,
           printApiPrice: 0,
           discount: discountAmount,

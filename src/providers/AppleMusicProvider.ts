@@ -245,18 +245,6 @@ class AppleMusicProvider implements IMusicProvider {
       });
 
       if (!response.ok) {
-        if (response.status === 401) {
-          return {
-            success: false,
-            error: 'Invalid or expired Apple Music Developer Token',
-          };
-        }
-        if (response.status === 404) {
-          return {
-            success: false,
-            error: 'Playlist not found',
-          };
-        }
         return {
           success: false,
           error: `Apple Music API error: ${response.status} ${response.statusText}`,
@@ -608,6 +596,108 @@ class AppleMusicProvider implements IMusicProvider {
         error: error.message || 'Failed to resolve shortlink',
       };
     }
+  }
+
+  /**
+   * Resolve an Apple Music song link to the correct URL for a given storefront.
+   * Song IDs differ across storefronts, so we look up the song by its ID
+   * in the target storefront via the Apple Music API.
+   * Returns the original link if resolution fails or storefront matches.
+   */
+  async resolveSongToStorefront(appleMusicLink: string, storefront: string): Promise<string> {
+    // Extract storefront and song ID from the link
+    // Formats:
+    //   .../song/{name}/{id}
+    //   .../album/{name}/{albumId}?i={songId}  (song ID is in the query param)
+    const match = appleMusicLink.match(/music\.apple\.com\/([a-z]{2})\/(?:song|album)\/(?:[^/]+\/)?(\d+)/i);
+    if (!match) return appleMusicLink;
+
+    const [, originalStorefront, pathId] = match;
+
+    // If ?i= param exists, that's the actual song ID; the path ID is the album
+    const iParam = appleMusicLink.match(/[?&]i=(\d+)/);
+    const songId = iParam ? iParam[1] : pathId;
+    if (originalStorefront === storefront) return appleMusicLink;
+
+    // Check cache
+    const cacheKey = `am_sf:${songId}:${storefront}`;
+    const cached = await this.cache.get(cacheKey);
+    if (cached) return cached;
+
+    // Step 1: Try the song ID directly in the target storefront (IDs are global catalog IDs)
+    const directResult = await this.apiRequest<any>(`/songs/${songId}`, storefront);
+
+    if (directResult.success && directResult.data?.data?.[0]?.attributes?.url) {
+      const resolvedUrl = directResult.data.data[0].attributes.url;
+      this.logger.log(
+        color.green.bold(
+          `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)}: ${color.white.bold(resolvedUrl)}`
+        )
+      );
+      await this.cache.set(cacheKey, resolvedUrl, 86400);
+      return resolvedUrl;
+    }
+
+    // Step 2: Fetch song from original storefront to get ISRC
+    const originalResult = await this.apiRequest<any>(`/songs/${songId}`, originalStorefront);
+    const isrc = originalResult.data?.data?.[0]?.attributes?.isrc;
+
+    if (!isrc) {
+      // The URL's storefront might be wrong — try the default storefront as last resort
+      const fallbackResult = await this.apiRequest<any>(`/songs/${songId}`, DEFAULT_STOREFRONT);
+      const fallbackIsrc = fallbackResult.data?.data?.[0]?.attributes?.isrc;
+
+      if (!fallbackIsrc) {
+        this.logger.log(
+          color.yellow.bold(
+            `[${color.white.bold('apple_music')}] Storefront resolve failed: song ${color.white.bold(songId)} not found in any storefront`
+          )
+        );
+        return appleMusicLink;
+      }
+
+      // Found via fallback, search by ISRC in target storefront
+      const isrcResult = await this.apiRequest<any>(`/songs?filter[isrc]=${fallbackIsrc}`, storefront);
+      if (isrcResult.success && isrcResult.data?.data?.[0]?.attributes?.url) {
+        const resolvedUrl = isrcResult.data.data[0].attributes.url;
+        this.logger.log(
+          color.green.bold(
+            `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)} via ISRC: ${color.white.bold(resolvedUrl)}`
+          )
+        );
+        await this.cache.set(cacheKey, resolvedUrl, 86400);
+        return resolvedUrl;
+      }
+
+      this.logger.log(
+        color.yellow.bold(
+          `[${color.white.bold('apple_music')}] Storefront resolve failed: song ${color.white.bold(songId)} not available in ${color.white.bold(storefront)}`
+        )
+      );
+      return appleMusicLink;
+    }
+
+    // Step 3: Look up the song by ISRC in the target storefront
+    const isrcResult = await this.apiRequest<any>(`/songs?filter[isrc]=${isrc}`, storefront);
+
+    if (isrcResult.success && isrcResult.data?.data?.[0]?.attributes?.url) {
+      const resolvedUrl = isrcResult.data.data[0].attributes.url;
+      this.logger.log(
+        color.green.bold(
+          `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)} via ISRC: ${color.white.bold(resolvedUrl)}`
+        )
+      );
+      await this.cache.set(cacheKey, resolvedUrl, 86400);
+      return resolvedUrl;
+    }
+
+    // Fallback: return original link
+    this.logger.log(
+      color.yellow.bold(
+        `[${color.white.bold('apple_music')}] Storefront resolve failed: song ${color.white.bold(songId)} not available in ${color.white.bold(storefront)}`
+      )
+    );
+    return appleMusicLink;
   }
 
   // OAuth methods not applicable for Apple Music (uses Developer Token)

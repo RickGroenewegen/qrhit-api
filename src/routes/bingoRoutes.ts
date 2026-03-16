@@ -386,7 +386,7 @@ export default async function bingoRoutes(
       const bingoPdfFilename = `bingo_${hash}.pdf`;
       const hostCardsPdfFilename = `hostcards_${hash}.pdf`;
       const sanitizedPlaylistName = utils.generateFilename(playlistInfo.playlistName).substring(0, 50);
-      const zipFilename = `${paymentId}_${sanitizedPlaylistName}_bingo.zip`;
+      const zipFilename = `${paymentId}_${sanitizedPlaylistName}_bingo_${hash}.zip`;
 
       const bingoPdfPath = path.join(bingoDir, bingoPdfFilename);
       const hostCardsPdfPath = path.join(bingoDir, hostCardsPdfFilename);

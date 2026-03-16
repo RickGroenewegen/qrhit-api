@@ -589,85 +589,86 @@ model PaymentHasPlaylist {
   priceVAT                   Float
   printApiPrice              Float    @default(0)
 
-  printApiUploaded        Boolean                  @default(false)
-  printApiUploadResponse  String?                  @db.Text
-  printerPageCount        Int                      @default(0)
-  suggestionsPending      Boolean                  @default(false)
-  artistOnlyForMe         Boolean                  @default(false)
-  titleOnlyForMe          Boolean                  @default(false)
-  yearOnlyForMe           Boolean                  @default(false)
-  eligableForPrinter      Boolean                  @default(false)
-  eligableForPrinterAt    DateTime?
-  userConfirmedPrinting   Boolean                  @default(false)
-  blocked                 Boolean                  @default(false)
-  emoji                   String?
-  background              String?
-  logo                    String?
-  selectedFont            String?                  @default("Arial, sans-serif")
-  selectedFontSize        String?                  @default("16px")
+  printApiUploaded         Boolean                  @default(false)
+  printApiUploadResponse   String?                  @db.Text
+  printerPageCount         Int                      @default(0)
+  suggestionsPending       Boolean                  @default(false)
+  artistOnlyForMe          Boolean                  @default(false)
+  titleOnlyForMe           Boolean                  @default(false)
+  yearOnlyForMe            Boolean                  @default(false)
+  eligableForPrinter       Boolean                  @default(false)
+  eligableForPrinterAt     DateTime?
+  userConfirmedPrinting    Boolean                  @default(false)
+  blocked                  Boolean                  @default(false)
+  emoji                    String?
+  background               String?
+  logo                     String?
+  selectedFont             String?                  @default("Arial, sans-serif")
+  selectedFontSize         String?                  @default("16px")
   // Front side color/gradient fields
-  backgroundFrontType     String?                  @default("image") // 'solid' or 'image'
-  backgroundFrontColor    String?                  @default("#ffffff")
-  useFrontGradient        Boolean                  @default(false)
-  gradientFrontColor      String?                  @default("#ffffff")
-  gradientFrontDegrees    Int                      @default(180)
-  gradientFrontPosition   Int                      @default(50)
+  backgroundFrontType      String?                  @default("image") // 'solid' or 'image'
+  backgroundFrontColor     String?                  @default("#ffffff")
+  useFrontGradient         Boolean                  @default(false)
+  gradientFrontColor       String?                  @default("#ffffff")
+  gradientFrontDegrees     Int                      @default(180)
+  gradientFrontPosition    Int                      @default(50)
   // Back side fields
-  backgroundBackType      String?                  @default("image") // 'solid' or 'image'
-  backgroundBack          String?
-  backgroundBackColor     String?                  @default("#ffffff")
-  fontColor               String?                  @default("#000000")
-  useGradient             Boolean                  @default(false)
-  gradientBackgroundColor String?                  @default("#ffffff")
-  gradientDegrees         Int                      @default(180)
-  gradientPosition        Int                      @default(50) // 0-100: controls color stop positions
-  sameAsFront             Boolean                  @default(false) // Copy front side settings to back
-  frontOpacity            Int                      @default(100) // Front background image opacity 0-100 (100% = fully visible by default)
-  backOpacity             Int                      @default(50) // Back background image opacity 0-100 (default 50%)
-  lastReloadAt            DateTime? // Timestamp of last playlist reload from Spotify
-  theme                   String? // Theme slug for app theming (e.g., "acme", "coca-cola")
-  themeName               String? // User-readable theme name (e.g., "Acme Company")
-  printerType             String                   @default("printnbind") // Printer type: "printnbind" or "tromp"
-  promotionalCredited     Boolean                  @default(false) // Whether promotional discount was credited to creator
-  promotionalCreditedAt   DateTime? // When the promotional credit was applied
-  gamesEnabled            Boolean                  @default(false) // Whether games (bingo/quiz) are enabled for this playlist
-  gamesPrice              Float                    @default(0) // Price charged for games (€3 when enabled)
+  backgroundBackType       String?                  @default("image") // 'solid' or 'image'
+  backgroundBack           String?
+  backgroundBackColor      String?                  @default("#ffffff")
+  fontColor                String?                  @default("#000000")
+  useGradient              Boolean                  @default(false)
+  gradientBackgroundColor  String?                  @default("#ffffff")
+  gradientDegrees          Int                      @default(180)
+  gradientPosition         Int                      @default(50) // 0-100: controls color stop positions
+  sameAsFront              Boolean                  @default(false) // Copy front side settings to back
+  frontOpacity             Int                      @default(100) // Front background image opacity 0-100 (100% = fully visible by default)
+  backOpacity              Int                      @default(50) // Back background image opacity 0-100 (default 50%)
+  lastReloadAt             DateTime? // Timestamp of last playlist reload from Spotify
+  theme                    String? // Theme slug for app theming (e.g., "acme", "coca-cola")
+  themeName                String? // User-readable theme name (e.g., "Acme Company")
+  printerType              String                   @default("printnbind") // Printer type: "printnbind" or "tromp"
+  promotionalCredited      Boolean                  @default(false) // Whether promotional discount was credited to creator
+  promotionalCreditedAt    DateTime? // When the promotional credit was applied
+  gamesEnabled             Boolean                  @default(false) // Whether games (bingo/quiz) are enabled for this playlist
+  gamesPrice               Float                    @default(0) // Price charged for games (€3 when enabled)
   // Box add-on
-  boxEnabled              Boolean                  @default(false)
-  boxQuantity             Int                      @default(0)
-  boxPrice                Float                    @default(0)
-  boxFilename             String?
+  boxEnabled               Boolean                  @default(false)
+  boxQuantity              Int                      @default(0)
+  boxPrice                 Float                    @default(0)
+  boxFilename              String?
   // Box front design
-  boxFrontBackgroundType  String?                  @default("image")
-  boxFrontBackground      String?
-  boxFrontBackgroundColor String?                  @default("#ffffff")
-  boxFrontUseFrontGradient Boolean                 @default(false)
-  boxFrontGradientColor   String?                  @default("#ffffff")
-  boxFrontGradientDegrees Int                      @default(180)
-  boxFrontGradientPosition Int                     @default(50)
-  boxFrontOpacity         Int                      @default(100)
-  boxFrontLogo            String?
-  boxFrontLogoScale       Int                      @default(50)
-  boxFrontLogoPositionX   Int                      @default(50)
-  boxFrontLogoPositionY   Int                      @default(50)
-  boxFrontEmoji           String?
+  boxFrontBackgroundType   String?                  @default("image")
+  boxFrontBackground       String?
+  boxFrontBackgroundColor  String?                  @default("#ffffff")
+  boxFrontUseFrontGradient Boolean                  @default(false)
+  boxFrontGradientColor    String?                  @default("#ffffff")
+  boxFrontGradientDegrees  Int                      @default(180)
+  boxFrontGradientPosition Int                      @default(50)
+  boxFrontOpacity          Int                      @default(100)
+  boxFrontLogo             String?
+  boxFrontLogoScale        Int                      @default(50)
+  boxFrontLogoPositionX    Int                      @default(50)
+  boxFrontLogoPositionY    Int                      @default(50)
+  boxFrontEmoji            String?
   // Box back design
-  boxBackBackgroundType   String?                  @default("solid")
-  boxBackBackground       String?
-  boxBackBackgroundColor  String?                  @default("#ffffff")
-  boxBackFontColor        String?                  @default("#000000")
-  boxBackUseGradient      Boolean                  @default(false)
-  boxBackGradientColor    String?                  @default("#ffffff")
-  boxBackGradientDegrees  Int                      @default(180)
-  boxBackGradientPosition Int                      @default(50)
-  boxBackOpacity          Int                      @default(50)
-  boxBackText             String?                  @db.Text
-  boxBackSelectedFont     String?                  @default("Arial, sans-serif")
-  boxBackSelectedFontSize String?                  @default("14px")
-  orderType               OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
-  items                   PaymentHasPlaylistItem[]
-  bingoFiles              BingoFile[]
-  quizzes                 Quiz[]
+  boxBackBackgroundType    String?                  @default("solid")
+  boxBackBackground        String?
+  boxBackBackgroundColor   String?                  @default("#ffffff")
+  boxBackFontColor         String?                  @default("#000000")
+  boxBackUseGradient       Boolean                  @default(false)
+  boxBackGradientColor     String?                  @default("#ffffff")
+  boxBackGradientDegrees   Int                      @default(180)
+  boxBackGradientPosition  Int                      @default(50)
+  boxBackOpacity           Int                      @default(50)
+  boxBackText              String?                  @db.Text
+  boxBackSelectedFont      String?                  @default("Arial, sans-serif")
+  boxBackSelectedFontSize  String?                  @default("14px")
+  appleStoreFront          String?                  @db.VarChar(5) // Apple Music storefront country code (e.g. "nl", "us")
+  orderType                OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
+  items                    PaymentHasPlaylistItem[]
+  bingoFiles               BingoFile[]
+  quizzes                  Quiz[]
 
   @@unique([paymentId, playlistId, type, subType])
   @@index([paymentId])
@@ -700,7 +701,7 @@ model BingoFile {
   contestants          Int
   rounds               Int
   trackCount           Int
-  selectedTrackIds     Json?              // Array of trackIds used in this bingo game
+  selectedTrackIds     Json? // Array of trackIds used in this bingo game
   createdAt            DateTime           @default(now())
 
   @@index([paymentHasPlaylistId])
@@ -730,11 +731,11 @@ model QuizQuestion {
   quiz          Quiz     @relation(fields: [quizId], references: [id], onDelete: Cascade)
   trackId       Int
   order         Int      @default(0)
-  type          String   // "year", "trivia", "artist", "image", etc.
+  type          String // "year", "trivia", "artist", "image", etc.
   question      String   @db.Text
   options       Json? // string[] for MC types; null for "year"
   correctAnswer String   @db.Text
-  imageFilename String?  // e.g. "a1b2c3d4e5f6...png" in quiz_images dir
+  imageFilename String? // e.g. "a1b2c3d4e5f6...png" in quiz_images dir
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
@@ -817,42 +818,42 @@ model TrustPilot {
 }
 
 model Company {
-  id               Int           @id @default(autoincrement())
-  name             String
-  test             Boolean       @default(false)
-  followUp         Boolean       @default(false)
-  onlyForAdmin     Boolean       @default(false)
-  address          String?
-  housenumber      String?
-  city             String?
-  zipcode          String?
-  countrycode      String?
-  contact          String?
-  contactemail     String?
-  contactphone     String?
-  calculation          String?       @db.Text
-  calculationTromp     String?       @db.Text
-  calculationSchneider String?       @db.Text
-  createdAt            DateTime      @default(now())
-  updatedAt        DateTime      @updatedAt
-  CompanyList      CompanyList[]
-  User             User[]
-  CompanyEvent     CompanyEvent[]
+  id                   Int            @id @default(autoincrement())
+  name                 String
+  test                 Boolean        @default(false)
+  followUp             Boolean        @default(false)
+  onlyForAdmin         Boolean        @default(false)
+  address              String?
+  housenumber          String?
+  city                 String?
+  zipcode              String?
+  countrycode          String?
+  contact              String?
+  contactemail         String?
+  contactphone         String?
+  calculation          String?        @db.Text
+  calculationTromp     String?        @db.Text
+  calculationSchneider String?        @db.Text
+  createdAt            DateTime       @default(now())
+  updatedAt            DateTime       @updatedAt
+  CompanyList          CompanyList[]
+  User                 User[]
+  CompanyEvent         CompanyEvent[]
 
   @@map("companies")
 }
 
 model CompanyEvent {
-  id            Int       @id @default(autoincrement())
+  id            Int      @id @default(autoincrement())
   companyId     Int
   userId        Int?
-  type          String    @default("comment") // comment, status_change, file_upload, etc.
-  content       String    @db.Text
+  type          String   @default("comment") // comment, status_change, file_upload, etc.
+  content       String   @db.Text
   attachmentUrl String?
-  createdAt     DateTime  @default(now())
+  createdAt     DateTime @default(now())
 
-  Company       Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  User          User?     @relation(fields: [userId], references: [id], onDelete: SetNull)
+  Company Company @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  User    User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
   @@index([companyId])
   @@map("company_events")
@@ -1139,19 +1140,19 @@ model ContactEmailReply {
 }
 
 model Top40Chart {
-  id               Int      @id @default(autoincrement())
+  id               Int    @id @default(autoincrement())
   year             Int
   weekNumber       Int
   position         Int
   artist           String
   title            String
-  previousPosition Int      @default(0)
-  weeksOnChart     Int      @default(1)
-  status           String   @default("")
+  previousPosition Int    @default(0)
+  weeksOnChart     Int    @default(1)
+  status           String @default("")
   externalId       String
 
-  createdAt        DateTime @default(now())
-  updatedAt        DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   @@unique([year, weekNumber, position])
   @@index([year, weekNumber])
