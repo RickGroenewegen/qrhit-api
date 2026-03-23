@@ -594,12 +594,12 @@
   "mail.gamesTimelineTitle": "Frise musicale",
   "mail.gamesTimelineDesc": "Un jeu solo — range les chansons dans l’ordre en scannant les QR codes et en écoutant.",
   "howto.title": "Comment jouer",
-  "howto.subtitle": "QRSong ! Jeu musical",
+  "howto.subtitle": "QRSong! Jeu musical",
   "howto.rulesTitle": "Les règles :",
-  "howto.rule1": "Chacun a une carte de départ. Pose-la face visible — c’est ta timeline.",
-  "howto.rule2": "Scanne une nouvelle carte et écoute la chanson.",
-  "howto.rule3": "Place la carte avant ou après une carte de ta timeline.",
-  "howto.rule4": "Dis le titre et l’artiste pour des points bonus.",
-  "howto.rule5": "Retourne la carte. Bonne place ? Garde-la. Mauvaise ? Perds-la.",
+  "howto.rule1": "Chacun commence avec une carte (année visible) pour débuter sa timeline.",
+  "howto.rule2": "Un DJ (ou joueur) scanne un QR avec l’appli QRSong! et une chanson démarre.",
+  "howto.rule3": "Devine l’année et place la carte à gauche (plus tôt) ou à droite (plus tard) dans ta timeline.",
+  "howto.rule4": "Retourne la carte. L’année est bonne ? Garde-la. Faux ? Retire-la.",
+  "howto.rule5": "Le premier à avoir 10 cartes dans sa timeline gagne !",
   "howto.winner": "Le premier à 10 cartes gagne !"
 }

@@ -591,10 +591,10 @@
   "howto.title": "Come si gioca",
   "howto.subtitle": "QRSong! Gioco musicale",
   "howto.rulesTitle": "Le regole:",
-  "howto.rule1": "Ognuno prende una carta iniziale. Mettila scoperta — è la tua timeline.",
-  "howto.rule2": "Scansiona una nuova carta e ascolta la canzone.",
-  "howto.rule3": "Metti la carta prima o dopo una nella tua timeline.",
-  "howto.rule4": "Dì titolo e artista per punti bonus.",
-  "howto.rule5": "Gira la carta. Giusto? Tienila. Sbagliato? Perdi la carta.",
+  "howto.rule1": "Ogni giocatore parte con una carta (lato anno su) come inizio della sua timeline.",
+  "howto.rule2": "Un DJ (o giocatore) scansiona un QR con l’app QRSong! e parte una canzone.",
+  "howto.rule3": "Indovina l’anno e metti la carta a sinistra (prima) o destra (dopo) nella tua timeline.",
+  "howto.rule4": "Gira la carta. L’anno è giusto? Tienila. Sbagliato? Via.",
+  "howto.rule5": "Chi per primo ha 10 carte nella timeline vince!",
   "howto.winner": "Chi arriva a 10 carte vince!"
 }

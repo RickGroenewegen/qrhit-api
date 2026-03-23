@@ -586,10 +586,10 @@
   "howto.title": "怎么玩",
   "howto.subtitle": "QRSong! 音乐游戏",
   "howto.rulesTitle": "规则：",
-  "howto.rule1": "每人拿一张起始卡。正面朝上放——这就是你的时间线。",
-  "howto.rule2": "扫一张新卡，听歌。",
-  "howto.rule3": "把卡放在时间线的前面或后面。",
-  "howto.rule4": "说出歌名和歌手拿加分。",
-  "howto.rule5": "翻卡。对了留着，错了丢掉。",
+  "howto.rule1": "每人以一张卡（年份朝上）开始他们的时间线。",
+  "howto.rule2": "DJ（或玩家）用QRSong! 扫码，歌曲就播放了。",
+  "howto.rule3": "猜年份，把卡放在时间线左（早）或右（晚）边。",
+  "howto.rule4": "翻卡。年份对了就留着，错了就拿走。",
+  "howto.rule5": "第一个集齐10张卡的人赢！",
   "howto.winner": "先集齐10张卡的人赢！"
 }

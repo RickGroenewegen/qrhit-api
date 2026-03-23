@@ -596,10 +596,9 @@
   "howto.title": "Hoe speel je",
   "howto.subtitle": "QRSong! Muziekspel",
   "howto.rulesTitle": "De regels:",
-  "howto.rule1": "Iedereen krijgt een startkaart. Leg hem open — dat is je tijdlijn.",
-  "howto.rule2": "Scan een nieuwe kaart en luister het nummer.",
-  "howto.rule3": "Leg de kaart voor of na een kaart in je tijdlijn.",
-  "howto.rule4": "Noem titel en artiest voor bonuspunten.",
-  "howto.rule5": "Dra de kaart om. Goed? Hou hem. Fout? Weg ermee.",
-  "howto.winner": "Wie als eerste 10 kaarten heeft, wint!"
+  "howto.rule1": "Elke speler begint met één muziekkaart (datumzijde omhoog) als startpunt van de tijdlijn.",
+  "howto.rule2": "Een DJ (of speler) scant met de QRSong!-app een QR-code op een kaart waarna een lied afspeelt.",
+  "howto.rule3": "Raad het jaartal en leg de kaart links (vroeger) of rechts (later) van de bestaande kaarten in jouw tijdlijn.",
+  "howto.rule4": "Draai de kaart om. Is het jaartal correct ten opzichte van je tijdlijn? Dan mag je de kaart houden. Heb je de kaart fout geplaatst? Dan moet de kaart uit het spel.",
+  "howto.rule5": "De eerste speler die een tijdlijn van 10 kaarten correct heeft opgebouwd, wint."
 }
