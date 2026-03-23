@@ -163,6 +163,8 @@ export async function getPlaylistsByPaymentId(
       payment_has_playlist.backOpacity,
       payment_has_playlist.printerType,
       payment_has_playlist.gamesEnabled,
+      payment_has_playlist.addHowToCard,
+      payment_has_playlist.addHowToCardLocale,
       playlists.numberOfTracks,
       payment_has_playlist.numberOfTracks AS paymentHasPlaylistNumberOfTracks,
       playlists.featured,
@@ -429,6 +431,53 @@ export async function updateGamesEnabled(
     deps.logger.log(
       color.red.bold(
         `Error updating gamesEnabled for playlist ${color.white.bold(
+          paymentHasPlaylistId
+        )}: ${error.message}`
+      )
+    );
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateAddHowToCard(
+  deps: DataDeps,
+  paymentHasPlaylistId: number,
+  addHowToCard: boolean,
+  addHowToCardLocale?: string
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const php = await deps.prisma.paymentHasPlaylist.findUnique({
+      where: { id: paymentHasPlaylistId },
+      select: { id: true },
+    });
+
+    if (!php) {
+      return { success: false, error: 'Playlist not found' };
+    }
+
+    const data: any = { addHowToCard };
+    if (addHowToCardLocale !== undefined) {
+      data.addHowToCardLocale = addHowToCardLocale;
+    }
+
+    await deps.prisma.paymentHasPlaylist.update({
+      where: { id: paymentHasPlaylistId },
+      data,
+    });
+
+    deps.logger.log(
+      color.blue.bold(
+        `Updated addHowToCard for playlist ${color.white.bold(
+          paymentHasPlaylistId
+        )} to ${color.white.bold(addHowToCard)}${addHowToCardLocale ? ` (locale: ${addHowToCardLocale})` : ''}`
+      )
+    );
+
+    return { success: true };
+  } catch (error: any) {
+    deps.logger.log(
+      color.red.bold(
+        `Error updating addHowToCard for playlist ${color.white.bold(
           paymentHasPlaylistId
         )}: ${error.message}`
       )

@@ -591,5 +591,14 @@
   "mail.gamesGoToAccount": "Ir a Mi Cuenta",
   "mail.gamesMoreInfo": "Ambos juegos vienen con tu add-on QRGames! Haz bingo y quizzes ilimitados desde tu cuenta.",
   "mail.gamesTimelineTitle": "Línea de tiempo musical",
-  "mail.gamesTimelineDesc": "Un juego para uno — ordena canciones escaneando QR y escuchando la música."
+  "mail.gamesTimelineDesc": "Un juego para uno — ordena canciones escaneando QR y escuchando la música.",
+  "howto.title": "Cómo jugar",
+  "howto.subtitle": "QRSong! Juego musical",
+  "howto.rulesTitle": "Las reglas:",
+  "howto.rule1": "Cada uno recibe una carta inicial. Ponla boca arriba — empieza tu línea de tiempo.",
+  "howto.rule2": "Escanea una nueva carta y escucha la canción.",
+  "howto.rule3": "Pon la carta antes o después de una en tu línea de tiempo.",
+  "howto.rule4": "Di el título y artista para puntos extra.",
+  "howto.rule5": "Dale la vuelta. ¿Correcto? Quédate la carta. ¿Mal? Pierdes la carta.",
+  "howto.winner": "¡El primero con 10 cartas gana!"
 }

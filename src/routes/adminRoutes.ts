@@ -1264,6 +1264,47 @@ export default async function adminRoutes(
     }
   );
 
+  // Toggle addHowToCard for payment_has_playlist
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/howto-card',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentHasPlaylistId } = request.params;
+      const { addHowToCard, addHowToCardLocale } = request.body;
+
+      if (!paymentHasPlaylistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'PaymentHasPlaylist ID is required',
+        });
+        return;
+      }
+
+      if (typeof addHowToCard !== 'boolean') {
+        reply.status(400).send({
+          success: false,
+          error: 'addHowToCard must be a boolean',
+        });
+        return;
+      }
+
+      const result = await data.updateAddHowToCard(
+        parseInt(paymentHasPlaylistId, 10),
+        addHowToCard,
+        addHowToCardLocale
+      );
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Update track count for payment_has_playlist and playlist
   fastify.post(
     '/admin/playlist/:paymentHasPlaylistId/track-count',

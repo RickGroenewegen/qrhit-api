@@ -583,5 +583,14 @@
   "mail.gamesGoToAccount": "マイアカウントへ",
   "mail.gamesMoreInfo": "両方のゲームがQRGames! アドオンに入ってる。アカウントから無制限にビンゴやクイズ作成OK！",
   "mail.gamesTimelineTitle": "音楽タイムライン",
-  "mail.gamesTimelineDesc": "1人用ゲーム — QRをスキャンして曲を聴き、順番に並べよう。"
+  "mail.gamesTimelineDesc": "1人用ゲーム — QRをスキャンして曲を聴き、順番に並べよう。",
+  "howto.title": "遊び方",
+  "howto.subtitle": "QRSong! 音楽ゲーム",
+  "howto.rulesTitle": "ルール：",
+  "howto.rule1": "みんな最初のカードをもらう。表向きに置いて、これがタイムラインの始まり。",
+  "howto.rule2": "新しいカードをスキャンして曲を聴こう。",
+  "howto.rule3": "カードをタイムラインのどこかに置こう。",
+  "howto.rule4": "曲名とアーティスト名を言えばボーナス点！",
+  "howto.rule5": "カードをめくる。合ってたらキープ、違ったら失う。",
+  "howto.winner": "最初に10枚集めた人が勝ち！"
 }

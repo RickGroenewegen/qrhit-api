@@ -587,5 +587,14 @@
   "mail.gamesGoToAccount": "Przejdź do Mojego Konta",
   "mail.gamesMoreInfo": "Obie gry są w dodatku QRGames! Twórz bingo i quizy bez limitu z konta.",
   "mail.gamesTimelineTitle": "Oś czasu muzyki",
-  "mail.gamesTimelineDesc": "Gra solo — ułóż utwory chronologicznie, skanuj QR i słuchaj."
+  "mail.gamesTimelineDesc": "Gra solo — ułóż utwory chronologicznie, skanuj QR i słuchaj.",
+  "howto.title": "Jak grać",
+  "howto.subtitle": "QRSong! Gra muzyczna",
+  "howto.rulesTitle": "Zasady:",
+  "howto.rule1": "Każdy dostaje kartę startową. Połóż ją odkrytą — to twój timeline.",
+  "howto.rule2": "Zeskanuj nową kartę i posłuchaj piosenki.",
+  "howto.rule3": "Połóż kartę przed lub za inną w swojej osi czasu.",
+  "howto.rule4": "Podaj tytuł i wykonawcę, dostaniesz bonus.",
+  "howto.rule5": "Odwróć kartę. Dobrze? Zostaje. Źle? Odpada.",
+  "howto.winner": "Kto pierwszy ma 10 kart, wygrywa!"
 }

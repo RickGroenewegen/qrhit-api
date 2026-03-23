@@ -581,5 +581,14 @@
   "mail.gamesGoToAccount": "Gå till Mitt Konto",
   "mail.gamesMoreInfo": "Båda spelen ingår i ditt QRGames!-tillägg. Skapa obegränsat med bingo och quiz från ditt konto.",
   "mail.gamesTimelineTitle": "Musiktidslinje",
-  "mail.gamesTimelineDesc": "Ett solospel – ordna låtar genom att scanna QR och lyssna."
+  "mail.gamesTimelineDesc": "Ett solospel – ordna låtar genom att scanna QR och lyssna.",
+  "howto.title": "Hur man spelar",
+  "howto.subtitle": "QRSong! Musikspel",
+  "howto.rulesTitle": "Reglerna:",
+  "howto.rule1": "Alla får ett startkort. Lägg det uppåt – det är din tidslinje.",
+  "howto.rule2": "Skanna ett nytt kort och lyssna på låten.",
+  "howto.rule3": "Lägg kortet före eller efter ett i din tidslinje.",
+  "howto.rule4": "Säg titel och artist för bonuspoäng.",
+  "howto.rule5": "Vänd på kortet. Rätt? Behåll det. Fel? Bort med det.",
+  "howto.winner": "Först till 10 kort vinner!"
 }

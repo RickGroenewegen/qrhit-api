@@ -592,5 +592,14 @@
   "mail.gamesGoToAccount": "Zu Mein Konto",
   "mail.gamesMoreInfo": "Beide Spiele sind im QRGames! Add-on dabei. Erstelle unbegrenzt Bingo und Quizze in deinem Konto.",
   "mail.gamesTimelineTitle": "Musik-Zeitstrahl",
-  "mail.gamesTimelineDesc": "Ein Einzelspieler-Spiel – ordne Songs chronologisch, scanne QR-Codes und hör rein."
+  "mail.gamesTimelineDesc": "Ein Einzelspieler-Spiel – ordne Songs chronologisch, scanne QR-Codes und hör rein.",
+  "howto.title": "So spielst du",
+  "howto.subtitle": "QRSong! Musikspiel",
+  "howto.rulesTitle": "Die Regeln:",
+  "howto.rule1": "Jeder bekommt eine Startkarte. Leg sie offen hin – das ist deine Timeline.",
+  "howto.rule2": "Scanne eine neue Karte und hör dir den Song an.",
+  "howto.rule3": "Lege die Karte vor oder nach eine Karte in deiner Timeline.",
+  "howto.rule4": "Sag Titel und Künstler für Bonuspunkte.",
+  "howto.rule5": "Dreh die Karte um. Richtig? Behalte sie. Falsch? Weg damit.",
+  "howto.winner": "Wer zuerst 10 Karten hat, gewinnt!"
 }

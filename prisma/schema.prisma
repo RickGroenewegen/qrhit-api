@@ -631,6 +631,8 @@ model PaymentHasPlaylist {
   promotionalCreditedAt   DateTime? // When the promotional credit was applied
   gamesEnabled            Boolean                  @default(false) // Whether games (bingo/quiz) are enabled for this playlist
   gamesPrice              Float                    @default(0) // Price charged for games (€3 when enabled)
+  addHowToCard            Boolean                  @default(false) // Whether to include a how-to explanation card as first card in printer PDF
+  addHowToCardLocale      String                   @default("en") @db.VarChar(5) // Locale for how-to card translations
   appleStoreFront         String?                  @db.VarChar(5) // Apple Music storefront country code (e.g. "nl", "us")
   orderType               OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                   PaymentHasPlaylistItem[]

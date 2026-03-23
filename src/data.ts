@@ -287,6 +287,10 @@ class Data {
     return playlistsModule.updateGamesEnabled(this.deps, paymentHasPlaylistId, gamesEnabled);
   }
 
+  public async updateAddHowToCard(paymentHasPlaylistId: number, addHowToCard: boolean, addHowToCardLocale?: string) {
+    return playlistsModule.updateAddHowToCard(this.deps, paymentHasPlaylistId, addHowToCard, addHowToCardLocale);
+  }
+
   public async resetJudgedStatus(paymentHasPlaylistId: number) {
     return playlistsModule.resetJudgedStatus(this.deps, paymentHasPlaylistId);
   }

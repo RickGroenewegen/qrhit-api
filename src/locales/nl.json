@@ -592,5 +592,14 @@
   "mail.gamesGoToAccount": "Ga naar Mijn Account",
   "mail.gamesMoreInfo": "Beide spellen zitten bij je QRGames! add-on. Maak onbeperkt bingo en quizzen vanuit je account.",
   "mail.gamesTimelineTitle": "Muziek Tijdlijn",
-  "mail.gamesTimelineDesc": "Een singleplayer spel — zet nummers op volgorde door QR-codes te scannen en te luisteren."
+  "mail.gamesTimelineDesc": "Een singleplayer spel — zet nummers op volgorde door QR-codes te scannen en te luisteren.",
+  "howto.title": "Hoe speel je",
+  "howto.subtitle": "QRSong! Muziekspel",
+  "howto.rulesTitle": "De regels:",
+  "howto.rule1": "Iedereen krijgt een startkaart. Leg hem open — dat is je tijdlijn.",
+  "howto.rule2": "Scan een nieuwe kaart en luister het nummer.",
+  "howto.rule3": "Leg de kaart voor of na een kaart in je tijdlijn.",
+  "howto.rule4": "Noem titel en artiest voor bonuspunten.",
+  "howto.rule5": "Dra de kaart om. Goed? Hou hem. Fout? Weg ermee.",
+  "howto.winner": "Wie als eerste 10 kaarten heeft, wint!"
 }

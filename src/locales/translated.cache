@@ -7855,5 +7855,113 @@
     "jp",
     "cn",
     "sv"
+  ],
+  "howto.title": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "howto.subtitle": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "howto.rulesTitle": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "howto.rule1": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "howto.rule2": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "howto.rule3": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "howto.rule4": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "howto.rule5": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
+  ],
+  "howto.winner": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv"
   ]
 }
