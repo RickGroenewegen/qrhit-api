@@ -158,16 +158,16 @@ class Translation {
         const enField = `${field}_en`;
         const targetField = `${field}_${locale}`;
 
-        // Some fields are nullable (String?) and some are not (String @default(""))
-        // Use { in: [null, ''] } which Prisma handles correctly for both cases
         const records = await config.delegate.findMany({
           where: {
             [enField]: { not: '' },
-            [targetField]: { in: ['', null as any] },
+            OR: [
+              { [targetField]: '' },
+              { [targetField]: null },
+            ],
           },
           select: { id: true, [enField]: true },
         }).catch(() =>
-          // Fallback: if null isn't valid for this field, just check for empty string
           config.delegate.findMany({
             where: {
               [enField]: { not: '' },
