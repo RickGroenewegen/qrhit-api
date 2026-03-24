@@ -595,10 +595,10 @@
   "howto.title": "Cómo jugar",
   "howto.subtitle": "QRSong! Juego musical",
   "howto.rulesTitle": "Las reglas:",
-  "howto.rule1": "Cada jugador empieza con una carta (año arriba) como inicio de su línea de tiempo.",
+  "howto.rule1": "Cada jugador empieza con una carta (lado del año arriba) como inicio de su línea de tiempo.",
   "howto.rule2": "Un DJ (o jugador) escanea un QR con la app QRSong! y suena una canción.",
-  "howto.rule3": "Adivina el año y pon la carta a la izquierda (antes) o derecha (después) en tu línea.",
-  "howto.rule4": "Dale la vuelta. ¿El año encaja? Quédate la carta. ¿No? Fuera.",
-  "howto.rule5": "¡El primero con 10 cartas en su línea gana!",
+  "howto.rule3": "Adivina el año y pon la carta a la izquierda (antes) o derecha (después) en tu línea de tiempo.",
+  "howto.rule4": "Dale la vuelta a la carta. ¿El año encaja? Quédate con ella. ¿No? Fuera.",
+  "howto.rule5": "¡El primero en tener 10 cartas en su línea de tiempo gana!",
   "howto.winner": "¡El primero con 10 cartas gana!"
 }

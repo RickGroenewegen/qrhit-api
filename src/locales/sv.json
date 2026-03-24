@@ -585,10 +585,10 @@
   "howto.title": "Hur spelar du",
   "howto.subtitle": "QRSong! Musikspel",
   "howto.rulesTitle": "Reglerna:",
-  "howto.rule1": "Alla börjar med ett kort (årssidan upp) som start på sin tidslinje.",
-  "howto.rule2": "En DJ (eller spelare) skannar en QR med QRSong!-appen och en låt spelas.",
-  "howto.rule3": "Gissa året och lägg kortet vänster (tidigare) eller höger (senare) i din tidslinje.",
-  "howto.rule4": "Vänd på kortet. Rätt år? Behåll det. Fel? Ta bort det.",
-  "howto.rule5": "Först med 10 kort i tidslinjen vinner!",
+  "howto.rule1": "Varje spelare börjar med ett kort (år-sidan upp) som start på sin tidslinje.",
+  "howto.rule2": "En DJ (eller spelare) skannar en QR-kod med QRSong!-appen och en låt spelas.",
+  "howto.rule3": "Gissa året och lägg kortet till vänster (tidigare) eller höger (senare) i din tidslinje.",
+  "howto.rule4": "Vänd på kortet. Stämmer året? Behåll det. Fel? Ta bort det.",
+  "howto.rule5": "Först att bygga en tidslinje med 10 kort vinner!",
   "howto.winner": "Först till 10 kort vinner!"
 }

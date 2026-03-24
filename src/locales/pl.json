@@ -591,10 +591,10 @@
   "howto.title": "Jak grać",
   "howto.subtitle": "QRSong! Gra muzyczna",
   "howto.rulesTitle": "Zasady:",
-  "howto.rule1": "Każdy zaczyna z jedną kartą (rok na wierzchu) jako początek swojej osi czasu.",
+  "howto.rule1": "Każdy gracz zaczyna z jedną kartą (rok na wierzchu) jako początek swojej osi czasu.",
   "howto.rule2": "DJ (lub gracz) skanuje QR kod w QRSong! i leci piosenka.",
   "howto.rule3": "Zgadnij rok i połóż kartę po lewej (wcześniej) lub prawej (później) na osi czasu.",
   "howto.rule4": "Odwróć kartę. Rok się zgadza? Zostaw. Nie? Odpada.",
-  "howto.rule5": "Kto pierwszy ma 10 kart na osi czasu, wygrywa!",
+  "howto.rule5": "Kto pierwszy ułoży 10 kart na osi czasu, wygrywa!",
   "howto.winner": "Kto pierwszy ma 10 kart, wygrywa!"
 }

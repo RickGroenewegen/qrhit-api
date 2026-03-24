@@ -158,7 +158,7 @@
 	"howto.rule1": "Each player starts with one card (year side up) as the beginning of their timeline.",
 	"howto.rule2": "A DJ (or player) scans a QR code using the QRSong! app and a song plays.",
 	"howto.rule3": "Guess the year and place the card left (earlier) or right (later) in your timeline.",
-	"howto.rule4": "Flip the card. Is the year correct relative to your timeline? Keep it. Wrong? Remove it.",
+	"howto.rule4": "Flip the card. Does the year match your timeline? Keep it. Wrong? Remove it.",
 	"howto.rule5": "First player to build a timeline of 10 cards wins!",
 	"verification.subject": "Verify Your Hitlist Submission",
 	"verification.title": "Verify Your Hitlist Submission",
