@@ -262,7 +262,8 @@ export class ChatGPT {
     const prompt = `Playlist name: "${playlistName}"\n\nSample tracks:\n${tracksPrompt}`;
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5',
+      model: 'gpt-5.4-mini',
+      temperature: 1,
       messages: [
         {
           role: 'system',
@@ -485,7 +486,7 @@ export class ChatGPT {
         .join('\n\n');
 
       const result = await this.openai.chat.completions.create({
-        model: 'o4-mini',
+        model: 'gpt-5.4-mini',
         temperature: 1,
         messages: [
           {
@@ -647,7 +648,7 @@ export class ChatGPT {
 
     try {
       const result = await this.openai.chat.completions.create({
-        model: 'o4-mini',
+        model: 'gpt-5.4-mini',
         temperature: 1,
         messages: [
           {
@@ -1179,7 +1180,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
   ): Promise<Record<string, string>> {
     if (!text || !targetLocales || targetLocales.length === 0) return {};
     const result = await this.openai.chat.completions.create({
-      model: 'o4-mini',
+      model: 'gpt-5.4-mini',
       temperature: 1,
       messages: [
         {
@@ -1418,28 +1419,12 @@ ${htmlString}
     subject: string,
     targetLocale: string
   ): Promise<{ subject: string; message: string }> {
-    const localeNames: { [key: string]: string } = {
-      en: 'English',
-      de: 'German',
-      fr: 'French',
-      es: 'Spanish',
-      it: 'Italian',
-      pt: 'Portuguese',
-      pl: 'Polish',
-      sv: 'Swedish',
-      jp: 'Japanese',
-      cn: 'Chinese',
-      ru: 'Russian',
-      hin: 'Hindi',
-      nl: 'Dutch',
-    };
-
-    const targetLang = localeNames[targetLocale] || 'English';
+    const targetLang = this.translation.getLanguageName(targetLocale);
 
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-4o-mini',
-        temperature: 0.3,
+        model: 'gpt-5.4-mini',
+        temperature: 1,
         messages: [
           {
             role: 'system',
@@ -1502,12 +1487,7 @@ ${htmlString}
    * @returns Array of generated questions with options and correct answers
    */
   private getLanguageName(locale: string): string {
-    const map: Record<string, string> = {
-      en: 'English', nl: 'Dutch', de: 'German', fr: 'French',
-      es: 'Spanish', it: 'Italian', pt: 'Portuguese', pl: 'Polish',
-      jp: 'Japanese', cn: 'Chinese', sv: 'Swedish',
-    };
-    return map[locale] || 'English';
+    return this.translation.getLanguageName(locale);
   }
 
   public async generateQuizQuestions(

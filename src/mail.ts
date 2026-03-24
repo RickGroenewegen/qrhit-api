@@ -1098,20 +1098,7 @@ ${knowledgeContext}${toolContext}`,
    * Translate content to a specific locale
    */
   public async translateToLocale(content: string, targetLocale: string): Promise<string> {
-    const localeNames: { [key: string]: string } = {
-      en: 'English',
-      de: 'German',
-      fr: 'French',
-      es: 'Spanish',
-      it: 'Italian',
-      pt: 'Portuguese',
-      pl: 'Polish',
-      sv: 'Swedish',
-      jp: 'Japanese',
-      cn: 'Chinese',
-    };
-
-    const targetLang = localeNames[targetLocale] || 'English';
+    const targetLang = this.translation.getLanguageName(targetLocale);
 
     try {
       const result = await this.openai.chat.completions.create({
@@ -2245,25 +2232,9 @@ ${params.html}
     const messageHtml = message.replace(/\n/g, '<br>');
 
     // Determine greeting based on locale
-    const greetings: { [key: string]: string } = {
-      en: 'Hello',
-      de: 'Hallo',
-      fr: 'Bonjour',
-      es: 'Hola',
-      it: 'Ciao',
-      pt: 'Olá',
-      pl: 'Cześć',
-      sv: 'Hej',
-      jp: 'こんにちは',
-      cn: '你好',
-      ru: 'Здравствуйте',
-      hin: 'नमस्ते',
-      nl: 'Hallo',
-    };
-
     const mailParams = {
       fullname: fullname || email.split('@')[0],
-      greeting: greetings[locale] || 'Hello',
+      greeting: this.translation.getGreeting(locale),
       message: messageHtml,
       messageText: message, // Plain text version with \n preserved
       productName: process.env['PRODUCT_NAME'],

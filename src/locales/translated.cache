@@ -11,7 +11,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.playlist": [
     "nl",
@@ -25,7 +26,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.items": [
     "nl",
@@ -39,7 +41,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.fullname": [
     "nl",
@@ -53,7 +56,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.address": [
     "nl",
@@ -67,7 +71,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.zipcode": [
     "nl",
@@ -81,7 +86,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.city": [
     "nl",
@@ -95,7 +101,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.country": [
     "nl",
@@ -109,7 +116,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.email": [
     "nl",
@@ -123,7 +131,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.trackingMailSubject": [
     "nl",
@@ -137,7 +146,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.trackOrder": [
     "nl",
@@ -151,7 +161,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.thankYou": [
     "nl",
@@ -165,7 +176,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.invoiceNumber": [
     "nl",
@@ -179,7 +191,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.invoiceDate": [
     "nl",
@@ -193,7 +206,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.paidInFull": [
     "nl",
@@ -207,7 +221,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.method": [
     "nl",
@@ -221,7 +236,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.product": [
     "nl",
@@ -235,7 +251,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.shippingAndHandling": [
     "nl",
@@ -249,7 +266,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.total": [
     "nl",
@@ -263,7 +281,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.ideal": [
     "nl",
@@ -277,7 +296,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.creditcard": [
     "nl",
@@ -291,7 +311,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.paypal": [
     "nl",
@@ -305,7 +326,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.bankTransfer": [
     "nl",
@@ -319,7 +341,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.invoice": [
     "nl",
@@ -333,7 +356,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.taxRate1": [
     "nl",
@@ -347,7 +371,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.taxRate2": [
     "nl",
@@ -361,7 +386,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.applePay": [
     "nl",
@@ -375,7 +401,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "payment.playlist": [
     "nl",
@@ -389,7 +416,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "payment.cards": [
     "nl",
@@ -403,7 +431,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.howToInstall": [
     "nl",
@@ -417,7 +446,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.onIOS": [
     "nl",
@@ -431,7 +461,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.onAndroid": [
     "nl",
@@ -445,7 +476,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.tapShare": [
     "nl",
@@ -459,7 +491,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.scrollDown": [
     "nl",
@@ -473,7 +506,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.tapMenu": [
     "nl",
@@ -487,7 +521,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.tapAddToHomeScreen": [
     "nl",
@@ -501,7 +536,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.gotIt": [
     "nl",
@@ -515,7 +551,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.closeScanner": [
     "nl",
@@ -529,7 +566,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.cameraError": [
     "nl",
@@ -543,7 +581,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.yourSongWillStart": [
     "nl",
@@ -557,7 +596,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.getReady": [
     "nl",
@@ -571,7 +611,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.tapTheCamera": [
     "nl",
@@ -585,7 +626,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.allRightsReserved": [
     "nl",
@@ -599,7 +641,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.mailSubject": [
     "nl",
@@ -613,7 +656,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.greetings": [
     "nl",
@@ -627,7 +671,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.orderInformation": [
     "nl",
@@ -641,7 +686,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "payment.digital": [
     "nl",
@@ -655,7 +701,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.invalidLink": [
     "nl",
@@ -669,7 +716,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.description": [
     "nl",
@@ -683,7 +731,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.amount": [
     "nl",
@@ -697,7 +746,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.pricePerPiece": [
     "nl",
@@ -711,7 +761,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.taxRate": [
     "nl",
@@ -725,7 +776,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.vatAmount": [
     "nl",
@@ -739,7 +791,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.totalInclVAT": [
     "nl",
@@ -753,7 +806,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.pdfProduct": [
     "nl",
@@ -767,7 +821,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.cards": [
     "nl",
@@ -781,7 +836,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.physicalProduct": [
     "nl",
@@ -795,7 +851,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AF": [
     "nl",
@@ -809,7 +866,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AX": [
     "nl",
@@ -823,7 +881,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AL": [
     "nl",
@@ -837,7 +896,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.DZ": [
     "nl",
@@ -851,7 +911,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AS": [
     "nl",
@@ -865,7 +926,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AD": [
     "nl",
@@ -879,7 +941,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AO": [
     "nl",
@@ -893,7 +956,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AI": [
     "nl",
@@ -907,7 +971,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AQ": [
     "nl",
@@ -921,7 +986,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AG": [
     "nl",
@@ -935,7 +1001,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AR": [
     "nl",
@@ -949,7 +1016,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AM": [
     "nl",
@@ -963,7 +1031,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AW": [
     "nl",
@@ -977,7 +1046,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AU": [
     "nl",
@@ -991,7 +1061,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AT": [
     "nl",
@@ -1005,7 +1076,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AZ": [
     "nl",
@@ -1019,7 +1091,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BS": [
     "nl",
@@ -1033,7 +1106,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BH": [
     "nl",
@@ -1047,7 +1121,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BD": [
     "nl",
@@ -1061,7 +1136,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BB": [
     "nl",
@@ -1075,7 +1151,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BY": [
     "nl",
@@ -1089,7 +1166,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BE": [
     "nl",
@@ -1103,7 +1181,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BZ": [
     "nl",
@@ -1117,7 +1196,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BJ": [
     "nl",
@@ -1131,7 +1211,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BM": [
     "nl",
@@ -1145,7 +1226,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BT": [
     "nl",
@@ -1159,7 +1241,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BO": [
     "nl",
@@ -1173,7 +1256,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BQ": [
     "nl",
@@ -1187,7 +1271,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BA": [
     "nl",
@@ -1201,7 +1286,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BW": [
     "nl",
@@ -1215,7 +1301,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BV": [
     "nl",
@@ -1229,7 +1316,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BR": [
     "nl",
@@ -1243,7 +1331,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.IO": [
     "nl",
@@ -1257,7 +1346,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BN": [
     "nl",
@@ -1271,7 +1361,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BG": [
     "nl",
@@ -1285,7 +1376,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BF": [
     "nl",
@@ -1299,7 +1391,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BI": [
     "nl",
@@ -1313,7 +1406,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.KH": [
     "nl",
@@ -1327,7 +1421,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CM": [
     "nl",
@@ -1341,7 +1436,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CA": [
     "nl",
@@ -1355,7 +1451,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CV": [
     "nl",
@@ -1369,7 +1466,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.KY": [
     "nl",
@@ -1383,7 +1481,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CF": [
     "nl",
@@ -1397,7 +1496,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TD": [
     "nl",
@@ -1411,7 +1511,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CL": [
     "nl",
@@ -1425,7 +1526,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CN": [
     "nl",
@@ -1439,7 +1541,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CX": [
     "nl",
@@ -1453,7 +1556,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CC": [
     "nl",
@@ -1467,7 +1571,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CO": [
     "nl",
@@ -1481,7 +1586,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.KM": [
     "nl",
@@ -1495,7 +1601,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CG": [
     "nl",
@@ -1509,7 +1616,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CD": [
     "nl",
@@ -1523,7 +1631,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CK": [
     "nl",
@@ -1537,7 +1646,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CR": [
     "nl",
@@ -1551,7 +1661,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CI": [
     "nl",
@@ -1565,7 +1676,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.HR": [
     "nl",
@@ -1579,7 +1691,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CW": [
     "nl",
@@ -1593,7 +1706,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CY": [
     "nl",
@@ -1607,7 +1721,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CZ": [
     "nl",
@@ -1621,7 +1736,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.DK": [
     "nl",
@@ -1635,7 +1751,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.DJ": [
     "nl",
@@ -1649,7 +1766,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.DM": [
     "nl",
@@ -1663,7 +1781,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.DO": [
     "nl",
@@ -1677,7 +1796,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.EC": [
     "nl",
@@ -1691,7 +1811,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.EG": [
     "nl",
@@ -1705,7 +1826,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SV": [
     "nl",
@@ -1719,7 +1841,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GQ": [
     "nl",
@@ -1733,7 +1856,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.ER": [
     "nl",
@@ -1747,7 +1871,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.EE": [
     "nl",
@@ -1761,7 +1886,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.ET": [
     "nl",
@@ -1775,7 +1901,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.FK": [
     "nl",
@@ -1789,7 +1916,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.FO": [
     "nl",
@@ -1803,7 +1931,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.FJ": [
     "nl",
@@ -1817,7 +1946,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.FI": [
     "nl",
@@ -1831,7 +1961,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.FR": [
     "nl",
@@ -1845,7 +1976,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GF": [
     "nl",
@@ -1859,7 +1991,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PF": [
     "nl",
@@ -1873,7 +2006,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TF": [
     "nl",
@@ -1887,7 +2021,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GA": [
     "nl",
@@ -1901,7 +2036,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GM": [
     "nl",
@@ -1915,7 +2051,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GE": [
     "nl",
@@ -1929,7 +2066,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.DE": [
     "nl",
@@ -1943,7 +2081,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GH": [
     "nl",
@@ -1957,7 +2096,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GI": [
     "nl",
@@ -1971,7 +2111,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GR": [
     "nl",
@@ -1985,7 +2126,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GL": [
     "nl",
@@ -1999,7 +2141,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GD": [
     "nl",
@@ -2013,7 +2156,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GP": [
     "nl",
@@ -2027,7 +2171,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GU": [
     "nl",
@@ -2041,7 +2186,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GT": [
     "nl",
@@ -2055,7 +2201,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GG": [
     "nl",
@@ -2069,7 +2216,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GN": [
     "nl",
@@ -2083,7 +2231,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GW": [
     "nl",
@@ -2097,7 +2246,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GY": [
     "nl",
@@ -2111,7 +2261,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.HT": [
     "nl",
@@ -2125,7 +2276,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.HM": [
     "nl",
@@ -2139,7 +2291,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.VA": [
     "nl",
@@ -2153,7 +2306,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.HN": [
     "nl",
@@ -2167,7 +2321,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.HK": [
     "nl",
@@ -2181,7 +2336,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.HU": [
     "nl",
@@ -2195,7 +2351,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.IS": [
     "nl",
@@ -2209,7 +2366,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.IN": [
     "nl",
@@ -2223,7 +2381,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.ID": [
     "nl",
@@ -2237,7 +2396,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.IQ": [
     "nl",
@@ -2251,7 +2411,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.IE": [
     "nl",
@@ -2265,7 +2426,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.IM": [
     "nl",
@@ -2279,7 +2441,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.IL": [
     "nl",
@@ -2293,7 +2456,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.IT": [
     "nl",
@@ -2307,7 +2471,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.JM": [
     "nl",
@@ -2321,7 +2486,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.JP": [
     "nl",
@@ -2335,7 +2501,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.JE": [
     "nl",
@@ -2349,7 +2516,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.JO": [
     "nl",
@@ -2363,7 +2531,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.KZ": [
     "nl",
@@ -2377,7 +2546,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.KE": [
     "nl",
@@ -2391,7 +2561,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.KI": [
     "nl",
@@ -2405,7 +2576,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.KR": [
     "nl",
@@ -2419,7 +2591,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.KW": [
     "nl",
@@ -2433,7 +2606,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.KG": [
     "nl",
@@ -2447,7 +2621,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.LA": [
     "nl",
@@ -2461,7 +2636,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.LV": [
     "nl",
@@ -2475,7 +2651,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.LB": [
     "nl",
@@ -2489,7 +2666,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.LS": [
     "nl",
@@ -2503,7 +2681,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.LR": [
     "nl",
@@ -2517,7 +2696,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.LY": [
     "nl",
@@ -2531,7 +2711,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.LI": [
     "nl",
@@ -2545,7 +2726,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.LT": [
     "nl",
@@ -2559,7 +2741,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.LU": [
     "nl",
@@ -2573,7 +2756,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MO": [
     "nl",
@@ -2587,7 +2771,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MK": [
     "nl",
@@ -2601,7 +2786,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MG": [
     "nl",
@@ -2615,7 +2801,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MW": [
     "nl",
@@ -2629,7 +2816,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MY": [
     "nl",
@@ -2643,7 +2831,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MV": [
     "nl",
@@ -2657,7 +2846,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.ML": [
     "nl",
@@ -2671,7 +2861,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MT": [
     "nl",
@@ -2685,7 +2876,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MH": [
     "nl",
@@ -2699,7 +2891,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MQ": [
     "nl",
@@ -2713,7 +2906,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MR": [
     "nl",
@@ -2727,7 +2921,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MU": [
     "nl",
@@ -2741,7 +2936,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.YT": [
     "nl",
@@ -2755,7 +2951,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MX": [
     "nl",
@@ -2769,7 +2966,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.FM": [
     "nl",
@@ -2783,7 +2981,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MD": [
     "nl",
@@ -2797,7 +2996,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MC": [
     "nl",
@@ -2811,7 +3011,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MN": [
     "nl",
@@ -2825,7 +3026,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.ME": [
     "nl",
@@ -2839,7 +3041,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MS": [
     "nl",
@@ -2853,7 +3056,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MA": [
     "nl",
@@ -2867,7 +3071,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MZ": [
     "nl",
@@ -2881,7 +3086,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MM": [
     "nl",
@@ -2895,7 +3101,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.NA": [
     "nl",
@@ -2909,7 +3116,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.NR": [
     "nl",
@@ -2923,7 +3131,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.NP": [
     "nl",
@@ -2937,7 +3146,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.NL": [
     "nl",
@@ -2951,7 +3161,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AN": [
     "nl",
@@ -2965,7 +3176,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.NC": [
     "nl",
@@ -2979,7 +3191,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.NZ": [
     "nl",
@@ -2993,7 +3206,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.NI": [
     "nl",
@@ -3007,7 +3221,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.NE": [
     "nl",
@@ -3021,7 +3236,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.NG": [
     "nl",
@@ -3035,7 +3251,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.NU": [
     "nl",
@@ -3049,7 +3266,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.NF": [
     "nl",
@@ -3063,7 +3281,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MP": [
     "nl",
@@ -3077,7 +3296,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.NO": [
     "nl",
@@ -3091,7 +3311,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.OM": [
     "nl",
@@ -3105,7 +3326,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PK": [
     "nl",
@@ -3119,7 +3341,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PW": [
     "nl",
@@ -3133,7 +3356,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PS": [
     "nl",
@@ -3147,7 +3371,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PA": [
     "nl",
@@ -3161,7 +3386,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PG": [
     "nl",
@@ -3175,7 +3401,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PY": [
     "nl",
@@ -3189,7 +3416,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PE": [
     "nl",
@@ -3203,7 +3431,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PH": [
     "nl",
@@ -3217,7 +3446,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PN": [
     "nl",
@@ -3231,7 +3461,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PL": [
     "nl",
@@ -3245,7 +3476,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PT": [
     "nl",
@@ -3259,7 +3491,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PR": [
     "nl",
@@ -3273,7 +3506,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.QA": [
     "nl",
@@ -3287,7 +3521,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.RE": [
     "nl",
@@ -3301,7 +3536,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.RO": [
     "nl",
@@ -3315,7 +3551,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.RU": [
     "nl",
@@ -3329,7 +3566,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.RW": [
     "nl",
@@ -3343,7 +3581,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.BL": [
     "nl",
@@ -3357,7 +3596,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SH": [
     "nl",
@@ -3371,7 +3611,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.KN": [
     "nl",
@@ -3385,7 +3626,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.LC": [
     "nl",
@@ -3399,7 +3641,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.MF": [
     "nl",
@@ -3413,7 +3656,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.PM": [
     "nl",
@@ -3427,7 +3671,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.VC": [
     "nl",
@@ -3441,7 +3686,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.WS": [
     "nl",
@@ -3455,7 +3701,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SM": [
     "nl",
@@ -3469,7 +3716,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.ST": [
     "nl",
@@ -3483,7 +3731,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SA": [
     "nl",
@@ -3497,7 +3746,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SN": [
     "nl",
@@ -3511,7 +3761,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.RS": [
     "nl",
@@ -3525,7 +3776,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SC": [
     "nl",
@@ -3539,7 +3791,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SL": [
     "nl",
@@ -3553,7 +3806,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SG": [
     "nl",
@@ -3567,7 +3821,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SX": [
     "nl",
@@ -3581,7 +3836,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SK": [
     "nl",
@@ -3595,7 +3851,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SI": [
     "nl",
@@ -3609,7 +3866,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SB": [
     "nl",
@@ -3623,7 +3881,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SO": [
     "nl",
@@ -3637,7 +3896,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.ZA": [
     "nl",
@@ -3651,7 +3911,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GS": [
     "nl",
@@ -3665,7 +3926,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SS": [
     "nl",
@@ -3679,7 +3941,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.ES": [
     "nl",
@@ -3693,7 +3956,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.LK": [
     "nl",
@@ -3707,7 +3971,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SR": [
     "nl",
@@ -3721,7 +3986,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SJ": [
     "nl",
@@ -3735,7 +4001,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SZ": [
     "nl",
@@ -3749,7 +4016,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.SE": [
     "nl",
@@ -3763,7 +4031,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.CH": [
     "nl",
@@ -3777,7 +4046,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TW": [
     "nl",
@@ -3791,7 +4061,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TJ": [
     "nl",
@@ -3805,7 +4076,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TZ": [
     "nl",
@@ -3819,7 +4091,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TH": [
     "nl",
@@ -3833,7 +4106,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TL": [
     "nl",
@@ -3847,7 +4121,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TG": [
     "nl",
@@ -3861,7 +4136,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TK": [
     "nl",
@@ -3875,7 +4151,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TO": [
     "nl",
@@ -3889,7 +4166,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TT": [
     "nl",
@@ -3903,7 +4181,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TN": [
     "nl",
@@ -3917,7 +4196,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TR": [
     "nl",
@@ -3931,7 +4211,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TM": [
     "nl",
@@ -3945,7 +4226,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TC": [
     "nl",
@@ -3959,7 +4241,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.TV": [
     "nl",
@@ -3973,7 +4256,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.UG": [
     "nl",
@@ -3987,7 +4271,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.UA": [
     "nl",
@@ -4001,7 +4286,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.AE": [
     "nl",
@@ -4015,7 +4301,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.GB": [
     "nl",
@@ -4029,7 +4316,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.US": [
     "nl",
@@ -4043,7 +4331,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.UM": [
     "nl",
@@ -4057,7 +4346,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.UY": [
     "nl",
@@ -4071,7 +4361,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.UZ": [
     "nl",
@@ -4085,7 +4376,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.VU": [
     "nl",
@@ -4099,7 +4391,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.VE": [
     "nl",
@@ -4113,7 +4406,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.VN": [
     "nl",
@@ -4127,7 +4421,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.VG": [
     "nl",
@@ -4141,7 +4436,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.VI": [
     "nl",
@@ -4155,7 +4451,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.WF": [
     "nl",
@@ -4169,7 +4466,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.EH": [
     "nl",
@@ -4183,7 +4481,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.YE": [
     "nl",
@@ -4197,7 +4496,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.ZM": [
     "nl",
@@ -4211,7 +4511,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countries.ZW": [
     "nl",
@@ -4225,7 +4526,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.invoiceAddress": [
     "nl",
@@ -4239,7 +4541,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.invoiceZipcode": [
     "nl",
@@ -4253,7 +4556,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.invoiceCity": [
     "nl",
@@ -4267,7 +4571,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.invoiceCountry": [
     "nl",
@@ -4281,7 +4586,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.cards": [
     "nl",
@@ -4295,7 +4601,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.yourInformation": [
     "nl",
@@ -4309,7 +4616,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.shippingAddress": [
     "nl",
@@ -4323,7 +4631,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.orderData": [
     "nl",
@@ -4337,7 +4646,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.bancontact": [
     "nl",
@@ -4351,7 +4661,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.mailSubjectDigital": [
     "nl",
@@ -4365,7 +4676,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.greatNewsMainDigital": [
     "nl",
@@ -4379,7 +4691,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.weHopeYouHaveFunDigital": [
     "nl",
@@ -4393,7 +4706,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.playlists": [
     "nl",
@@ -4407,7 +4721,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "payment.playlists": [
     "nl",
@@ -4421,7 +4736,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.downloadButton": [
     "nl",
@@ -4435,7 +4751,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.physicalDownloadButton": [
     "nl",
@@ -4449,7 +4766,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.appStore": [
     "nl",
@@ -4463,7 +4781,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.googlePlay": [
     "nl",
@@ -4477,7 +4796,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.other": [
     "nl",
@@ -4491,7 +4811,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.youNeedToInstall": [
     "nl",
@@ -4505,7 +4826,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.downloadLink": [
     "nl",
@@ -4519,7 +4841,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.physicalDownloadLink": [
     "nl",
@@ -4533,7 +4856,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "payment.paysafecard": [
     "nl",
@@ -4583,7 +4907,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.trustly": [
     "nl",
@@ -4597,7 +4922,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.belfius": [
     "nl",
@@ -4611,7 +4937,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.kbc": [
     "nl",
@@ -4625,7 +4952,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.satispay": [
     "nl",
@@ -4639,7 +4967,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.riverty": [
     "nl",
@@ -4653,7 +4982,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.eps": [
     "nl",
@@ -4667,7 +4997,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.twint": [
     "nl",
@@ -4681,7 +5012,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.bancomatpay": [
     "nl",
@@ -4695,7 +5027,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.przelewy24": [
     "nl",
@@ -4709,7 +5042,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.blik": [
     "nl",
@@ -4723,7 +5057,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.applepay": [
     "nl",
@@ -4737,7 +5072,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.mailSubjectVoucher": [
     "nl",
@@ -4751,7 +5087,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.mailSubjectVoucherPhysical": [
     "nl",
@@ -4765,7 +5102,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.voucherMessage": [
     "nl",
@@ -4779,7 +5117,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.voucherMessagePrinter": [
     "nl",
@@ -4793,7 +5132,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.downloadButtonVoucher": [
     "nl",
@@ -4807,7 +5147,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "payment.giftcard": [
     "nl",
@@ -4821,7 +5162,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "payment.giftcards": [
     "nl",
@@ -4835,7 +5177,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "payment.items": [
     "nl",
@@ -4849,7 +5192,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "voucher.title": [
     "nl",
@@ -4863,7 +5207,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "voucher.goTo": [
     "nl",
@@ -4877,7 +5222,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "voucher.click": [
     "nl",
@@ -4891,7 +5237,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "voucher.enterCode": [
     "nl",
@@ -4905,7 +5252,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "voucher.discountWillBeApplied": [
     "nl",
@@ -4919,7 +5267,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "voucher.code": [
     "nl",
@@ -4933,7 +5282,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "voucher.dearMusicLover": [
     "nl",
@@ -4947,7 +5297,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "voucher.withMusicalGreetings": [
     "nl",
@@ -4961,7 +5312,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.giftcard": [
     "nl",
@@ -4975,7 +5327,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "voucher.transform": [
     "nl",
@@ -4989,7 +5342,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "voucher.claim": [
     "nl",
@@ -5003,7 +5357,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "voucher.turn": [
     "nl",
@@ -5017,7 +5372,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.greatNewsDigital": [
     "nl",
@@ -5031,7 +5387,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.weHopeYouHaveFunMainDigital": [
     "nl",
@@ -5045,7 +5402,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.leaveReview": [
     "nl",
@@ -5059,7 +5417,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.unsubscribe": [
     "nl",
@@ -5073,7 +5432,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.greatNews": [
     "nl",
@@ -5100,7 +5460,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.housenumber": [
     "nl",
@@ -5114,7 +5475,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.invoiceHousenumber": [
     "nl",
@@ -5128,7 +5490,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.finalizedMailSubject": [
     "nl",
@@ -5142,7 +5505,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.reviewOrder": [
     "nl",
@@ -5156,7 +5520,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.youCanReview": [
     "nl",
@@ -5170,7 +5535,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.createYourOwn": [
     "nl",
@@ -5184,7 +5550,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown.visit": [
     "nl",
@@ -5198,7 +5565,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.youNeedToInstall": [
     "nl",
@@ -5212,7 +5580,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.createYourOwn": [
     "nl",
@@ -5226,7 +5595,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.visit": [
     "nl",
@@ -5240,7 +5610,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.invalidLink": [
     "nl",
@@ -5254,7 +5625,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.howToInstall": [
     "nl",
@@ -5268,7 +5640,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.onIOS": [
     "nl",
@@ -5282,7 +5655,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.onAndroid": [
     "nl",
@@ -5296,7 +5670,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.tapShare": [
     "nl",
@@ -5310,7 +5685,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.scrollDown": [
     "nl",
@@ -5324,7 +5700,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.tapMenu": [
     "nl",
@@ -5338,7 +5715,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.tapAddToHomeScreen": [
     "nl",
@@ -5352,7 +5730,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.gotIt": [
     "nl",
@@ -5366,7 +5745,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.closeScanner": [
     "nl",
@@ -5380,7 +5760,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.cameraError": [
     "nl",
@@ -5394,7 +5775,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.yourSongWillStart": [
     "nl",
@@ -5408,7 +5790,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.getReady": [
     "nl",
@@ -5422,7 +5805,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.tapTheCamera": [
     "nl",
@@ -5436,7 +5820,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.allRightsReserved": [
     "nl",
@@ -5450,7 +5835,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.appStore": [
     "nl",
@@ -5464,7 +5850,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.googlePlay": [
     "nl",
@@ -5478,7 +5865,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "countdown_onzevibe.other": [
     "nl",
@@ -5492,7 +5880,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "verification.subject": [
     "nl",
@@ -5506,7 +5895,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "verification.title": [
     "nl",
@@ -5520,7 +5910,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "verification.hello": [
     "nl",
@@ -5534,7 +5925,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "verification.thankYou": [
     "nl",
@@ -5548,7 +5940,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "verification.toComplete": [
     "nl",
@@ -5562,7 +5955,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "verification.buttonText": [
     "nl",
@@ -5576,7 +5970,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "verification.ignoreMessage": [
     "nl",
@@ -5590,7 +5985,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "verification.buttonFallback": [
     "nl",
@@ -5604,7 +6000,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "verification.thanks": [
     "nl",
@@ -5618,7 +6015,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "verification.team": [
     "nl",
@@ -5632,7 +6030,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.weHopeYouHaveFun": [
     "nl",
@@ -5646,7 +6045,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "portal_welcome.title": [
     "nl",
@@ -5660,7 +6060,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "portal_welcome.intro": [
     "nl",
@@ -5674,7 +6075,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "portal_welcome.usernameLabel": [
     "nl",
@@ -5688,7 +6090,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "portal_welcome.passwordLabel": [
     "nl",
@@ -5702,7 +6105,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "portal_welcome.passwordAdvice": [
     "nl",
@@ -5716,7 +6120,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "portal_welcome.success": [
     "nl",
@@ -5730,7 +6135,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "portal_welcome.team": [
     "nl",
@@ -5744,7 +6150,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "portal_welcome.portalUrlLabel": [
     "nl",
@@ -5758,7 +6165,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "portal_welcome.adminUrlLabel": [
     "nl",
@@ -5772,7 +6180,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "portal_welcome.adminUrlInfo": [
     "nl",
@@ -5786,7 +6195,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "portal_welcome.adminUrlLabelMail": [
     "nl",
@@ -5800,7 +6210,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "portal_welcome.intro2": [
     "nl",
@@ -5814,7 +6225,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "portal_welcome.contactWithin24h": [
     "nl",
@@ -5828,7 +6240,8 @@
     "jp",
     "cn",
     "ru",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrvote_welcome.title": [
     "nl",
@@ -5840,7 +6253,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrvote_welcome.success": [
     "nl",
@@ -5852,7 +6266,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrvote_welcome.contactWithin24h": [
     "nl",
@@ -5864,7 +6279,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrvote_welcome.verifyButton": [
     "nl",
@@ -5876,7 +6292,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrvote_welcome.intro": [
     "nl",
@@ -5888,7 +6305,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrvote_welcome.intro2": [
     "nl",
@@ -5900,7 +6318,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrvote_welcome.team": [
     "nl",
@@ -5912,7 +6331,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrsong_verification.subject": [
     "nl",
@@ -5924,7 +6344,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrsong_verification.title": [
     "nl",
@@ -5936,7 +6357,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrsong_verification.hello": [
     "nl",
@@ -5948,7 +6370,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrsong_verification.thankYou": [
     "nl",
@@ -5960,7 +6383,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrsong_verification.toComplete": [
     "nl",
@@ -5972,7 +6396,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrsong_verification.buttonText": [
     "nl",
@@ -5984,7 +6409,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrsong_verification.ignoreMessage": [
     "nl",
@@ -5996,7 +6422,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrsong_verification.buttonFallback": [
     "nl",
@@ -6008,7 +6435,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrsong_verification.thanks": [
     "nl",
@@ -6020,7 +6448,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrsong_verification.team": [
     "nl",
@@ -6032,7 +6461,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "account_verification.missingVerificationHash": [
     "nl",
@@ -6044,7 +6474,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "account_verification.invalidVerificationHash": [
     "nl",
@@ -6056,7 +6487,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "account_verification.accountAlreadyVerified": [
     "nl",
@@ -6068,7 +6500,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "account_verification.accountVerified": [
     "nl",
@@ -6080,7 +6513,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "account_verification.internalServerError": [
     "nl",
@@ -6092,7 +6526,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "password_reset.subject": [
     "nl",
@@ -6104,7 +6539,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "password_reset.title": [
     "nl",
@@ -6116,7 +6552,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "password_reset.hello": [
     "nl",
@@ -6128,7 +6565,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "password_reset.resetMessage": [
     "nl",
@@ -6140,7 +6578,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "password_reset.clickButton": [
     "nl",
@@ -6152,7 +6591,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "password_reset.buttonText": [
     "nl",
@@ -6164,7 +6604,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "password_reset.buttonFallback": [
     "nl",
@@ -6176,7 +6617,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "password_reset.expiry": [
     "nl",
@@ -6188,7 +6630,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "password_reset.ignoreMessage": [
     "nl",
@@ -6200,7 +6643,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "password_reset.thanks": [
     "nl",
@@ -6212,7 +6656,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "password_reset.team": [
     "nl",
@@ -6224,7 +6669,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrsong_activation.subject": [
     "nl",
@@ -6246,7 +6692,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrgames_activation.greeting": [
     "nl",
@@ -6258,7 +6705,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrgames_activation.yourActivationCode": [
     "nl",
@@ -6270,7 +6718,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrgames_activation.codeExpires": [
     "nl",
@@ -6282,7 +6731,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrgames_activation.simpleInstructions": [
     "nl",
@@ -6294,7 +6744,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrgames_activation.onceActivated": [
     "nl",
@@ -6306,7 +6757,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrgames_activation.needHelp": [
     "nl",
@@ -6318,7 +6770,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrgames_activation.happyPlaying": [
     "nl",
@@ -6330,7 +6783,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrgames_activation.team": [
     "nl",
@@ -6342,7 +6796,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrgames_activation.allRightsReserved": [
     "nl",
@@ -6354,7 +6809,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrgames_activation.visitWebsite": [
     "nl",
@@ -6366,7 +6822,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrgames_activation.contactSupport": [
     "nl",
@@ -6378,7 +6835,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "qrgames_activation.greatNews": [
     "nl",
@@ -6390,7 +6848,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.freeDigitalIncluded": [
     "nl",
@@ -6402,7 +6861,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.downloadDigitalButton": [
     "nl",
@@ -6414,7 +6874,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.downloadDigitalButtonPrinter": [
     "nl",
@@ -6426,7 +6887,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "product_type.digital": [
     "nl",
@@ -6438,7 +6900,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "product_type.sheets": [
     "nl",
@@ -6450,7 +6913,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "product_type.physical": [
     "nl",
@@ -6462,7 +6926,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "merchant.qr_music_game": [
     "nl",
@@ -6474,7 +6939,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "merchant.cards": [
     "nl",
@@ -6486,7 +6952,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "merchant.pdf": [
     "nl",
@@ -6498,7 +6965,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "merchant.sheets": [
     "nl",
@@ -6510,7 +6978,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.leaveReviewTrustpilot": [
     "nl",
@@ -6522,7 +6991,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.correctionButton": [
     "nl",
@@ -6534,7 +7004,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.correctionLink": [
     "nl",
@@ -6546,7 +7017,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.vatId": [
     "nl",
@@ -6558,7 +7030,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "chat.welcome": [
     "nl",
@@ -6570,7 +7043,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "chat.supportRequested": [
     "nl",
@@ -6582,7 +7056,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.multipleOrdersInfo": [
     "nl",
@@ -6594,7 +7069,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.promotionalCtaTitle": [
     "nl",
@@ -6606,7 +7082,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.promotionalCtaButton": [
     "nl",
@@ -6618,7 +7095,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.promotionalSaleBalance": [
     "nl",
@@ -6630,7 +7108,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.promotionalSaleCode": [
     "nl",
@@ -6642,7 +7121,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.promotionalSaleSubject": [
     "nl",
@@ -6654,7 +7134,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.promotionalSaleGreeting": [
     "nl",
@@ -6666,7 +7147,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.promotionalSaleCredited": [
     "nl",
@@ -6678,7 +7160,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.promotionalSaleKeepSharing": [
     "nl",
@@ -6690,7 +7173,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_email.subject": [
     "nl",
@@ -6702,7 +7186,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_email.saleMade": [
     "nl",
@@ -6714,7 +7199,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_email.hello": [
     "nl",
@@ -6726,7 +7212,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_email.playlistPurchased": [
     "nl",
@@ -6738,7 +7225,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_email.credited": [
     "nl",
@@ -6750,7 +7238,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_email.totalBalance": [
     "nl",
@@ -6762,7 +7251,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_email.yourDiscountCode": [
     "nl",
@@ -6774,7 +7264,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_email.keepSharing": [
     "nl",
@@ -6786,7 +7277,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_email.viewPlaylist": [
     "nl",
@@ -6798,7 +7290,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_email.managePlaylist": [
     "nl",
@@ -6810,7 +7303,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_email.clickHere": [
     "nl",
@@ -6822,7 +7316,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_email.thanks": [
     "nl",
@@ -6834,7 +7329,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_email.team": [
     "nl",
@@ -6846,7 +7342,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.subject": [
     "nl",
@@ -6858,7 +7355,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.hello": [
     "nl",
@@ -6870,7 +7368,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.congratulations": [
     "nl",
@@ -6882,7 +7381,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.playlistLive": [
     "nl",
@@ -6894,7 +7394,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.earnInfo": [
     "nl",
@@ -6906,7 +7407,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.yourDiscountCode": [
     "nl",
@@ -6918,7 +7420,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.discountCodeHelp": [
     "nl",
@@ -6930,7 +7433,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.shareTitle": [
     "nl",
@@ -6942,7 +7446,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.shareDescription": [
     "nl",
@@ -6954,7 +7459,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.shareLink": [
     "nl",
@@ -6966,7 +7472,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.shareText": [
     "nl",
@@ -6978,7 +7485,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.shareOnWhatsApp": [
     "nl",
@@ -6990,7 +7498,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.shareOnFacebook": [
     "nl",
@@ -7002,7 +7511,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.shareOnTwitter": [
     "nl",
@@ -7014,7 +7524,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.viewSetup": [
     "nl",
@@ -7026,7 +7537,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.thanks": [
     "nl",
@@ -7038,7 +7550,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.team": [
     "nl",
@@ -7050,7 +7563,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "promotional_approved.shareOnInstagram": [
     "nl",
@@ -7062,7 +7576,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.promotionalCtaSubtitle": [
     "nl",
@@ -7074,7 +7589,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.orderShipped": [
     "nl",
@@ -7086,7 +7602,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.sendToPrinterMailSubject": [
     "nl",
@@ -7098,7 +7615,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.printingStarted": [
     "nl",
@@ -7110,7 +7628,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.reviewMailSubject": [
     "nl",
@@ -7122,7 +7641,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.reviewRequest": [
     "nl",
@@ -7134,7 +7654,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.quantity": [
     "nl",
@@ -7146,7 +7667,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.unitPriceExclVAT": [
     "nl",
@@ -7158,7 +7680,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.totalExclVAT": [
     "nl",
@@ -7170,7 +7693,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.subtotalExclVAT": [
     "nl",
@@ -7182,7 +7706,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.vat": [
     "nl",
@@ -7194,7 +7719,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.over": [
     "nl",
@@ -7206,7 +7732,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.shipping": [
     "nl",
@@ -7218,7 +7745,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.discount": [
     "nl",
@@ -7230,7 +7758,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.volumeDiscount": [
     "nl",
@@ -7242,7 +7771,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "invoice.discountCode": [
     "nl",
@@ -7254,7 +7784,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "customer_pincode.subject": [
     "nl",
@@ -7266,7 +7797,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "customer_pincode.greeting": [
     "nl",
@@ -7278,7 +7810,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "customer_pincode.intro": [
     "nl",
@@ -7290,7 +7823,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "customer_pincode.yourCode": [
     "nl",
@@ -7302,7 +7836,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "customer_pincode.codeExpires": [
     "nl",
@@ -7314,7 +7849,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "customer_pincode.instructions": [
     "nl",
@@ -7326,7 +7862,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "customer_pincode.ignoreMessage": [
     "nl",
@@ -7338,7 +7875,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "customer_pincode.thanks": [
     "nl",
@@ -7350,7 +7888,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "customer_pincode.team": [
     "nl",
@@ -7362,7 +7901,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "customer_pincode.allRightsReserved": [
     "nl",
@@ -7374,7 +7914,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "customer_pincode.visitWebsite": [
     "nl",
@@ -7386,7 +7927,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "customer_pincode.contactSupport": [
     "nl",
@@ -7398,7 +7940,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "bingo_pdf.title": [
     "nl",
@@ -7410,7 +7953,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "bingo_pdf.footerBranding": [
     "nl",
@@ -7422,7 +7966,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "bingo_pdf.footerGenerator": [
     "nl",
@@ -7434,7 +7979,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "bingo_pdf.bingoCardsFilename": [
     "nl",
@@ -7446,7 +7992,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "bingo_pdf.hostCardsFilename": [
     "nl",
@@ -7458,7 +8005,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "bingo_pdf.roundInfo": [
     "nl",
@@ -7470,7 +8018,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "forgot_password_pincode.subject": [
     "nl",
@@ -7482,7 +8031,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "forgot_password_pincode.greeting": [
     "nl",
@@ -7494,7 +8044,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "forgot_password_pincode.intro": [
     "nl",
@@ -7506,7 +8057,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "forgot_password_pincode.yourCode": [
     "nl",
@@ -7518,7 +8070,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "forgot_password_pincode.codeExpires": [
     "nl",
@@ -7530,7 +8083,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "forgot_password_pincode.instructions": [
     "nl",
@@ -7542,7 +8096,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "forgot_password_pincode.ignoreMessage": [
     "nl",
@@ -7554,7 +8109,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "forgot_password_pincode.thanks": [
     "nl",
@@ -7566,7 +8122,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "forgot_password_pincode.team": [
     "nl",
@@ -7578,7 +8135,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "forgot_password_pincode.allRightsReserved": [
     "nl",
@@ -7590,7 +8148,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "forgot_password_pincode.visitWebsite": [
     "nl",
@@ -7602,7 +8161,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "forgot_password_pincode.contactSupport": [
     "nl",
@@ -7614,7 +8174,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.bingoSectionTitle": [
     "nl",
@@ -7626,7 +8187,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.bingoSectionDescription": [
     "nl",
@@ -7638,7 +8200,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.bingoDownloadButton": [
     "nl",
@@ -7650,7 +8213,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.bingoMoreInfo": [
     "nl",
@@ -7662,7 +8226,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "quiz.yearQuestion": [
     "nl",
@@ -7674,7 +8239,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "quiz.artistQuestion": [
     "nl",
@@ -7686,7 +8252,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "quiz.missingWordQuestion": [
     "nl",
@@ -7698,7 +8265,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "quiz.releaseOrderQuestion": [
     "nl",
@@ -7710,7 +8278,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "quiz.decadeQuestion": [
     "nl",
@@ -7722,7 +8291,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "quiz.titleQuestion": [
     "nl",
@@ -7734,7 +8304,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.gamesSectionTitle": [
     "nl",
@@ -7746,7 +8317,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.gamesSectionDescription": [
     "nl",
@@ -7758,7 +8330,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.gamesBingoTitle": [
     "nl",
@@ -7770,7 +8343,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.gamesBingoDesc": [
     "nl",
@@ -7782,7 +8356,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.gamesQuizTitle": [
     "nl",
@@ -7794,7 +8369,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.gamesQuizDesc": [
     "nl",
@@ -7806,7 +8382,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.gamesGoToAccount": [
     "nl",
@@ -7818,7 +8395,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.gamesMoreInfo": [
     "nl",
@@ -7830,7 +8408,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.gamesTimelineTitle": [
     "nl",
@@ -7842,7 +8421,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "mail.gamesTimelineDesc": [
     "nl",
@@ -7854,7 +8434,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "howto.title": [
     "nl",
@@ -7866,7 +8447,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "howto.subtitle": [
     "nl",
@@ -7878,7 +8460,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "howto.rulesTitle": [
     "nl",
@@ -7890,7 +8473,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "howto.rule1": [
     "nl",
@@ -7902,7 +8486,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "howto.rule2": [
     "nl",
@@ -7914,7 +8499,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "howto.rule3": [
     "nl",
@@ -7926,7 +8512,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "howto.rule4": [
     "nl",
@@ -7938,7 +8525,8 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ],
   "howto.rule5": [
     "nl",
@@ -7950,6 +8538,7 @@
     "pl",
     "jp",
     "cn",
-    "sv"
+    "sv",
+    "no"
   ]
 }

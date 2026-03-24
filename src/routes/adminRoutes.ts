@@ -32,6 +32,7 @@ import { ChatGPT } from '../chatgpt';
 import Mail from '../mail';
 import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
+import Translation from '../translation';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
 import path from 'path';
 import fs from 'fs';
@@ -4637,6 +4638,30 @@ export default async function adminRoutes(
         userGroups,
         displayName: user.displayName || '',
         email: user.email,
+      });
+    }
+  );
+
+  // Translate empty language fields across all models (fire-and-forget)
+  fastify.post(
+    '/admin/translate-fields',
+    getAuthHandler(['admin']),
+    async (request: any, reply) => {
+      const { locale } = request.body as { locale: string };
+      const translation = new Translation();
+
+      if (!locale || locale === 'en' || !translation.isValidLocale(locale)) {
+        return reply.status(400).send({ success: false, error: 'Invalid locale' });
+      }
+
+      // Fire and forget — progress is logged to stdout
+      translation.translateEmptyFields(locale).catch((err) => {
+        logger.log(color.red.bold(`[translate-fields] Fatal error: ${err.message}`));
+      });
+
+      return reply.send({
+        success: true,
+        message: `Translation to ${translation.getLanguageName(locale)} started in background. Check server logs for progress.`,
       });
     }
   );
