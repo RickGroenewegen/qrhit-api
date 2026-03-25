@@ -280,6 +280,15 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         // Use playlist template if set, otherwise use request template
         const template = playlist.template || request.params.template;
 
+        // Load how-to card translations if enabled
+        let howtoTranslations: Record<string, string> | null = null;
+        if (php[0].addHowToCard) {
+          howtoTranslations = await translation.getTranslationsByPrefix(
+            php[0].addHowToCardLocale || 'en',
+            'howto'
+          );
+        }
+
         await reply.view(`pdf_${template}.ejs`, {
           subdir,
           payment,
@@ -290,6 +299,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           eco,
           emptyPages,
           batchNumber,
+          startIndex,
+          howtoTranslations,
           getYearFontSize,
           getGoogleFontWeights,
         });

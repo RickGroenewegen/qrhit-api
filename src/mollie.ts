@@ -820,6 +820,9 @@ class Mollie {
             // Bingo
             gamesEnabled: true,
             appleStoreFront: true,
+            // How-to card
+            addHowToCard: true,
+            addHowToCardLocale: true,
             playlist: {
               select: {
                 name: true,

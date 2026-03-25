@@ -592,7 +592,7 @@
   "mail.gamesGoToAccount": "Aller à Mon Compte",
   "mail.gamesMoreInfo": "Les deux jeux sont inclus avec ton add-on QRGames ! Crée bingo et quiz illimités depuis ton compte.",
   "mail.gamesTimelineTitle": "Frise musicale",
-  "mail.gamesTimelineDesc": "Un jeu solo — range les chansons dans l’ordre en scannant les QR codes et en écoutant.",
+  "mail.gamesTimelineDesc": "Solo — scanne les QR, écoute et range les chansons par année.",
   "mail.boxUpgrade.subject": "Ta Gift Box pour '{{ playlist }}' est en route !",
   "mail.boxUpgrade.greeting": "Salut",
   "mail.boxUpgrade.body": "Bonne nouvelle ! Ta commande de Gift Box pour ta playlist est confirmée. On envoie ton design à l’imprimeur et ça part bientôt chez toi.",
@@ -612,5 +612,14 @@
   "mail.boxUpgradeGiftBox": "Gift Box",
   "mail.boxUpgradeShipping": "Livraison",
   "mail.boxUpgradeTotal": "Total",
-  "mail.boxUpgradeThankYou": "Ta Gift Box personnalisée est en impression et sera envoyée à l’adresse ci-dessous. Des questions ? Écris-nous à info@qrsong.io"
+  "mail.boxUpgradeThankYou": "Ta Gift Box personnalisée est en impression et sera envoyée à l’adresse ci-dessous. Des questions ? Écris-nous à info@qrsong.io",
+  "howto.title": "Comment jouer",
+  "howto.subtitle": "QRSong! Jeu musical",
+  "howto.rulesTitle": "Les règles :",
+  "howto.rule1": "Chaque joueur commence avec une carte (année visible) pour débuter sa timeline.",
+  "howto.rule2": "Un DJ (ou joueur) scanne un QR avec l’appli QRSong! et une chanson démarre.",
+  "howto.rule3": "Devine l’année et place la carte à gauche (plus tôt) ou à droite (plus tard) dans ta timeline.",
+  "howto.rule4": "Retourne la carte. L’année colle ? Garde-la. Faux ? Retire-la.",
+  "howto.rule5": "Le premier à avoir 10 cartes dans sa timeline gagne !",
+  "howto.winner": "Le premier à 10 cartes gagne !"
 }

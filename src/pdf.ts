@@ -423,17 +423,18 @@ class PDF {
     subdir: string,
     eco: boolean = false,
     printerType: string,
-    itemIndex?: number
+    itemIndex?: number,
+    addHowToCard?: boolean
   ): Promise<string> {
     // Determine provider based on payment email
     const useLambda = true; // payment.email === 'west14@gmail.com';
 
     if (useLambda) {
       this.logger.log(color.blue.bold('Using Lambda PDF provider'));
-      return this.generatePDFViaLambda(filename, playlist, payment, template, subdir, eco, printerType, itemIndex);
+      return this.generatePDFViaLambda(filename, playlist, payment, template, subdir, eco, printerType, itemIndex, addHowToCard);
     } else {
       this.logger.log(color.blue.bold('Using ConvertAPI PDF provider'));
-      return this.generatePDFViaConvertApi(filename, playlist, payment, template, subdir, eco, printerType, itemIndex);
+      return this.generatePDFViaConvertApi(filename, playlist, payment, template, subdir, eco, printerType, itemIndex, addHowToCard);
     }
   }
 
@@ -448,7 +449,8 @@ class PDF {
     subdir: string,
     eco: boolean = false,
     printerType: string,
-    itemIndex?: number
+    itemIndex?: number,
+    addHowToCard?: boolean
   ): Promise<string> {
     const numberOfTracks = playlist.numberOfTracks;
 
@@ -462,7 +464,10 @@ class PDF {
 
     const itemsPerPage = isDigitalTemplate ? 6 : 1;
     const pagesPerTrack = isDigitalTemplate ? 1 : 2;
-    const totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
+    let totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
+    if (addHowToCard && !isDigitalTemplate) {
+      totalPages += 2;
+    }
     const maxPagesPerPDF = 100;
 
     let ecoInt = eco ? 1 : 0;
@@ -602,7 +607,8 @@ class PDF {
     subdir: string,
     eco: boolean = false,
     printerType: string,
-    itemIndex?: number
+    itemIndex?: number,
+    addHowToCard?: boolean
   ): Promise<string> {
     const numberOfTracks = playlist.numberOfTracks;
 
@@ -617,7 +623,10 @@ class PDF {
     // Calculate chunking parameters
     const itemsPerPage = isDigitalTemplate ? 6 : 1;
     const pagesPerTrack = isDigitalTemplate ? 1 : 2;
-    const totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
+    let totalPages = Math.ceil(numberOfTracks / itemsPerPage) * pagesPerTrack;
+    if (addHowToCard && !isDigitalTemplate) {
+      totalPages += 2;
+    }
     const maxPagesPerPDF = 100; // 50 tracks for printer templates (same as convertAPI)
 
     let ecoInt = eco ? 1 : 0;

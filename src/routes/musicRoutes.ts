@@ -397,6 +397,10 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       td = result.data.tidalLink || null;
       st = result.data.st || null;
     }
+    // Ensure link is never null/empty so older app versions don't discard the response
+    if (!link && (ym || am || dz || td || az || yt)) {
+      link = '?';
+    }
     const useSpotifyRemote = true; // Default value
     return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, st };
   });
@@ -437,6 +441,10 @@ export default async function musicRoutes(fastify: FastifyInstance) {
       if (am && storefront) {
         am = await appleMusicProvider.resolveSongToStorefront(am, storefront);
       }
+    }
+    // Ensure link is never null/empty so older app versions don't discard the response
+    if (!link && (ym || am || dz || td || az || yt)) {
+      link = '?';
     }
     const useSpotifyRemote = true; // Default value
     return { link, yt, ym, am, az, dz, td, r: useSpotifyRemote, t, st };

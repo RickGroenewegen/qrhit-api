@@ -856,6 +856,9 @@ class PrintEnBind {
     playlistItem: any = null
   ): Promise<any> {
     let numberOfPages = numberOfTracks * 2;
+    if (item.addHowToCard) {
+      numberOfPages += 2;
+    }
 
     if (numberOfPages > 2000) {
       numberOfPages = 2000;

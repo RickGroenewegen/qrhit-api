@@ -14,6 +14,7 @@ import { ApiResult } from '../interfaces/ApiResult';
 import Cache from '../cache';
 import Logger from '../logger';
 import Utils from '../utils';
+import Translation from '../translation';
 
 // Apple Music API base URL
 const APPLE_MUSIC_API_BASE = 'https://api.music.apple.com/v1';
@@ -27,20 +28,7 @@ const CACHE_TTL_SEARCH = 3600; // 1 hour
 // No TTL for playlist/tracks cache - matches Spotify behavior
 
 // Map frontend locale codes to Apple Music storefront country codes
-const LOCALE_TO_STOREFRONT: Record<string, string> = {
-  'en': 'us',
-  'nl': 'nl',
-  'de': 'de',
-  'fr': 'fr',
-  'es': 'es',
-  'it': 'it',
-  'pt': 'pt',
-  'pl': 'pl',
-  'jp': 'jp',
-  'cn': 'cn',
-  'sv': 'se',
-};
-
+const LOCALE_TO_STOREFRONT = Translation.LOCALE_STOREFRONTS;
 const DEFAULT_STOREFRONT = 'nl';
 
 /**

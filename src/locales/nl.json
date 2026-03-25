@@ -592,7 +592,7 @@
   "mail.gamesGoToAccount": "Ga naar Mijn Account",
   "mail.gamesMoreInfo": "Beide spellen zitten bij je QRGames! add-on. Maak onbeperkt bingo en quizzen vanuit je account.",
   "mail.gamesTimelineTitle": "Muziek Tijdlijn",
-  "mail.gamesTimelineDesc": "Een singleplayer spel — zet nummers op volgorde door QR-codes te scannen en te luisteren.",
+  "mail.gamesTimelineDesc": "Solo spel — scan QR-codes, luister en zet liedjes op volgorde van jaar.",
   "mail.boxUpgrade.subject": "Je Gift Box voor '{{ playlist }}' is onderweg!",
   "mail.boxUpgrade.greeting": "Hoi",
   "mail.boxUpgrade.body": "Goed nieuws! Je Gift Box-bestelling voor je playlist is bevestigd. We sturen je ontwerp naar de drukker en het wordt snel verzonden.",
@@ -612,5 +612,13 @@
   "mail.boxUpgradeGiftBox": "Gift Box",
   "mail.boxUpgradeShipping": "Verzending",
   "mail.boxUpgradeTotal": "Totaal",
-  "mail.boxUpgradeThankYou": "Je custom Gift Box wordt gedrukt en verzonden naar het onderstaande adres. Vragen? Mail ons op info@qrsong.io"
+  "mail.boxUpgradeThankYou": "Je custom Gift Box wordt gedrukt en verzonden naar het onderstaande adres. Vragen? Mail ons op info@qrsong.io",
+  "howto.title": "Hoe speel je",
+  "howto.subtitle": "QRSong! Muziekspel",
+  "howto.rulesTitle": "De regels:",
+  "howto.rule1": "Iedereen begint met één kaart (jaartal boven) als start van hun tijdlijn.",
+  "howto.rule2": "Een DJ (of speler) scant een QR-code met de QRSong! app en een liedje speelt.",
+  "howto.rule3": "Raad het jaar en leg de kaart links (eerder) of rechts (later) in je tijdlijn.",
+  "howto.rule4": "Draai de kaart om. Past het jaar in je tijdlijn? Hou hem. Fout? Weg ermee.",
+  "howto.rule5": "Wie als eerste 10 kaarten op een rij heeft, wint!"
 }

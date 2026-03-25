@@ -32,6 +32,7 @@ import { ChatGPT } from '../chatgpt';
 import Mail from '../mail';
 import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
+import Translation from '../translation';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
 import path from 'path';
 import fs from 'fs';
@@ -1251,6 +1252,47 @@ export default async function adminRoutes(
       const result = await data.updateGamesEnabled(
         parseInt(paymentHasPlaylistId, 10),
         gamesEnabled
+      );
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
+  // Toggle addHowToCard for payment_has_playlist
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/howto-card',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentHasPlaylistId } = request.params;
+      const { addHowToCard, addHowToCardLocale } = request.body;
+
+      if (!paymentHasPlaylistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'PaymentHasPlaylist ID is required',
+        });
+        return;
+      }
+
+      if (typeof addHowToCard !== 'boolean') {
+        reply.status(400).send({
+          success: false,
+          error: 'addHowToCard must be a boolean',
+        });
+        return;
+      }
+
+      const result = await data.updateAddHowToCard(
+        parseInt(paymentHasPlaylistId, 10),
+        addHowToCard,
+        addHowToCardLocale
       );
 
       if (result.success) {
@@ -4596,6 +4638,30 @@ export default async function adminRoutes(
         userGroups,
         displayName: user.displayName || '',
         email: user.email,
+      });
+    }
+  );
+
+  // Translate empty language fields across all models (fire-and-forget)
+  fastify.post(
+    '/admin/translate-fields',
+    getAuthHandler(['admin']),
+    async (request: any, reply) => {
+      const { locale } = request.body as { locale: string };
+      const translation = new Translation();
+
+      if (!locale || locale === 'en' || !translation.isValidLocale(locale)) {
+        return reply.status(400).send({ success: false, error: 'Invalid locale' });
+      }
+
+      // Fire and forget — progress is logged to stdout
+      translation.translateEmptyFields(locale).catch((err) => {
+        logger.log(color.red.bold(`[translate-fields] Fatal error: ${err.message}`));
+      });
+
+      return reply.send({
+        success: true,
+        message: `Translation to ${translation.getLanguageName(locale)} started in background. Check server logs for progress.`,
       });
     }
   );

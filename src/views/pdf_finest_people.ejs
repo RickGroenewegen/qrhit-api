@@ -123,6 +123,9 @@
 </style>
 </head>
 <body>
+<% if (php.addHowToCard && startIndex === 0) { %>
+  <%- include('partials/howto_card') %>
+<% } %>
 <% tracks.forEach((track, index) => { %>
     <div class="card-front" style="<%= !eco && php.backgroundFrontType === 'solid' ? (php.useFrontGradient ? 'background: linear-gradient(' + (php.gradientFrontDegrees || 180) + 'deg, ' + (php.backgroundFrontColor || '#ffffff') + ' ' + Math.max(0, (php.gradientFrontPosition || 50) - 50) + '%, ' + (php.gradientFrontColor || '#ffffff') + ' ' + Math.min(100, (php.gradientFrontPosition || 50) + 50) + '%);' : 'background: ' + (php.backgroundFrontColor || '#ffffff') + ';') : '' %>">
         <% if (php.logo && php.logo.length) { %>

@@ -2,6 +2,7 @@ import OpenAI from 'openai';
 import PrismaInstance from './prisma';
 import Logger from './logger';
 import Cache from './cache';
+import Translation from './translation';
 import { color } from 'console-log-colors';
 import fs from 'fs';
 import path from 'path';
@@ -225,20 +226,7 @@ export class ChatService {
    * Translate content to a specific locale
    */
   public async translateToLocale(content: string, targetLocale: string): Promise<string> {
-    const localeNames: { [key: string]: string } = {
-      en: 'English',
-      de: 'German',
-      fr: 'French',
-      es: 'Spanish',
-      it: 'Italian',
-      pt: 'Portuguese',
-      pl: 'Polish',
-      sv: 'Swedish',
-      jp: 'Japanese',
-      cn: 'Chinese',
-    };
-
-    const targetLang = localeNames[targetLocale] || 'English';
+    const targetLang = Translation.LOCALE_NAMES[targetLocale] || 'English';
 
     try {
       const result = await this.openai.chat.completions.create({

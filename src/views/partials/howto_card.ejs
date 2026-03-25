@@ -1,0 +1,49 @@
+<!-- How-To Card - Front (uses back side styling) -->
+<div class="card-back" style="position: relative;">
+    <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
+        <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
+    <% } %>
+    <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100%; width: 100%; position: relative; z-index: 1; padding: 8mm;">
+        <div style="font-size: 7mm; font-weight: bold; color: <%= php.fontColor || '#000000' %>; text-align: center; line-height: 1.2;">
+            <%= howtoTranslations.title %>
+        </div>
+    </div>
+</div>
+<div style="page-break-after: always;"></div>
+<!-- How-To Card - Back (uses same styling as regular card backs) -->
+<div class="card-back" style="position: relative;">
+    <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
+        <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
+    <% } %>
+    <div style="display: flex; flex-direction: column; justify-content: center; height: 100%; width: 100%; position: relative; z-index: 1; box-sizing: border-box; padding: 8mm;">
+        <div style="font-size: 2.6mm; font-weight: bold; color: <%= php.fontColor || '#000000' %>; margin-bottom: 1.2mm;">
+            <%= howtoTranslations.rulesTitle %>
+        </div>
+
+        <div style="display: flex; align-items: flex-start; margin-bottom: 1mm;">
+            <div style="min-width: 2.8mm; height: 2.8mm; background: <%= php.fontColor || '#000000' %>; border-radius: 50%; color: <%= php.backgroundBackColor || '#ffffff' %>; font-size: 1.7mm; font-weight: bold; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; margin-right: 1.2mm; margin-top: 0.2mm;">1</div>
+            <div style="font-size: 1.9mm; color: <%= php.fontColor || '#000000' %>; line-height: 1.3;"><%= howtoTranslations.rule1 %></div>
+        </div>
+
+        <div style="display: flex; align-items: flex-start; margin-bottom: 1mm;">
+            <div style="min-width: 2.8mm; height: 2.8mm; background: <%= php.fontColor || '#000000' %>; border-radius: 50%; color: <%= php.backgroundBackColor || '#ffffff' %>; font-size: 1.7mm; font-weight: bold; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; margin-right: 1.2mm; margin-top: 0.2mm;">2</div>
+            <div style="font-size: 1.9mm; color: <%= php.fontColor || '#000000' %>; line-height: 1.3;"><%= howtoTranslations.rule2 %></div>
+        </div>
+
+        <div style="display: flex; align-items: flex-start; margin-bottom: 1mm;">
+            <div style="min-width: 2.8mm; height: 2.8mm; background: <%= php.fontColor || '#000000' %>; border-radius: 50%; color: <%= php.backgroundBackColor || '#ffffff' %>; font-size: 1.7mm; font-weight: bold; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; margin-right: 1.2mm; margin-top: 0.2mm;">3</div>
+            <div style="font-size: 1.9mm; color: <%= php.fontColor || '#000000' %>; line-height: 1.3;"><%= howtoTranslations.rule3 %></div>
+        </div>
+
+        <div style="display: flex; align-items: flex-start; margin-bottom: 1mm;">
+            <div style="min-width: 2.8mm; height: 2.8mm; background: <%= php.fontColor || '#000000' %>; border-radius: 50%; color: <%= php.backgroundBackColor || '#ffffff' %>; font-size: 1.7mm; font-weight: bold; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; margin-right: 1.2mm; margin-top: 0.2mm;">4</div>
+            <div style="font-size: 1.9mm; color: <%= php.fontColor || '#000000' %>; line-height: 1.3;"><%= howtoTranslations.rule4 %></div>
+        </div>
+
+        <div style="display: flex; align-items: flex-start;">
+            <div style="min-width: 2.8mm; height: 2.8mm; background: <%= php.fontColor || '#000000' %>; border-radius: 50%; color: <%= php.backgroundBackColor || '#ffffff' %>; font-size: 1.7mm; font-weight: bold; display: flex; align-items: center; justify-content: center; font-family: Arial, sans-serif; margin-right: 1.2mm; margin-top: 0.2mm;">5</div>
+            <div style="font-size: 1.9mm; color: <%= php.fontColor || '#000000' %>; line-height: 1.3; font-weight: bold;"><%= howtoTranslations.rule5 %></div>
+        </div>
+    </div>
+</div>
+<div style="page-break-after: always;"></div>

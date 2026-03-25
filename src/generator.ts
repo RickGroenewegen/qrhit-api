@@ -799,7 +799,8 @@ class Generator {
                       payment.qrSubDir,
                       false,
                       playlist.printerType || 'printnbind',
-                      item.index
+                      item.index,
+                      playlist.addHowToCard || false
                     )
                   : Promise.resolve(''),
               ]);

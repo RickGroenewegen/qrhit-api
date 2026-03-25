@@ -318,6 +318,7 @@ model genre {
   name_jp   String
   name_cn   String     @default("")
   name_sv   String     @default("")
+  name_no   String     @default("")
   createdAt DateTime   @default(now())
   updatedAt DateTime   @updatedAt
   Playlist  Playlist[]
@@ -344,6 +345,7 @@ model Playlist {
   description_jp         String?              @db.Text
   description_cn         String?              @db.Text
   description_sv         String?              @db.Text
+  description_no         String?              @db.Text
   createdAt              DateTime             @default(now())
   updatedAt              DateTime             @updatedAt
   featured               Boolean              @default(false)
@@ -664,6 +666,8 @@ model PaymentHasPlaylist {
   boxBackText              String?                  @db.Text
   boxBackSelectedFont      String?                  @default("Arial, sans-serif")
   boxBackSelectedFontSize  String?                  @default("14px")
+  addHowToCard             Boolean                  @default(false) // Whether to include a how-to explanation card as first card in printer PDF
+  addHowToCardLocale       String                   @default("en") @db.VarChar(5) // Locale for how-to card translations
   appleStoreFront          String?                  @db.VarChar(5) // Apple Music storefront country code (e.g. "nl", "us")
   orderType                OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                    PaymentHasPlaylistItem[]
@@ -795,6 +799,7 @@ model TrustPilot {
   title_jp    String
   title_cn    String
   title_sv    String   @default("")
+  title_no    String   @default("")
   message_en  String   @db.Text
   message_nl  String   @db.Text
   message_de  String   @db.Text
@@ -806,6 +811,7 @@ model TrustPilot {
   message_jp  String   @db.Text
   message_cn  String   @db.Text
   message_sv  String   @default("") @db.Text
+  message_no  String   @default("") @db.Text
   rating      Float
   image       String
   locale      String?
@@ -876,6 +882,7 @@ model CompanyList {
   description_jp          String    @default("")
   description_cn          String    @default("")
   description_sv          String    @default("")
+  description_no          String    @default("")
   slug                    String
   background              String?
   background2             String?
@@ -1027,6 +1034,7 @@ model Blog {
   slug_jp            String?  @unique
   slug_cn            String?  @unique
   slug_sv            String?  @unique
+  slug_no            String?  @unique
   active             Boolean  @default(false)
   image              String?
   image_instructions String?  @db.Text
@@ -1041,6 +1049,7 @@ model Blog {
   title_jp           String
   title_cn           String
   title_sv           String   @default("")
+  title_no           String   @default("")
   content_en         String   @db.Text
   content_nl         String   @db.Text
   content_de         String   @db.Text
@@ -1052,6 +1061,7 @@ model Blog {
   content_jp         String   @db.Text
   content_cn         String   @db.Text
   content_sv         String   @default("") @db.Text
+  content_no         String   @default("") @db.Text
   summary_en         String?  @db.Text
   summary_nl         String?  @db.Text
   summary_de         String?  @db.Text
@@ -1063,6 +1073,7 @@ model Blog {
   summary_jp         String?  @db.Text
   summary_cn         String?  @db.Text
   summary_sv         String?  @db.Text
+  summary_no         String?  @db.Text
   createdAt          DateTime @default(now())
   updatedAt          DateTime @updatedAt
 
