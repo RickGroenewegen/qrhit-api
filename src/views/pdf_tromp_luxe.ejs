@@ -6,7 +6,7 @@
 <!-- Preload Google Fonts -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Montserrat:wght@300&display=block" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Oswald:wght@300&display=block" rel="stylesheet">
 <style>
     body {
         font-family: 'Bebas Neue', Arial, sans-serif;
@@ -122,17 +122,17 @@
         <img class="background-image-back" src="<%= process.env['API_URI'] %>/assets/images/clients/tromp_luxe/<%= backgroundImage %>" alt="Card Background">
         <!-- Safe area container to prevent text from bleeding into trim area -->
         <div style="position: absolute; top: 5mm; left: 5mm; right: 5mm; bottom: 5mm; display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1;">
-            <div class="text" style="font-family: 'Montserrat', Arial, sans-serif; font-weight: 300; font-size: 17px; padding: 0 2mm; color: #000000; overflow-wrap: break-word; word-wrap: break-word;">
+            <div class="text" style="font-family: 'Oswald', Arial, sans-serif; font-weight: 300; font-size: 17px; padding: 0 2mm; color: #000000; overflow-wrap: break-word; word-wrap: break-word;">
                 <%= track.name %>
                 <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
-                    <div style="font-family: 'Montserrat', Arial, sans-serif; font-weight: 300; font-size: 10px; color: #000000; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
+                    <div style="font-family: 'Oswald', Arial, sans-serif; font-weight: 300; font-size: 10px; color: #000000; margin-top: 1mm;"><%- track.extraNameAttribute %></div>
                 <% } %>
             </div>
             <div class="text" style="margin-top: 3mm; font-family: 'Bebas Neue', Arial, sans-serif; font-size: 70px; padding: 0 2mm; color: #000000;"><%= track.year %></div>
-            <div class="text" style="margin-top: 3mm; font-family: 'Montserrat', Arial, sans-serif; font-weight: 300; font-size: 17px; padding: 0 2mm; color: #000000; overflow-wrap: break-word; word-wrap: break-word;">
+            <div class="text" style="margin-top: 3mm; font-family: 'Oswald', Arial, sans-serif; font-weight: 300; font-size: 17px; padding: 0 2mm; color: #000000; overflow-wrap: break-word; word-wrap: break-word;">
                 <%= track.artist %>
                 <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
-                    <div style="font-family: 'Montserrat', Arial, sans-serif; font-weight: 300; font-size: 10px; color: #000000; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
+                    <div style="font-family: 'Oswald', Arial, sans-serif; font-weight: 300; font-size: 10px; color: #000000; margin-top: 1mm;"><%= track.extraArtistAttribute %></div>
                 <% } %>
             </div>
         </div>
