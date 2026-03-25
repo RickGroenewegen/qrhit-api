@@ -86,7 +86,7 @@
 - **Provider:** Mollie Payments (European payment gateway)
 - **Payment Methods Supported:** 
   - Credit cards (Visa, Mastercard, AmEx)
-  - iDEAL (Dutch banking)
+  - iDEAL | Wero (Dutch banking)
   - PayPal
   - SEPA bank transfers
   - Apple Pay

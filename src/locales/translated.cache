@@ -284,21 +284,6 @@
     "sv",
     "no"
   ],
-  "invoice.ideal": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "hin",
-    "jp",
-    "cn",
-    "ru",
-    "sv",
-    "no"
-  ],
   "invoice.creditcard": [
     "nl",
     "de",
