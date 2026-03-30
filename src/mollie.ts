@@ -143,15 +143,14 @@ class Mollie {
         ORDER BY period DESC
       `);
 
-      // Query only upgrade-type games (initial games are already in payment totals)
+      // Count all games (initial + upgrade), but only sum upgrade prices (initial prices are already in payment totals)
       const gamesResults: any[] = await this.prisma.$queryRawUnsafe(`
         SELECT
           ${gamesDateExpr} as period,
           COUNT(*) as gamesAmount,
-          COALESCE(SUM(gp.totalPrice), 0) as gamesTotal
+          COALESCE(SUM(CASE WHEN gp.type = 'upgrade' THEN gp.totalPrice ELSE 0 END), 0) as gamesTotal
         FROM games_purchases gp
         WHERE gp.createdAt > '2024-12-05'
-          AND gp.type = 'upgrade'
         GROUP BY ${gamesDateExpr}
       `);
 
@@ -246,8 +245,18 @@ class Mollie {
       },
     });
 
-    // Query only upgrade-type games (initial games are already in payment totals)
-    const gamesByCountry = await this.prisma.gamesPurchase.groupBy({
+    // Count all games (initial + upgrade), but only sum upgrade prices (initial prices are already in payment totals)
+    const gamesByCountryCount = await this.prisma.gamesPurchase.groupBy({
+      by: ['countrycode'],
+      where: {
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+      },
+      _count: { _all: true },
+    });
+    const gamesByCountryTotal = await this.prisma.gamesPurchase.groupBy({
       by: ['countrycode'],
       where: {
         type: 'upgrade',
@@ -256,11 +265,14 @@ class Mollie {
           lte: endDate,
         },
       },
-      _count: { _all: true },
       _sum: { totalPrice: true },
     });
+    const gamesTotalMap = new Map(gamesByCountryTotal.map(g => [g.countrycode || 'Unknown', g._sum.totalPrice || 0]));
     const gamesMap = new Map<string, { amount: number; total: number }>(
-      gamesByCountry.map(g => [g.countrycode || 'Unknown', { amount: g._count._all, total: g._sum.totalPrice || 0 }])
+      gamesByCountryCount.map(g => {
+        const key = g.countrycode || 'Unknown';
+        return [key, { amount: g._count._all, total: gamesTotalMap.get(key) || 0 }];
+      })
     );
 
     const detailedReport = await Promise.all(
