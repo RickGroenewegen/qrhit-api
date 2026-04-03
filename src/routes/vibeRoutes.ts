@@ -2,6 +2,11 @@ import { FastifyInstance } from 'fastify';
 import { verifyToken } from '../auth';
 import Vibe from '../vibe';
 import Mollie from '../mollie';
+import AssetQueue from '../assetQueue';
+import PrismaInstance from '../prisma';
+import archiver from 'archiver';
+import * as fsPromises from 'fs/promises';
+import * as pathModule from 'path';
 
 export default async function vibeRoutes(
   fastify: FastifyInstance,
@@ -1897,6 +1902,266 @@ export default async function vibeRoutes(
         });
       } catch (error) {
         console.error('Error importing companies:', error);
+        reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  // ============================================
+  // Company Assets
+  // ============================================
+
+  // Generate company assets
+  fastify.post(
+    '/vibe/companies/:companyId/assets/generate',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+        if (isNaN(companyId)) {
+          reply.status(400).send({ error: 'Invalid company ID' });
+          return;
+        }
+
+        let label = '';
+        let instructions = '';
+        const brandingFilePaths: string[] = [];
+
+        // Handle multipart form data
+        const contentType = request.headers['content-type'] || '';
+        if (!contentType.includes('multipart/form-data')) {
+          reply.status(400).send({ error: 'Multipart form data required' });
+          return;
+        }
+
+        const prisma = PrismaInstance.getInstance();
+
+        // Create the asset record first to get the ID for the directory
+        // Upload branding files to a shared directory per timestamp
+        const publicDir = process.env['PUBLIC_DIR'];
+        const uploadBatch = Date.now().toString();
+        const uploadDir = pathModule.join(
+          publicDir || '',
+          'companydata',
+          'assets',
+          companyId.toString(),
+          'branding_' + uploadBatch
+        );
+        await fsPromises.mkdir(uploadDir, { recursive: true });
+
+        const parts = request.parts();
+        for await (const part of parts) {
+          if (part.type === 'file') {
+            const filename = `branding_${Date.now()}_${part.filename}`;
+            const filePath = pathModule.join(uploadDir, filename);
+            const buffer = await part.toBuffer();
+            await fsPromises.writeFile(filePath, buffer);
+            brandingFilePaths.push(filePath);
+          } else if (part.fieldname === 'label') {
+            label = part.value || '';
+          } else if (part.fieldname === 'instructions') {
+            instructions = part.value || '';
+          }
+        }
+
+        if (brandingFilePaths.length === 0) {
+          reply.status(400).send({ error: 'At least one branding image is required' });
+          return;
+        }
+
+        const brandingFilenames = JSON.stringify(brandingFilePaths.map(p => pathModule.basename(p)));
+        const assetQueue = AssetQueue.getInstance();
+        const providers: ('gemini' | 'openai')[] = ['gemini', 'openai'];
+        const assets: any[] = [];
+
+        for (const provider of providers) {
+          const asset = await prisma.companyAsset.create({
+            data: {
+              companyId,
+              label: label ? `${label} (${provider})` : provider,
+              llmProvider: provider,
+              instructions: instructions || null,
+              brandingImages: brandingFilenames,
+              status: 'pending',
+              progress: 0,
+            },
+          });
+
+          const jobId = await assetQueue.queueAssetJob({
+            companyAssetId: asset.id,
+            companyId,
+            brandingImagePaths: brandingFilePaths,
+            instructions: instructions || undefined,
+            llmProvider: provider,
+          });
+
+          await prisma.companyAsset.update({
+            where: { id: asset.id },
+            data: { jobId },
+          });
+
+          assets.push({ id: asset.id, status: 'pending', jobId, llmProvider: provider });
+        }
+
+        reply.send({ success: true, assets });
+      } catch (error) {
+        console.error('Error generating company assets:', error);
+        reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  // Get all company assets
+  fastify.get(
+    '/vibe/companies/:companyId/assets',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+        if (isNaN(companyId)) {
+          reply.status(400).send({ error: 'Invalid company ID' });
+          return;
+        }
+
+        const prisma = PrismaInstance.getInstance();
+        const assets = await prisma.companyAsset.findMany({
+          where: { companyId },
+          orderBy: { createdAt: 'desc' },
+        });
+
+        // Parse JSON fields for the response
+        const parsed = assets.map((a: any) => ({
+          id: a.id,
+          companyId: a.companyId,
+          label: a.label,
+          llmProvider: a.llmProvider,
+          status: a.status,
+          progress: a.progress,
+          images: a.images ? JSON.parse(a.images) : null,
+          errorMessage: a.errorMessage,
+          createdAt: a.createdAt,
+        }));
+
+        reply.send({ success: true, assets: parsed });
+      } catch (error) {
+        console.error('Error fetching company assets:', error);
+        reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  // Delete company asset
+  fastify.delete(
+    '/vibe/companies/:companyId/assets/:assetId',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+        const assetId = parseInt(request.params.assetId);
+        if (isNaN(companyId) || isNaN(assetId)) {
+          reply.status(400).send({ error: 'Invalid IDs' });
+          return;
+        }
+
+        const prisma = PrismaInstance.getInstance();
+        const asset = await prisma.companyAsset.findFirst({
+          where: { id: assetId, companyId },
+        });
+
+        if (!asset) {
+          reply.status(404).send({ error: 'Asset not found' });
+          return;
+        }
+
+        // Try to remove files on disk
+        const publicDir = process.env['PUBLIC_DIR'] || '';
+        const assetDir = pathModule.join(
+          publicDir,
+          'companydata',
+          'assets',
+          companyId.toString(),
+          assetId.toString()
+        );
+        try {
+          await fsPromises.rm(assetDir, { recursive: true, force: true });
+        } catch {
+          // Ignore cleanup errors
+        }
+
+        await prisma.companyAsset.delete({ where: { id: assetId } });
+
+        reply.send({ success: true });
+      } catch (error) {
+        console.error('Error deleting company asset:', error);
+        reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  // Download company assets as ZIP
+  fastify.get(
+    '/vibe/companies/:companyId/assets/:assetId/download-zip',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+        const assetId = parseInt(request.params.assetId);
+        if (isNaN(companyId) || isNaN(assetId)) {
+          reply.status(400).send({ error: 'Invalid IDs' });
+          return;
+        }
+
+        const prisma = PrismaInstance.getInstance();
+        const asset = await prisma.companyAsset.findFirst({
+          where: { id: assetId, companyId },
+        });
+
+        if (!asset || asset.status !== 'completed' || !asset.images) {
+          reply.status(404).send({ error: 'Asset not found or not ready' });
+          return;
+        }
+
+        const images: string[] = JSON.parse(asset.images);
+        const publicDir = process.env['PUBLIC_DIR'] || '';
+        const assetDir = pathModule.join(
+          publicDir,
+          'companydata',
+          'assets',
+          companyId.toString(),
+          assetId.toString()
+        );
+
+        const zipName = `company_assets_${asset.label ? asset.label.replace(/[^a-zA-Z0-9]/g, '_') + '_' : ''}${assetId}.zip`;
+
+        // Build ZIP in memory to avoid CORS issues with raw streaming
+        const archive = archiver('zip', { zlib: { level: 9 } });
+        const chunks: Buffer[] = [];
+
+        archive.on('data', (chunk: Buffer) => chunks.push(chunk));
+
+        for (const filename of images) {
+          const filePath = pathModule.join(assetDir, filename);
+          try {
+            await fsPromises.access(filePath);
+            archive.file(filePath, { name: filename });
+          } catch {
+            // Skip missing files
+          }
+        }
+
+        await archive.finalize();
+
+        // Wait for all data
+        await new Promise<void>((resolve) => archive.on('end', resolve));
+
+        const zipBuffer = Buffer.concat(chunks);
+
+        reply
+          .header('Content-Type', 'application/zip')
+          .header('Content-Disposition', `attachment; filename="${zipName}"`)
+          .send(zipBuffer);
+      } catch (error) {
+        console.error('Error downloading company assets ZIP:', error);
         reply.status(500).send({ error: 'Internal server error' });
       }
     }

@@ -812,6 +812,7 @@ model Company {
   CompanyList      CompanyList[]
   User             User[]
   CompanyEvent     CompanyEvent[]
+  CompanyAsset     CompanyAsset[]
 
   @@map("companies")
 }
@@ -830,6 +831,27 @@ model CompanyEvent {
 
   @@index([companyId])
   @@map("company_events")
+}
+
+model CompanyAsset {
+  id             Int      @id @default(autoincrement())
+  companyId      Int
+  label          String?
+  status         String   @default("pending") // pending, generating, completed, failed
+  jobId          String?
+  images         String?  @db.Text // JSON array of generated image filenames
+  brandingImages String?  @db.Text // JSON array of uploaded branding image filenames
+  llmProvider    String   @default("gemini") // gemini or openai
+  instructions   String?  @db.Text // Extra manual instructions for the LLM
+  progress       Int      @default(0) // 0-7
+  errorMessage   String?  @db.Text
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  Company        Company  @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@map("company_assets")
 }
 
 model CompanyList {
