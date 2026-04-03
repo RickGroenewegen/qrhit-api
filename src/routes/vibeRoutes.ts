@@ -2133,28 +2133,24 @@ export default async function vibeRoutes(
 
         const zipName = `company_assets_${asset.label ? asset.label.replace(/[^a-zA-Z0-9]/g, '_') + '_' : ''}${assetId}.zip`;
 
-        // Build ZIP in memory to avoid CORS issues with raw streaming
-        const archive = archiver('zip', { zlib: { level: 9 } });
-        const chunks: Buffer[] = [];
+        // Build ZIP in memory
+        const zipBuffer = await new Promise<Buffer>((resolve, reject) => {
+          const archive = archiver('zip', { zlib: { level: 9 } });
+          const chunks: Buffer[] = [];
 
-        archive.on('data', (chunk: Buffer) => chunks.push(chunk));
+          archive.on('data', (chunk: Buffer) => chunks.push(chunk));
+          archive.on('end', () => resolve(Buffer.concat(chunks)));
+          archive.on('error', (err: Error) => reject(err));
 
-        for (const filename of images) {
-          const filePath = pathModule.join(assetDir, filename);
-          try {
-            await fsPromises.access(filePath);
-            archive.file(filePath, { name: filename });
-          } catch {
-            // Skip missing files
+          for (const filename of images) {
+            const filePath = pathModule.join(assetDir, filename);
+            if (require('fs').existsSync(filePath)) {
+              archive.file(filePath, { name: filename });
+            }
           }
-        }
 
-        await archive.finalize();
-
-        // Wait for all data
-        await new Promise<void>((resolve) => archive.on('end', resolve));
-
-        const zipBuffer = Buffer.concat(chunks);
+          archive.finalize();
+        });
 
         reply
           .header('Content-Type', 'application/zip')
