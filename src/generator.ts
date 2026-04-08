@@ -1604,6 +1604,9 @@ class Generator {
       height: 120,
     });
 
+    // Add 3mm bleed (extends page to 126x126mm, scales content into bleed area)
+    await this.pdf.addBleed(boxOutputPath, 3);
+
     await this.prisma.paymentHasPlaylist.update({
       where: { id: paymentHasPlaylistId },
       data: { boxFilename },
