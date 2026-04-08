@@ -33,6 +33,7 @@ import Mail from '../mail';
 import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
 import Translation from '../translation';
+import PostNL from '../postnl';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
 import path from 'path';
 import fs from 'fs';
@@ -64,6 +65,7 @@ export default async function adminRoutes(
   const prisma = PrismaInstance.getInstance();
   const promotional = Promotional.getInstance();
   const brokenLink = BrokenLink.getInstance();
+  const postnl = PostNL.getInstance();
   const logger = new Logger();
 
   // Create order (admin only)
@@ -4663,6 +4665,35 @@ export default async function adminRoutes(
         success: true,
         message: `Translation to ${translation.getLanguageName(locale)} started in background. Check server logs for progress.`,
       });
+    }
+  );
+
+  // Create PostNL shipment labels for selected companies
+  fastify.post(
+    '/admin/shipment-labels',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { companies } = request.body;
+
+      if (!companies || !Array.isArray(companies) || companies.length === 0) {
+        return reply.status(400).send({ error: 'No companies provided' });
+      }
+
+      const result = await postnl.createShipmentLabels(companies);
+
+      if (!result.success) {
+        if (result.errors) {
+          return reply.status(422).send({
+            error: 'Some companies have incomplete address data',
+            validationErrors: result.errors,
+          });
+        }
+        return reply.status(500).send({ error: result.error || 'Failed to create shipment labels' });
+      }
+
+      reply.header('Content-Type', 'application/pdf');
+      reply.header('Content-Disposition', `attachment; filename="shipment_labels_${Date.now()}.pdf"`);
+      return reply.send(result.pdfBuffer);
     }
   );
 }

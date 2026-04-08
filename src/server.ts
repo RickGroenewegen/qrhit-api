@@ -33,6 +33,7 @@ import ProgressWebSocketServer from './progress-websocket';
 import GeneratorQueue from './generatorQueue';
 import MusicFetchQueue from './musicfetchQueue';
 import ExcelQueue from './excelQueue';
+import AssetQueue from './assetQueue';
 import ExternalCardService from './externalCardService';
 
 interface QueryParameters {
@@ -181,6 +182,7 @@ class Server {
     await this.utils.createDir(`${publicDir}/excel`);
     await this.utils.createDir(`${publicDir}/avatars`);
     await this.utils.createDir(`${publicDir}/quiz_images`);
+    await this.utils.createDir(`${publicDir}/companydata/assets`);
     await this.utils.createDir(`${privateDir}/invoice`);
   }
 
@@ -216,11 +218,14 @@ class Server {
           const excelQueue = ExcelQueue.getInstance();
           excelQueue.startWorkers(2);
 
+          const assetQueue = AssetQueue.getInstance();
+          assetQueue.startWorkers(4);
+
           this.logger.log(
             color.blue.bold(
               `Queue workers initialized successfully: ${color.white.bold(
                 workerCount.toString()
-              )} Generator workers, ${color.white.bold('1')} MusicFetch worker, ${color.white.bold('2')} Excel workers`
+              )} Generator workers, ${color.white.bold('1')} MusicFetch worker, ${color.white.bold('2')} Excel workers, ${color.white.bold('1')} Asset worker`
             )
           );
         } catch (error) {
