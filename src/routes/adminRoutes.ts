@@ -1267,6 +1267,49 @@ export default async function adminRoutes(
     }
   );
 
+  // Update box design for payment_has_playlist (admin)
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/box-design',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const phpId = parseInt(request.params.paymentHasPlaylistId, 10);
+      if (isNaN(phpId)) {
+        return reply.status(400).send({ success: false, error: 'Invalid ID' });
+      }
+      try {
+        const d = request.body;
+        await prisma.paymentHasPlaylist.update({
+          where: { id: phpId },
+          data: {
+            boxFrontBackgroundType: d.boxFrontBackgroundType,
+            boxFrontBackground: d.boxFrontBackground,
+            boxFrontBackgroundColor: d.boxFrontBackgroundColor,
+            boxFrontLogo: d.boxFrontLogo,
+            boxFrontLogoScale: d.boxFrontLogoScale,
+            boxFrontLogoPositionX: d.boxFrontLogoPositionX,
+            boxFrontLogoPositionY: d.boxFrontLogoPositionY,
+            boxFrontEmoji: d.boxFrontEmoji,
+            boxBackBackgroundType: d.boxBackBackgroundType,
+            boxBackBackground: d.boxBackBackground,
+            boxBackBackgroundColor: d.boxBackBackgroundColor,
+            boxBackFontColor: d.boxBackFontColor,
+            boxBackUseGradient: d.boxBackUseGradient,
+            boxBackGradientColor: d.boxBackGradientColor,
+            boxBackGradientDegrees: d.boxBackGradientDegrees,
+            boxBackGradientPosition: d.boxBackGradientPosition,
+            boxBackOpacity: d.boxBackOpacity,
+            boxBackText: d.boxBackText,
+            boxBackSelectedFont: d.boxBackSelectedFont,
+            boxBackSelectedFontSize: d.boxBackSelectedFontSize,
+          },
+        });
+        reply.send({ success: true });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message });
+      }
+    }
+  );
+
   // Toggle addHowToCard for payment_has_playlist
   fastify.post(
     '/admin/playlist/:paymentHasPlaylistId/howto-card',

@@ -225,19 +225,15 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
    */
   fastify.get(
     '/api/box/design/:paymentHasPlaylistId',
-    getAuthHandler(['users']),
+    getAuthHandler(['users', 'admin']),
     async (request: any, reply: any) => {
       try {
         const phpId = parseInt(request.params.paymentHasPlaylistId);
         const userIdString = request.user?.userId;
+        const isAdmin = request.user?.role === 'admin';
 
         if (isNaN(phpId)) {
           return reply.status(400).send({ success: false, error: 'Invalid paymentHasPlaylistId' });
-        }
-
-        const user = await prisma.user.findUnique({ where: { userId: userIdString } });
-        if (!user) {
-          return reply.status(401).send({ success: false, error: 'User not found' });
         }
 
         const php = await prisma.paymentHasPlaylist.findUnique({
@@ -249,8 +245,12 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           return reply.status(404).send({ success: false, error: 'Not found' });
         }
 
-        if (php.payment.userId !== user.id) {
-          return reply.status(403).send({ success: false, error: 'Unauthorized' });
+        // Admins can access any playlist, users can only access their own
+        if (!isAdmin) {
+          const user = await prisma.user.findUnique({ where: { userId: userIdString } });
+          if (!user || php.payment.userId !== user.id) {
+            return reply.status(403).send({ success: false, error: 'Unauthorized' });
+          }
         }
 
         return reply.send({
