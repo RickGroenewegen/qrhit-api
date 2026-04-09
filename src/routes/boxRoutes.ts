@@ -219,6 +219,73 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
   );
 
   /**
+   * GET /api/box/design/:paymentHasPlaylistId
+   * Get saved box design for a playlist
+   * Requires authentication
+   */
+  fastify.get(
+    '/api/box/design/:paymentHasPlaylistId',
+    getAuthHandler(['users']),
+    async (request: any, reply: any) => {
+      try {
+        const phpId = parseInt(request.params.paymentHasPlaylistId);
+        const userIdString = request.user?.userId;
+
+        if (isNaN(phpId)) {
+          return reply.status(400).send({ success: false, error: 'Invalid paymentHasPlaylistId' });
+        }
+
+        const user = await prisma.user.findUnique({ where: { userId: userIdString } });
+        if (!user) {
+          return reply.status(401).send({ success: false, error: 'User not found' });
+        }
+
+        const php = await prisma.paymentHasPlaylist.findUnique({
+          where: { id: phpId },
+          include: { payment: true },
+        });
+
+        if (!php) {
+          return reply.status(404).send({ success: false, error: 'Not found' });
+        }
+
+        if (php.payment.userId !== user.id) {
+          return reply.status(403).send({ success: false, error: 'Unauthorized' });
+        }
+
+        return reply.send({
+          success: true,
+          design: {
+            boxFrontBackgroundType: php.boxFrontBackgroundType,
+            boxFrontBackground: php.boxFrontBackground,
+            boxFrontBackgroundColor: php.boxFrontBackgroundColor,
+            boxFrontLogo: php.boxFrontLogo,
+            boxFrontLogoScale: php.boxFrontLogoScale,
+            boxFrontLogoPositionX: php.boxFrontLogoPositionX,
+            boxFrontLogoPositionY: php.boxFrontLogoPositionY,
+            boxFrontEmoji: php.boxFrontEmoji,
+            boxBackBackgroundType: php.boxBackBackgroundType,
+            boxBackBackground: php.boxBackBackground,
+            boxBackBackgroundColor: php.boxBackBackgroundColor,
+            boxBackFontColor: php.boxBackFontColor,
+            boxBackUseGradient: php.boxBackUseGradient,
+            boxBackGradientColor: php.boxBackGradientColor,
+            boxBackGradientDegrees: php.boxBackGradientDegrees,
+            boxBackGradientPosition: php.boxBackGradientPosition,
+            boxBackOpacity: php.boxBackOpacity,
+            boxBackText: php.boxBackText,
+            boxBackSelectedFont: php.boxBackSelectedFont,
+            boxBackSelectedFontSize: php.boxBackSelectedFontSize,
+          },
+        });
+      } catch (error: any) {
+        logger.log(color.red.bold(`Error in GET /api/box/design: ${error.message}`));
+        return reply.status(500).send({ success: false, error: 'Failed to load box design' });
+      }
+    }
+  );
+
+  /**
    * POST /api/box/upgrade-payment
    * Create a Mollie payment to add a gift box to an existing physical order
    * Requires authentication
@@ -228,7 +295,8 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
     getAuthHandler(['users']),
     async (request: any, reply: any) => {
       try {
-        const { paymentHasPlaylistId, boxDesign, locale } = request.body;
+        const { paymentHasPlaylistId, boxDesign, locale, quantity } = request.body;
+        const boxQuantity = Math.max(1, Math.min(10, parseInt(quantity) || 1));
         const userIdString = request.user?.userId;
 
         if (!paymentHasPlaylistId || !boxDesign) {
@@ -309,13 +377,13 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           shipping = shippingResult?.cost || 0;
         }
 
-        const totalAmount = parseFloat((BOX_UPGRADE_PRICE + shipping).toFixed(2));
+        const totalAmount = parseFloat((BOX_UPGRADE_PRICE * boxQuantity + shipping).toFixed(2));
 
         // Save box design data and set boxQuantity
         await prisma.paymentHasPlaylist.update({
           where: { id: phpId },
           data: {
-            boxQuantity: 1,
+            boxQuantity,
             // Box front design
             boxFrontBackgroundType: boxDesign.boxFrontBackgroundType,
             boxFrontBackground: boxDesign.boxFrontBackground,
@@ -379,8 +447,11 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
             originalPaymentId: php.payment.paymentId,
             shippingCost: shipping.toString(),
             boxPrice: BOX_UPGRADE_PRICE.toString(),
+            quantity: boxQuantity.toString(),
           },
-          description: `Gift Box - ${playlistName}`,
+          description: boxQuantity > 1
+            ? `Gift Box (${boxQuantity}x) - ${playlistName}`
+            : `Gift Box - ${playlistName}`,
           redirectUrl: `${process.env['FRONTEND_URI']}/${userLocale}/my-account?box_enabled=1`,
           webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
           locale: mollieLocale,

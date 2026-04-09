@@ -594,6 +594,7 @@
 	"mail.boxUpgradeSentToPrinter": "Your Gift Box is being prepared for printing and will be shipped to your address.",
 	"mail.boxUpgradeOrderDetails": "Order details",
 	"mail.boxUpgradePlaylist": "Playlist",
+	"mail.boxUpgradeQuantity": "Quantity",
 	"mail.boxUpgradeGiftBox": "Gift Box",
 	"mail.boxUpgradeShipping": "Shipping",
 	"mail.boxUpgradeTotal": "Total",

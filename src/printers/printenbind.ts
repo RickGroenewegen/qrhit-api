@@ -947,8 +947,8 @@ class PrintEnBind {
     };
   }
 
-  public async createBoxUpgradeOrder(paymentHasPlaylistId: number): Promise<any> {
-    this.logger.log(color.blue.bold(`Starting box upgrade Print&Bind order for PHP ${paymentHasPlaylistId}`));
+  public async createBoxUpgradeOrder(paymentHasPlaylistId: number, quantity: number = 1): Promise<any> {
+    this.logger.log(color.blue.bold(`Starting box upgrade Print&Bind order for PHP ${paymentHasPlaylistId} (quantity: ${quantity})`));
 
     const php = await this.prisma.paymentHasPlaylist.findUnique({
       where: { id: paymentHasPlaylistId },
@@ -975,14 +975,14 @@ class PrintEnBind {
     // Add box insert card item (if PDF was generated)
     if (boxFileUrl) {
       this.logger.log(color.blue.bold(`Box insert card PDF: ${color.white.bold(boxFileUrl)}`));
-      items.push(this.createBoxOrderCardItem(boxFileUrl, php.playlist, 1));
+      items.push(this.createBoxOrderCardItem(boxFileUrl, php.playlist, quantity));
     } else {
       this.logger.log(color.yellow.bold(`No box insert card PDF found for PHP ${paymentHasPlaylistId}, ordering box without insert card`));
     }
 
     // Add box item
-    items.push(this.createBoxOrderBoxItem(1));
-    this.logger.log(color.blue.bold(`Order items: ${items.length} (${boxFileUrl ? 'box + insert card' : 'box only'})`));
+    items.push(this.createBoxOrderBoxItem(quantity));
+    this.logger.log(color.blue.bold(`Order items: ${items.length} (${boxFileUrl ? 'box + insert card' : 'box only'}), quantity: ${quantity}`));
 
     if (items.length === 0) {
       throw new Error('No items to order');

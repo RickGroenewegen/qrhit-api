@@ -1581,7 +1581,7 @@ ${knowledgeContext}${toolContext}`,
     }
   }
 
-  async sendBoxUpgradeConfirmationEmail(paymentHasPlaylistId: number, boxPrice: number = 6.99, shippingCost: number = 0): Promise<void> {
+  async sendBoxUpgradeConfirmationEmail(paymentHasPlaylistId: number, boxPrice: number = 6.99, shippingCost: number = 0, quantity: number = 1): Promise<void> {
     if (!this.ses) return;
 
     const php = await prisma.paymentHasPlaylist.findUnique({
@@ -1617,6 +1617,7 @@ ${knowledgeContext}${toolContext}`,
       city: payment.city,
       zipcode: payment.zipcode,
       country: payment.countrycode,
+      quantity,
       boxPriceFormatted: boxPrice.toFixed(2),
       shippingCost: shippingCost.toFixed(2),
       totalPrice: (boxPrice + shippingCost).toFixed(2),

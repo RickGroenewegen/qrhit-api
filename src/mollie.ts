@@ -1461,15 +1461,17 @@ class Mollie {
         const paymentHasPlaylistId = parseInt(metadata.paymentHasPlaylistId);
         const userId = parseInt(metadata.userId);
         const originalPaymentId = metadata.originalPaymentId as string;
+        const quantity = parseInt(metadata.quantity) || 1;
 
         if (paymentHasPlaylistId && userId && originalPaymentId) {
           try {
             // Set boxEnabled and boxPrice on PaymentHasPlaylist
+            const unitPrice = metadata.boxPrice ? parseFloat(metadata.boxPrice) : 6.99;
             await this.prisma.paymentHasPlaylist.update({
               where: { id: paymentHasPlaylistId },
               data: {
                 boxEnabled: true,
-                boxPrice: metadata.boxPrice ? parseFloat(metadata.boxPrice) : 6.99,
+                boxPrice: parseFloat((unitPrice * quantity).toFixed(2)),
               },
             });
 
@@ -1484,7 +1486,7 @@ class Mollie {
 
             // Create Print&Bind box-only order
             try {
-              await this.printenbind.createBoxUpgradeOrder(paymentHasPlaylistId);
+              await this.printenbind.createBoxUpgradeOrder(paymentHasPlaylistId, quantity);
             } catch (printError) {
               this.logger.log(
                 color.yellow.bold(`Failed to create box Print&Bind order for PHP ${paymentHasPlaylistId}: ${printError}`)
@@ -1494,8 +1496,8 @@ class Mollie {
             // Send confirmation email
             try {
               const shippingCost = metadata.shippingCost ? parseFloat(metadata.shippingCost) : 0;
-              const boxPrice = metadata.boxPrice ? parseFloat(metadata.boxPrice) : 6.99;
-              await this.mail.sendBoxUpgradeConfirmationEmail(paymentHasPlaylistId, boxPrice, shippingCost);
+              const totalBoxPrice = parseFloat((unitPrice * quantity).toFixed(2));
+              await this.mail.sendBoxUpgradeConfirmationEmail(paymentHasPlaylistId, totalBoxPrice, shippingCost, quantity);
             } catch (mailError) {
               this.logger.log(
                 color.yellow.bold(`Failed to send box upgrade email for PHP ${paymentHasPlaylistId}: ${mailError}`)
