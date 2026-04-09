@@ -614,8 +614,6 @@ class Mollie {
   public async getPaymentList(
     search: OrderSearch & { page: number; itemsPerPage: number }
   ): Promise<{ payments: any[]; totalItems: number }> {
-    const showTestPayments = process.env['ENVIRONMENT'] == 'development';
-
     const whereClause =
       Array.isArray(search.status) && search.status.length > 0
         ? { status: { in: search.status } }
@@ -716,7 +714,6 @@ class Mollie {
     const totalItems = await this.prisma.payment.count({
       where: {
         vibe: false,
-        test: showTestPayments,
         ...whereClause,
         ...textSearchClause,
         ...finalizedClause,
@@ -729,7 +726,6 @@ class Mollie {
     const payments = await this.prisma.payment.findMany({
       where: {
         vibe: false,
-        test: showTestPayments,
         ...whereClause,
         ...textSearchClause,
         ...finalizedClause,
