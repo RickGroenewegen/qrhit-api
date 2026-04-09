@@ -470,8 +470,9 @@ class Spotify {
               });
 
               // Don't cache 404 errors for non-featured playlists - user might make it public
+              // Don't cache auth errors - next request may hit a different Spotify backend node
               const isNotFoundError = errorToCache === 'playlistNotFound';
-              if (featured || !isNotFoundError) {
+              if (!result.needsReAuth && (featured || !isNotFoundError)) {
                 // Cache errors for a shorter time (1 minute) since they might be transient
                 await this.cache.set(cacheKey, failureResult, 60);
               }
