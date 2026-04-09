@@ -161,11 +161,29 @@ class Mollie {
 
       const gamesMap = new Map(gamesResults.map(g => [g.period, g]));
 
+      // Count boxes ordered per period
+      const boxResults: any[] = await this.prisma.$queryRawUnsafe(`
+        SELECT
+          ${dateExpr} as period,
+          COALESCE(SUM(php.boxQuantity), 0) as boxAmount
+        FROM payment_has_playlist php
+        JOIN payments p ON php.paymentId = p.id
+        WHERE p.status = 'paid'
+          AND p.vibe = 0
+          AND p.createdAt > '2024-12-05'
+          AND php.boxEnabled = 1
+          ${emailFilter}
+        GROUP BY ${dateExpr}
+      `);
+
+      const boxMap = new Map(boxResults.map(b => [b.period, b]));
+
       return results.map(r => ({
         period: r.period,
         numberOfSales: Number(r.numberOfSales),
         totalPrice: Number(r.totalPrice) || 0,
         totalPriceWithoutTax: Number(r.totalPriceWithoutTax) || 0,
+        boxAmount: Number(boxMap.get(r.period)?.boxAmount) || 0,
         gamesAmount: Number(gamesMap.get(r.period)?.gamesAmount) || 0,
         gamesTotal: Number(gamesMap.get(r.period)?.gamesTotal) || 0,
       }));
@@ -202,6 +220,7 @@ class Mollie {
       numberOfSales: Number(r.numberOfSales),
       totalPrice: Number(r.totalPrice) || 0,
       totalPriceWithoutTax: Number(r.totalPriceWithoutTax) || 0,
+      boxAmount: 0,
       gamesAmount: 0,
       gamesTotal: 0,
     }));
@@ -280,6 +299,20 @@ class Mollie {
       })
     );
 
+    // Count boxes by country
+    const boxByCountry: any[] = await this.prisma.$queryRawUnsafe(`
+      SELECT p.countrycode, COALESCE(SUM(php.boxQuantity), 0) as boxAmount
+      FROM payment_has_playlist php
+      JOIN payments p ON php.paymentId = p.id
+      WHERE p.status = 'paid'
+        AND p.vibe = 0
+        AND p.createdAt >= '${startDate.toISOString()}'
+        AND p.createdAt <= '${endDate.toISOString()}'
+        AND php.boxEnabled = 1
+      GROUP BY p.countrycode
+    `);
+    const boxMap = new Map(boxByCountry.map(b => [b.countrycode || 'Unknown', Number(b.boxAmount) || 0]));
+
     const detailedReport = await Promise.all(
       report.map(async (entry) => {
         const payments = await this.prisma.payment.findMany({
@@ -316,6 +349,7 @@ class Mollie {
           totalPriceWithoutTax: entry._sum.totalPriceWithoutTax,
           taxRate: entry._max.taxRate,
           totalPlaylists: totalPlaylistsSold,
+          boxAmount: boxMap.get(countryKey) || 0,
           gamesAmount: gamesData?.amount || 0,
           gamesTotal: gamesData?.total || 0,
         };
