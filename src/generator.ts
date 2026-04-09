@@ -28,6 +28,7 @@ import archiver from 'archiver';
 import GeneratorQueue from './generatorQueue';
 import Bingo from './bingo';
 import AppleStorefront from './appleStorefront';
+import AppleMusicProvider from './providers/AppleMusicProvider';
 
 class Generator {
   private static instance: Generator;
@@ -485,7 +486,16 @@ class Generator {
 
     // Retrieve tracks using the appropriate provider via factory
     const provider = this.musicProviderFactory.getProvider(serviceType);
-    const response = await provider.getTracks(playlist.playlistId);
+
+    // For Apple Music, determine the correct storefront from the user's locale
+    let response;
+    if (serviceType === 'apple_music') {
+      const appleProvider = provider as AppleMusicProvider;
+      const storefront = appleProvider.getStorefrontForLocale(payment.locale);
+      response = await appleProvider.getTracks(playlist.playlistId, true, undefined, undefined, storefront);
+    } else {
+      response = await provider.getTracks(playlist.playlistId);
+    }
 
     if (!response.success || !response.data) {
       throw new Error(`Failed to fetch tracks from ${serviceType}: ${response.error || 'Unknown error'}`);
