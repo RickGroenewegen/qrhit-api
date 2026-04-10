@@ -393,6 +393,9 @@ model Playlist {
   // Curation fields for featured playlists
   featuredHidden Boolean @default(false)
 
+  // Merchant Center sync flag - set to true on any change, cleared after upload
+  markedForMerchantCenter Boolean @default(true)
+
   @@index([playlistId])
   @@index([serviceType])
   @@index([promotionalActive])

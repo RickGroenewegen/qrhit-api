@@ -300,10 +300,15 @@ export class MerchantCenterService {
       // while selecting all columns forces filesort to buffer those TEXT
       // fields, overflowing sort_buffer_size on production.
       // Step 1: fetch only the IDs in the correct order (tiny row size).
+      // Only playlists flagged as needing a Merchant Center sync are picked up.
+      // The flag is set whenever a featured playlist is edited via the dashboard
+      // and cleared again after a successful upload below.
       const sortedPlaylistIds = await this.prisma.playlist.findMany({
         where: {
           featured: true,
           slug: { not: '' },
+          markedForMerchantCenter: true,
+          promotionalActive: true,
         },
         orderBy: {
           score: 'desc',
@@ -350,6 +355,54 @@ export class MerchantCenterService {
         const progress = ((i + 1) / playlists.length * 100).toFixed(1);
         const productIds = await this.uploadPlaylist(playlist, progress);
         productIds.forEach((id) => expectedProductIds.add(id));
+
+        // Clear the sync flag once the playlist has been uploaded.
+        // Skip in development since dev runs don't actually hit the API.
+        if (!isDevelopment) {
+          try {
+            await this.prisma.playlist.update({
+              where: { id: playlist.id },
+              data: { markedForMerchantCenter: false },
+            });
+          } catch (flagError) {
+            this.logger.log(
+              yellow(
+                `Failed to clear markedForMerchantCenter for playlist ${playlist.id}: ${flagError}`
+              )
+            );
+          }
+        }
+      }
+
+      // Expand the expected-product-ID set with every other featured playlist
+      // that wasn't uploaded in this batch. Without this, the cleanup pass below
+      // would delete products belonging to playlists whose markedForMerchantCenter
+      // flag was already cleared by a previous run.
+      try {
+        const allFeaturedPlaylists = await this.prisma.playlist.findMany({
+          where: {
+            featured: true,
+            slug: { not: '' },
+            promotionalActive: true,
+          },
+          select: {
+            id: true,
+            featuredLocale: true,
+          },
+        });
+
+        for (const p of allFeaturedPlaylists) {
+          const ids = this.computeExpectedProductIdsForPlaylist(p);
+          ids.forEach((id) => expectedProductIds.add(id));
+        }
+      } catch (error) {
+        this.logger.log(
+          yellow(
+            `Failed to load all featured playlists for cleanup, skipping cleanup to avoid deleting valid products: ${error}`
+          )
+        );
+        this.logger.log(green.bold('✓ Sync completed'));
+        return;
       }
 
       // Get all existing products from Merchant Center
@@ -520,6 +573,58 @@ export class MerchantCenterService {
     }
 
     return productIds;
+  }
+
+  /**
+   * Compute the set of Merchant Center product IDs that a given playlist is
+   * expected to have, mirroring the locale/country/type loop in uploadPlaylist
+   * and the ID format in createMerchantProduct. Used by the cleanup pass so it
+   * doesn't delete products belonging to playlists that weren't part of this
+   * batch.
+   */
+  private computeExpectedProductIdsForPlaylist(playlist: {
+    id: number;
+    featuredLocale: string | null;
+  }): string[] {
+    const ids: string[] = [];
+    const isDevelopment = process.env['ENVIRONMENT'] === 'development';
+    const pairsToProcess = isDevelopment
+      ? this.localeCountryPairs.filter((p) =>
+          ['en', 'nl', 'de', 'es', 'sv', 'no'].includes(p.locale)
+        )
+      : this.localeCountryPairs;
+
+    const productTypeNums: Array<{ type: string; num: number }> = [
+      { type: 'digital', num: 1 },
+      { type: 'sheets', num: 2 },
+      { type: 'physical', num: 3 },
+    ];
+    const localeNumMap: { [key: string]: number } = {
+      en: 1,
+      nl: 2,
+      de: 3,
+      es: 4,
+      sv: 5,
+      no: 6,
+    };
+
+    for (const pair of pairsToProcess) {
+      const { locale, country } = pair;
+
+      // Mirror the featuredLocale gating from uploadPlaylist.
+      if (playlist.featuredLocale) {
+        if (playlist.featuredLocale !== locale) continue;
+        if (!this.supportedLocales.includes(playlist.featuredLocale)) continue;
+      }
+
+      const localeNum = localeNumMap[locale] || 1;
+      for (const pt of productTypeNums) {
+        const uniqueId = `${playlist.id}_${pt.num}_${localeNum}`;
+        ids.push(`online:${locale}:${country}:${uniqueId}`);
+      }
+    }
+
+    return ids;
   }
 
   /**

@@ -900,7 +900,10 @@ class Promotional {
 
       if (!description.trim()) {
         // No description to translate, just accept and update name/slug if promotionalTitle exists
-        const updateData: Record<string, any> = { promotionalAccepted: true };
+        const updateData: Record<string, any> = {
+          promotionalAccepted: true,
+          markedForMerchantCenter: true,
+        };
         if (playlist.promotionalTitle) {
           const sanitizedName = this.sanitizeBrandName(playlist.promotionalTitle);
           updateData.name = sanitizedName;
@@ -946,6 +949,7 @@ class Promotional {
       // Build update object with translations and additional fields
       const updateData: Record<string, any> = {
         promotionalAccepted: true,
+        markedForMerchantCenter: true,
         ...translationData,
       };
 
@@ -1045,7 +1049,7 @@ class Promotional {
       // Update playlist with translations
       await this.prisma.playlist.update({
         where: { playlistId },
-        data: translationData,
+        data: { ...translationData, markedForMerchantCenter: true },
       });
 
       // Clear cache

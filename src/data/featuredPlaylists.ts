@@ -571,7 +571,7 @@ export async function updatePlaylistFeatured(
 
     await deps.prisma.playlist.update({
       where: { playlistId },
-      data: { featured },
+      data: { featured, markedForMerchantCenter: true },
     });
 
     // Clear all Spotify cache for this playlist
@@ -610,7 +610,7 @@ export async function updateFeaturedHidden(
   try {
     await deps.prisma.playlist.update({
       where: { playlistId },
-      data: { featuredHidden },
+      data: { featuredHidden, markedForMerchantCenter: true },
     });
 
     // Clear featured playlists cache
@@ -633,7 +633,7 @@ export async function updateFeaturedLocale(
   try {
     await deps.prisma.playlist.update({
       where: { playlistId },
-      data: { featuredLocale },
+      data: { featuredLocale, markedForMerchantCenter: true },
     });
 
     // Clear featured playlists cache
@@ -665,6 +665,7 @@ export async function updatePromotionalPlaylist(
       description_en: data.description,
       promotionalDescription: data.description,
       featuredLocale: data.featuredLocale,
+      markedForMerchantCenter: true,
     };
 
     // Handle slug update with duplicate check
@@ -730,7 +731,7 @@ export async function acceptPromotionalPlaylist(
 
     await deps.prisma.playlist.update({
       where: { playlistId },
-      data: { promotionalAccepted: true },
+      data: { promotionalAccepted: true, markedForMerchantCenter: true },
     });
 
     // Clear featured playlists cache
@@ -771,6 +772,7 @@ export async function declinePromotionalPlaylist(
       data: {
         promotionalHide: true,
         promotionalDeclined: true,
+        markedForMerchantCenter: true,
       },
     });
 

@@ -1120,7 +1120,7 @@ export default async function adminRoutes(
         const customImagePath = `/public/playlist_images/${filename}`;
         await prisma.playlist.update({
           where: { playlistId },
-          data: { customImage: customImagePath },
+          data: { customImage: customImagePath, markedForMerchantCenter: true },
         });
 
         reply.send({
@@ -1183,7 +1183,7 @@ export default async function adminRoutes(
         // Update database to remove custom image
         await prisma.playlist.update({
           where: { playlistId },
-          data: { customImage: null },
+          data: { customImage: null, markedForMerchantCenter: true },
         });
 
         reply.send({ success: true });
