@@ -2,7 +2,8 @@ import { color, white } from 'console-log-colors';
 import Logger from './logger';
 import { Playlist } from '@prisma/client';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
-import { S3Client, GetObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
+import { S3Client, GetObjectCommand, DeleteObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3';
+import { randomUUID } from 'crypto';
 import ConvertApi from 'convertapi';
 import AnalyticsClient from './analytics';
 import { promises as fs } from 'fs';
@@ -361,6 +362,118 @@ class PDF {
     for (const s3Key of s3Keys) {
       await this.deleteFromS3(s3Key);
     }
+  }
+
+  /**
+   * Upload a local PDF file to S3 under the given key.
+   * `label` is included in log lines so the caller's purpose is visible
+   * (e.g. "insert card").
+   */
+  private async uploadFileToS3(
+    localPath: string,
+    s3Key: string,
+    label: string = 'PDF',
+    s3Bucket: string = 'qrhit-lambda-deployments'
+  ): Promise<void> {
+    const body = await fs.readFile(localPath);
+    await this.s3Client.send(
+      new PutObjectCommand({
+        Bucket: s3Bucket,
+        Key: s3Key,
+        Body: body,
+        ContentType: 'application/pdf',
+      })
+    );
+    this.logger.log(
+      color.blue.bold(
+        `Uploaded ${label} to S3: ${color.white.bold(s3Key)} (${white.bold(body.length)} bytes)`
+      )
+    );
+  }
+
+  /**
+   * Merge multiple local PDF files into a single PDF using the existing
+   * Lambda merge function. Each input may be repeated `repeat` times in the
+   * output sequence (useful when ordering N copies of the same insert).
+   *
+   * Uploads each repetition as its own S3 key so the Lambda's
+   * `deleteAfterMerge` cleanup remains safe with duplicates.
+   *
+   * @param inputs     ordered list of `{ localPath, repeat }` entries
+   * @param outputPath where to write the merged PDF
+   * @param label      label included in log output (e.g. "insert card")
+   * @returns the page count of the merged PDF
+   */
+  public async mergeLocalPdfs(
+    inputs: Array<{ localPath: string; repeat: number }>,
+    outputPath: string,
+    label: string = 'PDF'
+  ): Promise<number> {
+    if (inputs.length === 0) {
+      throw new Error('mergeLocalPdfs requires at least one input');
+    }
+
+    // Flatten with repetitions and assign a unique S3 key per upload.
+    const sequence: Array<{ localPath: string; s3Key: string }> = [];
+    const runId = randomUUID();
+    let i = 0;
+    for (const entry of inputs) {
+      const repeat = Math.max(1, Math.floor(entry.repeat));
+      for (let r = 0; r < repeat; r++) {
+        sequence.push({
+          localPath: entry.localPath,
+          s3Key: `pdf-merge-tmp/${runId}-${i.toString().padStart(4, '0')}.pdf`,
+        });
+        i++;
+      }
+    }
+
+    this.logger.log(
+      color.blue.bold(
+        `Merging ${white.bold(sequence.length.toString())} ${label} parts (` +
+          `${white.bold(inputs.length.toString())} unique sources) → ${color.white.bold(outputPath)}`
+      )
+    );
+
+    // Upload all parts to S3.
+    try {
+      await Promise.all(
+        sequence.map(({ localPath, s3Key }) =>
+          this.uploadFileToS3(localPath, s3Key, label)
+        )
+      );
+    } catch (uploadError) {
+      // Best-effort cleanup of anything that did upload before re-throwing.
+      this.logger.log(
+        color.red.bold(`Failed to upload ${label} parts to S3, cleaning up`)
+      );
+      await this.cleanupS3Keys(sequence.map((s) => s.s3Key));
+      throw uploadError;
+    }
+
+    // Lambda merge consumes & deletes each key after merging.
+    let pdfBuffer: Buffer;
+    try {
+      pdfBuffer = await this.mergePdfsViaLambda(sequence.map((s) => s.s3Key));
+    } catch (mergeError) {
+      // If the merge failed, the lambda may not have deleted anything; clean up.
+      this.logger.log(
+        color.red.bold(`Lambda merge of ${label} parts failed, cleaning up S3 keys`)
+      );
+      await this.cleanupS3Keys(sequence.map((s) => s.s3Key));
+      throw mergeError;
+    }
+
+    await fs.writeFile(outputPath, pdfBuffer);
+    const pageCount = await this.countPDFPages(outputPath);
+
+    this.logger.log(
+      color.green.bold(
+        `Merged ${label} PDF written: ${color.white.bold(outputPath)} (${white.bold(pageCount)} pages, ${white.bold(pdfBuffer.length)} bytes)`
+      )
+    );
+
+    return pageCount;
   }
 
   /**

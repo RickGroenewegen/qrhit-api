@@ -854,7 +854,10 @@ class Generator {
 
           // Generate box insert PDF if box is enabled
           if (playlist.boxEnabled && playlist.boxQuantity > 0) {
-            await this.generateBoxInsertPdf(playlist.paymentHasPlaylistId, payment.paymentId);
+            await this.generateBoxInsertPdf(
+              playlist.paymentHasPlaylistId,
+              payment.paymentId
+            );
           }
 
           if (playlist.orderType == 'digital' && !skipMail) {
@@ -1604,11 +1607,17 @@ class Generator {
     }
   }
 
-  public async generateBoxInsertPdf(paymentHasPlaylistId: number, paymentId: string): Promise<string> {
+  public async generateBoxInsertPdf(
+    paymentHasPlaylistId: number,
+    paymentId: string
+  ): Promise<string> {
     const boxFilename = `box_${paymentId}_${paymentHasPlaylistId}.pdf`;
     const boxOutputPath = `${process.env['PUBLIC_DIR']}/box-insert/${boxFilename}`;
     const boxUrl = `${process.env['API_URI']}/qr/pdf-box/${paymentHasPlaylistId}/${paymentId}`;
 
+    // The EJS template (pdf_box_insert.ejs) loops the front+back pair
+    // `boxQuantity` times based on the php record, so the rendered PDF
+    // already contains the right number of pages.
     await this.pdf.generateFromUrl(boxUrl, boxOutputPath, {
       width: 120,
       height: 120,
@@ -1623,7 +1632,8 @@ class Generator {
     });
 
     this.logger.log(
-      color.green.bold(`Generated box insert PDF: `) + color.white.bold(boxFilename)
+      color.green.bold(`Generated insert card PDF: `) +
+        color.white.bold(boxFilename)
     );
 
     return boxFilename;

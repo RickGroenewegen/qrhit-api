@@ -602,15 +602,13 @@ class PrintEnBind {
           physicalOrderCreated = true;
 
           if (logging) {
-            // Extract batch number from comment field
-            const batchMatch = items[i].comment?.match(/#([\d-]+)/);
-            const batchNumber = batchMatch ? batchMatch[1] : 'unknown';
-
             this.logger.log(
               color.blue.bold(
                 `Created order: ${color.white.bold(
                   orderId
-                )} and added first article (Batch: ${color.white.bold(`#${batchNumber}`)})`
+                )} and added first article — ${color.white.bold(
+                  this.describeArticle(items[i])
+                )}`
               )
             );
           }
@@ -640,15 +638,13 @@ class PrintEnBind {
         }
 
         if (logging) {
-          // Extract batch number from comment field
-          const batchMatch = items[i].comment?.match(/#([\d-]+)/);
-          const batchNumber = batchMatch ? batchMatch[1] : 'unknown';
-
           this.logger.log(
             color.blue.bold(
               `Added article ${color.white.bold(
                 i + 1
-              )} to order ${color.white.bold(orderId)} (Batch: ${color.white.bold(`#${batchNumber}`)})`
+              )} to order ${color.white.bold(orderId)} — ${color.white.bold(
+                this.describeArticle(items[i])
+              )}`
             )
           );
         }
@@ -675,6 +671,16 @@ class PrintEnBind {
             statusCode: boxResponse.status,
             responseBody: await boxResponse.clone().json(),
           });
+
+          this.logger.log(
+            color.blue.bold(
+              `Added article ${color.white.bold(
+                i + 1
+              )} to order ${color.white.bold(orderId)} — ${color.white.bold(
+                this.describeArticle(items[i])
+              )}`
+            )
+          );
         }
 
         totalItemsSuccess++;
@@ -911,6 +917,31 @@ class PrintEnBind {
     }
   }
 
+  /**
+   * Build a human-readable label describing a Print&Bind article so logs
+   * make it obvious whether we're sending game cards, insert cards, or
+   * the empty gift boxes themselves.
+   */
+  private describeArticle(item: any): string {
+    if (item?.type === 'qrsong_box') {
+      return `gift boxes (×${item.amount ?? 1})`;
+    }
+    if (item?.type === 'physical') {
+      const comment = typeof item.comment === 'string' ? item.comment : '';
+      // Insert card articles carry an "Insert card..." comment and have no
+      // batch number — they're identified by playlist name + page count.
+      if (/^Insert cards? for/i.test(comment)) {
+        const pages = parseInt(item.copies, 10) || 0;
+        return `insert cards (${pages} pages)`;
+      }
+      // Game card articles carry a "Batch nummer ... #X-Y" comment.
+      const batchMatch = comment.match(/#([\d-]+)/);
+      const batchNumber = batchMatch ? batchMatch[1] : 'unknown';
+      return `game cards (Batch #${batchNumber})`;
+    }
+    return `article (${item?.type ?? 'unknown'})`;
+  }
+
   private createBoxOrderCardItem(
     fileUrl: string,
     playlist: any,
@@ -935,6 +966,39 @@ class PrintEnBind {
       file_overwrite: true,
       file_url: fileUrl,
       comment: `Box insert for playlist ${playlist.name}`,
+    };
+  }
+
+  /**
+   * Generic insert-card article shape: the file already contains every page
+   * that needs printing, so `amount` stays at 1 and `copies` equals the file's
+   * actual page count. Used for both single-playlist (pre-multiplied source
+   * file) and multi-playlist (merged file) cases.
+   */
+  private createBoxOrderInsertItem(
+    fileUrl: string,
+    pageCount: number,
+    comment: string
+  ): any {
+    return {
+      type: 'physical',
+      amount: 1,
+      product: 'losbladig',
+      number: '1',
+      copies: pageCount.toString(),
+      color: 'all',
+      size: 'custom',
+      printside: 'double',
+      finishing: 'loose',
+      papertype: 'card',
+      size_custom_width: '120',
+      size_custom_height: '120',
+      check_doc: 'standard',
+      delivery_method: 'post',
+      add_file_method: 'url',
+      file_overwrite: true,
+      file_url: fileUrl,
+      comment,
     };
   }
 
@@ -1459,20 +1523,99 @@ class PrintEnBind {
       }
     }
 
-    // Add box insert articles for playlists with boxes enabled
-    for (const playlistItem of playlists) {
-      const playlist = playlistItem.playlist;
-      if (playlist.boxEnabled && playlist.boxQuantity > 0 && playlist.boxFilename) {
+    // Collect playlists that need a box insert in this order.
+    // Each playlist's boxFilename already contains its design repeated
+    // `boxQuantity` times (multiplication happens in generateBoxInsertPdf),
+    // so the work here is just (a) read the per-file page count and (b) for
+    // multi-playlist orders, merge those pre-multiplied files into one.
+    const insertPlaylists = playlists
+      .map((p) => p.playlist)
+      .filter(
+        (playlist: any) =>
+          playlist.boxEnabled &&
+          playlist.boxQuantity > 0 &&
+          playlist.boxFilename
+      );
+
+    if (insertPlaylists.length >= 1) {
+      const boxInsertDir = `${process.env['PUBLIC_DIR']}/box-insert`;
+      const pdfManager = new PDF();
+
+      if (insertPlaylists.length === 1) {
+        // Single playlist — the file is already the right size, just
+        // create one article with copies=actualPageCount.
+        const playlist = insertPlaylists[0];
+        const filePath = `${boxInsertDir}/${playlist.boxFilename}`;
+        const pageCount = await pdfManager.countPDFPages(filePath);
         const boxFileUrl = `${process.env['API_URI']}/public/box-insert/${playlist.boxFilename}`;
-        const boxOrderItem = this.createBoxOrderCardItem(boxFileUrl, playlist, playlist.boxQuantity);
-        orderItems.push(boxOrderItem);
+
+        const insertItem = this.createBoxOrderInsertItem(
+          boxFileUrl,
+          pageCount,
+          `Insert card${playlist.boxQuantity > 1 ? 's' : ''} for playlist ${playlist.name}`
+        );
+        orderItems.push(insertItem);
+
         this.logger.log(
           color.blue.bold(
-            `Adding box insert article to ${color.white.bold(
+            `Adding insert card article to ${color.white.bold(
               'Print&Bind'
             )} order. Playlist: ${color.white(
               playlist.name
-            )} Quantity: ${color.white.bold(playlist.boxQuantity)}`
+            )} Boxes: ${color.white.bold(
+              playlist.boxQuantity
+            )} Pages: ${color.white.bold(pageCount)}`
+          )
+        );
+      } else {
+        // Multiple playlists — merge their pre-multiplied insert files into
+        // a single PDF (no further repetition; each file already contains
+        // its boxQuantity copies) and submit one consolidated article.
+        const mergedFilename = `box_merged_${payment.paymentId}_${Date.now()}.pdf`;
+        const mergedPath = `${boxInsertDir}/${mergedFilename}`;
+
+        const mergeInputs = insertPlaylists.map((playlist: any) => ({
+          localPath: `${boxInsertDir}/${playlist.boxFilename}`,
+          repeat: 1,
+        }));
+
+        const playlistNames = insertPlaylists.map((p: any) => p.name);
+        const totalBoxes = insertPlaylists.reduce(
+          (sum: number, p: any) => sum + p.boxQuantity,
+          0
+        );
+
+        this.logger.log(
+          color.blue.bold(
+            `Merging ${color.white.bold(
+              insertPlaylists.length
+            )} insert card design(s) into a single PDF (${color.white.bold(
+              totalBoxes
+            )} insert cards total) for ${color.white.bold('Print&Bind')} order`
+          )
+        );
+
+        const pageCount = await pdfManager.mergeLocalPdfs(
+          mergeInputs,
+          mergedPath,
+          'insert card'
+        );
+
+        const mergedFileUrl = `${process.env['API_URI']}/public/box-insert/${mergedFilename}`;
+        const mergedOrderItem = this.createBoxOrderInsertItem(
+          mergedFileUrl,
+          pageCount,
+          `Insert cards for playlists: ${playlistNames.join(', ')}`
+        );
+        orderItems.push(mergedOrderItem);
+
+        this.logger.log(
+          color.blue.bold(
+            `Adding merged insert card article to ${color.white.bold(
+              'Print&Bind'
+            )} order. Playlists: ${color.white(
+              playlistNames.join(', ')
+            )} Pages: ${color.white.bold(pageCount)}`
           )
         );
       }
