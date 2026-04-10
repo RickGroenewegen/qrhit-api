@@ -111,7 +111,7 @@ export class MerchantCenterService {
   private initPromise: Promise<void> | null = null;
 
   // Supported locales for Merchant Center - limiting to main markets
-  private supportedLocales = ['en', 'nl', 'de'];
+  private supportedLocales = ['en', 'nl', 'de', 'es', 'sv', 'no'];
 
   // Mapping of locale-country combinations for Google Merchant Center
   // Multiple countries can use the same language content
@@ -121,21 +121,22 @@ export class MerchantCenterService {
     { locale: 'nl', country: 'BE' }, // Belgium using Dutch content
     { locale: 'de', country: 'DE' },
     { locale: 'de', country: 'AT' }, // Austria using German content
+    { locale: 'es', country: 'ES' },
+    { locale: 'sv', country: 'SE' },
+    { locale: 'no', country: 'NO' },
   ];
 
-  // Legacy mapping - kept for backwards compatibility
-  private localeToCountry: { [key: string]: string } = {
-    en: 'US',
-    nl: 'NL',
-    de: 'DE',
-    fr: 'FR',
-    es: 'ES',
-    it: 'IT',
-    pt: 'PT',
-    pl: 'PL',
-    jp: 'JP',
-    cn: 'CN',
-    SV: 'SV',
+  // Currency per target country for Google Merchant Center
+  // Google requires prices to match the target country's accepted currency
+  private countryToCurrency: { [key: string]: string } = {
+    US: 'EUR',
+    NL: 'EUR',
+    BE: 'EUR',
+    DE: 'EUR',
+    AT: 'EUR',
+    ES: 'EUR',
+    SE: 'SEK',
+    NO: 'NOK',
   };
 
   private constructor() {
@@ -292,20 +293,44 @@ export class MerchantCenterService {
         )
       );
 
-      // Fetch featured playlists from database
-      const playlists = await this.prisma.playlist.findMany({
+      // Fetch featured playlists from database.
+      // NOTE: We split this into two queries to avoid MariaDB's
+      // "Out of sort memory" error. The Playlist table contains many TEXT
+      // columns (description_en, description_nl, ...), and sorting by `score`
+      // while selecting all columns forces filesort to buffer those TEXT
+      // fields, overflowing sort_buffer_size on production.
+      // Step 1: fetch only the IDs in the correct order (tiny row size).
+      const sortedPlaylistIds = await this.prisma.playlist.findMany({
         where: {
           featured: true,
           slug: { not: '' },
         },
-        include: {
-          genre: true,
-        },
         orderBy: {
           score: 'desc',
         },
+        select: {
+          id: true,
+        },
         take: playlistLimit,
       });
+
+      // Step 2: fetch the full records for those IDs (no ORDER BY needed).
+      const playlistsUnordered = await this.prisma.playlist.findMany({
+        where: {
+          id: { in: sortedPlaylistIds.map((p) => p.id) },
+        },
+        include: {
+          genre: true,
+        },
+      });
+
+      // Re-order the full records to match the score-sorted IDs.
+      const playlistsById = new Map(
+        playlistsUnordered.map((p) => [p.id, p])
+      );
+      const playlists = sortedPlaylistIds
+        .map(({ id }) => playlistsById.get(id))
+        .filter((p): p is NonNullable<typeof p> => p !== undefined);
 
       if (playlists.length === 0) {
         this.logger.log('Warning: No featured playlists found');
@@ -428,7 +453,9 @@ export class MerchantCenterService {
     const isDevelopment = process.env['ENVIRONMENT'] === 'development';
     const debugMode = process.env['DEBUG_MERCHANT_CENTER'] === 'true';
     const pairsToProcess = isDevelopment
-      ? this.localeCountryPairs.filter((p) => ['en', 'nl', 'de'].includes(p.locale))
+      ? this.localeCountryPairs.filter((p) =>
+          ['en', 'nl', 'de', 'es', 'sv', 'no'].includes(p.locale)
+        )
       : this.localeCountryPairs;
 
     // Process each product type for each locale-country pair
@@ -622,7 +649,8 @@ export class MerchantCenterService {
     // We'll use a simple numeric ID combining playlist ID, type, and locale
     const typeNum =
       variant.type === 'digital' ? 1 : variant.type === 'sheets' ? 2 : 3;
-    const localeNum = { en: 1, nl: 2, de: 3 }[variant.locale] || 1;
+    const localeNum =
+      { en: 1, nl: 2, de: 3, es: 4, sv: 5, no: 6 }[variant.locale] || 1;
     const uniqueId = `${variant.id}_${typeNum}_${localeNum}`;
     const productId = `online:${variant.locale}:${country}:${uniqueId}`;
 
@@ -690,6 +718,8 @@ export class MerchantCenterService {
       pl: `Zawiera ${variant.numberOfTracks} utworów muzycznych`,
       jp: `${variant.numberOfTracks}曲の音楽トラックを含む`,
       cn: `包含${variant.numberOfTracks}首音乐曲目`,
+      sv: `Innehåller ${variant.numberOfTracks} musikspår`,
+      no: `Inneholder ${variant.numberOfTracks} musikkspor`,
     };
     description += ` ${tracksLabel[variant.locale] || tracksLabel['en']}`;
 
@@ -698,6 +728,9 @@ export class MerchantCenterService {
     if (variant.type === 'digital') {
       googleCategory = '839'; // Media > Music & Sound Recordings
     }
+
+    // Resolve currency for the target country (Google requires local currency)
+    const currency = this.countryToCurrency[country] || 'EUR';
 
     // Add shipping information based on product type
     const shipping = [];
@@ -709,7 +742,7 @@ export class MerchantCenterService {
         service: 'Digital Delivery',
         price: {
           value: '0',
-          currency: 'EUR',
+          currency: currency,
         },
         minHandlingTime: 0,
         maxHandlingTime: 0,
@@ -723,7 +756,7 @@ export class MerchantCenterService {
         service: 'Standard Shipping',
         price: {
           value: '4.95',
-          currency: 'EUR',
+          currency: currency,
         },
         minHandlingTime: 1,
         maxHandlingTime: 2,
@@ -743,7 +776,7 @@ export class MerchantCenterService {
       condition: 'new',
       price: {
         value: variant.price.toFixed(2),
-        currency: 'EUR',
+        currency: currency,
       },
       brand: 'QRSong!',
       contentLanguage: variant.locale,
