@@ -292,20 +292,44 @@ export class MerchantCenterService {
         )
       );
 
-      // Fetch featured playlists from database
-      const playlists = await this.prisma.playlist.findMany({
+      // Fetch featured playlists from database.
+      // NOTE: We split this into two queries to avoid MariaDB's
+      // "Out of sort memory" error. The Playlist table contains many TEXT
+      // columns (description_en, description_nl, ...), and sorting by `score`
+      // while selecting all columns forces filesort to buffer those TEXT
+      // fields, overflowing sort_buffer_size on production.
+      // Step 1: fetch only the IDs in the correct order (tiny row size).
+      const sortedPlaylistIds = await this.prisma.playlist.findMany({
         where: {
           featured: true,
           slug: { not: '' },
         },
-        include: {
-          genre: true,
-        },
         orderBy: {
           score: 'desc',
         },
+        select: {
+          id: true,
+        },
         take: playlistLimit,
       });
+
+      // Step 2: fetch the full records for those IDs (no ORDER BY needed).
+      const playlistsUnordered = await this.prisma.playlist.findMany({
+        where: {
+          id: { in: sortedPlaylistIds.map((p) => p.id) },
+        },
+        include: {
+          genre: true,
+        },
+      });
+
+      // Re-order the full records to match the score-sorted IDs.
+      const playlistsById = new Map(
+        playlistsUnordered.map((p) => [p.id, p])
+      );
+      const playlists = sortedPlaylistIds
+        .map(({ id }) => playlistsById.get(id))
+        .filter((p): p is NonNullable<typeof p> => p !== undefined);
 
       if (playlists.length === 0) {
         this.logger.log('Warning: No featured playlists found');
