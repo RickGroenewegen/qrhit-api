@@ -1,12 +1,14 @@
 import { FastifyInstance } from 'fastify';
 import PrismaInstance from '../prisma';
 import Logger from '../logger';
+import Data from '../data';
 import { color, white } from 'console-log-colors';
 import { createMollieClient, Locale } from '@mollie/api-client';
+import { BOX_PRICE } from '../config/constants';
 
 const prisma = PrismaInstance.getInstance();
 const logger = new Logger();
-const BOX_UPGRADE_PRICE = 6.99;
+const data = Data.getInstance();
 
 const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
   if (!getAuthHandler) return;
@@ -91,7 +93,7 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
 
         return reply.send({
           success: true,
-          totalPrice: BOX_UPGRADE_PRICE,
+          totalPrice: BOX_PRICE,
         });
       } catch (error: any) {
         logger.log(color.red.bold(`Error in POST /api/box/calculate-price: ${error.message}`));
@@ -197,8 +199,8 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
         return reply.send({
           success: true,
           shipping,
-          boxPrice: BOX_UPGRADE_PRICE,
-          total: BOX_UPGRADE_PRICE + shipping,
+          boxPrice: BOX_PRICE,
+          total: BOX_PRICE + shipping,
           address: {
             fullname: php.payment.fullname,
             address: php.payment.address,
@@ -377,7 +379,11 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           shipping = shippingResult?.cost || 0;
         }
 
-        const totalAmount = parseFloat((BOX_UPGRADE_PRICE * boxQuantity + shipping).toFixed(2));
+        // Apply VAT based on customer's country
+        const taxRate = (await data.getTaxRate(countryCode)) || 0;
+        const boxSubtotal = BOX_PRICE * boxQuantity;
+        const boxVAT = parseFloat((boxSubtotal * (taxRate / 100)).toFixed(2));
+        const totalAmount = parseFloat((boxSubtotal + boxVAT + shipping).toFixed(2));
 
         // Save box design data and set boxQuantity
         await prisma.paymentHasPlaylist.update({
@@ -446,7 +452,7 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
             userId: user.id.toString(),
             originalPaymentId: php.payment.paymentId,
             shippingCost: shipping.toString(),
-            boxPrice: BOX_UPGRADE_PRICE.toString(),
+            boxPrice: BOX_PRICE.toString(),
             quantity: boxQuantity.toString(),
           },
           description: boxQuantity > 1

@@ -1330,6 +1330,7 @@ class Mollie {
           profit: totalProfit,
           printApiPrice: 0,
           discount: discountAmount,
+          boxFee: calculateResult.data.boxFee || 0,
           PaymentHasPlaylist: { create: playlists },
           ...params.extraOrderData,
         },
@@ -1517,6 +1518,17 @@ class Mollie {
         const quantity = parseInt(metadata.quantity) || 1;
 
         if (paymentHasPlaylistId && userId && originalPaymentId) {
+          // Idempotency guard: skip if box is already enabled
+          const php = await this.prisma.paymentHasPlaylist.findUnique({
+            where: { id: paymentHasPlaylistId },
+          });
+          if (php?.boxEnabled === true) {
+            this.logger.log(
+              color.yellow.bold(`Box upgrade already processed for PHP ${paymentHasPlaylistId}, skipping`)
+            );
+            return { success: true };
+          }
+
           try {
             // Set boxEnabled and boxPrice on PaymentHasPlaylist
             const unitPrice = metadata.boxPrice ? parseFloat(metadata.boxPrice) : 6.99;

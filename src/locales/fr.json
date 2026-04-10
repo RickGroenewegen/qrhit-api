@@ -621,5 +621,6 @@
   "howto.rule3": "Devine l’année et place la carte à gauche (plus tôt) ou à droite (plus tard) dans ta timeline.",
   "howto.rule4": "Retourne la carte. L’année colle ? Garde-la. Faux ? Retire-la.",
   "howto.rule5": "Le premier à avoir 10 cartes dans sa timeline gagne !",
-  "howto.winner": "Le premier à 10 cartes gagne !"
+  "howto.winner": "Le premier à 10 cartes gagne !",
+  "mail.boxUpgradeQuantity": "Quantité"
 }

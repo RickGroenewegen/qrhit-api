@@ -616,5 +616,6 @@
   "howto.rule3": "Zgadnij rok i połóż kartę po lewej (wcześniej) lub prawej (później) na osi czasu.",
   "howto.rule4": "Odwróć kartę. Rok pasuje? Zostaw. Nie? Odpada.",
   "howto.rule5": "Kto pierwszy ułoży 10 kart, wygrywa!",
-  "howto.winner": "Kto pierwszy ma 10 kart, wygrywa!"
+  "howto.winner": "Kto pierwszy ma 10 kart, wygrywa!",
+  "mail.boxUpgradeQuantity": "Ilość"
 }

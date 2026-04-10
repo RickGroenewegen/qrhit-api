@@ -611,5 +611,6 @@
   "howto.rule3": "猜年份，把卡放左边（早）或右边（晚）在时间线里。",
   "howto.rule4": "翻卡片。年份对就留着，错了就拿走。",
   "howto.rule5": "第一个集齐10张卡的人赢！",
-  "howto.winner": "先集齐10张卡的人赢！"
+  "howto.winner": "先集齐10张卡的人赢！",
+  "mail.boxUpgradeQuantity": "数量"
 }

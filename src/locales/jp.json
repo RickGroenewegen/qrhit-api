@@ -612,5 +612,6 @@
   "howto.rule3": "年を当てて、カードを左（前）か右（後）に並べてね。",
   "howto.rule4": "カードをめくって。年が合ってたらキープ、違ったら捨ててね。",
   "howto.rule5": "最初に10枚並べた人が勝ち！",
-  "howto.winner": "最初に10枚集めた人が勝ち！"
+  "howto.winner": "最初に10枚集めた人が勝ち！",
+  "mail.boxUpgradeQuantity": "数量"
 }

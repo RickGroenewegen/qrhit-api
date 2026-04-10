@@ -123,7 +123,7 @@ if (boxFont && boxFont !== 'Arial, sans-serif') {
     <div class="background">
         <% if (php.boxFrontBackgroundType === 'image' && php.boxFrontBackground) { %>
             <img class="background-image" src="<%= process.env['API_URI'] %>/public/background/<%= php.boxFrontBackground %>"
-                 />
+                 style="opacity: <%= (php.boxFrontOpacity || 100) / 100 %>;" />
         <% } %>
         <% if (php.boxFrontBackgroundType === 'solid' || !php.boxFrontBackground) { %>
             <% if (php.boxFrontUseFrontGradient) { %>

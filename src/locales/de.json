@@ -621,5 +621,6 @@
   "howto.rule3": "Rate das Jahr und leg die Karte links (früher) oder rechts (später) in deine Zeitlinie.",
   "howto.rule4": "Dreh die Karte um. Passt das Jahr? Behalte sie. Falsch? Weg damit.",
   "howto.rule5": "Wer zuerst 10 Karten in der Zeitlinie hat, gewinnt!",
-  "howto.winner": "Wer zuerst 10 Karten hat, gewinnt!"
+  "howto.winner": "Wer zuerst 10 Karten hat, gewinnt!",
+  "mail.boxUpgradeQuantity": "Menge"
 }

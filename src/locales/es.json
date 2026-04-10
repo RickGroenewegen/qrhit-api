@@ -620,5 +620,6 @@
   "howto.rule3": "Adivina el año y pon la carta a la izquierda (antes) o derecha (después) en tu línea.",
   "howto.rule4": "Dale la vuelta a la carta. ¿El año encaja? Quédate con ella. ¿Mal? Fuera.",
   "howto.rule5": "¡El primero con 10 cartas en su línea gana!",
-  "howto.winner": "¡El primero con 10 cartas gana!"
+  "howto.winner": "¡El primero con 10 cartas gana!",
+  "mail.boxUpgradeQuantity": "Cantidad"
 }

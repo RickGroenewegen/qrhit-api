@@ -1182,6 +1182,8 @@ ${knowledgeContext}${toolContext}`,
       ),
       bingoDownloadUrl,
       hasBingo: !!bingoDownloadUrl,
+      hasBox: playlists.some((p: any) => p.boxEnabled && p.boxQuantity > 0),
+      boxQuantity: playlists.reduce((sum: number, p: any) => sum + (p.boxEnabled ? (p.boxQuantity || 0) : 0), 0),
     };
 
     try {
@@ -1520,6 +1522,8 @@ ${knowledgeContext}${toolContext}`,
       translations,
       bingoDownloadUrl,
       hasBingo: !!bingoDownloadUrl,
+      hasBox: !!playlist.boxEnabled && (playlist.boxQuantity || 0) > 0,
+      boxQuantity: playlist.boxQuantity || 0,
     };
 
     try {

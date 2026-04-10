@@ -597,5 +597,6 @@
   "mail.boxUpgradePlaylist": "Spilleliste",
   "mail.boxUpgradeGiftBox": "Gaveboks",
   "mail.boxUpgradeShipping": "Frakt",
-  "mail.boxUpgradeTotal": "Totalt"
+  "mail.boxUpgradeTotal": "Totalt",
+  "mail.boxUpgradeQuantity": "Antall"
 }

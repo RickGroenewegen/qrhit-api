@@ -598,5 +598,7 @@
 	"mail.boxUpgradeGiftBox": "Gift Box",
 	"mail.boxUpgradeShipping": "Shipping",
 	"mail.boxUpgradeTotal": "Total",
-	"mail.boxUpgradeThankYou": "Your custom Gift Box is being printed and will be shipped to the address below. If you have any questions, don't hesitate to contact us at info@qrsong.io"
+	"mail.boxUpgradeThankYou": "Your custom Gift Box is being printed and will be shipped to the address below. If you have any questions, don't hesitate to contact us at info@qrsong.io",
+	"mail.giftBoxIncluded": "Gift Box",
+	"mail.giftBoxIncludedPrinter": "Your order also includes a custom Gift Box that will be printed and shipped together with your cards."
 }

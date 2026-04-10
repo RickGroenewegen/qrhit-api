@@ -80,6 +80,12 @@
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.items }}</td>
                                         <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{ numberOfTracks }} {{ translations.cards }}</td>
                                     </tr>
+                                    {{#if hasBox}}
+                                    <tr>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; font-weight: 700; color: #2d3748;">{{ translations.giftBoxIncluded }}</td>
+                                        <td style="padding: 12px; border: 1px solid #e2e8f0; color: #4a5568;">{{boxQuantity}}x</td>
+                                    </tr>
+                                    {{/if}}
                                     <tr>
                                         <td colspan="2" style="padding: 12px; background-color: #4299e1; color: #ffffff; font-weight: 700; font-size: 16px;">{{ translations.yourInformation }}</td>
                                     </tr>

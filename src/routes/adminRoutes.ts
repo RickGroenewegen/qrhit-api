@@ -1284,6 +1284,11 @@ export default async function adminRoutes(
             boxFrontBackgroundType: d.boxFrontBackgroundType,
             boxFrontBackground: d.boxFrontBackground,
             boxFrontBackgroundColor: d.boxFrontBackgroundColor,
+            boxFrontUseFrontGradient: d.boxFrontUseFrontGradient,
+            boxFrontGradientColor: d.boxFrontGradientColor,
+            boxFrontGradientDegrees: d.boxFrontGradientDegrees,
+            boxFrontGradientPosition: d.boxFrontGradientPosition,
+            boxFrontOpacity: d.boxFrontOpacity,
             boxFrontLogo: d.boxFrontLogo,
             boxFrontLogoScale: d.boxFrontLogoScale,
             boxFrontLogoPositionX: d.boxFrontLogoPositionX,
@@ -1304,6 +1309,37 @@ export default async function adminRoutes(
           },
         });
         reply.send({ success: true });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message });
+      }
+    }
+  );
+
+  // Regenerate box insert PDF for payment_has_playlist (admin)
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/regenerate-box-pdf',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const phpId = parseInt(request.params.paymentHasPlaylistId, 10);
+      if (isNaN(phpId)) {
+        return reply.status(400).send({ success: false, error: 'Invalid ID' });
+      }
+      try {
+        const php = await prisma.paymentHasPlaylist.findUnique({
+          where: { id: phpId },
+          include: { payment: true },
+        });
+
+        if (!php) {
+          return reply.status(404).send({ success: false, error: 'PaymentHasPlaylist not found' });
+        }
+
+        if (!php.payment) {
+          return reply.status(404).send({ success: false, error: 'Payment not found' });
+        }
+
+        const boxFilename = await generator.generateBoxInsertPdf(phpId, php.payment.paymentId);
+        reply.send({ success: true, boxFilename });
       } catch (error: any) {
         reply.status(500).send({ success: false, error: error.message });
       }
