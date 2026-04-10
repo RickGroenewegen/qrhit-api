@@ -622,5 +622,7 @@
   "howto.rule4": "Dreh die Karte um. Passt das Jahr? Behalte sie. Falsch? Weg damit.",
   "howto.rule5": "Wer zuerst 10 Karten in der Zeitlinie hat, gewinnt!",
   "howto.winner": "Wer zuerst 10 Karten hat, gewinnt!",
-  "mail.boxUpgradeQuantity": "Menge"
+  "mail.boxUpgradeQuantity": "Menge",
+  "mail.giftBoxIncluded": "Geschenkbox",
+  "mail.giftBoxIncludedPrinter": "Deine Bestellung enthält auch eine personalisierte Geschenkbox, die mit deinen Karten gedruckt und verschickt wird."
 }

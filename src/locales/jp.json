@@ -613,5 +613,7 @@
   "howto.rule4": "カードをめくって。年が合ってたらキープ、違ったら捨ててね。",
   "howto.rule5": "最初に10枚並べた人が勝ち！",
   "howto.winner": "最初に10枚集めた人が勝ち！",
-  "mail.boxUpgradeQuantity": "数量"
+  "mail.boxUpgradeQuantity": "数量",
+  "mail.giftBoxIncluded": "ギフトボックス",
+  "mail.giftBoxIncludedPrinter": "注文にはカスタムギフトボックスも含まれていて、カードと一緒に印刷＆発送されるよ。"
 }

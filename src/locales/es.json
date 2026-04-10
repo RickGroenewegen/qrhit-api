@@ -621,5 +621,7 @@
   "howto.rule4": "Dale la vuelta a la carta. ¿El año encaja? Quédate con ella. ¿Mal? Fuera.",
   "howto.rule5": "¡El primero con 10 cartas en su línea gana!",
   "howto.winner": "¡El primero con 10 cartas gana!",
-  "mail.boxUpgradeQuantity": "Cantidad"
+  "mail.boxUpgradeQuantity": "Cantidad",
+  "mail.giftBoxIncluded": "Caja regalo",
+  "mail.giftBoxIncludedPrinter": "Tu pedido también incluye una caja regalo personalizada que se imprimirá y enviará junto con tus cartas."
 }

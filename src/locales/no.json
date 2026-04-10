@@ -598,5 +598,7 @@
   "mail.boxUpgradeGiftBox": "Gaveboks",
   "mail.boxUpgradeShipping": "Frakt",
   "mail.boxUpgradeTotal": "Totalt",
-  "mail.boxUpgradeQuantity": "Antall"
+  "mail.boxUpgradeQuantity": "Antall",
+  "mail.giftBoxIncluded": "Gaveeske",
+  "mail.giftBoxIncludedPrinter": "Bestillingen din inkluderer også en personlig gaveeske som trykkes og sendes sammen med kortene dine."
 }

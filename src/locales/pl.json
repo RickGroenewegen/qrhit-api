@@ -617,5 +617,7 @@
   "howto.rule4": "Odwróć kartę. Rok pasuje? Zostaw. Nie? Odpada.",
   "howto.rule5": "Kto pierwszy ułoży 10 kart, wygrywa!",
   "howto.winner": "Kto pierwszy ma 10 kart, wygrywa!",
-  "mail.boxUpgradeQuantity": "Ilość"
+  "mail.boxUpgradeQuantity": "Ilość",
+  "mail.giftBoxIncluded": "Pudełko prezentowe",
+  "mail.giftBoxIncludedPrinter": "Twoje zamówienie zawiera też spersonalizowane pudełko prezentowe, które zostanie wydrukowane i wysłane razem z kartami."
 }

@@ -617,5 +617,7 @@
   "howto.rule4": "Gira la carta. L’anno va bene? Tienila. Sbagliato? Via.",
   "howto.rule5": "Chi per primo fa una timeline di 10 carte vince!",
   "howto.winner": "Chi arriva a 10 carte vince!",
-  "mail.boxUpgradeQuantity": "Quantità"
+  "mail.boxUpgradeQuantity": "Quantità",
+  "mail.giftBoxIncluded": "Scatola regalo",
+  "mail.giftBoxIncludedPrinter": "Il tuo ordine include anche una scatola regalo personalizzata che verrà stampata e spedita con le tue carte."
 }

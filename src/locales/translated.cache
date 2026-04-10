@@ -8710,5 +8710,31 @@
     "cn",
     "sv",
     "no"
+  ],
+  "mail.giftBoxIncluded": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "mail.giftBoxIncludedPrinter": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
   ]
 }

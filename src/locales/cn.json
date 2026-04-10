@@ -612,5 +612,7 @@
   "howto.rule4": "翻卡片。年份对就留着，错了就拿走。",
   "howto.rule5": "第一个集齐10张卡的人赢！",
   "howto.winner": "先集齐10张卡的人赢！",
-  "mail.boxUpgradeQuantity": "数量"
+  "mail.boxUpgradeQuantity": "数量",
+  "mail.giftBoxIncluded": "礼品盒",
+  "mail.giftBoxIncludedPrinter": "你的订单还包含一个定制礼品盒，会和你的卡片一起印刷并寄出。"
 }

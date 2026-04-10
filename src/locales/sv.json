@@ -611,5 +611,7 @@
   "howto.rule4": "Vänd på kortet. Stämmer året? Behåll det. Fel? Ta bort det.",
   "howto.rule5": "Först till 10 kort i tidslinjen vinner!",
   "howto.winner": "Först till 10 kort vinner!",
-  "mail.boxUpgradeQuantity": "Antal"
+  "mail.boxUpgradeQuantity": "Antal",
+  "mail.giftBoxIncluded": "Presentask",
+  "mail.giftBoxIncludedPrinter": "Din beställning innehåller också en personlig presentask som trycks och skickas med dina kort."
 }

@@ -617,5 +617,7 @@
   "howto.rule4": "Vira a carta. O ano bate? Fica com ela. Errado? Tira fora.",
   "howto.rule5": "Quem montar 10 cartas na linha do tempo primeiro, vence!",
   "howto.winner": "Quem chegar a 10 cartas primeiro, vence!",
-  "mail.boxUpgradeQuantity": "Quantidade"
+  "mail.boxUpgradeQuantity": "Quantidade",
+  "mail.giftBoxIncluded": "Caixa de presente",
+  "mail.giftBoxIncludedPrinter": "Seu pedido também inclui uma caixa de presente personalizada que será impressa e enviada junto com seus cartões."
 }
