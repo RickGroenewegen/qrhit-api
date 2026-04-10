@@ -1201,12 +1201,15 @@ class PrintEnBind {
       }
       totalPrice += gamesFee;
 
-      // Box fee for physical/sheets items with box enabled
+      // Box fee for physical/sheets items with box enabled.
+      // boxQuantity is per playlist copy, so multiply by item.amount to
+      // get the actual number of boxes shipped/charged.
       let boxFee = 0;
       let totalBoxCount = 0;
       for (const item of orderItems) {
         if ((item.type === 'physical' || item.type === 'sheets') && item.boxEnabled === true) {
-          const qty = item.boxQuantity || 0;
+          const playlistAmount = parseInt(item.amount) || 1;
+          const qty = (item.boxQuantity || 0) * playlistAmount;
           totalBoxCount += qty;
           boxFee += qty * BOX_PRICE;
         }
