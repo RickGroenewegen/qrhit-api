@@ -1,9 +1,11 @@
 import { FastifyInstance } from 'fastify';
+import * as crypto from 'crypto';
 import { verifyToken } from '../auth';
 import Vibe from '../vibe';
 import Mollie from '../mollie';
 import AssetQueue from '../assetQueue';
 import PrismaInstance from '../prisma';
+import Translation from '../translation';
 import archiver from 'archiver';
 import * as fsPromises from 'fs/promises';
 import * as pathModule from 'path';
@@ -124,6 +126,7 @@ export default async function vibeRoutes(
         contact,
         contactemail,
         contactphone,
+        locale,
       } = request.body;
 
       if (isNaN(companyId)) {
@@ -148,6 +151,7 @@ export default async function vibeRoutes(
         contact,
         contactemail,
         contactphone,
+        locale,
       });
 
       if (!result.success) {
@@ -255,6 +259,681 @@ export default async function vibeRoutes(
       }
 
       reply.send({ success: true, company: result.data.company });
+    }
+  );
+
+  // Get list-level calculation with fallback to company-level
+  fastify.get(
+    '/vibe/companies/:companyId/lists/:listId/calculation',
+    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const variant = (request.query?.variant || 'onzevibe') as string;
+
+      if (isNaN(companyId) || isNaN(listId)) {
+        reply.status(400).send({ error: 'Invalid company or list ID' });
+        return;
+      }
+
+      if (!['onzevibe', 'tromp', 'schneider'].includes(variant)) {
+        reply.status(400).send({ error: 'Invalid variant' });
+        return;
+      }
+
+      if (
+        request.user.userGroups.includes('companyadmin') &&
+        request.user.companyId !== companyId
+      ) {
+        reply.status(403).send({ error: 'Forbidden' });
+        return;
+      }
+
+      const listColumn =
+        variant === 'tromp'
+          ? 'calculationTromp'
+          : variant === 'schneider'
+            ? 'calculationSchneider'
+            : 'calculation';
+
+      const prisma = PrismaInstance.getInstance();
+      const list = await prisma.companyList.findUnique({
+        where: { id: listId },
+        select: {
+          id: true,
+          companyId: true,
+          numberOfCards: true,
+          calculation: true,
+          calculationTromp: true,
+          calculationSchneider: true,
+        },
+      });
+
+      if (!list || list.companyId !== companyId) {
+        reply.status(404).send({ error: 'List not found' });
+        return;
+      }
+
+      const numberOfCards = list.numberOfCards;
+
+      const listValue = (list as any)[listColumn] as string | null;
+      if (listValue) {
+        reply.send({
+          success: true,
+          source: 'list',
+          calculation: listValue,
+          numberOfCards,
+        });
+        return;
+      }
+
+      const company = await prisma.company.findUnique({
+        where: { id: companyId },
+        select: {
+          calculation: true,
+          calculationTromp: true,
+          calculationSchneider: true,
+        },
+      });
+
+      const companyValue = company ? ((company as any)[listColumn] as string | null) : null;
+      if (companyValue) {
+        reply.send({
+          success: true,
+          source: 'company',
+          calculation: companyValue,
+          numberOfCards,
+        });
+        return;
+      }
+
+      reply.send({
+        success: true,
+        source: 'empty',
+        calculation: null,
+        numberOfCards,
+      });
+    }
+  );
+
+  // Update company list info (JSON). Accepts all non-design editable fields.
+  fastify.put(
+    '/vibe/companies/:companyId/lists/:listId/info',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const body = request.body || {};
+
+      if (isNaN(companyId) || isNaN(listId)) {
+        reply.status(400).send({ error: 'Invalid company or list ID' });
+        return;
+      }
+
+      const requiredStringFields = ['name', 'slug'] as const;
+      const descriptionFields = Translation.ALL_LOCALES.map(
+        (code) => `description_${code}`
+      );
+      const optionalStringFields = [
+        'playlistSource',
+        'playlistUrl',
+        'languages',
+        'musicWishes',
+        'designResponsibility',
+        'gameExplanation',
+        'approverName',
+        'specialNotes',
+        'internalNotes',
+        ...descriptionFields,
+      ];
+      const numberFields = [
+        'numberOfTracks',
+        'minimumNumberOfTracks',
+        'numberOfCards',
+      ] as const;
+      const dateFields = [
+        'startAt',
+        'endAt',
+        'meetingDate',
+        'desiredDeliveryDate',
+      ] as const;
+      const booleanFields = [
+        'showNames',
+        'qrvote',
+        'addBirthdayNumber1',
+        'hideBirthdayNumber1',
+        'personalizedApp',
+      ] as const;
+
+      const updateData: Record<string, any> = {};
+
+      for (const field of requiredStringFields) {
+        if (body[field] !== undefined) {
+          if (typeof body[field] !== 'string' || !body[field].trim()) {
+            reply.status(400).send({ error: `${field} must be a non-empty string` });
+            return;
+          }
+          updateData[field] = body[field].trim();
+        }
+      }
+
+      for (const field of optionalStringFields) {
+        if (body[field] !== undefined) {
+          if (body[field] === null) {
+            updateData[field] = null;
+          } else if (typeof body[field] === 'string') {
+            updateData[field] = body[field];
+          } else {
+            reply.status(400).send({ error: `${field} must be a string or null` });
+            return;
+          }
+        }
+      }
+
+      for (const field of numberFields) {
+        if (body[field] !== undefined) {
+          if (body[field] === null) {
+            updateData[field] = null;
+          } else {
+            const n = Number(body[field]);
+            if (!Number.isFinite(n) || n < 0) {
+              reply.status(400).send({ error: `${field} must be a non-negative number` });
+              return;
+            }
+            updateData[field] = Math.round(n);
+          }
+        }
+      }
+
+      for (const field of dateFields) {
+        if (body[field] !== undefined) {
+          if (body[field] === null || body[field] === '') {
+            updateData[field] = null;
+          } else {
+            const d = new Date(body[field]);
+            if (isNaN(d.getTime())) {
+              reply.status(400).send({ error: `${field} must be a valid date` });
+              return;
+            }
+            updateData[field] = d;
+          }
+        }
+      }
+
+      for (const field of booleanFields) {
+        if (body[field] !== undefined) {
+          updateData[field] = Boolean(body[field]);
+        }
+      }
+
+      if (Object.keys(updateData).length === 0) {
+        reply.status(400).send({ error: 'No fields to update' });
+        return;
+      }
+
+      const prisma = PrismaInstance.getInstance();
+      const list = await prisma.companyList.findUnique({ where: { id: listId } });
+      if (!list || list.companyId !== companyId) {
+        reply.status(404).send({ error: 'List not found' });
+        return;
+      }
+
+      if (updateData.slug && updateData.slug !== list.slug) {
+        const existing = await prisma.companyList.findFirst({
+          where: { slug: updateData.slug, NOT: { id: listId } },
+        });
+        if (existing) {
+          reply.status(409).send({ error: 'Slug already in use' });
+          return;
+        }
+      }
+
+      const updated = await prisma.companyList.update({
+        where: { id: listId },
+        data: updateData,
+      });
+
+      reply.send({ success: true, list: updated });
+    }
+  );
+
+  // Generate or rotate the intake-form token for a list
+  fastify.post(
+    '/vibe/companies/:companyId/lists/:listId/intake-link',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      if (isNaN(companyId) || isNaN(listId)) {
+        reply.status(400).send({ error: 'Invalid company or list ID' });
+        return;
+      }
+
+      const prisma = PrismaInstance.getInstance();
+      const list = await prisma.companyList.findUnique({ where: { id: listId } });
+      if (!list || list.companyId !== companyId) {
+        reply.status(404).send({ error: 'List not found' });
+        return;
+      }
+
+      const token = crypto.randomBytes(24).toString('base64url').slice(0, 32);
+
+      const updated = await (prisma as any).companyList.update({
+        where: { id: listId },
+        data: { intakeToken: token },
+      });
+
+      reply.send({ success: true, intakeToken: updated.intakeToken });
+    }
+  );
+
+  // Public intake form — fetch list + company data by token (no auth)
+  fastify.get(
+    '/vibe/intake/:token',
+    async (request: any, reply: any) => {
+      const token = String(request.params.token || '');
+      if (!token || token.length < 16) {
+        reply.status(400).send({ error: 'Invalid token' });
+        return;
+      }
+
+      const prisma = PrismaInstance.getInstance();
+      const list: any = await (prisma as any).companyList.findFirst({
+        where: { intakeToken: token },
+        select: {
+          id: true,
+          name: true,
+          slug: true,
+          numberOfCards: true,
+          playlistSource: true,
+          playlistUrl: true,
+          languages: true,
+          meetingDate: true,
+          desiredDeliveryDate: true,
+          musicWishes: true,
+          designResponsibility: true,
+          gameExplanation: true,
+          personalizedApp: true,
+          approverName: true,
+          specialNotes: true,
+          Company: {
+            select: {
+              id: true,
+              name: true,
+              contact: true,
+              contactemail: true,
+              contactphone: true,
+              address: true,
+              housenumber: true,
+              city: true,
+              zipcode: true,
+              countrycode: true,
+            },
+          },
+        },
+      });
+
+      if (!list) {
+        reply.status(404).send({ error: 'Intake link is not valid' });
+        return;
+      }
+
+      const { Company, ...listFields } = list;
+      reply.send({
+        success: true,
+        company: Company,
+        list: listFields,
+      });
+    }
+  );
+
+  // Public intake form — save (partial) list + company data by token
+  fastify.put(
+    '/vibe/intake/:token',
+    async (request: any, reply: any) => {
+      const token = String(request.params.token || '');
+      if (!token || token.length < 16) {
+        reply.status(400).send({ error: 'Invalid token' });
+        return;
+      }
+
+      const body = request.body || {};
+      const prisma = PrismaInstance.getInstance();
+      const list = await (prisma as any).companyList.findFirst({
+        where: { intakeToken: token },
+        select: { id: true, companyId: true },
+      });
+      if (!list) {
+        reply.status(404).send({ error: 'Intake link is not valid' });
+        return;
+      }
+
+      // Whitelist fields accepted from the public form.
+      const listStringFields = [
+        'playlistSource',
+        'playlistUrl',
+        'musicWishes',
+        'designResponsibility',
+        'gameExplanation',
+        'approverName',
+        'specialNotes',
+      ];
+      const listNumberFields = ['numberOfCards'];
+      const listDateFields = ['meetingDate', 'desiredDeliveryDate'];
+      const listBooleanFields = ['personalizedApp'];
+
+      const listUpdate: Record<string, any> = {};
+
+      for (const f of listStringFields) {
+        if (body[f] === undefined) continue;
+        if (body[f] === null || body[f] === '') {
+          listUpdate[f] = null;
+        } else if (typeof body[f] === 'string') {
+          listUpdate[f] = body[f];
+        } else {
+          reply.status(400).send({ error: `${f} must be a string` });
+          return;
+        }
+      }
+      for (const f of listNumberFields) {
+        if (body[f] === undefined) continue;
+        if (body[f] === null) {
+          listUpdate[f] = null;
+        } else {
+          const n = Number(body[f]);
+          if (!Number.isFinite(n) || n < 0) {
+            reply.status(400).send({ error: `${f} must be a non-negative number` });
+            return;
+          }
+          listUpdate[f] = Math.round(n);
+        }
+      }
+      for (const f of listDateFields) {
+        if (body[f] === undefined) continue;
+        if (body[f] === null || body[f] === '') {
+          listUpdate[f] = null;
+        } else {
+          const d = new Date(body[f]);
+          if (isNaN(d.getTime())) {
+            reply.status(400).send({ error: `${f} must be a valid date` });
+            return;
+          }
+          listUpdate[f] = d;
+        }
+      }
+      for (const f of listBooleanFields) {
+        if (body[f] === undefined) continue;
+        listUpdate[f] = Boolean(body[f]);
+      }
+
+      if (Object.keys(listUpdate).length > 0) {
+        await (prisma as any).companyList.update({
+          where: { id: list.id },
+          data: listUpdate,
+        });
+      }
+
+      // Company fields (contact person, email, phone) can be edited too.
+      const companyStringFields = [
+        'contact',
+        'contactemail',
+        'contactphone',
+      ];
+      const companyUpdate: Record<string, any> = {};
+      for (const f of companyStringFields) {
+        if (body.company && body.company[f] !== undefined) {
+          const val = body.company[f];
+          if (val === null || val === '') {
+            companyUpdate[f] = null;
+          } else if (typeof val === 'string') {
+            companyUpdate[f] = val.trim() || null;
+          }
+        }
+      }
+
+      if (Object.keys(companyUpdate).length > 0) {
+        await prisma.company.update({
+          where: { id: list.companyId },
+          data: companyUpdate,
+        });
+      }
+
+      reply.send({ success: true });
+    }
+  );
+
+  // Re-download a previously persisted quotation as PDF
+  fastify.get(
+    '/vibe/companies/:companyId/quotations/:quotationId/pdf',
+    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const quotationId = parseInt(request.params.quotationId);
+      if (isNaN(companyId) || isNaN(quotationId)) {
+        reply.status(400).send({ error: 'Invalid company or quotation ID' });
+        return;
+      }
+
+      const result = await vibe.getQuotationPDF(
+        companyId,
+        quotationId,
+        request.user.userGroups,
+        request.user.companyId
+      );
+
+      if (!result.success) {
+        const statusCode =
+          result.error === 'Forbidden'
+            ? 403
+            : result.error === 'Quotation not found' ||
+                result.error === 'Company not found' ||
+                result.error === 'Archived PDF not found'
+              ? 404
+              : 500;
+        reply.status(statusCode).send({ error: result.error });
+        return;
+      }
+
+      reply.header('Content-Type', 'application/pdf');
+      reply.header(
+        'Content-Disposition',
+        `attachment; filename="${result.filename}"`
+      );
+      reply.send(result.data);
+    }
+  );
+
+  // Delete a persisted quotation (and its archived PDF)
+  fastify.delete(
+    '/vibe/companies/:companyId/quotations/:quotationId',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const quotationId = parseInt(request.params.quotationId);
+      if (isNaN(companyId) || isNaN(quotationId)) {
+        reply.status(400).send({ error: 'Invalid company or quotation ID' });
+        return;
+      }
+
+      const prisma = PrismaInstance.getInstance();
+      const quotation = await (prisma as any).quotation.findUnique({
+        where: { id: quotationId },
+      });
+      if (!quotation || quotation.companyId !== companyId) {
+        reply.status(404).send({ error: 'Quotation not found' });
+        return;
+      }
+
+      const pdfPath = `${process.env['PRIVATE_DIR']}/quotation/${quotation.quotationNumber}.pdf`;
+      try {
+        const fsPromisesModule = await import('fs/promises');
+        await fsPromisesModule.unlink(pdfPath);
+      } catch {
+        /* file may already be gone */
+      }
+
+      await (prisma as any).quotation.delete({ where: { id: quotationId } });
+
+      reply.send({ success: true });
+    }
+  );
+
+  // List quotations for a company
+  fastify.get(
+    '/vibe/companies/:companyId/quotations',
+    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      if (isNaN(companyId)) {
+        reply.status(400).send({ error: 'Invalid company ID' });
+        return;
+      }
+      if (
+        request.user.userGroups.includes('companyadmin') &&
+        request.user.companyId !== companyId
+      ) {
+        reply.status(403).send({ error: 'Forbidden' });
+        return;
+      }
+
+      const prisma = PrismaInstance.getInstance();
+      const quotations = await (prisma as any).quotation.findMany({
+        where: { companyId },
+        orderBy: { createdAt: 'desc' },
+      });
+
+      reply.send({ success: true, quotations });
+    }
+  );
+
+  // Aggregate counts for the company detail sidebar
+  fastify.get(
+    '/vibe/companies/:companyId/counts',
+    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      if (isNaN(companyId)) {
+        reply.status(400).send({ error: 'Invalid company ID' });
+        return;
+      }
+      if (
+        request.user.userGroups.includes('companyadmin') &&
+        request.user.companyId !== companyId
+      ) {
+        reply.status(403).send({ error: 'Forbidden' });
+        return;
+      }
+
+      const prisma = PrismaInstance.getInstance();
+      const [users, lists, assets, quotations] = await Promise.all([
+        prisma.user.count({ where: { companyId } }),
+        prisma.companyList.count({ where: { companyId } }),
+        prisma.companyAsset.count({ where: { companyId } }),
+        (prisma as any).quotation.count({ where: { companyId } }),
+      ]);
+
+      reply.send({
+        success: true,
+        counts: { contacts: users, lists, assets, quotations },
+      });
+    }
+  );
+
+  // Update list-level OnzeVibe calculation
+  fastify.put(
+    '/vibe/companies/:companyId/lists/:listId/calculation',
+    getAuthHandler(['admin', 'vibeadmin', 'companyadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const { calculation } = request.body || {};
+
+      if (isNaN(companyId) || isNaN(listId)) {
+        reply.status(400).send({ error: 'Invalid company or list ID' });
+        return;
+      }
+
+      if (
+        request.user.userGroups.includes('companyadmin') &&
+        request.user.companyId !== companyId
+      ) {
+        reply.status(403).send({ error: 'Forbidden' });
+        return;
+      }
+
+      const prisma = PrismaInstance.getInstance();
+      const list = await prisma.companyList.findUnique({ where: { id: listId } });
+      if (!list || list.companyId !== companyId) {
+        reply.status(404).send({ error: 'List not found' });
+        return;
+      }
+
+      const updated = await prisma.companyList.update({
+        where: { id: listId },
+        data: { calculation },
+      });
+
+      reply.send({ success: true, list: updated });
+    }
+  );
+
+  // Update list-level Tromp calculation
+  fastify.put(
+    '/vibe/companies/:companyId/lists/:listId/calculation-tromp',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const { calculationTromp } = request.body || {};
+
+      if (isNaN(companyId) || isNaN(listId)) {
+        reply.status(400).send({ error: 'Invalid company or list ID' });
+        return;
+      }
+
+      const prisma = PrismaInstance.getInstance();
+      const list = await prisma.companyList.findUnique({ where: { id: listId } });
+      if (!list || list.companyId !== companyId) {
+        reply.status(404).send({ error: 'List not found' });
+        return;
+      }
+
+      const updated = await prisma.companyList.update({
+        where: { id: listId },
+        data: { calculationTromp },
+      });
+
+      reply.send({ success: true, list: updated });
+    }
+  );
+
+  // Update list-level Schneider calculation
+  fastify.put(
+    '/vibe/companies/:companyId/lists/:listId/calculation-schneider',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const { calculationSchneider } = request.body || {};
+
+      if (isNaN(companyId) || isNaN(listId)) {
+        reply.status(400).send({ error: 'Invalid company or list ID' });
+        return;
+      }
+
+      const prisma = PrismaInstance.getInstance();
+      const list = await prisma.companyList.findUnique({ where: { id: listId } });
+      if (!list || list.companyId !== companyId) {
+        reply.status(404).send({ error: 'List not found' });
+        return;
+      }
+
+      const updated = await prisma.companyList.update({
+        where: { id: listId },
+        data: { calculationSchneider },
+      });
+
+      reply.send({ success: true, list: updated });
     }
   );
 
@@ -513,7 +1192,13 @@ export default async function vibeRoutes(
 
       try {
         const companyId = parseInt(request.params.companyId);
-        const { type, isReseller, profitMargins, calculatedPrices } = request.body; // 'onzevibe', 'qrsong', or 'schneider'
+        const {
+          type,
+          isReseller,
+          profitMargins,
+          calculatedPrices,
+          listId,
+        } = request.body; // 'onzevibe', 'qrsong', or 'schneider'
 
         if (isNaN(companyId)) {
           reply.status(400).send({ error: 'Invalid company ID' });
@@ -527,7 +1212,8 @@ export default async function vibeRoutes(
           request.user.userGroups,
           request.user.companyId,
           type || 'onzevibe',
-          { isReseller, profitMargins, calculatedPrices }
+          { isReseller, profitMargins, calculatedPrices },
+          listId ? Number(listId) : undefined
         );
 
         if (!result.success) {

@@ -879,7 +879,7 @@
         {
             "slug": "apple-music",
             "title": "Do you support Apple Music?",
-            "description": "Yes and no. Currently, QRSong! only supports Spotify playlists. However, we the Hitstalt app supports our cards and can play songs via Apple Music if you have an active subscription.",
+            "description": "Yes and no. Currently, QRSong! supports playlists from Spotify, Apple Music, Tidal, Deezer, and YouTube Music. In the QRSong app you can choose Apple Music as your preferred music service to play songs through Apple Music with full hidden playback. An active Apple Music subscription is required for playback.",
             "tags": [
                 "Apple Music",
                 "Spotify",
@@ -992,6 +992,28 @@
             ]
         },
         {
+-            "slug": "qrgames-bingo-requirements",
+-            "title": "How many tracks do I need for Music Bingo?",
+-            "description": "You need at least 75 tracks in your playlist to play Music Bingo. This ensures enough variety for the bingo cards. Each card contains 24 random tracks from your playlist (plus a free center space), so having more tracks creates more unique cards for players.",
++                 "tags": [
+-                "bingo requirements",
+-                "minimum tracks",
+-                "75 tracks",
+-                "bingo cards"
++                "supported platforms",
++                "music services",
++                "streaming",
++                "Spotify",
++                "Apple Music",
++                "Tidal",
++                "Deezer",
++                "YouTube Music",
++                "which platforms"
++
+            ]
++
+        },
+        {
             "slug": "qrgames-join-quiz",
             "title": "How do players join a Music Quiz?",
             "description": "Players join by scanning the QR code displayed on the host screen with their phone's camera, or by navigating to the room link directly. No account or app download is needed - it works in any mobile browser. Players pick an avatar and wait in the lobby until the host starts the game.",
@@ -1004,14 +1026,95 @@
             ]
         },
         {
-            "slug": "qrgames-bingo-requirements",
-            "title": "How many tracks do I need for Music Bingo?",
-            "description": "You need at least 75 tracks in your playlist to play Music Bingo. This ensures enough variety for the bingo cards. Each card contains 24 random tracks from your playlist (plus a free center space), so having more tracks creates more unique cards for players.",
+            "slug": "supported-music-platforms",
+            "title": "Which music streaming platforms are supported?",
+            "description": "QRSong! supports playlists from 5 music streaming services: Spotify, Apple Music, Tidal, Deezer, and YouTube Music. Simply paste the URL of your public playlist from any of these services. Each platform has different capabilities regarding release year data and hidden playback. See the detailed entries for each platform for specifics.",
             "tags": [
-                "bingo requirements",
-                "minimum tracks",
-                "75 tracks",
-                "bingo cards"
+                "supported platforms",
+                "music services",
+                "streaming",
+                "Spotify",
+                "Apple Music",
+                "Tidal",
+                "Deezer",
+                "YouTube Music",
+                "which platforms"
+            ]
+        },
+        {
+            "slug": "platform-spotify",
+            "title": "How does Spotify work with QRSong?",
+            "description": "Spotify has full support. Just paste any public Spotify playlist URL to create your cards. Release years are included and verified by our AI and team. When playing with the QRSong app, there are three playback modes you can choose in the settings: 1) Hidden mode (Spotify Premium required): the song plays in the app without showing the artist or title — perfect for music quizzes. 2) Countdown mode: a countdown is shown, then the Spotify app opens and plays the song — you'll see the artist and title in Spotify. 3) No Spotify mode: the song plays in the QRSong app but the artist and title are visible. We recommend Spotify Premium with hidden mode for the best experience. Note: only playlists are supported — albums, podcasts, and episodes cannot be used. Spotify-curated playlists (like 'This is...') must first be copied to your own account.",
+            "tags": [
+                "Spotify",
+                "Spotify Premium",
+                "Spotify Free",
+                "hidden mode",
+                "countdown",
+                "playback",
+                "platform"
+            ]
+        },
+        {
+            "slug": "platform-apple-music",
+            "title": "How does Apple Music work with QRSong?",
+            "description": "Apple Music has full support. Just paste any public Apple Music playlist URL to create your cards. Release years are included and verified by our AI and team. When playing with the QRSong app, songs play without showing the artist or title — full hidden playback on both iPhone and Android. You do need an active Apple Music subscription to play songs. You don't need a subscription to create the cards, only to play them.",
+            "tags": [
+                "Apple Music",
+                "hidden playback",
+                "platform",
+                "iPhone",
+                "Android",
+                "playback"
+            ]
+        },
+        {
+            "slug": "platform-tidal",
+            "title": "How does Tidal work with QRSong?",
+            "description": "Tidal is supported. Just paste your Tidal playlist URL to create your cards. Release years are not available from Tidal, so our AI determines the correct years after purchase. These are verified by our team and you can review and correct them before finalizing. When playing with the QRSong app, songs play in the app without showing the artist or title. You can select Tidal as your preferred music service in the app settings. No Tidal subscription is needed.",
+            "tags": [
+                "Tidal",
+                "hidden playback",
+                "platform",
+                "AI years"
+            ]
+        },
+        {
+            "slug": "platform-deezer",
+            "title": "How does Deezer work with QRSong?",
+            "description": "Deezer is supported. Just paste any public Deezer playlist URL to create your cards. Release years are not available from Deezer, so our AI determines the correct years after purchase. These are verified by our team and you can review and correct them before finalizing. When playing with the QRSong app, songs play in the app without showing the artist or title. You can select Deezer as your preferred music service in the app settings. No Deezer subscription is needed.",
+            "tags": [
+                "Deezer",
+                "hidden playback",
+                "platform",
+                "AI years"
+            ]
+        },
+        {
+            "slug": "platform-youtube-music",
+            "title": "How does YouTube Music work with QRSong?",
+            "description": "YouTube Music is supported but with some limitations. Just paste your YouTube Music playlist URL to create your cards. Release years are not available from YouTube Music, so our AI determines the correct years after purchase. These are verified by our team and you can review and correct them before finalizing. When playing with the QRSong app, there is no hidden playback. A countdown is shown, then the YouTube Music app opens and plays the song — the artist and title will be visible immediately. If you'd prefer hidden playback, we suggest switching to Spotify (with Premium), Apple Music, Deezer, or Tidal in the app settings.",
+            "tags": [
+                "YouTube Music",
+                "no hidden playback",
+                "platform",
+                "AI years",
+                "countdown",
+                "limitations"
+            ]
+        },
+        {
+            "slug": "playback-modes-explained",
+            "title": "How does playback work when scanning QRSong cards?",
+            "description": "The QRSong app offers different playback experiences depending on your chosen music service and settings. Spotify with hidden mode (requires Spotify Premium): the song plays in the app without showing the artist or title — the best way to play for music quizzes. Spotify with countdown mode: a countdown is shown, then the Spotify app opens and plays the song (artist and title will be visible). No Spotify mode: the song plays in the QRSong app but the artist and title are shown. Apple Music: songs play in the app without showing artist or title — full hidden playback (requires Apple Music subscription). Deezer and Tidal: songs play in the QRSong app without showing artist or title — a great alternative if you don't have Spotify Premium or Apple Music. YouTube Music: a countdown is shown, then the YouTube Music app opens (artist and title visible immediately — no hidden playback). You can switch your preferred music service in the app settings at any time.",
+            "tags": [
+                "playback",
+                "hidden mode",
+                "countdown",
+                "how to play",
+                "scanner",
+                "app settings",
+                "Spotify Premium"
             ]
         }
     ]

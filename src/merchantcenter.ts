@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import Logger from './logger';
 import Translation from './translation';
 import Order from './order';
+import Shipping from './shipping';
 import Utils from './utils';
 import sharp from 'sharp';
 import axios from 'axios';
@@ -103,7 +104,14 @@ export class MerchantCenterService {
   private logger: Logger;
   private translate: Translation;
   private order: Order;
+  private shipping: Shipping;
   private utils: Utils;
+  // Cached shipping costs per country, populated at the start of each sync run
+  // via loadShippingCosts(). Format mirrors Shipping.getShippingInfoByCountry().
+  private shippingCostsByCountry: Map<
+    string,
+    { size: number; cost: number }[]
+  > = new Map();
   private content: any; // Google Shopping Content API
   private merchantId: string;
   private auth: any;
@@ -144,6 +152,7 @@ export class MerchantCenterService {
     this.logger = new Logger();
     this.translate = new Translation();
     this.order = Order.getInstance();
+    this.shipping = Shipping.getInstance();
     this.utils = new Utils();
     this.merchantId = process.env.GOOGLE_MERCHANT_ID || '';
 
@@ -282,6 +291,11 @@ export class MerchantCenterService {
       const playlistLimit = isDevelopment ? 2 : undefined;
 
       this.logger.log(blue.bold('Merchant Center sync starting'));
+
+      // Load real shipping costs once per sync run (same source as the
+      // public /shipping-info page) so every product variant gets the
+      // correct per-country, per-size price instead of a hardcoded value.
+      await this.loadShippingCosts();
       this.logger.log(
         blue.bold(
           `🔧 Environment: ${white.bold(isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION')}`
@@ -837,7 +851,9 @@ export class MerchantCenterService {
     // Resolve currency for the target country (Google requires local currency)
     const currency = this.countryToCurrency[country] || 'EUR';
 
-    // Add shipping information based on product type
+    // Add shipping information based on product type. For physical / sheets
+    // we look up the real per-country, per-size cost from the same source the
+    // public /shipping-info page uses, instead of a hardcoded value.
     const shipping = [];
 
     // Digital products have free instant shipping
@@ -855,12 +871,20 @@ export class MerchantCenterService {
         maxTransitTime: 0,
       });
     } else {
-      // Physical products and sheets have standard shipping
+      const lookedUpCost = this.getShippingCostForVariant(
+        country,
+        variant.type,
+        variant.numberOfTracks
+      );
+      // Fall back to 4.95 EUR if we couldn't resolve a real cost (e.g. country
+      // missing from ShippingCostNew). Better than failing the whole upload.
+      const shippingCost = lookedUpCost ?? 4.95;
+
       shipping.push({
         country: country,
         service: 'Standard Shipping',
         price: {
-          value: '4.95',
+          value: shippingCost.toFixed(2),
           currency: currency,
         },
         minHandlingTime: 1,
@@ -1223,6 +1247,71 @@ export class MerchantCenterService {
     if (numberOfTracks < 100) return 'small';
     if (numberOfTracks <= 250) return 'medium';
     return 'large';
+  }
+
+  /**
+   * Load shipping costs for every country from the same source the public
+   * /shipping-info page uses (Shipping.getShippingInfoByCountry). Result is
+   * cached on the instance for the duration of the sync run so we don't hit
+   * the database once per variant.
+   */
+  private async loadShippingCosts(): Promise<void> {
+    try {
+      const info = await this.shipping.getShippingInfoByCountry();
+      this.shippingCostsByCountry = new Map(
+        info.countries.map((c) => [c.countryCode, c.shippingCosts])
+      );
+      this.logger.log(
+        blue.bold(
+          `📦 Loaded shipping costs for ${white.bold(
+            this.shippingCostsByCountry.size.toString()
+          )} countries`
+        )
+      );
+    } catch (error) {
+      this.logger.log(
+        red(`Failed to load shipping costs, falling back to defaults: ${error}`)
+      );
+      this.shippingCostsByCountry = new Map();
+    }
+  }
+
+  /**
+   * Resolve the shipping cost (in EUR) for a given country / product type /
+   * track count, mirroring the size-tier logic used by PrintEnBind:
+   *   - sheets always use the smallest tier (80)
+   *   - physical use the smallest tier whose size >= numberOfTracks (capped at 1000)
+   * Returns null if no matching cost is found, in which case the caller
+   * should fall back to a sane default.
+   */
+  private getShippingCostForVariant(
+    country: string,
+    type: 'digital' | 'sheets' | 'physical',
+    numberOfTracks: number
+  ): number | null {
+    if (type === 'digital') return 0;
+
+    const costs = this.shippingCostsByCountry.get(country);
+    if (!costs || costs.length === 0) return null;
+
+    const TIERS = [80, 405, 1000];
+    let targetSize: number;
+    if (type === 'sheets') {
+      targetSize = TIERS[0];
+    } else {
+      targetSize =
+        TIERS.find((t) => numberOfTracks <= t) ?? TIERS[TIERS.length - 1];
+    }
+
+    // Exact tier match first; if not present, fall back to the smallest size
+    // >= targetSize, then to the largest available.
+    const exact = costs.find((c) => c.size === targetSize);
+    if (exact) return exact.cost;
+
+    const sorted = [...costs].sort((a, b) => a.size - b.size);
+    const next = sorted.find((c) => c.size >= targetSize);
+    if (next) return next.cost;
+    return sorted[sorted.length - 1].cost;
   }
 
   /**
