@@ -558,7 +558,8 @@ class Bingo {
   public async processBingoUpgradePayment(
     paymentHasPlaylistIds: number | number[] | string,
     userId: number,
-    pricePerPlaylist?: number
+    pricePerPlaylist?: number,
+    molliePaymentId?: string
   ): Promise<{ success: boolean; error?: string }> {
     try {
       // Normalize to array of numbers
@@ -575,18 +576,42 @@ class Bingo {
         return { success: false, error: 'No valid playlist IDs provided' };
       }
 
+      // Idempotency guard: if a GamesPurchase already exists for this Mollie
+      // payment ID, the upgrade has already been processed — replayed webhooks
+      // must not insert duplicate rows or re-credit the user.
+      if (molliePaymentId) {
+        const existing = await this.prisma.gamesPurchase.findFirst({
+          where: { molliePaymentId, type: 'upgrade' },
+          select: { id: true },
+        });
+        if (existing) {
+          this.logger.log(
+            color.yellow.bold(`Bingo upgrade webhook replay ignored for ${white.bold(molliePaymentId)}`)
+          );
+          return { success: true };
+        }
+      }
+
       // Calculate price per playlist if not provided (recalculate for security)
       const pricing = calculateGamesUpgradePrice(ids.length);
       const finalPricePerPlaylist = pricePerPlaylist ?? pricing.pricePerPlaylist;
 
-      // Update all PaymentHasPlaylist records to enable bingo
-      await this.prisma.paymentHasPlaylist.updateMany({
-        where: { id: { in: ids } },
+      // Atomic claim: only flip rows that aren't already enabled. If count=0
+      // every id was already processed by a prior webhook — return idempotently.
+      const claim = await this.prisma.paymentHasPlaylist.updateMany({
+        where: { id: { in: ids }, gamesEnabled: false },
         data: {
           gamesEnabled: true,
           gamesPrice: finalPricePerPlaylist,
         },
       });
+
+      if (claim.count === 0) {
+        this.logger.log(
+          color.yellow.bold(`Bingo upgrade already applied for ids: ${white.bold(ids.join(', '))}`)
+        );
+        return { success: true };
+      }
 
       // Look up country/taxRate from the Payment linked to the first PaymentHasPlaylist
       let countrycode: string | null = null;
@@ -616,6 +641,7 @@ class Bingo {
           type: 'upgrade',
           countrycode,
           taxRate,
+          molliePaymentId: molliePaymentId ?? null,
         },
       });
 
