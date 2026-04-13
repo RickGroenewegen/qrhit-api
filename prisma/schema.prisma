@@ -807,6 +807,7 @@ model Company {
   contact          String?
   contactemail     String?
   contactphone     String?
+  locale           String?
   calculation          String?       @db.Text
   calculationTromp     String?       @db.Text
   calculationSchneider String?       @db.Text
@@ -816,8 +817,37 @@ model Company {
   User             User[]
   CompanyEvent     CompanyEvent[]
   CompanyAsset     CompanyAsset[]
+  Quotation        Quotation[]
 
   @@map("companies")
+}
+
+model Quotation {
+  id                    Int       @id @default(autoincrement())
+  quotationNumber       String    @unique
+  companyId             Int
+  listId                Int?
+  listName              String?
+  userEmail             String?
+  variant               String
+  quantity              Int       @default(0)
+  numberOfCards         Int?
+  totalAmount           Float?
+  clientPaysTotal       Float?
+  ourProfit             Float?
+  includeVotingPortal   Boolean   @default(false)
+  includeCustomApp      Boolean   @default(false)
+  includePersonalization Boolean  @default(false)
+  isReseller            Boolean   @default(false)
+  manualDiscountPercent Float     @default(0)
+  payload               String?   @db.Text
+  createdAt             DateTime  @default(now())
+
+  Company               Company   @relation(fields: [companyId], references: [id], onDelete: Cascade)
+
+  @@index([companyId])
+  @@index([createdAt])
+  @@map("company_quotations")
 }
 
 model CompanyEvent {
@@ -905,6 +935,19 @@ model CompanyList {
   addBirthdayNumber1      Boolean   @default(false)
   hideBirthdayNumber1     Boolean   @default(false)
   forceTemplate           String?
+  calculation             String?   @db.Text
+  calculationTromp        String?   @db.Text
+  calculationSchneider    String?   @db.Text
+  intakeToken             String?   @unique
+  meetingDate             DateTime?
+  desiredDeliveryDate     DateTime?
+  musicWishes             String?   @db.Text
+  designResponsibility    String?
+  gameExplanation         String?
+  personalizedApp         Boolean   @default(false)
+  approverName            String?
+  specialNotes            String?   @db.Text
+  internalNotes           String?   @db.Text
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 

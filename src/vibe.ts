@@ -991,6 +991,7 @@ class Vibe {
         'contact',
         'contactemail',
         'contactphone',
+        'locale',
         'calculation',
         'calculationTromp',
         'calculationSchneider',
@@ -3461,11 +3462,13 @@ class Vibe {
         clientPricePerUnit: number;
         clientPaysTotal: number;
       };
-    }
+    },
+    listId?: number
   ): Promise<{
     success: boolean;
     data?: Buffer;
     filename?: string;
+    quotationNumber?: string;
     error?: string;
   }> {
     try {
@@ -3495,10 +3498,14 @@ class Vibe {
       const prefix = type === 'onzevibe' ? 'ONZ' : 'QRS';
       const quotationNumber = `${prefix}${Date.now().toString().slice(-8)}`;
 
-      // Prepare file path
-      const tempDir = '/tmp';
-      const fileName = `quotation_${quotationNumber}_${Date.now()}.pdf`;
-      const filePath = path.join(tempDir, fileName);
+      // Prepare file path — archive to PRIVATE_DIR so we can re-download later.
+      const quotationDir = `${process.env['PRIVATE_DIR']}/quotation`;
+      try {
+        await fs.access(quotationDir);
+      } catch {
+        await fs.mkdir(quotationDir, { recursive: true });
+      }
+      const filePath = `${quotationDir}/${quotationNumber}.pdf`;
 
       // Generate PDF using Lambda
       const PDF = require('./pdf').default;
@@ -3536,11 +3543,8 @@ class Vibe {
         marginRight: 0,
       });
 
-      // Read the generated PDF
+      // Read the archived PDF (kept on disk under PRIVATE_DIR for re-download)
       const pdfBuffer = await fs.readFile(filePath);
-
-      // Clean up
-      await fs.unlink(filePath).catch(() => {}); // Ignore unlink errors
 
       // Generate filename for download - never include printer names like 'tromp' or 'schneider'
       const downloadFilename = `Offerte_${company.name.replace(
@@ -3548,14 +3552,162 @@ class Vibe {
         '_'
       )}_${quotationNumber}.pdf`;
 
+      // Persist a quotation history row. Pull the current calculation JSON
+      // from the list (or fall back to the company-level one) so we can
+      // extract the flags and totals the admin cares about.
+      try {
+        const column =
+          type === 'qrsong'
+            ? 'calculationTromp'
+            : type === 'schneider'
+              ? 'calculationSchneider'
+              : 'calculation';
+
+        let calcJson: string | null = null;
+        let listName: string | null = null;
+        let listNumberOfCards: number | null = null;
+
+        if (listId) {
+          const list: any = await (this.prisma as any).companyList.findUnique({
+            where: { id: listId },
+            select: {
+              name: true,
+              numberOfCards: true,
+              calculation: true,
+              calculationTromp: true,
+              calculationSchneider: true,
+            },
+          });
+          if (list) {
+            listName = list.name;
+            listNumberOfCards = list.numberOfCards ?? null;
+            calcJson = list[column] as string | null;
+          }
+        }
+        if (!calcJson) {
+          calcJson = (company as any)[column] as string | null;
+        }
+
+        let state: any = {};
+        if (calcJson) {
+          try { state = JSON.parse(calcJson); } catch { /* ignore */ }
+        }
+
+        const clientPaysTotal = pricingOptions?.calculatedPrices?.clientPaysTotal;
+        const retailPrice = pricingOptions?.calculatedPrices?.retailPrice;
+        const quantity = Number(state.quantity) || 0;
+        const totalAmount =
+          clientPaysTotal ??
+          (retailPrice != null && quantity > 0 ? retailPrice * quantity : null);
+        const ourProfit =
+          (pricingOptions as any)?.ourProfit ??
+          pricingOptions?.calculatedPrices?.ourTotalProfit ??
+          null;
+
+        await (this.prisma as any).quotation.create({
+          data: {
+            quotationNumber,
+            companyId,
+            listId: listId ?? null,
+            listName,
+            userEmail: typeof userId === 'string' ? userId : null,
+            variant: type,
+            quantity,
+            numberOfCards: listNumberOfCards,
+            totalAmount,
+            clientPaysTotal: clientPaysTotal ?? null,
+            ourProfit,
+            includeVotingPortal: !!state.includeVotingPortal,
+            includeCustomApp: !!state.includeCustomApp,
+            includePersonalization: !!state.includePersonalization,
+            isReseller: !!(pricingOptions?.isReseller ?? state.isReseller),
+            manualDiscountPercent: Number(state.manualDiscountPercent) || 0,
+            payload: JSON.stringify({
+              state,
+              pricingOptions: pricingOptions ?? null,
+            }),
+          },
+        });
+      } catch (persistError: any) {
+        this.logger.log(
+          color.red.bold(
+            `Quotation PDF generated but persist FAILED: ${persistError?.message || persistError}`
+          )
+        );
+        console.error('[quotation persist] full error:', persistError);
+      }
+
+      return {
+        success: true,
+        data: pdfBuffer,
+        filename: downloadFilename,
+        quotationNumber,
+      };
+    } catch (error: any) {
+      this.logger.log(color.red.bold(`Error generating quotation: ${error}`));
+      return { success: false, error: 'Failed to generate quotation' };
+    }
+  }
+
+  /**
+   * Fetch the archived PDF for a previously generated quotation from
+   * PRIVATE_DIR/quotation/<quotationNumber>.pdf so the client can re-download
+   * the original document without any Lambda calls.
+   */
+  public async getQuotationPDF(
+    companyId: number,
+    quotationId: number,
+    userGroups: string[],
+    userCompanyId?: number
+  ): Promise<{
+    success: boolean;
+    data?: Buffer;
+    filename?: string;
+    error?: string;
+  }> {
+    try {
+      if (userGroups.includes('companyadmin') && userCompanyId !== companyId) {
+        return { success: false, error: 'Forbidden' };
+      }
+
+      const quotation = await (this.prisma as any).quotation.findUnique({
+        where: { id: quotationId },
+      });
+      if (!quotation || quotation.companyId !== companyId) {
+        return { success: false, error: 'Quotation not found' };
+      }
+
+      const companiesResult = await this.getAllCompanies(userGroups);
+      const company = companiesResult.data?.companies?.find(
+        (c: any) => c.id === companyId
+      );
+      if (!company) {
+        return { success: false, error: 'Company not found' };
+      }
+
+      const pdfPath = `${process.env['PRIVATE_DIR']}/quotation/${quotation.quotationNumber}.pdf`;
+      try {
+        await fs.access(pdfPath);
+      } catch {
+        return { success: false, error: 'Archived PDF not found' };
+      }
+
+      const pdfBuffer = await fs.readFile(pdfPath);
+      const downloadFilename = `Offerte_${company.name.replace(
+        /[^a-zA-Z0-9]/g,
+        '_'
+      )}_${quotation.quotationNumber}.pdf`;
+
       return {
         success: true,
         data: pdfBuffer,
         filename: downloadFilename,
       };
     } catch (error: any) {
-      this.logger.log(color.red.bold(`Error generating quotation: ${error}`));
-      return { success: false, error: 'Failed to generate quotation' };
+      this.logger.log(
+        color.red.bold(`Error fetching archived quotation: ${error?.message || error}`)
+      );
+      return { success: false, error: 'Failed to fetch quotation' };
     }
   }
 

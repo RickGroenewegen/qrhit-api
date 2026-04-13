@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import * as crypto from 'crypto';
 import Logger from '../logger';
 import { color } from 'console-log-colors';
 import { createOrUpdateAdminUser, deleteUserById, generateToken } from '../auth';
@@ -106,10 +107,15 @@ export default async function adminRoutes(
         return;
       }
 
+      // For new users, generate a random password if none was supplied.
+      // Editing an existing user may pass an empty password to keep the current one.
+      const effectivePassword =
+        password || (id ? '' : crypto.randomBytes(16).toString('hex'));
+
       try {
         const user = await createOrUpdateAdminUser(
           email,
-          password,
+          effectivePassword,
           displayName,
           companyId,
           userGroup,
