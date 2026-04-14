@@ -992,26 +992,15 @@
             ]
         },
         {
--            "slug": "qrgames-bingo-requirements",
--            "title": "How many tracks do I need for Music Bingo?",
--            "description": "You need at least 75 tracks in your playlist to play Music Bingo. This ensures enough variety for the bingo cards. Each card contains 24 random tracks from your playlist (plus a free center space), so having more tracks creates more unique cards for players.",
-+                 "tags": [
--                "bingo requirements",
--                "minimum tracks",
--                "75 tracks",
--                "bingo cards"
-+                "supported platforms",
-+                "music services",
-+                "streaming",
-+                "Spotify",
-+                "Apple Music",
-+                "Tidal",
-+                "Deezer",
-+                "YouTube Music",
-+                "which platforms"
-+
+            "slug": "qrgames-bingo-requirements",
+            "title": "How many tracks do I need for Music Bingo?",
+            "description": "You need at least 75 tracks in your playlist to play Music Bingo. This ensures enough variety for the bingo cards. Each card contains 24 random tracks from your playlist (plus a free center space), so having more tracks creates more unique cards for players.",
+            "tags": [
+                "bingo requirements",
+                "minimum tracks",
+                "75 tracks",
+                "bingo cards"
             ]
-+
         },
         {
             "slug": "qrgames-join-quiz",
