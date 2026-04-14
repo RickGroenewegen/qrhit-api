@@ -344,10 +344,14 @@
             </h2>
 
             <ul class="instructions-list">
+                <li>De kaarten hebben een formaat van <strong><% if (printer === 'tromp') { %>60x60mm<% } else { %>56x56mm<% } %></strong> (eindformaat na snijden)</li>
+                <li>De buitenste <strong>3mm rondom</strong> wordt beschouwd als <strong>bleed/afloop</strong> en wordt van de kaart gesneden</li>
+                <li>Houd er rekening mee dat er ook <strong>na het snijden nog een verschuiving van 1-2mm</strong> kan optreden. Plaats daarom <strong>geen belangrijke tekst, randen of elementen dicht bij de buitenrand</strong></li>
                 <li>QR codes zullen <strong>in het midden van de kaart</strong> geplaatst worden</li>
                 <li>Voor de voor- en achterkant een <strong>vierkante afbeelding</strong> aanleveren van minstens <em>1600x1600 pixels</em>, liefst als PSD</li>
                 <li>De QR scanner werkt het beste met een <strong>donkerdere QR code op een lichtere achtergrond</strong></li>
-                <li>Ontwerp aanleveren als <strong>PSD bestand</strong>, met de QR code in een aparte layer zodat deze uit te zetten is</li>
+                <li>Ontwerp aanleveren als <strong>PSD bestand</strong>, met de QR code in een <strong>aparte layer</strong> zodat deze uit te zetten is</li>
+                <li>Plaats ook de <strong>artiest, titel en jaartal op de achterkant in een aparte layer</strong>, zodat deze indien gewenst uitgezet kan worden</li>
                 <li>Wanneer er de wens is voor een ander font dient er gekozen te worden uit de <strong>Google Fonts</strong></li>
             </ul>
 
