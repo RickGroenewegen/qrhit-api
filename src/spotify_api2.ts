@@ -17,7 +17,6 @@ import {
  * - `tracks` field renamed to `items` in playlist responses
  * - `track` field renamed to `item` in track item responses
  * - `external_ids` removed from the API
- * - Batch GET /v1/tracks endpoint removed (delegates to SpotifyScraper)
  * - POST /v1/users/{id}/playlists removed (uses /v1/me/playlists)
  *
  * All responses are **normalized back to the old format** so that
@@ -545,25 +544,54 @@ class SpotifyApi2 {
   }
 
   /**
-   * Fetches tracks by IDs — delegates to SpotifyScraper since the batch
-   * GET /v1/tracks endpoint has been removed in the new API.
+   * Fetches details for multiple tracks by their Spotify IDs using
+   * GET /v1/tracks?ids=… (chunked to the 50-id API limit).
    */
   public async getTracksByIds(trackIds: string[]): Promise<ApiResult> {
     if (!trackIds || trackIds.length === 0) {
       return { success: false, error: 'No track IDs provided' };
     }
 
-    // Batch endpoint removed in new API — delegate to scraper
-    const SpotifyScraper = (await import('./spotify_scraper')).default;
-    const scraper = new SpotifyScraper();
-
     this.logger.log(
-      color.blue.bold(
-        `[${color.white.bold('spotify-api2')}] Delegating getTracksByIds (${color.white.bold(trackIds.length)} tracks) to SpotifyScraper`
-      )
-    );
+        color.blue.bold(
+          `[${color.white.bold('spotify-api2')}] Fetching tracks by ID from API for ${color.white.bold(
+            trackIds.length
+          )} tracks`
+        )
+      );
 
-    return scraper.getTracksByIds(trackIds);
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) {
+      return {
+        success: false,
+        error: 'Spotify authentication required',
+        needsReAuth: true,
+        authUrl: this.getAuthorizationUrl() ?? undefined,
+      };
+    }
+
+    const chunkSize = 50;
+    let allTracks: any[] = [];
+
+    try {
+      for (let i = 0; i < trackIds.length; i += chunkSize) {
+        const chunk = trackIds.slice(i, i + chunkSize);
+
+        const response = await axios.get('https://api.spotify.com/v1/tracks', {
+          params: { ids: chunk.join(',') },
+          headers: { Authorization: `Bearer ${accessToken}` },
+        });
+
+        const validTracksInChunk = (response.data?.tracks || []).filter(
+          (track: any) => track !== null
+        );
+        allTracks = allTracks.concat(validTracksInChunk);
+      }
+
+      return { success: true, data: { tracks: allTracks } };
+    } catch (error) {
+      return this.handleApiError(error, `fetching tracks by IDs`);
+    }
   }
 
   /**

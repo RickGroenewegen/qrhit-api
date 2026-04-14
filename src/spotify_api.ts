@@ -781,6 +781,14 @@ class SpotifyApi {
       return { success: false, error: 'No track IDs provided' };
     }
 
+    this.logger.log(
+        color.blue.bold(
+          `[${color.white.bold('spotify-api')}] Fetching tracks by ID from API for ${color.white.bold(
+            trackIds.length
+          )} tracks`
+        )
+      );
+
     const accessToken = await this.getAccessToken();
     if (!accessToken) {
       return {
