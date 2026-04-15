@@ -321,6 +321,7 @@
                 <li>Resolutie minimaal <em>150 dpi</em></li>
             </ul>
 
+            <% if (printer === 'tromp') { %>
             <div class="warning-box">
                 <span class="icon">!</span>
                 <div class="text">
@@ -334,6 +335,20 @@
                     <strong>Let op:</strong> Wanneer bij het omdoosje teksten op de zijkant en rug geplaatst worden, controleer dan of deze niet op z'n kop staan na het vouwen.
                 </div>
             </div>
+            <% } %>
+
+            <div class="highlight-box">
+                <div class="title">Uitleg voor de eindgebruiker</div>
+                <div class="content">
+                    Wilt u uitleg bij het spel leveren? Dan zijn er meerdere mogelijkheden:
+                    <ul style="margin: 6px 0 0 18px; padding: 0;">
+                        <li>Verwerk de <strong>tekstuele uitleg direct in het ontwerp van de doos</strong>, bijvoorbeeld op de achterkant of aan de binnenzijde van het deksel</li>
+                        <li>Plaats een <strong>QR code op de doos</strong> die verwijst naar <a href="https://www.qrsong.io/en/how-to">https://www.qrsong.io/en/how-to</a></li>
+                        <li>Maak een <strong>eigen uitlegpagina</strong> op uw eigen website en plaats een QR code op de doos die daarnaar verwijst</li>
+                        <li>Of 'offer' één kaart op uit de set en vervang deze door een zelf ontworpen <strong>Uitleg-kaart</strong> (deze moet aan dezelfde richtlijnen voldoen als de overige QR kaarten, zie sectie 2)</li>
+                    </ul>
+                </div>
+            </div>
         </div>
 
         <!-- Section 2: Cards -->
@@ -344,10 +359,14 @@
             </h2>
 
             <ul class="instructions-list">
+                <li>De kaarten hebben een formaat van <strong><% if (printer === 'tromp') { %>60x60mm<% } else { %>56x56mm<% } %></strong> (eindformaat na snijden)</li>
+                <li>De buitenste <strong>3mm rondom</strong> wordt beschouwd als <strong>bleed/afloop</strong> en wordt van de kaart gesneden</li>
+                <li>Houd er rekening mee dat er ook <strong>na het snijden nog een verschuiving van 1-2mm</strong> kan optreden. Houd belangrijke tekst, randen en elementen daarom <strong>minimaal 5mm (3mm bleed + 2mm tolerantie) van de buitenrand</strong></li>
                 <li>QR codes zullen <strong>in het midden van de kaart</strong> geplaatst worden</li>
-                <li>Voor de voor- en achterkant een <strong>vierkante afbeelding</strong> aanleveren van minstens <em>1600x1600 pixels</em>, liefst als PSD</li>
+                <li>Voor de voor- en achterkant een <strong>vierkante afbeelding</strong> aanleveren van minstens <em>1600x1600 pixels</em>, <strong>aanleveren als PSD</strong></li>
                 <li>De QR scanner werkt het beste met een <strong>donkerdere QR code op een lichtere achtergrond</strong></li>
-                <li>Ontwerp aanleveren als <strong>PSD bestand</strong>, met de QR code in een aparte layer zodat deze uit te zetten is</li>
+                <li>Ontwerp aanleveren als <strong>PSD bestand</strong>, met de QR code in een <strong>aparte layer</strong> zodat deze uit te zetten is</li>
+                <li>Plaats ook de <strong>artiest, titel en jaartal op de achterkant in een aparte layer</strong>, zodat deze indien gewenst uitgezet kan worden</li>
                 <li>Wanneer er de wens is voor een ander font dient er gekozen te worden uit de <strong>Google Fonts</strong></li>
             </ul>
 

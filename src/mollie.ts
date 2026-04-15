@@ -1,6 +1,6 @@
 import { ApiResult } from './interfaces/ApiResult';
 import { createMollieClient, Locale, PaymentMethod } from '@mollie/api-client';
-import { Payment } from '@prisma/client';
+import { Payment, Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
 import { color, white } from 'console-log-colors';
 import Logger from './logger';
@@ -63,24 +63,26 @@ class Mollie {
       ignoreEmails = ['west14@gmail.com', 'info@rickgroenewegen.nl'];
     }
 
+    const where = {
+      vibe: false,
+      AND: [
+        {
+          createdAt: {
+            gt: new Date('2024-12-05'),
+          },
+        },
+      ],
+      email: {
+        notIn: ignoreEmails,
+      },
+      status: {
+        in: ['paid'],
+      },
+    };
+
     const report = await this.prisma.payment.groupBy({
       by: ['createdAt'],
-      where: {
-        vibe: false,
-        AND: [
-          {
-            createdAt: {
-              gt: new Date('2024-12-05'),
-            },
-          },
-        ],
-        email: {
-          notIn: ignoreEmails,
-        },
-        status: {
-          in: ['paid'],
-        },
-      },
+      where,
       _count: {
         _all: true,
       },
@@ -89,6 +91,11 @@ class Mollie {
         totalPriceWithoutTax: true,
       },
     });
+
+    const refundAdjustments = await this.getRefundAdjustmentsByKey(
+      where,
+      (p) => new Date(p.createdAt).toISOString().split('T')[0]
+    );
 
     // Process the results to group by day and calculate totals
     const dailyReport = report.reduce((acc: any[], entry) => {
@@ -106,10 +113,21 @@ class Mollie {
           numberOfSales: entry._count._all,
           totalPrice: entry._sum.totalPrice || 0,
           totalPriceWithoutTax: entry._sum.totalPriceWithoutTax || 0,
+          totalRefunded: 0,
         });
       }
       return acc;
     }, []);
+
+    // Net out refunds proportionally per day
+    for (const row of dailyReport) {
+      const adj = refundAdjustments.get(row.day);
+      if (adj) {
+        row.totalPrice -= adj.refundedTotal;
+        row.totalPriceWithoutTax -= adj.refundedExVAT;
+        row.totalRefunded = adj.refundedTotal;
+      }
+    }
 
     // Sort by day descending (newest first)
     return dailyReport.sort((a, b) => b.day.localeCompare(a.day));
@@ -133,12 +151,25 @@ class Mollie {
       : "DATE_FORMAT(gp.createdAt, '%Y-%m')";
 
     if (filter === 'all') {
+      // Net out refunds proportionally. For partial refunds we scale the
+      // ex-VAT portion by (totalPriceWithoutTax / totalPrice) so refund VAT
+      // is allocated correctly against gross revenue.
       const results: any[] = await this.prisma.$queryRawUnsafe(`
         SELECT
           ${dateExpr} as period,
           COUNT(*) as numberOfSales,
-          COALESCE(SUM(p.totalPrice), 0) as totalPrice,
-          COALESCE(SUM(p.totalPriceWithoutTax), 0) as totalPriceWithoutTax
+          COALESCE(SUM(p.totalPrice - COALESCE(p.refundAmount, 0)), 0) as totalPrice,
+          COALESCE(
+            SUM(
+              p.totalPriceWithoutTax
+              - CASE
+                  WHEN p.totalPrice > 0 THEN COALESCE(p.refundAmount, 0) * (p.totalPriceWithoutTax / p.totalPrice)
+                  ELSE 0
+                END
+            ),
+            0
+          ) as totalPriceWithoutTax,
+          COALESCE(SUM(p.refundAmount), 0) as totalRefunded
         FROM payments p
         WHERE p.status = 'paid'
           AND p.vibe = 0
@@ -184,6 +215,7 @@ class Mollie {
         totalPrice: Number(r.totalPrice) || 0,
         totalPriceWithoutTax: Number(r.totalPriceWithoutTax) || 0,
         boxAmount: Number(boxMap.get(r.period)?.boxAmount) || 0,
+        totalRefunded: Number(r.totalRefunded) || 0,
         gamesAmount: Number(gamesMap.get(r.period)?.gamesAmount) || 0,
         gamesTotal: Number(gamesMap.get(r.period)?.gamesTotal) || 0,
       }));
@@ -198,12 +230,42 @@ class Mollie {
       typeFilter = "AND php.type = 'physical' AND (php.subType = 'none' OR php.subType IS NULL)";
     }
 
+    // For filtered views we approximate refund share per line item as
+    // (line gross / payment gross). Partial refunds on multi-line orders
+    // therefore distribute across the order's line items uniformly.
     const results: any[] = await this.prisma.$queryRawUnsafe(`
       SELECT
         ${dateExpr} as period,
         COUNT(DISTINCT p.id) as numberOfSales,
-        COALESCE(SUM(php.price), 0) as totalPrice,
-        COALESCE(SUM(php.priceWithoutVAT), 0) as totalPriceWithoutTax
+        COALESCE(
+          SUM(
+            php.price
+            - CASE
+                WHEN p.totalPrice > 0 THEN COALESCE(p.refundAmount, 0) * (php.price / p.totalPrice)
+                ELSE 0
+              END
+          ),
+          0
+        ) as totalPrice,
+        COALESCE(
+          SUM(
+            php.priceWithoutVAT
+            - CASE
+                WHEN p.totalPrice > 0 THEN COALESCE(p.refundAmount, 0) * (php.priceWithoutVAT / p.totalPrice)
+                ELSE 0
+              END
+          ),
+          0
+        ) as totalPriceWithoutTax,
+        COALESCE(
+          SUM(
+            CASE
+              WHEN p.totalPrice > 0 THEN COALESCE(p.refundAmount, 0) * (php.price / p.totalPrice)
+              ELSE 0
+            END
+          ),
+          0
+        ) as totalRefunded
       FROM payment_has_playlist php
       JOIN payments p ON php.paymentId = p.id
       WHERE p.status = 'paid'
@@ -221,6 +283,7 @@ class Mollie {
       totalPrice: Number(r.totalPrice) || 0,
       totalPriceWithoutTax: Number(r.totalPriceWithoutTax) || 0,
       boxAmount: 0,
+      totalRefunded: Number(r.totalRefunded) || 0,
       gamesAmount: 0,
       gamesTotal: 0,
     }));
@@ -236,27 +299,29 @@ class Mollie {
       ignoreEmails = ['west14@gmail.com', 'info@rickgroenewegen.nl'];
     }
 
+    const where = {
+      vibe: false,
+      AND: [
+        {
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+        {
+          createdAt: {
+            gt: new Date('2024-12-05'),
+          },
+        },
+      ],
+      email: {
+        notIn: ignoreEmails,
+      },
+    };
+
     const report = await this.prisma.payment.groupBy({
       by: ['countrycode'],
-      where: {
-        vibe: false,
-        AND: [
-          {
-            createdAt: {
-              gte: startDate,
-              lte: endDate,
-            },
-          },
-          {
-            createdAt: {
-              gt: new Date('2024-12-05'),
-            },
-          },
-        ],
-        email: {
-          notIn: ignoreEmails,
-        },
-      },
+      where,
       _count: {
         _all: true,
       },
@@ -268,6 +333,11 @@ class Mollie {
         taxRate: true,
       },
     });
+
+    const refundAdjustments = await this.getRefundAdjustmentsByKey(
+      where,
+      (p) => p.countrycode || 'Unknown'
+    );
 
     // Count all games (initial + upgrade), but only sum upgrade prices (initial prices are already in payment totals)
     const gamesByCountryCount = await this.prisma.gamesPurchase.groupBy({
@@ -341,12 +411,17 @@ class Mollie {
 
         const countryKey = entry.countrycode || 'Unknown';
         const gamesData = gamesMap.get(countryKey);
+        const adj = refundAdjustments.get(countryKey);
+
+        const grossTotal = entry._sum.totalPrice || 0;
+        const grossExVAT = entry._sum.totalPriceWithoutTax || 0;
 
         return {
           country: countryKey,
           numberOfSales: entry._count._all,
-          totalPrice: entry._sum.totalPrice || 0,
-          totalPriceWithoutTax: entry._sum.totalPriceWithoutTax,
+          totalPrice: grossTotal - (adj?.refundedTotal || 0),
+          totalPriceWithoutTax: grossExVAT - (adj?.refundedExVAT || 0),
+          totalRefunded: adj?.refundedTotal || 0,
           taxRate: entry._max.taxRate,
           totalPlaylists: totalPlaylistsSold,
           boxAmount: boxMap.get(countryKey) || 0,
@@ -369,27 +444,29 @@ class Mollie {
       ignoreEmails = ['west14@gmail.com', 'info@rickgroenewegen.nl'];
     }
 
+    const where = {
+      vibe: false,
+      AND: [
+        {
+          createdAt: {
+            gte: startDate,
+            lte: endDate,
+          },
+        },
+        {
+          createdAt: {
+            gt: new Date('2024-12-05'),
+          },
+        },
+      ],
+      email: {
+        notIn: ignoreEmails,
+      },
+    };
+
     const report = await this.prisma.payment.groupBy({
       by: ['taxRate'],
-      where: {
-        vibe: false,
-        AND: [
-          {
-            createdAt: {
-              gte: startDate,
-              lte: endDate,
-            },
-          },
-          {
-            createdAt: {
-              gt: new Date('2024-12-05'),
-            },
-          },
-        ],
-        email: {
-          notIn: ignoreEmails,
-        },
-      },
+      where,
       _count: {
         _all: true,
       },
@@ -399,6 +476,11 @@ class Mollie {
         productVATPrice: true,
       },
     });
+
+    const refundAdjustments = await this.getRefundAdjustmentsByKey(
+      where,
+      (p) => p.taxRate || 0
+    );
 
     // Query only upgrade-type games (initial games are already in payment totals)
     const gamesByTaxRate = await this.prisma.gamesPurchase.groupBy({
@@ -420,18 +502,83 @@ class Mollie {
     const detailedReport = report.map((entry) => {
       const taxKey = entry.taxRate || 0;
       const gamesData = gamesTaxMap.get(taxKey);
+      const adj = refundAdjustments.get(taxKey);
       return {
         taxRate: taxKey,
         numberOfSales: entry._count._all,
-        totalPrice: entry._sum.totalPrice || 0,
-        totalPriceWithoutTax: entry._sum.totalPriceWithoutTax || 0,
-        totalVAT: entry._sum.productVATPrice || 0,
+        totalPrice: (entry._sum.totalPrice || 0) - (adj?.refundedTotal || 0),
+        totalPriceWithoutTax:
+          (entry._sum.totalPriceWithoutTax || 0) - (adj?.refundedExVAT || 0),
+        totalVAT: (entry._sum.productVATPrice || 0) - (adj?.refundedVAT || 0),
+        totalRefunded: adj?.refundedTotal || 0,
         gamesAmount: gamesData?.amount || 0,
         gamesTotal: gamesData?.total || 0,
       };
     });
 
     return detailedReport.sort((a, b) => b.totalPrice - a.totalPrice);
+  }
+
+  /**
+   * Fetch refunded payments matching `where` and aggregate refund shares per
+   * key. Partial refunds are split proportionally across ex-VAT and VAT using
+   * the original row's (totalPriceWithoutTax / totalPrice) ratio so tax
+   * reports stay balanced after netting.
+   */
+  private async getRefundAdjustmentsByKey<K>(
+    where: Prisma.PaymentWhereInput,
+    keyFn: (p: {
+      createdAt: Date;
+      countrycode: string | null;
+      taxRate: number | null;
+    }) => K
+  ): Promise<
+    Map<
+      K,
+      {
+        refundedTotal: number;
+        refundedExVAT: number;
+        refundedVAT: number;
+      }
+    >
+  > {
+    const refunded = await this.prisma.payment.findMany({
+      where: {
+        ...where,
+        refundAmount: { gt: 0 },
+      },
+      select: {
+        createdAt: true,
+        countrycode: true,
+        taxRate: true,
+        totalPrice: true,
+        totalPriceWithoutTax: true,
+        productVATPrice: true,
+        refundAmount: true,
+      },
+    });
+
+    const adjustments = new Map<
+      K,
+      { refundedTotal: number; refundedExVAT: number; refundedVAT: number }
+    >();
+    for (const p of refunded) {
+      const gross = p.totalPrice || 0;
+      const refund = p.refundAmount || 0;
+      if (gross <= 0 || refund <= 0) continue;
+      const ratio = refund / gross;
+      const key = keyFn(p);
+      const current = adjustments.get(key) || {
+        refundedTotal: 0,
+        refundedExVAT: 0,
+        refundedVAT: 0,
+      };
+      current.refundedTotal += refund;
+      current.refundedExVAT += (p.totalPriceWithoutTax || 0) * ratio;
+      current.refundedVAT += (p.productVATPrice || 0) * ratio;
+      adjustments.set(key, current);
+    }
+    return adjustments;
   }
 
   public startCron(): void {
@@ -1503,7 +1650,12 @@ class Mollie {
         const pricePerPlaylist = metadata.pricePerPlaylist ? parseFloat(metadata.pricePerPlaylist) : undefined;
 
         if (paymentHasPlaylistIds && userId) {
-          const result = await this.bingo.processBingoUpgradePayment(paymentHasPlaylistIds, userId, pricePerPlaylist);
+          const result = await this.bingo.processBingoUpgradePayment(
+            paymentHasPlaylistIds,
+            userId,
+            pricePerPlaylist,
+            payment.id
+          );
           return result.success
             ? { success: true }
             : { success: false, error: result.error || 'Failed to process bingo upgrade' };
@@ -1609,24 +1761,30 @@ class Mollie {
         },
       });
 
-      this.logger.log(
-        color.blue.bold('Processed webhook for payment: ') +
-          color.bold.white(payment.id) +
-          color.blue.bold(' with status: ') +
-          color.bold.white(payment.status)
-      );
+      if (!dbPayment) {
+        this.logger.log(
+          color.yellow.bold('Webhook received for unknown payment: ') +
+            color.white.bold(payment.id)
+        );
+        return { success: true };
+      }
 
+      // Atomic state-transition claim: only the webhook that flips the status
+      // proceeds with side effects. Concurrent or replayed webhooks see count=0
+      // and return without re-firing downstream work.
+      let statusChanged = false;
       try {
-        // Update the payment in the database
-        await this.prisma.payment.update({
+        const claim = await this.prisma.payment.updateMany({
           where: {
             paymentId: payment.id,
+            status: { not: payment.status },
           },
           data: {
             status: payment.status,
             paymentMethod: payment.method,
           },
         });
+        statusChanged = claim.count > 0;
       } catch (e) {
         this.logger.log(
           color.red.bold('Failed to update payment in database: ') +
@@ -1638,11 +1796,15 @@ class Mollie {
         };
       }
 
-      if (
-        dbPayment &&
-        (dbPayment.status != payment.status ||
-          process.env['ENVIRONMENT'] == 'development')
-      ) {
+      this.logger.log(
+        color.blue.bold('Processed webhook for payment: ') +
+          color.bold.white(payment.id) +
+          color.blue.bold(' with status: ') +
+          color.bold.white(payment.status) +
+          (statusChanged ? '' : color.yellow.bold(' (replay — side effects skipped)'))
+      );
+
+      if (statusChanged || process.env['ENVIRONMENT'] == 'development') {
         if (payment.status == 'paid') {
           const metadata = payment.metadata as {
             clientIp: string;

@@ -105,6 +105,8 @@ export async function getPayment(deps: DataDeps, paymentId: string, playlistId: 
                   payments.zipcode,
                   payments.countryCode,
                   payments.status,
+                  payments.totalPrice,
+                  payments.totalPriceWithoutTax,
                   payments.differentInvoiceAddress,
                   payments.invoiceAddress,
                   payments.invoiceHousenumber,
@@ -137,6 +139,11 @@ export async function getPayment(deps: DataDeps, paymentId: string, playlistId: 
                   payment_has_playlist.type,
                   payment_has_playlist.subType,
                   payment_has_playlist.gamesEnabled,
+                  CASE
+                    WHEN payment_has_playlist.amount > 0
+                      THEN payment_has_playlist.price / payment_has_playlist.amount
+                    ELSE payment_has_playlist.price
+                  END AS price,
                   playlists.name AS playlistName,
                   playlists.type AS productType,
                   playlists.giftcardAmount,

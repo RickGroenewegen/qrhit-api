@@ -1177,13 +1177,7 @@ class Spotify {
         return JSON.parse(cacheResult);
       }
 
-      this.logger.log(
-        color.blue.bold(
-          `[${color.white.bold('spotify')}] Fetching tracks by ID from API for ${color.white.bold(
-            trackIds.length
-          )} tracks`
-        )
-      );
+      
 
       // Use rate limit manager for automatic fallback on 429 errors
       const tracksProvider = await this.getActiveTracksProvider();

@@ -1,5 +1,20 @@
+<%
+let howtoCardBackStyle = 'position: relative;';
+if (php.backgroundBackType === 'solid') {
+    if (php.useGradient) {
+        const firstStop = Math.max(0, php.gradientPosition - 50);
+        const secondStop = Math.min(100, php.gradientPosition + 50);
+        const bgColor = php.backgroundBackColor || '#ffffff';
+        const gradColor = php.gradientBackgroundColor || '#ffffff';
+        const degrees = php.gradientDegrees || 180;
+        howtoCardBackStyle += ` background: linear-gradient(${degrees}deg, ${bgColor} ${firstStop}%, ${gradColor} ${secondStop}%);`;
+    } else {
+        howtoCardBackStyle += ` background-color: ${php.backgroundBackColor || '#ffffff'};`;
+    }
+}
+%>
 <!-- How-To Card - Front (uses back side styling) -->
-<div class="card-back" style="position: relative;">
+<div class="card-back" style="<%= howtoCardBackStyle %> overflow: hidden;">
     <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
         <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
     <% } %>
@@ -11,7 +26,7 @@
 </div>
 <div style="page-break-after: always;"></div>
 <!-- How-To Card - Back (uses same styling as regular card backs) -->
-<div class="card-back" style="position: relative;">
+<div class="card-back" style="<%= howtoCardBackStyle %> overflow: hidden;">
     <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
         <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
     <% } %>
