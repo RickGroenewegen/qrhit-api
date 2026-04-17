@@ -11,6 +11,13 @@ import fs from 'fs/promises';
 import { color } from 'console-log-colors';
 import Formatters from '../formatters';
 import Logger from '../logger';
+import Fx from '../services/fx';
+import {
+  SUPPORTED_CURRENCIES,
+  isSupportedCurrency,
+  getCurrencyForCountry,
+  SupportedCurrency,
+} from '../data/currency-map';
 
 export default async function paymentRoutes(fastify: FastifyInstance) {
   const mollie = new Mollie();
@@ -22,6 +29,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   const logger = new Logger();
   const utils = new Utils();
   const formatters = new Formatters().getFormatters();
+  const fx = Fx.getInstance();
 
   // Check payment status
   fastify.post('/mollie/check', async (request: any, _reply) => {
@@ -146,10 +154,81 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
   fastify.post('/order/calculate', async (request: any, _reply) => {
     try {
       const result = await order.calculateOrder(request.body);
+      if (!result?.success || !result.data) {
+        return result;
+      }
+
+      const requested: SupportedCurrency = isSupportedCurrency(
+        request.body?.currency
+      )
+        ? (request.body.currency as SupportedCurrency)
+        : 'EUR';
+
+      if (requested === 'EUR') {
+        result.data.presentment = {
+          currency: 'EUR',
+          rate: 1,
+          total: result.data.total,
+          price: result.data.price,
+          shipping: result.data.shipping,
+          payment: result.data.payment,
+          volumeDiscount: result.data.volumeDiscount,
+          gamesFee: result.data.gamesFee,
+          qrgamesUnitPrice: result.data.qrgamesUnitPrice,
+        };
+        return result;
+      }
+
+      try {
+        const convertField = async (v: number) =>
+          (await fx.convert(v || 0, requested)).amount;
+        const totalConv = await fx.convert(result.data.total || 0, requested);
+        result.data.presentment = {
+          currency: requested,
+          rate: totalConv.rate,
+          total: totalConv.amount,
+          price: await convertField(result.data.price),
+          shipping: await convertField(result.data.shipping),
+          payment: await convertField(result.data.payment),
+          volumeDiscount: await convertField(result.data.volumeDiscount),
+          gamesFee: await convertField(result.data.gamesFee),
+          qrgamesUnitPrice: await convertField(result.data.qrgamesUnitPrice),
+        };
+      } catch (e) {
+        logger.log(
+          color.yellow.bold(
+            `FX conversion failed for ${requested}: ${(e as Error).message}`
+          )
+        );
+      }
       return result;
     } catch (e) {
       return { success: false };
     }
+  });
+
+  // Get supported currencies + current rates
+  fastify.get('/currency/rates', async (_request: any, _reply) => {
+    const rates = await fx.getRates();
+    return {
+      success: true,
+      data: {
+        currencies: SUPPORTED_CURRENCIES,
+        rates: rates?.rates ?? { EUR: 1 },
+        asOf: rates?.asOf ?? null,
+      },
+    };
+  });
+
+  // Get suggested currency for a country code
+  fastify.get('/currency/for-country/:countryCode', async (request: any) => {
+    const { countryCode } = request.params;
+    return {
+      success: true,
+      data: {
+        currency: getCurrencyForCountry(countryCode),
+      },
+    };
   });
 
   // Calculate volume discount
@@ -220,11 +299,19 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       }
     }
 
+    const invoiceCurrency = payment.currency || 'EUR';
+    const invoiceRate =
+      invoiceCurrency === 'EUR' ? 1 : payment.exchangeRate || 1;
+    const moneyFormatter = formatters.currencyFormatter(invoiceCurrency);
+
     await reply.view(`invoice.ejs`, {
       payment,
       playlists,
       orderType,
       ...formatters,
+      moneyFormatter,
+      invoiceCurrency,
+      invoiceRate,
       translations: await translation.getTranslationsByPrefix(
         payment.locale,
         'invoice'

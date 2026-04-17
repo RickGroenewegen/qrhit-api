@@ -13,6 +13,8 @@ import cluster from 'cluster';
 import { CronJob } from 'cron';
 import { blue, red, yellow, white, green } from 'console-log-colors';
 import PrismaInstance from './prisma';
+import Fx from './services/fx';
+import { getCurrencyForCountry } from './data/currency-map';
 
 // Set to true to delete and re-insert products (required for updating custom labels)
 // Set to false to use PATCH updates (faster but cannot update customAttributes)
@@ -106,6 +108,7 @@ export class MerchantCenterService {
   private order: Order;
   private shipping: Shipping;
   private utils: Utils;
+  private fx: Fx;
   // Cached shipping costs per country, populated at the start of each sync run
   // via loadShippingCosts(). Format mirrors Shipping.getShippingInfoByCountry().
   private shippingCostsByCountry: Map<
@@ -125,27 +128,23 @@ export class MerchantCenterService {
   // Multiple countries can use the same language content
   private localeCountryPairs: Array<{ locale: string; country: string }> = [
     { locale: 'en', country: 'US' },
+    { locale: 'en', country: 'GB' }, // UK — English content, GBP
+    { locale: 'en', country: 'AU' }, // Australia — English content, AUD
+    { locale: 'en', country: 'CA' }, // Canada — English content, CAD
     { locale: 'nl', country: 'NL' },
     { locale: 'nl', country: 'BE' }, // Belgium using Dutch content
     { locale: 'de', country: 'DE' },
     { locale: 'de', country: 'AT' }, // Austria using German content
+    { locale: 'de', country: 'CH' }, // Switzerland using German content, CHF
     { locale: 'es', country: 'ES' },
     { locale: 'sv', country: 'SE' },
     { locale: 'no', country: 'NO' },
   ];
 
-  // Currency per target country for Google Merchant Center
-  // Google requires prices to match the target country's accepted currency
-  private countryToCurrency: { [key: string]: string } = {
-    US: 'EUR',
-    NL: 'EUR',
-    BE: 'EUR',
-    DE: 'EUR',
-    AT: 'EUR',
-    ES: 'EUR',
-    SE: 'SEK',
-    NO: 'NOK',
-  };
+  // Per-country currency is resolved via the shared
+  // `getCurrencyForCountry()` helper in `src/data/currency-map.ts` — it
+  // falls back to EUR for anything not in the supported-currencies map,
+  // which is what Google Merchant Center expects for our European markets.
 
   private constructor() {
     this.prisma = PrismaInstance.getInstance();
@@ -154,6 +153,7 @@ export class MerchantCenterService {
     this.order = Order.getInstance();
     this.shipping = Shipping.getInstance();
     this.utils = new Utils();
+    this.fx = Fx.getInstance();
     this.merchantId = process.env.GOOGLE_MERCHANT_ID || '';
 
     // Set up cron job to sync products at 4 AM every day
@@ -849,7 +849,16 @@ export class MerchantCenterService {
     }
 
     // Resolve currency for the target country (Google requires local currency)
-    const currency = this.countryToCurrency[country] || 'EUR';
+    // and convert the EUR product price. FX fallback may downgrade us to EUR
+    // if rates aren't available — we trust the returned currency, not the
+    // requested one, to keep value + currency consistent in the feed.
+    const targetCurrency = getCurrencyForCountry(country);
+    const priceResult = await this.fx.convertAndFormat(
+      variant.price,
+      targetCurrency
+    );
+    const currency = priceResult.currency;
+    const priceValue = priceResult.value;
 
     // Add shipping information based on product type. For physical / sheets
     // we look up the real per-country, per-size cost from the same source the
@@ -878,13 +887,17 @@ export class MerchantCenterService {
       );
       // Fall back to 4.95 EUR if we couldn't resolve a real cost (e.g. country
       // missing from ShippingCostNew). Better than failing the whole upload.
-      const shippingCost = lookedUpCost ?? 4.95;
+      const shippingCostEur = lookedUpCost ?? 4.95;
+      const shippingResult = await this.fx.convertAndFormat(
+        shippingCostEur,
+        currency
+      );
 
       shipping.push({
         country: country,
         service: 'Standard Shipping',
         price: {
-          value: shippingCost.toFixed(2),
+          value: shippingResult.value,
           currency: currency,
         },
         minHandlingTime: 1,
@@ -904,7 +917,7 @@ export class MerchantCenterService {
       availability: 'in_stock',
       condition: 'new',
       price: {
-        value: variant.price.toFixed(2),
+        value: priceValue,
         currency: currency,
       },
       brand: 'QRSong!',

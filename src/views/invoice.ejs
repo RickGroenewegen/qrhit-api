@@ -212,11 +212,11 @@
 					<tr class="item">
 						<td><%= playlist.productType === 'giftcard' ? translations.giftcard : playlist.name %></td>
 						<td style="text-align:right;"><%= playlist.amount %></td>
-						<td style="text-align:right;"><%= euroFormatter.format(unitPriceExclVAT) %></td>
-						<td style="text-align:right;"><%= euroFormatter.format(totalExclVAT) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(invoiceRate *unitPriceExclVAT) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(invoiceRate *totalExclVAT) %></td>
 						<td style="text-align:right;"><%= payment.taxRate %>%</td>
-						<td style="text-align:right;"><%= euroFormatter.format(playlist.priceVAT) %></td>
-						<td style="text-align:right;"><%= euroFormatter.format(playlist.price) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(invoiceRate *playlist.priceVAT) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(invoiceRate *playlist.price) %></td>
 					</tr>
 				<% }); %>
 
@@ -226,11 +226,11 @@
 					<tr class="item">
 						<td><%= translations.shippingAndHandling %></td>
 						<td style="text-align:right;">1</td>
-						<td style="text-align:right;"><%= euroFormatter.format(shippingExclVAT) %></td>
-						<td style="text-align:right;"><%= euroFormatter.format(shippingExclVAT) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(invoiceRate *shippingExclVAT) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(invoiceRate *shippingExclVAT) %></td>
 						<td style="text-align:right;"><%= payment.taxRateShipping %>%</td>
-						<td style="text-align:right;"><%= euroFormatter.format(payment.shippingVATPrice) %></td>
-						<td style="text-align:right;"><%= euroFormatter.format(payment.shipping) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(invoiceRate *payment.shippingVATPrice) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(invoiceRate *payment.shipping) %></td>
 					</tr>
 				<% } %>
 
@@ -239,20 +239,20 @@
 
 				<tr style="border-top: 2px solid #eee;">
 					<td colspan="6" style="text-align:right; padding-top: 20px;"><strong><%= translations.subtotalExclVAT %>:</strong></td>
-					<td style="text-align:right; padding-top: 20px;"><strong><%= euroFormatter.format(subtotalExclVAT) %></strong></td>
+					<td style="text-align:right; padding-top: 20px;"><strong><%= moneyFormatter.format(invoiceRate *subtotalExclVAT) %></strong></td>
 				</tr>
 
 				<% if (payment.productVATPrice > 0) { %>
 				<tr>
-					<td colspan="6" style="text-align:right;"><%= translations.vat %> <%= payment.taxRate %>% <%= translations.over %> <%= euroFormatter.format(payment.productPriceWithoutTax) %>:</td>
-					<td style="text-align:right;"><%= euroFormatter.format(payment.productVATPrice) %></td>
+					<td colspan="6" style="text-align:right;"><%= translations.vat %> <%= payment.taxRate %>% <%= translations.over %> <%= moneyFormatter.format(invoiceRate *payment.productPriceWithoutTax) %>:</td>
+					<td style="text-align:right;"><%= moneyFormatter.format(invoiceRate *payment.productVATPrice) %></td>
 				</tr>
 				<% } %>
 
 				<% if (orderType != 'digital' && payment.shippingVATPrice > 0) { %>
 				<tr>
-					<td colspan="6" style="text-align:right;"><%= translations.vat %> <%= payment.taxRateShipping %>% <%= translations.over %> <%= euroFormatter.format(payment.shippingPriceWithoutTax) %> (<%= translations.shipping %>):</td>
-					<td style="text-align:right;"><%= euroFormatter.format(payment.shippingVATPrice) %></td>
+					<td colspan="6" style="text-align:right;"><%= translations.vat %> <%= payment.taxRateShipping %>% <%= translations.over %> <%= moneyFormatter.format(invoiceRate *payment.shippingPriceWithoutTax) %> (<%= translations.shipping %>):</td>
+					<td style="text-align:right;"><%= moneyFormatter.format(invoiceRate *payment.shippingVATPrice) %></td>
 				</tr>
 				<% } %>
 
@@ -260,14 +260,23 @@
 				<% const totalDiscount = payment.DiscountCodedUses.reduce((sum, use) => sum + use.amount, 0); %>
 				<tr>
 					<td colspan="6" style="text-align:right; color: #2e7d32;"><%= translations.discount %>:</td>
-					<td style="text-align:right; color: #2e7d32;">-<%= euroFormatter.format(totalDiscount) %></td>
+					<td style="text-align:right; color: #2e7d32;">-<%= moneyFormatter.format(invoiceRate *totalDiscount) %></td>
 				</tr>
 				<% } %>
 
 				<tr class="total" style="border-top: 2px solid #333;">
 					<td colspan="6" style="text-align:right; padding-top: 10px;"><strong><%= translations.totalInclVAT %>:</strong></td>
-					<td style="text-align:right; padding-top: 10px;"><strong><%= euroFormatter.format(payment.totalPrice) %></strong></td>
+					<td style="text-align:right; padding-top: 10px;"><strong><%= moneyFormatter.format(invoiceRate *payment.totalPrice) %></strong></td>
 				</tr>
+
+				<% if (invoiceCurrency !== 'EUR') { %>
+				<tr>
+					<td colspan="7" style="text-align:right; padding-top: 15px; font-size: 10px; color: #888;">
+						<%= translations.eurEquivalent || 'EUR equivalent' %>: <%= euroFormatter.format(payment.totalPrice) %>
+						(<%= translations.exchangeRate || 'rate' %>: 1 EUR = <%= invoiceRate.toFixed(4) %> <%= invoiceCurrency %>)
+					</td>
+				</tr>
+				<% } %>
 			</table>
 		</div>
 	</body>

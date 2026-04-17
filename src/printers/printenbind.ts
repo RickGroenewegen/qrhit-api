@@ -1135,6 +1135,10 @@ class PrintEnBind {
     params: SingleItemCalculation,
     recurse: boolean = true
   ): Promise<{ price: number; alternatives: any }> {
+    // Sticker-price helper used by the pricing page and by backend admin
+    // audit reporting. There's no specific customer here, so we apply the
+    // home-market (NL) rate as the displayed price. The real per-country
+    // rate is applied by /order/calculate at checkout.
     const taxRate = (await this.data.getTaxRate('NL'))!;
     let price = 0;
     let colorPrice = 0.018;

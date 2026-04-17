@@ -9,6 +9,12 @@ class Formatters {
       currency: 'EUR',
     });
 
+    const currencyFormatter = (code: string = 'EUR') =>
+      new Intl.NumberFormat('nl-NL', {
+        style: 'currency',
+        currency: code,
+      });
+
     // Format date in Dutch locale
     const dateFormatter = new Intl.DateTimeFormat('nl-NL', {
       year: 'numeric',
@@ -24,6 +30,7 @@ class Formatters {
 
     return {
       euroFormatter,
+      currencyFormatter,
       dateFormatter,
       firstLetterUppercaseFormatter,
     };

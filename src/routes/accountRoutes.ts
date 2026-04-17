@@ -1294,6 +1294,12 @@ export default async function accountRoutes(
             userHash: user.hash,
             createdAt: payment.createdAt,
             amount: payment.totalPrice,
+            // Currency the customer actually paid in, plus the amount they saw
+            // on the Mollie page. Fall back to EUR for historical rows that
+            // predate multi-currency support.
+            currency: payment.currency || 'EUR',
+            amountPresentment:
+              payment.totalPricePresentment ?? payment.totalPrice,
             status: payment.status,
             type: payment.PaymentHasPlaylist.length > 0 ? payment.PaymentHasPlaylist[0].type : 'digital',
             // For physical orders, download is available after finalized

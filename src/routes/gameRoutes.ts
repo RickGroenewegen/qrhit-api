@@ -12,7 +12,8 @@ import {
 } from '../game-plugins';
 import CacheInstance from '../cache';
 import { QRGAMES_UPGRADE_PRICE, calculateGamesUpgradePrice } from '../game';
-import { createMollieClient, Locale } from '@mollie/api-client';
+import Mollie from '../mollie';
+import Fx from '../services/fx';
 
 // Redis client for game rooms (separate from cache)
 let redis: Redis | null = null;
@@ -893,14 +894,27 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
             }
           }
 
-          // Calculate pricing with volume discount
+          // Calculate pricing with volume discount (EUR — books currency).
           const pricing = calculateGamesUpgradePrice(playlists.length);
+
+          // Attach a presentment block so the bingo-enable modal can show
+          // the price in the user's currency. FX conversion is delegated to
+          // the shared Fx service — route stays payment-agnostic.
+          const converted = await Fx.getInstance().tryConvert(
+            pricing.totalPrice,
+            request.body?.currency
+          );
 
           return reply.send({
             success: true,
             count: playlists.length,
             basePrice: QRGAMES_UPGRADE_PRICE,
             ...pricing,
+            presentment: {
+              currency: converted.currency,
+              total: converted.amount,
+              rate: converted.rate,
+            },
             playlists: playlists.map((php) => ({
               paymentHasPlaylistId: php.id,
               playlistName: php.playlist.name,
@@ -985,60 +999,40 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
             playlistNames.push(php.playlist.name);
           }
 
-          // Calculate pricing with volume discount
+          // Calculate pricing with volume discount (EUR — books currency).
           const pricing = calculateGamesUpgradePrice(playlists.length);
-
-          // Create Mollie payment for QRGames upgrade
-          const mollieClient = createMollieClient({
-            apiKey: process.env['MOLLIE_API_KEY']!,
-          });
-
-          // Get locale mapping
-          const localeMap: { [key: string]: string } = {
-            en: 'en_US',
-            nl: 'nl_NL',
-            de: 'de_DE',
-            fr: 'fr_FR',
-            es: 'es_ES',
-            it: 'it_IT',
-            pt: 'pt_PT',
-            pl: 'pl_PL',
-          };
-          const mollieLocale = (localeMap[locale || 'en'] || 'en_US') as Locale;
           const userLocale = locale || 'en';
+          const description =
+            playlists.length === 1
+              ? `QRGames - ${playlistNames[0]}`
+              : `QRGames - ${playlists.length} playlists`;
 
-          // Build description
-          const description = playlists.length === 1
-            ? `QRGames - ${playlistNames[0]}`
-            : `QRGames - ${playlists.length} playlists`;
-
-          const payment = await mollieClient.payments.create({
-            amount: {
-              currency: 'EUR',
-              value: pricing.totalPrice.toFixed(2),
-            },
+          // Delegate the whole FX + method-filter + Mollie dance to the
+          // shared `Mollie.createUpgradePayment` so this route just orchestrates.
+          const mollie = new Mollie();
+          const result = await mollie.createUpgradePayment({
+            amountEur: pricing.totalPrice,
+            requestedCurrency: request.body?.currency,
+            description,
+            locale: userLocale,
+            redirectUrl: `${process.env['FRONTEND_URI']}/${userLocale}/my-account?games_enabled=1`,
             metadata: {
               type: 'bingo_upgrade',
               paymentHasPlaylistIds: phpIds.join(','),
               userId: user.id.toString(),
               pricePerPlaylist: pricing.pricePerPlaylist.toString(),
             },
-            description,
-            redirectUrl: `${process.env['FRONTEND_URI']}/${userLocale}/my-account?games_enabled=1`,
-            webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
-            locale: mollieLocale,
+            clientIp: request.clientIp,
           });
 
-          const checkoutUrl = payment.getCheckoutUrl();
-
           logger.log(
-            color.blue.bold(`Created QRGames upgrade payment: ${white.bold(payment.id)} for ${white.bold(playlists.length.toString())} playlists (${white.bold('€' + pricing.totalPrice.toFixed(2))})`)
+            color.blue.bold(`Created QRGames upgrade payment: ${white.bold(result.id)} for ${white.bold(playlists.length.toString())} playlists (${white.bold(result.currency + ' ' + result.amount.toFixed(2))})`)
           );
 
           return reply.send({
             success: true,
-            paymentUrl: checkoutUrl,
-            paymentId: payment.id,
+            paymentUrl: result.checkoutUrl,
+            paymentId: result.id,
           });
         } catch (error: any) {
           logger.log(color.red.bold(`Error in POST /api/game/enable-payment: ${error.message}`));
