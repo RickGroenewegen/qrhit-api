@@ -175,6 +175,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           volumeDiscount: result.data.volumeDiscount,
           gamesFee: result.data.gamesFee,
           qrgamesUnitPrice: result.data.qrgamesUnitPrice,
+          adjustedItems: result.data.adjustedItems,
         };
         return result;
       }
@@ -183,6 +184,16 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         const convertField = async (v: number) =>
           (await fx.convert(v || 0, requested)).amount;
         const totalConv = await fx.convert(result.data.total || 0, requested);
+        const convertedAdjustedItems = result.data.adjustedItems
+          ? await Promise.all(
+              result.data.adjustedItems.map(async (it: any) => ({
+                playlistId: it.playlistId,
+                subType: it.subType,
+                unitPrice: await convertField(it.unitPrice),
+                lineTotal: await convertField(it.lineTotal),
+              }))
+            )
+          : undefined;
         result.data.presentment = {
           currency: requested,
           rate: totalConv.rate,
@@ -193,6 +204,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           volumeDiscount: await convertField(result.data.volumeDiscount),
           gamesFee: await convertField(result.data.gamesFee),
           qrgamesUnitPrice: await convertField(result.data.qrgamesUnitPrice),
+          adjustedItems: convertedAdjustedItems,
         };
       } catch (e) {
         logger.log(

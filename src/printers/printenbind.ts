@@ -1,5 +1,11 @@
 import Log from '../logger';
-import { MAX_CARDS, MAX_CARDS_PHYSICAL } from '../config/constants';
+import {
+  MAX_CARDS,
+  MAX_CARDS_PHYSICAL,
+  FLAT_SHIPPING_ENABLED,
+  FLAT_SHIPPING_RATE,
+  FLAT_SHIPPING_CAP_PER_CARD,
+} from '../config/constants';
 import PrismaInstance from '../prisma';
 import Cache from '../cache';
 import { ApiResult } from '../interfaces/ApiResult';
@@ -951,6 +957,14 @@ class PrintEnBind {
       let freeShipping: boolean = false;
       let shipping = 0;
       let handling = 0;
+      let adjustedItems:
+        | Array<{
+            playlistId: string;
+            subType: string;
+            unitPrice: number;
+            lineTotal: number;
+          }>
+        | undefined;
 
       if (physicalItems > 0 && shippingResult) {
         shipping = shippingResult!.cost || 0;
@@ -972,8 +986,68 @@ class PrintEnBind {
           shipping = 0;
         } else if (params.countrycode === 'NL') {
           shipping = 2.99;
+        } else if (
+          FLAT_SHIPPING_ENABLED &&
+          shipping > FLAT_SHIPPING_RATE &&
+          params.countrycode !== 'NL' &&
+          // Flat-fee is an offer conditional on CloudFront-detected country
+          // matching the country selected at checkout. If the user switches
+          // to a different shipping country, fall back to the true shipping
+          // cost (no redistribution). Spoofing gives no material benefit.
+          params.detectedCountryCode &&
+          params.detectedCountryCode === params.countrycode
+        ) {
+          // Flatten shipping for non-NL customers to the NL rate, and redistribute
+          // the delta across the physical cards in the order. taxRateShipping ===
+          // taxRate here, so VAT owed is identical whether the money sits on the
+          // shipping line or on the goods line.
+          const physicalOrderItems = orderItems.filter(
+            (it: any) => it.type === 'physical' || it.type === 'sheets'
+          );
+          let totalPhysicalCards = 0;
+          for (const it of physicalOrderItems) {
+            totalPhysicalCards += parseInt(it.amount) || 0;
+          }
+
+          if (totalPhysicalCards > 0) {
+            const actualShipping = shipping;
+            const delta = actualShipping - FLAT_SHIPPING_RATE;
+            const rawPerCard = delta / totalPhysicalCards;
+            const surchargePerCard = parseFloat(
+              Math.min(rawPerCard, FLAT_SHIPPING_CAP_PER_CARD).toFixed(2)
+            );
+            const totalRedistributed = parseFloat(
+              (surchargePerCard * totalPhysicalCards).toFixed(2)
+            );
+
+            adjustedItems = physicalOrderItems.map((it: any) => {
+              const amt = parseInt(it.amount) || 0;
+              const newUnitPrice = parseFloat(
+                (it.price + surchargePerCard).toFixed(2)
+              );
+              return {
+                playlistId: it.playlistId,
+                subType: it.subType || 'none',
+                unitPrice: newUnitPrice,
+                lineTotal: parseFloat((newUnitPrice * amt).toFixed(2)),
+              };
+            });
+
+            totalPrice = parseFloat(
+              (totalPrice + totalRedistributed).toFixed(2)
+            );
+            totalProductPriceWithoutVAT = parseFloat(
+              (
+                totalProductPriceWithoutVAT +
+                totalRedistributed / (1 + (taxRate ?? 0) / 100)
+              ).toFixed(2)
+            );
+            shipping = parseFloat(
+              (actualShipping - totalRedistributed).toFixed(2)
+            );
+          }
         }
-        
+
       } else if (physicalItems > 0 && !shippingResult) {
         totalPrice = 0;
       }
@@ -1017,6 +1091,7 @@ class PrintEnBind {
           volumeDiscount, // Add volume discount to result
           gamesFee, // Add games fee to result
           qrgamesUnitPrice: QRGAMES_UPGRADE_PRICE, // Per-playlist QRGames price
+          adjustedItems,
         },
       };
 
