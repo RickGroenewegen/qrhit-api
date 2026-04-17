@@ -586,11 +586,12 @@ export default async function accountRoutes(
           },
         });
 
-        // Always return success to prevent email enumeration
+        // No paid order for this email — tell the user explicitly so they
+        // know a purchase is required before creating an account.
         if (!payment || !payment.user) {
-          reply.send({
-            success: true,
-            message: 'customerPincodeEmailSent',
+          reply.status(404).send({
+            success: false,
+            error: 'noPurchaseFound',
           });
           return;
         }
