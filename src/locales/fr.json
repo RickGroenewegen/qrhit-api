@@ -601,5 +601,11 @@
   "howto.rule3": "Devine l’année et place la carte à gauche (plus tôt) ou à droite (plus tard) dans ta timeline.",
   "howto.rule4": "Retourne la carte. L’année colle à ta timeline ? Garde-la. Sinon, vire-la.",
   "howto.rule5": "Le premier à faire une timeline de 10 cartes gagne !",
-  "howto.winner": "Le premier à 10 cartes gagne !"
+  "howto.winner": "Le premier à 10 cartes gagne !",
+  "invoice.reverseChargeLine": "TVA autoliquidée (0%)",
+  "invoice.reverseChargeHeading": "TVA autoliquidée",
+  "invoice.reverseChargeExplanation": "La TVA est autoliquidée par le destinataire selon l’article 196 de la directive 2006/112/CE. Le destinataire doit déclarer la TVA localement.",
+  "invoice.vatIdVerified": "TVA vérifiée via VIES",
+  "invoice.eurEquivalent": "Équiv. en EUR",
+  "invoice.exchangeRate": "taux"
 }

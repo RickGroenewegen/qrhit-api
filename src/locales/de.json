@@ -601,5 +601,11 @@
   "howto.rule3": "Rate das Jahr und leg die Karte links (früher) oder rechts (später) in deine Timeline.",
   "howto.rule4": "Dreh die Karte um. Passt das Jahr? Behalte sie. Falsch? Weg damit.",
   "howto.rule5": "Wer zuerst 10 Karten in seiner Timeline hat, gewinnt!",
-  "howto.winner": "Wer zuerst 10 Karten hat, gewinnt!"
+  "howto.winner": "Wer zuerst 10 Karten hat, gewinnt!",
+  "invoice.reverseChargeLine": "USt umgekehrt (0%)",
+  "invoice.reverseChargeHeading": "USt umgekehrt",
+  "invoice.reverseChargeExplanation": "Die USt wird laut Artikel 196 der Richtlinie 2006/112/EG auf den Empfänger übertragen. Der Empfänger muss die USt selbst melden.",
+  "invoice.vatIdVerified": "USt-ID geprüft über VIES",
+  "invoice.eurEquivalent": "EUR Gegenwert",
+  "invoice.exchangeRate": "Kurs"
 }

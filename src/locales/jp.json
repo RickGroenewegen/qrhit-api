@@ -592,5 +592,11 @@
   "howto.rule3": "年を当てて、カードを左（前）か右（後）にタイムラインに置こう。",
   "howto.rule4": "カードをめくって。年が合ってたらキープ、違ったら捨ててね。",
   "howto.rule5": "最初に10枚のタイムラインを作った人が勝ち！",
-  "howto.winner": "最初に10枚集めた人が勝ち！"
+  "howto.winner": "最初に10枚集めた人が勝ち！",
+  "invoice.reverseChargeLine": "逆課税（0%）",
+  "invoice.reverseChargeHeading": "逆課税",
+  "invoice.reverseChargeExplanation": "VATは指令2006/112/EC第196条により受取人に逆課税されます。受取人が現地でVATを自己申告します。",
+  "invoice.vatIdVerified": "VAT番号はVIESで確認済み",
+  "invoice.eurEquivalent": "EUR相当額",
+  "invoice.exchangeRate": "レート"
 }

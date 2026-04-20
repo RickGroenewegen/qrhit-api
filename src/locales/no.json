@@ -587,5 +587,11 @@
   "quiz.missingWordQuestion": "Hvilket ord mangler i tittelen?",
   "quiz.releaseOrderQuestion": "Plasser denne låta i riktig rekkefølge",
   "quiz.decadeQuestion": "Hvilket tiår kom denne låta ut?",
-  "quiz.titleQuestion": "Hva heter denne låta?"
+  "quiz.titleQuestion": "Hva heter denne låta?",
+  "invoice.reverseChargeLine": "MVA omvendt (0%)",
+  "invoice.reverseChargeHeading": "MVA omvendt",
+  "invoice.reverseChargeExplanation": "MVA omvendes til mottaker etter artikkel 196 i direktiv 2006/112/EF. Mottaker må selv rapportere MVA lokalt.",
+  "invoice.vatIdVerified": "MVA-nummer sjekket via VIES",
+  "invoice.eurEquivalent": "EUR tilsvarende",
+  "invoice.exchangeRate": "kurs"
 }

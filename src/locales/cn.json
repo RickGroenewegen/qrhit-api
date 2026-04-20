@@ -591,5 +591,11 @@
   "howto.rule3": "猜年份，把卡放在时间线的左边（更早）或右边（更晚）。",
   "howto.rule4": "翻开卡片。年份对了就留着，错了就拿走。",
   "howto.rule5": "第一个拼出10张卡时间线的人获胜！",
-  "howto.winner": "先集齐10张卡的人赢！"
+  "howto.winner": "先集齐10张卡的人赢！",
+  "invoice.reverseChargeLine": "增值税反向计税（0%）",
+  "invoice.reverseChargeHeading": "增值税反向计税",
+  "invoice.reverseChargeExplanation": "根据指令2006/112/EC第196条，增值税由收件人反向计税。收件人需自行申报增值税。",
+  "invoice.vatIdVerified": "VAT号已通过VIES验证",
+  "invoice.eurEquivalent": "等值欧元",
+  "invoice.exchangeRate": "汇率"
 }

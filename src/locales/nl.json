@@ -600,5 +600,11 @@
   "howto.rule2": "Een DJ (of speler) scant een QR-code met de QRSong! app en een nummer speelt.",
   "howto.rule3": "Raad het jaar en leg de kaart links (eerder) of rechts (later) in je tijdlijn.",
   "howto.rule4": "Draai de kaart om. Past het jaar in je tijdlijn? Hou hem. Fout? Weg ermee.",
-  "howto.rule5": "Wie als eerste een tijdlijn van 10 kaarten bouwt, wint!"
+  "howto.rule5": "Wie als eerste een tijdlijn van 10 kaarten bouwt, wint!",
+  "invoice.reverseChargeLine": "Btw verlegd (0%)",
+  "invoice.reverseChargeHeading": "Btw verlegd",
+  "invoice.reverseChargeExplanation": "Btw wordt verlegd naar de ontvanger volgens artikel 196 van richtlijn 2006/112/EG. De ontvanger moet zelf btw aangeven via de lokale verleggingsregeling.",
+  "invoice.vatIdVerified": "Btw-nummer gecheckt via VIES",
+  "invoice.eurEquivalent": "EUR gelijkwaardig",
+  "invoice.exchangeRate": "koers"
 }

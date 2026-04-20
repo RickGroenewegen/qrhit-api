@@ -596,5 +596,11 @@
   "howto.rule3": "Adivinha o ano e coloca a carta à esquerda (antes) ou direita (depois) na tua linha do tempo.",
   "howto.rule4": "Vira a carta. O ano bate? Fica com ela. Errou? Tira fora.",
   "howto.rule5": "Quem montar uma linha do tempo com 10 cartas primeiro, vence!",
-  "howto.winner": "Quem chegar a 10 cartas primeiro, vence!"
+  "howto.winner": "Quem chegar a 10 cartas primeiro, vence!",
+  "invoice.reverseChargeLine": "IVA invertido (0%)",
+  "invoice.reverseChargeHeading": "IVA invertido",
+  "invoice.reverseChargeExplanation": "O IVA é invertido para o destinatário conforme o artigo 196 da diretiva 2006/112/CE. O destinatário deve declarar o IVA localmente.",
+  "invoice.vatIdVerified": "NIF verificado via VIES",
+  "invoice.eurEquivalent": "Equivalente EUR",
+  "invoice.exchangeRate": "taxa"
 }
