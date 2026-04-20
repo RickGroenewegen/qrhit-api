@@ -5,6 +5,7 @@ import {
   FLAT_SHIPPING_ENABLED,
   FLAT_SHIPPING_RATE,
   FLAT_SHIPPING_CAP_PER_CARD,
+  FLAT_SHIPPING_COUNTRIES,
 } from '../config/constants';
 import PrismaInstance from '../prisma';
 import Cache from '../cache';
@@ -990,6 +991,7 @@ class PrintEnBind {
           FLAT_SHIPPING_ENABLED &&
           shipping > FLAT_SHIPPING_RATE &&
           params.countrycode !== 'NL' &&
+          FLAT_SHIPPING_COUNTRIES.includes(params.countrycode) &&
           // Flat-fee is an offer conditional on CloudFront-detected country
           // matching the country selected at checkout. If the user switches
           // to a different shipping country, fall back to the true shipping
