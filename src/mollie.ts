@@ -1396,17 +1396,7 @@ class Mollie {
 
           const printApiItemPrice = orderType.amount * item.amount;
 
-          // If the calculation returned a flat-shipping redistribution, the
-          // actual per-item price charged is the adjusted one — use it so the
-          // stored line-items sum to what the customer paid.
-          const adjusted = (calculateResult.data.adjustedItems || []).find(
-            (a: any) =>
-              a.playlistId === item.playlistId &&
-              (a.subType || 'none') === (item.subType || 'none')
-          );
-          let itemPrice = adjusted
-            ? adjusted.lineTotal
-            : item.price * item.amount;
+          let itemPrice = item.price * item.amount;
           const itemPriceWithoutVAT = parseFloat(
             (itemPrice / (1 + calculateResult.data.taxRate / 100)).toFixed(2)
           );

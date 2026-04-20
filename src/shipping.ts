@@ -10,11 +10,6 @@ import Cache from './cache';
 import ExcelJS from 'exceljs';
 import SiteSettings from './sitesettings';
 import ShippingConfig from './shippingconfig';
-import {
-  FLAT_SHIPPING_ENABLED,
-  FLAT_SHIPPING_RATE,
-  FLAT_SHIPPING_COUNTRIES,
-} from './config/constants';
 
 class Shipping {
   private static instance: Shipping;
@@ -1100,11 +1095,6 @@ class Shipping {
   public async getShippingInfoByCountry(): Promise<{
     productionDays: number;
     productionMessage: string | null;
-    flatShipping: {
-      enabled: boolean;
-      rate: number;
-      countries: string[];
-    };
     countries: {
       countryCode: string;
       averageDays: number;
@@ -1115,8 +1105,8 @@ class Shipping {
     }[];
   }> {
     try {
-      // Check cache first. Bumped key version when flatShipping was added.
-      const cacheKey = 'shipping_info_by_country_v2';
+      // Cache key bumped when the response shape changes.
+      const cacheKey = 'shipping_info_by_country_v3';
       const cachedData = await this.cache.get(cacheKey);
 
       if (cachedData) {
@@ -1225,11 +1215,6 @@ class Shipping {
       const response = {
         productionDays,
         productionMessage,
-        flatShipping: {
-          enabled: FLAT_SHIPPING_ENABLED,
-          rate: FLAT_SHIPPING_RATE,
-          countries: FLAT_SHIPPING_COUNTRIES,
-        },
         countries: result,
       };
 
