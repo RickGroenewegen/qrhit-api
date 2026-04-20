@@ -588,6 +588,7 @@
   "quiz.releaseOrderQuestion": "Plasser denne låta i riktig rekkefølge",
   "quiz.decadeQuestion": "Hvilket tiår kom denne låta ut?",
   "quiz.titleQuestion": "Hva heter denne låta?",
+<<<<<<< HEAD
   "mail.boxUpgradeThankYou": "Your custom Gift Box is being printed and will be shipped to the address below. If you have any questions, don't hesitate to contact us at info@qrsong.io",
   "mail.boxUpgradeSubject": "Gaveboksen din for '{{ playlist }}' er på vei!",
   "mail.boxUpgradeGreeting": "Hei",
@@ -601,4 +602,12 @@
   "mail.boxUpgradeQuantity": "Antall",
   "mail.giftBoxIncluded": "Gaveeske",
   "mail.giftBoxIncludedPrinter": "Bestillingen din inkluderer også en personlig gaveeske som trykkes og sendes sammen med kortene dine."
+=======
+  "invoice.reverseChargeLine": "MVA omvendt (0%)",
+  "invoice.reverseChargeHeading": "MVA omvendt",
+  "invoice.reverseChargeExplanation": "MVA omvendes til mottaker etter artikkel 196 i direktiv 2006/112/EF. Mottaker må selv rapportere MVA lokalt.",
+  "invoice.vatIdVerified": "MVA-nummer sjekket via VIES",
+  "invoice.eurEquivalent": "EUR tilsvarende",
+  "invoice.exchangeRate": "kurs"
+>>>>>>> main
 }

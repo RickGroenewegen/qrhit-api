@@ -8530,6 +8530,7 @@
     "sv",
     "no"
   ],
+<<<<<<< HEAD
   "mail.boxUpgrade.total": [
     "nl",
     "de",
@@ -8685,6 +8686,8 @@
     "sv",
     "no"
   ],
+=======
+>>>>>>> main
   "invoice.ideal": [
     "nl",
     "de",
@@ -8698,7 +8701,11 @@
     "sv",
     "no"
   ],
+<<<<<<< HEAD
   "mail.boxUpgradeQuantity": [
+=======
+  "invoice.reverseChargeLine": [
+>>>>>>> main
     "nl",
     "de",
     "fr",
@@ -8711,7 +8718,11 @@
     "sv",
     "no"
   ],
+<<<<<<< HEAD
   "mail.giftBoxIncluded": [
+=======
+  "invoice.reverseChargeHeading": [
+>>>>>>> main
     "nl",
     "de",
     "fr",
@@ -8724,7 +8735,50 @@
     "sv",
     "no"
   ],
+<<<<<<< HEAD
   "mail.giftBoxIncludedPrinter": [
+=======
+  "invoice.reverseChargeExplanation": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "invoice.vatIdVerified": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "invoice.eurEquivalent": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "invoice.exchangeRate": [
+>>>>>>> main
     "nl",
     "de",
     "fr",

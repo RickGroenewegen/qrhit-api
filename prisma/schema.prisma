@@ -178,6 +178,12 @@ model Payment {
   refundAmount             Float?
   refundedAt               DateTime?
   refundReason             String?
+  currency                 String               @default("EUR")
+  exchangeRate             Float                @default(1)
+  totalPricePresentment    Float?
+  settlementAmountEur      Float?
+  reverseCharge            Boolean              @default(false)
+  vatIdChecked             String?
 
   DiscountCodedUses DiscountCodedUses[]
   Review            Review[]
@@ -294,13 +300,15 @@ model PushToken {
 }
 
 model taxRate {
-  id        Int       @id @default(autoincrement())
-  rate      Float
-  startDate DateTime?
-  endDate   DateTime?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
+  id          Int       @id @default(autoincrement())
+  rate        Float
+  countryCode String?   @db.VarChar(2)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
 
+  @@index([countryCode])
   @@map("taxrates")
 }
 
@@ -490,7 +498,7 @@ model Track {
   @@index([isrc])
   @@index([manuallyChecked, year, id])
   @@index([youtubeLink])
-  @@index([spotifyLinkIgnored])
+  @@index([spotifyLink, spotifyLinkIgnored])
   @@index([artist, name, manuallyChecked, year, id])
   @@fulltext([artist, name])
   @@map("tracks")

@@ -25,6 +25,11 @@ import AppTheme from './apptheme';
 import Bingo from './bingo';
 import PrintEnBind from './printers/printenbind';
 import Mail from './mail';
+import Fx from './services/fx';
+import {
+  isSupportedCurrency,
+  SupportedCurrency,
+} from './data/currency-map';
 
 class Mollie {
   private prisma = PrismaInstance.getInstance();
@@ -45,6 +50,7 @@ class Mollie {
   private bingo = Bingo.getInstance();
   private printenbind = PrintEnBind.getInstance();
   private mail = Mail.getInstance();
+  private fx = Fx.getInstance();
 
   constructor() {
     if (cluster.isPrimary) {
@@ -464,59 +470,106 @@ class Mollie {
       },
     };
 
-    const report = await this.prisma.payment.groupBy({
-      by: ['taxRate'],
+    // Group payments by (zone, taxRate). Zone is derived from countrycode:
+    //   NL     → Binnenland
+    //   EU !NL → EU
+    //   other  → Export (non-EU, charged 0% VAT)
+    const rows = await this.prisma.payment.findMany({
       where,
-      _count: {
-        _all: true,
-      },
-      _sum: {
+      select: {
+        countrycode: true,
+        taxRate: true,
         totalPrice: true,
         totalPriceWithoutTax: true,
         productVATPrice: true,
       },
     });
 
-    const refundAdjustments = await this.getRefundAdjustmentsByKey(
-      where,
-      (p) => p.taxRate || 0
+    type Agg = {
+      zone: string;
+      taxRate: number;
+      numberOfSales: number;
+      totalPrice: number;
+      totalPriceWithoutTax: number;
+      productVATPrice: number;
+    };
+    const paymentKey = (zone: string, taxRate: number) => `${zone}|${taxRate}`;
+    const agg = new Map<string, Agg>();
+    for (const r of rows) {
+      const zone = this.getTaxZone(r.countrycode);
+      const taxRate = r.taxRate || 0;
+      const key = paymentKey(zone, taxRate);
+      const cur = agg.get(key) || {
+        zone,
+        taxRate,
+        numberOfSales: 0,
+        totalPrice: 0,
+        totalPriceWithoutTax: 0,
+        productVATPrice: 0,
+      };
+      cur.numberOfSales += 1;
+      cur.totalPrice += r.totalPrice || 0;
+      cur.totalPriceWithoutTax += r.totalPriceWithoutTax || 0;
+      cur.productVATPrice += r.productVATPrice || 0;
+      agg.set(key, cur);
+    }
+
+    const refundAdjustments = await this.getRefundAdjustmentsByKey(where, (p) =>
+      paymentKey(this.getTaxZone(p.countrycode), p.taxRate || 0)
     );
 
-    // Query only upgrade-type games (initial games are already in payment totals)
-    const gamesByTaxRate = await this.prisma.gamesPurchase.groupBy({
-      by: ['taxRate'],
+    // Games: fetch with countrycode so we can group by zone too.
+    const gameRows = await this.prisma.gamesPurchase.findMany({
       where: {
         type: 'upgrade',
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
-        },
+        createdAt: { gte: startDate, lte: endDate },
       },
-      _count: { _all: true },
-      _sum: { totalPrice: true },
+      select: { countrycode: true, taxRate: true, totalPrice: true },
     });
-    const gamesTaxMap = new Map<number, { amount: number; total: number }>(
-      gamesByTaxRate.map(g => [g.taxRate || 0, { amount: g._count._all, total: g._sum.totalPrice || 0 }])
-    );
+    const gamesMap = new Map<string, { amount: number; total: number }>();
+    for (const g of gameRows) {
+      const zone = this.getTaxZone(g.countrycode);
+      const taxRate = g.taxRate || 0;
+      const key = paymentKey(zone, taxRate);
+      const cur = gamesMap.get(key) || { amount: 0, total: 0 };
+      cur.amount += 1;
+      cur.total += g.totalPrice || 0;
+      gamesMap.set(key, cur);
+    }
 
-    const detailedReport = report.map((entry) => {
-      const taxKey = entry.taxRate || 0;
-      const gamesData = gamesTaxMap.get(taxKey);
-      const adj = refundAdjustments.get(taxKey);
+    const detailedReport = Array.from(agg.values()).map((entry) => {
+      const key = paymentKey(entry.zone, entry.taxRate);
+      const gamesData = gamesMap.get(key);
+      const adj = refundAdjustments.get(key);
       return {
-        taxRate: taxKey,
-        numberOfSales: entry._count._all,
-        totalPrice: (entry._sum.totalPrice || 0) - (adj?.refundedTotal || 0),
+        zone: entry.zone,
+        taxRate: entry.taxRate,
+        numberOfSales: entry.numberOfSales,
+        totalPrice: entry.totalPrice - (adj?.refundedTotal || 0),
         totalPriceWithoutTax:
-          (entry._sum.totalPriceWithoutTax || 0) - (adj?.refundedExVAT || 0),
-        totalVAT: (entry._sum.productVATPrice || 0) - (adj?.refundedVAT || 0),
+          entry.totalPriceWithoutTax - (adj?.refundedExVAT || 0),
+        totalVAT: entry.productVATPrice - (adj?.refundedVAT || 0),
         totalRefunded: adj?.refundedTotal || 0,
         gamesAmount: gamesData?.amount || 0,
         gamesTotal: gamesData?.total || 0,
       };
     });
 
-    return detailedReport.sort((a, b) => b.totalPrice - a.totalPrice);
+    const zoneOrder = { NL: 0, EU: 1, EXPORT: 2 } as const;
+    return detailedReport.sort((a, b) => {
+      const za = zoneOrder[a.zone as keyof typeof zoneOrder] ?? 9;
+      const zb = zoneOrder[b.zone as keyof typeof zoneOrder] ?? 9;
+      if (za !== zb) return za - zb;
+      return b.totalPrice - a.totalPrice;
+    });
+  }
+
+  private getTaxZone(countryCode: string | null | undefined): string {
+    if (!countryCode) return 'EXPORT';
+    const cc = countryCode.toUpperCase();
+    if (cc === 'NL') return 'NL';
+    if (this.data.euCountryCodes.includes(cc)) return 'EU';
+    return 'EXPORT';
   }
 
   /**
@@ -680,6 +733,48 @@ class Mollie {
         }
       }
     }
+  }
+
+  /**
+   * Filter payment methods so Mollie only receives methods that are valid for
+   * the presentment currency. Mollie silently drops incompatible methods, but
+   * some combinations (e.g. PLN + card) would leave the user with nothing.
+   * See https://docs.mollie.com/reference/payment-method-availability
+   */
+  public filterMethodsByCurrency(
+    methods: PaymentMethod[],
+    currency: SupportedCurrency
+  ): PaymentMethod[] {
+    if (currency === 'EUR') return methods;
+
+    const cardsOk: SupportedCurrency[] = [
+      'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'USD', 'CAD', 'AUD',
+    ];
+    const paypalOk: SupportedCurrency[] = [
+      'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'USD', 'CAD', 'AUD', 'PLN',
+    ];
+    const klarnaOk: SupportedCurrency[] = ['NOK', 'SEK', 'DKK'];
+
+    return methods.filter((m) => {
+      switch (m) {
+        case PaymentMethod.creditcard:
+        case PaymentMethod.applepay:
+          return cardsOk.includes(currency);
+        case PaymentMethod.paypal:
+          return paypalOk.includes(currency);
+        case PaymentMethod.klarna:
+          return klarnaOk.includes(currency);
+        case PaymentMethod.przelewy24:
+          return currency === 'PLN';
+        case PaymentMethod.trustly:
+          return ['NOK', 'SEK', 'DKK', 'GBP'].includes(currency);
+        // Everything else (ideal, bancontact, belfius, kbc, eps, satispay,
+        // bancomatpay, blik, twint, paysafecard, …) — EUR-only on Mollie or
+        // currency-locked to a currency we don't auto-detect. Drop.
+        default:
+          return false;
+      }
+    });
   }
 
   private getMollieLocaleData(
@@ -951,6 +1046,8 @@ class Mollie {
         isBusinessOrder: true,
         refundAmount: true,
         refundedAt: true,
+        currency: true,
+        totalPricePresentment: true,
         refundReason: true,
         user: {
           select: {
@@ -1144,11 +1241,17 @@ class Mollie {
       // Refresh track counts from Spotify API (uncached) before calculating price
       await this.refreshCartTrackCounts(params.cart, params.locale);
 
+      // Re-run the calculation server-side so we never trust a client-
+      // tampered `taxRate` / `total`. MUST include the business/VAT-ID
+      // fields — otherwise reverse-charge is silently lost here and the
+      // Payment row ends up with mismatched taxRate vs productVATPrice.
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
         countrycode: params.extraOrderData.countrycode,
         cart: params.cart,
         fast: params.extraOrderData.fast || false,
+        isBusinessOrder: !!params.extraOrderData.isBusinessOrder,
+        vatId: params.extraOrderData.vatId || null,
       });
 
       const discountResult = await this.discount.calculateDiscounts(
@@ -1217,6 +1320,20 @@ class Mollie {
         description = description.substring(0, 250);
       }
 
+      // Resolve the presentment currency: request override → EUR fallback.
+      const requestedCurrency: string = isSupportedCurrency(params.currency)
+        ? params.currency
+        : 'EUR';
+
+      // Single FX call with built-in EUR fallback (shared with merchantcenter).
+      const converted = await this.fx.tryConvert(
+        calculateResult.data.total,
+        requestedCurrency
+      );
+      const presentmentAmount = converted.amount;
+      const presentmentRate = converted.rate;
+      const presentmentCurrency: SupportedCurrency = converted.currency;
+
       // Handle free orders (with discount) OR vibe orders with low totals
       if ((calculateResult.data.total === 0 && discountUsed) || (vibe && calculateResult.data.total <= 10)) {
         molliePaymentId = `free_${this.utils.generateRandomString(10)}`;
@@ -1249,16 +1366,17 @@ class Mollie {
           PaymentMethod.ideal,
           PaymentMethod.paypal,
           PaymentMethod.creditcard,
+          PaymentMethod.klarna,
         ];
-        const paymentMethods = [
-          ...defaultMethods,
-          ...localeData.paymentMethods,
-        ];
+        const paymentMethods = this.filterMethodsByCurrency(
+          [...defaultMethods, ...localeData.paymentMethods],
+          presentmentCurrency
+        );
 
         const payment = await paymentClient.payments.create({
           amount: {
-            currency: 'EUR',
-            value: calculateResult.data.total.toFixed(2),
+            currency: presentmentCurrency,
+            value: presentmentAmount.toFixed(2),
           },
           metadata: {
             clientIp,
@@ -1272,7 +1390,7 @@ class Mollie {
         });
 
         molliePaymentId = payment.id;
-        molliePaymentAmount = parseFloat(payment.amount.value);
+        molliePaymentAmount = calculateResult.data.total;
         molliePaymentStatus = payment.status;
         mollieCheckoutUrl = payment.getCheckoutUrl()!;
       }
@@ -1446,12 +1564,25 @@ class Mollie {
       delete params.extraOrderData.price;
       delete params.extraOrderData.agreeTerms;
       delete params.extraOrderData.agreeNoRefund;
+      // Strip form-echoed fields the server recomputes below. Without this,
+      // the client's remembered values (from the /order/calculate response)
+      // would spread in via `...params.extraOrderData` and overwrite our
+      // authoritative numbers — masking reverse-charge bugs (taxRate=0 on
+      // row, productVATPrice=2.26 stored from a stale calc) and in general
+      // opening a trust-the-client hole on VAT / shipping / totals.
+      delete params.extraOrderData.taxRate;
+      delete params.extraOrderData.taxRateShipping;
+      delete params.extraOrderData.shipping;
+      delete params.extraOrderData.volumeDiscount;
+      delete params.extraOrderData.gamesFee;
 
-      const taxRate = (await this.data.getTaxRate(
-        params.extraOrderData.countrycode
-      ))!;
+      // Use the tax rate the calculateOrder pipeline resolved (which
+      // already reflects reverse charge when applicable) instead of the
+      // raw country VAT — otherwise totalPriceWithoutTax ends up backed
+      // out of the wrong denominator for B2B reverse-charge orders.
+      const effectiveTaxRate = calculateResult.data.taxRate ?? 0;
       const molliePaymentAmountWithoutTax = parseFloat(
-        (molliePaymentAmount / (1 + taxRate / 100)).toFixed(2)
+        (molliePaymentAmount / (1 + effectiveTaxRate / 100)).toFixed(2)
       );
 
       const insertResult = await this.prisma.payment.create({
@@ -1478,6 +1609,12 @@ class Mollie {
           printApiPrice: 0,
           discount: discountAmount,
           boxFee: calculateResult.data.boxFee || 0,
+          currency: presentmentCurrency,
+          exchangeRate: presentmentRate,
+          totalPricePresentment:
+            presentmentCurrency === 'EUR' ? molliePaymentAmount : presentmentAmount,
+          reverseCharge: !!calculateResult.data.reverseCharge,
+          vatIdChecked: calculateResult.data.vatIdChecked || null,
           PaymentHasPlaylist: { create: playlists },
           ...params.extraOrderData,
         },
@@ -1683,7 +1820,9 @@ class Mollie {
 
           try {
             // Set boxEnabled and boxPrice on PaymentHasPlaylist
-            const unitPrice = metadata.boxPrice ? parseFloat(metadata.boxPrice) : 6.99;
+            const unitPrice = metadata.boxPrice
+              ? parseFloat(metadata.boxPrice)
+              : BOX_PRICE;
             await this.prisma.paymentHasPlaylist.update({
               where: { id: paymentHasPlaylistId },
               data: {
@@ -1773,6 +1912,11 @@ class Mollie {
       // proceeds with side effects. Concurrent or replayed webhooks see count=0
       // and return without re-firing downstream work.
       let statusChanged = false;
+      const settlementAmountEur =
+        (payment as any).settlementAmount &&
+        (payment as any).settlementAmount.currency === 'EUR'
+          ? parseFloat((payment as any).settlementAmount.value)
+          : null;
       try {
         const claim = await this.prisma.payment.updateMany({
           where: {
@@ -1782,6 +1926,7 @@ class Mollie {
           data: {
             status: payment.status,
             paymentMethod: payment.method,
+            ...(settlementAmountEur !== null ? { settlementAmountEur } : {}),
           },
         });
         statusChanged = claim.count > 0;
@@ -1949,6 +2094,11 @@ class Mollie {
         vibe: true,
         discount: true,
         volumeDiscount: true,
+        currency: true,
+        exchangeRate: true,
+        totalPricePresentment: true,
+        reverseCharge: true,
+        vatIdChecked: true,
         DiscountCodedUses: {
           select: {
             amount: true,
@@ -2027,18 +2177,111 @@ class Mollie {
     }
   }
 
+  /**
+   * Shared helper for routes that create a one-off Mollie payment (e.g. the
+   * bingo/QRGames upgrade flow). Handles FX conversion, method filtering per
+   * currency, and Mollie locale resolution so callers don't reimplement the
+   * multi-currency plumbing. Amount is always passed in EUR — conversion to
+   * the presentment currency happens inside.
+   */
+  public async createUpgradePayment(params: {
+    amountEur: number;
+    requestedCurrency?: string;
+    description: string;
+    locale: string;
+    redirectUrl: string;
+    metadata: Record<string, string>;
+    clientIp: string;
+  }): Promise<{
+    id: string;
+    checkoutUrl: string | null;
+    currency: SupportedCurrency;
+    amount: number;
+  }> {
+    const requestedCurrency = isSupportedCurrency(params.requestedCurrency)
+      ? params.requestedCurrency
+      : 'EUR';
+    const converted = await this.fx.tryConvert(
+      params.amountEur,
+      requestedCurrency
+    );
+
+    const paymentClientResult = await this.getClient(params.clientIp);
+    const paymentClient = paymentClientResult.client;
+
+    const localeData = this.getMollieLocaleData(params.locale, '');
+    const defaultMethods: PaymentMethod[] = [
+      PaymentMethod.applepay,
+      PaymentMethod.ideal,
+      PaymentMethod.paypal,
+      PaymentMethod.creditcard,
+      PaymentMethod.klarna,
+    ];
+    const method = this.filterMethodsByCurrency(
+      [...defaultMethods, ...localeData.paymentMethods],
+      converted.currency
+    );
+
+    const payment = await paymentClient.payments.create({
+      amount: {
+        currency: converted.currency,
+        value: converted.amount.toFixed(2),
+      },
+      method,
+      metadata: params.metadata,
+      description: params.description,
+      redirectUrl: params.redirectUrl,
+      webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
+      locale: localeData.locale,
+    });
+
+    return {
+      id: payment.id,
+      checkoutUrl: payment.getCheckoutUrl(),
+      currency: converted.currency,
+      amount: converted.amount,
+    };
+  }
+
   public async createRefund(
     molliePaymentId: string,
     amount: number
   ): Promise<ApiResult> {
     try {
-      // Format amount to 2 decimal places
-      const formattedAmount = amount.toFixed(2);
+      const dbPayment = await this.prisma.payment.findUnique({
+        where: { paymentId: molliePaymentId },
+        select: {
+          currency: true,
+          exchangeRate: true,
+          totalPrice: true,
+          totalPricePresentment: true,
+        },
+      });
+
+      const currency: SupportedCurrency =
+        dbPayment && isSupportedCurrency(dbPayment.currency)
+          ? (dbPayment.currency as SupportedCurrency)
+          : 'EUR';
+
+      let refundValue = amount;
+      if (currency !== 'EUR' && dbPayment) {
+        // Caller passes the refund amount in EUR. Convert to presentment currency
+        // proportionally to how much of the order is being refunded.
+        const eurTotal = dbPayment.totalPrice || 0;
+        const presentmentTotal = dbPayment.totalPricePresentment || 0;
+        if (eurTotal > 0 && presentmentTotal > 0) {
+          refundValue = (amount / eurTotal) * presentmentTotal;
+        } else if (dbPayment.exchangeRate) {
+          refundValue = amount * dbPayment.exchangeRate;
+        }
+      }
+
+      const formattedAmount = refundValue.toFixed(2);
 
       const refund = await this.mollieClient.paymentRefunds.create({
         paymentId: molliePaymentId,
         amount: {
-          currency: 'EUR',
+          currency,
           value: formattedAmount,
         },
       });
@@ -2047,7 +2290,7 @@ class Mollie {
         color.green.bold('Created refund: ') +
           color.white.bold(refund.id) +
           color.gray(' for ') +
-          color.white.bold(`EUR ${formattedAmount}`)
+          color.white.bold(`${currency} ${formattedAmount}`)
       );
 
       return {
@@ -2055,6 +2298,7 @@ class Mollie {
         data: {
           refundId: refund.id,
           amount: formattedAmount,
+          currency,
           status: refund.status,
         },
       };

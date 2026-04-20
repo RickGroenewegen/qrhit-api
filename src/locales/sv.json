@@ -609,9 +609,20 @@
   "howto.rule2": "En DJ (eller spelare) skannar en QR med QRSong! och en låt spelas.",
   "howto.rule3": "Gissa året och lägg kortet vänster (tidigare) eller höger (senare) i din tidslinje.",
   "howto.rule4": "Vänd på kortet. Stämmer året? Behåll det. Fel? Ta bort det.",
+<<<<<<< HEAD
   "howto.rule5": "Först till 10 kort i tidslinjen vinner!",
   "howto.winner": "Först till 10 kort vinner!",
   "mail.boxUpgradeQuantity": "Antal",
   "mail.giftBoxIncluded": "Presentask",
   "mail.giftBoxIncludedPrinter": "Din beställning innehåller också en personlig presentask som trycks och skickas med dina kort."
+=======
+  "howto.rule5": "Först att bygga en tidslinje med 10 kort vinner!",
+  "howto.winner": "Först till 10 kort vinner!",
+  "invoice.reverseChargeLine": "Moms omvänd (0%)",
+  "invoice.reverseChargeHeading": "Moms omvänd",
+  "invoice.reverseChargeExplanation": "Momsen omvänds till mottagaren enligt artikel 196 i direktiv 2006/112/EG. Mottagaren ansvarar för att redovisa moms lokalt.",
+  "invoice.vatIdVerified": "Momsnummer kollat via VIES",
+  "invoice.eurEquivalent": "EUR motsvarande",
+  "invoice.exchangeRate": "kurs"
+>>>>>>> main
 }

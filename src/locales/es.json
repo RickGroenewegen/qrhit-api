@@ -617,6 +617,7 @@
   "howto.rulesTitle": "Las reglas:",
   "howto.rule1": "Cada jugador empieza con una carta (año arriba) como inicio de su línea de tiempo.",
   "howto.rule2": "Un DJ (o jugador) escanea un QR con la app QRSong! y suena una canción.",
+<<<<<<< HEAD
   "howto.rule3": "Adivina el año y pon la carta a la izquierda (antes) o derecha (después) en tu línea.",
   "howto.rule4": "Dale la vuelta a la carta. ¿El año encaja? Quédate con ella. ¿Mal? Fuera.",
   "howto.rule5": "¡El primero con 10 cartas en su línea gana!",
@@ -624,4 +625,16 @@
   "mail.boxUpgradeQuantity": "Cantidad",
   "mail.giftBoxIncluded": "Caja regalo",
   "mail.giftBoxIncludedPrinter": "Tu pedido también incluye una caja regalo personalizada que se imprimirá y enviará junto con tus cartas."
+=======
+  "howto.rule3": "Adivina el año y pon la carta a la izquierda (antes) o derecha (después) en tu línea de tiempo.",
+  "howto.rule4": "Dale la vuelta a la carta. ¿El año encaja? Quédate con ella. ¿No? Fuera.",
+  "howto.rule5": "¡El primero en tener 10 cartas en su línea de tiempo gana!",
+  "howto.winner": "¡El primero con 10 cartas gana!",
+  "invoice.reverseChargeLine": "IVA invertido (0%)",
+  "invoice.reverseChargeHeading": "IVA invertido",
+  "invoice.reverseChargeExplanation": "El IVA se invierte al destinatario según el artículo 196 de la directiva 2006/112/CE. El destinatario debe autoliquidar el IVA localmente.",
+  "invoice.vatIdVerified": "NIF verificado por VIES",
+  "invoice.eurEquivalent": "Equivalente EUR",
+  "invoice.exchangeRate": "tasa"
+>>>>>>> main
 }

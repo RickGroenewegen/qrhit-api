@@ -614,10 +614,22 @@
   "howto.rule1": "Każdy zaczyna z jedną kartą (rok na wierzchu) jako początek osi czasu.",
   "howto.rule2": "DJ (lub gracz) skanuje QR kod w QRSong! i leci piosenka.",
   "howto.rule3": "Zgadnij rok i połóż kartę po lewej (wcześniej) lub prawej (później) na osi czasu.",
+<<<<<<< HEAD
   "howto.rule4": "Odwróć kartę. Rok pasuje? Zostaw. Nie? Odpada.",
   "howto.rule5": "Kto pierwszy ułoży 10 kart, wygrywa!",
   "howto.winner": "Kto pierwszy ma 10 kart, wygrywa!",
   "mail.boxUpgradeQuantity": "Ilość",
   "mail.giftBoxIncluded": "Pudełko prezentowe",
   "mail.giftBoxIncludedPrinter": "Twoje zamówienie zawiera też spersonalizowane pudełko prezentowe, które zostanie wydrukowane i wysłane razem z kartami."
+=======
+  "howto.rule4": "Odwróć kartę. Rok się zgadza? Zostaw. Nie? Odpada.",
+  "howto.rule5": "Kto pierwszy ułoży 10 kart na osi czasu, wygrywa!",
+  "howto.winner": "Kto pierwszy ma 10 kart, wygrywa!",
+  "invoice.reverseChargeLine": "Odwrotne obciążenie VAT (0%)",
+  "invoice.reverseChargeHeading": "Odwrotne obciążenie VAT",
+  "invoice.reverseChargeExplanation": "VAT jest przenoszony na odbiorcę zgodnie z art. 196 dyrektywy 2006/112/WE. Odbiorca rozlicza VAT samodzielnie.",
+  "invoice.vatIdVerified": "NIP sprawdzony przez VIES",
+  "invoice.eurEquivalent": "Równowartość EUR",
+  "invoice.exchangeRate": "kurs"
+>>>>>>> main
 }

@@ -3,7 +3,7 @@ import PrismaInstance from '../prisma';
 import Logger from '../logger';
 import Data from '../data';
 import { color, white } from 'console-log-colors';
-import { createMollieClient, Locale } from '@mollie/api-client';
+import Mollie from '../mollie';
 import { BOX_PRICE } from '../config/constants';
 
 const prisma = PrismaInstance.getInstance();
@@ -297,7 +297,7 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
     getAuthHandler(['users']),
     async (request: any, reply: any) => {
       try {
-        const { paymentHasPlaylistId, boxDesign, locale, quantity } = request.body;
+        const { paymentHasPlaylistId, boxDesign, locale, quantity, currency } = request.body;
         const boxQuantity = Math.max(1, Math.min(10, parseInt(quantity) || 1));
         const userIdString = request.user?.userId;
 
@@ -420,32 +420,23 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           },
         });
 
-        // Create Mollie payment for box upgrade
-        const mollieClient = createMollieClient({
-          apiKey: process.env['MOLLIE_API_KEY']!,
-        });
-
-        // Get locale mapping
-        const localeMap: { [key: string]: string } = {
-          en: 'en_US',
-          nl: 'nl_NL',
-          de: 'de_DE',
-          fr: 'fr_FR',
-          es: 'es_ES',
-          it: 'it_IT',
-          pt: 'pt_PT',
-          pl: 'pl_PL',
-        };
-        const mollieLocale = (localeMap[locale || 'en'] || 'en_US') as Locale;
         const userLocale = locale || 'en';
-
         const playlistName = php.playlist.name;
 
-        const payment = await mollieClient.payments.create({
-          amount: {
-            currency: 'EUR',
-            value: totalAmount.toFixed(2),
-          },
+        // Delegate FX conversion + method filtering + Mollie create to the
+        // shared Mollie.createUpgradePayment helper. `totalAmount` is in EUR
+        // (books currency); the helper converts to the buyer's presentment
+        // currency and charges Mollie in that currency.
+        const mollie = new Mollie();
+        const result = await mollie.createUpgradePayment({
+          amountEur: totalAmount,
+          requestedCurrency: currency,
+          description:
+            boxQuantity > 1
+              ? `Gift Box (${boxQuantity}x) - ${playlistName}`
+              : `Gift Box - ${playlistName}`,
+          locale: userLocale,
+          redirectUrl: `${process.env['FRONTEND_URI']}/${userLocale}/my-account?box_enabled=1`,
           metadata: {
             type: 'box_upgrade',
             paymentHasPlaylistId: phpId.toString(),
@@ -455,25 +446,18 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
             boxPrice: BOX_PRICE.toString(),
             quantity: boxQuantity.toString(),
           },
-          description: boxQuantity > 1
-            ? `Gift Box (${boxQuantity}x) - ${playlistName}`
-            : `Gift Box - ${playlistName}`,
-          redirectUrl: `${process.env['FRONTEND_URI']}/${userLocale}/my-account?box_enabled=1`,
-          webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
-          locale: mollieLocale,
+          clientIp: request.clientIp,
         });
-
-        const checkoutUrl = payment.getCheckoutUrl();
 
         logger.log(
           color.blue.bold(
-            `Created box upgrade payment: ${white.bold(payment.id)} for playlist ${white.bold(playlistName)} (${white.bold('€' + totalAmount.toFixed(2))})`
+            `Created box upgrade payment: ${white.bold(result.id)} for playlist ${white.bold(playlistName)} (${white.bold(result.currency + ' ' + result.amount.toFixed(2))})`
           )
         );
 
         return reply.send({
           success: true,
-          paymentUrl: checkoutUrl,
+          paymentUrl: result.checkoutUrl,
         });
       } catch (error: any) {
         logger.log(color.red.bold(`Error in POST /api/box/upgrade-payment: ${error.message}`));

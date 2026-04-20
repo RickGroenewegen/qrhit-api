@@ -617,7 +617,16 @@
   "howto.rule4": "Gira la carta. L’anno va bene? Tienila. Sbagliato? Via.",
   "howto.rule5": "Chi per primo fa una timeline di 10 carte vince!",
   "howto.winner": "Chi arriva a 10 carte vince!",
+<<<<<<< HEAD
   "mail.boxUpgradeQuantity": "Quantità",
   "mail.giftBoxIncluded": "Scatola regalo",
   "mail.giftBoxIncludedPrinter": "Il tuo ordine include anche una scatola regalo personalizzata che verrà stampata e spedita con le tue carte."
+=======
+  "invoice.reverseChargeLine": "IVA inversa (0%)",
+  "invoice.reverseChargeHeading": "IVA inversa",
+  "invoice.reverseChargeExplanation": "L’IVA è a carico del destinatario secondo l’art. 196 della direttiva 2006/112/CE. Il destinatario deve autoliquidare l’IVA.",
+  "invoice.vatIdVerified": "P.IVA verificata via VIES",
+  "invoice.eurEquivalent": "Equivalente EUR",
+  "invoice.exchangeRate": "tasso"
+>>>>>>> main
 }

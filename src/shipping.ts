@@ -1105,8 +1105,8 @@ class Shipping {
     }[];
   }> {
     try {
-      // Check cache first
-      const cacheKey = 'shipping_info_by_country';
+      // Cache key bumped when the response shape changes.
+      const cacheKey = 'shipping_info_by_country_v3';
       const cachedData = await this.cache.get(cacheKey);
 
       if (cachedData) {

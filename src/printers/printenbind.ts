@@ -613,6 +613,27 @@ class PrintEnBind {
             );
           }
           totalItemsSuccess++;
+        } else if (logging) {
+          // No orderId → Printenbind rejected the POST (auth, payload
+          // shape, etc.). Surface the status + body so we can diagnose
+          // without re-running with a debugger attached.
+          this.logger.log(
+            color.red.bold(
+              `Printenbind did not return an orderId for ${color.white.bold(
+                customerInfo.countrycode
+              )} (POST /orders/articles → ${color.white.bold(
+                response.status.toString()
+              )})`
+            )
+          );
+          this.logger.log(
+            color.gray('  response body: ') +
+              color.white(JSON.stringify(firstResponse))
+          );
+          this.logger.log(
+            color.gray('  request body: ') +
+              color.white(JSON.stringify(items[i]))
+          );
         }
       } else if (items[i].type == 'physical' && physicalOrderCreated) {
         const articleResponse = await fetch(
@@ -1101,7 +1122,16 @@ class PrintEnBind {
       countrySelected = true;
     }
 
-    const taxRate = (await this.data.getTaxRate(params.countrycode))!;
+    // Resolve the tax rate along with the EU B2B reverse-charge flag in one
+    // call. `taxRate` will be 0 when reverse charge applies; the flag is
+    // returned alongside so we can surface it to the checkout UI and the
+    // Mollie payment record.
+    const taxContext = await this.data.resolveTaxContext({
+      buyerCountry: params.countrycode,
+      isBusinessOrder: !!params.isBusinessOrder,
+      vatId: params.vatId || null,
+    });
+    const taxRate = taxContext.taxRate;
 
     try {
       const orderItems = [];
@@ -1171,7 +1201,6 @@ class PrintEnBind {
         } else if (params.countrycode === 'NL') {
           shipping = 2.99;
         }
-        
       } else if (physicalItems > 0 && !shippingResult) {
         totalPrice = 0;
       }
@@ -1233,6 +1262,9 @@ class PrintEnBind {
           boxFee,
           boxUnitPrice: BOX_PRICE,
           totalBoxCount,
+          reverseCharge: taxContext.reverseCharge,
+          vatIdChecked: taxContext.vatIdChecked || null,
+          vatIdStatus: taxContext.vatIdStatus,
         },
       };
 
@@ -1351,6 +1383,10 @@ class PrintEnBind {
     params: SingleItemCalculation,
     recurse: boolean = true
   ): Promise<{ price: number; alternatives: any }> {
+    // Sticker-price helper used by the pricing page and by backend admin
+    // audit reporting. There's no specific customer here, so we apply the
+    // home-market (NL) rate as the displayed price. The real per-country
+    // rate is applied by /order/calculate at checkout.
     const taxRate = (await this.data.getTaxRate('NL'))!;
     let price = 0;
     let colorPrice = 0.018;
@@ -1848,19 +1884,20 @@ class PrintEnBind {
       )
     );
 
-    // Process countries in batches of 5
-    const batchSize = 5;
-    for (let i = 0; i < codes.length; i += batchSize) {
-      const countryBatch = codes.slice(i, i + batchSize);
-
-      await Promise.all(
-        countryBatch.map(async (countryCode) => {
-          await this.processCountryShippingCosts(countryCode, authToken!);
-        })
+    // Process countries one at a time. Parallel runs collided on Printenbind
+    // (shared file uploads, rate limits) — serial is slower but deterministic
+    // and much easier to reason about in the logs.
+    for (let i = 0; i < codes.length; i++) {
+      const countryCode = codes[i];
+      this.logger.log(
+        color.blue.bold(
+          `[${i + 1}/${codes.length}] Starting ${color.white.bold(countryCode)}`
+        )
       );
-
-      // Add a small delay between batches to avoid overwhelming the API
-      await new Promise((resolve) => setTimeout(resolve, 2000));
+      await this.processCountryShippingCosts(countryCode, authToken!);
+      // Gentle pause between countries so we don't blow past the API's
+      // request ceiling. 1s is plenty for a 3-call-per-country workload.
+      await new Promise((resolve) => setTimeout(resolve, 1000));
     }
   }
 
@@ -1875,17 +1912,17 @@ class PrintEnBind {
     ];
 
     try {
-      // Process all amounts in parallel for this country
-      await Promise.all(
-        amountConfigs.map(async ({ amount, fileUrl }) => {
-          try {
-            // Check if record exists
-            const existingRecord = await this.prisma.shippingCostNew.findFirst({
-              where: {
-                country: countryCode,
-                size: amount,
-              },
-            });
+      // Process each amount sequentially for this country. Parallel runs
+      // caused Printenbind rate-limit and file-overwrite collisions.
+      for (const { amount, fileUrl } of amountConfigs) {
+        try {
+          // Check if record exists
+          const existingRecord = await this.prisma.shippingCostNew.findFirst({
+            where: {
+              country: countryCode,
+              size: amount,
+            },
+          });
 
             this.logger.log(
               color.blue.bold(
@@ -1916,6 +1953,11 @@ class PrintEnBind {
               delivery_method: 'post',
               add_file_method: 'url',
               file_url: fileUrl,
+              // Printenbind rejects duplicate filenames with "bestaat al op
+              // onze server". These shipping-cost probes reuse the same
+              // three fixture PDFs on every run; without overwrite, only
+              // the very first country succeeds and every subsequent 400s.
+              file_overwrite: true,
             };
             if (isNL) {
               orderItem.delivery_option = 'standard';
@@ -1983,15 +2025,39 @@ class PrintEnBind {
                 )
               );
             } else {
+              // Dump the full result incl. apiCalls + Printenbind response
+              // bodies so we can see which step Printenbind rejected (auth,
+              // size, country, etc.) rather than just "failed".
               this.logger.log(
                 color.red.bold(
                   `Failed to calculate shipping for ${color.white.bold(
                     countryCode
-                  )} with ${color.white.bold(
-                    amount.toString()
-                  )} items`
+                  )} with ${color.white.bold(amount.toString())} items`
                 )
               );
+              this.logger.log(
+                color.red.bold('  └─ result: ') +
+                  color.white(JSON.stringify(result, null, 2))
+              );
+              if ((result as any).apiCalls) {
+                for (const call of (result as any).apiCalls as Array<any>) {
+                  this.logger.log(
+                    color.yellow.bold(
+                      `     [${call.statusCode}] ${call.method} ${call.url}`
+                    )
+                  );
+                  if (call.body) {
+                    this.logger.log(
+                      color.gray('       body:     ') +
+                        color.white(JSON.stringify(call.body))
+                    );
+                  }
+                  this.logger.log(
+                    color.gray('       response: ') +
+                      color.white(JSON.stringify(call.responseBody))
+                  );
+                }
+              }
             }
           } catch (error) {
             this.logger.log(
@@ -2001,9 +2067,14 @@ class PrintEnBind {
                 )} with ${color.white.bold(amount.toString())} items: ${error}`
               )
             );
+          if (error instanceof Error && error.stack) {
+            this.logger.log(color.gray(error.stack));
           }
-        })
-      );
+        }
+        // Brief breather between amount probes so the same file never
+        // gets re-uploaded back-to-back.
+        await new Promise((resolve) => setTimeout(resolve, 500));
+      }
     } catch (error) {
       this.logger.log(
         color.red.bold(

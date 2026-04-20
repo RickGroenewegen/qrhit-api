@@ -345,6 +345,13 @@ class Data {
     return usersModule.getTaxRate(this.deps, countryCode, date);
   }
 
+  public async resolveTaxContext(
+    params: import('./services/vat').TaxContextParams
+  ): Promise<import('./services/vat').TaxContextResult> {
+    const { resolveTaxContext } = await import('./services/vat');
+    return resolveTaxContext(this.deps, params);
+  }
+
   public async updatePaymentPrinterHold(paymentId: string, printerHold: boolean) {
     return usersModule.updatePaymentPrinterHold(this.deps, paymentId, printerHold);
   }

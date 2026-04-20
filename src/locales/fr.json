@@ -619,10 +619,22 @@
   "howto.rule1": "Chaque joueur commence avec une carte (année visible) pour débuter sa timeline.",
   "howto.rule2": "Un DJ (ou joueur) scanne un QR avec l’appli QRSong! et une chanson démarre.",
   "howto.rule3": "Devine l’année et place la carte à gauche (plus tôt) ou à droite (plus tard) dans ta timeline.",
+<<<<<<< HEAD
   "howto.rule4": "Retourne la carte. L’année colle ? Garde-la. Faux ? Retire-la.",
   "howto.rule5": "Le premier à avoir 10 cartes dans sa timeline gagne !",
   "howto.winner": "Le premier à 10 cartes gagne !",
   "mail.boxUpgradeQuantity": "Quantité",
   "mail.giftBoxIncluded": "Boîte cadeau",
   "mail.giftBoxIncludedPrinter": "Ta commande inclut aussi une boîte cadeau personnalisée qui sera imprimée et envoyée avec tes cartes."
+=======
+  "howto.rule4": "Retourne la carte. L’année colle à ta timeline ? Garde-la. Sinon, vire-la.",
+  "howto.rule5": "Le premier à faire une timeline de 10 cartes gagne !",
+  "howto.winner": "Le premier à 10 cartes gagne !",
+  "invoice.reverseChargeLine": "TVA autoliquidée (0%)",
+  "invoice.reverseChargeHeading": "TVA autoliquidée",
+  "invoice.reverseChargeExplanation": "La TVA est autoliquidée par le destinataire selon l’article 196 de la directive 2006/112/CE. Le destinataire doit déclarer la TVA localement.",
+  "invoice.vatIdVerified": "TVA vérifiée via VIES",
+  "invoice.eurEquivalent": "Équiv. en EUR",
+  "invoice.exchangeRate": "taux"
+>>>>>>> main
 }

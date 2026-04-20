@@ -262,48 +262,31 @@ export async function getTaxRate(
   date: Date = new Date()
 ): Promise<number | null> {
   if (!euCountryCodes.includes(countryCode)) {
-    return 0; // Default NL
+    return 0; // Non-EU: export, 0% VAT
   }
 
-  const taxRates = await deps.prisma.taxRate.findMany({
-    where: {
-      OR: [
-        {
-          startDate: {
-            lte: date,
-          },
-          endDate: {
-            gte: date,
-          },
-        },
-        {
-          startDate: {
-            lte: date,
-          },
-          endDate: null,
-        },
-        {
-          startDate: null,
-          endDate: {
-            gte: date,
-          },
-        },
-        {
-          startDate: null,
-          endDate: null,
-        },
-      ],
-    },
-    orderBy: {
-      startDate: 'desc',
-    },
+  const dateWindow = {
+    OR: [
+      { startDate: { lte: date }, endDate: { gte: date } },
+      { startDate: { lte: date }, endDate: null },
+      { startDate: null, endDate: { gte: date } },
+      { startDate: null, endDate: null },
+    ],
+  };
+
+  // Prefer a country-specific row, fall back to the legacy NULL-country row
+  // (which acts as the system-wide default for backwards compatibility).
+  const countrySpecific = await deps.prisma.taxRate.findFirst({
+    where: { AND: [{ countryCode }, dateWindow] },
+    orderBy: { startDate: 'desc' },
   });
+  if (countrySpecific) return countrySpecific.rate;
 
-  if (taxRates.length === 0) {
-    return null;
-  }
-
-  return taxRates[0].rate;
+  const fallback = await deps.prisma.taxRate.findFirst({
+    where: { AND: [{ countryCode: null }, dateWindow] },
+    orderBy: { startDate: 'desc' },
+  });
+  return fallback?.rate ?? null;
 }
 
 export async function updatePaymentPrinterHold(
