@@ -26,12 +26,3 @@ export function roundTotal(
   return Number(rounded.toFixed(2));
 }
 
-export function formatMollieAmount(
-  amount: number,
-  currency: SupportedCurrency
-): string {
-  if (currency === 'CZK' || currency === 'PLN' || currency === 'NOK' || currency === 'SEK' || currency === 'DKK') {
-    return amount.toFixed(2);
-  }
-  return amount.toFixed(2);
-}

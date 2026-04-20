@@ -1179,11 +1179,17 @@ class Mollie {
       // Refresh track counts from Spotify API (uncached) before calculating price
       await this.refreshCartTrackCounts(params.cart, params.locale);
 
+      // Re-run the calculation server-side so we never trust a client-
+      // tampered `taxRate` / `total`. MUST include the business/VAT-ID
+      // fields — otherwise reverse-charge is silently lost here and the
+      // Payment row ends up with mismatched taxRate vs productVATPrice.
       const calculateResult = await this.order.calculateOrder({
         orderType: params.orderType,
         countrycode: params.extraOrderData.countrycode,
         cart: params.cart,
         fast: params.extraOrderData.fast || false,
+        isBusinessOrder: !!params.extraOrderData.isBusinessOrder,
+        vatId: params.extraOrderData.vatId || null,
       });
 
       const discountResult = await this.discount.calculateDiscounts(
@@ -1476,12 +1482,25 @@ class Mollie {
       delete params.extraOrderData.price;
       delete params.extraOrderData.agreeTerms;
       delete params.extraOrderData.agreeNoRefund;
+      // Strip form-echoed fields the server recomputes below. Without this,
+      // the client's remembered values (from the /order/calculate response)
+      // would spread in via `...params.extraOrderData` and overwrite our
+      // authoritative numbers — masking reverse-charge bugs (taxRate=0 on
+      // row, productVATPrice=2.26 stored from a stale calc) and in general
+      // opening a trust-the-client hole on VAT / shipping / totals.
+      delete params.extraOrderData.taxRate;
+      delete params.extraOrderData.taxRateShipping;
+      delete params.extraOrderData.shipping;
+      delete params.extraOrderData.volumeDiscount;
+      delete params.extraOrderData.gamesFee;
 
-      const taxRate = (await this.data.getTaxRate(
-        params.extraOrderData.countrycode
-      ))!;
+      // Use the tax rate the calculateOrder pipeline resolved (which
+      // already reflects reverse charge when applicable) instead of the
+      // raw country VAT — otherwise totalPriceWithoutTax ends up backed
+      // out of the wrong denominator for B2B reverse-charge orders.
+      const effectiveTaxRate = calculateResult.data.taxRate ?? 0;
       const molliePaymentAmountWithoutTax = parseFloat(
-        (molliePaymentAmount / (1 + taxRate / 100)).toFixed(2)
+        (molliePaymentAmount / (1 + effectiveTaxRate / 100)).toFixed(2)
       );
 
       const insertResult = await this.prisma.payment.create({
@@ -1511,6 +1530,8 @@ class Mollie {
           exchangeRate: presentmentRate,
           totalPricePresentment:
             presentmentCurrency === 'EUR' ? molliePaymentAmount : presentmentAmount,
+          reverseCharge: !!calculateResult.data.reverseCharge,
+          vatIdChecked: calculateResult.data.vatIdChecked || null,
           PaymentHasPlaylist: { create: playlists },
           ...params.extraOrderData,
         },
@@ -1905,6 +1926,11 @@ class Mollie {
         vibe: true,
         discount: true,
         volumeDiscount: true,
+        currency: true,
+        exchangeRate: true,
+        totalPricePresentment: true,
+        reverseCharge: true,
+        vatIdChecked: true,
         DiscountCodedUses: {
           select: {
             amount: true,

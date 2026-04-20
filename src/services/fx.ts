@@ -91,6 +91,23 @@ class Fx {
     return await this.refreshRates();
   }
 
+  /**
+   * Rates already multiplied by the FX buffer (ECB × 1.05) and keyed EUR: 1.
+   * This is what the frontend consumes so the client never has to know the
+   * buffer size — single source of truth lives here.
+   */
+  public async getEffectiveRates(): Promise<FxRates | null> {
+    const raw = await this.getRates();
+    if (!raw) return null;
+    const out: Partial<Record<SupportedCurrency, number>> = { EUR: 1 };
+    for (const code of SUPPORTED_CURRENCIES) {
+      if (code === 'EUR') continue;
+      const rate = raw.rates?.[code];
+      if (rate) out[code] = rate * (1 + BUFFER_PCT);
+    }
+    return { asOf: raw.asOf, rates: out as Record<SupportedCurrency, number> };
+  }
+
   public async convert(
     amountEur: number,
     to: SupportedCurrency

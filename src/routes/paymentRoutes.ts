@@ -176,6 +176,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           gamesFee: result.data.gamesFee,
           qrgamesUnitPrice: result.data.qrgamesUnitPrice,
           adjustedItems: result.data.adjustedItems,
+          reverseCharge: result.data.reverseCharge,
+          vatIdStatus: result.data.vatIdStatus,
         };
         return result;
       }
@@ -205,6 +207,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           gamesFee: await convertField(result.data.gamesFee),
           qrgamesUnitPrice: await convertField(result.data.qrgamesUnitPrice),
           adjustedItems: convertedAdjustedItems,
+          reverseCharge: result.data.reverseCharge,
+          vatIdStatus: result.data.vatIdStatus,
         };
       } catch (e) {
         logger.log(
@@ -219,9 +223,12 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Get supported currencies + current rates
+  // Get supported currencies + current rates. Returns EFFECTIVE rates (ECB ×
+  // buffer) so the frontend multiplies EUR × rate directly — keeping the
+  // buffer as a backend-only concern. Changing BUFFER_PCT only needs a server
+  // restart; clients will pick up the new effective rate on their next fetch.
   fastify.get('/currency/rates', async (_request: any, _reply) => {
-    const rates = await fx.getRates();
+    const rates = await fx.getEffectiveRates();
     return {
       success: true,
       data: {
@@ -312,8 +319,26 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
     }
 
     const invoiceCurrency = payment.currency || 'EUR';
+    // `invoiceRate` is the raw buffered FX rate Mollie used; fine for the
+    // footnote ("1 EUR = X NOK") but NOT safe to drive line items, because
+    // the total was snap-rounded (e.g. nearest NOK 5) before Mollie charged
+    // it. Using `invoiceRate * totalPrice` would print a smooth total that
+    // differs from what the customer actually paid.
+    //
+    // `displayRate` is the effective rate implied by the charged total —
+    // totalPricePresentment / totalPrice. Multiplying every EUR line by
+    // `displayRate` keeps line items proportional AND makes them sum to the
+    // presentment total, so the invoice matches Mollie exactly.
     const invoiceRate =
       invoiceCurrency === 'EUR' ? 1 : payment.exchangeRate || 1;
+    const presentmentTotal =
+      invoiceCurrency === 'EUR'
+        ? payment.totalPrice
+        : payment.totalPricePresentment ?? payment.totalPrice * invoiceRate;
+    const displayRate =
+      invoiceCurrency === 'EUR' || !payment.totalPrice
+        ? 1
+        : presentmentTotal / payment.totalPrice;
     const moneyFormatter = formatters.currencyFormatter(invoiceCurrency);
 
     await reply.view(`invoice.ejs`, {
@@ -324,6 +349,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
       moneyFormatter,
       invoiceCurrency,
       invoiceRate,
+      displayRate,
+      presentmentTotal,
       translations: await translation.getTranslationsByPrefix(
         payment.locale,
         'invoice'

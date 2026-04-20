@@ -181,6 +181,8 @@ model Payment {
   exchangeRate             Float                @default(1)
   totalPricePresentment    Float?
   settlementAmountEur      Float?
+  reverseCharge            Boolean              @default(false)
+  vatIdChecked             String?
 
   DiscountCodedUses DiscountCodedUses[]
   Review            Review[]

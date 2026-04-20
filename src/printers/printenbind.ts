@@ -910,7 +910,16 @@ class PrintEnBind {
       countrySelected = true;
     }
 
-    const taxRate = (await this.data.getTaxRate(params.countrycode))!;
+    // Resolve the tax rate along with the EU B2B reverse-charge flag in one
+    // call. `taxRate` will be 0 when reverse charge applies; the flag is
+    // returned alongside so we can surface it to the checkout UI and the
+    // Mollie payment record.
+    const taxContext = await this.data.resolveTaxContext({
+      buyerCountry: params.countrycode,
+      isBusinessOrder: !!params.isBusinessOrder,
+      vatId: params.vatId || null,
+    });
+    const taxRate = taxContext.taxRate;
 
     try {
       const orderItems = [];
@@ -1094,6 +1103,9 @@ class PrintEnBind {
           gamesFee, // Add games fee to result
           qrgamesUnitPrice: QRGAMES_UPGRADE_PRICE, // Per-playlist QRGames price
           adjustedItems,
+          reverseCharge: taxContext.reverseCharge,
+          vatIdChecked: taxContext.vatIdChecked || null,
+          vatIdStatus: taxContext.vatIdStatus,
         },
       };
 
