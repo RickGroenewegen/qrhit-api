@@ -1328,7 +1328,7 @@ class Mollie {
         });
 
         molliePaymentId = payment.id;
-        molliePaymentAmount = calculateResult.data.total;
+        molliePaymentAmount = Math.round(calculateResult.data.total * 100) / 100;
         molliePaymentStatus = payment.status;
         mollieCheckoutUrl = payment.getCheckoutUrl()!;
       }
