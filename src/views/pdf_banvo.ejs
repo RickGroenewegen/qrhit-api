@@ -3,12 +3,11 @@
 <head>
 <meta charset="UTF-8">
 <title>Your QR Cards</title>
-<%- include('partials/font-import-inline') %>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@800;900&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Raleway:wght@800;900&display=block" rel="stylesheet">
+<%- include('partials/font-import-inline') %>
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=Raleway:wght@800;900&display=swap');
     body {
         font-family: <%= php.selectedFont || 'Arial, sans-serif' %>;
         margin: 0;
@@ -134,6 +133,11 @@
 </style>
 </head>
 <body>
+<!-- Force Raleway 800 + 900 to be fetched before layout finalises (prevents faux-bold fallback in PDF renderer) -->
+<div aria-hidden="true" style="position:absolute;left:-9999px;top:-9999px;visibility:hidden;">
+    <span style="font-family:'Raleway',sans-serif;font-weight:800;">Raleway ExtraBold 0123456789</span>
+    <span style="font-family:'Raleway',sans-serif;font-weight:900;">Raleway Black 0123456789</span>
+</div>
 <% if (php.addHowToCard && startIndex === 0) { %>
   <%- include('partials/howto_card') %>
 <% } %>
