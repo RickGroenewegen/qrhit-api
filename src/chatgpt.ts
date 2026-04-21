@@ -89,7 +89,7 @@ export class ChatGPT {
       );
 
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-5',
+        model: 'gpt-5.4-mini',
         messages: [
           {
             role: 'system',
@@ -100,9 +100,11 @@ export class ChatGPT {
             content: prompt,
           },
         ],
-        function_call: { name: 'parseYearMistakes' },
-        functions: [
+        tool_choice: { type: 'function', function: { name: 'parseYearMistakes' } },
+        tools: [
           {
+            type: 'function',
+            function: {
             name: 'parseYearMistakes',
             parameters: {
               type: 'object',
@@ -146,12 +148,14 @@ export class ChatGPT {
               },
               required: ['mistakes'],
             },
+            },
           },
         ],
       });
 
-      if (result?.choices[0]?.message?.function_call) {
-        const funcCall = result.choices[0].message.function_call;
+      const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
+      if (toolCall && toolCall.type === 'function') {
+        const funcCall = toolCall.function;
         let completionArguments;
         try {
           completionArguments = JSON.parse(funcCall.arguments as string);
@@ -286,9 +290,11 @@ export class ChatGPT {
                       ${prompt}`,
         },
       ],
-      function_call: { name: 'generateDescriptions' },
-      functions: [
+      tool_choice: { type: 'function', function: { name: 'generateDescriptions' } },
+      tools: [
         {
+          type: 'function',
+          function: {
           name: 'generateDescriptions',
           parameters: {
             type: 'object',
@@ -303,12 +309,14 @@ export class ChatGPT {
             ),
             required: languages.map((lang) => `description_${lang}`),
           },
+          },
         },
       ],
     });
 
-    if (result?.choices[0]?.message?.function_call) {
-      const funcCall = result.choices[0].message.function_call;
+    const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
+    if (toolCall && toolCall.type === 'function') {
+      const funcCall = toolCall.function;
       try {
         const descriptions = JSON.parse(funcCall.arguments as string);
         return descriptions;
@@ -352,7 +360,7 @@ export class ChatGPT {
     );
 
     const result = await this.openai.chat.completions.create({
-      model: 'o4-mini',
+      model: 'gpt-5.4-mini',
       temperature: 1,
       messages: [
         {
@@ -371,9 +379,11 @@ export class ChatGPT {
                     ${prompt}`,
         },
       ],
-      function_call: { name: 'determineGenre' },
-      functions: [
+      tool_choice: { type: 'function', function: { name: 'determineGenre' } },
+      tools: [
         {
+          type: 'function',
+          function: {
           name: 'determineGenre',
           parameters: {
             type: 'object',
@@ -392,12 +402,14 @@ export class ChatGPT {
             },
             required: ['genreId', 'reasoning'],
           },
+          },
         },
       ],
     });
 
-    if (result?.choices[0]?.message?.function_call) {
-      const funcCall = result.choices[0].message.function_call;
+    const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
+    if (toolCall && toolCall.type === 'function') {
+      const funcCall = toolCall.function;
       try {
         const genreResult = JSON.parse(funcCall.arguments as string);
 
@@ -504,9 +516,11 @@ export class ChatGPT {
                       ${reviewsPrompt}`,
           },
         ],
-        function_call: { name: 'translateReviews' },
-        functions: [
+        tool_choice: { type: 'function', function: { name: 'translateReviews' } },
+        tools: [
           {
+            type: 'function',
+            function: {
             name: 'translateReviews',
             parameters: {
               type: 'object',
@@ -551,12 +565,14 @@ export class ChatGPT {
               },
               required: ['translations'],
             },
+            },
           },
         ],
       });
 
-      if (result?.choices[0]?.message?.function_call) {
-        const funcCall = result.choices[0].message.function_call;
+      const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
+      if (toolCall && toolCall.type === 'function') {
+        const funcCall = toolCall.function;
         try {
           const translationResults = JSON.parse(funcCall.arguments as string);
 
@@ -662,9 +678,11 @@ export class ChatGPT {
             )}.`,
           },
         ],
-        function_call: { name: 'getGenreTranslations' },
-        functions: [
+        tool_choice: { type: 'function', function: { name: 'getGenreTranslations' } },
+        tools: [
           {
+            type: 'function',
+            function: {
             name: 'getGenreTranslations',
             parameters: {
               type: 'object',
@@ -679,12 +697,14 @@ export class ChatGPT {
               ),
               required: targetLocales,
             },
+            },
           },
         ],
       });
 
-      if (result?.choices[0]?.message?.function_call) {
-        const funcCall = result.choices[0].message.function_call;
+      const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
+      if (toolCall && toolCall.type === 'function') {
+        const funcCall = toolCall.function;
         try {
           const translations = JSON.parse(
             funcCall.arguments as string
@@ -734,7 +754,7 @@ export class ChatGPT {
     let answer = undefined;
 
     const result = await this.openai.chat.completions.create({
-      model: 'o4-mini',
+      model: 'gpt-5.4-mini',
       temperature: 1,
       messages: [
         {
@@ -746,9 +766,11 @@ export class ChatGPT {
           content: prompt,
         },
       ],
-      function_call: { name: 'parseYear' },
-      functions: [
+      tool_choice: { type: 'function', function: { name: 'parseYear' } },
+      tools: [
         {
+          type: 'function',
+          function: {
           name: 'parseYear',
           parameters: {
             type: 'object',
@@ -775,18 +797,20 @@ export class ChatGPT {
             },
             required: ['year', 'reasoning'],
           },
+          },
         },
       ],
     });
 
     if (result) {
-      if (result.choices[0].message.function_call) {
+      const toolCall = result.choices[0].message.tool_calls?.[0];
+      if (toolCall && toolCall.type === 'function') {
         // Log the used tokens
         const promptTokens = result.usage!.prompt_tokens;
         const completionTokens = result.usage!.completion_tokens;
         const totalTokens = result.usage!.total_tokens;
 
-        const funcCall = result.choices[0].message.function_call;
+        const funcCall = toolCall.function;
         const functionCallName = funcCall.name;
         let completionArguments;
         try {
@@ -818,7 +842,7 @@ export class ChatGPT {
     instruction: string
   ): Promise<{ title: string; content: string; summary?: string }> {
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5.2',
+      model: 'gpt-5.4',
       messages: [
         {
           role: 'system',
@@ -893,9 +917,11 @@ Write in a professional, informative, and engaging style. The tone should be cle
           content: instruction,
         },
       ],
-      function_call: { name: 'generateBlog' },
-      functions: [
+      tool_choice: { type: 'function', function: { name: 'generateBlog' } },
+      tools: [
         {
+          type: 'function',
+          function: {
           name: 'generateBlog',
           parameters: {
             type: 'object',
@@ -918,12 +944,14 @@ Write in a professional, informative, and engaging style. The tone should be cle
             },
             required: ['title', 'content'],
           },
+          },
         },
       ],
     });
 
-    if (result?.choices[0]?.message?.function_call) {
-      const funcCall = result.choices[0].message.function_call;
+    const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
+    if (toolCall && toolCall.type === 'function') {
+      const funcCall = toolCall.function;
       try {
         const blog = JSON.parse(funcCall.arguments as string);
         return blog;
@@ -949,7 +977,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
     onChunk: (chunk: string) => void
   ): Promise<{ title: string; content: string; summary?: string }> {
     const stream = await this.openai.chat.completions.create({
-      model: 'gpt-5.2',
+      model: 'gpt-5.4',
       stream: true,
       messages: [
         {
@@ -1194,9 +1222,11 @@ Write in a professional, informative, and engaging style. The tone should be cle
           )}.\n\nText:\n${text}`,
         },
       ],
-      function_call: { name: 'translateText' },
-      functions: [
+      tool_choice: { type: 'function', function: { name: 'translateText' } },
+      tools: [
         {
+          type: 'function',
+          function: {
           name: 'translateText',
           parameters: {
             type: 'object',
@@ -1211,12 +1241,14 @@ Write in a professional, informative, and engaging style. The tone should be cle
             ),
             required: targetLocales,
           },
+          },
         },
       ],
     });
 
-    if (result?.choices[0]?.message?.function_call) {
-      const funcCall = result.choices[0].message.function_call;
+    const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
+    if (toolCall && toolCall.type === 'function') {
+      const funcCall = toolCall.function;
       try {
         const translations = JSON.parse(funcCall.arguments as string);
         return translations;
@@ -1242,21 +1274,34 @@ Write in a professional, informative, and engaging style. The tone should be cle
     type: 'artist' | 'title'
   ): Promise<string[]> {
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5',
+      model: 'gpt-5.4-mini',
       temperature: 1,
       messages: [
         {
           role: 'system',
-          content: `You are a text processing assistant that splits long strings intelligently. When splitting text, preserve meaning and readability by breaking at natural points like spaces, punctuation, or syllable boundaries. Each segment must be 20 characters or less.`,
+          content: `You split a single long word into shorter segments for display. Rules:
+1. Every segment MUST be 20 characters or less.
+2. Concatenating all segments in order (with no separators) MUST exactly equal the input — do not add, drop, reorder, or change any characters, including case, accents, and umlauts.
+3. Use the minimum number of segments needed to satisfy rule 1.
+4. Prefer breaks at natural points: syllable boundaries, compound-word boundaries, or between consonant clusters. Aim for roughly balanced segment lengths.
+5. Do not add spaces, hyphens, or any other characters between segments.`,
         },
         {
           role: 'user',
-          content: `Split the following ${type} into segments where each segment is maximum 20 characters. Try to split at natural breaking points (spaces, punctuation, syllables) to maintain readability and preferebly somewhere around the middle:\n\n"${text}"`,
+          content: `Split this ${type} word into segments following the rules. The input is one long word (not a phrase).
+
+Example input: "Raderbergerboorebürgerspillverein"
+Example output segments: ["Raderberger", "boorebürger", "spillverein"]
+(concatenated = "Raderbergerboorebürgerspillverein", each ≤ 20 chars)
+
+Input: "${text}"`,
         },
       ],
-      function_call: { name: 'splitText' },
-      functions: [
+      tool_choice: { type: 'function', function: { name: 'splitText' } },
+      tools: [
         {
+          type: 'function',
+          function: {
           name: 'splitText',
           description: `Splits a ${type} string into segments of maximum 20 characters each`,
           parameters: {
@@ -1275,12 +1320,14 @@ Write in a professional, informative, and engaging style. The tone should be cle
             },
             required: ['segments'],
           },
+          },
         },
       ],
     });
 
-    if (result?.choices[0]?.message?.function_call) {
-      const funcCall = result.choices[0].message.function_call;
+    const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
+    if (toolCall && toolCall.type === 'function') {
+      const funcCall = toolCall.function;
       try {
         const parsed = JSON.parse(funcCall.arguments as string);
         return parsed.segments || [text];
@@ -1332,7 +1379,7 @@ ${htmlString}
 `;
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5',
+      model: 'gpt-5.4-mini',
       temperature: 0,
       messages: [
         {
@@ -1344,9 +1391,11 @@ ${htmlString}
           content: prompt,
         },
       ],
-      function_call: { name: 'extractOrders' },
-      functions: [
+      tool_choice: { type: 'function', function: { name: 'extractOrders' } },
+      tools: [
         {
+          type: 'function',
+          function: {
           name: 'extractOrders',
           description:
             'Extracts an array of orderIds, order dates, and amounts from HTML. Ignores any Creditfactuur that negates a Factuur (same orderId and amount, but negative).',
@@ -1380,12 +1429,14 @@ ${htmlString}
             },
             required: ['orders'],
           },
+          },
         },
       ],
     });
 
-    if (result?.choices[0]?.message?.function_call) {
-      const funcCall = result.choices[0].message.function_call;
+    const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
+    if (toolCall && toolCall.type === 'function') {
+      const funcCall = toolCall.function;
       try {
         const parsed = JSON.parse(funcCall.arguments as string);
         return { orders: parsed.orders };
@@ -1435,8 +1486,10 @@ ${htmlString}
             content: `Subject: ${subject}\n\nMessage: ${message}`,
           },
         ],
-        functions: [
+        tools: [
           {
+            type: 'function',
+            function: {
             name: 'translate_email',
             description: 'Translate email subject and message to target language',
             parameters: {
@@ -1453,12 +1506,13 @@ ${htmlString}
               },
               required: ['subject', 'message'],
             },
+            },
           },
         ],
-        function_call: { name: 'translate_email' },
+        tool_choice: { type: 'function', function: { name: 'translate_email' } },
       });
 
-      const functionCall = response.choices[0]?.message?.function_call;
+      const functionCall = (response.choices[0]?.message?.tool_calls?.[0] as any)?.function;
 
       if (functionCall && functionCall.arguments) {
         const parsed = JSON.parse(functionCall.arguments);
@@ -1569,7 +1623,7 @@ ${htmlString}
         );
 
         const result = await this.openai.chat.completions.create({
-          model: 'gpt-5-mini',
+          model: 'gpt-5.4-mini',
           temperature: 1,
           messages: [
             {
@@ -1581,9 +1635,11 @@ ${htmlString}
               content: `Generate a trivia question for each of these songs (respond in ${languageName}):\n${tracksPrompt}`,
             },
           ],
-          function_call: { name: 'generateTriviaQuestions' },
-          functions: [
+          tool_choice: { type: 'function', function: { name: 'generateTriviaQuestions' } },
+          tools: [
             {
+              type: 'function',
+              function: {
               name: 'generateTriviaQuestions',
               parameters: {
                 type: 'object',
@@ -1617,13 +1673,14 @@ ${htmlString}
                 },
                 required: ['questions'],
               },
+              },
             },
           ],
         });
 
-        if (result?.choices[0]?.message?.function_call) {
+        if (result?.choices[0]?.message?.tool_calls?.[0]) {
           try {
-            const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+            const parsed = JSON.parse((result.choices[0].message.tool_calls![0] as any).function.arguments as string);
             this.logger.logDev(
               color.cyan(`[Quiz] Trivia batch returned ${parsed.questions?.length || 0} questions`)
             );
@@ -1686,7 +1743,7 @@ ${htmlString}
         );
 
         const result = await this.openai.chat.completions.create({
-          model: 'gpt-5-mini',
+          model: 'gpt-5.4-mini',
           temperature: 1,
           messages: [
             {
@@ -1698,9 +1755,11 @@ ${htmlString}
               content: `For each song, provide 3 alternative artist names (same genre/style, plausible but wrong). Use real artist names, do not translate them:\n${tracksPrompt}`,
             },
           ],
-          function_call: { name: 'generateArtistAlternatives' },
-          functions: [
+          tool_choice: { type: 'function', function: { name: 'generateArtistAlternatives' } },
+          tools: [
             {
+              type: 'function',
+              function: {
               name: 'generateArtistAlternatives',
               parameters: {
                 type: 'object',
@@ -1726,13 +1785,14 @@ ${htmlString}
                 },
                 required: ['tracks'],
               },
+              },
             },
           ],
         });
 
-        if (result?.choices[0]?.message?.function_call) {
+        if (result?.choices[0]?.message?.tool_calls?.[0]) {
           try {
-            const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+            const parsed = JSON.parse((result.choices[0].message.tool_calls![0] as any).function.arguments as string);
             this.logger.logDev(
               color.cyan(`[Quiz] Artist batch returned ${parsed.tracks?.length || 0} items`)
             );
@@ -1796,7 +1856,7 @@ ${htmlString}
         );
 
         const result = await this.openai.chat.completions.create({
-          model: 'gpt-5-mini',
+          model: 'gpt-5.4-mini',
           temperature: 1,
           messages: [
             {
@@ -1808,9 +1868,11 @@ ${htmlString}
               content: `For each song title, pick a word to blank out and provide 3 wrong alternatives (different words that could plausibly fit in the title):\n${tracksPrompt}`,
             },
           ],
-          function_call: { name: 'generateMissingWordQuestions' },
-          functions: [
+          tool_choice: { type: 'function', function: { name: 'generateMissingWordQuestions' } },
+          tools: [
             {
+              type: 'function',
+              function: {
               name: 'generateMissingWordQuestions',
               parameters: {
                 type: 'object',
@@ -1844,13 +1906,14 @@ ${htmlString}
                 },
                 required: ['tracks'],
               },
+              },
             },
           ],
         });
 
-        if (result?.choices[0]?.message?.function_call) {
+        if (result?.choices[0]?.message?.tool_calls?.[0]) {
           try {
-            const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+            const parsed = JSON.parse((result.choices[0].message.tool_calls![0] as any).function.arguments as string);
             this.logger.logDev(
               color.cyan(`[Quiz] Missing word batch returned ${parsed.tracks?.length || 0} items`)
             );
@@ -1913,7 +1976,7 @@ ${htmlString}
         );
 
         const result = await this.openai.chat.completions.create({
-          model: 'gpt-5-mini',
+          model: 'gpt-5.4-mini',
           temperature: 1,
           messages: [
             {
@@ -1925,9 +1988,11 @@ ${htmlString}
               content: `For each song, provide 3 alternative song titles (same genre/era, plausible but wrong). Use real song titles or well-known lyrics/phrases from the song that are often mistaken for the title:\n${tracksPrompt}`,
             },
           ],
-          function_call: { name: 'generateTitleAlternatives' },
-          functions: [
+          tool_choice: { type: 'function', function: { name: 'generateTitleAlternatives' } },
+          tools: [
             {
+              type: 'function',
+              function: {
               name: 'generateTitleAlternatives',
               parameters: {
                 type: 'object',
@@ -1953,13 +2018,14 @@ ${htmlString}
                 },
                 required: ['tracks'],
               },
+              },
             },
           ],
         });
 
-        if (result?.choices[0]?.message?.function_call) {
+        if (result?.choices[0]?.message?.tool_calls?.[0]) {
           try {
-            const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+            const parsed = JSON.parse((result.choices[0].message.tool_calls![0] as any).function.arguments as string);
             this.logger.logDev(
               color.cyan(`[Quiz] Title batch returned ${parsed.tracks?.length || 0} items`)
             );
@@ -2042,7 +2108,7 @@ ${htmlString}
 
     if (type === 'trivia') {
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-5-mini',
+        model: 'gpt-5.4-mini',
         temperature: 1,
         messages: [
           {
@@ -2054,9 +2120,11 @@ ${htmlString}
             content: `Generate a trivia question about "${track.name}" by ${track.artist} (${track.year}). Respond in ${languageName}.${currentQuestion ? `\n\nIMPORTANT: The previous question was: "${currentQuestion}". Generate a DIFFERENT question — do not repeat or rephrase this.` : ''}`,
           },
         ],
-        function_call: { name: 'generateTriviaQuestion' },
-        functions: [
+        tool_choice: { type: 'function', function: { name: 'generateTriviaQuestion' } },
+        tools: [
           {
+            type: 'function',
+            function: {
             name: 'generateTriviaQuestion',
             parameters: {
               type: 'object',
@@ -2070,13 +2138,14 @@ ${htmlString}
               },
               required: ['question', 'correctAnswer', 'wrongOptions'],
             },
+            },
           },
         ],
       });
 
-      if (result?.choices[0]?.message?.function_call) {
+      if (result?.choices[0]?.message?.tool_calls?.[0]) {
         try {
-          const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+          const parsed = JSON.parse((result.choices[0].message.tool_calls![0] as any).function.arguments as string);
           const allOptions = [parsed.correctAnswer, ...parsed.wrongOptions.slice(0, 3)];
           for (let j = allOptions.length - 1; j > 0; j--) {
             const k = Math.floor(Math.random() * (j + 1));
@@ -2100,7 +2169,7 @@ ${htmlString}
 
     if (type === 'artist') {
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-5-mini',
+        model: 'gpt-5.4-mini',
         temperature: 1,
         messages: [
           {
@@ -2112,9 +2181,11 @@ ${htmlString}
             content: `Generate 3 alternative artist names for "${track.name}" by ${track.artist}.${currentQuestion ? `\n\nThe previous question was: "${currentQuestion}". Generate different alternatives than before.` : ''}`,
           },
         ],
-        function_call: { name: 'generateAlternatives' },
-        functions: [
+        tool_choice: { type: 'function', function: { name: 'generateAlternatives' } },
+        tools: [
           {
+            type: 'function',
+            function: {
             name: 'generateAlternatives',
             parameters: {
               type: 'object',
@@ -2126,13 +2197,14 @@ ${htmlString}
               },
               required: ['alternatives'],
             },
+            },
           },
         ],
       });
 
-      if (result?.choices[0]?.message?.function_call) {
+      if (result?.choices[0]?.message?.tool_calls?.[0]) {
         try {
-          const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+          const parsed = JSON.parse((result.choices[0].message.tool_calls![0] as any).function.arguments as string);
           const allOptions = [track.artist, ...parsed.alternatives.slice(0, 3)];
           for (let j = allOptions.length - 1; j > 0; j--) {
             const k = Math.floor(Math.random() * (j + 1));
@@ -2158,7 +2230,7 @@ ${htmlString}
       const missingWordQuestionText = this.translation.translate('quiz.missingWordQuestion', locale);
 
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-5-mini',
+        model: 'gpt-5.4-mini',
         temperature: 1,
         messages: [
           {
@@ -2170,9 +2242,11 @@ ${htmlString}
             content: `For the song "${track.name}" by ${track.artist}, pick a word to blank out and provide 3 wrong alternatives (different words that could plausibly fit in the title).${currentQuestion ? `\n\nIMPORTANT: The previous question was: "${currentQuestion}". Pick a DIFFERENT word to blank out this time.` : ''}`,
           },
         ],
-        function_call: { name: 'generateMissingWordQuestion' },
-        functions: [
+        tool_choice: { type: 'function', function: { name: 'generateMissingWordQuestion' } },
+        tools: [
           {
+            type: 'function',
+            function: {
             name: 'generateMissingWordQuestion',
             parameters: {
               type: 'object',
@@ -2193,13 +2267,14 @@ ${htmlString}
               },
               required: ['missingWord', 'titleWithBlank', 'alternatives'],
             },
+            },
           },
         ],
       });
 
-      if (result?.choices[0]?.message?.function_call) {
+      if (result?.choices[0]?.message?.tool_calls?.[0]) {
         try {
-          const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+          const parsed = JSON.parse((result.choices[0].message.tool_calls![0] as any).function.arguments as string);
           const allOptions = [parsed.missingWord, ...parsed.alternatives.slice(0, 3)];
           for (let j = allOptions.length - 1; j > 0; j--) {
             const k = Math.floor(Math.random() * (j + 1));
@@ -2223,7 +2298,7 @@ ${htmlString}
 
     if (type === 'title') {
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-5-mini',
+        model: 'gpt-5.4-mini',
         temperature: 1,
         messages: [
           {
@@ -2235,9 +2310,11 @@ ${htmlString}
             content: `Generate 3 alternative song titles for "${track.name}" by ${track.artist} (${track.year}). You may use famous lyrics or phrases from the song that are commonly mistaken for the title.${currentQuestion ? `\n\nThe previous question was: "${currentQuestion}". Generate different alternatives than before.` : ''}`,
           },
         ],
-        function_call: { name: 'generateAlternatives' },
-        functions: [
+        tool_choice: { type: 'function', function: { name: 'generateAlternatives' } },
+        tools: [
           {
+            type: 'function',
+            function: {
             name: 'generateAlternatives',
             parameters: {
               type: 'object',
@@ -2249,13 +2326,14 @@ ${htmlString}
               },
               required: ['alternatives'],
             },
+            },
           },
         ],
       });
 
-      if (result?.choices[0]?.message?.function_call) {
+      if (result?.choices[0]?.message?.tool_calls?.[0]) {
         try {
-          const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+          const parsed = JSON.parse((result.choices[0].message.tool_calls![0] as any).function.arguments as string);
           const allOptions = [track.name, ...parsed.alternatives.slice(0, 3)];
           for (let j = allOptions.length - 1; j > 0; j--) {
             const k = Math.floor(Math.random() * (j + 1));
@@ -2303,7 +2381,7 @@ ${htmlString}
       : '';
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5-mini',
+      model: 'gpt-5.4-mini',
       temperature: 1,
       messages: [
         {
@@ -2315,9 +2393,11 @@ ${htmlString}
           content: `Song: "${track.name}" by ${track.artist}\nQuestion: ${question}\nCorrect answer: ${correctAnswer}\n\nGenerate 3 plausible wrong answers in ${languageName}.${avoidText}`,
         },
       ],
-      function_call: { name: 'generateWrongOptions' },
-      functions: [
+      tool_choice: { type: 'function', function: { name: 'generateWrongOptions' } },
+      tools: [
         {
+          type: 'function',
+          function: {
           name: 'generateWrongOptions',
           parameters: {
             type: 'object',
@@ -2330,13 +2410,14 @@ ${htmlString}
             },
             required: ['wrongOptions'],
           },
+          },
         },
       ],
     });
 
-    if (result?.choices[0]?.message?.function_call) {
+    if (result?.choices[0]?.message?.tool_calls?.[0]) {
       try {
-        const parsed = JSON.parse(result.choices[0].message.function_call.arguments as string);
+        const parsed = JSON.parse((result.choices[0].message.tool_calls![0] as any).function.arguments as string);
         return (parsed.wrongOptions || []).slice(0, 3);
       } catch (error) {
         this.logger.log(color.red.bold(`[Quiz] Error parsing wrong options: ${error}`));
