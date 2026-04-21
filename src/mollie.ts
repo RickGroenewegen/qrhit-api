@@ -11,7 +11,6 @@ import Utils from './utils';
 import Generator from './generator';
 import { CartItem } from './interfaces/CartItem';
 import { OrderSearch } from './interfaces/OrderSearch';
-import axios from 'axios';
 import Discount from './discount';
 import { CronJob } from 'cron';
 import cluster from 'cluster';
@@ -642,7 +641,7 @@ class Mollie {
 
   private async refreshCartTrackCounts(
     cart: { items: CartItem[] },
-    locale: string
+    _locale: string
   ): Promise<void> {
     for (const item of cart.items) {
       if (item.productType !== 'giftcard') {
@@ -1387,12 +1386,6 @@ class Mollie {
             item.playlistId,
             item.subType
           );
-
-          if (item.isSlug) {
-            const dbPlaylist = await this.prisma.playlist.findFirst({
-              where: { slug: item.playlistId },
-            });
-          }
 
           const printApiItemPrice = orderType.amount * item.amount;
 

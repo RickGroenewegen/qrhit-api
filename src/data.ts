@@ -12,7 +12,6 @@ import cluster from 'cluster';
 import { Music } from './music';
 import PushoverClient from './pushover';
 import { ChatGPT } from './chatgpt';
-import YTMusic from 'ytmusic-api';
 import axios, { AxiosInstance } from 'axios';
 import AppTheme from './apptheme';
 import { DataDeps } from './data/types';
@@ -43,8 +42,6 @@ class Data {
   private blockedPlaylists: Set<number> = new Set();
   private blockedPlaylistsInitialized: boolean = false;
 
-  private ytmusic: YTMusic;
-
   /** Cast this instance to DataDeps for sub-module calls */
   private get deps(): DataDeps {
     return this as unknown as DataDeps;
@@ -53,8 +50,6 @@ class Data {
   public euCountryCodes = usersModule.euCountryCodes;
 
   private constructor() {
-    this.ytmusic = new YTMusic();
-    this.ytmusic.initialize();
     this.axiosInstance = axios.create();
     // ... rest of constructor
     if (cluster.isPrimary) {

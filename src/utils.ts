@@ -314,7 +314,7 @@ class Utils {
     }
   }
 
-  public reviveDates(key: any, value: any): any {
+  public reviveDates(_key: any, value: any): any {
     const isISODate =
       typeof value === 'string' &&
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/.test(value);
@@ -490,7 +490,7 @@ class Utils {
     message?: string;
     honeypot?: string;
   }): { isSpam: boolean; reason: string | null } {
-    const { name, email, message, honeypot } = data;
+    const { name, message, honeypot } = data;
 
     // Check honeypot field - if filled, it's a bot
     if (honeypot && honeypot.trim().length > 0) {
