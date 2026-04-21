@@ -33,6 +33,7 @@ export const FONTS: FontConfig[] = [
   { family: 'Teko, Arial, sans-serif', displayName: 'Teko (Athletic)', defaultSize: '18px', yearSize: '44px', googleFontName: 'Teko', googleFontWeights: '300;400;500;600;700' },
   { family: 'Montserrat, Arial, sans-serif', displayName: 'Montserrat (Geometric)', defaultSize: '15px', yearSize: '42px', googleFontName: 'Montserrat', googleFontWeights: '400;700' },
   { family: '"Roboto Condensed", Arial, sans-serif', displayName: 'Roboto Condensed (Compact)', defaultSize: '15px', yearSize: '42px', googleFontName: 'Roboto Condensed', googleFontWeights: '400;700' },
+  { family: 'Raleway, Arial, sans-serif', displayName: 'Raleway (ExtraBold/Black)', defaultSize: '15px', yearSize: '42px', googleFontName: 'Raleway', googleFontWeights: '400;700;800;900' },
 ];
 
 /**
