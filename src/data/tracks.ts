@@ -550,11 +550,6 @@ export async function storeTracks(
   // Update existing tracks
   for (const track of tracksToUpdate) {
     if (!track.manuallyCorrected) {
-      const existingTrack = await deps.prisma.track.findUnique({
-        where: { trackId: track.id },
-        select: { youtubeLink: true },
-      });
-
       const sanitizedTitle = await sanitizeTitleOrArtist(
         deps,
         deps.utils.cleanTrackName(track.name),
@@ -579,6 +574,35 @@ export async function storeTracks(
         where: { trackId: track.id },
         data: updateData,
       });
+    } else {
+      const existingTrack = await deps.prisma.track.findUnique({
+        where: { trackId: track.id },
+        select: { name: true, artist: true },
+      });
+      if (existingTrack) {
+        const sanitizedTitle = await sanitizeTitleOrArtist(
+          deps,
+          existingTrack.name,
+          'title'
+        );
+        const sanitizedArtist = await sanitizeTitleOrArtist(
+          deps,
+          existingTrack.artist,
+          'artist'
+        );
+        if (
+          sanitizedTitle !== existingTrack.name ||
+          sanitizedArtist !== existingTrack.artist
+        ) {
+          await deps.prisma.track.update({
+            where: { trackId: track.id },
+            data: {
+              name: sanitizedTitle,
+              artist: sanitizedArtist,
+            },
+          });
+        }
+      }
     }
   }
 
