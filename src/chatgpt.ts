@@ -1144,13 +1144,13 @@ Write in a professional, informative, and engaging style. The tone should be cle
         image: file,
         prompt: imagePrompt,
         n: 1,
-        model: 'gpt-image-1',
+        model: 'gpt-image-1.5',
         size: '1536x1024',
         quality: 'high',
       });
 
       // const response = await this.openai.images.generate({
-      //   model: 'gpt-image-1',
+      //   model: 'gpt-image-1.5',
       //   prompt: imagePrompt,
       //   n: 1,
       //   size: '1536x1024',
