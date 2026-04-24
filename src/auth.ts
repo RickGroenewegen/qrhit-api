@@ -837,7 +837,8 @@ export async function createOrUpdateAdminUser(
   companyId?: number,
   userGroup?: string,
   id?: number,
-  currentUserGroups?: string[] // Pass the current user's groups for permission check
+  currentUserGroups?: string[], // Pass the current user's groups for permission check
+  phone?: string | null
 ): Promise<any> {
   const userId = email;
   const userHash = crypto.randomBytes(16).toString('hex');
@@ -940,6 +941,14 @@ export async function createOrUpdateAdminUser(
         `;
       }
 
+      // Update phone separately, only when explicitly provided (undefined = leave unchanged)
+      if (phone !== undefined) {
+        await prisma.user.update({
+          where: { id: existingUser.id },
+          data: { phone: phone || null },
+        });
+      }
+
       // Connect user to userGroup if provided using the helper function
       if (userGroupRecord) {
         await ensureUserInGroup(existingUser.id, userGroup!);
@@ -965,11 +974,12 @@ export async function createOrUpdateAdminUser(
       const salt = generateSalt();
       const hashedPassword = hashPassword(password, salt, CURRENT_ITERATIONS);
       await prisma.$executeRaw`
-        INSERT INTO users (userId, email, displayName, hash, password, salt, passwordIterations, marketingEmails, sync, createdAt, updatedAt, companyId, verified)
+        INSERT INTO users (userId, email, displayName, phone, hash, password, salt, passwordIterations, marketingEmails, sync, createdAt, updatedAt, companyId, verified)
         VALUES (
           ${userId},
           ${email},
           ${displayName},
+          ${phone ?? null},
           ${userHash},
           ${hashedPassword},
           ${salt},

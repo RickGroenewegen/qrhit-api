@@ -99,7 +99,7 @@ export default async function adminRoutes(
     '/admin/create',
     getAuthHandler(['admin', 'vibeadmin']),
     async (request: any, reply: any) => {
-      const { email, password, displayName, companyId, userGroup, id } =
+      const { email, password, displayName, companyId, userGroup, id, phone } =
         request.body;
 
       if (!email || !displayName) {
@@ -120,7 +120,8 @@ export default async function adminRoutes(
           companyId,
           userGroup,
           id,
-          request.user?.userGroups
+          request.user?.userGroups,
+          phone
         );
         reply.send({
           success: true,

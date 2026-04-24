@@ -59,6 +59,7 @@ class Vibe {
           userId: true,
           email: true,
           displayName: true,
+          phone: true,
           createdAt: true,
           updatedAt: true,
         },
@@ -137,12 +138,15 @@ class Vibe {
       fullname,
       company,
       email,
+      phone,
+      message,
       captchaToken,
       password1,
       password2,
       qrvote,
       marketingEmails,
       honeypot,
+      source,
     } = body || {};
 
     if (!fullname || !company || !email) {
@@ -212,9 +216,15 @@ class Vibe {
 
     try {
       // 1. Create the company (if not exists)
+      const isBusinessLead = source === 'business';
       const companyResult = await this.createCompany({
         name: company,
-        test: false,
+        test: isBusinessLead, // business intake form = lead, not production
+        onlyForAdmin: isBusinessLead,
+        contact: fullname,
+        contactemail: email,
+        contactphone: phone,
+        message,
       });
       if (!companyResult.success) {
         return {
@@ -267,6 +277,7 @@ class Vibe {
             userId: email,
             email,
             displayName: fullname || email.split('@')[0],
+            phone: phone || null,
             password: hash,
             salt: salt,
             hash: userHash,
@@ -292,6 +303,23 @@ class Vibe {
               verified: false,
               verifiedAt: null,
             },
+          });
+        }
+
+        // If this unaffiliated user submitted a business intake, adopt them
+        // as the contact for the newly created company. Never overwrite an
+        // existing companyId — that would move someone else's user.
+        const mergePatch: any = {};
+        if (user.companyId == null) {
+          mergePatch.companyId = companyId;
+        }
+        if (phone && !user.phone) {
+          mergePatch.phone = phone;
+        }
+        if (Object.keys(mergePatch).length > 0) {
+          user = await this.prisma.user.update({
+            where: { id: user.id },
+            data: mergePatch,
           });
         }
       }
@@ -348,8 +376,9 @@ class Vibe {
             locale,
             user.verificationHash || ''
           );
-        } else {
+        } else if (!isBusinessLead) {
           // Send regular OnzeVibe portal welcome email
+          // Skipped for the /business intake form — those are leads, handled manually
           await this.mail.sendPortalWelcomeEmail(
             email,
             fullname,
@@ -370,13 +399,24 @@ class Vibe {
 
       // Send pushover notification for new company registration
       try {
+        const pushoverLines = [
+          `Company: ${company}`,
+          `Contact: ${fullname} <${email}>`,
+        ];
+        if (phone && String(phone).trim()) {
+          pushoverLines.push(`Phone: ${phone}`);
+        }
+        if (message && String(message).trim()) {
+          pushoverLines.push(`Message: ${message}`);
+        }
         await this.pushover.sendMessage(
           {
             title: 'New company registered',
-            message: `Company: ${company}\nContact: ${fullname} <${email}>`,
+            message: pushoverLines.join('\n'),
             sound: 'incoming',
           },
-          clientIp
+          clientIp,
+          isBusinessLead // always notify for /business intake, even in dev / trusted IP
         );
       } catch (pushErr) {
         this.logger.log(
@@ -992,6 +1032,7 @@ class Vibe {
         'contactemail',
         'contactphone',
         'locale',
+        'message',
         'calculation',
         'calculationTromp',
         'calculationSchneider',
@@ -1136,6 +1177,7 @@ class Vibe {
     contact?: string;
     contactemail?: string;
     contactphone?: string;
+    message?: string;
   }): Promise<any> {
     try {
       if (!companyData.name || companyData.name.trim() === '') {
@@ -1168,6 +1210,7 @@ class Vibe {
           contact: companyData.contact,
           contactemail: companyData.contactemail,
           contactphone: companyData.contactphone,
+          message: companyData.message,
         },
       });
 

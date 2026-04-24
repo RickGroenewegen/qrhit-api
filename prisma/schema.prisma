@@ -215,6 +215,7 @@ model User {
   userId                    String           @unique
   email                     String           @unique
   displayName               String
+  phone                     String?
   locale                    String?
   country                   String?
   hash                      String           @unique
@@ -816,6 +817,7 @@ model Company {
   contactemail     String?
   contactphone     String?
   locale           String?
+  message              String?       @db.Text
   calculation          String?       @db.Text
   calculationTromp     String?       @db.Text
   calculationSchneider String?       @db.Text
