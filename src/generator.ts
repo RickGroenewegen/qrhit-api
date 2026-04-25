@@ -164,26 +164,93 @@ class Generator {
       },
     });
 
-    let eligiblePayments = paymentId && force
-      ? payments
-      : payments.filter((payment) =>
-          payment.PaymentHasPlaylist.every(
-            (php) => php.suggestionsPending === false
-          )
+    // Track payments dropped because the user still has open suggestions.
+    // We warn the customer (us) once via Pushover when this happens — many
+    // users wait out the 36h countdown thinking it auto-processes their
+    // pending suggestions, but it doesn't.
+    const blockedByPendingSuggestions: Array<{
+      paymentId: string;
+      reason: string;
+    }> = [];
+
+    let eligiblePayments: typeof payments;
+    if (paymentId && force) {
+      eligiblePayments = payments;
+    } else {
+      eligiblePayments = [];
+      for (const payment of payments) {
+        const hasPendingPhp = payment.PaymentHasPlaylist.some(
+          (php) => php.suggestionsPending === true
         );
 
-    if (!(paymentId && force)) {
-      const filtered = [] as typeof eligiblePayments;
-      for (const payment of eligiblePayments) {
-        const playlistIds = payment.PaymentHasPlaylist.map(
-          (php) => php.playlistId
-        );
-        const userSuggestionCount = await this.prisma.userSuggestion.count({
-          where: { playlistId: { in: playlistIds } },
-        });
-        if (userSuggestionCount === 0) filtered.push(payment);
+        let userSuggestionCount = 0;
+        if (!hasPendingPhp) {
+          const playlistIds = payment.PaymentHasPlaylist.map(
+            (php) => php.playlistId
+          );
+          userSuggestionCount = await this.prisma.userSuggestion.count({
+            where: { playlistId: { in: playlistIds } },
+          });
+        }
+
+        if (!hasPendingPhp && userSuggestionCount === 0) {
+          eligiblePayments.push(payment);
+        } else {
+          blockedByPendingSuggestions.push({
+            paymentId: payment.paymentId,
+            reason: hasPendingPhp
+              ? 'PaymentHasPlaylist.suggestionsPending=true'
+              : `${userSuggestionCount} unresolved UserSuggestion row(s)`,
+          });
+        }
       }
-      eligiblePayments = filtered;
+    }
+
+    // Warn once per payment that's stuck on user suggestions past its window.
+    if (blockedByPendingSuggestions.length > 0) {
+      const stuckPaymentIds = blockedByPendingSuggestions.map(
+        (b) => b.paymentId
+      );
+      const needWarning = await this.prisma.payment.findMany({
+        where: {
+          paymentId: { in: stuckPaymentIds },
+          suggestionWarningSent: false,
+        },
+        select: { id: true, paymentId: true, fullname: true, email: true },
+      });
+
+      for (const p of needWarning) {
+        const blocker = blockedByPendingSuggestions.find(
+          (b) => b.paymentId === p.paymentId
+        );
+        this.pushover.sendMessage(
+          {
+            title: '⏳ Order stuck on user suggestions',
+            message: `Payment ${p.paymentId} (${
+              p.fullname || p.email || 'unknown'
+            }) cannot be sent to printer: ${
+              blocker?.reason || 'open suggestions'
+            }. The 36h countdown does NOT auto-resolve these — the user must accept/reject their suggestions in their dashboard.`,
+            sound: 'incoming',
+            priority: 0,
+          },
+          ''
+        );
+        await this.prisma.payment.update({
+          where: { id: p.id },
+          data: {
+            suggestionWarningSent: true,
+            suggestionWarningSentAt: new Date(),
+          },
+        });
+        this.logger.log(
+          color.yellow.bold(
+            `Pushover warning sent for stuck payment ${white.bold(
+              p.paymentId
+            )} (${blocker?.reason})`
+          )
+        );
+      }
     }
 
     if (eligiblePayments.length === 0) {

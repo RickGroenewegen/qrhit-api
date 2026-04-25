@@ -171,6 +171,8 @@ model Payment {
   sentToPrinterAt          DateTime?
   fast                     Boolean              @default(false)
   printerHold              Boolean              @default(false)
+  suggestionWarningSent    Boolean              @default(false)
+  suggestionWarningSentAt  DateTime?
   processedFirstTime       Boolean              @default(false)
   processedFirstTimeAt     DateTime?
   printerInvoice           PrinterInvoice?      @relation(fields: [printerInvoiceId], references: [id], onDelete: SetNull)
