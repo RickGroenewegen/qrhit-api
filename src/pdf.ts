@@ -59,6 +59,17 @@ class PDF {
   private analytics = AnalyticsClient.getInstance();
 
   /**
+   * Public wrapper to render an arbitrary URL to a PDF buffer via Lambda.
+   * Used by finalCheck to re-render the live card route for comparison.
+   */
+  public async renderUrlToPdfBuffer(
+    url: string,
+    options: LambdaPdfOptions['options']
+  ): Promise<Buffer> {
+    return this.convertHtmlToPdf(url, options);
+  }
+
+  /**
    * Invoke the Lambda function to convert HTML to PDF
    */
   private async convertHtmlToPdf(

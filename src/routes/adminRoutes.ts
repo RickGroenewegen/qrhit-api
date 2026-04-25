@@ -561,6 +561,34 @@ export default async function adminRoutes(
     }
   );
 
+  // Manually run the print&bind eligibility / finalCheck / send pipeline
+  // that the hourly cron normally runs. Optional body { paymentId, force }
+  // narrows the run to a single payment (force=true bypasses the eligibility
+  // filter, useful when re-checking an order that's currently on hold).
+  fastify.post(
+    '/admin/run-printer-pass',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentId, force } = request.body || {};
+      try {
+        const summary = await generator.runSendToPrinterPass({
+          paymentId: paymentId || undefined,
+          force: !!force,
+        });
+        reply.send({ success: true, summary });
+      } catch (error: any) {
+        logger.log(
+          color.red.bold(
+            `run-printer-pass failed: ${error.message || error}`
+          )
+        );
+        reply
+          .status(500)
+          .send({ success: false, error: error.message || String(error) });
+      }
+    }
+  );
+
   // Update printer hold status for payment
   fastify.post(
     '/payment/:paymentId/printer-hold',

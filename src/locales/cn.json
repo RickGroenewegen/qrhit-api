@@ -597,5 +597,18 @@
   "invoice.reverseChargeExplanation": "根据指令2006/112/EC第196条，增值税由收件人反向计税。收件人需自行申报增值税。",
   "invoice.vatIdVerified": "VAT号已通过VIES验证",
   "invoice.eurEquivalent": "等值欧元",
-  "invoice.exchangeRate": "汇率"
+  "invoice.exchangeRate": "汇率",
+  "design_alter.subject": "需要操作：请更新你的卡片设计",
+  "design_alter.title": "你的卡片设计需要更新",
+  "design_alter.hello": "嗨",
+  "design_alter.intro": "在我们打印你的订单前，你需要对卡片设计做个小改动。",
+  "design_alter.reasonInappropriate": "我们的自动审核发现你的卡片上有无法打印的内容（比如脏话、仇恨言论或其他不合适的东西）。",
+  "design_alter.reasonHitster": "我们的自动审核发现你的卡片上有第三方品牌（Hitster）的内容。为避免版权问题，请先删除这些内容。",
+  "design_alter.clickButton": "点下面的按钮打开并调整你的设计：",
+  "design_alter.buttonText": "更新我的设计",
+  "design_alter.buttonFallback": "按钮没反应？复制这个链接到浏览器：",
+  "design_alter.afterEdit": "保存更改后，我们会自动继续处理并打印你的订单。",
+  "design_alter.questions": "有问题就直接回复这封邮件，我们帮你。",
+  "design_alter.thanks": "谢谢",
+  "design_alter.team": "QRSong! 团队"
 }

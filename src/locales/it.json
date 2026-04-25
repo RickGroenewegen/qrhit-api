@@ -602,5 +602,18 @@
   "invoice.reverseChargeExplanation": "L’IVA è a carico del destinatario secondo l’art. 196 della direttiva 2006/112/CE. Il destinatario deve autoliquidare l’IVA.",
   "invoice.vatIdVerified": "P.IVA verificata via VIES",
   "invoice.eurEquivalent": "Equivalente EUR",
-  "invoice.exchangeRate": "tasso"
+  "invoice.exchangeRate": "tasso",
+  "design_alter.subject": "Azione richiesta: aggiorna il design della tua carta",
+  "design_alter.title": "Il tuo design della carta va aggiornato",
+  "design_alter.hello": "Ciao",
+  "design_alter.intro": "Prima di stampare il tuo ordine, devi fare una piccola modifica al design.",
+  "design_alter.reasonInappropriate": "La nostra verifica automatica ha trovato qualcosa sulla tua carta che non possiamo stampare (tipo parolacce, odio o altro materiale inadatto).",
+  "design_alter.reasonHitster": "La nostra verifica automatica ha trovato riferimenti a un altro marchio (Hitster) sulla tua carta. Per evitare problemi, devi toglierli.",
+  "design_alter.clickButton": "Clicca qui sotto per aprire e modificare il design:",
+  "design_alter.buttonText": "Aggiorna il mio design",
+  "design_alter.buttonFallback": "Il pulsante non va? Copia e incolla questo link nel browser:",
+  "design_alter.afterEdit": "Appena salvi le modifiche, riprendiamo l’ordine e stampiamo.",
+  "design_alter.questions": "Se hai domande, rispondi a questa mail e ti aiutiamo.",
+  "design_alter.thanks": "Grazie",
+  "design_alter.team": "Il team QRSong!"
 }

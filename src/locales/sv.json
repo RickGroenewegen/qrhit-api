@@ -596,5 +596,18 @@
   "invoice.reverseChargeExplanation": "Momsen omvänds till mottagaren enligt artikel 196 i direktiv 2006/112/EG. Mottagaren ansvarar för att redovisa moms lokalt.",
   "invoice.vatIdVerified": "Momsnummer kollat via VIES",
   "invoice.eurEquivalent": "EUR motsvarande",
-  "invoice.exchangeRate": "kurs"
+  "invoice.exchangeRate": "kurs",
+  "design_alter.subject": "Åtgärd krävs: uppdatera ditt kortdesign",
+  "design_alter.title": "Ditt kortdesign behöver uppdateras",
+  "design_alter.hello": "Hej",
+  "design_alter.intro": "Innan vi kan trycka din beställning behöver du ändra en liten grej på kortdesignen.",
+  "design_alter.reasonInappropriate": "Vår automatiska granskning hittade nåt på ditt kort vi inte kan trycka (t.ex. svordomar, hat eller annat olämpligt).",
+  "design_alter.reasonHitster": "Vår automatiska granskning hittade referenser till ett annat varumärke (Hitster) på ditt kort. Ta bort dem så vi slipper IP-problem.",
+  "design_alter.clickButton": "Klicka nedan för att öppna och ändra din design:",
+  "design_alter.buttonText": "Uppdatera min design",
+  "design_alter.buttonFallback": "Funkar inte knappen? Kopiera och klistra in länken i din webbläsare:",
+  "design_alter.afterEdit": "När du sparat ändringarna fortsätter vi automatiskt med trycket.",
+  "design_alter.questions": "Har du frågor? Svara bara på mejlet så hjälper vi dig.",
+  "design_alter.thanks": "Tack",
+  "design_alter.team": "QRSong!-teamet"
 }

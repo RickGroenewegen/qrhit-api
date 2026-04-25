@@ -598,5 +598,18 @@
   "invoice.reverseChargeExplanation": "VATは指令2006/112/EC第196条により受取人に逆課税されます。受取人が現地でVATを自己申告します。",
   "invoice.vatIdVerified": "VAT番号はVIESで確認済み",
   "invoice.eurEquivalent": "EUR相当額",
-  "invoice.exchangeRate": "レート"
+  "invoice.exchangeRate": "レート",
+  "design_alter.subject": "対応が必要です：カードデザインを更新してね",
+  "design_alter.title": "カードデザインの更新が必要だよ",
+  "design_alter.hello": "やあ",
+  "design_alter.intro": "印刷する前に、カードデザインをちょっとだけ直してほしいんだ。",
+  "design_alter.reasonInappropriate": "自動チェックで印刷できない内容が見つかったよ（例：暴言、ヘイトスピーチ、不適切な内容など）。",
+  "design_alter.reasonHitster": "自動チェックで他社ブランド（Hitster）の記載が見つかったよ。印刷前に消してね。",
+  "design_alter.clickButton": "下のボタンを押してデザインを開いて直してね：",
+  "design_alter.buttonText": "デザインを更新する",
+  "design_alter.buttonFallback": "ボタンが使えない場合は、このリンクをコピーしてブラウザに貼り付けてね：",
+  "design_alter.afterEdit": "変更を保存したら、自動で注文を再開して印刷を進めるよ。",
+  "design_alter.questions": "質問があれば、このメールに返信してね。手伝うよ！",
+  "design_alter.thanks": "ありがとう",
+  "design_alter.team": "QRSong! チーム"
 }

@@ -178,6 +178,117 @@ class Mail {
   }
 
   /**
+   * Send the customer a "please update your design" email after finalCheck
+   * flagged a user-actionable issue (profanity / Hitster references).
+   *
+   * The link points at the existing user-suggestions screen which already
+   * lets the user re-open the designer for that playlist.
+   */
+  public async sendDesignAlterMail(
+    email: string,
+    fullname: string,
+    locale: string,
+    paymentId: string,
+    userHash: string,
+    playlistId: string,
+    reason: 'inappropriate' | 'hitster'
+  ): Promise<void> {
+    if (!this.ses) return;
+
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+
+    const translations = await this.translation.getTranslationsByPrefix(
+      locale,
+      'design_alter'
+    );
+
+    const designerLink = `${process.env['FRONTEND_URI']}/${locale}/usersuggestions/${paymentId}/${userHash}/${playlistId}/1`;
+
+    const reasonText =
+      reason === 'hitster'
+        ? translations?.['reasonHitster'] ||
+          'Our automatic review found references to a third-party brand on your card.'
+        : translations?.['reasonInappropriate'] ||
+          'Our automatic review flagged content on your card that we cannot print.';
+
+    const mailParams = {
+      fullname: fullname || email.split('@')[0],
+      designerLink,
+      reasonText,
+      productName: process.env['PRODUCT_NAME'],
+      currentYear: new Date().getFullYear(),
+      translations,
+    };
+
+    try {
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+
+      const html = await this.templates.render(
+        'mails/design_alter_html',
+        mailParams
+      );
+      const text = await this.templates.render(
+        'mails/design_alter_text',
+        mailParams
+      );
+
+      const subject = this.translation.translate(
+        'design_alter.subject',
+        locale
+      );
+
+      const attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+
+      const rawEmail = await this.renderRaw(
+        {
+          from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+          to: email,
+          subject,
+          html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+          text,
+          attachments,
+          unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+          replyTo: process.env['REPLY_TO_EMAIL'],
+        },
+        false
+      );
+
+      const emailBuffer = Buffer.from(rawEmail);
+
+      const command = new SendRawEmailCommand({
+        RawMessage: {
+          Data: emailBuffer,
+        },
+      });
+
+      await this.ses.send(command);
+      this.logger.log(
+        color.blue.bold(
+          `Design-alter email sent to ${white.bold(email)} (reason: ${reason})`
+        )
+      );
+    } catch (error) {
+      console.error('Error while sending design-alter email:', error);
+      this.logger.log(
+        color.red.bold(
+          `Failed to send design-alter email to ${white.bold(
+            email
+          )}: ${error}`
+        )
+      );
+    }
+  }
+
+  /**
    * Send a QRSong activation email for activating purchased cards.
    * @param email The user's email address
    * @param fullname The user's full name

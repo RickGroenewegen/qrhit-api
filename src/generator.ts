@@ -29,6 +29,7 @@ import GeneratorQueue from './generatorQueue';
 import Bingo from './bingo';
 import AppleStorefront from './appleStorefront';
 import AppleMusicProvider from './providers/AppleMusicProvider';
+import FinalCheck, { FinalCheckResult } from './finalCheck';
 
 class Generator {
   private static instance: Generator;
@@ -48,6 +49,7 @@ class Generator {
   private cache = Cache.getInstance();
   private generatorQueue: GeneratorQueue | null = null;
   private bingo = Bingo.getInstance();
+  private finalCheck = FinalCheck.getInstance();
 
   private constructor() {
     this.setCron();
@@ -84,101 +86,237 @@ class Generator {
     new CronJob(
       '0 * * * *',
       async () => {
-        const payments = await this.prisma.payment.findMany({
-          where: {
-            sentToPrinter: false,
-            printerHold: false,
-            vibe: false,
-            PaymentHasPlaylist: {
-              none: {
-                printerType: 'reseller',
-              },
-            },
-            OR: [
-              {
-                canBeSentToPrinter: true,
-                userAgreedToPrinting: true,
-              },
-              {
-                canBeSentToPrinter: true,
-                canBeSentToPrinterAt: {
-                  lte: new Date(),
-                },
-              },
-            ],
-          },
-          include: {
-            PaymentHasPlaylist: {
-              select: {
-                suggestionsPending: true,
-                playlistId: true,
-              },
-            },
-          },
-        });
-
-        // Filter payments to only include those where all PaymentHasPlaylist records have suggestionsPending = false
-        const eligiblePayments = payments.filter((payment) =>
-          payment.PaymentHasPlaylist.every(
-            (php) => php.suggestionsPending === false
-          )
-        );
-
-        // Additionally filter out payments that have any UserSuggestion records for their playlists
-        const paymentsWithoutUserSuggestions = [];
-        for (const payment of eligiblePayments) {
-          const playlistIds = payment.PaymentHasPlaylist.map(
-            (php) => php.playlistId
-          );
-
-          const userSuggestionCount = await this.prisma.userSuggestion.count({
-            where: {
-              playlistId: {
-                in: playlistIds,
-              },
-            },
-          });
-
-          if (userSuggestionCount === 0) {
-            paymentsWithoutUserSuggestions.push(payment);
-          }
-        }
-
-        if (paymentsWithoutUserSuggestions.length > 0) {
-          this.logger.log(
-            blue.bold(
-              `Found ${white.bold(
-                paymentsWithoutUserSuggestions.length.toString()
-              )} payments ready to be sent to printer`
-            )
-          );
-
-          for (const payment of paymentsWithoutUserSuggestions) {
-            try {
-              await this.sendToPrinter(payment.paymentId, '');
-              this.logger.log(
-                color.green.bold(
-                  `Successfully sent payment ${white.bold(
-                    payment.paymentId
-                  )} to printer`
-                )
-              );
-            } catch (error) {
-              this.logger.log(
-                color.red.bold(
-                  `Error sending payment ${white.bold(
-                    payment.paymentId
-                  )} to printer: ${error}`
-                )
-              );
-            }
-          }
-        }
+        await this.runSendToPrinterPass();
       },
       null,
       true,
       'Europe/Amsterdam'
     );
+  }
+
+  /**
+   * Run one pass of the print&bind eligibility/finalCheck/send pipeline.
+   * Used by the hourly cron and by the admin "run now" trigger.
+   *
+   * If `paymentId` is supplied, only that payment is considered (still
+   * subject to the same eligibility filters and finalCheck gate). Pass
+   * `force=true` to bypass the eligibility filter for that single payment
+   * (useful for re-checking a payment that's already on hold).
+   */
+  public async runSendToPrinterPass(
+    options: { paymentId?: string; force?: boolean } = {}
+  ): Promise<{
+    checked: number;
+    sent: number;
+    held: number;
+    results: Array<{
+      paymentId: string;
+      outcome: 'sent' | 'held' | 'send-failed' | 'skipped';
+      reason?: string;
+    }>;
+  }> {
+    const { paymentId, force = false } = options;
+    const summary = {
+      checked: 0,
+      sent: 0,
+      held: 0,
+      results: [] as Array<{
+        paymentId: string;
+        outcome: 'sent' | 'held' | 'send-failed' | 'skipped';
+        reason?: string;
+      }>,
+    };
+
+    const baseWhere: any = paymentId
+      ? { paymentId }
+      : {
+          sentToPrinter: false,
+          printerHold: false,
+          vibe: false,
+          PaymentHasPlaylist: {
+            none: {
+              printerType: 'reseller',
+            },
+          },
+          OR: [
+            {
+              canBeSentToPrinter: true,
+              userAgreedToPrinting: true,
+            },
+            {
+              canBeSentToPrinter: true,
+              canBeSentToPrinterAt: {
+                lte: new Date(),
+              },
+            },
+          ],
+        };
+
+    const payments = await this.prisma.payment.findMany({
+      where: baseWhere,
+      include: {
+        PaymentHasPlaylist: {
+          select: {
+            suggestionsPending: true,
+            playlistId: true,
+          },
+        },
+      },
+    });
+
+    let eligiblePayments = paymentId && force
+      ? payments
+      : payments.filter((payment) =>
+          payment.PaymentHasPlaylist.every(
+            (php) => php.suggestionsPending === false
+          )
+        );
+
+    if (!(paymentId && force)) {
+      const filtered = [] as typeof eligiblePayments;
+      for (const payment of eligiblePayments) {
+        const playlistIds = payment.PaymentHasPlaylist.map(
+          (php) => php.playlistId
+        );
+        const userSuggestionCount = await this.prisma.userSuggestion.count({
+          where: { playlistId: { in: playlistIds } },
+        });
+        if (userSuggestionCount === 0) filtered.push(payment);
+      }
+      eligiblePayments = filtered;
+    }
+
+    if (eligiblePayments.length === 0) {
+      return summary;
+    }
+
+    this.logger.log(
+      blue.bold(
+        `Found ${white.bold(
+          eligiblePayments.length.toString()
+        )} payment(s) to run finalCheck on before sending to printer`
+      )
+    );
+
+    for (const payment of eligiblePayments) {
+      summary.checked++;
+
+      try {
+        const result = await this.sendToPrinter(payment.paymentId, '');
+        if (result.success) {
+          summary.sent++;
+          summary.results.push({
+            paymentId: payment.paymentId,
+            outcome: 'sent',
+          });
+          this.logger.log(
+            color.green.bold(
+              `Successfully sent payment ${white.bold(
+                payment.paymentId
+              )} to printer`
+            )
+          );
+        } else if (result.reason && result.reason.startsWith('finalCheck:')) {
+          summary.held++;
+          summary.results.push({
+            paymentId: payment.paymentId,
+            outcome: 'held',
+            reason: result.reason,
+          });
+        } else {
+          summary.results.push({
+            paymentId: payment.paymentId,
+            outcome: 'send-failed',
+            reason: result.reason,
+          });
+          this.logger.log(
+            color.red.bold(
+              `sendToPrinter returned failure for ${white.bold(
+                payment.paymentId
+              )}: ${result.reason}`
+            )
+          );
+        }
+      } catch (error) {
+        summary.results.push({
+          paymentId: payment.paymentId,
+          outcome: 'send-failed',
+          reason: (error as Error).message,
+        });
+        this.logger.log(
+          color.red.bold(
+            `Error sending payment ${white.bold(
+              payment.paymentId
+            )} to printer: ${error}`
+          )
+        );
+      }
+    }
+
+    return summary;
+  }
+
+  /**
+   * Apply the consequences of a failed finalCheck:
+   *  - Always: set printerHold=true (so the cron won't pick it up again)
+   *           and send a Pushover alert.
+   *  - User-actionable failures (inappropriate / hitster): also reset the
+   *           "Judged" flag for the offending playlist and email the customer.
+   */
+  private async handleFinalCheckFailure(
+    payment: any,
+    check: Extract<FinalCheckResult, { ok: false }>
+  ): Promise<void> {
+    await this.prisma.payment.update({
+      where: { id: payment.id },
+      data: { printerHold: true },
+    });
+
+    this.pushover.sendMessage(
+      {
+        title: '🚨 finalCheck failed - order on hold',
+        message: `Payment ${payment.paymentId} put on printer hold.\nReason: ${check.reason}\nDetails: ${check.details}`,
+        sound: 'siren',
+        priority: 1,
+      },
+      ''
+    );
+
+    this.logger.log(
+      color.red.bold(
+        `finalCheck failed for ${white.bold(
+          payment.paymentId
+        )} (${check.reason}): ${check.details}`
+      )
+    );
+
+    if (!check.userActionable) return;
+
+    if (check.paymentHasPlaylistId) {
+      await this.data.resetJudgedStatus(check.paymentHasPlaylistId);
+    }
+
+    const fullPayment = await this.prisma.payment.findFirst({
+      where: { id: payment.id },
+      include: { user: { select: { hash: true } } },
+    });
+
+    if (
+      fullPayment &&
+      fullPayment.email &&
+      fullPayment.user &&
+      check.playlistId
+    ) {
+      await this.mail.sendDesignAlterMail(
+        fullPayment.email,
+        fullPayment.fullname || '',
+        fullPayment.locale || 'en',
+        fullPayment.paymentId,
+        fullPayment.user.hash,
+        check.playlistId,
+        check.reason === 'hitster' ? 'hitster' : 'inappropriate'
+      );
+    }
   }
 
   public async queueGenerate(
@@ -1227,6 +1365,45 @@ class Generator {
         );
 
         return { success: false, reason: 'PDF validation errors' };
+      }
+
+      // finalCheck — gates EVERY send-to-printer code path (cron, user
+      // approval flow, admin manual). On failure: printerHold flips to
+      // true (excluding from cron), Pushover fires, and user-actionable
+      // failures (profanity / Hitster) reset the Judged flag and email
+      // the customer.
+      let finalCheckResult: FinalCheckResult;
+      try {
+        finalCheckResult = await this.finalCheck.runCheck({
+          id: payment.id,
+          paymentId: payment.paymentId,
+          qrSubDir: payment.qrSubDir,
+        });
+      } catch (error) {
+        this.logger.log(
+          color.red.bold(
+            `finalCheck threw for ${white.bold(paymentId)}: ${
+              (error as Error).message
+            }`
+          )
+        );
+        finalCheckResult = {
+          ok: false,
+          reason: 'pdf-missing',
+          userActionable: false,
+          details: `finalCheck threw: ${(error as Error).message}`,
+          paymentHasPlaylistId: 0,
+          playlistDbId: 0,
+          playlistId: '',
+        };
+      }
+
+      if (!finalCheckResult.ok) {
+        await this.handleFinalCheckFailure(payment, finalCheckResult);
+        return {
+          success: false,
+          reason: `finalCheck:${finalCheckResult.reason}: ${finalCheckResult.details}`,
+        };
       }
 
       const orderData = await this.order.createOrder(

@@ -602,5 +602,18 @@
   "invoice.reverseChargeExplanation": "O IVA é invertido para o destinatário conforme o artigo 196 da diretiva 2006/112/CE. O destinatário deve declarar o IVA localmente.",
   "invoice.vatIdVerified": "NIF verificado via VIES",
   "invoice.eurEquivalent": "Equivalente EUR",
-  "invoice.exchangeRate": "taxa"
+  "invoice.exchangeRate": "taxa",
+  "design_alter.subject": "Ação necessária: atualiza o design do teu cartão",
+  "design_alter.title": "Teu design de cartão precisa de atualização",
+  "design_alter.hello": "Oi",
+  "design_alter.intro": "Antes de imprimirmos teu pedido, faz só uma pequena alteração no design.",
+  "design_alter.reasonInappropriate": "Nossa revisão automática achou algo no teu cartão que não podemos imprimir (tipo palavrão, discurso de ódio ou coisa imprópria).",
+  "design_alter.reasonHitster": "Nossa revisão automática achou referências a outra marca (Hitster) no teu cartão. Pra evitar problemas, remove isso antes de imprimir.",
+  "design_alter.clickButton": "Clica no botão abaixo pra abrir e ajustar teu design:",
+  "design_alter.buttonText": "Atualizar meu design",
+  "design_alter.buttonFallback": "O botão não funciona? Copia e cola esse link no navegador:",
+  "design_alter.afterEdit": "Assim que salvares as alterações, seguimos com a impressão.",
+  "design_alter.questions": "Se tiver dúvidas, responde a este e-mail e ajudamos.",
+  "design_alter.thanks": "Obrigado",
+  "design_alter.team": "A equipe QRSong!"
 }

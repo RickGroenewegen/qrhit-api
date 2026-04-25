@@ -602,5 +602,18 @@
   "invoice.reverseChargeExplanation": "VAT jest przenoszony na odbiorcę zgodnie z art. 196 dyrektywy 2006/112/WE. Odbiorca rozlicza VAT samodzielnie.",
   "invoice.vatIdVerified": "NIP sprawdzony przez VIES",
   "invoice.eurEquivalent": "Równowartość EUR",
-  "invoice.exchangeRate": "kurs"
+  "invoice.exchangeRate": "kurs",
+  "design_alter.subject": "Wymagana akcja: zaktualizuj swój projekt karty",
+  "design_alter.title": "Twój projekt karty wymaga aktualizacji",
+  "design_alter.hello": "Cześć",
+  "design_alter.intro": "Zanim wydrukujemy zamówienie, musisz coś małego zmienić w projekcie.",
+  "design_alter.reasonInappropriate": "Nasz automatyczny przegląd wykrył coś na twojej karcie, czego nie możemy wydrukować (np. wulgaryzmy, mowę nienawiści lub inne nieodpowiednie treści).",
+  "design_alter.reasonHitster": "Nasz automatyczny przegląd znalazł odniesienia do innej marki (Hitster) na twojej karcie. Usuń je, żeby uniknąć problemów z prawami autorskimi.",
+  "design_alter.clickButton": "Kliknij poniżej, żeby otworzyć i poprawić projekt:",
+  "design_alter.buttonText": "Zaktualizuj mój projekt",
+  "design_alter.buttonFallback": "Przycisk nie działa? Skopiuj ten link do przeglądarki:",
+  "design_alter.afterEdit": "Jak tylko zapiszesz zmiany, automatycznie wznowimy drukowanie zamówienia.",
+  "design_alter.questions": "Masz pytania? Odpowiedz na tego maila, pomożemy ci.",
+  "design_alter.thanks": "Dzięki",
+  "design_alter.team": "Zespół QRSong!"
 }

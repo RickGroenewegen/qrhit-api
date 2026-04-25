@@ -606,5 +606,18 @@
   "invoice.reverseChargeExplanation": "Btw wordt verlegd naar de ontvanger volgens artikel 196 van richtlijn 2006/112/EG. De ontvanger moet zelf btw aangeven via de lokale verleggingsregeling.",
   "invoice.vatIdVerified": "Btw-nummer gecheckt via VIES",
   "invoice.eurEquivalent": "EUR gelijkwaardig",
-  "invoice.exchangeRate": "koers"
+  "invoice.exchangeRate": "koers",
+  "design_alter.subject": "Actie nodig: update je kaartontwerp",
+  "design_alter.title": "Je kaartontwerp moet worden bijgewerkt",
+  "design_alter.hello": "Hoi",
+  "design_alter.intro": "Voordat we je bestelling kunnen drukken, moet je nog iets kleins aanpassen aan je kaartontwerp.",
+  "design_alter.reasonInappropriate": "Onze automatische controle vond iets op je kaart dat we niet kunnen drukken (zoals scheldwoorden, haatspraak of ongepaste dingen).",
+  "design_alter.reasonHitster": "Onze automatische controle vond verwijzingen naar een ander merk (Hitster) op je kaart. Om IP-problemen te voorkomen, moet je die eerst weghalen.",
+  "design_alter.clickButton": "Klik hieronder om je ontwerp te openen en aan te passen:",
+  "design_alter.buttonText": "Update mijn ontwerp",
+  "design_alter.buttonFallback": "Werkt de knop niet? Kopieer en plak deze link in je browser:",
+  "design_alter.afterEdit": "Als je je wijzigingen hebt opgeslagen, pakken we je bestelling automatisch weer op en gaan we verder met drukken.",
+  "design_alter.questions": "Heb je vragen? Reageer gewoon op deze mail, dan helpen we je.",
+  "design_alter.thanks": "Bedankt",
+  "design_alter.team": "Het QRSong! Team"
 }

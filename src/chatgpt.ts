@@ -2426,4 +2426,76 @@ ${htmlString}
 
     return ['Option B', 'Option C', 'Option D'];
   }
+
+  /**
+   * Ask GPT-5.5 vision a question about one or more images and parse the
+   * response as JSON. Each image is read from a local file path and sent as
+   * a base64 data URI so we don't have to host them publicly.
+   *
+   * `expectJson = true` (default) returns the parsed object; on parse
+   * failure returns `null`. With `expectJson = false`, returns the raw
+   * string answer.
+   */
+  public async askWithImages(
+    prompt: string,
+    imagePaths: string[],
+    options: { systemPrompt?: string; expectJson?: boolean } = {}
+  ): Promise<any> {
+    const { systemPrompt, expectJson = true } = options;
+
+    const imageBlocks = await Promise.all(
+      imagePaths.map(async (p) => {
+        const buf = await fs.readFile(p);
+        const ext = path.extname(p).toLowerCase().replace('.', '') || 'png';
+        const mime = ext === 'jpg' ? 'image/jpeg' : `image/${ext}`;
+        return {
+          type: 'image_url' as const,
+          image_url: {
+            url: `data:${mime};base64,${buf.toString('base64')}`,
+          },
+        };
+      })
+    );
+
+    const messages: any[] = [];
+    if (systemPrompt) {
+      messages.push({ role: 'system', content: systemPrompt });
+    }
+    messages.push({
+      role: 'user',
+      content: [{ type: 'text', text: prompt }, ...imageBlocks],
+    });
+
+    try {
+      const result = await this.openai.chat.completions.create({
+        model: 'gpt-5.5',
+        messages,
+        ...(expectJson
+          ? { response_format: { type: 'json_object' as const } }
+          : {}),
+      });
+
+      const raw = result.choices[0]?.message?.content || '';
+
+      if (!expectJson) return raw;
+
+      try {
+        return JSON.parse(raw);
+      } catch {
+        this.logger.log(
+          color.red.bold(
+            `askWithImages: failed to parse JSON response: ${raw.slice(0, 200)}`
+          )
+        );
+        return null;
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `askWithImages call failed: ${(error as Error).message}`
+        )
+      );
+      return null;
+    }
+  }
 }

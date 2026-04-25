@@ -607,5 +607,18 @@
   "invoice.reverseChargeExplanation": "Die USt wird laut Artikel 196 der Richtlinie 2006/112/EG auf den Empfänger übertragen. Der Empfänger muss die USt selbst melden.",
   "invoice.vatIdVerified": "USt-ID geprüft über VIES",
   "invoice.eurEquivalent": "EUR Gegenwert",
-  "invoice.exchangeRate": "Kurs"
+  "invoice.exchangeRate": "Kurs",
+  "design_alter.subject": "Aktion nötig: Bitte aktualisiere dein Kartendesign",
+  "design_alter.title": "Dein Kartendesign braucht ein Update",
+  "design_alter.hello": "Hey",
+  "design_alter.intro": "Bevor wir deinen Auftrag drucken, musst du noch was Kleines am Kartendesign ändern.",
+  "design_alter.reasonInappropriate": "Unsere automatische Prüfung hat was auf deiner Karte gefunden, das wir nicht drucken können (z.B. Schimpfwörter, Hassrede oder anderes Unpassendes).",
+  "design_alter.reasonHitster": "Unsere automatische Prüfung hat Verweise auf eine andere Marke (Hitster) auf deiner Karte gefunden. Um IP-Probleme zu vermeiden, musst du die entfernen.",
+  "design_alter.clickButton": "Klick unten, um dein Design zu öffnen und anzupassen:",
+  "design_alter.buttonText": "Design updaten",
+  "design_alter.buttonFallback": "Geht der Button nicht? Kopier diesen Link in deinen Browser:",
+  "design_alter.afterEdit": "Sobald du gespeichert hast, machen wir automatisch mit dem Druck weiter.",
+  "design_alter.questions": "Wenn du Fragen hast, antworte einfach auf diese Mail, wir helfen dir.",
+  "design_alter.thanks": "Danke",
+  "design_alter.team": "Das QRSong! Team"
 }
