@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+    <meta name="theme-color" content="#0077be">
+    <link rel="manifest" href="/assets/manifest.json?v=<%= version %>">
+    <link rel="icon" type="image/x-icon" href="/assets/images/favicon.ico">
+    <link rel="apple-touch-icon" href="/assets/images/icon-192x192.png">
+    <title>QRSong!</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
+    <link rel="stylesheet" href="/assets/css/onboarding.css?v=<%= version %>">
+</head>
+<body>
+    <canvas id="shader-bg" aria-hidden="true"></canvas>
+
+    <main class="onboarding-card" id="onboarding-card">
+        <div class="logo-orbit">
+            <img src="/assets/images/logo_white.png?v=<%= version %>" alt="QRSong!" class="logo-img"/>
+        </div>
+
+        <h1 class="onboarding-heading">
+            <span class="shimmer-text"><%= translations.youNeedToInstall %></span>
+        </h1>
+
+        <div class="store-buttons">
+            <button data-magnetic onclick="location.href='https://apps.apple.com/app/qrsong/id6727011939';" class="store-btn" aria-label="<%= translations.appStore %>">
+                <span class="btn-content"><i class="fab fa-apple"></i><span><%= translations.appStore %></span></span>
+            </button>
+            <button data-magnetic onclick="location.href='https://play.google.com/store/apps/details?id=nl.rickgroenewegen.qrsong';" class="store-btn" aria-label="<%= translations.googlePlay %>">
+                <span class="btn-content"><i class="fab fa-google-play"></i><span><%= translations.googlePlay %></span></span>
+            </button>
+        </div>
+
+        <div class="tagline-row">
+            <span class="eq" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+            <span class="tagline-text"><%= translations.createYourOwn %></span>
+            <span class="eq eq--mirror" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        </div>
+
+        <button data-magnetic onclick="window.open('<%= domain %>', '_blank');" class="secondary-link" aria-label="<%= translations.visit %>">
+            <span class="btn-content"><i class="fas fa-globe"></i><span><%= translations.visit %></span></span>
+        </button>
+    </main>
+
+    <footer class="footer">&copy; QRSong! <%= new Date().getFullYear() %>. <%= translations.allRightsReserved %>.</footer>
+
+    <script src="/assets/js/onboarding.js?v=<%= version %>"></script>
+</body>
+</html>

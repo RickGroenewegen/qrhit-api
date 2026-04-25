@@ -322,7 +322,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     if (process.env['ENVIRONMENT'] === 'development') {
       useVersion = new Date().getTime().toString();
     }
-    await reply.view(`countdown.ejs`, {
+    await reply.view(`onboarding.ejs`, {
       translations,
       version: useVersion,
       domain: process.env['FRONTEND_URI'],
@@ -341,7 +341,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     if (process.env['ENVIRONMENT'] === 'development') {
       useVersion = new Date().getTime().toString();
     }
-    await reply.view(`countdown.ejs`, {
+    await reply.view(`onboarding.ejs`, {
       translations,
       version: useVersion,
       domain: process.env['FRONTEND_URI'],
