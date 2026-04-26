@@ -1328,7 +1328,8 @@ class Suggestion {
         playlistId,
         serviceTracks.data.tracks,
         trackOrder,
-        serviceType
+        serviceType,
+        validation.locale || 'en'
       );
 
       // Update playlist numberOfTracks to match service

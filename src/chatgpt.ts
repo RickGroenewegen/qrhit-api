@@ -89,7 +89,7 @@ export class ChatGPT {
       );
 
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-5.4-mini',
+        model: 'gpt-5.5-mini',
         messages: [
           {
             role: 'system',
@@ -266,7 +266,7 @@ export class ChatGPT {
     const prompt = `Playlist name: "${playlistName}"\n\nSample tracks:\n${tracksPrompt}`;
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5.4-mini',
+      model: 'gpt-5.5-mini',
       temperature: 1,
       messages: [
         {
@@ -360,7 +360,7 @@ export class ChatGPT {
     );
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5.4-mini',
+      model: 'gpt-5.5-mini',
       temperature: 1,
       messages: [
         {
@@ -498,7 +498,7 @@ export class ChatGPT {
         .join('\n\n');
 
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-5.4-mini',
+        model: 'gpt-5.5-mini',
         temperature: 1,
         messages: [
           {
@@ -664,7 +664,7 @@ export class ChatGPT {
 
     try {
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-5.4-mini',
+        model: 'gpt-5.5-mini',
         temperature: 1,
         messages: [
           {
@@ -754,7 +754,7 @@ export class ChatGPT {
     let answer = undefined;
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5.4-mini',
+      model: 'gpt-5.5-mini',
       temperature: 1,
       messages: [
         {
@@ -842,7 +842,7 @@ export class ChatGPT {
     instruction: string
   ): Promise<{ title: string; content: string; summary?: string }> {
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5.4',
+      model: 'gpt-5.5',
       messages: [
         {
           role: 'system',
@@ -977,7 +977,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
     onChunk: (chunk: string) => void
   ): Promise<{ title: string; content: string; summary?: string }> {
     const stream = await this.openai.chat.completions.create({
-      model: 'gpt-5.4',
+      model: 'gpt-5.5',
       stream: true,
       messages: [
         {
@@ -1208,7 +1208,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
   ): Promise<Record<string, string>> {
     if (!text || !targetLocales || targetLocales.length === 0) return {};
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5.4-mini',
+      model: 'gpt-5.5-mini',
       temperature: 1,
       messages: [
         {
@@ -1274,7 +1274,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
     type: 'artist' | 'title'
   ): Promise<string[]> {
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5.4-mini',
+      model: 'gpt-5.5',
       temperature: 1,
       messages: [
         {
@@ -1379,7 +1379,7 @@ ${htmlString}
 `;
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5.4-mini',
+      model: 'gpt-5.5-mini',
       temperature: 0,
       messages: [
         {
@@ -1474,7 +1474,7 @@ ${htmlString}
 
     try {
       const response = await this.openai.chat.completions.create({
-        model: 'gpt-5.4-mini',
+        model: 'gpt-5.5-mini',
         temperature: 1,
         messages: [
           {
@@ -1623,7 +1623,7 @@ ${htmlString}
         );
 
         const result = await this.openai.chat.completions.create({
-          model: 'gpt-5.4-mini',
+          model: 'gpt-5.5-mini',
           temperature: 1,
           messages: [
             {
@@ -1743,7 +1743,7 @@ ${htmlString}
         );
 
         const result = await this.openai.chat.completions.create({
-          model: 'gpt-5.4-mini',
+          model: 'gpt-5.5-mini',
           temperature: 1,
           messages: [
             {
@@ -1856,7 +1856,7 @@ ${htmlString}
         );
 
         const result = await this.openai.chat.completions.create({
-          model: 'gpt-5.4-mini',
+          model: 'gpt-5.5-mini',
           temperature: 1,
           messages: [
             {
@@ -1976,7 +1976,7 @@ ${htmlString}
         );
 
         const result = await this.openai.chat.completions.create({
-          model: 'gpt-5.4-mini',
+          model: 'gpt-5.5-mini',
           temperature: 1,
           messages: [
             {
@@ -2108,7 +2108,7 @@ ${htmlString}
 
     if (type === 'trivia') {
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-5.4-mini',
+        model: 'gpt-5.5-mini',
         temperature: 1,
         messages: [
           {
@@ -2169,7 +2169,7 @@ ${htmlString}
 
     if (type === 'artist') {
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-5.4-mini',
+        model: 'gpt-5.5-mini',
         temperature: 1,
         messages: [
           {
@@ -2230,7 +2230,7 @@ ${htmlString}
       const missingWordQuestionText = this.translation.translate('quiz.missingWordQuestion', locale);
 
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-5.4-mini',
+        model: 'gpt-5.5-mini',
         temperature: 1,
         messages: [
           {
@@ -2298,7 +2298,7 @@ ${htmlString}
 
     if (type === 'title') {
       const result = await this.openai.chat.completions.create({
-        model: 'gpt-5.4-mini',
+        model: 'gpt-5.5-mini',
         temperature: 1,
         messages: [
           {
@@ -2381,7 +2381,7 @@ ${htmlString}
       : '';
 
     const result = await this.openai.chat.completions.create({
-      model: 'gpt-5.4-mini',
+      model: 'gpt-5.5-mini',
       temperature: 1,
       messages: [
         {

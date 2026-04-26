@@ -6,48 +6,79 @@ import { updateTrackYear } from './trackYears';
 import { clearPlaylistCache } from './misc';
 import { getLink } from './musicLinks';
 import { checkUnfinalizedPayments } from './users';
+import { splitLongWord } from './hyphenate';
+
+const MAX_WORD_LEN = 20;
 
 export async function sanitizeTitleOrArtist(
   deps: DataDeps,
   text: string,
-  type: 'artist' | 'title'
+  type: 'artist' | 'title',
+  locale: string = 'en'
 ): Promise<string> {
   if (!text) return text;
 
-  // Check if any word in the text is >= 25 characters
   const words = text.split(/\s+/);
-  const hasLongWord = words.some((word) => word.length >= 20);
+  const longWords = words.filter((word) => word.length > MAX_WORD_LEN);
 
-  if (!hasLongWord) {
+  if (longWords.length === 0) {
     return text;
   }
 
-  // Found a long word, log it and split using ChatGPT
-  const longWords = words.filter((word) => word.length >= 20);
   deps.logger.log(
     color.yellow.bold(
-      `Found long ${type} word(s) >= 20 characters: ${color.white.bold(
+      `Found long ${type} word(s) > ${MAX_WORD_LEN} characters: ${color.white.bold(
         longWords.join(', ')
       )} in "${color.white.bold(text)}"`
     )
   );
 
-  // Process each long word
   let sanitizedText = text;
   for (const longWord of longWords) {
     const segments = await deps.openai.splitArtistOrString(longWord, type);
-    const splitWord = segments.join(' ');
+    let splitWord = segments.join(' ');
 
+    const llmFailed =
+      segments.length < 2 ||
+      segments.some((s) => s.length > MAX_WORD_LEN) ||
+      segments.join('') !== longWord;
+
+    if (llmFailed) {
+      const fallbackSegments = splitLongWord(longWord, locale, MAX_WORD_LEN);
+      splitWord = fallbackSegments.join(' ');
+      deps.logger.log(
+        color.yellow.bold(
+          `LLM split unusable for ${type} "${color.white.bold(
+            longWord
+          )}", falling back to hyphenation (${color.white.bold(
+            locale
+          )}): "${color.white.bold(splitWord)}"`
+        )
+      );
+    } else {
+      deps.logger.log(
+        color.green.bold(
+          `Split long ${type} word "${color.white.bold(
+            longWord
+          )}" into: "${color.white.bold(splitWord)}"`
+        )
+      );
+    }
+
+    sanitizedText = sanitizedText.replace(longWord, splitWord);
+  }
+
+  const stillTooLong = sanitizedText
+    .split(/\s+/)
+    .filter((word) => word.length > MAX_WORD_LEN);
+  if (stillTooLong.length > 0) {
     deps.logger.log(
-      color.green.bold(
-        `Split long ${type} word "${color.white.bold(
-          longWord
-        )}" into: "${color.white.bold(splitWord)}"`
+      color.red.bold(
+        `Split failed for ${type}: still > ${MAX_WORD_LEN} chars: ${color.white.bold(
+          stillTooLong.join(', ')
+        )} in "${color.white.bold(sanitizedText)}"`
       )
     );
-
-    // Replace the long word with the split version
-    sanitizedText = sanitizedText.replace(longWord, splitWord);
   }
 
   return sanitizedText;
@@ -310,14 +341,21 @@ export async function updateTrack(
   tidalLink: string,
   deezerLink: string,
   amazonMusicLink: string,
-  clientIp: string
+  clientIp: string,
+  locale: string = 'en'
 ): Promise<{ success: boolean; error?: string }> {
   try {
-    const sanitizedTitle = await sanitizeTitleOrArtist(deps, name, 'title');
+    const sanitizedTitle = await sanitizeTitleOrArtist(
+      deps,
+      name,
+      'title',
+      locale
+    );
     const sanitizedArtist = await sanitizeTitleOrArtist(
       deps,
       artist,
-      'artist'
+      'artist',
+      locale
     );
 
     await deps.prisma.track.update({
@@ -381,7 +419,8 @@ export async function storeTracks(
   playlistId: string,
   tracks: any,
   trackOrder?: Map<string, number>,
-  serviceType: string = 'spotify'
+  serviceType: string = 'spotify',
+  locale: string = 'en'
 ): Promise<any> {
   // Filter out any tracks with null/undefined artists or episode URLs (podcast episodes)
   const validTracks = tracks.filter((track: any) => {
@@ -511,12 +550,14 @@ export async function storeTracks(
         const sanitizedTitle = await sanitizeTitleOrArtist(
           deps,
           deps.utils.cleanTrackName(track.name),
-          'title'
+          'title',
+          locale
         );
         const sanitizedArtist = await sanitizeTitleOrArtist(
           deps,
           track.artist,
-          'artist'
+          'artist',
+          locale
         );
 
         // Determine the service link from track data
@@ -553,12 +594,14 @@ export async function storeTracks(
       const sanitizedTitle = await sanitizeTitleOrArtist(
         deps,
         deps.utils.cleanTrackName(track.name),
-        'title'
+        'title',
+        locale
       );
       const sanitizedArtist = await sanitizeTitleOrArtist(
         deps,
         track.artist,
-        'artist'
+        'artist',
+        locale
       );
 
       const updateData: any = {
@@ -583,12 +626,14 @@ export async function storeTracks(
         const sanitizedTitle = await sanitizeTitleOrArtist(
           deps,
           existingTrack.name,
-          'title'
+          'title',
+          locale
         );
         const sanitizedArtist = await sanitizeTitleOrArtist(
           deps,
           existingTrack.artist,
-          'artist'
+          'artist',
+          locale
         );
         if (
           sanitizedTitle !== existingTrack.name ||

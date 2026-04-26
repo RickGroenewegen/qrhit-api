@@ -736,7 +736,8 @@ class Generator {
       playlist.playlistId,
       tracks,
       trackOrder,
-      serviceType
+      serviceType,
+      payment.locale || 'en'
     );
 
     // Extract and store Apple Music storefront from track URLs

@@ -175,9 +175,10 @@ class Data {
     tidalLink: string,
     deezerLink: string,
     amazonMusicLink: string,
-    clientIp: string
+    clientIp: string,
+    locale: string = 'en'
   ): Promise<{ success: boolean; error?: string }> {
-    return tracksModule.updateTrack(this.deps, id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink, amazonMusicLink, clientIp);
+    return tracksModule.updateTrack(this.deps, id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink, amazonMusicLink, clientIp, locale);
   }
 
   public async storeTracks(
@@ -185,9 +186,10 @@ class Data {
     playlistId: string,
     tracks: any,
     trackOrder?: Map<string, number>,
-    serviceType: string = 'spotify'
+    serviceType: string = 'spotify',
+    locale: string = 'en'
   ): Promise<any> {
-    return tracksModule.storeTracks(this.deps, playlistDatabaseId, playlistId, tracks, trackOrder, serviceType);
+    return tracksModule.storeTracks(this.deps, playlistDatabaseId, playlistId, tracks, trackOrder, serviceType, locale);
   }
 
   public async searchTracks(
