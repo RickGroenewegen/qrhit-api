@@ -177,11 +177,22 @@ export class Music {
         standardDeviation = 0;
       }
 
-      // Rule 3: If Spotify year is equal to both AI and OpenPerplex years, use Spotify year
+      // Rule 3: If Spotify year equals AI year, and OpenPerplex either agrees
+      // or is missing, use the Spotify year. Veto when MB and Discogs are both
+      // present, agree with each other, and point to an earlier year — that
+      // combination is too strong a signal of an original release to override
+      // automatically, so leave it for manual review.
+      const mbDcAgreeEarlier =
+        mbResult.year > 0 &&
+        discogsResult.year > 0 &&
+        mbResult.year === discogsResult.year &&
+        mbResult.year < spotifyReleaseYear;
+
       if (
         spotifyReleaseYear > 0 &&
         spotifyReleaseYear == aiResult.year &&
-        spotifyReleaseYear == openPerplexYear
+        (openPerplexYear == 0 || spotifyReleaseYear == openPerplexYear) &&
+        !mbDcAgreeEarlier
       ) {
         finalYear = spotifyReleaseYear;
         standardDeviation = 0;
