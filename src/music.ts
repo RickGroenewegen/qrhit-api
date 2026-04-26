@@ -209,6 +209,35 @@ export class Music {
         finalYear = openPerplexYear;
         standardDeviation = 0;
       }
+
+      // Rule 5: If Discogs, MusicBrainz, and AI all agree on the same valid year,
+      // trust that consensus over Spotify and OpenPerplex (which often reflect
+      // re-release or streaming-platform dates).
+      if (
+        discogsResult.year > 0 &&
+        mbResult.year > 0 &&
+        aiResult.year > 0 &&
+        discogsResult.year === mbResult.year &&
+        mbResult.year === aiResult.year
+      ) {
+        finalYear = discogsResult.year;
+        standardDeviation = 0;
+      }
+
+      // Rule 6: If Spotify, Discogs, MusicBrainz, and AI all agree on the same
+      // valid year, that 4-way consensus wins regardless of OpenPerplex.
+      if (
+        spotifyReleaseYear > 0 &&
+        discogsResult.year > 0 &&
+        mbResult.year > 0 &&
+        aiResult.year > 0 &&
+        spotifyReleaseYear === discogsResult.year &&
+        discogsResult.year === mbResult.year &&
+        mbResult.year === aiResult.year
+      ) {
+        finalYear = spotifyReleaseYear;
+        standardDeviation = 0;
+      }
     }
 
     const fullResult = {
