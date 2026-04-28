@@ -375,6 +375,29 @@ export async function updateTrack(
     });
     // Get the link again, but without the cache
     await getLink(deps, id, clientIp, false);
+
+    // Bust Apple Music storefront-resolution cache for this song
+    // (am_sf:<songId>:<storefront>) so manual edits are honored on the next request
+    if (appleMusicLink) {
+      const amMatch = appleMusicLink.match(
+        /music\.apple\.com\/[a-z]{2}\/(?:song|album)\/(?:[^/]+\/)?(\d+)/i
+      );
+      const iParam = appleMusicLink.match(/[?&]i=(\d+)/);
+      const songId = iParam ? iParam[1] : amMatch ? amMatch[1] : null;
+      if (songId) {
+        const deleted = await deps.cache.delPatternNonBlocking(
+          `am_sf:${songId}:*`
+        );
+        deps.logger.log(
+          color.blue.bold(
+            `Cleared ${color.white.bold(deleted)} am_sf:${color.white.bold(
+              songId
+            )}:* entries after track ${color.white.bold(id)} update`
+          )
+        );
+      }
+    }
+
     await checkUnfinalizedPayments(deps);
 
     // Clear cache for any featured playlists containing this track
