@@ -619,7 +619,7 @@ class AppleMusicProvider implements IMusicProvider {
       const resolvedUrl = directResult.data.data[0].attributes.url;
       this.logger.log(
         color.green.bold(
-          `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)}: ${color.white.bold(resolvedUrl)}`
+          `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)}: ${color.white.bold(appleMusicLink)} → ${color.white.bold(resolvedUrl)}`
         )
       );
       // await this.cache.set(cacheKey, resolvedUrl, 86400);
@@ -650,7 +650,7 @@ class AppleMusicProvider implements IMusicProvider {
         const resolvedUrl = isrcResult.data.data[0].attributes.url;
         this.logger.log(
           color.green.bold(
-            `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)} via ISRC: ${color.white.bold(resolvedUrl)}`
+            `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)} via ISRC: ${color.white.bold(appleMusicLink)} → ${color.white.bold(resolvedUrl)}`
           )
         );
         // await this.cache.set(cacheKey, resolvedUrl, 86400);
@@ -672,7 +672,7 @@ class AppleMusicProvider implements IMusicProvider {
       const resolvedUrl = isrcResult.data.data[0].attributes.url;
       this.logger.log(
         color.green.bold(
-          `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)} via ISRC: ${color.white.bold(resolvedUrl)}`
+          `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)} via ISRC: ${color.white.bold(appleMusicLink)} → ${color.white.bold(resolvedUrl)}`
         )
       );
       // await this.cache.set(cacheKey, resolvedUrl, 86400);
