@@ -607,8 +607,8 @@ class AppleMusicProvider implements IMusicProvider {
     const songId = iParam ? iParam[1] : pathId;
     if (originalStorefront === storefront) return appleMusicLink;
 
-    // Check cache (temporarily disabled — resolve every request)
-    const cacheKey = `am_sf:${songId}:${storefront}`;
+    // Storefront-resolution cache temporarily disabled — resolve every request.
+    // const cacheKey = `am_sf:${songId}:${storefront}`;
     // const cached = await this.cache.get(cacheKey);
     // if (cached) return cached;
 
