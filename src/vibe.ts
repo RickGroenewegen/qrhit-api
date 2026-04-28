@@ -3568,6 +3568,9 @@ class Vibe {
       if (pricingOptions?.calculatedPrices) {
         queryParams.set('calculatedPrices', JSON.stringify(pricingOptions.calculatedPrices));
       }
+      if (listId) {
+        queryParams.set('listId', String(listId));
+      }
 
       const queryString = queryParams.toString();
       const htmlUrl = `${baseUrl}/vibe/quotation/${type}/${companyId}/${quotationNumber}${queryString ? '?' + queryString : ''}`;

@@ -948,6 +948,9 @@ export default async function vibeRoutes(
 
         // Extract pricing options from query parameters
         const isReseller = request.query.isReseller === 'true';
+        const listIdParam = request.query.listId
+          ? parseInt(request.query.listId)
+          : null;
         let profitMargins = null;
         let calculatedPrices = null;
 
@@ -977,6 +980,33 @@ export default async function vibeRoutes(
           return;
         }
 
+        // If a list was specified, load its per-list calculation so per-list
+        // toggles (e.g. includeVotingPortal) override the company defaults.
+        let listCalc: {
+          calculation: string | null;
+          calculationTromp: string | null;
+          calculationSchneider: string | null;
+        } | null = null;
+        if (listIdParam && !isNaN(listIdParam)) {
+          try {
+            const prisma = PrismaInstance.getInstance();
+            const list: any = await (prisma as any).companyList.findUnique({
+              where: { id: listIdParam },
+              select: {
+                companyId: true,
+                calculation: true,
+                calculationTromp: true,
+                calculationSchneider: true,
+              },
+            });
+            if (list && list.companyId === companyId) {
+              listCalc = list;
+            }
+          } catch (e) {
+            console.error('Error loading list calculation:', e);
+          }
+        }
+
         let calculation: any = {};
         let calculationResult: any = {};
         let productDescription = '';
@@ -1003,12 +1033,13 @@ export default async function vibeRoutes(
             manualDiscountPercent: companyDiscountPercent,
           };
 
-          if (company.calculationTromp) {
+          const trompSource = listCalc?.calculationTromp ?? company.calculationTromp;
+          if (trompSource) {
             try {
-              const storedCalc = JSON.parse(company.calculationTromp);
+              const storedCalc = JSON.parse(trompSource);
               calculation = { ...storedCalc, manualDiscountPercent: companyDiscountPercent };
             } catch (e) {
-              console.error('Error parsing company Tromp calculation:', e);
+              console.error('Error parsing Tromp calculation:', e);
             }
           }
 
@@ -1040,12 +1071,13 @@ export default async function vibeRoutes(
             manualDiscountPercent: companyDiscountPercent,
           };
 
-          if (company.calculationSchneider) {
+          const schneiderSource = listCalc?.calculationSchneider ?? company.calculationSchneider;
+          if (schneiderSource) {
             try {
-              const storedCalc = JSON.parse(company.calculationSchneider);
+              const storedCalc = JSON.parse(schneiderSource);
               calculation = { ...storedCalc, manualDiscountPercent: companyDiscountPercent };
             } catch (e) {
-              console.error('Error parsing company Schneider calculation:', e);
+              console.error('Error parsing Schneider calculation:', e);
             }
           }
 
@@ -1097,12 +1129,13 @@ export default async function vibeRoutes(
             fluidMode: false,
           };
 
-          if (company.calculation) {
+          const onzevibeSource = listCalc?.calculation ?? company.calculation;
+          if (onzevibeSource) {
             try {
-              const storedCalc = JSON.parse(company.calculation);
+              const storedCalc = JSON.parse(onzevibeSource);
               calculation = storedCalc;
             } catch (e) {
-              console.error('Error parsing company calculation:', e);
+              console.error('Error parsing OnzeVibe calculation:', e);
             }
           }
 

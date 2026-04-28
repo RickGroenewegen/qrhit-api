@@ -760,8 +760,16 @@ export async function searchTracks(
   const safePlaylistItemId = playlistItemId ? Number(playlistItemId) : 0;
 
   if (hasSearch) {
-    const likePattern = `%${searchTerm}%`;
-    conditions.push(Prisma.sql`(t.artist LIKE ${likePattern} OR t.name LIKE ${likePattern})`);
+    const trimmed = searchTerm.trim();
+    const likePattern = `%${trimmed}%`;
+    const numericId = /^\d+$/.test(trimmed) ? Number(trimmed) : null;
+    if (numericId !== null) {
+      conditions.push(
+        Prisma.sql`(t.id = ${numericId} OR t.artist LIKE ${likePattern} OR t.name LIKE ${likePattern})`
+      );
+    } else {
+      conditions.push(Prisma.sql`(t.artist LIKE ${likePattern} OR t.name LIKE ${likePattern})`);
+    }
   }
 
   if (validService) {
