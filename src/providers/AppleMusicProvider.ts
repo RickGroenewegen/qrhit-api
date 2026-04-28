@@ -607,10 +607,10 @@ class AppleMusicProvider implements IMusicProvider {
     const songId = iParam ? iParam[1] : pathId;
     if (originalStorefront === storefront) return appleMusicLink;
 
-    // Check cache
+    // Check cache (temporarily disabled — resolve every request)
     const cacheKey = `am_sf:${songId}:${storefront}`;
-    const cached = await this.cache.get(cacheKey);
-    if (cached) return cached;
+    // const cached = await this.cache.get(cacheKey);
+    // if (cached) return cached;
 
     // Step 1: Try the song ID directly in the target storefront (IDs are global catalog IDs)
     const directResult = await this.apiRequest<any>(`/songs/${songId}`, storefront);
@@ -622,7 +622,7 @@ class AppleMusicProvider implements IMusicProvider {
           `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)}: ${color.white.bold(resolvedUrl)}`
         )
       );
-      await this.cache.set(cacheKey, resolvedUrl, 86400);
+      // await this.cache.set(cacheKey, resolvedUrl, 86400);
       return resolvedUrl;
     }
 
@@ -653,7 +653,7 @@ class AppleMusicProvider implements IMusicProvider {
             `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)} via ISRC: ${color.white.bold(resolvedUrl)}`
           )
         );
-        await this.cache.set(cacheKey, resolvedUrl, 86400);
+        // await this.cache.set(cacheKey, resolvedUrl, 86400);
         return resolvedUrl;
       }
 
@@ -675,7 +675,7 @@ class AppleMusicProvider implements IMusicProvider {
           `[${color.white.bold('apple_music')}] Storefront resolved ${color.white.bold(originalStorefront)} → ${color.white.bold(storefront)} via ISRC: ${color.white.bold(resolvedUrl)}`
         )
       );
-      await this.cache.set(cacheKey, resolvedUrl, 86400);
+      // await this.cache.set(cacheKey, resolvedUrl, 86400);
       return resolvedUrl;
     }
 
