@@ -950,6 +950,7 @@ model CompanyList {
   calculation             String?   @db.Text
   calculationTromp        String?   @db.Text
   calculationSchneider    String?   @db.Text
+  printer                 String    @default("schneider")
   intakeToken             String?   @unique
   meetingDate             DateTime?
   desiredDeliveryDate     DateTime?

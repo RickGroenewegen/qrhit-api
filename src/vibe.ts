@@ -3757,6 +3757,305 @@ class Vibe {
     }
   }
 
+  /**
+   * Build invoice line items + totals for a company list, mirroring the
+   * line items shown in the corresponding quotation EJS templates.
+   *
+   * Returns excl-VAT prices. The caller (MoneyBird invoice) attaches the
+   * VAT rate id, MoneyBird computes BTW itself.
+   *
+   * paymentOption:
+   *   - 'full' : full invoice with all line items
+   *   - 'down' : single-line 30% down-payment line
+   *   - 'remaining' : single-line 70% remaining-payment line
+   */
+  public async buildInvoiceLineItems(
+    companyId: number,
+    listId: number,
+    type: 'onzevibe' | 'qrsong' | 'schneider',
+    paymentOption: 'full' | 'down' | 'remaining'
+  ): Promise<{
+    success: boolean;
+    error?: string;
+    items?: { description: string; amount: string; price: string }[];
+    company?: any;
+    list?: any;
+    reference?: string;
+    totals?: {
+      subtotalExclVat: number;
+      discountAmount: number;
+      totalAfterDiscount: number;
+    };
+  }> {
+    try {
+      const list: any = await (this.prisma as any).companyList.findUnique({
+        where: { id: listId },
+      });
+      if (!list || list.companyId !== companyId) {
+        return { success: false, error: 'List not found' };
+      }
+      const company = await this.prisma.company.findUnique({
+        where: { id: companyId },
+      });
+      if (!company) return { success: false, error: 'Company not found' };
+
+      // Pull company-wide manualDiscountPercent from main calculation.
+      let companyDiscountPercent = 0;
+      if ((company as any).calculation) {
+        try {
+          companyDiscountPercent =
+            JSON.parse((company as any).calculation).manualDiscountPercent || 0;
+        } catch {
+          /* ignore */
+        }
+      }
+
+      const items: { description: string; amount: string; price: string }[] = [];
+      let subtotalExclVat = 0;
+
+      if (type === 'qrsong') {
+        const stored = list.calculationTromp
+          ? JSON.parse(list.calculationTromp)
+          : (company as any).calculationTromp
+            ? JSON.parse((company as any).calculationTromp)
+            : {};
+        const calc = { ...stored, manualDiscountPercent: companyDiscountPercent };
+        const r = await this.calculateTrompPricing({
+          quantity: calc.quantity || 100,
+          includeStansmestekening: calc.includeStansmestekening || false,
+          includeStansvorm: calc.includeStansvorm || false,
+          includeCustomApp: calc.includeCustomApp || false,
+          includeVotingPortal: calc.includeVotingPortal || false,
+          profitMargin: calc.profitMargin || 0,
+        });
+        if (!r.success) return { success: false, error: 'Pricing failed' };
+        const cr = r.calculation;
+        const pricePerUnit = cr.pricePerSet;
+        const quantity = cr.quantity;
+
+        items.push({
+          description: 'QRSong! muziekkaarten set — Een doos met 2 kleinere doosjes met ieder 48 kaarten (totaal 96 kaarten)',
+          amount: String(quantity),
+          price: pricePerUnit.toFixed(2),
+        });
+
+        if (Array.isArray(cr.extras)) {
+          for (const e of cr.extras) {
+            const lower = (e.name || '').toLowerCase();
+            if (lower.includes('app') || lower.includes('voting')) continue;
+            items.push({
+              description: `${e.name} (eenmalige kosten)`,
+              amount: '1',
+              price: Number(e.price).toFixed(2),
+            });
+          }
+        }
+        if (cr.customAppFee > 0) {
+          items.push({
+            description: 'App in eigen stijl — eenmalige kosten, maatwerk app ontwikkeling',
+            amount: '1',
+            price: '350.00',
+          });
+        }
+        if (cr.votingPortalFee > 0) {
+          items.push({
+            description: 'Voting Portal — eenmalige kosten, gebruik stemportaal',
+            amount: '1',
+            price: '500.00',
+          });
+        }
+
+        subtotalExclVat =
+          pricePerUnit * quantity +
+          (cr.extras
+            ?.filter((e: any) => {
+              const l = (e.name || '').toLowerCase();
+              return !l.includes('app') && !l.includes('voting');
+            })
+            .reduce((s: number, e: any) => s + Number(e.price), 0) || 0) +
+          (cr.customAppFee || 0) +
+          (cr.votingPortalFee || 0);
+      } else if (type === 'schneider') {
+        const stored = list.calculationSchneider
+          ? JSON.parse(list.calculationSchneider)
+          : (company as any).calculationSchneider
+            ? JSON.parse((company as any).calculationSchneider)
+            : {};
+        const calc = { ...stored, manualDiscountPercent: companyDiscountPercent };
+        const r = await this.calculateSchneiderPricing({
+          quantity: calc.quantity || 100,
+          cardCount: calc.cardCount || 48,
+          includeStansmes: calc.includeStansmes || false,
+          includeCustomApp: calc.includeCustomApp || false,
+          includeVotingPortal: calc.includeVotingPortal || false,
+          profitMargin: calc.profitMargin || 0,
+        });
+        if (!r.success) return { success: false, error: 'Pricing failed' };
+        const cr = r.calculation;
+        const pricePerUnit = cr.pricePerBox;
+        const quantity = cr.quantity;
+        const cardCount = calc.cardCount || 48;
+
+        items.push({
+          description: `QRSong! Box - ${cardCount} kaarten`,
+          amount: String(quantity),
+          price: pricePerUnit.toFixed(2),
+        });
+
+        if (Array.isArray(cr.extras)) {
+          for (const e of cr.extras) {
+            const lower = (e.name || '').toLowerCase();
+            if (lower.includes('app') || lower.includes('voting')) continue;
+            items.push({
+              description: `${e.name} (eenmalige kosten)`,
+              amount: '1',
+              price: Number(e.price).toFixed(2),
+            });
+          }
+        }
+        if (cr.customAppFee > 0) {
+          items.push({
+            description: 'App in eigen stijl — eenmalige kosten, maatwerk app ontwikkeling',
+            amount: '1',
+            price: '350.00',
+          });
+        }
+        if (cr.votingPortalFee > 0) {
+          items.push({
+            description: 'Voting Portal — eenmalige kosten, gebruik stemportaal',
+            amount: '1',
+            price: '500.00',
+          });
+        }
+
+        subtotalExclVat =
+          pricePerUnit * quantity +
+          (cr.extras
+            ?.filter((e: any) => {
+              const l = (e.name || '').toLowerCase();
+              return !l.includes('app') && !l.includes('voting');
+            })
+            .reduce((s: number, e: any) => s + Number(e.price), 0) || 0) +
+          (cr.customAppFee || 0) +
+          (cr.votingPortalFee || 0);
+      } else {
+        // OnzeVibe
+        const stored = list.calculation
+          ? JSON.parse(list.calculation)
+          : (company as any).calculation
+            ? JSON.parse((company as any).calculation)
+            : {};
+        const calc = { ...stored };
+        const r = await this.calculatePricing({
+          quantity: calc.quantity || 100,
+          includePersonalization:
+            calc.includePersonalization !== undefined
+              ? calc.includePersonalization
+              : true,
+          shipmentOnLocation: calc.shipmentOnLocation || false,
+          soldBy: calc.soldBy || 'onzevibe',
+          isReseller: calc.isReseller || false,
+          manualDiscount: calc.manualDiscount || 0,
+          fluidMode: calc.fluidMode || false,
+          includeCustomApp: calc.includeCustomApp || false,
+          includeVotingPortal: calc.includeVotingPortal || false,
+        });
+        if (!r.success) return { success: false, error: 'Pricing failed' };
+        const cr = r.calculation;
+        const pricePerUnit = cr.pricing.commercialPricePerBox;
+        const quantity = cr.quantity;
+
+        const detailParts: string[] = [];
+        if (calc.includePersonalization) detailParts.push('inclusief personalisatie');
+        else detailParts.push('geen personalisatie');
+        if (calc.shipmentOnLocation) detailParts.push('levering op één locatie');
+
+        items.push({
+          description: `OnzeVibe box met 200 QR muziekkaarten (${detailParts.join(', ')})`,
+          amount: String(quantity),
+          price: pricePerUnit.toFixed(2),
+        });
+
+        if (cr.pricing.customAppFee > 0) {
+          items.push({
+            description: 'App in eigen stijl — eenmalige kosten, maatwerk app ontwikkeling',
+            amount: '1',
+            price: '350.00',
+          });
+        }
+        if (cr.pricing.votingPortalFee > 0) {
+          items.push({
+            description: 'Voting Portal — eenmalige kosten, gebruik stemportaal',
+            amount: '1',
+            price: '500.00',
+          });
+        }
+
+        subtotalExclVat =
+          pricePerUnit * quantity +
+          (cr.pricing.customAppFee || 0) +
+          (cr.pricing.votingPortalFee || 0);
+      }
+
+      // Apply manual discount as a negative line (mirrors quotation totals
+      // section). MoneyBird applies this excl. VAT before BTW is computed.
+      const discountPct = Number(companyDiscountPercent) || 0;
+      const discountAmount = subtotalExclVat * (discountPct / 100);
+      if (discountPct > 0) {
+        items.push({
+          description: `Korting (${discountPct}%)`,
+          amount: '1',
+          price: (-discountAmount).toFixed(2),
+        });
+      }
+
+      const totalAfterDiscount = subtotalExclVat - discountAmount;
+      const reference = `${list.name}`;
+
+      // For down/remaining payment, collapse to a single line.
+      if (paymentOption === 'down' || paymentOption === 'remaining') {
+        const fraction = paymentOption === 'down' ? 0.3 : 0.7;
+        const label =
+          paymentOption === 'down'
+            ? `Aanbetaling 30% — ${list.name}`
+            : `Slottermijn 70% — ${list.name}`;
+        const collapsed = [
+          {
+            description: label,
+            amount: '1',
+            price: (totalAfterDiscount * fraction).toFixed(2),
+          },
+        ];
+        return {
+          success: true,
+          items: collapsed,
+          company,
+          list,
+          reference,
+          totals: {
+            subtotalExclVat,
+            discountAmount,
+            totalAfterDiscount: totalAfterDiscount * fraction,
+          },
+        };
+      }
+
+      return {
+        success: true,
+        items,
+        company,
+        list,
+        reference,
+        totals: { subtotalExclVat, discountAmount, totalAfterDiscount },
+      };
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(`Error building invoice items: ${error?.message || error}`)
+      );
+      return { success: false, error: error?.message || 'Failed to build items' };
+    }
+  }
+
   // ============================================
   // Company Events
   // ============================================
