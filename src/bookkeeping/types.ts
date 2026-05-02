@@ -59,4 +59,15 @@ export interface BookkeepingProvider {
     invoiceDate: string;
     items: BookkeepingLineItem[];
   }): Promise<BookkeepingInvoice>;
+
+  /** Download the PDF for a sales invoice as a Buffer. */
+  downloadInvoicePdf(invoiceId: string | number): Promise<Buffer>;
+
+  /** Look up a sales invoice by its `reference` field; returns null if none. */
+  findInvoiceByReference(
+    reference: string
+  ): Promise<BookkeepingInvoice | null>;
+
+  /** Move a draft sales invoice to a finalized state (assigns a number). */
+  finalizeInvoice(invoiceId: string | number): Promise<BookkeepingInvoice | null>;
 }

@@ -154,6 +154,7 @@ class Moneybird implements BookkeepingProvider {
         url,
         method,
         data: body,
+        timeout: 15000,
         headers: {
           Authorization: `Bearer ${this.apiKey}`,
           'Content-Type': 'application/json',
@@ -305,6 +306,100 @@ class Moneybird implements BookkeepingProvider {
       `id=${data?.id} number=${data?.invoice_id || '-'} total_incl=€ ${data?.total_price_incl_tax || '?'} url=${data?.url || '-'}`
     );
     return data;
+  }
+
+  /**
+   * Finalize a draft (Concept) sales invoice — assigns a number and moves it
+   * to "Open". Uses send_invoice with delivery_method 'Manual' so MoneyBird
+   * does NOT email the customer; we just want the invoice out of draft state.
+   */
+  public async finalizeInvoice(
+    invoiceId: string | number
+  ): Promise<BookkeepingInvoice | null> {
+    if (!this.apiKey) throw new Error('MONEYBIRD_API_KEY is not configured');
+    try {
+      const data = await this.authedRequest<any>(
+        'PATCH',
+        `sales_invoices/${invoiceId}/send_invoice`,
+        {
+          sales_invoice_sending: { delivery_method: 'Manual' },
+        }
+      );
+      const adminId = await this.getAdministrationId();
+      if (data?.id) {
+        data.url = `${MONEYBIRD_BASE}/${adminId}/sales_invoices/${data.id}`;
+      }
+      this.success(
+        'invoice finalized ',
+        `id=${data?.id} number=${data?.invoice_id || '-'}`
+      );
+      return data as BookkeepingInvoice;
+    } catch (err: any) {
+      const status = err?.response?.status;
+      this.error(
+        `finalize invoice failed${status ? ' (' + status + ')' : ''}: `,
+        err?.message
+      );
+      return null;
+    }
+  }
+
+  public async findInvoiceByReference(
+    reference: string
+  ): Promise<BookkeepingInvoice | null> {
+    if (!reference) return null;
+    try {
+      const filter = `reference:${reference}`;
+      const data = await this.authedRequest<any[]>(
+        'GET',
+        `sales_invoices.json?filter=${encodeURIComponent(filter)}`
+      );
+      if (!Array.isArray(data) || data.length === 0) return null;
+      const match = data.find((d) => d?.reference === reference) || data[0];
+      const adminId = await this.getAdministrationId();
+      if (match?.id) {
+        match.url = `${MONEYBIRD_BASE}/${adminId}/sales_invoices/${match.id}`;
+      }
+      return match as BookkeepingInvoice;
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 404) return null;
+      this.error(
+        `find invoice by reference failed${status ? ' (' + status + ')' : ''}: `,
+        err?.message
+      );
+      return null;
+    }
+  }
+
+  public async downloadInvoicePdf(
+    invoiceId: string | number
+  ): Promise<Buffer> {
+    if (!this.apiKey) {
+      throw new Error('MONEYBIRD_API_KEY is not configured');
+    }
+    const adminId = await this.getAdministrationId();
+    const url = `${API_BASE}/${adminId}/sales_invoices/${invoiceId}/download_pdf`;
+    this.info('GET ', url);
+    try {
+      const response = await axios.request<ArrayBuffer>({
+        url,
+        method: 'GET',
+        responseType: 'arraybuffer',
+        headers: {
+          Authorization: `Bearer ${this.apiKey}`,
+          Accept: 'application/pdf',
+        },
+      });
+      return Buffer.from(response.data);
+    } catch (err: any) {
+      const status = err?.response?.status;
+      this.error(
+        `GET sales invoice PDF failed${status ? ' (' + status + ')' : ''}: `,
+        err?.message
+      );
+      throw err;
+    }
   }
 }
 

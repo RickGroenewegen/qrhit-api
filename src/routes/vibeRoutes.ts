@@ -34,6 +34,92 @@ export default async function vibeRoutes(
     }
   );
 
+  // List existing MoneyBird invoices for a company list, keyed by payment
+  // option ('full' | 'down' | 'remaining'). Returns null entries for ones
+  // that don't exist yet.
+  fastify.get(
+    '/vibe/companies/:companyId/lists/:listId/invoices',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+        const listId = parseInt(request.params.listId);
+        if (isNaN(companyId) || isNaN(listId)) {
+          reply.status(400).send({ error: 'Invalid company or list ID' });
+          return;
+        }
+        const status = await bookkeeping.getStatus();
+        if (!status.connected) {
+          reply.send({
+            connected: false,
+            full: null,
+            down: null,
+            remaining: null,
+          });
+          return;
+        }
+        const prisma = PrismaInstance.getInstance();
+        const list: any = await (prisma as any).companyList.findUnique({
+          where: { id: listId },
+          select: { id: true, name: true, companyId: true },
+        });
+        if (!list || list.companyId !== companyId) {
+          reply.status(404).send({ error: 'List not found' });
+          return;
+        }
+        const refs = {
+          full: list.name,
+          down: `${list.name} — Aanbetaling 30%`,
+          remaining: `${list.name} — Slottermijn 70%`,
+        };
+        const [full, down, remaining] = await Promise.all([
+          bookkeeping.findInvoiceByReference(refs.full),
+          bookkeeping.findInvoiceByReference(refs.down),
+          bookkeeping.findInvoiceByReference(refs.remaining),
+        ]);
+        reply.send({ connected: true, full, down, remaining });
+      } catch (error: any) {
+        console.error('Error listing invoices:', error?.message || error);
+        reply.status(500).send({ error: 'Failed to list invoices' });
+      }
+    }
+  );
+
+  // Stream a sales invoice PDF from the bookkeeping provider.
+  fastify.get(
+    '/vibe/sales-invoices/:invoiceId/pdf',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const invoiceId = request.params.invoiceId;
+        if (!invoiceId) {
+          reply.status(400).send({ error: 'Missing invoice ID' });
+          return;
+        }
+        const status = await bookkeeping.getStatus();
+        if (!status.connected) {
+          reply.status(409).send({
+            error: 'Bookkeeping provider not connected',
+            reason: status.reason,
+          });
+          return;
+        }
+        const buf = await bookkeeping.downloadInvoicePdf(invoiceId);
+        reply
+          .header('Content-Type', 'application/pdf')
+          .header(
+            'Content-Disposition',
+            `attachment; filename="invoice-${invoiceId}.pdf"`
+          )
+          .send(buf);
+      } catch (error: any) {
+        const status = error?.response?.status || 500;
+        console.error('Error downloading invoice PDF:', error?.message || error);
+        reply.status(status).send({ error: 'Failed to download PDF' });
+      }
+    }
+  );
+
   // Create a sales invoice from a list's quotation values.
   // body: { type: 'onzevibe' | 'qrsong' | 'schneider', paymentOption: 'full' | 'down' | 'remaining' }
   fastify.post(
@@ -119,12 +205,19 @@ export default async function vibeRoutes(
               : '';
         const reference = `${list.name}${refSuffix}`;
 
-        const invoice = await bookkeeping.createInvoice({
+        const draft = await bookkeeping.createInvoice({
           contactId: contact.id,
           reference,
           invoiceDate: new Date().toISOString().slice(0, 10),
           items: built.items,
         });
+
+        // Finalize so the invoice is no longer in "Concept" state.
+        // If finalize fails, fall back to the draft so the admin still sees
+        // the result (they can manually book it in MoneyBird).
+        const finalized =
+          draft?.id != null ? await bookkeeping.finalizeInvoice(draft.id) : null;
+        const invoice = finalized || draft;
 
         reply.send({
           success: true,

@@ -114,6 +114,36 @@ class Bookkeeping {
     }
   }
 
+  public async findInvoiceByReference(
+    reference: string
+  ): Promise<BookkeepingInvoice | null> {
+    return this.provider.findInvoiceByReference(reference);
+  }
+
+  public async finalizeInvoice(
+    invoiceId: string | number
+  ): Promise<BookkeepingInvoice | null> {
+    this.info('finalize invoice ', `id=${invoiceId}`);
+    return this.provider.finalizeInvoice(invoiceId);
+  }
+
+  public async downloadInvoicePdf(
+    invoiceId: string | number
+  ): Promise<Buffer> {
+    this.info('download invoice pdf ', `id=${invoiceId}`);
+    try {
+      const buf = await this.provider.downloadInvoicePdf(invoiceId);
+      this.success('invoice pdf ready ', `id=${invoiceId} bytes=${buf.length}`);
+      return buf;
+    } catch (err: any) {
+      this.error(
+        'invoice pdf failed: ',
+        err?.response?.data ? JSON.stringify(err.response.data) : err?.message
+      );
+      throw err;
+    }
+  }
+
   public async createInvoice(args: {
     contactId: string | number;
     reference: string;
