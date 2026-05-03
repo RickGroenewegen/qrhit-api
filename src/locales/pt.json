@@ -613,24 +613,30 @@
   "howto.rulesTitle": "As regras:",
   "howto.rule1": "Cada jogador começa com uma carta (ano pra cima) como início da linha do tempo.",
   "howto.rule2": "Um DJ (ou jogador) escaneia um QR com o app QRSong! e toca uma música.",
-<<<<<<< HEAD
   "howto.rule3": "Adivinha o ano e põe a carta à esquerda (antes) ou direita (depois) na tua linha.",
   "howto.rule4": "Vira a carta. O ano bate? Fica com ela. Errado? Tira fora.",
   "howto.rule5": "Quem montar 10 cartas na linha do tempo primeiro, vence!",
   "howto.winner": "Quem chegar a 10 cartas primeiro, vence!",
   "mail.boxUpgradeQuantity": "Quantidade",
   "mail.giftBoxIncluded": "Caixa de presente",
-  "mail.giftBoxIncludedPrinter": "Seu pedido também inclui uma caixa de presente personalizada que será impressa e enviada junto com seus cartões."
-=======
-  "howto.rule3": "Adivinha o ano e coloca a carta à esquerda (antes) ou direita (depois) na tua linha do tempo.",
-  "howto.rule4": "Vira a carta. O ano bate? Fica com ela. Errou? Tira fora.",
-  "howto.rule5": "Quem montar uma linha do tempo com 10 cartas primeiro, vence!",
-  "howto.winner": "Quem chegar a 10 cartas primeiro, vence!",
+  "mail.giftBoxIncludedPrinter": "Seu pedido também inclui uma caixa de presente personalizada que será impressa e enviada junto com seus cartões.",
   "invoice.reverseChargeLine": "IVA invertido (0%)",
   "invoice.reverseChargeHeading": "IVA invertido",
   "invoice.reverseChargeExplanation": "O IVA é invertido para o destinatário conforme o artigo 196 da diretiva 2006/112/CE. O destinatário deve declarar o IVA localmente.",
   "invoice.vatIdVerified": "NIF verificado via VIES",
   "invoice.eurEquivalent": "Equivalente EUR",
-  "invoice.exchangeRate": "taxa"
->>>>>>> main
+  "invoice.exchangeRate": "taxa",
+  "design_alter.subject": "Ação necessária: atualiza o design do teu cartão",
+  "design_alter.title": "Teu design de cartão precisa de atualização",
+  "design_alter.hello": "Oi",
+  "design_alter.intro": "Antes de imprimirmos teu pedido, faz só uma pequena alteração no design.",
+  "design_alter.reasonInappropriate": "Nossa revisão automática achou algo no teu cartão que não podemos imprimir (tipo palavrão, discurso de ódio ou coisa imprópria).",
+  "design_alter.reasonHitster": "Nossa revisão automática achou referências a outra marca (Hitster) no teu cartão. Pra evitar problemas, remove isso antes de imprimir.",
+  "design_alter.clickButton": "Clica no botão abaixo pra abrir e ajustar teu design:",
+  "design_alter.buttonText": "Atualizar meu design",
+  "design_alter.buttonFallback": "O botão não funciona? Copia e cola esse link no navegador:",
+  "design_alter.afterEdit": "Assim que salvares as alterações, seguimos com a impressão.",
+  "design_alter.questions": "Se tiver dúvidas, responde a este e-mail e ajudamos.",
+  "design_alter.thanks": "Obrigado",
+  "design_alter.team": "A equipe QRSong!"
 }

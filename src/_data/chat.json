@@ -1105,6 +1105,25 @@
                 "app settings",
                 "Spotify Premium"
             ]
+        },
+        {
+            "slug": "android-media-notification",
+            "title": "My Android phone shows the artist and title in a notification (Samsung Now Bar / Live Notifications), how do I hide it?",
+            "description": "On newer Android phones, especially Samsung with One UI 7 / 8, a small notification tile (Now Bar / Live Notifications) can appear at the top of the screen showing the currently playing song's artist and title, even while the QRSong! app is open. This spoils the guess. How to hide it: (1) Samsung: go to Settings > Lock screen and AOD > Live notifications, and turn off Media player. On some devices this option is not in the menu directly, so use the search field in Settings and search for 'Live notifications'. Note: this also removes media controls from the lock screen, but during QRSong! gameplay that is actually desired. (2) Stock Android / Pixel: long-press the Spotify notification in the notification shade, tap the gear icon, and disable the 'Now playing' or 'Media playback' notification channel. As a stronger fallback, go to Settings > Notifications > Notifications on lock screen > Don't show any notifications (this hides all lock-screen notifications, not just Spotify). (3) No-settings alternative: place the phone face-down during play, or play through an external speaker.",
+            "tags": [
+                "android",
+                "samsung",
+                "one ui",
+                "now bar",
+                "live notifications",
+                "media player",
+                "notification",
+                "island",
+                "spoiler",
+                "hide artist title",
+                "lock screen",
+                "pixel"
+            ]
         }
     ]
 }

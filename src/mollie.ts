@@ -11,7 +11,6 @@ import Utils from './utils';
 import Generator from './generator';
 import { CartItem } from './interfaces/CartItem';
 import { OrderSearch } from './interfaces/OrderSearch';
-import axios from 'axios';
 import Discount from './discount';
 import { CronJob } from 'cron';
 import cluster from 'cluster';
@@ -451,6 +450,7 @@ class Mollie {
     }
 
     const where = {
+      status: 'paid',
       vibe: false,
       AND: [
         {
@@ -518,13 +518,19 @@ class Mollie {
       paymentKey(this.getTaxZone(p.countrycode), p.taxRate || 0)
     );
 
-    // Games: fetch with countrycode so we can group by zone too.
+    // Games: count all rows (initial + upgrade) but only sum upgrade prices.
+    // Initial games are free signups so they have no VAT impact, but the count
+    // mirrors the monthly report so the two reports reconcile.
     const gameRows = await this.prisma.gamesPurchase.findMany({
       where: {
-        type: 'upgrade',
         createdAt: { gte: startDate, lte: endDate },
       },
-      select: { countrycode: true, taxRate: true, totalPrice: true },
+      select: {
+        countrycode: true,
+        taxRate: true,
+        totalPrice: true,
+        type: true,
+      },
     });
     const gamesMap = new Map<string, { amount: number; total: number }>();
     for (const g of gameRows) {
@@ -533,7 +539,7 @@ class Mollie {
       const key = paymentKey(zone, taxRate);
       const cur = gamesMap.get(key) || { amount: 0, total: 0 };
       cur.amount += 1;
-      cur.total += g.totalPrice || 0;
+      if (g.type === 'upgrade') cur.total += g.totalPrice || 0;
       gamesMap.set(key, cur);
     }
 
@@ -556,12 +562,92 @@ class Mollie {
     });
 
     const zoneOrder = { NL: 0, EU: 1, EXPORT: 2 } as const;
-    return detailedReport.sort((a, b) => {
+    detailedReport.sort((a, b) => {
       const za = zoneOrder[a.zone as keyof typeof zoneOrder] ?? 9;
       const zb = zoneOrder[b.zone as keyof typeof zoneOrder] ?? 9;
       if (za !== zb) return za - zb;
       return b.totalPrice - a.totalPrice;
     });
+
+    // OSS breakdown: per-country × taxRate within EU (excluding NL).
+    // Required for the Unieregeling (One Stop Shop) quarterly return.
+    const ossKey = (country: string, taxRate: number) =>
+      `${country}|${taxRate}`;
+    const ossAgg = new Map<
+      string,
+      {
+        country: string;
+        taxRate: number;
+        numberOfSales: number;
+        totalPrice: number;
+        totalPriceWithoutTax: number;
+        productVATPrice: number;
+      }
+    >();
+    for (const r of rows) {
+      if (this.getTaxZone(r.countrycode) !== 'EU') continue;
+      const country = (r.countrycode || '').toUpperCase();
+      const taxRate = r.taxRate || 0;
+      const key = ossKey(country, taxRate);
+      const cur = ossAgg.get(key) || {
+        country,
+        taxRate,
+        numberOfSales: 0,
+        totalPrice: 0,
+        totalPriceWithoutTax: 0,
+        productVATPrice: 0,
+      };
+      cur.numberOfSales += 1;
+      cur.totalPrice += r.totalPrice || 0;
+      cur.totalPriceWithoutTax += r.totalPriceWithoutTax || 0;
+      cur.productVATPrice += r.productVATPrice || 0;
+      ossAgg.set(key, cur);
+    }
+
+    const ossRefundAdjustments = await this.getRefundAdjustmentsByKey(
+      where,
+      (p) => {
+        if (this.getTaxZone(p.countrycode) !== 'EU') return '';
+        return ossKey((p.countrycode || '').toUpperCase(), p.taxRate || 0);
+      }
+    );
+
+    const ossGamesMap = new Map<string, { amount: number; total: number }>();
+    for (const g of gameRows) {
+      if (this.getTaxZone(g.countrycode) !== 'EU') continue;
+      const country = (g.countrycode || '').toUpperCase();
+      const taxRate = g.taxRate || 0;
+      const key = ossKey(country, taxRate);
+      const cur = ossGamesMap.get(key) || { amount: 0, total: 0 };
+      cur.amount += 1;
+      if (g.type === 'upgrade') cur.total += g.totalPrice || 0;
+      ossGamesMap.set(key, cur);
+    }
+
+    const ossBreakdown = Array.from(ossAgg.values()).map((entry) => {
+      const key = ossKey(entry.country, entry.taxRate);
+      const gamesData = ossGamesMap.get(key);
+      const adj = ossRefundAdjustments.get(key);
+      return {
+        country: entry.country,
+        taxRate: entry.taxRate,
+        numberOfSales: entry.numberOfSales,
+        totalPrice: entry.totalPrice - (adj?.refundedTotal || 0),
+        totalPriceWithoutTax:
+          entry.totalPriceWithoutTax - (adj?.refundedExVAT || 0),
+        totalVAT: entry.productVATPrice - (adj?.refundedVAT || 0),
+        totalRefunded: adj?.refundedTotal || 0,
+        gamesAmount: gamesData?.amount || 0,
+        gamesTotal: gamesData?.total || 0,
+      };
+    });
+
+    ossBreakdown.sort((a, b) => {
+      if (a.country !== b.country) return a.country.localeCompare(b.country);
+      return b.taxRate - a.taxRate;
+    });
+
+    return { rows: detailedReport, ossBreakdown };
   }
 
   private getTaxZone(countryCode: string | null | undefined): string {
@@ -681,7 +767,7 @@ class Mollie {
 
   private async refreshCartTrackCounts(
     cart: { items: CartItem[] },
-    locale: string
+    _locale: string
   ): Promise<void> {
     for (const item of cart.items) {
       if (item.productType !== 'giftcard') {
@@ -1390,7 +1476,7 @@ class Mollie {
         });
 
         molliePaymentId = payment.id;
-        molliePaymentAmount = calculateResult.data.total;
+        molliePaymentAmount = Math.round(calculateResult.data.total * 100) / 100;
         molliePaymentStatus = payment.status;
         mollieCheckoutUrl = payment.getCheckoutUrl()!;
       }
@@ -1449,12 +1535,6 @@ class Mollie {
             item.playlistId,
             item.subType
           );
-
-          if (item.isSlug) {
-            const dbPlaylist = await this.prisma.playlist.findFirst({
-              where: { slug: item.playlistId },
-            });
-          }
 
           const printApiItemPrice = orderType.amount * item.amount;
 

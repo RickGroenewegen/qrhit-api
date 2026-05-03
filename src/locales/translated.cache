@@ -8530,7 +8530,6 @@
     "sv",
     "no"
   ],
-<<<<<<< HEAD
   "mail.boxUpgrade.total": [
     "nl",
     "de",
@@ -8686,8 +8685,6 @@
     "sv",
     "no"
   ],
-=======
->>>>>>> main
   "invoice.ideal": [
     "nl",
     "de",
@@ -8701,11 +8698,7 @@
     "sv",
     "no"
   ],
-<<<<<<< HEAD
   "mail.boxUpgradeQuantity": [
-=======
-  "invoice.reverseChargeLine": [
->>>>>>> main
     "nl",
     "de",
     "fr",
@@ -8718,11 +8711,7 @@
     "sv",
     "no"
   ],
-<<<<<<< HEAD
   "mail.giftBoxIncluded": [
-=======
-  "invoice.reverseChargeHeading": [
->>>>>>> main
     "nl",
     "de",
     "fr",
@@ -8735,9 +8724,188 @@
     "sv",
     "no"
   ],
-<<<<<<< HEAD
   "mail.giftBoxIncludedPrinter": [
-=======
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.subject": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.title": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.hello": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.intro": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.reasonInappropriate": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.reasonHitster": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.clickButton": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.buttonText": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.buttonFallback": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.afterEdit": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.questions": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.thanks": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.team": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
   "invoice.reverseChargeExplanation": [
     "nl",
     "de",
@@ -8765,20 +8933,6 @@
     "no"
   ],
   "invoice.eurEquivalent": [
-    "nl",
-    "de",
-    "fr",
-    "es",
-    "it",
-    "pt",
-    "pl",
-    "jp",
-    "cn",
-    "sv",
-    "no"
-  ],
-  "invoice.exchangeRate": [
->>>>>>> main
     "nl",
     "de",
     "fr",

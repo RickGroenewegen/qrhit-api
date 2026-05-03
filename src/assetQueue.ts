@@ -336,7 +336,7 @@ ${extraInstructions}`;
         parts.push({ inlineData: { data: productBuffers[i].toString('base64'), mimeType: 'image/jpeg' } });
 
         const response = await ai.models.generateContent({
-          model: 'gemini-3.1-flash-image-preview',
+          model: 'gemini-3-pro-image-preview',
           contents: [{ role: 'user', parts }],
           config: { responseModalities: ['TEXT', 'IMAGE'] },
         });
@@ -401,7 +401,7 @@ ${extraInstructions}`;
         imageInputs.push(await toFile(productPng, `product_${i + 1}.png`, { type: 'image/png' }));
 
         const response = await openai.images.edit({
-          model: 'gpt-image-1.5',
+          model: 'gpt-image-2',
           image: imageInputs.length === 1 ? imageInputs[0] : imageInputs,
           prompt,
           size: '1024x1024',

@@ -99,7 +99,7 @@ export default async function adminRoutes(
     '/admin/create',
     getAuthHandler(['admin', 'vibeadmin']),
     async (request: any, reply: any) => {
-      const { email, password, displayName, companyId, userGroup, id } =
+      const { email, password, displayName, companyId, userGroup, id, phone } =
         request.body;
 
       if (!email || !displayName) {
@@ -120,7 +120,8 @@ export default async function adminRoutes(
           companyId,
           userGroup,
           id,
-          request.user?.userGroups
+          request.user?.userGroups,
+          phone
         );
         reply.send({
           success: true,
@@ -556,6 +557,34 @@ export default async function adminRoutes(
           success: false,
           error: 'Failed to duplicate payment',
         });
+      }
+    }
+  );
+
+  // Manually run the print&bind eligibility / finalCheck / send pipeline
+  // that the hourly cron normally runs. Optional body { paymentId, force }
+  // narrows the run to a single payment (force=true bypasses the eligibility
+  // filter, useful when re-checking an order that's currently on hold).
+  fastify.post(
+    '/admin/run-printer-pass',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentId, force } = request.body || {};
+      try {
+        const summary = await generator.runSendToPrinterPass({
+          paymentId: paymentId || undefined,
+          force: !!force,
+        });
+        reply.send({ success: true, summary });
+      } catch (error: any) {
+        logger.log(
+          color.red.bold(
+            `run-printer-pass failed: ${error.message || error}`
+          )
+        );
+        reply
+          .status(500)
+          .send({ success: false, error: error.message || String(error) });
       }
     }
   );
@@ -1863,22 +1892,37 @@ export default async function adminRoutes(
   );
 
   // Tax report
+  // Period accepts:
+  //   YYYYMM  -> calendar month
+  //   YYYYQn  -> calendar quarter (n = 1..4)
   fastify.get(
-    '/tax_report/:yearMonth',
+    '/tax_report/:period',
     getAuthHandler(['admin']),
     async (request: any, reply: any) => {
-      const { yearMonth } = request.params;
-      const year = parseInt(yearMonth.substring(0, 4));
-      const month = parseInt(yearMonth.substring(4, 6));
+      const { period } = request.params;
+      const year = parseInt(period.substring(0, 4));
+      const tail = period.substring(4);
+      let startDate: Date;
+      let endDate: Date;
 
-      const startDate = new Date(year, month - 1, 1);
-      const endDate = new Date(year, month, 0, 23, 59, 59);
+      const quarterMatch = /^Q([1-4])$/i.exec(tail);
+      if (quarterMatch) {
+        const quarter = parseInt(quarterMatch[1]);
+        const startMonth = (quarter - 1) * 3;
+        startDate = new Date(year, startMonth, 1);
+        endDate = new Date(year, startMonth + 3, 0, 23, 59, 59);
+      } else {
+        const month = parseInt(tail);
+        startDate = new Date(year, month - 1, 1);
+        endDate = new Date(year, month, 0, 23, 59, 59);
+      }
 
       const report = await mollie.getPaymentsByTaxRate(startDate, endDate);
 
       reply.send({
         success: true,
-        data: report,
+        data: report.rows,
+        ossBreakdown: report.ossBreakdown,
       });
     }
   );

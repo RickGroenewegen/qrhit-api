@@ -177,11 +177,22 @@ export class Music {
         standardDeviation = 0;
       }
 
-      // Rule 3: If Spotify year is equal to both AI and OpenPerplex years, use Spotify year
+      // Rule 3: If Spotify year equals AI year, and OpenPerplex either agrees
+      // or is missing, use the Spotify year. Veto when MB and Discogs are both
+      // present, agree with each other, and point to an earlier year — that
+      // combination is too strong a signal of an original release to override
+      // automatically, so leave it for manual review.
+      const mbDcAgreeEarlier =
+        mbResult.year > 0 &&
+        discogsResult.year > 0 &&
+        mbResult.year === discogsResult.year &&
+        mbResult.year < spotifyReleaseYear;
+
       if (
         spotifyReleaseYear > 0 &&
         spotifyReleaseYear == aiResult.year &&
-        spotifyReleaseYear == openPerplexYear
+        (openPerplexYear == 0 || spotifyReleaseYear == openPerplexYear) &&
+        !mbDcAgreeEarlier
       ) {
         finalYear = spotifyReleaseYear;
         standardDeviation = 0;
@@ -196,6 +207,35 @@ export class Music {
         openPerplexYear < spotifyReleaseYear
       ) {
         finalYear = openPerplexYear;
+        standardDeviation = 0;
+      }
+
+      // Rule 5: If Discogs, MusicBrainz, and AI all agree on the same valid year,
+      // trust that consensus over Spotify and OpenPerplex (which often reflect
+      // re-release or streaming-platform dates).
+      if (
+        discogsResult.year > 0 &&
+        mbResult.year > 0 &&
+        aiResult.year > 0 &&
+        discogsResult.year === mbResult.year &&
+        mbResult.year === aiResult.year
+      ) {
+        finalYear = discogsResult.year;
+        standardDeviation = 0;
+      }
+
+      // Rule 6: If Spotify, Discogs, MusicBrainz, and AI all agree on the same
+      // valid year, that 4-way consensus wins regardless of OpenPerplex.
+      if (
+        spotifyReleaseYear > 0 &&
+        discogsResult.year > 0 &&
+        mbResult.year > 0 &&
+        aiResult.year > 0 &&
+        spotifyReleaseYear === discogsResult.year &&
+        discogsResult.year === mbResult.year &&
+        mbResult.year === aiResult.year
+      ) {
+        finalYear = spotifyReleaseYear;
         standardDeviation = 0;
       }
     }

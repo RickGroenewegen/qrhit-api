@@ -619,22 +619,29 @@
   "howto.rule1": "Chaque joueur commence avec une carte (année visible) pour débuter sa timeline.",
   "howto.rule2": "Un DJ (ou joueur) scanne un QR avec l’appli QRSong! et une chanson démarre.",
   "howto.rule3": "Devine l’année et place la carte à gauche (plus tôt) ou à droite (plus tard) dans ta timeline.",
-<<<<<<< HEAD
   "howto.rule4": "Retourne la carte. L’année colle ? Garde-la. Faux ? Retire-la.",
   "howto.rule5": "Le premier à avoir 10 cartes dans sa timeline gagne !",
   "howto.winner": "Le premier à 10 cartes gagne !",
   "mail.boxUpgradeQuantity": "Quantité",
   "mail.giftBoxIncluded": "Boîte cadeau",
-  "mail.giftBoxIncludedPrinter": "Ta commande inclut aussi une boîte cadeau personnalisée qui sera imprimée et envoyée avec tes cartes."
-=======
-  "howto.rule4": "Retourne la carte. L’année colle à ta timeline ? Garde-la. Sinon, vire-la.",
-  "howto.rule5": "Le premier à faire une timeline de 10 cartes gagne !",
-  "howto.winner": "Le premier à 10 cartes gagne !",
+  "mail.giftBoxIncludedPrinter": "Ta commande inclut aussi une boîte cadeau personnalisée qui sera imprimée et envoyée avec tes cartes.",
   "invoice.reverseChargeLine": "TVA autoliquidée (0%)",
   "invoice.reverseChargeHeading": "TVA autoliquidée",
   "invoice.reverseChargeExplanation": "La TVA est autoliquidée par le destinataire selon l’article 196 de la directive 2006/112/CE. Le destinataire doit déclarer la TVA localement.",
   "invoice.vatIdVerified": "TVA vérifiée via VIES",
   "invoice.eurEquivalent": "Équiv. en EUR",
-  "invoice.exchangeRate": "taux"
->>>>>>> main
+  "invoice.exchangeRate": "taux",
+  "design_alter.subject": "Action requise : mets à jour ton design de carte",
+  "design_alter.title": "Ton design de carte doit être mis à jour",
+  "design_alter.hello": "Salut",
+  "design_alter.intro": "Avant d’imprimer ta commande, il faut juste que tu modifies un petit truc sur ton design.",
+  "design_alter.reasonInappropriate": "Notre vérif automatique a trouvé du contenu sur ta carte qu’on ne peut pas imprimer (genre insultes, discours haineux ou autre truc inadapté).",
+  "design_alter.reasonHitster": "Notre vérif automatique a trouvé des références à une autre marque (Hitster) sur ta carte. Pour éviter des soucis, il faut les enlever.",
+  "design_alter.clickButton": "Clique sur le bouton ci-dessous pour ouvrir et modifier ton design :",
+  "design_alter.buttonText": "Mettre à jour mon design",
+  "design_alter.buttonFallback": "Le bouton marche pas ? Copie-colle ce lien dans ton navigateur :",
+  "design_alter.afterEdit": "Une fois tes modifs enregistrées, on reprend ta commande et on imprime direct.",
+  "design_alter.questions": "Si tu as des questions, réponds à ce mail et on t’aide.",
+  "design_alter.thanks": "Merci",
+  "design_alter.team": "L’équipe QRSong!"
 }

@@ -76,24 +76,24 @@ class Utils {
       str = str.split(' - ')[0];
     }
 
-    // Remove "(feat. ...)" from the title
-    str = str.replace(/\(feat\..*?\)/gi, '').trim();
+    // Remove "(feat. ...)"
+    str = str.replace(/\(feat\..*?\)/gi, ' ');
 
-    // Remove (Remastered) from the title
-    str = str.replace(/\(Remastered\)/gi, '').trim();
-
-    // Remove (Re-recorded) from the title
-    str = str.replace(/\(Re-recorded\)/gi, '').trim();
-
-    // Remove (Classic Version) from the title
-    str = str.replace(/\(Classic Version\)/gi, '').trim();
-
-    // Remove (From "...") from the title (e.g., From "Pretty Woman")
-    str = str.replace(/\(From\s+[""].*?[""]\)/gi, '').trim();
+    // Remove (From "...") (e.g., From "Pretty Woman")
+    str = str.replace(/\(From\s+[""].*?[""]\)/gi, ' ');
 
     // Remove video-related tags (Official Video, Official Music Video, Official HD Video, Official 4K Video)
-    str = str.replace(/\(Official\s*(Music\s*)?Video\)/gi, '').trim();
-    str = str.replace(/\(Official\s*(HD|4K)\s*Video\)/gi, '').trim();
+    str = str.replace(/\(Official\s*(Music\s*)?Video\)/gi, ' ');
+    str = str.replace(/\(Official\s*(HD|4K)\s*Video\)/gi, ' ');
+
+    // Remove common YouTube-style parenthetical tags
+    str = str.replace(
+      /\((?:lyrics?|lyric\s*video|audio|official\s*audio|visualizer|visualiser|karaoke|remastered|re-?recorded|classic\s*version|hq|hd|4k)\)/gi,
+      ' '
+    );
+
+    // Collapse any runs of whitespace introduced by the removals
+    str = str.replace(/\s+/g, ' ').trim();
 
     // Title can be max. 70 characters. Add "..." if it's longer (do this last after all cleaning)
     if (str.length > 70) {
@@ -314,7 +314,7 @@ class Utils {
     }
   }
 
-  public reviveDates(key: any, value: any): any {
+  public reviveDates(_key: any, value: any): any {
     const isISODate =
       typeof value === 'string' &&
       /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}.\d{3}Z$/.test(value);
@@ -490,7 +490,7 @@ class Utils {
     message?: string;
     honeypot?: string;
   }): { isSpam: boolean; reason: string | null } {
-    const { name, email, message, honeypot } = data;
+    const { name, message, honeypot } = data;
 
     // Check honeypot field - if filled, it's a bot
     if (honeypot && honeypot.trim().length > 0) {

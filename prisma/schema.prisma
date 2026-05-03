@@ -171,7 +171,9 @@ model Payment {
   sentToPrinter            Boolean              @default(false)
   sentToPrinterAt          DateTime?
   fast                     Boolean              @default(false)
-  printerHold              Boolean              @default(true)
+  printerHold              Boolean              @default(false)
+  suggestionWarningSent    Boolean              @default(false)
+  suggestionWarningSentAt  DateTime?
   processedFirstTime       Boolean              @default(false)
   processedFirstTimeAt     DateTime?
   printerInvoice           PrinterInvoice?      @relation(fields: [printerInvoiceId], references: [id], onDelete: SetNull)
@@ -216,6 +218,7 @@ model User {
   userId                    String           @unique
   email                     String           @unique
   displayName               String
+  phone                     String?
   locale                    String?
   country                   String?
   hash                      String           @unique
@@ -849,6 +852,7 @@ model Company {
   contactemail         String?
   contactphone         String?
   locale               String?
+  message              String?        @db.Text
   calculation          String?        @db.Text
   calculationTromp     String?        @db.Text
   calculationSchneider String?        @db.Text
@@ -979,6 +983,7 @@ model CompanyList {
   calculation             String?   @db.Text
   calculationTromp        String?   @db.Text
   calculationSchneider    String?   @db.Text
+  printer                 String    @default("schneider")
   intakeToken             String?   @unique
   meetingDate             DateTime?
   desiredDeliveryDate     DateTime?

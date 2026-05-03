@@ -229,12 +229,47 @@ class YouTubeMusicProvider implements IMusicProvider {
   }
 
   /**
+   * Decide whether to trust YT Music's artist field or fall back to the
+   * "Artist - Title" split. MUSIC_VIDEO_TYPE_ATV / _OMV / _OFFICIAL_SOURCE_MUSIC
+   * are real catalog entries; anything else (notably _UGC, or a missing type)
+   * means the artist is probably just the uploading channel name.
+   */
+  private resolveTitleAndArtist(
+    rawTitle: string,
+    rawArtist: string,
+    videoType: string | null
+  ): { name: string; artist: string } {
+    const isCatalogTrack =
+      videoType === 'MUSIC_VIDEO_TYPE_ATV' ||
+      videoType === 'MUSIC_VIDEO_TYPE_OMV' ||
+      videoType === 'MUSIC_VIDEO_TYPE_OFFICIAL_SOURCE_MUSIC';
+
+    if (!isCatalogTrack && rawTitle.includes(' - ')) {
+      const [left, ...rest] = rawTitle.split(' - ');
+      const right = rest.join(' - ').trim();
+      const leftTrim = left.trim();
+      if (leftTrim && right) {
+        return {
+          name: this.utils.cleanTrackName(right),
+          artist: leftTrim,
+        };
+      }
+    }
+
+    return {
+      name: this.utils.cleanTrackName(rawTitle),
+      artist: rawArtist,
+    };
+  }
+
+  /**
    * Extract video items from playlist response
    */
   private extractPlaylistVideos(data: any): Array<{
     videoId: string;
     title: string;
     artist: string;
+    videoType: string | null;
     thumbnails: Array<{ url: string; width: number; height: number }>;
     duration: number | null;
   }> {
@@ -242,6 +277,7 @@ class YouTubeMusicProvider implements IMusicProvider {
       videoId: string;
       title: string;
       artist: string;
+      videoType: string | null;
       thumbnails: Array<{ url: string; width: number; height: number }>;
       duration: number | null;
     }> = [];
@@ -257,11 +293,16 @@ class YouTubeMusicProvider implements IMusicProvider {
         if (!videoId) continue;
 
         let title = '';
+        let videoType: string | null = null;
         const flexColumns = item?.flexColumns;
         if (flexColumns && Array.isArray(flexColumns) && flexColumns.length > 0) {
           const titleRuns = flexColumns[0]?.musicResponsiveListItemFlexColumnRenderer?.text?.runs;
           if (titleRuns && Array.isArray(titleRuns) && titleRuns.length > 0) {
             title = titleRuns[0]?.text || '';
+            videoType =
+              titleRuns[0]?.navigationEndpoint?.watchEndpoint
+                ?.watchEndpointMusicSupportedConfigs?.watchEndpointMusicConfig
+                ?.musicVideoType || null;
           }
         }
 
@@ -294,7 +335,7 @@ class YouTubeMusicProvider implements IMusicProvider {
           }
         }
 
-        videos.push({ videoId, title, artist, thumbnails, duration });
+        videos.push({ videoId, title, artist, videoType, thumbnails, duration });
       } catch (e) {
         continue;
       }
@@ -462,6 +503,7 @@ class YouTubeMusicProvider implements IMusicProvider {
       videoId: string;
       title: string;
       artist: string;
+      videoType: string | null;
       thumbnails: Array<{ url: string; width: number; height: number }>;
       duration: number | null;
     }>;
@@ -485,6 +527,7 @@ class YouTubeMusicProvider implements IMusicProvider {
       videoId: string;
       title: string;
       artist: string;
+      videoType: string | null;
       thumbnails: Array<{ url: string; width: number; height: number }>;
       duration: number | null;
     }> = [];
@@ -661,20 +704,27 @@ class YouTubeMusicProvider implements IMusicProvider {
         )
       );
 
-      const tracks: ProviderTrackData[] = videos.map((video) => ({
-        id: video.videoId,
-        name: this.utils.cleanTrackName(video.title),
-        artist: video.artist,
-        artistsList: [video.artist],
-        album: '',
-        albumImageUrl: this.getBestThumbnail(video.thumbnails),
-        releaseDate: null,
-        isrc: undefined,
-        previewUrl: null,
-        duration: video.duration ? video.duration * 1000 : undefined,
-        serviceType: ServiceType.YOUTUBE_MUSIC,
-        serviceLink: `https://music.youtube.com/watch?v=${video.videoId}`,
-      }));
+      const tracks: ProviderTrackData[] = videos.map((video) => {
+        const { name, artist } = this.resolveTitleAndArtist(
+          video.title,
+          video.artist,
+          video.videoType
+        );
+        return {
+          id: video.videoId,
+          name,
+          artist,
+          artistsList: [artist],
+          album: '',
+          albumImageUrl: this.getBestThumbnail(video.thumbnails),
+          releaseDate: null,
+          isrc: undefined,
+          previewUrl: null,
+          duration: video.duration ? video.duration * 1000 : undefined,
+          serviceType: ServiceType.YOUTUBE_MUSIC,
+          serviceLink: `https://music.youtube.com/watch?v=${video.videoId}`,
+        };
+      });
 
       const result: ProviderTracksResult = {
         tracks,

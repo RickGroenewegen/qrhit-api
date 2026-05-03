@@ -3,6 +3,7 @@ import * as crypto from 'crypto';
 import { verifyToken } from '../auth';
 import Vibe from '../vibe';
 import Mollie from '../mollie';
+import Bookkeeping from '../bookkeeping';
 import AssetQueue from '../assetQueue';
 import PrismaInstance from '../prisma';
 import Translation from '../translation';
@@ -17,6 +18,224 @@ export default async function vibeRoutes(
 ) {
   const vibe = Vibe.getInstance();
   const mollie = new Mollie();
+  const bookkeeping = Bookkeeping.getInstance();
+
+  // ============================================
+  // Bookkeeping (MoneyBird) — invoice creation
+  // ============================================
+
+  // Returns { provider, connected, reason? }.
+  fastify.get(
+    '/vibe/bookkeeping/status',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      const status = await bookkeeping.getStatus();
+      reply.send({ provider: bookkeeping.providerName(), ...status });
+    }
+  );
+
+  // List existing MoneyBird invoices for a company list, keyed by payment
+  // option ('full' | 'down' | 'remaining'). Returns null entries for ones
+  // that don't exist yet.
+  fastify.get(
+    '/vibe/companies/:companyId/lists/:listId/invoices',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+        const listId = parseInt(request.params.listId);
+        if (isNaN(companyId) || isNaN(listId)) {
+          reply.status(400).send({ error: 'Invalid company or list ID' });
+          return;
+        }
+        const status = await bookkeeping.getStatus();
+        if (!status.connected) {
+          reply.send({
+            connected: false,
+            full: null,
+            down: null,
+            remaining: null,
+          });
+          return;
+        }
+        const prisma = PrismaInstance.getInstance();
+        const list: any = await (prisma as any).companyList.findUnique({
+          where: { id: listId },
+          select: { id: true, name: true, companyId: true },
+        });
+        if (!list || list.companyId !== companyId) {
+          reply.status(404).send({ error: 'List not found' });
+          return;
+        }
+        const refs = {
+          full: list.name,
+          down: `${list.name} — Aanbetaling 30%`,
+          remaining: `${list.name} — Slottermijn 70%`,
+        };
+        const [full, down, remaining] = await Promise.all([
+          bookkeeping.findInvoiceByReference(refs.full),
+          bookkeeping.findInvoiceByReference(refs.down),
+          bookkeeping.findInvoiceByReference(refs.remaining),
+        ]);
+        reply.send({ connected: true, full, down, remaining });
+      } catch (error: any) {
+        console.error('Error listing invoices:', error?.message || error);
+        reply.status(500).send({ error: 'Failed to list invoices' });
+      }
+    }
+  );
+
+  // Stream a sales invoice PDF from the bookkeeping provider.
+  fastify.get(
+    '/vibe/sales-invoices/:invoiceId/pdf',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const invoiceId = request.params.invoiceId;
+        if (!invoiceId) {
+          reply.status(400).send({ error: 'Missing invoice ID' });
+          return;
+        }
+        const status = await bookkeeping.getStatus();
+        if (!status.connected) {
+          reply.status(409).send({
+            error: 'Bookkeeping provider not connected',
+            reason: status.reason,
+          });
+          return;
+        }
+        const buf = await bookkeeping.downloadInvoicePdf(invoiceId);
+        reply
+          .header('Content-Type', 'application/pdf')
+          .header(
+            'Content-Disposition',
+            `attachment; filename="invoice-${invoiceId}.pdf"`
+          )
+          .send(buf);
+      } catch (error: any) {
+        const status = error?.response?.status || 500;
+        console.error('Error downloading invoice PDF:', error?.message || error);
+        reply.status(status).send({ error: 'Failed to download PDF' });
+      }
+    }
+  );
+
+  // Create a sales invoice from a list's quotation values.
+  // body: { type: 'onzevibe' | 'qrsong' | 'schneider', paymentOption: 'full' | 'down' | 'remaining' }
+  fastify.post(
+    '/vibe/companies/:companyId/lists/:listId/invoice',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const companyId = parseInt(request.params.companyId);
+        const listId = parseInt(request.params.listId);
+        if (isNaN(companyId) || isNaN(listId)) {
+          reply.status(400).send({ error: 'Invalid company or list ID' });
+          return;
+        }
+        const { type, paymentOption } = request.body || {};
+        const t =
+          type === 'qrsong' || type === 'schneider' ? type : 'onzevibe';
+        const po =
+          paymentOption === 'down' || paymentOption === 'remaining'
+            ? paymentOption
+            : 'full';
+
+        const status = await bookkeeping.getStatus();
+        if (!status.connected) {
+          reply.status(409).send({
+            error: 'Bookkeeping provider not connected',
+            reason: status.reason,
+          });
+          return;
+        }
+
+        const built = await vibe.buildInvoiceLineItems(
+          companyId,
+          listId,
+          t as 'onzevibe' | 'qrsong' | 'schneider',
+          po as 'full' | 'down' | 'remaining'
+        );
+        if (!built.success || !built.items || !built.company) {
+          reply
+            .status(400)
+            .send({ error: built.error || 'Could not build invoice items' });
+          return;
+        }
+
+        const company = built.company as any;
+        const list = built.list as any;
+
+        const fullName = (company.contact || '').trim();
+        const [firstname, ...rest] = fullName.split(/\s+/);
+        const lastname = rest.join(' ').trim();
+
+        const contactPayload = {
+          company_name: company.name,
+          firstname: firstname || undefined,
+          lastname: lastname || undefined,
+          address1:
+            [company.address, company.housenumber].filter(Boolean).join(' ') ||
+            undefined,
+          zipcode: company.zipcode || undefined,
+          city: company.city || undefined,
+          country: (company.countrycode || '').toUpperCase() || undefined,
+          phone: company.contactphone || undefined,
+          send_invoices_to_email: company.contactemail || undefined,
+          send_estimates_to_email: company.contactemail || undefined,
+        };
+
+        const customerKey = `qrhit-${company.id}`;
+        const contact = await bookkeeping.findOrCreateContact(
+          customerKey,
+          contactPayload
+        );
+        if (!contact?.id) {
+          reply
+            .status(500)
+            .send({ error: 'Failed to create or find bookkeeping contact' });
+          return;
+        }
+
+        const refSuffix =
+          po === 'down'
+            ? ' — Aanbetaling 30%'
+            : po === 'remaining'
+              ? ' — Slottermijn 70%'
+              : '';
+        const reference = `${list.name}${refSuffix}`;
+
+        const draft = await bookkeeping.createInvoice({
+          contactId: contact.id,
+          reference,
+          invoiceDate: new Date().toISOString().slice(0, 10),
+          items: built.items,
+        });
+
+        // Finalize so the invoice is no longer in "Concept" state.
+        // If finalize fails, fall back to the draft so the admin still sees
+        // the result (they can manually book it in MoneyBird).
+        const finalized =
+          draft?.id != null ? await bookkeeping.finalizeInvoice(draft.id) : null;
+        const invoice = finalized || draft;
+
+        reply.send({
+          success: true,
+          invoice,
+          contact: { id: contact.id, company_name: contact.company_name },
+        });
+      } catch (error: any) {
+        console.error(
+          'Invoice creation error:',
+          error?.response?.data || error
+        );
+        reply.status(500).send({
+          error: 'Failed to create invoice',
+          details: error?.response?.data || error?.message,
+        });
+      }
+    }
+  );
 
   // Get all companies
   fastify.get(
@@ -384,6 +603,7 @@ export default async function vibeRoutes(
         'approverName',
         'specialNotes',
         'internalNotes',
+        'printer',
         ...descriptionFields,
       ];
       const numberFields = [
@@ -948,6 +1168,9 @@ export default async function vibeRoutes(
 
         // Extract pricing options from query parameters
         const isReseller = request.query.isReseller === 'true';
+        const listIdParam = request.query.listId
+          ? parseInt(request.query.listId)
+          : null;
         let profitMargins = null;
         let calculatedPrices = null;
 
@@ -977,6 +1200,33 @@ export default async function vibeRoutes(
           return;
         }
 
+        // If a list was specified, load its per-list calculation so per-list
+        // toggles (e.g. includeVotingPortal) override the company defaults.
+        let listCalc: {
+          calculation: string | null;
+          calculationTromp: string | null;
+          calculationSchneider: string | null;
+        } | null = null;
+        if (listIdParam && !isNaN(listIdParam)) {
+          try {
+            const prisma = PrismaInstance.getInstance();
+            const list: any = await (prisma as any).companyList.findUnique({
+              where: { id: listIdParam },
+              select: {
+                companyId: true,
+                calculation: true,
+                calculationTromp: true,
+                calculationSchneider: true,
+              },
+            });
+            if (list && list.companyId === companyId) {
+              listCalc = list;
+            }
+          } catch (e) {
+            console.error('Error loading list calculation:', e);
+          }
+        }
+
         let calculation: any = {};
         let calculationResult: any = {};
         let productDescription = '';
@@ -1003,12 +1253,13 @@ export default async function vibeRoutes(
             manualDiscountPercent: companyDiscountPercent,
           };
 
-          if (company.calculationTromp) {
+          const trompSource = listCalc?.calculationTromp ?? company.calculationTromp;
+          if (trompSource) {
             try {
-              const storedCalc = JSON.parse(company.calculationTromp);
+              const storedCalc = JSON.parse(trompSource);
               calculation = { ...storedCalc, manualDiscountPercent: companyDiscountPercent };
             } catch (e) {
-              console.error('Error parsing company Tromp calculation:', e);
+              console.error('Error parsing Tromp calculation:', e);
             }
           }
 
@@ -1040,12 +1291,13 @@ export default async function vibeRoutes(
             manualDiscountPercent: companyDiscountPercent,
           };
 
-          if (company.calculationSchneider) {
+          const schneiderSource = listCalc?.calculationSchneider ?? company.calculationSchneider;
+          if (schneiderSource) {
             try {
-              const storedCalc = JSON.parse(company.calculationSchneider);
+              const storedCalc = JSON.parse(schneiderSource);
               calculation = { ...storedCalc, manualDiscountPercent: companyDiscountPercent };
             } catch (e) {
-              console.error('Error parsing company Schneider calculation:', e);
+              console.error('Error parsing Schneider calculation:', e);
             }
           }
 
@@ -1097,12 +1349,13 @@ export default async function vibeRoutes(
             fluidMode: false,
           };
 
-          if (company.calculation) {
+          const onzevibeSource = listCalc?.calculation ?? company.calculation;
+          if (onzevibeSource) {
             try {
-              const storedCalc = JSON.parse(company.calculation);
+              const storedCalc = JSON.parse(onzevibeSource);
               calculation = storedCalc;
             } catch (e) {
-              console.error('Error parsing company calculation:', e);
+              console.error('Error parsing OnzeVibe calculation:', e);
             }
           }
 

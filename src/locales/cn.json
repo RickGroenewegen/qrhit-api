@@ -606,7 +606,6 @@
   "howto.title": "怎么玩",
   "howto.subtitle": "QRSong! 音乐游戏",
   "howto.rulesTitle": "规则：",
-<<<<<<< HEAD
   "howto.rule1": "每人以一张卡（年份朝上）开始时间线。",
   "howto.rule2": "DJ（或玩家）用QRSong! 扫码，歌曲播放。",
   "howto.rule3": "猜年份，把卡放左边（早）或右边（晚）在时间线里。",
@@ -615,19 +614,24 @@
   "howto.winner": "先集齐10张卡的人赢！",
   "mail.boxUpgradeQuantity": "数量",
   "mail.giftBoxIncluded": "礼品盒",
-  "mail.giftBoxIncludedPrinter": "你的订单还包含一个定制礼品盒，会和你的卡片一起印刷并寄出。"
-=======
-  "howto.rule1": "每个玩家以一张卡（年份朝上）开始他们的时间线。",
-  "howto.rule2": "DJ（或玩家）用QRSong!应用扫码，歌曲就播放了。",
-  "howto.rule3": "猜年份，把卡放在时间线的左边（更早）或右边（更晚）。",
-  "howto.rule4": "翻开卡片。年份对了就留着，错了就拿走。",
-  "howto.rule5": "第一个拼出10张卡时间线的人获胜！",
-  "howto.winner": "先集齐10张卡的人赢！",
+  "mail.giftBoxIncludedPrinter": "你的订单还包含一个定制礼品盒，会和你的卡片一起印刷并寄出。",
   "invoice.reverseChargeLine": "增值税反向计税（0%）",
   "invoice.reverseChargeHeading": "增值税反向计税",
   "invoice.reverseChargeExplanation": "根据指令2006/112/EC第196条，增值税由收件人反向计税。收件人需自行申报增值税。",
   "invoice.vatIdVerified": "VAT号已通过VIES验证",
   "invoice.eurEquivalent": "等值欧元",
-  "invoice.exchangeRate": "汇率"
->>>>>>> main
+  "invoice.exchangeRate": "汇率",
+  "design_alter.subject": "需要操作：请更新你的卡片设计",
+  "design_alter.title": "你的卡片设计需要更新",
+  "design_alter.hello": "嗨",
+  "design_alter.intro": "在我们打印你的订单前，你需要对卡片设计做个小改动。",
+  "design_alter.reasonInappropriate": "我们的自动审核发现你的卡片上有无法打印的内容（比如脏话、仇恨言论或其他不合适的东西）。",
+  "design_alter.reasonHitster": "我们的自动审核发现你的卡片上有第三方品牌（Hitster）的内容。为避免版权问题，请先删除这些内容。",
+  "design_alter.clickButton": "点下面的按钮打开并调整你的设计：",
+  "design_alter.buttonText": "更新我的设计",
+  "design_alter.buttonFallback": "按钮没反应？复制这个链接到浏览器：",
+  "design_alter.afterEdit": "保存更改后，我们会自动继续处理并打印你的订单。",
+  "design_alter.questions": "有问题就直接回复这封邮件，我们帮你。",
+  "design_alter.thanks": "谢谢",
+  "design_alter.team": "QRSong! 团队"
 }

@@ -1,0 +1,351 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+*, *::before, *::after { box-sizing: border-box; }
+
+:root {
+    --brand-cyan: #5cc8ff;
+    --brand-deep: #00264d;
+    --brand-mid:  #0077be;
+    --ink:        #ffffff;
+    --ink-soft:   rgba(255, 255, 255, 0.75);
+    --ink-mute:   rgba(255, 255, 255, 0.55);
+    --ease:       cubic-bezier(0.2, 0.7, 0.2, 1);
+    --ease-out:   cubic-bezier(0.16, 1, 0.3, 1);
+    --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+html, body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    width: 100%;
+}
+
+body {
+    color: var(--ink);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Roboto', sans-serif;
+    background: radial-gradient(ellipse at 30% 0%, #0a3a66 0%, #051a32 60%, #02101e 100%);
+    min-height: 100dvh;
+    display: grid;
+    grid-template-rows: 1fr auto;
+    justify-items: center;
+    align-items: center;
+    padding: 24px;
+    padding-bottom: env(safe-area-inset-bottom);
+    overflow-x: hidden;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+}
+
+/* ── WebGL aurora background ──────────────────── */
+#shader-bg {
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 0;
+    pointer-events: none;
+    display: block;
+}
+body > *:not(#shader-bg) { position: relative; z-index: 1; }
+
+/* Vignette to anchor the card */
+body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: radial-gradient(ellipse at center, transparent 30%, rgba(0,0,0,0.45) 100%);
+    z-index: 0;
+    pointer-events: none;
+}
+
+/* ── Onboarding card ──────────────────────────── */
+.onboarding-card {
+    position: relative;
+    width: 100%;
+    max-width: 440px;
+    padding: 36px 32px 32px;
+    border-radius: 24px;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,0.10) 0%, rgba(255,255,255,0.04) 100%);
+    backdrop-filter: blur(24px) saturate(140%);
+    -webkit-backdrop-filter: blur(24px) saturate(140%);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow:
+        0 32px 80px rgba(0, 8, 24, 0.55),
+        0 8px 24px rgba(0, 8, 24, 0.35),
+        inset 0 1px 0 rgba(255, 255, 255, 0.18),
+        inset 0 -1px 0 rgba(0, 0, 0, 0.2);
+    text-align: center;
+    overflow: hidden;
+    animation: cardIn 0.9s var(--ease-out) both;
+}
+
+/* Card edge highlight that catches the aurora behind */
+.onboarding-card::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    padding: 1px;
+    background: linear-gradient(135deg, rgba(255,255,255,0.35), rgba(255,255,255,0.04) 40%, rgba(92,200,255,0.18) 80%, rgba(255,255,255,0.0));
+    -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+            mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+    -webkit-mask-composite: xor;
+            mask-composite: exclude;
+    pointer-events: none;
+}
+
+@keyframes cardIn {
+    from { opacity: 0; transform: translateY(16px) scale(0.97); filter: blur(6px); }
+    to   { opacity: 1; transform: translateY(0)    scale(1);    filter: blur(0); }
+}
+
+/* ── Logo ─────────────────────────────────────── */
+.logo-orbit {
+    position: relative;
+    margin: 4px auto 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.logo-img {
+    position: relative;
+    z-index: 2;
+    max-width: 220px;
+    width: 100%;
+    height: auto;
+    filter: drop-shadow(0 6px 24px rgba(0, 0, 0, 0.45));
+    animation: floaty 7s ease-in-out infinite;
+}
+@keyframes floaty {
+    0%, 100% { transform: translateY(0); }
+    50%      { transform: translateY(-4px); }
+}
+
+/* ── Heading with shimmer sweep ───────────────── */
+.onboarding-heading {
+    margin: 4px 0 28px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    line-height: 1.25;
+}
+.shimmer-text {
+    background: linear-gradient(
+        100deg,
+        rgba(255,255,255,0.85) 0%,
+        rgba(255,255,255,0.85) 35%,
+        #ffffff 50%,
+        rgba(255,255,255,0.85) 65%,
+        rgba(255,255,255,0.85) 100%
+    );
+    background-size: 250% 100%;
+    background-clip: text;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    color: transparent;
+    animation: shimmer 4.5s linear infinite;
+}
+@keyframes shimmer {
+    0%   { background-position: 250% 0; }
+    100% { background-position: -50% 0; }
+}
+
+/* ── Store buttons (PRIMARY actions) ──────────── */
+.store-buttons {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+.store-btn {
+    flex: 1 1 auto;
+    appearance: none;
+    -webkit-appearance: none;
+    color: #001828;
+    background: linear-gradient(135deg, #ffffff 0%, #d9efff 100%);
+    border: 1px solid rgba(255, 255, 255, 0.65);
+    padding: 15px 16px;
+    border-radius: 14px;
+    font-family: inherit;
+    font-size: 15px;
+    font-weight: 700;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+    box-shadow:
+        0 12px 28px rgba(4, 18, 36, 0.45),
+        0 1px 0 rgba(255,255,255,0.6) inset,
+        0 -1px 0 rgba(0,0,0,0.05) inset;
+    transition: transform 0.18s var(--ease), background 0.2s ease, border-color 0.2s ease, box-shadow 0.25s ease;
+    will-change: transform;
+}
+.store-btn .btn-content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 9px;
+    pointer-events: none;
+}
+.store-btn i { font-size: 17px; }
+.store-btn::before {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    background: radial-gradient(140% 140% at 50% 0%, rgba(255,255,255,0.7), transparent 55%);
+    opacity: 0.6;
+    transition: opacity 0.25s ease;
+    pointer-events: none;
+}
+.store-btn:hover {
+    background: linear-gradient(135deg, #ffffff 0%, #c2e6ff 100%);
+    box-shadow:
+        0 16px 36px rgba(4, 18, 36, 0.55),
+        0 0 0 1px rgba(255,255,255,0.8) inset;
+}
+.store-btn:hover::before { opacity: 1; }
+.store-btn:active { transform: scale(0.97); }
+
+/* ── Secondary link: visit website ────────────── */
+.secondary-link {
+    display: block;
+    width: 100%;
+    appearance: none;
+    -webkit-appearance: none;
+    background: transparent;
+    color: var(--ink-soft);
+    border: 0;
+    padding: 12px 14px;
+    font-family: inherit;
+    font-size: 14px;
+    font-weight: 500;
+    letter-spacing: 0.01em;
+    cursor: pointer;
+    border-radius: 10px;
+    transition: color 0.2s ease, background 0.2s ease, transform 0.18s var(--ease);
+    text-align: center;
+    position: relative;
+    will-change: transform;
+}
+.secondary-link .btn-content {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    pointer-events: none;
+}
+.secondary-link i { font-size: 13px; opacity: 0.85; }
+.secondary-link::after {
+    /* underline that grows on hover */
+    content: '';
+    position: absolute;
+    left: 50%;
+    bottom: 8px;
+    width: 0;
+    height: 1px;
+    background: rgba(255,255,255,0.8);
+    transition: width 0.25s var(--ease), left 0.25s var(--ease);
+}
+.secondary-link:hover {
+    color: var(--ink);
+    background: rgba(255,255,255,0.04);
+}
+.secondary-link:hover::after {
+    width: 60%;
+    left: 20%;
+}
+.secondary-link:active { transform: scale(0.98); }
+
+/* Staggered entrance */
+.store-buttons .store-btn,
+.tagline-row,
+.secondary-link {
+    opacity: 0;
+    animation: riseIn 0.7s var(--ease-out) forwards;
+}
+.store-buttons .store-btn:nth-child(1) { animation-delay: 0.30s; }
+.store-buttons .store-btn:nth-child(2) { animation-delay: 0.40s; }
+.tagline-row                           { animation-delay: 0.55s; }
+.secondary-link                        { animation-delay: 0.70s; }
+@keyframes riseIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to   { opacity: 1; transform: translateY(0);    }
+}
+
+/* ── Tagline with equalizer accents ───────────── */
+.tagline-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 14px;
+    margin: 4px auto 22px;
+    color: var(--ink-soft);
+    font-size: 14px;
+    font-style: italic;
+    line-height: 1.4;
+}
+.tagline-text {
+    max-width: 260px;
+}
+.eq {
+    display: inline-flex;
+    align-items: flex-end;
+    gap: 3px;
+    height: 18px;
+}
+.eq i {
+    display: inline-block;
+    width: 3px;
+    border-radius: 2px;
+    background: linear-gradient(180deg, var(--brand-cyan), rgba(92,200,255,0.45));
+    box-shadow: 0 0 8px rgba(92, 200, 255, 0.55);
+    animation: eqBar 1.2s ease-in-out infinite;
+    transform-origin: bottom;
+}
+.eq i:nth-child(1) { height: 30%; animation-delay: 0.0s; }
+.eq i:nth-child(2) { height: 70%; animation-delay: 0.15s; }
+.eq i:nth-child(3) { height: 50%; animation-delay: 0.30s; }
+.eq i:nth-child(4) { height: 90%; animation-delay: 0.10s; }
+.eq--mirror i:nth-child(1) { animation-delay: 0.10s; }
+.eq--mirror i:nth-child(2) { animation-delay: 0.30s; }
+.eq--mirror i:nth-child(3) { animation-delay: 0.15s; }
+.eq--mirror i:nth-child(4) { animation-delay: 0.0s; }
+@keyframes eqBar {
+    0%, 100% { transform: scaleY(0.3); }
+    50%      { transform: scaleY(1.0); }
+}
+
+/* ── Footer ───────────────────────────────────── */
+.footer {
+    grid-row: 2;
+    text-align: center;
+    font-size: 12px;
+    color: var(--ink-mute);
+    letter-spacing: 0.02em;
+    padding: 18px 16px 8px;
+    pointer-events: none;
+}
+
+/* ── Responsive ───────────────────────────────── */
+@media (max-width: 480px) {
+    .onboarding-card { padding: 28px 22px 24px; max-width: 100%; }
+    .logo-orbit      { width: 180px; height: 180px; }
+    .logo-img        { max-width: 160px; }
+    .onboarding-heading { font-size: 1.3rem; margin-bottom: 22px; }
+    .store-buttons   { flex-direction: column; gap: 10px; }
+}
+
+/* ── Reduced motion ───────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+    #shader-bg { display: none; }
+    .onboarding-card,
+    .store-buttons .store-btn,
+    .tagline-row,
+    .secondary-link { animation: none !important; opacity: 1; }
+    .logo-img,
+    .shimmer-text,
+    .eq i { animation: none !important; }
+    .shimmer-text { -webkit-text-fill-color: var(--ink); color: var(--ink); }
+}

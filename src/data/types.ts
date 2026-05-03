@@ -9,7 +9,6 @@ import PushoverClient from '../pushover';
 import AppTheme from '../apptheme';
 import PrismaInstance from '../prisma';
 import { AxiosInstance } from 'axios';
-import YTMusic from 'ytmusic-api';
 
 export interface DataDeps {
   prisma: ReturnType<typeof PrismaInstance.getInstance>;
@@ -23,7 +22,6 @@ export interface DataDeps {
   pushover: PushoverClient;
   appTheme: AppTheme;
   axiosInstance: AxiosInstance;
-  ytmusic: YTMusic;
   blockedPlaylists: Set<number>;
   blockedPlaylistsInitialized: boolean;
 }

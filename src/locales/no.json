@@ -588,7 +588,6 @@
   "quiz.releaseOrderQuestion": "Plasser denne låta i riktig rekkefølge",
   "quiz.decadeQuestion": "Hvilket tiår kom denne låta ut?",
   "quiz.titleQuestion": "Hva heter denne låta?",
-<<<<<<< HEAD
   "mail.boxUpgradeThankYou": "Your custom Gift Box is being printed and will be shipped to the address below. If you have any questions, don't hesitate to contact us at info@qrsong.io",
   "mail.boxUpgradeSubject": "Gaveboksen din for '{{ playlist }}' er på vei!",
   "mail.boxUpgradeGreeting": "Hei",
@@ -601,13 +600,24 @@
   "mail.boxUpgradeTotal": "Totalt",
   "mail.boxUpgradeQuantity": "Antall",
   "mail.giftBoxIncluded": "Gaveeske",
-  "mail.giftBoxIncludedPrinter": "Bestillingen din inkluderer også en personlig gaveeske som trykkes og sendes sammen med kortene dine."
-=======
+  "mail.giftBoxIncludedPrinter": "Bestillingen din inkluderer også en personlig gaveeske som trykkes og sendes sammen med kortene dine.",
   "invoice.reverseChargeLine": "MVA omvendt (0%)",
   "invoice.reverseChargeHeading": "MVA omvendt",
   "invoice.reverseChargeExplanation": "MVA omvendes til mottaker etter artikkel 196 i direktiv 2006/112/EF. Mottaker må selv rapportere MVA lokalt.",
   "invoice.vatIdVerified": "MVA-nummer sjekket via VIES",
   "invoice.eurEquivalent": "EUR tilsvarende",
-  "invoice.exchangeRate": "kurs"
->>>>>>> main
+  "invoice.exchangeRate": "kurs",
+  "design_alter.subject": "Handling kreves: oppdater kortdesignet ditt",
+  "design_alter.title": "Kortdesignet ditt må oppdateres",
+  "design_alter.hello": "Hei",
+  "design_alter.intro": "Før vi kan trykke bestillingen din, må du gjøre en liten endring på kortdesignet.",
+  "design_alter.reasonInappropriate": "Vår automatiske sjekk fant noe på kortet ditt vi ikke kan trykke (f.eks. banning, hatprat eller annet upassende).",
+  "design_alter.reasonHitster": "Vår automatiske sjekk fant referanser til et annet merke (Hitster) på kortet ditt. Fjern dem for å unngå IP-problemer.",
+  "design_alter.clickButton": "Trykk under for å åpne og endre designet ditt:",
+  "design_alter.buttonText": "Oppdater designet mitt",
+  "design_alter.buttonFallback": "Funker ikke knappen? Kopier og lim inn denne linken i nettleseren:",
+  "design_alter.afterEdit": "Når du har lagret endringene, fortsetter vi automatisk med trykkingen.",
+  "design_alter.questions": "Har du spørsmål? Bare svar på denne mailen, så hjelper vi deg.",
+  "design_alter.thanks": "Takk",
+  "design_alter.team": "QRSong!-teamet"
 }

@@ -6,12 +6,94 @@ import Utils from '../utils';
 import TrackEnrichment from '../trackEnrichment';
 import ProgressWebSocketServer from '../progress-websocket';
 import { ServiceType } from '../enums/ServiceType';
+import Cache from '../cache';
+
+const TIDAL_PLAYBACK_TOKEN_CACHE_KEY = 'tidal_playback_token';
+const TIDAL_AUTH_TOKEN_URL = 'https://auth.tidal.com/v1/oauth2/token';
 
 export default async function tidalRoutes(fastify: FastifyInstance) {
   const tidalProvider = TidalProvider.getInstance();
   const logger = new Logger();
   const utils = new Utils();
   const trackEnrichment = TrackEnrichment.getInstance();
+  const cache = Cache.getInstance();
+
+  // Get or refresh a TIDAL client-credentials access token (for 30-second previews).
+  // Mirrors the `/apple-music/token` pattern: secret lives on the server, client only sees a
+  // short-lived bearer token. Redis-cached for (expires_in - 60) seconds.
+  fastify.get('/tidal/playback-token', async (_request, reply) => {
+    const cached = await cache.get(TIDAL_PLAYBACK_TOKEN_CACHE_KEY);
+    if (cached) {
+      try {
+        const parsed = JSON.parse(cached) as { token: string; expiresAt: number };
+        if (parsed.expiresAt > Date.now() + 60_000) {
+          return { token: parsed.token, expiresAt: parsed.expiresAt };
+        }
+      } catch {
+        // Fall through and refresh
+      }
+    }
+
+    const clientId = process.env['TIDAL_CLIENT_ID'];
+    const clientSecret = process.env['TIDAL_CLIENT_SECRET'];
+    if (!clientId || !clientSecret) {
+      reply.status(500);
+      return {
+        error:
+          'TIDAL client not configured (set TIDAL_CLIENT_ID / TIDAL_CLIENT_SECRET)',
+      };
+    }
+
+    const body = new URLSearchParams({
+      grant_type: 'client_credentials',
+      client_id: clientId,
+      client_secret: clientSecret,
+    });
+
+    try {
+      const response = await fetch(TIDAL_AUTH_TOKEN_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: body.toString(),
+      });
+
+      if (!response.ok) {
+        const errBody = await response.text();
+        logger.log(
+          color.red.bold(
+            `[${color.white.bold('tidal')}] playback token exchange failed: ${response.status} - ${errBody}`
+          )
+        );
+        reply.status(502);
+        return { error: `TIDAL token exchange failed: ${response.status}` };
+      }
+
+      const data = (await response.json()) as {
+        access_token: string;
+        expires_in: number;
+        token_type: string;
+      };
+
+      const expiresAt = Date.now() + data.expires_in * 1000;
+      const cacheTtl = Math.max(60, data.expires_in - 60);
+
+      await cache.set(
+        TIDAL_PLAYBACK_TOKEN_CACHE_KEY,
+        JSON.stringify({ token: data.access_token, expiresAt }),
+        cacheTtl
+      );
+
+      return { token: data.access_token, expiresAt };
+    } catch (error: any) {
+      logger.log(
+        color.red.bold(
+          `[${color.white.bold('tidal')}] playback token error: ${error?.message || error}`
+        )
+      );
+      reply.status(500);
+      return { error: 'Failed to obtain TIDAL playback token' };
+    }
+  });
 
   // Get Tidal OAuth authorization URL
   fastify.get('/tidal/auth', async (_request, reply) => {

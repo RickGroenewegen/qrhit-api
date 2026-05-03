@@ -12,7 +12,6 @@ import cluster from 'cluster';
 import { Music } from './music';
 import PushoverClient from './pushover';
 import { ChatGPT } from './chatgpt';
-import YTMusic from 'ytmusic-api';
 import axios, { AxiosInstance } from 'axios';
 import AppTheme from './apptheme';
 import { DataDeps } from './data/types';
@@ -43,8 +42,6 @@ class Data {
   private blockedPlaylists: Set<number> = new Set();
   private blockedPlaylistsInitialized: boolean = false;
 
-  private ytmusic: YTMusic;
-
   /** Cast this instance to DataDeps for sub-module calls */
   private get deps(): DataDeps {
     return this as unknown as DataDeps;
@@ -53,8 +50,6 @@ class Data {
   public euCountryCodes = usersModule.euCountryCodes;
 
   private constructor() {
-    this.ytmusic = new YTMusic();
-    this.ytmusic.initialize();
     this.axiosInstance = axios.create();
     // ... rest of constructor
     if (cluster.isPrimary) {
@@ -180,9 +175,10 @@ class Data {
     tidalLink: string,
     deezerLink: string,
     amazonMusicLink: string,
-    clientIp: string
+    clientIp: string,
+    locale: string = 'en'
   ): Promise<{ success: boolean; error?: string }> {
-    return tracksModule.updateTrack(this.deps, id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink, amazonMusicLink, clientIp);
+    return tracksModule.updateTrack(this.deps, id, artist, name, year, spotifyLink, youtubeMusicLink, appleMusicLink, tidalLink, deezerLink, amazonMusicLink, clientIp, locale);
   }
 
   public async storeTracks(
@@ -190,9 +186,10 @@ class Data {
     playlistId: string,
     tracks: any,
     trackOrder?: Map<string, number>,
-    serviceType: string = 'spotify'
+    serviceType: string = 'spotify',
+    locale: string = 'en'
   ): Promise<any> {
-    return tracksModule.storeTracks(this.deps, playlistDatabaseId, playlistId, tracks, trackOrder, serviceType);
+    return tracksModule.storeTracks(this.deps, playlistDatabaseId, playlistId, tracks, trackOrder, serviceType, locale);
   }
 
   public async searchTracks(
