@@ -148,12 +148,36 @@
         {
             "slug": "box",
             "title": "Do the cards come in a box?",
-            "description": "No. The cards come in a transport box that fits in most mailboxes. Inside, the cards are neatly tied together with a paper band. We hope to offer gift boxes in the future. But for business orders, we can provide custom branded boxes if the amount of boxes exceeds 50. If its a single person give https://www.dekaartendrukkerij.nl as an option to order boxes.",
+            "description": "By default the cards arrive in a mailbox-friendly transport box, neatly tied together with a paper band. You can also opt into a personalized gift box during checkout: a 12x12cm foldable box with a window on the lid, a custom insert card you design yourself, and a personal message on the back. The gift box ships as a printed A3 sheet that you press out and fold (no glue or tools needed). For larger business orders we can provide custom branded boxes if the amount exceeds 50.",
             "tags": [
-                "multiple",
-                "designs",
-                "one playlist",
-                "different"
+                "box",
+                "gift box",
+                "packaging",
+                "transport"
+            ]
+        },
+        {
+            "slug": "gift-box-capacity",
+            "title": "How many cards fit in a gift box?",
+            "description": "Each gift box holds up to 190 QR music cards and includes a built-in divider. If your playlist is larger than that, additional boxes are added automatically — one extra box for every 190 cards. So a 250-card playlist ships with 2 boxes, 400 cards ships with 3, and so on. The number of boxes is shown during checkout, so you always know what's coming. You can never order fewer or more boxes than your card count requires; the count is fixed by the size of your playlist.",
+            "tags": [
+                "gift box",
+                "capacity",
+                "190 cards",
+                "how many boxes",
+                "multiple boxes"
+            ]
+        },
+        {
+            "slug": "gift-box-design",
+            "title": "What can I customize on the gift box?",
+            "description": "The gift box itself has a fixed exterior design with a window on the lid. You personalize it by designing the insert card that sits behind that window. You can customize four things: (1) the lid image visible through the window, (2) a logo placed on top of the lid image, (3) the inside background visible when you open the box, and (4) a personal message on the back of the insert card.",
+            "tags": [
+                "gift box",
+                "customize",
+                "insert card",
+                "design",
+                "personal message"
             ]
         },
         {

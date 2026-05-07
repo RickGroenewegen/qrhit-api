@@ -3,7 +3,7 @@ export const MAX_CARDS_PHYSICAL = 1000;
 
 // Box product
 export const BOX_PRICE = 6.99;
-export const BOX_MAX_CARDS = 175;
+export const BOX_MAX_CARDS = 190;
 
 // Spotify API rate limiting
 export const SPOTIFY_CONCURRENT_REQUESTS = 2; // Very conservative: 2 concurrent requests (changed from 3)
