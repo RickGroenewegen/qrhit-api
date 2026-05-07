@@ -23,7 +23,7 @@ import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
 import { FONTS } from '../fonts';
 import { BACKGROUNDS } from '../backgrounds';
-import { BOX_PRICE, BOX_MAX_CARDS } from '../config/constants';
+import { BOX_PRICE, BOX_MAX_CARDS, BOX_TIER_PRICES } from '../config/constants';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
 import path from 'path';
 import fs from 'fs/promises';
@@ -57,6 +57,7 @@ export default async function publicRoutes(fastify: FastifyInstance) {
     reply.send({
       boxUnitPrice: BOX_PRICE,
       boxMaxCards: BOX_MAX_CARDS,
+      boxTierPrices: BOX_TIER_PRICES,
       gamesUnitPrice: QRGAMES_UPGRADE_PRICE,
     });
   });

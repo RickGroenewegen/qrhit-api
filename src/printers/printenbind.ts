@@ -1,5 +1,5 @@
 import Log from '../logger';
-import { MAX_CARDS, MAX_CARDS_PHYSICAL, BOX_PRICE } from '../config/constants';
+import { MAX_CARDS, MAX_CARDS_PHYSICAL, BOX_PRICE, boxTierPrice } from '../config/constants';
 import PrismaInstance from '../prisma';
 import Cache from '../cache';
 import { ApiResult } from '../interfaces/ApiResult';
@@ -1190,9 +1190,8 @@ class PrintEnBind {
       }
       totalPrice += gamesFee;
 
-      // Box fee for physical/sheets items with box enabled.
-      // boxQuantity is per playlist copy, so multiply by item.amount to
-      // get the actual number of boxes shipped/charged.
+      // Box fee for physical/sheets items with box enabled. Discount tier
+      // is computed per cart item from its own total box count.
       let boxFee = 0;
       let totalBoxCount = 0;
       for (const item of orderItems) {
@@ -1200,7 +1199,7 @@ class PrintEnBind {
           const playlistAmount = parseInt(item.amount) || 1;
           const qty = (item.boxQuantity || 0) * playlistAmount;
           totalBoxCount += qty;
-          boxFee += qty * BOX_PRICE;
+          boxFee += qty * boxTierPrice(qty);
         }
       }
       totalPrice += boxFee;

@@ -181,6 +181,21 @@
             ]
         },
         {
+            "slug": "gift-box-price",
+            "title": "How much does the gift box cost? Is there a bulk discount?",
+            "description": "A single gift box costs €6.99. When a playlist needs multiple boxes, the per-box price drops automatically: 2 boxes cost €6.00 each (save 14%), 3 boxes are €5.00 each (save 29%), 4 boxes are €4.50 each (save 36%), and 5 or more boxes are just €4.00 each (save 43%). The discount applies per playlist in the cart, and the exact total — including any savings — is shown during checkout before payment. So a 250-card playlist (which needs 2 boxes) costs €12.00 in box add-ons, and a 400-card playlist (3 boxes) costs €15.00.",
+            "tags": [
+                "gift box",
+                "price",
+                "cost",
+                "discount",
+                "bulk",
+                "multiple boxes",
+                "6.99",
+                "add-on"
+            ]
+        },
+        {
             "slug": "multiple-designs",
             "title": "Kan ik ook in 1 playlist die ik deel meerdere ontwerpen hebben?",
             "description": "No, if you would like to do so: Split your Spotify playlist into multiple playlists, each with their own design. Then place multiple orders, one for each design/playlist combination.",
