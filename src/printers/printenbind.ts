@@ -671,40 +671,6 @@ class PrintEnBind {
         }
 
         totalItemsSuccess++;
-      } else if (items[i].type == 'qrsong_box' && physicalOrderCreated) {
-        const boxResponse = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-          {
-            method: 'POST',
-            headers: {
-              Authorization: authToken!,
-              'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(items[i]),
-          }
-        );
-
-        if (logging) {
-          apiCalls.push({
-            method: 'POST',
-            url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-            body: items[i],
-            statusCode: boxResponse.status,
-            responseBody: await boxResponse.clone().json(),
-          });
-
-          this.logger.log(
-            color.blue.bold(
-              `Added article ${color.white.bold(
-                i + 1
-              )} to order ${color.white.bold(orderId)} — ${color.white.bold(
-                this.describeArticle(items[i])
-              )}`
-            )
-          );
-        }
-
-        totalItemsSuccess++;
       } else if (items[i].type == 'digital') {
         const orderType = await this.getOrderType(
           items[i].numberOfTracks,
@@ -934,19 +900,22 @@ class PrintEnBind {
           '. Deze bestelling is een A4 die door de klant zelf uitgeknipt zal gaan worden.';
       }
 
+      // Print&Bind auto-adds a 2nd/3rd/… box for every 190 cards based on
+      // the accessory line — we never specify a box quantity ourselves.
+      if (item.boxEnabled) {
+        orderObj.accessory_group = 'packaging';
+        orderObj.accessory_item = 'box_qrsong';
+      }
+
       return orderObj;
     }
   }
 
   /**
    * Build a human-readable label describing a Print&Bind article so logs
-   * make it obvious whether we're sending game cards, insert cards, or
-   * the empty gift boxes themselves.
+   * make it obvious whether we're sending game cards or insert cards.
    */
   private describeArticle(item: any): string {
-    if (item?.type === 'qrsong_box') {
-      return `gift boxes (×${item.amount ?? 1})`;
-    }
     if (item?.type === 'physical') {
       const comment = typeof item.comment === 'string' ? item.comment : '';
       // Insert card articles carry an "Insert card..." comment and have no
@@ -986,6 +955,9 @@ class PrintEnBind {
       add_file_method: 'url',
       file_overwrite: true,
       file_url: fileUrl,
+      // Box ships as a packaging accessory on this insert-card article.
+      accessory_group: 'packaging',
+      accessory_item: 'box_qrsong',
       comment: `Box insert for playlist ${playlist.name}`,
     };
   }
@@ -1023,15 +995,6 @@ class PrintEnBind {
     };
   }
 
-  private createBoxOrderBoxItem(totalBoxQuantity: number): any {
-    return {
-      type: 'qrsong_box',
-      amount: totalBoxQuantity,
-      delivery_method: 'post',
-      comment: 'Foldable QRSong boxes',
-    };
-  }
-
   public async createBoxUpgradeOrder(paymentHasPlaylistId: number, quantity: number = 1): Promise<any> {
     this.logger.log(color.blue.bold(`Starting box upgrade Print&Bind order for PHP ${paymentHasPlaylistId} (quantity: ${quantity})`));
 
@@ -1057,21 +1020,18 @@ class PrintEnBind {
 
     const items: any[] = [];
 
-    // Add box insert card item (if PDF was generated)
-    if (boxFileUrl) {
-      this.logger.log(color.blue.bold(`Box insert card PDF: ${color.white.bold(boxFileUrl)}`));
-      items.push(this.createBoxOrderCardItem(boxFileUrl, php.playlist, quantity));
-    } else {
-      this.logger.log(color.yellow.bold(`No box insert card PDF found for PHP ${paymentHasPlaylistId}, ordering box without insert card`));
+    // The box itself is now a packaging accessory on the insert-card
+    // article (Print&Bind no longer accepts a standalone box article).
+    // If we have no insert-card PDF, we have nothing to attach the
+    // accessory to and the order can't proceed.
+    if (!boxFileUrl) {
+      this.logger.log(color.red.bold(`No box insert card PDF found for PHP ${paymentHasPlaylistId} — box cannot be ordered without an insert-card article to attach the packaging accessory to.`));
+      throw new Error('Box insert card PDF missing — cannot create box upgrade order');
     }
 
-    // Add box item
-    items.push(this.createBoxOrderBoxItem(quantity));
-    this.logger.log(color.blue.bold(`Order items: ${items.length} (${boxFileUrl ? 'box + insert card' : 'box only'}), quantity: ${quantity}`));
-
-    if (items.length === 0) {
-      throw new Error('No items to order');
-    }
+    this.logger.log(color.blue.bold(`Box insert card PDF: ${color.white.bold(boxFileUrl)}`));
+    items.push(this.createBoxOrderCardItem(boxFileUrl, php.playlist, quantity));
+    this.logger.log(color.blue.bold(`Order items: ${items.length} (insert card + packaging accessory), quantity: ${quantity}`));
 
     const customerInfo = {
       fullname: payment.fullname || undefined,
@@ -1658,26 +1618,6 @@ class PrintEnBind {
           )
         );
       }
-    }
-
-    // Add box packaging article if any playlists have boxes
-    let totalBoxQuantity = 0;
-    for (const playlistItem of playlists) {
-      const playlist = playlistItem.playlist;
-      if (playlist.boxEnabled && playlist.boxQuantity > 0) {
-        totalBoxQuantity += playlist.boxQuantity;
-      }
-    }
-    if (totalBoxQuantity > 0) {
-      const boxOrderBoxItem = this.createBoxOrderBoxItem(totalBoxQuantity);
-      orderItems.push(boxOrderBoxItem);
-      this.logger.log(
-        color.blue.bold(
-          `Adding box packaging article to ${color.white.bold(
-            'Print&Bind'
-          )} order. Total quantity: ${color.white.bold(totalBoxQuantity)}`
-        )
-      );
     }
 
     const result = await this.processOrderRequest(
