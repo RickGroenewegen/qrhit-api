@@ -1023,6 +1023,7 @@ const gameRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
               pricePerPlaylist: pricing.pricePerPlaylist.toString(),
             },
             clientIp: request.clientIp,
+            viewerCountry: request.body?.viewerCountry,
           });
 
           logger.log(
