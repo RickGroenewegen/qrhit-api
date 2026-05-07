@@ -806,23 +806,38 @@ class Mollie {
       PaymentMethod.belfius,
     ],
     DE: [
+      // Ordered by German consumer popularity (PayPal + SEPA dominate;
+      // Klarna/card/ApplePay tier next; Riverty/Trustly/paysafecard niche).
       PaymentMethod.paypal,
+      PaymentMethod.directdebit,
       PaymentMethod.klarna,
       PaymentMethod.creditcard,
       PaymentMethod.applepay,
+      PaymentMethod.riverty,
+      PaymentMethod.trustly,
+      PaymentMethod.paysafecard,
     ],
     AT: [
+      // EPS is the Austrian local favourite, then the same DE tiers.
+      // Riverty intentionally omitted: very low penetration in AT
+      // (Klarna dominates the BNPL slot here).
       PaymentMethod.eps,
-      PaymentMethod.creditcard,
-      PaymentMethod.applepay,
       PaymentMethod.klarna,
       PaymentMethod.paypal,
-    ],
-    CH: [
-      PaymentMethod.twint,
       PaymentMethod.creditcard,
       PaymentMethod.applepay,
+      PaymentMethod.directdebit,
+      PaymentMethod.trustly,
+      PaymentMethod.paysafecard,
+    ],
+    CH: [
+      // TWINT is by far the dominant Swiss method.
+      // Riverty intentionally omitted: very low Swiss penetration
+      // (Klarna fills the BNPL slot here).
+      PaymentMethod.twint,
+      PaymentMethod.creditcard,
       PaymentMethod.paypal,
+      PaymentMethod.applepay,
       PaymentMethod.klarna,
     ],
     FR: [
