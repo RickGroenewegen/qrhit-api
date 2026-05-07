@@ -620,7 +620,7 @@
   "invoice.reverseChargeExplanation": "根据指令2006/112/EC第196条，增值税由收件人反向计税。收件人需自行申报增值税。",
   "invoice.vatIdVerified": "VAT号已通过VIES验证",
   "invoice.eurEquivalent": "等值欧元",
-  "invoice.exchangeRate": "汇率",
+  "invoice.exchangeRate": "税率",
   "design_alter.subject": "需要操作：请更新你的卡片设计",
   "design_alter.title": "你的卡片设计需要更新",
   "design_alter.hello": "嗨",
