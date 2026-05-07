@@ -2441,6 +2441,28 @@ export default async function adminRoutes(
     }
   );
 
+  // Generate AI product images for all featured playlists. Long-running, so
+  // fire-and-forget and let the admin watch the API logs.
+  fastify.post(
+    '/admin/merchant-center/generate-product-images',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const { merchantCenter } = await import('../merchantcenter');
+        merchantCenter.generateAllFeaturedAIProductImages();
+        reply.send({
+          success: true,
+          message: 'AI product image generation started',
+        });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to start AI product image generation',
+        });
+      }
+    }
+  );
+
   // Create gameset ZIP with QR codes
   fastify.post(
     '/admin/gameset/create',

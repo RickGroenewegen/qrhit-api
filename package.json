@@ -32,6 +32,7 @@
     "@fastify/swagger-ui": "^5.2.6",
     "@fastify/view": "^11.1.1",
     "@google/genai": "^1.50.1",
+    "@hyzyla/pdfium": "^2.1.12",
     "@mollie/api-client": "^4.5.0",
     "@prisma/adapter-mariadb": "^7.7.0",
     "@prisma/client": "^7.7.0",
