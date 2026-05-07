@@ -3799,12 +3799,22 @@ class Vibe {
       });
       if (!company) return { success: false, error: 'Company not found' };
 
-      // Pull company-wide manualDiscountPercent from main calculation.
-      let companyDiscountPercent = 0;
-      if ((company as any).calculation) {
+      // Pull manualDiscountPercent from the LIST's per-type calculation
+      // (calculation / calculationTromp / calculationSchneider). Each printer
+      // type stores its own discount on the list, so we must read the field
+      // that matches the invoice type rather than the company-wide one.
+      const listCalcField =
+        type === 'qrsong'
+          ? 'calculationTromp'
+          : type === 'schneider'
+            ? 'calculationSchneider'
+            : 'calculation';
+      let listDiscountPercent = 0;
+      const rawListCalc = (list as any)[listCalcField];
+      if (rawListCalc) {
         try {
-          companyDiscountPercent =
-            JSON.parse((company as any).calculation).manualDiscountPercent || 0;
+          listDiscountPercent =
+            JSON.parse(rawListCalc).manualDiscountPercent || 0;
         } catch {
           /* ignore */
         }
@@ -3819,7 +3829,7 @@ class Vibe {
           : (company as any).calculationTromp
             ? JSON.parse((company as any).calculationTromp)
             : {};
-        const calc = { ...stored, manualDiscountPercent: companyDiscountPercent };
+        const calc = { ...stored, manualDiscountPercent: listDiscountPercent };
         const r = await this.calculateTrompPricing({
           quantity: calc.quantity || 100,
           includeStansmestekening: calc.includeStansmestekening || false,
@@ -3881,7 +3891,7 @@ class Vibe {
           : (company as any).calculationSchneider
             ? JSON.parse((company as any).calculationSchneider)
             : {};
-        const calc = { ...stored, manualDiscountPercent: companyDiscountPercent };
+        const calc = { ...stored, manualDiscountPercent: listDiscountPercent };
         const r = await this.calculateSchneiderPricing({
           quantity: calc.quantity || 100,
           cardCount: calc.cardCount || 48,
@@ -3999,7 +4009,7 @@ class Vibe {
 
       // Apply manual discount as a negative line (mirrors quotation totals
       // section). MoneyBird applies this excl. VAT before BTW is computed.
-      const discountPct = Number(companyDiscountPercent) || 0;
+      const discountPct = Number(listDiscountPercent) || 0;
       const discountAmount = subtotalExclVat * (discountPct / 100);
       if (discountPct > 0) {
         items.push({

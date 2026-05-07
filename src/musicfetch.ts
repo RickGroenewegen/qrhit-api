@@ -33,7 +33,7 @@ export interface BulkProcessResult {
 }
 
 // Rate limit: requests per minute (MusicFetch plan allows 6/min, we use 5 to be safe)
-const RATE_LIMIT_PER_MINUTE = 19;
+const RATE_LIMIT_PER_MINUTE = 5;
 
 // Map of link field names to MusicFetch service names
 const LINK_FIELD_TO_SERVICE: Record<string, string> = {

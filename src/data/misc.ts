@@ -360,6 +360,7 @@ export async function createSiteMap(deps: DataDeps): Promise<void> {
     '/terms-and-conditions',
     '/playlists',
     '/onzevibe',
+    '/business',
     '/qr-cards-as-a-service',
     '/pubquiz',
     '/shipping-info',
