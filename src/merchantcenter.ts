@@ -12,8 +12,10 @@ import fs from 'fs/promises';
 import cluster from 'cluster';
 import { CronJob } from 'cron';
 import { blue, red, yellow, white, green } from 'console-log-colors';
+import OpenAI from 'openai';
 import PrismaInstance from './prisma';
 import Fx from './services/fx';
+import PDF from './pdf';
 import { getCurrencyForCountry } from './data/currency-map';
 
 // Set to true to delete and re-insert products (required for updating custom labels)
@@ -120,6 +122,8 @@ export class MerchantCenterService {
   private auth: any;
   private initialized: boolean = false;
   private initPromise: Promise<void> | null = null;
+  private openai = new OpenAI({ apiKey: process.env['OPENAI_API_KEY'] });
+  private pdfService = new PDF();
 
   // Supported locales for Merchant Center - limiting to main markets
   private supportedLocales = ['en', 'nl', 'de', 'es', 'sv', 'no'];
@@ -177,6 +181,23 @@ export class MerchantCenterService {
             }
           });
           job.start();
+
+          this.logger.log(
+            blue.bold('Setting up AI product image generation at 1 AM')
+          );
+          const aiImageJob = new CronJob('0 1 * * *', async () => {
+            this.logger.log(
+              blue.bold('Running scheduled AI product image generation')
+            );
+            try {
+              await this.generateAllFeaturedAIProductImages();
+            } catch (error) {
+              this.logger.log(
+                red(`Scheduled AI product image generation failed: ${error}`)
+              );
+            }
+          });
+          aiImageJob.start();
         }
       });
     }
@@ -466,7 +487,7 @@ export class MerchantCenterService {
     // Get actual prices from OrderType like the summary component does
     const numberOfTracks = playlist.numberOfTracks;
 
-    // Get order types for each product variant
+    // Get order type for the physical cards variant
     const cardsOrderType = await this.order.getOrderType(
       numberOfTracks,
       false,
@@ -474,38 +495,8 @@ export class MerchantCenterService {
       playlist.playlistId,
       'none'
     );
-    const digitalOrderType = await this.order.getOrderType(
-      numberOfTracks,
-      true,
-      'cards',
-      playlist.playlistId,
-      'none'
-    );
-    const sheetsOrderType = await this.order.getOrderType(
-      numberOfTracks,
-      false,
-      'cards',
-      playlist.playlistId,
-      'sheets'
-    );
 
     const productTypes = [
-      {
-        type: 'digital',
-        price:
-          digitalOrderType?.amount ||
-          digitalOrderType?.amountWithMargin ||
-          playlist.priceDigital ||
-          9.99,
-      },
-      {
-        type: 'sheets',
-        price:
-          sheetsOrderType?.amount ||
-          sheetsOrderType?.amountWithMargin ||
-          playlist.priceSheets ||
-          14.99,
-      },
       {
         type: 'physical',
         price:
@@ -609,8 +600,6 @@ export class MerchantCenterService {
       : this.localeCountryPairs;
 
     const productTypeNums: Array<{ type: string; num: number }> = [
-      { type: 'digital', num: 1 },
-      { type: 'sheets', num: 2 },
       { type: 'physical', num: 3 },
     ];
     const localeNumMap: { [key: string]: number } = {
@@ -1005,6 +994,358 @@ export class MerchantCenterService {
   }
 
   /**
+   * Generate an AI-composed product image for a single playlist:
+   *  - Picks the first payment that includes this playlist (the "sample")
+   *  - Renders pages 1+2 of the printer view (front + back of one card) via Lambda
+   *  - Splits the resulting PDF into front/back JPGs via ConvertAPI
+   *  - Sends product_base.png + front + back to the OpenAI image edit model
+   *  - Saves the result under PUBLIC_DIR/products as merchant_ai_{playlistId}_{ts}.jpg
+   * Returns the public URL on success, or null if no sample payment exists or
+   * any step fails. Safe to call from a bulk loop or per-playlist trigger.
+   */
+  public async generateAIProductImage(
+    playlistId: string,
+    options: { force?: boolean } = {}
+  ): Promise<string | null> {
+    try {
+      // Skip work if we already have an AI image for this playlist on disk
+      // (unless force=true). The merchant feed will pick up the latest match.
+      if (!options.force) {
+        const existing = await this.findLatestAIProductImage(playlistId);
+        if (existing) {
+          this.logger.log(
+            yellow(
+              `AI product image: already exists for ${white.bold(playlistId)}, skipping`
+            )
+          );
+          // Still flag the playlist so the next merchant upload re-publishes
+          // the existing AI image — covers the case where generation ran but
+          // the upload pass hasn't pushed it to Google yet.
+          await this.markPlaylistForMerchantCenter(playlistId);
+          return existing;
+        }
+      }
+
+      // Look up the playlist
+      const playlist = await this.prisma.playlist.findUnique({
+        where: { playlistId },
+      });
+      if (!playlist) {
+        this.logger.log(
+          yellow(`AI product image: playlist ${white.bold(playlistId)} not found`)
+        );
+        return null;
+      }
+
+      // Find the first payment that includes this playlist (used as a sample
+      // source for rendering the printer view). We need a payment with a
+      // qrSubDir set so the printer view can resolve QR code URLs.
+      const samplePhp = await this.prisma.paymentHasPlaylist.findFirst({
+        where: {
+          playlistId: playlist.id,
+          payment: {
+            qrSubDir: { not: null },
+          },
+        },
+        include: { payment: true },
+        orderBy: { id: 'asc' },
+      });
+
+      if (!samplePhp || !samplePhp.payment?.qrSubDir) {
+        this.logger.log(
+          yellow(
+            `AI product image: no sample payment found for playlist ${white.bold(playlistId)}`
+          )
+        );
+        return null;
+      }
+
+      const samplePayment = samplePhp.payment;
+      const subdir = samplePayment.qrSubDir!;
+      const apiUri = process.env['API_URI'] || 'https://api.qrsong.io';
+      const printerUrl =
+        `${apiUri}/qr/pdf/${playlistId}/${samplePayment.paymentId}/printer/0/0/${subdir}/0/0/0`;
+
+      this.logger.log(
+        blue.bold(
+          `🎨 AI image: rendering printer view for ${white.bold(
+            playlist.name || playlistId
+          )}`
+        )
+      );
+
+      // Render pages 1+2 (front + back of one card) via the existing Lambda
+      // PDF pipeline. The printer template uses 60x60mm pages (1 card per page).
+      const pdfBuffer = await this.pdfService.renderUrlToPdfBuffer(printerUrl, {
+        width: 60,
+        height: 60,
+        marginTop: 0,
+        marginRight: 0,
+        marginBottom: 0,
+        marginLeft: 0,
+        pageRanges: '1-2',
+      });
+
+      // Render pages 1 and 2 of the PDF to PNG buffers (front + back) using
+      // pdfjs-dist + node-canvas. No external service required.
+      const [frontPng, backPng] = await this.renderPdfPagesToPng(pdfBuffer, [1, 2]);
+
+      // Build OpenAI input files. The first image is the base template; the
+      // remaining ones are the references the model should style-match.
+      const baseImagePath = path.join(
+        process.env['ASSETS_DIR']!,
+        'images/product_base.png'
+      );
+      const baseBuf = await fs.readFile(baseImagePath);
+
+      const baseFile = new File([new Uint8Array(baseBuf)], 'product_base.png', {
+        type: 'image/png',
+      });
+      const frontFile = new File([new Uint8Array(frontPng)], 'card_front.png', {
+        type: 'image/png',
+      });
+      const backFile = new File([new Uint8Array(backPng)], 'card_back.png', {
+        type: 'image/png',
+      });
+
+      const prompt =
+        'Create a product photo using the EXACT composition, camera angle, lighting, shadows and white background of the first reference image (product_base.png). ' +
+        'The base image contains three distinct card elements: ' +
+        '(A) a stack of cards on the LEFT, ' +
+        '(B) a single card leaning in the MIDDLE, ' +
+        '(C) a stack of cards on the RIGHT. ' +
+        'Replace the card artwork as follows: ' +
+        '- The leaning middle card (B) must display the design from the SECOND reference image. ' +
+        '- BOTH the left stack (A) AND the right stack (C) must display the design from the THIRD reference image. They must show the SAME design as each other — the design from the third reference. Do NOT leave the left stack showing the original base-image artwork; it must be replaced with the third reference design just like the right stack. ' +
+        'Preserve the geometry, scale, perspective, depth-of-field, paper thickness, edge highlights and drop shadows of the base image exactly. The output must look like a real studio product photo on a clean white background, suitable for a Google Shopping listing.';
+
+      this.logger.log(
+        blue.bold(
+          `🤖 AI image: requesting OpenAI image edit for ${white.bold(playlistId)}`
+        )
+      );
+
+      const response = await this.openai.images.edit({
+        image: [baseFile, frontFile, backFile] as any,
+        prompt,
+        n: 1,
+        model: 'gpt-image-2',
+        size: '1024x1024',
+        quality: 'high',
+      });
+
+      const b64 = response.data?.[0]?.b64_json;
+      if (!b64) {
+        this.logger.log(red('AI product image: OpenAI returned no image data'));
+        return null;
+      }
+
+      const outBuf = Buffer.from(b64, 'base64');
+      const productsDir = path.join(process.env['PUBLIC_DIR']!, 'products');
+      await fs.mkdir(productsDir, { recursive: true });
+      const timestamp = Date.now();
+      const outFilename = `merchant_ai_${playlistId}_${timestamp}.jpg`;
+      const outPath = path.join(productsDir, outFilename);
+
+      // Compress to JPG so Google Merchant accepts it cleanly
+      await sharp(outBuf)
+        .jpeg({ quality: 90, progressive: true })
+        .toFile(outPath);
+
+      // Remove older AI images for this playlist (keep latest, plus a 1h grace
+      // window so any in-flight Google fetch doesn't 404).
+      try {
+        const files = await fs.readdir(productsDir);
+        const now = Date.now();
+        const KEEP_DURATION = 60 * 60 * 1000;
+        for (const f of files) {
+          if (
+            f.startsWith(`merchant_ai_${playlistId}_`) &&
+            f.endsWith('.jpg') &&
+            f !== outFilename
+          ) {
+            const tsStr = f.split('_').pop()?.replace('.jpg', '');
+            const ts = tsStr ? parseInt(tsStr) : NaN;
+            if (!isNaN(ts) && now - ts > KEEP_DURATION) {
+              await fs.unlink(path.join(productsDir, f)).catch(() => {});
+            }
+          }
+        }
+      } catch {
+        // ignore cleanup errors
+      }
+
+      const url = `${apiUri}/public/products/${outFilename}`;
+      this.logger.log(
+        green.bold(`✓ AI image saved: ${white.bold(outFilename)}`)
+      );
+      // Flip the merchant-sync flag so the next upload pass picks this
+      // playlist up and pushes the new image to Google Merchant Center.
+      await this.markPlaylistForMerchantCenter(playlistId);
+      return url;
+    } catch (error: any) {
+      this.logger.log(
+        red(
+          `AI product image generation failed for ${playlistId}: ${error?.message || error}`
+        )
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Render specific pages of a PDF buffer to PNG buffers via @hyzyla/pdfium
+   * (MIT, WebAssembly build of Chromium's PDFium — no native deps, no AGPL).
+   * Page numbers are 1-based to match PDF conventions.
+   */
+  private async renderPdfPagesToPng(
+    pdfBuffer: Buffer,
+    pages: number[],
+    scale: number = 4
+  ): Promise<Buffer[]> {
+    const { PDFiumLibrary } = await import('@hyzyla/pdfium');
+    const library = await PDFiumLibrary.init();
+    try {
+      const doc = await library.loadDocument(new Uint8Array(pdfBuffer));
+      try {
+        const out: Buffer[] = [];
+        for (const pageNum of pages) {
+          // pdfium uses 0-based page indexes
+          const page = doc.getPage(pageNum - 1);
+          const rendered = await page.render({
+            scale,
+            render: async (opts) =>
+              sharp(opts.data, {
+                raw: { width: opts.width, height: opts.height, channels: 4 },
+              })
+                .png()
+                .toBuffer(),
+          });
+          out.push(Buffer.from(rendered.data));
+        }
+        return out;
+      } finally {
+        doc.destroy();
+      }
+    } finally {
+      library.destroy();
+    }
+  }
+
+  /**
+   * Look up the most recent pre-generated AI product image for a playlist on
+   * disk, if any. Used by the merchant feed to prefer the AI image over the
+   * Sharp composite when one is available.
+   */
+  private async findLatestAIProductImage(
+    playlistId: string
+  ): Promise<string | null> {
+    try {
+      const productsDir = path.join(process.env['PUBLIC_DIR']!, 'products');
+      const files = await fs.readdir(productsDir);
+      const matches = files
+        .filter(
+          (f) => f.startsWith(`merchant_ai_${playlistId}_`) && f.endsWith('.jpg')
+        )
+        .sort();
+      if (matches.length === 0) return null;
+      const latest = matches[matches.length - 1];
+      const apiUri = process.env['API_URI'] || 'https://api.qrsong.io';
+      return `${apiUri}/public/products/${latest}`;
+    } catch {
+      return null;
+    }
+  }
+
+  /**
+   * Flip `markedForMerchantCenter = true` on a playlist by its Spotify ID
+   * so the next upload pass will re-publish it (and any new AI image with it).
+   * Silently swallows errors — failing to flag should never break image gen.
+   */
+  private async markPlaylistForMerchantCenter(
+    playlistId: string
+  ): Promise<void> {
+    try {
+      await this.prisma.playlist.updateMany({
+        where: { playlistId },
+        data: { markedForMerchantCenter: true },
+      });
+    } catch (error) {
+      this.logger.log(
+        yellow(
+          `Failed to mark playlist ${playlistId} for merchant sync: ${error}`
+        )
+      );
+    }
+  }
+
+  /**
+   * Generate AI product images for all featured playlists. Used by the bulk
+   * action. Uses the same featured-playlist filter as the upload pass so
+   * generated images line up with what gets sent to Merchant Center.
+   */
+  public async generateAllFeaturedAIProductImages(): Promise<{
+    total: number;
+    generated: number;
+    skipped: number;
+    failed: number;
+  }> {
+    const playlists = await this.prisma.playlist.findMany({
+      where: {
+        featured: true,
+        slug: { not: '' },
+        promotionalActive: true,
+      },
+      select: {
+        id: true,
+        playlistId: true,
+        name: true,
+      },
+      orderBy: { score: 'desc' },
+    });
+
+    this.logger.log(
+      blue.bold(
+        `🎨 AI product images: generating for ${white.bold(playlists.length.toString())} featured playlists`
+      )
+    );
+
+    let generated = 0;
+    let skipped = 0;
+    let failed = 0;
+    for (let i = 0; i < playlists.length; i++) {
+      const p = playlists[i];
+      const progress = (((i + 1) / playlists.length) * 100).toFixed(1);
+      try {
+        const url = await this.generateAIProductImage(p.playlistId);
+        if (url) {
+          generated++;
+          this.logger.log(
+            green(
+              `  (${white.bold(progress)}%) ✓ ${white.bold(p.name || p.playlistId)}`
+            )
+          );
+        } else {
+          skipped++;
+        }
+      } catch (error: any) {
+        failed++;
+        this.logger.log(
+          red(`  (${progress}%) ✗ ${p.playlistId}: ${error?.message || error}`)
+        );
+      }
+    }
+
+    this.logger.log(
+      blue.bold(
+        `🎨 AI product images done — generated ${white.bold(generated.toString())}, skipped ${white.bold(skipped.toString())}, failed ${white.bold(failed.toString())}`
+      )
+    );
+
+    return { total: playlists.length, generated, skipped, failed };
+  }
+
+  /**
    * Generate a composite product image with the playlist cover on the product card template
    * @param playlistImageUrl - URL of the playlist cover image
    * @param imageKey - Unique key for caching (e.g., playlistId_type_locale)
@@ -1016,6 +1357,17 @@ export class MerchantCenterService {
     imageKey: string,
     productType: string
   ): Promise<string> {
+    // Prefer the pre-generated AI image when one exists for this playlist.
+    // Only physical/cards is currently shipped, but we look up for any type
+    // since the AI image is the on-disk source of truth when present.
+    const playlistIdFromKey = imageKey.split('_')[0];
+    if (playlistIdFromKey) {
+      const aiUrl = await this.findLatestAIProductImage(playlistIdFromKey);
+      if (aiUrl) {
+        return aiUrl;
+      }
+    }
+
     try {
       // Paths for images - use product_pdf.jpg for digital, product_sheets.jpg for sheets, product_cards.jpg for cards
       let templateFile: string;

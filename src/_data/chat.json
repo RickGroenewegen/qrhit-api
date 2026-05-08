@@ -220,6 +220,24 @@
             ]
         },
         {
+            "slug": "robot-icon",
+            "title": "What does the little robot icon mean in the summary list / on a card?",
+            "description": "The small robot icon you see next to a release year in the summary list (and on the card preview) means we are not yet 100% sure of that song's release year. This happens in two situations: (1) you are using a music service that does not provide release years (Tidal, Deezer, YouTube Music) — in that case the AI will determine the year for every track after purchase; or (2) you are using a service that does provide years (Spotify, Apple Music) but this is the first time we've encountered a particular song, so we cannot fully trust the year yet. In both cases, after you complete your purchase our AI determines the correct original release year (Spotify's year is often wrong for remasters), our team double-checks the result, and you get a chance to review and correct any year on the correction form before the cards are finalized. So the robot icon is not a problem — it just signals 'this year will still be verified'.",
+            "tags": [
+                "robot",
+                "robot icon",
+                "icon",
+                "summary",
+                "summary list",
+                "year",
+                "release year",
+                "AI",
+                "verification",
+                "blurred year",
+                "what is this icon"
+            ]
+        },
+        {
             "slug": "missing-songs",
             "title": "I'm missing songs in the summary list, why?",
             "description": "If you recently modified your Spotify playlist, QRSong! might have cached your playlist. In the list there is a button at the top to refresh your playlist from Spotify. Click that button to reload your playlist and update the summary list.",

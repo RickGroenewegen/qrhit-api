@@ -16,6 +16,7 @@ import Printer from '../printer';
 import PrinterInvoiceService from '../printerinvoice';
 import Utils from '../utils';
 import Mollie from '../mollie';
+import Bookkeeping from '../bookkeeping';
 import Order from '../order';
 import Suggestion from '../suggestion';
 import Copy from '../copy';
@@ -55,6 +56,7 @@ export default async function adminRoutes(
   const printerInvoice = PrinterInvoiceService.getInstance();
   const utils = new Utils();
   const mollie = new Mollie();
+  const bookkeeping = Bookkeeping.getInstance();
   const order = Order.getInstance();
   const suggestion = Suggestion.getInstance();
   const copy = Copy.getInstance();
@@ -1927,6 +1929,185 @@ export default async function adminRoutes(
     }
   );
 
+  fastify.post(
+    '/tax_report/:period/invoice',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { period } = request.params;
+        const year = parseInt(period.substring(0, 4));
+        const tail = period.substring(4);
+        let startDate: Date;
+        let endDate: Date;
+        let label: string;
+
+        const quarterMatch = /^Q([1-4])$/i.exec(tail);
+        if (quarterMatch) {
+          const quarter = parseInt(quarterMatch[1]);
+          const startMonth = (quarter - 1) * 3;
+          startDate = new Date(year, startMonth, 1);
+          endDate = new Date(year, startMonth + 3, 0, 23, 59, 59);
+          label = `${year} Q${quarter}`;
+        } else {
+          const month = parseInt(tail);
+          startDate = new Date(year, month - 1, 1);
+          endDate = new Date(year, month, 0, 23, 59, 59);
+          label = `${year}-${String(month).padStart(2, '0')}`;
+        }
+
+        const status = await bookkeeping.getStatus();
+        if (!status.connected) {
+          reply.status(409).send({
+            success: false,
+            error: 'Bookkeeping provider not connected',
+            reason: status.reason,
+          });
+          return;
+        }
+
+        const reference = `Tax report ${label}`;
+
+        const existing = await bookkeeping.findInvoiceByReference(reference);
+        if (existing?.id) {
+          reply.status(409).send({
+            success: false,
+            error: `Invoice for ${label} already exists`,
+            invoice: existing,
+          });
+          return;
+        }
+
+        const report = await mollie.getPaymentsByTaxRate(startDate, endDate);
+        const rows = report.rows.filter(
+          (r: any) => (r.numberOfSales || 0) > 0
+        );
+        if (rows.length === 0) {
+          reply
+            .status(400)
+            .send({ success: false, error: 'No sales in this period' });
+          return;
+        }
+
+        // Pre-flight: every (country, percentage) combo we need must already
+        // exist in MoneyBird, since the API does not allow creating tax
+        // rates. Collect any missing combos and abort with a clear list.
+        const resolved: Array<{ row: any; taxRateId?: string }> = [];
+        const missing: Array<{
+          country: string;
+          percentage: number;
+          suggestedName: string;
+        }> = [];
+        const seen = new Set<string>();
+        for (const r of rows) {
+          const pct = Number(r.taxRate) || 0;
+          const country = (r.countrycode || '').toUpperCase();
+          const taxRateId = await bookkeeping.findTaxRateId({
+            percentage: pct,
+            countryCode: country || undefined,
+          });
+          resolved.push({ row: r, taxRateId });
+          if (!taxRateId) {
+            const key = `${country}|${pct}`;
+            if (!seen.has(key)) {
+              seen.add(key);
+              missing.push({
+                country: country || '—',
+                percentage: pct,
+                suggestedName: country
+                  ? `VAT ${pct}% ${country} (sales)`
+                  : `VAT ${pct}% (sales)`,
+              });
+            }
+          }
+        }
+        if (missing.length > 0) {
+          reply.status(422).send({
+            success: false,
+            error:
+              'Some required tax rates do not exist in MoneyBird. Create them manually under Instellingen → BTW-tarieven, then try again.',
+            missing,
+          });
+          return;
+        }
+
+        const contact = await bookkeeping.findContactByCompanyName('QRSong!');
+        if (!contact?.id) {
+          reply.status(404).send({
+            success: false,
+            error: 'QRSong! contact not found in MoneyBird',
+          });
+          return;
+        }
+
+        const countryDisplay = (() => {
+          try {
+            return new Intl.DisplayNames(['en'], { type: 'region' });
+          } catch {
+            return null;
+          }
+        })();
+        const countryName = (code: string): string => {
+          if (!code) return 'Unknown';
+          try {
+            return countryDisplay?.of(code) || code;
+          } catch {
+            return code;
+          }
+        };
+
+        const items: any[] = resolved.map(({ row: r, taxRateId }) => {
+          const country = countryName(r.countrycode);
+          return {
+            description: `Sales ${country} ${label} (${r.zone}, ${r.taxRate}%)`,
+            amount: '1 x',
+            price: (r.totalPriceWithoutTax || 0).toFixed(2),
+            ...(taxRateId ? { tax_rate_id: taxRateId } : {}),
+          };
+        });
+
+        const invoiceDate = new Date(
+          endDate.getFullYear(),
+          endDate.getMonth(),
+          endDate.getDate()
+        )
+          .toISOString()
+          .slice(0, 10);
+
+        const draft = await bookkeeping.createInvoice({
+          contactId: contact.id,
+          reference,
+          invoiceDate,
+          items,
+        });
+
+        // Move the draft out of "Concept" — finalize so MoneyBird assigns a
+        // number and books it. Falls back to the draft if finalize fails so
+        // the admin still has a result to inspect.
+        const finalized =
+          draft?.id != null
+            ? await bookkeeping.finalizeInvoice(draft.id)
+            : null;
+        const invoice = finalized || draft;
+
+        reply.send({
+          success: true,
+          invoice,
+          contact: { id: contact.id, company_name: contact.company_name },
+        });
+      } catch (error: any) {
+        console.error(
+          'Tax-report invoice error:',
+          error?.response?.data || error
+        );
+        reply.status(500).send({
+          success: false,
+          error: 'Failed to create tax-report invoice',
+          details: error?.response?.data || error?.message,
+        });
+      }
+    }
+  );
+
   // Day report
   fastify.get(
     '/day_report',
@@ -2515,6 +2696,28 @@ export default async function adminRoutes(
         reply.status(500).send({
           success: false,
           error: error.message || 'Failed to upload to Merchant Center',
+        });
+      }
+    }
+  );
+
+  // Generate AI product images for all featured playlists. Long-running, so
+  // fire-and-forget and let the admin watch the API logs.
+  fastify.post(
+    '/admin/merchant-center/generate-product-images',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const { merchantCenter } = await import('../merchantcenter');
+        merchantCenter.generateAllFeaturedAIProductImages();
+        reply.send({
+          success: true,
+          message: 'AI product image generation started',
+        });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to start AI product image generation',
         });
       }
     }

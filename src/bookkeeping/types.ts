@@ -25,6 +25,7 @@ export interface BookkeepingLineItem {
   description: string;
   amount: string;
   price: string;
+  tax_rate_id?: string;
 }
 
 export interface BookkeepingInvoice {
@@ -51,6 +52,20 @@ export interface BookkeepingProvider {
     customerKey: string,
     payload: BookkeepingContactInput
   ): Promise<BookkeepingContact>;
+
+  /** Look up an existing contact by its company name (case-insensitive). */
+  findContactByCompanyName(name: string): Promise<BookkeepingContact | null>;
+
+  /**
+   * Find an existing sales-invoice VAT rate for (percentage, country).
+   * Returns undefined if no matching rate exists. MoneyBird's tax_rates
+   * endpoint is read-only via the API, so callers must surface missing
+   * rates to the admin instead of creating on the fly.
+   */
+  findTaxRateId(args: {
+    percentage: number;
+    countryCode?: string;
+  }): Promise<string | undefined>;
 
   /** Create a sales invoice with the given line items. */
   createInvoice(args: {

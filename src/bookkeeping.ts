@@ -114,6 +114,19 @@ class Bookkeeping {
     }
   }
 
+  public async findContactByCompanyName(
+    name: string
+  ): Promise<BookkeepingContact | null> {
+    return this.provider.findContactByCompanyName(name);
+  }
+
+  public async findTaxRateId(args: {
+    percentage: number;
+    countryCode?: string;
+  }): Promise<string | undefined> {
+    return this.provider.findTaxRateId(args);
+  }
+
   public async findInvoiceByReference(
     reference: string
   ): Promise<BookkeepingInvoice | null> {
