@@ -3076,6 +3076,10 @@ class Vibe {
       // Apply manual discount to commercial price (client pays less)
       commercialPrice -= manualDiscount || 0;
 
+      // Round per-box price to 2 decimals so totals reconcile with the displayed unit price
+      const round2 = (n: number) => Math.round(n * 100) / 100;
+      commercialPrice = round2(commercialPrice);
+
       // Calculate profits
       const kickBackFee = tierData.kickBackFee;
       let resellerDiscountForUs = 0;
@@ -3089,21 +3093,22 @@ class Vibe {
       }
 
       // Our profit is reduced by the manual discount
-      const profitPerBox =
-        kickBackFee + resellerDiscountForUs - (manualDiscount || 0);
-      const baseOurProfit = profitPerBox * quantity;
+      const profitPerBox = round2(
+        kickBackFee + resellerDiscountForUs - (manualDiscount || 0)
+      );
+      const baseOurProfit = round2(profitPerBox * quantity);
       const resellerProfit = isReseller
-        ? tierData.resellerDiscount * quantity
+        ? round2(tierData.resellerDiscount * quantity)
         : 0;
-      const baseClientPrice = commercialPrice * quantity;
+      const baseClientPrice = round2(commercialPrice * quantity);
 
       // Add custom app fee (one-time) - added to both client price and our profit
       const customAppFee = includeCustomApp ? 350 : 0;
       const votingPortalFee = includeVotingPortal ? 500 : 0;
-      const clientPrice = baseClientPrice + customAppFee + votingPortalFee;
-      const ourProfit = baseOurProfit + customAppFee + votingPortalFee;
+      const clientPrice = round2(baseClientPrice + customAppFee + votingPortalFee);
+      const ourProfit = round2(baseOurProfit + customAppFee + votingPortalFee);
 
-      const happiBoxPayment = clientPrice - ourProfit - resellerProfit;
+      const happiBoxPayment = round2(clientPrice - ourProfit - resellerProfit);
 
       // Return calculation results
       return {
@@ -3210,8 +3215,9 @@ class Vibe {
       }
 
       // Calculate per-unit prices
-      const boxPricePerUnit = boxPrice / quantity;
-      const cardPricePerUnit = cardPrice / quantity;
+      const round2 = (n: number) => Math.round(n * 100) / 100;
+      const boxPricePerUnit = round2(boxPrice / quantity);
+      const cardPricePerUnit = round2(cardPrice / quantity);
 
       // Calculate extras
       const extras: { name: string; price: number }[] = [];
@@ -3231,24 +3237,21 @@ class Vibe {
       // Price per set includes boxes + cards + profit (but NOT extras, as they're one-time costs shown separately)
       const baseCostPerSet = (boxPrice + cardPrice) / quantity;
       const profitPerSet = profitMargin || 0;
-      const pricePerSet =
-        Math.round((baseCostPerSet + profitPerSet) * 100) / 100; // Round to 2 decimals
+      const pricePerSet = round2(baseCostPerSet + profitPerSet);
 
-      // Calculate totals from the rounded pricePerSet to maintain consistency
-      // This ensures that clientPrice = pricePerSet × quantity (exactly)
-      const subtotalFromRounded = pricePerSet * quantity;
-      const baseClientPrice = subtotalFromRounded + extrasTotal;
+      // Derive totals from the rounded pricePerSet so clientPrice = pricePerSet × quantity exactly
+      const subtotalFromRounded = round2(pricePerSet * quantity);
+      const baseClientPrice = round2(subtotalFromRounded + extrasTotal);
 
       // Calculate ourProfit and trompCost for display
-      const baseOurProfit = (profitMargin || 0) * quantity;
-      const trompCostFromRounded = subtotalFromRounded - baseOurProfit;
-      const trompCost = trompCostFromRounded + extrasTotal;
+      const baseOurProfit = round2((profitMargin || 0) * quantity);
+      const trompCost = round2(subtotalFromRounded - baseOurProfit + extrasTotal);
 
       // Add custom app fee and voting portal fee (one-time) - added to both client price and our profit
       const customAppFee = includeCustomApp ? 350 : 0;
       const votingPortalFee = includeVotingPortal ? 500 : 0;
-      const clientPrice = baseClientPrice + customAppFee + votingPortalFee;
-      const ourProfit = baseOurProfit + customAppFee + votingPortalFee;
+      const clientPrice = round2(baseClientPrice + customAppFee + votingPortalFee);
+      const ourProfit = round2(baseOurProfit + customAppFee + votingPortalFee);
 
       // Return calculation results
       return {
@@ -3375,7 +3378,7 @@ class Vibe {
         const discountedPrice = tierPrice * (1 - resellerDiscount);
 
         fixedCost = 0;
-        pricePerPiece = Math.round(discountedPrice * 1000) / 1000;
+        pricePerPiece = Math.round(discountedPrice * 100) / 100;
         boxType = '1-vaks luxe dekseldoosje';
         stansmesPrice = 0; // No stansmes for 48 cards
         subtotal = pricePerPiece * quantity;
@@ -3425,13 +3428,14 @@ class Vibe {
       }
 
       // Calculate cost per box (without extras, as they're one-time)
-      const costPerBox = subtotal / quantity;
-      const profitPerBox = profitMargin || 0;
-      const pricePerBox = Math.round((costPerBox + profitPerBox) * 100) / 100;
+      const round2 = (n: number) => Math.round(n * 100) / 100;
+      const costPerBox = round2(subtotal / quantity);
+      const profitPerBox = round2(profitMargin || 0);
+      const pricePerBox = round2(costPerBox + profitPerBox);
 
       // Calculate totals
-      const schneiderCost = subtotal + extrasTotal;
-      const baseOurProfit = (profitMargin || 0) * quantity;
+      const schneiderCost = round2(subtotal + extrasTotal);
+      const baseOurProfit = round2((profitMargin || 0) * quantity);
 
       // Add custom app fee (one-time)
       const customAppFee = includeCustomApp ? 350 : 0;
@@ -3445,8 +3449,8 @@ class Vibe {
         extras.push({ name: 'Voting Portal', price: votingPortalFee });
       }
 
-      const clientPrice = (pricePerBox * quantity) + extrasTotal + customAppFee + votingPortalFee;
-      const ourProfit = baseOurProfit + customAppFee + votingPortalFee;
+      const clientPrice = round2(pricePerBox * quantity + extrasTotal + customAppFee + votingPortalFee);
+      const ourProfit = round2(baseOurProfit + customAppFee + votingPortalFee);
 
       // Return calculation results
       return {

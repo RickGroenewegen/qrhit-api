@@ -222,6 +222,39 @@ class Moneybird implements BookkeepingProvider {
     })) as BookkeepingContact;
   }
 
+  /**
+   * Look up an existing contact by company name (case-insensitive). Uses
+   * MoneyBird's `query` filter and then matches exact company_name from the
+   * returned page.
+   */
+  public async findContactByCompanyName(
+    name: string
+  ): Promise<BookkeepingContact | null> {
+    if (!name) return null;
+    try {
+      const data = await this.authedRequest<any[]>(
+        'GET',
+        `contacts.json?query=${encodeURIComponent(name)}`
+      );
+      if (!Array.isArray(data)) return null;
+      const target = name.trim().toLowerCase();
+      const match = data.find(
+        (c) => (c?.company_name || '').trim().toLowerCase() === target
+      );
+      if (match) {
+        this.info(
+          'contact found by company name ',
+          `"${name}" → id=${match.id}`
+        );
+        return match as BookkeepingContact;
+      }
+      this.info('no exact contact match for ', `"${name}"`);
+      return null;
+    } catch {
+      return null;
+    }
+  }
+
   // --------- Tax rates ---------
 
   public async getTaxRates(): Promise<any[]> {
@@ -255,6 +288,105 @@ class Moneybird implements BookkeepingProvider {
     return this.cachedTaxRateId;
   }
 
+  /**
+   * Find a tax rate matching (percentage, country) usable on a sales
+   * invoice. We exclude purchase / general-journal rates and accept any
+   * remaining active rate — MoneyBird tags export 0% rates with types
+   * other than `sales_invoice` (e.g. `eu_country_zero`, `verkoop_export`),
+   * which the previous strict filter wrongly excluded.
+   *
+   * Match priority: exact (percentage + country) → percentage with empty
+   * country (legacy NL default). MoneyBird's tax_rates endpoint is
+   * read-only via the API, so missing rates must be created manually in
+   * the MoneyBird UI.
+   */
+  public async findTaxRateId(args: {
+    percentage: number;
+    countryCode?: string;
+  }): Promise<string | undefined> {
+    const wantPct = Number(args.percentage) || 0;
+    const wantCountry = (args.countryCode || '').toUpperCase();
+
+    const rates = await this.getTaxRates();
+    const isPurchaseLike = (t: string) =>
+      typeof t === 'string' &&
+      (t.startsWith('purchase') ||
+        t.startsWith('inkoop') ||
+        t === 'general_journal');
+    const usable = rates.filter(
+      (r) => !isPurchaseLike(r.tax_rate_type || '')
+    );
+
+    // Country can come from MoneyBird's `country` field, or — for rates the
+    // user named manually — be embedded in the rate's `name` (e.g.
+    // "VAT 0% CA (sales)"). Pull a 2-letter code out of the name as a
+    // fallback when the structured field is missing.
+    const countryFromName = (name: string): string => {
+      const m = (name || '').toUpperCase().match(/\b[A-Z]{2}\b/);
+      return m ? m[0] : '';
+    };
+    const rateCountry = (r: any): string =>
+      (r.country || '').toUpperCase() || countryFromName(r.name || '');
+
+    const exact = usable.find((r) => {
+      const pct = Number(r.percentage);
+      return pct === wantPct && rateCountry(r) === wantCountry;
+    });
+    if (exact?.id) {
+      this.info(
+        'tax rate found ',
+        `id=${exact.id} ${wantPct}% country=${wantCountry || '-'} type=${exact.tax_rate_type || '-'} name="${exact.name || ''}"`
+      );
+      return String(exact.id);
+    }
+
+    // 0% is a single flat rate in this admin — any country falls back to
+    // the country-less 0% rate. (For non-zero rates we keep the country
+    // strict to avoid accidentally booking 21% on a German order.)
+    if (wantPct === 0) {
+      const zeroFallback = usable.find((r) => {
+        const pct = Number(r.percentage);
+        return pct === 0 && rateCountry(r) === '';
+      });
+      if (zeroFallback?.id) {
+        this.info(
+          'tax rate fallback ',
+          `id=${zeroFallback.id} 0% generic (any country) type=${zeroFallback.tax_rate_type || '-'}`
+        );
+        return String(zeroFallback.id);
+      }
+    }
+
+    // Fall back to a country-less rate of the same percentage — the legacy
+    // pre-OSS setup where every rate is the NL default.
+    const looseFallbackOk = wantCountry === '' || wantCountry === 'NL';
+    if (looseFallbackOk) {
+      const fallback = usable.find((r) => {
+        const pct = Number(r.percentage);
+        return pct === wantPct && rateCountry(r) === '';
+      });
+      if (fallback?.id) {
+        this.info(
+          'tax rate fallback ',
+          `id=${fallback.id} ${wantPct}% (no country tag) type=${fallback.tax_rate_type || '-'}`
+        );
+        return String(fallback.id);
+      }
+    }
+
+    const available = usable
+      .filter((r) => Number(r.percentage) === wantPct)
+      .map(
+        (r) =>
+          `${r.percentage}% country=${rateCountry(r) || '-'} type=${r.tax_rate_type || '-'} active=${r.active} id=${r.id} name="${r.name || ''}"`
+      );
+    this.warn(
+      'tax rate not found ',
+      `${wantPct}% country=${wantCountry || '-'} (candidates at this percentage: ${available.length ? available.join('; ') : 'none'})`
+    );
+    return undefined;
+  }
+
   // --------- Sales invoices ---------
 
   public async createInvoice(args: {
@@ -263,13 +395,16 @@ class Moneybird implements BookkeepingProvider {
     invoiceDate: string;
     items: BookkeepingLineItem[];
   }): Promise<BookkeepingInvoice> {
-    const taxRateId = await this.getStandardVatRateId();
-    const details_attributes: InvoiceLineItem[] = args.items.map((it) => ({
-      description: it.description,
-      amount: it.amount,
-      price: it.price,
-      ...(taxRateId ? { tax_rate_id: taxRateId } : {}),
-    }));
+    const fallbackTaxRateId = await this.getStandardVatRateId();
+    const details_attributes: InvoiceLineItem[] = args.items.map((it) => {
+      const lineRate = it.tax_rate_id || fallbackTaxRateId;
+      return {
+        description: it.description,
+        amount: it.amount,
+        price: it.price,
+        ...(lineRate ? { tax_rate_id: lineRate } : {}),
+      };
+    });
 
     this.info(
       'creating sales invoice ',

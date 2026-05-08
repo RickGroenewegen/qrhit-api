@@ -438,31 +438,39 @@ class Mollie {
     const rows = await this.prisma.payment.findMany({
       where,
       select: {
+        paymentId: true,
         countrycode: true,
         taxRate: true,
         totalPrice: true,
         totalPriceWithoutTax: true,
         productVATPrice: true,
       },
+      orderBy: { createdAt: 'asc' },
     });
 
     type Agg = {
       zone: string;
+      countrycode: string;
       taxRate: number;
+      firstPaymentId: string;
       numberOfSales: number;
       totalPrice: number;
       totalPriceWithoutTax: number;
       productVATPrice: number;
     };
-    const paymentKey = (zone: string, taxRate: number) => `${zone}|${taxRate}`;
+    const paymentKey = (zone: string, countrycode: string, taxRate: number) =>
+      `${zone}|${countrycode}|${taxRate}`;
     const agg = new Map<string, Agg>();
     for (const r of rows) {
       const zone = this.getTaxZone(r.countrycode);
+      const countrycode = (r.countrycode || '').toUpperCase();
       const taxRate = r.taxRate || 0;
-      const key = paymentKey(zone, taxRate);
+      const key = paymentKey(zone, countrycode, taxRate);
       const cur = agg.get(key) || {
         zone,
+        countrycode,
         taxRate,
+        firstPaymentId: r.paymentId,
         numberOfSales: 0,
         totalPrice: 0,
         totalPriceWithoutTax: 0,
@@ -476,7 +484,11 @@ class Mollie {
     }
 
     const refundAdjustments = await this.getRefundAdjustmentsByKey(where, (p) =>
-      paymentKey(this.getTaxZone(p.countrycode), p.taxRate || 0)
+      paymentKey(
+        this.getTaxZone(p.countrycode),
+        (p.countrycode || '').toUpperCase(),
+        p.taxRate || 0
+      )
     );
 
     // Games: count all rows (initial + upgrade) but only sum upgrade prices.
@@ -496,8 +508,9 @@ class Mollie {
     const gamesMap = new Map<string, { amount: number; total: number }>();
     for (const g of gameRows) {
       const zone = this.getTaxZone(g.countrycode);
+      const countrycode = (g.countrycode || '').toUpperCase();
       const taxRate = g.taxRate || 0;
-      const key = paymentKey(zone, taxRate);
+      const key = paymentKey(zone, countrycode, taxRate);
       const cur = gamesMap.get(key) || { amount: 0, total: 0 };
       cur.amount += 1;
       if (g.type === 'upgrade') cur.total += g.totalPrice || 0;
@@ -505,12 +518,14 @@ class Mollie {
     }
 
     const detailedReport = Array.from(agg.values()).map((entry) => {
-      const key = paymentKey(entry.zone, entry.taxRate);
+      const key = paymentKey(entry.zone, entry.countrycode, entry.taxRate);
       const gamesData = gamesMap.get(key);
       const adj = refundAdjustments.get(key);
       return {
         zone: entry.zone,
+        countrycode: entry.countrycode,
         taxRate: entry.taxRate,
+        firstPaymentId: entry.firstPaymentId,
         numberOfSales: entry.numberOfSales,
         totalPrice: entry.totalPrice - (adj?.refundedTotal || 0),
         totalPriceWithoutTax:
@@ -527,7 +542,9 @@ class Mollie {
       const za = zoneOrder[a.zone as keyof typeof zoneOrder] ?? 9;
       const zb = zoneOrder[b.zone as keyof typeof zoneOrder] ?? 9;
       if (za !== zb) return za - zb;
-      return b.totalPrice - a.totalPrice;
+      if (a.countrycode !== b.countrycode)
+        return a.countrycode.localeCompare(b.countrycode);
+      return b.taxRate - a.taxRate;
     });
 
     // OSS breakdown: per-country × taxRate within EU (excluding NL).

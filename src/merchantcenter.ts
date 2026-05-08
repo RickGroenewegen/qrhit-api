@@ -181,6 +181,23 @@ export class MerchantCenterService {
             }
           });
           job.start();
+
+          this.logger.log(
+            blue.bold('Setting up AI product image generation at 1 AM')
+          );
+          const aiImageJob = new CronJob('0 1 * * *', async () => {
+            this.logger.log(
+              blue.bold('Running scheduled AI product image generation')
+            );
+            try {
+              await this.generateAllFeaturedAIProductImages();
+            } catch (error) {
+              this.logger.log(
+                red(`Scheduled AI product image generation failed: ${error}`)
+              );
+            }
+          });
+          aiImageJob.start();
         }
       });
     }
