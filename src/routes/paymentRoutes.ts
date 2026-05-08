@@ -38,7 +38,17 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
 
   // Create payment
   fastify.post('/mollie/payment', async (request: any, _reply) => {
-    return await mollie.getPaymentUri(request.body, request.clientIp);
+    const headerCountry =
+      (request.headers['cloudfront-viewer-country'] as string | undefined) ||
+      (request.headers['x-country-code'] as string | undefined) ||
+      '';
+    return await mollie.getPaymentUri(
+      request.body,
+      request.clientIp,
+      false,
+      false,
+      headerCountry.toUpperCase()
+    );
   });
 
   // Payment webhook

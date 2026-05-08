@@ -1475,9 +1475,24 @@ class Mollie {
     params: any,
     clientIp: string,
     waitForDirectGeneration: boolean = false,
-    skipGenerationMail: boolean = false
+    skipGenerationMail: boolean = false,
+    fallbackCountry: string = ''
   ): Promise<ApiResult> {
     try {
+      // Backstop for the rare case where the client submits an empty
+      // countrycode (digital orders previously skipped the validator, and
+      // a stale prefill from a prior empty order could overwrite the
+      // CloudFront-detected value with ''). Without a country the Payment
+      // row ends up with an empty countrycode and VAT zone resolution
+      // falls back to "Unknown" in reports.
+      if (
+        params?.extraOrderData &&
+        !params.extraOrderData.countrycode &&
+        fallbackCountry
+      ) {
+        params.extraOrderData.countrycode = fallbackCountry;
+      }
+
       let useOrderType = 'digital';
       let description = '';
       let totalCards = 0;
