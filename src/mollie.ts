@@ -1541,17 +1541,20 @@ class Mollie {
     fallbackCountry: string = ''
   ): Promise<ApiResult> {
     try {
+      if (!params?.extraOrderData) {
+        return {
+          success: false,
+          error: 'Invalid request: extraOrderData is required',
+        };
+      }
+
       // Backstop for the rare case where the client submits an empty
       // countrycode (digital orders previously skipped the validator, and
       // a stale prefill from a prior empty order could overwrite the
       // CloudFront-detected value with ''). Without a country the Payment
       // row ends up with an empty countrycode and VAT zone resolution
       // falls back to "Unknown" in reports.
-      if (
-        params?.extraOrderData &&
-        !params.extraOrderData.countrycode &&
-        fallbackCountry
-      ) {
+      if (!params.extraOrderData.countrycode && fallbackCountry) {
         params.extraOrderData.countrycode = fallbackCountry;
       }
 
