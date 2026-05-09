@@ -564,6 +564,9 @@ class PrintEnBind {
           totalProductPriceWithoutVAT += productPriceWithoutVAT;
         }
 
+        // `type` is an internal routing flag; Print&Bind doesn't accept it.
+        const { type: _t, ...articleBody } = items[i];
+
         // Create initial order with first article
         const response = await fetch(
           `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
@@ -573,7 +576,7 @@ class PrintEnBind {
               Authorization: authToken!,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(items[i]),
+            body: JSON.stringify(articleBody),
           }
         );
 
@@ -583,7 +586,7 @@ class PrintEnBind {
           apiCalls.push({
             method: 'POST',
             url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/articles`,
-            body: items[i],
+            body: articleBody,
             statusCode: response.status,
             responseBody: firstResponse,
           });
@@ -636,6 +639,9 @@ class PrintEnBind {
           );
         }
       } else if (items[i].type == 'physical' && physicalOrderCreated) {
+        // `type` is an internal routing flag; Print&Bind doesn't accept it.
+        const { type: _t, ...articleBody } = items[i];
+
         const articleResponse = await fetch(
           `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
           {
@@ -644,7 +650,7 @@ class PrintEnBind {
               Authorization: authToken!,
               'Content-Type': 'application/json',
             },
-            body: JSON.stringify(items[i]),
+            body: JSON.stringify(articleBody),
           }
         );
 
@@ -652,7 +658,7 @@ class PrintEnBind {
           apiCalls.push({
             method: 'POST',
             url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
-            body: items[i],
+            body: articleBody,
             statusCode: articleResponse.status,
             responseBody: await articleResponse.clone().json(),
           });
@@ -940,7 +946,7 @@ class PrintEnBind {
     return {
       type: 'physical',
       amount: quantity,
-      product: 'losbladig',
+      product: 'werkblad',
       number: '1',
       copies: '2',
       color: 'all',
@@ -976,7 +982,7 @@ class PrintEnBind {
     return {
       type: 'physical',
       amount: 1,
-      product: 'losbladig',
+      product: 'werkblad',
       number: '1',
       copies: pageCount.toString(),
       color: 'all',
@@ -1049,7 +1055,7 @@ class PrintEnBind {
 
     if (result.success && result.data?.orderId) {
       // Finish order in production
-      if (process.env['ENVIRONMENT'] === 'production') {
+      if (process.env['ENVIRONMENT'] === 'production' || process.env['ENVIRONMENT'] === 'development') {
         this.logger.log(color.blue.bold(`Finishing order ${color.white.bold(result.data.orderId)} in production`));
         await this.finishOrder(result.data.orderId, result.apiCalls);
       }
@@ -1616,6 +1622,13 @@ class PrintEnBind {
             )} Pages: ${color.white.bold(pageCount)}`
           )
         );
+        this.logger.log(
+          color.blue.bold(
+            `Merged insert card article JSON: ${color.white.bold(
+              JSON.stringify(mergedOrderItem, null, 2)
+            )}`
+          )
+        );
       }
     }
 
@@ -1638,7 +1651,7 @@ class PrintEnBind {
     let finalApiCalls = result.apiCalls || [];
 
     if (result.success) {
-      if (process.env['ENVIRONMENT'] === 'production') {
+      if (process.env['ENVIRONMENT'] === 'production' || process.env['ENVIRONMENT'] === 'development') {
         const finishResult = await this.finishOrder(
           result.data.orderId,
           finalApiCalls

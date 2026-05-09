@@ -69,8 +69,8 @@ class FinalCheck {
 
   private logVision(paymentId: string, phpId: number, message: string) {
     this.logger.log(
-      color.cyan.bold(
-        `[finalCheck] ${white.bold(paymentId)} php=${white.bold(
+      color.blue.bold(
+        `[${white.bold('finalCheck')}] ${white.bold(paymentId)} php=${white.bold(
           phpId.toString()
         )} ${message}`
       )

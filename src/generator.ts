@@ -1447,39 +1447,49 @@ class Generator {
       // approval flow, admin manual). On failure: printerHold flips to
       // true (excluding from cron), Pushover fires, and user-actionable
       // failures (profanity / Hitster) reset the Judged flag and email
-      // the customer.
-      let finalCheckResult: FinalCheckResult;
-      try {
-        finalCheckResult = await this.finalCheck.runCheck({
-          id: payment.id,
-          paymentId: payment.paymentId,
-          qrSubDir: payment.qrSubDir,
-        });
-      } catch (error) {
+      // the customer. Skipped on development to keep local iteration fast.
+      if (process.env['ENVIRONMENT'] === 'development') {
         this.logger.log(
-          color.red.bold(
-            `finalCheck threw for ${white.bold(paymentId)}: ${
-              (error as Error).message
-            }`
+          color.yellow.bold(
+            `[${white.bold('finalCheck')}] skipped for ${white.bold(
+              paymentId
+            )} (development environment)`
           )
         );
-        finalCheckResult = {
-          ok: false,
-          reason: 'pdf-missing',
-          userActionable: false,
-          details: `finalCheck threw: ${(error as Error).message}`,
-          paymentHasPlaylistId: 0,
-          playlistDbId: 0,
-          playlistId: '',
-        };
-      }
+      } else {
+        let finalCheckResult: FinalCheckResult;
+        try {
+          finalCheckResult = await this.finalCheck.runCheck({
+            id: payment.id,
+            paymentId: payment.paymentId,
+            qrSubDir: payment.qrSubDir,
+          });
+        } catch (error) {
+          this.logger.log(
+            color.red.bold(
+              `finalCheck threw for ${white.bold(paymentId)}: ${
+                (error as Error).message
+              }`
+            )
+          );
+          finalCheckResult = {
+            ok: false,
+            reason: 'pdf-missing',
+            userActionable: false,
+            details: `finalCheck threw: ${(error as Error).message}`,
+            paymentHasPlaylistId: 0,
+            playlistDbId: 0,
+            playlistId: '',
+          };
+        }
 
-      if (!finalCheckResult.ok) {
-        await this.handleFinalCheckFailure(payment, finalCheckResult);
-        return {
-          success: false,
-          reason: `finalCheck:${finalCheckResult.reason}: ${finalCheckResult.details}`,
-        };
+        if (!finalCheckResult.ok) {
+          await this.handleFinalCheckFailure(payment, finalCheckResult);
+          return {
+            success: false,
+            reason: `finalCheck:${finalCheckResult.reason}: ${finalCheckResult.details}`,
+          };
+        }
       }
 
       const orderData = await this.order.createOrder(
@@ -1538,10 +1548,6 @@ class Generator {
           )
         );
       } else {
-
-
-        console.log(111, JSON.stringify(orderData, null, 2))
-
         // Pushover
         this.pushover.sendMessage(
           {
@@ -1555,7 +1561,9 @@ class Generator {
           color.red.bold(
             `There was an error while sending order ${white.bold(
               paymentId
-            )} to the printer`
+            )} to the printer. Response: ${white.bold(
+              JSON.stringify(orderData.response, null, 2)
+            )}`
           )
         );
         return { success: false, reason: 'PrintAPI error' };
