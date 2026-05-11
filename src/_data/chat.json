@@ -666,7 +666,7 @@
         {
             "slug": "correction-process",
             "title": "How does the correction process work?",
-            "description": "After purchase, you receive an email with a link to review your order. You can correct song titles, artists, years, and add extra information. Once satisfied, you approve the order for printing. Physical orders ship only after your approval.",
+            "description": "After purchase, you receive an email with a link to review your order. You can correct song titles, artists, years, and add extra information. You have 36 hours to review and approve your order — if you need more time, you can extend the deadline as many times as you like with a single click in the correction form (no extra cost). Once satisfied, you approve the order for printing. Physical orders ship only after your approval.",
             "tags": [
                 "corrections",
                 "review",
@@ -825,7 +825,7 @@
         {
             "slug": "extension",
             "title": "Can I request an extension for reviewing my order?",
-            "description": "Yes! If you need more time to review and correct your order before it ships, you can request a 24-hour extension through the review form.",
+            "description": "Yes! The default review window is 36 hours, but if you need more time you can extend the deadline directly in the correction form with a single click. There is no limit — you can extend as many times as you like, for as long as you need, free of charge. Your order will not ship until you approve it.",
             "tags": [
                 "extension",
                 "review",
