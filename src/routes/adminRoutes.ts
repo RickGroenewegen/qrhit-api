@@ -563,6 +563,38 @@ export default async function adminRoutes(
     }
   );
 
+  // Mark users for Mail Octopus sync and trigger the contact upload.
+  // Body { limit?: number } — leave empty to resync the entire user base,
+  // or set a number (e.g. 10) to test with a small batch first.
+  fastify.post(
+    '/admin/mail-octopus/resync',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { limit } = request.body || {};
+      const parsedLimit =
+        typeof limit === 'number' && Number.isFinite(limit) && limit > 0
+          ? Math.floor(limit)
+          : undefined;
+      try {
+        const result = await mail.resyncMailOctopusContacts(parsedLimit);
+        reply.send({
+          success: true,
+          flagged: result.flagged,
+          limit: parsedLimit ?? null,
+        });
+      } catch (error: any) {
+        logger.log(
+          color.red.bold(
+            `mail-octopus/resync failed: ${error.message || error}`
+          )
+        );
+        reply
+          .status(500)
+          .send({ success: false, error: error.message || String(error) });
+      }
+    }
+  );
+
   // Manually run the print&bind eligibility / finalCheck / send pipeline
   // that the hourly cron normally runs. Optional body { paymentId, force }
   // narrows the run to a single payment (force=true bypasses the eligibility
