@@ -493,7 +493,8 @@ class PrintEnBind {
     },
     logging: boolean = false,
     cache: boolean = true,
-    fast: boolean = false
+    fast: boolean = false,
+    orderComment: string = ''
   ): Promise<
     ApiResult & {
       apiCalls?: Array<{
@@ -539,6 +540,62 @@ class PrintEnBind {
 
     if (!this.data.euCountryCodes.includes(customerInfo.countrycode)) {
       paymentMethod = 'account';
+    }
+
+    // If there's an order-level comment (e.g. packing instructions
+    // for box orders), create the order first via POST /v1/orders so
+    // the comment lives on the order itself rather than being copied
+    // into each article. Subsequent articles are appended below.
+    // See https://www.printenbind.nl/api/documentation/order
+    if (orderComment) {
+      const createOrderBody = { comment: orderComment };
+      const orderResp = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/orders`,
+        {
+          method: 'POST',
+          headers: {
+            Authorization: authToken!,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(createOrderBody),
+        }
+      );
+      const orderRespBody = await orderResp.clone().json();
+      if (logging) {
+        apiCalls.push({
+          method: 'POST',
+          url: `${process.env['PRINTENBIND_API_URL']}/v1/orders`,
+          body: createOrderBody,
+          statusCode: orderResp.status,
+          responseBody: orderRespBody,
+        });
+      }
+      const headerLocation = orderResp.headers.get('location');
+      orderId =
+        headerLocation?.split('/')[1] ||
+        orderRespBody.order?.toString() ||
+        orderRespBody.location?.split('/')[1] ||
+        null;
+      if (orderId) {
+        physicalOrderCreated = true;
+        if (logging) {
+          this.logger.log(
+            color.blue.bold(
+              `Created order ${color.white.bold(
+                orderId
+              )} with order-level comment`
+            )
+          );
+        }
+      } else if (logging) {
+        this.logger.log(
+          color.red.bold(
+            `Printenbind did not return an orderId from POST /v1/orders (status ${color.white.bold(
+              orderResp.status.toString()
+            )}) — falling back to creating order from first article`
+          )
+        );
+      }
     }
 
     // Add remaining articles
@@ -924,13 +981,13 @@ class PrintEnBind {
   private describeArticle(item: any): string {
     if (item?.type === 'physical') {
       const comment = typeof item.comment === 'string' ? item.comment : '';
-      // Insert card articles carry an "Insert card..." comment and have no
-      // batch number — they're identified by playlist name + page count.
-      if (/^Insert cards? for/i.test(comment)) {
+      // Insert card articles are 120x120 'werkblad' without a packaging
+      // accessory. Game card articles are 'losbladig' and carry a
+      // "Batch nummer ... #X-Y" comment.
+      if (item.product === 'werkblad' && !item.accessory_group) {
         const pages = parseInt(item.copies, 10) || 0;
         return `insert cards (${pages} pages)`;
       }
-      // Game card articles carry a "Batch nummer ... #X-Y" comment.
       const batchMatch = comment.match(/#([\d-]+)/);
       const batchNumber = batchMatch ? batchMatch[1] : 'unknown';
       return `game cards (Batch #${batchNumber})`;
@@ -1556,7 +1613,7 @@ class PrintEnBind {
         const insertItem = this.createBoxOrderInsertItem(
           boxFileUrl,
           pageCount,
-          `Insert card${playlist.boxQuantity > 1 ? 's' : ''} for playlist ${playlist.name}`
+          ''
         );
         orderItems.push(insertItem);
 
@@ -1609,7 +1666,7 @@ class PrintEnBind {
         const mergedOrderItem = this.createBoxOrderInsertItem(
           mergedFileUrl,
           pageCount,
-          `Insert cards for playlists: ${playlistNames.join(', ')}`
+          ''
         );
         orderItems.push(mergedOrderItem);
 
@@ -1643,14 +1700,12 @@ class PrintEnBind {
       return sum;
     }, 0);
 
-    if (totalBoxCount > 0) {
-      const boxWarning = `LET OP: Deze order moet verpakt worden met in totaal ${totalBoxCount} QRSong! dozen`;
-      for (const orderItem of orderItems) {
-        orderItem.comment = orderItem.comment
-          ? `${boxWarning}. ${orderItem.comment}`
-          : boxWarning;
-      }
-    }
+    const orderComment =
+      totalBoxCount > 0
+        ? `LET OP: Deze order moet verpakt worden met in totaal ${totalBoxCount} QRSong! ${
+            totalBoxCount === 1 ? 'doos' : 'dozen'
+          }`
+        : '';
 
     const result = await this.processOrderRequest(
       orderItems,
@@ -1665,7 +1720,8 @@ class PrintEnBind {
       },
       true,
       false,
-      payment.fast || false
+      payment.fast || false,
+      orderComment
     );
 
     let finalApiCalls = result.apiCalls || [];

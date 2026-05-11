@@ -1425,6 +1425,7 @@ class Mollie {
             // Box
             boxEnabled: true,
             boxQuantity: true,
+            boxFilename: true,
             boxFrontBackgroundType: true,
             boxFrontBackground: true,
             boxFrontBackgroundColor: true,
