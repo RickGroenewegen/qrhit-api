@@ -1632,6 +1632,26 @@ class PrintEnBind {
       }
     }
 
+    // If this order contains any boxes, warn the packer up-front about the
+    // total number of boxes that need to be included in the shipment. The
+    // total is summed across all playlists (boxQuantity × playlist amount).
+    const totalBoxCount = playlists.reduce((sum: number, playlistItem: any) => {
+      const playlist = playlistItem.playlist;
+      if (playlist.boxEnabled && playlist.boxQuantity > 0) {
+        return sum + playlist.boxQuantity * (playlist.amount || 1);
+      }
+      return sum;
+    }, 0);
+
+    if (totalBoxCount > 0) {
+      const boxWarning = `LET OP: Deze order moet verpakt worden met in totaal ${totalBoxCount} QRSong! dozen`;
+      for (const orderItem of orderItems) {
+        orderItem.comment = orderItem.comment
+          ? `${boxWarning}. ${orderItem.comment}`
+          : boxWarning;
+      }
+    }
+
     const result = await this.processOrderRequest(
       orderItems,
       {
