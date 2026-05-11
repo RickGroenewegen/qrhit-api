@@ -47,7 +47,8 @@ class Designer {
   public async uploadBackgroundImage(
     base64Image: string,
     filename?: string,
-    qrBackgroundType: 'none' | 'circle' | 'square' = 'square'
+    qrBackgroundType: 'none' | 'circle' | 'square' = 'square',
+    kind: 'card' | 'box' = 'card'
   ): Promise<{
     success: boolean;
     filename?: string;
@@ -128,7 +129,7 @@ class Designer {
 
         this.logger.log(
           color.green.bold(
-            `Background image processed and uploaded successfully: ${white.bold(
+            `${kind === 'box' ? 'Box' : 'Card'} background image processed and uploaded successfully: ${white.bold(
               filePath
             )}`
           )
@@ -164,7 +165,8 @@ class Designer {
   public async uploadBackgroundBackImage(
     base64Image: string,
     filename?: string,
-    qrBackgroundType: 'none' | 'circle' | 'square' = 'square'
+    qrBackgroundType: 'none' | 'circle' | 'square' = 'square',
+    kind: 'card' | 'box' = 'card'
   ): Promise<{
     success: boolean;
     filename?: string;
@@ -241,7 +243,7 @@ class Designer {
 
         this.logger.log(
           color.green.bold(
-            `Background back image processed and uploaded successfully: ${white.bold(
+            `${kind === 'box' ? 'Box' : 'Card'} background back image processed and uploaded successfully: ${white.bold(
               filePath
             )}`
           )
@@ -275,7 +277,8 @@ class Designer {
    */
   public async uploadLogoImage(
     base64Image: string,
-    filename?: string
+    filename?: string,
+    kind: 'card' | 'box' = 'card'
   ): Promise<{
     success: boolean;
     filename?: string;
@@ -333,7 +336,7 @@ class Designer {
 
         this.logger.log(
           color.green.bold(
-            `Logo image uploaded successfully: ${white.bold(filePath)}`
+            `${kind === 'box' ? 'Box' : 'Card'} logo image uploaded successfully: ${white.bold(filePath)}`
           )
         );
 

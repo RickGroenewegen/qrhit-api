@@ -45,7 +45,7 @@
         {
             "slug": "cards-dont-work",
             "title": "My cards do not work / The app is playing the wrong songs, what can I do?",
-            "description": "If you encounter issues where the app plays the wrong songs or the QR codes do not work, please first ensure that you are using the latest version of the QRSong! app. And make sure you have Spotify Premium to play songs in hidden mode. If you don't have Spotify premium you can change to any other playback mode in the app settings. We suggest setting it so 'No Spotify mode' or setting the music service to Tidal or Deezer (You won't need a subscription for these services). If the problem persists, please contact our support team with details of the issue, including screenshots if possible. We will investigate and provide assistance to resolve the problem.",
+            "description": "If the app plays the wrong songs or the QR codes do not work, please first make sure you're using the latest version of the QRSong! app. If you're using Spotify without Premium, hidden mode is unavailable — you can switch to a different playback mode in the app settings. We suggest either 'No Spotify mode', or switching the music service to Tidal or Deezer (no subscription needed for either) for full hidden playback. If the problem persists, contact support at info@qrsong.io with details and screenshots if possible.",
             "tags": [
                 "cards don't work",
                 "wrong songs",
@@ -69,7 +69,7 @@
         {
             "slug": "express",
             "title": "Can I pay extra for express production or shipping?",
-            "description": "Yes and no. For physical orders, we aim to produce and ship within 2-3 business. You can speed this process up with express production. Express production costs an additional 20% extra and ensures your order is prioritized in our production queue. Usually this means if you order before 13:00 PM your order will get printend and shipped the same day. Contact us at info@qrsong.io after you approved your playlist to request express production and we'll send you a payment link. De do NOT offer express shipping options at this time, but we work with reliable carriers to ensure timely delivery.",
+            "description": "Express production: YES. Express shipping: NO. For physical orders our standard production time is 2-3 business days. You can speed up production with our express option for an additional 20% — your order is moved to the front of the queue, and if you approve your playlist before 13:00 it usually gets printed and shipped the same day. To request express production, email us at info@qrsong.io after approving your playlist and we'll send you a payment link. We do NOT offer express shipping. Once your order leaves our facility it travels with our standard carriers, and we cannot upgrade or speed up the postal delivery itself.",
             "tags": [
                 "express",
                 "production",
@@ -125,8 +125,8 @@
         },
         {
             "slug": "broken-link",
-            "title": "What is one of my QR codes broken? What is the Spotify track is no longer available?",
-            "description": "We are able to fix broken QR codes for you free of charge. Please contact support with your order details and the specific tracks that are broken or unavailable. Please also provide a alternative Spotify link if possible. ",
+            "title": "What if one of my QR codes is broken or the Spotify track is no longer available?",
+            "description": "We can fix broken QR codes for you free of charge. Please contact support at info@qrsong.io with your order details and the specific tracks that are broken or unavailable. If possible, also provide an alternative Spotify (or Apple Music / Tidal / Deezer / YouTube Music) link to the same song.",
             "tags": [
                 "broken",
                 "QR code",
@@ -137,10 +137,13 @@
         {
             "slug": "digital-version",
             "title": "What is the digital version? And will I receive one if I order physical cards?",
-            "description": "Yes, if you order physical cards, you will also receive a digital version. The digital version is a PDF with your cards. It is included with your physical purchase at no extra cost.",
+            "description": "The digital version is a PDF file with your QR cards that you can download, print, and cut out yourself. It is delivered instantly via email (or after our team verifies the release years for custom playlists, usually within 24 hours). To print it yourself you'll need a color printer, thicker paper (we recommend at least 200gsm) and scissors or a paper cutter. Important: every physical order automatically includes the digital version at no extra cost, so you can start playing right away while you wait for the printed cards to arrive.",
             "tags": [
                 "digital",
                 "pdf",
+                "print",
+                "download",
+                "instant",
                 "physical order",
                 "included"
             ]
@@ -197,8 +200,8 @@
         },
         {
             "slug": "multiple-designs",
-            "title": "Kan ik ook in 1 playlist die ik deel meerdere ontwerpen hebben?",
-            "description": "No, if you would like to do so: Split your Spotify playlist into multiple playlists, each with their own design. Then place multiple orders, one for each design/playlist combination.",
+            "title": "Can I have multiple card designs within a single playlist order?",
+            "description": "No, each order uses a single card design. If you'd like multiple designs, split your Spotify playlist into separate playlists and place a separate order for each playlist/design combination.",
             "tags": [
                 "multiple",
                 "designs",
@@ -297,7 +300,7 @@
         {
             "slug": "spotify-premium",
             "title": "Do I need Spotify Premium?",
-            "description": "Spotify Premium is recommended but not required. Premium supports 'Hidden mode' which plays songs without showing artist and title. With Spotify Free, songs will still play but you'll see the artist and title after 3 seconds, so you'll need to flip your phone quickly to avoid seeing the answer.",
+            "description": "Spotify Premium is recommended but not required. Premium supports 'Hidden mode' which plays songs in the QRSong! app without showing the artist or title. With Spotify Free, songs still play but the artist and title become visible after a short delay (3 seconds by default — you can change this delay to any value in the app settings). If you'd prefer hidden playback without a Spotify Premium subscription, you can also switch the music service in the app to Tidal or Deezer (no subscription needed) or Apple Music (subscription required).",
             "tags": [
                 "spotify",
                 "premium",
@@ -343,18 +346,6 @@
             ]
         },
         {
-            "slug": "digital-version",
-            "title": "What is the digital version?",
-            "description": "The digital version is a PDF file that you can download, print, and cut out yourself. It's delivered instantly via email and is a cost-effective way to get your QR music cards quickly. You'll need a color printer, thicker paper, and scissors/cutter. Important to note: Each physical order also includes the digital version at no extra cost.",
-            "tags": [
-                "digital",
-                "pdf",
-                "print",
-                "download",
-                "instant"
-            ]
-        },
-        {
             "slug": "physical-cards",
             "title": "What are the physical cards like?",
             "description": "Physical cards are high-quality printed cards (350gsm paper) delivered to your doorstep. They are double-sided and printed in full color. Cards come in a transport box, neatly tied together with a paper band. No assembly required - ready to play right out of the box.",
@@ -396,8 +387,8 @@
                     "requiredData": [
                         {
                             "name": "countryCode",
-                            "description": "The 2-letter ISO country code for the shipping destination. Convert the country name to its ISO code (e.g., 'Deutschland' or 'Germany' → 'DE', 'Netherlands' or 'Nederland' → 'NL', 'France' or 'Frankrijk' → 'FR', 'Spain' or 'España' → 'ES', 'United States' or 'USA' → 'US', 'United Kingdom' or 'UK' → 'GB', etc.)",
-                            "userPrompt": "the country you're shipping to (for example: Germany, Netherlands, United States, etc.)"
+                            "description": "The 2-letter ISO country code for the shipping destination (e.g. NL, DE, FR, US, GB). Convert the user's country name in any language to the correct ISO code.",
+                            "userPrompt": "the country you're shipping to"
                         }
                     ]
                 }
@@ -454,7 +445,7 @@
         {
             "slug": "phone-compatibility",
             "title": "Is my phone suitable for QRSong?",
-            "description": "Yes! Almost any smartphone with a camera can scan the QR codes. If you have an iOS (12.0+) or Android (6.0+) phone that can scan QR codes, you can use our cards. You'll also need Spotify installed.",
+            "description": "Yes! Almost any smartphone with a camera can scan the QR codes. If you have an iOS (12.0+) or Android (5.0+) phone that can scan QR codes, you can use our cards. You'll also need Spotify (or any other supported music service) installed.",
             "tags": [
                 "phone",
                 "compatible",
@@ -478,7 +469,7 @@
         {
             "slug": "maximum-cards",
             "title": "What is the maximum number of cards?",
-            "description": "For digital orders, the maximum is 500 cards. For physical cards, the maximum is 1000 cards per order. If you need more, you can split your playlist and place multiple orders.",
+            "description": "For digital orders, the maximum is 3000 cards. For physical cards, the maximum is 1000 cards per order. If you need more, you can split your playlist and place multiple orders.",
             "tags": [
                 "maximum",
                 "limit",
@@ -724,7 +715,7 @@
         {
             "slug": "free-shipping",
             "title": "Is free shipping available?",
-            "description": "Shipping in the Netherlands is free for orders over 50 euros. Adding multiple playlists to your order can help you reach free shipping. Same shipping cost applies regardless of how many card sets you order.",
+            "description": "Yes — shipping is free in the Netherlands, Germany and Belgium when you order 2 or more playlists in a single order. For single-playlist orders to the Netherlands, shipping is a flat €2.99. Adding an extra playlist to your cart is often the cheapest way to qualify for free shipping. The same shipping cost applies regardless of how many card sets are in the order, so bundling really pays off.",
             "tags": [
                 "free shipping",
                 "shipping",
@@ -758,7 +749,7 @@
         {
             "slug": "languages",
             "title": "What languages are supported?",
-            "description": "QRSong! supports 12+ languages including English, Dutch, German, French, Spanish, Italian, Portuguese, Polish, Swedish, Japanese, Chinese and Swedish.",
+            "description": "QRSong! supports 14 languages: English, Dutch, German, French, Spanish, Italian, Portuguese, Polish, Swedish, Norwegian, Russian, Japanese, Chinese and Hindi. The website and app are fully translated; the language on your printed cards follows your selection at order time.",
             "tags": [
                 "languages",
                 "translation",
@@ -1180,6 +1171,181 @@
                 "hide artist title",
                 "lock screen",
                 "pixel"
+            ]
+        },
+        {
+            "slug": "account-after-purchase",
+            "title": "Why can I only create an account after I've made a purchase?",
+            "description": "QRSong! does not offer a separate sign-up flow because an account is only useful once you have an order. After your first purchase you'll receive an email with a link to set a password, and from that moment on you can log in to view your orders, re-download digital cards, host games, manage your playlists, and place new orders more quickly. So the simplest way to get an account is to place an order — even a small digital one — and use the link in the confirmation email to activate it.",
+            "tags": [
+                "account",
+                "register",
+                "sign up",
+                "create account",
+                "no account",
+                "after purchase"
+            ]
+        },
+        {
+            "slug": "password-reset",
+            "title": "I forgot my password / I can't log in. How do I reset it?",
+            "description": "On the login page, click 'Forgot password' and enter the email address you used when ordering. We'll send you an email with a reset link — click it and choose a new password. The link is valid for a limited time, so use it soon. If you don't see the email within a few minutes, check your spam/junk folder. Still no email? Make sure you're using the same email address as on your order (check your order confirmation email). If you're still stuck, contact support at info@qrsong.io and we'll help you regain access.",
+            "tags": [
+                "password",
+                "forgot password",
+                "reset password",
+                "login",
+                "can't log in",
+                "locked out"
+            ]
+        },
+        {
+            "slug": "email-verification",
+            "title": "I didn't receive my verification or activation email, what should I do?",
+            "description": "Most of the time the email is just delayed by a minute or two, or it landed in your spam/junk folder — please check there first (and also any 'Promotions' or 'Updates' tabs in Gmail). If after 10 minutes there's still no email: (1) double-check that the email address on your order is spelled correctly, (2) try adding info@qrsong.io to your contacts and request the email again from the login or order page, (3) if you use a strict corporate or school mail filter, try a personal address. If none of that works, email us at info@qrsong.io from the address you used at checkout and we'll verify your account manually.",
+            "tags": [
+                "verification",
+                "verify email",
+                "activation email",
+                "didn't receive",
+                "spam",
+                "missing email"
+            ]
+        },
+        {
+            "slug": "invoice-download",
+            "title": "Where do I find my invoice?",
+            "description": "An invoice (PDF) is generated automatically once your payment is confirmed. You can find it in two places: (1) attached to or linked from your order confirmation email, and (2) inside your account on the website under your order details, where you can re-download it any time. If you need a corrected invoice (different company name, VAT ID, or billing address) please contact us at info@qrsong.io with your order number — we can re-issue it for you.",
+            "tags": [
+                "invoice",
+                "receipt",
+                "billing",
+                "download invoice",
+                "PDF invoice",
+                "tax"
+            ]
+        },
+        {
+            "slug": "billing-vs-shipping-address",
+            "title": "Can I use a different billing address than my shipping address?",
+            "description": "Yes. During checkout you can tick the option to enter a separate invoice address, which is useful if you're shipping a gift to someone else or if your company should be billed to a different location than where the cards arrive. The shipping address is used purely for delivery; the invoice address (and optional company name and VAT ID) is what appears on your invoice and is used for tax purposes.",
+            "tags": [
+                "billing address",
+                "invoice address",
+                "shipping address",
+                "different address",
+                "company billing"
+            ]
+        },
+        {
+            "slug": "international-shipping-cost",
+            "title": "How much does shipping cost to my country?",
+            "description": "Shipping is calculated automatically at checkout based on your country and the number of card sets in your order. As a quick guide: shipping is free in the Netherlands, Germany and Belgium when you order 2 or more playlists; single-playlist orders to the Netherlands ship for €2.99 flat. For other countries the exact cost is shown in the cart before payment — there are no hidden fees added afterwards. If you'd like an estimate before going to checkout, tell me which country you're shipping to and I can look up the typical delivery time for you.",
+            "tags": [
+                "shipping cost",
+                "international shipping",
+                "delivery cost",
+                "how much shipping",
+                "shipping fee",
+                "abroad"
+            ]
+        },
+        {
+            "slug": "payment-methods-detailed",
+            "title": "Which payment methods can I use?",
+            "description": "Checkout is handled by Mollie, so you can pay with all major credit cards (Visa, Mastercard, American Express), PayPal, Apple Pay, iDEAL (Netherlands), Bancontact (Belgium), Klarna (pay later / pay in installments where available), SEPA bank transfer, and several other local methods depending on your country. The available options are shown automatically at checkout based on where you're shipping to. All payments are one-time — there are no subscriptions, recurring charges, or stored cards on our side.",
+            "tags": [
+                "payment methods",
+                "ideal",
+                "paypal",
+                "credit card",
+                "apple pay",
+                "bancontact",
+                "klarna",
+                "mollie",
+                "how to pay"
+            ]
+        },
+        {
+            "slug": "gdpr-data-deletion",
+            "title": "Can you delete my account and personal data (GDPR)?",
+            "description": "Yes — you can request deletion of your personal data at any time by emailing info@qrsong.io from the address linked to your account. Please note: data that is part of an invoice (your name, address, order details) must be retained for 7 years for tax/accounting reasons under Dutch law, so we cannot remove that information until that period has passed. Everything outside that legal requirement (account login, marketing preferences, saved playlists, design uploads) can be deleted on request. You can also request a copy of the personal data we hold about you under GDPR.",
+            "tags": [
+                "GDPR",
+                "delete account",
+                "delete data",
+                "privacy",
+                "data deletion",
+                "right to erasure",
+                "personal data"
+            ]
+        },
+        {
+            "slug": "account-features",
+            "title": "What can I do with a QRSong! account?",
+            "description": "Once you have an account (created automatically after your first order) you can: view your full order history, re-download digital PDFs of all your card sets, re-download invoices, re-open the correction form for orders still in review, manage your saved playlists and designs, host QRGames (Music Quiz, Music Bingo, Music Timeline) for any playlist you've enabled them on, place new orders without re-entering your details, and update your password and email preferences.",
+            "tags": [
+                "account features",
+                "what can I do",
+                "dashboard",
+                "my account",
+                "re-download",
+                "order history"
+            ]
+        },
+        {
+            "slug": "branded-boxes",
+            "title": "Do you offer custom branded boxes for large orders?",
+            "description": "Yes — for business orders of more than 50 boxes we can produce fully custom branded gift boxes with your own design printed on the exterior (rather than the standard QRSong! design with the window). This is a custom service, so lead time and pricing depend on the design and quantity. To get a quote, email us at info@qrsong.io with the number of boxes you need, your timeline, and a rough idea of the artwork you have in mind, and we'll get back to you with options.",
+            "tags": [
+                "branded boxes",
+                "custom boxes",
+                "business",
+                "corporate",
+                "bulk",
+                "white label",
+                "50 boxes",
+                "custom design"
+            ]
+        },
+        {
+            "slug": "music-match",
+            "title": "What is Music Match?",
+            "description": "Music Match is a separate musical card game from QRSong! and Source 1 Media — a partnership product. Each player gets 7 Match cards. The DJ scans a QR card to play a song, and players race to be the first to play a Match card from their hand that fits the song (by artist, genre, decade, and other categories). The first player to get rid of all their cards wins. It's a great party game on its own and is sold separately from regular QRSong! card sets.",
+            "tags": [
+                "music match",
+                "card game",
+                "party game",
+                "Source 1 Media",
+                "match cards",
+                "what is music match"
+            ]
+        },
+        {
+            "slug": "paper-gsm-explained",
+            "title": "What does 350gsm paper mean?",
+            "description": "GSM stands for 'grams per square meter' and tells you how heavy and sturdy the paper is. For reference: regular printer/copy paper is 80gsm, postcards are around 200gsm, and standard playing cards are typically 280-310gsm. Our cards are printed on 350gsm — heavier and stiffer than most playing cards, so they feel premium, hold up to repeated handling and shuffling, and don't bend or curl easily.",
+            "tags": [
+                "gsm",
+                "paper weight",
+                "350gsm",
+                "paper quality",
+                "thickness",
+                "card stock"
+            ]
+        },
+        {
+            "slug": "eco-printing",
+            "title": "What is QRSong! doing to be more sustainable?",
+            "description": "A few practical things: (1) The eco-friendly card option uses a white background on the QR side, which significantly reduces ink usage during printing. (2) The digital PDF version uses no paper at all — perfect if you're happy to print at home or play purely digitally. (3) Multi-playlist orders ship together in one parcel rather than separately, reducing packaging and transport. (4) Our gift boxes ship flat as a single A3 sheet that you fold yourself, which cuts shipping volume dramatically compared to pre-assembled boxes. We're continuing to look for ways to reduce the footprint of our printing and shipping.",
+            "tags": [
+                "sustainability",
+                "eco",
+                "environment",
+                "green",
+                "ink saving",
+                "packaging",
+                "footprint"
             ]
         }
     ]

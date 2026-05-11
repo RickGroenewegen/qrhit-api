@@ -402,13 +402,17 @@ export default async function publicRoutes(fastify: FastifyInstance) {
 
   // Designer upload
   fastify.post('/designer/upload/:type', async (request: any, reply) => {
-    const { image, filename, hideCircle, qrBackgroundType } = request.body;
+    const { image, filename, hideCircle, qrBackgroundType, kind } = request.body;
     const { type } = request.params;
 
     if (!image) {
       reply.status(400).send({ success: false, error: 'No image provided' });
       return;
     }
+
+    // Tag uploads so the log makes clear whether they come from the card or
+    // box designer. Defaults to 'card' for safety / backwards compatibility.
+    const uploadKind: 'card' | 'box' = kind === 'box' ? 'box' : 'card';
 
     let result = { success: false };
 
@@ -419,7 +423,8 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       result = await designer.uploadBackgroundImage(
         image,
         filename,
-        backgroundType
+        backgroundType,
+        uploadKind
       );
     } else if (type == 'backgroundBack') {
       // Upload background for the back side of cards
@@ -427,10 +432,11 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       result = await designer.uploadBackgroundBackImage(
         image,
         filename,
-        backgroundType
+        backgroundType,
+        uploadKind
       );
     } else if (type == 'logo') {
-      result = await designer.uploadLogoImage(image, filename);
+      result = await designer.uploadLogoImage(image, filename, uploadKind);
     }
     return result;
   });
