@@ -1055,7 +1055,7 @@ class PrintEnBind {
 
     if (result.success && result.data?.orderId) {
       // Finish order in production
-      if (process.env['ENVIRONMENT'] === 'production' || process.env['ENVIRONMENT'] === 'development') {
+      if (process.env['ENVIRONMENT'] === 'production') {
         this.logger.log(color.blue.bold(`Finishing order ${color.white.bold(result.data.orderId)} in production`));
         await this.finishOrder(result.data.orderId, result.apiCalls);
       }
@@ -1651,7 +1651,7 @@ class PrintEnBind {
     let finalApiCalls = result.apiCalls || [];
 
     if (result.success) {
-      if (process.env['ENVIRONMENT'] === 'production' || process.env['ENVIRONMENT'] === 'development') {
+      if (process.env['ENVIRONMENT'] === 'production') {
         const finishResult = await this.finishOrder(
           result.data.orderId,
           finalApiCalls
