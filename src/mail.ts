@@ -2082,7 +2082,76 @@ ${params.html}
     }
   }
 
-  public async uploadContacts(): Promise<void> {
+  /**
+   * Flag users for Mail Octopus sync (sync=true) and trigger the upload.
+   * If `limit` is provided, only that many users are flagged (picked from the
+   * most recently created users that aren't already flagged); otherwise every
+   * user is flagged. Useful for a one-off backfill (e.g. after introducing
+   * new tags) or for testing with a small batch.
+   *
+   * Returns the number of users flagged. The actual upload runs in the
+   * background — monitor logs for progress.
+   */
+  public async resyncMailOctopusContacts(
+    limit?: number
+  ): Promise<{ flagged: number }> {
+    let flagged = 0;
+
+    // Skip users in privileged groups (admin, vibeadmin, companyadmin, …) —
+    // mirrors the filter applied in uploadContacts so we don't leave their
+    // sync flag permanently stuck on.
+    const groupFilter = {
+      UserGroupUser: {
+        every: {
+          UserGroup: { name: 'users' },
+        },
+      },
+    };
+
+    if (limit && limit > 0) {
+      // Pick `limit` users that aren't already flagged, newest first.
+      const candidates = await prisma.user.findMany({
+        select: { id: true },
+        where: { sync: false, ...groupFilter },
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+      });
+      if (candidates.length > 0) {
+        const result = await prisma.user.updateMany({
+          where: { id: { in: candidates.map((c) => c.id) } },
+          data: { sync: true },
+        });
+        flagged = result.count;
+      }
+    } else {
+      const result = await prisma.user.updateMany({
+        where: { sync: false, ...groupFilter },
+        data: { sync: true },
+      });
+      flagged = result.count;
+    }
+
+    this.logger.log(
+      color.blue.bold(
+        `Flagged ${white.bold(flagged)} user(s) for Mail Octopus sync${
+          limit && limit > 0 ? ` (limit ${white.bold(limit)})` : ' (all)'
+        }`
+      )
+    );
+
+    // Fire and forget — uploadContacts can take a long time for large batches.
+    this.uploadContacts(limit).catch((err) => {
+      this.logger.log(
+        color.red(
+          `Mail Octopus resync upload failed: ${white.bold(err.message || err)}`
+        )
+      );
+    });
+
+    return { flagged };
+  }
+
+  public async uploadContacts(limit?: number): Promise<void> {
     try {
       this.logger.log(
         color.blue.bold('Starting daily contact upload to Mail Octopus')
@@ -2091,24 +2160,26 @@ ${params.html}
       // First complete user information
       await this.completeUserInformation();
 
-      // Define country codes array
-      const countryCodes = ['NL'];
+      const listId = process.env['MAIL_OCTOPUS_LIST_ID'];
+      const apiKey = process.env['MAIL_OCTOPUS_API_KEY'];
 
-      // Build lists object dynamically
-      const lists: { [key: string]: string | undefined } = {
-        general: process.env['MAIL_OCTOPUS_LIST_ID'],
-      };
-
-      // Add country-specific lists only if environment variable exists
-      for (const countryCode of countryCodes) {
-        const envKey = `MAIL_OCTOPUS_LIST_ID_${countryCode}`;
-        const listId = process.env[envKey];
-        if (listId) {
-          lists[countryCode] = listId;
-        }
+      if (!listId) {
+        this.logger.log(
+          color.yellow.bold(
+            'Skipping contact upload - MAIL_OCTOPUS_LIST_ID is not configured'
+          )
+        );
+        return;
       }
 
-      // Get all users
+      // Known locales — used to explicitly clear stale locale-* tags when a
+      // contact's locale changes (PUT only mutates tags listed in the payload).
+      const knownLocales = Translation.ALL_LOCALES;
+
+      // Only export contacts that aren't in any privileged group:
+      // either no `user_in_groups` row at all, or every row links to the
+      // "users" group (Prisma's `every` returns true for empty lists, so a
+      // single condition covers both cases).
       const users = await prisma.user.findMany({
         select: {
           id: true,
@@ -2121,7 +2192,13 @@ ${params.html}
         },
         where: {
           sync: true,
+          UserGroupUser: {
+            every: {
+              UserGroup: { name: 'users' },
+            },
+          },
         },
+        ...(limit && limit > 0 ? { take: limit } : {}),
       });
 
       if (users.length === 0) {
@@ -2147,140 +2224,99 @@ ${params.html}
         }
       }
 
-      // Process each list
-      const apiKey = process.env.MAIL_OCTOPUS_API_KEY;
+      this.logger.log(
+        color.blue.bold(
+          `Processing list ${white.bold(listId)} with ${white.bold(
+            users.length
+          )} contact(s)`
+        )
+      );
+
       const processedEmails = new Set<string>();
+      const apiUrl = `https://api.emailoctopus.com/lists/${listId}/contacts`;
+      let successCount = 0;
 
-      for (const [listName, listId] of Object.entries(lists)) {
-        if (!listId) {
-          const skipDescription =
-            listName === 'general'
-              ? 'general (all countries)'
-              : `${listName} country`;
-          this.logger.log(
-            color.yellow(
-              `Skipping ${white.bold(
-                skipDescription
-              )} list - no list ID configured`
-            )
-          );
-          continue;
+      for (const user of users) {
+        const locale = (user.locale || '').trim().toLowerCase();
+        const country = (user.country || '').trim().toLowerCase();
+
+        // Build tag map: set the current locale-* / country-* tag to true
+        // and explicitly clear the others so locale/country changes propagate.
+        const tags: { [key: string]: boolean } = {};
+        for (const code of knownLocales) {
+          tags[`locale-${code}`] = code === locale;
+        }
+        if (country) {
+          tags[`country-${country}`] = true;
         }
 
-        const listDescription =
-          listName === 'general' ? 'general' : `${listName}`;
-
-        this.logger.log(
-          color.blue.bold(
-            `Processing ${white.bold(listDescription)} list (${white.bold(
-              listId
-            )})`
-          )
-        );
-
-        // Filter users based on list type
-        let filteredUsers = users;
-        if (listName !== 'general') {
-          // For country-specific lists, filter by country
-          filteredUsers = users.filter((user) => user.country === listName);
-        }
-
-        if (filteredUsers.length === 0) {
-          this.logger.log(
-            color.yellow(
-              `No users found for ${white.bold(listDescription)} list`
-            )
-          );
-          continue;
-        }
-
-        // Format contacts for Mail Octopus API
-        const contacts = filteredUsers.map((user) => ({
-          email: user.email,
+        const payload = {
+          email_address: user.email,
           fields: {
             FirstName: user.displayName,
             SignupDate: user.createdAt.toISOString(),
             Locale: user.locale || '',
             Country: user.country || '',
           },
+          tags,
           status: user.marketingEmails ? 'subscribed' : 'unsubscribed',
-        }));
+        };
 
-        // Mail Octopus API v2 endpoint
-        const apiUrl = `https://api.emailoctopus.com/lists/${listId}/contacts`;
-        let successCount = 0;
+        try {
+          await axios.put(apiUrl, payload, {
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${apiKey}`,
+            },
+          });
 
-        for (const contact of contacts) {
-          try {
-            await axios.put(
-              apiUrl,
-              {
-                api_key: apiKey,
-                email_address: contact.email,
-                fields: contact.fields,
-                status: contact.status,
-                list_id: listId,
-              },
-              {
-                headers: {
-                  'Content-Type': 'application/json',
-                  Authorization: `Bearer ${apiKey}`,
-                },
-              }
-            );
+          this.logger.log(
+            color.blue.bold(
+              `Successfully uploaded ${white.bold(user.email)} (${white.bold(
+                locale || 'no-locale'
+              )})`
+            )
+          );
 
+          successCount++;
+          processedEmails.add(user.email);
+
+          // Wait 250ms before the next request to respect rate limiting
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        } catch (err: any) {
+          if (err.response?.status === 422) {
+            // Invalid email or unprocessable content - log cleanly and mark as processed to stop retrying
             this.logger.log(
-              color.blue.bold(
-                `[${white.bold(
-                  listDescription
-                )}] Successfully uploaded ${white.bold(contact.email)}`
+              color.yellow(
+                `Skipping invalid contact ${white.bold(
+                  user.email
+                )}: ${white.bold(
+                  err.response?.data?.detail || 'Unprocessable content'
+                )}`
               )
             );
-
-            successCount++;
-            processedEmails.add(contact.email);
-
-            // Wait 250ms before the next request to respect rate limiting
-            await new Promise((resolve) => setTimeout(resolve, 250));
-          } catch (err: any) {
-            if (err.response?.status === 422) {
-              // Invalid email or unprocessable content - log cleanly and mark as processed to stop retrying
-              this.logger.log(
-                color.yellow(
-                  `[${white.bold(
-                    listDescription
-                  )}] Skipping invalid contact ${white.bold(
-                    contact.email
-                  )}: ${white.bold(err.response?.data?.detail || 'Unprocessable content')}`
-                )
-              );
-              processedEmails.add(contact.email);
-            } else {
-              // Log other errors but continue with others
-              this.logger.log(
-                color.red(
-                  `[${white.bold(
-                    listDescription
-                  )}] Error uploading ${white.bold(
-                    contact.email
-                  )}: ${white.bold(err.message)}`
-                )
-              );
-            }
-
-            // Also wait after errors to avoid hitting rate limits
-            await new Promise((resolve) => setTimeout(resolve, 250));
+            processedEmails.add(user.email);
+          } else {
+            this.logger.log(
+              color.red(
+                `Error uploading ${white.bold(user.email)}: ${white.bold(
+                  err.message
+                )}`
+              )
+            );
           }
-        }
 
-        this.logger.log(
-          color.blue.bold(
-            `[${white.bold(listDescription)}] Uploaded ${white.bold(
-              successCount
-            )} out of ${white.bold(contacts.length)} contacts`
-          )
-        );
+          await new Promise((resolve) => setTimeout(resolve, 250));
+        }
       }
+
+      this.logger.log(
+        color.blue.bold(
+          `Uploaded ${white.bold(successCount)} out of ${white.bold(
+            users.length
+          )} contacts`
+        )
+      );
 
       // Set sync to false for all successfully processed users
       if (processedEmails.size > 0) {
@@ -2298,7 +2334,7 @@ ${params.html}
         color.blue.bold(
           `Contact upload completed. Processed ${white.bold(
             processedEmails.size
-          )} unique contacts across all lists`
+          )} unique contacts`
         )
       );
     } catch (error: any) {
