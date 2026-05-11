@@ -1865,8 +1865,11 @@ class Generator {
     paymentId: string
   ): Promise<string> {
     const boxFilename = `box_${paymentId}_${paymentHasPlaylistId}.pdf`;
-    const boxOutputPath = `${process.env['PUBLIC_DIR']}/box-insert/${boxFilename}`;
+    const boxDir = `${process.env['PUBLIC_DIR']}/box-insert`;
+    const boxOutputPath = `${boxDir}/${boxFilename}`;
     const boxUrl = `${process.env['API_URI']}/qr/pdf-box/${paymentHasPlaylistId}/${paymentId}`;
+
+    await fs.mkdir(boxDir, { recursive: true });
 
     // The EJS template (pdf_box_insert.ejs) loops the front+back pair
     // `boxQuantity` times based on the php record, so the rendered PDF
