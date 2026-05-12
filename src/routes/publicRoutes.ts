@@ -23,7 +23,9 @@ import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
 import { FONTS } from '../fonts';
 import { BACKGROUNDS } from '../backgrounds';
-import { BOX_PRICE, BOX_MAX_CARDS, BOX_TIER_PRICES } from '../config/constants';
+import { BOX_PRICE, BOX_MAX_CARDS, BOX_TIER_PRICES, EXTRA_TRACK_TIERS } from '../config/constants';
+import Upgrade, { pickBoxDesignFields } from '../upgrade';
+import PrismaInstance from '../prisma';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
 import path from 'path';
 import fs from 'fs/promises';
@@ -544,6 +546,260 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       }
 
       return { success };
+    }
+  );
+
+  // ===== User-suggestions upgrade endpoints =====
+  // These are authenticated by paymentId + userHash (no JWT required) so the
+  // email link "just works." They mirror /api/box/* but live on this page
+  // rather than /my-account.
+
+  const upgrade = Upgrade.getInstance();
+
+  // Box: get saved design (no JWT — userHash-authenticated)
+  fastify.get(
+    '/usersuggestions/:paymentId/:userHash/:playlistId/box/design',
+    async (request: any, reply: any) => {
+      try {
+        const { paymentId, userHash, playlistId } = request.params;
+        const ctx = await upgrade.verifyUserHash(paymentId, userHash, playlistId);
+        if (!ctx) {
+          return reply.status(403).send({ success: false, error: 'Unauthorized' });
+        }
+        return reply.send({
+          success: true,
+          design: pickBoxDesignFields(ctx.php),
+        });
+      } catch (error: any) {
+        logger.log(`Error in GET /usersuggestions/.../box/design: ${error.message}`);
+        return reply.status(500).send({ success: false, error: 'Failed to load box design' });
+      }
+    }
+  );
+
+  // Box: save design (without payment) — only allowed when box is already enabled
+  fastify.post(
+    '/usersuggestions/:paymentId/:userHash/:playlistId/box/design',
+    async (request: any, reply: any) => {
+      try {
+        const { paymentId, userHash, playlistId } = request.params;
+        const { boxDesign } = request.body || {};
+        const ctx = await upgrade.verifyUserHash(paymentId, userHash, playlistId);
+        if (!ctx) {
+          return reply.status(403).send({ success: false, error: 'Unauthorized' });
+        }
+        if (!ctx.php.boxEnabled) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Box is not yet enabled for this order',
+          });
+        }
+        if (!boxDesign) {
+          return reply.status(400).send({ success: false, error: 'Missing boxDesign' });
+        }
+        await PrismaInstance.getInstance().paymentHasPlaylist.update({
+          where: { id: ctx.php.id },
+          data: pickBoxDesignFields(boxDesign),
+        });
+        return reply.send({ success: true });
+      } catch (error: any) {
+        logger.log(`Error in POST /usersuggestions/.../box/design: ${error.message}`);
+        return reply.status(500).send({ success: false, error: 'Failed to save box design' });
+      }
+    }
+  );
+
+  // Box: calculate price (EUR). Quantity is derived server-side from the
+  // playlist's track count — clients do not supply it.
+  fastify.post(
+    '/usersuggestions/:paymentId/:userHash/:playlistId/box/calculate-price',
+    async (request: any, reply: any) => {
+      try {
+        const { paymentId, userHash, playlistId } = request.params;
+        const ctx = await upgrade.verifyUserHash(paymentId, userHash, playlistId);
+        if (!ctx) {
+          return reply.status(403).send({ success: false, error: 'Unauthorized' });
+        }
+        if (ctx.php.type !== 'physical') {
+          return reply.status(400).send({
+            success: false,
+            error: 'Gift box is only available for physical orders',
+          });
+        }
+        const price = await upgrade.calculateBoxUpgradePrice(ctx.php, ctx.payment);
+        return reply.send({ success: true, ...price });
+      } catch (error: any) {
+        logger.log(`Error in POST /usersuggestions/.../box/calculate-price: ${error.message}`);
+        return reply.status(500).send({ success: false, error: 'Failed to calculate price' });
+      }
+    }
+  );
+
+  // Box: create Mollie upgrade payment. No design is collected at this
+  // step — the user designs the box AFTER unlocking it (post-payment).
+  fastify.post(
+    '/usersuggestions/:paymentId/:userHash/:playlistId/box/upgrade-payment',
+    async (request: any, reply: any) => {
+      try {
+        const { paymentId, userHash, playlistId } = request.params;
+        const { locale, currency, digital } = request.body || {};
+        const ctx = await upgrade.verifyUserHash(paymentId, userHash, playlistId);
+        if (!ctx) {
+          return reply.status(403).send({ success: false, error: 'Unauthorized' });
+        }
+        if (ctx.php.type !== 'physical') {
+          return reply.status(400).send({
+            success: false,
+            error: 'Gift box is only available for physical orders',
+          });
+        }
+
+        const price = await upgrade.calculateBoxUpgradePrice(ctx.php, ctx.payment);
+
+        // Persist the derived quantity now. Design will be added post-payment
+        // via POST /usersuggestions/.../box/design once boxEnabled is true.
+        await PrismaInstance.getInstance().paymentHasPlaylist.update({
+          where: { id: ctx.php.id },
+          data: { boxQuantity: price.boxQuantity },
+        });
+
+        const userLocale = locale || ctx.payment.locale || 'en';
+        const digitalSegment = digital === undefined || digital === null
+          ? '0'
+          : String(parseInt(digital) || 0);
+        const result = await mollie.createUpgradePayment({
+          amountEur: price.totalEur,
+          requestedCurrency: currency || ctx.payment.currency || 'EUR',
+          description:
+            price.boxQuantity > 1
+              ? `Gift Box (${price.boxQuantity}x) - ${ctx.playlist.name}`
+              : `Gift Box - ${ctx.playlist.name}`,
+          locale: userLocale,
+          redirectUrl: `${process.env['FRONTEND_URI']}/${userLocale}/usersuggestions/${paymentId}/${userHash}/${playlistId}/${digitalSegment}?upgrade=box_success`,
+          metadata: {
+            type: 'box_upgrade',
+            paymentHasPlaylistId: ctx.php.id.toString(),
+            userId: ctx.user.id.toString(),
+            originalPaymentId: ctx.payment.paymentId,
+            shippingCost: '0',
+            boxPrice: BOX_PRICE.toString(),
+            quantity: price.boxQuantity.toString(),
+            source: 'usersuggestions',
+          },
+          clientIp: request.clientIp,
+        });
+
+        return reply.send({ success: true, paymentUrl: result.checkoutUrl });
+      } catch (error: any) {
+        logger.log(`Error in POST /usersuggestions/.../box/upgrade-payment: ${error.message}`);
+        console.error(error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to create box upgrade payment',
+        });
+      }
+    }
+  );
+
+  // Tracks: calculate price (EUR)
+  fastify.post(
+    '/usersuggestions/:paymentId/:userHash/:playlistId/tracks/calculate-price',
+    async (request: any, reply: any) => {
+      try {
+        const { paymentId, userHash, playlistId } = request.params;
+        const { extraTracks } = request.body || {};
+        const ctx = await upgrade.verifyUserHash(paymentId, userHash, playlistId);
+        if (!ctx) {
+          return reply.status(403).send({ success: false, error: 'Unauthorized' });
+        }
+        if (ctx.php.type !== 'physical') {
+          return reply.status(400).send({
+            success: false,
+            error: 'Track upgrade is only available for physical orders',
+          });
+        }
+        const tier = parseInt(extraTracks);
+        if (!(EXTRA_TRACK_TIERS as readonly number[]).includes(tier)) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid extraTracks tier',
+          });
+        }
+        const price = await upgrade.calculateExtraTracksPrice(ctx.php, ctx.payment, tier);
+        return reply.send({
+          success: true,
+          ...price,
+          currentNumberOfTracks: ctx.php.numberOfTracks,
+        });
+      } catch (error: any) {
+        logger.log(`Error in POST /usersuggestions/.../tracks/calculate-price: ${error.message}`);
+        return reply.status(500).send({ success: false, error: 'Failed to calculate price' });
+      }
+    }
+  );
+
+  // Tracks: create Mollie upgrade payment
+  fastify.post(
+    '/usersuggestions/:paymentId/:userHash/:playlistId/tracks/upgrade-payment',
+    async (request: any, reply: any) => {
+      try {
+        const { paymentId, userHash, playlistId } = request.params;
+        const { extraTracks, locale, currency, digital } = request.body || {};
+        const ctx = await upgrade.verifyUserHash(paymentId, userHash, playlistId);
+        if (!ctx) {
+          return reply.status(403).send({ success: false, error: 'Unauthorized' });
+        }
+        if (ctx.php.type !== 'physical') {
+          return reply.status(400).send({
+            success: false,
+            error: 'Track upgrade is only available for physical orders',
+          });
+        }
+        const tier = parseInt(extraTracks);
+        if (!(EXTRA_TRACK_TIERS as readonly number[]).includes(tier)) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Invalid extraTracks tier',
+          });
+        }
+        if (ctx.php.userConfirmedPrinting) {
+          return reply.status(400).send({
+            success: false,
+            error: 'Cannot add tracks after order has been confirmed for printing',
+          });
+        }
+        const price = await upgrade.calculateExtraTracksPrice(ctx.php, ctx.payment, tier);
+        const userLocale = locale || ctx.payment.locale || 'en';
+        const digitalSegment = digital === undefined || digital === null
+          ? '0'
+          : String(parseInt(digital) || 0);
+        const result = await mollie.createUpgradePayment({
+          amountEur: price.totalEur,
+          requestedCurrency: currency || ctx.payment.currency || 'EUR',
+          description: `+${tier} tracks - ${ctx.playlist.name}`,
+          locale: userLocale,
+          redirectUrl: `${process.env['FRONTEND_URI']}/${userLocale}/usersuggestions/${paymentId}/${userHash}/${playlistId}/${digitalSegment}?upgrade=tracks_success`,
+          metadata: {
+            type: 'tracks_upgrade',
+            paymentHasPlaylistId: ctx.php.id.toString(),
+            userId: ctx.user.id.toString(),
+            originalPaymentId: ctx.payment.paymentId,
+            extraTracks: tier.toString(),
+            previousNumberOfTracks: (ctx.php.numberOfTracks || 0).toString(),
+            source: 'usersuggestions',
+          },
+          clientIp: request.clientIp,
+        });
+
+        return reply.send({ success: true, paymentUrl: result.checkoutUrl });
+      } catch (error: any) {
+        logger.log(`Error in POST /usersuggestions/.../tracks/upgrade-payment: ${error.message}`);
+        console.error(error);
+        return reply.status(500).send({
+          success: false,
+          error: 'Failed to create tracks upgrade payment',
+        });
+      }
     }
   );
 

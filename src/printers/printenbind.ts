@@ -1,5 +1,5 @@
 import Log from '../logger';
-import { MAX_CARDS, MAX_CARDS_PHYSICAL, BOX_PRICE, boxTierPrice } from '../config/constants';
+import { MAX_CARDS, MAX_CARDS_PHYSICAL, BOX_PRICE, BOX_UNIT_COST, boxTierPrice } from '../config/constants';
 import PrismaInstance from '../prisma';
 import Cache from '../cache';
 import { ApiResult } from '../interfaces/ApiResult';
@@ -1401,6 +1401,19 @@ class PrintEnBind {
     }
   }
 
+  /**
+   * Raw print cost per card in EUR — just paper + ink, no handling, no
+   * minimum-order amortization, no profit, no VAT. Mirrors the constants in
+   * `calculateSingleItem`. Used by post-purchase upgrade pricing where the
+   * customer pays a simple per-card markup rather than going through the
+   * full margin model.
+   */
+  public getRawCardCostEur(): number {
+    const colorPrice = 0.018;
+    const paperPrice = 0.034;
+    return colorPrice * 2 + paperPrice;
+  }
+
   public async calculateSingleItem(
     params: SingleItemCalculation,
     recurse: boolean = true
@@ -1824,7 +1837,24 @@ class PrintEnBind {
         (printApiPrice + amountTax).toFixed(2)
       );
 
-      const newProfit = totalPriceWithoutTax - printApiPrice;
+      // Empty boxes are bought from a supplier outside the print-API invoice,
+      // so deduct their wholesale cost (BOX_UNIT_COST × total boxes shipped)
+      // from the profit to reflect true margin.
+      const playlistsForBoxes = await this.prisma.paymentHasPlaylist.findMany({
+        where: { paymentId: payment.id },
+        select: { boxEnabled: true, boxQuantity: true, amount: true },
+      });
+      const totalBoxCount = playlistsForBoxes.reduce((sum, p) => {
+        if (p.boxEnabled && p.boxQuantity > 0) {
+          return sum + p.boxQuantity * (p.amount || 1);
+        }
+        return sum;
+      }, 0);
+      const boxCost = parseFloat((totalBoxCount * BOX_UNIT_COST).toFixed(2));
+
+      const newProfit = parseFloat(
+        (totalPriceWithoutTax - printApiPrice - boxCost).toFixed(2)
+      );
 
       await this.prisma.payment.update({
         where: { paymentId: payment.paymentId },
@@ -1847,6 +1877,8 @@ class PrintEnBind {
             totalPriceWithoutTax.toFixed(2)
           )}] [API: ${color.white.bold(
             printApiPrice.toFixed(2)
+          )}] [BOX: ${color.white.bold(
+            `${totalBoxCount}×${BOX_UNIT_COST.toFixed(2)}=${boxCost.toFixed(2)}`
           )}] [PR: ${color.white.bold(newProfit.toFixed(2))}]`
         )
       );

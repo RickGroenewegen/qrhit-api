@@ -667,6 +667,33 @@
             ]
         },
         {
+            "slug": "add-gift-box-in-correction",
+            "title": "Can I add a gift box after I've already paid?",
+            "description": "Yes. The correction form has a dedicated Gift Box tab where you can add a gift box to a physical order even if you didn't select one during checkout. You'll see exactly how many boxes your playlist needs (one box holds up to 190 cards), the price (with the same bulk discount as a regular order — 1 box €6.99, 5+ boxes €4.00 each), and a single 'Add to my order' button that takes you through a quick Mollie payment. Once paid, the gift box is unlocked and you can design the lid image, logo, and personal message right in the same tab. Because the box ships in the same package as your cards, there's no extra shipping cost.",
+            "tags": [
+                "gift box",
+                "add",
+                "upgrade",
+                "correction form",
+                "after purchase",
+                "physical"
+            ]
+        },
+        {
+            "slug": "add-tracks-in-correction",
+            "title": "Can I add extra tracks to my playlist after paying?",
+            "description": "Yes. The correction form has an 'Add more tracks' option (visible on the Tracks tab and as a small '+ Add more' link in the order summary at the top). You can pick a tier — +10, +25, +50, +75, +100, or +200 tracks — and pay through Mollie. After the payment completes, the slots are added to your playlist. You then open your playlist on Spotify (or Apple Music / whichever service you used), add the new songs, come back to the correction form, and click the Reload button to pull the new tracks in. The extra cards are printed together with your existing order so there's no separate shipment.",
+            "tags": [
+                "tracks",
+                "add tracks",
+                "extra tracks",
+                "upgrade",
+                "correction form",
+                "after purchase",
+                "more songs"
+            ]
+        },
+        {
             "slug": "extra-info",
             "title": "Can I add extra information to cards?",
             "description": "Yes! You can add personalized details in a smaller font under the artist and song title. Perfect for movie titles, country of origin, personal messages to recipients, or fun facts about songs. Adding information can be done after puchase. You will receive a link to review and correct your order, but also add extra info there.",

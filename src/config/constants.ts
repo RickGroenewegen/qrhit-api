@@ -4,6 +4,10 @@ export const MAX_CARDS_PHYSICAL = 1000;
 // Box product
 export const BOX_PRICE = 6.99;
 export const BOX_MAX_CARDS = 190;
+// What a single empty box costs us to buy from the supplier. Deducted from
+// the profit calculation in printer-side reconciliation so reported profit
+// reflects true margin, not just (sales − printer invoice).
+export const BOX_UNIT_COST = 0.75;
 
 // Per-box price by total boxes on a single cart item. Index 0 is unused;
 // index N is the per-box price when the item has N boxes (anything past the
@@ -20,6 +24,15 @@ export function boxTierPrice(boxCount: number): number {
 export function boxDiscount(boxCount: number): number {
   return 1 - boxTierPrice(boxCount) / BOX_PRICE;
 }
+
+// Multiplier on top of the printenbind raw per-card cost for the "add more
+// tracks" upgrade. 1.25 = 25% markup. Keeps post-purchase upgrade pricing
+// independent of the full margin model used at initial checkout.
+export const EXTRA_TRACK_MARKUP_MULT = 1.25;
+
+// Tiers offered to users for the "add more tracks" upgrade.
+export const EXTRA_TRACK_TIERS = [10, 25, 50, 75, 100, 200] as const;
+export type ExtraTrackTier = (typeof EXTRA_TRACK_TIERS)[number];
 
 // Spotify API rate limiting
 export const SPOTIFY_CONCURRENT_REQUESTS = 2; // Very conservative: 2 concurrent requests (changed from 3)

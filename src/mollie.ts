@@ -2161,11 +2161,40 @@ class Mollie {
             const unitPrice = metadata.boxPrice
               ? parseFloat(metadata.boxPrice)
               : BOX_PRICE;
+            const boxLineTotal = parseFloat((unitPrice * quantity).toFixed(2));
             await this.prisma.paymentHasPlaylist.update({
               where: { id: paymentHasPlaylistId },
               data: {
                 boxEnabled: true,
-                boxPrice: parseFloat((unitPrice * quantity).toFixed(2)),
+                boxPrice: boxLineTotal,
+              },
+            });
+
+            // Roll the upgrade total into Payment.totalPrice so books reflect
+            // the customer's full lifetime spend on this order. Include the
+            // settled amount (subtotal + VAT + any shipping carried in the
+            // metadata) to match what was actually charged.
+            const upgradeShipping = metadata.shippingCost
+              ? parseFloat(metadata.shippingCost)
+              : 0;
+            // Re-derive VAT from the box subtotal using the original payment's
+            // country, the same way `Upgrade.calculateBoxUpgradePrice` does.
+            const phpForVat = await this.prisma.paymentHasPlaylist.findUnique({
+              where: { id: paymentHasPlaylistId },
+              select: { payment: { select: { countrycode: true } } },
+            });
+            const upgradeTaxRate =
+              (await this.data.getTaxRate(phpForVat?.payment?.countrycode || 'NL')) || 0;
+            const upgradeVat = parseFloat(
+              (boxLineTotal * (upgradeTaxRate / 100)).toFixed(2)
+            );
+            const upgradeChargedEur = parseFloat(
+              (boxLineTotal + upgradeVat + upgradeShipping).toFixed(2)
+            );
+            await this.prisma.payment.update({
+              where: { paymentId: originalPaymentId },
+              data: {
+                totalPrice: { increment: upgradeChargedEur },
               },
             });
 
@@ -2184,17 +2213,6 @@ class Mollie {
             } catch (printError) {
               this.logger.log(
                 color.yellow.bold(`Failed to create box Print&Bind order for PHP ${paymentHasPlaylistId}: ${printError}`)
-              );
-            }
-
-            // Send confirmation email
-            try {
-              const shippingCost = metadata.shippingCost ? parseFloat(metadata.shippingCost) : 0;
-              const totalBoxPrice = parseFloat((unitPrice * quantity).toFixed(2));
-              await this.mail.sendBoxUpgradeConfirmationEmail(paymentHasPlaylistId, totalBoxPrice, shippingCost, quantity);
-            } catch (mailError) {
-              this.logger.log(
-                color.yellow.bold(`Failed to send box upgrade email for PHP ${paymentHasPlaylistId}: ${mailError}`)
               );
             }
 
@@ -2218,6 +2236,104 @@ class Mollie {
               color.red.bold(`Error processing box upgrade: ${error.message}`)
             );
             return { success: false, error: 'Failed to process box upgrade' };
+          }
+        }
+      }
+
+      // Check if this is a tracks upgrade payment
+      if (metadata?.type === 'tracks_upgrade' && payment.status === 'paid') {
+        const paymentHasPlaylistId = parseInt(metadata.paymentHasPlaylistId);
+        const userId = parseInt(metadata.userId);
+        const originalPaymentId = metadata.originalPaymentId as string;
+        const extraTracks = parseInt(metadata.extraTracks);
+        const previousNumberOfTracks = parseInt(metadata.previousNumberOfTracks) || 0;
+
+        if (paymentHasPlaylistId && userId && originalPaymentId && extraTracks) {
+          // Idempotency guard via Redis: a webhook for the same Mollie payment
+          // ID must only be applied once, even if Mollie retries.
+          const idemKey = `tracks_upgrade_processed:${payment.id}`;
+          const alreadyProcessed = await this.cache.get(idemKey);
+          if (alreadyProcessed) {
+            this.logger.log(
+              color.yellow.bold(`Tracks upgrade ${payment.id} already processed, skipping`)
+            );
+            return { success: true };
+          }
+
+          try {
+            const php = await this.prisma.paymentHasPlaylist.findUnique({
+              where: { id: paymentHasPlaylistId },
+            });
+            if (!php) {
+              return { success: false, error: 'PaymentHasPlaylist not found' };
+            }
+
+            const newCount = (php.numberOfTracks || previousNumberOfTracks) + extraTracks;
+
+            const result = await this.data.updatePlaylistDetails(
+              paymentHasPlaylistId,
+              newCount,
+              undefined
+            );
+            if (!result.success) {
+              this.logger.log(
+                color.red.bold(`Failed to update track count for tracks upgrade: ${result.error}`)
+              );
+              return { success: false, error: result.error || 'Failed to update track count' };
+            }
+
+            // Roll the charged amount into Payment.totalPrice so the books
+            // reflect the customer's full lifetime spend on this order.
+            const chargedAmountEur =
+              (payment as any).amount && (payment as any).amount.currency === 'EUR'
+                ? parseFloat((payment as any).amount.value)
+                : null;
+            if (chargedAmountEur !== null) {
+              await this.prisma.payment.update({
+                where: { paymentId: originalPaymentId },
+                data: { totalPrice: { increment: chargedAmountEur } },
+              });
+            } else {
+              // Non-EUR settlement: prefer settlementAmount in EUR if present.
+              const settlementEur =
+                (payment as any).settlementAmount &&
+                (payment as any).settlementAmount.currency === 'EUR'
+                  ? parseFloat((payment as any).settlementAmount.value)
+                  : null;
+              if (settlementEur !== null) {
+                await this.prisma.payment.update({
+                  where: { paymentId: originalPaymentId },
+                  data: { totalPrice: { increment: settlementEur } },
+                });
+              }
+            }
+
+            // Mark as processed for 60 days; webhook replays after that are
+            // vanishingly unlikely.
+            await this.cache.set(idemKey, '1', 60 * 60 * 24 * 60);
+
+            // Clear user cache so the new track count surfaces on dashboards.
+            const phpRecord = await this.prisma.paymentHasPlaylist.findUnique({
+              where: { id: paymentHasPlaylistId },
+              include: { payment: { include: { user: { select: { hash: true } } } } },
+            });
+            if (phpRecord?.payment?.user?.hash) {
+              await this.cache.del(`playlists:user:${phpRecord.payment.user.hash}`);
+            }
+
+            this.logger.log(
+              color.blue.bold('Processed tracks upgrade payment: ') +
+                color.white.bold(`+${extraTracks} → ${newCount}`) +
+                color.blue.bold(' for PHP: ') +
+                color.white.bold(paymentHasPlaylistId.toString())
+            );
+
+            return { success: true };
+          } catch (error: any) {
+            this.logger.log(
+              color.red.bold(`Error processing tracks upgrade: ${error.message}`)
+            );
+            return { success: false, error: 'Failed to process tracks upgrade' };
           }
         }
       }

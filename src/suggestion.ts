@@ -34,7 +34,11 @@ class Suggestion {
   ): Promise<any> {
     const payment = await this.prisma.payment.findFirst({
       select: {
+        id: true,
         canBeSentToPrinterAt: true,
+        countrycode: true,
+        currency: true,
+        locale: true,
       },
       where: {
         paymentId,
@@ -43,8 +47,21 @@ class Suggestion {
 
     const playlist = await this.prisma.playlist.findFirst({
       where: { playlistId },
-      select: { serviceType: true },
+      select: { id: true, serviceType: true },
     });
+
+    const php = payment && playlist
+      ? await this.prisma.paymentHasPlaylist.findFirst({
+          where: { paymentId: payment.id, playlistId: playlist.id },
+          select: {
+            id: true,
+            type: true,
+            numberOfTracks: true,
+            boxEnabled: true,
+            boxQuantity: true,
+          },
+        })
+      : null;
 
     const tracks = await this.prisma.$queryRaw<any[]>`
       SELECT
@@ -88,7 +105,20 @@ class Suggestion {
     `;
     return {
       suggestions: tracks,
-      metadata: { payment, serviceType: playlist?.serviceType ?? 'spotify' },
+      metadata: {
+        payment: {
+          canBeSentToPrinterAt: payment?.canBeSentToPrinterAt ?? null,
+          countrycode: payment?.countrycode ?? null,
+          currency: payment?.currency ?? null,
+          locale: payment?.locale ?? null,
+        },
+        serviceType: playlist?.serviceType ?? 'spotify',
+        paymentHasPlaylistId: php?.id ?? null,
+        playlistType: php?.type ?? null,
+        numberOfTracks: php?.numberOfTracks ?? null,
+        boxEnabled: php?.boxEnabled ?? false,
+        boxQuantity: php?.boxQuantity ?? 0,
+      },
     };
   }
 
