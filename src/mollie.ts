@@ -175,7 +175,17 @@ class Mollie {
             0
           ) as totalPriceWithoutTax,
           COALESCE(SUM(p.refundAmount), 0) as totalRefunded,
-          COALESCE(SUM(p.profit), 0) as totalProfit
+          COALESCE(SUM(p.profit), 0) as totalProfit,
+          COALESCE(SUM(
+            CASE
+              WHEN EXISTS (
+                SELECT 1 FROM payment_has_playlist php
+                WHERE php.paymentId = p.id AND php.type = 'physical'
+              )
+                THEN (CASE WHEN p.printApiPrice > 0 THEN 1 ELSE 0 END)
+              ELSE 1
+            END
+          ), 0) as profitAssignedCount
         FROM payments p
         WHERE p.status = 'paid'
           AND p.vibe = 0
@@ -225,6 +235,7 @@ class Mollie {
         gamesAmount: Number(gamesMap.get(r.period)?.gamesAmount) || 0,
         gamesTotal: Number(gamesMap.get(r.period)?.gamesTotal) || 0,
         totalProfit: Number(r.totalProfit) || 0,
+        profitAssignedCount: Number(r.profitAssignedCount) || 0,
       }));
     }
 
@@ -289,7 +300,17 @@ class Mollie {
     const profitResults: any[] = await this.prisma.$queryRawUnsafe(`
       SELECT
         ${dateExpr} as period,
-        COALESCE(SUM(p.profit), 0) as totalProfit
+        COALESCE(SUM(p.profit), 0) as totalProfit,
+        COALESCE(SUM(
+          CASE
+            WHEN EXISTS (
+              SELECT 1 FROM payment_has_playlist php
+              WHERE php.paymentId = p.id AND php.type = 'physical'
+            )
+              THEN (CASE WHEN p.printApiPrice > 0 THEN 1 ELSE 0 END)
+            ELSE 1
+          END
+        ), 0) as profitAssignedCount
       FROM payments p
       WHERE p.status = 'paid'
         AND p.vibe = 0
@@ -314,6 +335,7 @@ class Mollie {
       gamesAmount: 0,
       gamesTotal: 0,
       totalProfit: Number(profitMap.get(r.period)?.totalProfit) || 0,
+      profitAssignedCount: Number(profitMap.get(r.period)?.profitAssignedCount) || 0,
     }));
   }
 
@@ -412,6 +434,38 @@ class Mollie {
     `);
     const boxMap = new Map(boxByCountry.map(b => [b.countrycode || 'Unknown', Number(b.boxAmount) || 0]));
 
+    // Count payments whose profit has been assigned. Digital orders get profit
+    // at creation; physical orders only after submission to the print API
+    // (printApiPrice > 0). Mirrors the groupBy `where` so it shares the same
+    // denominator as numberOfSales.
+    const monthEmailFilter = ignoreEmails.length
+      ? `AND p.email NOT IN (${ignoreEmails.map(e => `'${e}'`).join(',')})`
+      : '';
+    const profitAssignedByCountry: any[] = await this.prisma.$queryRawUnsafe(`
+      SELECT
+        p.countrycode,
+        COALESCE(SUM(
+          CASE
+            WHEN EXISTS (
+              SELECT 1 FROM payment_has_playlist php
+              WHERE php.paymentId = p.id AND php.type = 'physical'
+            )
+              THEN (CASE WHEN p.printApiPrice > 0 THEN 1 ELSE 0 END)
+            ELSE 1
+          END
+        ), 0) as profitAssignedCount
+      FROM payments p
+      WHERE p.vibe = 0
+        AND p.createdAt >= '${startDate.toISOString()}'
+        AND p.createdAt <= '${endDate.toISOString()}'
+        AND p.createdAt > '2024-12-05'
+        ${monthEmailFilter}
+      GROUP BY p.countrycode
+    `);
+    const profitAssignedMap = new Map(
+      profitAssignedByCountry.map(p => [p.countrycode || 'Unknown', Number(p.profitAssignedCount) || 0])
+    );
+
     const detailedReport = await Promise.all(
       report.map(async (entry) => {
         const payments = await this.prisma.payment.findMany({
@@ -457,6 +511,7 @@ class Mollie {
           gamesAmount: gamesData?.amount || 0,
           gamesTotal: gamesData?.total || 0,
           totalProfit: entry._sum.profit || 0,
+          profitAssignedCount: profitAssignedMap.get(countryKey) || 0,
         };
       })
     );
