@@ -175,7 +175,16 @@ class Mollie {
             0
           ) as totalPriceWithoutTax,
           COALESCE(SUM(p.refundAmount), 0) as totalRefunded,
-          COALESCE(SUM(p.profit), 0) as totalProfit,
+          COALESCE(SUM(
+            CASE
+              WHEN EXISTS (
+                SELECT 1 FROM payment_has_playlist php
+                WHERE php.paymentId = p.id AND php.type = 'physical'
+              )
+                THEN (CASE WHEN p.printApiPrice > 0 THEN p.profit ELSE 0 END)
+              ELSE p.profit
+            END
+          ), 0) as totalProfit,
           COALESCE(SUM(
             CASE
               WHEN EXISTS (
@@ -300,7 +309,16 @@ class Mollie {
     const profitResults: any[] = await this.prisma.$queryRawUnsafe(`
       SELECT
         ${dateExpr} as period,
-        COALESCE(SUM(p.profit), 0) as totalProfit,
+        COALESCE(SUM(
+          CASE
+            WHEN EXISTS (
+              SELECT 1 FROM payment_has_playlist php
+              WHERE php.paymentId = p.id AND php.type = 'physical'
+            )
+              THEN (CASE WHEN p.printApiPrice > 0 THEN p.profit ELSE 0 END)
+            ELSE p.profit
+          END
+        ), 0) as totalProfit,
         COALESCE(SUM(
           CASE
             WHEN EXISTS (
@@ -378,7 +396,6 @@ class Mollie {
       _sum: {
         totalPrice: true,
         totalPriceWithoutTax: true,
-        profit: true,
       },
       _max: {
         taxRate: true,
@@ -450,6 +467,16 @@ class Mollie {
               SELECT 1 FROM payment_has_playlist php
               WHERE php.paymentId = p.id AND php.type = 'physical'
             )
+              THEN (CASE WHEN p.printApiPrice > 0 THEN p.profit ELSE 0 END)
+            ELSE p.profit
+          END
+        ), 0) as totalProfit,
+        COALESCE(SUM(
+          CASE
+            WHEN EXISTS (
+              SELECT 1 FROM payment_has_playlist php
+              WHERE php.paymentId = p.id AND php.type = 'physical'
+            )
               THEN (CASE WHEN p.printApiPrice > 0 THEN 1 ELSE 0 END)
             ELSE 1
           END
@@ -463,7 +490,13 @@ class Mollie {
       GROUP BY p.countrycode
     `);
     const profitAssignedMap = new Map(
-      profitAssignedByCountry.map(p => [p.countrycode || 'Unknown', Number(p.profitAssignedCount) || 0])
+      profitAssignedByCountry.map(p => [
+        p.countrycode || 'Unknown',
+        {
+          totalProfit: Number(p.totalProfit) || 0,
+          profitAssignedCount: Number(p.profitAssignedCount) || 0,
+        },
+      ])
     );
 
     const detailedReport = await Promise.all(
@@ -510,8 +543,8 @@ class Mollie {
           boxAmount: boxMap.get(countryKey) || 0,
           gamesAmount: gamesData?.amount || 0,
           gamesTotal: gamesData?.total || 0,
-          totalProfit: entry._sum.profit || 0,
-          profitAssignedCount: profitAssignedMap.get(countryKey) || 0,
+          totalProfit: profitAssignedMap.get(countryKey)?.totalProfit || 0,
+          profitAssignedCount: profitAssignedMap.get(countryKey)?.profitAssignedCount || 0,
         };
       })
     );

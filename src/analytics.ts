@@ -76,11 +76,13 @@ class AnalyticsClient {
 
     const financeResult = await this.getProfitAndTurnOver();
 
+    if (!result['finance']) result['finance'] = {};
     result['finance']['profit'] = financeResult.totalProfit;
     result['finance']['turnover'] = financeResult.totalPrice;
 
     const soldResult = await this.getTotalPlaylistsSoldByType();
 
+    if (!result['purchase']) result['purchase'] = {};
     result['purchase']['digital'] = soldResult.digital.amount;
     result['purchase']['physical'] = soldResult.physical.amount;
     result['purchase']['cards'] =
