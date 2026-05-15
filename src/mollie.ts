@@ -174,7 +174,8 @@ class Mollie {
             ),
             0
           ) as totalPriceWithoutTax,
-          COALESCE(SUM(p.refundAmount), 0) as totalRefunded
+          COALESCE(SUM(p.refundAmount), 0) as totalRefunded,
+          COALESCE(SUM(p.profit), 0) as totalProfit
         FROM payments p
         WHERE p.status = 'paid'
           AND p.vibe = 0
@@ -223,6 +224,7 @@ class Mollie {
         totalRefunded: Number(r.totalRefunded) || 0,
         gamesAmount: Number(gamesMap.get(r.period)?.gamesAmount) || 0,
         gamesTotal: Number(gamesMap.get(r.period)?.gamesTotal) || 0,
+        totalProfit: Number(r.totalProfit) || 0,
       }));
     }
 
@@ -282,6 +284,26 @@ class Mollie {
       ORDER BY period DESC
     `);
 
+    // Profit summed at the payment level (once per payment) restricted to
+    // payments that have at least one line item matching the filter.
+    const profitResults: any[] = await this.prisma.$queryRawUnsafe(`
+      SELECT
+        ${dateExpr} as period,
+        COALESCE(SUM(p.profit), 0) as totalProfit
+      FROM payments p
+      WHERE p.status = 'paid'
+        AND p.vibe = 0
+        AND p.createdAt > '2024-12-05'
+        ${emailFilter}
+        AND EXISTS (
+          SELECT 1 FROM payment_has_playlist php
+          WHERE php.paymentId = p.id
+          ${typeFilter}
+        )
+      GROUP BY ${dateExpr}
+    `);
+    const profitMap = new Map(profitResults.map(p => [p.period, p]));
+
     return results.map(r => ({
       period: r.period,
       numberOfSales: Number(r.numberOfSales),
@@ -291,6 +313,7 @@ class Mollie {
       totalRefunded: Number(r.totalRefunded) || 0,
       gamesAmount: 0,
       gamesTotal: 0,
+      totalProfit: Number(profitMap.get(r.period)?.totalProfit) || 0,
     }));
   }
 
@@ -333,6 +356,7 @@ class Mollie {
       _sum: {
         totalPrice: true,
         totalPriceWithoutTax: true,
+        profit: true,
       },
       _max: {
         taxRate: true,
@@ -432,6 +456,7 @@ class Mollie {
           boxAmount: boxMap.get(countryKey) || 0,
           gamesAmount: gamesData?.amount || 0,
           gamesTotal: gamesData?.total || 0,
+          totalProfit: entry._sum.profit || 0,
         };
       })
     );
