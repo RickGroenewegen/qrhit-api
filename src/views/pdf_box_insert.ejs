@@ -86,6 +86,14 @@
         margin-top: 8px;
     }
 
+    .front-title {
+        position: absolute;
+        transform: translate(-50%, -50%);
+        text-align: center;
+        line-height: 1;
+        white-space: nowrap;
+    }
+
     .back-text {
         padding: 15mm;
         text-align: center;
@@ -97,22 +105,30 @@
     }
 </style>
 <%
-// Font embedding for box back text
+// Font embedding for box text (back personal message + front text title)
 let boxFontStyles = '';
-const boxFont = php.boxBackSelectedFont || 'Arial, sans-serif';
-if (boxFont && boxFont !== 'Arial, sans-serif') {
-    let fontName = boxFont.split(',')[0].trim().replace(/["']/g, '');
+const fontsToEmbed = [];
+[php.boxBackSelectedFont, php.boxFrontTitleFont].forEach(function (f) {
+    if (f && f !== 'Arial, sans-serif' && fontsToEmbed.indexOf(f) === -1) {
+        fontsToEmbed.push(f);
+    }
+});
+fontsToEmbed.forEach(function (f) {
+    let fontName = f.split(',')[0].trim().replace(/["']/g, '');
     let googleFontName = fontName.replace(/ /g, '+');
-    let weights = typeof getGoogleFontWeights === 'function' ? getGoogleFontWeights(boxFont) : '400;700';
-
-    boxFontStyles = `
+    let weights = typeof getGoogleFontWeights === 'function' ? getGoogleFontWeights(f) : '400;700';
+    boxFontStyles += `
     <style>
         @import url('https://fonts.googleapis.com/css2?family=${googleFontName}:wght@${weights}&display=swap');
     </style>
-    <link rel="preconnect" href="https://fonts.googleapis.com">
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=${googleFontName}:wght@${weights}&display=swap" rel="stylesheet">
     `;
+});
+if (fontsToEmbed.length) {
+    boxFontStyles = `
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    ` + boxFontStyles;
 }
 %>
 <%- boxFontStyles %>
@@ -143,7 +159,26 @@ for (let i = 0; i < insertCount; i++) {
         <% } %>
     </div>
     <div class="content">
-        <% if (php.boxFrontLogo) { %>
+        <% if ((php.boxFrontTitleType || 'logo') === 'text' && php.boxFrontTitleText) { %>
+            <%
+            // Build the styled text title for the front of the box.
+            let titleStyle = 'left: ' + (php.boxFrontTitlePositionX != null ? php.boxFrontTitlePositionX : 50) + '%;'
+                + ' top: ' + (php.boxFrontTitlePositionY != null ? php.boxFrontTitlePositionY : 50) + '%;'
+                + ' font-family: ' + (php.boxFrontTitleFont || 'Arial, sans-serif') + ';'
+                + ' font-size: ' + ((php.boxFrontTitleFontSize || 32) * 1.47) + 'px;'
+                + ' color: ' + (php.boxFrontTitleColor || '#ffffff') + ';';
+            if (php.boxFrontTitleStrokeWidth && php.boxFrontTitleStrokeWidth > 0) {
+                titleStyle += ' -webkit-text-stroke: ' + php.boxFrontTitleStrokeWidth + 'px ' + (php.boxFrontTitleStrokeColor || '#000000') + ';';
+            }
+            if (php.boxFrontTitleShadowEnabled) {
+                titleStyle += ' text-shadow: ' + (php.boxFrontTitleShadowOffsetX != null ? php.boxFrontTitleShadowOffsetX : 2) + 'px '
+                    + (php.boxFrontTitleShadowOffsetY != null ? php.boxFrontTitleShadowOffsetY : 2) + 'px '
+                    + (php.boxFrontTitleShadowBlur != null ? php.boxFrontTitleShadowBlur : 4) + 'px '
+                    + (php.boxFrontTitleShadowColor || '#000000') + ';';
+            }
+            %>
+            <div class="front-title" style="<%= titleStyle %>"><%= php.boxFrontTitleText %></div>
+        <% } else if (php.boxFrontLogo) { %>
             <img class="logo-image" src="<%= process.env['API_URI'] %>/public/logo/<%= php.boxFrontLogo %>"
                  style="max-width: <%= (php.boxFrontLogoScale || 50) %>%; max-height: <%= (php.boxFrontLogoScale || 50) %>%; position: absolute; left: <%= (php.boxFrontLogoPositionX || 50) %>%; top: <%= (php.boxFrontLogoPositionY || 50) %>%; transform: translate(-50%, -50%); object-fit: contain;" />
         <% } %>

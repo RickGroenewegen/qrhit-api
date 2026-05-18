@@ -667,6 +667,21 @@ model PaymentHasPlaylist {
   boxFrontLogoPositionX    Int                      @default(50)
   boxFrontLogoPositionY    Int                      @default(50)
   boxFrontEmoji            String?
+  // Box front title (logo image or styled text)
+  boxFrontTitleType          String?                @default("logo")
+  boxFrontTitleText          String?                @db.Text
+  boxFrontTitleFont          String?                @default("Arial, sans-serif")
+  boxFrontTitleFontSize      Int                    @default(32)
+  boxFrontTitleColor         String?                @default("#ffffff")
+  boxFrontTitlePositionX     Int                    @default(50)
+  boxFrontTitlePositionY     Int                    @default(50)
+  boxFrontTitleStrokeWidth   Int                    @default(0)
+  boxFrontTitleStrokeColor   String?                @default("#000000")
+  boxFrontTitleShadowEnabled Boolean                @default(false)
+  boxFrontTitleShadowColor   String?                @default("#000000")
+  boxFrontTitleShadowBlur    Int                    @default(4)
+  boxFrontTitleShadowOffsetX Int                    @default(2)
+  boxFrontTitleShadowOffsetY Int                    @default(2)
   // Box back design
   boxBackBackgroundType    String?                  @default("solid")
   boxBackBackground        String?

@@ -60,6 +60,21 @@ export interface CartItem {
   boxFrontLogoPositionX?: number;
   boxFrontLogoPositionY?: number;
   boxFrontEmoji?: string;
+  // Box front title (logo image or styled text)
+  boxFrontTitleType?: 'logo' | 'text';
+  boxFrontTitleText?: string;
+  boxFrontTitleFont?: string;
+  boxFrontTitleFontSize?: number;
+  boxFrontTitleColor?: string;
+  boxFrontTitlePositionX?: number;
+  boxFrontTitlePositionY?: number;
+  boxFrontTitleStrokeWidth?: number;
+  boxFrontTitleStrokeColor?: string;
+  boxFrontTitleShadowEnabled?: boolean;
+  boxFrontTitleShadowColor?: string;
+  boxFrontTitleShadowBlur?: number;
+  boxFrontTitleShadowOffsetX?: number;
+  boxFrontTitleShadowOffsetY?: number;
   // Box back design
   boxBackBackgroundType?: 'solid' | 'image';
   boxBackBackground?: string;
