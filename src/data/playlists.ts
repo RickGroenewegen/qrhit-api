@@ -162,6 +162,8 @@ export async function getPlaylistsByPaymentId(
       payment_has_playlist.frontOpacity,
       payment_has_playlist.backOpacity,
       payment_has_playlist.printerType,
+      payment_has_playlist.theme,
+      payment_has_playlist.themeName,
       payment_has_playlist.gamesEnabled,
       payment_has_playlist.boxEnabled,
       payment_has_playlist.boxQuantity,
@@ -239,7 +241,9 @@ export async function updatePaymentHasPlaylist(
   eco: boolean,
   doubleSided: boolean,
   printerType?: string,
-  template?: string | null
+  template?: string | null,
+  theme?: string | null,
+  themeName?: string | null
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const updateData: any = {
@@ -249,6 +253,14 @@ export async function updatePaymentHasPlaylist(
 
     if (printerType !== undefined) {
       updateData.printerType = printerType;
+    }
+
+    if (theme !== undefined) {
+      updateData.theme = theme;
+    }
+
+    if (themeName !== undefined) {
+      updateData.themeName = themeName;
     }
 
     // Get the paymentHasPlaylist to find the related playlistId
@@ -275,9 +287,18 @@ export async function updatePaymentHasPlaylist(
       });
     }
 
+    // Reload the in-memory theme cache when theme data changed
+    if (theme !== undefined || themeName !== undefined) {
+      await deps.appTheme.reload();
+    }
+
     deps.logger.log(
       color.blue.bold(
-        `Updated playlist data for ${color.white.bold(paymentHasPlaylistId)}`
+        `Updated playlist data for ${color.white.bold(
+          paymentHasPlaylistId
+        )} ${color.white.bold(
+          JSON.stringify({ eco, doubleSided, printerType, template, theme, themeName })
+        )}`
       )
     );
     return { success: true };

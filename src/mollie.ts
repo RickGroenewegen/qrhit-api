@@ -1494,6 +1494,8 @@ class Mollie {
             eco: true,
             doubleSided: true,
             printerType: true,
+            theme: true,
+            themeName: true,
             background: true,
             logo: true,
             subType: true,

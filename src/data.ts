@@ -263,9 +263,11 @@ class Data {
     eco: boolean,
     doubleSided: boolean,
     printerType?: string,
-    template?: string | null
+    template?: string | null,
+    theme?: string | null,
+    themeName?: string | null
   ): Promise<{ success: boolean; error?: string }> {
-    return playlistsModule.updatePaymentHasPlaylist(this.deps, paymentHasPlaylistId, eco, doubleSided, printerType, template);
+    return playlistsModule.updatePaymentHasPlaylist(this.deps, paymentHasPlaylistId, eco, doubleSided, printerType, template, theme, themeName);
   }
 
   public async updatePlaylistDetails(paymentHasPlaylistId: number, numberOfTracks: number, appleStoreFront?: string | null) {

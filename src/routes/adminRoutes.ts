@@ -2349,7 +2349,8 @@ export default async function adminRoutes(
         const paymentHasPlaylistId = parseInt(
           request.params.paymentHasPlaylistId
         );
-        const { eco, doubleSided, printerType, template } = request.body;
+        const { eco, doubleSided, printerType, template, theme, themeName } =
+          request.body;
 
         if (isNaN(paymentHasPlaylistId)) {
           reply
@@ -2393,12 +2394,32 @@ export default async function adminRoutes(
           return;
         }
 
+        // Validate theme if provided
+        if (theme !== undefined && theme !== null && typeof theme !== 'string') {
+          reply.status(400).send({
+            success: false,
+            error: 'Invalid theme value. Must be string or null.',
+          });
+          return;
+        }
+
+        // Validate themeName if provided
+        if (themeName !== undefined && themeName !== null && typeof themeName !== 'string') {
+          reply.status(400).send({
+            success: false,
+            error: 'Invalid themeName value. Must be string or null.',
+          });
+          return;
+        }
+
         const result = await data.updatePaymentHasPlaylist(
           paymentHasPlaylistId,
           eco,
           doubleSided,
           printerType,
-          template
+          template,
+          theme,
+          themeName
         );
 
         if (!result.success) {

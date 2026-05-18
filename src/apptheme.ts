@@ -1,4 +1,5 @@
 import { color } from 'console-log-colors';
+import Redis from 'ioredis';
 import Logger from './logger';
 import PrismaInstance from './prisma';
 import Utils from './utils';
@@ -6,11 +7,18 @@ import cluster from 'cluster';
 
 class AppTheme {
   private static instance: AppTheme;
+  private static readonly RELOAD_CHANNEL = 'apptheme:reload';
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private utils = new Utils();
   private appThemes: Map<number, { s: string; n: string; st: string }> = new Map();
   private appThemesInitialized: boolean = false;
+  // Unique id for this process so we can ignore reload messages we published ourselves
+  private instanceId: string = `${process.pid}-${Math.random()
+    .toString(36)
+    .slice(2)}`;
+  private publisher: Redis | null = null;
+  private subscriber: Redis | null = null;
 
   private constructor() {
     // Initialize themes on startup
@@ -25,6 +33,9 @@ class AppTheme {
     } else {
       this.loadAppThemes(false);
     }
+
+    // Listen for cross-worker reload broadcasts
+    this.setupReloadSubscriber();
   }
 
   public static getInstance(): AppTheme {
@@ -32,6 +43,58 @@ class AppTheme {
       AppTheme.instance = new AppTheme();
     }
     return AppTheme.instance;
+  }
+
+  /**
+   * Set up Redis pub/sub so a reload on one worker propagates to all workers.
+   * Each Node cluster worker keeps its own in-memory theme cache, so without
+   * this broadcast only the worker that handled the request would be fresh.
+   */
+  private setupReloadSubscriber(): void {
+    const redisUrl = process.env['REDIS_URL'];
+
+    if (!redisUrl) {
+      // No Redis configured - fall back to local-only reloads
+      return;
+    }
+
+    try {
+      this.publisher = new Redis(redisUrl, { db: 0 });
+      this.subscriber = new Redis(redisUrl, { db: 0 });
+
+      this.publisher.on('error', (error) => {
+        this.logger.log(
+          color.red.bold('AppTheme publisher Redis error: ') +
+            color.white.bold(error.message)
+        );
+      });
+      this.subscriber.on('error', (error) => {
+        this.logger.log(
+          color.red.bold('AppTheme subscriber Redis error: ') +
+            color.white.bold(error.message)
+        );
+      });
+
+      this.subscriber.subscribe(AppTheme.RELOAD_CHANNEL);
+      this.subscriber.on('message', async (channel, message) => {
+        if (channel !== AppTheme.RELOAD_CHANNEL) {
+          return;
+        }
+
+        // Ignore the broadcast we published ourselves - that worker already
+        // reloaded locally in reload().
+        if (message === this.instanceId) {
+          return;
+        }
+
+        await this.loadAppThemes(false);
+      });
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold('Failed to set up AppTheme reload subscriber: ') +
+          color.white.bold(error.message)
+      );
+    }
   }
 
   /**
@@ -92,11 +155,24 @@ class AppTheme {
   }
 
   /**
-   * Reload themes (useful for adding new themes without restarting API)
+   * Reload themes (useful for adding new themes without restarting API).
+   * Reloads this worker immediately and broadcasts to all other workers.
    */
   public async reload(): Promise<void> {
     this.appThemesInitialized = false;
     await this.loadAppThemes();
+
+    // Notify the other workers so their in-memory caches stay in sync
+    if (this.publisher) {
+      try {
+        await this.publisher.publish(AppTheme.RELOAD_CHANNEL, this.instanceId);
+      } catch (error: any) {
+        this.logger.log(
+          color.red.bold('Failed to broadcast AppTheme reload: ') +
+            color.white.bold(error.message)
+        );
+      }
+    }
   }
 
   /**
