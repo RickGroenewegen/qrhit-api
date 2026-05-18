@@ -21,11 +21,15 @@ export default async function themeRoutes(
       const themeContent = await fs.readFile(themePath, 'utf-8');
       const themeData = JSON.parse(themeContent);
 
+      // Cache-buster tied to the theme version so the asset URL changes
+      // whenever the theme is updated, defeating WebView/CloudFront caching.
+      const cacheBuster = themeData.version ?? Date.now();
+
       // Check if logo exists and update URL
       const logoPath = `${process.env['APP_ROOT']}/_data/themes/${slug}/logo.png`;
       try {
         await fs.access(logoPath);
-        themeData.assets.logo = `${process.env['API_URI']}/theme/${slug}/logo`;
+        themeData.assets.logo = `${process.env['API_URI']}/theme/${slug}/logo?v=${cacheBuster}`;
       } catch {
         themeData.assets.logo = null;
       }
@@ -34,7 +38,7 @@ export default async function themeRoutes(
       const backgroundPath = `${process.env['APP_ROOT']}/_data/themes/${slug}/background.png`;
       try {
         await fs.access(backgroundPath);
-        themeData.assets.background = `${process.env['API_URI']}/theme/${slug}/background`;
+        themeData.assets.background = `${process.env['API_URI']}/theme/${slug}/background?v=${cacheBuster}`;
       } catch {
         themeData.assets.background = null;
       }
@@ -93,9 +97,11 @@ export default async function themeRoutes(
       // Check if file exists
       await fs.access(logoPath);
 
-      // Stream the file
+      // Stream the file. The URL is version-busted by /theme/:slug, so the
+      // asset itself can be cached aggressively.
       const file = await fs.readFile(logoPath);
       reply.type('image/png');
+      reply.header('Cache-Control', 'public, max-age=31536000, immutable');
       return file;
     } catch (error: any) {
       if (error.code === 'ENOENT') {
@@ -119,9 +125,11 @@ export default async function themeRoutes(
       // Check if file exists
       await fs.access(backgroundPath);
 
-      // Stream the file
+      // Stream the file. The URL is version-busted by /theme/:slug, so the
+      // asset itself can be cached aggressively.
       const file = await fs.readFile(backgroundPath);
       reply.type('image/png');
+      reply.header('Cache-Control', 'public, max-age=31536000, immutable');
       return file;
     } catch (error: any) {
       if (error.code === 'ENOENT') {

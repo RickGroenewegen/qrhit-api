@@ -1,7 +1,7 @@
 {
   "id": "derby",
   "name": "Derby",
-  "version": 7,
+  "version": 8,
   "showMusicalNotes": false,
   "showRecord": true,
   "showEqualizer": true,
