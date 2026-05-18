@@ -128,6 +128,7 @@ class Server {
     await quizRoutes(this.fastify, getAuthHandler);
     await gameRoutes(this.fastify, getAuthHandler);
     await boxRoutes(this.fastify, getAuthHandler);
+    await themeRoutes(this.fastify, getAuthHandler);
   };
 
   public async addRoutes() {
@@ -136,9 +137,6 @@ class Server {
 
     // Register music/spotify routes
     await musicRoutes(this.fastify);
-
-    // Register theme routes
-    await themeRoutes(this.fastify);
 
     // Register payment routes
     await paymentRoutes(this.fastify);

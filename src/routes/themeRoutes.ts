@@ -4,7 +4,10 @@ import Logger from '../logger';
 import fs from 'fs/promises';
 import path from 'path';
 
-export default async function themeRoutes(fastify: FastifyInstance) {
+export default async function themeRoutes(
+  fastify: FastifyInstance,
+  getAuthHandler: any
+) {
   const appTheme = AppTheme.getInstance();
   const logger = new Logger();
 
@@ -49,16 +52,20 @@ export default async function themeRoutes(fastify: FastifyInstance) {
     }
   });
 
-  // Reload app themes (admin endpoint)
-  fastify.post('/theme/reload', async (_request: any, _reply) => {
-    try {
-      await appTheme.reload();
-      return { success: true, message: 'App themes reloaded successfully' };
-    } catch (error: any) {
-      console.error(`Error reloading app themes: ${error.message}`);
-      return { success: false, error: 'Failed to reload app themes' };
+  // Reload app themes (admin only)
+  fastify.post(
+    '/theme/reload',
+    getAuthHandler(['admin']),
+    async (_request: any, _reply) => {
+      try {
+        await appTheme.reload();
+        return { success: true, message: 'App themes reloaded successfully' };
+      } catch (error: any) {
+        console.error(`Error reloading app themes: ${error.message}`);
+        return { success: false, error: 'Failed to reload app themes' };
+      }
     }
-  });
+  );
 
   // Get all app themes (debugging endpoint)
   fastify.get('/theme/debug/all', async (_request: any, _reply) => {
