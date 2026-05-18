@@ -1,6 +1,11 @@
 import { color, blue, white } from 'console-log-colors';
 import Logger from './logger';
-import { MAX_CARDS, MAX_CARDS_PHYSICAL } from './config/constants';
+import {
+  MAX_CARDS,
+  MAX_CARDS_PHYSICAL,
+  PRINTER_TYPE,
+  DEFAULT_PRINTER_TYPE,
+} from './config/constants';
 import PrismaInstance from './prisma';
 import Utils from './utils';
 import Mollie from './mollie';
@@ -135,7 +140,7 @@ class Generator {
           vibe: false,
           PaymentHasPlaylist: {
             none: {
-              printerType: 'reseller',
+              printerType: PRINTER_TYPE.RESELLER,
             },
           },
           OR: [
@@ -973,8 +978,8 @@ class Generator {
             printerTemplate = playlist.template;
           } else if (payment.vibe) {
             printerTemplate = 'printer_vibe';
-          } else if (playlist.printerType === 'schneiders') {
-            printerTemplate = 'schneiders';
+          } else if (playlist.printerType === PRINTER_TYPE.SCHNEIDERS) {
+            printerTemplate = PRINTER_TYPE.SCHNEIDERS;
           }
 
           // Generate PDFs for each item
@@ -1001,7 +1006,7 @@ class Generator {
                   digitalTemplate,
                   payment.qrSubDir,
                   eco,
-                  playlist.printerType || 'printnbind',
+                  playlist.printerType || DEFAULT_PRINTER_TYPE,
                   item.index
                 ),
                 playlist.orderType == 'physical'
@@ -1014,7 +1019,7 @@ class Generator {
                         : printerTemplate,
                       payment.qrSubDir,
                       false,
-                      playlist.printerType || 'printnbind',
+                      playlist.printerType || DEFAULT_PRINTER_TYPE,
                       item.index,
                       playlist.addHowToCard || false
                     )

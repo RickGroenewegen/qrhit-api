@@ -34,6 +34,24 @@ export const EXTRA_TRACK_MARKUP_MULT = 1.25;
 export const EXTRA_TRACK_TIERS = [10, 25, 50, 75, 100, 200] as const;
 export type ExtraTrackTier = (typeof EXTRA_TRACK_TIERS)[number];
 
+// Printer types. Single source of truth for the PaymentHasPlaylist.printerType
+// values used across the API (generator, pdf, resellers, admin validation).
+export const PRINTER_TYPE = {
+  PRINTNBIND: 'printnbind',
+  TROMP: 'tromp',
+  SCHNEIDERS: 'schneiders',
+  RESELLER: 'reseller',
+  MUSICMATCH: 'musicmatch',
+} as const;
+
+export type PrinterType = (typeof PRINTER_TYPE)[keyof typeof PRINTER_TYPE];
+
+// All valid printerType values.
+export const PRINTER_TYPES: PrinterType[] = Object.values(PRINTER_TYPE);
+
+// Default printerType for new playlists (matches the Prisma schema default).
+export const DEFAULT_PRINTER_TYPE: PrinterType = PRINTER_TYPE.PRINTNBIND;
+
 // Spotify API rate limiting
 export const SPOTIFY_CONCURRENT_REQUESTS = 2; // Very conservative: 2 concurrent requests (changed from 3)
 export const SPOTIFY_PAGE_LIMIT = 100; // Test value, will fallback to 50 if not supported

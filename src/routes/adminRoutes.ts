@@ -37,6 +37,7 @@ import BrokenLink from '../brokenLink';
 import Translation from '../translation';
 import PostNL from '../postnl';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
+import { PRINTER_TYPE, PRINTER_TYPES } from '../config/constants';
 import path from 'path';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
@@ -2377,10 +2378,15 @@ export default async function adminRoutes(
           return;
         }
 
-        if (printerType && !['printnbind', 'tromp', 'schneiders'].includes(printerType)) {
+        if (
+          printerType &&
+          !(PRINTER_TYPES as string[]).includes(printerType)
+        ) {
           reply.status(400).send({
             success: false,
-            error: 'Invalid printerType value. Must be "printnbind", "tromp", or "schneiders".',
+            error: `Invalid printerType value. Must be one of: ${PRINTER_TYPES.map(
+              (t) => `"${t}"`
+            ).join(', ')}.`,
           });
           return;
         }
@@ -3670,6 +3676,82 @@ export default async function adminRoutes(
         const result = {
           name,
           cards,
+        };
+
+        return { success: true, data: result };
+      } catch (error: any) {
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Internal server error',
+        });
+      }
+    }
+  );
+
+  // Create MusicMatch JSON (all playlists, compact format)
+  fastify.post(
+    '/admin/create-musicmatch-json',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const playlists = await prisma.playlist.findMany({
+          where: {
+            serviceType: 'spotify',
+            Payment: { some: { printerType: PRINTER_TYPE.MUSICMATCH } },
+          },
+          orderBy: { id: 'asc' },
+          select: {
+            id: true,
+            name: true,
+            tracks: {
+              orderBy: { order: 'asc' },
+              select: {
+                track: {
+                  select: {
+                    id: true,
+                    trackId: true,
+                    spotifyLink: true,
+                    youtubeLink: true,
+                    youtubeMusicLink: true,
+                    deezerLink: true,
+                    appleMusicLink: true,
+                    amazonMusicLink: true,
+                    tidalLink: true,
+                  },
+                },
+              },
+            },
+          },
+        });
+
+        const p = playlists
+          .map((playlist) => ({
+            i: playlist.id,
+            n: playlist.name,
+            t: playlist.tracks
+              .filter((pt) => pt.track && pt.track.trackId)
+              .map((pt) => {
+                const track = pt.track;
+                const links: Record<string, string> = {};
+                if (track.spotifyLink) links.spotify = track.spotifyLink;
+                if (track.youtubeLink) links.youtube = track.youtubeLink;
+                if (track.youtubeMusicLink)
+                  links.youtubeMusic = track.youtubeMusicLink;
+                if (track.deezerLink) links.deezer = track.deezerLink;
+                if (track.appleMusicLink)
+                  links.appleMusic = track.appleMusicLink;
+                if (track.amazonMusicLink)
+                  links.amazonMusic = track.amazonMusicLink;
+                if (track.tidalLink) links.tidal = track.tidalLink;
+                return { i: track.id, l: track.trackId, links };
+              }),
+          }))
+          .filter((playlist) => playlist.t.length > 0);
+
+        const result = {
+          h: true,
+          t: Math.floor(Date.now() / 1000),
+          p,
         };
 
         return { success: true, data: result };

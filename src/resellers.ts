@@ -12,6 +12,7 @@ import { ResellerUser } from './resellerAuth';
 import { CartItem } from './interfaces/CartItem';
 import { BACKGROUNDS, getBackgroundsWithUrls } from './backgrounds';
 import { FONTS } from './fonts';
+import { PRINTER_TYPE } from './config/constants';
 
 class Resellers {
   private static instance: Resellers;
@@ -365,7 +366,7 @@ class Resellers {
       gradientPosition: design.gradientPosition || 50,
       frontOpacity: design.frontOpacity !== undefined ? design.frontOpacity : 100,
       backOpacity: design.backOpacity !== undefined ? design.backOpacity : 50,
-      printerType: 'reseller',
+      printerType: PRINTER_TYPE.RESELLER,
       gamesEnabled: false,
       gamesPrice: 0,
     };
@@ -558,7 +559,7 @@ class Resellers {
 
     // Only allow status checks for reseller orders
     const isResellerOrder = payment.PaymentHasPlaylist.some(
-      (php) => php.printerType === 'reseller'
+      (php) => php.printerType === PRINTER_TYPE.RESELLER
     );
     if (!isResellerOrder) {
       this.logger.logDev(
