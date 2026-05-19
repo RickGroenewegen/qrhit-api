@@ -1106,6 +1106,23 @@
             ]
         },
         {
+            "slug": "cross-platform-playlist",
+            "title": "I made my playlist on one service — will the cards also work on Deezer / Tidal / Apple Music / YouTube Music?",
+            "description": "Yes. The cards are not locked to the service you used to create your playlist. When you create a Spotify playlist (or one on any other supported service), our system automatically searches for matching links on all the other supported platforms — Spotify, Apple Music, Tidal, Deezer, and YouTube Music. This means a friend or player can scan the same card and play the song in whichever music service they prefer. We aim for over 97% cross-platform coverage, and in practice it works very well. The only caveat is that there is no guarantee every single song exists on every platform — catalogs differ slightly between services, so a small number of tracks may occasionally be missing on one platform. But overall, cards made from a playlist on one service will absolutely work on the other services too.",
+            "tags": [
+                "cross-platform",
+                "different service",
+                "switch service",
+                "works on Deezer",
+                "works on Tidal",
+                "works on Apple Music",
+                "works on YouTube Music",
+                "Spotify playlist other platforms",
+                "platform compatibility",
+                "song coverage"
+            ]
+        },
+        {
             "slug": "platform-spotify",
             "title": "How does Spotify work with QRSong?",
             "description": "Spotify has full support. Just paste any public Spotify playlist URL to create your cards. Release years are included and verified by our AI and team. When playing with the QRSong app, there are three playback modes you can choose in the settings: 1) Hidden mode (Spotify Premium required): the song plays in the app without showing the artist or title — perfect for music quizzes. 2) Countdown mode: a countdown is shown, then the Spotify app opens and plays the song — you'll see the artist and title in Spotify. 3) No Spotify mode: the song plays in the QRSong app but the artist and title are visible. We recommend Spotify Premium with hidden mode for the best experience. Note: only playlists are supported — albums, podcasts, and episodes cannot be used. Spotify-curated playlists (like 'This is...') must first be copied to your own account.",
