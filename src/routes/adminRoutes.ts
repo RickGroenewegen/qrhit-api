@@ -1538,6 +1538,65 @@ export default async function adminRoutes(
     }
   );
 
+  // Change the product type (digital / cards / sheets) of a payment_has_playlist
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/type',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentHasPlaylistId } = request.params;
+      const { productType } = request.body;
+
+      if (!paymentHasPlaylistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'PaymentHasPlaylist ID is required',
+        });
+        return;
+      }
+
+      if (!['digital', 'cards', 'sheets'].includes(productType)) {
+        reply.status(400).send({
+          success: false,
+          error: 'Valid productType is required (digital, cards or sheets)',
+        });
+        return;
+      }
+
+      const result = await data.changePlaylistType(
+        parseInt(paymentHasPlaylistId, 10),
+        productType
+      );
+
+      if (!result.success) {
+        reply.status(result.error === 'PaymentHasPlaylist not found' ? 404 : 400).send({
+          success: false,
+          error: result.error,
+        });
+        return;
+      }
+
+      // No type change happened — nothing to regenerate.
+      if (!result.changed) {
+        reply.send({ success: true, changed: false });
+        return;
+      }
+
+      // Regenerate all PDFs for the order so they match the new product type.
+      const userAgent = request.headers['user-agent'] || '';
+      const jobId = await generator.queueGenerate(
+        result.paymentId!,
+        request.clientIp,
+        '',
+        true, // Force finalize
+        true, // Skip main "order received" mail — this is an admin change
+        false,
+        userAgent
+      );
+
+      reply.send({ success: true, changed: true, jobId });
+    }
+  );
+
   // Analytics
   fastify.get(
     '/analytics',

@@ -282,6 +282,13 @@ class Data {
     return playlistsModule.updatePlaylistAmount(this.deps, paymentHasPlaylistId, amount);
   }
 
+  public async changePlaylistType(
+    paymentHasPlaylistId: number,
+    productType: playlistsModule.ProductType
+  ) {
+    return playlistsModule.changePlaylistType(this.deps, paymentHasPlaylistId, productType);
+  }
+
   public async updateGamesEnabled(paymentHasPlaylistId: number, gamesEnabled: boolean) {
     return playlistsModule.updateGamesEnabled(this.deps, paymentHasPlaylistId, gamesEnabled);
   }

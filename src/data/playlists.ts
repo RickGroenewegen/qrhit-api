@@ -449,6 +449,148 @@ export async function updatePlaylistAmount(
   }
 }
 
+/** Admin-selectable product type, mapped to the underlying type/subType pair. */
+export type ProductType = 'digital' | 'cards' | 'sheets';
+
+const PRODUCT_TYPE_MAP: Record<
+  ProductType,
+  { type: string; subType: string; digital: boolean; orderTypeProduct: string }
+> = {
+  digital: { type: 'digital', subType: 'none', digital: true, orderTypeProduct: 'cards' },
+  cards: { type: 'physical', subType: 'none', digital: false, orderTypeProduct: 'cards' },
+  sheets: { type: 'physical', subType: 'sheets', digital: false, orderTypeProduct: 'sheets' },
+};
+
+/**
+ * Changes the product type (digital / physical cards / physical sheets) of a
+ * single order line item. Updates only the fields that depend on the type and
+ * resets the now-stale printer/PDF state — prices are intentionally left
+ * untouched. The caller is responsible for queueing PDF regeneration when
+ * `changed` is true.
+ */
+export async function changePlaylistType(
+  deps: DataDeps,
+  paymentHasPlaylistId: number,
+  productType: ProductType
+): Promise<{
+  success: boolean;
+  error?: string;
+  paymentId?: string;
+  changed?: boolean;
+}> {
+  try {
+    const target = PRODUCT_TYPE_MAP[productType];
+    if (!target) {
+      return { success: false, error: `Invalid productType: ${productType}` };
+    }
+
+    const php = await deps.prisma.paymentHasPlaylist.findUnique({
+      where: { id: paymentHasPlaylistId },
+      select: {
+        id: true,
+        paymentId: true,
+        playlistId: true,
+        type: true,
+        subType: true,
+        numberOfTracks: true,
+        payment: { select: { paymentId: true } },
+      },
+    });
+
+    if (!php) {
+      return { success: false, error: 'PaymentHasPlaylist not found' };
+    }
+
+    const paymentIdString = php.payment.paymentId;
+
+    // No-op: already the requested type.
+    if (php.type === target.type && (php.subType || 'none') === target.subType) {
+      return { success: true, paymentId: paymentIdString, changed: false };
+    }
+
+    // Unique constraint is @@unique([paymentId, playlistId, type, subType]) —
+    // refuse if another line item for the same playlist already occupies it.
+    const collision = await deps.prisma.paymentHasPlaylist.findFirst({
+      where: {
+        paymentId: php.paymentId,
+        playlistId: php.playlistId,
+        type: target.type,
+        subType: target.subType,
+        id: { not: paymentHasPlaylistId },
+      },
+      select: { id: true },
+    });
+    if (collision) {
+      return {
+        success: false,
+        error: `This order already has a "${productType}" line item for the same playlist (#${collision.id}).`,
+      };
+    }
+
+    // Re-look-up the OrderType categorization FK (no pricing involved). For
+    // physical products fall back to the largest tier when the track count
+    // exceeds every maxCards tier (mirrors Printer.getOrderType clamping).
+    let orderType = await deps.prisma.orderType.findFirst({
+      where: {
+        type: target.orderTypeProduct,
+        digital: target.digital,
+        ...(target.digital ? {} : { maxCards: { gte: php.numberOfTracks } }),
+      },
+      orderBy: { maxCards: 'asc' },
+      select: { id: true },
+    });
+    if (!orderType && !target.digital) {
+      orderType = await deps.prisma.orderType.findFirst({
+        where: { type: target.orderTypeProduct, digital: false },
+        orderBy: { maxCards: 'desc' },
+        select: { id: true },
+      });
+    }
+    if (!orderType) {
+      return {
+        success: false,
+        error: `No matching OrderType found for "${productType}" (${php.numberOfTracks} tracks).`,
+      };
+    }
+
+    await deps.prisma.paymentHasPlaylist.update({
+      where: { id: paymentHasPlaylistId },
+      data: {
+        type: target.type,
+        subType: target.subType,
+        orderTypeId: orderType.id,
+        // Reset stale printer/PDF state — regeneration repopulates these.
+        printApiUploaded: false,
+        eligableForPrinter: false,
+        eligableForPrinterAt: null,
+        filename: null,
+        filenameDigital: null,
+      },
+    });
+
+    deps.logger.log(
+      color.blue.bold(
+        `Changed product type to ${color.white.bold(
+          productType
+        )} for paymentHasPlaylist ${color.white.bold(
+          paymentHasPlaylistId
+        )} (payment ${color.white.bold(paymentIdString)})`
+      )
+    );
+
+    return { success: true, paymentId: paymentIdString, changed: true };
+  } catch (error: any) {
+    deps.logger.log(
+      color.red.bold(
+        `Error changing product type for PaymentHasPlaylist ${color.white.bold(
+          paymentHasPlaylistId
+        )}: ${error.message}`
+      )
+    );
+    return { success: false, error: error.message };
+  }
+}
+
 export async function updateGamesEnabled(
   deps: DataDeps,
   paymentHasPlaylistId: number,
