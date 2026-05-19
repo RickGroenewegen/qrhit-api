@@ -304,6 +304,10 @@ class Data {
     return playlistsModule.updatePlaylistBlocked(this.deps, playlistId, blocked);
   }
 
+  public async buildMusicMatchExport(): Promise<playlistsModule.MusicMatchExport> {
+    return playlistsModule.buildMusicMatchExport(this.deps);
+  }
+
   private async loadBlocked(): Promise<void> {
     await playlistsModule.loadBlocked(this.deps);
     this.blockedPlaylistsInitialized = true;

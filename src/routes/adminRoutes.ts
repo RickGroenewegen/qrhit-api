@@ -37,7 +37,7 @@ import BrokenLink from '../brokenLink';
 import Translation from '../translation';
 import PostNL from '../postnl';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
-import { PRINTER_TYPE, PRINTER_TYPES } from '../config/constants';
+import { PRINTER_TYPES } from '../config/constants';
 import path from 'path';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
@@ -3688,65 +3688,13 @@ export default async function adminRoutes(
     }
   );
 
-  // Create MusicMatch JSON (all playlists, compact format)
+  // Create MusicMatch JSON (musicmatch playlists, compact format)
   fastify.post(
     '/admin/create-musicmatch-json',
     getAuthHandler(['admin']),
     async (_request: any, reply: any) => {
       try {
-        const playlists = await prisma.playlist.findMany({
-          where: {
-            serviceType: 'spotify',
-            Payment: { some: { printerType: PRINTER_TYPE.MUSICMATCH } },
-          },
-          orderBy: { id: 'asc' },
-          select: {
-            id: true,
-            name: true,
-            tracks: {
-              orderBy: { order: 'asc' },
-              select: {
-                track: {
-                  select: {
-                    id: true,
-                    trackId: true,
-                    spotifyLink: true,
-                    youtubeMusicLink: true,
-                    deezerLink: true,
-                    appleMusicLink: true,
-                    tidalLink: true,
-                  },
-                },
-              },
-            },
-          },
-        });
-
-        const p = playlists
-          .map((playlist) => ({
-            i: playlist.id,
-            n: playlist.name,
-            t: playlist.tracks
-              .filter((pt) => pt.track && pt.track.trackId)
-              .map((pt) => {
-                const track = pt.track;
-                const ln: Record<string, string> = {};
-                if (track.spotifyLink) ln.sp = track.spotifyLink;
-                if (track.appleMusicLink) ln.am = track.appleMusicLink;
-                if (track.deezerLink) ln.dz = track.deezerLink;
-                if (track.tidalLink) ln.td = track.tidalLink;
-                if (track.youtubeMusicLink) ln.ym = track.youtubeMusicLink;
-                return { i: track.id, l: track.trackId, ln };
-              }),
-          }))
-          .filter((playlist) => playlist.t.length > 0);
-
-        const result = {
-          h: true,
-          t: Math.floor(Date.now() / 1000),
-          p,
-        };
-
+        const result = await data.buildMusicMatchExport();
         return { success: true, data: result };
       } catch (error: any) {
         return reply.status(500).send({

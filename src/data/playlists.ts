@@ -2,6 +2,7 @@ import { color } from 'console-log-colors';
 import slugify from 'slugify';
 import { CartItem } from '../interfaces/CartItem';
 import { DataDeps } from './types';
+import { PRINTER_TYPE } from '../config/constants';
 
 export const BLOCKED_PLAYLISTS_CACHE_KEY = 'blocked_playlists_v1';
 
@@ -725,4 +726,95 @@ export async function loadBlockedFromCache(deps: DataDeps): Promise<void> {
       )
     );
   }
+}
+
+/** A single playlist entry in the MusicMatch export. */
+export interface MusicMatchPlaylist {
+  /** payment_has_playlist.id */
+  i: number;
+  /** playlist name */
+  n: string;
+  /** tracks */
+  t: {
+    /** track.id */
+    i: number;
+    /** Spotify track id */
+    l: string;
+    /** streaming service links, keyed by short service code */
+    ln: Record<string, string>;
+  }[];
+}
+
+/** The full MusicMatch export payload. */
+export interface MusicMatchExport {
+  h: true;
+  /** generation time, unix seconds */
+  t: number;
+  /** playlists */
+  p: MusicMatchPlaylist[];
+}
+
+/**
+ * Builds the MusicMatch JSON export: every Spotify PaymentHasPlaylist whose
+ * printerType is 'musicmatch', with its tracks and per-service links.
+ */
+export async function buildMusicMatchExport(
+  deps: DataDeps
+): Promise<MusicMatchExport> {
+  const paymentPlaylists = await deps.prisma.paymentHasPlaylist.findMany({
+    where: {
+      printerType: PRINTER_TYPE.MUSICMATCH,
+      playlist: { serviceType: 'spotify' },
+    },
+    orderBy: { id: 'asc' },
+    select: {
+      id: true,
+      playlist: {
+        select: {
+          name: true,
+          tracks: {
+            orderBy: { order: 'asc' },
+            select: {
+              track: {
+                select: {
+                  id: true,
+                  trackId: true,
+                  spotifyLink: true,
+                  youtubeMusicLink: true,
+                  deezerLink: true,
+                  appleMusicLink: true,
+                  tidalLink: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    },
+  });
+
+  const p: MusicMatchPlaylist[] = paymentPlaylists
+    .map((php) => ({
+      i: php.id,
+      n: php.playlist.name,
+      t: php.playlist.tracks
+        .filter((pt) => pt.track && pt.track.trackId)
+        .map((pt) => {
+          const track = pt.track;
+          const ln: Record<string, string> = {};
+          if (track.spotifyLink) ln.sp = track.spotifyLink;
+          if (track.appleMusicLink) ln.am = track.appleMusicLink;
+          if (track.deezerLink) ln.dz = track.deezerLink;
+          if (track.tidalLink) ln.td = track.tidalLink;
+          if (track.youtubeMusicLink) ln.ym = track.youtubeMusicLink;
+          return { i: track.id, l: track.trackId, ln };
+        }),
+    }))
+    .filter((playlist) => playlist.t.length > 0);
+
+  return {
+    h: true,
+    t: Math.floor(Date.now() / 1000),
+    p,
+  };
 }
