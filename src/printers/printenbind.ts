@@ -767,11 +767,11 @@ class PrintEnBind {
     }
 
     if (physicalOrderCreated) {
-      // Set up delivery
+      // Set up delivery. Print&Bind advised using 'mailbox' for NL so the
+      // package always goes via letterbox; 'mailbox' and 'international' do
+      // not require a delivery_option.
       const deliveryMethod =
-        customerInfo.countrycode === 'NL' ? 'post' : 'international';
-      const deliveryOption =
-        customerInfo.countrycode === 'NL' ? 'standard' : '';
+        customerInfo.countrycode === 'NL' ? 'mailbox' : 'international';
 
       const deliveryData = {
         name_contact: customerInfo.fullname?.trim() || 'John Doe',
@@ -781,8 +781,6 @@ class PrintEnBind {
         zipcode: customerInfo.zipcode?.trim() || '1234AB',
         country: customerInfo.countrycode,
         delivery_method: deliveryMethod,
-        delivery_option:
-          customerInfo.countrycode === 'NL' ? 'standard' : undefined,
         blanco: '1',
         email: customerInfo.email || 'john@doe.com',
       };
