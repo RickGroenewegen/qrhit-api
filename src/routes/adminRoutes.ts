@@ -83,7 +83,8 @@ export default async function adminRoutes(
       const result = await generator.sendToPrinter(
         request.body.paymentId,
         request.clientIp,
-        true
+        true,
+        true // Admin manual send — skip the GPT content checks
       );
 
       if (!result.success) {

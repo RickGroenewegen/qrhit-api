@@ -1337,7 +1337,8 @@ class Generator {
   public async sendToPrinter(
     paymentId: string,
     clientIp: string,
-    force: boolean = false
+    force: boolean = false,
+    skipFinalCheck: boolean = false
   ): Promise<{ success: boolean; reason?: string }> {
     // Acquire distributed lock to prevent concurrent processing
     const lockKey = `printer:${paymentId}`;
@@ -1452,13 +1453,18 @@ class Generator {
       // approval flow, admin manual). On failure: printerHold flips to
       // true (excluding from cron), Pushover fires, and user-actionable
       // failures (profanity / Hitster) reset the Judged flag and email
-      // the customer. Skipped on development to keep local iteration fast.
-      if (process.env['ENVIRONMENT'] === 'development') {
+      // the customer. Skipped on development to keep local iteration fast,
+      // and when an admin explicitly sends to printer from the dashboard.
+      if (process.env['ENVIRONMENT'] === 'development' || skipFinalCheck) {
         this.logger.log(
           color.yellow.bold(
             `[${white.bold('finalCheck')}] skipped for ${white.bold(
               paymentId
-            )} (development environment)`
+            )} (${
+              skipFinalCheck
+                ? 'admin manual send to printer'
+                : 'development environment'
+            })`
           )
         );
       } else {
