@@ -95,6 +95,13 @@
         word-wrap: break-word;
         white-space: pre-wrap;
     }
+
+    /* The insert card sits inside the lid, so the back/personal-message
+       side faces the customer upside down. Print it rotated 180deg so it
+       reads correctly in the physical box. */
+    .page.back-side {
+        transform: rotate(180deg);
+    }
 </style>
 <%
 // Font embedding for box back text
@@ -154,7 +161,7 @@ for (let i = 0; i < insertCount; i++) {
 </div>
 
 <!-- Insert <%= i + 1 %> of <%= insertCount %> — Back side -->
-<div class="page">
+<div class="page back-side">
     <div class="background">
         <% if (php.boxBackBackgroundType === 'image' && php.boxBackBackground) { %>
             <img class="background-image" src="<%= process.env['API_URI'] %>/public/background/<%= php.boxBackBackground %>"
