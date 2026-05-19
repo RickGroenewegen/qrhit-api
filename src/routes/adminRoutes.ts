@@ -3711,11 +3711,9 @@ export default async function adminRoutes(
                     id: true,
                     trackId: true,
                     spotifyLink: true,
-                    youtubeLink: true,
                     youtubeMusicLink: true,
                     deezerLink: true,
                     appleMusicLink: true,
-                    amazonMusicLink: true,
                     tidalLink: true,
                   },
                 },
@@ -3732,18 +3730,13 @@ export default async function adminRoutes(
               .filter((pt) => pt.track && pt.track.trackId)
               .map((pt) => {
                 const track = pt.track;
-                const links: Record<string, string> = {};
-                if (track.spotifyLink) links.spotify = track.spotifyLink;
-                if (track.youtubeLink) links.youtube = track.youtubeLink;
-                if (track.youtubeMusicLink)
-                  links.youtubeMusic = track.youtubeMusicLink;
-                if (track.deezerLink) links.deezer = track.deezerLink;
-                if (track.appleMusicLink)
-                  links.appleMusic = track.appleMusicLink;
-                if (track.amazonMusicLink)
-                  links.amazonMusic = track.amazonMusicLink;
-                if (track.tidalLink) links.tidal = track.tidalLink;
-                return { i: track.id, l: track.trackId, links };
+                const ln: Record<string, string> = {};
+                if (track.spotifyLink) ln.sp = track.spotifyLink;
+                if (track.appleMusicLink) ln.am = track.appleMusicLink;
+                if (track.deezerLink) ln.dz = track.deezerLink;
+                if (track.tidalLink) ln.td = track.tidalLink;
+                if (track.youtubeMusicLink) ln.ym = track.youtubeMusicLink;
+                return { i: track.id, l: track.trackId, ln };
               }),
           }))
           .filter((playlist) => playlist.t.length > 0);
