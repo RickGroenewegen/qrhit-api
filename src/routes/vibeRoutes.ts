@@ -1279,7 +1279,7 @@ export default async function vibeRoutes(
 
           // Set product description for Tromp (48 cards per box, 2 smaller boxes = 96 cards total)
           productDescription = 'QRSong! muziekkaarten set';
-          productDetails = 'Een doos met 2 kleinere doosjes met ieder 48 kaarten (totaal 96 kaarten)';
+          productDetails = 'Een doos met 2 kleinere doosjes met ieder 100 kaarten (totaal 200 kaarten)';
         } else if (type === 'schneider') {
           // Schneider calculation
           calculation = {

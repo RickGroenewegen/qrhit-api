@@ -3848,7 +3848,7 @@ class Vibe {
         const quantity = cr.quantity;
 
         items.push({
-          description: 'QRSong! muziekkaarten set — Een doos met 2 kleinere doosjes met ieder 48 kaarten (totaal 96 kaarten)',
+          description: 'QRSong! muziekkaarten set — Een doos met 2 kleinere doosjes met ieder 100 kaarten (totaal 200 kaarten)',
           amount: String(quantity),
           price: pricePerUnit.toFixed(2),
         });
