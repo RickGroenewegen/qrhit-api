@@ -71,6 +71,23 @@ export default async function appleMusicRoutes(fastify: FastifyInstance) {
     return await appleMusicProvider.resolveShortlink(url);
   });
 
+  // Resolve an Apple Music song URL to the user's storefront.
+  // Body: { url: string, storefront: string }  storefront is the user's ISO country code (e.g. "us", "nl")
+  fastify.post('/apple-music/resolve-storefront', async (request: any, reply) => {
+    const { url, storefront } = request.body || {};
+
+    if (!url || !storefront) {
+      return { success: false, error: 'Missing url or storefront parameter' };
+    }
+
+    const resolvedUrl = await appleMusicProvider.resolveSongToStorefront(
+      url,
+      storefront.toLowerCase()
+    );
+
+    return { success: true, data: { url: resolvedUrl } };
+  });
+
   // Get Apple Music playlist info
   fastify.post('/apple-music/playlists', async (request: any, reply) => {
     const { playlistId, url, cache } = request.body;

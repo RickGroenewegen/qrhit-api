@@ -3344,6 +3344,35 @@ export default async function adminRoutes(
     }
   );
 
+  // Create MusicMatch links in an uploaded Excel file (synchronous, returns the file)
+  fastify.post(
+    '/admin/create-musicmatch-links',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const excel = Excel.getInstance();
+        const { buffer, filename, stats } = await excel.createMusicMatchLinks(
+          request.parts()
+        );
+
+        reply
+          .header(
+            'Content-Type',
+            'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+          )
+          .header('Content-Disposition', `attachment; filename="${filename}"`)
+          .header('X-MusicMatch-Stats', JSON.stringify(stats))
+          .send(buffer);
+      } catch (error: any) {
+        console.error('Error creating MusicMatch links:', error);
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to create MusicMatch links',
+        });
+      }
+    }
+  );
+
   // Bulk create shipments in TrackingMore
   fastify.post(
     '/admin/shipping/create-all',

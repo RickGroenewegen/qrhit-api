@@ -724,6 +724,143 @@ class Excel {
       throw error;
     }
   }
+
+  /**
+   * Process Excel upload and write MusicMatch links into column 6.
+   * Reads Spotify track IDs from column 5 (raw ID or full Spotify URL),
+   * looks up the matching Track and a PaymentHasPlaylist (printerType=musicmatch)
+   * that contains that track, then writes https://api.musicmatchgame.com/{phpId}/{trackId}.
+   */
+  public async createMusicMatchLinks(
+    parts: any
+  ): Promise<{ buffer: Buffer; filename: string; stats: { processed: number; notFound: number; noPhp: number; invalid: number } }> {
+    let fileBuffer: Buffer | null = null;
+    let originalFilename = 'unknown.xlsx';
+    let hasHeader = true;
+    const spotifyColumn = 5;
+    const outputColumn = 6;
+
+    for await (const part of parts) {
+      if (part.type === 'file') {
+        fileBuffer = await part.toBuffer();
+        originalFilename = (part as any).filename || 'unknown.xlsx';
+      } else {
+        const fieldValue = (part as any).value;
+        if (part.fieldname === 'hasHeader') {
+          hasHeader = fieldValue === 'true';
+        }
+      }
+    }
+
+    if (!fileBuffer) {
+      throw new Error('No file uploaded');
+    }
+
+    this.logger.log(
+      color.blue.bold(
+        `Creating MusicMatch links for ${color.white.bold(originalFilename)} (hasHeader=${color.white.bold(hasHeader)})`
+      )
+    );
+
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(fileBuffer as any);
+    const worksheet = workbook.worksheets[0];
+    if (!worksheet) {
+      throw new Error('No worksheet found in Excel file');
+    }
+
+    const startRow = hasHeader ? 2 : 1;
+    const lastRow = worksheet.lastRow?.number || 0;
+
+    let processed = 0;
+    let notFound = 0;
+    let noPhp = 0;
+    let invalid = 0;
+
+    for (let rowNumber = startRow; rowNumber <= lastRow; rowNumber++) {
+      const row = worksheet.getRow(rowNumber);
+      const cell = row.getCell(spotifyColumn);
+
+      let raw = '';
+      if (cell.value) {
+        if (typeof cell.value === 'string') {
+          raw = cell.value.trim();
+        } else if (typeof cell.value === 'object' && (cell.value as any).hyperlink) {
+          raw = String((cell.value as any).hyperlink).trim();
+        } else if (typeof cell.value === 'object' && (cell.value as any).text) {
+          const t = (cell.value as any).text;
+          raw = typeof t === 'string' ? t.trim() : '';
+        } else {
+          raw = String(cell.value).trim();
+        }
+      }
+
+      if (!raw) {
+        invalid++;
+        continue;
+      }
+
+      // Accept full Spotify URL or bare ID, optionally with ?si=... suffix
+      let spotifyTrackId = raw;
+      const urlMatch = raw.match(/track\/([a-zA-Z0-9]+)/);
+      if (urlMatch) {
+        spotifyTrackId = urlMatch[1];
+      } else {
+        const qIdx = spotifyTrackId.indexOf('?');
+        if (qIdx >= 0) spotifyTrackId = spotifyTrackId.substring(0, qIdx);
+      }
+
+      if (!/^[a-zA-Z0-9]+$/.test(spotifyTrackId)) {
+        row.getCell(outputColumn).value = 'Error: Invalid Spotify ID';
+        invalid++;
+        continue;
+      }
+
+      const track = await this.prisma.track.findUnique({
+        where: { trackId: spotifyTrackId },
+        select: { id: true },
+      });
+
+      if (!track) {
+        row.getCell(outputColumn).value = 'Error: Track not found';
+        notFound++;
+        continue;
+      }
+
+      const phpRows = await this.prisma.$queryRaw<Array<{ id: number }>>`
+        SELECT php.id
+        FROM payment_has_playlist php
+        INNER JOIN playlist_has_tracks pht ON pht.playlistId = php.playlistId
+        WHERE pht.trackId = ${track.id}
+          AND php.printerType = 'musicmatch'
+        ORDER BY php.id ASC
+        LIMIT 1
+      `;
+
+      if (!phpRows || phpRows.length === 0) {
+        row.getCell(outputColumn).value = 'Error: No MusicMatch playlist';
+        noPhp++;
+        continue;
+      }
+
+      const phpId = phpRows[0].id;
+      row.getCell(outputColumn).value = `https://api.musicmatchgame.com/${phpId}/${track.id}`;
+      processed++;
+    }
+
+    this.logger.log(
+      color.green.bold(
+        `MusicMatch links done: ${color.white.bold(processed)} written, ${color.white.bold(notFound)} track not found, ${color.white.bold(noPhp)} no musicmatch php, ${color.white.bold(invalid)} invalid`
+      )
+    );
+
+    const resultBuffer = await workbook.xlsx.writeBuffer();
+    return {
+      buffer: Buffer.from(resultBuffer),
+      filename: `musicmatch_${Date.now()}_${originalFilename}`,
+      stats: { processed, notFound, noPhp, invalid },
+    };
+  }
 }
 
 export default Excel;
