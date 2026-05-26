@@ -11,7 +11,8 @@ export type FinalCheckFailureReason =
   | 'pdf-missing'
   | 'design-mismatch'
   | 'inappropriate'
-  | 'hitster';
+  | 'hitster'
+  | 'unreadable';
 
 export type FinalCheckResult =
   | { ok: true }
@@ -323,6 +324,59 @@ Reply STRICTLY as JSON: {"clean": true|false, "evidence": "string"}`;
             )}: ${(e as Error).message}`
           )
         );
+      }
+
+      const readabilityPrompt = `You are checking whether the artist / title / year text on a printed music-trivia card is readable by a human at arm's length.
+
+You will receive two images. Each image is one page of a PDF. Depending on the product type, a page may show:
+  (a) ONE single card filling the page, or
+  (b) a SHEET containing many small cards arranged in a grid.
+
+Either way, find every place where the artist name, song title, or year is printed and judge ONLY whether the text has enough contrast against whatever is directly behind it (solid color, gradient, or background photo).
+
+FLAG (readable: false) only for CLEAR contrast failures that a normal human would struggle to read:
+- Dark text on a dark background (e.g. black/navy text on a dark photo or dark solid).
+- Light text on a light background (e.g. white/cream text on a pale/washed-out photo or light solid).
+- Text whose color is so close to the background color that it visually disappears.
+- Text laid over a busy area of a background image where the specific letters become unreadable because foreground and background share the same tonal range.
+
+DO NOT FLAG:
+- Text that is small but has good contrast — small-but-legible is fine.
+- Stylistic choices (unusual fonts, italics, mixed case) as long as contrast is OK.
+- Slightly low contrast that is still comfortably readable.
+- QR codes, decorative elements, logos, or non-text graphics.
+- Anti-aliasing / rendering softness from the rasterizer.
+
+If even ONE card on the page has unreadable artist/title/year text due to poor contrast, set readable=false and describe which text and what the contrast problem is. If all text is legible, set readable=true.
+
+Reply STRICTLY as JSON: {"readable": true|false, "details": "string"}`;
+
+      this.logVision(
+        payment.paymentId,
+        php.id,
+        'readability/contrast → asking GPT (pages 1+2)'
+      );
+      const readResult = await this.chatgpt.askWithImages(readabilityPrompt, [
+        pdfPage1,
+        pdfPage2,
+      ]);
+      this.logVision(
+        payment.paymentId,
+        php.id,
+        `readability/contrast → readable=${readResult?.readable} ${
+          readResult?.details ? `details="${readResult.details}"` : ''
+        }`
+      );
+      if (readResult && readResult.readable === false) {
+        return {
+          ok: false,
+          reason: 'unreadable',
+          userActionable: false,
+          details:
+            readResult.details ||
+            'Artist/title/year text has insufficient contrast against its background.',
+          ...failBase,
+        };
       }
 
       this.logVision(payment.paymentId, php.id, 'all checks passed ✓');
