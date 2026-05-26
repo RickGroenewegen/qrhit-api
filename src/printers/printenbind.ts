@@ -1516,12 +1516,24 @@ class PrintEnBind {
   public async createOrder(
     payment: any,
     playlists: any[],
-    productType: string
+    productType: string,
+    inlayOnly: boolean = false
   ): Promise<any> {
     const authToken = await this.getAuthToken();
     const orderItems = [];
 
+    if (inlayOnly) {
+      this.logger.log(
+        color.yellow.bold(
+          `Inlay-only mode: skipping QR card articles for payment ${color.white.bold(
+            payment.paymentId
+          )}`
+        )
+      );
+    }
+
     for (const playlistItem of playlists) {
+      if (inlayOnly) continue;
       const playlist = playlistItem.playlist;
 
       // Fetch all payment_has_playlist_item records for this playlist
@@ -1698,6 +1710,26 @@ class PrintEnBind {
           )
         );
       }
+    }
+
+    if (orderItems.length === 0) {
+      this.logger.log(
+        color.red.bold(
+          `No order items to send for payment ${color.white.bold(
+            payment.paymentId
+          )}${inlayOnly ? ' (inlay-only mode, but no inlay cards configured)' : ''}`
+        )
+      );
+      return {
+        success: false,
+        request: '',
+        response: {
+          apiCalls: [],
+          error: inlayOnly
+            ? 'No inlay cards configured for this order'
+            : 'No order items to send',
+        },
+      };
     }
 
     // If this order contains any boxes, warn the packer up-front about the

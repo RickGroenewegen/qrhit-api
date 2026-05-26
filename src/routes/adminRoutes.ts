@@ -84,7 +84,8 @@ export default async function adminRoutes(
         request.body.paymentId,
         request.clientIp,
         true,
-        true // Admin manual send — skip the GPT content checks
+        true, // Admin manual send — skip the GPT content checks
+        request.body.inlayOnly === true
       );
 
       if (!result.success) {

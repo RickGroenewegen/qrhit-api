@@ -1338,7 +1338,8 @@ class Generator {
     paymentId: string,
     clientIp: string,
     force: boolean = false,
-    skipFinalCheck: boolean = false
+    skipFinalCheck: boolean = false,
+    inlayOnly: boolean = false
   ): Promise<{ success: boolean; reason?: string }> {
     // Acquire distributed lock to prevent concurrent processing
     const lockKey = `printer:${paymentId}`;
@@ -1417,8 +1418,12 @@ class Generator {
         }
       }
 
-      // Validate PDF page counts before sending to printer
-      const validation = await this.validatePDFPageCounts(physicalPlaylists);
+      // Validate PDF page counts before sending to printer.
+      // Skipped for inlay-only sends — those only ship the box insert PDFs,
+      // which are validated separately by the print API.
+      const validation = inlayOnly
+        ? { isValid: true, errors: [] as string[] }
+        : await this.validatePDFPageCounts(physicalPlaylists);
 
       // If there are validation errors, send Pushover notification and abort
       if (!validation.isValid) {
@@ -1506,7 +1511,8 @@ class Generator {
       const orderData = await this.order.createOrder(
         payment,
         physicalPlaylists,
-        playlists[0].productType
+        playlists[0].productType,
+        inlayOnly
       );
 
       printApiOrderId = orderData.response.id;
@@ -1527,8 +1533,11 @@ class Generator {
       });
 
       if (orderData.success) {
-        // Send email notification to customer about printing started
-        if (payment.user) {
+        // Send email notification to customer about printing started.
+        // Skipped for inlay-only sends — the customer already received the
+        // print-started email with the original full order; this is an
+        // admin-initiated reprint of just the box insert cards.
+        if (payment.user && !inlayOnly) {
           // Deduplicate playlists to send only one email per unique playlist (not per copy)
           const uniquePlaylists = new Map();
           for (const physicalPlaylist of physicalPlaylists) {
