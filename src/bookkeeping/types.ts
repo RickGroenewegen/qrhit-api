@@ -26,6 +26,7 @@ export interface BookkeepingLineItem {
   amount: string;
   price: string;
   tax_rate_id?: string;
+  ledger_account_id?: string;
 }
 
 export interface BookkeepingInvoice {
@@ -66,6 +67,12 @@ export interface BookkeepingProvider {
     percentage: number;
     countryCode?: string;
   }): Promise<string | undefined>;
+
+  /**
+   * Find a ledger account ("grootboekrekening") id by its numeric code
+   * (e.g. "8010"). Returns undefined when no active account matches.
+   */
+  findLedgerAccountIdByCode(code: string): Promise<string | undefined>;
 
   /** Create a sales invoice with the given line items. */
   createInvoice(args: {

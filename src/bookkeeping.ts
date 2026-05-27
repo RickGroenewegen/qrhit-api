@@ -127,6 +127,12 @@ class Bookkeeping {
     return this.provider.findTaxRateId(args);
   }
 
+  public async findLedgerAccountIdByCode(
+    code: string
+  ): Promise<string | undefined> {
+    return this.provider.findLedgerAccountIdByCode(code);
+  }
+
   public async findInvoiceByReference(
     reference: string
   ): Promise<BookkeepingInvoice | null> {

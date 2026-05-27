@@ -18,6 +18,7 @@ interface InvoiceLineItem {
   amount: string;
   price: string;
   tax_rate_id?: string;
+  ledger_account_id?: string;
 }
 
 class Moneybird implements BookkeepingProvider {
@@ -26,6 +27,7 @@ class Moneybird implements BookkeepingProvider {
   private logger = new Logger();
   private cachedAdministrationId: string | null = null;
   private cachedTaxRateId: string | undefined = undefined;
+  private ledgerAccountIdByCode: Map<string, string | undefined> = new Map();
 
   // Hardcoded "QRSong!" huisstijl — fetched once from
   // GET /document_styles.json and pinned here.
@@ -387,6 +389,51 @@ class Moneybird implements BookkeepingProvider {
     return undefined;
   }
 
+  // --------- Ledger accounts ---------
+
+  /**
+   * Find a ledger account ("grootboekrekening") id by its numeric code
+   * (e.g. "8010" for "Omzet QRSong - particulier"). Cached per process.
+   * Returns undefined when no active account matches the code.
+   */
+  public async findLedgerAccountIdByCode(
+    code: string
+  ): Promise<string | undefined> {
+    const key = String(code || '').trim();
+    if (!key) return undefined;
+    if (this.ledgerAccountIdByCode.has(key)) {
+      return this.ledgerAccountIdByCode.get(key);
+    }
+    try {
+      const data = await this.authedRequest<any[]>(
+        'GET',
+        'ledger_accounts.json'
+      );
+      const list = Array.isArray(data) ? data : [];
+      const match = list.find(
+        (l) => String(l?.account_id || '').trim() === key
+      );
+      const id = match?.id ? String(match.id) : undefined;
+      this.ledgerAccountIdByCode.set(key, id);
+      if (id) {
+        this.info(
+          'ledger account resolved ',
+          `code=${key} id=${id} name="${match?.name || ''}"`
+        );
+      } else {
+        this.warn('ledger account not found ', `code=${key}`);
+      }
+      return id;
+    } catch (err: any) {
+      const status = err?.response?.status;
+      this.error(
+        `fetch ledger accounts failed${status ? ' (' + status + ')' : ''}: `,
+        err?.response?.data ? JSON.stringify(err.response.data) : err?.message
+      );
+      return undefined;
+    }
+  }
+
   // --------- Sales invoices ---------
 
   public async createInvoice(args: {
@@ -403,6 +450,9 @@ class Moneybird implements BookkeepingProvider {
         amount: it.amount,
         price: it.price,
         ...(lineRate ? { tax_rate_id: lineRate } : {}),
+        ...(it.ledger_account_id
+          ? { ledger_account_id: it.ledger_account_id }
+          : {}),
       };
     });
 

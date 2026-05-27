@@ -2149,6 +2149,19 @@ export default async function adminRoutes(
           }
         };
 
+        // Book every line on 8010 "Omzet QRSong - particulier" so the
+        // invoice doesn't land in an unassigned grootboekrekening.
+        const ledgerAccountId =
+          await bookkeeping.findLedgerAccountIdByCode('8010');
+        if (!ledgerAccountId) {
+          reply.status(422).send({
+            success: false,
+            error:
+              'Ledger account 8010 ("Omzet QRSong - particulier") not found in MoneyBird',
+          });
+          return;
+        }
+
         const items: any[] = resolved.map(({ row: r, taxRateId }) => {
           const country = countryName(r.countrycode);
           return {
@@ -2156,6 +2169,7 @@ export default async function adminRoutes(
             amount: '1 x',
             price: (r.totalPriceWithoutTax || 0).toFixed(2),
             ...(taxRateId ? { tax_rate_id: taxRateId } : {}),
+            ledger_account_id: ledgerAccountId,
           };
         });
 
