@@ -189,6 +189,8 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
 
         if (countryCode === 'NL') {
           shipping = 2.99;
+        } else if (['ES', 'NO', 'SE'].includes(countryCode)) {
+          shipping = 3.90;
         } else {
           const PrintEnBind = (await import('../printers/printenbind')).default;
           const printEnBind = PrintEnBind.getInstance();
@@ -372,6 +374,8 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
 
         if (countryCode === 'NL') {
           shipping = 2.99;
+        } else if (['ES', 'NO', 'SE'].includes(countryCode)) {
+          shipping = 3.90;
         } else {
           const PrintEnBind = (await import('../printers/printenbind')).default;
           const printEnBind = PrintEnBind.getInstance();

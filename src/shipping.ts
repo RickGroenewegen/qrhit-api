@@ -1106,7 +1106,7 @@ class Shipping {
   }> {
     try {
       // Cache key bumped when the response shape changes.
-      const cacheKey = 'shipping_info_by_country_v3';
+      const cacheKey = 'shipping_info_by_country_v4';
       const cachedData = await this.cache.get(cacheKey);
 
       if (cachedData) {
@@ -1147,6 +1147,9 @@ class Shipping {
         if (cost.country === 'NL') {
           // NL shipping is always 2.99
           adjustedCost = 2.99;
+        } else if (['ES', 'NO', 'SE'].includes(cost.country)) {
+          // ES/NO/SE shipping is always 3.90 (advertising test)
+          adjustedCost = 3.90;
         } else {
           // All other countries: deduct 1
           adjustedCost = cost.cost - 1;
