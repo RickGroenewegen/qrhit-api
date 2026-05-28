@@ -796,6 +796,40 @@ class SpotifyApi2 {
       this.redirectUri
     )}&scope=${encodeURIComponent(scope)}`;
   }
+
+  /**
+   * Deletes (unfollows) a playlist from the app-owned account. Mirrors
+   * the implementation in SpotifyApi so the cleanup cron can call this
+   * regardless of which provider is currently wired in.
+   */
+  public async deletePlaylist(playlistId: string): Promise<ApiResult> {
+    const accessToken = await this.getAccessToken();
+    if (!accessToken) {
+      return {
+        success: false,
+        error: 'Spotify authentication required',
+        needsReAuth: true,
+        authUrl: this.getAuthorizationUrl() ?? undefined,
+      };
+    }
+
+    try {
+      await axios.delete(
+        `https://api.spotify.com/v1/playlists/${playlistId}/followers`,
+        { headers: { Authorization: `Bearer ${accessToken}` } }
+      );
+      this.logger.log(
+        color.green.bold(
+          `Successfully deleted/unfollowed playlist ${color.white.bold(
+            playlistId
+          )}`
+        )
+      );
+      return { success: true };
+    } catch (error) {
+      return this.handleApiError(error, `deleting playlist ${playlistId}`);
+    }
+  }
 }
 
 export default SpotifyApi2;

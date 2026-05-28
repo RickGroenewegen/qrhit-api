@@ -35,6 +35,7 @@ import MusicFetchQueue from './musicfetchQueue';
 import ExcelQueue from './excelQueue';
 import AssetQueue from './assetQueue';
 import aiPlaylistRoutes from './routes/aiPlaylistRoutes';
+import aiAdminRoutes from './routes/aiAdminRoutes';
 import ExternalCardService from './externalCardService';
 
 interface QueryParameters {
@@ -130,6 +131,7 @@ class Server {
     await gameRoutes(this.fastify, getAuthHandler);
     await boxRoutes(this.fastify, getAuthHandler);
     await themeRoutes(this.fastify, getAuthHandler);
+    await aiAdminRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
   };
 
   public async addRoutes() {

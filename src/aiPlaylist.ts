@@ -1,10 +1,13 @@
 import OpenAI from 'openai';
 import { Prisma } from '@prisma/client';
 import { color, white } from 'console-log-colors';
+import { CronJob } from 'cron';
+import cluster from 'cluster';
 import Logger from './logger';
 import PrismaInstance from './prisma';
 import Spotify from './spotify';
 import Cache from './cache';
+import Utils from './utils';
 import ProgressWebSocketServer from './progress-websocket';
 import { CostTracker } from './aiPricing';
 
@@ -66,6 +69,14 @@ interface CandidateTrack {
   spotifyLink: string;
 }
 
+/** Which column(s) a keyword should be matched against. */
+type KeywordTarget = 'any' | 'artist' | 'title';
+
+interface SearchKeyword {
+  value: string;
+  target: KeywordTarget;
+}
+
 interface AIPlaylistJobData {
   jobId: string;
   prompt: string;
@@ -82,17 +93,158 @@ class AIPlaylistGenerator {
   private prisma = PrismaInstance.getInstance();
   private spotify = Spotify.getInstance();
   private cache = Cache.getInstance();
+  private utils = new Utils();
   private openai = new OpenAI({ apiKey: process.env['OPENAI_TOKEN'] });
   /** In-flight snapshots keyed by jobId so `broadcastProgress` can co-write. */
   private snapshots: Map<string, AIPlaylistSnapshot> = new Map();
+  private cleanupJob: CronJob | null = null;
 
   private constructor() {}
 
   public static getInstance(): AIPlaylistGenerator {
     if (!AIPlaylistGenerator.instance) {
       AIPlaylistGenerator.instance = new AIPlaylistGenerator();
+      AIPlaylistGenerator.instance.scheduleCleanup();
     }
     return AIPlaylistGenerator.instance;
+  }
+
+  /**
+   * Schedule a daily sweep that removes AI-generated Spotify playlists
+   * older than one week which were never purchased (i.e. their Spotify
+   * playlistId never made it into our `playlists` table). Only the
+   * cluster primary on the main server (or dev) runs the cron so we
+   * don't multi-fire across workers/servers.
+   */
+  private scheduleCleanup(): void {
+    if (!cluster.isPrimary) return;
+    // Run at 03:30 UTC daily. Wrap the env check in a fire-and-forget
+    // promise so the constructor stays sync.
+    this.utils
+      .isMainServer()
+      .then((isMain) => {
+        const dev = process.env['ENVIRONMENT'] === 'development';
+        if (!isMain && !dev) return;
+        this.cleanupJob = new CronJob('30 3 * * *', async () => {
+          try {
+            await this.cleanupUnpurchasedPlaylists();
+          } catch (err) {
+            this.logger.log(
+              color.red.bold(`[AI cleanup] crashed: ${err}`)
+            );
+          }
+        });
+        this.cleanupJob.start();
+        this.logger.log(
+          color.blue.bold(
+            '[AI cleanup] cron scheduled — daily at 03:30 UTC'
+          )
+        );
+      })
+      .catch(() => {});
+  }
+
+  /**
+   * Find AI playlists that:
+   *   • are at least 7 days old,
+   *   • completed successfully (status='success'),
+   *   • have a Spotify playlist ID we still know about,
+   *   • whose Spotify playlist ID is NOT referenced by any `playlists`
+   *     row (i.e. nobody bought them).
+   * Delete each from the app-owned Spotify account and mark the
+   * AISearch row so we don't try again.
+   */
+  public async cleanupUnpurchasedPlaylists(): Promise<{
+    scanned: number;
+    deleted: number;
+    skipped: number;
+    errors: number;
+  }> {
+    const cutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+    let scanned = 0;
+    let deleted = 0;
+    let skipped = 0;
+    let errors = 0;
+
+    this.logger.log(
+      color.blue.bold(
+        `[AI cleanup] scanning for unpurchased AI playlists older than ${white.bold(
+          cutoff.toISOString()
+        )}`
+      )
+    );
+
+    // Find AISearch rows that look like prime candidates. We re-check
+    // each one's purchase status individually since the `playlists`
+    // table is keyed on `playlistId` (Spotify id), not a foreign key.
+    const candidates = await this.prisma.aISearch.findMany({
+      where: {
+        status: 'success',
+        createdAt: { lt: cutoff },
+        spotifyPlaylistId: { not: null },
+        // The errorMessage column is reused as a "deleted at" marker
+        // (prefix 'cleaned:') so cron re-runs skip rows we've already
+        // processed without needing a new schema column.
+        OR: [
+          { errorMessage: null },
+          { NOT: { errorMessage: { startsWith: 'cleaned:' } } },
+        ],
+      },
+      select: { id: true, jobId: true, spotifyPlaylistId: true },
+      take: 200,
+    });
+
+    scanned = candidates.length;
+
+    for (const row of candidates) {
+      const spId = row.spotifyPlaylistId!;
+      try {
+        const playlistRow = await this.prisma.playlist.findUnique({
+          where: { playlistId: spId },
+          select: { id: true },
+        });
+        if (playlistRow) {
+          // Purchased (or imported through some other flow) — leave alone.
+          skipped += 1;
+          continue;
+        }
+        const result = await this.spotify.deletePlaylist(spId);
+        if (!result?.success) {
+          this.logger.log(
+            color.yellow.bold(
+              `[AI cleanup] could not delete ${white.bold(spId)}: ${result?.error || 'unknown'}`
+            )
+          );
+          errors += 1;
+          continue;
+        }
+        await this.prisma.aISearch.update({
+          where: { id: row.id },
+          data: { errorMessage: `cleaned:${new Date().toISOString()}` },
+        });
+        deleted += 1;
+        this.logger.log(
+          color.green.bold(
+            `[AI cleanup] deleted unpurchased playlist ${white.bold(spId)} (job ${white.bold(row.jobId)})`
+          )
+        );
+      } catch (err) {
+        errors += 1;
+        this.logger.log(
+          color.red.bold(`[AI cleanup] error processing ${spId}: ${err}`)
+        );
+      }
+    }
+
+    this.logger.log(
+      color.blue.bold(
+        `[AI cleanup] done — scanned=${white.bold(scanned.toString())} deleted=${white.bold(
+          deleted.toString()
+        )} skipped=${white.bold(skipped.toString())} errors=${white.bold(errors.toString())}`
+      )
+    );
+
+    return { scanned, deleted, skipped, errors };
   }
 
   public async run(data: AIPlaylistJobData): Promise<void> {
@@ -196,7 +348,7 @@ class AIPlaylistGenerator {
       // call is recorded in the same CostTracker so it shows up in the
       // final AISearch row.
       const targetPool = trackCount * 2;
-      const tried = new Set(keywords.map((k) => k.toLowerCase()));
+      const tried = new Set(keywords.map((k) => k.value.toLowerCase()));
       let expansionRounds = 0;
       while (
         candidates.length < targetPool &&
@@ -228,7 +380,7 @@ class AIPlaylistGenerator {
           );
           break;
         }
-        for (const k of extra) tried.add(k.toLowerCase());
+        for (const k of extra) tried.add(k.value.toLowerCase());
         const extraCandidates = await this.searchCandidates(
           jobId,
           extra,
@@ -300,7 +452,7 @@ class AIPlaylistGenerator {
           status: 'error',
           errorMessage: 'No tracks matched the theme',
           deliveredCount: 0,
-          keywords,
+          keywords: keywords.map((k) => k.value),
           startYear,
           endYear,
           cost,
@@ -337,7 +489,7 @@ class AIPlaylistGenerator {
           status: 'error',
           errorMessage: spotifyResult.error || 'Spotify playlist creation failed',
           deliveredCount: picked.length,
-          keywords,
+          keywords: keywords.map((k) => k.value),
           startYear,
           endYear,
           cost,
@@ -371,7 +523,7 @@ class AIPlaylistGenerator {
       await this.finalizeAISearch(jobId, {
         status: 'success',
         deliveredCount: picked.length,
-        keywords,
+        keywords: keywords.map((k) => k.value),
         startYear,
         endYear,
         spotifyPlaylistId: spotifyResult.playlistId,
@@ -489,7 +641,7 @@ class AIPlaylistGenerator {
     locale: string,
     cost: CostTracker
   ): Promise<{
-    keywords: string[];
+    keywords: SearchKeyword[];
     startYear: number | null;
     endYear: number | null;
     title: string;
@@ -508,7 +660,7 @@ class AIPlaylistGenerator {
         {
           role: 'system',
           content:
-            'You analyze a user-supplied music theme and return: (1) up to 50 search keywords, and (2) an optional release-or-composition-year range if the user mentioned a specific time period.\n\nKEYWORD RULES — CRITICAL:\nThe keywords are used to run SQL `LIKE %keyword%` against ONLY two columns: `artist` (the performing artist name) and `name` (the song title). They are NOT used against any genre, mood, decade, or tag column. Therefore:\n  • DO return concrete artist or band names that fit the theme (e.g. "Marco Borsato", "2 Unlimited", "Vengaboys", "BZN").\n  • DO return distinctive words or phrases likely to appear in a relevant SONG TITLE (e.g. "love", "summer", "Christmas", "tonight" — only when the user theme clearly implies them, like a christmas or summer playlist).\n  • DO NOT return genre or sub-genre names ("Eurodance", "synthpop", "house", "happy hardcore", "R&B", "pop", "rock", "nederpop"). These will not match anything.\n  • DO NOT return moods, descriptors, or marketing tags ("nostalgia", "party", "upbeat", "club", "catchy", "radio hits", "hit singles", "mainstream", "Top 40", "boy bands", "girl groups").\n  • DO NOT return decade words or era labels ("90s", "1990s", "nineties") — the year range below already covers that.\n  • DO NOT return country/language tags ("Dutch artists", "Holland", "NL", "Nederlandse hits") — instead return artists from that country.\nUse the theme (genre/era/mood/country) internally to pick which artists belong in the list; do not echo the descriptors as keywords.\n\nLOCALE BIAS — IMPORTANT:\n' +
+            'You analyze a user-supplied music theme and return: (1) up to 50 search keywords, and (2) an optional release-or-composition-year range if the user mentioned a specific time period.\n\nKEYWORD RULES — CRITICAL:\nThe keywords are used to run SQL `LIKE %keyword%` against ONLY two columns: `artist` (the performing artist name) and `name` (the song title). They are NOT used against any genre, mood, decade, or tag column. Therefore:\n  • DO return concrete artist or band names that fit the theme (e.g. "Marco Borsato", "2 Unlimited", "Vengaboys", "BZN").\n  • DO return distinctive words or phrases likely to appear in a relevant SONG TITLE (e.g. "love", "summer", "Christmas", "tonight" — only when the user theme clearly implies them, like a christmas or summer playlist).\n  • DO NOT return genre or sub-genre names ("Eurodance", "synthpop", "house", "happy hardcore", "R&B", "pop", "rock", "nederpop"). These will not match anything.\n  • DO NOT return moods, descriptors, or marketing tags ("nostalgia", "party", "upbeat", "club", "catchy", "radio hits", "hit singles", "mainstream", "Top 40", "boy bands", "girl groups").\n  • DO NOT return decade words or era labels ("90s", "1990s", "nineties") — the year range below already covers that.\n  • DO NOT return country/language tags ("Dutch artists", "Holland", "NL", "Nederlandse hits") — instead return artists from that country.\nUse the theme (genre/era/mood/country) internally to pick which artists belong in the list; do not echo the descriptors as keywords.\n\nCOLUMN INTENT — IMPORTANT:\nYou return three keyword buckets: `keywords` (search both columns), `artistKeywords` (search artist only), `titleKeywords` (search song title only). Choose the right bucket:\n  • When the user explicitly says a word should be IN THE TITLE only ("songs with `soul` in the title", "tracks called `love`", "anything with `night` in the name") → put it in `titleKeywords`. Putting it in `keywords` would also match every artist whose name contains it — the opposite of what the user asked.\n  • When the user clearly wants songs BY an artist or in that artist\'s style and the artist\'s name could ambiguously appear in unrelated song titles → prefer `artistKeywords`.\n  • When the user explicitly says a word should match EITHER the title OR the artist ("songs that mention `love` anywhere", "anything with `soul` in the title or the artist name") → put it in `keywords` (both columns). This is also the right bucket for broad themes where you don\'t need to narrow scope.\n\nLOCALE BIAS — IMPORTANT:\n' +
             localeHint +
             '\n\nLIST SIZE — IMPORTANT:\n50 is the maximum, not a target. Match the breadth of the user theme:\n  • If the user names ONE artist ("Taylor Swift", "Bach") → return just that one keyword. Do not invent similar artists they did not ask for.\n  • If the user names a few specific artists → return only those artists.\n  • If the user describes a broad theme ("Dutch 90s hits", "summer beach party") → return a focused 15–35 artists (and a few title words if the theme implies them).\n  • Never pad the list to look thorough. Returning 5 right keywords beats returning 50 with noise.\n\nYear-range rules: only set startYear/endYear if the theme clearly implies a time period (e.g. "80s rock" → 1980-1989, "90s" → 1990-1999, "early 2000s" → 2000-2005, "from 1975" → 1975-1975, "songs from the 60s and 70s" → 1960-1979, "2010 onwards" → 2010-current year, "renaissance music" → 1400-1600, "medieval chants" → 800-1400, "baroque" → 1600-1750). The catalog includes classical compositions dating back roughly to year 1000, so historic ranges are valid. If no year hint is present in the theme, leave both null. Never invent a range to be helpful — only use it if the user explicitly references a year, decade, or era.',
         },
@@ -534,7 +686,20 @@ class AIPlaylistGenerator {
                 keywords: {
                   type: 'array',
                   items: { type: 'string' },
-                  description: 'Search keywords: artist names, genres, themes',
+                  description:
+                    'Keywords searched in BOTH the artist column AND the song title column. Use this when either side could plausibly match (e.g. "Beatles" — searches artist; "Christmas" — searches title; "Beach Boys" — searches artist; mixed-intent terms).',
+                },
+                artistKeywords: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description:
+                    'Keywords searched ONLY against the artist column. Use when the user wants songs BY a specific artist or in their style, and you want to avoid false positives from those words appearing in unrelated song titles.',
+                },
+                titleKeywords: {
+                  type: 'array',
+                  items: { type: 'string' },
+                  description:
+                    'Keywords searched ONLY against the song title column. CRITICAL: use this whenever the user explicitly asks for songs whose TITLE contains a word (e.g. "songs with `soul` in the title", "tracks called `love`", "anything with `summer` in the name"). Putting "soul" into the regular keywords here would surface every soul-genre artist and dilute the result.',
                 },
                 startYear: {
                   type: ['integer', 'null'],
@@ -547,7 +712,14 @@ class AIPlaylistGenerator {
                     'Latest release year if the theme implies a time period; otherwise null',
                 },
               },
-              required: ['title', 'keywords', 'startYear', 'endYear'],
+              required: [
+                'title',
+                'keywords',
+                'artistKeywords',
+                'titleKeywords',
+                'startYear',
+                'endYear',
+              ],
             },
           },
         },
@@ -562,7 +734,9 @@ class AIPlaylistGenerator {
     }
 
     let parsed: {
-      keywords: string[];
+      keywords?: string[];
+      artistKeywords?: string[];
+      titleKeywords?: string[];
       startYear: number | null;
       endYear: number | null;
       title?: string;
@@ -573,18 +747,31 @@ class AIPlaylistGenerator {
       throw new Error('Failed to parse keyword tool call arguments');
     }
 
-    // Trim, drop empties, and dedupe case-insensitively. The LLM
-    // occasionally returns near-duplicates (e.g. "BLØF" + "Bløf") which
-    // would just double-search and stack twice in the word cloud.
-    const seenKeywords = new Set<string>();
-    const keywords: string[] = [];
-    for (const raw of parsed.keywords || []) {
-      const t = (raw || '').trim();
-      if (!t) continue;
+    // Combine all three column-intent buckets into typed SearchKeywords.
+    // Dedupe is per-keyword-string (case-insensitive): if the same word
+    // appears in two buckets we keep the most specific intent (title or
+    // artist) over `any`.
+    const intentByLower = new Map<string, KeywordTarget>();
+    const displayByLower = new Map<string, string>();
+    const ingest = (raw: unknown, target: KeywordTarget) => {
+      if (typeof raw !== 'string') return;
+      const t = raw.trim();
+      if (!t) return;
       const key = t.toLowerCase();
-      if (seenKeywords.has(key)) continue;
-      seenKeywords.add(key);
-      keywords.push(t);
+      if (!displayByLower.has(key)) displayByLower.set(key, t);
+      const current = intentByLower.get(key);
+      // Promote `any` → `artist`/`title` if a more specific intent appears.
+      if (!current || (current === 'any' && target !== 'any')) {
+        intentByLower.set(key, target);
+      }
+    };
+    for (const k of parsed.titleKeywords || []) ingest(k, 'title');
+    for (const k of parsed.artistKeywords || []) ingest(k, 'artist');
+    for (const k of parsed.keywords || []) ingest(k, 'any');
+
+    const keywords: SearchKeyword[] = [];
+    for (const [lower, target] of intentByLower) {
+      keywords.push({ value: displayByLower.get(lower)!, target });
       if (keywords.length >= KEYWORD_LIMIT) break;
     }
 
@@ -600,9 +787,12 @@ class AIPlaylistGenerator {
       .slice(0, 60)
       .trim();
 
+    const keywordLogLine = keywords
+      .map((k) => (k.target === 'any' ? k.value : `${k.value} [${k.target}]`))
+      .join(', ');
     this.logger.log(
       color.blue.bold(
-        `[AI] ${white.bold(jobId)} title="${white.bold(title)}" keywords: ${white.bold(keywords.join(', '))}`
+        `[AI] ${white.bold(jobId)} title="${white.bold(title)}" keywords: ${white.bold(keywordLogLine)}`
       )
     );
 
@@ -620,7 +810,8 @@ class AIPlaylistGenerator {
       },
       current: keywords.length,
       total: KEYWORD_LIMIT,
-      keywords,
+      // Frontend cares only about the displayable strings.
+      keywords: keywords.map((k) => k.value),
       startYear,
       endYear,
     });
@@ -642,7 +833,7 @@ class AIPlaylistGenerator {
     startYear: number | null,
     endYear: number | null,
     cost: CostTracker
-  ): Promise<string[]> {
+  ): Promise<SearchKeyword[]> {
     const localeHint = this.describeLocale(locale);
     const yearHint =
       startYear !== null || endYear !== null
@@ -706,14 +897,16 @@ class AIPlaylistGenerator {
     }
 
     const seen = new Set(alreadyTried.map((k) => k.toLowerCase()));
-    const out: string[] = [];
+    const out: SearchKeyword[] = [];
     for (const raw of parsed.keywords || []) {
       const t = (raw || '').trim();
       if (!t) continue;
       const key = t.toLowerCase();
       if (seen.has(key)) continue;
       seen.add(key);
-      out.push(t);
+      // Expansion keywords default to `any` — we don't ask the LLM to
+      // classify them since the round itself is a retry of broad search.
+      out.push({ value: t, target: 'any' });
       if (out.length >= KEYWORD_LIMIT) break;
     }
 
@@ -755,7 +948,7 @@ class AIPlaylistGenerator {
 
   private async searchCandidates(
     jobId: string,
-    keywords: string[],
+    keywords: SearchKeyword[],
     startYear: number | null,
     endYear: number | null
   ): Promise<CandidateTrack[]> {
@@ -787,14 +980,15 @@ class AIPlaylistGenerator {
     // Prisma connection pool with the rest of the app.
     const buckets: CandidateTrack[][] = [];
     for (let i = 0; i < keywords.length; i++) {
-      const keyword = keywords[i];
+      const kw = keywords[i];
       const completed = i + 1;
+      const targetLabel = kw.target === 'any' ? '' : ` [${kw.target}]`;
       try {
-        const rows = await this.searchByKeyword(keyword, startYear, endYear);
+        const rows = await this.searchByKeyword(kw, startYear, endYear);
         this.logger.log(
           color.blue.bold(
             `[AI]   ${white.bold(`${completed}/${keywords.length}`)} keyword="${white.bold(
-              keyword
+              kw.value + targetLabel
             )}" → ${white.bold(rows.length.toString())} candidates`
           )
         );
@@ -805,16 +999,16 @@ class AIPlaylistGenerator {
             rows.length > 0
               ? 'submit.aiMsg.searchingHit'
               : 'submit.aiMsg.searchingMiss',
-          messageParams: { keyword },
+          messageParams: { keyword: kw.value },
           current: completed,
           total: keywords.length,
-          currentKeyword: keyword,
+          currentKeyword: kw.value,
           keywordHits: rows.length,
         });
         buckets.push(rows);
       } catch (err) {
         this.logger.log(
-          color.red.bold(`Keyword search failed for "${keyword}": ${err}`)
+          color.red.bold(`Keyword search failed for "${kw.value}": ${err}`)
         );
         buckets.push([]);
       }
@@ -844,11 +1038,22 @@ class AIPlaylistGenerator {
   }
 
   private async searchByKeyword(
-    keyword: string,
+    keyword: SearchKeyword,
     startYear: number | null,
     endYear: number | null
   ): Promise<CandidateTrack[]> {
-    const like = `%${keyword.replace(/[%_]/g, (m) => '\\' + m)}%`;
+    const like = `%${keyword.value.replace(/[%_]/g, (m) => '\\' + m)}%`;
+
+    // Column filter based on the LLM's column-intent classification:
+    //   • title  → name LIKE only
+    //   • artist → artist LIKE only
+    //   • any    → either column matches (legacy/default behaviour)
+    const columnFilter =
+      keyword.target === 'title'
+        ? Prisma.sql`name LIKE ${like}`
+        : keyword.target === 'artist'
+        ? Prisma.sql`artist LIKE ${like}`
+        : Prisma.sql`(artist LIKE ${like} OR name LIKE ${like})`;
 
     // Build optional year filter. When a range is given we also require
     // `year IS NOT NULL` so we don't sweep up unknown-year tracks into a
@@ -867,7 +1072,7 @@ class AIPlaylistGenerator {
       FROM tracks
       WHERE spotifyLink IS NOT NULL
         AND spotifyLinkIgnored = 0
-        AND (artist LIKE ${like} OR name LIKE ${like})
+        AND ${columnFilter}
         ${yearFilter}
       ORDER BY RAND()
       LIMIT ${PER_KEYWORD_LIMIT}
@@ -1038,9 +1243,19 @@ class AIPlaylistGenerator {
       messageParams: { count: tracks.length },
     });
 
-    const trackIds = tracks
-      .map((t) => t.spotifyLink?.split('/').pop())
-      .filter((s): s is string => !!s && s.length > 0);
+    // Dedupe by *Spotify* track ID — two rows in our `tracks` table can
+    // share a `spotifyLink` (different internal IDs, same Spotify URI),
+    // which would otherwise add duplicates to the playlist and trigger
+    // the "N tracks were duplicate" warning on the summary page.
+    const seen = new Set<string>();
+    const trackIds: string[] = [];
+    for (const t of tracks) {
+      const sid = t.spotifyLink?.split('/').pop();
+      if (!sid) continue;
+      if (seen.has(sid)) continue;
+      seen.add(sid);
+      trackIds.push(sid);
+    }
 
     const playlistName = this.buildPlaylistName(title, shortId);
     const result = await this.spotify.createOrUpdatePlaylist(playlistName, trackIds);
