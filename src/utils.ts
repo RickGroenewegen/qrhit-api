@@ -46,6 +46,25 @@ class Utils {
     return false;
   }
 
+  /**
+   * Resolve the original client IP for a Fastify request. Behind
+   * CloudFront / a load balancer the `X-Forwarded-For` header (parsed by
+   * the ipPlugin into `request.clientIp`) is the source of truth; we
+   * fall back to CloudFront-specific headers and the socket address for
+   * cases where the plugin hasn't run yet.
+   */
+  public getClientIp(request: any): string {
+    return (
+      request?.clientIp ||
+      request?.headers?.['cf-connecting-ip'] ||
+      (typeof request?.headers?.['x-forwarded-for'] === 'string'
+        ? request.headers['x-forwarded-for'].split(',')[0].trim()
+        : '') ||
+      request?.socket?.remoteAddress ||
+      ''
+    );
+  }
+
   public isTrustedIp(ip: string): boolean {
     if (
       process.env['TRUSTED_IPS'] &&

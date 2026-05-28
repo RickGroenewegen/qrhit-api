@@ -1866,6 +1866,34 @@ class Mollie {
         params.cart.items
       );
 
+      // Look up any AI-generated playlist prompts so we can persist them
+      // on the payment_has_playlist records below.
+      const cartSpotifyIds = Array.from(
+        new Set(
+          (params.cart.items || [])
+            .map((it: any) => it?.playlistId)
+            .filter((id: any) => typeof id === 'string' && id.length > 0)
+        )
+      ) as string[];
+      const aiPromptsBySpotifyId = new Map<string, string>();
+      if (cartSpotifyIds.length > 0) {
+        try {
+          const { aiPlaylistPromptKey } = await import('./aiPlaylist');
+          for (const spId of cartSpotifyIds) {
+            const cached = await this.cache.get(aiPlaylistPromptKey(spId));
+            if (typeof cached === 'string' && cached.length > 0) {
+              aiPromptsBySpotifyId.set(spId, cached);
+            }
+          }
+        } catch (err) {
+          this.logger.log(
+            color.yellow.bold(
+              `Failed to look up AI playlist prompts: ${err}`
+            )
+          );
+        }
+      }
+
       const productPriceWithoutTax = parseFloat(
         parseFloat(calculateResult.data.price).toFixed(2)
       );
@@ -1995,6 +2023,7 @@ class Mollie {
             boxBackText: item.boxBackText || '',
             boxBackSelectedFont: item.boxBackSelectedFont || 'Arial, sans-serif',
             boxBackSelectedFontSize: item.boxBackFontSize ? `${item.boxBackFontSize}px` : (item.boxBackSelectedFontSize || '14px'),
+            aiPrompt: aiPromptsBySpotifyId.get(item.playlistId) || null,
           };
         })
       );
@@ -2074,6 +2103,23 @@ class Mollie {
       });
 
       const paymentId = insertResult.id;
+
+      // AI prompts have been persisted on the PaymentHasPlaylist rows above;
+      // delete the transient Redis copies so they don't linger past their use.
+      if (aiPromptsBySpotifyId.size > 0) {
+        try {
+          const { aiPlaylistPromptKey } = await import('./aiPlaylist');
+          for (const spId of aiPromptsBySpotifyId.keys()) {
+            await this.cache.del(aiPlaylistPromptKey(spId));
+          }
+        } catch (err) {
+          this.logger.log(
+            color.yellow.bold(
+              `Failed to clean up AI playlist prompts from cache: ${err}`
+            )
+          );
+        }
+      }
 
       // Log QRGames purchase if any playlists have gamesEnabled
       const gamesPlaylists = playlists.filter((p: any) => p.gamesEnabled === true);

@@ -12,13 +12,33 @@ interface ProgressConnection {
 }
 
 interface ProgressData {
-  stage?: 'fetching_ids' | 'fetching_metadata' | 'enriching';
+  stage?:
+    | 'fetching_ids'
+    | 'fetching_metadata'
+    | 'enriching'
+    | 'thinking_keywords'
+    | 'searching_tracks'
+    | 'curating_with_llm'
+    | 'creating_spotify_playlist';
   percentage: number;
   message?: string;
+  /** Translation key the frontend should i18n. Preferred over `message`. */
+  messageKey?: string;
+  /** Substitution params for the translation key. */
+  messageParams?: Record<string, string | number | null | undefined>;
   current?: number;
   total?: number;
   trackCount?: number;
   error?: string;
+  spotifyPlaylistUrl?: string;
+  spotifyPlaylistId?: string;
+  requestedCount?: number;
+  deliveredCount?: number;
+  keywords?: string[];
+  currentKeyword?: string;
+  keywordHits?: number;
+  startYear?: number | null;
+  endYear?: number | null;
 }
 
 class ProgressWebSocketServer {
@@ -29,7 +49,12 @@ class ProgressWebSocketServer {
   private pubClient: Redis | null = null;
   private subClient: Redis | null = null;
 
-  constructor(server: HTTPServer) {
+  constructor(_server?: HTTPServer | null) {
+    // The `server` param is kept for backwards compatibility but is not used
+    // directly here — upgrades are routed in via `handleUpgrade()` from the
+    // Fastify upgrade event. When `_server` is null the instance is used for
+    // publish-only (e.g. from the cluster primary, where queue workers live
+    // but the HTTP server doesn't).
     this.wss = new WebSocketServer({
       noServer: true,
     });
@@ -173,11 +198,27 @@ class ProgressWebSocketServer {
    * Broadcast completion event for a playlist
    * @param requestId Unique ID to isolate this specific request from concurrent requests
    */
-  public broadcastComplete(playlistId: string, serviceType: string, requestId: string, data: { trackCount?: number }) {
+  public broadcastComplete(
+    playlistId: string,
+    serviceType: string,
+    requestId: string,
+    data: {
+      trackCount?: number;
+      spotifyPlaylistUrl?: string;
+      spotifyPlaylistId?: string;
+      requestedCount?: number;
+      deliveredCount?: number;
+      message?: string;
+    }
+  ) {
     this.publishProgressEvent(playlistId, serviceType, requestId, 'complete', {
       percentage: 100,
-      message: 'Complete',
+      message: data.message || 'Complete',
       trackCount: data.trackCount,
+      spotifyPlaylistUrl: data.spotifyPlaylistUrl,
+      spotifyPlaylistId: data.spotifyPlaylistId,
+      requestedCount: data.requestedCount,
+      deliveredCount: data.deliveredCount,
     });
   }
 

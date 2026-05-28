@@ -34,6 +34,7 @@ import GeneratorQueue from './generatorQueue';
 import MusicFetchQueue from './musicfetchQueue';
 import ExcelQueue from './excelQueue';
 import AssetQueue from './assetQueue';
+import aiPlaylistRoutes from './routes/aiPlaylistRoutes';
 import ExternalCardService from './externalCardService';
 
 interface QueryParameters {
@@ -146,6 +147,9 @@ class Server {
 
     // Register reseller API routes
     await resellerRoutes(this.fastify);
+
+    // Register AI playlist routes
+    await aiPlaylistRoutes(this.fastify);
 
     // WebSocket endpoints - return 426 Upgrade Required for non-WebSocket requests
     this.fastify.get('/chat-ws', async (request, reply) => {

@@ -13,7 +13,12 @@ function createPrismaAdapter(): PrismaMariaDb {
     user: url.username,
     password: url.password,
     database: url.pathname.slice(1),
-    connectionLimit: process.env.NODE_ENV === 'development' ? 1 : 5,
+    // The primary process hosts the queue worker fleet (Generator,
+    // MusicFetch, Excel, Asset, AIPlaylist) which together can keep many
+    // queries in flight at once. Keep dev tight to surface starvation
+    // early, but give prod enough headroom for the worker pool plus HTTP
+    // traffic.
+    connectionLimit: process.env.NODE_ENV === 'development' ? 5 : 10,
   });
 }
 

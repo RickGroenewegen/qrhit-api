@@ -526,7 +526,13 @@ class Spotify {
               image = playlistData.images[0].url;
             }
 
-            let playlistName = playlistData.name;
+            // Strip the AI-search short id suffix (e.g. " (AIID: a34n234n)")
+            // that we append when creating AI-generated playlists, so the
+            // user-facing name stays clean in the summary flow.
+            let playlistName = (playlistData.name || '').replace(
+              /\s*\(AIID:\s*[a-z0-9]{4,16}\)\s*$/i,
+              ''
+            );
             let playlistDescription = playlistData.description;
             let allDescriptions: Record<string, string | null> = {};
             let playlistDesign: any = null;

@@ -683,6 +683,7 @@ model PaymentHasPlaylist {
   addHowToCard             Boolean                  @default(false) // Whether to include a how-to explanation card as first card in printer PDF
   addHowToCardLocale       String                   @default("en") @db.VarChar(5) // Locale for how-to card translations
   appleStoreFront          String?                  @db.VarChar(5) // Apple Music storefront country code (e.g. "nl", "us")
+  aiPrompt                 String?                  @db.VarChar(250) // Original user prompt if this playlist was AI-generated
   orderType                OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)
   items                    PaymentHasPlaylistItem[]
   bingoFiles               BingoFile[]
@@ -709,6 +710,33 @@ model PaymentHasPlaylistItem {
   @@unique([paymentHasPlaylistId, index])
   @@index([paymentHasPlaylistId])
   @@map("payment_has_playlist_item")
+}
+
+model AISearch {
+  id                Int      @id @default(autoincrement())
+  jobId             String   @unique @db.VarChar(64)
+  shortId           String   @unique @db.VarChar(12)
+  prompt            String   @db.VarChar(250)
+  requestedCount    Int
+  deliveredCount    Int      @default(0)
+  startYear         Int?
+  endYear           Int?
+  keywords          Json?
+  spotifyPlaylistId String?  @db.VarChar(64)
+  spotifyPlaylistUrl String? @db.VarChar(255)
+  status            String   @default("running") @db.VarChar(20) // running | success | error
+  errorMessage      String?  @db.Text
+  model             String   @db.VarChar(64)
+  inputTokens       Int      @default(0)
+  outputTokens      Int      @default(0)
+  totalCostUsd      Float    @default(0)
+  durationMs        Int      @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([createdAt])
+  @@index([status])
+  @@map("aisearches")
 }
 
 model BingoFile {
