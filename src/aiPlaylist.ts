@@ -57,7 +57,7 @@ export interface AIPlaylistSnapshot {
 
 const SERVICE_TYPE = 'ai';
 const MODEL = 'gpt-5.4-mini';
-const KEYWORD_LIMIT = 50;
+const KEYWORD_LIMIT = 100;
 const PER_KEYWORD_LIMIT = 50;
 const CURATION_BATCH_SIZE = 100;
 
@@ -286,6 +286,7 @@ class AIPlaylistGenerator {
           jobId,
           shortId,
           prompt,
+          locale,
           requestedCount: trackCount,
           model: MODEL,
           status: 'running',
@@ -298,6 +299,10 @@ class AIPlaylistGenerator {
         )
       );
     }
+
+    // Hoisted outside the try so the catch-all error finalize can also
+    // record the title if step 1 happened to complete before failure.
+    let resolvedTitle: string | undefined;
 
     try {
       // ── Step 1/4: keyword brainstorm ────────────────────────────
@@ -313,6 +318,7 @@ class AIPlaylistGenerator {
         locale,
         cost
       );
+      resolvedTitle = title;
       this.logger.log(
         color.green.bold(
           `[AI] ${white.bold(jobId)} step 1/4 done in ${white.bold(
@@ -388,12 +394,30 @@ class AIPlaylistGenerator {
           endYear
         );
         const before = candidates.length;
-        const known = new Set(candidates.map((c) => c.trackId));
+        // Apply the same three dedupe rules to the merge that
+        // `searchCandidates` applies to a single round — otherwise
+        // duplicates can slip in via later expansion waves and the
+        // LLM ends up picking the same song twice with different
+        // trackIds.
+        const knownTrackIds = new Set(candidates.map((c) => c.trackId));
+        const knownSpotifyIds = new Set(
+          candidates
+            .map((c) => c.spotifyLink?.split('/').pop() || '')
+            .filter(Boolean)
+        );
+        const knownArtistTitle = new Set(
+          candidates.map((c) => this.dedupeKey(c.artist, c.name)).filter(Boolean)
+        );
         for (const c of extraCandidates) {
-          if (!known.has(c.trackId)) {
-            candidates.push(c);
-            known.add(c.trackId);
-          }
+          if (knownTrackIds.has(c.trackId)) continue;
+          const sid = c.spotifyLink?.split('/').pop() || '';
+          if (sid && knownSpotifyIds.has(sid)) continue;
+          const at = this.dedupeKey(c.artist, c.name);
+          if (at && knownArtistTitle.has(at)) continue;
+          candidates.push(c);
+          knownTrackIds.add(c.trackId);
+          if (sid) knownSpotifyIds.add(sid);
+          if (at) knownArtistTitle.add(at);
         }
         this.logger.log(
           color.blue.bold(
@@ -453,6 +477,7 @@ class AIPlaylistGenerator {
           errorMessage: 'No tracks matched the theme',
           deliveredCount: 0,
           keywords: keywords.map((k) => k.value),
+          title: resolvedTitle,
           startYear,
           endYear,
           cost,
@@ -490,6 +515,7 @@ class AIPlaylistGenerator {
           errorMessage: spotifyResult.error || 'Spotify playlist creation failed',
           deliveredCount: picked.length,
           keywords: keywords.map((k) => k.value),
+          title: resolvedTitle,
           startYear,
           endYear,
           cost,
@@ -524,6 +550,7 @@ class AIPlaylistGenerator {
         status: 'success',
         deliveredCount: picked.length,
         keywords: keywords.map((k) => k.value),
+        title: resolvedTitle,
         startYear,
         endYear,
         spotifyPlaylistId: spotifyResult.playlistId,
@@ -563,6 +590,7 @@ class AIPlaylistGenerator {
       await this.finalizeAISearch(jobId, {
         status: 'error',
         errorMessage: error?.message || 'Unexpected error',
+        title: resolvedTitle,
         cost,
         durationMs: Date.now() - t0,
       });
@@ -582,6 +610,7 @@ class AIPlaylistGenerator {
       errorMessage?: string;
       deliveredCount?: number;
       keywords?: string[];
+      title?: string;
       startYear?: number | null;
       endYear?: number | null;
       spotifyPlaylistId?: string;
@@ -598,6 +627,7 @@ class AIPlaylistGenerator {
           errorMessage: fields.errorMessage ?? null,
           deliveredCount: fields.deliveredCount ?? 0,
           keywords: fields.keywords ?? Prisma.JsonNull,
+          title: fields.title ?? null,
           startYear: fields.startYear ?? null,
           endYear: fields.endYear ?? null,
           spotifyPlaylistId: fields.spotifyPlaylistId ?? null,
@@ -662,7 +692,7 @@ class AIPlaylistGenerator {
           content:
             'You analyze a user-supplied music theme and return: (1) up to 50 search keywords, and (2) an optional release-or-composition-year range if the user mentioned a specific time period.\n\nKEYWORD RULES — CRITICAL:\nThe keywords are used to run SQL `LIKE %keyword%` against ONLY two columns: `artist` (the performing artist name) and `name` (the song title). They are NOT used against any genre, mood, decade, or tag column. Therefore:\n  • DO return concrete artist or band names that fit the theme (e.g. "Marco Borsato", "2 Unlimited", "Vengaboys", "BZN").\n  • DO return distinctive words or phrases likely to appear in a relevant SONG TITLE (e.g. "love", "summer", "Christmas", "tonight" — only when the user theme clearly implies them, like a christmas or summer playlist).\n  • DO NOT return genre or sub-genre names ("Eurodance", "synthpop", "house", "happy hardcore", "R&B", "pop", "rock", "nederpop"). These will not match anything.\n  • DO NOT return moods, descriptors, or marketing tags ("nostalgia", "party", "upbeat", "club", "catchy", "radio hits", "hit singles", "mainstream", "Top 40", "boy bands", "girl groups").\n  • DO NOT return decade words or era labels ("90s", "1990s", "nineties") — the year range below already covers that.\n  • DO NOT return country/language tags ("Dutch artists", "Holland", "NL", "Nederlandse hits") — instead return artists from that country.\nUse the theme (genre/era/mood/country) internally to pick which artists belong in the list; do not echo the descriptors as keywords.\n\nCOLUMN INTENT — IMPORTANT:\nYou return three keyword buckets: `keywords` (search both columns), `artistKeywords` (search artist only), `titleKeywords` (search song title only). Choose the right bucket:\n  • When the user explicitly says a word should be IN THE TITLE only ("songs with `soul` in the title", "tracks called `love`", "anything with `night` in the name") → put it in `titleKeywords`. Putting it in `keywords` would also match every artist whose name contains it — the opposite of what the user asked.\n  • When the user clearly wants songs BY an artist or in that artist\'s style and the artist\'s name could ambiguously appear in unrelated song titles → prefer `artistKeywords`.\n  • When the user explicitly says a word should match EITHER the title OR the artist ("songs that mention `love` anywhere", "anything with `soul` in the title or the artist name") → put it in `keywords` (both columns). This is also the right bucket for broad themes where you don\'t need to narrow scope.\n\nLOCALE BIAS — IMPORTANT:\n' +
             localeHint +
-            '\n\nLIST SIZE — IMPORTANT:\n50 is the maximum, not a target. Match the breadth of the user theme:\n  • If the user names ONE artist ("Taylor Swift", "Bach") → return just that one keyword. Do not invent similar artists they did not ask for.\n  • If the user names a few specific artists → return only those artists.\n  • If the user describes a broad theme ("Dutch 90s hits", "summer beach party") → return a focused 15–35 artists (and a few title words if the theme implies them).\n  • Never pad the list to look thorough. Returning 5 right keywords beats returning 50 with noise.\n\nYear-range rules: only set startYear/endYear if the theme clearly implies a time period (e.g. "80s rock" → 1980-1989, "90s" → 1990-1999, "early 2000s" → 2000-2005, "from 1975" → 1975-1975, "songs from the 60s and 70s" → 1960-1979, "2010 onwards" → 2010-current year, "renaissance music" → 1400-1600, "medieval chants" → 800-1400, "baroque" → 1600-1750). The catalog includes classical compositions dating back roughly to year 1000, so historic ranges are valid. If no year hint is present in the theme, leave both null. Never invent a range to be helpful — only use it if the user explicitly references a year, decade, or era.',
+            '\n\nLIST SIZE & DIVERSITY — IMPORTANT:\n100 is the maximum, not a target. Match the breadth of the user theme:\n  • If the user names ONE artist ("Taylor Swift", "Bach") → return just that one keyword. Do not invent similar artists they did not ask for.\n  • If the user names a few specific artists → return only those artists.\n  • If the user describes a broad theme ("90s hits", "summer beach party", "Dutch 90s") → BE DIVERSE: return a wide spread of artists from different sub-genres, eras within the range, regions, and styles that fit. For a wide theme like "90s hits" you can comfortably return 60–100 distinct artists covering pop, rock, R&B, hip-hop, dance, country, alt-rock, one-hit wonders, etc. Aim for breadth, not safe big-names only.\n  • For narrower themes still cover the corners: include cult favourites, deep cuts, lesser-known but era-appropriate artists alongside the obvious picks. A diverse list yields a more interesting playlist.\n  • Never pad with noise — every keyword should be a real artist or distinctive song word the user would actually want.\n\nYear-range rules: only set startYear/endYear if the theme clearly implies a time period (e.g. "80s rock" → 1980-1989, "90s" → 1990-1999, "early 2000s" → 2000-2005, "from 1975" → 1975-1975, "songs from the 60s and 70s" → 1960-1979, "2010 onwards" → 2010-current year, "renaissance music" → 1400-1600, "medieval chants" → 800-1400, "baroque" → 1600-1750). The catalog includes classical compositions dating back roughly to year 1000, so historic ranges are valid. If no year hint is present in the theme, leave both null. Never invent a range to be helpful — only use it if the user explicitly references a year, decade, or era.',
         },
         {
           role: 'user',
@@ -1014,16 +1044,35 @@ class AIPlaylistGenerator {
       }
     }
 
-    const merged = new Map<string, CandidateTrack>();
+    // Dedupe the candidate pool by THREE rules so the LLM never sees
+    // duplicates and the final playlist count actually matches what
+    // the user asked for:
+    //   1. Internal trackId (obvious — same DB row twice).
+    //   2. Spotify track ID extracted from `spotifyLink` (different
+    //      DB rows can point at the same Spotify URI).
+    //   3. Cleaned artist + title (case-insensitive, with " - <suffix>"
+    //      and "(feat. …) / (Remastered) / (Live)"-style adornments
+    //      stripped via `utils.cleanTrackName`). The summary page does
+    //      something similar for its duplicate warning, so two rows
+    //      that look distinct in the DB ("Voorbij" vs "Voorbij - Live")
+    //      now collapse to a single entry before the LLM ever sees them.
+    const seenTrackIds = new Set<string>();
+    const seenSpotifyIds = new Set<string>();
+    const seenArtistTitle = new Set<string>();
+    const candidates: CandidateTrack[] = [];
     for (const bucket of buckets) {
       for (const row of bucket) {
-        if (!merged.has(row.trackId)) {
-          merged.set(row.trackId, row);
-        }
+        if (seenTrackIds.has(row.trackId)) continue;
+        const sid = row.spotifyLink?.split('/').pop() || '';
+        if (sid && seenSpotifyIds.has(sid)) continue;
+        const at = this.dedupeKey(row.artist, row.name);
+        if (at && seenArtistTitle.has(at)) continue;
+        seenTrackIds.add(row.trackId);
+        if (sid) seenSpotifyIds.add(sid);
+        if (at) seenArtistTitle.add(at);
+        candidates.push(row);
       }
     }
-
-    const candidates = Array.from(merged.values());
 
     this.broadcastProgress(jobId, {
       stage: 'searching_tracks',
@@ -1035,6 +1084,45 @@ class AIPlaylistGenerator {
     });
 
     return candidates;
+  }
+
+  /**
+   * Strong-form dedupe key for artist+title pairs. Collapses benign
+   * variants so the final playlist count matches the user's request
+   * and the summary page doesn't flag survivors.
+   *
+   * Normalisation (per side):
+   *   • run through `utils.cleanTrackName` (strips feat./lyrics/
+   *     remastered/`" - <suffix>"` etc.)
+   *   • repeatedly strip any trailing `(…)` or `[…]` group — catches
+   *     "(The Vengabus)", "(Radio Edit)", "[Single Version]" that
+   *     `cleanTrackName`'s named-tag list doesn't cover
+   *   • safety-net " - " split in case `cleanTrackName` missed one
+   *   • lowercase, collapse whitespace, strip trailing punctuation
+   *     ("!" vs no "!" differs between versions, e.g.
+   *     "Freedom! '90" vs "Freedom '90")
+   */
+  private dedupeKey(artist: string | null | undefined, name: string | null | undefined): string {
+    const reduce = (raw: string): string => {
+      let s = String(raw || '');
+      s = this.utils.cleanTrackName(s);
+      let prev: string;
+      do {
+        prev = s;
+        s = s.replace(/\s*[\(\[][^()\[\]]*[\)\]]\s*$/u, '').trim();
+      } while (s !== prev);
+      const dashIdx = s.indexOf(' - ');
+      if (dashIdx > 0) s = s.slice(0, dashIdx);
+      s = s
+        .toLowerCase()
+        .replace(/\s+/g, ' ')
+        .trim()
+        .replace(/[\s!?.,:;'"`’]+$/u, '');
+      return s;
+    };
+    const a = reduce(artist || '');
+    const n = reduce(name || '');
+    return a && n ? `${a}|||${n}` : '';
   }
 
   private async searchByKeyword(
@@ -1101,6 +1189,14 @@ class AIPlaylistGenerator {
       Math.ceil(shuffled.length / CURATION_BATCH_SIZE)
     );
 
+    // Per-batch quota so every batch contributes its share — otherwise
+    // batch 1 tends to gobble most of the target (LLM picks aggressively
+    // while the budget is huge) and later batches contribute almost
+    // nothing, hurting diversity. We round up so a stingy batch can be
+    // compensated by a later one; the hard `target` cap below stops us
+    // from overshooting.
+    const perBatchQuota = Math.max(1, Math.ceil(target / totalBatches));
+
     for (let i = 0; i < shuffled.length; i += CURATION_BATCH_SIZE) {
       const batch = shuffled.slice(i, i + CURATION_BATCH_SIZE);
       const batchIndex = Math.floor(i / CURATION_BATCH_SIZE) + 1;
@@ -1120,13 +1216,15 @@ class AIPlaylistGenerator {
         total: target,
       });
 
-      const remaining = target - picks.size;
-      if (remaining <= 0) break;
-
+      if (picks.size >= target) break;
+      // Ask the LLM for "up to perBatchQuota" from this batch — its
+      // share of the target. The LLM is still instructed to be honest
+      // about quality (no padding), so a weak batch can return fewer.
+      const askThisBatch = Math.min(perBatchQuota, target - picks.size);
       const picked = await this.curateBatch(
         prompt,
         batch,
-        remaining,
+        askThisBatch,
         startYear,
         endYear,
         cost
@@ -1143,11 +1241,51 @@ class AIPlaylistGenerator {
         color.blue.bold(
           `[AI]   curate batch ${white.bold(`${batchIndex}/${totalBatches}`)} → +${white.bold(
             (picks.size - beforeSize).toString()
-          )} picks (total ${white.bold(`${picks.size}/${target}`)})`
+          )} picks (total ${white.bold(`${picks.size}/${target}`)}, quota ${white.bold(askThisBatch.toString())})`
         )
       );
+    }
 
-      if (picks.size >= target) break;
+    // Top-up pass: if any batches under-delivered against their quota
+    // we'll still be short of the target. Walk the unused candidates
+    // and ask the LLM to fill the remainder — this guarantees we use
+    // the full pool before giving up.
+    if (picks.size < target) {
+      const leftover = shuffled.filter((c) => !picks.has(c.trackId));
+      const reshuffled = this.shuffle(leftover);
+      const totalTopupBatches = Math.max(
+        1,
+        Math.ceil(reshuffled.length / CURATION_BATCH_SIZE)
+      );
+      for (let i = 0; i < reshuffled.length; i += CURATION_BATCH_SIZE) {
+        if (picks.size >= target) break;
+        const batch = reshuffled.slice(i, i + CURATION_BATCH_SIZE);
+        const batchIndex = Math.floor(i / CURATION_BATCH_SIZE) + 1;
+        const remaining = target - picks.size;
+        const picked = await this.curateBatch(
+          prompt,
+          batch,
+          remaining,
+          startYear,
+          endYear,
+          cost
+        );
+        const beforeSize = picks.size;
+        for (const tid of picked) {
+          const row = byTrackId.get(tid);
+          if (row && !picks.has(tid)) {
+            picks.set(tid, row);
+            if (picks.size >= target) break;
+          }
+        }
+        this.logger.log(
+          color.blue.bold(
+            `[AI]   top-up batch ${white.bold(`${batchIndex}/${totalTopupBatches}`)} → +${white.bold(
+              (picks.size - beforeSize).toString()
+            )} picks (total ${white.bold(`${picks.size}/${target}`)})`
+          )
+        );
+      }
     }
 
     return Array.from(picks.values()).slice(0, target);
@@ -1190,7 +1328,7 @@ class AIPlaylistGenerator {
         },
         {
           role: 'user',
-          content: `Theme:\n${prompt}${yearHint}\n\nWe still need up to ${remaining} more tracks.\n\nCandidates (tab-separated: trackId\\tartist — title):\n${trackList}`,
+          content: `Theme:\n${prompt}${yearHint}\n\nPick up to ${remaining} of the best matches FROM THIS BATCH (don't worry about other batches — they're handled separately). Returning fewer is fine if this batch genuinely doesn't have ${remaining} good matches.\n\nCandidates (tab-separated: trackId\\tartist — title):\n${trackList}`,
         },
       ],
       tool_choice: { type: 'function', function: { name: 'returnPicks' } },
@@ -1243,17 +1381,21 @@ class AIPlaylistGenerator {
       messageParams: { count: tracks.length },
     });
 
-    // Dedupe by *Spotify* track ID — two rows in our `tracks` table can
-    // share a `spotifyLink` (different internal IDs, same Spotify URI),
-    // which would otherwise add duplicates to the playlist and trigger
-    // the "N tracks were duplicate" warning on the summary page.
-    const seen = new Set<string>();
+    // Dedupe using both Spotify track ID AND cleaned artist+title.
+    // `cleanTrackName` strips " - Remastered", "(feat. …)", "(Live)",
+    // etc. so two recordings that differ only by suffix collapse to
+    // one entry — same rule as the summary page's duplicate detection.
+    const seenSpotifyId = new Set<string>();
+    const seenArtistTitle = new Set<string>();
     const trackIds: string[] = [];
     for (const t of tracks) {
       const sid = t.spotifyLink?.split('/').pop();
       if (!sid) continue;
-      if (seen.has(sid)) continue;
-      seen.add(sid);
+      if (seenSpotifyId.has(sid)) continue;
+      const at = this.dedupeKey(t.artist, t.name);
+      if (at && seenArtistTitle.has(at)) continue;
+      seenSpotifyId.add(sid);
+      if (at) seenArtistTitle.add(at);
       trackIds.push(sid);
     }
 

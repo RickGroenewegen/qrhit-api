@@ -717,6 +717,8 @@ model AISearch {
   jobId             String   @unique @db.VarChar(64)
   shortId           String   @unique @db.VarChar(12)
   prompt            String   @db.VarChar(250)
+  locale            String   @default("en") @db.VarChar(5)
+  title             String?  @db.VarChar(120) // LLM-chosen playlist title (without AIID suffix)
   requestedCount    Int
   deliveredCount    Int      @default(0)
   startYear         Int?

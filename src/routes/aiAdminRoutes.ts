@@ -52,7 +52,8 @@ export default async function aiAdminRoutes(
           ];
         }
 
-        const [total, rows, aggregates] = await Promise.all([
+        const last24hCutoff = new Date(Date.now() - 24 * 3600 * 1000);
+        const [total, rows, aggregates, last24h] = await Promise.all([
           prisma.aISearch.count({ where }),
           prisma.aISearch.findMany({
             where,
@@ -64,6 +65,8 @@ export default async function aiAdminRoutes(
               jobId: true,
               shortId: true,
               prompt: true,
+              title: true,
+              locale: true,
               requestedCount: true,
               deliveredCount: true,
               startYear: true,
@@ -89,6 +92,17 @@ export default async function aiAdminRoutes(
             },
             _count: { _all: true },
           }),
+          // Last-24h totals — unfiltered, independent of `where`/search/status
+          // so the operator can see fresh activity at a glance.
+          prisma.aISearch.aggregate({
+            where: { createdAt: { gte: last24hCutoff } },
+            _sum: {
+              inputTokens: true,
+              outputTokens: true,
+              totalCostUsd: true,
+            },
+            _count: { _all: true },
+          }),
         ]);
 
         return reply.send({
@@ -104,6 +118,12 @@ export default async function aiAdminRoutes(
               inputTokens: aggregates._sum?.inputTokens || 0,
               outputTokens: aggregates._sum?.outputTokens || 0,
               totalCostUsd: aggregates._sum?.totalCostUsd || 0,
+            },
+            last24h: {
+              count: last24h._count?._all || 0,
+              inputTokens: last24h._sum?.inputTokens || 0,
+              outputTokens: last24h._sum?.outputTokens || 0,
+              totalCostUsd: last24h._sum?.totalCostUsd || 0,
             },
           },
         });
