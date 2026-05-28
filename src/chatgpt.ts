@@ -1981,11 +1981,11 @@ ${htmlString}
           messages: [
             {
               role: 'system',
-              content: `You are a music expert. For each song, generate 3 alternative song titles that are plausible but wrong. The alternatives should be real or realistic-sounding song titles from the same genre or era that a player might confuse with the real title. Use real song titles when possible. You can also use well-known phrases or lyrics from the song that people often mistakenly think is the title (e.g. "You Can Be My Bodyguard" for a song actually called "You Can Call Me Al"). Do not translate song titles.`,
+              content: `You are a music expert. For each song, generate 3 alternative song titles that are plausible but wrong. The alternatives should be real or realistic-sounding song titles from the same genre or era that a player might confuse with the real title. Use real song titles when possible. You can also use well-known phrases or lyrics from the song that people often mistakenly think is the title (e.g. "You Can Be My Bodyguard" for a song actually called "You Can Call Me Al").\n\nCRITICAL LANGUAGE RULE: Song titles MUST stay in their original language. NEVER translate song titles into any other language under any circumstances. If the original song title is in English, all 3 alternatives MUST be in English. If the original is in Spanish, alternatives MUST be in Spanish. The alternatives should match the language of the actual song title, NOT the user's interface language.`,
             },
             {
               role: 'user',
-              content: `For each song, provide 3 alternative song titles (same genre/era, plausible but wrong). Use real song titles or well-known lyrics/phrases from the song that are often mistaken for the title:\n${tracksPrompt}`,
+              content: `For each song, provide 3 alternative song titles (same genre/era, plausible but wrong). Use real song titles or well-known lyrics/phrases from the song that are often mistaken for the title. IMPORTANT: keep every alternative in the same language as the original song title — do not translate:\n${tracksPrompt}`,
             },
           ],
           tool_choice: { type: 'function', function: { name: 'generateTitleAlternatives' } },
@@ -2303,11 +2303,11 @@ ${htmlString}
         messages: [
           {
             role: 'system',
-            content: `You are a music expert. Generate 3 alternative song titles from the same genre or era as the given song. The alternatives should be real or realistic-sounding song titles that a player might confuse with the real title. Use real song titles when possible. You can also use well-known phrases or lyrics from the song that people often mistakenly think is the title (e.g. "You Can Be My Bodyguard" for a song actually called "You Can Call Me Al"). Do not translate song titles.`,
+            content: `You are a music expert. Generate 3 alternative song titles from the same genre or era as the given song. The alternatives should be real or realistic-sounding song titles that a player might confuse with the real title. Use real song titles when possible. You can also use well-known phrases or lyrics from the song that people often mistakenly think is the title (e.g. "You Can Be My Bodyguard" for a song actually called "You Can Call Me Al").\n\nCRITICAL LANGUAGE RULE: Song titles MUST stay in their original language. NEVER translate song titles. If the original is English, alternatives MUST be English. Match the language of the actual song title, not the user's interface language.`,
           },
           {
             role: 'user',
-            content: `Generate 3 alternative song titles for "${track.name}" by ${track.artist} (${track.year}). You may use famous lyrics or phrases from the song that are commonly mistaken for the title.${currentQuestion ? `\n\nThe previous question was: "${currentQuestion}". Generate different alternatives than before.` : ''}`,
+            content: `Generate 3 alternative song titles for "${track.name}" by ${track.artist} (${track.year}). You may use famous lyrics or phrases from the song that are commonly mistaken for the title. Keep every alternative in the same language as the original title — do not translate.${currentQuestion ? `\n\nThe previous question was: "${currentQuestion}". Generate different alternatives than before.` : ''}`,
           },
         ],
         tool_choice: { type: 'function', function: { name: 'generateAlternatives' } },
