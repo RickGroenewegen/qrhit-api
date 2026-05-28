@@ -44,6 +44,14 @@ export interface TracksUpgradePrice {
   perCardEur: number;
   extraTracksCostEur: number;
   handlingFeeEur: number;
+  // Box-upgrade portion: populated when the order has boxes enabled and the
+  // new track total spills into another physical box. Zeroed out otherwise.
+  boxEnabled: boolean;
+  currentBoxQuantity: number;
+  newBoxQuantity: number;
+  extraBoxes: number;
+  boxUnitPriceEur: number;
+  boxesCostEur: number;
   vatEur: number;
   totalEur: number;
   taxRate: number;
@@ -207,7 +215,7 @@ class Upgrade {
    * order.
    */
   public async calculateExtraTracksPrice(
-    _php: any,
+    php: any,
     payment: any,
     extraTracks: number
   ): Promise<TracksUpgradePrice> {
@@ -229,21 +237,60 @@ class Upgrade {
     );
     // Flat handling fee — applied once per upgrade regardless of tier.
     const handlingFeeEur = TRACKS_UPGRADE_HANDLING_FEE_EUR;
-    const subtotalExclVat = parseFloat(
+    const tracksSubtotalExclVat = parseFloat(
       (extraTracksCostExclVat + handlingFeeEur).toFixed(2)
     );
-    const vatEur = parseFloat(
-      (subtotalExclVat * (taxRate / 100)).toFixed(2)
+    const tracksVatEur = parseFloat(
+      (tracksSubtotalExclVat * (taxRate / 100)).toFixed(2)
     );
-    const totalEur = parseFloat(
-      (subtotalExclVat + vatEur).toFixed(2)
+    const tracksTotalEur = parseFloat(
+      (tracksSubtotalExclVat + tracksVatEur).toFixed(2)
     );
+
+    // Box portion. Only orders with `boxEnabled` ever needed boxes in the
+    // first place — for those we charge for any additional boxes the new
+    // track total spills into. boxTierPrice() is VAT-INCLUSIVE (same
+    // convention as the regular checkout and `calculateBoxUpgradePrice`),
+    // so the line total is unit * extraBoxes and VAT is derived back out
+    // for display.
+    const boxEnabled = !!php?.boxEnabled;
+    const currentTracks = php?.numberOfTracks || 0;
+    const currentBoxQuantity = php?.boxQuantity || 0;
+    const newTracksTotal = currentTracks + extraTracks;
+    const newBoxQuantity = boxEnabled
+      ? Math.max(currentBoxQuantity, deriveBoxQuantity(newTracksTotal))
+      : 0;
+    const extraBoxes = boxEnabled
+      ? Math.max(0, newBoxQuantity - currentBoxQuantity)
+      : 0;
+    const boxUnitPriceEur = extraBoxes > 0 ? boxTierPrice(newBoxQuantity) : 0;
+    const boxesCostEur =
+      extraBoxes > 0
+        ? parseFloat((boxUnitPriceEur * extraBoxes).toFixed(2))
+        : 0;
+    const boxesSubtotalExclVat =
+      extraBoxes > 0
+        ? parseFloat((boxesCostEur / (1 + taxRate / 100)).toFixed(2))
+        : 0;
+    const boxesVatEur =
+      extraBoxes > 0
+        ? parseFloat((boxesCostEur - boxesSubtotalExclVat).toFixed(2))
+        : 0;
+
+    const vatEur = parseFloat((tracksVatEur + boxesVatEur).toFixed(2));
+    const totalEur = parseFloat((tracksTotalEur + boxesCostEur).toFixed(2));
 
     return {
       extraTracks,
       perCardEur: parseFloat(markedUpPerCardExclVat.toFixed(2)),
       extraTracksCostEur: extraTracksCostExclVat,
       handlingFeeEur,
+      boxEnabled,
+      currentBoxQuantity,
+      newBoxQuantity,
+      extraBoxes,
+      boxUnitPriceEur,
+      boxesCostEur,
       vatEur,
       totalEur,
       taxRate,

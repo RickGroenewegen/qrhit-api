@@ -786,6 +786,12 @@ export default async function publicRoutes(fastify: FastifyInstance) {
             originalPaymentId: ctx.payment.paymentId,
             extraTracks: tier.toString(),
             previousNumberOfTracks: (ctx.php.numberOfTracks || 0).toString(),
+            // Box portion — populated only when the order has boxes enabled
+            // and the new track total spills into another box. Webhook reads
+            // these to bump boxQuantity / boxPrice after the payment clears.
+            extraBoxes: price.extraBoxes.toString(),
+            newBoxQuantity: price.newBoxQuantity.toString(),
+            boxUnitPriceEur: price.boxUnitPriceEur.toString(),
             source: 'usersuggestions',
           },
           clientIp: request.clientIp,

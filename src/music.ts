@@ -4,14 +4,12 @@ import axios, { AxiosInstance } from 'axios';
 import { color } from 'console-log-colors';
 import { ChatGPT } from './chatgpt';
 import Cache from './cache';
-import { OpenPerplex } from './openperplex';
 
 export class Music {
   private prisma = PrismaInstance.getInstance();
   private logger = new Logger();
   private axiosInstance: AxiosInstance;
   private openai = new ChatGPT();
-  private openperplex = new OpenPerplex();
   private readonly mbMaxRetries: number = 5;
   private readonly mbMaxRateLimit: number = 1200;
   private readonly discogsMaxRetries: number = 3;
@@ -38,10 +36,9 @@ export class Music {
   ): Promise<any> {
     // Search MusicBrainz
 
-    const [mbResult, discogsResult, openPerplexYear] = await Promise.all([
+    const [mbResult, discogsResult] = await Promise.all([
       this.searchMusicBrainz(isrc, artist, title),
       this.searchDiscogs(artist, title),
-      this.openperplex.ask(artist, title),
     ]);
 
     // Try Google search and extract Wikipedia languages
@@ -85,7 +82,6 @@ export class Music {
 
                     MusicBrainz thinks the release year is ${mbResult.year}
                     Discogs thinks the release year is ${discogsResult.year}
-                    OpenPerplex (AI scraping) thinks the release year is ${openPerplexYear}
 
                     When evaulating a classical song, we are looking for the year of original composition, not the year of release.
 
@@ -96,14 +92,12 @@ export class Music {
 
     const weights = {
       ai: 0.5,
-      openPerplex: 0.28,
-      mb: 0.11,
-      discogs: 0.11,
+      mb: 0.25,
+      discogs: 0.25,
     };
 
     const sources = {
       ai: aiResult.year,
-      openPerplex: openPerplexYear,
       mb: mbResult.year,
       discogs: discogsResult.year,
     };
@@ -143,7 +137,6 @@ export class Music {
         discogsResult.year == 0 &&
         aiResult.year == 0 &&
         mbResult.year == 0 &&
-        openPerplexYear == 0 &&
         spotifyReleaseYear > 0
       ) {
         // Rule 1: If all years except Spotify are 0, use the Spotify year
@@ -156,7 +149,6 @@ export class Music {
       const nonSpotifyYears = [
         mbResult.year,
         discogsResult.year,
-        openPerplexYear,
         aiResult.year,
       ];
       const validNonSpotifyYears = nonSpotifyYears.filter(
@@ -177,11 +169,11 @@ export class Music {
         standardDeviation = 0;
       }
 
-      // Rule 3: If Spotify year equals AI year, and OpenPerplex either agrees
-      // or is missing, use the Spotify year. Veto when MB and Discogs are both
-      // present, agree with each other, and point to an earlier year — that
-      // combination is too strong a signal of an original release to override
-      // automatically, so leave it for manual review.
+      // Rule 3: If Spotify year equals AI year, use the Spotify year. Veto
+      // when MB and Discogs are both present, agree with each other, and
+      // point to an earlier year — that combination is too strong a signal
+      // of an original release to override automatically, so leave it for
+      // manual review.
       const mbDcAgreeEarlier =
         mbResult.year > 0 &&
         discogsResult.year > 0 &&
@@ -191,28 +183,15 @@ export class Music {
       if (
         spotifyReleaseYear > 0 &&
         spotifyReleaseYear == aiResult.year &&
-        (openPerplexYear == 0 || spotifyReleaseYear == openPerplexYear) &&
         !mbDcAgreeEarlier
       ) {
         finalYear = spotifyReleaseYear;
         standardDeviation = 0;
       }
 
-      // Rule 4: If both OpenPerplex and AI years are equal and smaller than Spotify year, use that year
-      if (
-        openPerplexYear > 0 &&
-        aiResult.year > 0 &&
-        openPerplexYear == aiResult.year &&
-        spotifyReleaseYear > 0 &&
-        openPerplexYear < spotifyReleaseYear
-      ) {
-        finalYear = openPerplexYear;
-        standardDeviation = 0;
-      }
-
-      // Rule 5: If Discogs, MusicBrainz, and AI all agree on the same valid year,
-      // trust that consensus over Spotify and OpenPerplex (which often reflect
-      // re-release or streaming-platform dates).
+      // Rule 4: If Discogs, MusicBrainz, and AI all agree on the same valid year,
+      // trust that consensus over Spotify (which often reflects a re-release
+      // or streaming-platform date).
       if (
         discogsResult.year > 0 &&
         mbResult.year > 0 &&
@@ -224,8 +203,8 @@ export class Music {
         standardDeviation = 0;
       }
 
-      // Rule 6: If Spotify, Discogs, MusicBrainz, and AI all agree on the same
-      // valid year, that 4-way consensus wins regardless of OpenPerplex.
+      // Rule 5: If Spotify, Discogs, MusicBrainz, and AI all agree on the same
+      // valid year, that 4-way consensus wins.
       if (
         spotifyReleaseYear > 0 &&
         discogsResult.year > 0 &&
@@ -248,7 +227,7 @@ export class Music {
         spotify: spotifyReleaseYear,
         mb: mbResult.year,
         ai: aiResult.year,
-        openPerplex: openPerplexYear,
+        openPerplex: 0,
         discogs: discogsResult.year,
       },
     };
@@ -259,7 +238,7 @@ export class Music {
           mbResult.year
         )}] [DC: ${color.white.bold(
           discogsResult.year
-        )}] [OP: ${color.white.bold(openPerplexYear)}] [AI: ${color.white.bold(
+        )}] [AI: ${color.white.bold(
           aiResult.year
         )}] for track ${color.white.bold(artist)} - ${color.white.bold(
           title

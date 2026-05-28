@@ -2362,6 +2362,11 @@ class Mollie {
         const originalPaymentId = metadata.originalPaymentId as string;
         const extraTracks = parseInt(metadata.extraTracks);
         const previousNumberOfTracks = parseInt(metadata.previousNumberOfTracks) || 0;
+        const extraBoxes = parseInt(metadata.extraBoxes) || 0;
+        const newBoxQuantity = parseInt(metadata.newBoxQuantity) || 0;
+        const boxUnitPriceEur = metadata.boxUnitPriceEur
+          ? parseFloat(metadata.boxUnitPriceEur)
+          : 0;
 
         if (paymentHasPlaylistId && userId && originalPaymentId && extraTracks) {
           // Idempotency guard via Redis: a webhook for the same Mollie payment
@@ -2395,6 +2400,29 @@ class Mollie {
                 color.red.bold(`Failed to update track count for tracks upgrade: ${result.error}`)
               );
               return { success: false, error: result.error || 'Failed to update track count' };
+            }
+
+            // If the new track total spilled into another physical box, bump
+            // boxQuantity to the new total and roll the extra-box cost into
+            // boxPrice. Only orders that already had boxEnabled get this —
+            // the calculator only emits extraBoxes > 0 for those.
+            if (extraBoxes > 0 && newBoxQuantity > 0 && boxUnitPriceEur > 0) {
+              const extraBoxesCost = parseFloat(
+                (boxUnitPriceEur * extraBoxes).toFixed(2)
+              );
+              await this.prisma.paymentHasPlaylist.update({
+                where: { id: paymentHasPlaylistId },
+                data: {
+                  boxQuantity: newBoxQuantity,
+                  boxPrice: { increment: extraBoxesCost },
+                },
+              });
+              this.logger.log(
+                color.blue.bold('Tracks upgrade added boxes: ') +
+                  color.white.bold(`+${extraBoxes} → ${newBoxQuantity}`) +
+                  color.blue.bold(' for PHP: ') +
+                  color.white.bold(paymentHasPlaylistId.toString())
+              );
             }
 
             // Roll the charged amount into Payment.totalPrice so the books
