@@ -3199,15 +3199,38 @@ class Vibe {
           { qty: 2500, price: 12.04 },
           { qty: 5000, price: 11.27 },
         ];
-        // Pick the highest tier whose qty is <= quantity. Below the lowest tier (250),
-        // fall back to the 250 tier price (most expensive per unit).
-        let unitPrice = luxeTiers[0].price;
-        for (const tier of luxeTiers) {
-          if (quantity >= tier.qty) unitPrice = tier.price;
+
+        // Interpolate the TOTAL purchase cost linearly between adjacent tiers
+        // (per Tromp's calculation method), then derive the per-unit price.
+        // - At or below the lowest tier: use lowest tier's per-unit price.
+        // - At or above the highest tier: use highest tier's per-unit price.
+        // - Between tiers: lerp by total cost.
+        //     som1 = lower.qty * lower.price
+        //     som2 = upper.qty * upper.price
+        //     totalCost = som1 + ((som2 - som1) / (upper.qty - lower.qty)) * (qty - lower.qty)
+        let totalCost: number;
+        if (quantity <= luxeTiers[0].qty) {
+          totalCost = quantity * luxeTiers[0].price;
+        } else if (quantity >= luxeTiers[luxeTiers.length - 1].qty) {
+          totalCost = quantity * luxeTiers[luxeTiers.length - 1].price;
+        } else {
+          let lower = luxeTiers[0];
+          let upper = luxeTiers[luxeTiers.length - 1];
+          for (let i = 0; i < luxeTiers.length - 1; i++) {
+            if (quantity >= luxeTiers[i].qty && quantity <= luxeTiers[i + 1].qty) {
+              lower = luxeTiers[i];
+              upper = luxeTiers[i + 1];
+              break;
+            }
+          }
+          const som1 = lower.qty * lower.price;
+          const som2 = upper.qty * upper.price;
+          totalCost = som1 + ((som2 - som1) / (upper.qty - lower.qty)) * (quantity - lower.qty);
         }
+
         // Treat the luxe box as a single bundled unit: put full cost on boxPrice,
         // leave cardPrice at 0 (the UI hides the card section for luxe).
-        boxPrice = unitPrice * quantity;
+        boxPrice = totalCost;
         cardPrice = 0;
         boxTypeName = 'Luxe doos (200 kaarten + bedrukte chips)';
         cardsPerSet = 200;
