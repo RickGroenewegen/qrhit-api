@@ -546,9 +546,18 @@ class AIPlaylistGenerator {
         );
       }
 
+      // Use the actual Spotify-added count (post our final dedupe) for
+      // the stored `deliveredCount` so the admin dashboard and the
+      // frontend banner reflect what's truly in the playlist — not
+      // the LLM's optimistic pick count.
+      const actualDelivered =
+        typeof spotifyResult.addedCount === 'number'
+          ? spotifyResult.addedCount
+          : picked.length;
+
       await this.finalizeAISearch(jobId, {
         status: 'success',
-        deliveredCount: picked.length,
+        deliveredCount: actualDelivered,
         keywords: keywords.map((k) => k.value),
         title: resolvedTitle,
         startYear,
@@ -563,7 +572,7 @@ class AIPlaylistGenerator {
         spotifyPlaylistUrl: spotifyResult.playlistUrl,
         spotifyPlaylistId: spotifyResult.playlistId,
         requestedCount: trackCount,
-        deliveredCount: picked.length,
+        deliveredCount: actualDelivered,
       });
 
       this.logger.log(
@@ -1373,7 +1382,16 @@ class AIPlaylistGenerator {
     title: string,
     tracks: CandidateTrack[],
     shortId: string
-  ): Promise<{ success: boolean; playlistUrl?: string; playlistId?: string; error?: string }> {
+  ): Promise<{
+    success: boolean;
+    playlistUrl?: string;
+    playlistId?: string;
+    error?: string;
+    /** Number of unique tracks actually sent to Spotify after our
+     *  final defensive dedupe pass. Differs from the LLM's pick count
+     *  when two picks shared a Spotify ID or normalised artist+title. */
+    addedCount?: number;
+  }> {
     this.broadcastProgress(jobId, {
       stage: 'creating_spotify_playlist',
       percentage: 92,
@@ -1410,6 +1428,7 @@ class AIPlaylistGenerator {
       success: true,
       playlistUrl: result.data?.playlistUrl,
       playlistId: result.data?.playlistId,
+      addedCount: trackIds.length,
     };
   }
 
