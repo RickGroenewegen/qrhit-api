@@ -3187,50 +3187,14 @@ class Vibe {
       let cardsPerSet: number;
 
       if (printingType === 'luxe') {
-        // Luxe doos (luxury box, cards included) - tiered per-set purchase price
-        // Source: "luxe doos QRSong.xlsx" - Inkoop Tromp column
-        const luxeTiers: Array<{ qty: number; price: number }> = [
-          { qty: 250, price: 25.9 },
-          { qty: 300, price: 23.33 },
-          { qty: 400, price: 20.13 },
-          { qty: 500, price: 18.2 },
-          { qty: 750, price: 15.63 },
-          { qty: 1000, price: 14.35 },
-          { qty: 2500, price: 12.04 },
-          { qty: 5000, price: 11.27 },
-        ];
-
-        // Interpolate the TOTAL purchase cost linearly between adjacent tiers
-        // (per Tromp's calculation method), then derive the per-unit price.
-        // - At or below the lowest tier: use lowest tier's per-unit price.
-        // - At or above the highest tier: use highest tier's per-unit price.
-        // - Between tiers: lerp by total cost.
-        //     som1 = lower.qty * lower.price
-        //     som2 = upper.qty * upper.price
-        //     totalCost = som1 + ((som2 - som1) / (upper.qty - lower.qty)) * (qty - lower.qty)
-        let totalCost: number;
-        if (quantity <= luxeTiers[0].qty) {
-          totalCost = quantity * luxeTiers[0].price;
-        } else if (quantity >= luxeTiers[luxeTiers.length - 1].qty) {
-          totalCost = quantity * luxeTiers[luxeTiers.length - 1].price;
-        } else {
-          let lower = luxeTiers[0];
-          let upper = luxeTiers[luxeTiers.length - 1];
-          for (let i = 0; i < luxeTiers.length - 1; i++) {
-            if (quantity >= luxeTiers[i].qty && quantity <= luxeTiers[i + 1].qty) {
-              lower = luxeTiers[i];
-              upper = luxeTiers[i + 1];
-              break;
-            }
-          }
-          const som1 = lower.qty * lower.price;
-          const som2 = upper.qty * upper.price;
-          totalCost = som1 + ((som2 - som1) / (upper.qty - lower.qty)) * (quantity - lower.qty);
-        }
-
-        // Treat the luxe box as a single bundled unit: put full cost on boxPrice,
-        // leave cardPrice at 0 (the UI hides the card section for luxe).
-        boxPrice = totalCost;
+        // Luxe doos (luxury box, cards included) - linear total cost.
+        // Confirmed by Tromp: totalCost = setup + perBox * quantity.
+        //   setup  = €3850 (fixed)
+        //   perBox = €10.50
+        // Per-unit = 3850/qty + 10.50.
+        const LUXE_SETUP = 3850;
+        const LUXE_PER_BOX = 10.5;
+        boxPrice = LUXE_SETUP + LUXE_PER_BOX * quantity;
         cardPrice = 0;
         boxTypeName = 'Luxe doos (200 kaarten + bedrukte chips)';
         cardsPerSet = 200;
