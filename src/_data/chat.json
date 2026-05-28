@@ -151,7 +151,7 @@
         {
             "slug": "box",
             "title": "Do the cards come in a box?",
-            "description": "By default the cards arrive in a mailbox-friendly transport box, neatly tied together with a paper band. You can also opt into a personalized gift box during checkout: a 12x12cm foldable box with a window on the lid, a custom insert card you design yourself, and a personal message on the back. The gift box ships as a printed A3 sheet that you press out and fold (no glue or tools needed). For larger business orders we can provide custom branded boxes if the amount exceeds 50.",
+            "description": "By default the cards arrive in a mailbox-friendly transport box, neatly tied together with a paper band. You can also opt into a personalized gift box during checkout: a 12x12cm foldable presentation box with a window on the lid, a custom insert card you design yourself, and a personal message on the back. Important to know about the quality: the gift box is decorative gift packaging, not a rigid premade game box like the ones you find with common retail board games. It ships as a flat printed A3 cardboard sheet that you press out and fold into shape yourself at home (no glue or tools needed, just a few minutes of folding along the pre-scored creases). Personalized hard, rigid game boxes at retail quality simply aren't produced by print-on-demand companies. For larger business orders (more than 50 boxes) we can produce fully custom branded rigid boxes; see the branded-boxes entry.",
             "tags": [
                 "box",
                 "gift box",
@@ -162,7 +162,7 @@
         {
             "slug": "gift-box-capacity",
             "title": "How many cards fit in a gift box?",
-            "description": "Each gift box holds up to 190 QR music cards and includes a built-in divider. If your playlist is larger than that, additional boxes are added automatically — one extra box for every 190 cards. So a 250-card playlist ships with 2 boxes, 400 cards ships with 3, and so on. The number of boxes is shown during checkout, so you always know what's coming. You can never order fewer or more boxes than your card count requires; the count is fixed by the size of your playlist.",
+            "description": "Each gift box holds up to 190 QR music cards and includes a built-in divider. If your playlist is larger than that, additional boxes are added automatically — one extra box for every 190 cards. So a 250-card playlist ships with 2 boxes, 400 cards ships with 3, and so on. The number of boxes is shown during checkout, so you always know what's coming. You can never order fewer or more boxes than your card count requires; the count is fixed by the size of your playlist. About the box itself: each box is a 12x12cm foldable presentation box that ships flat as a printed A3 cardboard sheet you press out and fold at home. It is decorative gift packaging, not a rigid premade game box like the ones you find with common retail board games.",
             "tags": [
                 "gift box",
                 "capacity",
@@ -174,7 +174,7 @@
         {
             "slug": "gift-box-design",
             "title": "What can I customize on the gift box?",
-            "description": "The gift box itself has a fixed exterior design with a window on the lid. You personalize it by designing the insert card that sits behind that window. You can customize four things: (1) the lid image visible through the window, (2) a logo placed on top of the lid image, (3) the inside background visible when you open the box, and (4) a personal message on the back of the insert card.",
+            "description": "The gift box itself has a fixed printed exterior design with a window on the lid. You personalize it by designing the insert card that sits behind that window. You can customize four things: (1) the lid image visible through the window, (2) a logo placed on top of the lid image, (3) the inside background visible when you open the box, and (4) a personal message on the back of the insert card. About the box itself: it is decorative gift packaging, not a rigid premade game box like the ones you find with common retail board games. The exterior design is fixed (you cannot fully reskin the outside of the box) because the box ships as a flat printed A3 cardboard sheet that you press out and fold yourself at home. Personalization happens entirely on the insert card behind the window.",
             "tags": [
                 "gift box",
                 "customize",
@@ -184,9 +184,30 @@
             ]
         },
         {
+            "slug": "gift-box-fold-instructions",
+            "title": "How do I fold or build the gift box? Are there instructions?",
+            "description": "Yes! The gift box arrives flat as a printed A3 cardboard sheet that you press out and fold yourself at home. It takes a few minutes and needs no glue or tools, just follow the pre-scored creases. We have a step-by-step video tutorial that walks you through the whole process: https://www.youtube.com/watch?v=OE3DsOM81Qo. The same video is also shown on the gift box page and during the box-design step in the order flow.",
+            "tags": [
+                "gift box",
+                "fold",
+                "folding",
+                "build",
+                "assemble",
+                "assembly",
+                "instructions",
+                "tutorial",
+                "video",
+                "how to fold",
+                "how to build",
+                "how to assemble",
+                "A3 sheet",
+                "press out"
+            ]
+        },
+        {
             "slug": "gift-box-price",
             "title": "How much does the gift box cost? Is there a bulk discount?",
-            "description": "A single gift box costs €6.99. When a playlist needs multiple boxes, the per-box price drops automatically: 2 boxes cost €6.00 each (save 14%), 3 boxes are €5.00 each (save 29%), 4 boxes are €4.50 each (save 36%), and 5 or more boxes are just €4.00 each (save 43%). The discount applies per playlist in the cart, and the exact total — including any savings — is shown during checkout before payment. So a 250-card playlist (which needs 2 boxes) costs €12.00 in box add-ons, and a 400-card playlist (3 boxes) costs €15.00.",
+            "description": "A single gift box costs €6.99. When a playlist needs multiple boxes, the per-box price drops automatically: 2 boxes cost €6.00 each (save 14%), 3 boxes are €5.00 each (save 29%), 4 boxes are €4.50 each (save 36%), and 5 or more boxes are just €4.00 each (save 43%). The discount applies per playlist in the cart, and the exact total — including any savings — is shown during checkout before payment. So a 250-card playlist (which needs 2 boxes) costs €12.00 in box add-ons, and a 400-card playlist (3 boxes) costs €15.00. What you get for that price: a 12x12cm decorative gift box that ships flat as a printed A3 cardboard sheet you press out and fold yourself at home, together with a custom-printed insert card you designed. It is gift packaging, not a rigid premade game box like the ones you find with common retail board games. Personalized hard retail-quality boxes simply aren't produced by print-on-demand companies, which is why our box is intentionally designed as foldable gift packaging.",
             "tags": [
                 "gift box",
                 "price",
@@ -669,7 +690,7 @@
         {
             "slug": "add-gift-box-in-correction",
             "title": "Can I add a gift box after I've already paid?",
-            "description": "Yes. The correction form has a dedicated Gift Box tab where you can add a gift box to a physical order even if you didn't select one during checkout. You'll see exactly how many boxes your playlist needs (one box holds up to 190 cards), the price (with the same bulk discount as a regular order — 1 box €6.99, 5+ boxes €4.00 each), and a single 'Add to my order' button that takes you through a quick Mollie payment. Once paid, the gift box is unlocked and you can design the lid image, logo, and personal message right in the same tab. Because the box ships in the same package as your cards, there's no extra shipping cost.",
+            "description": "Yes. The correction form has a dedicated Gift Box tab where you can add a gift box to a physical order even if you didn't select one during checkout. You'll see exactly how many boxes your playlist needs (one box holds up to 190 cards), the price (with the same bulk discount as a regular order — 1 box €6.99, 5+ boxes €4.00 each), and a single 'Add to my order' button that takes you through a quick Mollie payment. Once paid, the gift box is unlocked and you can design the lid image, logo, and personal message right in the same tab. Because the box ships in the same package as your cards, there's no extra shipping cost. Quick note on what you're adding: the gift box is decorative gift packaging that arrives flat as a printed A3 cardboard sheet you press out and fold yourself at home, not a rigid premade game box like the ones you find with common retail board games.",
             "tags": [
                 "gift box",
                 "add",
@@ -1340,7 +1361,7 @@
         {
             "slug": "branded-boxes",
             "title": "Do you offer custom branded boxes for large orders?",
-            "description": "Yes — for business orders of more than 50 boxes we can produce fully custom branded gift boxes with your own design printed on the exterior (rather than the standard QRSong! design with the window). This is a custom service, so lead time and pricing depend on the design and quantity. To get a quote, email us at info@qrsong.io with the number of boxes you need, your timeline, and a rough idea of the artwork you have in mind, and we'll get back to you with options.",
+            "description": "Yes — for business orders of more than 50 boxes we can produce fully custom branded boxes with your own design printed on the exterior. This is a separate, premium product from our standard consumer gift box: business branded boxes are rigid, premade boxes (sturdy SK2 board, comparable to retail board-game boxes), available in 48-card, 96-card and 192-card formats, printed inside and out in your house style. This is a custom service, so lead time and pricing depend on the design and quantity. To get a quote, email us at info@qrsong.io with the number of boxes you need, your timeline, and a rough idea of the artwork you have in mind, and we'll get back to you with options. Note: this is different from the standard consumer gift box (an optional add-on during checkout), which is a foldable A3 press-and-fold cardboard sheet for gifting and is not available in a rigid premade format.",
             "tags": [
                 "branded boxes",
                 "custom boxes",
