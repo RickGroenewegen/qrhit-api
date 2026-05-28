@@ -3162,7 +3162,7 @@ class Vibe {
     includeCustomApp?: boolean;
     includeVotingPortal?: boolean;
     profitMargin: number;
-    printingType?: string; // 'eigen', 'voorbedrukt', or 'klein'
+    printingType?: string; // 'eigen', 'voorbedrukt', 'klein', or 'luxe'
   }): Promise<any> {
     try {
       const {
@@ -3186,7 +3186,32 @@ class Vibe {
       let boxTypeName: string;
       let cardsPerSet: number;
 
-      if (printingType === 'voorbedrukt') {
+      if (printingType === 'luxe') {
+        // Luxe doos (luxury box, cards included) - tiered per-set purchase price
+        // Source: "luxe doos QRSong.xlsx" - Inkoop Tromp column
+        const luxeTiers: Array<{ qty: number; price: number }> = [
+          { qty: 250, price: 25.9 },
+          { qty: 300, price: 23.33 },
+          { qty: 400, price: 20.13 },
+          { qty: 500, price: 18.2 },
+          { qty: 750, price: 15.63 },
+          { qty: 1000, price: 14.35 },
+          { qty: 2500, price: 12.04 },
+          { qty: 5000, price: 11.27 },
+        ];
+        // Pick the highest tier whose qty is <= quantity. Below the lowest tier (250),
+        // fall back to the 250 tier price (most expensive per unit).
+        let unitPrice = luxeTiers[0].price;
+        for (const tier of luxeTiers) {
+          if (quantity >= tier.qty) unitPrice = tier.price;
+        }
+        // Treat the luxe box as a single bundled unit: put full cost on boxPrice,
+        // leave cardPrice at 0 (the UI hides the card section for luxe).
+        boxPrice = unitPrice * quantity;
+        cardPrice = 0;
+        boxTypeName = 'Luxe doos (200 kaarten + bedrukte chips)';
+        cardsPerSet = 200;
+      } else if (printingType === 'voorbedrukt') {
         // Voorbedrukt doosje met venster (Column D) - Pre-printed box with window
         // Boxes: (1165 / 1000) * quantity = 1.165 * quantity
         boxPrice = 1.165 * quantity;
@@ -3841,14 +3866,24 @@ class Vibe {
           includeCustomApp: calc.includeCustomApp || false,
           includeVotingPortal: calc.includeVotingPortal || false,
           profitMargin: calc.profitMargin || 0,
+          printingType: calc.printingType || 'eigen',
         });
         if (!r.success) return { success: false, error: 'Pricing failed' };
         const cr = r.calculation;
         const pricePerUnit = cr.pricePerSet;
         const quantity = cr.quantity;
 
+        let itemDescription: string;
+        if (calc.printingType === 'luxe') {
+          itemDescription = 'QRSong! Luxe doos — Luxe doos met 200 kaarten en bedrukte chips';
+        } else if (calc.printingType === 'klein') {
+          itemDescription = 'QRSong! muziekkaarten set — Klein voorbedrukt doosje met 100 kaarten';
+        } else {
+          itemDescription = 'QRSong! muziekkaarten set — Een doos met 2 kleinere doosjes met ieder 100 kaarten (totaal 200 kaarten)';
+        }
+
         items.push({
-          description: 'QRSong! muziekkaarten set — Een doos met 2 kleinere doosjes met ieder 100 kaarten (totaal 200 kaarten)',
+          description: itemDescription,
           amount: String(quantity),
           price: pricePerUnit.toFixed(2),
         });

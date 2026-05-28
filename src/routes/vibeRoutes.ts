@@ -7,6 +7,7 @@ import Bookkeeping from '../bookkeeping';
 import AssetQueue from '../assetQueue';
 import PrismaInstance from '../prisma';
 import Translation from '../translation';
+import Cache from '../cache';
 import archiver from 'archiver';
 import * as fsPromises from 'fs/promises';
 import * as pathModule from 'path';
@@ -1271,15 +1272,24 @@ export default async function vibeRoutes(
             includeCustomApp: calculation.includeCustomApp || false,
             includeVotingPortal: calculation.includeVotingPortal || false,
             profitMargin: calculation.profitMargin || 0,
+            printingType: calculation.printingType || 'eigen',
           });
 
           if (pricingResult.success) {
             calculationResult = pricingResult.calculation;
           }
 
-          // Set product description for Tromp (48 cards per box, 2 smaller boxes = 96 cards total)
-          productDescription = 'QRSong! muziekkaarten set';
-          productDetails = 'Een doos met 2 kleinere doosjes met ieder 100 kaarten (totaal 200 kaarten)';
+          // Set product description for Tromp
+          if (calculation.printingType === 'luxe') {
+            productDescription = 'QRSong! Luxe doos';
+            productDetails = 'Luxe doos met 200 kaarten en bedrukte chips';
+          } else if (calculation.printingType === 'klein') {
+            productDescription = 'QRSong! muziekkaarten set';
+            productDetails = 'Klein voorbedrukt doosje met 100 kaarten';
+          } else {
+            productDescription = 'QRSong! muziekkaarten set';
+            productDetails = 'Een doos met 2 kleinere doosjes met ieder 100 kaarten (totaal 200 kaarten)';
+          }
         } else if (type === 'schneider') {
           // Schneider calculation
           calculation = {
@@ -2143,6 +2153,53 @@ export default async function vibeRoutes(
       } catch (error) {
         console.error('Error calculating pricing:', error);
         reply.status(500).send({ error: 'Internal server error' });
+      }
+    }
+  );
+
+  // Pricing tables profit-margin config (Redis-backed, shared across browsers/users).
+  // Stores the same shape the frontend used to keep in localStorage:
+  //   { profitMatrix: ProfitMatrix, defaultProfits: Record<string, ProfitEntry> }
+  fastify.get(
+    '/vibe/pricing-tables/profit-config',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const cache = Cache.getInstance();
+        const [matrixRaw, defaultsRaw] = await Promise.all([
+          cache.get('pricing_tables:profit_matrix', false),
+          cache.get('pricing_tables:default_profits', false),
+        ]);
+        reply.send({
+          profitMatrix: matrixRaw ? JSON.parse(matrixRaw) : null,
+          defaultProfits: defaultsRaw ? JSON.parse(defaultsRaw) : null,
+        });
+      } catch (error) {
+        console.error('Error reading pricing-tables profit config:', error);
+        reply.status(500).send({ error: 'Failed to read profit config' });
+      }
+    }
+  );
+
+  fastify.put(
+    '/vibe/pricing-tables/profit-config',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { profitMatrix, defaultProfits } = request.body || {};
+        const cache = Cache.getInstance();
+        const ops: Promise<void>[] = [];
+        if (profitMatrix !== undefined) {
+          ops.push(cache.set('pricing_tables:profit_matrix', JSON.stringify(profitMatrix)));
+        }
+        if (defaultProfits !== undefined) {
+          ops.push(cache.set('pricing_tables:default_profits', JSON.stringify(defaultProfits)));
+        }
+        await Promise.all(ops);
+        reply.send({ success: true });
+      } catch (error) {
+        console.error('Error writing pricing-tables profit config:', error);
+        reply.status(500).send({ error: 'Failed to write profit config' });
       }
     }
   );
