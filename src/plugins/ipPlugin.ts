@@ -1,5 +1,7 @@
 import { FastifyPluginAsync } from 'fastify';
 import fp from 'fastify-plugin';
+import AbuseGuard from '../abuse_guard';
+import Utils from '../utils';
 
 declare module 'fastify' {
   interface FastifyRequest {
@@ -10,16 +12,23 @@ declare module 'fastify' {
 const ipPlugin: FastifyPluginAsync = async (fastify, options) => {
   fastify.decorateRequest('clientIp', '');
 
+  const abuseGuard = AbuseGuard.getInstance();
+  const utils = new Utils();
+
   fastify.addHook('onRequest', (request, reply, done) => {
-    const xForwardedFor = request.headers['x-forwarded-for'];
-    if (xForwardedFor) {
-      const ips = Array.isArray(xForwardedFor)
-        ? xForwardedFor
-        : xForwardedFor.split(',');
-      request.clientIp = ips[0].trim();
-    } else {
-      request.clientIp = request.socket.remoteAddress || '';
+    // Spoof-resistant client IP for security decisions: prefers the
+    // CloudFront-set viewer address over the attacker-controllable
+    // X-Forwarded-For header. Falls back to the legacy XFF parse when not
+    // behind CloudFront.
+    request.clientIp = utils.resolveTrustedClientIp(request);
+
+    // Reject banned IPs across the entire API. This is a synchronous,
+    // in-memory lookup so it adds no latency to normal traffic.
+    if (abuseGuard.isBanned(request.clientIp)) {
+      reply.status(403).send({ error: 'Forbidden' });
+      return;
     }
+
     done();
   });
 };

@@ -96,6 +96,63 @@ class Cache {
     await this.executeCommand('del', cacheKey);
   }
 
+  /**
+   * Adds a member to a sorted set with the given numeric score. Used to model
+   * an expiring set (score = expiry timestamp).
+   */
+  async addToSortedSet(
+    key: string,
+    score: number,
+    member: string
+  ): Promise<void> {
+    let cacheKey = `${this.version}:${key}`;
+    await this.executeCommand('zadd', cacheKey, score, member);
+  }
+
+  /**
+   * Removes all members of a sorted set whose score is <= maxScore.
+   */
+  async pruneSortedSet(key: string, maxScore: number): Promise<void> {
+    let cacheKey = `${this.version}:${key}`;
+    await this.executeCommand('zremrangebyscore', cacheKey, '-inf', maxScore);
+  }
+
+  /**
+   * Returns the members of a sorted set with their scores as
+   * `{ member, score }` pairs.
+   */
+  async getSortedSetWithScores(
+    key: string
+  ): Promise<{ member: string; score: number }[]> {
+    let cacheKey = `${this.version}:${key}`;
+    const flat: string[] = await this.executeCommand(
+      'zrange',
+      cacheKey,
+      0,
+      -1,
+      'WITHSCORES'
+    );
+    const result: { member: string; score: number }[] = [];
+    for (let i = 0; i < (flat?.length || 0); i += 2) {
+      result.push({ member: flat[i], score: parseInt(flat[i + 1], 10) });
+    }
+    return result;
+  }
+
+  /**
+   * Atomically increments a counter and returns the new value. When the key is
+   * first created (value becomes 1) and an expiry is supplied, a TTL is set so
+   * the counter behaves as a fixed-window rate limiter.
+   */
+  async increment(key: string, expireInSeconds?: number): Promise<number> {
+    let cacheKey = `${this.version}:${key}`;
+    const count = await this.executeCommand('incr', cacheKey);
+    if (count === 1 && expireInSeconds) {
+      await this.executeCommand('expire', cacheKey, expireInSeconds);
+    }
+    return count;
+  }
+
   async delPattern(pattern: string): Promise<void> {
     let cachePattern = `${this.version}:${pattern}`;
     const keys = await this.executeCommand('keys', cachePattern);

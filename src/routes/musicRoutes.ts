@@ -12,6 +12,7 @@ import TrackEnrichment from '../trackEnrichment';
 import PrismaInstance from '../prisma';
 import { AppleMusicProvider } from '../providers';
 import AppleStorefront from '../appleStorefront';
+import AbuseGuard from '../abuse_guard';
 
 // Import service-specific routes
 import spotifyRoutes from './spotifyRoutes';
@@ -32,6 +33,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   const prisma = PrismaInstance.getInstance();
   const appleMusicProvider = AppleMusicProvider.getInstance();
   const appleStorefront = AppleStorefront.getInstance();
+  const abuseGuard = AbuseGuard.getInstance();
 
   // Register service-specific routes
   await fastify.register(spotifyRoutes);
@@ -372,6 +374,11 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     const headers = request.headers;
     const userAgent = headers['user-agent'] || '';
 
+    const guard = await abuseGuard.check(request.clientIp, userAgent);
+    if (!guard.allowed) {
+      return reply.status(403).send({ error: 'Forbidden' });
+    }
+
     const result = await data.getLink(
       request.params.trackId,
       request.clientIp,
@@ -408,6 +415,12 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   fastify.get('/qrlink2/:trackId/:php', async (request: any, reply) => {
     const headers = request.headers;
     const userAgent = headers['user-agent'] || '';
+
+    const guard = await abuseGuard.check(request.clientIp, userAgent);
+    if (!guard.allowed) {
+      return reply.status(403).send({ error: 'Forbidden' });
+    }
+
     const result = await data.getLink(
       request.params.trackId,
       request.clientIp,

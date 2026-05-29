@@ -65,6 +65,48 @@ class Utils {
     );
   }
 
+  /**
+   * Resolve the original client IP in a way that resists `X-Forwarded-For`
+   * spoofing, for use in security decisions (bans / rate limiting).
+   *
+   * Behind CloudFront, the `CloudFront-Viewer-Address` header is the source of
+   * truth: CloudFront sets it from the real TCP peer and strips any
+   * client-supplied `CloudFront-*` headers, so a viewer cannot forge it. We
+   * prefer it over `X-Forwarded-For` (whose left-most entries are fully
+   * attacker-controlled). The header value is `ip:port` for IPv4 and
+   * `[ipv6]:port` for IPv6.
+   *
+   * For full protection ensure (a) the CloudFront origin-request policy
+   * forwards `CloudFront-Viewer-Address`, and (b) the ALB security group only
+   * accepts traffic from CloudFront so the origin can't be hit directly with a
+   * spoofed XFF. Without (a) this safely falls back to the legacy XFF parse.
+   */
+  public resolveTrustedClientIp(request: any): string {
+    const viewerAddress = request?.headers?.['cloudfront-viewer-address'];
+    if (typeof viewerAddress === 'string' && viewerAddress.length > 0) {
+      const stripped = this.stripPort(viewerAddress);
+      if (stripped) {
+        return stripped;
+      }
+    }
+    return this.getClientIp(request);
+  }
+
+  /**
+   * Strips the trailing `:port` from a `host:port` value, handling the
+   * bracketed `[ipv6]:port` form.
+   */
+  private stripPort(value: string): string {
+    const trimmed = value.trim();
+    if (trimmed.startsWith('[')) {
+      const end = trimmed.indexOf(']');
+      return end > 0 ? trimmed.substring(1, end) : trimmed;
+    }
+    // IPv4 (or bare host): drop the last :port segment if present.
+    const lastColon = trimmed.lastIndexOf(':');
+    return lastColon > 0 ? trimmed.substring(0, lastColon) : trimmed;
+  }
+
   public isTrustedIp(ip: string): boolean {
     if (
       process.env['TRUSTED_IPS'] &&
