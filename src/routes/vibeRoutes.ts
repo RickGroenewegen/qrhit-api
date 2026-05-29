@@ -1333,7 +1333,7 @@ export default async function vibeRoutes(
 
           switch (cardCount) {
             case 48:
-              productDetails = 'Luxe doos met 1 vakje, 48 kaarten';
+              productDetails = 'Doos met 1 vakje, 48 kaarten';
               break;
             case 96:
               productDetails = 'Luxe doos met 2 vakjes, 2x 48 kaarten';
