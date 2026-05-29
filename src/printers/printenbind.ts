@@ -785,6 +785,11 @@ class PrintEnBind {
         email: customerInfo.email || 'john@doe.com',
       };
 
+      console.log(
+        'Print&Bind delivery request body:',
+        JSON.stringify(deliveryData, null, 2)
+      );
+
       const addDeliveryResult = await fetch(
         `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
         {
@@ -798,6 +803,22 @@ class PrintEnBind {
       );
 
       const addDelivery = await addDeliveryResult.json();
+
+      console.log(
+        `Print&Bind delivery response (status ${addDeliveryResult.status}):`,
+        JSON.stringify(addDelivery, null, 2)
+      );
+
+      if (!addDeliveryResult.ok) {
+        this.logger.log(
+          color.red.bold(
+            `Failed to set delivery for order ${orderId}: ${
+              addDeliveryResult.status
+            } ${JSON.stringify(addDelivery)}`
+          )
+        );
+        // decide: throw, or mark totalItemsSuccess so result.success stays false
+      }
 
       if (logging) {
         apiCalls.push({
