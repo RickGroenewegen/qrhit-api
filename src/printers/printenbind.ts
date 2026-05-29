@@ -771,7 +771,7 @@ class PrintEnBind {
       // package always goes via letterbox; 'mailbox' and 'international' do
       // not require a delivery_option.
       const deliveryMethod =
-        customerInfo.countrycode === 'NL' ? 'mailbox' : 'international';
+        customerInfo.countrycode === 'NL' ? 'post' : 'international';
 
       const deliveryData = {
         name_contact: customerInfo.fullname?.trim() || 'John Doe',
@@ -2297,6 +2297,81 @@ class PrintEnBind {
       this.logger.log(color.red.bold(`Error getting delivery info: ${error}`));
       return null;
     }
+  }
+
+  /**
+   * Builds the data for the admin "Shipment Check" table: every payment that
+   * has a Print&Bind order ID and a printApiStatus of 'Submitted'. For each one
+   * we retrieve the delivery data from Print&Bind and flag any order where the
+   * delivery call errors or no delivery data exists.
+   */
+  public async getSubmittedDeliveryCheck(): Promise<any[]> {
+    const payments = await this.prisma.payment.findMany({
+      where: {
+        printApiStatus: 'Submitted',
+        printApiOrderId: { notIn: [''] },
+      },
+      select: {
+        paymentId: true,
+        printApiOrderId: true,
+        fullname: true,
+        email: true,
+        countrycode: true,
+        printApiTrackingLink: true,
+        createdAt: true,
+      },
+      orderBy: { createdAt: 'desc' },
+    });
+
+    const authToken = await this.getAuthToken();
+
+    const results: any[] = [];
+    for (const payment of payments) {
+      let deliveryStatus: 'ok' | 'missing' | 'error' = 'ok';
+      let deliveryError: string | null = null;
+      let delivery: any = null;
+
+      try {
+        const response = await fetch(
+          `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${payment.printApiOrderId}`,
+          {
+            method: 'GET',
+            headers: { Authorization: authToken! },
+          }
+        );
+
+        if (!response.ok) {
+          deliveryStatus = 'error';
+          deliveryError = `HTTP ${response.status} ${response.statusText}`;
+        } else {
+          delivery = await response.json();
+          if (!delivery || Object.keys(delivery).length === 0) {
+            deliveryStatus = 'missing';
+            deliveryError = 'No delivery data found';
+          }
+        }
+      } catch (error: any) {
+        deliveryStatus = 'error';
+        deliveryError = error?.message || String(error);
+      }
+
+      results.push({
+        paymentId: payment.paymentId,
+        printApiOrderId: payment.printApiOrderId,
+        fullname: payment.fullname,
+        email: payment.email,
+        countrycode: payment.countrycode,
+        createdAt: payment.createdAt,
+        deliveryStatus,
+        deliveryError,
+        deliveryMethod: delivery?.delivery_method ?? null,
+        amount: delivery?.amount ?? null,
+        trackingUrl:
+          delivery?.tracktrace_url || payment.printApiTrackingLink || null,
+      });
+    }
+
+    return results;
   }
 
   public async handleTrackingMails(): Promise<void> {

@@ -2799,6 +2799,26 @@ export default async function adminRoutes(
     }
   );
 
+  // Shipment check - list all Submitted Print&Bind orders and verify that
+  // delivery data exists / can be retrieved for each one.
+  fastify.get(
+    '/admin/printenbind/shipment-check',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const PrintEnBind = (await import('../printers/printenbind')).default;
+        const printEnBind = PrintEnBind.getInstance();
+        const data = await printEnBind.getSubmittedDeliveryCheck();
+        reply.send({ success: true, data });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error?.message || 'Failed to run shipment check',
+        });
+      }
+    }
+  );
+
   // Handle tracking mails - check shipped orders and send tracking emails
   fastify.post(
     '/admin/printenbind/handle-tracking-mails',
