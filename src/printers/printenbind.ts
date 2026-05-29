@@ -2300,12 +2300,12 @@ class PrintEnBind {
   }
 
   /**
-   * Builds the data for the admin "Shipment Check" table: every payment that
-   * has a Print&Bind order ID and a printApiStatus of 'Submitted'. For each one
-   * we retrieve the delivery data from Print&Bind and flag any order where the
-   * delivery call errors or no delivery data exists.
+   * Returns the list for the admin "Shipment Check" table: every payment that
+   * has a Print&Bind order ID and a printApiStatus of 'Submitted'. This is a
+   * DB-only query so the table can render instantly; the delivery data for each
+   * order is fetched separately (one call per order) via checkDeliveryForOrder.
    */
-  public async getSubmittedDeliveryCheck(): Promise<any[]> {
+  public async getSubmittedOrders(): Promise<any[]> {
     const payments = await this.prisma.payment.findMany({
       where: {
         printApiStatus: 'Submitted',
@@ -2323,55 +2323,59 @@ class PrintEnBind {
       orderBy: { createdAt: 'desc' },
     });
 
-    const authToken = await this.getAuthToken();
+    return payments.map((payment) => ({
+      paymentId: payment.paymentId,
+      printApiOrderId: payment.printApiOrderId,
+      fullname: payment.fullname,
+      email: payment.email,
+      countrycode: payment.countrycode,
+      createdAt: payment.createdAt,
+    }));
+  }
 
-    const results: any[] = [];
-    for (const payment of payments) {
-      let deliveryStatus: 'ok' | 'missing' | 'error' = 'ok';
-      let deliveryError: string | null = null;
-      let delivery: any = null;
+  /**
+   * Retrieves the Print&Bind delivery data for a single order and reports
+   * whether it is ok, missing, or errored. Used by the admin "Shipment Check"
+   * table to fill in each row one by one.
+   */
+  public async checkDeliveryForOrder(orderId: string): Promise<any> {
+    let deliveryStatus: 'ok' | 'missing' | 'error' = 'ok';
+    let deliveryError: string | null = null;
+    let delivery: any = null;
 
-      try {
-        const response = await fetch(
-          `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${payment.printApiOrderId}`,
-          {
-            method: 'GET',
-            headers: { Authorization: authToken! },
-          }
-        );
-
-        if (!response.ok) {
-          deliveryStatus = 'error';
-          deliveryError = `HTTP ${response.status} ${response.statusText}`;
-        } else {
-          delivery = await response.json();
-          if (!delivery || Object.keys(delivery).length === 0) {
-            deliveryStatus = 'missing';
-            deliveryError = 'No delivery data found';
-          }
+    try {
+      const authToken = await this.getAuthToken();
+      const response = await fetch(
+        `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
+        {
+          method: 'GET',
+          headers: { Authorization: authToken! },
         }
-      } catch (error: any) {
-        deliveryStatus = 'error';
-        deliveryError = error?.message || String(error);
-      }
+      );
 
-      results.push({
-        paymentId: payment.paymentId,
-        printApiOrderId: payment.printApiOrderId,
-        fullname: payment.fullname,
-        email: payment.email,
-        countrycode: payment.countrycode,
-        createdAt: payment.createdAt,
-        deliveryStatus,
-        deliveryError,
-        deliveryMethod: delivery?.delivery_method ?? null,
-        amount: delivery?.amount ?? null,
-        trackingUrl:
-          delivery?.tracktrace_url || payment.printApiTrackingLink || null,
-      });
+      if (!response.ok) {
+        deliveryStatus = 'error';
+        deliveryError = `HTTP ${response.status} ${response.statusText}`;
+      } else {
+        delivery = await response.json();
+        if (!delivery || Object.keys(delivery).length === 0) {
+          deliveryStatus = 'missing';
+          deliveryError = 'No delivery data found';
+        }
+      }
+    } catch (error: any) {
+      deliveryStatus = 'error';
+      deliveryError = error?.message || String(error);
     }
 
-    return results;
+    return {
+      printApiOrderId: orderId,
+      deliveryStatus,
+      deliveryError,
+      deliveryMethod: delivery?.delivery_method ?? null,
+      amount: delivery?.amount ?? null,
+      trackingUrl: delivery?.tracktrace_url ?? null,
+    };
   }
 
   public async handleTrackingMails(): Promise<void> {

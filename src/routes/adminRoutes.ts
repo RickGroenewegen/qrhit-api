@@ -2799,8 +2799,9 @@ export default async function adminRoutes(
     }
   );
 
-  // Shipment check - list all Submitted Print&Bind orders and verify that
-  // delivery data exists / can be retrieved for each one.
+  // Shipment check - fast DB-only list of all Submitted Print&Bind orders.
+  // Delivery data per order is fetched separately (see the route below) so the
+  // table can render immediately without waiting on many Print&Bind calls.
   fastify.get(
     '/admin/printenbind/shipment-check',
     getAuthHandler(['admin']),
@@ -2808,12 +2809,33 @@ export default async function adminRoutes(
       try {
         const PrintEnBind = (await import('../printers/printenbind')).default;
         const printEnBind = PrintEnBind.getInstance();
-        const data = await printEnBind.getSubmittedDeliveryCheck();
+        const data = await printEnBind.getSubmittedOrders();
         reply.send({ success: true, data });
       } catch (error: any) {
         reply.status(500).send({
           success: false,
-          error: error?.message || 'Failed to run shipment check',
+          error: error?.message || 'Failed to load shipment check',
+        });
+      }
+    }
+  );
+
+  // Shipment check - retrieve the delivery status for a single Print&Bind order.
+  // Called one order at a time by the admin table.
+  fastify.get(
+    '/admin/printenbind/shipment-check/:orderId',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { orderId } = request.params;
+        const PrintEnBind = (await import('../printers/printenbind')).default;
+        const printEnBind = PrintEnBind.getInstance();
+        const data = await printEnBind.checkDeliveryForOrder(orderId);
+        reply.send({ success: true, data });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error?.message || 'Failed to check delivery',
         });
       }
     }
