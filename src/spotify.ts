@@ -60,6 +60,30 @@ export interface SkippedTracksInfo {
   details: SkippedTrack[];
 }
 
+// Result shape returned by resolveSpotifyUrl and the per-card-service resolvers
+interface ResolveSpotifyUrlResult {
+  success: boolean;
+  spotifyUri?: string;
+  links?: {
+    spotifyLink?: string | null;
+    appleMusicLink?: string | null;
+    tidalLink?: string | null;
+    youtubeMusicLink?: string | null;
+    deezerLink?: string | null;
+    amazonMusicLink?: string | null;
+  };
+  error?: string;
+  cached?: boolean;
+  blacklisted?: boolean;
+}
+
+// A URL matched to a known physical card service, plus the identifiers needed
+// to resolve it to a track.
+type CardServiceMatch =
+  | { service: 'musicmatch'; paymentHasPlaylistId: string; trackId: string }
+  | { service: 'hitster'; setSku: string; cardNumber: string }
+  | { service: 'hitify'; code: string };
+
 class Spotify {
   private static instance: Spotify;
   private cache = Cache.getInstance();
@@ -1490,8 +1514,325 @@ class Spotify {
   }
 
   /**
+   * Detects whether a URL belongs to a known physical card service
+   * (MusicMatch Game, Hitster, Hitify) and returns the identifiers needed to
+   * resolve it. Returns null when the URL is not a recognized card link.
+   */
+  private matchCardService(url: string): CardServiceMatch | null {
+    // MusicMatch Game: https://api.musicmatchgame.com/{paymentHasPlaylistId}/{trackId}
+    const musicMatchGameMatch = url.match(
+      /^https?:\/\/api\.musicmatchgame\.com\/(\d+)\/(\d+)$/
+    );
+    if (musicMatchGameMatch) {
+      return {
+        service: 'musicmatch',
+        paymentHasPlaylistId: musicMatchGameMatch[1],
+        trackId: musicMatchGameMatch[2],
+      };
+    }
+
+    // Hitster: https://hitstergame.com/{locale?}/{setSku|country}/{cardNumber}
+    // Examples: /nl/aaaa0027/00153 (Jumbo SKU), /nl/de/00054 and /de/00075 (country code)
+    if (url.includes('hitstergame.com')) {
+      const match = url.match(
+        /hitstergame\.com\/(?:[^/]+\/)?([a-zA-Z0-9]+)\/([0-9]+)/
+      );
+      if (match) {
+        return { service: 'hitster', setSku: match[1], cardNumber: match[2] };
+      }
+    }
+
+    // Hitify: https://hitify.app/p/{code}
+    const hitifyMatch = url.match(
+      /^https?:\/\/(?:www\.)?hitify\.app\/p\/([a-zA-Z0-9]+)/i
+    );
+    if (hitifyMatch) {
+      return { service: 'hitify', code: hitifyMatch[1] };
+    }
+
+    return null;
+  }
+
+  /**
+   * Dispatches a matched card service to its dedicated resolver. Each resolver
+   * caches its own result under cacheKey.
+   */
+  private async resolveCardService(
+    match: CardServiceMatch,
+    cacheKey: string
+  ): Promise<ResolveSpotifyUrlResult> {
+    switch (match.service) {
+      case 'musicmatch':
+        return this.resolveMusicMatchCard(
+          match.paymentHasPlaylistId,
+          match.trackId,
+          cacheKey
+        );
+      case 'hitster':
+        return this.resolveHitsterCard(
+          match.setSku,
+          match.cardNumber,
+          cacheKey
+        );
+      case 'hitify':
+        return this.resolveHitifyCard(match.code, cacheKey);
+    }
+  }
+
+  /**
+   * Resolves a MusicMatch Game card to a Spotify URI + music service links.
+   */
+  private async resolveMusicMatchCard(
+    paymentHasPlaylistId: string,
+    trackId: string,
+    cacheKey: string
+  ): Promise<ResolveSpotifyUrlResult> {
+    const ExternalCardService = (await import('./externalCardService')).default;
+    const externalCardService = ExternalCardService.getInstance();
+    const cardData = await externalCardService.getCardByMusicMatchKey(
+      paymentHasPlaylistId,
+      trackId
+    );
+
+    let result: ResolveSpotifyUrlResult;
+    if (cardData && cardData.spotifyId) {
+      result = {
+        success: true,
+        spotifyUri: `spotify:track:${cardData.spotifyId}`,
+        links: {
+          spotifyLink: cardData.spotifyLink,
+          appleMusicLink: cardData.appleMusicLink,
+          tidalLink: cardData.tidalLink,
+          youtubeMusicLink: cardData.youtubeMusicLink,
+          deezerLink: cardData.deezerLink,
+          amazonMusicLink: cardData.amazonMusicLink,
+        },
+      };
+    } else {
+      result = {
+        success: false,
+        error: `No MusicMatch mapping found for payment_has_playlist ${paymentHasPlaylistId}, track ${trackId}`,
+      };
+    }
+    await this.cache.set(cacheKey, JSON.stringify(result));
+    return { ...result, cached: false };
+  }
+
+  /**
+   * Resolves a Hitster card (Jumbo SKU or country code) to a Spotify URI +
+   * music service links.
+   */
+  private async resolveHitsterCard(
+    setSku: string,
+    cardNumber: string,
+    cacheKey: string
+  ): Promise<ResolveSpotifyUrlResult> {
+    const ExternalCardService = (await import('./externalCardService')).default;
+    const externalCardService = ExternalCardService.getInstance();
+
+    // A pure alphabetic setSku is a country code (e.g. 'de', 'nl'); otherwise a Jumbo SKU
+    const isCountryCode = /^[a-z]+$/i.test(setSku);
+    const cardData = isCountryCode
+      ? await externalCardService.getCardByCountryKey(
+          setSku.toLowerCase(),
+          cardNumber
+        )
+      : await externalCardService.getCardByJumboKey(setSku, cardNumber);
+
+    let result: ResolveSpotifyUrlResult;
+    if (cardData && cardData.spotifyId) {
+      result = {
+        success: true,
+        spotifyUri: `spotify:track:${cardData.spotifyId}`,
+        links: {
+          spotifyLink: cardData.spotifyLink,
+          appleMusicLink: cardData.appleMusicLink,
+          tidalLink: cardData.tidalLink,
+          youtubeMusicLink: cardData.youtubeMusicLink,
+          deezerLink: cardData.deezerLink,
+          amazonMusicLink: cardData.amazonMusicLink,
+        },
+      };
+    } else {
+      result = {
+        success: false,
+        error: isCountryCode
+          ? `No mapping found for country ${setSku.toLowerCase()}, card ${cardNumber}`
+          : `No mapping found for ${setSku}_${cardNumber}`,
+      };
+    }
+    await this.cache.set(cacheKey, JSON.stringify(result));
+    return { ...result, cached: false };
+  }
+
+  /**
+   * Looks up a Spotify track id by ISRC using the official Spotify Web API.
+   * The `isrc:` search operator is only reliable on the official API, so this
+   * deliberately uses this.spotifyApi rather than the provider-switching
+   * searchTracks(). Returns null when nothing matches.
+   */
+  private async findSpotifyTrackIdByIsrc(
+    isrc: string
+  ): Promise<string | null> {
+    const result = await this.spotifyApi.searchTracks(`isrc:${isrc}`, 1);
+
+    // Treat an API failure as transient and throw so the caller caches it
+    // only briefly, rather than permanently flagging a valid card as missing.
+    if (!result.success) {
+      throw new Error(
+        `Spotify ISRC search failed: ${result.error || 'unknown'}`
+      );
+    }
+
+    const items = result.data?.tracks?.items;
+    if (items && items.length > 0 && items[0]?.id) {
+      return items[0].id;
+    }
+
+    return null;
+  }
+
+  /**
+   * Resolves a Hitify card (https://hitify.app/p/{code}) by calling the Hitify
+   * partner API, then matching the returned ISRC against our track database.
+   * Falls back to the Spotify track id Hitify provides, then to an official
+   * Spotify ISRC lookup when the ISRC isn't in our catalog.
+   */
+  private async resolveHitifyCard(
+    code: string,
+    cacheKey: string
+  ): Promise<ResolveSpotifyUrlResult> {
+    const apiKey = process.env['HITIFY_API_KEY'];
+
+    if (!apiKey) {
+      const result: ResolveSpotifyUrlResult = {
+        success: false,
+        error: 'Hitify API key not configured',
+      };
+      // Short cache so it recovers once the key is configured
+      await this.cache.set(cacheKey, JSON.stringify(result), 600);
+      return { ...result, cached: false };
+    }
+
+    try {
+      const hitifyResponse = await axios.get(
+        `https://hitify.app/api/partner/resolve/${encodeURIComponent(code)}`,
+        {
+          headers: { 'X-API-Key': apiKey },
+          validateStatus: (status) => status >= 200 && status < 500,
+        }
+      );
+
+      if (hitifyResponse.status === 401) {
+        const result: ResolveSpotifyUrlResult = {
+          success: false,
+          error: 'Invalid or missing Hitify API key',
+        };
+        await this.cache.set(cacheKey, JSON.stringify(result), 600);
+        return { ...result, cached: false };
+      }
+
+      if (hitifyResponse.status === 404) {
+        const result: ResolveSpotifyUrlResult = {
+          success: false,
+          error: `Unknown Hitify card: ${code}`,
+        };
+        await this.cache.set(cacheKey, JSON.stringify(result));
+        return { ...result, cached: false };
+      }
+
+      const isrc: string | null = hitifyResponse.data?.isrc || null;
+      const hitifySpotifyTrackId: string | null =
+        hitifyResponse.data?.spotify_track_id || null;
+
+      // Match the ISRC to our database first, fall back to the Spotify track id
+      let track = null;
+      if (isrc) {
+        track = await this.prisma.track.findFirst({ where: { isrc } });
+      }
+      if (!track && hitifySpotifyTrackId) {
+        track = await this.prisma.track.findFirst({
+          where: { trackId: hitifySpotifyTrackId },
+        });
+      }
+
+      let result: ResolveSpotifyUrlResult;
+      if (track) {
+        result = {
+          success: true,
+          spotifyUri: `spotify:track:${track.trackId}`,
+          links: {
+            spotifyLink:
+              track.spotifyLink ||
+              `https://open.spotify.com/track/${track.trackId}`,
+            appleMusicLink: track.appleMusicLink,
+            tidalLink: track.tidalLink,
+            youtubeMusicLink: track.youtubeMusicLink,
+            deezerLink: track.deezerLink,
+            amazonMusicLink: track.amazonMusicLink,
+          },
+        };
+      } else if (hitifySpotifyTrackId) {
+        // No DB match, but Hitify handed us a Spotify track id directly —
+        // construct the link straight away, no extra lookup needed.
+        result = {
+          success: true,
+          spotifyUri: `spotify:track:${hitifySpotifyTrackId}`,
+          links: {
+            spotifyLink: `https://open.spotify.com/track/${hitifySpotifyTrackId}`,
+            appleMusicLink: null,
+            tidalLink: null,
+            youtubeMusicLink: null,
+            deezerLink: null,
+            amazonMusicLink: null,
+          },
+        };
+      } else if (isrc) {
+        // Valid ISRC that isn't in our DB and Hitify gave no Spotify id —
+        // look the recording up on Spotify directly by ISRC.
+        const spotifyTrackId = await this.findSpotifyTrackIdByIsrc(isrc);
+        if (spotifyTrackId) {
+          result = {
+            success: true,
+            spotifyUri: `spotify:track:${spotifyTrackId}`,
+            links: {
+              spotifyLink: `https://open.spotify.com/track/${spotifyTrackId}`,
+              appleMusicLink: null,
+              tidalLink: null,
+              youtubeMusicLink: null,
+              deezerLink: null,
+              amazonMusicLink: null,
+            },
+          };
+        } else {
+          result = {
+            success: false,
+            error: `No track match for Hitify card ${code} (isrc=${isrc}, not in DB and no Spotify result)`,
+          };
+        }
+      } else {
+        result = {
+          success: false,
+          error: `No track match for Hitify card ${code} (isrc=none)`,
+        };
+      }
+
+      await this.cache.set(cacheKey, JSON.stringify(result));
+      return { ...result, cached: false };
+    } catch (e: any) {
+      const result: ResolveSpotifyUrlResult = {
+        success: false,
+        error: `Hitify resolve failed: ${e.message || e}`,
+      };
+      // Short cache for transient failures
+      await this.cache.set(cacheKey, JSON.stringify(result), 600);
+      return { ...result, cached: false };
+    }
+  }
+
+  /**
    * Attempts to resolve a Spotify URI from a given URL by following all known redirect mechanisms.
-   * For external cards (Jumbo, Country, MusicMatch), also returns all available music service links.
+   * For external cards (Jumbo, Country, MusicMatch, Hitify), also returns all available music service links.
    * @param url The URL to resolve.
    * @returns {Promise<{ success: boolean, spotifyUri?: string, links?: object, error?: string, cached?: boolean, blacklisted?: boolean }>}
    */
@@ -1545,44 +1886,7 @@ class Spotify {
         // If URL parsing fails, continue with original logic
       }
 
-      // Check if it's a MusicMatch Game URL pattern first (https://api.musicmatchgame.com/paymentHasPlaylistId/trackId)
-      const musicMatchGamePattern =
-        /^https?:\/\/api\.musicmatchgame\.com\/(\d+)\/(\d+)$/;
-      const musicMatchGameMatch = normalizedUrl.match(musicMatchGamePattern);
-      if (musicMatchGameMatch) {
-        const paymentHasPlaylistId = musicMatchGameMatch[1];
-        const trackId = musicMatchGameMatch[2];
-
-        // Use ExternalCardService for lookup
-        const ExternalCardService = (await import('./externalCardService')).default;
-        const externalCardService = ExternalCardService.getInstance();
-        const cardData = await externalCardService.getCardByMusicMatchKey(paymentHasPlaylistId, trackId);
-
-        if (cardData && cardData.spotifyId) {
-          const result = {
-            success: true,
-            spotifyUri: `spotify:track:${cardData.spotifyId}`,
-            links: {
-              spotifyLink: cardData.spotifyLink,
-              appleMusicLink: cardData.appleMusicLink,
-              tidalLink: cardData.tidalLink,
-              youtubeMusicLink: cardData.youtubeMusicLink,
-              deezerLink: cardData.deezerLink,
-              amazonMusicLink: cardData.amazonMusicLink,
-            },
-          };
-          await this.cache.set(cacheKey, JSON.stringify(result));
-          return { ...result, cached: false };
-        } else {
-          const result = {
-            success: false,
-            error: `No MusicMatch mapping found for payment_has_playlist ${paymentHasPlaylistId}, track ${trackId}`,
-          };
-          await this.cache.set(cacheKey, JSON.stringify(result));
-          return { ...result, cached: false };
-        }
-      }
-
+      // Return any cached result first (covers all card services and native links)
       const cached = await this.cache.get(cacheKey);
       if (cached) {
         try {
@@ -1591,6 +1895,13 @@ class Spotify {
         } catch (e) {
           // ignore parse error, continue to resolve
         }
+      }
+
+      // Detect known physical card services (MusicMatch Game, Hitster, Hitify)
+      // and resolve them to a Spotify URI + music service links.
+      const cardMatch = this.matchCardService(normalizedUrl);
+      if (cardMatch) {
+        return await this.resolveCardService(cardMatch, cacheKey);
       }
 
       // Check if URL is a native music service link (Deezer, YouTube Music, Tidal, Apple Music)
@@ -1611,84 +1922,6 @@ class Spotify {
         };
         await this.cache.set(cacheKey, JSON.stringify(result));
         return { ...result, cached: false };
-      }
-
-      // Special handling for hitstergame.com links
-      if (normalizedUrl.includes('hitstergame.com')) {
-        // Try to extract the set_sku and cardnumber from the URL
-        // Example: https://hitstergame.com/nl/aaaa0027/00153 (Jumbo SKU with locale)
-        // Example: https://hitstergame.com/nl/de/00054 (Country code with locale)
-        // Example: https://hitstergame.com/de/00075 (Country code without locale)
-        const match = normalizedUrl.match(
-          /hitstergame\.com\/(?:[^/]+\/)?([a-zA-Z0-9]+)\/([0-9]+)/
-        );
-        if (match) {
-          const setSku = match[1];
-          const cardNumber = match[2];
-
-          // Use ExternalCardService for lookups
-          const ExternalCardService = (await import('./externalCardService')).default;
-          const externalCardService = ExternalCardService.getInstance();
-
-          // Check if setSku is a pure alphabetic country code (e.g., 'de', 'en', 'nl')
-          const isCountryCode = /^[a-z]+$/i.test(setSku);
-
-          if (isCountryCode) {
-            // Look up in country card maps
-            const countryCode = setSku.toLowerCase();
-            const cardData = await externalCardService.getCardByCountryKey(countryCode, cardNumber);
-
-            if (cardData && cardData.spotifyId) {
-              const result = {
-                success: true,
-                spotifyUri: `spotify:track:${cardData.spotifyId}`,
-                links: {
-                  spotifyLink: cardData.spotifyLink,
-                  appleMusicLink: cardData.appleMusicLink,
-                  tidalLink: cardData.tidalLink,
-                  youtubeMusicLink: cardData.youtubeMusicLink,
-                  deezerLink: cardData.deezerLink,
-                  amazonMusicLink: cardData.amazonMusicLink,
-                },
-              };
-              await this.cache.set(cacheKey, JSON.stringify(result));
-              return { ...result, cached: false };
-            } else {
-              const result = {
-                success: false,
-                error: `No mapping found for country ${countryCode}, card ${cardNumber}`,
-              };
-              await this.cache.set(cacheKey, JSON.stringify(result));
-              return { ...result, cached: false };
-            }
-          } else {
-            // Use Jumbo SKU logic
-            const cardData = await externalCardService.getCardByJumboKey(setSku, cardNumber);
-            if (cardData && cardData.spotifyId) {
-              const result = {
-                success: true,
-                spotifyUri: `spotify:track:${cardData.spotifyId}`,
-                links: {
-                  spotifyLink: cardData.spotifyLink,
-                  appleMusicLink: cardData.appleMusicLink,
-                  tidalLink: cardData.tidalLink,
-                  youtubeMusicLink: cardData.youtubeMusicLink,
-                  deezerLink: cardData.deezerLink,
-                  amazonMusicLink: cardData.amazonMusicLink,
-                },
-              };
-              await this.cache.set(cacheKey, JSON.stringify(result));
-              return { ...result, cached: false };
-            } else {
-              const result = {
-                success: false,
-                error: `No mapping found for ${setSku}_${cardNumber}`,
-              };
-              await this.cache.set(cacheKey, JSON.stringify(result));
-              return { ...result, cached: false };
-            }
-          }
-        }
       }
 
       // 1. Follow HTTP redirects (301/302/other 3xx)
