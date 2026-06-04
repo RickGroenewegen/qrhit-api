@@ -654,9 +654,37 @@ class PrintEnBind {
         const bodyOrder = firstResponse.order;
         const bodyLocation = firstResponse.location;
 
-        orderId = headerLocation?.split('/')[1]
+        if (logging) {
+          this.logger.log(
+            color.blue.bold(
+              `Print&Bind order creation response (status ${color.white.bold(
+                response.status.toString()
+              )}) — location header: ${color.white.bold(
+                String(headerLocation)
+              )}, body: ${color.white.bold(JSON.stringify(firstResponse))}`
+            )
+          );
+        }
+
+        // Print&Bind returns the new order via a Location-style path. The
+        // path may or may not have a leading slash and may include extra
+        // segments (e.g. `/orders/7989-1` or `orders/7989-1/articles/1`), so
+        // we pull the segment right after `orders` rather than a fixed index
+        // (a fixed index broke when a leading slash shifted everything and
+        // orderId became the literal string 'orders').
+        const idFromPath = (path?: string | null): string | undefined => {
+          if (!path) return undefined;
+          const segments = path.split('/').filter(Boolean);
+          const ordersIdx = segments.indexOf('orders');
+          if (ordersIdx >= 0 && segments[ordersIdx + 1]) {
+            return segments[ordersIdx + 1];
+          }
+          return segments[segments.length - 1];
+        };
+
+        orderId = idFromPath(headerLocation)
           || bodyOrder?.toString()
-          || bodyLocation?.split('/')[1];
+          || idFromPath(bodyLocation);
 
         if (orderId) {
           physicalOrderCreated = true;
