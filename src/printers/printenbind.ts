@@ -654,17 +654,14 @@ class PrintEnBind {
         const bodyOrder = firstResponse.order;
         const bodyLocation = firstResponse.location;
 
-        if (logging) {
-          this.logger.log(
-            color.blue.bold(
-              `Print&Bind order creation response (status ${color.white.bold(
-                response.status.toString()
-              )}) — location header: ${color.white.bold(
-                String(headerLocation)
-              )}, body: ${color.white.bold(JSON.stringify(firstResponse))}`
-            )
-          );
-        }
+        console.log(
+          `Print&Bind order creation response (status ${response.status}):`,
+          JSON.stringify(firstResponse, null, 2)
+        );
+        console.log(
+          'Print&Bind order creation location header:',
+          headerLocation
+        );
 
         // Print&Bind returns the new order via a Location-style path. The
         // path may or may not have a leading slash and may include extra
