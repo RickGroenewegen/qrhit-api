@@ -197,6 +197,7 @@ export async function getPlaylistsByPaymentId(
       payment_has_playlist.boxFrontOpacity,
       payment_has_playlist.addHowToCard,
       payment_has_playlist.addHowToCardLocale,
+      payment_has_playlist.howToCardImage,
       playlists.numberOfTracks,
       payment_has_playlist.numberOfTracks AS paymentHasPlaylistNumberOfTracks,
       playlists.featured,
@@ -671,6 +672,47 @@ export async function updateAddHowToCard(
     deps.logger.log(
       color.red.bold(
         `Error updating addHowToCard for playlist ${color.white.bold(
+          paymentHasPlaylistId
+        )}: ${error.message}`
+      )
+    );
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateHowToCardImage(
+  deps: DataDeps,
+  paymentHasPlaylistId: number,
+  howToCardImage: string | null
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const php = await deps.prisma.paymentHasPlaylist.findUnique({
+      where: { id: paymentHasPlaylistId },
+      select: { id: true },
+    });
+
+    if (!php) {
+      return { success: false, error: 'Playlist not found' };
+    }
+
+    await deps.prisma.paymentHasPlaylist.update({
+      where: { id: paymentHasPlaylistId },
+      data: { howToCardImage },
+    });
+
+    deps.logger.log(
+      color.blue.bold(
+        `Updated howToCardImage for playlist ${color.white.bold(
+          paymentHasPlaylistId
+        )} to ${color.white.bold(howToCardImage || '(cleared)')}`
+      )
+    );
+
+    return { success: true };
+  } catch (error: any) {
+    deps.logger.log(
+      color.red.bold(
+        `Error updating howToCardImage for playlist ${color.white.bold(
           paymentHasPlaylistId
         )}: ${error.message}`
       )

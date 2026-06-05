@@ -13,7 +13,12 @@ if (php.backgroundBackType === 'solid') {
     }
 }
 %>
-<!-- How-To Card - Front (uses back side styling) -->
+<!-- How-To Card - Front (uses back side styling, or a custom full-bleed image) -->
+<% if (php.howToCardImage && php.howToCardImage.length) { %>
+<div class="card-back" style="position: relative; overflow: hidden;">
+    <img class="background-image-back" style="opacity: 1;" src="<%= process.env['API_URI'] %>/public/background/<%= php.howToCardImage %>" alt="How to play">
+</div>
+<% } else { %>
 <div class="card-back" style="<%= howtoCardBackStyle %> overflow: hidden;">
     <% if (php.backgroundBackType !== 'solid' && php.backgroundBack && php.backgroundBack.length) { %>
         <img class="background-image-back" src="<%= process.env['API_URI'] %>/public/background/<%= php.backgroundBack %>" alt="Card Background">
@@ -24,6 +29,7 @@ if (php.backgroundBackType === 'solid') {
         </div>
     </div>
 </div>
+<% } %>
 <div style="page-break-after: always;"></div>
 <!-- How-To Card - Back (uses same styling as regular card backs) -->
 <div class="card-back" style="<%= howtoCardBackStyle %> overflow: hidden;">

@@ -682,6 +682,7 @@ model PaymentHasPlaylist {
   boxBackSelectedFontSize  String?                  @default("14px")
   addHowToCard             Boolean                  @default(false) // Whether to include a how-to explanation card as first card in printer PDF
   addHowToCardLocale       String                   @default("en") @db.VarChar(5) // Locale for how-to card translations
+  howToCardImage           String?                  @db.VarChar(255) // Custom square image filename for the how-to card "How to play" front side
   appleStoreFront          String?                  @db.VarChar(5) // Apple Music storefront country code (e.g. "nl", "us")
   aiPrompt                 String?                  @db.VarChar(250) // Original user prompt if this playlist was AI-generated
   orderType                OrderType                @relation(fields: [orderTypeId], references: [id], onDelete: Cascade)

@@ -303,6 +303,10 @@ class Data {
     return playlistsModule.updateAddHowToCard(this.deps, paymentHasPlaylistId, addHowToCard, addHowToCardLocale);
   }
 
+  public async updateHowToCardImage(paymentHasPlaylistId: number, howToCardImage: string | null) {
+    return playlistsModule.updateHowToCardImage(this.deps, paymentHasPlaylistId, howToCardImage);
+  }
+
   public async resetJudgedStatus(paymentHasPlaylistId: number) {
     return playlistsModule.resetJudgedStatus(this.deps, paymentHasPlaylistId);
   }

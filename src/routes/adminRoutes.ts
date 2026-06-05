@@ -28,6 +28,7 @@ import ShippingConfig from '../shippingconfig';
 import Spotify from '../spotify';
 import Cache from '../cache';
 import PrismaInstance from '../prisma';
+import Designer from '../designer';
 import { ChatService } from '../chat';
 import ChatWebSocketServer from '../chat-websocket';
 import { ChatGPT } from '../chatgpt';
@@ -51,6 +52,7 @@ export default async function adminRoutes(
   const generator = Generator.getInstance();
   const analytics = AnalyticsClient.getInstance();
   const data = Data.getInstance();
+  const designer = Designer.getInstance();
   const openperplex = new OpenPerplex();
   const push = Push.getInstance();
   const discount = new Discount();
@@ -1450,6 +1452,67 @@ export default async function adminRoutes(
 
       if (result.success) {
         reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
+  // Upload or clear the custom "How to play" front image for the how-to card
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/howto-card-image',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentHasPlaylistId } = request.params;
+      const { image } = request.body;
+
+      if (!paymentHasPlaylistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'PaymentHasPlaylist ID is required',
+        });
+        return;
+      }
+
+      const phpId = parseInt(paymentHasPlaylistId, 10);
+
+      // Empty/null image clears the custom image
+      if (!image) {
+        const result = await data.updateHowToCardImage(phpId, null);
+        if (result.success) {
+          reply.send({ success: true, filename: null });
+        } else {
+          reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+            success: false,
+            error: result.error,
+          });
+        }
+        return;
+      }
+
+      // Process and store the uploaded square image (reuses the background pipeline)
+      const upload = await designer.uploadBackgroundImage(
+        image,
+        undefined,
+        'square',
+        'card'
+      );
+
+      if (!upload.success || !upload.filename) {
+        reply.status(400).send({
+          success: false,
+          error: upload.error || 'Failed to process image',
+        });
+        return;
+      }
+
+      const result = await data.updateHowToCardImage(phpId, upload.filename);
+
+      if (result.success) {
+        reply.send({ success: true, filename: upload.filename });
       } else {
         reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
           success: false,
