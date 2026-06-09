@@ -9,7 +9,7 @@ import { color, white } from 'console-log-colors';
 const MIN_TRACKS = 25;
 const MAX_TRACKS = 500;
 const MAX_PROMPT_LEN = 250;
-const DAILY_LIMIT_PER_IP = 25;
+const DAILY_LIMIT_PER_IP = 5;
 
 function isDev(): boolean {
   return process.env['ENVIRONMENT'] === 'development';

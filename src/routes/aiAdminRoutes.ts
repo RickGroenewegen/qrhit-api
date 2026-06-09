@@ -105,10 +105,44 @@ export default async function aiAdminRoutes(
           }),
         ]);
 
+        // Determine which of these AI creations resulted in an actual
+        // purchase. The link is: AISearch.spotifyPlaylistId === the Spotify
+        // playlist id stored on Playlist.playlistId, and that Playlist must
+        // have at least one *paid*, non-test Payment attached to it.
+        const spotifyIds = Array.from(
+          new Set(
+            rows
+              .map((r) => r.spotifyPlaylistId)
+              .filter((id): id is string => !!id)
+          )
+        );
+        let purchasedIds = new Set<string>();
+        if (spotifyIds.length) {
+          const purchasedPlaylists = await prisma.playlist.findMany({
+            where: {
+              playlistId: { in: spotifyIds },
+              Payment: {
+                some: {
+                  payment: { status: 'paid', test: false },
+                },
+              },
+            },
+            select: { playlistId: true },
+          });
+          purchasedIds = new Set(purchasedPlaylists.map((p) => p.playlistId));
+        }
+
+        const rowsWithPurchase = rows.map((r) => ({
+          ...r,
+          purchased: r.spotifyPlaylistId
+            ? purchasedIds.has(r.spotifyPlaylistId)
+            : false,
+        }));
+
         return reply.send({
           success: true,
           data: {
-            rows,
+            rows: rowsWithPurchase,
             page,
             pageSize,
             total,
