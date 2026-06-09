@@ -679,9 +679,16 @@ class PrintEnBind {
           return segments[segments.length - 1];
         };
 
-        orderId = idFromPath(headerLocation)
-          || bodyOrder?.toString()
-          || idFromPath(bodyLocation);
+        // Only treat this as a created order when Print&Bind actually
+        // accepted the article. A 400 still carries a `location` like
+        // `/orders/<id>/article`, so without this guard we'd extract an id
+        // for an empty order shell and fail later with the misleading
+        // "No articles has been placed in this cart yet".
+        orderId = response.ok
+          ? idFromPath(headerLocation)
+            || bodyOrder?.toString()
+            || idFromPath(bodyLocation)
+          : null;
 
         if (orderId) {
           physicalOrderCreated = true;

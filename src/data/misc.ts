@@ -351,6 +351,7 @@ export async function createSiteMap(deps: DataDeps): Promise<void> {
     '/gift-box',
     '/music-match',
     '/music-bingo',
+    '/hitster-alternative',
     '/music-quiz',
     '/music-timeline',
     '/examples',

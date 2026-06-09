@@ -18,7 +18,15 @@ export interface VerifiedUpgradeContext {
 }
 
 export interface BoxUpgradePrice {
+  // Boxes needed for ONE copy of the playlist (one box per BOX_MAX_CARDS
+  // cards). This is what gets persisted to PaymentHasPlaylist.boxQuantity —
+  // fulfillment multiplies it back out by `amount`.
   boxQuantity: number;
+  // How many times this playlist was ordered (PaymentHasPlaylist.amount).
+  amount: number;
+  // Total physical boxes the customer pays for: boxQuantity * amount. Each
+  // copy is packed into its own box(es).
+  totalBoxes: number;
   boxMaxCards: number;
   boxUnitPriceEur: number;
   boxBasePriceEur: number;
@@ -163,38 +171,49 @@ class Upgrade {
   }
 
   /**
-   * Box upgrade price in EUR. Quantity is derived from the playlist's track
-   * count (one box per BOX_MAX_CARDS cards). Uses the same tiered per-box
-   * price (`boxTierPrice`) as the regular order flow. No shipping because
-   * on the user-suggestions screen the order has not yet been sent to the
-   * printer — the boxes ride along with the cards.
+   * Box upgrade price in EUR. Boxes-per-copy is derived from the playlist's
+   * track count (one box per BOX_MAX_CARDS cards). The playlist can be
+   * ordered more than once (`amount`); each copy is packed into its own
+   * box(es), so the customer pays for `boxesPerSet * amount` boxes. The
+   * tiered per-box price (`boxTierPrice`) is applied on that TOTAL count, so
+   * larger orders unlock the multi-box discount — same convention as the
+   * regular order flow. No shipping because on the user-suggestions screen
+   * the order has not yet been sent to the printer — the boxes ride along
+   * with the cards.
    */
   public async calculateBoxUpgradePrice(
     php: any,
     payment: any
   ): Promise<BoxUpgradePrice> {
     const numberOfTracks = php?.numberOfTracks || 0;
-    const qty = deriveBoxQuantity(numberOfTracks);
+    const amount = php?.amount || 1;
+    const boxesPerSet = deriveBoxQuantity(numberOfTracks);
+    const totalBoxes = boxesPerSet * amount;
     const countryCode = payment.countrycode || 'NL';
     const taxRate = (await this.data.getTaxRate(countryCode)) || 0;
 
-    // boxTierPrice(qty) is VAT-INCLUSIVE — same convention as the regular
-    // order flow's calculateOrder (it adds `boxFee` directly to totalPrice,
-    // which itself is VAT-inclusive). So total = unit * qty, and VAT is
-    // derived back-out from the inclusive amount for display only.
-    const boxUnitPriceEur = boxTierPrice(qty);
+    // boxTierPrice(totalBoxes) is VAT-INCLUSIVE — same convention as the
+    // regular order flow's calculateOrder (it adds `boxFee` directly to
+    // totalPrice, which itself is VAT-inclusive). So total = unit *
+    // totalBoxes, and VAT is derived back-out from the inclusive amount for
+    // display only.
+    const boxUnitPriceEur = boxTierPrice(totalBoxes);
     const boxBasePriceEur = BOX_PRICE;
     const boxDiscountPct = parseFloat(
       ((1 - boxUnitPriceEur / boxBasePriceEur) * 100).toFixed(2)
     );
-    const totalEur = parseFloat((boxUnitPriceEur * qty).toFixed(2));
+    const totalEur = parseFloat((boxUnitPriceEur * totalBoxes).toFixed(2));
     const subtotalExclVatEur = parseFloat(
       (totalEur / (1 + taxRate / 100)).toFixed(2)
     );
     const vatEur = parseFloat((totalEur - subtotalExclVatEur).toFixed(2));
 
     return {
-      boxQuantity: qty,
+      // Persisted to PaymentHasPlaylist.boxQuantity (per-copy). Fulfillment
+      // (printenbind) multiplies it back out by `amount`.
+      boxQuantity: boxesPerSet,
+      amount,
+      totalBoxes,
       boxMaxCards: BOX_MAX_CARDS,
       boxUnitPriceEur,
       boxBasePriceEur,

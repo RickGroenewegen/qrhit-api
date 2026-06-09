@@ -56,6 +56,7 @@ class Suggestion {
           select: {
             id: true,
             type: true,
+            amount: true,
             numberOfTracks: true,
             boxEnabled: true,
             boxQuantity: true,
@@ -116,7 +117,10 @@ class Suggestion {
         paymentHasPlaylistId: php?.id ?? null,
         playlistType: php?.type ?? null,
         numberOfTracks: php?.numberOfTracks ?? null,
+        amount: php?.amount ?? 1,
         boxEnabled: php?.boxEnabled ?? false,
+        // Boxes per copy. Total boxes the customer receives is
+        // boxQuantity * amount (each copy is packed separately).
         boxQuantity: php?.boxQuantity ?? 0,
       },
     };

@@ -1,4 +1,5 @@
 import { FastifyInstance } from 'fastify';
+import { color, white } from 'console-log-colors';
 import Mail from '../mail';
 import Push from '../push';
 import Suggestion from '../suggestion';
@@ -671,8 +672,8 @@ export default async function publicRoutes(fastify: FastifyInstance) {
           amountEur: price.totalEur,
           requestedCurrency: currency || ctx.payment.currency || 'EUR',
           description:
-            price.boxQuantity > 1
-              ? `Gift Box (${price.boxQuantity}x) - ${ctx.playlist.name}`
+            price.totalBoxes > 1
+              ? `Gift Box (${price.totalBoxes}x) - ${ctx.playlist.name}`
               : `Gift Box - ${ctx.playlist.name}`,
           locale: userLocale,
           redirectUrl: `${process.env['FRONTEND_URI']}/${userLocale}/usersuggestions/${paymentId}/${userHash}/${playlistId}/${digitalSegment}?upgrade=box_success`,
@@ -682,8 +683,12 @@ export default async function publicRoutes(fastify: FastifyInstance) {
             userId: ctx.user.id.toString(),
             originalPaymentId: ctx.payment.paymentId,
             shippingCost: '0',
-            boxPrice: BOX_PRICE.toString(),
-            quantity: price.boxQuantity.toString(),
+            // Tiered (discounted) per-box price and the TOTAL box count
+            // (boxesPerSet * amount). The webhook records boxPrice as
+            // unitPrice * quantity, so this keeps the recorded line total in
+            // step with what Mollie actually charges (price.totalEur).
+            boxPrice: price.boxUnitPriceEur.toString(),
+            quantity: price.totalBoxes.toString(),
             source: 'usersuggestions',
           },
           clientIp: request.clientIp,
@@ -1140,6 +1145,65 @@ export default async function publicRoutes(fastify: FastifyInstance) {
         success: false,
         error: 'Failed to log broken link',
       });
+    }
+  });
+
+  // Client-side broken-chunk reporting. The browser posts here the moment a
+  // lazy/dynamic import fails (almost always a stale index.html still pointing
+  // at a previous deploy's chunk hashes), right before it attempts a
+  // cache-busting reload. We throttle the Pushover alert via Redis so a deploy
+  // that breaks chunks for many users at once yields a single notification per
+  // window instead of a flood. Trusted IPs / development are filtered out by
+  // PushoverClient itself, so only real production users trigger an alert.
+  fastify.post('/chunk-error', async (request: any, reply: any) => {
+    try {
+      const body = request.body || {};
+      const message = String(body.message || '').slice(0, 500);
+      const pageUrl = String(body.url || '').slice(0, 500);
+      const userAgent = String(
+        body.userAgent || request.headers['user-agent'] || ''
+      ).slice(0, 300);
+
+      // Count reports within a 10-minute window; only alert on the first one.
+      const windowMinutes = 10;
+      const count = await cache.increment(
+        'chunkError:alert',
+        windowMinutes * 60
+      );
+
+      logger.log(
+        color.yellow.bold(
+          `Broken chunk reported (#${white.bold(
+            String(count)
+          )} in window) from ${white.bold(
+            request.clientIp || 'unknown'
+          )}: ${white.bold(message)}`
+        )
+      );
+
+      if (count === 1) {
+        const pushover = new PushoverClient();
+        pushover.sendMessage(
+          {
+            title: 'QRSong: broken chunks detected',
+            message:
+              `A client failed to load a lazy chunk — likely a stale deploy.\n\n` +
+              `Error: ${message}\n` +
+              `Page: ${pageUrl}\n` +
+              `IP: ${request.clientIp || 'unknown'}\n` +
+              `UA: ${userAgent}\n\n` +
+              `Further reports in the next ${windowMinutes} min are suppressed.`,
+            sound: 'falling',
+          },
+          request.clientIp
+        );
+      }
+
+      return reply.send({ success: true });
+    } catch (error) {
+      logger.log(`Error in /chunk-error: ${(error as Error).message}`);
+      // Never surface an error to the client beacon; it is fire-and-forget.
+      return reply.status(200).send({ success: true });
     }
   });
 
