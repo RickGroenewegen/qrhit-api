@@ -1155,6 +1155,9 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   // that breaks chunks for many users at once yields a single notification per
   // window instead of a flood. Trusted IPs / development are filtered out by
   // PushoverClient itself, so only real production users trigger an alert.
+  const BOT_UA_RE =
+    /bot|crawler|spider|crawling|slurp|bingpreview|facebookexternalhit|whatsapp|telegrambot|headless|lighthouse|pagespeed|pingdom|gtmetrix|phantomjs|puppeteer|playwright|selenium|python-requests|python-urllib|curl\/|wget\/|axios\/|node-fetch|go-http-client|java\/|libwww|okhttp|scrapy/i;
+
   fastify.post('/chunk-error', async (request: any, reply: any) => {
     try {
       const body = request.body || {};
@@ -1163,6 +1166,14 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       const userAgent = String(
         body.userAgent || request.headers['user-agent'] || ''
       ).slice(0, 300);
+
+      // Bots (crawlers, headless browsers, monitoring tools) routinely trip
+      // chunk errors on stale cached pages; their reports are noise. Skip them
+      // before the Redis counter so a bot can't consume the once-per-window
+      // alert slot that a real user's report should trigger.
+      if (BOT_UA_RE.test(userAgent)) {
+        return reply.send({ success: true });
+      }
 
       // Count reports within a 10-minute window; only alert on the first one.
       const windowMinutes = 10;

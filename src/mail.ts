@@ -250,14 +250,17 @@ class Mail {
 
       const rawEmail = await this.renderRaw(
         {
-          from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+          // Customers must be able to reply to this mail (it asks them to
+          // fix their design), so send it from the info address instead of
+          // the noreply transactional sender.
+          from: `${process.env['PRODUCT_NAME']} <${process.env['INFO_EMAIL']}>`,
           to: email,
           subject,
           html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
           text,
           attachments,
           unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
-          replyTo: process.env['REPLY_TO_EMAIL'],
+          replyTo: process.env['INFO_EMAIL'],
         },
         false
       );

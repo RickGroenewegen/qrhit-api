@@ -126,9 +126,12 @@ if (boxFont && boxFont !== 'Arial, sans-serif') {
 </head>
 <body>
 <%
-// Repeat the front+back pair `boxQuantity` times so the rendered PDF
-// already contains every physical insert card the customer ordered.
-const insertCount = Math.max(1, php.boxQuantity || 1);
+// Repeat the front+back pair once per physical box so the rendered PDF
+// already contains every insert card the customer ordered. boxQuantity is
+// stored PER PLAYLIST COPY, so the total is boxQuantity × amount. Upgrade
+// flows pass an explicit `count` (their purchased quantity is already a
+// total and not always boxQuantity × amount).
+const insertCount = Math.max(1, count || (php.boxQuantity || 1) * (php.amount || 1));
 for (let i = 0; i < insertCount; i++) {
 %>
 <!-- Insert <%= i + 1 %> of <%= insertCount %> — Front side (visible through window) -->

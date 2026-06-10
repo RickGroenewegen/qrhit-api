@@ -2310,6 +2310,7 @@ class Mollie {
           // Idempotency guard: skip if box is already enabled
           const php = await this.prisma.paymentHasPlaylist.findUnique({
             where: { id: paymentHasPlaylistId },
+            include: { payment: { select: { sentToPrinter: true } } },
           });
           if (php?.boxEnabled === true) {
             this.logger.log(
@@ -2360,21 +2361,41 @@ class Mollie {
               },
             });
 
-            // Generate box insert card PDF
+            // Generate box insert card PDF. Pass the purchased box total
+            // explicitly: the my-account upgrade stores the user-chosen
+            // TOTAL in boxQuantity while the usersuggestions upgrade stores
+            // a per-copy value, so deriving boxQuantity × amount here would
+            // be wrong for the former.
             try {
-              await this.generator.generateBoxInsertPdf(paymentHasPlaylistId, originalPaymentId);
+              await this.generator.generateBoxInsertPdf(paymentHasPlaylistId, originalPaymentId, quantity);
             } catch (pdfError) {
               this.logger.log(
                 color.yellow.bold(`Failed to generate box PDF for PHP ${paymentHasPlaylistId}: ${pdfError}`)
               );
             }
 
-            // Create Print&Bind box-only order
-            try {
-              await this.printenbind.createBoxUpgradeOrder(paymentHasPlaylistId, quantity);
-            } catch (printError) {
+            // Create a separate Print&Bind box-only order — but only when
+            // the main order has already been sent to the printer. Before
+            // that point (usersuggestions upgrades) the box rides along
+            // with the main order: boxEnabled/boxFilename are now set, so
+            // sendToPrinter attaches the packaging accessory and the insert
+            // card article itself. Creating a separate order here too would
+            // ship the boxes twice.
+            if (php?.payment?.sentToPrinter) {
+              try {
+                await this.printenbind.createBoxUpgradeOrder(paymentHasPlaylistId, quantity);
+              } catch (printError) {
+                this.logger.log(
+                  color.yellow.bold(`Failed to create box Print&Bind order for PHP ${paymentHasPlaylistId}: ${printError}`)
+                );
+              }
+            } else {
               this.logger.log(
-                color.yellow.bold(`Failed to create box Print&Bind order for PHP ${paymentHasPlaylistId}: ${printError}`)
+                color.blue.bold(
+                  `Main order not sent to printer yet — box for PHP ${color.white.bold(
+                    paymentHasPlaylistId.toString()
+                  )} will ride along with the main Print&Bind order`
+                )
               );
             }
 

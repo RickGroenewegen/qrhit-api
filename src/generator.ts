@@ -1882,18 +1882,22 @@ class Generator {
 
   public async generateBoxInsertPdf(
     paymentHasPlaylistId: number,
-    paymentId: string
+    paymentId: string,
+    insertCount?: number
   ): Promise<string> {
     const boxFilename = `box_${paymentId}_${paymentHasPlaylistId}.pdf`;
     const boxDir = `${process.env['PUBLIC_DIR']}/box-insert`;
     const boxOutputPath = `${boxDir}/${boxFilename}`;
-    const boxUrl = `${process.env['API_URI']}/qr/pdf-box/${paymentHasPlaylistId}/${paymentId}`;
+    const boxUrl = `${process.env['API_URI']}/qr/pdf-box/${paymentHasPlaylistId}/${paymentId}${
+      insertCount ? `?count=${insertCount}` : ''
+    }`;
 
     await fs.mkdir(boxDir, { recursive: true });
 
-    // The EJS template (pdf_box_insert.ejs) loops the front+back pair
-    // `boxQuantity` times based on the php record, so the rendered PDF
-    // already contains the right number of pages.
+    // The EJS template (pdf_box_insert.ejs) loops the front+back pair once
+    // per physical box (boxQuantity × amount from the php record, or the
+    // explicit insertCount override), so the rendered PDF already contains
+    // the right number of pages.
     await this.pdf.generateFromUrl(boxUrl, boxOutputPath, {
       width: 120,
       height: 120,

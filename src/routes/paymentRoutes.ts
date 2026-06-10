@@ -451,9 +451,14 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         return;
       }
 
+      // Optional explicit insert count (used by box upgrade flows where the
+      // purchased box total is not boxQuantity × amount). 0 = derive from php.
+      const count = Math.min(100, Math.max(0, parseInt(request.query.count) || 0));
+
       await reply.view('pdf_box_insert.ejs', {
         payment,
         php,
+        count,
         getGoogleFontWeights,
       });
     }

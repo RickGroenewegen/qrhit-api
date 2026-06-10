@@ -1412,7 +1412,15 @@ export default async function adminRoutes(
           return reply.status(404).send({ success: false, error: 'Payment not found' });
         }
 
-        const boxFilename = await generator.generateBoxInsertPdf(phpId, php.payment.paymentId);
+        // Optional explicit insert count. Default derives boxQuantity ×
+        // amount from the php record; pass count for legacy orders whose
+        // boxQuantity was stored as a TOTAL (old my-account box upgrades).
+        const count = parseInt(request.body?.count, 10) || 0;
+        const boxFilename = await generator.generateBoxInsertPdf(
+          phpId,
+          php.payment.paymentId,
+          count > 0 ? count : undefined
+        );
         reply.send({ success: true, boxFilename });
       } catch (error: any) {
         reply.status(500).send({ success: false, error: error.message });

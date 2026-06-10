@@ -817,11 +817,6 @@ class PrintEnBind {
         email: customerInfo.email || 'john@doe.com',
       };
 
-      console.log(
-        'Print&Bind delivery request body:',
-        JSON.stringify(deliveryData, null, 2)
-      );
-
       const addDeliveryResult = await fetch(
         `${process.env['PRINTENBIND_API_URL']}/v1/delivery/${orderId}`,
         {
@@ -835,11 +830,6 @@ class PrintEnBind {
       );
 
       const addDelivery = await addDeliveryResult.json();
-
-      console.log(
-        `Print&Bind delivery response (status ${addDeliveryResult.status}):`,
-        JSON.stringify(addDelivery, null, 2)
-      );
 
       if (!addDeliveryResult.ok) {
         this.logger.log(
@@ -1052,14 +1042,17 @@ class PrintEnBind {
   private createBoxOrderCardItem(
     fileUrl: string,
     playlist: any,
-    quantity: number
+    pageCount: number
   ): any {
     return {
       type: 'physical',
-      amount: quantity,
+      // The file is pre-multiplied (one front+back pair per purchased box),
+      // same convention as createBoxOrderInsertItem: amount stays 1 and
+      // copies equals the file's actual page count.
+      amount: 1,
       product: 'werkblad',
       number: '1',
-      copies: '2',
+      copies: pageCount.toString(),
       color: 'all',
       size: 'custom',
       printside: 'double',
@@ -1152,8 +1145,16 @@ class PrintEnBind {
     }
 
     this.logger.log(color.blue.bold(`Box insert card PDF: ${color.white.bold(boxFileUrl)}`));
-    items.push(this.createBoxOrderCardItem(boxFileUrl, php.playlist, quantity));
-    this.logger.log(color.blue.bold(`Order items: ${items.length} (insert card + packaging accessory), quantity: ${quantity}`));
+
+    // The regenerated file already contains one front+back pair per
+    // purchased box (the webhook passes the purchased total to
+    // generateBoxInsertPdf), so read the real page count and submit a
+    // single article — same convention as the main order flow.
+    const pdfManager = new PDF();
+    const boxFilePath = `${process.env['PUBLIC_DIR']}/box-insert/${php.boxFilename}`;
+    const pageCount = await pdfManager.countPDFPages(boxFilePath);
+    items.push(this.createBoxOrderCardItem(boxFileUrl, php.playlist, pageCount));
+    this.logger.log(color.blue.bold(`Order items: ${items.length} (insert card + packaging accessory), boxes: ${quantity}, pages: ${pageCount}`));
 
     const customerInfo = {
       fullname: payment.fullname || undefined,
@@ -1167,7 +1168,21 @@ class PrintEnBind {
 
     this.logger.log(color.blue.bold(`Shipping to: ${color.white.bold(`${customerInfo.address} ${customerInfo.housenumber}, ${customerInfo.zipcode} ${customerInfo.city}, ${customerInfo.countrycode}`)}`));
 
-    const result = await this.processOrderRequest(items, customerInfo);
+    // Same packer warning as the main order flow: the article itself only
+    // carries one packaging accessory line, so the total box count is
+    // communicated via the order-level comment.
+    const orderComment = `LET OP: Deze order moet verpakt worden met in totaal ${quantity} QRSong! ${
+      quantity === 1 ? 'doos' : 'dozen'
+    }`;
+
+    const result = await this.processOrderRequest(
+      items,
+      customerInfo,
+      false,
+      true,
+      false,
+      orderComment
+    );
 
     if (result.success && result.data?.orderId) {
       // Finish order in production
@@ -1672,9 +1687,10 @@ class PrintEnBind {
 
     // Collect playlists that need a box insert in this order.
     // Each playlist's boxFilename already contains its design repeated
-    // `boxQuantity` times (multiplication happens in generateBoxInsertPdf),
-    // so the work here is just (a) read the per-file page count and (b) for
-    // multi-playlist orders, merge those pre-multiplied files into one.
+    // `boxQuantity × amount` times (multiplication happens in
+    // generateBoxInsertPdf), so the work here is just (a) read the per-file
+    // page count and (b) for multi-playlist orders, merge those
+    // pre-multiplied files into one.
     const insertPlaylists = playlists
       .map((p) => p.playlist)
       .filter(
@@ -1710,7 +1726,7 @@ class PrintEnBind {
             )} order. Playlist: ${color.white(
               playlist.name
             )} Boxes: ${color.white.bold(
-              playlist.boxQuantity
+              playlist.boxQuantity * (playlist.amount || 1)
             )} Pages: ${color.white.bold(pageCount)}`
           )
         );
@@ -1728,7 +1744,7 @@ class PrintEnBind {
 
         const playlistNames = insertPlaylists.map((p: any) => p.name);
         const totalBoxes = insertPlaylists.reduce(
-          (sum: number, p: any) => sum + p.boxQuantity,
+          (sum: number, p: any) => sum + p.boxQuantity * (p.amount || 1),
           0
         );
 

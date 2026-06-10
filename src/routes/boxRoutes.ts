@@ -1,14 +1,13 @@
 import { FastifyInstance } from 'fastify';
 import PrismaInstance from '../prisma';
 import Logger from '../logger';
-import Data from '../data';
 import { color, white } from 'console-log-colors';
 import Mollie from '../mollie';
-import { BOX_PRICE } from '../config/constants';
+import Upgrade from '../upgrade';
 
 const prisma = PrismaInstance.getInstance();
 const logger = new Logger();
-const data = Data.getInstance();
+const upgrade = Upgrade.getInstance();
 
 const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
   if (!getAuthHandler) return;
@@ -91,9 +90,15 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
         }
 
 
+        // Same tiered, VAT-inclusive calculation as the usersuggestions
+        // flow — keeps the displayed price in step with what upgrade-payment
+        // actually charges.
+        const price = await upgrade.calculateBoxUpgradePrice(php, php.payment);
+
         return reply.send({
           success: true,
-          totalPrice: BOX_PRICE,
+          totalPrice: price.totalEur,
+          ...price,
         });
       } catch (error: any) {
         logger.log(color.red.bold(`Error in POST /api/box/calculate-price: ${error.message}`));
@@ -198,11 +203,13 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           shipping = shippingResult?.cost || 0;
         }
 
+        const price = await upgrade.calculateBoxUpgradePrice(php, php.payment);
+
         return reply.send({
           success: true,
           shipping,
-          boxPrice: BOX_PRICE,
-          total: BOX_PRICE + shipping,
+          boxPrice: price.boxUnitPriceEur,
+          total: parseFloat((price.totalEur + shipping).toFixed(2)),
           address: {
             fullname: php.payment.fullname,
             address: php.payment.address,
@@ -299,8 +306,7 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
     getAuthHandler(['users']),
     async (request: any, reply: any) => {
       try {
-        const { paymentHasPlaylistId, boxDesign, locale, quantity, currency } = request.body;
-        const boxQuantity = Math.max(1, Math.min(10, parseInt(quantity) || 1));
+        const { paymentHasPlaylistId, boxDesign, locale, currency } = request.body;
         const userIdString = request.user?.userId;
 
         if (!paymentHasPlaylistId || !boxDesign) {
@@ -383,17 +389,19 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           shipping = shippingResult?.cost || 0;
         }
 
-        // Apply VAT based on customer's country
-        const taxRate = (await data.getTaxRate(countryCode)) || 0;
-        const boxSubtotal = BOX_PRICE * boxQuantity;
-        const boxVAT = parseFloat((boxSubtotal * (taxRate / 100)).toFixed(2));
-        const totalAmount = parseFloat((boxSubtotal + boxVAT + shipping).toFixed(2));
+        // Box quantity is derived server-side from the playlist's track
+        // count and copy count — same convention as the usersuggestions
+        // upgrade flow and the initial checkout. boxQuantity is persisted
+        // PER COPY; fulfillment multiplies it back out by `amount`.
+        // price.totalEur is VAT-inclusive (boxTierPrice convention).
+        const price = await upgrade.calculateBoxUpgradePrice(php, php.payment);
+        const totalAmount = parseFloat((price.totalEur + shipping).toFixed(2));
 
         // Save box design data and set boxQuantity
         await prisma.paymentHasPlaylist.update({
           where: { id: phpId },
           data: {
-            boxQuantity,
+            boxQuantity: price.boxQuantity,
             // Box front design
             boxFrontBackgroundType: boxDesign.boxFrontBackgroundType,
             boxFrontBackground: boxDesign.boxFrontBackground,
@@ -436,8 +444,8 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
           amountEur: totalAmount,
           requestedCurrency: currency,
           description:
-            boxQuantity > 1
-              ? `Gift Box (${boxQuantity}x) - ${playlistName}`
+            price.totalBoxes > 1
+              ? `Gift Box (${price.totalBoxes}x) - ${playlistName}`
               : `Gift Box - ${playlistName}`,
           locale: userLocale,
           redirectUrl: `${process.env['FRONTEND_URI']}/${userLocale}/my-account?box_enabled=1`,
@@ -447,8 +455,10 @@ const boxRoutes = async (fastify: FastifyInstance, getAuthHandler?: any) => {
             userId: user.id.toString(),
             originalPaymentId: php.payment.paymentId,
             shippingCost: shipping.toString(),
-            boxPrice: BOX_PRICE.toString(),
-            quantity: boxQuantity.toString(),
+            // Tiered (discounted) per-box price and the TOTAL box count
+            // (boxQuantity × amount) — same as the usersuggestions flow.
+            boxPrice: price.boxUnitPriceEur.toString(),
+            quantity: price.totalBoxes.toString(),
           },
           clientIp: request.clientIp,
         });
