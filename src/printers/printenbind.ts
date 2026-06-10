@@ -743,29 +743,57 @@ class PrintEnBind {
           }
         );
 
+        const articleResponseBody = await articleResponse
+          .clone()
+          .json()
+          .catch(() => null);
+
         if (logging) {
           apiCalls.push({
             method: 'POST',
             url: `${process.env['PRINTENBIND_API_URL']}/v1/orders/${orderId}/articles`,
             body: articleBody,
             statusCode: articleResponse.status,
-            responseBody: await articleResponse.clone().json(),
+            responseBody: articleResponseBody,
           });
         }
 
-        if (logging) {
+        if (articleResponse.ok) {
+          if (logging) {
+            this.logger.log(
+              color.blue.bold(
+                `Added article ${color.white.bold(
+                  i + 1
+                )} to order ${color.white.bold(orderId)} — ${color.white.bold(
+                  this.describeArticle(items[i])
+                )}`
+              )
+            );
+          }
+          totalItemsSuccess++;
+        } else {
+          // Leave totalItemsSuccess untouched so result.success stays false —
+          // otherwise the order is "sent" with an empty cart and every later
+          // step (delivery, finish, tracking) fails with misleading errors.
           this.logger.log(
-            color.blue.bold(
-              `Added article ${color.white.bold(
+            color.red.bold(
+              `Failed to add article ${color.white.bold(
                 i + 1
               )} to order ${color.white.bold(orderId)} — ${color.white.bold(
                 this.describeArticle(items[i])
-              )}`
+              )} (POST /orders/${orderId}/articles → ${color.white.bold(
+                articleResponse.status.toString()
+              )})`
             )
           );
+          this.logger.log(
+            color.gray('  response body: ') +
+              color.white(JSON.stringify(articleResponseBody))
+          );
+          this.logger.log(
+            color.gray('  request body: ') + color.white(JSON.stringify(items[i]))
+          );
         }
-
-        totalItemsSuccess++;
       } else if (items[i].type == 'digital') {
         const orderType = await this.getOrderType(
           items[i].numberOfTracks,
@@ -1855,6 +1883,20 @@ class PrintEnBind {
           finalApiCalls
         );
         finalApiCalls = finishResult.apiCalls || [];
+
+        if (!finishResult.success) {
+          // The order is still sitting in the Print&Bind cart — report
+          // failure so the dashboard shows it instead of pretending the
+          // order was sent (and don't store payment info/tracking).
+          return {
+            success: false,
+            request: '',
+            response: {
+              apiCalls: finalApiCalls,
+              error: `Print&Bind order ${result.data.orderId} could not be finished`,
+            },
+          };
+        }
       }
 
       this.logger.log(
