@@ -21,6 +21,33 @@ export default async function vibeRoutes(
   const mollie = new Mollie();
   const bookkeeping = Bookkeeping.getInstance();
 
+  // Pull the optional order metrics (sent along by the calculators) out of a
+  // calculation save body. Only returns the fields that were provided.
+  const extractCalculationMetrics = (
+    body: any
+  ): { numberOfBoxes?: number; buyPrice?: number | null; sellPrice?: number | null } => {
+    const metrics: {
+      numberOfBoxes?: number;
+      buyPrice?: number | null;
+      sellPrice?: number | null;
+    } = {};
+    if (body?.numberOfBoxes !== undefined) {
+      const n = Number(body.numberOfBoxes);
+      if (Number.isFinite(n) && n >= 0) metrics.numberOfBoxes = Math.round(n);
+    }
+    for (const field of ['buyPrice', 'sellPrice'] as const) {
+      if (body?.[field] !== undefined) {
+        if (body[field] === null) {
+          metrics[field] = null;
+        } else {
+          const n = Number(body[field]);
+          if (Number.isFinite(n)) metrics[field] = Math.round(n * 100) / 100;
+        }
+      }
+    }
+    return metrics;
+  };
+
   // ============================================
   // Bookkeeping (MoneyBird) — invoice creation
   // ============================================
@@ -626,7 +653,36 @@ export default async function vibeRoutes(
         'personalizedApp',
       ] as const;
 
+      const allowedStatuses = [
+        'new',
+        'company',
+        'questions',
+        'box',
+        'card',
+        'playlist',
+        'personalize',
+        'generating_pdf',
+        'pdf_complete',
+        'spotify_list_generated',
+        'submitted',
+        'production',
+        'open',
+        'closed',
+        'draft',
+      ];
+
       const updateData: Record<string, any> = {};
+
+      if (body.status !== undefined) {
+        if (
+          typeof body.status !== 'string' ||
+          !allowedStatuses.includes(body.status)
+        ) {
+          reply.status(400).send({ error: 'Invalid status value' });
+          return;
+        }
+        updateData['status'] = body.status;
+      }
 
       for (const field of requiredStringFields) {
         if (body[field] !== undefined) {
@@ -715,6 +771,400 @@ export default async function vibeRoutes(
       });
 
       reply.send({ success: true, list: updated });
+    }
+  );
+
+  // Helper to verify a list belongs to a company; replies with 404 and
+  // returns null when it doesn't.
+  const findCompanyList = async (
+    companyId: number,
+    listId: number,
+    reply: any
+  ): Promise<any | null> => {
+    if (isNaN(companyId) || isNaN(listId)) {
+      reply.status(400).send({ error: 'Invalid company or list ID' });
+      return null;
+    }
+    const prisma = PrismaInstance.getInstance();
+    const list = await prisma.companyList.findUnique({ where: { id: listId } });
+    if (!list || list.companyId !== companyId) {
+      reply.status(404).send({ error: 'List not found' });
+      return null;
+    }
+    return list;
+  };
+
+  // ---- Delivery addresses ----
+
+  // Get delivery addresses for a list
+  fastify.get(
+    '/vibe/companies/:companyId/lists/:listId/delivery-addresses',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const list = await findCompanyList(companyId, listId, reply);
+      if (!list) return;
+
+      const prisma = PrismaInstance.getInstance();
+      const addresses = await (prisma as any).companyListDeliveryAddress.findMany({
+        where: { companyListId: listId },
+        orderBy: { id: 'asc' },
+      });
+      reply.send({ success: true, addresses });
+    }
+  );
+
+  // Create delivery address
+  fastify.post(
+    '/vibe/companies/:companyId/lists/:listId/delivery-addresses',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const list = await findCompanyList(companyId, listId, reply);
+      if (!list) return;
+
+      const { name, address, country } = request.body || {};
+      if (!name?.trim() || !address?.trim() || !country?.trim()) {
+        reply
+          .status(400)
+          .send({ error: 'name, address and country are required' });
+        return;
+      }
+
+      const prisma = PrismaInstance.getInstance();
+      const created = await (prisma as any).companyListDeliveryAddress.create({
+        data: {
+          companyListId: listId,
+          name: name.trim(),
+          address: address.trim(),
+          country: country.trim(),
+        },
+      });
+      reply.status(201).send({ success: true, address: created });
+    }
+  );
+
+  // Update delivery address
+  fastify.put(
+    '/vibe/companies/:companyId/lists/:listId/delivery-addresses/:addressId',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const addressId = parseInt(request.params.addressId);
+      const list = await findCompanyList(companyId, listId, reply);
+      if (!list) return;
+
+      const prisma = PrismaInstance.getInstance();
+      const existing = await (prisma as any).companyListDeliveryAddress.findUnique({
+        where: { id: addressId },
+      });
+      if (!existing || existing.companyListId !== listId) {
+        reply.status(404).send({ error: 'Delivery address not found' });
+        return;
+      }
+
+      const { name, address, country } = request.body || {};
+      if (!name?.trim() || !address?.trim() || !country?.trim()) {
+        reply
+          .status(400)
+          .send({ error: 'name, address and country are required' });
+        return;
+      }
+
+      const updated = await (prisma as any).companyListDeliveryAddress.update({
+        where: { id: addressId },
+        data: {
+          name: name.trim(),
+          address: address.trim(),
+          country: country.trim(),
+        },
+      });
+      reply.send({ success: true, address: updated });
+    }
+  );
+
+  // Delete delivery address
+  fastify.delete(
+    '/vibe/companies/:companyId/lists/:listId/delivery-addresses/:addressId',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const addressId = parseInt(request.params.addressId);
+      const list = await findCompanyList(companyId, listId, reply);
+      if (!list) return;
+
+      const prisma = PrismaInstance.getInstance();
+      const existing = await (prisma as any).companyListDeliveryAddress.findUnique({
+        where: { id: addressId },
+      });
+      if (!existing || existing.companyListId !== listId) {
+        reply.status(404).send({ error: 'Delivery address not found' });
+        return;
+      }
+
+      await (prisma as any).companyListDeliveryAddress.delete({
+        where: { id: addressId },
+      });
+      reply.send({ success: true });
+    }
+  );
+
+  // ---- Design files (cards / box) ----
+
+  const LIST_FILE_TYPES: string[] = ['cards', 'box'];
+  const listFilesDir = () => `${process.env['PRIVATE_DIR']}/list-files`;
+
+  // Get design files for a list
+  fastify.get(
+    '/vibe/companies/:companyId/lists/:listId/files',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const list = await findCompanyList(companyId, listId, reply);
+      if (!list) return;
+
+      const prisma = PrismaInstance.getInstance();
+      const files = await (prisma as any).companyListFile.findMany({
+        where: { companyListId: listId },
+        orderBy: { type: 'asc' },
+      });
+      reply.send({ success: true, files });
+    }
+  );
+
+  // Upload (or replace) a design file for a list
+  fastify.post(
+    '/vibe/companies/:companyId/lists/:listId/files/:type',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const type = request.params.type;
+      if (!LIST_FILE_TYPES.includes(type)) {
+        reply.status(400).send({ error: 'Invalid file type' });
+        return;
+      }
+      const list = await findCompanyList(companyId, listId, reply);
+      if (!list) return;
+
+      const fsPromises = require('fs').promises;
+      const path = require('path');
+
+      let savedFilename: string | null = null;
+      let originalName: string | null = null;
+      let mimeType: string | null = null;
+      let size = 0;
+
+      const parts = request.parts();
+      for await (const part of parts) {
+        if (part.type === 'file' && part.fieldname === 'file') {
+          const safeName = String(part.filename || 'design')
+            .replace(/[^a-zA-Z0-9._-]/g, '_')
+            .slice(-100);
+          savedFilename = `list_${listId}_${type}_${Date.now()}_${safeName}`;
+          originalName = part.filename || safeName;
+          mimeType = part.mimetype || null;
+
+          await fsPromises.mkdir(listFilesDir(), { recursive: true });
+          const buffer = await part.toBuffer();
+          size = buffer.length;
+          await fsPromises.writeFile(
+            path.join(listFilesDir(), savedFilename),
+            buffer
+          );
+        }
+      }
+
+      if (!savedFilename) {
+        reply.status(400).send({ error: 'No file uploaded' });
+        return;
+      }
+
+      const prisma = PrismaInstance.getInstance();
+      const existing = await (prisma as any).companyListFile.findUnique({
+        where: { companyListId_type: { companyListId: listId, type } },
+      });
+      if (existing) {
+        // Remove the old file from disk; the DB row is replaced below.
+        try {
+          await fsPromises.unlink(path.join(listFilesDir(), existing.filename));
+        } catch {
+          /* old file may already be gone */
+        }
+      }
+
+      const file = await (prisma as any).companyListFile.upsert({
+        where: { companyListId_type: { companyListId: listId, type } },
+        create: {
+          companyListId: listId,
+          type,
+          filename: savedFilename,
+          originalName,
+          mimeType,
+          size,
+        },
+        update: {
+          filename: savedFilename,
+          originalName,
+          mimeType,
+          size,
+        },
+      });
+      reply.status(201).send({ success: true, file });
+    }
+  );
+
+  // Download a design file
+  fastify.get(
+    '/vibe/companies/:companyId/lists/:listId/files/:type/download',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const type = request.params.type;
+      if (!LIST_FILE_TYPES.includes(type)) {
+        reply.status(400).send({ error: 'Invalid file type' });
+        return;
+      }
+      const list = await findCompanyList(companyId, listId, reply);
+      if (!list) return;
+
+      const prisma = PrismaInstance.getInstance();
+      const file = await (prisma as any).companyListFile.findUnique({
+        where: { companyListId_type: { companyListId: listId, type } },
+      });
+      if (!file) {
+        reply.status(404).send({ error: 'File not found' });
+        return;
+      }
+
+      const fsPromises = require('fs').promises;
+      const path = require('path');
+      try {
+        const buffer = await fsPromises.readFile(
+          path.join(listFilesDir(), file.filename)
+        );
+        reply
+          .header('Content-Type', file.mimeType || 'application/octet-stream')
+          .header(
+            'Content-Disposition',
+            `attachment; filename="${encodeURIComponent(file.originalName)}"`
+          )
+          .send(buffer);
+      } catch {
+        reply.status(404).send({ error: 'File missing on disk' });
+      }
+    }
+  );
+
+  // Delete a design file
+  fastify.delete(
+    '/vibe/companies/:companyId/lists/:listId/files/:type',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      const type = request.params.type;
+      if (!LIST_FILE_TYPES.includes(type)) {
+        reply.status(400).send({ error: 'Invalid file type' });
+        return;
+      }
+      const list = await findCompanyList(companyId, listId, reply);
+      if (!list) return;
+
+      const prisma = PrismaInstance.getInstance();
+      const file = await (prisma as any).companyListFile.findUnique({
+        where: { companyListId_type: { companyListId: listId, type } },
+      });
+      if (!file) {
+        reply.status(404).send({ error: 'File not found' });
+        return;
+      }
+
+      const fsPromises = require('fs').promises;
+      const path = require('path');
+      try {
+        await fsPromises.unlink(path.join(listFilesDir(), file.filename));
+      } catch {
+        /* file may already be gone */
+      }
+      await (prisma as any).companyListFile.delete({ where: { id: file.id } });
+      reply.send({ success: true });
+    }
+  );
+
+  // ---- Order e-mail ----
+
+  // Build the printer order e-mail (Dutch) for a list
+  fastify.get(
+    '/vibe/companies/:companyId/lists/:listId/order-email',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      const listId = parseInt(request.params.listId);
+      if (isNaN(companyId) || isNaN(listId)) {
+        reply.status(400).send({ error: 'Invalid company or list ID' });
+        return;
+      }
+
+      const result = await vibe.getOrderEmail(companyId, listId);
+      if (!result.success) {
+        reply
+          .status(result.error === 'List not found' ? 404 : 500)
+          .send({ error: result.error });
+        return;
+      }
+      reply.send({ success: true, email: result.data });
+    }
+  );
+
+  // Toggle the favorite flag on a company
+  fastify.put(
+    '/vibe/companies/:companyId/favorite',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const companyId = parseInt(request.params.companyId);
+      if (isNaN(companyId)) {
+        reply.status(400).send({ error: 'Invalid company ID' });
+        return;
+      }
+
+      const prisma = PrismaInstance.getInstance();
+      const company = await prisma.company.findUnique({
+        where: { id: companyId },
+      });
+      if (!company) {
+        reply.status(404).send({ error: 'Company not found' });
+        return;
+      }
+
+      const favorite = Boolean(request.body?.favorite);
+      const updated = await (prisma as any).company.update({
+        where: { id: companyId },
+        data: { favorite },
+      });
+      reply.send({ success: true, favorite: updated.favorite });
+    }
+  );
+
+  // ---- Live orders (production lists) ----
+
+  // Get all lists with status "production" across companies
+  fastify.get(
+    '/vibe/production-lists',
+    getAuthHandler(['admin', 'vibeadmin']),
+    async (request: any, reply: any) => {
+      const result = await vibe.getProductionLists();
+      if (!result.success) {
+        reply.status(500).send({ error: result.error });
+        return;
+      }
+      reply.send({ success: true, lists: result.data });
     }
   );
 
@@ -1091,7 +1541,7 @@ export default async function vibeRoutes(
 
       const updated = await prisma.companyList.update({
         where: { id: listId },
-        data: { calculation },
+        data: { calculation, ...extractCalculationMetrics(request.body) },
       });
 
       reply.send({ success: true, list: updated });
@@ -1121,7 +1571,7 @@ export default async function vibeRoutes(
 
       const updated = await prisma.companyList.update({
         where: { id: listId },
-        data: { calculationTromp },
+        data: { calculationTromp, ...extractCalculationMetrics(request.body) },
       });
 
       reply.send({ success: true, list: updated });
@@ -1151,7 +1601,7 @@ export default async function vibeRoutes(
 
       const updated = await prisma.companyList.update({
         where: { id: listId },
-        data: { calculationSchneider },
+        data: { calculationSchneider, ...extractCalculationMetrics(request.body) },
       });
 
       reply.send({ success: true, list: updated });

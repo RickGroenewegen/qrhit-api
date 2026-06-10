@@ -1,5 +1,6 @@
 import { PrismaClient, CompanyList } from '@prisma/client'; // Added CompanyList
 import * as auth from './auth';
+import crypto from 'crypto';
 import Logger from './logger';
 import { color, white } from 'console-log-colors';
 import fs from 'fs/promises'; // Added fs
@@ -1222,6 +1223,53 @@ class Vibe {
         )
       );
 
+      // Automatically convert the contact person into a contact user
+      // connected to this company (companyadmin group).
+      const contactEmail = companyData.contactemail?.trim();
+      if (contactEmail) {
+        try {
+          const existingUser = await this.prisma.user.findUnique({
+            where: { email: contactEmail },
+          });
+          if (!existingUser) {
+            const randomPassword = crypto.randomBytes(16).toString('hex');
+            await auth.createOrUpdateAdminUser(
+              contactEmail,
+              randomPassword,
+              companyData.contact?.trim() || contactEmail,
+              newCompany.id,
+              'companyadmin',
+              undefined,
+              undefined,
+              companyData.contactphone?.trim() || null
+            );
+            this.logger.log(
+              color.green.bold(
+                `Created contact user ${color.white.bold(
+                  contactEmail
+                )} for company ${color.white.bold(newCompany.name)}`
+              )
+            );
+          } else {
+            this.logger.log(
+              color.yellow.bold(
+                `Contact user ${color.white.bold(
+                  contactEmail
+                )} already exists, skipping auto-create for company ${color.white.bold(
+                  newCompany.name
+                )}`
+              )
+            );
+          }
+        } catch (userError) {
+          this.logger.log(
+            color.red.bold(
+              `Company created but contact user creation failed: ${userError}`
+            )
+          );
+        }
+      }
+
       return {
         success: true,
         data: {
@@ -1231,6 +1279,281 @@ class Vibe {
     } catch (error) {
       this.logger.log(color.red.bold(`Error creating company: ${error}`));
       return { success: false, error: 'Error creating company' };
+    }
+  }
+
+  /**
+   * Get all lists that are in production, across all companies.
+   * Used for the "Live orders" overview in the dashboard.
+   */
+  public async getProductionLists(): Promise<any> {
+    try {
+      const lists = await (this.prisma as any).companyList.findMany({
+        where: { status: 'production' },
+        include: {
+          Company: { select: { id: true, name: true } },
+          CompanyListDeliveryAddress: true,
+          CompanyListFile: { select: { type: true } },
+        },
+        orderBy: { updatedAt: 'desc' },
+      });
+
+      const rows = lists.map((list: any) => {
+        const column =
+          list.printer === 'qrsong'
+            ? 'calculationTromp'
+            : list.printer === 'schneider'
+            ? 'calculationSchneider'
+            : 'calculation';
+        let boxes = Number(list.numberOfBoxes) || 0;
+        if (!boxes) {
+          try {
+            const state = JSON.parse(list[column] || '{}');
+            boxes = Number(state.quantity) || 0;
+          } catch {
+            /* ignore */
+          }
+        }
+        return {
+          id: list.id,
+          companyId: list.companyId,
+          companyName: list.Company?.name || '',
+          name: list.name,
+          slug: list.slug,
+          printer: list.printer,
+          status: list.status,
+          numberOfCards: list.numberOfCards,
+          numberOfBoxes: boxes,
+          buyPrice: list.buyPrice,
+          sellPrice: list.sellPrice,
+          desiredDeliveryDate: list.desiredDeliveryDate,
+          deliveryAddressCount: list.CompanyListDeliveryAddress.length,
+          fileTypes: list.CompanyListFile.map((f: any) => f.type),
+          createdAt: list.createdAt,
+          updatedAt: list.updatedAt,
+        };
+      });
+
+      return { success: true, data: rows };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error getting production lists: ${error}`));
+      return { success: false, error: 'Error getting production lists' };
+    }
+  }
+
+  /**
+   * Build the (hard-coded Dutch) printer order e-mail for a list.
+   * Returns subject + html + text so the admin can copy/paste it into
+   * their own mail client. Works for both Tromp and Schneider lists.
+   */
+  public async getOrderEmail(companyId: number, listId: number): Promise<any> {
+    try {
+      const list: any = await (this.prisma as any).companyList.findUnique({
+        where: { id: listId },
+        include: {
+          Company: { select: { id: true, name: true } },
+          CompanyListDeliveryAddress: { orderBy: { id: 'asc' } },
+          CompanyListFile: true,
+        },
+      });
+      if (!list || list.companyId !== companyId) {
+        return { success: false, error: 'List not found' };
+      }
+
+      const warnings: string[] = [];
+
+      // Total number of boxes comes from the current quotation/calculator
+      // state stored on the list (per-printer column).
+      const column =
+        list.printer === 'qrsong'
+          ? 'calculationTromp'
+          : list.printer === 'schneider'
+          ? 'calculationSchneider'
+          : 'calculation';
+      let calcState: any = {};
+      try {
+        calcState = JSON.parse(list[column] || '{}');
+      } catch {
+        /* ignore */
+      }
+      const totalBoxes = Number(calcState.quantity) || 0;
+      if (!totalBoxes) {
+        warnings.push(
+          'Geen aantal dozen gevonden in de calculator van deze lijst. Open de calculator en sla de berekening op.'
+        );
+      }
+
+      // Printer-specific product description
+      let productDescription = '';
+      if (list.printer === 'schneider') {
+        const cardCount = Number(calcState.cardCount) || list.numberOfCards || 96;
+        const bundleByCount: Record<number, { bundle: string; box: string }> = {
+          48: { bundle: '1x 48 in banderol', box: '1-vaks' },
+          96: { bundle: '2x 48 in banderol', box: '2-vaks' },
+          144: { bundle: '2x 72 in banderol', box: '2-vaks' },
+          192: { bundle: '4x 48 in banderol', box: '4-vaks' },
+        };
+        const spec = bundleByCount[cardCount] || bundleByCount[96];
+        productDescription = `${cardCount} kaarten (${spec.bundle}), formaat 56 x 56 mm, wit 350 grams Condat, 2-zijdig uniek, fc/fc + lak bedrukt, met afgeronde hoeken in een luxe ${spec.box} dekseldoosje van wit SK2 karton, deksel + bodem fc/0 bedrukt + glanslaminaat.`;
+      } else if (list.printer === 'qrsong') {
+        const printingType = calcState.printingType || 'eigen';
+        const trompDescriptions: Record<string, string> = {
+          eigen:
+            '200 kaarten per set, doosje met volledig eigen bedrukking, kaarten 2-zijdig uniek bedrukt',
+          voorbedrukt:
+            '200 kaarten per set in een voorbedrukt doosje met venster, kaarten 2-zijdig uniek bedrukt',
+          klein:
+            '100 kaarten per set in een klein voorbedrukt doosje met venster, kaarten 2-zijdig uniek bedrukt',
+          luxe: 'luxe doos met 200 kaarten + bedrukte chips',
+        };
+        productDescription =
+          trompDescriptions[printingType] || trompDescriptions['eigen'];
+      } else {
+        productDescription = `${list.numberOfCards || 200} kaarten per doos`;
+        warnings.push(
+          'Deze lijst gebruikt de OnzeVibe printer; controleer de productomschrijving.'
+        );
+      }
+
+      // Desired delivery date in Dutch
+      let deliveryDateText = '';
+      if (list.desiredDeliveryDate) {
+        const months = [
+          'januari', 'februari', 'maart', 'april', 'mei', 'juni',
+          'juli', 'augustus', 'september', 'oktober', 'november', 'december',
+        ];
+        const d = new Date(list.desiredDeliveryDate);
+        deliveryDateText = `${d.getDate()} ${months[d.getMonth()]} ${d.getFullYear()}`;
+      } else {
+        deliveryDateText = '[LEVERDATUM]';
+        warnings.push('Geen gewenste leverdatum ingesteld op deze lijst.');
+      }
+
+      // Delivery addresses: first one gets all boxes, the rest 0, and the
+      // QRSong! (Rick Groenewegen) address is always added last with 3 boxes.
+      type OrderAddress = { name: string; lines: string[]; boxes: number };
+      const addresses: OrderAddress[] = list.CompanyListDeliveryAddress.map(
+        (a: any, index: number) => ({
+          name: a.name,
+          lines: [
+            ...String(a.address || '')
+              .split('\n')
+              .map((line: string) => line.trim())
+              .filter(Boolean),
+            a.country,
+          ].filter(Boolean),
+          boxes: index === 0 ? totalBoxes : 0,
+        })
+      );
+      if (addresses.length === 0) {
+        warnings.push(
+          'Geen leveradressen ingevoerd op deze lijst (tabblad "Delivery"). Alleen het QRSong! adres staat in de mail.'
+        );
+      }
+      addresses.push({
+        name: 'Rick Groenewegen',
+        lines: ['Prinsenhof 1', '2171XZ Sassenheim', 'Nederland'],
+        boxes: 3,
+      });
+
+      const files = list.CompanyListFile.map((f: any) => ({
+        type: f.type,
+        originalName: f.originalName,
+      }));
+      for (const type of ['cards', 'box']) {
+        if (!files.some((f: any) => f.type === type)) {
+          warnings.push(
+            type === 'cards'
+              ? 'Het ontwerp voor de kaarten ontbreekt nog (tabblad "Files").'
+              : 'Het ontwerp voor het doosje ontbreekt nog (tabblad "Files").'
+          );
+        }
+      }
+
+      const numberWords = [
+        '', 'één', 'twee', 'drie', 'vier', 'vijf',
+        'zes', 'zeven', 'acht', 'negen', 'tien',
+      ];
+      const addressCountText =
+        numberWords[addresses.length] || String(addresses.length);
+
+      // Build text + html versions of the mail body
+      const textParts: string[] = [];
+      textParts.push('Goedendag,');
+      textParts.push(
+        `We willen graag een order plaatsen voor in totaal ${totalBoxes || '[AANTAL]'} x ${productDescription}`
+      );
+      textParts.push(
+        `De wens is dat het uiterlijk ${deliveryDateText} geleverd wordt.`
+      );
+      textParts.push(
+        'De bestanden voor de kaartjes en het doosje zijn als bijlage toegevoegd.'
+      );
+      textParts.push(
+        `We willen de order graag op ${addressCountText} verschillende adressen uit laten leveren:`
+      );
+      addresses.forEach((address, index) => {
+        textParts.push(
+          `Adres ${index + 1}: ${address.boxes} stuks\n\n${[
+            address.name,
+            ...address.lines,
+          ].join('\n')}`
+        );
+      });
+      textParts.push('Gr,\nRick Groenewegen');
+      const text = textParts.join('\n\n');
+
+      const esc = (value: string) =>
+        value
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;');
+      const htmlParts: string[] = [];
+      htmlParts.push('<p>Goedendag,</p>');
+      htmlParts.push(
+        `<p>We willen graag een order plaatsen voor in totaal <strong>${
+          totalBoxes || '[AANTAL]'
+        }</strong> x ${esc(productDescription)}</p>`
+      );
+      htmlParts.push(
+        `<p>De wens is dat het uiterlijk <strong>${esc(
+          deliveryDateText
+        )}</strong> geleverd wordt.</p>`
+      );
+      htmlParts.push(
+        '<p>De bestanden voor de kaartjes en het doosje zijn als bijlage toegevoegd.</p>'
+      );
+      htmlParts.push(
+        `<p>We willen de order graag op <strong>${esc(
+          addressCountText
+        )}</strong> verschillende adressen uit laten leveren:</p>`
+      );
+      addresses.forEach((address, index) => {
+        htmlParts.push(
+          `<p><strong>Adres ${index + 1}: ${address.boxes} stuks</strong></p>`
+        );
+        htmlParts.push(
+          `<p>${[address.name, ...address.lines].map(esc).join('<br>')}</p>`
+        );
+      });
+      htmlParts.push('<p>Gr,<br>Rick Groenewegen</p>');
+      const html = htmlParts.join('\n');
+
+      return {
+        success: true,
+        data: {
+          subject: `Order ${list.Company?.name || list.name}`,
+          html,
+          text,
+          totalBoxes,
+          addressCount: addresses.length,
+          files,
+          warnings,
+        },
+      };
+    } catch (error) {
+      this.logger.log(color.red.bold(`Error building order email: ${error}`));
+      return { success: false, error: 'Error building order email' };
     }
   }
 

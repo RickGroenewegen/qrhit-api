@@ -874,6 +874,7 @@ model Company {
   test                 Boolean        @default(false)
   followUp             Boolean        @default(false)
   onlyForAdmin         Boolean        @default(false)
+  favorite             Boolean        @default(false)
   address              String?
   housenumber          String?
   city                 String?
@@ -993,6 +994,9 @@ model CompanyList {
   numberOfTracks          Int
   minimumNumberOfTracks   Int?
   numberOfCards           Int       @default(0)
+  numberOfBoxes           Int       @default(0)
+  buyPrice                Float?
+  sellPrice               Float?
   startAt                 DateTime?
   endAt                   DateTime?
   votingBackground        String?
@@ -1028,13 +1032,47 @@ model CompanyList {
   createdAt               DateTime  @default(now())
   updatedAt               DateTime  @updatedAt
 
-  Company               Company                 @relation(fields: [companyId], references: [id], onDelete: Cascade)
-  CompanyListSubmission CompanyListSubmission[]
-  CompanyListQuestion   CompanyListQuestion[]
-  Playlist              Playlist?               @relation(fields: [playlistId], references: [id], onDelete: SetNull)
-  Payment               Payment?                @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  Company                    Company                      @relation(fields: [companyId], references: [id], onDelete: Cascade)
+  CompanyListSubmission      CompanyListSubmission[]
+  CompanyListQuestion        CompanyListQuestion[]
+  Playlist                   Playlist?                    @relation(fields: [playlistId], references: [id], onDelete: SetNull)
+  Payment                    Payment?                     @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  CompanyListDeliveryAddress CompanyListDeliveryAddress[]
+  CompanyListFile            CompanyListFile[]
 
   @@map("company_lists")
+}
+
+model CompanyListDeliveryAddress {
+  id            Int      @id @default(autoincrement())
+  companyListId Int
+  name          String
+  address       String   @db.Text
+  country       String   @default("Nederland")
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  CompanyList CompanyList @relation(fields: [companyListId], references: [id], onDelete: Cascade)
+
+  @@index([companyListId])
+  @@map("company_list_delivery_addresses")
+}
+
+model CompanyListFile {
+  id            Int      @id @default(autoincrement())
+  companyListId Int
+  type          String // 'cards' | 'box'
+  filename      String // stored filename on disk (PRIVATE_DIR/list-files)
+  originalName  String
+  mimeType      String?
+  size          Int      @default(0)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  CompanyList CompanyList @relation(fields: [companyListId], references: [id], onDelete: Cascade)
+
+  @@unique([companyListId, type])
+  @@map("company_list_files")
 }
 
 model CompanyListQuestion {
