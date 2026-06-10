@@ -245,7 +245,8 @@ export async function updatePaymentHasPlaylist(
   printerType?: string,
   template?: string | null,
   theme?: string | null,
-  themeName?: string | null
+  themeName?: string | null,
+  boxQuantity?: number
 ): Promise<{ success: boolean; error?: string }> {
   try {
     const updateData: any = {
@@ -255,6 +256,11 @@ export async function updatePaymentHasPlaylist(
 
     if (printerType !== undefined) {
       updateData.printerType = printerType;
+    }
+
+    if (boxQuantity !== undefined) {
+      updateData.boxQuantity = boxQuantity;
+      updateData.boxEnabled = boxQuantity > 0;
     }
 
     if (theme !== undefined) {
@@ -299,7 +305,7 @@ export async function updatePaymentHasPlaylist(
         `Updated playlist data for ${color.white.bold(
           paymentHasPlaylistId
         )} ${color.white.bold(
-          JSON.stringify({ eco, doubleSided, printerType, template, theme, themeName })
+          JSON.stringify({ eco, doubleSided, printerType, template, theme, themeName, boxQuantity })
         )}`
       )
     );

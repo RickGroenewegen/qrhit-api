@@ -2496,8 +2496,15 @@ export default async function adminRoutes(
         const paymentHasPlaylistId = parseInt(
           request.params.paymentHasPlaylistId
         );
-        const { eco, doubleSided, printerType, template, theme, themeName } =
-          request.body;
+        const {
+          eco,
+          doubleSided,
+          printerType,
+          template,
+          theme,
+          themeName,
+          boxQuantity,
+        } = request.body;
 
         if (isNaN(paymentHasPlaylistId)) {
           reply
@@ -2564,6 +2571,21 @@ export default async function adminRoutes(
           return;
         }
 
+        // Validate boxQuantity if provided
+        if (
+          boxQuantity !== undefined &&
+          (typeof boxQuantity !== 'number' ||
+            !Number.isInteger(boxQuantity) ||
+            boxQuantity < 0)
+        ) {
+          reply.status(400).send({
+            success: false,
+            error:
+              'Invalid boxQuantity value. Must be a non-negative integer.',
+          });
+          return;
+        }
+
         const result = await data.updatePaymentHasPlaylist(
           paymentHasPlaylistId,
           eco,
@@ -2571,7 +2593,8 @@ export default async function adminRoutes(
           printerType,
           template,
           theme,
-          themeName
+          themeName,
+          boxQuantity
         );
 
         if (!result.success) {
