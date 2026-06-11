@@ -260,6 +260,31 @@ export default async function adminRoutes(
     }
   );
 
+  // Manually send the gift box folding instructions email
+  fastify.get(
+    '/send-box-instructions/:paymentId',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const payment = await prisma.payment.findUnique({
+        where: { paymentId: request.params.paymentId },
+      });
+
+      if (!payment) {
+        reply.status(404).send({ success: false, error: 'Payment not found' });
+        return;
+      }
+
+      await mail.sendBoxInstructionsEmail(payment);
+
+      await prisma.payment.update({
+        where: { id: payment.id },
+        data: { boxInstructionsMailSent: true },
+      });
+
+      reply.send({ success: true });
+    }
+  );
+
   // Queue status endpoints
   fastify.get('/queue/status', getAuthHandler(['admin']), async () => {
     if (!process.env['REDIS_URL']) {

@@ -293,6 +293,12 @@ class PrintEnBind {
           });
           trackingJob.start();
 
+          // Send gift box folding instructions 24 hours after shipping
+          const boxInstructionsJob = new CronJob('35 * * * *', async () => {
+            await this.handleBoxInstructionMails();
+          });
+          boxInstructionsJob.start();
+
           // Schedule monthly shipping costs update (1st day of month at 1 AM)
           const shippingJob = new CronJob('0 1 1 * *', async () => {
             //await this.calculateShippingCosts();
@@ -2714,6 +2720,7 @@ class PrintEnBind {
                 where: { id: order.id },
                 data: {
                   printApiShipped: true,
+                  printApiShippedAt: new Date(),
                   printApiStatus: 'Shipped',
                   printApiTrackingLink: trackingLink,
                 },
@@ -2738,6 +2745,59 @@ class PrintEnBind {
     } catch (error) {
       this.logger.log(
         color.red.bold(`Error retrieving unshipped orders: ${error}`)
+      );
+    }
+  }
+
+  /**
+   * Sends the gift box folding instructions email to orders that contain a
+   * gift box, 24 hours after the tracking email went out.
+   */
+  public async handleBoxInstructionMails(): Promise<void> {
+    try {
+      const twentyFourHoursAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
+
+      const payments = await this.prisma.payment.findMany({
+        where: {
+          status: 'paid',
+          test: false,
+          printApiShipped: true,
+          printApiShippedAt: {
+            not: null,
+            lte: twentyFourHoursAgo,
+          },
+          boxInstructionsMailSent: false,
+          PaymentHasPlaylist: {
+            some: {
+              boxEnabled: true,
+              boxQuantity: {
+                gt: 0,
+              },
+            },
+          },
+        },
+      });
+
+      for (const payment of payments) {
+        // Flag first so a crash mid-send can never cause repeated emails
+        await this.prisma.payment.update({
+          where: { id: payment.id },
+          data: { boxInstructionsMailSent: true },
+        });
+
+        await this.mail.sendBoxInstructionsEmail(payment);
+
+        this.logger.log(
+          color.blue.bold(
+            `Sent gift box instructions email for order ${color.white.bold(
+              payment.orderId
+            )} to ${color.white.bold(payment.email)}`
+          )
+        );
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error sending box instruction mails: ${error}`)
       );
     }
   }

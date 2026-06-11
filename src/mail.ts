@@ -1513,6 +1513,87 @@ ${knowledgeContext}${toolContext}`,
     }
   }
 
+  async sendBoxInstructionsEmail(payment: Payment): Promise<void> {
+    if (!this.ses) return;
+
+    const logoPath = `${process.env['ASSETS_DIR']}/images/logo.png`;
+
+    const videoId = 'OE3DsOM81Qo';
+    const videoLink = `https://www.youtube.com/watch?v=${videoId}`;
+    const videoThumbnail = `https://img.youtube.com/vi/${videoId}/maxresdefault.jpg`;
+    const giftBoxLink = `${process.env['FRONTEND_URI']}/${payment.locale}/gift-box`;
+
+    const mailParams = {
+      payment,
+      videoLink,
+      videoThumbnail,
+      giftBoxLink,
+      productName: process.env['PRODUCT_NAME'],
+      translations: await this.translation.getTranslationsByPrefix(
+        payment.locale,
+        'mail'
+      ),
+      currentYear: new Date().getFullYear(),
+    };
+
+    try {
+      // Read the logo file and convert it to Base64
+      const logoBuffer = await fs.readFile(logoPath);
+      const logoBase64 = this.wrapBase64(logoBuffer.toString('base64'));
+
+      const html = await this.templates.render(
+        'mails/box_instructions_html',
+        mailParams
+      );
+      const text = await this.templates.render(
+        'mails/box_instructions_text',
+        mailParams
+      );
+
+      const subject = this.translation.translate(
+        'mail.boxInstructionsMailSubject',
+        payment.locale,
+        {
+          orderId: payment.orderId,
+        }
+      );
+
+      const attachments: Attachment[] = [
+        {
+          contentType: 'image/png',
+          filename: 'logo.png',
+          data: logoBase64,
+          isInline: true,
+          cid: 'logo',
+        },
+      ];
+
+      const rawEmail = await this.renderRaw({
+        from: `${process.env['PRODUCT_NAME']} <${process.env['FROM_EMAIL']}>`,
+        to: payment.email,
+        subject,
+        html: html.replace('<img src="logo.png"', '<img src="cid:logo"'),
+        text,
+        attachments,
+        unsubscribe: process.env['UNSUBSCRIBE_EMAIL']!,
+        replyTo: process.env['REPLY_TO_EMAIL'],
+      });
+
+      const emailBuffer = Buffer.from(rawEmail);
+
+      // Prepare and send the raw email
+      const command = new SendRawEmailCommand({
+        RawMessage: {
+          Data: emailBuffer,
+        },
+      });
+
+      await this.ses.send(command);
+    } catch (error) {
+      console.error('Error while sending box instructions email:', error);
+    }
+  }
+
   async sendFinalizedMail(
     payment: Payment & { user: { hash: string } },
     reviewLink: string,

@@ -2098,6 +2098,7 @@ class Mollie {
             presentmentCurrency === 'EUR' ? molliePaymentAmount : presentmentAmount,
           reverseCharge: !!calculateResult.data.reverseCharge,
           vatIdChecked: calculateResult.data.vatIdChecked || null,
+          boxInstructionsMailSent: false,
           PaymentHasPlaylist: { create: playlists },
           ...params.extraOrderData,
         },
