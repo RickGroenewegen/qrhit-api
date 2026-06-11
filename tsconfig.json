@@ -111,6 +111,8 @@
    "prisma",
    "docs",
     // You can add more directories or specific files here
-    "**/*.spec.ts"
+    "**/*.spec.ts",
+    "test",
+    "vitest.config.ts"
   ]
 }

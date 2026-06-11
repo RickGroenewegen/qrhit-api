@@ -12,7 +12,12 @@
     "start:worker": "npm run build && ncp ./src ./build && node -r dotenv/config build/src/worker.js",
     "start:worker-dev": "tsx watch src/worker.ts",
     "start_pm2": "git reset --hard HEAD && git pull origin HEAD && sudo npm install --force && sudo npx prisma db push && npm run build && ncp ./src ./build && node -r dotenv/config build/src/app.js",
-    "test": "npm run build && ncp ./src ./build && node -r dotenv/config build/test.js"
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:unit": "vitest run test/unit",
+    "test:int": "vitest run test/integration test/ws",
+    "test:coverage": "vitest run --coverage",
+    "test:db:push": "node test/db-push.js"
   },
   "keywords": [],
   "author": "",
@@ -124,7 +129,9 @@
     "@types/qrcode": "^1.5.6",
     "@types/sanitize-html": "^2.16.1",
     "@types/uuid": "^10.0.0",
+    "@vitest/coverage-v8": "^4.1.8",
     "prisma": "^7.7.0",
-    "typescript": "^6.0.3"
+    "typescript": "^6.0.3",
+    "vitest": "^4.1.8"
   }
 }

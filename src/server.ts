@@ -77,6 +77,20 @@ class Server {
     return Server.instance;
   }
 
+  // Test-only: a fresh, non-singleton instance so each test suite can build
+  // an isolated Fastify app without leaking state between suites.
+  public static createFresh(): Server {
+    return new Server();
+  }
+
+  // Test-only: configure the Fastify app (plugins, auth, routes) without
+  // listening, clustering, websockets, queue workers or cron jobs, and hand
+  // it back so tests can use fastify.inject().
+  public async buildForTesting(): Promise<FastifyInstance> {
+    await this.configure();
+    return this.fastify;
+  }
+
   private addAuthRoutes = async () => {
     // Middleware for token verification
     const verifyTokenMiddleware = async (
@@ -162,13 +176,17 @@ class Server {
     });
   }
 
-  public init = async () => {
+  private configure = async () => {
     this.isMainServer = this.utils.parseBoolean(process.env['MAIN_SERVER']!);
     await this.setVersion();
     await this.createDirs();
     await this.registerPlugins();
     await this.addAuthRoutes();
     await this.addRoutes();
+  };
+
+  public init = async () => {
+    await this.configure();
     await this.startCluster();
   };
 

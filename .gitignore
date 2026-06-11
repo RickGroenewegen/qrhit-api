@@ -22,3 +22,7 @@ public/playlist_images
 public/company-events
 apple_music.p8
 public
+
+# Test harness scratch space
+test/.tmp/
+coverage/

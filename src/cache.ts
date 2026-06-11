@@ -16,7 +16,11 @@ class Cache {
       throw new Error('REDIS_URL environment variable is not defined');
     }
 
-    this.client = new Redis(redisUrl, { db: 0 });
+    // REDIS_DB is only set by the test harness (.env.test) to isolate test
+    // keys from dev/prod data; when unset this stays db 0 as before.
+    this.client = new Redis(redisUrl, {
+      db: parseInt(process.env['REDIS_DB'] || '0', 10),
+    });
 
     // Handle connection errors
     this.client.on('error', (error) => {
