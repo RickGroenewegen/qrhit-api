@@ -30,16 +30,23 @@ export async function resetDb(): Promise<void> {
     `SELECT TABLE_NAME FROM information_schema.tables
      WHERE table_schema = '${db}' AND table_type = 'BASE TABLE'`
   );
-  await prisma().$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 0');
-  try {
-    for (const { TABLE_NAME } of tables) {
-      // Prisma's own migration bookkeeping table must survive resets.
-      if (TABLE_NAME === '_prisma_migrations') continue;
-      await prisma().$executeRawUnsafe(`TRUNCATE TABLE \`${TABLE_NAME}\``);
-    }
-  } finally {
-    await prisma().$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1');
-  }
+  // Interactive transaction pins a single pooled connection so the
+  // FOREIGN_KEY_CHECKS session toggle applies to the TRUNCATEs.
+  await prisma().$transaction(
+    async (tx) => {
+      await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 0');
+      try {
+        for (const { TABLE_NAME } of tables) {
+          // Prisma's own migration bookkeeping table must survive resets.
+          if (TABLE_NAME === '_prisma_migrations') continue;
+          await tx.$executeRawUnsafe(`TRUNCATE TABLE \`${TABLE_NAME}\``);
+        }
+      } finally {
+        await tx.$executeRawUnsafe('SET FOREIGN_KEY_CHECKS = 1');
+      }
+    },
+    { timeout: 120000 }
+  );
 }
 
 /**
