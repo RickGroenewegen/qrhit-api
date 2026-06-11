@@ -10,6 +10,14 @@ import dotenv from 'dotenv';
 import fs from 'fs';
 import path from 'path';
 
+// Mirror the BigInt JSON serialization patch from the production
+// entrypoints (src/app.ts, src/worker.ts): buildForTesting() boots Server
+// directly and would otherwise 500 on raw-SQL LONGLONG values.
+(BigInt.prototype as any).toJSON = function () {
+  const int = Number.parseInt(this.toString());
+  return int ?? this.toString();
+};
+
 // 1. Real .env first (DB/Redis hosts + credentials stay out of the repo),
 //    then .env.test overrides (ENVIRONMENT=test, scratch dirs, REDIS_DB...).
 dotenv.config({ quiet: true });
