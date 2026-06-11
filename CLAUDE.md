@@ -267,3 +267,12 @@ Both Angular frontends consume this API through the following key endpoints:
 3. **Full Stack Testing**: Both servers running simultaneously
 4. **API Testing**: Frontend makes requests to localhost:3004
 5. **Production**: Frontend builds to static files, backend serves API
+## Testing
+
+See [TESTING.md](TESTING.md) for the full guide. Quick reference:
+- `npm run test:unit` (fast) · `npm test` (full) · `npm run test:coverage` (+thresholds)
+- After schema changes: `npm run test:db:push`
+- Integration tests: `buildTestApp()` + helpers in `test/helpers/` — never hit dev/prod DB (harness rewrites DATABASE_URL to qrhit_test)
+- Mail/pushover/push/printer are globally mocked; assert via `outbound.calls()`
+- When you change or add backend logic, add/update the matching tests (or run `/write-tests`)
+- Coverage thresholds in vitest.config.ts only ever go up
