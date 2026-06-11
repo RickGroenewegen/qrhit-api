@@ -1138,6 +1138,42 @@ class PrintEnBind {
     };
   }
 
+  /**
+   * Inlay-card article for the standalone inlay card order flow
+   * (orderInlayCard). Identical to createBoxOrderInsertItem except the
+   * product is 'losbladig' instead of 'werkblad' — a loose inlay card has
+   * to be ordered as 'losbladig' at Print&Bind.
+   */
+  private createInlayCardOrderItem(
+    fileUrl: string,
+    pageCount: number,
+    comment: string
+  ): any {
+    return {
+      type: 'physical',
+      amount: 1,
+      product: 'losbladig',
+      number: '1',
+      copies: pageCount.toString(),
+      color: 'all',
+      size: 'custom',
+      printside: 'double',
+      finishing: 'loose',
+      finishing2: 'none',
+      finishing_extra: 'none',
+      accessory_item: 'none',
+      papertype: 'card',
+      size_custom_width: '120',
+      size_custom_height: '120',
+      check_doc: 'standard',
+      delivery_method: 'post',
+      add_file_method: 'url',
+      file_overwrite: true,
+      file_url: fileUrl,
+      comment,
+    };
+  }
+
   public async createBoxUpgradeOrder(paymentHasPlaylistId: number, quantity: number = 1): Promise<any> {
     this.logger.log(color.blue.bold(`Starting box upgrade Print&Bind order for PHP ${paymentHasPlaylistId} (quantity: ${quantity})`));
 
@@ -1918,6 +1954,207 @@ class PrintEnBind {
 
       if (trackingLink.length > 0) {
         // Update printApiTrackingLink
+        await this.prisma.payment.update({
+          where: { paymentId: payment.paymentId },
+          data: {
+            printApiTrackingLink: trackingLink,
+          },
+        });
+      }
+
+      this.setPaymentInfo(result.data.orderId, payment);
+
+      return {
+        success: true,
+        request: '',
+        response: {
+          apiCalls: finalApiCalls,
+          id: result.data.orderId,
+        },
+      };
+    } else {
+      return {
+        success: false,
+        request: '',
+        response: {
+          apiCalls: finalApiCalls,
+        },
+      };
+    }
+  }
+
+  /**
+   * Standalone order flow for loose inlay cards (admin dashboard "Send to
+   * printer - inlay card only"). Fully separate from createOrder: it builds
+   * the inlay card article(s) as product 'losbladig' (a loose inlay card
+   * cannot be ordered as 'werkblad') and runs the complete order from A to
+   * Z — create, finish (skipped on development), tracking and payment info.
+   */
+  public async orderInlayCard(payment: any, playlists: any[]): Promise<any> {
+    const orderItems = [];
+
+    // Collect playlists that have an inlay (box insert) card. Each
+    // playlist's boxFilename already contains its design repeated
+    // `boxQuantity × amount` times (multiplication happens in
+    // generateBoxInsertPdf).
+    const insertPlaylists = playlists
+      .map((p) => p.playlist)
+      .filter(
+        (playlist: any) =>
+          playlist.boxEnabled &&
+          playlist.boxQuantity > 0 &&
+          playlist.boxFilename
+      );
+
+    if (insertPlaylists.length === 0) {
+      this.logger.log(
+        color.red.bold(
+          `No inlay cards configured for payment ${color.white.bold(
+            payment.paymentId
+          )}`
+        )
+      );
+      return {
+        success: false,
+        request: '',
+        response: {
+          apiCalls: [],
+          error: 'No inlay cards configured for this order',
+        },
+      };
+    }
+
+    const boxInsertDir = `${process.env['PUBLIC_DIR']}/box-insert`;
+    const pdfManager = new PDF();
+
+    if (insertPlaylists.length === 1) {
+      // Single playlist — the file is already the right size, just
+      // create one article with copies=actualPageCount.
+      const playlist = insertPlaylists[0];
+      const filePath = `${boxInsertDir}/${playlist.boxFilename}`;
+      const pageCount = await pdfManager.countPDFPages(filePath);
+      const boxFileUrl = `${process.env['API_URI']}/public/box-insert/${playlist.boxFilename}`;
+
+      orderItems.push(
+        this.createInlayCardOrderItem(boxFileUrl, pageCount, '')
+      );
+
+      this.logger.log(
+        color.blue.bold(
+          `Adding inlay card article (losbladig) to ${color.white.bold(
+            'Print&Bind'
+          )} order. Playlist: ${color.white(
+            playlist.name
+          )} Cards: ${color.white.bold(
+            playlist.boxQuantity * (playlist.amount || 1)
+          )} Pages: ${color.white.bold(pageCount)}`
+        )
+      );
+    } else {
+      // Multiple playlists — merge their pre-multiplied insert files into
+      // a single PDF and submit one consolidated article.
+      const mergedFilename = `box_merged_${payment.paymentId}_${Date.now()}.pdf`;
+      const mergedPath = `${boxInsertDir}/${mergedFilename}`;
+
+      const mergeInputs = insertPlaylists.map((playlist: any) => ({
+        localPath: `${boxInsertDir}/${playlist.boxFilename}`,
+        repeat: 1,
+      }));
+
+      const playlistNames = insertPlaylists.map((p: any) => p.name);
+
+      const pageCount = await pdfManager.mergeLocalPdfs(
+        mergeInputs,
+        mergedPath,
+        'inlay card'
+      );
+
+      const mergedFileUrl = `${process.env['API_URI']}/public/box-insert/${mergedFilename}`;
+      orderItems.push(
+        this.createInlayCardOrderItem(mergedFileUrl, pageCount, '')
+      );
+
+      this.logger.log(
+        color.blue.bold(
+          `Adding merged inlay card article (losbladig) to ${color.white.bold(
+            'Print&Bind'
+          )} order. Playlists: ${color.white(
+            playlistNames.join(', ')
+          )} Pages: ${color.white.bold(pageCount)}`
+        )
+      );
+    }
+
+    const result = await this.processOrderRequest(
+      orderItems,
+      {
+        fullname: payment.fullname,
+        email: payment.email,
+        address: payment.address,
+        housenumber: payment.housenumber,
+        zipcode: payment.zipcode,
+        city: payment.city,
+        countrycode: payment.countrycode,
+      },
+      true,
+      false,
+      payment.fast || false,
+      ''
+    );
+
+    let finalApiCalls = result.apiCalls || [];
+
+    if (result.success) {
+      // Finish the order from A to Z — only skipped on development so
+      // local runs don't submit real orders.
+      if (process.env['ENVIRONMENT'] !== 'development') {
+        const finishResult = await this.finishOrder(
+          result.data.orderId,
+          finalApiCalls
+        );
+        finalApiCalls = finishResult.apiCalls || [];
+
+        if (!finishResult.success) {
+          // The order is still sitting in the Print&Bind cart — report
+          // failure so the dashboard shows it instead of pretending the
+          // order was sent (and don't store payment info/tracking).
+          return {
+            success: false,
+            request: '',
+            response: {
+              apiCalls: finalApiCalls,
+              error: `Print&Bind inlay card order ${result.data.orderId} could not be finished`,
+            },
+          };
+        }
+      } else {
+        this.logger.log(
+          color.yellow.bold(
+            `Skipping finish for inlay card order ${color.white.bold(
+              result.data.orderId
+            )} (development environment)`
+          )
+        );
+      }
+
+      this.logger.log(
+        color.blue.bold(
+          `Finished inlay card order ${color.white.bold(result.data.orderId)}`
+        )
+      );
+
+      const delivery = await this.getDeliveryInfo(result.data.orderId);
+      const trackingLink = delivery?.tracktrace_url || '';
+
+      this.logger.log(
+        color.blue.bold(
+          `Tracking link for inlay card order ${color.white.bold(
+            result.data.orderId
+          )} is: ${color.white.bold(trackingLink)}`
+        )
+      );
+
+      if (trackingLink.length > 0) {
         await this.prisma.payment.update({
           where: { paymentId: payment.paymentId },
           data: {

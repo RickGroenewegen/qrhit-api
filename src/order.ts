@@ -251,6 +251,10 @@ class Order {
     );
   }
 
+  public async orderInlayCard(payment: any, playlists: any[]): Promise<any> {
+    return await this.printer.orderInlayCard(payment, playlists);
+  }
+
   public async createInvoice(payment: any): Promise<string> {
     const invoiceUrl = `${process.env['API_URI']}/invoice/${payment.paymentId}`;
     const pdfPath = `${process.env['PRIVATE_DIR']}/invoice/${payment.paymentId}.pdf`;

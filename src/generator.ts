@@ -1508,12 +1508,16 @@ class Generator {
         }
       }
 
-      const orderData = await this.order.createOrder(
-        payment,
-        physicalPlaylists,
-        playlists[0].productType,
-        inlayOnly
-      );
+      // Inlay-only sends (admin dashboard action) use the dedicated
+      // standalone flow that orders the inlay card as product 'losbladig';
+      // the regular flow stays untouched.
+      const orderData = inlayOnly
+        ? await this.order.orderInlayCard(payment, physicalPlaylists)
+        : await this.order.createOrder(
+            payment,
+            physicalPlaylists,
+            playlists[0].productType
+          );
 
       printApiOrderId = orderData.response.id;
       printApiOrderRequest = JSON.stringify(orderData.request);
