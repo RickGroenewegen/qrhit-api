@@ -26,3 +26,4 @@ public
 # Test harness scratch space
 test/.tmp/
 coverage/
+.claude/last-tested-commit
