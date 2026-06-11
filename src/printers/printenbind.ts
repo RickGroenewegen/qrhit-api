@@ -654,15 +654,6 @@ class PrintEnBind {
         const bodyOrder = firstResponse.order;
         const bodyLocation = firstResponse.location;
 
-        console.log(
-          `Print&Bind order creation response (status ${response.status}):`,
-          JSON.stringify(firstResponse, null, 2)
-        );
-        console.log(
-          'Print&Bind order creation location header:',
-          headerLocation
-        );
-
         // Print&Bind returns the new order via a Location-style path. The
         // path may or may not have a leading slash and may include extra
         // segments (e.g. `/orders/7989-1` or `orders/7989-1/articles/1`), so
@@ -1117,42 +1108,6 @@ class PrintEnBind {
       type: 'physical',
       amount: 1,
       product: 'werkblad',
-      number: '1',
-      copies: pageCount.toString(),
-      color: 'all',
-      size: 'custom',
-      printside: 'double',
-      finishing: 'loose',
-      finishing2: 'none',
-      finishing_extra: 'none',
-      accessory_item: 'none',
-      papertype: 'card',
-      size_custom_width: '120',
-      size_custom_height: '120',
-      check_doc: 'standard',
-      delivery_method: 'post',
-      add_file_method: 'url',
-      file_overwrite: true,
-      file_url: fileUrl,
-      comment,
-    };
-  }
-
-  /**
-   * Inlay-card article for the standalone inlay card order flow
-   * (orderInlayCard). Identical to createBoxOrderInsertItem except the
-   * product is 'losbladig' instead of 'werkblad' — a loose inlay card has
-   * to be ordered as 'losbladig' at Print&Bind.
-   */
-  private createInlayCardOrderItem(
-    fileUrl: string,
-    pageCount: number,
-    comment: string
-  ): any {
-    return {
-      type: 'physical',
-      amount: 1,
-      product: 'losbladig',
       number: '1',
       copies: pageCount.toString(),
       color: 'all',
@@ -1658,24 +1613,12 @@ class PrintEnBind {
   public async createOrder(
     payment: any,
     playlists: any[],
-    productType: string,
-    inlayOnly: boolean = false
+    productType: string
   ): Promise<any> {
     const authToken = await this.getAuthToken();
     const orderItems = [];
 
-    if (inlayOnly) {
-      this.logger.log(
-        color.yellow.bold(
-          `Inlay-only mode: skipping QR card articles for payment ${color.white.bold(
-            payment.paymentId
-          )}`
-        )
-      );
-    }
-
     for (const playlistItem of playlists) {
-      if (inlayOnly) continue;
       const playlist = playlistItem.playlist;
 
       // Fetch all payment_has_playlist_item records for this playlist
@@ -1860,7 +1803,7 @@ class PrintEnBind {
         color.red.bold(
           `No order items to send for payment ${color.white.bold(
             payment.paymentId
-          )}${inlayOnly ? ' (inlay-only mode, but no inlay cards configured)' : ''}`
+          )}`
         )
       );
       return {
@@ -1868,9 +1811,7 @@ class PrintEnBind {
         request: '',
         response: {
           apiCalls: [],
-          error: inlayOnly
-            ? 'No inlay cards configured for this order'
-            : 'No order items to send',
+          error: 'No order items to send',
         },
       };
     }
@@ -1986,8 +1927,7 @@ class PrintEnBind {
   /**
    * Standalone order flow for loose inlay cards (admin dashboard "Send to
    * printer - inlay card only"). Fully separate from createOrder: it builds
-   * the inlay card article(s) as product 'losbladig' (a loose inlay card
-   * cannot be ordered as 'werkblad') and runs the complete order from A to
+   * only the inlay card article(s) and runs the complete order from A to
    * Z — create, finish (skipped on development), tracking and payment info.
    */
   public async orderInlayCard(payment: any, playlists: any[]): Promise<any> {
@@ -2035,13 +1975,11 @@ class PrintEnBind {
       const pageCount = await pdfManager.countPDFPages(filePath);
       const boxFileUrl = `${process.env['API_URI']}/public/box-insert/${playlist.boxFilename}`;
 
-      orderItems.push(
-        this.createInlayCardOrderItem(boxFileUrl, pageCount, '')
-      );
+      orderItems.push(this.createBoxOrderInsertItem(boxFileUrl, pageCount, ''));
 
       this.logger.log(
         color.blue.bold(
-          `Adding inlay card article (losbladig) to ${color.white.bold(
+          `Adding inlay card article to ${color.white.bold(
             'Print&Bind'
           )} order. Playlist: ${color.white(
             playlist.name
@@ -2071,12 +2009,12 @@ class PrintEnBind {
 
       const mergedFileUrl = `${process.env['API_URI']}/public/box-insert/${mergedFilename}`;
       orderItems.push(
-        this.createInlayCardOrderItem(mergedFileUrl, pageCount, '')
+        this.createBoxOrderInsertItem(mergedFileUrl, pageCount, '')
       );
 
       this.logger.log(
         color.blue.bold(
-          `Adding merged inlay card article (losbladig) to ${color.white.bold(
+          `Adding merged inlay card article to ${color.white.bold(
             'Print&Bind'
           )} order. Playlists: ${color.white(
             playlistNames.join(', ')

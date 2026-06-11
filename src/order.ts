@@ -240,15 +240,9 @@ class Order {
   public async createOrder(
     payment: any,
     playlists: any[],
-    productType: string,
-    inlayOnly: boolean = false
+    productType: string
   ): Promise<any> {
-    return await this.printer.createOrder(
-      payment,
-      playlists,
-      productType,
-      inlayOnly
-    );
+    return await this.printer.createOrder(payment, playlists, productType);
   }
 
   public async orderInlayCard(payment: any, playlists: any[]): Promise<any> {
