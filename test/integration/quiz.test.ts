@@ -9,10 +9,13 @@ import {
 import { FastifyInstance } from 'fastify';
 import fs from 'fs';
 import path from 'path';
+import axios from 'axios';
+import Redis from 'ioredis';
 import { buildTestApp, closeTestApp } from '../helpers/app';
 import { resetDb, seedBaseline, prisma } from '../helpers/db';
 import { flushTestRedis } from '../helpers/redis';
 import { createTestUser, authHeader, TestUser } from '../helpers/auth';
+import { MAX_QUESTIONS } from '../../src/quiz';
 
 // The production entrypoints (src/app.ts / src/worker.ts) globally patch
 // The quiz routes instantiate ChatGPT for AI question generation. Anything
@@ -716,6 +719,486 @@ describe('quiz routes', () => {
         url: '/api/quiz/player/00000000-0000-0000-0000-000000000000',
       });
       expect(res.statusCode).toBe(404);
+    });
+
+    it('rejects non-quiz rooms and ended quizzes on the player endpoint', async () => {
+      // Game-room state lives in Redis db 1 (production hardcodes this);
+      // write throwaway keys with a short TTL like the ws suites do.
+      const gameRedis = new Redis(process.env['REDIS_URL']!, { db: 1 });
+      try {
+        const bingoUuid = `test-bingo-${Date.now()}`;
+        await gameRedis.set(
+          `room:${bingoUuid}`,
+          JSON.stringify({ uuid: bingoUuid, type: 'bingo', pluginData: {} }),
+          'EX',
+          60
+        );
+        const notQuiz = await app.inject({
+          method: 'GET',
+          url: `/api/quiz/player/${bingoUuid}`,
+        });
+        expect(notQuiz.statusCode).toBe(400);
+        expect(notQuiz.json().error).toBe('Not a quiz room');
+
+        const endedUuid = `test-ended-${Date.now()}`;
+        await gameRedis.set(
+          `room:${endedUuid}`,
+          JSON.stringify({
+            uuid: endedUuid,
+            type: 'quiz',
+            state: 'ended',
+            pluginData: {},
+          }),
+          'EX',
+          60
+        );
+        const ended = await app.inject({
+          method: 'GET',
+          url: `/api/quiz/player/${endedUuid}`,
+        });
+        expect(ended.statusCode).toBe(400);
+        expect(ended.json().error).toBe('Quiz has ended');
+      } finally {
+        await gameRedis.quit();
+      }
+    });
+  });
+
+  describe('POST /api/quiz/generate — additional validation and AI path', () => {
+    it(`rejects more than ${MAX_QUESTIONS} selected tracks`, async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/quiz/generate',
+        headers: authHeader(owner.token),
+        payload: {
+          paymentId: fix.payment.paymentId,
+          userHash: owner.user.hash,
+          playlistId: fix.playlist.playlistId,
+          selectedTracks: Array.from(
+            { length: MAX_QUESTIONS + 1 },
+            (_, i) => `bogus_${i}`
+          ),
+          useAi: false,
+        },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe(`Maximum ${MAX_QUESTIONS} questions allowed`);
+    });
+
+    it('rejects when fewer than 5 selected tracks match the playlist', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/quiz/generate',
+        headers: authHeader(owner.token),
+        payload: {
+          paymentId: fix.payment.paymentId,
+          userHash: owner.user.hash,
+          playlistId: fix.playlist.playlistId,
+          // 6 ids, none of which exist in the playlist
+          selectedTracks: Array.from({ length: 6 }, (_, i) => `missing_${i}`),
+          useAi: false,
+        },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe('At least 5 valid tracks are required');
+    });
+
+    it('generates an AI quiz via the (mocked) LLM, reporting progress', async () => {
+      const aiUser = await createTestUser();
+      const aiFix = await seedPaidPlaylist({ user: aiUser, trackCount: 6 });
+      const selected = aiFix.tracks.slice(0, 5).map((t) => t.trackId);
+
+      chatgptMock.generateQuizQuestions.mockImplementationOnce(
+        async (tracks: any[], _locale: string, onProgress: any) => {
+          onProgress({
+            step: 'questions',
+            detail: 'working',
+            questionsGenerated: 1,
+          });
+          return tracks.map((t: any) => ({
+            trackId: t.trackId,
+            type: t.type,
+            question: `AI question about ${t.name}?`,
+            options: ['A', 'B', 'C', 'D'],
+            correctAnswer: 'A',
+          }));
+        }
+      );
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/quiz/generate',
+        headers: authHeader(aiUser.token),
+        payload: {
+          paymentId: aiFix.payment.paymentId,
+          userHash: aiUser.user.hash,
+          playlistId: aiFix.playlist.playlistId,
+          selectedTracks: selected,
+          questionTypes: ['trivia'],
+          name: 'AI Quiz',
+          locale: 'nl',
+        },
+      });
+      expect(res.statusCode).toBe(200);
+      const { generationId } = res.json();
+
+      const progress = await waitForGeneration(app, aiUser.token, generationId);
+      expect(progress.status).toBe('complete');
+      expect(chatgptMock.generateQuizQuestions).toHaveBeenCalledTimes(1);
+      expect(chatgptMock.generateQuizQuestions.mock.calls[0][1]).toBe('nl');
+
+      const quiz = await prisma().quiz.findUnique({
+        where: { id: progress.quizId },
+        include: { questions: true },
+      });
+      expect(quiz!.useAi).toBe(true);
+      expect(quiz!.locale).toBe('nl');
+      expect(quiz!.questions).toHaveLength(5);
+      for (const q of quiz!.questions) {
+        expect(q.question).toMatch(/^AI question about /);
+        expect(q.correctAnswer).toBe('A');
+      }
+    });
+
+    it('reports an error status when background AI generation fails', async () => {
+      const errUser = await createTestUser();
+      const errFix = await seedPaidPlaylist({ user: errUser, trackCount: 5 });
+
+      chatgptMock.generateQuizQuestions.mockRejectedValueOnce(
+        new Error('LLM exploded')
+      );
+
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/quiz/generate',
+        headers: authHeader(errUser.token),
+        payload: {
+          paymentId: errFix.payment.paymentId,
+          userHash: errUser.user.hash,
+          playlistId: errFix.playlist.playlistId,
+          selectedTracks: errFix.tracks.map((t) => t.trackId),
+          questionTypes: ['trivia'],
+        },
+      });
+      expect(res.statusCode).toBe(200);
+
+      const progress = await waitForGeneration(
+        app,
+        errUser.token,
+        res.json().generationId
+      );
+      expect(progress.status).toBe('error');
+      expect(progress.error).toBe('quiz.generateError');
+    });
+  });
+
+  describe('non-AI question regeneration', () => {
+    it('SUSPECTED BUG: regenerating a decade question fails with 500 (BigInt year)', async () => {
+      // The regenerate route fetches the track via
+      // `SELECT ... COALESCE(year, 2000) as year` — MariaDB types that
+      // expression as BIGINT, so Prisma returns a BigInt. The decade/
+      // release_order generators then do `Math.floor(year / 10)` which
+      // throws "Cannot mix BigInt and other types" → 500. The non-AI
+      // regenerate path is therefore broken; if this test starts seeing a
+      // 200, the bug has been fixed — flip the assertions to verify the
+      // regenerated question (4 options, correctAnswer "1970s").
+      const quiz = await seedQuiz(fix, 1);
+      const q = quiz.questions[0];
+      await prisma().quizQuestion.update({
+        where: { id: q.id },
+        data: { type: 'decade' },
+      });
+      const llmCallsBefore = chatgptMock.regenerateQuizQuestion.mock.calls.length;
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/quiz/${quiz.id}/question/${q.id}/regenerate`,
+        headers: authHeader(owner.token),
+        payload: {},
+      });
+      expect(res.statusCode).toBe(500);
+      expect(res.json().error).toBe('Failed to regenerate question');
+      // The LLM is never involved for non-AI types.
+      expect(chatgptMock.regenerateQuizQuestion.mock.calls.length).toBe(
+        llmCallsBefore
+      );
+      // Question untouched.
+      const inDb = await prisma().quizQuestion.findUnique({
+        where: { id: q.id },
+      });
+      expect(inDb!.question).toBe(q.question);
+    });
+
+    it('SUSPECTED BUG: regenerating a release_order question fails with 500 (BigInt year)', async () => {
+      // Same root cause as the decade case above.
+      const quiz = await seedQuiz(fix, 1);
+      const q = quiz.questions[0];
+      await prisma().quizQuestion.update({
+        where: { id: q.id },
+        data: { type: 'release_order' },
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/quiz/${quiz.id}/question/${q.id}/regenerate`,
+        headers: authHeader(owner.token),
+        payload: {},
+      });
+      expect(res.statusCode).toBe(500);
+      expect(res.json().error).toBe('Failed to regenerate question');
+    });
+
+    it('returns 429 when the daily AI edit limit is exhausted', async () => {
+      const limited = await createTestUser();
+      const limFix = await seedPaidPlaylist({ user: limited, trackCount: 5 });
+      const quiz = await seedQuiz(limFix, 1);
+
+      // checkAiRateLimit counts per JWT userId per day in game Redis (db 1).
+      const gameRedis = new Redis(process.env['REDIS_URL']!, { db: 1 });
+      try {
+        const today = new Date().toISOString().slice(0, 10);
+        await gameRedis.set(
+          `quiz_ai_usage:${limited.user.userId}:${today}`,
+          '10',
+          'EX',
+          120
+        );
+        const res = await app.inject({
+          method: 'POST',
+          url: `/api/quiz/${quiz.id}/question/${quiz.questions[0].id}/regenerate`,
+          headers: authHeader(limited.token),
+          payload: {},
+        });
+        expect(res.statusCode).toBe(429);
+        expect(res.json().error).toBe('AI limit reached (10/10 today)');
+      } finally {
+        await gameRedis.quit();
+      }
+    });
+  });
+
+  describe('image edge cases', () => {
+    it('rejects an oversized base64 avatar (>5MB)', async () => {
+      const big = Buffer.alloc(5 * 1024 * 1024 + 16, 7).toString('base64');
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/quiz/avatar',
+        payload: { image: `data:image/png;base64,${big}` },
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toBe('Image too large');
+    });
+
+    it('accepts a multipart avatar upload and rejects one without a file', async () => {
+      const png = Buffer.from(PNG_1X1.split(',')[1], 'base64');
+      const boundary = '----quiztestboundary';
+      const body = Buffer.concat([
+        Buffer.from(
+          `--${boundary}\r\nContent-Disposition: form-data; name="avatar"; filename="a.png"\r\nContent-Type: image/png\r\n\r\n`
+        ),
+        png,
+        Buffer.from(`\r\n--${boundary}--\r\n`),
+      ]);
+      const ok = await app.inject({
+        method: 'POST',
+        url: '/api/quiz/avatar',
+        headers: {
+          'content-type': `multipart/form-data; boundary=${boundary}`,
+        },
+        payload: body,
+      });
+      expect(ok.statusCode).toBe(200);
+      expect(ok.json().filename).toMatch(/\.png$/);
+
+      // multipart body with a non-file field only → 400
+      const noFile = Buffer.from(
+        `--${boundary}\r\nContent-Disposition: form-data; name="other"\r\n\r\nvalue\r\n--${boundary}--\r\n`
+      );
+      const bad = await app.inject({
+        method: 'POST',
+        url: '/api/quiz/avatar',
+        headers: {
+          'content-type': `multipart/form-data; boundary=${boundary}`,
+        },
+        payload: noFile,
+      });
+      expect(bad.statusCode).toBe(400);
+      expect(bad.json().error).toBe('avatar file is required');
+    });
+
+    it('rejects a non-data-URI question image and an unknown question', async () => {
+      const quiz = await seedQuiz(fix, 1);
+      const badFormat = await app.inject({
+        method: 'POST',
+        url: `/api/quiz/${quiz.id}/question/${quiz.questions[0].id}/upload-image`,
+        headers: authHeader(owner.token),
+        payload: { image: 'http://example.com/x.png' },
+      });
+      expect(badFormat.statusCode).toBe(400);
+
+      const notFound = await app.inject({
+        method: 'POST',
+        url: `/api/quiz/${quiz.id}/question/999999/upload-image`,
+        headers: authHeader(owner.token),
+        payload: { image: PNG_1X1 },
+      });
+      expect(notFound.statusCode).toBe(404);
+
+      const delNotFound = await app.inject({
+        method: 'DELETE',
+        url: `/api/quiz/${quiz.id}/question/999999/image`,
+        headers: authHeader(owner.token),
+      });
+      expect(delNotFound.statusCode).toBe(404);
+    });
+
+    it('returns 404 generating AI options for an unknown question', async () => {
+      const quiz = await seedQuiz(fix, 1);
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/quiz/${quiz.id}/question/999999/ai-options`,
+        headers: authHeader(owner.token),
+        payload: { question: 'Q?', correctAnswer: 'A' },
+      });
+      expect(res.statusCode).toBe(404);
+    });
+  });
+
+  describe('wikimedia endpoints (mocked axios)', () => {
+    it('requires a q parameter', async () => {
+      const res = await app.inject({
+        method: 'GET',
+        url: '/api/wikimedia/search',
+        headers: authHeader(owner.token),
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('searches and filters results by extension, mime and license', async () => {
+      const detailFor = (over: Record<string, any>) => ({
+        data: {
+          query: {
+            pages: {
+              '1': {
+                imageinfo: [
+                  {
+                    url: 'https://upload.wikimedia.org/full.jpg',
+                    thumburl: 'https://upload.wikimedia.org/thumb.jpg',
+                    mime: 'image/jpeg',
+                    extmetadata: {
+                      LicenseShortName: { value: 'CC BY-SA 4.0' },
+                    },
+                    ...over['imageinfo'],
+                  },
+                ],
+                categories: over['categories'] ?? [],
+              },
+            },
+          },
+        },
+      });
+
+      const getSpy = vi
+        .spyOn(axios, 'get')
+        .mockImplementation(async (url: string) => {
+          if (url.includes('list=search')) {
+            return {
+              data: {
+                query: {
+                  search: [
+                    { title: 'File:Good Artist Photo.jpg' },
+                    { title: 'File:Some logo.png' }, // filtered: "logo"
+                    { title: 'File:Vector art.svg' }, // filtered: svg
+                    { title: 'File:Unfree image.jpg' }, // filtered: license
+                  ],
+                },
+              },
+            } as any;
+          }
+          if (url.includes('Unfree')) {
+            return detailFor({
+              imageinfo: {
+                extmetadata: {
+                  LicenseShortName: { value: 'Fair use' },
+                },
+              },
+            }) as any;
+          }
+          return detailFor({}) as any;
+        });
+
+      try {
+        const res = await app.inject({
+          method: 'GET',
+          url: '/api/wikimedia/search?q=test%20artist',
+          headers: authHeader(owner.token),
+        });
+        expect(res.statusCode).toBe(200);
+        const { results } = res.json();
+        expect(results).toHaveLength(1);
+        expect(results[0]).toMatchObject({
+          title: 'Good Artist Photo.jpg',
+          thumbUrl: 'https://upload.wikimedia.org/thumb.jpg',
+          fullUrl: 'https://upload.wikimedia.org/full.jpg',
+          license: 'CC BY-SA 4.0',
+        });
+        // only the search call + detail lookups for non-skipped titles
+        expect(
+          getSpy.mock.calls.filter(([u]) =>
+            String(u).includes('list=search')
+          )
+        ).toHaveLength(1);
+      } finally {
+        getSpy.mockRestore();
+      }
+    });
+
+    it('downloads a wikimedia image onto a question (mocked download)', async () => {
+      const quiz = await seedQuiz(fix, 1);
+      const q = quiz.questions[0];
+      const png = Buffer.from(PNG_1X1.split(',')[1], 'base64');
+      const getSpy = vi
+        .spyOn(axios, 'get')
+        .mockResolvedValue({ data: png } as any);
+
+      try {
+        const missingUrl = await app.inject({
+          method: 'POST',
+          url: `/api/quiz/${quiz.id}/question/${q.id}/wikimedia-image`,
+          headers: authHeader(owner.token),
+          payload: {},
+        });
+        expect(missingUrl.statusCode).toBe(400);
+
+        const notFound = await app.inject({
+          method: 'POST',
+          url: `/api/quiz/${quiz.id}/question/999999/wikimedia-image`,
+          headers: authHeader(owner.token),
+          payload: { url: 'https://upload.wikimedia.org/full.jpg' },
+        });
+        expect(notFound.statusCode).toBe(404);
+
+        const res = await app.inject({
+          method: 'POST',
+          url: `/api/quiz/${quiz.id}/question/${q.id}/wikimedia-image`,
+          headers: authHeader(owner.token),
+          payload: { url: 'https://upload.wikimedia.org/full.jpg' },
+        });
+        expect(res.statusCode).toBe(200);
+        const { filename } = res.json();
+        expect(filename).toMatch(/\.png$/);
+        expect(
+          fs.existsSync(
+            path.join(process.env['PUBLIC_DIR']!, 'quiz_images', filename)
+          )
+        ).toBe(true);
+        const inDb = await prisma().quizQuestion.findUnique({
+          where: { id: q.id },
+        });
+        expect(inDb!.imageFilename).toBe(filename);
+      } finally {
+        getSpy.mockRestore();
+      }
     });
   });
 });
