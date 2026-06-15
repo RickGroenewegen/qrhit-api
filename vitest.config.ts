@@ -25,9 +25,13 @@ export default defineConfig({
         'src/**/*.d.ts',
       ],
       // Thresholds are a ratchet: set just below achieved coverage and only
-      // ever raised. See TESTING.md.
+      // ever raised. See TESTING.md. Achieved 2026-06-15: stmts 80.39%,
+      // branches 68.71%, funcs 81.52%, lines 80.57% (3418 tests).
       thresholds: {
-        // Set after the initial harness build-out (Phase C).
+        statements: 79,
+        branches: 67,
+        functions: 80,
+        lines: 79,
       },
     },
   },
