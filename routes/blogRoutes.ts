@@ -16,7 +16,7 @@ export default async function blogRoutes(fastify: FastifyInstance) {
   // Admin: Create a blog post (expects { title_xx, content_xx, summary_xx } for all supported locales)
   fastify.post(
     '/admin/blogs',
-    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    { preHandler: fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
       if (!request.body.title_en) {
         reply.status(400).send({
@@ -33,7 +33,7 @@ export default async function blogRoutes(fastify: FastifyInstance) {
   // Admin: Get all blogs (defaults to English, includes inactive blogs)
   fastify.get(
     '/admin/blogs',
-    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    { preHandler: fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
       const result = await blog.getAllBlogsAdmin('en');
       reply.send(result);
@@ -43,7 +43,7 @@ export default async function blogRoutes(fastify: FastifyInstance) {
   // Admin: Get a single blog by id (defaults to English, includes inactive blogs)
   fastify.get(
     '/admin/blogs/:id',
-    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    { preHandler: fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
       const id = parseInt(request.params.id);
       if (isNaN(id)) {
@@ -58,7 +58,7 @@ export default async function blogRoutes(fastify: FastifyInstance) {
   // Admin: Get a single blog by id for a specific locale (includes inactive blogs)
   fastify.get(
     '/admin/blogs/:locale/:id',
-    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    { preHandler: fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
       const id = parseInt(request.params.id);
       if (isNaN(id)) {
@@ -74,7 +74,7 @@ export default async function blogRoutes(fastify: FastifyInstance) {
   // Admin: Update a blog post (expects { title_xx, content_xx, summary_xx, active } for all supported locales)
   fastify.put(
     '/admin/blogs/:id',
-    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    { preHandler: fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
       const id = parseInt(request.params.id);
       if (isNaN(id)) {
@@ -90,7 +90,7 @@ export default async function blogRoutes(fastify: FastifyInstance) {
   fastify.delete(
     '/admin/blogs/:id',
     {
-      preHandler: fastify.authenticate && fastify.authenticate(['admin']),
+      preHandler: fastify.authenticate(['admin']),
       preValidation: async (request: any, reply: any) => {
         // Skip body parsing for DELETE requests
         request.body = undefined;
@@ -110,7 +110,7 @@ export default async function blogRoutes(fastify: FastifyInstance) {
   // Admin: Generate a blog post using AI (expects { instruction })
   fastify.post(
     '/admin/blogs/generate',
-    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    { preHandler: fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
       const { instruction, instructions_image } = request.body;
 
@@ -269,7 +269,7 @@ export default async function blogRoutes(fastify: FastifyInstance) {
   // Admin: Translate a blog post to other languages
   fastify.post(
     '/admin/blogs/:id/translate',
-    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    { preHandler: fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
       const id = parseInt(request.params.id);
       if (isNaN(id)) {
@@ -472,7 +472,7 @@ export default async function blogRoutes(fastify: FastifyInstance) {
   // Admin: Refresh blog image
   fastify.post(
     '/admin/blogs/:id/refresh-image',
-    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    { preHandler: fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
       const id = parseInt(request.params.id);
       if (isNaN(id)) {
@@ -560,7 +560,7 @@ export default async function blogRoutes(fastify: FastifyInstance) {
   // Admin: Upload custom blog image
   fastify.post(
     '/admin/blogs/:id/upload-image',
-    { preHandler: fastify.authenticate && fastify.authenticate(['admin']) },
+    { preHandler: fastify.authenticate(['admin']) },
     async (request: any, reply: any) => {
       const id = parseInt(request.params.id);
       if (isNaN(id)) {

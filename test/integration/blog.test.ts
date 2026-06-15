@@ -34,15 +34,21 @@ describe('blog and tracking routes', () => {
   });
 
   describe('blog admin CRUD', () => {
-    // SECURITY BUG (documented, not fixed here): routes/blogRoutes.ts guards
-    // every admin route with `fastify.authenticate && fastify.authenticate(...)`
-    // but `fastify.authenticate` is never decorated anywhere, so the
-    // preHandler is undefined and ALL /admin/blogs* endpoints are publicly
-    // accessible without a token. When this is fixed, this test should
-    // expect 401.
-    it('currently allows unauthenticated access to admin blog routes (missing authenticate decorator)', async () => {
+    // FIXED: server.ts now decorates fastify.authenticate, so the admin blog
+    // routes get a real auth preHandler. Unauthenticated access is rejected.
+    it('rejects unauthenticated access to admin blog routes', async () => {
       const res = await app.inject({ method: 'GET', url: '/admin/blogs' });
-      expect(res.statusCode).toBe(200);
+      expect(res.statusCode).toBe(401);
+    });
+
+    it('rejects a non-admin user from admin blog routes', async () => {
+      const plain = await createTestUser({ groups: ['users'] });
+      const res = await app.inject({
+        method: 'GET',
+        url: '/admin/blogs',
+        headers: authHeader(plain.token),
+      });
+      expect(res.statusCode).toBe(403);
     });
 
     it('requires an english title', async () => {

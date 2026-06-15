@@ -169,6 +169,61 @@ export default async function quizRoutes(
   if (!getAuthHandler) return;
 
   /**
+   * Ownership helpers. A quiz belongs to the user whose paid payment created
+   * the playlist association it hangs off of:
+   *   quiz -> payment_has_playlist -> payment -> user
+   * The JWT carries the user's string `userId` (request.user.userId).
+   */
+  async function userOwnsQuiz(
+    quizId: number,
+    userId: string | undefined
+  ): Promise<boolean> {
+    if (!userId || !Number.isInteger(quizId)) return false;
+    const rows = await prisma.$queryRaw<{ id: number }[]>`
+      SELECT q.id FROM quizzes q
+      JOIN payment_has_playlist php ON php.id = q.paymentHasPlaylistId
+      JOIN payments p ON p.id = php.paymentId
+      JOIN users u ON u.id = p.userId
+      WHERE q.id = ${quizId} AND u.userId = ${userId}
+      LIMIT 1
+    `;
+    return rows.length > 0;
+  }
+
+  async function userOwnsPlaylistAssoc(
+    paymentHasPlaylistId: number,
+    userId: string | undefined
+  ): Promise<boolean> {
+    if (!userId || !Number.isInteger(paymentHasPlaylistId)) return false;
+    const rows = await prisma.$queryRaw<{ id: number }[]>`
+      SELECT php.id FROM payment_has_playlist php
+      JOIN payments p ON p.id = php.paymentId
+      JOIN users u ON u.id = p.userId
+      WHERE php.id = ${paymentHasPlaylistId} AND u.userId = ${userId}
+      LIMIT 1
+    `;
+    return rows.length > 0;
+  }
+
+  // preHandler enforcing quiz ownership on :quizId routes. Runs after the
+  // auth preHandler (which sets request.user). Replies 404 (not 403) so we
+  // don't leak the existence of other users' quizzes.
+  const requireQuizOwner = async (request: any, reply: any) => {
+    const quizId = parseInt(request.params.quizId);
+    if (!(await userOwnsQuiz(quizId, request.user?.userId))) {
+      return reply
+        .status(404)
+        .send({ success: false, error: 'Quiz not found' });
+    }
+  };
+
+  // Users-group auth + quiz-ownership, chained as preHandlers in order.
+  const usersAuth = getAuthHandler(['users']);
+  const ownQuizAuth = {
+    preHandler: [usersAuth.preHandler, requireQuizOwner],
+  };
+
+  /**
    * GET /api/quiz/ai-usage/:userHash
    * Get AI quiz generation usage for the current week
    */
@@ -386,7 +441,7 @@ export default async function quizRoutes(
    */
   fastify.get(
     '/api/quiz/:quizId',
-    getAuthHandler(['users']),
+    ownQuizAuth,
     async (request: any, reply: any) => {
       try {
         const { quizId } = request.params;
@@ -451,6 +506,16 @@ export default async function quizRoutes(
     async (request: any, reply: any) => {
       try {
         const { paymentHasPlaylistId } = request.params;
+        if (
+          !(await userOwnsPlaylistAssoc(
+            parseInt(paymentHasPlaylistId),
+            request.user?.userId
+          ))
+        ) {
+          return reply
+            .status(404)
+            .send({ success: false, error: 'Not found' });
+        }
         const quizzes = await prisma.quiz.findMany({
           where: { paymentHasPlaylistId: parseInt(paymentHasPlaylistId) },
           include: {
@@ -473,7 +538,7 @@ export default async function quizRoutes(
    */
   fastify.put(
     '/api/quiz/:quizId/question/:questionId',
-    getAuthHandler(['users']),
+    ownQuizAuth,
     async (request: any, reply: any) => {
       try {
         const { quizId, questionId } = request.params;
@@ -507,7 +572,7 @@ export default async function quizRoutes(
    */
   fastify.delete(
     '/api/quiz/:quizId/question/:questionId',
-    getAuthHandler(['users']),
+    ownQuizAuth,
     async (request: any, reply: any) => {
       try {
         const { quizId, questionId } = request.params;
@@ -533,7 +598,7 @@ export default async function quizRoutes(
    */
   fastify.post(
     '/api/quiz/:quizId/question/:questionId/regenerate',
-    getAuthHandler(['users']),
+    ownQuizAuth,
     async (request: any, reply: any) => {
       try {
         const { quizId, questionId } = request.params;
@@ -638,7 +703,7 @@ export default async function quizRoutes(
    */
   fastify.post(
     '/api/quiz/:quizId/question/:questionId/ai-options',
-    getAuthHandler(['users']),
+    ownQuizAuth,
     async (request: any, reply: any) => {
       try {
         const { quizId, questionId } = request.params;
@@ -696,7 +761,7 @@ export default async function quizRoutes(
    */
   fastify.post(
     '/api/quiz/:quizId/question/:questionId/upload-image',
-    getAuthHandler(['users']),
+    ownQuizAuth,
     async (request: any, reply: any) => {
       try {
         const { quizId, questionId } = request.params;
@@ -759,7 +824,7 @@ export default async function quizRoutes(
    */
   fastify.delete(
     '/api/quiz/:quizId/question/:questionId/image',
-    getAuthHandler(['users']),
+    ownQuizAuth,
     async (request: any, reply: any) => {
       try {
         const { quizId, questionId } = request.params;
@@ -797,7 +862,7 @@ export default async function quizRoutes(
    */
   fastify.post(
     '/api/quiz/:quizId/question',
-    getAuthHandler(['users']),
+    ownQuizAuth,
     async (request: any, reply: any) => {
       try {
         const { quizId } = request.params;
@@ -860,7 +925,7 @@ export default async function quizRoutes(
    */
   fastify.put(
     '/api/quiz/:quizId/reorder',
-    getAuthHandler(['users']),
+    ownQuizAuth,
     async (request: any, reply: any) => {
       try {
         const { quizId } = request.params;
@@ -894,7 +959,7 @@ export default async function quizRoutes(
    */
   fastify.put(
     '/api/quiz/:quizId',
-    getAuthHandler(['users']),
+    ownQuizAuth,
     async (request: any, reply: any) => {
       try {
         const { quizId } = request.params;
@@ -923,7 +988,7 @@ export default async function quizRoutes(
    */
   fastify.delete(
     '/api/quiz/:quizId',
-    getAuthHandler(['users']),
+    ownQuizAuth,
     async (request: any, reply: any) => {
       try {
         const { quizId } = request.params;
@@ -946,7 +1011,7 @@ export default async function quizRoutes(
    */
   fastify.post(
     '/api/quiz/:quizId/room',
-    getAuthHandler(['users']),
+    ownQuizAuth,
     async (request: any, reply: any) => {
       try {
         const { quizId } = request.params;
@@ -1176,7 +1241,7 @@ export default async function quizRoutes(
    */
   fastify.post(
     '/api/quiz/:quizId/question/:questionId/wikimedia-image',
-    getAuthHandler(['users']),
+    ownQuizAuth,
     async (request: any, reply: any) => {
       try {
         const { quizId, questionId } = request.params;

@@ -419,11 +419,10 @@ describe('quiz routes', () => {
       ).toBe(0);
     });
 
-    it('SUSPECTED BUG: any authenticated user can read another user\'s quiz', async () => {
-      // The quiz CRUD endpoints only check the "users" group — there is no
-      // ownership check linking the quiz back to the requesting user. This
-      // test documents the actual (insecure) behavior; if it starts failing
-      // with a 403/404 the hole has been fixed and the assertion should flip.
+    it('FIXED: a stranger cannot read another user\'s quiz (404)', async () => {
+      // quizRoutes now enforces ownership (quiz -> payment_has_playlist ->
+      // payment -> user) on every :quizId route, replying 404 so the
+      // existence of other users' quizzes is not leaked.
       const quiz = await seedQuiz(fix, 1);
       const stranger = await createTestUser();
       const res = await app.inject({
@@ -431,8 +430,33 @@ describe('quiz routes', () => {
         url: `/api/quiz/${quiz.id}`,
         headers: authHeader(stranger.token),
       });
-      expect(res.statusCode).toBe(200);
-      expect(res.json().quiz.id).toBe(quiz.id);
+      expect(res.statusCode).toBe(404);
+    });
+
+    it('FIXED: a stranger cannot delete another user\'s quiz (404)', async () => {
+      const quiz = await seedQuiz(fix, 1);
+      const stranger = await createTestUser();
+      const res = await app.inject({
+        method: 'DELETE',
+        url: `/api/quiz/${quiz.id}`,
+        headers: authHeader(stranger.token),
+      });
+      expect(res.statusCode).toBe(404);
+      // The quiz must still exist.
+      const stillThere = await prisma().quiz.findUnique({
+        where: { id: quiz.id },
+      });
+      expect(stillThere).not.toBeNull();
+    });
+
+    it('FIXED: a stranger cannot list quizzes for a playlist they do not own (404)', async () => {
+      const stranger = await createTestUser();
+      const res = await app.inject({
+        method: 'GET',
+        url: `/api/quiz/list/${fix.php.id}`,
+        headers: authHeader(stranger.token),
+      });
+      expect(res.statusCode).toBe(404);
     });
   });
 

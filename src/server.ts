@@ -136,6 +136,17 @@ class Server {
       };
     };
 
+    // Decorate fastify.authenticate so routes that use the
+    // `{ preHandler: fastify.authenticate(['admin']) }` pattern (e.g.
+    // blogRoutes) actually get a real auth preHandler. Without this the
+    // decorator is undefined and those routes were silently public.
+    this.fastify.decorate(
+      'authenticate',
+      (allowedGroups: string[] = []) =>
+        (request: any, reply: any) =>
+          verifyTokenMiddleware(request, reply, allowedGroups)
+    );
+
     // Register route modules
     await accountRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
     await adminRoutes(this.fastify, verifyTokenMiddleware, getAuthHandler);
