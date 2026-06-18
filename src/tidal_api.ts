@@ -2,6 +2,7 @@ import crypto from 'crypto';
 import { color } from 'console-log-colors';
 import Settings from './settings';
 import Logger from './logger';
+import PushoverClient from './pushover';
 
 // Authorization URL (user-facing login page)
 const TIDAL_LOGIN_URL = 'https://login.tidal.com';
@@ -19,6 +20,7 @@ class TidalApi {
   private static instance: TidalApi;
   private settings = Settings.getInstance();
   private logger = new Logger();
+  private pushover = new PushoverClient();
 
   // PKCE state stored temporarily during auth flow
   private codeVerifier: string | null = null;
@@ -30,7 +32,11 @@ class TidalApi {
   constructor() {
     this.clientId = process.env.TIDAL_CLIENT_ID || '';
     this.clientSecret = process.env.TIDAL_CLIENT_SECRET || '';
-    this.redirectUri = process.env.TIDAL_REDIRECT_URI || '';
+    // The Tidal OAuth redirect must point at this backend's GET /tidal/callback.
+    // Derived from API_URI so it follows the deployment (dev/staging/prod) automatically.
+    this.redirectUri = `${
+      process.env.API_URI || 'http://localhost:3004'
+    }/tidal/callback`;
 
     if (!this.clientId) {
       this.logger.log('WARNING: TIDAL_CLIENT_ID not set in environment');
@@ -137,6 +143,10 @@ class TidalApi {
       await this.settings.setSetting('tidal_access_token', tokenData.access_token);
       if (tokenData.refresh_token) {
         await this.settings.setSetting('tidal_refresh_token', tokenData.refresh_token);
+        await this.settings.setSetting(
+          'tidal_refresh_token_obtained_at',
+          Date.now().toString()
+        );
       }
       const expiresAt = Date.now() + tokenData.expires_in * 1000;
       await this.settings.setSetting('tidal_token_expires_at', expiresAt.toString());
@@ -190,8 +200,14 @@ class TidalApi {
             `[${color.white.bold('tidal')}] Token refresh failed: ${response.status} - ${JSON.stringify(errorData)}`
           )
         );
-        // Clear tokens if refresh fails
-        await this.clearTokens();
+        // Only discard the refresh token when it is permanently dead (invalid_grant /
+        // auth error). Transient failures (5xx, network) must keep the token so the
+        // next call can retry, otherwise a brief Tidal outage forces a manual re-login.
+        const isInvalidGrant =
+          response.status === 400 || response.status === 401 || errorData.error === 'invalid_grant';
+        if (isInvalidGrant) {
+          await this.handleExpiredRefreshToken();
+        }
         return null;
       }
 
@@ -201,6 +217,11 @@ class TidalApi {
       await this.settings.setSetting('tidal_access_token', tokenData.access_token);
       if (tokenData.refresh_token) {
         await this.settings.setSetting('tidal_refresh_token', tokenData.refresh_token);
+        // A rotated refresh token starts a fresh expiry window.
+        await this.settings.setSetting(
+          'tidal_refresh_token_obtained_at',
+          Date.now().toString()
+        );
       }
       const expiresAt = Date.now() + tokenData.expires_in * 1000;
       await this.settings.setSetting('tidal_token_expires_at', expiresAt.toString());
@@ -249,7 +270,40 @@ class TidalApi {
     await this.settings.setSetting('tidal_access_token', '');
     await this.settings.setSetting('tidal_refresh_token', '');
     await this.settings.setSetting('tidal_token_expires_at', '');
+    await this.settings.setSetting('tidal_refresh_token_obtained_at', '');
     await this.settings.setSetting('tidal_code_verifier', '');
+  }
+
+  /**
+   * Handles a permanently-expired/revoked Tidal refresh token (invalid_grant).
+   * Discards the stored tokens so we never retry a known-bad token, and alerts an
+   * admin (via Pushover) to re-authorize Tidal from the admin bulk-actions panel.
+   * (We don't embed a login URL here: Tidal's PKCE flow stores a one-shot code
+   * verifier, so the URL must be generated at the moment the admin starts the flow.)
+   */
+  private async handleExpiredRefreshToken(): Promise<void> {
+    await this.clearTokens();
+
+    this.logger.log(
+      color.red.bold(
+        `[${color.white.bold(
+          'tidal'
+        )}] Refresh token invalid_grant - discarded stored tokens. Re-authorization required via the admin panel.`
+      )
+    );
+
+    this.pushover.sendMessage(
+      {
+        title: '🎵 Tidal re-authorization required',
+        message:
+          'The Tidal refresh token expired/was revoked and has been discarded. ' +
+          'Tidal access is down until the app is re-authorized from the admin bulk-actions panel.',
+        priority: 1,
+        sound: 'siren',
+      },
+      '',
+      true
+    );
   }
 
   /**

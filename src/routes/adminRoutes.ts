@@ -38,7 +38,12 @@ import BrokenLink from '../brokenLink';
 import Translation from '../translation';
 import PostNL from '../postnl';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
-import { PRINTER_TYPES } from '../config/constants';
+import Settings from '../settings';
+import {
+  PRINTER_TYPES,
+  SPOTIFY_REFRESH_TOKEN_TTL_DAYS,
+  TIDAL_REFRESH_TOKEN_TTL_DAYS,
+} from '../config/constants';
 import path from 'path';
 import fs from 'fs';
 import fsPromises from 'fs/promises';
@@ -4929,6 +4934,62 @@ export default async function adminRoutes(
         return reply.status(500).send({
           success: false,
           error: error.message || 'Failed to get provider status',
+        });
+      }
+    }
+  );
+
+  // Music service token status (refresh-token lifetime + access-token validity).
+  // Used by the admin bulk-actions panel to show when a manual re-login is due.
+  fastify.get(
+    '/admin/music-token-status',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const settings = Settings.getInstance();
+        const DAY_MS = 24 * 60 * 60 * 1000;
+
+        const parseTs = (value: string | null): number | null => {
+          if (!value) return null;
+          const n = parseInt(value, 10);
+          return Number.isFinite(n) && n > 0 ? n : null;
+        };
+
+        const buildStatus = async (
+          prefix: 'spotify' | 'tidal',
+          ttlDays: number
+        ) => {
+          const [refreshToken, expiresAtStr, obtainedAtStr] = await Promise.all([
+            settings.getSetting(`${prefix}_refresh_token` as any),
+            settings.getSetting(`${prefix}_token_expires_at` as any),
+            settings.getSetting(`${prefix}_refresh_token_obtained_at` as any),
+          ]);
+
+          const obtainedAt = parseTs(obtainedAtStr);
+          return {
+            connected: !!refreshToken, // empty string or null both mean "not connected"
+            accessTokenExpiresAt: parseTs(expiresAtStr),
+            refreshTokenObtainedAt: obtainedAt,
+            refreshTokenExpiresAt:
+              obtainedAt !== null ? obtainedAt + ttlDays * DAY_MS : null,
+            refreshTokenTtlDays: ttlDays,
+          };
+        };
+
+        const [spotify, tidal] = await Promise.all([
+          buildStatus('spotify', SPOTIFY_REFRESH_TOKEN_TTL_DAYS),
+          buildStatus('tidal', TIDAL_REFRESH_TOKEN_TTL_DAYS),
+        ]);
+
+        return reply.send({
+          success: true,
+          now: Date.now(),
+          services: { spotify, tidal },
+        });
+      } catch (error: any) {
+        return reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to get music token status',
         });
       }
     }

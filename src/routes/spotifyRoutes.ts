@@ -8,10 +8,30 @@ export default async function spotifyRoutes(fastify: FastifyInstance) {
   const spotify = Spotify.getInstance();
   const utils = new Utils();
 
-  // Get Spotify authorization URL
+  // Get Spotify authorization URL (returns the URL so a caller/admin can start re-auth)
   fastify.get('/spotify/auth-url', async (_request, reply) => {
     const authUrl = spotify.getAuthorizationUrl();
-    reply.send({ success: true });
+    if (!authUrl) {
+      reply.send({ success: false, error: 'Missing Spotify Client ID' });
+      return;
+    }
+    reply.send({ success: true, authUrl });
+  });
+
+  // One-click re-authorization: redirect the browser straight to Spotify's login.
+  // After login Spotify redirects to GET /spotify_callback, which stores the new
+  // access + refresh token. Use this to manually mint a fresh refresh token (e.g.
+  // after the previous one expires under Spotify's 6-month limit).
+  fastify.get('/spotify/login', async (_request, reply) => {
+    const authUrl = spotify.getAuthorizationUrl();
+    if (!authUrl) {
+      reply
+        .code(500)
+        .type('text/html')
+        .send('<html><body><h1>Spotify login unavailable</h1><p>Missing Spotify Client ID.</p></body></html>');
+      return;
+    }
+    reply.redirect(authUrl);
   });
 
   // Get Spotify playlist tracks

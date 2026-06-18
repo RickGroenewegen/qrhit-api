@@ -2,6 +2,7 @@ import axios, { AxiosError, AxiosResponse } from 'axios'; // Import AxiosRespons
 import Logger from './logger';
 import Settings from './settings';
 import Cache from './cache';
+import PushoverClient from './pushover';
 import { color } from 'console-log-colors';
 import { ApiResult } from './interfaces/ApiResult'; // Assuming ApiResult interface exists
 import { ProgressCallback } from './interfaces/IMusicProvider';
@@ -30,11 +31,14 @@ interface SpotifyErrorResponse {
 class SpotifyApi {
   private logger = new Logger();
   private settings = Settings.getInstance();
+  private pushover = new PushoverClient();
   private clientId = process.env['SPOTIFY_CLIENT_ID'];
   private clientSecret = process.env['SPOTIFY_CLIENT_SECRET'];
-  private redirectUri =
-    process.env['SPOTIFY_REDIRECT_URI'] ||
-    'http://localhost:3004/spotify_callback'; // Default fallback
+  // The Spotify OAuth redirect must point at this backend's GET /spotify_callback.
+  // Derived from API_URI so it follows the deployment (dev/staging/prod) automatically.
+  private redirectUri = `${
+    process.env['API_URI'] || 'http://localhost:3004'
+  }/spotify_callback`;
 
   /**
    * Retrieves a valid access token, refreshing if necessary.
@@ -131,6 +135,11 @@ class SpotifyApi {
           'spotify_refresh_token',
           newRefreshToken
         );
+        // A rotated refresh token starts a fresh 6-month expiry window.
+        await this.settings.setSetting(
+          'spotify_refresh_token_obtained_at',
+          Date.now().toString()
+        );
         this.logger.log(color.blue(`[${color.white.bold('spotify')}] Stored new refresh token.`));
       }
 
@@ -139,15 +148,71 @@ class SpotifyApi {
       );
       return access_token;
     } catch (error) {
+      // The token endpoint returns OAuth-style errors: { error: 'invalid_grant', ... }.
+      // A 400 invalid_grant means the refresh token is permanently dead (revoked, or
+      // expired under Spotify's 6-month limit). Per Spotify's guidance we must discard
+      // it and NOT retry — anything else (network blip, 5xx, 429) is transient and the
+      // refresh token must be kept so the next call can retry.
+      const axiosError = axios.isAxiosError(error) ? error : null;
+      const status = axiosError?.response?.status;
+      const oauthError =
+        typeof (axiosError?.response?.data as any)?.error === 'string'
+          ? ((axiosError?.response?.data as any).error as string)
+          : undefined;
+      const isInvalidGrant = status === 400 && oauthError === 'invalid_grant';
+
       this.logger.log(
-        color.red.bold(`[${color.white.bold('spotify')}] Token refresh error: ${error}`)
+        color.red.bold(
+          `[${color.white.bold('spotify')}] Token refresh error: ${oauthError || error}`
+        )
       );
-      // Optionally clear tokens if refresh fails permanently (e.g., invalid refresh token)
-      // await this.settings.deleteSetting('spotify_refresh_token');
-      // await this.settings.deleteSetting('spotify_access_token');
-      // await this.settings.deleteSetting('spotify_token_expires_at');
+
+      if (isInvalidGrant) {
+        await this.handleExpiredRefreshToken();
+      }
       return null;
     }
+  }
+
+  /**
+   * Handles a permanently-expired/revoked Spotify refresh token (invalid_grant).
+   * Discards the stored tokens so we never retry a known-bad token, and alerts an
+   * admin (via Pushover) with a one-click link to re-authorize the app's Spotify
+   * connection. The app's Spotify access is down until re-authorization completes.
+   */
+  private async handleExpiredRefreshToken(): Promise<void> {
+    await this.settings.deleteSetting('spotify_refresh_token');
+    await this.settings.deleteSetting('spotify_access_token');
+    await this.settings.deleteSetting('spotify_token_expires_at');
+    await this.settings.deleteSetting('spotify_refresh_token_obtained_at');
+
+    const authUrl = this.getAuthorizationUrl();
+
+    this.logger.log(
+      color.red.bold(
+        `[${color.white.bold(
+          'spotify'
+        )}] Refresh token invalid_grant - discarded stored tokens. Re-authorization required: ${color.white.bold(
+          authUrl || 'auth url unavailable'
+        )}`
+      )
+    );
+
+    this.pushover.sendMessage(
+      {
+        title: '🎵 Spotify re-authorization required',
+        message:
+          'The Spotify refresh token returned invalid_grant and has been discarded. ' +
+          'Spotify access is down until the app is re-authorized.' +
+          (authUrl ? `\n\nTap to re-authorize: ${authUrl}` : ''),
+        url: authUrl ?? undefined,
+        url_title: 'Re-authorize Spotify',
+        priority: 1,
+        sound: 'siren',
+      },
+      '',
+      true
+    );
   }
 
   /**
@@ -192,6 +257,10 @@ class SpotifyApi {
       );
       if (refresh_token) {
         await this.settings.setSetting('spotify_refresh_token', refresh_token);
+        await this.settings.setSetting(
+          'spotify_refresh_token_obtained_at',
+          Date.now().toString()
+        );
       } else {
         this.logger.log(
           color.yellow('No refresh token received from auth code grant.')

@@ -84,6 +84,13 @@ vi.mock('../../../src/cache', () => ({
   },
 }));
 
+// Pushover is fired on invalid_grant; stub it so the unit test does no real I/O.
+vi.mock('../../../src/pushover', () => ({
+  default: class {
+    async sendMessage() {}
+  },
+}));
+
 import SpotifyApi from '../../../src/spotify_api';
 
 const CLIENT_ID = 'test-client-id';
@@ -98,7 +105,8 @@ function makeApi(): InstanceType<typeof SpotifyApi> {
   // every `new SpotifyApi()`.
   process.env['SPOTIFY_CLIENT_ID'] = CLIENT_ID;
   process.env['SPOTIFY_CLIENT_SECRET'] = CLIENT_SECRET;
-  process.env['SPOTIFY_REDIRECT_URI'] = REDIRECT_URI;
+  // Redirect URI is derived from API_URI (+ /spotify_callback).
+  process.env['API_URI'] = 'http://localhost:3004';
   return new SpotifyApi();
 }
 
@@ -199,6 +207,8 @@ describe('SpotifyApi.getAccessToken', () => {
     // New tokens are persisted with a 60-second expiry buffer.
     expect(h.settingsStore.get('spotify_access_token')).toBe('fresh-token');
     expect(h.settingsStore.get('spotify_refresh_token')).toBe('refresh-2');
+    // A rotated refresh token restarts the 6-month tracking clock.
+    expect(Number(h.settingsStore.get('spotify_refresh_token_obtained_at'))).toBeGreaterThanOrEqual(before);
     const expiresAt = Number(h.settingsStore.get('spotify_token_expires_at'));
     expect(expiresAt).toBeGreaterThanOrEqual(before + (3600 - 60) * 1000);
     expect(expiresAt).toBeLessThanOrEqual(Date.now() + (3600 - 60) * 1000);
@@ -216,12 +226,30 @@ describe('SpotifyApi.getAccessToken', () => {
     expect(h.settingsStore.get('spotify_refresh_token')).toBe('refresh-1');
   });
 
-  it('returns null when the refresh request fails', async () => {
+  it('discards the dead refresh token on a 400 invalid_grant and does not retry', async () => {
     h.settingsStore.set('spotify_refresh_token', 'refresh-1');
+    h.settingsStore.set('spotify_refresh_token_obtained_at', '123');
     h.axiosPost.mockRejectedValueOnce(axiosError(400, { data: { error: 'invalid_grant' } }));
 
     await expect(makeApi().getAccessToken()).resolves.toBeNull();
+
+    // Spotify's 6-month expiry: discard the token, never retry a known-bad one.
     expect(h.axiosPost).toHaveBeenCalledTimes(1);
+    expect(h.deleteSetting).toHaveBeenCalledWith('spotify_refresh_token');
+    expect(h.deleteSetting).toHaveBeenCalledWith('spotify_access_token');
+    expect(h.deleteSetting).toHaveBeenCalledWith('spotify_token_expires_at');
+    expect(h.deleteSetting).toHaveBeenCalledWith('spotify_refresh_token_obtained_at');
+    expect(h.settingsStore.has('spotify_refresh_token')).toBe(false);
+  });
+
+  it('keeps the refresh token on a transient refresh failure (5xx / network)', async () => {
+    h.settingsStore.set('spotify_refresh_token', 'refresh-1');
+    h.axiosPost.mockRejectedValueOnce(axiosError(503));
+
+    await expect(makeApi().getAccessToken()).resolves.toBeNull();
+    // A brief outage must not force a manual re-login.
+    expect(h.deleteSetting).not.toHaveBeenCalledWith('spotify_refresh_token');
+    expect(h.settingsStore.get('spotify_refresh_token')).toBe('refresh-1');
   });
 });
 
@@ -252,6 +280,8 @@ describe('SpotifyApi.getTokensFromAuthCode', () => {
     expect(config.headers.Authorization).toBe(BASIC_AUTH);
     expect(h.settingsStore.get('spotify_access_token')).toBe('auth-access');
     expect(h.settingsStore.get('spotify_refresh_token')).toBe('auth-refresh');
+    // Issuance time is stamped so the 6-month expiry can be estimated later.
+    expect(h.settingsStore.get('spotify_refresh_token_obtained_at')).toBeTruthy();
   });
 
   it('returns null when the exchange fails', async () => {

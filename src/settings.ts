@@ -8,9 +8,11 @@ export type SettingKey =
   | 'spotify_access_token'
   | 'spotify_refresh_token'
   | 'spotify_token_expires_at' // Store expiry time as Unix timestamp (milliseconds)
+  | 'spotify_refresh_token_obtained_at' // When the current refresh token was issued (ms); used to estimate the 6-month expiry
   | 'tidal_access_token'
   | 'tidal_refresh_token'
   | 'tidal_token_expires_at'
+  | 'tidal_refresh_token_obtained_at' // When the current refresh token was issued (ms)
   | 'tidal_code_verifier'; // PKCE code verifier for OAuth flow
 
 class Settings {

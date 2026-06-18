@@ -67,6 +67,13 @@ vi.mock('../../../src/settings', () => ({
   },
 }));
 
+// Pushover is fired on invalid_grant; stub it so the unit test does no real I/O.
+vi.mock('../../../src/pushover', () => ({
+  default: class {
+    async sendMessage() {}
+  },
+}));
+
 import SpotifyApi2 from '../../../src/spotify_api2';
 
 const CLIENT_ID = 'test-client-id';
@@ -80,7 +87,8 @@ const V2_TRACK_FIELDS =
 function makeApi(): InstanceType<typeof SpotifyApi2> {
   process.env['SPOTIFY_CLIENT_ID'] = CLIENT_ID;
   process.env['SPOTIFY_CLIENT_SECRET'] = CLIENT_SECRET;
-  process.env['SPOTIFY_REDIRECT_URI'] = REDIRECT_URI;
+  // Redirect URI is derived from API_URI (+ /spotify_callback).
+  process.env['API_URI'] = 'http://localhost:3004';
   return new SpotifyApi2();
 }
 
@@ -173,6 +181,26 @@ describe('SpotifyApi2.getAccessToken', () => {
 
     h.settingsStore.clear();
     await expect(makeApi().getAccessToken()).resolves.toBeNull();
+  });
+
+  it('discards the dead refresh token on a 400 invalid_grant', async () => {
+    h.settingsStore.set('spotify_refresh_token', 'refresh-1');
+    h.settingsStore.set('spotify_refresh_token_obtained_at', '123');
+    h.axiosPost.mockRejectedValueOnce(axiosError(400, { data: { error: 'invalid_grant' } }));
+
+    await expect(makeApi().getAccessToken()).resolves.toBeNull();
+    expect(h.deleteSetting).toHaveBeenCalledWith('spotify_refresh_token');
+    expect(h.deleteSetting).toHaveBeenCalledWith('spotify_refresh_token_obtained_at');
+    expect(h.settingsStore.has('spotify_refresh_token')).toBe(false);
+  });
+
+  it('keeps the refresh token on a transient (5xx) refresh failure', async () => {
+    h.settingsStore.set('spotify_refresh_token', 'refresh-1');
+    h.axiosPost.mockRejectedValueOnce(axiosError(503));
+
+    await expect(makeApi().getAccessToken()).resolves.toBeNull();
+    expect(h.deleteSetting).not.toHaveBeenCalledWith('spotify_refresh_token');
+    expect(h.settingsStore.get('spotify_refresh_token')).toBe('refresh-1');
   });
 });
 

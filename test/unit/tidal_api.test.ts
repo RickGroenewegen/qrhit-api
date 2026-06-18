@@ -40,6 +40,13 @@ vi.mock('../../src/cache', () => ({
   },
 }));
 
+// Pushover is fired when a refresh token is discarded; stub it (no real I/O).
+vi.mock('../../src/pushover', () => ({
+  default: class {
+    async sendMessage() {}
+  },
+}));
+
 // ---------------------------------------------------------------------------
 // Import under test (after mocks)
 // ---------------------------------------------------------------------------
@@ -52,7 +59,9 @@ import TidalApi from '../../src/tidal_api';
 
 process.env.TIDAL_CLIENT_ID = 'test-client-id';
 process.env.TIDAL_CLIENT_SECRET = 'test-secret';
-process.env.TIDAL_REDIRECT_URI = 'https://example.com/callback';
+// Redirect URI is now derived from API_URI (+ /tidal/callback).
+process.env.API_URI = 'https://example.com';
+const TIDAL_REDIRECT_URI = 'https://example.com/tidal/callback';
 
 // ---------------------------------------------------------------------------
 // fetch mock infrastructure
@@ -117,7 +126,7 @@ describe('getAuthorizationUrl', () => {
     const url = api.getAuthorizationUrl();
     const parsed = new URL(url);
     expect(parsed.searchParams.get('client_id')).toBe('test-client-id');
-    expect(parsed.searchParams.get('redirect_uri')).toBe('https://example.com/callback');
+    expect(parsed.searchParams.get('redirect_uri')).toBe(TIDAL_REDIRECT_URI);
     expect(parsed.searchParams.get('scope')).toBe('playlists.read');
     expect(parsed.searchParams.get('code_challenge_method')).toBe('S256');
     expect(parsed.searchParams.get('response_type')).toBe('code');
@@ -286,9 +295,11 @@ describe('refreshAccessToken', () => {
     expect(result).toBe('at-new');
     expect(settingsStore.get('tidal_access_token')).toBe('at-new');
     expect(settingsStore.get('tidal_refresh_token')).toBe('rt-new');
+    // A rotated refresh token restarts the expiry-tracking clock.
+    expect(settingsStore.get('tidal_refresh_token_obtained_at')).toBeTruthy();
   });
 
-  it('calls clearTokens and returns null on non-ok response', async () => {
+  it('discards tokens and returns null on an auth-error (401) response', async () => {
     settingsStore.set('tidal_refresh_token', 'rt-bad');
     settingsStore.set('tidal_access_token', 'at-old');
 
@@ -297,9 +308,22 @@ describe('refreshAccessToken', () => {
     const api = getInstance();
     const result = await api.refreshAccessToken();
     expect(result).toBeNull();
-    // clearTokens sets all four keys to ''
+    // clearTokens blanks every token key.
     expect(settingsStore.get('tidal_access_token')).toBe('');
     expect(settingsStore.get('tidal_refresh_token')).toBe('');
+  });
+
+  it('keeps the refresh token on a transient (5xx) refresh failure', async () => {
+    settingsStore.set('tidal_refresh_token', 'rt-keep');
+    settingsStore.set('tidal_access_token', 'at-old');
+
+    mockFetch.mockResolvedValueOnce(makeResponse({ error: 'server_error' }, 503));
+
+    const api = getInstance();
+    const result = await api.refreshAccessToken();
+    expect(result).toBeNull();
+    // A brief Tidal outage must not force a manual re-login.
+    expect(settingsStore.get('tidal_refresh_token')).toBe('rt-keep');
   });
 
   it('returns null on fetch exception', async () => {

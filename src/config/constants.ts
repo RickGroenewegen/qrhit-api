@@ -56,3 +56,10 @@ export const DEFAULT_PRINTER_TYPE: PrinterType = PRINTER_TYPE.PRINTNBIND;
 export const SPOTIFY_CONCURRENT_REQUESTS = 2; // Very conservative: 2 concurrent requests (changed from 3)
 export const SPOTIFY_PAGE_LIMIT = 100; // Test value, will fallback to 50 if not supported
 export const SPOTIFY_PAGE_LIMIT_FALLBACK = 50; // Confirmed Spotify API limit
+
+// Refresh-token lifetimes used to estimate when a manual re-authorization is due.
+// Spotify announced (June 2026) that user refresh tokens expire 6 months after issue.
+export const SPOTIFY_REFRESH_TOKEN_TTL_DAYS = 180;
+// Tidal's exact refresh-token lifetime is not documented in our integration; we assume
+// the same 6-month window as a safe default. Adjust here if Tidal confirms otherwise.
+export const TIDAL_REFRESH_TOKEN_TTL_DAYS = 180;
