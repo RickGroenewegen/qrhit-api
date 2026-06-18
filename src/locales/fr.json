@@ -661,5 +661,7 @@
   "mail.boxInstructionsStep5": "Plie le séparateur sur chaque ligne de pli.",
   "mail.boxInstructionsStep6": "Mets le séparateur dans la boîte, il collera aux bandes.",
   "mail.boxInstructionsStep7": "Mets tes cartes dans la boîte.",
-  "mail.boxInstructionsStep8": "Couvre les cartes avec le séparateur et ferme la boîte."
+  "mail.boxInstructionsStep8": "Couvre les cartes avec le séparateur et ferme la boîte.",
+  "invoice.giftBox": "Boîte cadeau",
+  "invoice.qrGames": "QRGames"
 }

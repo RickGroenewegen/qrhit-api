@@ -660,5 +660,7 @@
   "mail.boxInstructionsStep5": "Vouw de kaartverdeler langs alle vouwlijnen.",
   "mail.boxInstructionsStep6": "Zet de kaartverdeler in de doos. Hij plakt aan de strips.",
   "mail.boxInstructionsStep7": "Doe je kaarten in de doos.",
-  "mail.boxInstructionsStep8": "Dek de kaarten af met de verdeler en sluit de doos."
+  "mail.boxInstructionsStep8": "Dek de kaarten af met de verdeler en sluit de doos.",
+  "invoice.giftBox": "Cadeaudoos",
+  "invoice.qrGames": "QRGames"
 }

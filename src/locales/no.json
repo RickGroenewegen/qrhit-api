@@ -637,5 +637,7 @@
   "mail.boxInstructionsStep5": "Brett kortskillet langs alle bretter.",
   "mail.boxInstructionsStep6": "Sett kortskillet i boksen, det fester seg til stripene.",
   "mail.boxInstructionsStep7": "Legg kortene dine i boksen.",
-  "mail.boxInstructionsStep8": "Dekk kortene med skillet og lukk boksen."
+  "mail.boxInstructionsStep8": "Dekk kortene med skillet og lukk boksen.",
+  "invoice.giftBox": "Gaveeske",
+  "invoice.qrGames": "QRGames"
 }

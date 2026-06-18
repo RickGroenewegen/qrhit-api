@@ -656,5 +656,7 @@
   "mail.boxInstructionsStep5": "Złóż przekładkę wzdłuż wszystkich linii.",
   "mail.boxInstructionsStep6": "Włóż przekładkę do pudełka, przyklei się do pasków.",
   "mail.boxInstructionsStep7": "Włóż karty do pudełka.",
-  "mail.boxInstructionsStep8": "Przykryj karty przekładką i zamknij pudełko."
+  "mail.boxInstructionsStep8": "Przykryj karty przekładką i zamknij pudełko.",
+  "invoice.giftBox": "Pudełko prezentowe",
+  "invoice.qrGames": "QRGames"
 }

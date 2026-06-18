@@ -656,5 +656,7 @@
   "mail.boxInstructionsStep5": "Dobra o divisor em todas as dobras.",
   "mail.boxInstructionsStep6": "Coloca o divisor na caixa, ele gruda nas tiras.",
   "mail.boxInstructionsStep7": "Coloca suas cartas na caixa.",
-  "mail.boxInstructionsStep8": "Cobre as cartas com o divisor e fecha a caixa."
+  "mail.boxInstructionsStep8": "Cobre as cartas com o divisor e fecha a caixa.",
+  "invoice.giftBox": "Caixa de presente",
+  "invoice.qrGames": "QRGames"
 }

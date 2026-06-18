@@ -158,6 +158,8 @@
 	"invoice.cards": "QR Cards",
 	"invoice.physicalProduct": "QR music cards",
 	"invoice.giftcard": "Gift card",
+	"invoice.giftBox": "Gift box",
+	"invoice.qrGames": "QRGames",
 	"payment.playlist": "Playlist",
 	"payment.giftcard": "Gift card",
 	"payment.cards": "QR Cards",

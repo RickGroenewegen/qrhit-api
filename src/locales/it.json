@@ -656,5 +656,7 @@
   "mail.boxInstructionsStep5": "Piega il divisore su tutte le linee.",
   "mail.boxInstructionsStep6": "Metti il divisore nella scatola, si attacca alle strisce.",
   "mail.boxInstructionsStep7": "Metti le carte nella scatola.",
-  "mail.boxInstructionsStep8": "Copri le carte col divisore e chiudi la scatola."
+  "mail.boxInstructionsStep8": "Copri le carte col divisore e chiudi la scatola.",
+  "invoice.giftBox": "Scatola regalo",
+  "invoice.qrGames": "QRGames"
 }

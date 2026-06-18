@@ -9217,5 +9217,31 @@
     "cn",
     "sv",
     "no"
+  ],
+  "invoice.giftBox": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "invoice.qrGames": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
   ]
 }

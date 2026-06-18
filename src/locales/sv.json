@@ -650,5 +650,7 @@
   "mail.boxInstructionsStep5": "Vik kortavdelaren längs alla viklinjer.",
   "mail.boxInstructionsStep6": "Lägg avdelaren i lådan, den fastnar på remsorna.",
   "mail.boxInstructionsStep7": "Lägg dina kort i lådan.",
-  "mail.boxInstructionsStep8": "Täck korten med avdelaren och stäng lådan."
+  "mail.boxInstructionsStep8": "Täck korten med avdelaren och stäng lådan.",
+  "invoice.giftBox": "Presentlåda",
+  "invoice.qrGames": "QRGames"
 }

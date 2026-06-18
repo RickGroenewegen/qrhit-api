@@ -651,5 +651,7 @@
   "mail.boxInstructionsStep5": "沿着所有折线折叠分隔片。",
   "mail.boxInstructionsStep6": "把分隔片放进盒子，会粘在胶条上。",
   "mail.boxInstructionsStep7": "把你的卡片放进盒子里。",
-  "mail.boxInstructionsStep8": "用分隔片盖住卡片，然后关上盒子。"
+  "mail.boxInstructionsStep8": "用分隔片盖住卡片，然后关上盒子。",
+  "invoice.giftBox": "礼品盒",
+  "invoice.qrGames": "QRGames"
 }

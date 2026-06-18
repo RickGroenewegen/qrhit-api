@@ -660,5 +660,7 @@
   "mail.boxInstructionsStep5": "Dobla el separador por todas las líneas.",
   "mail.boxInstructionsStep6": "Pon el separador en la caja, se pega a las tiras.",
   "mail.boxInstructionsStep7": "Pon tus cartas en la caja.",
-  "mail.boxInstructionsStep8": "Cubre las cartas con el separador y cierra la caja."
+  "mail.boxInstructionsStep8": "Cubre las cartas con el separador y cierra la caja.",
+  "invoice.giftBox": "Caja regalo",
+  "invoice.qrGames": "QRGames"
 }

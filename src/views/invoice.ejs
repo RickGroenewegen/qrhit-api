@@ -220,6 +220,52 @@
 					</tr>
 				<% }); %>
 
+				<% // Gift box and QRGames are VAT-inclusive add-ons charged at the
+				   // product tax rate, folded into the order total. Show them as
+				   // their own lines so the itemisation reconciles with the total.
+				   const addonRate = payment.taxRate || 0;
+				%>
+
+				<% if (payment.boxFee && payment.boxFee > 0) {
+					let boxQty = 0;
+					playlists.forEach(function(pl) {
+						if (pl.boxEnabled) { boxQty += (pl.boxQuantity || 0) * (pl.amount || 1); }
+					});
+					if (boxQty < 1) { boxQty = 1; }
+					const boxExclVAT = payment.reverseCharge ? payment.boxFee : payment.boxFee / (1 + addonRate / 100);
+					const boxVAT = payment.boxFee - boxExclVAT;
+				%>
+					<tr class="item">
+						<td><%= translations.giftBox || 'Gift box' %></td>
+						<td style="text-align:right;"><%= boxQty %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(displayRate *(boxExclVAT / boxQty)) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(displayRate *boxExclVAT) %></td>
+						<td style="text-align:right;"><%= payment.reverseCharge ? '—' : (payment.taxRate + '%') %></td>
+						<td style="text-align:right;"><%= payment.reverseCharge ? '—' : moneyFormatter.format(displayRate *boxVAT) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(displayRate *payment.boxFee) %></td>
+					</tr>
+				<% } %>
+
+				<% if (payment.gamesFee && payment.gamesFee > 0) {
+					let gamesQty = 0;
+					playlists.forEach(function(pl) {
+						if (pl.gamesEnabled) { gamesQty += 1; }
+					});
+					if (gamesQty < 1) { gamesQty = 1; }
+					const gamesExclVAT = payment.reverseCharge ? payment.gamesFee : payment.gamesFee / (1 + addonRate / 100);
+					const gamesVAT = payment.gamesFee - gamesExclVAT;
+				%>
+					<tr class="item">
+						<td><%= translations.qrGames || 'QRGames' %></td>
+						<td style="text-align:right;"><%= gamesQty %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(displayRate *(gamesExclVAT / gamesQty)) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(displayRate *gamesExclVAT) %></td>
+						<td style="text-align:right;"><%= payment.reverseCharge ? '—' : (payment.taxRate + '%') %></td>
+						<td style="text-align:right;"><%= payment.reverseCharge ? '—' : moneyFormatter.format(displayRate *gamesVAT) %></td>
+						<td style="text-align:right;"><%= moneyFormatter.format(displayRate *payment.gamesFee) %></td>
+					</tr>
+				<% } %>
+
 				<% if (orderType != 'digital') {
 					const shippingExclVAT = payment.shipping - payment.shippingVATPrice;
 				%>
@@ -247,11 +293,20 @@
 					<td colspan="6" style="text-align:right; color: #1e3a8a;"><strong><%= translations.reverseChargeLine || 'VAT reverse charged (0%)' %>:</strong></td>
 					<td style="text-align:right; color: #1e3a8a;"><strong><%= moneyFormatter.format(0) %></strong></td>
 				</tr>
-				<% } else { %>
-					<% if (payment.productVATPrice > 0) { %>
+				<% } else {
+					// Box and QRGames are taxed at the product rate; include their
+					// embedded VAT in the product VAT line so the breakdown sums to
+					// the (corrected) total VAT.
+					const summaryAddonsGross = (payment.boxFee || 0) + (payment.gamesFee || 0);
+					const summaryAddonsExclVAT = summaryAddonsGross / (1 + (payment.taxRate || 0) / 100);
+					const summaryAddonsVAT = summaryAddonsGross - summaryAddonsExclVAT;
+					const productBaseExclVAT = payment.productPriceWithoutTax + summaryAddonsExclVAT;
+					const productVATTotal = payment.productVATPrice + summaryAddonsVAT;
+				%>
+					<% if (productVATTotal > 0) { %>
 					<tr>
-						<td colspan="6" style="text-align:right;"><%= translations.vat %> <%= payment.taxRate %>% <%= translations.over %> <%= moneyFormatter.format(displayRate *payment.productPriceWithoutTax) %>:</td>
-						<td style="text-align:right;"><%= moneyFormatter.format(displayRate *payment.productVATPrice) %></td>
+						<td colspan="6" style="text-align:right;"><%= translations.vat %> <%= payment.taxRate %>% <%= translations.over %> <%= moneyFormatter.format(displayRate *productBaseExclVAT) %>:</td>
+						<td style="text-align:right;"><%= moneyFormatter.format(displayRate *productVATTotal) %></td>
 					</tr>
 					<% } %>
 

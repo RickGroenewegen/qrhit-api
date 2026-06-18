@@ -652,5 +652,7 @@
   "mail.boxInstructionsStep5": "仕切りを折り目に沿って全部折ってね。",
   "mail.boxInstructionsStep6": "仕切りを箱に入れて、テープにくっつくよ。",
   "mail.boxInstructionsStep7": "カードを箱に入れてね。",
-  "mail.boxInstructionsStep8": "仕切りでカードを覆って箱を閉めてね。"
+  "mail.boxInstructionsStep8": "仕切りでカードを覆って箱を閉めてね。",
+  "invoice.giftBox": "ギフトボックス",
+  "invoice.qrGames": "QRGames"
 }

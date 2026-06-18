@@ -661,5 +661,7 @@
   "mail.boxInstructionsStep5": "Falte den Karten-Trenner an allen Falzlinien.",
   "mail.boxInstructionsStep6": "Leg den Karten-Trenner in die Box. Er klebt an den Streifen.",
   "mail.boxInstructionsStep7": "Pack deine Karten in die Box.",
-  "mail.boxInstructionsStep8": "Deck die Karten mit dem Trenner ab und mach die Box zu."
+  "mail.boxInstructionsStep8": "Deck die Karten mit dem Trenner ab und mach die Box zu.",
+  "invoice.giftBox": "Geschenkbox",
+  "invoice.qrGames": "QRGames"
 }

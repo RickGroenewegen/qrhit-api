@@ -1924,8 +1924,25 @@ class Mollie {
         ).toFixed(2)
       );
 
+      // Box and QRGames fees are VAT-INCLUSIVE add-ons charged at the product
+      // tax rate (boxTierPrice / QRGAMES_UPGRADE_PRICE are gross amounts) and
+      // are folded straight into `total`. Back out the embedded VAT so the
+      // order's total output VAT (and the invoice) reflects it — otherwise
+      // the line items under-sum the total by the add-on VAT. When reverse
+      // charge applies taxRate is 0, so this is correctly 0 as well.
+      const addonsTaxRate = calculateResult.data.taxRate ?? 0;
+      const addonsGross =
+        (calculateResult.data.boxFee || 0) +
+        (calculateResult.data.gamesFee || 0);
+      const addonsVATPrice = parseFloat(
+        (
+          addonsGross -
+          addonsGross / (1 + addonsTaxRate / 100)
+        ).toFixed(2)
+      );
+
       const totalVATPrice = parseFloat(
-        (productVATPrice + shippingVATPrice).toFixed(2)
+        (productVATPrice + shippingVATPrice + addonsVATPrice).toFixed(2)
       );
 
       const playlists = await Promise.all(
@@ -2092,6 +2109,7 @@ class Mollie {
           printApiPrice: 0,
           discount: discountAmount,
           boxFee: calculateResult.data.boxFee || 0,
+          gamesFee: calculateResult.data.gamesFee || 0,
           currency: presentmentCurrency,
           exchangeRate: presentmentRate,
           totalPricePresentment:
@@ -2765,6 +2783,8 @@ class Mollie {
         totalPricePresentment: true,
         reverseCharge: true,
         vatIdChecked: true,
+        boxFee: true,
+        gamesFee: true,
         DiscountCodedUses: {
           select: {
             amount: true,
