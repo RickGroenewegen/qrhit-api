@@ -37,6 +37,7 @@ import AssetQueue from './assetQueue';
 import aiPlaylistRoutes from './routes/aiPlaylistRoutes';
 import aiAdminRoutes from './routes/aiAdminRoutes';
 import ExternalCardService from './externalCardService';
+import CalendarService from './calendarService';
 
 interface QueryParameters {
   [key: string]: string | string[];
@@ -276,6 +277,10 @@ class Server {
 
       // Initialize ExternalCardService (starts nightly import cron job)
       ExternalCardService.getInstance();
+
+      // Initialize CalendarService (starts monthly event-calendar prefill cron;
+      // production main server only — see startPrefillCron)
+      CalendarService.getInstance();
 
       const numCPUs = os.cpus().length;
       for (let i = 0; i < numCPUs; i++) {

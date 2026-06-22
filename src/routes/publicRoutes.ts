@@ -22,6 +22,7 @@ import { ChatService } from '../chat';
 import PushoverClient from '../pushover';
 import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
+import CalendarService from '../calendarService';
 import { FONTS } from '../fonts';
 import { BACKGROUNDS } from '../backgrounds';
 import { BOX_PRICE, BOX_MAX_CARDS, BOX_TIER_PRICES, EXTRA_TRACK_TIERS } from '../config/constants';
@@ -54,6 +55,39 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   const chatService = new ChatService();
   const promotional = Promotional.getInstance();
   const brokenLink = BrokenLink.getInstance();
+  const calendar = CalendarService.getInstance();
+
+  // Occasion landing pages (per language). Public, SSR-consumed, Redis-cached.
+  fastify.get('/occasions/:locale', async (request: any, reply: any) => {
+    try {
+      const { locale } = request.params;
+      const cacheKey = `occasions_list_v1_${locale}`;
+      const cached = await cache.get(cacheKey);
+      if (cached) return { success: true, occasions: JSON.parse(cached) };
+      const occasions = await calendar.listOccasions(locale);
+      await cache.set(cacheKey, JSON.stringify(occasions), 86400);
+      return { success: true, occasions };
+    } catch (e: any) {
+      logger.log(color.red.bold(`/occasions error: ${e.message || e}`));
+      return reply.status(500).send({ success: false, error: 'Failed' });
+    }
+  });
+
+  fastify.get('/occasions/:locale/:slug', async (request: any, reply: any) => {
+    try {
+      const { locale, slug } = request.params;
+      const cacheKey = `occasion_v1_${locale}_${slug}`;
+      const cached = await cache.get(cacheKey);
+      if (cached) return JSON.parse(cached);
+      const result = await calendar.getOccasionLanding(locale, slug);
+      if (!result.success) return reply.status(404).send(result);
+      await cache.set(cacheKey, JSON.stringify(result), 86400);
+      return result;
+    } catch (e: any) {
+      logger.log(color.red.bold(`/occasions/:slug error: ${e.message || e}`));
+      return reply.status(500).send({ success: false, error: 'Failed' });
+    }
+  });
 
   // Pricing constants endpoint
   fastify.get('/api/pricing', async (_request: any, reply: any) => {

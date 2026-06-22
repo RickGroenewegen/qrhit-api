@@ -140,6 +140,81 @@ export async function getFeaturedPlaylists(
   return returnList;
 }
 
+/**
+ * Project a set of playlist ids into the same card shape as
+ * getFeaturedPlaylists, preserving the given id order. Reused by the occasion
+ * landing pages and the seasonal /playlists row so playlist-card renders them
+ * unchanged. Takes prisma + utils directly (no DataDeps) so CalendarService can
+ * call it.
+ */
+export async function projectPlaylistsByIds(
+  prisma: any,
+  utils: any,
+  ids: number[],
+  locale: string
+): Promise<any[]> {
+  const cleanIds = (ids || []).map((n) => Number(n)).filter((n) => Number.isInteger(n));
+  if (cleanIds.length === 0) return [];
+  const safeLocale = /^[a-z]{2}$/.test(locale) ? locale : 'en';
+  const idList = cleanIds.join(',');
+
+  const query = `
+    SELECT
+      playlists.id,
+      playlists.playlistId,
+      playlists.name,
+      playlists.slug,
+      playlists.image,
+      playlists.customImage,
+      playlists.score,
+      playlists.price,
+      playlists.priceDigital,
+      playlists.priceSheets,
+      playlists.numberOfTracks,
+      playlists.featuredLocale,
+      playlists.decadePercentage2020,
+      playlists.decadePercentage2010,
+      playlists.decadePercentage2000,
+      playlists.decadePercentage1990,
+      playlists.decadePercentage1980,
+      playlists.decadePercentage1970,
+      playlists.decadePercentage1960,
+      playlists.decadePercentage1950,
+      playlists.decadePercentage1900,
+      playlists.decadePercentage0,
+      playlists.genreId,
+      playlists.description_${safeLocale} as description,
+      playlists.description_en as descriptionEnFallback,
+      g.name_${safeLocale} as genreName,
+      playlists.promotionalActive as isPromotional,
+      playlists.promotionalTitle,
+      playlists.promotionalDescription
+    FROM playlists
+    LEFT JOIN genres g ON playlists.genreId = g.id
+    WHERE playlists.id IN (${idList})
+  `;
+
+  let rows: any[] = await prisma.$queryRawUnsafe(query);
+  rows = rows.map((p) => {
+    if (!p.description && safeLocale !== 'en') p.description = p.descriptionEnFallback;
+    delete p.descriptionEnFallback;
+    if (p.isPromotional === 1) {
+      p.isPromotional = true;
+      if (p.promotionalTitle) p.name = p.promotionalTitle;
+      if (p.promotionalDescription) p.description = p.promotionalDescription;
+    } else {
+      p.isPromotional = false;
+    }
+    if (p.name) p.name = utils.replaceBrandTerms(p.name);
+    if (p.description) p.description = utils.replaceBrandTerms(p.description);
+    return p;
+  });
+
+  // Preserve the requested order (the caller passes ids in sortOrder).
+  const byId = new Map(rows.map((r) => [Number(r.id), r]));
+  return cleanIds.map((id) => byId.get(id)).filter(Boolean);
+}
+
 export async function getAllFeaturedPlaylists(deps: DataDeps): Promise<any[]> {
   try {
     const playlists = await deps.prisma.playlist.findMany({
@@ -352,6 +427,7 @@ export async function searchFeaturedPlaylists(
           promotionalTitle: true,
           promotionalDescription: true,
           promotionalUserId: true,
+          baseEventsTagged: true,
         },
         orderBy: { [safeColumn]: safeDirection },
         skip: offset,
@@ -362,6 +438,26 @@ export async function searchFeaturedPlaylists(
 
     // Get purchase counts
     const playlistIds = approvedPlaylists.map((p) => p.id);
+
+    // Base-event links (occasion tags) for the visible playlists.
+    const baseLinks =
+      playlistIds.length > 0
+        ? await deps.prisma.eventBasePlaylist.findMany({
+            where: { playlistId: { in: playlistIds } },
+            select: {
+              playlistId: true,
+              baseEvent: { select: { id: true, key: true, name_en: true } },
+            },
+            orderBy: { baseEvent: { name_en: 'asc' } },
+          })
+        : [];
+    const baseEventsMap = new Map<number, { id: number; key: string; name: string }[]>();
+    for (const link of baseLinks) {
+      const arr = baseEventsMap.get(link.playlistId) || [];
+      // Expose the English name as `name` for the admin UI.
+      arr.push({ id: link.baseEvent.id, key: link.baseEvent.key, name: link.baseEvent.name_en });
+      baseEventsMap.set(link.playlistId, arr);
+    }
     const purchaseCounts = playlistIds.length > 0
       ? await deps.prisma.paymentHasPlaylist.groupBy({
           by: ['playlistId'],
@@ -406,6 +502,8 @@ export async function searchFeaturedPlaylists(
           userEmail: user?.email || null,
           userDisplayName: user?.displayName || null,
           purchaseCount,
+          baseEvents: baseEventsMap.get(p.id) || [],
+          baseEventsTagged: p.baseEventsTagged,
         };
       })
     );

@@ -147,6 +147,7 @@ class Translation {
       { model: 'TrustPilot', delegate: prisma.trustPilot, fields: ['title', 'message'] },
       { model: 'CompanyList', delegate: prisma.companyList, fields: ['description'] },
       { model: 'Blog', delegate: prisma.blog, fields: ['title', 'content', 'summary'] },
+      { model: 'EventBase', delegate: prisma.eventBase, fields: ['name', 'description', 'body'] },
     ];
 
     const tag = white.bold('[translate-fields]');
@@ -210,6 +211,15 @@ class Translation {
     }
 
     logger.log(color.blue.bold(`${tag} Done. Updated ${white.bold(String(totalUpdated))} fields for ${white.bold(targetLang)}.`));
+
+    // EventBase names/descriptions feed the public occasion pages — bust their cache.
+    try {
+      const cache = (await import('./cache')).default.getInstance();
+      await cache.delPattern('occasion_v1_*');
+      await cache.delPattern('occasions_list_v1_*');
+    } catch {
+      // Non-fatal: caches expire on their own TTL.
+    }
   }
 }
 

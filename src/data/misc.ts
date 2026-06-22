@@ -11,6 +11,7 @@ import {
   CACHE_KEY_TRACK_COUNT,
 } from '../spotify';
 import { CACHE_KEY_FEATURED_PLAYLISTS } from './featuredPlaylists';
+import { LOCALE_PRIMARY_COUNTRY, occasionSlug } from './giftOccasions';
 import { DataDeps } from './types';
 
 export async function getPDFFilepath(
@@ -341,6 +342,22 @@ export async function createSiteMap(deps: DataDeps): Promise<void> {
     },
   });
 
+  // Occasion landing pages: all base events + which countries each applies to
+  // (a locale gets a page when its primary market has the occasion).
+  const eventBases = await deps.prisma.eventBase.findMany();
+  const eventCountryRows = await deps.prisma.calendarEvent.findMany({
+    where: { baseEventId: { not: null } },
+    select: { baseEventId: true, country: true },
+    distinct: ['baseEventId', 'country'],
+  });
+  const countriesByBase = new Map<number, Set<string>>();
+  for (const row of eventCountryRows) {
+    if (row.baseEventId == null) continue;
+    const set = countriesByBase.get(row.baseEventId) || new Set<string>();
+    set.add(row.country);
+    countriesByBase.set(row.baseEventId, set);
+  }
+
   // Define standard paths with default values
   const standardPaths = [
     '/faq',
@@ -426,6 +443,17 @@ export async function createSiteMap(deps: DataDeps): Promise<void> {
             blog[`slug_${locale}` as keyof typeof blog]
           }`,
           lastmod: blog.updatedAt.toISOString().split('T')[0],
+          changefreq: 'weekly',
+          priority: '0.7',
+        })),
+      // Add occasion landing pages applicable to this locale's primary market
+      ...eventBases
+        .filter((eb) =>
+          countriesByBase.get(eb.id)?.has(LOCALE_PRIMARY_COUNTRY[locale] || '')
+        )
+        .map((eb) => ({
+          loc: `/${locale}/occasion/${occasionSlug(eb, locale)}`,
+          lastmod: eb.updatedAt.toISOString().split('T')[0],
           changefreq: 'weekly',
           priority: '0.7',
         })),

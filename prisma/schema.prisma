@@ -405,9 +405,16 @@ model Playlist {
   PlayListExtraInfo      TrackExtraInfo[]
   genre                  genre?               @relation(fields: [genreId], references: [id])
   CompanyList            CompanyList[]
+  eventBaseLinks         EventBasePlaylist[]
 
   // Curation fields for featured playlists
   featuredHidden Boolean @default(false)
+
+  // True once the playlist has been reviewed for base-event links (by the AI
+  // backfill or manual curation on the Featured page). Drives the backfill's
+  // "untagged" query so a playlist reviewed as fitting zero occasions is not
+  // re-processed.
+  baseEventsTagged Boolean @default(false)
 
   // Merchant Center sync flag - set to true on any change, cleared after upload
   markedForMerchantCenter Boolean @default(true)
@@ -1400,4 +1407,105 @@ model GamesPurchase {
   @@index([userId])
   @@index([createdAt])
   @@map("games_purchases")
+}
+
+// Country-specific, gift-relevant occasions (Christmas, Mother's/Father's Day,
+// etc.) shown in the admin Event calendar. Auto events are prefilled from the
+// date-holidays library (source = "auto", stable eventKey); manual events are
+// added by admins (source = "manual", eventKey = null). eventKey is nullable on
+// purpose: MySQL treats NULLs as distinct in a unique index, so the
+// (country, eventKey, year) constraint lets auto events upsert idempotently
+// while unlimited manual events coexist without collisions.
+model CalendarEvent {
+  id          Int        @id @default(autoincrement())
+  eventKey    String?    @db.VarChar(64)
+  baseEventId Int?
+  baseEvent   EventBase? @relation(fields: [baseEventId], references: [id], onDelete: Cascade)
+  name        String     @db.VarChar(191)
+  country     String     @db.VarChar(2)
+  date        DateTime
+  year        Int
+  type        String     @default("observance") @db.VarChar(20)
+  relevant    Boolean    @default(true)
+  source      String     @default("auto") @db.VarChar(10)
+  hidden      Boolean    @default(false)
+  notes       String?    @db.Text
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  @@unique([country, eventKey, year])
+  @@index([date])
+  @@index([country])
+  @@index([baseEventId])
+  @@map("calendar_events")
+}
+
+model EventBase {
+  id               Int                 @id @default(autoincrement())
+  key              String              @unique @db.VarChar(64)
+  // name_en is the English source; name_<locale> are filled by the
+  // "Translate Fields" admin action (translateEmptyFields).
+  name_en          String              @db.VarChar(191)
+  name_nl          String              @default("") @db.VarChar(191)
+  name_de          String              @default("") @db.VarChar(191)
+  name_fr          String              @default("") @db.VarChar(191)
+  name_es          String              @default("") @db.VarChar(191)
+  name_it          String              @default("") @db.VarChar(191)
+  name_pt          String              @default("") @db.VarChar(191)
+  name_pl          String              @default("") @db.VarChar(191)
+  name_jp          String              @default("") @db.VarChar(191)
+  name_cn          String              @default("") @db.VarChar(191)
+  name_sv          String              @default("") @db.VarChar(191)
+  name_no          String              @default("") @db.VarChar(191)
+  // description_en describes what kind of playlists belong to this occasion
+  // (admin-editable, used to guide the AI backfill); name_<locale> + the
+  // "Translate Fields" action fill the rest.
+  description_en   String?             @db.Text
+  description_nl   String?             @db.Text
+  description_de   String?             @db.Text
+  description_fr   String?             @db.Text
+  description_es   String?             @db.Text
+  description_it   String?             @db.Text
+  description_pt   String?             @db.Text
+  description_pl   String?             @db.Text
+  description_jp   String?             @db.Text
+  description_cn   String?             @db.Text
+  description_sv   String?             @db.Text
+  description_no   String?             @db.Text
+  // body_en is long-form editorial SEO copy for the landing page; the rest are
+  // filled by the "Translate Fields" action / on-create auto-translate.
+  body_en          String?             @db.Text
+  body_nl          String?             @db.Text
+  body_de          String?             @db.Text
+  body_fr          String?             @db.Text
+  body_es          String?             @db.Text
+  body_it          String?             @db.Text
+  body_pt          String?             @db.Text
+  body_pl          String?             @db.Text
+  body_jp          String?             @db.Text
+  body_cn          String?             @db.Text
+  body_sv          String?             @db.Text
+  body_no          String?             @db.Text
+  windowDaysBefore Int                 @default(14)
+  notes            String?             @db.Text
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
+  events           CalendarEvent[]
+  playlists        EventBasePlaylist[]
+
+  @@map("event_bases")
+}
+
+model EventBasePlaylist {
+  id          Int       @id @default(autoincrement())
+  baseEventId Int
+  playlistId  Int
+  sortOrder   Int       @default(0)
+  createdAt   DateTime  @default(now())
+  baseEvent   EventBase @relation(fields: [baseEventId], references: [id], onDelete: Cascade)
+  playlist    Playlist  @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+
+  @@unique([baseEventId, playlistId])
+  @@index([playlistId])
+  @@map("event_base_playlists")
 }

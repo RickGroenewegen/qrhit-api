@@ -38,6 +38,7 @@ import BrokenLink from '../brokenLink';
 import Translation from '../translation';
 import PostNL from '../postnl';
 import MusicProviderFactory, { serviceTypeMap } from '../providers/MusicProviderFactory';
+import CalendarService from '../calendarService';
 import Settings from '../settings';
 import {
   PRINTER_TYPES,
@@ -61,6 +62,7 @@ export default async function adminRoutes(
   const openperplex = new OpenPerplex();
   const push = Push.getInstance();
   const discount = new Discount();
+  const calendar = CalendarService.getInstance();
   const printerInvoice = PrinterInvoiceService.getInstance();
   const utils = new Utils();
   const mollie = new Mollie();
@@ -2787,6 +2789,212 @@ export default async function adminRoutes(
     }
   );
 
+  // Event calendar management
+  fastify.post(
+    '/admin/calendar/search',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { searchTerm = '', country = '', upcomingOnly = false, page = 1, limit = 25 } =
+          request.body || {};
+        const result = await calendar.searchEvents({
+          searchTerm,
+          country,
+          upcomingOnly: !!upcomingOnly,
+          page: Number(page),
+          limit: Number(limit),
+        });
+        reply.send({ success: true, ...result });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message || 'Search failed' });
+      }
+    }
+  );
+
+  fastify.post(
+    '/admin/calendar/event',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { name, country, date, baseEventId } = request.body || {};
+      if (!name || !country || !date || !baseEventId) {
+        reply.status(400).send({ success: false, error: 'Missing required fields' });
+        return;
+      }
+      try {
+        const event = await calendar.createEvent(request.body);
+        reply.send({ success: true, event });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message || 'Create failed' });
+      }
+    }
+  );
+
+  fastify.put(
+    '/admin/calendar/event/:id',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id);
+      if (isNaN(id)) {
+        reply.status(400).send({ success: false, error: 'Invalid id' });
+        return;
+      }
+      try {
+        const event = await calendar.updateEvent(id, request.body || {});
+        reply.send({ success: true, event });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message || 'Update failed' });
+      }
+    }
+  );
+
+  fastify.delete(
+    '/admin/calendar/event/:id',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id);
+      if (isNaN(id)) {
+        reply.status(400).send({ success: false, error: 'Invalid id' });
+        return;
+      }
+      try {
+        await calendar.deleteEvent(id);
+        reply.send({ success: true });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message || 'Delete failed' });
+      }
+    }
+  );
+
+  // Bulk-action: prefill the event calendar on demand (also works in dev,
+  // where the monthly cron is intentionally disabled).
+  fastify.post(
+    '/admin/calendar/prefill',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const summary = await calendar.prefillEvents();
+        reply.send({ success: true, summary });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message || 'Prefill failed' });
+      }
+    }
+  );
+
+  // Base events (canonical occasions that calendar events link to)
+  fastify.get(
+    '/admin/calendar/bases',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const bases = await calendar.listBaseEvents();
+        reply.send({ success: true, bases });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message || 'List failed' });
+      }
+    }
+  );
+
+  fastify.post(
+    '/admin/calendar/base',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { name } = request.body || {};
+      if (!name) {
+        reply.status(400).send({ success: false, error: 'Name is required' });
+        return;
+      }
+      try {
+        const base = await calendar.createBaseEvent(request.body);
+        reply.send({ success: true, base });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message || 'Create failed' });
+      }
+    }
+  );
+
+  fastify.put(
+    '/admin/calendar/base/:id',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id);
+      if (isNaN(id)) {
+        reply.status(400).send({ success: false, error: 'Invalid id' });
+        return;
+      }
+      try {
+        const base = await calendar.updateBaseEvent(id, request.body || {});
+        reply.send({ success: true, base });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message || 'Update failed' });
+      }
+    }
+  );
+
+  fastify.delete(
+    '/admin/calendar/base/:id',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const id = parseInt(request.params.id);
+      if (isNaN(id)) {
+        reply.status(400).send({ success: false, error: 'Invalid id' });
+        return;
+      }
+      try {
+        await calendar.deleteBaseEvent(id);
+        reply.send({ success: true });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message || 'Delete failed' });
+      }
+    }
+  );
+
+  // Playlist <-> base event links (manual curation on the Featured page)
+  fastify.get(
+    '/admin/playlist/:playlistId/base-events',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const baseEvents = await calendar.getPlaylistBaseEvents(request.params.playlistId);
+        reply.send({ success: true, baseEvents });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message || 'Failed' });
+      }
+    }
+  );
+
+  fastify.put(
+    '/admin/playlist/:playlistId/base-events',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const { baseEventIds } = request.body || {};
+        const baseEvents = await calendar.setPlaylistBaseEvents(
+          request.params.playlistId,
+          Array.isArray(baseEventIds) ? baseEventIds : []
+        );
+        reply.send({ success: true, baseEvents });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message || 'Failed' });
+      }
+    }
+  );
+
+  // Bulk-action: one-time AI backfill of playlist <-> base event links.
+  // Fire-and-forget: the job logs progress and sends a Pushover summary.
+  fastify.post(
+    '/admin/calendar/backfill-playlist-events',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const count = await calendar.countUntaggedFeatured();
+        void calendar.backfillPlaylistBaseEvents();
+        reply.send({ success: true, started: true, count });
+      } catch (error: any) {
+        reply.status(500).send({ success: false, error: error.message || 'Backfill failed' });
+      }
+    }
+  );
+
   // Printer invoice management
   fastify.get(
     '/admin/printerinvoices',
@@ -5183,21 +5391,35 @@ export default async function adminRoutes(
     '/admin/translate-fields',
     getAuthHandler(['admin']),
     async (request: any, reply) => {
-      const { locale } = request.body as { locale: string };
+      const body = request.body as { locales?: string[]; locale?: string };
       const translation = new Translation();
 
-      if (!locale || locale === 'en' || !translation.isValidLocale(locale)) {
-        return reply.status(400).send({ success: false, error: 'Invalid locale' });
+      // Accept a `locales` array (multi-select) or a single `locale` (back-compat).
+      const requested =
+        body.locales && body.locales.length ? body.locales : body.locale ? [body.locale] : [];
+      const locales = [...new Set(requested)].filter(
+        (l) => l && l !== 'en' && translation.isValidLocale(l)
+      );
+
+      if (locales.length === 0) {
+        return reply.status(400).send({ success: false, error: 'No valid locales' });
       }
 
-      // Fire and forget — progress is logged to stdout
-      translation.translateEmptyFields(locale).catch((err) => {
+      // Fire and forget — translate each selected locale sequentially; progress
+      // is logged to stdout.
+      (async () => {
+        for (const l of locales) {
+          await translation.translateEmptyFields(l);
+        }
+      })().catch((err) => {
         logger.log(color.red.bold(`[translate-fields] Fatal error: ${err.message}`));
       });
 
       return reply.send({
         success: true,
-        message: `Translation to ${translation.getLanguageName(locale)} started in background. Check server logs for progress.`,
+        message: `Translation to ${locales
+          .map((l) => translation.getLanguageName(l))
+          .join(', ')} started in background. Check server logs for progress.`,
       });
     }
   );

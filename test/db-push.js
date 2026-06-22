@@ -20,7 +20,9 @@ const url = new URL(process.env.DATABASE_URL);
 url.pathname = `/${testDbName}`;
 
 console.log(`Pushing Prisma schema to ${url.hostname}/${testDbName} ...`);
-const result = spawnSync('npx', ['prisma', 'db', 'push'], {
+// Forward extra CLI args (e.g. --accept-data-loss) to prisma db push.
+const extraArgs = process.argv.slice(2);
+const result = spawnSync('npx', ['prisma', 'db', 'push', ...extraArgs], {
   stdio: 'inherit',
   env: { ...process.env, DATABASE_URL: url.toString() },
 });

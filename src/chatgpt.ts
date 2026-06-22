@@ -445,6 +445,110 @@ export class ChatGPT {
   }
 
   /**
+   * Decide which gift-occasion base events (if any) a playlist belongs to.
+   * Returns the matching base-event keys (0, 1 or more). Deliberately strict:
+   * most playlists are not occasion-specific and should return an empty list.
+   */
+  public async determineBaseEvents(
+    playlistName: string,
+    description: string | null,
+    genreName: string | null,
+    availableBaseEvents: Array<{ key: string; name: string; description?: string | null }>
+  ): Promise<string[]> {
+    if (availableBaseEvents.length === 0) return [];
+
+    const keys = availableBaseEvents.map((b) => b.key);
+    const optionList = availableBaseEvents
+      .map((b) => `- ${b.key}: ${b.name}${b.description ? ` (${b.description})` : ''}`)
+      .join('\n');
+
+    const prompt = `Playlist name: "${playlistName}"
+Genre: ${genreName || 'unknown'}
+Description: ${description ? description.replace(/\s+/g, ' ').trim() : '(none)'}`;
+
+    let result;
+    try {
+      result = await this.openai.chat.completions.create({
+        model: 'gpt-5.4-mini',
+        temperature: 1,
+        messages: [
+          {
+            role: 'system',
+            content: `You match music playlists to gift-giving occasions for a personalized music-card shop.`,
+          },
+          {
+            role: 'user',
+            content: `Decide which of the occasions below this playlist is a good fit for as a gift.
+                      Only choose an occasion when the playlist is clearly themed for it (e.g. a Christmas songs
+                      playlist -> christmas; a romantic/love playlist -> valentines_day). Most playlists are NOT
+                      occasion-specific: when in doubt, return an empty list. A playlist may match several occasions.
+
+                      Available occasions (key: name):
+                      ${optionList}
+
+                      ${prompt}`,
+          },
+        ],
+        tool_choice: { type: 'function', function: { name: 'determineBaseEvents' } },
+        tools: [
+          {
+            type: 'function',
+            function: {
+              name: 'determineBaseEvents',
+              parameters: {
+                type: 'object',
+                properties: {
+                  baseEventKeys: {
+                    type: 'array',
+                    items: { type: 'string', enum: keys },
+                    description:
+                      'Keys of the occasions this playlist clearly fits, or an empty array if none.',
+                  },
+                  reasoning: {
+                    type: 'string',
+                    description: 'Brief explanation of the choice.',
+                  },
+                },
+                required: ['baseEventKeys', 'reasoning'],
+              },
+            },
+          },
+        ],
+      });
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(`Error calling LLM for base events (${playlistName}): ${error}`)
+      );
+      return [];
+    }
+
+    const toolCall = result?.choices[0]?.message?.tool_calls?.[0];
+    if (toolCall && toolCall.type === 'function') {
+      try {
+        const parsed = JSON.parse(toolCall.function.arguments as string);
+        const chosen: string[] = Array.isArray(parsed.baseEventKeys)
+          ? parsed.baseEventKeys.filter((k: string) => keys.includes(k))
+          : [];
+        this.logger.log(
+          color.magenta(
+            `Base events for ${color.white.bold(playlistName)}: ${color.white.bold(
+              chosen.length ? chosen.join(', ') : 'none'
+            )}`
+          )
+        );
+        return [...new Set(chosen)];
+      } catch (error) {
+        this.logger.log(
+          color.red.bold(`Error parsing base-event response: ${error}`)
+        );
+        this.logger.log(color.red.bold(`Raw response: ${toolCall.function.arguments}`));
+      }
+    }
+
+    return [];
+  }
+
+  /**
    * Translates Trustpilot review titles and messages to all supported locales
    * @param reviews Array of Trustpilot reviews to translate
    * @param targetLocales Array of locale codes to translate to
@@ -1217,9 +1321,9 @@ Write in a professional, informative, and engaging style. The tone should be cle
         },
         {
           role: 'user',
-          content: `Translate the following text into these languages: ${targetLocales.join(
-            ', '
-          )}.\n\nText:\n${text}`,
+          content: `Translate the following text into these languages: ${targetLocales
+            .map((l) => `${this.translation.getLanguageName(l)} (key "${l}")`)
+            .join(', ')}.\n\nReturn each translation under its key.\n\nText:\n${text}`,
         },
       ],
       tool_choice: { type: 'function', function: { name: 'translateText' } },
@@ -1235,7 +1339,7 @@ Write in a professional, informative, and engaging style. The tone should be cle
                 locale,
                 {
                   type: 'string',
-                  description: `The translated text in ${locale}`,
+                  description: `The translated text in ${this.translation.getLanguageName(locale)}`,
                 },
               ])
             ),

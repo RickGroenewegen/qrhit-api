@@ -13,6 +13,8 @@ import PrismaInstance from '../prisma';
 import { AppleMusicProvider } from '../providers';
 import AppleStorefront from '../appleStorefront';
 import AbuseGuard from '../abuse_guard';
+import CalendarService from '../calendarService';
+import Cache from '../cache';
 
 // Import service-specific routes
 import spotifyRoutes from './spotifyRoutes';
@@ -34,6 +36,8 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   const appleMusicProvider = AppleMusicProvider.getInstance();
   const appleStorefront = AppleStorefront.getInstance();
   const abuseGuard = AbuseGuard.getInstance();
+  const calendar = CalendarService.getInstance();
+  const cache = Cache.getInstance();
 
   // Register service-specific routes
   await fastify.register(spotifyRoutes);
@@ -278,6 +282,30 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     const skipLocaleFilter = request.query.all === 'true';
     const playlists = await data.getFeaturedPlaylists(request.params.locale, skipLocaleFilter);
     return { success: true, data: playlists };
+  });
+
+  // Active seasonal occasions + curated playlists for the visitor's country.
+  // Country comes from ?country= (the frontend already knows it) or the
+  // CloudFront-Viewer-Country header. Cache key includes country + date.
+  fastify.get('/seasonal/:locale', async (request: any, _reply) => {
+    const locale = request.params.locale;
+    const cfCountry =
+      request.headers['cloudfront-viewer-country'] || request.headers['cf-ipcountry'];
+    const country = (
+      request.query.country ||
+      (typeof cfCountry === 'string' ? cfCountry : '') ||
+      ''
+    ).toUpperCase();
+    if (!country || country.length !== 2) {
+      return { success: true, occasions: [] };
+    }
+    const today = new Date().toISOString().slice(0, 10).replace(/-/g, '');
+    const cacheKey = `seasonal_v1_${today}_${locale}_${country}`;
+    const cached = await cache.get(cacheKey);
+    if (cached) return { success: true, occasions: JSON.parse(cached) };
+    const occasions = await calendar.getActiveOccasionsForCountry(country, locale);
+    await cache.set(cacheKey, JSON.stringify(occasions), 3600);
+    return { success: true, occasions };
   });
 
   // Get link coverage for a playlist (by database ID)
