@@ -306,7 +306,9 @@ export async function translateGenres(deps: DataDeps): Promise<{
   };
 }
 
-export async function createSiteMap(deps: DataDeps): Promise<void> {
+export async function createSiteMap(
+  deps: DataDeps
+): Promise<{ locales: number; urls: number }> {
   // Get all available locales from Translation class
   const locales = deps.translate.allLocales;
 
@@ -411,6 +413,7 @@ export async function createSiteMap(deps: DataDeps): Promise<void> {
   await fs.writeFile(sitemapIndexPath, sitemapIndexContent, 'utf8');
 
   // Create language-specific sitemaps
+  let totalUrls = 0;
   for (const locale of locales) {
     // Create paths with default properties for this locale
     const paths = [
@@ -480,15 +483,18 @@ export async function createSiteMap(deps: DataDeps): Promise<void> {
     );
 
     await fs.writeFile(localeSitemapPath, localeSitemapContent, 'utf8');
+    totalUrls += paths.length;
   }
 
   deps.logger.log(
     color.blue.bold(
       `Generated sitemap index with ${color.white.bold(
         locales.length
-      )} language-specific sitemaps`
+      )} language-specific sitemaps (${color.white.bold(totalUrls)} URLs)`
     )
   );
+
+  return { locales: locales.length, urls: totalUrls };
 }
 
 export async function generatePlaylistExcel(

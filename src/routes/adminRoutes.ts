@@ -2880,6 +2880,24 @@ export default async function adminRoutes(
     }
   );
 
+  // Bulk-action: regenerate the XML sitemaps on demand. Normally only built on
+  // server startup, so this picks up newly added blogs/occasions/products
+  // without a restart.
+  fastify.post(
+    '/admin/sitemap/regenerate',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const summary = await data.createSiteMap();
+        reply.send({ success: true, summary });
+      } catch (error: any) {
+        reply
+          .status(500)
+          .send({ success: false, error: error.message || 'Sitemap regeneration failed' });
+      }
+    }
+  );
+
   // Base events (canonical occasions that calendar events link to)
   fastify.get(
     '/admin/calendar/bases',

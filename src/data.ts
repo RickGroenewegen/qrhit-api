@@ -469,7 +469,7 @@ class Data {
     return miscModule.translateGenres(this.deps);
   }
 
-  private async createSiteMap(): Promise<void> {
+  public async createSiteMap(): Promise<{ locales: number; urls: number }> {
     return miscModule.createSiteMap(this.deps);
   }
 
