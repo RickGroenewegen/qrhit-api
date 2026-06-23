@@ -54,6 +54,7 @@ export interface BaseEventInput {
   body?: string | null;
   windowDaysBefore?: number;
   notes?: string | null;
+  heroImage?: string | null;
 }
 
 interface CollectedEvent {
@@ -421,6 +422,7 @@ class CalendarService {
         body_en: input.body ?? null,
         windowDaysBefore: input.windowDaysBefore ?? 14,
         notes: input.notes ?? null,
+        heroImage: input.heroImage ?? null,
       },
     });
     // Fire-and-forget: translate name + description + body into all languages.
@@ -492,9 +494,105 @@ class CalendarService {
     if (input.body !== undefined) data.body_en = input.body;
     if (input.windowDaysBefore !== undefined) data.windowDaysBefore = input.windowDaysBefore;
     if (input.notes !== undefined) data.notes = input.notes;
+    if (input.heroImage !== undefined) data.heroImage = input.heroImage;
     const updated = await this.prisma.eventBase.update({ where: { id }, data });
     await this.bustOccasionCaches();
     return updated;
+  }
+
+  // Hero-image generation runs as a background job: the OpenAI round-trip takes
+  // a couple of minutes, which would time out behind CloudFront/ALB on a
+  // synchronous request. The admin modal starts a job and polls for the result.
+  // When a baseEventId is given (edit), the job persists heroImage onto the row
+  // itself the moment it finishes — so the slow generation is fully decoupled
+  // from the modal and the image is never lost if the admin closes it. For
+  // "add" (no row yet) the filename rides back via the poll and is saved on
+  // form submit. Job state lives in Redis.
+  private eventImageJobKey(jobId: string): string {
+    return `event_image_job_${jobId}`;
+  }
+
+  /** Start a background hero-image job; returns a job id the client polls. */
+  public async startEventImageJob(
+    name: string,
+    description?: string | null,
+    baseEventId?: number | null
+  ): Promise<string> {
+    const jobId = `${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+    // Seed the state synchronously so the very first poll sees "pending".
+    await this.cache.set(
+      this.eventImageJobKey(jobId),
+      JSON.stringify({ status: 'pending' }),
+      900 // 15 min TTL
+    );
+    void this.runEventImageJob(jobId, name, description ?? null, baseEventId ?? null);
+    return jobId;
+  }
+
+  private async runEventImageJob(
+    jobId: string,
+    name: string,
+    description: string | null,
+    baseEventId: number | null
+  ): Promise<void> {
+    const key = this.eventImageJobKey(jobId);
+    try {
+      const image = await this.chatgpt.generateEventImage(name, description);
+      if (image && baseEventId) {
+        // Persist immediately so it survives the modal being closed during the
+        // (slow) generation. Failure here is logged but still reported as done.
+        try {
+          await this.prisma.eventBase.update({
+            where: { id: baseEventId },
+            data: { heroImage: image },
+          });
+          await this.bustOccasionCaches();
+          this.logger.log(
+            color.green.bold(
+              `Saved hero image ${color.white.bold(image)} on base event ${color.white.bold(
+                String(baseEventId)
+              )}`
+            )
+          );
+        } catch (e: any) {
+          this.logger.log(
+            color.red.bold(
+              `Failed to persist hero image on base event ${color.white.bold(
+                String(baseEventId)
+              )}: ${e?.message || e}`
+            )
+          );
+        }
+      }
+      await this.cache.set(
+        key,
+        JSON.stringify(
+          image
+            ? { status: 'done', image, saved: !!baseEventId }
+            : { status: 'error', error: 'Failed to generate image' }
+        ),
+        900
+      );
+    } catch (e: any) {
+      await this.cache.set(
+        key,
+        JSON.stringify({ status: 'error', error: e?.message || 'Failed to generate image' }),
+        900
+      );
+    }
+  }
+
+  /** Current state of a hero-image job (null if unknown / expired). */
+  public async getEventImageJob(
+    jobId: string
+  ): Promise<{ status: string; image?: string; error?: string; saved?: boolean } | null> {
+    const raw = await this.cache.get(this.eventImageJobKey(jobId), false);
+    if (!raw) return null;
+    try {
+      return JSON.parse(raw);
+    } catch {
+      return null;
+    }
   }
 
   /** Delete a base event. Linked calendar events cascade (schema onDelete). */
@@ -836,6 +934,7 @@ class CalendarService {
         name: eb[`name_${safeLocale}`] || eb.name_en,
         description: eb[`description_${safeLocale}`] || eb.description_en || null,
         body: eb[`body_${safeLocale}`] || eb.body_en || null,
+        heroImage: eb.heroImage || null,
         slug: occasionSlug(eb, safeLocale),
         date,
         daysUntil,

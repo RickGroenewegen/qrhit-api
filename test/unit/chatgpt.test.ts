@@ -1014,7 +1014,7 @@ describe('ChatGPT.generateBlogImage', () => {
 
     expect(filename).toMatch(/^blog_\d+\.jpg$/);
     const editArgs = imagesEditMock.mock.calls[0][0];
-    expect(editArgs.model).toBe('gpt-image-1.5');
+    expect(editArgs.model).toBe('gpt-image-2');
     expect(editArgs.prompt).toBe('A party scene');
     expect(editArgs.size).toBe('1536x1024');
     expect(editArgs.quality).toBe('high');

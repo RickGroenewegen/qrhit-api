@@ -1248,13 +1248,13 @@ Write in a professional, informative, and engaging style. The tone should be cle
         image: file,
         prompt: imagePrompt,
         n: 1,
-        model: 'gpt-image-1.5',
+        model: 'gpt-image-2',
         size: '1536x1024',
         quality: 'high',
       });
 
       // const response = await this.openai.images.generate({
-      //   model: 'gpt-image-1.5',
+      //   model: 'gpt-image-2',
       //   prompt: imagePrompt,
       //   n: 1,
       //   size: '1536x1024',
@@ -1294,6 +1294,109 @@ Write in a professional, informative, and engaging style. The tone should be cle
       this.logger.log(
         color.red.bold(
           `Error generating blog image: ${(error as Error).message}`
+        )
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Generate a hero image for an occasion / base event, themed around the
+   * occasion and its description. Mirrors generateBlogImage: edits the brand
+   * cards.png template so the QRSong product stays on-brand, then stores a
+   * wide hero-sized JPEG under PUBLIC_DIR/event_images.
+   * @param name The occasion name (e.g. "Christmas") used for theming
+   * @param description Optional admin description guiding the vibe
+   * @returns Promise<string | null> - filename if successful, null if failed
+   */
+  public async generateEventImage(
+    name: string,
+    description?: string | null
+  ): Promise<string | null> {
+    try {
+      const eventImagesDir = path.join(
+        process.env['PUBLIC_DIR']!,
+        'event_images'
+      );
+      try {
+        await fs.access(eventImagesDir);
+      } catch {
+        await fs.mkdir(eventImagesDir, { recursive: true });
+        this.logger.log(
+          color.blue.bold(
+            `Created event images directory: ${color.white.bold(
+              eventImagesDir
+            )}`
+          )
+        );
+      }
+
+      // Build a hero-banner prompt from the occasion name + description. The
+      // description is admin-authored guidance ("what fits this occasion"); we
+      // frame it as a visual scene rather than passing it verbatim. No product
+      // reference image is used — this is a pure text-to-image hero scene.
+      const vibe =
+        description && description.trim()
+          ? ` Mood and theme: ${description.trim()}.`
+          : '';
+      const imagePrompt =
+        `A warm, festive wide hero banner celebrating ${name}.${vibe} ` +
+        `A beautifully styled, seasonal scene themed around ${name}, with ` +
+        `soft cinematic lighting and vibrant, tasteful colours. Photographic, ` +
+        `high quality, suitable as a website hero background with calm ` +
+        `negative space. No text, no words, no letters, no logos, no ` +
+        `watermarks.`;
+
+      this.logger.log(
+        color.blue.bold(
+          `Generating event hero image for "${color.white.bold(name)}"`
+        )
+      );
+
+      const response = await this.openai.images.generate({
+        model: 'gpt-image-2',
+        prompt: imagePrompt,
+        n: 1,
+        size: '1536x1024',
+        quality: 'high',
+      });
+
+      if (
+        response.data &&
+        response.data.length > 0 &&
+        response.data[0].b64_json
+      ) {
+        const resultBuffer = Buffer.from(response.data[0].b64_json, 'base64');
+
+        const timestamp = Date.now();
+        const filename = `event_${timestamp}.jpg`;
+        const filepath = path.join(eventImagesDir, filename);
+
+        // Wide hero crop (16:9) for the occasion landing page background.
+        await sharp(resultBuffer)
+          .resize(1920, 1080, { fit: 'cover' })
+          .jpeg({ quality: 85, progressive: true })
+          .toFile(filepath);
+
+        this.logger.log(
+          color.green.bold(
+            `Event hero image generated and saved: ${color.white.bold(
+              filename
+            )}`
+          )
+        );
+
+        return filename;
+      } else {
+        this.logger.log(
+          color.red.bold('No image data received for event hero image')
+        );
+        return null;
+      }
+    } catch (error) {
+      this.logger.log(
+        color.red.bold(
+          `Error generating event hero image: ${(error as Error).message}`
         )
       );
       return null;

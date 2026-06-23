@@ -2930,6 +2930,59 @@ export default async function adminRoutes(
     }
   );
 
+  // Start a background hero-image job for a base event (name + description).
+  // Returns a jobId immediately — generation can take 30s+, which would time
+  // out behind CloudFront on a synchronous request — and the client polls the
+  // status route below. Stateless w.r.t. the DB so it works for "add" too; the
+  // resulting filename is persisted when the form is saved.
+  fastify.post(
+    '/admin/calendar/base/generate-image',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { name, description, baseEventId } = request.body || {};
+      if (!name || !String(name).trim()) {
+        reply.status(400).send({ success: false, error: 'Name is required' });
+        return;
+      }
+      const parsedId =
+        baseEventId != null && Number.isInteger(parseInt(baseEventId))
+          ? parseInt(baseEventId)
+          : null;
+      try {
+        const jobId = await calendar.startEventImageJob(
+          String(name).trim(),
+          description ?? null,
+          parsedId
+        );
+        reply.send({ success: true, jobId });
+      } catch (error: any) {
+        reply
+          .status(500)
+          .send({ success: false, error: error.message || 'Generate failed' });
+      }
+    }
+  );
+
+  // Poll a hero-image job: { status: 'pending' | 'done' | 'error', image?, error? }.
+  fastify.get(
+    '/admin/calendar/base/generate-image/:jobId',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      try {
+        const job = await calendar.getEventImageJob(request.params.jobId);
+        if (!job) {
+          reply.send({ success: true, status: 'pending' });
+          return;
+        }
+        reply.send({ success: true, ...job });
+      } catch (error: any) {
+        reply
+          .status(500)
+          .send({ success: false, error: error.message || 'Status failed' });
+      }
+    }
+  );
+
   fastify.put(
     '/admin/calendar/base/:id',
     getAuthHandler(['admin']),

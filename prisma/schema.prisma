@@ -1488,6 +1488,10 @@ model EventBase {
   body_no          String?             @db.Text
   windowDaysBefore Int                 @default(14)
   notes            String?             @db.Text
+  // Hero image shown on the public occasion landing pages (all locales share
+  // one image). Generated from name_en + description_en via OpenAI and stored
+  // under PUBLIC_DIR/event_images; this column holds just the filename.
+  heroImage        String?             @db.VarChar(255)
   createdAt        DateTime            @default(now())
   updatedAt        DateTime            @updatedAt
   events           CalendarEvent[]
