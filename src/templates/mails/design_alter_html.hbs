@@ -39,6 +39,19 @@
                                             <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.hello }} {{ fullname }},</p>
                                             <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.intro }}</p>
                                             <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ reasonText }}</p>
+                                            {{#if flaggedImages}}
+                                            <p style="margin: 0 0 16px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ flaggedImagesIntro }}</p>
+                                            {{#each flaggedImages}}
+                                            <table style="width: 100%; margin: 0 0 16px;" cellpadding="0" cellspacing="0" role="presentation">
+                                                <tr>
+                                                    <td style="padding: 12px; border: 1px solid #e2e8f0; border-radius: 8px;">
+                                                        <p style="margin: 0 0 8px; font-size: 14px; font-weight: bold; line-height: 20px; color: #4a5568;">{{ this.name }}</p>
+                                                        <img src="cid:{{ this.cid }}" alt="{{ this.name }}" style="display: block; max-width: 100%; height: auto; border-radius: 4px;">
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                            {{/each}}
+                                            {{/if}}
                                             <p style="margin: 0 0 24px; font-size: 16px; line-height: 24px; color: #4a5568;">{{ translations.clickButton }}</p>
                                             <table width="100%" border="0" cellspacing="0" cellpadding="0" role="presentation" style="margin-top: 24px; margin-bottom: 24px;">
                                                 <tr>

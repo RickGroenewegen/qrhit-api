@@ -658,5 +658,10 @@
   "mail.boxInstructionsStep7": "Metti le carte nella scatola.",
   "mail.boxInstructionsStep8": "Copri le carte col divisore e chiudi la scatola.",
   "invoice.giftBox": "Scatola regalo",
-  "invoice.qrGames": "QRGames"
+  "invoice.qrGames": "QRGames",
+  "design_alter.flaggedImagesIntro": "Le immagini qui sotto hanno causato questo. Rimuovile o sostituiscile prima di inviare di nuovo:",
+  "design_alter.imageCardFront": "Fronte carta",
+  "design_alter.imageCardBack": "Retro carta",
+  "design_alter.imageBoxFront": "Inlay scatola (fronte)",
+  "design_alter.imageBoxBack": "Inlay scatola (retro)"
 }

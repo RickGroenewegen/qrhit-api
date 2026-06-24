@@ -662,5 +662,10 @@
   "mail.boxInstructionsStep7": "Pon tus cartas en la caja.",
   "mail.boxInstructionsStep8": "Cubre las cartas con el separador y cierra la caja.",
   "invoice.giftBox": "Caja regalo",
-  "invoice.qrGames": "QRGames"
+  "invoice.qrGames": "QRGames",
+  "design_alter.flaggedImagesIntro": "La(s) imagen(es) de abajo causaron esto. Elimínalas o cámbialas antes de volver a enviar:",
+  "design_alter.imageCardFront": "Frente de la carta",
+  "design_alter.imageCardBack": "Reverso de la carta",
+  "design_alter.imageBoxFront": "Inserto caja (frente)",
+  "design_alter.imageBoxBack": "Inserto caja (detrás)"
 }

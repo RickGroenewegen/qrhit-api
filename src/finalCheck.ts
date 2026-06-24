@@ -14,6 +14,16 @@ export type FinalCheckFailureReason =
   | 'hitster'
   | 'unreadable';
 
+export interface FinalCheckFlaggedImage {
+  // i18n label key, resolved to a human name in the design-alter mail
+  key: 'cardFront' | 'cardBack' | 'boxFront' | 'boxBack';
+  // attachment filename (e.g. 'card-front.png')
+  filename: string;
+  // the rendered page PNG, kept in-memory so the mail layer is self-contained
+  // (the temp render dir is deleted before the mail is built)
+  buffer: Buffer;
+}
+
 export type FinalCheckResult =
   | { ok: true }
   | {
@@ -24,6 +34,9 @@ export type FinalCheckResult =
       paymentHasPlaylistId: number;
       playlistDbId: number;
       playlistId: string;
+      // Populated only for Hitster visual hits: the offending rendered page(s),
+      // attached inline to the customer email.
+      flaggedImages?: FinalCheckFlaggedImage[];
     };
 
 class FinalCheck {
@@ -256,74 +269,159 @@ Reply STRICTLY as JSON: {"match": true|false, "reason": "string"}`;
         };
       }
 
-      const hitsterPrompt = `The first two attached images are reference photos of the Hitster product (a competing music game). The next two attached images are pages of a printed card from another product.
+      // Resolve the box inlay PDF (if any) so it is Hitster-checked alongside
+      // the playing card. Only present for physical orders with a box enabled.
+      let boxPdfPath: string | null = null;
+      if (php.boxEnabled && php.boxFilename) {
+        const candidate = `${process.env['PUBLIC_DIR']}/box-insert/${php.boxFilename}`;
+        try {
+          await fs.access(candidate);
+          boxPdfPath = candidate;
+        } catch {
+          this.logVision(
+            payment.paymentId,
+            php.id,
+            `box inlay PDF missing on disk (${php.boxFilename}) → skipping box checks`
+          );
+        }
+      }
 
-Decide whether the card infringes on Hitster. Be SPECIFIC:
+      const hitsterPrompt = `The first two attached images are reference photos of the Hitster product (a competing music game). The final attached image is one side of a printed card or box insert from another product.
+
+Decide whether it infringes on Hitster. Be SPECIFIC:
 
 REASONS TO FLAG (clean: false):
-- The literal word "Hitster" appears anywhere on the card (textual or stylized).
+- The literal word "Hitster" appears anywhere on it (textual or stylized).
 - Distinctive Hitster visual elements are reproduced — for example: the Hitster logo, Hitster's specific speaker/loudspeaker imagery as seen in the reference photos, or a clear copy of their cover-art / box-art style.
 
 REASONS NOT TO FLAG (clean: true):
-- The card is simply a music-trivia card with a QR code, song year, and artist/title. That format is generic across the category and is not by itself an infringement.
+- It is simply a music-trivia card with a QR code, song year, and artist/title. That format is generic across the category and is not by itself an infringement.
 - The product has a name that rhymes with or puns on "Hitster" (e.g. "Shipster", "Listster"). Rhyming/punning names alone are NOT a reason to flag — only the literal name "Hitster" is.
 - Generic icons (musical notes, headphones) that are not the specific speaker imagery from the Hitster reference images.
 
 Reply STRICTLY as JSON: {"clean": true|false, "evidence": "string"}`;
-      this.logVision(payment.paymentId, php.id, 'Hitster look-alike → asking GPT (with 2 reference images)');
-      const hitsterVisual = await this.chatgpt.askWithImages(hitsterPrompt, [
-        ...this.hitsterRefImages,
-        pdfPage1,
-        pdfPage2,
-      ]);
-      this.logVision(
-        payment.paymentId,
-        php.id,
-        `Hitster look-alike → clean=${hitsterVisual?.clean} ${hitsterVisual?.evidence ? `evidence="${hitsterVisual.evidence}"` : ''}`
-      );
-      if (hitsterVisual && hitsterVisual.clean === false) {
+
+      // Check each rendered page individually so we know exactly which page
+      // infringes and can attach it (name + image) to the customer email.
+      const hitsterPages: {
+        key: FinalCheckFlaggedImage['key'];
+        path: string;
+        filename: string;
+        label: string;
+      }[] = [
+        { key: 'cardFront', path: pdfPage1, filename: 'card-front.png', label: 'card front' },
+        { key: 'cardBack', path: pdfPage2, filename: 'card-back.png', label: 'card back' },
+      ];
+
+      if (boxPdfPath) {
+        try {
+          this.logVision(payment.paymentId, php.id, 'rendering box inlay pages 1-2 → PNG');
+          const [boxPage1, boxPage2] = await this.pdfToPngPages(
+            boxPdfPath,
+            tmpDir,
+            'box'
+          );
+          hitsterPages.push({
+            key: 'boxFront',
+            path: boxPage1,
+            filename: 'box-front.png',
+            label: 'box inlay front',
+          });
+          hitsterPages.push({
+            key: 'boxBack',
+            path: boxPage2,
+            filename: 'box-back.png',
+            label: 'box inlay back',
+          });
+        } catch (e) {
+          this.logVision(
+            payment.paymentId,
+            php.id,
+            `box inlay rasterization failed: ${
+              (e as Error).message
+            } → box still text-scanned`
+          );
+        }
+      }
+
+      const flaggedImages: FinalCheckFlaggedImage[] = [];
+      const flaggedDetails: string[] = [];
+      for (const page of hitsterPages) {
+        this.logVision(
+          payment.paymentId,
+          php.id,
+          `Hitster look-alike (${page.label}) → asking GPT (with 2 reference images)`
+        );
+        const verdict = await this.chatgpt.askWithImages(hitsterPrompt, [
+          ...this.hitsterRefImages,
+          page.path,
+        ]);
+        this.logVision(
+          payment.paymentId,
+          php.id,
+          `Hitster look-alike (${page.label}) → clean=${verdict?.clean} ${
+            verdict?.evidence ? `evidence="${verdict.evidence}"` : ''
+          }`
+        );
+        if (verdict && verdict.clean === false) {
+          flaggedImages.push({
+            key: page.key,
+            filename: page.filename,
+            buffer: await fs.readFile(page.path),
+          });
+          flaggedDetails.push(
+            `${page.label}: ${verdict.evidence || 'Hitster-like elements detected'}`
+          );
+        }
+      }
+
+      if (flaggedImages.length > 0) {
         return {
           ok: false,
           reason: 'hitster',
           userActionable: true,
-          details: `Visual: ${
-            hitsterVisual.evidence || 'Hitster-like elements detected'
-          }`,
+          details: `Visual: ${flaggedDetails.join(' | ')}`,
+          flaggedImages,
           ...failBase,
         };
       }
 
-      try {
-        this.logVision(payment.paymentId, php.id, 'Hitster textual scan → extracting PDF text (pages 1-2)');
-        const buf = await fs.readFile(pdfPath);
-        const parser = new PDFParse({ data: new Uint8Array(buf) });
-        const parsed = await parser.getText({ first: 2 });
-        await parser.destroy();
-        const text = parsed.pages?.map((p) => p.text).join(' ') || '';
-        const matched = /hitster/i.test(text);
-        this.logVision(
-          payment.paymentId,
-          php.id,
-          `Hitster textual scan → matched=${matched} (${text.length} chars scanned)`
-        );
-        if (matched) {
-          return {
-            ok: false,
-            reason: 'hitster',
-            userActionable: true,
-            details:
-              'The word "Hitster" was found in the printed text of pages 1-2.',
-            ...failBase,
-          };
+      for (const target of [
+        { label: 'card', path: pdfPath },
+        ...(boxPdfPath ? [{ label: 'box inlay', path: boxPdfPath }] : []),
+      ]) {
+        try {
+          this.logVision(
+            payment.paymentId,
+            php.id,
+            `Hitster textual scan (${target.label}) → extracting PDF text (pages 1-2)`
+          );
+          const { matched, chars } = await this.pdfContainsHitsterText(
+            target.path
+          );
+          this.logVision(
+            payment.paymentId,
+            php.id,
+            `Hitster textual scan (${target.label}) → matched=${matched} (${chars} chars scanned)`
+          );
+          if (matched) {
+            return {
+              ok: false,
+              reason: 'hitster',
+              userActionable: true,
+              details: `The word "Hitster" was found in the printed text of the ${target.label}.`,
+              ...failBase,
+            };
+          }
+        } catch (e) {
+          this.logger.log(
+            color.yellow.bold(
+              `finalCheck: pdf-parse failed for ${white.bold(
+                target.path
+              )}: ${(e as Error).message}`
+            )
+          );
         }
-      } catch (e) {
-        this.logger.log(
-          color.yellow.bold(
-            `finalCheck: pdf-parse failed for ${white.bold(
-              filename
-            )}: ${(e as Error).message}`
-          )
-        );
       }
 
       const readabilityPrompt = `You are checking whether the artist / title / year text on a printed music-trivia card is readable by a human at arm's length.
@@ -411,6 +509,22 @@ Reply STRICTLY as JSON: {"readable": true|false, "details": "string"}`;
       await fs.writeFile(out1, Buffer.from(pages[0].data as Uint8Array));
       await fs.writeFile(out2, Buffer.from(pages[1].data as Uint8Array));
       return [out1, out2];
+    } finally {
+      try {
+        await parser.destroy();
+      } catch {}
+    }
+  }
+
+  private async pdfContainsHitsterText(
+    pdfPath: string
+  ): Promise<{ matched: boolean; chars: number }> {
+    const buf = await fs.readFile(pdfPath);
+    const parser = new PDFParse({ data: new Uint8Array(buf) });
+    try {
+      const parsed = await parser.getText({ first: 2 });
+      const text = parsed.pages?.map((p) => p.text).join(' ') || '';
+      return { matched: /hitster/i.test(text), chars: text.length };
     } finally {
       try {
         await parser.destroy();

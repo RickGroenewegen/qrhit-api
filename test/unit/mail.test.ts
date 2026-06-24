@@ -462,8 +462,61 @@ describe('account & verification mails', () => {
     );
     expect(raw).toContain('third-party brand');
     expect(raw).toContain(
-      'http://localhost:4200/en/usersuggestions/pay_1/uhash/pl_1/1'
+      'http://localhost:4200/en/usersuggestions/pay_1/uhash/pl_1/0'
     );
+  });
+
+  it('sendDesignAlterMail (hitster) attaches each flagged page inline and lists its name', async () => {
+    await mail.sendDesignAlterMail(
+      'designer@example.com',
+      'Des',
+      'en',
+      'pay_1',
+      'uhash',
+      'pl_1',
+      'hitster',
+      [
+        {
+          key: 'cardFront',
+          filename: 'card-front.png',
+          buffer: Buffer.from('cardfront-png'),
+        },
+        {
+          key: 'boxFront',
+          filename: 'box-front.png',
+          buffer: Buffer.from('boxfront-png'),
+        },
+      ]
+    );
+    const raw = lastRaw();
+    // Intro + per-image labels rendered in the HTML body
+    expect(raw).toContain('triggered this');
+    expect(raw).toContain('Card front');
+    expect(raw).toContain('Box inlay (front)');
+    // Both flagged pages referenced inline and attached with matching cids
+    expect(raw).toContain('src="cid:flag0"');
+    expect(raw).toContain('src="cid:flag1"');
+    expect(raw).toContain('Content-ID: <flag0>');
+    expect(raw).toContain('Content-ID: <flag1>');
+    expect(raw).toContain('filename="card-front.png"');
+    expect(raw).toContain('filename="box-front.png"');
+  });
+
+  it('sendDesignAlterMail (hitster) without flagged images omits the image block', async () => {
+    await mail.sendDesignAlterMail(
+      'designer@example.com',
+      'Des',
+      'en',
+      'pay_1',
+      'uhash',
+      'pl_1',
+      'hitster'
+    );
+    const raw = lastRaw();
+    expect(raw).not.toContain('triggered this');
+    expect(raw).not.toContain('Content-ID: <flag0>');
+    // The generic reason text is still present
+    expect(raw).toContain('third-party brand');
   });
 
   it('sendDesignAlterMail (inappropriate) uses the inappropriate reason', async () => {

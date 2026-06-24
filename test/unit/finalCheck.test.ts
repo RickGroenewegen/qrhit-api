@@ -281,6 +281,107 @@ describe('FinalCheck.runCheck', () => {
     }
   });
 
+  it('attaches the offending card page (flaggedImages) when the card visual check flags Hitster', async () => {
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
+    askWithImagesMock.mockImplementation(async (prompt: string) => {
+      if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
+      if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
+      if (prompt.includes('readable')) return { readable: true, details: '' };
+      if (prompt.includes('Hitster')) return { clean: false, evidence: 'logo found' };
+      return {};
+    });
+    const result = await fc.runCheck(makePayment());
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe('hitster');
+      expect(result.flaggedImages?.[0].key).toBe('cardFront');
+      expect(result.flaggedImages?.[0].filename).toBe('card-front.png');
+      expect(Buffer.isBuffer(result.flaggedImages?.[0].buffer)).toBe(true);
+    }
+  });
+
+  it('checks the box inlay and flags it (reason=hitster) with the box page attached', async () => {
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+      makePhp({ boxEnabled: true, boxFilename: 'box-pay.pdf' }),
+    ]);
+    // Card pages clean; only the box inlay front infringes.
+    askWithImagesMock.mockImplementation(
+      async (prompt: string, images: string[]) => {
+        if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
+        if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
+        if (prompt.includes('readable')) return { readable: true, details: '' };
+        if (prompt.includes('Hitster')) {
+          const page = images[images.length - 1] || '';
+          return page.includes('box_page1')
+            ? { clean: false, evidence: 'Hitster box art reproduced' }
+            : { clean: true, evidence: '' };
+        }
+        return {};
+      }
+    );
+    const result = await fc.runCheck(makePayment());
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe('hitster');
+      expect(result.userActionable).toBe(true);
+      expect(result.flaggedImages).toHaveLength(1);
+      expect(result.flaggedImages?.[0].key).toBe('boxFront');
+      expect(result.flaggedImages?.[0].filename).toBe('box-front.png');
+    }
+  });
+
+  it('does NOT check the box inlay when boxEnabled is false', async () => {
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+      makePhp({ boxEnabled: false }),
+    ]);
+    // Mock would flag a box page, but the box must never be rendered/checked.
+    askWithImagesMock.mockImplementation(
+      async (prompt: string, images: string[]) => {
+        if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
+        if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
+        if (prompt.includes('readable')) return { readable: true, details: '' };
+        if (prompt.includes('Hitster')) {
+          const page = images[images.length - 1] || '';
+          return page.includes('box_')
+            ? { clean: false, evidence: 'box' }
+            : { clean: true, evidence: '' };
+        }
+        return {};
+      }
+    );
+    const result = await fc.runCheck(makePayment());
+    expect(result.ok).toBe(true);
+  });
+
+  it('collects multiple flagged pages (card + box) when several infringe', async () => {
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+      makePhp({ boxEnabled: true, boxFilename: 'box-pay.pdf' }),
+    ]);
+    askWithImagesMock.mockImplementation(
+      async (prompt: string, images: string[]) => {
+        if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
+        if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
+        if (prompt.includes('readable')) return { readable: true, details: '' };
+        if (prompt.includes('Hitster')) {
+          const page = images[images.length - 1] || '';
+          return page.includes('pdf_page1') || page.includes('box_page1')
+            ? { clean: false, evidence: 'x' }
+            : { clean: true, evidence: '' };
+        }
+        return {};
+      }
+    );
+    const result = await fc.runCheck(makePayment());
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.flaggedImages).toHaveLength(2);
+      expect(result.flaggedImages?.map((f) => f.key)).toEqual([
+        'cardFront',
+        'boxFront',
+      ]);
+    }
+  });
+
   it('returns ok=false with reason=unreadable when readability check fails', async () => {
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
     askWithImagesMock.mockImplementation(async (prompt: string) => {

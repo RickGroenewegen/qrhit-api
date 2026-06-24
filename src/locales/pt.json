@@ -658,5 +658,10 @@
   "mail.boxInstructionsStep7": "Coloca suas cartas na caixa.",
   "mail.boxInstructionsStep8": "Cobre as cartas com o divisor e fecha a caixa.",
   "invoice.giftBox": "Caixa de presente",
-  "invoice.qrGames": "QRGames"
+  "invoice.qrGames": "QRGames",
+  "design_alter.flaggedImagesIntro": "A(s) imagem(ns) abaixo causaram isso. Remove ou troca antes de reenviar:",
+  "design_alter.imageCardFront": "Frente do cartão",
+  "design_alter.imageCardBack": "Verso do cartão",
+  "design_alter.imageBoxFront": "Inlay da caixa (frente)",
+  "design_alter.imageBoxBack": "Inlay da caixa (verso)"
 }

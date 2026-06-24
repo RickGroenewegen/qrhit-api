@@ -652,5 +652,10 @@
   "mail.boxInstructionsStep7": "Lägg dina kort i lådan.",
   "mail.boxInstructionsStep8": "Täck korten med avdelaren och stäng lådan.",
   "invoice.giftBox": "Presentlåda",
-  "invoice.qrGames": "QRGames"
+  "invoice.qrGames": "QRGames",
+  "design_alter.flaggedImagesIntro": "Bilden/bilderna nedan orsakade detta. Ta bort eller byt ut dem innan du skickar igen:",
+  "design_alter.imageCardFront": "Kortets framsida",
+  "design_alter.imageCardBack": "Kortets baksida",
+  "design_alter.imageBoxFront": "Boxinlägg (fram)",
+  "design_alter.imageBoxBack": "Boxinlägg (bak)"
 }

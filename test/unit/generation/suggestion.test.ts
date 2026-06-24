@@ -853,6 +853,12 @@ describe('processCorrections', () => {
         where: { id: 30 },
         data: { eligableForPrinter: false },
       });
+      // The printer hold placed by finalCheck must be cleared so the corrected
+      // order can re-enter the pipeline.
+      expect(h.prisma.payment.update).toHaveBeenCalledWith({
+        where: { id: 10 },
+        data: { printerHold: false },
+      });
       expect(h.queueGenerate).toHaveBeenCalledWith(
         'pay_1',
         '',

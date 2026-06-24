@@ -341,6 +341,13 @@ describe('sendToPrinter()', () => {
 
   it('user-actionable hitster failure resets the Judged flag and emails the customer', async () => {
     const { payment } = arrangePrinter();
+    const flaggedImages = [
+      {
+        key: 'cardFront',
+        filename: 'card-front.png',
+        buffer: Buffer.from('card-front-png'),
+      },
+    ];
     h.finalCheck.runCheck.mockResolvedValue({
       ok: false,
       reason: 'hitster',
@@ -349,6 +356,7 @@ describe('sendToPrinter()', () => {
       paymentHasPlaylistId: 31,
       playlistDbId: 21,
       playlistId: 'pl1',
+      flaggedImages,
     });
 
     const res = await gen.sendToPrinter('pay_1', '1.1.1.1');
@@ -370,6 +378,7 @@ describe('sendToPrinter()', () => {
       'userhash',
       'pl1',
       'hitster',
+      flaggedImages,
     ]);
   });
 

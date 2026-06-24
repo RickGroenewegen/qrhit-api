@@ -386,7 +386,8 @@ class Generator {
         fullPayment.paymentId,
         fullPayment.user.hash,
         check.playlistId,
-        check.reason === 'hitster' ? 'hitster' : 'inappropriate'
+        check.reason === 'hitster' ? 'hitster' : 'inappropriate',
+        check.flaggedImages
       );
     }
   }
@@ -1460,7 +1461,12 @@ class Generator {
       // failures (profanity / Hitster) reset the Judged flag and email
       // the customer. Skipped on development to keep local iteration fast,
       // and when an admin explicitly sends to printer from the dashboard.
-      if (process.env['ENVIRONMENT'] === 'development' || skipFinalCheck) {
+      //
+      // TEMP(2026-06-24): finalCheck temporarily ENABLED in development for
+      // testing. To restore the dev skip, put back:
+      //   process.env['ENVIRONMENT'] === 'development' ||
+      // in the condition below.
+      if (/* process.env['ENVIRONMENT'] === 'development' || */ skipFinalCheck) {
         this.logger.log(
           color.yellow.bold(
             `[${white.bold('finalCheck')}] skipped for ${white.bold(

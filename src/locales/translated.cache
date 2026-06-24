@@ -9243,5 +9243,70 @@
     "cn",
     "sv",
     "no"
+  ],
+  "design_alter.flaggedImagesIntro": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.imageCardFront": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.imageCardBack": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.imageBoxFront": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
+  ],
+  "design_alter.imageBoxBack": [
+    "nl",
+    "de",
+    "fr",
+    "es",
+    "it",
+    "pt",
+    "pl",
+    "jp",
+    "cn",
+    "sv",
+    "no"
   ]
 }

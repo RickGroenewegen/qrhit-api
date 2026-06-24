@@ -663,5 +663,10 @@
   "mail.boxInstructionsStep7": "Pack deine Karten in die Box.",
   "mail.boxInstructionsStep8": "Deck die Karten mit dem Trenner ab und mach die Box zu.",
   "invoice.giftBox": "Geschenkbox",
-  "invoice.qrGames": "QRGames"
+  "invoice.qrGames": "QRGames",
+  "design_alter.flaggedImagesIntro": "Das/die Bild(er) unten haben das ausgelöst. Bitte entferne oder ersetze sie vor dem erneuten Absenden:",
+  "design_alter.imageCardFront": "Karten-Vorderseite",
+  "design_alter.imageCardBack": "Karten-Rückseite",
+  "design_alter.imageBoxFront": "Box-Einlage (Vorne)",
+  "design_alter.imageBoxBack": "Box-Einlage (Hinten)"
 }

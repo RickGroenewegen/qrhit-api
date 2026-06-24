@@ -639,5 +639,10 @@
   "mail.boxInstructionsStep7": "Legg kortene dine i boksen.",
   "mail.boxInstructionsStep8": "Dekk kortene med skillet og lukk boksen.",
   "invoice.giftBox": "Gaveeske",
-  "invoice.qrGames": "QRGames"
+  "invoice.qrGames": "QRGames",
+  "design_alter.flaggedImagesIntro": "Bildet/bildene under utløste dette. Fjern eller bytt dem før du sender inn på nytt:",
+  "design_alter.imageCardFront": "Kortforside",
+  "design_alter.imageCardBack": "Kortbakside",
+  "design_alter.imageBoxFront": "Boksinnlegg (forside)",
+  "design_alter.imageBoxBack": "Boksinnlegg (bakside)"
 }

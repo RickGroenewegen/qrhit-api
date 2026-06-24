@@ -658,5 +658,10 @@
   "mail.boxInstructionsStep7": "Włóż karty do pudełka.",
   "mail.boxInstructionsStep8": "Przykryj karty przekładką i zamknij pudełko.",
   "invoice.giftBox": "Pudełko prezentowe",
-  "invoice.qrGames": "QRGames"
+  "invoice.qrGames": "QRGames",
+  "design_alter.flaggedImagesIntro": "Obrazki poniżej to spowodowały. Usuń lub zamień je przed ponownym wysłaniem:",
+  "design_alter.imageCardFront": "Przód karty",
+  "design_alter.imageCardBack": "Tył karty",
+  "design_alter.imageBoxFront": "Wkładka pudełka (przód)",
+  "design_alter.imageBoxBack": "Wkładka pudełka (tył)"
 }

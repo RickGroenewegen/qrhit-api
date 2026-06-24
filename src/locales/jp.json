@@ -654,5 +654,10 @@
   "mail.boxInstructionsStep7": "カードを箱に入れてね。",
   "mail.boxInstructionsStep8": "仕切りでカードを覆って箱を閉めてね。",
   "invoice.giftBox": "ギフトボックス",
-  "invoice.qrGames": "QRGames"
+  "invoice.qrGames": "QRGames",
+  "design_alter.flaggedImagesIntro": "下の画像が原因です。再送信する前に削除か差し替えてね：",
+  "design_alter.imageCardFront": "カード表面",
+  "design_alter.imageCardBack": "カード裏面",
+  "design_alter.imageBoxFront": "箱インレイ（表）",
+  "design_alter.imageBoxBack": "箱インレイ（裏）"
 }

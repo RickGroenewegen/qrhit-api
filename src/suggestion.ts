@@ -938,6 +938,16 @@ class Suggestion {
               eligableForPrinter: false,
             },
           });
+
+          // Clear any printer hold placed by finalCheck (e.g. a Hitster /
+          // inappropriate-content flag). The user has resubmitted a corrected
+          // design, so the order should re-enter the pipeline. finalCheck runs
+          // again in sendToPrinter, so a still-infringing resubmit is simply
+          // re-held and re-emailed.
+          await this.prisma.payment.update({
+            where: { id: paymentDbId },
+            data: { printerHold: false },
+          });
         }
 
         // Regenerate PDFs (old PDFs are automatically cleared by generator.generate())

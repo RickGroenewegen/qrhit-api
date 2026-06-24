@@ -18,6 +18,7 @@ import cluster from 'cluster';
 import OpenAI from 'openai';
 import { ChatService } from './chat';
 import PrismaInstance from './prisma';
+import type { FinalCheckFlaggedImage } from './finalCheck';
 
 const prisma = PrismaInstance.getInstance();
 const PROMOTIONAL_CREDIT_AMOUNT = parseFloat(process.env['PROMOTIONAL_CREDIT_AMOUNT'] || '2.5');
@@ -191,7 +192,8 @@ class Mail {
     paymentId: string,
     userHash: string,
     playlistId: string,
-    reason: 'inappropriate' | 'hitster'
+    reason: 'inappropriate' | 'hitster',
+    flaggedImages?: FinalCheckFlaggedImage[]
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -202,7 +204,13 @@ class Mail {
       'design_alter'
     );
 
-    const designerLink = `${process.env['FRONTEND_URI']}/${locale}/usersuggestions/${paymentId}/${userHash}/${playlistId}/1`;
+    // The trailing route segment is the `:digital` flag on the correction page.
+    // finalCheck (and therefore this email) only ever runs on PHYSICAL orders,
+    // so pass 0. Passing 1 makes the page treat the order as digital, which
+    // hides the physical-only card/box design editors needed to fix the flagged
+    // images and greys out the "process corrections" action until track text is
+    // changed.
+    const designerLink = `${process.env['FRONTEND_URI']}/${locale}/usersuggestions/${paymentId}/${userHash}/${playlistId}/0`;
 
     const reasonText =
       reason === 'hitster'
@@ -211,6 +219,28 @@ class Mail {
         : translations?.['reasonInappropriate'] ||
           'Our automatic review flagged content on your card that we cannot print.';
 
+    // Human-readable fallback labels for each flagged page (used when a
+    // translation is missing for the locale).
+    const imageLabelFallback: Record<FinalCheckFlaggedImage['key'], string> = {
+      cardFront: 'Card front',
+      cardBack: 'Card back',
+      boxFront: 'Box inlay (front)',
+      boxBack: 'Box inlay (back)',
+    };
+
+    // Build the template view-model + matching inline cids for each flagged
+    // image (cid 'flag0', 'flag1', …).
+    const flaggedImageData = (flaggedImages || []).map((img, index) => {
+      const labelKey = `image${img.key.charAt(0).toUpperCase()}${img.key.slice(
+        1
+      )}`;
+      return {
+        name:
+          translations?.[labelKey] || imageLabelFallback[img.key] || img.key,
+        cid: `flag${index}`,
+      };
+    });
+
     const mailParams = {
       fullname: fullname || email.split('@')[0],
       designerLink,
@@ -218,6 +248,12 @@ class Mail {
       productName: process.env['PRODUCT_NAME'],
       currentYear: new Date().getFullYear(),
       translations,
+      flaggedImages: flaggedImageData,
+      flaggedImagesIntro:
+        flaggedImageData.length > 0
+          ? translations?.['flaggedImagesIntro'] ||
+            'The image(s) below triggered this. Please remove or replace them before resubmitting:'
+          : '',
     };
 
     try {
@@ -247,6 +283,18 @@ class Mail {
           cid: 'logo',
         },
       ];
+
+      // Attach each flagged rendered page inline so the customer sees exactly
+      // which image triggered the review.
+      (flaggedImages || []).forEach((img, index) => {
+        attachments.push({
+          contentType: 'image/png',
+          filename: img.filename,
+          data: this.wrapBase64(img.buffer.toString('base64')),
+          isInline: true,
+          cid: `flag${index}`,
+        });
+      });
 
       const rawEmail = await this.renderRaw(
         {

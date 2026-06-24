@@ -13,6 +13,7 @@ const { prismaMock, translateTextMock } = vi.hoisted(() => {
       trustPilot: delegate(),
       companyList: delegate(),
       blog: delegate(),
+      eventBase: delegate(),
     },
     translateTextMock: vi.fn(),
   };

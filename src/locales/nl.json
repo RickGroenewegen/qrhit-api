@@ -662,5 +662,10 @@
   "mail.boxInstructionsStep7": "Doe je kaarten in de doos.",
   "mail.boxInstructionsStep8": "Dek de kaarten af met de verdeler en sluit de doos.",
   "invoice.giftBox": "Cadeaudoos",
-  "invoice.qrGames": "QRGames"
+  "invoice.qrGames": "QRGames",
+  "design_alter.flaggedImagesIntro": "De afbeelding(en) hieronder veroorzaakten dit. Verwijder of vervang ze voordat je opnieuw indient:",
+  "design_alter.imageCardFront": "Voorkant kaart",
+  "design_alter.imageCardBack": "Achterkant kaart",
+  "design_alter.imageBoxFront": "Doos inlay (voorkant)",
+  "design_alter.imageBoxBack": "Doos inlay (achterkant)"
 }

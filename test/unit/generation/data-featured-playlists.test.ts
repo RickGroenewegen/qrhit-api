@@ -52,6 +52,7 @@ function makeDeps() {
       count: vi.fn(),
     },
     paymentHasPlaylist: { groupBy: vi.fn(async () => []) },
+    eventBasePlaylist: { findMany: vi.fn(async () => []) },
     user: { findUnique: vi.fn(async () => null) },
     $queryRawUnsafe: vi.fn(async () => []),
   };

@@ -5,6 +5,13 @@
 {{ translations.intro }}
 
 {{ reasonText }}
+{{#if flaggedImages}}
+
+{{ flaggedImagesIntro }}
+{{#each flaggedImages}}
+- {{ this.name }}
+{{/each}}
+{{/if}}
 
 {{ translations.clickButton }}
 
