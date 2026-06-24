@@ -370,7 +370,6 @@ export async function createSiteMap(
     '/gift-box',
     '/music-match',
     '/music-bingo',
-    '/hitster-alternative',
     '/music-quiz',
     '/music-timeline',
     '/examples',
