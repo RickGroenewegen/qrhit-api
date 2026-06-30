@@ -605,6 +605,9 @@
 
         <!-- Signature Section -->
         <div style="margin-top: 12px;">
+            <div style="font-size: 10px; color: #666; margin-bottom: 6px; line-height: 1.4;">
+                Door ondertekening gaat Opdrachtgever akkoord met deze offerte en verklaart Opdrachtgever uitdrukkelijk in te stemmen met de Algemene Voorwaarden en met de bepalingen inzake Intellectueel Eigendom en Vrijwaring, zoals opgenomen in deze offerte.
+            </div>
             <div style="border: 1px solid #e0e0e0; border-radius: 4px; padding: 10px; width: 50%;">
                 <div style="font-size: 11px; color: #666; margin-bottom: 4px;">Voor akkoord namens <%= company.name %></div>
                 <div style="border-bottom: 1px solid #ccc; height: 30px;"></div>
@@ -677,26 +680,7 @@
             </div>
         </div>
 
-        <!-- Terms and Conditions (Page 3) -->
-        <div class="terms-section">
-            <h2 class="section-title">Algemene Voorwaarden</h2>
-            <ol class="terms-list">
-                <li>Aanbetaling: Bij akkoord op deze offerte wordt een aanbetaling van 30% van het totaalbedrag gefactureerd. Na ontvangst van de aanbetaling wordt de order in behandeling genomen en de productie/uitvoering ingepland.</li>
-                <li>Betaling dient te geschieden binnen 14 dagen na factuurdatum.</li>
-                <li>Alle bedragen zijn in EUR, betaling via bankoverschrijving.</li>
-                <li>Bij akkoord graag deze offerte ondertekend retour.</li>
-                <li>Deze offerte is geldig tot <%= formatDate(validUntil) %>.</li>
-                <li>Indicatieve levertijd: Opgegeven levertijden zijn indicatief en gelden niet als fatale termijnen, tenzij uitdrukkelijk schriftelijk anders is overeengekomen.</li>
-                <li>Startmoment levertijd: Levertijden gaan in nadat de overeenkomst tot stand is gekomen én alle voor uitvoering noodzakelijke informatie, bestanden, goedkeuringen (zoals een drukproef) en eventuele (aan)betalingen door Opdrachtnemer zijn ontvangen.</li>
-                <li>Vertraging en ingebrekestelling: Bij overschrijding van een levertijd informeert Opdrachtnemer Opdrachtgever zo spoedig mogelijk. Opdrachtgever kan de overeenkomst pas ontbinden nadat Opdrachtnemer schriftelijk in gebreke is gesteld en een redelijke termijn voor nakoming is geboden, en nakoming binnen die termijn uitblijft.</li>
-                <li>Aansprakelijkheid bij vertraging: Opdrachtnemer is niet aansprakelijk voor schade als gevolg van overschrijding van levertijden, behoudens opzet of bewuste roekeloosheid. Eventuele aansprakelijkheid is in ieder geval beperkt tot het factuurbedrag van het betreffende deel van de opdracht.</li>
-                <li>Overmacht: In geval van overmacht wordt de levertijd opgeschort voor de duur van de overmachtssituatie. Onder overmacht wordt mede verstaan: niet-tijdige levering door toeleveranciers, transportproblemen, storingen, ziekte, brand, overheidsmaatregelen en andere omstandigheden buiten de invloedssfeer van Opdrachtnemer.</li>
-                <li>De QR-codes linken naar Spotify. Wij streven ernaar links werkend te houden en kunnen deze updaten indien nodig. Echter, als Spotify een nummer volledig verwijdert, is dit buiten onze controle.</li>
-                <li>De app werkt ook zonder Spotify Premium, maar dan ziet de gebruiker na een korte countdown de artiest/titel en speelt een 30-seconden preview. Met Premium blijft alles verborgen tot je raadt.</li>
-                <li>Afhankelijkheid van Derden: QRSong! streeft naar continue beschikbaarheid van de digitale diensten. De werking van het product is echter afhankelijk van externe dienstverleners, waaronder maar niet beperkt tot muziekstreamingdiensten (Spotify, Apple Music, YouTube Music, Deezer, Tidal), hosting- en infrastructuurproviders. QRSong! kan niet aansprakelijk worden gesteld voor storingen, wijzigingen in functionaliteit, of beëindiging van diensten door deze derden. Bij substantiële wijzigingen zal QRSong! zich inspannen om een passend alternatief te bieden, zonder dat hieraan rechten kunnen worden ontleend.</li>
-                <li>Beperking van Aansprakelijkheid: QRSong! is niet aansprakelijk voor indirecte of gevolgschade, fouten in de inhoud, verlies van gegevens, of schade door onjuist gebruik van de kaarten of app.</li>
-            </ol>
-        </div>
+        <%- include('partials/quotation_terms', { brandName: 'QRSong!' }) %>
 
         <!-- Footer -->
         <div class="footer">
