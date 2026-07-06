@@ -13,6 +13,8 @@ import { flushTestRedis } from '../helpers/redis';
 import { createTestUser, authHeader } from '../helpers/auth';
 import Generator from '../../src/generator';
 import PDF from '../../src/pdf';
+import Bookkeeping from '../../src/bookkeeping';
+import Mollie from '../../src/mollie';
 
 /**
  * admin-routes2: covers endpoint groups not touched by admin.test.ts,
@@ -636,6 +638,61 @@ describe('admin routes — wave 2 coverage', () => {
       });
       expect(res.statusCode).toBe(200);
       expect(res.json().success).toBe(true);
+    });
+
+    it('POST /tax_report/:period/invoice — dates the invoice on the day it is generated', async () => {
+      const bookkeeping = Bookkeeping.getInstance();
+      const createSpy = vi
+        .spyOn(bookkeeping, 'createInvoice')
+        .mockResolvedValue({ id: 'inv-1' } as any);
+      const spies = [
+        createSpy,
+        vi.spyOn(bookkeeping, 'getStatus').mockResolvedValue({ connected: true } as any),
+        vi.spyOn(bookkeeping, 'findInvoiceByReference').mockResolvedValue(null),
+        vi.spyOn(bookkeeping, 'findTaxRateId').mockResolvedValue('tax-1'),
+        vi.spyOn(bookkeeping, 'findContactByCompanyName').mockResolvedValue({
+          id: 'c-1',
+          company_name: 'QRSong!',
+        } as any),
+        vi.spyOn(bookkeeping, 'findLedgerAccountIdByCode').mockResolvedValue('ledger-8010'),
+        vi.spyOn(bookkeeping, 'finalizeInvoice').mockResolvedValue({
+          id: 'inv-1',
+          invoice_id: '2026-0001',
+        } as any),
+        vi.spyOn(Mollie.prototype, 'getPaymentsByTaxRate').mockResolvedValue({
+          rows: [
+            {
+              countrycode: 'NL',
+              zone: 'Binnenland',
+              taxRate: 21,
+              numberOfSales: 3,
+              totalPriceWithoutTax: 100,
+            },
+          ],
+        }),
+      ];
+
+      try {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/tax_report/202601/invoice',
+          headers,
+        });
+        expect(res.statusCode).toBe(200);
+        expect(res.json().success).toBe(true);
+
+        const now = new Date();
+        const today = [
+          now.getFullYear(),
+          String(now.getMonth() + 1).padStart(2, '0'),
+          String(now.getDate()).padStart(2, '0'),
+        ].join('-');
+        expect(createSpy).toHaveBeenCalledWith(
+          expect.objectContaining({ invoiceDate: today })
+        );
+      } finally {
+        spies.forEach((s) => s.mockRestore());
+      }
     });
 
     it('POST /admin/process_playback_counts — runs review process', async () => {
