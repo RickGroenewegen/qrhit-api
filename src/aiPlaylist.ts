@@ -111,10 +111,9 @@ class AIPlaylistGenerator {
 
   /**
    * Schedule a daily sweep that removes AI-generated Spotify playlists
-   * older than one week which were never purchased (i.e. their Spotify
-   * playlistId never made it into our `playlists` table). Only the
-   * cluster primary on the main server (or dev) runs the cron so we
-   * don't multi-fire across workers/servers.
+   * older than three days which were never purchased (no paid, non-test
+   * payment attached). Only the cluster primary on the main server (or
+   * dev) runs the cron so we don't multi-fire across workers/servers.
    */
   private scheduleCleanup(): void {
     if (!cluster.isPrimary) return;
@@ -146,11 +145,12 @@ class AIPlaylistGenerator {
 
   /**
    * Find AI playlists that:
-   *   • are at least 7 days old,
+   *   • are at least 3 days old,
    *   • completed successfully (status='success'),
    *   • have a Spotify playlist ID we still know about,
-   *   • whose Spotify playlist ID is NOT referenced by any `playlists`
-   *     row (i.e. nobody bought them).
+   *   • were never purchased — no `playlists` row with the same Spotify id
+   *     has a paid, non-test payment attached (same definition the admin
+   *     AI-creations dashboard uses for its "Purchased" column).
    * Delete each from the app-owned Spotify account and mark the
    * AISearch row so we don't try again.
    */
@@ -160,7 +160,7 @@ class AIPlaylistGenerator {
     skipped: number;
     errors: number;
   }> {
-    const cutoff = new Date(Date.now() - 7 * 24 * 3600 * 1000);
+    const cutoff = new Date(Date.now() - 3 * 24 * 3600 * 1000);
     let scanned = 0;
     let deleted = 0;
     let skipped = 0;
@@ -199,12 +199,18 @@ class AIPlaylistGenerator {
     for (const row of candidates) {
       const spId = row.spotifyPlaylistId!;
       try {
-        const playlistRow = await this.prisma.playlist.findUnique({
-          where: { playlistId: spId },
+        // Purchase guard: skip (never delete) if this playlist was bought.
+        // "Purchased" = a `playlists` row with the same Spotify id that has
+        // at least one paid, non-test payment attached — identical to the
+        // admin AI-creations dashboard's "Purchased" column.
+        const purchased = await this.prisma.playlist.findFirst({
+          where: {
+            playlistId: spId,
+            Payment: { some: { payment: { status: 'paid', test: false } } },
+          },
           select: { id: true },
         });
-        if (playlistRow) {
-          // Purchased (or imported through some other flow) — leave alone.
+        if (purchased) {
           skipped += 1;
           continue;
         }

@@ -2276,13 +2276,12 @@ export default async function adminRoutes(
           };
         });
 
-        const invoiceDate = new Date(
-          endDate.getFullYear(),
-          endDate.getMonth(),
-          endDate.getDate()
-        )
-          .toISOString()
-          .slice(0, 10);
+        const now = new Date();
+        const invoiceDate = [
+          now.getFullYear(),
+          String(now.getMonth() + 1).padStart(2, '0'),
+          String(now.getDate()).padStart(2, '0'),
+        ].join('-');
 
         const draft = await bookkeeping.createInvoice({
           contactId: contact.id,
