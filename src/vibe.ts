@@ -3196,6 +3196,8 @@ class Vibe {
     fluidMode?: boolean;
     includeCustomApp?: boolean;
     includeVotingPortal?: boolean;
+    forceResellerPrice?: number | null;
+    forceClientPrice?: number | null;
   }): Promise<any> {
     try {
       const {
@@ -3208,6 +3210,8 @@ class Vibe {
         fluidMode = false,
         includeCustomApp = false,
         includeVotingPortal = false,
+        forceResellerPrice = null,
+        forceClientPrice = null,
       } = params;
 
       // Validate input
@@ -3416,9 +3420,20 @@ class Vibe {
       }
 
       // Our profit is reduced by the manual discount
-      const profitPerBox = round2(
+      let profitPerBox = round2(
         kickBackFee + resellerDiscountForUs - (manualDiscount || 0)
       );
+
+      // A forced per-box price overrides the calculated commercial price for
+      // the party that pays us (reseller when isReseller, client otherwise).
+      // The difference flows 1:1 into our profit, like a manual discount.
+      const forcedPerBox = isReseller ? forceResellerPrice : forceClientPrice;
+      if (forcedPerBox && forcedPerBox > 0) {
+        const priceDelta = round2(forcedPerBox - commercialPrice);
+        commercialPrice = round2(forcedPerBox);
+        profitPerBox = round2(profitPerBox + priceDelta);
+      }
+
       const baseOurProfit = round2(profitPerBox * quantity);
       const resellerProfit = isReseller
         ? round2(tierData.resellerDiscount * quantity)
@@ -3453,6 +3468,8 @@ class Vibe {
             fluidMode,
             includeCustomApp,
             includeVotingPortal,
+            forceResellerPrice: forceResellerPrice || 0,
+            forceClientPrice: forceClientPrice || 0,
           },
           pricing: {
             commercialPricePerBox: commercialPrice,
@@ -4318,6 +4335,8 @@ class Vibe {
           fluidMode: calc.fluidMode || false,
           includeCustomApp: calc.includeCustomApp || false,
           includeVotingPortal: calc.includeVotingPortal || false,
+          forceResellerPrice: calc.forceResellerPrice || null,
+          forceClientPrice: calc.forceClientPrice || null,
         });
         if (!r.success) return { success: false, error: 'Pricing failed' };
         const cr = r.calculation;

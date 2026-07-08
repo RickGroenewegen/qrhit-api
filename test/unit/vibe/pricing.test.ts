@@ -99,6 +99,42 @@ describe('calculatePricing (OnzeVibe/HappiBox)', () => {
     expect(c.pricing.profitPerBox).toBe(2.54); // 4.54 - 2
   });
 
+  it('force client price overrides the per-box price; the delta flows into our profit', async () => {
+    const res = await vibe.calculatePricing({
+      ...baseParams,
+      forceClientPrice: 40,
+      forceResellerPrice: 99, // ignored: not a reseller order
+    });
+    const c = res.calculation;
+    expect(c.pricing.commercialPricePerBox).toBe(40);
+    expect(c.pricing.profitPerBox).toBe(-0.41); // 4.54 + (40 - 44.95)
+    expect(c.pricing.clientPrice).toBe(4000);
+    expect(c.adjustments.forceClientPrice).toBe(40);
+  });
+
+  it('force reseller price applies only on reseller orders', async () => {
+    const res = await vibe.calculatePricing({
+      ...baseParams,
+      isReseller: true,
+      forceResellerPrice: 50,
+      forceClientPrice: 10, // ignored: reseller order
+    });
+    const c = res.calculation;
+    expect(c.pricing.commercialPricePerBox).toBe(50);
+    expect(c.pricing.profitPerBox).toBe(8.05); // 3 + (50 - 44.95)
+    expect(c.pricing.clientPrice).toBe(5000);
+  });
+
+  it('ignores empty/zero force prices', async () => {
+    const res = await vibe.calculatePricing({
+      ...baseParams,
+      forceClientPrice: 0,
+      forceResellerPrice: null,
+    });
+    expect(res.calculation.pricing.commercialPricePerBox).toBe(44.95);
+    expect(res.calculation.pricing.profitPerBox).toBe(4.54);
+  });
+
   it.each([
     [100, 100],
     [249, 100],

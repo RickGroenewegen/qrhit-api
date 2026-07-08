@@ -1833,6 +1833,8 @@ export default async function vibeRoutes(
             fluidMode: calculation.fluidMode || false,
             includeCustomApp: calculation.includeCustomApp || false,
             includeVotingPortal: calculation.includeVotingPortal || false,
+            forceResellerPrice: calculation.forceResellerPrice || null,
+            forceClientPrice: calculation.forceClientPrice || null,
           });
 
           if (pricingResult.success) {
