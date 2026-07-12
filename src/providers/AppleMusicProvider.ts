@@ -1,4 +1,7 @@
 import { color } from 'console-log-colors';
+import jwt from 'jsonwebtoken';
+import fs from 'fs';
+import path from 'path';
 import { ServiceType } from '../enums/ServiceType';
 import {
   IMusicProvider,
@@ -25,6 +28,13 @@ const CACHE_KEY_APPLE_MUSIC_TRACKS = 'apple_music_tracks_';
 const CACHE_KEY_APPLE_MUSIC_SEARCH = 'apple_music_search_';
 const CACHE_TTL_SEARCH = 3600; // 1 hour
 
+// Developer token (MusicKit JWT) generated from the .p8 key.
+// The JWT is valid for up to 180 days (Apple's max); we cache it for 30 days
+// so it is always regenerated well before it can expire.
+const CACHE_KEY_APPLE_MUSIC_TOKEN = 'apple_music_developer_token';
+const APPLE_MUSIC_TOKEN_CACHE_TTL = 30 * 24 * 60 * 60; // 30 days in seconds
+const APPLE_MUSIC_TOKEN_EXPIRY = 180 * 24 * 60 * 60; // 180 days in seconds (Apple max)
+
 // No TTL for playlist/tracks cache - matches Spotify behavior
 
 // Map frontend locale codes to Apple Music storefront country codes
@@ -47,6 +57,7 @@ class AppleMusicProvider implements IMusicProvider {
   private logger = new Logger();
   private utils = new Utils();
   private developerToken: string | null = null;
+  private developerTokenExpiry = 0; // epoch seconds; 0 = unknown
 
   readonly serviceType = ServiceType.APPLE_MUSIC;
 
@@ -88,14 +99,113 @@ class AppleMusicProvider implements IMusicProvider {
   }
 
   /**
-   * Get the Developer Token for Apple Music API
-   * The token should be set in environment variables
+   * Get the Developer Token (MusicKit JWT) for the Apple Music API.
+   *
+   * The token is generated on demand from the `apple_music.p8` private key and
+   * cached in Redis (shared with the `GET /apple-music/token` route) so it is
+   * regenerated automatically long before it can expire. A static
+   * `APPLE_MUSIC_DEVELOPER_TOKEN` env var is only used as a last-resort fallback
+   * when the key file / config is missing.
    */
-  private getDeveloperToken(): string | null {
-    if (!this.developerToken) {
-      this.developerToken = process.env['APPLE_MUSIC_DEVELOPER_TOKEN'] || null;
+  public async getDeveloperToken(): Promise<string | null> {
+    const now = Math.floor(Date.now() / 1000);
+    const buffer = 24 * 60 * 60; // refresh a day before expiry
+
+    // 1. In-memory memo (only trust it while comfortably valid)
+    if (this.developerToken && this.developerTokenExpiry > now + buffer) {
+      return this.developerToken;
     }
-    return this.developerToken;
+
+    // 2. Shared Redis cache (populated here or by the /apple-music/token route)
+    const cached = await this.cache.get(CACHE_KEY_APPLE_MUSIC_TOKEN);
+    if (cached) {
+      const exp = this.decodeTokenExpiry(cached);
+      if (exp > now + buffer) {
+        this.developerToken = cached;
+        this.developerTokenExpiry = exp;
+        return cached;
+      }
+    }
+
+    // 3. Generate a fresh JWT from the .p8 key
+    const generated = this.generateDeveloperToken();
+    if (generated) {
+      this.developerToken = generated;
+      this.developerTokenExpiry = this.decodeTokenExpiry(generated);
+      await this.cache.set(
+        CACHE_KEY_APPLE_MUSIC_TOKEN,
+        generated,
+        APPLE_MUSIC_TOKEN_CACHE_TTL
+      );
+      return generated;
+    }
+
+    // 4. Last-resort fallback: legacy static env var
+    return process.env['APPLE_MUSIC_DEVELOPER_TOKEN'] || null;
+  }
+
+  /**
+   * Sign a new Apple Music developer token (ES256 JWT) from the .p8 key.
+   * Returns null if the key file or Team ID / Key ID are not configured.
+   */
+  private generateDeveloperToken(): string | null {
+    try {
+      const keyPath = path.join(
+        process.env['APP_ROOT'] || '',
+        '..',
+        'apple_music.p8'
+      );
+      const teamId = process.env['APPLE_MUSIC_TEAM_ID'];
+      const keyId = process.env['APPLE_MUSIC_KEY_ID'];
+
+      if (!fs.existsSync(keyPath) || !teamId || !keyId) {
+        this.logger.log(
+          color.red.bold(
+            `[${color.white.bold('apple_music')}] Cannot generate developer token: missing key file or Team ID / Key ID`
+          )
+        );
+        return null;
+      }
+
+      const privateKey = fs.readFileSync(keyPath, 'utf8');
+      const token = jwt.sign({}, privateKey, {
+        algorithm: 'ES256',
+        expiresIn: APPLE_MUSIC_TOKEN_EXPIRY,
+        issuer: teamId,
+        header: { alg: 'ES256', kid: keyId },
+      });
+
+      this.logger.log(
+        color.green.bold(
+          `[${color.white.bold('apple_music')}] Generated a fresh developer token`
+        )
+      );
+      return token;
+    } catch (error: any) {
+      this.logger.log(
+        color.red.bold(
+          `[${color.white.bold('apple_music')}] Failed to generate developer token: ${color.white.bold(error.message)}`
+        )
+      );
+      return null;
+    }
+  }
+
+  /**
+   * Decode a JWT's `exp` claim (epoch seconds) without verifying the signature.
+   * Returns 0 if it cannot be parsed.
+   */
+  private decodeTokenExpiry(token: string): number {
+    try {
+      const parts = token.split('.');
+      if (parts.length !== 3) return 0;
+      const payload = JSON.parse(
+        Buffer.from(parts[1], 'base64').toString('utf8')
+      );
+      return typeof payload.exp === 'number' ? payload.exp : 0;
+    } catch {
+      return 0;
+    }
   }
 
   /**
@@ -216,7 +326,7 @@ class AppleMusicProvider implements IMusicProvider {
     endpoint: string,
     storefront: string = DEFAULT_STOREFRONT
   ): Promise<{ success: boolean; data?: T; error?: string }> {
-    const token = this.getDeveloperToken();
+    const token = await this.getDeveloperToken();
     if (!token) {
       return {
         success: false,
@@ -233,6 +343,12 @@ class AppleMusicProvider implements IMusicProvider {
       });
 
       if (!response.ok) {
+        const body = await response.text().catch(() => '');
+        this.logger.log(
+          color.red.bold(
+            `[${color.white.bold('apple_music')}] API error ${color.white.bold(String(response.status))} ${color.white.bold(response.statusText)} for ${color.white.bold(url)} body: ${color.white.bold(body.slice(0, 500))}`
+          )
+        );
         return {
           success: false,
           error: `Apple Music API error: ${response.status} ${response.statusText}`,

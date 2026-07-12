@@ -4,59 +4,21 @@ import Utils from '../utils';
 import TrackEnrichment from '../trackEnrichment';
 import ProgressWebSocketServer from '../progress-websocket';
 import { ServiceType } from '../enums/ServiceType';
-import Cache from '../cache';
-import jwt from 'jsonwebtoken';
-import fs from 'fs';
-import path from 'path';
-
-const APPLE_MUSIC_TOKEN_CACHE_KEY = 'apple_music_developer_token';
-const APPLE_MUSIC_TOKEN_CACHE_TTL = 30 * 24 * 60 * 60; // 30 days in seconds
-const APPLE_MUSIC_TOKEN_EXPIRY = 180 * 24 * 60 * 60; // 180 days in seconds (max allowed by Apple)
 
 export default async function appleMusicRoutes(fastify: FastifyInstance) {
   const appleMusicProvider = AppleMusicProvider.getInstance();
   const utils = new Utils();
   const trackEnrichment = TrackEnrichment.getInstance();
-  const cache = Cache.getInstance();
 
-  // Get or generate Apple Music developer token (cached in Redis for 30 days)
+  // Get or generate the Apple Music developer token.
+  // Generation + Redis caching live in AppleMusicProvider so the frontend
+  // MusicKit token and the server-side API calls always share one valid token.
   fastify.get('/apple-music/token', async (request: any, reply) => {
-    // Check Redis cache first
-    const cached = await cache.get(APPLE_MUSIC_TOKEN_CACHE_KEY);
-    if (cached) {
-      return { token: cached };
-    }
-
-    // Generate a new JWT
-    const keyPath = path.join(process.env['APP_ROOT'] || '', '..', 'apple_music.p8');
-    if (!fs.existsSync(keyPath)) {
+    const token = await appleMusicProvider.getDeveloperToken();
+    if (!token) {
       reply.status(500);
-      return { error: 'Apple Music key not configured' };
+      return { error: 'Apple Music token not configured' };
     }
-
-    const privateKey = fs.readFileSync(keyPath, 'utf8');
-
-    const teamId = process.env['APPLE_MUSIC_TEAM_ID'];
-    const keyId = process.env['APPLE_MUSIC_KEY_ID'];
-
-    if (!teamId || !keyId) {
-      reply.status(500);
-      return { error: 'Apple Music Team ID or Key ID not configured' };
-    }
-
-    const token = jwt.sign({}, privateKey, {
-      algorithm: 'ES256',
-      expiresIn: APPLE_MUSIC_TOKEN_EXPIRY,
-      issuer: teamId,
-      header: {
-        alg: 'ES256',
-        kid: keyId,
-      },
-    });
-
-    // Cache in Redis for 30 days
-    await cache.set(APPLE_MUSIC_TOKEN_CACHE_KEY, token, APPLE_MUSIC_TOKEN_CACHE_TTL);
-
     return { token };
   });
 
