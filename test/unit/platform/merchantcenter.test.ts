@@ -735,6 +735,21 @@ describe('createMerchantProduct', () => {
     );
     expect(product.description).toBe(' Contains 100 music tracks');
   });
+
+  it('returns null (skips the variant) when only a raw external image is available', async () => {
+    // No AI image for this playlist and the cover download fails, so
+    // generateProductImage falls back to the raw external URL. The feed must
+    // NOT ship that (Google rejects external CDN images), so the product is
+    // skipped instead of built.
+    h.axiosGet.mockRejectedValue(new Error('403 from CDN'));
+    const product = await svc.createMerchantProduct(
+      makeVariant({
+        playlistId: 'PLSKIP',
+        image: 'https://i.scdn.co/image/abc',
+      })
+    );
+    expect(product).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -710,6 +710,12 @@ export class MerchantCenterService {
   ): Promise<string | null> {
     try {
       const product = await this.createMerchantProduct(variant);
+      // createMerchantProduct returns null when it can't produce a hosted
+      // image for the variant (see the guard there). Skip silently — it has
+      // already logged why — so we never upload a raw external image URL.
+      if (!product) {
+        return null;
+      }
       const isDevelopment = process.env['ENVIRONMENT'] === 'development';
 
       // In development mode, skip actual API calls
@@ -816,7 +822,7 @@ export class MerchantCenterService {
    */
   private async createMerchantProduct(
     variant: ProductVariant
-  ): Promise<MerchantProduct> {
+  ): Promise<MerchantProduct | null> {
     const baseUrl = process.env.FRONTEND_URI || 'https://www.qrsong.io';
     const country = variant.country;
 
@@ -839,15 +845,26 @@ export class MerchantCenterService {
       variant.type
     );
 
-    // Check if we're using the fallback Spotify image (indicates generation failure)
-    if (productImage.includes('scdn.co') || productImage.includes('spotify')) {
+    // Guard against shipping a raw external cover URL as the Merchant image.
+    // generateProductImage() falls back to the original playlist cover
+    // (Spotify image-cdn / Apple mzstatic / etc.) when the AI image is absent
+    // AND the Sharp composite fails. Google always rejects those external URLs
+    // (image_link_broken / image_decoding_error), so rather than upload a
+    // guaranteed-disapproved product we skip this variant. Only our own hosted
+    // composite/AI images live under /public/products/ — anything else is a
+    // generation failure. The next sync will pick the variant back up once an
+    // AI/composite image exists for the playlist.
+    if (!productImage.includes('/public/products/')) {
       this.logger.log(
-        red('⚠️ WARNING: Using original Spotify image instead of composite')
+        yellow(
+          `⤫ Skipping ${white.bold(variant.slug)} [${white.bold(
+            variant.type
+          )}/${white.bold(variant.locale)}/${white.bold(
+            country
+          )}]: no hosted product image (fell back to ${productImage})`
+        )
       );
-      this.logger.log(
-        red(`  Product: ${variant.slug} [${variant.type}/${variant.locale}]`)
-      );
-      this.logger.log(red(`  Image URL: ${productImage}`));
+      return null;
     }
 
     // Generate product URL with orderType parameter
