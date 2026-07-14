@@ -376,6 +376,8 @@ describe('initialization', () => {
     });
     expect(h.products.list).toHaveBeenCalledWith({
       merchantId: 'merchant-test-1',
+      maxResults: 250,
+      pageToken: undefined,
     });
   });
 
@@ -487,10 +489,16 @@ describe('computeExpectedProductIdsForPlaylist', () => {
     ]);
   });
 
-  it('returns nothing for an unsupported featured locale', () => {
+  it('includes every country whose allowed locales cover the featured locale (fr → CA/BE/CH)', () => {
+    // Mirrors the website's "localised + international" rule: a French list is
+    // allowed in the countries whose allowed-locale set contains 'fr'.
     expect(
       svc.computeExpectedProductIdsForPlaylist({ id: 7, featuredLocale: 'fr' })
-    ).toEqual([]);
+    ).toEqual([
+      'online:en:CA:7_3_1',
+      'online:nl:BE:7_3_2',
+      'online:de:CH:7_3_3',
+    ]);
   });
 });
 
@@ -913,6 +921,46 @@ describe('uploadFeaturedPlaylists', () => {
     });
   });
 
+  it('isolates a failing playlist so the rest of the batch still uploads', async () => {
+    // Regression guard: previously an unhandled throw in uploadPlaylist aborted
+    // the whole run and left the failing playlist marked, permanently blocking
+    // every lower-score playlist behind it. Now each playlist is isolated.
+    await putAIImage('PL7');
+    await putAIImage('PL8');
+    const pl7 = makePlaylist({ id: 7, playlistId: 'PL7', featuredLocale: 'de' });
+    const pl8 = makePlaylist({ id: 8, playlistId: 'PL8', featuredLocale: 'de' });
+    h.prisma.playlist.findMany
+      .mockResolvedValueOnce([{ id: 7 }, { id: 8 }]) // sorted IDs
+      .mockResolvedValueOnce([pl7, pl8]) // full records
+      .mockResolvedValueOnce([
+        { id: 7, featuredLocale: 'de' },
+        { id: 8, featuredLocale: 'de' },
+      ]); // cleanup set
+    h.products.list.mockResolvedValue({ data: { resources: [] } });
+    // First playlist's price lookup throws (poison); the second succeeds.
+    h.getOrderType
+      .mockRejectedValueOnce(new Error('boom'))
+      .mockResolvedValue({ amount: 21.95 });
+
+    // The run completes instead of rejecting.
+    await expect(
+      merchantCenter.uploadFeaturedPlaylists()
+    ).resolves.toBeUndefined();
+
+    // Only the healthy playlist (8) uploaded its DE/AT/CH variants.
+    expect(h.products.insert).toHaveBeenCalledTimes(3);
+    // Its flag was cleared…
+    expect(h.prisma.playlist.update).toHaveBeenCalledWith({
+      where: { id: 8 },
+      data: { markedForMerchantCenter: false },
+    });
+    // …but the failed playlist stays marked so it is retried next run.
+    expect(h.prisma.playlist.update).not.toHaveBeenCalledWith({
+      where: { id: 7 },
+      data: { markedForMerchantCenter: false },
+    });
+  });
+
   it('returns early without touching the API when no playlist is marked', async () => {
     h.prisma.playlist.findMany.mockResolvedValue([]);
     await merchantCenter.uploadFeaturedPlaylists();
@@ -961,10 +1009,14 @@ describe('uploadPlaylist', () => {
     expect(h.products.insert).toHaveBeenCalledTimes(3);
   });
 
-  it('uploads nothing for an unsupported featured locale', async () => {
+  it('uploads to every country whose allowed locales cover the featured locale (fr → CA/BE/CH)', async () => {
     const ids = await svc.uploadPlaylist(makePlaylist({ featuredLocale: 'fr' }));
-    expect(ids).toEqual([]);
-    expect(h.products.insert).not.toHaveBeenCalled();
+    expect(ids).toEqual([
+      'online:en:CA:7_3_1',
+      'online:nl:BE:7_3_2',
+      'online:de:CH:7_3_3',
+    ]);
+    expect(h.products.insert).toHaveBeenCalledTimes(3);
   });
 
   it('stops after the first variant in debug mode', async () => {

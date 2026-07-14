@@ -48,6 +48,47 @@ const GENRE_GROUPS: Record<string, string> = {
   '80s': 'other',
 };
 
+// Which playlist locales a target country is allowed to show, mirroring the
+// public /:locale/playlists page (src/data/country-locales.ts in the frontend).
+// A playlist is included for a country when it is international
+// (featuredLocale == null) OR its featuredLocale (comma-separated) intersects
+// this allowed set. This is the SAME "localised + international" rule the
+// website uses, ported here so the Merchant Center feed matches it instead of
+// doing a stricter single-locale exact match.
+const COUNTRY_ALLOWED_LOCALES: Record<string, string[]> = {
+  US: ['en'],
+  GB: ['en'],
+  AU: ['en'],
+  CA: ['en', 'fr'],
+  NL: ['nl', 'en'],
+  BE: ['nl', 'fr', 'en'],
+  DE: ['de', 'en'],
+  AT: ['de', 'en'],
+  CH: ['de', 'fr', 'it', 'en'],
+  ES: ['es', 'en'],
+  SE: ['sv', 'no', 'en'],
+  NO: ['no', 'sv', 'en'],
+};
+
+// True when a playlist's featuredLocale (possibly comma-separated, possibly
+// null/empty) is allowed to show in the given country. International playlists
+// (no featuredLocale) are always allowed. Mirrors isPlaylistAllowedInCountry()
+// in the frontend.
+function isPlaylistAllowedInCountry(
+  featuredLocale: string | null | undefined,
+  country: string
+): boolean {
+  if (!featuredLocale) return true; // international — always shown
+  const allowed = COUNTRY_ALLOWED_LOCALES[country];
+  if (!allowed) return false;
+  const locales = featuredLocale
+    .split(',')
+    .map((l) => l.trim())
+    .filter(Boolean);
+  if (locales.length === 0) return true;
+  return locales.some((l) => allowed.includes(l));
+}
+
 interface ProductVariant {
   id: number; // Database ID
   playlistId: string;
@@ -124,9 +165,6 @@ export class MerchantCenterService {
   private initPromise: Promise<void> | null = null;
   private openai = new OpenAI({ apiKey: process.env['OPENAI_API_KEY'] });
   private pdfService = new PDF();
-
-  // Supported locales for Merchant Center - limiting to main markets
-  private supportedLocales = ['en', 'nl', 'de', 'es', 'sv', 'no'];
 
   // Mapping of locale-country combinations for Google Merchant Center
   // Multiple countries can use the same language content
@@ -384,30 +422,64 @@ export class MerchantCenterService {
       // Track which product IDs should exist
       const expectedProductIds: Set<string> = new Set();
 
-      // Process each playlist and collect expected product IDs
+      // Process each playlist and collect expected product IDs.
+      //
+      // Each playlist is isolated in its own try/catch: a single failing
+      // playlist (bad image, hung download, transient Google error, ...) must
+      // NOT abort the whole run. Previously an unhandled throw here aborted the
+      // entire sync, and because the flag is only cleared AFTER a successful
+      // upload, the failing playlist stayed marked and blocked every
+      // lower-score playlist behind it on every subsequent run — which is how
+      // Germany (newer, lower-score playlists) ended up with almost no products
+      // while NL/BE stayed populated.
+      let uploadedCount = 0;
+      let failedCount = 0;
       for (let i = 0; i < playlists.length; i++) {
         const playlist = playlists[i];
         const progress = ((i + 1) / playlists.length * 100).toFixed(1);
-        const productIds = await this.uploadPlaylist(playlist, progress);
-        productIds.forEach((id) => expectedProductIds.add(id));
 
-        // Clear the sync flag once the playlist has been uploaded.
-        // Skip in development since dev runs don't actually hit the API.
-        if (!isDevelopment) {
-          try {
-            await this.prisma.playlist.update({
-              where: { id: playlist.id },
-              data: { markedForMerchantCenter: false },
-            });
-          } catch (flagError) {
-            this.logger.log(
-              yellow(
-                `Failed to clear markedForMerchantCenter for playlist ${playlist.id}: ${flagError}`
-              )
-            );
+        try {
+          const productIds = await this.uploadPlaylist(playlist, progress);
+          productIds.forEach((id) => expectedProductIds.add(id));
+          uploadedCount++;
+
+          // Clear the sync flag only after a successful upload. Skip in
+          // development since dev runs don't actually hit the API.
+          if (!isDevelopment) {
+            try {
+              await this.prisma.playlist.update({
+                where: { id: playlist.id },
+                data: { markedForMerchantCenter: false },
+              });
+            } catch (flagError) {
+              this.logger.log(
+                yellow(
+                  `Failed to clear markedForMerchantCenter for playlist ${playlist.id}: ${flagError}`
+                )
+              );
+            }
           }
+        } catch (playlistError: any) {
+          // Keep the flag set so this playlist is retried next run, and keep
+          // going so the rest of the batch still gets processed.
+          failedCount++;
+          this.logger.log(
+            red(
+              `✗ Playlist ${white.bold(
+                playlist.slug || playlist.playlistId || String(playlist.id)
+              )} failed, continuing: ${playlistError?.message || playlistError}`
+            )
+          );
         }
       }
+
+      this.logger.log(
+        blue.bold(
+          `Processed ${white.bold(uploadedCount.toString())} playlists, ${white.bold(
+            failedCount.toString()
+          )} failed`
+        )
+      );
 
       // Expand the expected-product-ID set with every other featured playlist
       // that wasn't uploaded in this batch. Without this, the cleanup pass below
@@ -521,19 +593,15 @@ export class MerchantCenterService {
     for (const pair of pairsToProcess) {
       const { locale, country } = pair;
 
-      // Check if playlist has a specific featured locale
-      // If featuredLocale is set, only upload for that specific locale
-      // If featuredLocale is not set, upload for all supported locales
-      if (playlist.featuredLocale) {
-        // Only process if this is the specific featured locale
-        if (playlist.featuredLocale !== locale) {
-          continue;
-        }
-        // Also check if the featured locale is in the supported locales
-        if (!this.supportedLocales.includes(playlist.featuredLocale)) {
-          // Skip this playlist entirely if its featured locale is not supported
-          continue;
-        }
+      // Include this playlist for this country using the SAME "localised +
+      // international" rule as the public /:locale/playlists page: international
+      // playlists (no featuredLocale) go everywhere, and locale-specific ones
+      // go to any country whose allowed locales intersect their featuredLocale
+      // (e.g. a 'de' or 'en' list shows in Germany; a comma list like 'de,nl'
+      // shows in both). This replaces the old strict single-locale exact match
+      // which excluded English and multi-locale lists from non-English feeds.
+      if (!isPlaylistAllowedInCountry(playlist.featuredLocale, country)) {
+        continue;
       }
 
       for (const productType of productTypes) {
@@ -614,10 +682,10 @@ export class MerchantCenterService {
     for (const pair of pairsToProcess) {
       const { locale, country } = pair;
 
-      // Mirror the featuredLocale gating from uploadPlaylist.
-      if (playlist.featuredLocale) {
-        if (playlist.featuredLocale !== locale) continue;
-        if (!this.supportedLocales.includes(playlist.featuredLocale)) continue;
+      // Mirror the "localised + international" gating from uploadPlaylist so the
+      // cleanup pass expects exactly the products we now create.
+      if (!isPlaylistAllowedInCountry(playlist.featuredLocale, country)) {
+        continue;
       }
 
       const localeNum = localeNumMap[locale] || 1;
@@ -2013,16 +2081,32 @@ export class MerchantCenterService {
   }
 
   /**
-   * List all products in Google Merchant Center
+   * List ALL products in Google Merchant Center, following pagination.
+   *
+   * The Content API caps a single products.list page at 250 items (and
+   * defaults to 25). This method previously returned only the first page, so
+   * with thousands of products in the account the cleanup pass in
+   * uploadFeaturedPlaylists() only ever saw ~25 products and could never
+   * delete stale / crawled / wrong-currency items. We now walk every page via
+   * nextPageToken so callers get the complete set.
    */
   public async listProducts(): Promise<any[]> {
     await this.ensureInitialized();
 
     try {
-      const response = await this.content.products.list({
-        merchantId: this.merchantId,
-      });
-      return response.data.resources || [];
+      const all: any[] = [];
+      let pageToken: string | undefined = undefined;
+      do {
+        const response: any = await this.content.products.list({
+          merchantId: this.merchantId,
+          maxResults: 250,
+          pageToken,
+        });
+        const resources = response?.data?.resources || [];
+        all.push(...resources);
+        pageToken = response?.data?.nextPageToken;
+      } while (pageToken);
+      return all;
     } catch (error) {
       this.logger.log(`Failed to list products: ${error}`);
       throw error;
