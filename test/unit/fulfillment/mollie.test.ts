@@ -104,6 +104,7 @@ const discountMock = vi.hoisted(() => ({
   calculateDiscounts: vi.fn(),
   associatePaymentWithDiscountUse: vi.fn(),
   removeDiscountUsesByPaymentId: vi.fn(),
+  removeDiscountUsesByIds: vi.fn(),
 }));
 vi.mock('../../../src/discount', () => ({
   default: class {
@@ -111,6 +112,7 @@ vi.mock('../../../src/discount', () => ({
     associatePaymentWithDiscountUse =
       discountMock.associatePaymentWithDiscountUse;
     removeDiscountUsesByPaymentId = discountMock.removeDiscountUsesByPaymentId;
+    removeDiscountUsesByIds = discountMock.removeDiscountUsesByIds;
   },
 }));
 
@@ -272,6 +274,10 @@ function applyDefaults(): void {
   });
   discountMock.associatePaymentWithDiscountUse.mockResolvedValue(undefined);
   discountMock.removeDiscountUsesByPaymentId.mockResolvedValue(undefined);
+  discountMock.removeDiscountUsesByIds.mockResolvedValue({
+    success: true,
+    message: 'discountUsesRemovedSuccessfully',
+  });
 
   translationMock.getTranslationsByPrefix.mockResolvedValue(TRANSLATIONS);
 
@@ -794,9 +800,41 @@ describe('getPaymentUri', () => {
       },
     });
     const result = await mollie.getPaymentUri(makeParams(), IP);
-    expect(result).toEqual({ success: false, error: 'Failed to create payment' });
+    // A stable code so the checkout can say "this order is too small to pay
+    // online" instead of a generic failure the user can't act on.
+    expect(result).toEqual({ success: false, error: 'amount_too_low' });
     expect(mollieApi.liveClient.payments.create).not.toHaveBeenCalled();
     expect(prismaMock.payment.create).not.toHaveBeenCalled();
+  });
+
+  it('releases reserved discount uses when payment creation fails', async () => {
+    // calculateDiscounts() redeems the voucher before the Mollie payment
+    // exists, and the webhook cannot clean up rows that have no paymentId — so
+    // without this the customer's voucher was burned by a payment that never
+    // happened, and burned again on every retry.
+    discountMock.calculateDiscounts.mockResolvedValue({
+      discountAmount: 5,
+      discountUseIds: [41, 42],
+      discountUsed: true,
+    });
+    mollieApi.liveClient.payments.create.mockRejectedValue(
+      new Error('Mollie is down')
+    );
+
+    const result = await mollie.getPaymentUri(makeParams(), IP);
+
+    expect(result.success).toBe(false);
+    expect(discountMock.removeDiscountUsesByIds).toHaveBeenCalledWith([41, 42]);
+  });
+
+  it('does not try to release anything when no discount was used', async () => {
+    mollieApi.liveClient.payments.create.mockRejectedValue(
+      new Error('Mollie is down')
+    );
+
+    await mollie.getPaymentUri(makeParams(), IP);
+
+    expect(discountMock.removeDiscountUsesByIds).not.toHaveBeenCalled();
   });
 
   it('does NOT discount the VAT breakdown for partially discounted orders (suspected bug)', async () => {
@@ -1385,10 +1423,13 @@ describe('checkPaymentStatus', () => {
     }
   });
 
-  it('returns an error for unknown payments', async () => {
+  it('returns an explicit unknown status for unknown payments', async () => {
+    // A status-less response made the frontend swallow every poll
+    // (`if (!status) return`) and eventually claim the payment had failed.
     prismaMock.payment.findUnique.mockResolvedValue(null);
     expect(await mollie.checkPaymentStatus('tr_nope')).toEqual({
       success: false,
+      data: { status: 'unknown' },
       error: 'Error checking payment status',
     });
   });

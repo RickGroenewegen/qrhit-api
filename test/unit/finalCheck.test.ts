@@ -2,7 +2,7 @@
  * Unit tests for src/finalCheck.ts (FinalCheck class).
  *
  * FinalCheck.runCheck() coordinates PDF rendering, AI-vision checks (design-match,
- * profanity, Hitster look-alike, readability) and PDF text scanning.
+ * Hitster look-alike, readability) and PDF text scanning.
  *
  * All I/O is mocked:
  *  - src/prisma        → paymentHasPlaylist records
@@ -169,7 +169,6 @@ describe('FinalCheck.runCheck', () => {
     // Default AI responses: all clean
     askWithImagesMock.mockImplementation(async (prompt: string) => {
       if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
-      if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
       if (prompt.includes('Hitster')) return { clean: true, evidence: '' };
       if (prompt.includes('readable')) return { readable: true, details: '' };
       return {};
@@ -212,7 +211,6 @@ describe('FinalCheck.runCheck', () => {
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
     askWithImagesMock.mockImplementation(async (prompt: string) => {
       if (prompt.includes('SAME OVERALL DESIGN')) return { match: false, reason: 'wrong background' };
-      if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
       if (prompt.includes('Hitster')) return { clean: true, evidence: '' };
       if (prompt.includes('readable')) return { readable: true, details: '' };
       return {};
@@ -225,29 +223,29 @@ describe('FinalCheck.runCheck', () => {
     }
   });
 
-  it('returns ok=false with reason=inappropriate when profanity detected', async () => {
+  it('does not flag profanity in song titles or artist names (no content check)', async () => {
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
+    pdfParseMock.getText.mockResolvedValue({
+      pages: [{ text: 'Fuck tha Police' }, { text: 'N.W.A 1988' }],
+    });
+    const profanityPrompts: string[] = [];
     askWithImagesMock.mockImplementation(async (prompt: string) => {
+      if (prompt.includes('profanity')) profanityPrompts.push(prompt);
       if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
-      if (prompt.includes('profanity')) return { clean: false, categories: ['hate_speech'], details: 'slur detected' };
       if (prompt.includes('Hitster')) return { clean: true, evidence: '' };
       if (prompt.includes('readable')) return { readable: true, details: '' };
       return {};
     });
     const result = await fc.runCheck(makePayment());
-    expect(result.ok).toBe(false);
-    if (!result.ok) {
-      expect(result.reason).toBe('inappropriate');
-      expect(result.userActionable).toBe(true);
-      expect(result.details).toContain('hate_speech');
-    }
+    expect(result.ok).toBe(true);
+    // No profanity/content prompt may ever be sent to the vision model
+    expect(profanityPrompts).toHaveLength(0);
   });
 
   it('returns ok=false with reason=hitster when visual check detects Hitster', async () => {
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
     askWithImagesMock.mockImplementation(async (prompt: string) => {
       if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
-      if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
       if (prompt.includes('Hitster')) return { clean: false, evidence: 'literal Hitster logo found' };
       if (prompt.includes('readable')) return { readable: true, details: '' };
       return {};
@@ -265,7 +263,6 @@ describe('FinalCheck.runCheck', () => {
     // Visual check passes, but PDF text contains "hitster"
     askWithImagesMock.mockImplementation(async (prompt: string) => {
       if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
-      if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
       if (prompt.includes('Hitster')) return { clean: true, evidence: '' };
       if (prompt.includes('readable')) return { readable: true, details: '' };
       return {};
@@ -285,7 +282,6 @@ describe('FinalCheck.runCheck', () => {
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
     askWithImagesMock.mockImplementation(async (prompt: string) => {
       if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
-      if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
       if (prompt.includes('readable')) return { readable: true, details: '' };
       if (prompt.includes('Hitster')) return { clean: false, evidence: 'logo found' };
       return {};
@@ -308,7 +304,6 @@ describe('FinalCheck.runCheck', () => {
     askWithImagesMock.mockImplementation(
       async (prompt: string, images: string[]) => {
         if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
-        if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
         if (prompt.includes('readable')) return { readable: true, details: '' };
         if (prompt.includes('Hitster')) {
           const page = images[images.length - 1] || '';
@@ -338,7 +333,6 @@ describe('FinalCheck.runCheck', () => {
     askWithImagesMock.mockImplementation(
       async (prompt: string, images: string[]) => {
         if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
-        if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
         if (prompt.includes('readable')) return { readable: true, details: '' };
         if (prompt.includes('Hitster')) {
           const page = images[images.length - 1] || '';
@@ -360,7 +354,6 @@ describe('FinalCheck.runCheck', () => {
     askWithImagesMock.mockImplementation(
       async (prompt: string, images: string[]) => {
         if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
-        if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
         if (prompt.includes('readable')) return { readable: true, details: '' };
         if (prompt.includes('Hitster')) {
           const page = images[images.length - 1] || '';
@@ -386,7 +379,6 @@ describe('FinalCheck.runCheck', () => {
     prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
     askWithImagesMock.mockImplementation(async (prompt: string) => {
       if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
-      if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
       if (prompt.includes('Hitster')) return { clean: true, evidence: '' };
       if (prompt.includes('readable')) return { readable: false, details: 'white text on white background' };
       return {};
@@ -406,7 +398,6 @@ describe('FinalCheck.runCheck', () => {
     const designMatchCalls: string[] = [];
     askWithImagesMock.mockImplementation(async (prompt: string) => {
       if (prompt.includes('SAME OVERALL DESIGN')) designMatchCalls.push(prompt);
-      if (prompt.includes('profanity')) return { clean: true, categories: [], details: '' };
       if (prompt.includes('Hitster')) return { clean: true, evidence: '' };
       if (prompt.includes('readable')) return { readable: true, details: '' };
       return {};
@@ -438,12 +429,9 @@ describe('FinalCheck.runCheck', () => {
       makePhp({ id: 2, filename: 'file2.pdf' }),
     ]);
 
-    let checkCount = 0;
     askWithImagesMock.mockImplementation(async (prompt: string) => {
-      checkCount++;
-      if (prompt.includes('profanity')) return { clean: false, categories: ['test'], details: 'fail on first php' };
       if (prompt.includes('SAME OVERALL DESIGN')) return { match: true, reason: 'ok' };
-      if (prompt.includes('Hitster')) return { clean: true, evidence: '' };
+      if (prompt.includes('Hitster')) return { clean: false, evidence: 'fail on first php' };
       if (prompt.includes('readable')) return { readable: true, details: '' };
       return {};
     });

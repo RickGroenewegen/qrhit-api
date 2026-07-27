@@ -311,11 +311,15 @@ describe('checkDiscount', () => {
     endDate: null,
   };
 
-  it('throws when recaptcha says bot', async () => {
+  it('reports a recaptcha failure instead of throwing', async () => {
+    // Throwing escaped the route (which has no try/catch) as a raw 500, and
+    // verifyRecaptcha fails closed — so an unreachable Google turned every
+    // coupon attempt into an opaque error.
     h.verifyRecaptcha.mockResolvedValueOnce({ isHuman: false, score: 0.1 });
-    await expect(discount.checkDiscount('CODE', 'tok', false)).rejects.toThrow(
-      'Request failed'
-    );
+    expect(await discount.checkDiscount('CODE', 'tok', false)).toEqual({
+      success: false,
+      message: 'recaptchaFailed',
+    });
     expect(h.prisma.discountCode.findUnique).not.toHaveBeenCalled();
   });
 

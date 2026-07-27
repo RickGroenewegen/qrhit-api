@@ -1326,7 +1326,22 @@ class PrintEnBind {
           shipping = 3.90;
         }
       } else if (physicalItems > 0 && !shippingResult) {
-        totalPrice = 0;
+        // No shipping rate for this country. Zeroing the total used to make the
+        // checkout button silently do nothing (a €0 total blocks submission but
+        // leaves no invalid field to point at). Say so instead, so the frontend
+        // can name the country and offer the digital version.
+        this.logger.log(
+          color.yellow.bold(
+            `No shipping rate for country ${color.white.bold(
+              params.countrycode
+            )} — refusing to calculate a physical order`
+          )
+        );
+        return {
+          success: false,
+          error: 'no_shipping',
+          countrycode: params.countrycode,
+        };
       }
 
       if (params.fast) {

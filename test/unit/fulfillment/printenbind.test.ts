@@ -651,14 +651,17 @@ describe('calculateOrder', () => {
     expect(r.data.total).toBeCloseTo(105.99, 10);
   });
 
-  it('zeroes the total when physical items have no shipping data for the country', async () => {
+  it('refuses the order when physical items have no shipping data for the country', async () => {
+    // Returning a €0 total made the checkout button silently do nothing: a
+    // zero total blocks submission but leaves no invalid field to point at.
     prismaMock.shippingCostNew.findFirst.mockResolvedValue(null);
     const r = await peb.calculateOrder({
       countrycode: 'US',
       cart: { items: [cardsItem()] },
     });
-    expect(r.data.total).toBe(0);
-    expect(r.data.shipping).toBe(0);
+    expect(r.success).toBe(false);
+    expect(r.error).toBe('no_shipping');
+    expect(r.countrycode).toBe('US');
   });
 
   it('skips shipping entirely for digital-only carts (giftcard)', async () => {

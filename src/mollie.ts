@@ -1657,6 +1657,9 @@ class Mollie {
     skipGenerationMail: boolean = false,
     fallbackCountry: string = ''
   ): Promise<ApiResult> {
+    // Declared outside the try so the catch can release any discount uses that
+    // were already reserved before the failure.
+    let discountUseIds: number[] = [];
     try {
       if (!params?.extraOrderData) {
         return {
@@ -1683,7 +1686,6 @@ class Mollie {
       let molliePaymentStatus = 'noMollie';
       let molliePaymentAmount = 0;
       let discountAmount = 0;
-      let discountUseIds: number[] = [];
       let discountUsed = false;
       let triggerDirectGeneration: boolean = false;
       let vibe: boolean = false;
@@ -1707,6 +1709,18 @@ class Mollie {
         isBusinessOrder: !!params.extraOrderData.isBusinessOrder,
         vatId: params.extraOrderData.vatId || null,
       });
+
+      // calculateOrder now refuses (rather than silently returning a €0 total)
+      // when we have no shipping rate for the country. Bail out before any
+      // discount is redeemed, and pass the reason through to the checkout.
+      if (!calculateResult?.success || !calculateResult.data) {
+        return {
+          success: false,
+          error: (calculateResult as any)?.error === 'no_shipping'
+            ? 'no_shipping'
+            : 'Failed to create payment',
+        };
+      }
 
       const discountResult = await this.discount.calculateDiscounts(
         params.cart,
@@ -1848,6 +1862,25 @@ class Mollie {
           webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
           locale: resolved.locale,
         });
+
+        // The payment id only exists after creation, so the redirect URL is
+        // patched here. Without it the return trip carries no reference at all
+        // and the frontend depends entirely on localStorage — which does not
+        // survive the redirect when the browser blocks storage (Safari
+        // "Block All Cookies"), stranding customers who have already paid.
+        try {
+          await paymentClient.payments.update(payment.id, {
+            redirectUrl: `${process.env['FRONTEND_URI']}/${params.locale}/generate/check_payment?paymentId=${payment.id}`,
+          });
+        } catch (e) {
+          this.logger.log(
+            color.yellow.bold(
+              `Could not attach paymentId to redirect URL for ${color.white.bold(
+                payment.id
+              )}: ${e instanceof Error ? e.message : String(e)}`
+            )
+          );
+        }
 
         molliePaymentId = payment.id;
         molliePaymentAmount = Math.round(calculateResult.data.total * 100) / 100;
@@ -2232,9 +2265,38 @@ class Mollie {
         console.error(e.stack);
       }
 
+      // Discounts are redeemed before the Mollie payment is created, so a
+      // failure here (provider down, minimum-amount guard, bad amount) would
+      // otherwise burn the customer's voucher for a payment that never
+      // existed. The webhook cannot clean these up: they have no paymentId.
+      if (discountUseIds.length > 0) {
+        const released = await this.discount.removeDiscountUsesByIds(
+          discountUseIds
+        );
+        this.logger.log(
+          color.yellow.bold(
+            `Released ${color.white.bold(
+              String(discountUseIds.length)
+            )} discount use(s) after failed payment creation: ${color.white.bold(
+              released.message
+            )}`
+          )
+        );
+      }
+
+      // Map the few failures the checkout has specific copy for onto stable
+      // codes; everything else stays generic so we don't leak internals.
+      const message = e instanceof Error ? e.message : '';
+      let error = 'Failed to create payment';
+      if (message.includes('Order calculation')) {
+        error = 'amount_too_low';
+      } else if (message.includes('no_shipping')) {
+        error = 'no_shipping';
+      }
+
       return {
         success: false,
-        error: 'Failed to create payment',
+        error,
       };
     }
   }
@@ -2724,8 +2786,15 @@ class Mollie {
         },
       };
     } else {
+      // No row for this id. Returning a status-less error made the frontend
+      // swallow every poll (`if (!status) return`) and eventually claim the
+      // payment had failed. Be explicit so it can say "we cannot confirm this"
+      // instead.
       return {
         success: false,
+        data: {
+          status: 'unknown',
+        },
         error: 'Error checking payment status',
       };
     }

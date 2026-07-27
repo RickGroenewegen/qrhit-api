@@ -380,10 +380,14 @@ describe('Discount.calculateTotalDiscountForPayment', () => {
 // ──────────────────────────────────────────────
 
 describe('Discount.checkDiscount', () => {
-  it('throws when recaptcha fails', async () => {
+  it('reports a recaptcha failure instead of throwing', async () => {
+    // Throwing escaped as a raw 500 from a route with no try/catch.
     verifyRecaptcha.mockResolvedValueOnce({ isHuman: false });
     const svc = makeSvc();
-    await expect(svc.checkDiscount('CODE', 'token', false)).rejects.toThrow('Request failed');
+    expect(await svc.checkDiscount('CODE', 'token', false)).toEqual({
+      success: false,
+      message: 'recaptchaFailed',
+    });
   });
 
   it('returns not found when code does not exist', async () => {

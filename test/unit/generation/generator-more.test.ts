@@ -382,13 +382,13 @@ describe('sendToPrinter()', () => {
     ]);
   });
 
-  it('user-actionable inappropriate failure without an email address skips the customer mail', async () => {
+  it('user-actionable failure without an email address skips the customer mail', async () => {
     arrangePrinter({ email: null });
     h.finalCheck.runCheck.mockResolvedValue({
       ok: false,
-      reason: 'inappropriate',
+      reason: 'hitster',
       userActionable: true,
-      details: 'profanity on card 3',
+      details: 'Hitster logo on card 3',
       paymentHasPlaylistId: 31,
       playlistDbId: 21,
       playlistId: 'pl1',

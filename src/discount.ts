@@ -421,6 +421,28 @@ class Discount {
     }
   }
 
+  /**
+   * Release discount uses that were reserved for a payment that never came into
+   * existence. `removeDiscountUsesByPaymentId` cannot help there: those rows
+   * have no paymentId yet, so without this a voucher was permanently consumed
+   * whenever payment creation failed — and consumed again on every retry.
+   */
+  public async removeDiscountUsesByIds(ids: number[]): Promise<any> {
+    if (!ids || ids.length === 0) {
+      return { success: true, message: 'noDiscountUsesToRemove' };
+    }
+    try {
+      await this.prisma.discountCodedUses.deleteMany({
+        where: {
+          id: { in: ids },
+        },
+      });
+      return { success: true, message: 'discountUsesRemovedSuccessfully' };
+    } catch (error) {
+      return { success: false, message: 'errorRemovingDiscountUses', error };
+    }
+  }
+
   public async associatePaymentWithDiscountUse(
     discountUseId: number,
     paymentId: number
@@ -445,14 +467,17 @@ class Discount {
     token: string,
     digital: boolean
   ): Promise<any> {
-    // Verify reCAPTCHA token
-    const { isHuman } = await this.utils.verifyRecaptcha(token);
-
-    if (!isHuman) {
-      throw new Error('Request failed');
-    }
-
     try {
+      // Verify reCAPTCHA token. This used to throw outside the try/catch, and
+      // the route has no try/catch either, so it surfaced as a raw 500.
+      // verifyRecaptcha fails *closed*, so an unreachable Google or a missing
+      // secret turned every coupon attempt into an opaque error.
+      const { isHuman } = await this.utils.verifyRecaptcha(token);
+
+      if (!isHuman) {
+        return { success: false, message: 'recaptchaFailed' };
+      }
+
       const discount = await this.prisma.discountCode.findUnique({
         where: { code },
       });

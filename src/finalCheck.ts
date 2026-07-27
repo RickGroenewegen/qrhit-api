@@ -10,7 +10,6 @@ import PDF from './pdf';
 export type FinalCheckFailureReason =
   | 'pdf-missing'
   | 'design-mismatch'
-  | 'inappropriate'
   | 'hitster'
   | 'unreadable';
 
@@ -244,29 +243,6 @@ Reply STRICTLY as JSON: {"match": true|false, "reason": "string"}`;
             ...failBase,
           };
         }
-      }
-
-      const profPrompt = `Inspect the two card pages for profanity, hate speech, racism, sexual content, harassment, or anything illegal in the EU. Be strict but reasonable: do NOT flag ordinary song titles, artist names, or album artwork that is otherwise innocuous. Reply STRICTLY as JSON: {"clean": true|false, "categories": ["string"], "details": "string"}`;
-      this.logVision(payment.paymentId, php.id, 'profanity/illegality → asking GPT');
-      const profResult = await this.chatgpt.askWithImages(profPrompt, [
-        pdfPage1,
-        pdfPage2,
-      ]);
-      this.logVision(
-        payment.paymentId,
-        php.id,
-        `profanity/illegality → clean=${profResult?.clean} categories=[${(profResult?.categories || []).join(', ')}] ${profResult?.details ? `details="${profResult.details}"` : ''}`
-      );
-      if (profResult && profResult.clean === false) {
-        return {
-          ok: false,
-          reason: 'inappropriate',
-          userActionable: true,
-          details: `Categories: ${(profResult.categories || []).join(
-            ', '
-          )}. ${profResult.details || ''}`,
-          ...failBase,
-        };
       }
 
       // Resolve the box inlay PDF (if any) so it is Hitster-checked alongside

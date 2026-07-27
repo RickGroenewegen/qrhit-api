@@ -332,7 +332,7 @@ class Generator {
    * Apply the consequences of a failed finalCheck:
    *  - Always: set printerHold=true (so the cron won't pick it up again)
    *           and send a Pushover alert.
-   *  - User-actionable failures (inappropriate / hitster): also reset the
+   *  - User-actionable failures (hitster): also reset the
    *           "Judged" flag for the offending playlist and email the customer.
    */
   private async handleFinalCheckFailure(
