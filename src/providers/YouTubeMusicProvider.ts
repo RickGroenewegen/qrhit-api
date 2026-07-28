@@ -514,14 +514,9 @@ class YouTubeMusicProvider implements IMusicProvider {
       trackCount: number;
     };
   }> {
-    let browseId = playlistId;
-
-    // Ensure playlist ID has correct prefix for YouTube Music API
-    if (browseId.startsWith('PL')) {
-      browseId = 'VL' + browseId;
-    } else if (!browseId.startsWith('VL') && !browseId.startsWith('RD') && !browseId.startsWith('OL')) {
-      browseId = 'VL' + browseId;
-    }
+    // Every playlist browse needs the VL prefix - including auto-generated
+    // (RDCLAK5uy...) and album (OLAK5uy...) lists, which 400 without it
+    const browseId = playlistId.startsWith('VL') ? playlistId : 'VL' + playlistId;
 
     const allVideos: Array<{
       videoId: string;
@@ -557,8 +552,22 @@ class YouTubeMusicProvider implements IMusicProvider {
     const initialData = initialResponse.data;
     metadata = this.extractPlaylistMetadata(initialData);
 
-    const initialVideos = this.extractPlaylistVideos(initialData);
-    allVideos.push(...initialVideos);
+    // Continuation pages can repeat videos that were already on an earlier
+    // page (auto-generated playlists resend the whole first page), so keep
+    // track of what we have seen
+    const seenVideoIds = new Set<string>();
+    const addVideos = (videos: typeof allVideos): number => {
+      let added = 0;
+      for (const video of videos) {
+        if (seenVideoIds.has(video.videoId)) continue;
+        seenVideoIds.add(video.videoId);
+        allVideos.push(video);
+        added++;
+      }
+      return added;
+    };
+
+    addVideos(this.extractPlaylistVideos(initialData));
 
     const totalTracksExpected = metadata.trackCount || null;
 
@@ -597,11 +606,10 @@ class YouTubeMusicProvider implements IMusicProvider {
         const continueData = continueResponse.data;
         const pageVideos = this.extractPlaylistVideos(continueData);
 
-        if (pageVideos.length === 0) {
+        if (pageVideos.length === 0 || addVideos(pageVideos) === 0) {
           break;
         }
 
-        allVideos.push(...pageVideos);
         continuationData = this.extractContinuationData(continueData);
 
         // Report progress after each page
@@ -621,7 +629,11 @@ class YouTubeMusicProvider implements IMusicProvider {
           });
         }
       } catch (e: any) {
-        this.logger.log(`ERROR: Failed to fetch continuation page: ${e.message}`);
+        this.logger.log(
+          color.red.bold(
+            `[${color.white.bold('ytmusic')}] Failed to fetch continuation page: ${color.white.bold(e.message)}`
+          )
+        );
         break;
       }
     }
@@ -662,14 +674,11 @@ class YouTubeMusicProvider implements IMusicProvider {
 
       return { success: true, data: providerData };
     } catch (error: any) {
-      this.logger.log(`ERROR: YouTube Music error fetching playlist ${playlistId}: ${error.message}`);
-
-      if (this.isRadioPlaylist(playlistId) && error.message?.includes('400')) {
-        return {
-          success: false,
-          error: 'Radio/auto-generated playlists are not supported. Please use a user-created playlist instead.',
-        };
-      }
+      this.logger.log(
+        color.red.bold(
+          `[${color.white.bold('ytmusic')}] Error fetching playlist ${color.white.bold(playlistId)}: ${color.white.bold(error.message)}`
+        )
+      );
 
       return { success: false, error: error.message || 'Failed to fetch playlist' };
     }
@@ -684,10 +693,6 @@ class YouTubeMusicProvider implements IMusicProvider {
     _maxTracks?: number,
     onProgress?: ProgressCallback
   ): Promise<ApiResult & { data?: ProviderTracksResult }> {
-    if (this.isRadioPlaylist(playlistId)) {
-      this.logger.log(`WARNING: Attempting to fetch radio playlist ${playlistId} - this may fail without cookies`);
-    }
-
     const cacheKey = `${CACHE_KEY_YT_TRACKS}${playlistId}`;
     const cached = await this.cache.get(cacheKey);
     if (cached && cache) {
@@ -736,18 +741,34 @@ class YouTubeMusicProvider implements IMusicProvider {
         },
       };
 
+      // Personalised mixes (RDAMVM..., RDEM...) browse fine but return no
+      // items - never cache that as an empty playlist
+      if (tracks.length === 0) {
+        this.logger.log(
+          color.yellow.bold(
+            `[${color.white.bold('ytmusic')}] Playlist ${color.white.bold(playlistId)} returned no tracks`
+          )
+        );
+
+        if (this.isRadioPlaylist(playlistId)) {
+          return {
+            success: false,
+            error: 'Radio/mix playlists are not supported. Please use a regular playlist instead.',
+          };
+        }
+
+        return { success: true, data: result };
+      }
+
       await this.cache.set(cacheKey, JSON.stringify(result));
 
       return { success: true, data: result };
     } catch (error: any) {
-      this.logger.log(`ERROR: YouTube Music error fetching tracks for playlist ${playlistId}: ${error.message}`);
-
-      if (this.isRadioPlaylist(playlistId) && error.message?.includes('400')) {
-        return {
-          success: false,
-          error: 'Radio/auto-generated playlists are not supported. Please use a user-created playlist instead.',
-        };
-      }
+      this.logger.log(
+        color.red.bold(
+          `[${color.white.bold('ytmusic')}] Error fetching tracks for playlist ${color.white.bold(playlistId)}: ${color.white.bold(error.message)}`
+        )
+      );
 
       return { success: false, error: error.message || 'Failed to fetch tracks' };
     }
@@ -775,7 +796,11 @@ class YouTubeMusicProvider implements IMusicProvider {
         songs = await this.ytmusic.searchSongs(query);
       } catch (error: any) {
         if (error.message?.includes('400')) {
-          this.logger.log(`YouTube Music search got 400, re-initializing and retrying...`);
+          this.logger.log(
+            color.yellow.bold(
+              `[${color.white.bold('ytmusic')}] Search got a 400, re-initializing and retrying`
+            )
+          );
           await this.reinitialize();
           songs = await this.ytmusic.searchSongs(query);
         } else {
@@ -810,7 +835,11 @@ class YouTubeMusicProvider implements IMusicProvider {
 
       return { success: true, data: result };
     } catch (error: any) {
-      this.logger.log(`ERROR: YouTube Music error searching for "${query}": ${error.message}`);
+      this.logger.log(
+        color.red.bold(
+          `[${color.white.bold('ytmusic')}] Error searching for ${color.white.bold(query)}: ${color.white.bold(error.message)}`
+        )
+      );
       return { success: false, error: error.message || 'Failed to search tracks' };
     }
   }
