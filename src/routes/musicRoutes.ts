@@ -13,6 +13,7 @@ import PrismaInstance from '../prisma';
 import { AppleMusicProvider } from '../providers';
 import AppleStorefront from '../appleStorefront';
 import AbuseGuard from '../abuse_guard';
+import DeckPrompt from '../deckPrompt';
 import CalendarService from '../calendarService';
 import Cache from '../cache';
 
@@ -36,6 +37,7 @@ export default async function musicRoutes(fastify: FastifyInstance) {
   const appleMusicProvider = AppleMusicProvider.getInstance();
   const appleStorefront = AppleStorefront.getInstance();
   const abuseGuard = AbuseGuard.getInstance();
+  const deckPrompt = DeckPrompt.getInstance();
   const calendar = CalendarService.getInstance();
   const cache = Cache.getInstance();
 
@@ -189,6 +191,24 @@ export default async function musicRoutes(fastify: FastifyInstance) {
         .status(500)
         .send({ success: false, error: e.message || 'Internal error' });
     }
+  });
+
+  // Decide whether a scanned code should trigger the "get your own deck" prompt
+  // in the app. The app asks for every scan that was not one of our own cards;
+  // all rules live in DeckPrompt so they can change without an app release.
+  fastify.post('/deck_prompt', async (request: any, reply: any) => {
+    const { url } = request.body || {};
+    if (!url || typeof url !== 'string') {
+      reply
+        .status(400)
+        .send({ success: false, error: 'Missing or invalid url parameter' });
+      return;
+    }
+
+    const result = deckPrompt.evaluate(url);
+    deckPrompt.log(url, result);
+
+    reply.send({ success: true, ...result });
   });
 
   // Resolve unknown Spotify URL - returns all available music service links
