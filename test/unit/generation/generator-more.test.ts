@@ -357,6 +357,7 @@ describe('sendToPrinter()', () => {
       playlistDbId: 21,
       playlistId: 'pl1',
       flaggedImages,
+      correctionTab: 'card',
     });
 
     const res = await gen.sendToPrinter('pay_1', '1.1.1.1');
@@ -379,6 +380,7 @@ describe('sendToPrinter()', () => {
       'pl1',
       'hitster',
       flaggedImages,
+      'card',
     ]);
   });
 

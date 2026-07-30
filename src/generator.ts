@@ -388,7 +388,8 @@ class Generator {
         fullPayment.user.hash,
         check.playlistId,
         check.reason === 'hitster' ? 'hitster' : 'inappropriate',
-        check.flaggedImages
+        check.flaggedImages,
+        check.correctionTab
       );
     }
   }

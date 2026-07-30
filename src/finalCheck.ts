@@ -23,6 +23,11 @@ export interface FinalCheckFlaggedImage {
   buffer: Buffer;
 }
 
+// Which tab of the user-suggestions correction page the customer should land
+// on to fix the problem. Mapped onto the `?tab=` query param of the designer
+// link in the design-alter mail.
+export type FinalCheckCorrectionTab = 'tracks' | 'card' | 'box';
+
 export type FinalCheckResult =
   | { ok: true }
   | {
@@ -36,7 +41,20 @@ export type FinalCheckResult =
       // Populated only for Hitster visual hits: the offending rendered page(s),
       // attached inline to the customer email.
       flaggedImages?: FinalCheckFlaggedImage[];
+      // Set on user-actionable failures so the mail can deep-link the right
+      // editor. When both the card and the box are at fault we send the user
+      // to the card tab — the card is the primary product.
+      correctionTab?: FinalCheckCorrectionTab;
     };
+
+// Both flagged → 'card'. The card is the primary product, and the tab bar
+// keeps the box one click away.
+export function correctionTabForFlaggedKeys(
+  keys: FinalCheckFlaggedImage['key'][]
+): FinalCheckCorrectionTab {
+  const hasCard = keys.some((k) => k === 'cardFront' || k === 'cardBack');
+  return hasCard ? 'card' : 'box';
+}
 
 class FinalCheck {
   private static instance: FinalCheck;
@@ -358,13 +376,18 @@ Reply STRICTLY as JSON: {"clean": true|false, "evidence": "string"}`;
           userActionable: true,
           details: `Visual: ${flaggedDetails.join(' | ')}`,
           flaggedImages,
+          correctionTab: correctionTabForFlaggedKeys(
+            flaggedImages.map((i) => i.key)
+          ),
           ...failBase,
         };
       }
 
       for (const target of [
-        { label: 'card', path: pdfPath },
-        ...(boxPdfPath ? [{ label: 'box inlay', path: boxPdfPath }] : []),
+        { label: 'card', path: pdfPath, tab: 'card' as const },
+        ...(boxPdfPath
+          ? [{ label: 'box inlay', path: boxPdfPath, tab: 'box' as const }]
+          : []),
       ]) {
         try {
           this.logVision(
@@ -386,6 +409,7 @@ Reply STRICTLY as JSON: {"clean": true|false, "evidence": "string"}`;
               reason: 'hitster',
               userActionable: true,
               details: `The word "Hitster" was found in the printed text of the ${target.label}.`,
+              correctionTab: target.tab,
               ...failBase,
             };
           }

@@ -102,7 +102,9 @@ process.env['PUBLIC_DIR'] = '/tmp/test-public';
 process.env['ASSETS_DIR'] = '/tmp/test-assets';
 process.env['API_URI'] = 'https://api.qrsong.io';
 
-import FinalCheck from '../../src/finalCheck';
+import FinalCheck, {
+  correctionTabForFlaggedKeys,
+} from '../../src/finalCheck';
 
 // Build a minimal paymentHasPlaylist record
 function makePhp(overrides: Partial<any> = {}) {
@@ -293,6 +295,7 @@ describe('FinalCheck.runCheck', () => {
       expect(result.flaggedImages?.[0].key).toBe('cardFront');
       expect(result.flaggedImages?.[0].filename).toBe('card-front.png');
       expect(Buffer.isBuffer(result.flaggedImages?.[0].buffer)).toBe(true);
+      expect(result.correctionTab).toBe('card');
     }
   });
 
@@ -322,6 +325,7 @@ describe('FinalCheck.runCheck', () => {
       expect(result.flaggedImages).toHaveLength(1);
       expect(result.flaggedImages?.[0].key).toBe('boxFront');
       expect(result.flaggedImages?.[0].filename).toBe('box-front.png');
+      expect(result.correctionTab).toBe('box');
     }
   });
 
@@ -372,6 +376,42 @@ describe('FinalCheck.runCheck', () => {
         'cardFront',
         'boxFront',
       ]);
+      // Card + box both flagged → send the user to the card tab.
+      expect(result.correctionTab).toBe('card');
+    }
+  });
+
+  it('sets correctionTab=card when the textual scan finds Hitster on the card', async () => {
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([makePhp()]);
+    pdfParseMock.getText.mockResolvedValue({
+      pages: [{ text: 'Powered by Hitster' }, { text: '2000' }],
+    });
+    const result = await fc.runCheck(makePayment());
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe('hitster');
+      expect(result.correctionTab).toBe('card');
+    }
+  });
+
+  it('sets correctionTab=box when only the box inlay text contains Hitster', async () => {
+    prismaMock.paymentHasPlaylist.findMany.mockResolvedValue([
+      makePhp({ boxEnabled: true, boxFilename: 'box-pay.pdf' }),
+    ]);
+    // First getText call is the card (clean), second is the box inlay.
+    pdfParseMock.getText
+      .mockResolvedValueOnce({
+        pages: [{ text: 'Normal song title' }, { text: 'Artist 2000' }],
+      })
+      .mockResolvedValueOnce({
+        pages: [{ text: 'A Hitster style box' }, { text: '' }],
+      });
+    const result = await fc.runCheck(makePayment());
+    expect(result.ok).toBe(false);
+    if (!result.ok) {
+      expect(result.reason).toBe('hitster');
+      expect(result.details).toContain('box inlay');
+      expect(result.correctionTab).toBe('box');
     }
   });
 
@@ -482,5 +522,24 @@ describe('FinalCheck.runCheck', () => {
       expect.stringContaining('/printer/'),
       expect.any(Object)
     );
+  });
+});
+
+describe('correctionTabForFlaggedKeys', () => {
+  it('maps card-only hits to the card tab', () => {
+    expect(correctionTabForFlaggedKeys(['cardFront'])).toBe('card');
+    expect(correctionTabForFlaggedKeys(['cardBack'])).toBe('card');
+    expect(correctionTabForFlaggedKeys(['cardFront', 'cardBack'])).toBe('card');
+  });
+
+  it('maps box-only hits to the box tab', () => {
+    expect(correctionTabForFlaggedKeys(['boxFront'])).toBe('box');
+    expect(correctionTabForFlaggedKeys(['boxBack'])).toBe('box');
+    expect(correctionTabForFlaggedKeys(['boxFront', 'boxBack'])).toBe('box');
+  });
+
+  it('maps mixed card+box hits to the card tab', () => {
+    expect(correctionTabForFlaggedKeys(['boxFront', 'cardBack'])).toBe('card');
+    expect(correctionTabForFlaggedKeys(['cardFront', 'boxBack'])).toBe('card');
   });
 });

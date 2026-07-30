@@ -18,7 +18,10 @@ import cluster from 'cluster';
 import OpenAI from 'openai';
 import { ChatService } from './chat';
 import PrismaInstance from './prisma';
-import type { FinalCheckFlaggedImage } from './finalCheck';
+import type {
+  FinalCheckCorrectionTab,
+  FinalCheckFlaggedImage,
+} from './finalCheck';
 
 const prisma = PrismaInstance.getInstance();
 const PROMOTIONAL_CREDIT_AMOUNT = parseFloat(process.env['PROMOTIONAL_CREDIT_AMOUNT'] || '2.5');
@@ -193,7 +196,8 @@ class Mail {
     userHash: string,
     playlistId: string,
     reason: 'inappropriate' | 'hitster',
-    flaggedImages?: FinalCheckFlaggedImage[]
+    flaggedImages?: FinalCheckFlaggedImage[],
+    correctionTab?: FinalCheckCorrectionTab
   ): Promise<void> {
     if (!this.ses) return;
 
@@ -210,7 +214,10 @@ class Mail {
     // hides the physical-only card/box design editors needed to fix the flagged
     // images and greys out the "process corrections" action until track text is
     // changed.
-    const designerLink = `${process.env['FRONTEND_URI']}/${locale}/usersuggestions/${paymentId}/${userHash}/${playlistId}/0`;
+    // `?tab=` opens the correction page straight on the editor that needs
+    // fixing (card design, box design, or the track list).
+    const tabQuery = correctionTab ? `?tab=${correctionTab}` : '';
+    const designerLink = `${process.env['FRONTEND_URI']}/${locale}/usersuggestions/${paymentId}/${userHash}/${playlistId}/0${tabQuery}`;
 
     const reasonText =
       reason === 'hitster'

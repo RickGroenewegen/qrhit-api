@@ -519,6 +519,36 @@ describe('account & verification mails', () => {
     expect(raw).toContain('third-party brand');
   });
 
+  it('sendDesignAlterMail appends ?tab= so the link opens the flagged editor', async () => {
+    await mail.sendDesignAlterMail(
+      'designer@example.com',
+      'Des',
+      'en',
+      'pay_1',
+      'uhash',
+      'pl_1',
+      'hitster',
+      undefined,
+      'box'
+    );
+    expect(lastRaw()).toContain(
+      'http://localhost:4200/en/usersuggestions/pay_1/uhash/pl_1/0?tab=box'
+    );
+  });
+
+  it('sendDesignAlterMail omits ?tab= when no correction tab is known', async () => {
+    await mail.sendDesignAlterMail(
+      'designer@example.com',
+      'Des',
+      'en',
+      'pay_1',
+      'uhash',
+      'pl_1',
+      'hitster'
+    );
+    expect(lastRaw()).not.toContain('?tab=');
+  });
+
   it('sendDesignAlterMail (inappropriate) uses the inappropriate reason', async () => {
     await mail.sendDesignAlterMail(
       'designer@example.com',
