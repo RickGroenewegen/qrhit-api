@@ -63,7 +63,8 @@ export default async function spotifyRoutes(fastify: FastifyInstance) {
       utils.parseBoolean(request.body.slug),
       request.clientIp,
       userAgent,
-      onProgress
+      onProgress,
+      utils.parseBoolean(request.body.allowDuplicates)
     );
 
     // Broadcast completion if requestId provided

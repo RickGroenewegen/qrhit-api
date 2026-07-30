@@ -18,6 +18,7 @@ export interface CartItem {
   qrBackgroundType?: 'none' | 'circle' | 'square'; // Background shape for QR code (default: 'square')
   qrBackgroundColor?: string; // Background color of the QR code square/circle (default: '#ffffff')
   eco?: boolean;
+  allowDuplicates?: boolean; // Keep tracks with the same artist+title (different versions)
   isSlug?: boolean;
   emoji?: string;
   background?: string;

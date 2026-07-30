@@ -398,6 +398,30 @@ export default async function musicRoutes(fastify: FastifyInstance) {
     });
   });
 
+  // Cards for playlists whose tracks are not in our database (the summary
+  // preview, the card designer) cannot use /qr2/:trackId/:php, so they carry
+  // the streaming link itself: /qr_url2?link=<direct service link>. A phone
+  // camera lands on the same onboarding page as any other card; the app reads
+  // the link parameter and plays it straight away.
+  fastify.get('/qr_url2', async (request: any, reply) => {
+    const locale = utils.parseAcceptLanguage(
+      request.headers['accept-language']
+    );
+    const translations = await translation.getTranslationsByPrefix(
+      locale,
+      'countdown'
+    );
+    let useVersion = '1.0.0'; // Default version
+    if (process.env['ENVIRONMENT'] === 'development') {
+      useVersion = new Date().getTime().toString();
+    }
+    await reply.view(`onboarding.ejs`, {
+      translations,
+      version: useVersion,
+      domain: process.env['FRONTEND_URI'],
+    });
+  });
+
   fastify.get('/qrvibe/:trackId', async (request: any, reply) => {
     const locale = utils.parseAcceptLanguage(
       request.headers['accept-language']

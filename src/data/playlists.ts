@@ -166,6 +166,7 @@ export async function getPlaylistsByPaymentId(
       payment_has_playlist.theme,
       payment_has_playlist.themeName,
       payment_has_playlist.gamesEnabled,
+      payment_has_playlist.allowDuplicates,
       payment_has_playlist.boxEnabled,
       payment_has_playlist.boxQuantity,
       payment_has_playlist.boxPrice,
@@ -631,6 +632,47 @@ export async function updateGamesEnabled(
     deps.logger.log(
       color.red.bold(
         `Error updating gamesEnabled for playlist ${color.white.bold(
+          paymentHasPlaylistId
+        )}: ${error.message}`
+      )
+    );
+    return { success: false, error: error.message };
+  }
+}
+
+export async function updateAllowDuplicates(
+  deps: DataDeps,
+  paymentHasPlaylistId: number,
+  allowDuplicates: boolean
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const php = await deps.prisma.paymentHasPlaylist.findUnique({
+      where: { id: paymentHasPlaylistId },
+      select: { id: true },
+    });
+
+    if (!php) {
+      return { success: false, error: 'Playlist not found' };
+    }
+
+    await deps.prisma.paymentHasPlaylist.update({
+      where: { id: paymentHasPlaylistId },
+      data: { allowDuplicates },
+    });
+
+    deps.logger.log(
+      color.blue.bold(
+        `Updated allowDuplicates for playlist ${color.white.bold(
+          paymentHasPlaylistId
+        )} to ${color.white.bold(allowDuplicates)}`
+      )
+    );
+
+    return { success: true };
+  } catch (error: any) {
+    deps.logger.log(
+      color.red.bold(
+        `Error updating allowDuplicates for playlist ${color.white.bold(
           paymentHasPlaylistId
         )}: ${error.message}`
       )

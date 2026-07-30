@@ -35,6 +35,31 @@ export interface ProviderTrackData {
 /**
  * Result of fetching tracks from a playlist
  */
+/**
+ * Named options for IMusicProvider.getTracks.
+ *
+ * Every field is optional and every provider accepts the whole bag, ignoring
+ * what does not apply to it (only Apple Music reads `storefront`). Callers can
+ * therefore pass the same options object to any provider without knowing which
+ * one they hold.
+ */
+export interface GetTracksOptions {
+  /** Use cached results. Default true. */
+  cache?: boolean;
+  /** Cap the number of tracks fetched. */
+  maxTracks?: number;
+  /** Progress updates during long fetches. */
+  onProgress?: ProgressCallback;
+  /**
+   * Keep different versions of the same song (live/remix/remaster) instead of
+   * collapsing them on artist+title. The customer's choice, stored on
+   * payment_has_playlist.allowDuplicates. Default false.
+   */
+  allowDuplicates?: boolean;
+  /** Apple Music only: the storefront to resolve the playlist against. */
+  storefront?: string;
+}
+
 export interface ProviderTracksResult {
   tracks: ProviderTrackData[];
   total: number;
@@ -132,17 +157,22 @@ export interface IMusicProvider {
   getPlaylist(playlistId: string, ...args: any[]): Promise<ApiResult & { data?: ProviderPlaylistData }>;
 
   /**
-   * Get tracks from a playlist
+   * Get tracks from a playlist.
+   *
+   * Options are a named bag rather than positional arguments on purpose. The
+   * positional form used to mean different things per provider — the 5th
+   * argument was `allowDuplicates` on Spotify but `storefront` on Apple Music —
+   * which made every call site a chance to pass the wrong thing. That is
+   * exactly how a checkout path silently re-deduped a playlist the customer had
+   * asked to keep duplicates on, undercharging the order and truncating the
+   * generated PDF. Named options make that class of mistake impossible.
+   *
    * @param playlistId The playlist ID
-   * @param cache Whether to use cached results (default: true)
-   * @param maxTracks Maximum number of tracks to fetch (optional)
-   * @param onProgress Optional callback for progress updates during long fetches
+   * @param options See GetTracksOptions
    */
   getTracks(
     playlistId: string,
-    cache?: boolean,
-    maxTracks?: number,
-    onProgress?: ProgressCallback
+    options?: GetTracksOptions
   ): Promise<ApiResult & { data?: ProviderTracksResult }>;
 
   /**

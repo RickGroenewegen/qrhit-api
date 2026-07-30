@@ -294,6 +294,10 @@ class Data {
     return playlistsModule.updateGamesEnabled(this.deps, paymentHasPlaylistId, gamesEnabled);
   }
 
+  public async updateAllowDuplicates(paymentHasPlaylistId: number, allowDuplicates: boolean) {
+    return playlistsModule.updateAllowDuplicates(this.deps, paymentHasPlaylistId, allowDuplicates);
+  }
+
   public async getPaymentHasPlaylistById(paymentHasPlaylistId: number) {
     return this.deps.prisma.paymentHasPlaylist.findUnique({
       where: { id: paymentHasPlaylistId },

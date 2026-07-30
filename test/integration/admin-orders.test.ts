@@ -156,6 +156,131 @@ describe('admin order routes', () => {
       });
       expect(res.json().totalItems).toBe(0);
     });
+
+    describe('music service filter', () => {
+      const YT_PAYMENT_ID = 'tr_admin_order_yt';
+      let ytPaymentDbId: number;
+      let ytPlaylistDbId: number;
+
+      beforeAll(async () => {
+        const ytPlaylist = await prisma().playlist.create({
+          data: {
+            playlistId: 'order-playlist-yt',
+            name: 'YouTube Mix',
+            slug: 'youtube-mix',
+            image: 'img.png',
+            serviceType: 'youtube_music',
+          },
+        });
+        ytPlaylistDbId = ytPlaylist.id;
+
+        const orderType = await prisma().orderType.findFirstOrThrow({
+          where: { name: 'cards-500' },
+        });
+        const user = await prisma().user.findFirstOrThrow({
+          where: { userId: 'order-user' },
+        });
+
+        const ytPayment = await prisma().payment.create({
+          data: {
+            userId: user.id,
+            paymentId: YT_PAYMENT_ID,
+            orderId: 'QR900002',
+            status: 'paid',
+            fullname: 'YouTube Customer',
+            email: 'yt@test.qrsong.io',
+            totalPrice: 60.5,
+            productPriceWithoutTax: 50,
+            shippingPriceWithoutTax: 0,
+            productVATPrice: 10.5,
+            shippingVATPrice: 0,
+            totalVATPrice: 10.5,
+            taxRate: 21,
+            countrycode: 'NL',
+            address: 'Orderstraat 2',
+            city: 'Utrecht',
+            zipcode: '3511AB',
+            housenumber: '2',
+          },
+        });
+        ytPaymentDbId = ytPayment.id;
+
+        await prisma().paymentHasPlaylist.create({
+          data: {
+            paymentId: ytPayment.id,
+            playlistId: ytPlaylist.id,
+            amount: 1,
+            numberOfTracks: 100,
+            orderTypeId: orderType.id,
+            type: 'physical',
+            printerType: 'tromp',
+            price: 60.5,
+            priceWithoutVAT: 50,
+            priceVAT: 10.5,
+          },
+        });
+      });
+
+      afterAll(async () => {
+        await prisma().paymentHasPlaylist.deleteMany({
+          where: { paymentId: ytPaymentDbId },
+        });
+        await prisma().payment.delete({ where: { id: ytPaymentDbId } });
+        await prisma().playlist.delete({ where: { id: ytPlaylistDbId } });
+      });
+
+      const search = async (payload: Record<string, unknown>) => {
+        const res = await app.inject({
+          method: 'POST',
+          url: '/orders',
+          headers,
+          payload,
+        });
+        expect(res.statusCode).toBe(200);
+        return res.json();
+      };
+
+      it('returns every order when no service is selected', async () => {
+        expect((await search({})).totalItems).toBe(2);
+      });
+
+      it('returns only orders holding a playlist of that service', async () => {
+        const yt = await search({ serviceType: 'youtube_music' });
+        expect(yt.totalItems).toBe(1);
+        expect(yt.data[0].paymentId).toBe(YT_PAYMENT_ID);
+
+        const spotify = await search({ serviceType: 'spotify' });
+        expect(spotify.totalItems).toBe(1);
+        expect(spotify.data[0].paymentId).toBe(PAYMENT_ID);
+      });
+
+      it('returns nothing for a service with no orders', async () => {
+        expect((await search({ serviceType: 'tidal' })).totalItems).toBe(0);
+      });
+
+      it('combines with the text search', async () => {
+        expect(
+          (await search({ serviceType: 'youtube_music', textSearch: 'YouTube Mix' }))
+            .totalItems
+        ).toBe(1);
+        expect(
+          (await search({ serviceType: 'spotify', textSearch: 'YouTube Mix' }))
+            .totalItems
+        ).toBe(0);
+      });
+
+      it('narrows the printer type filter instead of replacing it', async () => {
+        expect(
+          (await search({ printerType: 'tromp', serviceType: 'youtube_music' }))
+            .totalItems
+        ).toBe(1);
+        // The only tromp order is a YouTube Music one, so asking for Spotify
+        // as well must return nothing
+        expect(
+          (await search({ printerType: 'tromp', serviceType: 'spotify' })).totalItems
+        ).toBe(0);
+      });
+    });
   });
 
   describe('payment info', () => {

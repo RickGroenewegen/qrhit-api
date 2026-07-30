@@ -63,3 +63,10 @@ export const SPOTIFY_REFRESH_TOKEN_TTL_DAYS = 180;
 // Tidal's exact refresh-token lifetime is not documented in our integration; we assume
 // the same 6-month window as a safe default. Adjust here if Tidal confirms otherwise.
 export const TIDAL_REFRESH_TOKEN_TTL_DAYS = 180;
+
+// Path of the QR link printed on cards for playlists whose tracks are not in
+// our database (summary previews, the card designer). Those cards cannot carry
+// a /qr2/{trackId}/{php} link, so they carry the streaming link itself:
+// /qr_url2?link=<direct service link>. Shared so the scan-side consumers
+// (DeckPrompt, the unknown-link resolver) all recognise the same path.
+export const OWN_CARD_PATH = '/qr_url2';

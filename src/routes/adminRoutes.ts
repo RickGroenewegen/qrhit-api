@@ -1373,6 +1373,47 @@ export default async function adminRoutes(
     }
   );
 
+  // Toggle allowDuplicates for payment_has_playlist. Only takes effect on the next
+  // regeneration of the playlist, since the track list is already stored.
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/allow-duplicates',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { paymentHasPlaylistId } = request.params;
+      const { allowDuplicates } = request.body;
+
+      if (!paymentHasPlaylistId) {
+        reply.status(400).send({
+          success: false,
+          error: 'PaymentHasPlaylist ID is required',
+        });
+        return;
+      }
+
+      if (typeof allowDuplicates !== 'boolean') {
+        reply.status(400).send({
+          success: false,
+          error: 'allowDuplicates must be a boolean',
+        });
+        return;
+      }
+
+      const result = await data.updateAllowDuplicates(
+        parseInt(paymentHasPlaylistId, 10),
+        allowDuplicates
+      );
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        reply.status(result.error === 'Playlist not found' ? 404 : 500).send({
+          success: false,
+          error: result.error,
+        });
+      }
+    }
+  );
+
   // Update box design for payment_has_playlist (admin)
   fastify.post(
     '/admin/playlist/:paymentHasPlaylistId/box-design',

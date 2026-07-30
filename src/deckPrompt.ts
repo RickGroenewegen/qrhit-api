@@ -1,5 +1,6 @@
 import { color } from 'console-log-colors';
 import Logger from './logger';
+import { OWN_CARD_PATH } from './config/constants';
 
 /**
  * Decides whether a scanned code should trigger the "get your own QRSong deck"
@@ -27,6 +28,13 @@ export interface DeckPromptResult {
 // Hosts whose cards should trigger the prompt. Extend via
 // `DECK_PROMPT_HOSTS` (comma-separated) to add a service without a deploy.
 const DEFAULT_PROMPT_HOSTS = ['hitify.app'];
+
+// Our own cards for playlists whose tracks are not in the database wrap the
+// streaming link in OWN_CARD_PATH (/qr_url2?link=...), so they arrive here as a
+// link to our own API rather than as a bare service link. Recognised
+// explicitly, because otherwise a wrapped Spotify link would be
+// indistinguishable from a print-at-home deck and we would offer a deck to
+// someone already holding one.
 
 class DeckPrompt {
   private static instance: DeckPrompt;
@@ -66,6 +74,11 @@ class DeckPrompt {
     }
 
     const value = scanned.trim();
+
+    // Our own preview cards, whatever service they point at.
+    if (this.isOwnCard(value)) {
+      return { prompt: false };
+    }
 
     // `spotify:track:...` URIs never parse as a URL, so check them first.
     if (this.spotifyDirectEnabled && /^spotify:track:[a-zA-Z0-9]+/i.test(value)) {
@@ -117,6 +130,15 @@ class DeckPrompt {
           color.white.bold(result.service || 'unknown')
       )
     );
+  }
+
+  /**
+   * True when the scan is one of our own wrapped cards. Matched on the path
+   * rather than as a substring, so a competitor cannot suppress the prompt by
+   * putting "/qr_url2" in a track title.
+   */
+  private isOwnCard(value: string): boolean {
+    return this.pathnameOf(value) === OWN_CARD_PATH;
   }
 
   private hostnameOf(value: string): string | null {

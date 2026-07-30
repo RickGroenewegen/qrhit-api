@@ -7,4 +7,6 @@ export interface OrderSearch {
   printerHold?: boolean;
   notSubmitted?: boolean;
   printerType?: string;
+  // Music service of the ordered playlists: spotify, youtube_music, ...
+  serviceType?: string;
 }

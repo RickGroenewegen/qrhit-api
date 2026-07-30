@@ -196,6 +196,26 @@ describe('music routes — wave 2 coverage', () => {
       });
       expect([200, 404, 500]).toContain(res.statusCode);
     });
+
+    // Apps before 1.8.0 do not know the /qr_url2 card format, so they post the
+    // whole wrapper here instead of the link inside it. The resolver unwraps it
+    // so those builds keep playing our preview cards.
+    it('unwraps a /qr_url2 card and returns the link inside it', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/qrlink_unknown',
+        payload: {
+          url:
+            'https://api.qrsong.io/qr_url2?link=' +
+            encodeURIComponent('https://www.deezer.com/track/3135556'),
+        },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({
+        success: true,
+        dz: 'https://www.deezer.com/track/3135556',
+      });
+    });
   });
 
   // ====================================================================
@@ -209,6 +229,36 @@ describe('music routes — wave 2 coverage', () => {
         url: `/qr2/${dbTrackId}/999`,
       });
       // Should render the onboarding.ejs template
+      expect([200, 404, 500]).toContain(res.statusCode);
+    });
+  });
+
+  // ====================================================================
+  // GET /qr_url2?link=... (EJS template)
+  // ====================================================================
+
+  describe('GET /qr_url2', () => {
+    const LINK = 'https://music.youtube.com/watch?v=lcOxhH8N3Bo';
+
+    it('serves the same onboarding page as /qr2, so a camera scan lands there', async () => {
+      const wrapped = await app.inject({
+        method: 'GET',
+        url: `/qr_url2?link=${encodeURIComponent(LINK)}`,
+      });
+      const qr2 = await app.inject({
+        method: 'GET',
+        url: `/qr2/${dbTrackId}/999`,
+      });
+
+      // Asserted explicitly so this cannot pass on two identical error pages
+      expect(wrapped.statusCode).toBe(200);
+      expect(wrapped.body.length).toBeGreaterThan(500);
+      expect(wrapped.statusCode).toBe(qr2.statusCode);
+      expect(wrapped.body).toBe(qr2.body);
+    });
+
+    it('renders even without a link parameter', async () => {
+      const res = await app.inject({ method: 'GET', url: '/qr_url2' });
       expect([200, 404, 500]).toContain(res.statusCode);
     });
   });

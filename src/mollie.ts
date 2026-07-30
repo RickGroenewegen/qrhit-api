@@ -25,6 +25,7 @@ import Bingo from './bingo';
 import PrintEnBind from './printers/printenbind';
 import Mail from './mail';
 import Fx from './services/fx';
+import SpotifyProvider from './providers/SpotifyProvider';
 import {
   isSupportedCurrency,
   SupportedCurrency,
@@ -908,7 +909,14 @@ class Mollie {
         const provider = this.musicServiceRegistry.getProviderByString(serviceType);
 
         if (provider) {
-          const result = await provider.getTracks(item.playlistId);
+          // The opt-out MUST be passed here. Without it the refresh re-dedupes a
+          // playlist the customer chose to keep duplicates on, which then
+          // (a) underprices the order, because the count below drives
+          // getOrderType, and (b) truncates the PDF, because pdf.ts paginates on
+          // the stored numberOfTracks.
+          const result = await provider.getTracks(item.playlistId, {
+            allowDuplicates: item.allowDuplicates === true,
+          });
           tracksResult = {
             success: result.success,
             error: result.error,
@@ -1419,28 +1427,45 @@ class Mollie {
           }
         : {};
 
+    // Music service filter - if provided, only include payments holding at
+    // least one playlist from that service
+    const serviceTypeClause =
+      search.serviceType && search.serviceType.trim() !== ''
+        ? {
+            PaymentHasPlaylist: {
+              some: {
+                playlist: {
+                  serviceType: search.serviceType,
+                },
+              },
+            },
+          }
+        : {};
+
+    // Every playlist-scoped filter keys on PaymentHasPlaylist, so they have to
+    // be combined with AND: spreading them into one object would let the last
+    // one silently drop the others
+    const playlistClauses = [
+      printerHoldClause,
+      notSubmittedClause,
+      printerTypeClause,
+      serviceTypeClause,
+    ].filter((clause) => Object.keys(clause).length > 0);
+
+    const whereFilter = {
+      vibe: false,
+      ...whereClause,
+      ...textSearchClause,
+      ...finalizedClause,
+      ...(playlistClauses.length > 0 ? { AND: playlistClauses } : {}),
+    };
+
     const totalItems = await this.prisma.payment.count({
-      where: {
-        vibe: false,
-        ...whereClause,
-        ...textSearchClause,
-        ...finalizedClause,
-        ...printerHoldClause,
-        ...notSubmittedClause,
-        ...printerTypeClause,
-      },
+      where: whereFilter,
     });
 
     const payments = await this.prisma.payment.findMany({
-      where: {
-        vibe: false,
-        ...whereClause,
-        ...textSearchClause,
-        ...finalizedClause,
-        ...printerHoldClause,
-        ...notSubmittedClause,
-        ...printerTypeClause,
-      },
+      where: whereFilter,
       skip: (search.page - 1) * search.itemsPerPage,
       take: search.itemsPerPage,
       orderBy: {
@@ -1500,6 +1525,7 @@ class Mollie {
             logo: true,
             subType: true,
             blocked: true,
+            allowDuplicates: true,
             userConfirmedPrinting: true,
             orderType: {
               select: {
@@ -2007,6 +2033,7 @@ class Mollie {
             subType: item.type == 'sheets' ? 'sheets' : 'none',
             doubleSided: item.doubleSided,
             eco: item.eco,
+            allowDuplicates: item.allowDuplicates === true,
             qrColor: item.qrColor || '#000000',
             qrBackgroundColor: item.qrBackgroundColor || '#ffffff',
             hideCircle: item.hideCircle,

@@ -1,5 +1,9 @@
 import { format, set } from 'date-fns';
-import { MAX_CARDS, MAX_CARDS_PHYSICAL } from './config/constants';
+import {
+  MAX_CARDS,
+  MAX_CARDS_PHYSICAL,
+  OWN_CARD_PATH,
+} from './config/constants';
 import { color, white } from 'console-log-colors';
 import axios, { AxiosRequestConfig } from 'axios';
 import { ApiResult } from './interfaces/ApiResult';
@@ -809,12 +813,16 @@ class Spotify {
     isSlug: boolean = false,
     clientIp: string = '',
     userAgent: string = '',
-    onProgress?: ProgressCallback
+    onProgress?: ProgressCallback,
+    allowDuplicates: boolean = false
   ): Promise<ApiResult> {
     try {
+      // Deduped and non-deduped results are different track lists, so they must
+      // never share a cache entry.
+      const dupSuffix = allowDuplicates ? '_dup' : '';
 
-      let cacheKey = `${CACHE_KEY_TRACKS}${playlistId}`; // Use different prefix for cache key
-      let cacheKeyCount = `${CACHE_KEY_TRACK_COUNT}${playlistId}`;
+      let cacheKey = `${CACHE_KEY_TRACKS}${playlistId}${dupSuffix}`; // Use different prefix for cache key
+      let cacheKeyCount = `${CACHE_KEY_TRACK_COUNT}${playlistId}${dupSuffix}`;
       let allFormattedTracks: Track[] = []; // Renamed for clarity
       const uniqueTrackIds = new Set<string>();
       let maxReached = false;
@@ -848,8 +856,8 @@ class Spotify {
       let checkPlaylistId = playlistData.playlistId;
 
       // Update cache keys with actual ID and track count
-      cacheKey = `${CACHE_KEY_TRACKS}${checkPlaylistId}_${playlistData.numberOfTracks}`;
-      cacheKeyCount = `${CACHE_KEY_TRACK_COUNT}${checkPlaylistId}_${playlistData.numberOfTracks}`;
+      cacheKey = `${CACHE_KEY_TRACKS}${checkPlaylistId}_${playlistData.numberOfTracks}${dupSuffix}`;
+      cacheKeyCount = `${CACHE_KEY_TRACK_COUNT}${checkPlaylistId}_${playlistData.numberOfTracks}${dupSuffix}`;
 
       const cacheResult = await this.cache.get(cacheKey);
       const tracksProvider = await this.getActiveTracksProvider();
@@ -947,8 +955,12 @@ class Spotify {
           duplicates: 0,
         };
 
-        // Track artist+title combinations to detect duplicates (like frontend was doing)
-        const artistTitleFirstPosition: Map<string, number> = new Map();
+        // Track artist+title combinations to detect duplicates (like frontend was doing).
+        // When the customer opted to keep duplicates we key on the track id instead, so
+        // different versions of the same song survive while a track that was literally
+        // added twice is still collapsed (it would otherwise be silently dropped further
+        // down by the uniqueTrackIds filter, without showing up in the skip summary).
+        const duplicateFirstPosition: Map<string, number> = new Map();
 
         // Pre-scan to collect skipped tracks info
         trackItems.forEach((item: any, index: number) => {
@@ -990,14 +1002,16 @@ class Spotify {
                 skipSummary.unavailable++;
                 skippedDetails.push({ position, reason: 'unavailable', name, artist });
               } else {
-                // Track is valid - check for artist+title duplicates
-                const artistTitleKey = `${artist.toLowerCase().trim()}|||${name.toLowerCase().trim()}`;
-                if (artistTitleFirstPosition.has(artistTitleKey)) {
-                  const firstPosition = artistTitleFirstPosition.get(artistTitleKey)!;
+                // Track is valid - check for duplicates
+                const duplicateKey = allowDuplicates
+                  ? item.track.id
+                  : `${artist.toLowerCase().trim()}|||${name.toLowerCase().trim()}`;
+                if (duplicateFirstPosition.has(duplicateKey)) {
+                  const firstPosition = duplicateFirstPosition.get(duplicateKey)!;
                   skipSummary.duplicates++;
                   skippedDetails.push({ position, reason: 'duplicate', name, artist, duplicateOf: firstPosition });
                 } else {
-                  artistTitleFirstPosition.set(artistTitleKey, position);
+                  duplicateFirstPosition.set(duplicateKey, position);
                 }
               }
             }
@@ -1851,8 +1865,11 @@ class Spotify {
     cached?: boolean;
     blacklisted?: boolean;
   }> {
-    // Add https:// if missing to normalize URL for domain checking
-    let normalizedUrl = url;
+    // Unwrap our own preview cards first, so the wrapper and the bare link
+    // share one cache entry below and nothing is ever cached against a URL that
+    // only ever resolves to the onboarding page. Then add https:// if missing,
+    // to normalize the URL for domain checking.
+    let normalizedUrl = this.unwrapOwnCardLink(url);
     if (!/^https?:\/\//i.test(normalizedUrl)) {
       normalizedUrl = 'https://' + normalizedUrl;
     }
@@ -2212,6 +2229,57 @@ class Spotify {
         error: e.message || 'Internal error',
       };
     }
+  }
+
+  /**
+   * Unwraps one of our own preview cards. Cards for playlists whose tracks are
+   * not in the database cannot carry a /qr2/ link, so they carry the streaming
+   * link itself: /qr_url2?link=<direct service link>.
+   *
+   * App 1.8.0 and up read that link out of the code themselves and never reach
+   * this resolver. Older builds do not know the format: they fall through their
+   * own matchers and post the whole wrapper to /qrlink_unknown, where without
+   * this it fetches the onboarding page, finds no track in it and fails. So the
+   * wrapper is unwrapped here too and the link inside is resolved instead,
+   * which is exactly what those builds got before the cards changed.
+   *
+   * Returns the URL unchanged when it is not one of our wrappers.
+   */
+  private unwrapOwnCardLink(url: string): string {
+    if (!url) return url;
+
+    let current = url.trim();
+
+    // A wrapper around a wrapper is not something we generate. The bound is
+    // only here so a hand-crafted URL cannot spin this loop.
+    for (let depth = 0; depth < 3; depth++) {
+      let inner: string | null = null;
+
+      try {
+        const parsed = new URL(
+          /^https?:\/\//i.test(current) ? current : 'https://' + current
+        );
+        // Matched on the path, not as a substring, so "/qr_url2" appearing
+        // inside somebody else's URL does not trigger unwrapping.
+        if (parsed.pathname === OWN_CARD_PATH) {
+          inner = parsed.searchParams.get('link');
+        }
+      } catch {
+        return current;
+      }
+
+      if (!inner) return current;
+
+      // The query string is whatever was printed on the card, and the resolver
+      // below fetches what it is handed, so only plain http(s) links are
+      // followed. Every link we wrap is https, so this rejects nothing real.
+      const trimmed = inner.trim();
+      if (!/^https?:\/\//i.test(trimmed)) return current;
+
+      current = trimmed;
+    }
+
+    return current;
   }
 
   /**

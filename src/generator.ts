@@ -34,6 +34,7 @@ import GeneratorQueue from './generatorQueue';
 import Bingo from './bingo';
 import AppleStorefront from './appleStorefront';
 import AppleMusicProvider from './providers/AppleMusicProvider';
+import SpotifyProvider from './providers/SpotifyProvider';
 import FinalCheck, { FinalCheckResult } from './finalCheck';
 
 class Generator {
@@ -698,15 +699,21 @@ class Generator {
     // Retrieve tracks using the appropriate provider via factory
     const provider = this.musicProviderFactory.getProvider(serviceType);
 
-    // For Apple Music, determine the correct storefront from the user's locale
-    let response;
-    if (serviceType === 'apple_music') {
-      const appleProvider = provider as AppleMusicProvider;
-      const storefront = appleProvider.getStorefrontForLocale(payment.locale);
-      response = await appleProvider.getTracks(playlist.playlistId, true, undefined, undefined, storefront);
-    } else {
-      response = await provider.getTracks(playlist.playlistId);
-    }
+    // The customer may have opted out of the artist+title duplicate filter on
+    // the summary page. That choice lives on payment_has_playlist so every
+    // regeneration rebuilds the exact same track list they paid for — it must
+    // be passed for EVERY provider, not just Spotify, or a regeneration
+    // silently produces a different (shorter) set of cards than was ordered.
+    const response = await provider.getTracks(playlist.playlistId, {
+      cache: true,
+      allowDuplicates: !!playlist.allowDuplicates,
+      // Apple Music resolves the playlist against a storefront; every other
+      // provider ignores this.
+      storefront:
+        serviceType === 'apple_music'
+          ? (provider as AppleMusicProvider).getStorefrontForLocale(payment.locale)
+          : undefined,
+    });
 
     if (!response.success || !response.data) {
       throw new Error(`Failed to fetch tracks from ${serviceType}: ${response.error || 'Unknown error'}`);
@@ -776,8 +783,33 @@ class Generator {
       )
     );
     const dbTracks = await this.data.getTracks(playlist.id);
+    const paidNumberOfTracks = playlist.numberOfTracks;
     playlist.numberOfTracks = dbTracks.length;
 
+    // payment_has_playlist.numberOfTracks is a copy of the count the BROWSER
+    // sent in the cart at checkout (mollie.ts builds the PaymentHasPlaylist
+    // rows straight from params.cart.items). It can disagree with the track
+    // list we just stored — the customer toggling "keep duplicates", the
+    // source playlist changing between add-to-cart and payment, or a stale
+    // cart all cause drift. pdf.ts paginates on that column
+    // (`Math.min(..., numberOfTracks) - 1`), so a stale value silently
+    // truncates the PDF and the customer never receives the missing cards.
+    // Persist what we actually stored so the PDF matches the real playlist.
+    if (playlist.paymentHasPlaylistId && dbTracks.length !== paidNumberOfTracks) {
+      this.logger.log(
+        color.yellow.bold(
+          `Track count drift for paymentHasPlaylist ${white.bold(
+            playlist.paymentHasPlaylistId
+          )}: paid for ${white.bold(paidNumberOfTracks)}, playlist holds ${white.bold(
+            dbTracks.length
+          )} — correcting so the PDF is complete`
+        )
+      );
+      await this.data.updatePlaylistDetails(
+        playlist.paymentHasPlaylistId,
+        dbTracks.length
+      );
+    }
   }
 
   /**

@@ -293,7 +293,7 @@ describe('TidalProvider.getTracks', () => {
     });
 
     const progress: any[] = [];
-    const result = await p.getTracks(UUID, true, undefined, (pr) => progress.push(pr));
+    const result = await p.getTracks(UUID, { cache: true, onProgress: (pr) => progress.push(pr) });
 
     expect(h.tidal.getPlaylistItems).toHaveBeenCalledWith(UUID, 'US', undefined);
     expect(h.tidal.getTracks).toHaveBeenCalledWith(['t1', 't2']);
@@ -396,7 +396,7 @@ describe('TidalProvider.getTracks', () => {
       },
     });
 
-    const result = await p.getTracks(UUID, true, 2);
+    const result = await p.getTracks(UUID, { cache: true, maxTracks: 2 });
     expect(result.data?.tracks).toHaveLength(2);
     expect(h.tidal.getPlaylistItems).toHaveBeenCalledTimes(1);
   });

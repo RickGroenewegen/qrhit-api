@@ -322,15 +322,18 @@ describe('YouTubeMusicProvider.getPlaylist', () => {
     expect(fresh.data?.name).toBe('Fresh');
   });
 
-  it('maps 400 errors on radio (RD) playlists to a friendly message', async () => {
+  it('VL-prefixes auto-generated (RD) and album (OL) IDs, which 400 without it', async () => {
     const p = newProvider();
-    h.axiosPost.mockRejectedValueOnce(new Error('Request failed with status code 400'));
-    const result = await p.getPlaylist('RDAMVMxyz');
-    expect(result.success).toBe(false);
-    expect(result.error).toContain('Radio/auto-generated playlists are not supported');
+    h.axiosPost.mockResolvedValue({ data: playlistResponse({ items: [] }) });
+
+    await p.getPlaylist('RDCLAK5uy_abc', false);
+    await p.getPlaylist('OLAK5uy_abc', false);
+
+    expect(h.axiosPost.mock.calls[0][1].browseId).toBe('VLRDCLAK5uy_abc');
+    expect(h.axiosPost.mock.calls[1][1].browseId).toBe('VLOLAK5uy_abc');
   });
 
-  it('returns the raw error for non-radio playlists', async () => {
+  it('returns the raw error for failed playlists', async () => {
     const p = newProvider();
     h.axiosPost.mockRejectedValueOnce(new Error('Request failed with status code 400'));
     const result = await p.getPlaylist('PLnormal');
@@ -454,7 +457,7 @@ describe('YouTubeMusicProvider.getTracks', () => {
       });
 
     const progress: any[] = [];
-    const result = await p.getTracks('PLpaged', true, undefined, (pr) => progress.push(pr));
+    const result = await p.getTracks('PLpaged', { cache: true, onProgress: (pr) => progress.push(pr) });
 
     expect(h.axiosPost).toHaveBeenCalledTimes(2);
     const secondBody = h.axiosPost.mock.calls[1][1];
@@ -477,12 +480,69 @@ describe('YouTubeMusicProvider.getTracks', () => {
     expect(h.axiosPost).not.toHaveBeenCalled();
   });
 
-  it('maps 400 errors on radio playlists to a friendly message', async () => {
+  it('drops videos a continuation page repeats from an earlier page', async () => {
     const p = newProvider();
-    h.axiosPost.mockRejectedValueOnce(new Error('Request failed with status code 400'));
-    const result = await p.getTracks('RDradio1');
+    h.axiosPost
+      .mockResolvedValueOnce({
+        data: playlistResponse({
+          items: [
+            videoItem({ videoId: 'a', title: 'One' }),
+            videoItem({ videoId: 'b', title: 'Two' }),
+          ],
+          continuationToken: 'CONT_TOKEN_1',
+        }),
+      })
+      // Auto-generated playlists resend the whole first page plus the tail
+      .mockResolvedValueOnce({
+        data: playlistResponse({
+          items: [
+            videoItem({ videoId: 'a', title: 'One' }),
+            videoItem({ videoId: 'b', title: 'Two' }),
+            videoItem({ videoId: 'c', title: 'Three' }),
+          ],
+        }),
+      });
+
+    const result = await p.getTracks('PLrepeat');
+    expect(result.data?.tracks.map((t) => t.id)).toEqual(['a', 'b', 'c']);
+    expect(result.data?.total).toBe(3);
+  });
+
+  it('stops paging when a continuation page adds nothing new', async () => {
+    const p = newProvider();
+    h.axiosPost.mockResolvedValue({
+      data: playlistResponse({
+        items: [videoItem({ videoId: 'a', title: 'One' })],
+        continuationToken: 'SAME_TOKEN',
+      }),
+    });
+
+    const result = await p.getTracks('PLloop');
+    expect(result.data?.tracks.map((t) => t.id)).toEqual(['a']);
+    // initial request + one continuation that turned out to be a repeat
+    expect(h.axiosPost).toHaveBeenCalledTimes(2);
+  });
+
+  it('rejects mixes that browse fine but hold no tracks, and does not cache them', async () => {
+    const p = newProvider();
+    h.axiosPost.mockResolvedValueOnce({ data: playlistResponse({ items: [] }) });
+
+    const result = await p.getTracks('RDAMVMxyz');
+
     expect(result.success).toBe(false);
-    expect(result.error).toContain('Radio/auto-generated playlists are not supported');
+    expect(result.error).toContain('Radio/mix playlists are not supported');
+    expect(h.cacheSet).not.toHaveBeenCalled();
+  });
+
+  it('never caches an empty track list', async () => {
+    const p = newProvider();
+    h.axiosPost.mockResolvedValueOnce({ data: playlistResponse({ items: [] }) });
+
+    const result = await p.getTracks('PLempty');
+
+    expect(result.success).toBe(true);
+    expect(result.data?.total).toBe(0);
+    expect(h.cacheSet).not.toHaveBeenCalled();
   });
 });
 

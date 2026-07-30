@@ -627,6 +627,10 @@ model PaymentHasPlaylist {
   eligableForPrinterAt     DateTime?
   userConfirmedPrinting    Boolean                  @default(false)
   blocked                  Boolean                  @default(false)
+  // When true the artist+title duplicate filter is skipped for this playlist, so
+  // different versions of the same song each get their own card. Set by the
+  // customer on the summary page, toggleable by admins afterwards.
+  allowDuplicates          Boolean                  @default(false)
   emoji                    String?
   background               String?
   logo                     String?

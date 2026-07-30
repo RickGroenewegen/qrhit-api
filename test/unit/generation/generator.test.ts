@@ -341,13 +341,11 @@ describe('generate()', () => {
     await gen.generate('pay_1', '1.1.1.1', '', mollie);
 
     expect(h.provider.getStorefrontForLocale).toHaveBeenCalledWith('en');
-    expect(h.provider.getTracks).toHaveBeenCalledWith(
-      'pl1',
-      true,
-      undefined,
-      undefined,
-      'nl'
-    );
+    expect(h.provider.getTracks).toHaveBeenCalledWith('pl1', {
+      cache: true,
+      allowDuplicates: false,
+      storefront: 'nl',
+    });
     expect(h.prisma.paymentHasPlaylist.update).toHaveBeenCalledWith({
       where: { id: 31 },
       data: { appleStoreFront: 'de' },

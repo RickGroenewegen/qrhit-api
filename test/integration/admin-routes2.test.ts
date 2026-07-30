@@ -23,7 +23,7 @@ import Mollie from '../../src/mollie';
  * Groups targeted here:
  *  - printer invoices (CRUD: GET/POST/PUT/DELETE + process)
  *  - payment printer-hold / express flags
- *  - playlist blocked / judged / games-enabled / amount / type / track-count
+ *  - playlist blocked / judged / games-enabled / allow-duplicates / amount / type / track-count
  *  - admin/playlist/:id/box-design
  *  - promotional accept / decline / reload / locale / edit
  *  - month_report / day_report / monthly_report / tax_report
@@ -420,6 +420,36 @@ describe('admin routes — wave 2 coverage', () => {
         payload: { gamesEnabled: true },
       });
       expect(res.statusCode).toBe(200);
+    });
+
+    it('POST /admin/playlist/:id/allow-duplicates — rejects non-boolean', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/admin/playlist/${phpId}/allow-duplicates`,
+        headers,
+        payload: { allowDuplicates: 'yes' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('POST /admin/playlist/:id/allow-duplicates — sets flag', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: `/admin/playlist/${phpId}/allow-duplicates`,
+        headers,
+        payload: { allowDuplicates: true },
+      });
+      expect(res.statusCode).toBe(200);
+    });
+
+    it('POST /admin/playlist/:id/allow-duplicates — 404 for an unknown playlist', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/admin/playlist/99999999/allow-duplicates',
+        headers,
+        payload: { allowDuplicates: true },
+      });
+      expect(res.statusCode).toBe(404);
     });
 
     it('POST /admin/playlist/:id/amount — rejects invalid amount', async () => {
@@ -1137,6 +1167,7 @@ describe('admin routes — wave 2 coverage', () => {
       { method: 'GET',    url: '/day_report' },
       { method: 'GET',    url: '/monthly_report' },
       { method: 'POST',   url: '/admin/process_playback_counts' },
+      { method: 'POST',   url: '/admin/playlist/1/allow-duplicates' },
     ] as const;
 
     for (const ep of endpoints) {

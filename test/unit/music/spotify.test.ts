@@ -609,6 +609,47 @@ describe('Spotify.getTracks', () => {
     expect(set?.ttl).toBe(86400);
   });
 
+  it('keeps artist+title duplicates when allowDuplicates is set, under its own cache key', async () => {
+    seedPlaylistCache('PLDUP', 3);
+    holder.prisma.playlist.findFirst.mockResolvedValue({ id: 33 });
+    holder.spotifyApi.getTracks.mockResolvedValueOnce({
+      success: true,
+      data: {
+        items: [
+          makeItem('t1', 'Song A', 'Artist A'),
+          makeItem('t2', 'song a ', ' ARTIST A'), // live version: same artist+title, other id
+          makeItem('t1', 'Song A', 'Artist A'), // literally the same track twice
+        ],
+      },
+    });
+
+    const res = await spotify.getTracks(
+      'PLDUP',
+      true,
+      '',
+      false,
+      false,
+      '',
+      '',
+      undefined,
+      true // allowDuplicates
+    );
+
+    expect(res.success).toBe(true);
+    // Both versions survive; only the repeated track id is collapsed.
+    expect(res.data.tracks.map((t: any) => t.id)).toEqual(['t1', 't2']);
+    expect(res.data.totalTracks).toBe(2);
+    expect(res.data.skippedTracks.summary.duplicates).toBe(1);
+    expect(
+      res.data.skippedTracks.details.find((d: any) => d.reason === 'duplicate')
+    ).toMatchObject({ position: 3, duplicateOf: 1 });
+
+    // Cached separately from the deduped variant so the two never mix.
+    expect(
+      holder.cacheSets.find((s) => s.key === `${CACHE_KEY_TRACKS}PLDUP_3_dup`)
+    ).toBeDefined();
+  });
+
   it('applies enrichment data and playlist-specific overrides', async () => {
     seedPlaylistCache('PL2', 1);
     holder.prisma.playlist.findFirst.mockResolvedValue({ id: 22 });
@@ -1101,6 +1142,94 @@ describe('Spotify.resolveSpotifyUrl', () => {
       service: 'tidal',
       trackId: '77777',
     });
+  });
+
+  // Our own preview cards carry /qr_url2?link=<direct service link>. App 1.8.0
+  // unwraps that itself, but every older build posts the whole wrapper here, so
+  // the resolver has to see through it — otherwise it fetches the onboarding
+  // page, finds no track and those cards stop playing on the installed base.
+  it('unwraps a /qr_url2 card around a Spotify link', async () => {
+    axiosGet.mockResolvedValue({ status: 200, headers: {}, data: '' });
+    const res = await spotify.resolveSpotifyUrl(
+      'https://api.qrsong.io/qr_url2?link=' +
+        encodeURIComponent('https://open.spotify.com/track/wrapped1')
+    );
+    expect(res).toMatchObject({
+      success: true,
+      spotifyUri: 'spotify:track:wrapped1',
+    });
+    // The wrapper itself is never fetched — only the link inside it.
+    for (const call of axiosGet.mock.calls) {
+      expect(String(call[0])).not.toContain('qr_url2');
+    }
+  });
+
+  it('unwraps a /qr_url2 card around each native service link', async () => {
+    const cases: [string, string, string][] = [
+      ['https://www.deezer.com/track/424242', 'deezer', '424242'],
+      [
+        'https://music.youtube.com/watch?v=lcOxhH8N3Bo',
+        'youtube-music',
+        'lcOxhH8N3Bo',
+      ],
+      ['https://tidal.com/track/818181', 'tidal', '818181'],
+      ['https://music.apple.com/song/1440857781', 'apple-music', '1440857781'],
+    ];
+
+    for (const [link, service, trackId] of cases) {
+      const res = await spotify.resolveSpotifyUrl(
+        'https://api.qrsong.io/qr_url2?link=' + encodeURIComponent(link)
+      );
+      expect((res as any).nativeLink).toEqual({ service, trackId });
+      expect(res.success).toBe(true);
+    }
+    expect(axiosGet).not.toHaveBeenCalled();
+  });
+
+  it('shares one cache entry between a wrapped card and its bare link', async () => {
+    axiosGet.mockResolvedValue({ status: 200, headers: {}, data: '' });
+    const bare = 'https://open.spotify.com/track/shared1';
+    await spotify.resolveSpotifyUrl(bare);
+    const wrapped = await spotify.resolveSpotifyUrl(
+      'https://api.qrsong.io/qr_url2?link=' + encodeURIComponent(bare)
+    );
+    // Unwrapping happens before the cache key is derived, so no result is ever
+    // stored against the wrapper itself.
+    expect(wrapped).toMatchObject({
+      success: true,
+      spotifyUri: 'spotify:track:shared1',
+      cached: true,
+    });
+  });
+
+  it('leaves a /qr_url2 URL alone when the link is missing or not http(s)', async () => {
+    axiosGet.mockResolvedValue({ status: 200, headers: {}, data: '' });
+
+    const noLink = await spotify.resolveSpotifyUrl(
+      'https://api.qrsong.io/qr_url2'
+    );
+    expect(noLink.success).toBe(false);
+
+    // Only http(s) is followed: the query string is whatever was printed on the
+    // card and the resolver fetches what it is handed.
+    const fileLink = await spotify.resolveSpotifyUrl(
+      'https://api.qrsong.io/qr_url2?link=' +
+        encodeURIComponent('file:///etc/passwd')
+    );
+    expect(fileLink.success).toBe(false);
+    for (const call of axiosGet.mock.calls) {
+      expect(String(call[0])).toMatch(/^https?:\/\//);
+    }
+  });
+
+  it('does not unwrap when /qr_url2 is not the whole path', async () => {
+    // Matched on the path, so a competitor cannot smuggle a link through by
+    // putting "/qr_url2" somewhere inside their own URL.
+    const res = await spotify.resolveSpotifyUrl(
+      'https://elsewhere.example/x/qr_url2/y?link=' +
+        encodeURIComponent('https://open.spotify.com/track/nope')
+    );
+    expect(res.spotifyUri).toBeUndefined();
   });
 
   it('resolves a Hitster country-code card via the country lookup', async () => {

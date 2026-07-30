@@ -12,6 +12,7 @@ test-only except the two factory methods on `Server`.
 | `npm run test:unit` | Pure unit tests only (fast, ~10s) |
 | `npm run test:int` | Integration + websocket suites (hits test DB/Redis) |
 | `npm run test:coverage` | Full suite + V8 coverage report + thresholds |
+| `npm run test:live` | Live suites in `test/live/` — real calls to the music services |
 | `npm run test:db:push` | Push prisma schema to the test database (run after every schema change) |
 
 ## How the environment works
@@ -61,6 +62,12 @@ misconfiguration can never truncate dev data).
   `vi.spyOn(Utils.prototype, 'verifyRecaptcha').mockResolvedValue({ isHuman: true, score: 0.9 })`.
 - **Websocket** (`test/ws/`): `startTestWsServer()` + `WsTestClient` from
   `test/helpers/wsServer.ts`.
+- **Live** (`test/live/`): real network calls against the music services, run
+  separately via `npm run test:live` (own config, `test/live/setup.ts` puts the
+  real `fetch` back). Excluded from `npm test` — they need internet and break
+  when a provider changes its API, which is the point. Pass `cache=false` so
+  the request really goes out, and keep assertions loose on anything the
+  service can change (titles, exact track counts).
 - Files run serially (shared DB) — never assume another suite's data.
 - Never weaken an assertion to make a test pass; match real behavior and
   flag suspected bugs.

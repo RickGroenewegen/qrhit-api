@@ -1240,7 +1240,10 @@ describe('reloadPlaylist', () => {
       paidTracks: 50,
       currentTracks: 42,
     });
-    expect(h.provider.getTracks).toHaveBeenCalledWith('pl_1', false);
+    expect(h.provider.getTracks).toHaveBeenCalledWith('pl_1', {
+      cache: false,
+      storefront: undefined,
+    });
 
     expect(h.storeTracks).toHaveBeenCalledTimes(1);
     const [dbId, plId, storedTracks, order, service, locale] =

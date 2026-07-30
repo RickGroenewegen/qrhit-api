@@ -272,7 +272,12 @@ export default async function tidalRoutes(fastify: FastifyInstance) {
         }
       : undefined;
 
-    const result = await tidalProvider.getTracks(resolvedPlaylistId, utils.parseBoolean(cache), limit, onProgress);
+    const result = await tidalProvider.getTracks(resolvedPlaylistId, {
+      cache: utils.parseBoolean(cache),
+      maxTracks: limit,
+      onProgress,
+      allowDuplicates: utils.parseBoolean(request.body.allowDuplicates),
+    });
 
     // Broadcast completion or error (only if requestId provided)
     if (progressWs && requestId) {

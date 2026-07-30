@@ -322,7 +322,7 @@ describe('AppleMusicProvider.getTracks', () => {
       .mockResolvedValueOnce(jsonResponse({ data: [appleTrack('102')] }));
 
     const progress: any[] = [];
-    const result = await p.getTracks('pl.mix', true, undefined, (pr) => progress.push(pr));
+    const result = await p.getTracks('pl.mix', { cache: true, onProgress: (pr) => progress.push(pr) });
 
     expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([
       'https://api.music.apple.com/v1/catalog/nl/playlists/pl.mix',
@@ -367,7 +367,7 @@ describe('AppleMusicProvider.getTracks', () => {
       .mockResolvedValueOnce(jsonResponse({ data: [{ attributes: { trackCount: 1 } }] }))
       .mockResolvedValueOnce(jsonResponse({ data: [appleTrack('1')] }));
 
-    await p.getTracks('pl.us', true, undefined, undefined, 'us');
+    await p.getTracks('pl.us', { cache: true, storefront: 'us' });
     expect(fetchMock.mock.calls[0][0]).toBe('https://api.music.apple.com/v1/catalog/us/playlists/pl.us');
     expect(h.cacheSet.mock.calls[0][0]).toBe('apple_music_tracks_us_pl.us');
   });
@@ -493,6 +493,18 @@ describe('AppleMusicProvider.resolveSongToStorefront', () => {
     expect(fetchMock.mock.calls[0][0]).toBe('https://api.music.apple.com/v1/catalog/de/songs/12345');
     expect(resolved).toBe('https://music.apple.com/de/song/track/999');
     expect(h.cacheSet).toHaveBeenCalledWith('am_sf:12345:de', resolved, 86400);
+  });
+
+  it('resolves storefront-less /song/{id} links printed on summary cards', async () => {
+    const p = newProvider();
+    fetchMock.mockResolvedValueOnce(
+      jsonResponse({ data: [{ attributes: { url: 'https://music.apple.com/de/song/track/12345' } }] })
+    );
+
+    const resolved = await p.resolveSongToStorefront('https://music.apple.com/song/12345', 'de');
+
+    expect(fetchMock.mock.calls[0][0]).toBe('https://api.music.apple.com/v1/catalog/de/songs/12345');
+    expect(resolved).toBe('https://music.apple.com/de/song/track/12345');
   });
 
   it('uses the ?i= album query parameter as the song ID', async () => {

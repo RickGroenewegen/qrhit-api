@@ -281,7 +281,7 @@ describe('DeezerProvider.getTracks', () => {
       .mockResolvedValueOnce(jsonResponse({ data: [deezerTrack(3)] }));
 
     const progress: any[] = [];
-    const result = await p.getTracks('777', true, undefined, (pr) => progress.push(pr));
+    const result = await p.getTracks('777', { cache: true, onProgress: (pr) => progress.push(pr) });
 
     expect(fetchMock.mock.calls.map((c) => c[0])).toEqual([
       'https://api.deezer.com/playlist/777',
@@ -355,7 +355,7 @@ describe('DeezerProvider.getTracks', () => {
         })
       );
 
-    const result = await p.getTracks('8', true, 2);
+    const result = await p.getTracks('8', { cache: true, maxTracks: 2 });
     expect(result.data?.tracks.map((t) => t.id)).toEqual(['1', '2']);
     // metadata + first page only — no second page fetched
     expect(fetchMock).toHaveBeenCalledTimes(2);

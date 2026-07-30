@@ -27,3 +27,8 @@ public
 test/.tmp/
 coverage/
 .claude/last-tested-commit
+
+# Environment secrets (never commit)
+.env
+.env.*
+!.env.example

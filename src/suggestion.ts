@@ -1351,9 +1351,13 @@ class Suggestion {
 
       // Fetch fresh tracks from the music service (cache=false to get latest data)
       // For Apple Music, use the payment's locale to determine the storefront
-      const serviceTracks = serviceType === 'apple_music'
-        ? await (provider as any).getTracks(playlistId, false, undefined, undefined, AppleMusicProvider.getInstance().getStorefrontForLocale(validation.locale))
-        : await provider.getTracks(playlistId, false);
+      const serviceTracks = await provider.getTracks(playlistId, {
+        cache: false,
+        storefront:
+          serviceType === 'apple_music'
+            ? AppleMusicProvider.getInstance().getStorefrontForLocale(validation.locale)
+            : undefined,
+      });
 
       if (!serviceTracks.success || !serviceTracks.data || !serviceTracks.data.tracks) {
         return {

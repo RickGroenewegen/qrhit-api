@@ -77,7 +77,11 @@ export default async function youtubeMusicRoutes(fastify: FastifyInstance) {
         }
       : undefined;
 
-    const result = await ytMusicProvider.getTracks(resolvedPlaylistId, utils.parseBoolean(cache), undefined, onProgress);
+    const result = await ytMusicProvider.getTracks(resolvedPlaylistId, {
+      cache: utils.parseBoolean(cache),
+      onProgress,
+      allowDuplicates: utils.parseBoolean(request.body.allowDuplicates),
+    });
 
     // Broadcast completion or error (only if requestId provided)
     if (progressWs && requestId) {

@@ -3,6 +3,7 @@ import { ServiceType } from '../enums/ServiceType';
 import {
   IMusicProvider,
   MusicProviderConfig,
+  GetTracksOptions,
   ProgressCallback,
   ProviderPlaylistData,
   ProviderTrackData,
@@ -10,6 +11,7 @@ import {
   ProviderSearchResult,
   UrlValidationResult,
 } from '../interfaces/IMusicProvider';
+import { applyDuplicateFilter } from './trackDedupe';
 import { ApiResult } from '../interfaces/ApiResult';
 import Cache from '../cache';
 import Logger from '../logger';
@@ -307,15 +309,19 @@ class DeezerProvider implements IMusicProvider {
    */
   async getTracks(
     playlistId: string,
-    cache: boolean = true,
-    maxTracks?: number,
-    onProgress?: ProgressCallback
+    options: GetTracksOptions = {}
   ): Promise<ApiResult & { data?: ProviderTracksResult }> {
+    const { cache = true, maxTracks, onProgress, allowDuplicates = false } = options;
     // Check cache first (skip if cache=false to force refresh)
+    // The cache holds the COMPLETE list; the duplicate filter is applied on the
+    // way out so one entry serves both variants.
     const cacheKey = `${CACHE_KEY_DEEZER_TRACKS}${playlistId}`;
     const cached = await this.cache.get(cacheKey);
     if (cached && cache) {
-      return { success: true, data: JSON.parse(cached) };
+      return {
+        success: true,
+        data: applyDuplicateFilter(JSON.parse(cached), allowDuplicates),
+      };
     }
 
     try {
@@ -430,10 +436,13 @@ class DeezerProvider implements IMusicProvider {
         },
       };
 
-      // Cache the result
+      // Cache the complete list, then filter on the way out.
       await this.cache.set(cacheKey, JSON.stringify(trackResult));
 
-      return { success: true, data: trackResult };
+      return {
+        success: true,
+        data: applyDuplicateFilter(trackResult, allowDuplicates),
+      };
     } catch (error: any) {
       this.logger.log(`ERROR: Deezer error fetching tracks for playlist ${playlistId}: ${error.message}`);
       return {

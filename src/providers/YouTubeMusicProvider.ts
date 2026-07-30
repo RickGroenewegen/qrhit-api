@@ -5,6 +5,7 @@ import { ServiceType } from '../enums/ServiceType';
 import {
   IMusicProvider,
   MusicProviderConfig,
+  GetTracksOptions,
   ProgressCallback,
   ProviderPlaylistData,
   ProviderTrackData,
@@ -12,6 +13,7 @@ import {
   ProviderSearchResult,
   UrlValidationResult,
 } from '../interfaces/IMusicProvider';
+import { applyDuplicateFilter } from './trackDedupe';
 import { ApiResult } from '../interfaces/ApiResult';
 import Cache from '../cache';
 import Logger from '../logger';
@@ -689,14 +691,18 @@ class YouTubeMusicProvider implements IMusicProvider {
    */
   async getTracks(
     playlistId: string,
-    cache: boolean = true,
-    _maxTracks?: number,
-    onProgress?: ProgressCallback
+    options: GetTracksOptions = {}
   ): Promise<ApiResult & { data?: ProviderTracksResult }> {
+    const { cache = true, onProgress, allowDuplicates = false } = options;
+    // The cache holds the COMPLETE list; the duplicate filter is applied on the
+    // way out so one entry serves both variants.
     const cacheKey = `${CACHE_KEY_YT_TRACKS}${playlistId}`;
     const cached = await this.cache.get(cacheKey);
     if (cached && cache) {
-      return { success: true, data: JSON.parse(cached) };
+      return {
+        success: true,
+        data: applyDuplicateFilter(JSON.parse(cached), allowDuplicates),
+      };
     }
 
     try {
@@ -757,12 +763,13 @@ class YouTubeMusicProvider implements IMusicProvider {
           };
         }
 
-        return { success: true, data: result };
+        return { success: true, data: applyDuplicateFilter(result, allowDuplicates) };
       }
 
+      // Cache the complete list, then filter on the way out.
       await this.cache.set(cacheKey, JSON.stringify(result));
 
-      return { success: true, data: result };
+      return { success: true, data: applyDuplicateFilter(result, allowDuplicates) };
     } catch (error: any) {
       this.logger.log(
         color.red.bold(

@@ -1009,6 +1009,87 @@ describe('getPaymentUri', () => {
       printApiPrice: 30,
     });
   });
+
+  // Regression: the refresh used to call getTracks() without the opt-out, so a
+  // playlist the customer chose to keep duplicates on was re-deduped here. That
+  // undercharged the order (the count below feeds getOrderType) AND truncated
+  // the PDF later, because pdf.ts paginates on the stored numberOfTracks.
+  it('forwards allowDuplicates to Spotify when refreshing the count', async () => {
+    providerMock.getTracks.mockResolvedValue({
+      success: true,
+      data: { total: 3 },
+    });
+    orderMock.getOrderType.mockResolvedValue({ id: 9, amount: 30 });
+
+    await mollie.getPaymentUri(
+      makeParams({
+        cart: {
+          items: [
+            makeItem({
+              serviceType: 'spotify',
+              allowDuplicates: true,
+              numberOfTracks: 2, // stale deduped count from the browser cart
+            }),
+          ],
+        },
+      }),
+      IP
+    );
+
+    expect(providerMock.getTracks).toHaveBeenCalledWith('sp1', {
+      allowDuplicates: true,
+    });
+    // Priced and stored on the with-duplicates count, not the stale 2.
+    expect(orderMock.getOrderType).toHaveBeenCalledWith(
+      3,
+      true,
+      'cards',
+      'sp1',
+      'none'
+    );
+    const row =
+      prismaMock.payment.create.mock.calls[0][0].data.PaymentHasPlaylist
+        .create[0];
+    expect(row).toMatchObject({ numberOfTracks: 3, allowDuplicates: true });
+  });
+
+  // The duplicate filter is not Spotify-specific any more — every provider
+  // applies it (see providers/trackDedupe.ts), so every provider must also be
+  // told when the customer opted out.
+  it('forwards allowDuplicates for non-Spotify providers too', async () => {
+    providerMock.getTracks.mockResolvedValue({
+      success: true,
+      data: { total: 40 },
+    });
+    orderMock.getOrderType.mockResolvedValue({ id: 9, amount: 30 });
+
+    await mollie.getPaymentUri(
+      makeParams({
+        cart: {
+          items: [makeItem({ serviceType: 'tidal', allowDuplicates: true })],
+        },
+      }),
+      IP
+    );
+
+    expect(providerMock.getTracks).toHaveBeenCalledWith('sp1', {
+      allowDuplicates: true,
+    });
+  });
+
+  it('defaults allowDuplicates to false when the cart item omits it', async () => {
+    providerMock.getTracks.mockResolvedValue({
+      success: true,
+      data: { total: 40 },
+    });
+    orderMock.getOrderType.mockResolvedValue({ id: 9, amount: 30 });
+
+    await mollie.getPaymentUri(makeParams(), IP);
+
+    expect(providerMock.getTracks).toHaveBeenCalledWith('sp1', {
+      allowDuplicates: false,
+    });
+  });
 });
 
 // ---------------------------------------------------------------------------

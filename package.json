@@ -17,7 +17,9 @@
     "test:unit": "vitest run test/unit",
     "test:int": "vitest run test/integration test/ws",
     "test:coverage": "vitest run --coverage",
-    "test:db:push": "node test/db-push.js"
+    "test:db:push": "node test/db-push.js",
+    "test:live": "vitest run --config vitest.live.config.ts",
+    "kpi": "tsx scripts/kpi.ts"
   },
   "keywords": [],
   "author": "",

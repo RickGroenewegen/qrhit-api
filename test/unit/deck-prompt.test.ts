@@ -97,6 +97,50 @@ describe('DeckPrompt', () => {
     });
   });
 
+  describe('our own wrapped cards', () => {
+    const wrap = (link: string) =>
+      `https://api.qrsong.io/qr_url2?link=${encodeURIComponent(link)}`;
+
+    it('stays silent whatever service the wrapped link points at', () => {
+      const prompt = freshPrompt();
+      const prompted = [
+        'https://open.spotify.com/track/4c1LnEyVW8evh46XomFZ7u',
+        'https://music.youtube.com/watch?v=lcOxhH8N3Bo',
+        'https://www.deezer.com/track/12345',
+        'https://tidal.com/track/12345',
+        'https://music.apple.com/song/12345',
+      ]
+        .map(wrap)
+        .filter((url) => prompt.evaluate(url).prompt);
+
+      expect(prompted).toEqual([]);
+    });
+
+    it('stays silent even for a host that is on the prompt list', () => {
+      process.env['DECK_PROMPT_HOSTS'] = 'hitify.app';
+      const result = freshPrompt().evaluate(
+        'https://hitify.app/qr_url2?link=https%3A%2F%2Fopen.spotify.com%2Ftrack%2F1'
+      );
+      expect(result.prompt).toBe(false);
+    });
+
+    it('still prompts on the same link unwrapped', () => {
+      const result = freshPrompt().evaluate(
+        'https://open.spotify.com/track/4c1LnEyVW8evh46XomFZ7u'
+      );
+      expect(result.prompt).toBe(true);
+    });
+
+    it('is not fooled by the path appearing inside the card payload', () => {
+      // The print-at-home payload is attacker-controlled text, so a substring
+      // match would let any deck opt itself out
+      const result = freshPrompt().evaluate(
+        'https://open.spotify.com/track/4c1LnEyVW8evh46XomFZ7u|/qr_url2|Artist|2003|bw'
+      );
+      expect(result.prompt).toBe(true);
+    });
+  });
+
   describe('known card services', () => {
     it('prompts on hitify.app links', () => {
       const result = freshPrompt().evaluate('https://hitify.app/p/abc123');

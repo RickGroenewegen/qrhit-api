@@ -6,6 +6,7 @@ import { ServiceType } from '../enums/ServiceType';
 import {
   IMusicProvider,
   MusicProviderConfig,
+  GetTracksOptions,
   ProgressCallback,
   ProviderPlaylistData,
   ProviderSearchResult,
@@ -13,6 +14,7 @@ import {
   ProviderTracksResult,
   UrlValidationResult,
 } from '../interfaces/IMusicProvider';
+import { applyDuplicateFilter } from './trackDedupe';
 import { ApiResult } from '../interfaces/ApiResult';
 import Cache from '../cache';
 import Logger from '../logger';
@@ -429,16 +431,25 @@ class AppleMusicProvider implements IMusicProvider {
    */
   async getTracks(
     playlistId: string,
-    cache: boolean = true,
-    _maxTracks?: number,
-    onProgress?: ProgressCallback,
-    storefront: string = DEFAULT_STOREFRONT
+    options: GetTracksOptions = {}
   ): Promise<ApiResult & { data?: ProviderTracksResult }> {
+    const {
+      cache = true,
+      onProgress,
+      allowDuplicates = false,
+      storefront = DEFAULT_STOREFRONT,
+    } = options;
     // Check cache first (skip if cache=false to force refresh)
+    // Storefront stays in the key because it changes WHICH tracks come back.
+    // The duplicate filter does not — the cache holds the complete list and the
+    // filter is applied on the way out, so one entry serves both variants.
     const cacheKey = `${CACHE_KEY_APPLE_MUSIC_TRACKS}${storefront}_${playlistId}`;
     const cached = await this.cache.get(cacheKey);
     if (cached && cache) {
-      return { success: true, data: JSON.parse(cached) };
+      return {
+        success: true,
+        data: applyDuplicateFilter(JSON.parse(cached), allowDuplicates),
+      };
     }
 
     try {
@@ -568,10 +579,13 @@ class AppleMusicProvider implements IMusicProvider {
         },
       };
 
-      // Cache the result
+      // Cache the complete list, then filter on the way out.
       await this.cache.set(cacheKey, JSON.stringify(trackResult));
 
-      return { success: true, data: trackResult };
+      return {
+        success: true,
+        data: applyDuplicateFilter(trackResult, allowDuplicates),
+      };
     } catch (error: any) {
       this.logger.log(`ERROR: Apple Music error fetching tracks for playlist ${playlistId}: ${error.message}`);
       return {
@@ -711,17 +725,22 @@ class AppleMusicProvider implements IMusicProvider {
   async resolveSongToStorefront(appleMusicLink: string, storefront: string): Promise<string> {
     // Extract storefront and song ID from the link
     // Formats:
-    //   .../song/{name}/{id}
-    //   .../album/{name}/{albumId}?i={songId}  (song ID is in the query param)
-    const match = appleMusicLink.match(/music\.apple\.com\/([a-z]{2})\/(?:song|album)\/(?:[^/]+\/)?(\d+)/i);
+    //   .../{cc}/song/{name}/{id}
+    //   .../{cc}/album/{name}/{albumId}?i={songId}  (song ID is in the query param)
+    //   .../song/{id}  (summary-page cards: only the track id is known there)
+    const match = appleMusicLink.match(/music\.apple\.com\/(?:([a-z]{2})\/)?(?:song|album)\/(?:[^/]+\/)?(\d+)/i);
     if (!match) return appleMusicLink;
 
-    const [, originalStorefront, pathId] = match;
+    const [, linkStorefront, pathId] = match;
+    const originalStorefront = linkStorefront || DEFAULT_STOREFRONT;
 
     // If ?i= param exists, that's the actual song ID; the path ID is the album
     const iParam = appleMusicLink.match(/[?&]i=(\d+)/);
     const songId = iParam ? iParam[1] : pathId;
-    if (originalStorefront === storefront) return appleMusicLink;
+
+    // Storefront-less links always need resolving, even for the same storefront:
+    // the app needs a URL it can parse a song id out of
+    if (linkStorefront && linkStorefront === storefront) return appleMusicLink;
 
     // Check cache
     const cacheKey = `am_sf:${songId}:${storefront}`;

@@ -2,6 +2,7 @@ import { ServiceType } from '../enums/ServiceType';
 import {
   IMusicProvider,
   MusicProviderConfig,
+  GetTracksOptions,
   ProgressCallback,
   ProviderPlaylistData,
   ProviderTrackData,
@@ -218,10 +219,13 @@ class SpotifyProvider implements IMusicProvider {
    */
   async getTracks(
     playlistId: string,
-    cache?: boolean,
-    _maxTracks?: number,
-    onProgress?: ProgressCallback
+    options: GetTracksOptions = {}
   ): Promise<ApiResult & { data?: ProviderTracksResult }> {
+    const { cache, onProgress, allowDuplicates } = options;
+    // Spotify applies the duplicate filter inside src/spotify.ts (it also
+    // classifies podcasts/local files/unavailable tracks there and keys the
+    // deduped and non-deduped lists into separate cache entries), so this
+    // provider forwards the flag rather than running applyDuplicateFilter.
     const result = await this.spotify.getTracks(
       playlistId,
       cache !== false, // cache
@@ -230,7 +234,8 @@ class SpotifyProvider implements IMusicProvider {
       false, // isSlug
       '', // clientIp
       '', // userAgent
-      onProgress // pass through progress callback
+      onProgress, // pass through progress callback
+      allowDuplicates === true // keep different versions of the same song
     );
 
     if (!result.success || !result.data) {
