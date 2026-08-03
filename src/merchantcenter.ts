@@ -17,6 +17,7 @@ import PrismaInstance from './prisma';
 import Fx from './services/fx';
 import PDF from './pdf';
 import { getCurrencyForCountry } from './data/currency-map';
+import { resolveQrSubDir } from './qrPaths';
 
 // Set to true to delete and re-insert products (required for updating custom labels)
 // Set to false to use PATCH updates (faster but cannot update customAttributes)
@@ -1146,7 +1147,10 @@ export class MerchantCenterService {
       }
 
       const samplePayment = samplePhp.payment;
-      const subdir = samplePayment.qrSubDir!;
+      const subdir = await resolveQrSubDir(
+        samplePayment.qrSubDir,
+        samplePhp.id
+      );
       const apiUri = process.env['API_URI'] || 'https://api.qrsong.io';
       const printerUrl =
         `${apiUri}/qr/pdf/${playlistId}/${samplePayment.paymentId}/printer/0/0/${subdir}/0/0/0`;

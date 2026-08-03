@@ -188,13 +188,16 @@ describe('generate()', () => {
     const qrSubDir =
       h.prisma.payment.update.mock.calls[0][0].data.qrSubDir;
     expect(qrSubDir).toMatch(/^[0-9a-f]{16}$/);
+    // QR filenames are Spotify track ids, which are shared between playlists, so
+    // each payment_has_playlist writes into its own directory (php 31 here).
+    // Otherwise two decks in one order overwrite each other's QR codes.
     expect(h.qr.generateQRLambda).toHaveBeenCalledWith(
       `${process.env['API_URI']}/qr2/1/31`,
-      `${process.env['PUBLIC_DIR']}/qr/${qrSubDir}/t1.png`,
+      `${process.env['PUBLIC_DIR']}/qr/${qrSubDir}_31/t1.png`,
       undefined
     );
     expect(h.utils.createDir).toHaveBeenCalledWith(
-      `${process.env['PUBLIC_DIR']}/qr/${qrSubDir}`
+      `${process.env['PUBLIC_DIR']}/qr/${qrSubDir}_31`
     );
 
     // Analytics counters for a digital order

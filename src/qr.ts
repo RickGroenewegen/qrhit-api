@@ -42,8 +42,10 @@ class Qr {
           color.red.bold('Error running Lambda function: ') +
             color.white.bold(errorObject.error)
         );
-        // Fallback to old method
-        this.generateQR(link, outputPath);
+        // Fallback to old method. Must carry qrColor: without it the fallback
+        // silently defaults to black and the customer gets a deck where the
+        // failed cards are the wrong colour.
+        await this.generateQR(link, outputPath, qrColor);
       }
     } catch (error) {
       this.logger.log(color.red.bold('Error generating QR code via Lambda!'));

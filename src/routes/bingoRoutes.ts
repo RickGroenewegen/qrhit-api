@@ -12,6 +12,7 @@ import archiver from 'archiver';
 import Translation from '../translation';
 import Utils from '../utils';
 import CacheInstance from '../cache';
+import { resolveQrSubDir } from '../qrPaths';
 
 
 interface TrackRow {
@@ -639,9 +640,14 @@ export default async function bingoRoutes(
           return reply.status(400).send('QR codes not yet generated for this playlist');
         }
 
+        const itemQrSubDir = await resolveQrSubDir(
+          qrSubDir,
+          playlistInfo.paymentHasPlaylistId
+        );
+
         const tracksWithQr = bingoTracks.map((track) => ({
           ...track,
-          qrUrl: `${apiUri}/public/qr/${qrSubDir}/${track.trackId}.png`,
+          qrUrl: `${apiUri}/public/qr/${itemQrSubDir}/${track.trackId}.png`,
         }));
 
         // Render EJS template

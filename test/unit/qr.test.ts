@@ -97,9 +97,15 @@ describe('Qr.generateQRLambda', () => {
     const qr = new Qr();
     const fallback = vi.spyOn(qr, 'generateQR').mockResolvedValue(undefined);
 
-    await qr.generateQRLambda('https://qrsong.io/qrlink/y', '/tmp/y.png', '#000000');
+    await qr.generateQRLambda('https://qrsong.io/qrlink/y', '/tmp/y.png', '#ff0000');
 
-    expect(fallback).toHaveBeenCalledWith('https://qrsong.io/qrlink/y', '/tmp/y.png');
+    // The colour must survive the fallback, otherwise the cards that failed on
+    // the Lambda come out black in an otherwise coloured deck.
+    expect(fallback).toHaveBeenCalledWith(
+      'https://qrsong.io/qrlink/y',
+      '/tmp/y.png',
+      '#ff0000'
+    );
   });
 
   it('swallows Lambda invocation errors (logs, does not throw)', async () => {

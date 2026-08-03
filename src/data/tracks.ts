@@ -279,7 +279,17 @@ export async function findAndUpdateTrackByISRC(
   return { wasUpdated: false, method: '' };
 }
 
-export async function getTracks(deps: DataDeps, playlistId: number, userId: number = 0): Promise<any> {
+// The paymentHasPlaylistId below is resolved with a LIMIT 1 subquery that has no
+// ORDER BY and does not filter on the payment, so a customer who ordered the
+// same playlist more than once gets an arbitrary one of their orders baked into
+// every /qr2/<track>/<php> link. Callers that already know which
+// payment_has_playlist they are rendering should pass it in.
+export async function getTracks(
+  deps: DataDeps,
+  playlistId: number,
+  userId: number = 0,
+  paymentHasPlaylistId?: number
+): Promise<any> {
   // Note: COALESCE(NULLIF(tei.column, ''), tracks.column) is used for string fields
   // to handle cases where extra info might be an empty string instead of NULL.
   // For numeric fields like year, COALESCE(tei.year, tracks.year) is sufficient.
@@ -306,6 +316,12 @@ export async function getTracks(deps: DataDeps, playlistId: number, userId: numb
       LEFT JOIN trackextrainfo tei ON tei.trackId = tracks.id AND tei.playlistId = ${playlistId}
       WHERE playlist_has_tracks.playlistId = ${playlistId}
       ORDER BY playlist_has_tracks.order ASC`;
+
+  if (paymentHasPlaylistId) {
+    for (const track of tracks as any[]) {
+      track.paymentHasPlaylistId = paymentHasPlaylistId;
+    }
+  }
 
   return tracks;
 }

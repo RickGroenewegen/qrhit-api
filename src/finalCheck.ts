@@ -6,6 +6,7 @@ import Logger from './logger';
 import PrismaInstance from './prisma';
 import { ChatGPT } from './chatgpt';
 import PDF from './pdf';
+import { resolveQrSubDir } from './qrPaths';
 
 export type FinalCheckFailureReason =
   | 'pdf-missing'
@@ -540,7 +541,7 @@ Reply STRICTLY as JSON: {"readable": true|false, "details": "string"}`;
     const template = isSheets ? 'printer_sheets' : 'printer';
     const startIndex = 0;
     const endIndex = isSheets ? 11 : 0;
-    const subdir = payment.qrSubDir || '';
+    const subdir = await resolveQrSubDir(payment.qrSubDir, php.id);
     const ecoInt = php.eco ? 1 : 0;
     const itemIndex = 0;
 

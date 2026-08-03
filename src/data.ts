@@ -156,8 +156,17 @@ class Data {
 
   // ── Tracks ───────────────────────────────────────────────────
 
-  public async getTracks(playlistId: number, userId: number = 0): Promise<any> {
-    return tracksModule.getTracks(this.deps, playlistId, userId);
+  public async getTracks(
+    playlistId: number,
+    userId: number = 0,
+    paymentHasPlaylistId?: number
+  ): Promise<any> {
+    return tracksModule.getTracks(
+      this.deps,
+      playlistId,
+      userId,
+      paymentHasPlaylistId
+    );
   }
 
   public async getTrackById(trackId: number): Promise<any> {

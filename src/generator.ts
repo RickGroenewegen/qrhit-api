@@ -36,6 +36,7 @@ import AppleStorefront from './appleStorefront';
 import AppleMusicProvider from './providers/AppleMusicProvider';
 import SpotifyProvider from './providers/SpotifyProvider';
 import FinalCheck, { FinalCheckResult } from './finalCheck';
+import { qrSubDirForItem, resolveQrSubDir } from './qrPaths';
 
 class Generator {
   private static instance: Generator;
@@ -557,8 +558,13 @@ class Generator {
           userAgent
         );
 
-        // Get tracks for QR generation
-        const dbTracks = await this.data.getTracks(playlist.id, payment.userId);
+        // Get tracks for QR generation. Pass the item explicitly so the QR links
+        // point at this deck and not at another order for the same playlist.
+        const dbTracks = await this.data.getTracks(
+          playlist.id,
+          payment.userId,
+          playlist.paymentHasPlaylistId
+        );
 
         // Generate QR codes
         await this.generateQRCodes(playlist, dbTracks, subdir);
@@ -855,7 +861,13 @@ class Generator {
       )
     );
 
-    const outputDir = `${process.env['PUBLIC_DIR']}/qr/${subdir}`;
+    // Per playlist item, never the payment-wide subdir: the filenames are
+    // Spotify track ids, so two decks in one order that share a song would
+    // otherwise overwrite each other's QR codes. See qrPaths.ts.
+    const outputDir = `${process.env['PUBLIC_DIR']}/qr/${qrSubDirForItem(
+      subdir,
+      playlist.paymentHasPlaylistId
+    )}`;
     await this.utils.createDir(outputDir);
 
     if (process.env['ENVIRONMENT'] === 'development') {
@@ -1023,6 +1035,11 @@ class Generator {
           // Add product type to filename to differentiate cards vs sheets
           const productTypeString = playlist.subType === 'sheets' ? '_sheets' : '_cards';
 
+          const qrSubDir = await resolveQrSubDir(
+            payment.qrSubDir,
+            playlist.paymentHasPlaylistId
+          );
+
           for (const item of items) {
             const filename = sanitizeFilename(
               `${hash}_printer${productTypeString}${ecoString}_${item.index}.pdf`.replace(/ /g, '_')
@@ -1038,7 +1055,7 @@ class Generator {
                   playlist,
                   payment,
                   digitalTemplate,
-                  payment.qrSubDir,
+                  qrSubDir,
                   eco,
                   playlist.printerType || DEFAULT_PRINTER_TYPE,
                   item.index
@@ -1051,7 +1068,7 @@ class Generator {
                       playlist.subType == 'sheets'
                         ? 'printer_sheets'
                         : printerTemplate,
-                      payment.qrSubDir,
+                      qrSubDir,
                       false,
                       playlist.printerType || DEFAULT_PRINTER_TYPE,
                       item.index,

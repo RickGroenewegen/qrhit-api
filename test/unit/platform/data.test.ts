@@ -504,7 +504,7 @@ describe('delegation wrappers', () => {
     h.tracks.getTracks.mockResolvedValueOnce(['t']);
 
     await expect(data.getTracks(3)).resolves.toEqual(['t']);
-    expect(h.tracks.getTracks).toHaveBeenCalledWith(data, 3, 0);
+    expect(h.tracks.getTracks).toHaveBeenCalledWith(data, 3, 0, undefined);
   });
 
   it('storeTracks defaults serviceType to spotify and locale to en', async () => {
