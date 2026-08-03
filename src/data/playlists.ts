@@ -816,6 +816,135 @@ export async function resetJudgedStatus(
   }
 }
 
+export interface TrackOrderEntry {
+  id: number;
+  artist: string;
+  name: string;
+  year: number | null;
+  order: number;
+}
+
+/**
+ * Tracks of the playlist behind a paymentHasPlaylist, in playlist_has_tracks.order.
+ */
+export async function getPlaylistTrackOrder(
+  deps: DataDeps,
+  paymentHasPlaylistId: number
+): Promise<{ success: boolean; error?: string; tracks?: TrackOrderEntry[] }> {
+  try {
+    const php = await deps.prisma.paymentHasPlaylist.findUnique({
+      where: { id: paymentHasPlaylistId },
+      select: { playlistId: true },
+    });
+
+    if (!php) {
+      return { success: false, error: 'PaymentHasPlaylist not found' };
+    }
+
+    const rows = await deps.prisma.playlistHasTrack.findMany({
+      where: { playlistId: php.playlistId },
+      // The composite key has no natural tiebreaker, so add trackId to keep the
+      // order stable for playlists whose rows all still sit at the default 0.
+      orderBy: [{ order: 'asc' }, { trackId: 'asc' }],
+      select: {
+        order: true,
+        track: { select: { id: true, artist: true, name: true, year: true } },
+      },
+    });
+
+    return {
+      success: true,
+      tracks: rows.map((row) => ({
+        id: row.track.id,
+        artist: row.track.artist,
+        name: row.track.name,
+        year: row.track.year,
+        order: row.order,
+      })),
+    };
+  } catch (error: any) {
+    deps.logger.log(
+      color.red.bold(
+        `Error loading track order for paymentHasPlaylist ${color.white.bold(
+          paymentHasPlaylistId
+        )}: ${error.message}`
+      )
+    );
+    return { success: false, error: error.message };
+  }
+}
+
+/**
+ * Rewrites playlist_has_tracks.order to the given trackId sequence (0-based).
+ * trackIds must be exactly the playlist's current tracks - a partial list would
+ * silently leave the omitted rows on stale order values.
+ */
+export async function updatePlaylistTrackOrder(
+  deps: DataDeps,
+  paymentHasPlaylistId: number,
+  trackIds: number[]
+): Promise<{ success: boolean; error?: string }> {
+  try {
+    const php = await deps.prisma.paymentHasPlaylist.findUnique({
+      where: { id: paymentHasPlaylistId },
+      select: { playlistId: true },
+    });
+
+    if (!php) {
+      return { success: false, error: 'PaymentHasPlaylist not found' };
+    }
+
+    const existing = await deps.prisma.playlistHasTrack.findMany({
+      where: { playlistId: php.playlistId },
+      select: { trackId: true },
+    });
+
+    const existingIds = new Set(existing.map((row) => row.trackId));
+    const submittedIds = new Set(trackIds);
+
+    if (
+      submittedIds.size !== trackIds.length ||
+      submittedIds.size !== existingIds.size ||
+      trackIds.some((id) => !existingIds.has(id))
+    ) {
+      return {
+        success: false,
+        error: 'Track list does not match the tracks on this playlist',
+      };
+    }
+
+    await deps.prisma.$transaction(
+      trackIds.map((trackId, index) =>
+        deps.prisma.playlistHasTrack.update({
+          where: {
+            playlistId_trackId: { playlistId: php.playlistId, trackId },
+          },
+          data: { order: index },
+        })
+      )
+    );
+
+    deps.logger.log(
+      color.blue.bold(
+        `Updated track order for playlist ${color.white.bold(
+          php.playlistId
+        )} (${color.white.bold(trackIds.length)} tracks)`
+      )
+    );
+
+    return { success: true };
+  } catch (error: any) {
+    deps.logger.log(
+      color.red.bold(
+        `Error updating track order for paymentHasPlaylist ${color.white.bold(
+          paymentHasPlaylistId
+        )}: ${error.message}`
+      )
+    );
+    return { success: false, error: error.message };
+  }
+}
+
 export async function updatePlaylistBlocked(
   deps: DataDeps,
   playlistId: number,

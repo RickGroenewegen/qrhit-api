@@ -329,6 +329,21 @@ class Data {
     return playlistsModule.updatePlaylistBlocked(this.deps, playlistId, blocked);
   }
 
+  public async getPlaylistTrackOrder(paymentHasPlaylistId: number) {
+    return playlistsModule.getPlaylistTrackOrder(this.deps, paymentHasPlaylistId);
+  }
+
+  public async updatePlaylistTrackOrder(
+    paymentHasPlaylistId: number,
+    trackIds: number[]
+  ) {
+    return playlistsModule.updatePlaylistTrackOrder(
+      this.deps,
+      paymentHasPlaylistId,
+      trackIds
+    );
+  }
+
   public async buildMusicMatchExport(): Promise<playlistsModule.MusicMatchExport> {
     return playlistsModule.buildMusicMatchExport(this.deps);
   }

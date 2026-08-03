@@ -644,7 +644,7 @@ class PDF {
 
         if (!isDigitalTemplate) {
           // Printer templates - determine page size based on template
-          const pageSize = template === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+          const pageSize = printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
           options['PageWidth'] = pageSize;
           options['PageHeight'] = pageSize;
         } else if (isUsTemplate) {
@@ -690,7 +690,7 @@ class PDF {
         if (payment.vibe) {
           await this.resizePDFPages(finalPath, 62, 62);
         } else {
-          const pageSize = template === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+          const pageSize = printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
           await this.resizePDFPages(finalPath, pageSize, pageSize);
           await this.addBleed(finalPath, 3);
         }
@@ -784,7 +784,7 @@ class PDF {
       options.format = isUsTemplate ? 'letter' : 'a4';
     } else {
       // Printer templates - determine page size based on template
-      const pageSize = template === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+      const pageSize = printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
       options.width = pageSize;
       options.height = pageSize;
     }
@@ -883,7 +883,7 @@ class PDF {
       if (payment.vibe) {
         await this.resizePDFPages(finalPath, 62, 62);
       } else {
-        const pageSize = template === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
+        const pageSize = printerType === PRINTER_TYPE.SCHNEIDERS ? 56 : 60;
         await this.resizePDFPages(finalPath, pageSize, pageSize);
         await this.addBleed(finalPath, 3);
       }

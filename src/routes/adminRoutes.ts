@@ -737,6 +737,85 @@ export default async function adminRoutes(
     }
   );
 
+  // Track order for a playlist (admin drag/drop reordering)
+  fastify.get(
+    '/admin/playlist/:paymentHasPlaylistId/track-order',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const paymentHasPlaylistId = parseInt(
+        request.params.paymentHasPlaylistId,
+        10
+      );
+
+      if (!Number.isFinite(paymentHasPlaylistId)) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      const result = await data.getPlaylistTrackOrder(paymentHasPlaylistId);
+
+      if (result.success) {
+        reply.send({ success: true, tracks: result.tracks });
+      } else {
+        reply
+          .status(result.error === 'PaymentHasPlaylist not found' ? 404 : 500)
+          .send({ success: false, error: result.error });
+      }
+    }
+  );
+
+  fastify.post(
+    '/admin/playlist/:paymentHasPlaylistId/track-order',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const paymentHasPlaylistId = parseInt(
+        request.params.paymentHasPlaylistId,
+        10
+      );
+      const { trackIds } = request.body;
+
+      if (!Number.isFinite(paymentHasPlaylistId)) {
+        reply.status(400).send({
+          success: false,
+          error: 'Playlist ID is required',
+        });
+        return;
+      }
+
+      if (
+        !Array.isArray(trackIds) ||
+        trackIds.some((id: any) => !Number.isInteger(id))
+      ) {
+        reply.status(400).send({
+          success: false,
+          error: 'trackIds must be an array of track ids',
+        });
+        return;
+      }
+
+      const result = await data.updatePlaylistTrackOrder(
+        paymentHasPlaylistId,
+        trackIds
+      );
+
+      if (result.success) {
+        reply.send({ success: true });
+      } else {
+        const status =
+          result.error === 'PaymentHasPlaylist not found'
+            ? 404
+            : result.error ===
+                'Track list does not match the tracks on this playlist'
+              ? 400
+              : 500;
+        reply.status(status).send({ success: false, error: result.error });
+      }
+    }
+  );
+
   // Update blocked status for playlist
   fastify.post(
     '/admin/playlist/:playlistId/blocked',

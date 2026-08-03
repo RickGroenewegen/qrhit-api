@@ -15,6 +15,8 @@ import {
   updateHowToCardImage,
   resetJudgedStatus,
   updatePlaylistBlocked,
+  getPlaylistTrackOrder,
+  updatePlaylistTrackOrder,
   loadBlocked,
   loadBlockedFromCache,
   buildMusicMatchExport,
@@ -68,6 +70,10 @@ function makeDeps() {
       delete: vi.fn(async () => ({})),
     },
     payment: { update: vi.fn(async () => ({})) },
+    playlistHasTrack: {
+      findMany: vi.fn(),
+      update: vi.fn(async () => ({})),
+    },
     orderType: { findFirst: vi.fn() },
     $queryRaw: vi.fn(),
     $queryRawUnsafe: vi.fn(),
@@ -986,5 +992,130 @@ describe('buildMusicMatchExport', () => {
         ],
       },
     ]);
+  });
+});
+
+describe('getPlaylistTrackOrder', () => {
+  it('returns the playlist tracks ordered by order then trackId', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ playlistId: 42 });
+    prisma.playlistHasTrack.findMany.mockResolvedValue([
+      { order: 0, track: { id: 7, artist: 'Queen', name: 'Bo Rhap', year: 1975 } },
+      { order: 1, track: { id: 9, artist: 'Abba', name: 'SOS', year: 1975 } },
+    ]);
+
+    const res = await getPlaylistTrackOrder(deps, 5);
+
+    expect(res.success).toBe(true);
+    expect(res.tracks).toEqual([
+      { id: 7, artist: 'Queen', name: 'Bo Rhap', year: 1975, order: 0 },
+      { id: 9, artist: 'Abba', name: 'SOS', year: 1975, order: 1 },
+    ]);
+    expect(prisma.playlistHasTrack.findMany).toHaveBeenCalledWith(
+      expect.objectContaining({
+        where: { playlistId: 42 },
+        orderBy: [{ order: 'asc' }, { trackId: 'asc' }],
+      })
+    );
+  });
+
+  it('404s when the paymentHasPlaylist does not exist', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue(null);
+
+    const res = await getPlaylistTrackOrder(deps, 5);
+
+    expect(res).toEqual({ success: false, error: 'PaymentHasPlaylist not found' });
+    expect(prisma.playlistHasTrack.findMany).not.toHaveBeenCalled();
+  });
+
+  it('reports the error message when the query throws', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockRejectedValue(new Error('db down'));
+
+    const res = await getPlaylistTrackOrder(deps, 5);
+
+    expect(res).toEqual({ success: false, error: 'db down' });
+  });
+});
+
+describe('updatePlaylistTrackOrder', () => {
+  it('writes a 0-based order for each track in one transaction', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ playlistId: 42 });
+    prisma.playlistHasTrack.findMany.mockResolvedValue([
+      { trackId: 7 },
+      { trackId: 9 },
+      { trackId: 11 },
+    ]);
+
+    const res = await updatePlaylistTrackOrder(deps, 5, [11, 7, 9]);
+
+    expect(res).toEqual({ success: true });
+    expect(prisma.$transaction).toHaveBeenCalledTimes(1);
+    expect(prisma.playlistHasTrack.update).toHaveBeenCalledTimes(3);
+    expect(prisma.playlistHasTrack.update).toHaveBeenNthCalledWith(1, {
+      where: { playlistId_trackId: { playlistId: 42, trackId: 11 } },
+      data: { order: 0 },
+    });
+    expect(prisma.playlistHasTrack.update).toHaveBeenNthCalledWith(3, {
+      where: { playlistId_trackId: { playlistId: 42, trackId: 9 } },
+      data: { order: 2 },
+    });
+  });
+
+  it('rejects a partial list rather than leaving rows on stale order values', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ playlistId: 42 });
+    prisma.playlistHasTrack.findMany.mockResolvedValue([
+      { trackId: 7 },
+      { trackId: 9 },
+    ]);
+
+    const res = await updatePlaylistTrackOrder(deps, 5, [7]);
+
+    expect(res).toEqual({
+      success: false,
+      error: 'Track list does not match the tracks on this playlist',
+    });
+    expect(prisma.playlistHasTrack.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects a track that is not on the playlist', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ playlistId: 42 });
+    prisma.playlistHasTrack.findMany.mockResolvedValue([
+      { trackId: 7 },
+      { trackId: 9 },
+    ]);
+
+    const res = await updatePlaylistTrackOrder(deps, 5, [7, 999]);
+
+    expect(res.success).toBe(false);
+    expect(prisma.playlistHasTrack.update).not.toHaveBeenCalled();
+  });
+
+  it('rejects duplicate track ids', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ playlistId: 42 });
+    prisma.playlistHasTrack.findMany.mockResolvedValue([
+      { trackId: 7 },
+      { trackId: 9 },
+    ]);
+
+    const res = await updatePlaylistTrackOrder(deps, 5, [7, 7]);
+
+    expect(res.success).toBe(false);
+    expect(prisma.playlistHasTrack.update).not.toHaveBeenCalled();
+  });
+
+  it('404s when the paymentHasPlaylist does not exist', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue(null);
+
+    const res = await updatePlaylistTrackOrder(deps, 5, [7]);
+
+    expect(res).toEqual({ success: false, error: 'PaymentHasPlaylist not found' });
+    expect(prisma.playlistHasTrack.update).not.toHaveBeenCalled();
   });
 });
