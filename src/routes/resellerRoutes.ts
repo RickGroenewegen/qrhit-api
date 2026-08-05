@@ -5,6 +5,7 @@ import { verifyResellerApiKey } from '../resellerAuth';
 import Resellers from '../resellers';
 import Logger from '../logger';
 import { FONTS } from '../fonts';
+import { sendCatalogue } from '../http-cache';
 import { color, white } from 'console-log-colors';
 
 const logger = new Logger();
@@ -714,9 +715,11 @@ export default async function resellerRoutes(fastify: FastifyInstance) {
         },
       },
     },
-    async (_request, reply) => {
-      reply.header('Cache-Control', 'public, max-age=86400');
-      return { success: true, data: FONTS.map((f) => ({ id: f.id, displayName: f.displayName })) };
+    async (request, reply) => {
+      return sendCatalogue(request, reply, {
+        success: true,
+        data: FONTS.map((f) => ({ id: f.id, displayName: f.displayName })),
+      });
     }
   );
 
@@ -753,10 +756,9 @@ export default async function resellerRoutes(fastify: FastifyInstance) {
         },
       },
     },
-    async (_request, reply) => {
-      reply.header('Cache-Control', 'public, max-age=86400');
+    async (request, reply) => {
       const data = await resellers.getPresetBackgrounds();
-      return { success: true, data };
+      return sendCatalogue(request, reply, { success: true, data });
     }
   );
 }

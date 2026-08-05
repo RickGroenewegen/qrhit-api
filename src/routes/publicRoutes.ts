@@ -24,6 +24,7 @@ import Promotional from '../promotional';
 import BrokenLink from '../brokenLink';
 import CalendarService from '../calendarService';
 import { FONTS } from '../fonts';
+import { sendCatalogue } from '../http-cache';
 import { BACKGROUNDS } from '../backgrounds';
 import { BOX_PRICE, BOX_MAX_CARDS, BOX_TIER_PRICES, EXTRA_TRACK_TIERS } from '../config/constants';
 import Upgrade, { pickBoxDesignFields } from '../upgrade';
@@ -1257,15 +1258,13 @@ export default async function publicRoutes(fastify: FastifyInstance) {
   });
 
   // -- GET /fonts (public, no auth) --
-  fastify.get('/fonts', async (_request, reply) => {
-    reply.header('Cache-Control', 'public, max-age=86400');
-    return { success: true, data: FONTS };
+  fastify.get('/fonts', async (request, reply) => {
+    return sendCatalogue(request, reply, { success: true, data: FONTS });
   });
 
   // -- GET /backgrounds (public, no auth) --
-  fastify.get('/backgrounds', async (_request, reply) => {
-    reply.header('Cache-Control', 'public, max-age=86400');
-    return { success: true, data: BACKGROUNDS };
+  fastify.get('/backgrounds', async (request, reply) => {
+    return sendCatalogue(request, reply, { success: true, data: BACKGROUNDS });
   });
 
 }
