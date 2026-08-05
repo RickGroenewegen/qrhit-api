@@ -6,7 +6,13 @@ import { describe, it, expect } from 'vitest';
  * Pure functions — no mocks needed.
  */
 
-import { FONTS, getYearFontSize, getGoogleFontWeights } from '../../src/fonts';
+import {
+  FONTS,
+  getYearFontSize,
+  getGoogleFontWeights,
+  getGoogleFontName,
+  getFontWeight,
+} from '../../src/fonts';
 
 // ──────────────────────────────────────────────
 // FONTS array
@@ -19,6 +25,7 @@ describe('FONTS array', () => {
 
   it('every entry has required fields', () => {
     for (const font of FONTS) {
+      expect(typeof font.id).toBe('string');
       expect(typeof font.family).toBe('string');
       expect(typeof font.displayName).toBe('string');
       expect(typeof font.defaultSize).toBe('string');
@@ -41,6 +48,25 @@ describe('FONTS array', () => {
   it('all defaultSize values end with px', () => {
     for (const font of FONTS) {
       expect(font.defaultSize).toMatch(/^\d+px$/);
+    }
+  });
+
+  it('ids are unique — the reseller API keys fonts by id', () => {
+    const ids = FONTS.map((f) => f.id);
+    expect(new Set(ids).size).toBe(ids.length);
+  });
+
+  it('families are unique — selectedFont is stored as the family string', () => {
+    const families = FONTS.map((f) => f.family);
+    expect(new Set(families).size).toBe(families.length);
+  });
+
+  it('every weight variant leads with an alias and names a real Google family', () => {
+    for (const font of FONTS.filter((f) => f.fontWeight)) {
+      const leadingFamily = font.family.split(',')[0].trim().replace(/["']/g, '');
+      expect(leadingFamily).toBe(font.id);
+      expect(font.family).toContain(font.googleFontName);
+      expect(font.googleFontWeights.split(';')).toContain(font.fontWeight);
     }
   });
 });
@@ -126,5 +152,43 @@ describe('getGoogleFontWeights', () => {
   it('returns 400;700 for null/undefined input', () => {
     expect(getGoogleFontWeights(null as any)).toBe('400;700');
     expect(getGoogleFontWeights(undefined as any)).toBe('400;700');
+  });
+});
+
+// ──────────────────────────────────────────────
+// Weight variants (Roboto Condensed vs Roboto Condensed Bold)
+// ──────────────────────────────────────────────
+
+describe('weight variants', () => {
+  const regular = '"Roboto Condensed", Arial, sans-serif';
+  const bold = '"Roboto Condensed Bold", "Roboto Condensed", Arial, sans-serif';
+
+  it('resolves the regular and the bold cut to different entries', () => {
+    expect(getFontWeight(regular)).toBe('');
+    expect(getFontWeight(bold)).toBe('700');
+  });
+
+  it('requests the real Google family for both', () => {
+    expect(getGoogleFontName(regular)).toBe('Roboto Condensed');
+    expect(getGoogleFontName(bold)).toBe('Roboto Condensed');
+  });
+
+  it('shares the year size with the regular cut', () => {
+    expect(getYearFontSize(bold)).toBe(getYearFontSize(regular));
+  });
+
+  it('loads weight 700 for the bold cut', () => {
+    expect(getGoogleFontWeights(bold).split(';')).toContain('700');
+  });
+
+  it('leaves other fonts without a weight', () => {
+    expect(getFontWeight('Oswald, Arial, sans-serif')).toBe('');
+    expect(getFontWeight('Arial, sans-serif')).toBe('');
+    expect(getFontWeight('')).toBe('');
+  });
+
+  it('falls back to the leading family name for unknown fonts', () => {
+    expect(getGoogleFontName('Unknown Font, sans-serif')).toBe('Unknown Font');
+    expect(getGoogleFontName('')).toBe('');
   });
 });

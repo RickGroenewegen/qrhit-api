@@ -75,12 +75,15 @@ Returns all available fonts for card designs.
     { "id": "Oswald", "displayName": "Oswald (Modern)" },
     { "id": "Fredoka", "displayName": "Fredoka (Rounded)" },
     { "id": "Caveat", "displayName": "Caveat (Handwritten)" },
-    { "id": "Pacifico", "displayName": "Pacifico (Casual)" }
+    { "id": "Pacifico", "displayName": "Pacifico (Casual)" },
+    { "id": "Roboto Condensed Bold", "displayName": "Roboto Condensed Bold (Compact)" }
   ]
 }
 ```
 
 The `id` value is what you pass as `design.selectedFont` when creating orders. An empty string means Arial (the default). To render fonts in their true look on your end, load them from Google Fonts using the `id` as the font family name (e.g. `https://fonts.googleapis.com/css2?family=Oswald&display=swap`).
+
+A few ids are a weight variant of another font rather than a Google family of their own. `Roboto Condensed Bold` is the one that exists today: load `family=Roboto+Condensed:wght@700` and render the text at `font-weight: 700`.
 
 ---
 

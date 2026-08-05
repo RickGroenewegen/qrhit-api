@@ -3,6 +3,28 @@ import QRCode from 'qrcode';
 import Logger from './logger';
 import { LambdaClient, InvokeCommand } from '@aws-sdk/client-lambda';
 
+// The qrcode package's default quiet zone, in modules, on every side.
+const QR_QUIET_ZONE = 4;
+
+/**
+ * Module count of the QR symbol for a link, quiet zone included.
+ *
+ * Templates that overlay something on a QR code use this to line the overlay up
+ * with the module grid: a rendered PNG is exactly `width` px wide, so one module
+ * is `width / getQrTotalModules(link)`. Snapping an overlay to that pitch keeps
+ * it from slicing modules in half, which reads as ragged half-squares.
+ *
+ * The symbol version depends on the link length, so this must be called with
+ * the same link the QR was generated from, and it mirrors generateQR's error
+ * correction level H.
+ */
+export function getQrTotalModules(link: string): number {
+  return (
+    QRCode.create(link, { errorCorrectionLevel: 'H' }).modules.size +
+    QR_QUIET_ZONE * 2
+  );
+}
+
 class Qr {
   private logger = new Logger();
   public async generateQRLambda(

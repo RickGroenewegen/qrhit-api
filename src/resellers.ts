@@ -656,9 +656,9 @@ class Resellers {
    * Resolve a googleFontName (e.g. "Oswald") to the full CSS family string.
    * Also returns the font's recommended default size.
    */
-  private resolveFont(googleFontName?: string): { family: string; defaultSize: string } {
-    if (!googleFontName) return { family: 'Arial, sans-serif', defaultSize: '16px' };
-    const font = FONTS.find((f) => f.googleFontName === googleFontName);
+  private resolveFont(fontId?: string): { family: string; defaultSize: string } {
+    if (!fontId) return { family: 'Arial, sans-serif', defaultSize: '16px' };
+    const font = FONTS.find((f) => f.id === fontId);
     if (font) return { family: font.family, defaultSize: font.defaultSize };
     return { family: 'Arial, sans-serif', defaultSize: '16px' };
   }

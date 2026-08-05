@@ -109,12 +109,16 @@ let boxFontStyles = '';
 const boxFont = php.boxBackSelectedFont || 'Arial, sans-serif';
 if (boxFont && boxFont !== 'Arial, sans-serif') {
     let fontName = boxFont.split(',')[0].trim().replace(/["']/g, '');
-    let googleFontName = fontName.replace(/ /g, '+');
+    // Weight variants lead with a private alias, so the family to request from
+    // Google is looked up rather than derived from the CSS string.
+    let googleFontName = (typeof getGoogleFontName === 'function' ? getGoogleFontName(boxFont) : fontName).replace(/ /g, '+');
     let weights = typeof getGoogleFontWeights === 'function' ? getGoogleFontWeights(boxFont) : '400;700';
+    let fontWeight = typeof getFontWeight === 'function' ? getFontWeight(boxFont) : '';
 
     boxFontStyles = `
     <style>
         @import url('https://fonts.googleapis.com/css2?family=${googleFontName}:wght@${weights}&display=swap');
+        ${fontWeight ? `.back-text { font-weight: ${fontWeight}; }` : ''}
     </style>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>

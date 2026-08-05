@@ -700,10 +700,31 @@ export async function storeTracks(
 
   // Bulk insert playlist_has_tracks with order
   if (trackOrder && trackOrder.size > 0) {
+    // An admin-set order outranks the streaming service's. Existing rows keep
+    // the order they have; only tracks added to the playlist since then get a
+    // position, appended after the last card so nothing shifts.
+    const playlist = await deps.prisma.playlist.findUnique({
+      where: { id: playlistDatabaseId },
+      select: { manualTrackOrder: true },
+    });
+    const keepManualOrder = playlist?.manualTrackOrder === true;
+
+    let orderOffset = 0;
+    if (keepManualOrder) {
+      const [maxRow] = await deps.prisma.$queryRaw<{ maxOrder: number | null }[]>`
+        SELECT MAX(\`order\`) as maxOrder
+        FROM playlist_has_tracks
+        WHERE playlistId = ${playlistDatabaseId}
+      `;
+      orderOffset = maxRow?.maxOrder ?? 0;
+    }
+
     // Build CASE statement for order
     const orderCases: Prisma.Sql[] = [];
     for (const [trackId, order] of trackOrder.entries()) {
-      orderCases.push(Prisma.sql`WHEN trackId = ${trackId} THEN ${order}`);
+      orderCases.push(
+        Prisma.sql`WHEN trackId = ${trackId} THEN ${order + orderOffset}`
+      );
     }
 
     await deps.prisma.$executeRaw`
@@ -717,32 +738,40 @@ export async function storeTracks(
       WHERE trackId IN (${Prisma.join(providedTrackIds)})
     `;
 
-    // Update order for existing tracks (INSERT IGNORE skips these)
-    // Need qualified column names for UPDATE with JOIN
-    const updateOrderCases: Prisma.Sql[] = [];
-    for (const [trackId, order] of trackOrder.entries()) {
-      updateOrderCases.push(
-        Prisma.sql`WHEN t.trackId = ${trackId} THEN ${order}`
+    if (keepManualOrder) {
+      deps.logger.log(
+        color.green.bold(
+          `Keeping manual track order for playlist ${color.white.bold(playlistId)}`
+        )
+      );
+    } else {
+      // Update order for existing tracks (INSERT IGNORE skips these)
+      // Need qualified column names for UPDATE with JOIN
+      const updateOrderCases: Prisma.Sql[] = [];
+      for (const [trackId, order] of trackOrder.entries()) {
+        updateOrderCases.push(
+          Prisma.sql`WHEN t.trackId = ${trackId} THEN ${order}`
+        );
+      }
+      await deps.prisma.$executeRaw`
+        UPDATE playlist_has_tracks pht
+        INNER JOIN tracks t ON pht.trackId = t.id
+        SET pht.\`order\` = CASE
+          ${Prisma.join(updateOrderCases, ' ')}
+          ELSE pht.\`order\`
+        END
+        WHERE pht.playlistId = ${playlistDatabaseId}
+          AND t.trackId IN (${Prisma.join(providedTrackIds)})
+      `;
+
+      deps.logger.log(
+        color.green.bold(
+          `Stored playlist_has_tracks with track order for ${color.white.bold(
+            providedTrackIds.length
+          )} tracks`
+        )
       );
     }
-    await deps.prisma.$executeRaw`
-      UPDATE playlist_has_tracks pht
-      INNER JOIN tracks t ON pht.trackId = t.id
-      SET pht.\`order\` = CASE
-        ${Prisma.join(updateOrderCases, ' ')}
-        ELSE pht.\`order\`
-      END
-      WHERE pht.playlistId = ${playlistDatabaseId}
-        AND t.trackId IN (${Prisma.join(providedTrackIds)})
-    `;
-
-    deps.logger.log(
-      color.green.bold(
-        `Stored playlist_has_tracks with track order for ${color.white.bold(
-          providedTrackIds.length
-        )} tracks`
-      )
-    );
   } else {
     // Original behavior without order
     await deps.prisma.$executeRaw`

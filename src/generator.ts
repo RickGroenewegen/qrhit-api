@@ -20,6 +20,7 @@ import Spotify from './spotify';
 import { MusicProviderFactory } from './providers';
 import Mail from './mail';
 import QR from './qr';
+import { applyQrLogo, clampScale, resolveLogoPath } from './qr-logo';
 import PDF from './pdf';
 import Order from './order';
 import AnalyticsClient from './analytics';
@@ -870,12 +871,48 @@ class Generator {
     )}`;
     await this.utils.createDir(outputDir);
 
+    // A centre logo is drawn into the QR bitmap rather than overlaid by the
+    // templates, so every template gets it and nothing can misalign - see
+    // src/qr-logo.ts.
+    // resolveLogoPath rejects anything that is not a plain filename inside the
+    // logo directory, so a crafted qrLogo cannot make sharp read elsewhere.
+    const qrLogoPath = resolveLogoPath(
+      process.env['PUBLIC_DIR'] as string,
+      playlist.qrLogo
+    );
+    if (playlist.qrLogo && !qrLogoPath) {
+      this.logger.log(
+        color.yellow.bold(
+          `Ignoring invalid QR logo filename ${color.white.bold(
+            playlist.qrLogo
+          )}`
+        )
+      );
+    }
+    const qrLogoOptions = qrLogoPath
+      ? {
+          logoPath: qrLogoPath,
+          scale: clampScale(playlist.qrLogoScale),
+          // The logo has to read as QR "light": the shape colour when there is
+          // one, white when the QR sits directly on the card.
+          backingColor:
+            (playlist.qrBackgroundType || 'square') === 'none'
+              ? '#ffffff'
+              : playlist.qrBackgroundColor || '#ffffff',
+        }
+      : null;
+    const drawLogo = async (outputPath: string, link: string) => {
+      if (!qrLogoOptions) return;
+      await applyQrLogo(outputPath, link, qrLogoOptions, this.logger);
+    };
+
     if (process.env['ENVIRONMENT'] === 'development') {
       // Use old method in series
       for (const track of dbTracks) {
         const link = `${process.env['API_URI']}/qr2/${track.id}/${track.paymentHasPlaylistId}`;
         const outputPath = `${outputDir}/${track.trackId}.png`;
         await this.qr.generateQR(link, outputPath, playlist.qrColor);
+        await drawLogo(outputPath, link);
       }
     } else {
       // Use new method in parallel batches of 25
@@ -887,6 +924,7 @@ class Generator {
             const link = `${process.env['API_URI']}/qr2/${track.id}/${track.paymentHasPlaylistId}`;
             const outputPath = `${outputDir}/${track.trackId}.png`;
             await this.qr.generateQRLambda(link, outputPath, playlist.qrColor);
+            await drawLogo(outputPath, link);
           })
         );
       }

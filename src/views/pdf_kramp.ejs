@@ -84,21 +84,6 @@
         width: 100%;
         height: 100%;
     }
-    .qr-center-logo {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        z-index: 3;
-        box-sizing: content-box;
-        padding: 0.6mm;
-        line-height: 0;
-    }
-    .qr-center-logo img {
-        display: block;
-        width: 100%;
-        height: auto;
-    }
     .text {
         text-align: center;
         padding-top: 1.87mm;
@@ -158,14 +143,9 @@
         // Determine QR background type - handle backward compatibility
         let qrBgType = php.qrBackgroundType || (php.hideCircle ? 'none' : 'square');
         let qrBgColor = php.qrBackgroundColor || '#ffffff';
-        // QR size per background type (mm) and the Kramp logo overlaid on its centre.
-        // The QR codes are generated at error correction level H (30% recoverable),
-        // so a centre patch of this size stays well inside the safe margin.
+        // QR size per background type (mm). A centre logo, if the design has
+        // one, is already part of the QR image - see src/qr-logo.ts.
         const qrSizeMm = qrBgType === 'square' ? 29.87 : 33.6;
-        const centerLogoWidthMm = (qrSizeMm * 0.38).toFixed(2);
-        // The logo backing patch has to read as QR "light" - use the shape colour
-        // when there is one, white when the QR sits directly on the card.
-        const centerLogoBgColor = qrBgType === 'none' ? '#ffffff' : qrBgColor;
         %>
         <% if (qrBgType === 'square') { %>
             <!-- Square background for QR code using SVG -->
@@ -180,9 +160,6 @@
         <% } %>
         <div class="qr-wrap" style="width: <%= qrSizeMm %>mm; height: <%= qrSizeMm %>mm;">
             <img class="qr-code" src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code">
-            <div class="qr-center-logo" style="width: <%= centerLogoWidthMm %>mm; background-color: <%= centerLogoBgColor %>;">
-                <img src="<%= process.env['API_URI'] %>/assets/images/clients/kramp/logo.png" alt="Kramp" style="<%= eco ? 'filter: grayscale(100%);' : '' %>">
-            </div>
         </div>
         <!-- Domain URL removed - always hidden -->
     </div>

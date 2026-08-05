@@ -4,8 +4,12 @@ let fontStyles = '';
 if (php.selectedFont && php.selectedFont !== 'Arial, sans-serif') {
     // Extract the font name before the comma
     let fontName = php.selectedFont.split(',')[0].trim().replace(/["']/g, '');
-    let googleFontName = fontName.replace(/ /g, '+');
+    // Weight variants lead with a private alias, so the family to request from
+    // Google is looked up rather than derived from the CSS string.
+    let googleFontName = (typeof getGoogleFontName === 'function' ? getGoogleFontName(php.selectedFont) : fontName).replace(/ /g, '+');
     let weights = typeof getGoogleFontWeights === 'function' ? getGoogleFontWeights(php.selectedFont) : '400;700';
+    let fontWeight = typeof getFontWeight === 'function' ? getFontWeight(php.selectedFont) : '';
+    let weightRule = fontWeight ? `font-weight: ${fontWeight} !important;` : '';
 
     fontStyles = `
     <style>
@@ -13,12 +17,14 @@ if (php.selectedFont && php.selectedFont !== 'Arial, sans-serif') {
 
         body {
             font-family: '${fontName}', ${php.selectedFont.split(',').slice(1).join(',')}, Arial, sans-serif !important;
+            ${weightRule}
             -webkit-font-smoothing: antialiased;
             -moz-osx-font-smoothing: grayscale;
         }
 
         .text, .text.artist, .text.year, .text.name {
             font-family: '${fontName}', ${php.selectedFont.split(',').slice(1).join(',')}, Arial, sans-serif !important;
+            ${weightRule}
         }
 
         .text.year {

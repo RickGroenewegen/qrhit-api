@@ -17,6 +17,8 @@ export interface CartItem {
   hideCircle?: boolean; // DEPRECATED: Use qrBackgroundType instead
   qrBackgroundType?: 'none' | 'circle' | 'square'; // Background shape for QR code (default: 'square')
   qrBackgroundColor?: string; // Background color of the QR code square/circle (default: '#ffffff')
+  qrLogo?: string; // Filename of the logo shown in the middle of the QR code
+  qrLogoScale?: number; // Logo width as a percentage of the QR (default: 25)
   eco?: boolean;
   allowDuplicates?: boolean; // Keep tracks with the same artist+title (different versions)
   isSlug?: boolean;

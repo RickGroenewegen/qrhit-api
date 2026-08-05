@@ -372,6 +372,9 @@ model Playlist {
   priceSheets            Float                @default(0)
   numberOfTracks         Int                  @default(0)
   resetCache             Boolean              @default(false)
+  // Set once an admin reorders the cards by hand. Regeneration then keeps that
+  // order instead of rewriting it from the streaming service's playlist order.
+  manualTrackOrder       Boolean              @default(false)
   giftcardAmount         Float                @default(0)
   giftcardFrom           String?              @db.VarChar(100)
   giftcardMessage        String?              @db.VarChar(255)
@@ -611,6 +614,12 @@ model PaymentHasPlaylist {
   qrBackgroundType           String   @default("square")
   qrColor                    String   @default("#000000")
   qrBackgroundColor          String   @default("#ffffff")
+  // Logo shown in the middle of every QR code. The modules it covers are
+  // cleared from the QR bitmap at generation time - see src/qr-logo.ts.
+  qrLogo                     String?
+  // Logo width as a percentage of the QR. Capped in the designer at 30 so
+  // error correction level H keeps the code scannable.
+  qrLogoScale                Int      @default(25)
   price                      Float
   priceWithoutVAT            Float
   priceVAT                   Float

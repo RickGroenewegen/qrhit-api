@@ -6,7 +6,14 @@ import Discount from '../discount';
 import Review from '../review';
 import Translation from '../translation';
 import Utils from '../utils';
-import { getYearFontSize, getGoogleFontWeights } from '../fonts';
+import {
+  getYearFontSize,
+  getGoogleFontWeights,
+  getGoogleFontName,
+  getFontWeight,
+} from '../fonts';
+import { getQrTotalModules } from '../qr';
+
 import fs from 'fs/promises';
 import { color } from 'console-log-colors';
 import Formatters from '../formatters';
@@ -427,6 +434,9 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           howtoTranslations,
           getYearFontSize,
           getGoogleFontWeights,
+          getGoogleFontName,
+          getFontWeight,
+          getQrTotalModules,
         });
       }
     }
@@ -460,6 +470,8 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
         php,
         count,
         getGoogleFontWeights,
+        getGoogleFontName,
+        getFontWeight,
       });
     }
   );

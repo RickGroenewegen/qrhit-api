@@ -4,6 +4,7 @@ import Log from './logger';
 import Utils from './utils';
 import { color, white } from 'console-log-colors';
 import sharp from 'sharp';
+import { sanitizeLogoFilename, clampScale } from './qr-logo';
 import PrismaInstance from './prisma';
 
 class Designer {
@@ -381,6 +382,8 @@ class Designer {
           php.qrBackgroundType,
           php.qrColor,
           php.qrBackgroundColor,
+          php.qrLogo,
+          php.qrLogoScale,
           php.selectedFont,
           php.selectedFontSize,
           php.doubleSided,
@@ -471,6 +474,8 @@ class Designer {
       qrBackgroundType?: 'none' | 'circle' | 'square';
       qrColor?: string;
       qrBackgroundColor?: string;
+      qrLogo?: string;
+      qrLogoScale?: number;
       selectedFont?: string;
       selectedFontSize?: string;
       doubleSided?: boolean;
@@ -547,6 +552,8 @@ class Designer {
           qrBackgroundType: design.qrBackgroundType,
           qrColor: design.qrColor,
           qrBackgroundColor: design.qrBackgroundColor,
+          qrLogo: sanitizeLogoFilename(design.qrLogo),
+          qrLogoScale: clampScale(design.qrLogoScale),
           selectedFont: design.selectedFont,
           selectedFontSize: design.selectedFontSize,
           doubleSided: design.doubleSided,

@@ -26,6 +26,7 @@ import PrintEnBind from './printers/printenbind';
 import Mail from './mail';
 import Fx from './services/fx';
 import SpotifyProvider from './providers/SpotifyProvider';
+import { sanitizeLogoFilename, clampScale } from './qr-logo';
 import {
   isSupportedCurrency,
   SupportedCurrency,
@@ -1541,6 +1542,8 @@ class Mollie {
             qrBackgroundType: true,
             qrColor: true,
             qrBackgroundColor: true,
+            qrLogo: true,
+            qrLogoScale: true,
             selectedFont: true,
             selectedFontSize: true,
             emoji: true,
@@ -2036,6 +2039,8 @@ class Mollie {
             allowDuplicates: item.allowDuplicates === true,
             qrColor: item.qrColor || '#000000',
             qrBackgroundColor: item.qrBackgroundColor || '#ffffff',
+            qrLogo: sanitizeLogoFilename(item.qrLogo),
+            qrLogoScale: clampScale(item.qrLogoScale),
             hideCircle: item.hideCircle,
             qrBackgroundType:
               item.qrBackgroundType || (item.hideCircle ? 'none' : 'square'),

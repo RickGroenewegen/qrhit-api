@@ -716,7 +716,7 @@ export default async function resellerRoutes(fastify: FastifyInstance) {
     },
     async (_request, reply) => {
       reply.header('Cache-Control', 'public, max-age=86400');
-      return { success: true, data: FONTS.map((f) => ({ id: f.googleFontName, displayName: f.displayName })) };
+      return { success: true, data: FONTS.map((f) => ({ id: f.id, displayName: f.displayName })) };
     }
   );
 

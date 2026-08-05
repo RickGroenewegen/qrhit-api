@@ -143,6 +143,8 @@ export async function getPlaylistsByPaymentId(
       payment_has_playlist.eco,
       payment_has_playlist.qrColor,
       payment_has_playlist.qrBackgroundColor,
+      payment_has_playlist.qrLogo,
+      payment_has_playlist.qrLogoScale,
       payment_has_playlist.hideCircle,
       payment_has_playlist.qrBackgroundType,
       payment_has_playlist.subType,
@@ -878,6 +880,9 @@ export async function getPlaylistTrackOrder(
  * Rewrites playlist_has_tracks.order to the given trackId sequence (0-based).
  * trackIds must be exactly the playlist's current tracks - a partial list would
  * silently leave the omitted rows on stale order values.
+ *
+ * Also flags the playlist as manually ordered, which stops regeneration from
+ * rewriting the order back to the streaming service's (see storeTracks).
  */
 export async function updatePlaylistTrackOrder(
   deps: DataDeps,
@@ -913,16 +918,20 @@ export async function updatePlaylistTrackOrder(
       };
     }
 
-    await deps.prisma.$transaction(
-      trackIds.map((trackId, index) =>
+    await deps.prisma.$transaction([
+      ...trackIds.map((trackId, index) =>
         deps.prisma.playlistHasTrack.update({
           where: {
             playlistId_trackId: { playlistId: php.playlistId, trackId },
           },
           data: { order: index },
         })
-      )
-    );
+      ),
+      deps.prisma.playlist.update({
+        where: { id: php.playlistId },
+        data: { manualTrackOrder: true },
+      }),
+    ]);
 
     deps.logger.log(
       color.blue.bold(

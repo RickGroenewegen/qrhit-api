@@ -1064,6 +1064,32 @@ describe('updatePlaylistTrackOrder', () => {
     });
   });
 
+  it('flags the playlist so regeneration stops rewriting the order', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ playlistId: 42 });
+    prisma.playlistHasTrack.findMany.mockResolvedValue([
+      { trackId: 7 },
+      { trackId: 9 },
+    ]);
+
+    await updatePlaylistTrackOrder(deps, 5, [9, 7]);
+
+    expect(prisma.playlist.update).toHaveBeenCalledWith({
+      where: { id: 42 },
+      data: { manualTrackOrder: true },
+    });
+  });
+
+  it('does not flag the playlist when the list is rejected', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ playlistId: 42 });
+    prisma.playlistHasTrack.findMany.mockResolvedValue([{ trackId: 7 }]);
+
+    await updatePlaylistTrackOrder(deps, 5, [999]);
+
+    expect(prisma.playlist.update).not.toHaveBeenCalled();
+  });
+
   it('rejects a partial list rather than leaving rows on stale order values', async () => {
     const { deps, prisma } = makeDeps();
     prisma.paymentHasPlaylist.findUnique.mockResolvedValue({ playlistId: 42 });

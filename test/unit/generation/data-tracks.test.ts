@@ -69,7 +69,10 @@ function makeDeps() {
       update: vi.fn(async () => ({})),
       createMany: vi.fn(async () => ({ count: 0 })),
     },
-    playlist: { findMany: vi.fn(async () => []) },
+    playlist: {
+      findMany: vi.fn(async () => []),
+      findUnique: vi.fn(async () => ({ manualTrackOrder: false }) as any),
+    },
     $queryRaw: vi.fn(async () => []),
     $executeRaw: vi.fn(async () => 0),
   };
@@ -557,6 +560,46 @@ describe('storeTracks', () => {
     const upd = flatten(prisma.$executeRaw.mock.calls[2]);
     expect(upd.sql).toContain('UPDATE playlist_has_tracks pht');
     expect(upd.values).toEqual(['s1', 2, 99, 's1']);
+  });
+
+  it('leaves an admin-set order alone instead of rewriting it from the service', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({ manualTrackOrder: true } as any);
+    prisma.$queryRaw.mockResolvedValue([{ maxOrder: 40 }] as any);
+
+    await storeTracks(deps, 99, 'pl1', [goodTrack], new Map([['s1', 2]]));
+
+    // delete + insert only — the UPDATE that clobbers the manual order is gone.
+    expect(prisma.$executeRaw).toHaveBeenCalledTimes(2);
+    expect(
+      prisma.$executeRaw.mock.calls.some((call: any[]) =>
+        flatten(call).sql.includes('UPDATE playlist_has_tracks pht')
+      )
+    ).toBe(false);
+  });
+
+  it('appends tracks new to a manually ordered playlist after the last card', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({ manualTrackOrder: true } as any);
+    prisma.$queryRaw.mockResolvedValue([{ maxOrder: 40 }] as any);
+
+    await storeTracks(deps, 99, 'pl1', [goodTrack], new Map([['s1', 2]]));
+
+    // Only rows INSERT IGNORE actually creates get this order, so an existing
+    // card keeps its place and a genuinely new one lands at 40 + 2.
+    const ins = flatten(prisma.$executeRaw.mock.calls[1]);
+    expect(ins.values).toEqual([99, 's1', 42, 's1']);
+  });
+
+  it('starts at the service order when the playlist has no rows yet', async () => {
+    const { deps, prisma } = makeDeps();
+    prisma.playlist.findUnique.mockResolvedValue({ manualTrackOrder: true } as any);
+    prisma.$queryRaw.mockResolvedValue([{ maxOrder: null }] as any);
+
+    await storeTracks(deps, 99, 'pl1', [goodTrack], new Map([['s1', 2]]));
+
+    const ins = flatten(prisma.$executeRaw.mock.calls[1]);
+    expect(ins.values).toEqual([99, 's1', 2, 's1']);
   });
 });
 
