@@ -1,5 +1,6 @@
 import sharp from 'sharp';
 import path from 'path';
+import jsQR from 'jsqr';
 import { color } from 'console-log-colors';
 import Logger from './logger';
 import { getQrTotalModules } from './qr';
@@ -39,12 +40,15 @@ export const MIN_SCALE = 15;
 export const MAX_SCALE = 40;
 
 /**
- * Most of the symbol the logo may clear.
+ * Fallback ceiling on how much of the symbol the logo may clear.
  *
- * Level H recovers ~30% of codewords, but a damaged module ruins its whole
- * codeword, so the usable budget is well under that. Measured against real
- * codes: a square logo clearing 14.3% still decodes, 17.8% does not. This sits
- * at the last value that decoded, and getQrLogoRect shrinks the rect to fit.
+ * This is only a first guess. It cannot be the real safety mechanism: how much
+ * a code tolerates depends on its symbol version, which follows the link length
+ * and so differs per card and per environment. Measured: a 19x7 rect clears
+ * just 7.9% of a 41-module grid and still will not decode, because at that
+ * width it clips version 4's alignment pattern - while the same rect is fine on
+ * a 45-module grid. So applyQrLogo decodes what it produced and shrinks until
+ * it scans, and this only keeps the starting point sane.
  */
 export const MAX_AREA_FRACTION = 0.145;
 
@@ -166,6 +170,25 @@ export async function getImageAspect(imagePath: string): Promise<number | null> 
   }
 }
 
+/**
+ * Whether a rendered QR PNG still decodes.
+ *
+ * The QR's light modules are transparent, so it is flattened onto white first -
+ * the same thing a card does when it prints the code onto its background.
+ */
+async function decodes(png: Buffer): Promise<boolean> {
+  try {
+    const { data, info } = await sharp(png)
+      .flatten({ background: '#ffffff' })
+      .ensureAlpha()
+      .raw()
+      .toBuffer({ resolveWithObject: true });
+    return !!jsQR(new Uint8ClampedArray(data), info.width, info.height);
+  } catch {
+    return false;
+  }
+}
+
 export interface QrLogoOptions {
   /** Absolute path of the logo image to draw. */
   logoPath: string;
@@ -244,47 +267,81 @@ export async function applyQrLogo(
       return false;
     }
 
-    // Round outwards so the cleared area always covers the whole backing patch
-    // rather than leaving a sliver of a module along its edge.
-    const rect = getQrLogoRect(totalModules, options.scale, aspect);
-    const left = Math.max(0, Math.floor(rect.x * pitch));
-    const top = Math.max(0, Math.floor(rect.y * pitch));
-    const right = Math.min(width, Math.ceil((rect.x + rect.width) * pitch));
-    const bottom = Math.min(height, Math.ceil((rect.y + rect.height) * pitch));
+    // Build the code at a given scale. Round outwards so the cleared area always
+    // covers the whole backing patch rather than leaving a sliver of a module
+    // along its edge.
+    const render = async (scale: number): Promise<Buffer> => {
+      const rect = getQrLogoRect(totalModules, scale, aspect);
+      const left = Math.max(0, Math.floor(rect.x * pitch));
+      const top = Math.max(0, Math.floor(rect.y * pitch));
+      const right = Math.min(width, Math.ceil((rect.x + rect.width) * pitch));
+      const bottom = Math.min(height, Math.ceil((rect.y + rect.height) * pitch));
 
-    for (let y = top; y < bottom; y++) {
-      for (let x = left; x < right; x++) {
-        data[(y * width + x) * channels + 3] = 0;
+      const cleared = Buffer.from(data);
+      for (let y = top; y < bottom; y++) {
+        for (let x = left; x < right; x++) {
+          cleared[(y * width + x) * channels + 3] = 0;
+        }
       }
+
+      // The logo sits inside the cleared rect, inset by the module of quiet
+      // space getQrLogoRect added on each side.
+      const logoWidth = Math.max(1, Math.round((rect.width - 2) * pitch));
+      const logoHeight = Math.max(1, Math.round(logoWidth * aspect));
+      const logo = await sharp(options.logoPath)
+        .resize(logoWidth, logoHeight, { fit: 'inside' })
+        .png()
+        .toBuffer();
+
+      const patch = await sharp({
+        create: {
+          width: right - left,
+          height: bottom - top,
+          channels: 4,
+          background: options.backingColor,
+        },
+      })
+        .composite([{ input: logo, gravity: 'centre' }])
+        .png()
+        .toBuffer();
+
+      return sharp(cleared, { raw: { width, height, channels } })
+        .composite([{ input: patch, left, top }])
+        .png()
+        .toBuffer();
+    };
+
+    // How much a code tolerates depends on its symbol version, which follows
+    // the link length - so the requested scale is a wish, not a guarantee.
+    // Step it down until the result actually decodes rather than shipping a
+    // card nobody can scan.
+    for (let scale = clampScale(options.scale); scale >= MIN_SCALE; scale -= 1) {
+      const candidate = await render(scale);
+      if (!(await decodes(candidate))) continue;
+
+      if (scale !== clampScale(options.scale)) {
+        logger?.log(
+          color.yellow.bold(
+            `QR logo reduced to ${color.white.bold(
+              scale + '%'
+            )} on a ${color.white.bold(
+              totalModules
+            )}-module code so it still scans`
+          )
+        );
+      }
+      await sharp(candidate).toFile(pngPath);
+      return true;
     }
 
-    // The logo sits inside the cleared rect, inset by the module of quiet space
-    // getQrLogoRect added on each side.
-    const logoWidth = Math.max(1, Math.round((rect.width - 2) * pitch));
-    const logoHeight = Math.max(1, Math.round(logoWidth * aspect));
-    const logo = await sharp(options.logoPath)
-      .resize(logoWidth, logoHeight, { fit: 'inside' })
-      .png()
-      .toBuffer();
-
-    const patch = await sharp({
-      create: {
-        width: right - left,
-        height: bottom - top,
-        channels: 4,
-        background: options.backingColor,
-      },
-    })
-      .composite([{ input: logo, gravity: 'centre' }])
-      .png()
-      .toBuffer();
-
-    await sharp(data, { raw: { width, height, channels } })
-      .composite([{ input: patch, left, top }])
-      .png()
-      .toFile(pngPath);
-
-    return true;
+    logger?.log(
+      color.yellow.bold(
+        `QR logo left off ${color.white.bold(
+          pngPath
+        )}: no size down to ${color.white.bold(MIN_SCALE + '%')} decoded`
+      )
+    );
+    return false;
   } catch (error: any) {
     logger?.log(
       color.red.bold(
