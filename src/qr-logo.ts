@@ -315,21 +315,12 @@ export async function applyQrLogo(
     // the link length - so the requested scale is a wish, not a guarantee.
     // Step it down until the result actually decodes rather than shipping a
     // card nobody can scan.
+    // Silent by design: this runs per card, so logging each reduction buries
+    // the generation log under hundreds of identical lines.
     for (let scale = clampScale(options.scale); scale >= MIN_SCALE; scale -= 1) {
       const candidate = await render(scale);
       if (!(await decodes(candidate))) continue;
 
-      if (scale !== clampScale(options.scale)) {
-        logger?.log(
-          color.yellow.bold(
-            `QR logo reduced to ${color.white.bold(
-              scale + '%'
-            )} on a ${color.white.bold(
-              totalModules
-            )}-module code so it still scans`
-          )
-        );
-      }
       await sharp(candidate).toFile(pngPath);
       return true;
     }

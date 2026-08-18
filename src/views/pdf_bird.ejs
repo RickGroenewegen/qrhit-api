@@ -1,0 +1,284 @@
+<%
+// Geometry of the BIRD artwork (assets/images/clients/bird/kaart.png, 781x781).
+// The white panel runs x 94-686, y 93-615, but the BIRD tab cuts into it from
+// below at y 557, so 557 is the floor for anything drawn full width.
+const BIRD_CARD_MM = 60;
+const BIRD_PX_PER_MM = 96 / 25.4;
+const birdMm = (px) => (px / 781) * BIRD_CARD_MM;
+
+// Air between the content and the edges of the white panel.
+const BIRD_PAD_X = 2;
+const BIRD_PAD_Y = 1.5;
+
+const birdPanelLeft = birdMm(94) + BIRD_PAD_X;
+const birdPanelRight = BIRD_CARD_MM - birdMm(686) + BIRD_PAD_X;
+const birdPanelTop = birdMm(93) + BIRD_PAD_Y;
+const birdPanelHeight = birdMm(557 - 93) - 2 * BIRD_PAD_Y;
+const birdPanelWidth = BIRD_CARD_MM - birdPanelLeft - birdPanelRight;
+
+const BIRD = {
+    panelLeft: birdPanelLeft.toFixed(2),
+    panelRight: birdPanelRight.toFixed(2),
+    panelTop: birdPanelTop.toFixed(2),
+    panelHeight: birdPanelHeight.toFixed(2),
+    boxWidthPx: birdPanelWidth * BIRD_PX_PER_MM,
+    boxHeightPx: birdPanelHeight * BIRD_PX_PER_MM,
+    // Largest QR that still keeps white all around it inside the panel.
+    qrSize: Math.floor((birdPanelHeight - 1) * 10) / 10,
+    sizes: [15, 14, 13, 12, 11, 10, 9, 8, 7],
+    yearRatio: 2.1,
+    minExtraSize: 7,
+    lineHeight: 1.2,
+    yearLineHeight: 1.15,
+    gapRatio: 0.7,
+};
+
+// Google Sans advance widths in em, measured off the rendered font. The panel
+// is far too small to guess with an average: "WWW" runs 0.95em per character
+// where "ill" runs 0.21em, and the two want very different sizes. Values are
+// rounded up so the estimate errs towards a smaller, safely fitting size.
+const BIRD_ADVANCE = {};
+[
+    [0.18, "'"],
+    [0.21, 'il'],
+    [0.24, 'j .,:;!I'],
+    [0.29, '/'],
+    [0.33, '[]"()'],
+    [0.35, 'tf'],
+    [0.37, 'r'],
+    [0.44, '1-'],
+    [0.49, 'sxz?'],
+    [0.52, 'kLJvy'],
+    [0.54, '273ac'],
+    [0.57, 'ES869+T5nueh'],
+    [0.60, 'ZPY4RogbdpqB'],
+    [0.65, 'X&KV0'],
+    [0.72, 'UAHDNC'],
+    [0.83, 'wGOQ'],
+    [0.88, 'Mm'],
+    [0.96, 'W'],
+].forEach(([em, chars]) => {
+    for (const ch of chars) BIRD_ADVANCE[ch] = em;
+});
+BIRD_ADVANCE[' '] = 0.24;
+const BIRD_DEFAULT_ADVANCE = 0.60;
+
+// Accents ride on top of the base letter and do not change its advance, so
+// decomposing first lets "Bjork" and "Björk" measure the same.
+function birdWidthEm(text) {
+    let em = 0;
+    for (const ch of text.normalize('NFD')) {
+        const code = ch.codePointAt(0);
+        if (code >= 0x0300 && code <= 0x036f) continue; // combining marks
+        if (code >= 0x2e80) { em += 1; continue; }      // CJK and friends
+        em += BIRD_ADVANCE[ch] !== undefined ? BIRD_ADVANCE[ch] : BIRD_DEFAULT_ADVANCE;
+    }
+    return em;
+}
+
+// Greedy word wrap, matching what overflow-wrap: break-word does in the
+// browser: break between words, and split a word that cannot fit on its own.
+function birdLineCount(text, sizePx, maxWidthPx) {
+    const trimmed = (text || '').trim();
+    if (!trimmed) return 0;
+    const maxEm = maxWidthPx / sizePx;
+    const spaceEm = BIRD_ADVANCE[' '];
+    let lines = 1;
+    let used = 0;
+    for (const word of trimmed.split(/\s+/)) {
+        const wordEm = birdWidthEm(word);
+        if (wordEm > maxEm) {
+            // Long unbroken word: it starts a line and spills over several.
+            if (used > 0) lines++;
+            const spill = Math.ceil(wordEm / maxEm);
+            lines += spill - 1;
+            used = wordEm - (spill - 1) * maxEm;
+            continue;
+        }
+        const needed = used === 0 ? wordEm : used + spaceEm + wordEm;
+        if (needed > maxEm) {
+            lines++;
+            used = wordEm;
+        } else {
+            used = needed;
+        }
+    }
+    return lines;
+}
+
+// Step the type down until the whole block fits the white panel.
+function birdFit(track) {
+    const artist = track.artist || '';
+    const name = track.name || '';
+    const artistExtra = track.extraArtistAttribute || '';
+    const nameExtra = track.extraNameAttribute || '';
+    let size = BIRD.sizes[BIRD.sizes.length - 1];
+    let extraSize = BIRD.minExtraSize;
+    let yearSize = Math.round(size * BIRD.yearRatio);
+    for (const candidate of BIRD.sizes) {
+        size = candidate;
+        extraSize = Math.max(BIRD.minExtraSize, candidate - 3);
+        yearSize = Math.round(candidate * BIRD.yearRatio);
+        const textLines =
+            birdLineCount(artist, candidate, BIRD.boxWidthPx) +
+            birdLineCount(name, candidate, BIRD.boxWidthPx);
+        const extraLines =
+            birdLineCount(artistExtra, extraSize, BIRD.boxWidthPx) +
+            birdLineCount(nameExtra, extraSize, BIRD.boxWidthPx);
+        const height =
+            textLines * candidate * BIRD.lineHeight +
+            extraLines * extraSize * BIRD.lineHeight +
+            yearSize * BIRD.yearLineHeight +
+            2 * (candidate * BIRD.gapRatio); // the gaps above and below the year
+        if (height <= BIRD.boxHeightPx) break;
+    }
+    return {
+        size,
+        extraSize,
+        yearSize,
+        gapMm: (size * BIRD.gapRatio / BIRD_PX_PER_MM).toFixed(2),
+    };
+}
+%>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Your QR Cards</title>
+<style>
+    /* Google Sans has no weight axis on the CSS API - asking for
+       "css2?family=Google+Sans:wght@400" answers 400 Bad Request. The plain
+       family request is the Regular 400 cut. */
+    @import url('https://fonts.googleapis.com/css2?family=Google+Sans&display=swap');
+
+    body {
+        font-family: 'Google Sans', Arial, sans-serif;
+        font-weight: 400;
+        margin: 0;
+        padding: 0;
+        -webkit-font-smoothing: antialiased;
+        -moz-osx-font-smoothing: grayscale;
+    }
+    .card-front, .card-back {
+        width: <%= BIRD_CARD_MM %>mm;
+        height: <%= BIRD_CARD_MM %>mm;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        position: relative;
+        overflow: hidden;
+    }
+    .card-back {
+        <% if (php.backgroundBackType === 'solid') { %>
+            <% if (php.useGradient) {
+                const firstStop = Math.max(0, php.gradientPosition - 50);
+                const secondStop = Math.min(100, php.gradientPosition + 50);
+                const bgColor = php.backgroundBackColor || '#ffffff';
+                const gradColor = php.gradientBackgroundColor || '#ffffff';
+                const degrees = php.gradientDegrees || 180;
+            %>
+            background: linear-gradient(<%= degrees %>deg, <%= bgColor %> <%= firstStop %>%, <%= gradColor %> <%= secondStop %>%);
+            <% } else if (php.backgroundBackColor) { %>
+            background-color: <%= php.backgroundBackColor %>;
+            <% } else { %>
+            background-color: #ffffff;
+            <% } %>
+        <% } else { %>
+        background-color: transparent;
+        <% } %>
+    }
+    /* Used by the how-to card partial */
+    .background-image-back {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        z-index: 0;
+        opacity: <%= (php.backOpacity !== undefined ? php.backOpacity : 50) / 100 %>;
+    }
+    /* The client artwork is the card: full bleed, same on front and back.
+       Nothing here is redrawn in CSS or SVG, it all comes from the image. */
+    .bird-card {
+        background-image: url('<%= process.env['API_URI'] %>/assets/images/clients/bird/kaart.png');
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+    /* Invisible box marking the white panel the artwork leaves free, above the
+       BIRD tab. Everything the card has to say lives inside it. */
+    .bird-panel {
+        position: absolute;
+        top: <%= BIRD.panelTop %>mm;
+        left: <%= BIRD.panelLeft %>mm;
+        right: <%= BIRD.panelRight %>mm;
+        height: <%= BIRD.panelHeight %>mm;
+        z-index: 2;
+    }
+    .bird-text {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        text-align: center;
+        height: 100%;
+        width: 100%;
+        overflow: hidden;
+        color: #000000;
+    }
+    .bird-line,
+    .bird-extra {
+        width: 100%;
+        overflow-wrap: break-word;
+        word-wrap: break-word;
+        line-height: <%= BIRD.lineHeight %>;
+    }
+    .qr-code {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: <%= BIRD.qrSize %>mm;
+        height: <%= BIRD.qrSize %>mm;
+    }
+</style>
+</head>
+<body>
+<% if (php.addHowToCard && startIndex === 0) { %>
+  <%- include('partials/howto_card') %>
+<% } %>
+<% tracks.forEach((track, index) => { %>
+    <div class="card-front bird-card">
+        <div class="bird-panel">
+            <img class="qr-code" src="<%= process.env['API_URI'] %>/public/qr/<%= subdir %>/<%= track.trackId %>.png" alt="QR Code">
+        </div>
+    </div>
+    <div style="page-break-after: always;"></div>
+    <% const bird = birdFit(track); %>
+    <div class="card-back bird-card">
+        <div class="bird-panel">
+            <div class="bird-text">
+                <div class="bird-line" style="font-size: <%= bird.size %>px;">
+                    <%= track.artist %>
+                    <% if (track.extraArtistAttribute && track.extraArtistAttribute.length > 0) { %>
+                        <div class="bird-extra" style="font-size: <%= bird.extraSize %>px;"><%= track.extraArtistAttribute %></div>
+                    <% } %>
+                </div>
+                <div class="bird-line" style="font-size: <%= bird.yearSize %>px; line-height: <%= BIRD.yearLineHeight %>; margin: <%= bird.gapMm %>mm 0;"><%= track.year %></div>
+                <div class="bird-line" style="font-size: <%= bird.size %>px;">
+                    <%= track.name %>
+                    <% if (track.extraNameAttribute && track.extraNameAttribute.length > 0) { %>
+                        <div class="bird-extra" style="font-size: <%= bird.extraSize %>px;"><%= track.extraNameAttribute %></div>
+                    <% } %>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div style="page-break-after: always;"></div>
+<% }); %>
+</body>
+</html>
