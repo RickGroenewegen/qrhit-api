@@ -1,0 +1,364 @@
+<!--
+    Shared design system for the Retail and Reseller pricing PDFs.
+    Both documents include this file so they cannot drift apart.
+
+    Follows the QRSong! brand kit:
+      DISCO     #18565E   POP  #F79677   OFF WHITE  #feefe5
+      Hagrid Text, Heavy, letter-spacing 70 (0.07em) for display
+      Rounded cards, grain-textured music assets
+
+    Parameters:
+      editionName - label printed on the cover sticker and running headers
+-->
+<style>
+    /* Hagrid Text is the brand display face. Drop HagridText-Heavy.woff2 into
+       assets/fonts/ and it takes over automatically; until then the stack
+       falls through to the heaviest wide grotesque available. */
+    @font-face {
+        font-family: 'Hagrid Text';
+        src: url('<%= baseUrl %>/assets/fonts/HagridText-Heavy.woff2') format('woff2');
+        font-weight: 900;
+        font-style: normal;
+        font-display: swap;
+    }
+
+    :root {
+        --disco: #18565E;
+        --pop: #F79677;
+        --off: #feefe5;
+
+        /* Tints derived from the three brand colours - no new hues */
+        --disco-70: rgba(24, 86, 94, 0.70);
+        --disco-45: rgba(24, 86, 94, 0.45);
+        --disco-18: rgba(24, 86, 94, 0.18);
+        --disco-09: rgba(24, 86, 94, 0.09);
+        --off-70: rgba(254, 239, 229, 0.70);
+        --off-45: rgba(254, 239, 229, 0.45);
+        --off-20: rgba(254, 239, 229, 0.20);
+
+        --radius: 6mm;
+        --radius-sm: 3mm;
+
+        --display: 'Hagrid Text', 'Hagrid', 'Arial Black', 'Helvetica Neue', Helvetica, sans-serif;
+        --body: 'Aeonik', -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    @page {
+        size: A4 portrait;
+        margin: 0;
+    }
+
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+    }
+
+    body {
+        font-family: var(--body);
+        line-height: 1.5;
+        color: var(--disco);
+        background: var(--off);
+        font-size: 11px;
+        -webkit-print-color-adjust: exact !important;
+        print-color-adjust: exact !important;
+        -webkit-font-smoothing: antialiased;
+    }
+
+    /* Brand display type: heavy, uppercase, tracking 70 */
+    .display {
+        font-family: var(--display);
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        line-height: 1.02;
+    }
+
+    /* ---------------------------------------------------------------
+       Sheet
+    --------------------------------------------------------------- */
+    .sheet {
+        width: 210mm;
+        min-height: 297mm;
+        padding: 14mm 14mm 12mm;
+        box-sizing: border-box;
+        background: var(--off);
+        page-break-before: always;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+    }
+
+    .sheet:first-of-type {
+        page-break-before: avoid;
+    }
+
+    .sheet-body {
+        flex: 1;
+    }
+
+    .sheet-body.spread {
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+    }
+
+    /* ---------------------------------------------------------------
+       Running header - wordmark, section name, edition sticker
+    --------------------------------------------------------------- */
+    .sheet-head {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding-bottom: 9px;
+        margin-bottom: 20px;
+        border-bottom: 2px solid var(--disco);
+    }
+
+    .sheet-head-logo {
+        height: 26px;
+        width: auto;
+    }
+
+    .sheet-head-right {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+    }
+
+    .sheet-head-title {
+        font-family: var(--display);
+        font-weight: 900;
+        text-transform: uppercase;
+        letter-spacing: 0.07em;
+        font-size: 14px;
+        color: var(--disco);
+    }
+
+    /* POP sticker - the edition marker, per the brand kit badge treatment */
+    .sticker {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 8px;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--disco);
+        background: var(--pop);
+        padding: 4px 9px;
+        border-radius: 99px;
+        white-space: nowrap;
+    }
+
+    .sticker.on-disco {
+        color: var(--disco);
+        background: var(--pop);
+    }
+
+    .sticker.outline {
+        background: transparent;
+        color: var(--off);
+        border: 1.5px solid var(--off);
+    }
+
+    /* ---------------------------------------------------------------
+       Section title
+    --------------------------------------------------------------- */
+    .section-title {
+        display: flex;
+        align-items: center;
+        gap: 11px;
+        margin-bottom: 14px;
+    }
+
+    .section-title h2 {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 13px;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--disco);
+        white-space: nowrap;
+    }
+
+    .section-title .bar {
+        flex: 1;
+        height: 3px;
+        border-radius: 2px;
+        background: var(--pop);
+    }
+
+    .section-title .section-meta {
+        font-size: 8.5px;
+        color: var(--disco-70);
+        white-space: nowrap;
+    }
+
+    /* ---------------------------------------------------------------
+       Pricing table - DISCO header band, rounded, tabular figures
+    --------------------------------------------------------------- */
+    .price-panel {
+        border-radius: var(--radius);
+        overflow: hidden;
+        border: 2px solid var(--disco);
+    }
+
+    .pricing-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+        font-variant-numeric: tabular-nums;
+        font-feature-settings: 'tnum' 1;
+    }
+
+    .pricing-table thead th {
+        background: var(--disco);
+        color: var(--off);
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 8.5px;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        padding: 13px 13px;
+        text-align: right;
+        vertical-align: bottom;
+        line-height: 1.2;
+    }
+
+    .pricing-table thead th.qty-header {
+        text-align: left;
+        width: 64px;
+        border-right: 1px solid var(--off-20);
+    }
+
+    .pricing-table thead th .col-name {
+        display: block;
+        font-size: 12px;
+        letter-spacing: 0.05em;
+        color: var(--off);
+    }
+
+    .pricing-table thead th .col-sub {
+        display: block;
+        font-family: var(--body);
+        font-weight: 400;
+        font-size: 7.5px;
+        letter-spacing: 0.06em;
+        color: var(--off-45);
+        margin-top: 3px;
+    }
+
+    .pricing-table tbody tr {
+        border-bottom: 1px solid var(--disco-18);
+    }
+
+    .pricing-table tbody tr:nth-child(even) {
+        background: var(--disco-09);
+    }
+
+    .pricing-table tbody tr:last-child {
+        border-bottom: none;
+    }
+
+    .pricing-table td {
+        padding: 12px 13px;
+        text-align: right;
+        vertical-align: middle;
+    }
+
+    .pricing-table td.qty-cell {
+        text-align: left;
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 14px;
+        letter-spacing: 0.04em;
+        color: var(--disco);
+        border-right: 1px solid var(--disco-18);
+    }
+
+    .pricing-table td.qty-cell .qty-unit {
+        display: block;
+        font-family: var(--body);
+        font-weight: 600;
+        font-size: 7px;
+        letter-spacing: 0.09em;
+        text-transform: uppercase;
+        color: var(--disco-45);
+        margin-top: 1px;
+    }
+
+    .pricing-table td.price-cell {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 15px;
+        letter-spacing: 0.03em;
+        color: var(--disco);
+    }
+
+    .pricing-table td.price-empty {
+        color: var(--disco-18);
+    }
+
+    /* ---------------------------------------------------------------
+       Sheet footer
+    --------------------------------------------------------------- */
+    .sheet-foot {
+        margin-top: 12px;
+        padding-top: 9px;
+        border-top: 2px solid var(--disco);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 14px;
+        font-size: 8px;
+        color: var(--disco-70);
+    }
+
+    .sheet-foot strong {
+        font-family: var(--display);
+        font-weight: 900;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        color: var(--disco);
+        font-size: 8.5px;
+    }
+
+    .sheet-foot-note {
+        font-style: italic;
+    }
+
+    .legend {
+        display: flex;
+        gap: 12px;
+        align-items: center;
+    }
+
+    .legend-item {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        font-size: 8px;
+        white-space: nowrap;
+    }
+
+    .legend-key {
+        width: 8px;
+        height: 8px;
+        border-radius: 99px;
+        flex-shrink: 0;
+    }
+
+    /* ---------------------------------------------------------------
+       Brand note assets - grain-textured, from the brand kit
+    --------------------------------------------------------------- */
+    .note-art {
+        position: absolute;
+        pointer-events: none;
+    }
+
+    .note-art img {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+</style>

@@ -1,0 +1,188 @@
+<!--
+    Closing page - shared between the Reseller and Retail PDFs.
+    Mirrors the cover: one DISCO panel on OFF WHITE paper, with the
+    beamed-note asset bleeding off the corner.
+
+    Expects: baseUrl, editionName
+-->
+<style>
+    .closing {
+        width: 210mm;
+        min-height: 297mm;
+        box-sizing: border-box;
+        background: var(--off);
+        padding: 10mm;
+        page-break-before: always;
+        display: flex;
+    }
+
+    .closing-panel {
+        flex: 1;
+        position: relative;
+        overflow: hidden;
+        border-radius: 10mm;
+        background: var(--disco);
+        color: var(--off);
+        padding: 22mm 16mm 14mm;
+        display: flex;
+        flex-direction: column;
+    }
+
+    .closing-texture {
+        position: absolute;
+        inset: 0;
+        background-image: url('<%= baseUrl %>/assets/images/brand/texture_disco.jpg');
+        background-size: cover;
+        background-position: bottom center;
+        opacity: 0.62;
+    }
+
+    .closing-note {
+        position: absolute;
+        right: -18mm;
+        top: -14mm;
+        width: 78mm;
+        opacity: 0.9;
+    }
+
+    .closing-note img {
+        display: block;
+        width: 100%;
+        height: auto;
+    }
+
+    .closing-inner {
+        position: relative;
+        z-index: 2;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+
+    .closing-kicker {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 9px;
+        letter-spacing: 0.14em;
+        text-transform: uppercase;
+        color: var(--pop);
+        margin-bottom: 14px;
+    }
+
+    .closing-title {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 42px;
+        letter-spacing: 0.07em;
+        text-transform: uppercase;
+        line-height: 1.04;
+        margin-bottom: 16px;
+        max-width: 128mm;
+    }
+
+    .closing-rule {
+        width: 46mm;
+        height: 4px;
+        border-radius: 2px;
+        background: var(--pop);
+        margin-bottom: 18px;
+    }
+
+    .closing-copy {
+        font-size: 13.5px;
+        line-height: 1.6;
+        color: var(--off-70);
+        max-width: 106mm;
+    }
+
+    .closing-contacts {
+        display: flex;
+        gap: 0;
+        margin-top: auto;
+        border-top: 1px solid var(--off-20);
+        border-bottom: 1px solid var(--off-20);
+    }
+
+    .closing-contact {
+        flex: 1;
+        padding: 16px 18px 16px 0;
+        border-right: 1px solid var(--off-20);
+    }
+
+    .closing-contact:last-child {
+        border-right: none;
+        padding-right: 0;
+    }
+
+    .closing-contact:not(:first-child) {
+        padding-left: 18px;
+    }
+
+    .closing-contact-label {
+        font-family: var(--display);
+        font-weight: 900;
+        font-size: 7px;
+        letter-spacing: 0.13em;
+        text-transform: uppercase;
+        color: var(--off-45);
+        margin-bottom: 6px;
+    }
+
+    .closing-contact-value {
+        font-size: 14px;
+        font-weight: 600;
+        color: var(--off);
+    }
+
+    .closing-foot {
+        margin-top: auto;
+        padding-top: 20px;
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-end;
+    }
+
+    .closing-logo {
+        height: 32px;
+        width: auto;
+    }
+</style>
+
+<div class="closing">
+    <div class="closing-panel">
+        <div class="closing-texture"></div>
+        <div class="closing-note">
+            <img src="<%= baseUrl %>/assets/images/brand/note2_pop.png" alt="" />
+        </div>
+
+        <div class="closing-inner">
+            <div class="closing-kicker">Your vibe. Your music.</div>
+            <div class="closing-title">Zullen we er iets moois van maken?</div>
+            <div class="closing-rule"></div>
+            <div class="closing-copy">
+                Neem contact op voor een offerte op maat, vraag proefboxen aan of laat ons
+                meedenken over het ontwerp. We reageren doorgaans binnen een werkdag.
+            </div>
+
+            <div class="closing-contacts">
+                <div class="closing-contact">
+                    <div class="closing-contact-label">E-mail</div>
+                    <div class="closing-contact-value">zakelijk@qrsong.io</div>
+                </div>
+                <div class="closing-contact">
+                    <div class="closing-contact-label">Website</div>
+                    <div class="closing-contact-value">www.qrsong.io</div>
+                </div>
+                <div class="closing-contact">
+                    <div class="closing-contact-label">Proefbox</div>
+                    <div class="closing-contact-value">Op aanvraag</div>
+                </div>
+            </div>
+
+            <div class="closing-foot">
+                <img src="<%= baseUrl %>/assets/images/logo_white.png" alt="QRSong!" class="closing-logo" />
+                <div class="sticker"><%= editionName %></div>
+            </div>
+        </div>
+    </div>
+</div>

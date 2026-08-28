@@ -3,429 +3,96 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Informatie & Prijzen - <%= formatDate(new Date()) %></title>
-    <style>
-        @media print {
-            @page {
-                size: A4 portrait;
-                margin: 0;
-            }
-            body {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-        }
+    <title>Informatie &amp; Prijzen - <%= formatDate(new Date()) %></title>
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.4;
-            color: #333;
-            background: white;
-            font-size: 11px;
-        }
-
-        .page {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 10mm 12mm;
-            box-sizing: border-box;
-            background: white;
-            page-break-before: always;
-        }
-
-        .page:first-of-type {
-            page-break-before: avoid;
-        }
-
-        /* Header */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-            padding-bottom: 8px;
-            border-bottom: 3px solid #2d8a4e;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo {
-            height: 35px;
-            width: auto;
-        }
-
-        .header-title {
-            font-size: 24px;
-            color: #2d8a4e;
-            font-weight: 600;
-        }
-
-        .header-subtitle {
-            font-size: 12px;
-            color: #666;
-        }
-
-        .header-right {
-            text-align: right;
-            font-size: 11px;
-            color: #666;
-        }
-
-        .header-date {
-            font-weight: 600;
-            color: #2d8a4e;
-            font-size: 14px;
-        }
-
-        /* Tables */
-        .pricing-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 11px;
-            table-layout: fixed;
-        }
-
-        .pricing-table thead th {
-            padding: 4px 6px;
-            text-align: center;
-            font-weight: 600;
-            color: white;
-            background: #2d8a4e;
-            border: 1px solid #246b3d;
-            font-size: 11px;
-            line-height: 1.1;
-            white-space: nowrap;
-        }
-
-        .pricing-table thead th.qty-header {
-            text-align: center;
-            width: 50px;
-            background: #246b3d;
-            padding: 8px 5px;
-        }
-
-        .pricing-table thead th.product-header {
-            background: #3da862;
-            font-size: 12px;
-            font-weight: 500;
-        }
-
-        .pricing-table thead th .group-name {
-            display: block;
-            font-size: 10px;
-            font-weight: 400;
-            opacity: 0.85;
-            margin-bottom: 2px;
-        }
-
-        .pricing-table thead th .product-name {
-            display: block;
-            font-weight: 600;
-            font-size: 11px;
-        }
-
-        .pricing-table tbody tr {
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .pricing-table tbody tr:nth-child(even) {
-            background: #f8f8f8;
-        }
-
-        .pricing-table td {
-            padding: 3px 6px;
-            text-align: center;
-            border-left: 1px solid #e0e0e0;
-            vertical-align: middle;
-        }
-
-        .pricing-table td:first-child {
-            border-left: 1px solid #ccc;
-        }
-
-        .pricing-table td:last-child {
-            border-right: 1px solid #ccc;
-        }
-
-        .pricing-table td.qty-cell {
-            text-align: right;
-            font-weight: 600;
-            color: #2d8a4e;
-            background: #f0f0f0;
-            padding: 3px 6px;
-            font-size: 14px;
-            width: 55px;
-        }
-
-        .pricing-table td.price-cell {
-            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-            font-size: 15px;
-            font-weight: 600;
-            color: #2d8a4e;
-            padding: 3px 5px;
-        }
-
-        .pricing-table td.group-separator {
-            border-left: 2px solid #2d8a4e;
-        }
-
-        .pricing-table td.cell-disabled {
-            background: repeating-linear-gradient(
-                -45deg,
-                #f8faf8,
-                #f8faf8 2px,
-                #eef3ee 2px,
-                #eef3ee 4px
-            ) !important;
-        }
-
-        /* Table Footer */
-        .table-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 10px;
-            padding: 8px 12px;
-            background: #f5f5f5;
-            border-radius: 3px;
-            font-size: 10px;
-            color: #666;
-        }
-
-        .table-footer-left {
-            color: #2d8a4e;
-        }
-
-        .table-footer-right {
-            color: #888;
-            font-style: italic;
-        }
-
-        .table-footer-center {
-            color: #999;
-            font-size: 8px;
-            font-style: italic;
-        }
-
-        /* Contact Page */
-        .contact-page {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 20mm 25mm;
-            box-sizing: border-box;
-            background: white;
-            page-break-before: always;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .contact-content {
-            text-align: center;
-            max-width: 500px;
-        }
-
-        .contact-logo {
-            width: 150px;
-            margin-bottom: 30px;
-        }
-
-        .contact-title {
-            font-size: 24px;
-            font-weight: 700;
-            color: #2d8a4e;
-            margin-bottom: 10px;
-        }
-
-        .contact-subtitle {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 40px;
-        }
-
-        .contact-methods {
-            display: flex;
-            gap: 40px;
-            justify-content: center;
-            margin-bottom: 40px;
-        }
-
-        .contact-method {
-            text-align: center;
-        }
-
-        .contact-method-icon {
-            width: 50px;
-            height: 50px;
-            background: #2d8a4e;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 10px;
-            color: white;
-            font-size: 20px;
-        }
-
-        .contact-method-label {
-            font-size: 10px;
-            color: #888;
-            margin-bottom: 5px;
-        }
-
-        .contact-method-value {
-            font-size: 12px;
-            font-weight: 600;
-            color: #333;
-        }
-
-        .cta-buttons {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-top: 30px;
-        }
-
-        .cta-button {
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-size: 12px;
-            font-weight: 600;
-            text-decoration: none;
-        }
-
-        .cta-button.primary {
-            background: #2d8a4e;
-            color: white;
-        }
-
-        .cta-button.secondary {
-            background: white;
-            color: #2d8a4e;
-            border: 2px solid #2d8a4e;
-        }
-    </style>
-</head>
-<body>
-    <!-- Page 1: Front Page -->
     <%
-        var accentColor = '#2d8a4e';
-        var gradientStart = '#2d8a4e';
-        var gradientEnd = '#246b3d';
-        var title = 'Informatie & Prijzen';
-        var subtitle = '';
+        // Both editions share the brand palette; only the sticker label differs.
+        var editionName = 'Prijslijst';
         var version = new Date().toISOString().slice(0, 10).replace(/-/g, '.');
     %>
+
+    <%- include('partials/pricing_theme', { baseUrl: baseUrl }) %>
+</head>
+<body>
+
     <%- include('partials/front_page', {
         baseUrl: baseUrl,
         formatDate: formatDate,
-        title: title,
-        subtitle: subtitle,
-        gradientStart: gradientStart,
-        gradientEnd: gradientEnd,
+        title: 'Informatie & Prijzen',
+        subtitle: '',
+        editionName: editionName,
         version: version
     }) %>
 
-    <!-- Pages 2-3: Product Information -->
     <%- include('partials/product_info', {
         baseUrl: baseUrl,
-        accentColor: accentColor
+        editionName: editionName
     }) %>
 
-    <!-- Page 4: QRSong! Box Pricing Table (Portrait) -->
+    <!-- Pricing sheet -->
     <% const boxGroup = groups.find(g => g.name === 'QRSong! Box'); %>
     <% if (boxGroup) { %>
-    <div class="page">
-        <div class="header">
-            <div class="header-left">
-                <img src="<%= baseUrl %>/assets/images/logo_green.png" alt="QRSong!" class="logo" />
-                <div>
-                    <div class="header-title">QRSong! Box</div>
-                    <div class="header-subtitle">Prijslijst</div>
-                </div>
-            </div>
-            <div class="header-right">
-                <div class="header-date"><%= formatDate(new Date()) %></div>
+    <div class="sheet">
+        <div class="sheet-head">
+            <img src="<%= baseUrl %>/assets/images/logo_green.png" alt="QRSong!" class="sheet-head-logo" />
+            <div class="sheet-head-right">
+                <div class="sheet-head-title">QRSong! Box</div>
+                <div class="sticker"><%= editionName %></div>
             </div>
         </div>
 
-        <table class="pricing-table">
-            <thead>
-                <tr>
-                    <th class="qty-header">Aantal</th>
-                    <% boxGroup.products.forEach((product, pIdx) => { %>
-                    <th class="product-header">
-                        <span class="product-name"><%= product.name %></span>
-                    </th>
-                    <% }); %>
-                </tr>
-            </thead>
-            <tbody>
-                <% quantities.forEach((qty, qIdx) => { %>
-                <tr>
-                    <td class="qty-cell"><%= formatNumber(qty) %></td>
-                    <% boxGroup.products.forEach((product, pIdx) => {
-                        const priceData = prices[product.id]?.[qty];
-                    %>
-                    <td class="price-cell">
-                        <% if (priceData) { %>
-                        <%= formatCurrency(priceData.retailPrice) %>
-                        <% } else { %>
-                        <span style="color: #ccc;">-</span>
-                        <% } %>
-                    </td>
-                    <% }); %>
-                </tr>
-                <% }); %>
-            </tbody>
-        </table>
+        <div class="sheet-body">
+            <div class="section-title">
+                <h2>Adviesprijzen per box</h2>
+                <div class="bar"></div>
+                <div class="section-meta">Excl. 21% BTW, incl. verzending</div>
+            </div>
 
-        <div class="table-footer">
-            <div class="table-footer-left">
-                <strong>QRSong! Box - Prijslijst</strong>
+            <div class="price-panel">
+                <table class="pricing-table">
+                    <thead>
+                        <tr>
+                            <th class="qty-header">Aantal</th>
+                            <% boxGroup.products.forEach((product) => { %>
+                            <th>
+                                <span class="col-name"><%= product.name %></span>
+                                <span class="col-sub">per box</span>
+                            </th>
+                            <% }); %>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% quantities.forEach((qty) => { %>
+                        <tr>
+                            <td class="qty-cell">
+                                <%= formatNumber(qty) %>
+                                <span class="qty-unit">boxen</span>
+                            </td>
+                            <% boxGroup.products.forEach((product) => {
+                                const priceData = prices[product.id]?.[qty];
+                            %>
+                            <td class="price-cell<%= priceData ? '' : ' price-empty' %>">
+                                <%= priceData ? formatCurrency(priceData.retailPrice) : '-' %>
+                            </td>
+                            <% }); %>
+                        </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
             </div>
-            <div class="table-footer-center">
-                Prijzen onder voorbehoud van wijzigingen. Druk- en zetfouten voorbehouden.
-            </div>
-            <div class="table-footer-right">
-                Prijzen excl. 21% BTW, incl. verzending
-            </div>
+        </div>
+
+        <div class="sheet-foot">
+            <div><strong>QRSong! Box</strong> &nbsp;Adviesprijzen per box</div>
+            <div class="sheet-foot-note">Prijzen onder voorbehoud van wijzigingen. Druk- en zetfouten voorbehouden.</div>
         </div>
     </div>
     <% } %>
 
-    <!-- Page 5: Contact -->
-    <div class="contact-page">
-        <div class="contact-content">
-            <img src="<%= baseUrl %>/assets/images/logo_white.png" alt="QRSong!" class="contact-logo" />
-            <div class="contact-title">Interesse?</div>
-            <div class="contact-subtitle">Neem contact met ons op voor een offerte op maat of vraag proefboxen aan.</div>
+    <%- include('partials/closing_page', {
+        baseUrl: baseUrl,
+        editionName: editionName
+    }) %>
 
-            <div class="contact-methods">
-                <div class="contact-method">
-                    <div class="contact-method-icon">@</div>
-                    <div class="contact-method-label">E-mail</div>
-                    <div class="contact-method-value">zakelijk@qrsong.io</div>
-                </div>
-                <div class="contact-method">
-                    <div class="contact-method-icon">www</div>
-                    <div class="contact-method-label">Website</div>
-                    <div class="contact-method-value">www.qrsong.io</div>
-                </div>
-            </div>
-
-        </div>
-    </div>
 </body>
 </html>

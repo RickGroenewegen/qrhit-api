@@ -3,564 +3,181 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-    <title>Informatie & Prijzen (Resellers) - <%= formatDate(new Date()) %></title>
+    <title>Informatie &amp; Prijzen (Resellers) - <%= formatDate(new Date()) %></title>
+
+    <%
+        // Both editions share the brand palette; only the sticker label differs.
+        var editionName = 'Reseller editie';
+    %>
+
+    <%- include('partials/pricing_theme', { baseUrl: baseUrl }) %>
+
     <style>
-        @media print {
-            @page {
-                size: A4 portrait;
-                margin: 0;
-            }
-            body {
-                -webkit-print-color-adjust: exact !important;
-                print-color-adjust: exact !important;
-            }
-        }
-
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
-            line-height: 1.4;
-            color: #333;
-            background: white;
-            font-size: 11px;
-        }
-
-        .page {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 10mm 12mm;
-            box-sizing: border-box;
-            background: white;
-            page-break-before: always;
-        }
-
-        .page:first-of-type {
-            page-break-before: avoid;
-        }
-
-        /* Header */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 8px;
-            padding-bottom: 6px;
-            border-bottom: 2px solid #214b53;
-        }
-
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 15px;
-        }
-
-        .logo {
-            height: 30px;
-            width: auto;
-        }
-
-        .header-title {
-            font-size: 24px;
-            color: #214b53;
-            font-weight: 600;
-        }
-
-        .header-subtitle {
-            font-size: 12px;
-            color: #666;
-        }
-
-        .header-right {
-            text-align: right;
-            font-size: 11px;
-            color: #666;
-        }
-
-        .header-date {
-            font-weight: 600;
-            color: #214b53;
-            font-size: 14px;
-        }
-
-        /* Tables */
-        .pricing-table {
-            width: 100%;
-            border-collapse: collapse;
-            font-size: 10px;
-            table-layout: fixed;
-        }
-
-        .pricing-table thead th {
-            padding: 3px 5px;
-            text-align: center;
-            font-weight: 600;
-            color: white;
-            background: #214b53;
-            border: 1px solid #1a3d44;
-            font-size: 10px;
-            line-height: 1.1;
-            white-space: nowrap;
-        }
-
-        .pricing-table thead th.qty-header {
-            text-align: center;
-            width: 45px;
-            background: #1a3d44;
-            padding: 5px 4px;
-        }
-
-        .pricing-table thead th.product-header {
-            background: #2d6a76;
-            font-size: 10px;
-            font-weight: 500;
-        }
-
-        .pricing-table thead th .group-name {
-            display: block;
-            font-size: 9px;
-            font-weight: 400;
-            opacity: 0.85;
-            margin-bottom: 2px;
-        }
-
-        .pricing-table thead th .product-name {
-            display: block;
-            font-weight: 600;
-            font-size: 10px;
-        }
-
-        .pricing-table > tbody > tr {
-            border-bottom: 1px solid #e0e0e0;
-        }
-
-        .pricing-table > tbody > tr:nth-child(even) {
-            background: #f8f8f8;
-        }
-
+        /* Reseller-only: three figures stacked inside one price cell.
+           Rows are tighter than the retail edition so 14 tiers still fit
+           on a single A4 sheet. */
         .pricing-table td {
-            padding: 2px 4px;
-            text-align: center;
-            border-left: 1px solid #e0e0e0;
-            vertical-align: middle;
-        }
-
-        .pricing-table td:first-child {
-            border-left: 1px solid #ccc;
-        }
-
-        .pricing-table td:last-child {
-            border-right: 1px solid #ccc;
-        }
-
-        .pricing-table td.qty-cell {
-            text-align: right;
-            font-weight: 600;
-            color: #214b53;
-            background: #f0f0f0;
-            padding: 2px 5px;
-            vertical-align: middle;
-            font-size: 11px;
-            width: 50px;
+            padding: 8px 12px;
         }
 
         .pricing-table td.price-cell {
-            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-            font-size: 9px;
-            line-height: 1.1;
-            padding: 1px 3px;
+            font-family: var(--body);
+            font-size: 11px;
+            font-weight: 400;
+            letter-spacing: 0;
+            padding: 6px 12px;
         }
 
-        .pricing-table td.group-separator {
-            border-left: 2px solid #214b53;
-        }
-
-        .pricing-table td.cell-disabled {
-            background: repeating-linear-gradient(
-                -45deg,
-                #f0f7f8,
-                #f0f7f8 2px,
-                #dbeaed 2px,
-                #dbeaed 4px
-            ) !important;
-        }
-
-        .price-table {
+        .price-stack {
             width: 100%;
             border-collapse: collapse;
-            border: none;
-            font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
-            font-size: 10px;
         }
 
-        .price-table tr {
-            border: none !important;
-            border-bottom: none !important;
-            background: transparent !important;
-        }
-
-        .price-table tr:nth-child(even) {
-            background: transparent !important;
-        }
-
-        .price-table td {
+        .price-stack td {
             padding: 0;
-            border: none !important;
-            border-bottom: none !important;
-            vertical-align: middle;
-            background: transparent !important;
-            line-height: 1.1;
+            border: none;
+            line-height: 1.25;
         }
 
-        .price-table .price-label {
+        .price-stack .stack-label {
             text-align: left;
-            font-size: 8px;
-            font-weight: 400;
-            color: #666;
-            width: 36px;
-        }
-
-        .price-table .price-value {
-            text-align: right;
-            font-weight: 600;
-        }
-
-        .price-table .price-pct {
-            text-align: left;
-            padding-left: 3px;
-            width: 40px;
+            font-family: var(--display);
+            font-weight: 900;
             font-size: 7px;
-            color: #aaa;
-            font-weight: 400;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: var(--disco-45);
+            width: 40px;
         }
 
-        .price-reseller {
-            color: #214b53;
-        }
-
-        .price-retail {
-            color: #2d8a4e;
-        }
-
-        .price-margin {
-            color: #888;
-        }
-
-        .price-value.reseller {
-            color: #214b53;
-        }
-
-        .price-value.retail {
-            color: #2d8a4e;
-            font-weight: 600;
-        }
-
-        .price-value.margin {
-            color: #999;
-            font-weight: 500;
-        }
-
-        .price-percent {
-            color: #999;
-            font-size: 8px;
-            margin-left: 3px;
-        }
-
-        /* Table Footer */
-        .table-footer {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-top: 8px;
-            padding: 6px 10px;
-            background: #f5f5f5;
-            border-radius: 3px;
-            font-size: 9px;
-            color: #666;
-        }
-
-        .table-footer-left {
-            color: #214b53;
-        }
-
-        .table-footer-legend {
-            display: flex;
-            gap: 15px;
-        }
-
-        .table-footer-legend .legend-item {
-            display: flex;
-            align-items: center;
-            gap: 4px;
-        }
-
-        .legend-dot {
-            width: 8px;
-            height: 8px;
-            border-radius: 2px;
-            display: inline-block;
-        }
-
-        .legend-dot.reseller {
-            background: #214b53;
-        }
-
-        .legend-dot.retail {
-            background: #2d8a4e;
-        }
-
-        .legend-dot.margin {
-            background: #999;
-        }
-
-        .table-footer-right {
-            color: #888;
-            font-style: italic;
-        }
-
-        .table-disclaimer {
-            text-align: center;
-            margin-top: 6px;
-            font-size: 8px;
-            color: #999;
-            font-style: italic;
-        }
-
-        /* Contact Page */
-        .contact-page {
-            width: 210mm;
-            min-height: 297mm;
-            padding: 20mm 25mm;
-            box-sizing: border-box;
-            background: white;
-            page-break-before: always;
-            display: flex;
-            flex-direction: column;
-            justify-content: center;
-            align-items: center;
-        }
-
-        .contact-content {
-            text-align: center;
-            max-width: 400px;
-        }
-
-        .contact-logo {
-            width: 120px;
-            margin-bottom: 30px;
-        }
-
-        .contact-title {
-            font-size: 28px;
-            font-weight: 700;
-            color: #214b53;
-            margin-bottom: 10px;
-        }
-
-        .contact-subtitle {
-            font-size: 14px;
-            color: #666;
-            margin-bottom: 40px;
-        }
-
-        .contact-methods {
-            display: flex;
-            gap: 40px;
-            justify-content: center;
-            margin-bottom: 40px;
-        }
-
-        .contact-method {
-            text-align: center;
-        }
-
-        .contact-method-icon {
-            width: 50px;
-            height: 50px;
-            background: #214b53;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            margin: 0 auto 10px;
-            color: white;
-            font-size: 20px;
-        }
-
-        .contact-method-label {
-            font-size: 10px;
-            color: #888;
-            margin-bottom: 5px;
-        }
-
-        .contact-method-value {
+        .price-stack .stack-value {
+            text-align: right;
+            font-family: var(--display);
+            font-weight: 900;
             font-size: 12px;
+            letter-spacing: 0.03em;
+        }
+
+        .price-stack .stack-pct {
+            text-align: right;
+            width: 42px;
+            font-family: var(--body);
+            font-size: 8px;
             font-weight: 600;
-            color: #333;
+            color: var(--disco-45);
         }
 
-        .cta-buttons {
-            display: flex;
-            gap: 20px;
-            justify-content: center;
-            margin-top: 30px;
-        }
-
-        .cta-button {
-            padding: 12px 30px;
-            border-radius: 25px;
-            font-size: 12px;
-            font-weight: 600;
-            text-decoration: none;
-        }
-
-        .cta-button.primary {
-            background: #214b53;
-            color: white;
-        }
-
-        .cta-button.secondary {
-            background: white;
-            color: #214b53;
-            border: 2px solid #214b53;
-        }
+        .row-buy .stack-value { color: var(--disco); }
+        .row-rrp .stack-value { color: var(--disco-70); }
+        .row-margin .stack-value { color: var(--pop); }
     </style>
 </head>
 <body>
-    <!-- Page 1: Front Page (Portrait) -->
-    <%
-        var accentColor = '#214b53';
-        var gradientStart = '#214b53';
-        var gradientEnd = '#1a3d44';
-        var title = 'Reseller Informatie & Prijzen';
-        var subtitle = '';
-    %>
+
     <%- include('partials/front_page', {
         baseUrl: baseUrl,
         formatDate: formatDate,
-        title: title,
-        subtitle: subtitle,
-        gradientStart: gradientStart,
-        gradientEnd: gradientEnd,
+        title: 'Informatie & Prijzen',
+        subtitle: 'Voor resellers',
+        editionName: editionName,
         version: version
     }) %>
 
-    <!-- Pages 2-3: Product Information (Portrait) -->
     <%- include('partials/product_info', {
         baseUrl: baseUrl,
-        accentColor: accentColor
+        editionName: editionName
     }) %>
 
-    <!-- Page 4: QRSong! Box Pricing Table (Portrait) -->
+    <!-- Pricing sheet -->
     <% const boxGroup = groups.find(g => g.name === 'QRSong! Box'); %>
     <% if (boxGroup) { %>
-    <div class="page">
-        <div class="header">
-            <div class="header-left">
-                <img src="<%= baseUrl %>/assets/images/logo_green.png" alt="QRSong!" class="logo" />
-                <div>
-                    <div class="header-title">QRSong! Box</div>
-                    <div class="header-subtitle">Reseller Prijslijst</div>
-                </div>
-            </div>
-            <div class="header-right">
-                <div class="header-date"><%= formatDate(new Date()) %></div>
+    <div class="sheet">
+        <div class="sheet-head">
+            <img src="<%= baseUrl %>/assets/images/logo_green.png" alt="QRSong!" class="sheet-head-logo" />
+            <div class="sheet-head-right">
+                <div class="sheet-head-title">QRSong! Box</div>
+                <div class="sticker"><%= editionName %></div>
             </div>
         </div>
 
-        <table class="pricing-table">
-            <thead>
-                <tr>
-                    <th class="qty-header">Aantal</th>
-                    <% boxGroup.products.forEach((product, pIdx) => { %>
-                    <th class="product-header">
-                        <span class="product-name"><%= product.name %></span>
-                    </th>
-                    <% }); %>
-                </tr>
-            </thead>
-            <tbody>
-                <% quantities.forEach((qty, qIdx) => { %>
-                <tr>
-                    <td class="qty-cell"><%= formatNumber(qty) %></td>
-                    <% boxGroup.products.forEach((product, pIdx) => {
-                        const priceData = prices[product.id]?.[qty];
-                    %>
-                    <td class="price-cell">
-                        <% if (priceData) { %>
-                        <% const margin = priceData.retailPrice - priceData.resellerPrice; %>
-                        <% const marginPercent = priceData.resellerPrice > 0 ? ((margin / priceData.resellerPrice) * 100).toFixed(1) : '0.0'; %>
-                        <table class="price-table">
-                            <tr class="price-reseller">
-                                <td class="price-label">Inkoop</td>
-                                <td class="price-value"><%= formatCurrency(priceData.resellerPrice) %></td>
-                                <td></td>
-                            </tr>
-                            <tr class="price-retail">
-                                <td class="price-label">Advies</td>
-                                <td class="price-value"><%= formatCurrency(priceData.retailPrice) %></td>
-                                <td></td>
-                            </tr>
-                            <tr class="price-margin">
-                                <td class="price-label">Opslag</td>
-                                <td class="price-value"><%= formatCurrency(margin) %></td>
-                                <td class="price-pct">(<%= marginPercent %>%)</td>
-                            </tr>
-                        </table>
-                        <% } else { %>
-                        <span style="color: #ccc;">-</span>
-                        <% } %>
-                    </td>
-                    <% }); %>
-                </tr>
-                <% }); %>
-            </tbody>
-        </table>
+        <div class="sheet-body">
+            <div class="section-title">
+                <h2>Inkoop, advies &amp; opslag</h2>
+                <div class="bar"></div>
+                <div class="section-meta">Per box, excl. 21% BTW</div>
+            </div>
 
-        <div class="table-footer">
-            <div class="table-footer-left">
-                <strong>QRSong! Box - Reseller Prijslijst</strong>
-            </div>
-            <div class="table-footer-legend">
-                <span class="legend-item"><span class="legend-dot reseller"></span> Inkoop</span>
-                <span class="legend-item"><span class="legend-dot retail"></span> Advies</span>
-                <span class="legend-item"><span class="legend-dot margin"></span> Opslag</span>
-            </div>
-            <div class="table-footer-right">
-                Prijzen excl. 21% BTW, incl. verzending
+            <div class="price-panel">
+                <table class="pricing-table">
+                    <thead>
+                        <tr>
+                            <th class="qty-header">Aantal</th>
+                            <% boxGroup.products.forEach((product) => { %>
+                            <th>
+                                <span class="col-name"><%= product.name %></span>
+                                <span class="col-sub">per box</span>
+                            </th>
+                            <% }); %>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% quantities.forEach((qty) => { %>
+                        <tr>
+                            <td class="qty-cell">
+                                <%= formatNumber(qty) %>
+                                <span class="qty-unit">boxen</span>
+                            </td>
+                            <% boxGroup.products.forEach((product) => {
+                                const priceData = prices[product.id]?.[qty];
+                            %>
+                            <td class="price-cell<%= priceData ? '' : ' price-empty' %>">
+                                <% if (priceData) { %>
+                                <% const margin = priceData.retailPrice - priceData.resellerPrice; %>
+                                <% const marginPercent = priceData.resellerPrice > 0 ? ((margin / priceData.resellerPrice) * 100).toFixed(1) : '0.0'; %>
+                                <table class="price-stack">
+                                    <tr class="row-buy">
+                                        <td class="stack-label">Inkoop</td>
+                                        <td class="stack-value"><%= formatCurrency(priceData.resellerPrice) %></td>
+                                        <td class="stack-pct"></td>
+                                    </tr>
+                                    <tr class="row-rrp">
+                                        <td class="stack-label">Advies</td>
+                                        <td class="stack-value"><%= formatCurrency(priceData.retailPrice) %></td>
+                                        <td class="stack-pct"></td>
+                                    </tr>
+                                    <tr class="row-margin">
+                                        <td class="stack-label">Opslag</td>
+                                        <td class="stack-value"><%= formatCurrency(margin) %></td>
+                                        <td class="stack-pct"><%= marginPercent %>%</td>
+                                    </tr>
+                                </table>
+                                <% } else { %>
+                                -
+                                <% } %>
+                            </td>
+                            <% }); %>
+                        </tr>
+                        <% }); %>
+                    </tbody>
+                </table>
             </div>
         </div>
-        <div class="table-disclaimer">
-            Prijzen onder voorbehoud van wijzigingen. Druk- en zetfouten voorbehouden.
+
+        <div class="sheet-foot">
+            <div class="legend">
+                <span class="legend-item"><span class="legend-key" style="background: var(--disco);"></span> Inkoop</span>
+                <span class="legend-item"><span class="legend-key" style="background: var(--disco-45);"></span> Advies</span>
+                <span class="legend-item"><span class="legend-key" style="background: var(--pop);"></span> Opslag</span>
+            </div>
+            <div class="sheet-foot-note">Prijzen onder voorbehoud van wijzigingen. Druk- en zetfouten voorbehouden.</div>
         </div>
     </div>
     <% } %>
 
-    <!-- Page 5: Contact (Portrait) -->
-    <div class="contact-page">
-        <div class="contact-content">
-            <img src="<%= baseUrl %>/assets/images/logo_white.png" alt="QRSong!" class="contact-logo" />
-            <div class="contact-title">Interesse?</div>
-            <div class="contact-subtitle">Neem contact met ons op voor een offerte op maat of vraag proefboxen aan.</div>
+    <%- include('partials/closing_page', {
+        baseUrl: baseUrl,
+        editionName: editionName
+    }) %>
 
-            <div class="contact-methods">
-                <div class="contact-method">
-                    <div class="contact-method-icon">@</div>
-                    <div class="contact-method-label">E-mail</div>
-                    <div class="contact-method-value">zakelijk@qrsong.io</div>
-                </div>
-                <div class="contact-method">
-                    <div class="contact-method-icon">www</div>
-                    <div class="contact-method-label">Website</div>
-                    <div class="contact-method-value">www.qrsong.io</div>
-                </div>
-            </div>
-
-        </div>
-    </div>
 </body>
 </html>
