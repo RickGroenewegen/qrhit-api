@@ -337,15 +337,13 @@
         version: version
     }) %>
 
-    <!-- Page 2: Product Information -->
-    <div class="product-page" style="width: 210mm; min-height: 297mm; padding: 12mm 15mm; box-sizing: border-box; background: white; page-break-before: always;">
-        <%- include('partials/product_info', {
-            baseUrl: baseUrl,
-            accentColor: accentColor
-        }) %>
-    </div>
+    <!-- Pages 2-3: Product Information -->
+    <%- include('partials/product_info', {
+        baseUrl: baseUrl,
+        accentColor: accentColor
+    }) %>
 
-    <!-- Page 3: QRSong! Box Pricing Table (Portrait) -->
+    <!-- Page 4: QRSong! Box Pricing Table (Portrait) -->
     <% const boxGroup = groups.find(g => g.name === 'QRSong! Box'); %>
     <% if (boxGroup) { %>
     <div class="page">
@@ -396,69 +394,6 @@
         <div class="table-footer">
             <div class="table-footer-left">
                 <strong>QRSong! Box - Prijslijst</strong>
-            </div>
-            <div class="table-footer-center">
-                Prijzen onder voorbehoud van wijzigingen. Druk- en zetfouten voorbehouden.
-            </div>
-            <div class="table-footer-right">
-                Prijzen excl. 21% BTW, incl. verzending
-            </div>
-        </div>
-    </div>
-    <% } %>
-
-    <!-- Page 4: QRSong! HappiBox Pricing Table (Portrait) -->
-    <% const happiBoxGroup = groups.find(g => g.name === 'QRSong! HappiBox'); %>
-    <% if (happiBoxGroup) { %>
-    <div class="page">
-        <div class="header">
-            <div class="header-left">
-                <img src="<%= baseUrl %>/assets/images/logo_green.png" alt="QRSong!" class="logo" />
-                <div>
-                    <div class="header-title">QRSong! HappiBox</div>
-                    <div class="header-subtitle">Prijslijst</div>
-                </div>
-            </div>
-            <div class="header-right">
-                <div class="header-date"><%= formatDate(new Date()) %></div>
-            </div>
-        </div>
-
-        <table class="pricing-table">
-            <thead>
-                <tr>
-                    <th class="qty-header">Aantal</th>
-                    <% happiBoxGroup.products.forEach((product, pIdx) => { %>
-                    <th class="product-header">
-                        <span class="product-name"><%= product.name %></span>
-                    </th>
-                    <% }); %>
-                </tr>
-            </thead>
-            <tbody>
-                <% const happiBoxQuantities = quantities.filter(qty => ![100, 150, 200].includes(qty)); %>
-                <% happiBoxQuantities.forEach((qty, qIdx) => { %>
-                <tr>
-                    <td class="qty-cell"><%= formatNumber(qty) %></td>
-                    <% happiBoxGroup.products.forEach((product, pIdx) => {
-                        const priceData = prices[product.id]?.[qty];
-                    %>
-                    <td class="price-cell">
-                        <% if (priceData) { %>
-                        <%= formatCurrency(priceData.retailPrice) %>
-                        <% } else { %>
-                        <span style="color: #ccc;">-</span>
-                        <% } %>
-                    </td>
-                    <% }); %>
-                </tr>
-                <% }); %>
-            </tbody>
-        </table>
-
-        <div class="table-footer">
-            <div class="table-footer-left">
-                <strong>QRSong! HappiBox - Prijslijst</strong>
             </div>
             <div class="table-footer-center">
                 Prijzen onder voorbehoud van wijzigingen. Druk- en zetfouten voorbehouden.

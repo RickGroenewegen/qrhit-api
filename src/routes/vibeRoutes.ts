@@ -2763,13 +2763,6 @@ export default async function vibeRoutes(
               { id: 'schneider-192', name: '192 kaarten', cardCount: 192 },
             ],
           },
-          {
-            name: 'QRSong! HappiBox',
-            products: [
-              { id: 'onzevibe', name: 'Doos & kaarten eigen stijl', includePersonalization: false },
-              { id: 'onzevibe-pers', name: 'Incl. personalisatie', includePersonalization: true },
-            ],
-          },
         ];
 
         // Calculate prices for all products and quantities
@@ -2781,38 +2774,7 @@ export default async function vibeRoutes(
 
             for (const qty of quantities) {
               try {
-                if (group.name === 'QRSong! HappiBox') {
-                  const result = await vibe.calculatePricing({
-                    quantity: qty,
-                    soldBy: 'onzevibe',
-                    includePersonalization: (product as any).includePersonalization,
-                    shipmentOnLocation: true,
-                    isReseller: true,
-                    manualDiscount: 0,
-                    fluidMode: true,
-                    includeCustomApp: false,
-                  });
-
-                  if (result.success && result.calculation) {
-                    const pricing = result.calculation.pricing;
-                    const commercialPricePerBox = pricing.commercialPricePerBox;
-                    const profitPerBox = pricing.profitPerBox;
-                    const resellerProfitPerBox = pricing.resellerProfit / qty;
-
-                    // Retail = commercialPricePerBox (what end client pays)
-                    // Reseller = retail - resellerProfit (what reseller pays)
-                    // Inkoop = retail - resellerProfit - ourProfit
-                    const retailPrice = commercialPricePerBox;
-                    const resellerPrice = commercialPricePerBox - resellerProfitPerBox;
-                    const purchasePrice = commercialPricePerBox - resellerProfitPerBox - profitPerBox;
-
-                    // Calculate percentages based on purchase price
-                    const qrsongProfitPercent = purchasePrice > 0 ? ((profitPerBox / purchasePrice) * 100).toFixed(1) + '%' : '0.0%';
-                    const resellerProfitPercent = purchasePrice > 0 ? ((resellerProfitPerBox / purchasePrice) * 100).toFixed(1) + '%' : '0.0%';
-
-                    prices[product.id][qty] = { resellerPrice, retailPrice, qrsongProfitPercent, resellerProfitPercent };
-                  }
-                } else if (group.name === 'Standaard') {
+                if (group.name === 'Standaard') {
                   // Get per-product, per-tier profit settings
                   const settings = getProfit(product.id, qty);
                   const result = await vibe.calculateTrompPricing({
@@ -3003,13 +2965,6 @@ export default async function vibeRoutes(
               { id: 'schneider-192', name: '192 kaarten', cardCount: 192 },
             ],
           },
-          {
-            name: 'QRSong! HappiBox',
-            products: [
-              { id: 'onzevibe', name: 'Doos & kaarten eigen stijl', includePersonalization: false },
-              { id: 'onzevibe-pers', name: 'Incl. personalisatie', includePersonalization: true },
-            ],
-          },
         ];
 
         // Calculate retail prices only
@@ -3021,23 +2976,7 @@ export default async function vibeRoutes(
 
             for (const qty of quantities) {
               try {
-                if (group.name === 'QRSong! HappiBox') {
-                  const result = await vibe.calculatePricing({
-                    quantity: qty,
-                    soldBy: 'onzevibe',
-                    includePersonalization: (product as any).includePersonalization,
-                    shipmentOnLocation: true,
-                    isReseller: true,
-                    manualDiscount: 0,
-                    fluidMode: true,
-                    includeCustomApp: false,
-                  });
-
-                  if (result.success && result.calculation) {
-                    const retailPrice = result.calculation.pricing.commercialPricePerBox;
-                    prices[product.id][qty] = { retailPrice };
-                  }
-                } else if (group.name === 'Standaard') {
+                if (group.name === 'Standaard') {
                   const settings = getProfit(product.id, qty);
                   const result = await vibe.calculateTrompPricing({
                     quantity: qty,
