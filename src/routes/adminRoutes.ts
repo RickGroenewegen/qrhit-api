@@ -3457,6 +3457,52 @@ export default async function adminRoutes(
     }
   );
 
+  // Auto-mode: resolve undecidable release years and approve customer
+  // corrections without an admin in the loop. Off by default.
+  fastify.get(
+    '/admin/auto-mode',
+    getAuthHandler(['admin']),
+    async (_request: any, reply: any) => {
+      try {
+        const enabled = await Settings.getInstance().isAutoMode();
+        reply.send({ success: true, enabled });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to read auto-mode',
+        });
+      }
+    }
+  );
+
+  fastify.post(
+    '/admin/auto-mode',
+    getAuthHandler(['admin']),
+    async (request: any, reply: any) => {
+      const { enabled } = request.body ?? {};
+
+      if (typeof enabled !== 'boolean') {
+        return reply.status(400).send({
+          success: false,
+          error: 'enabled must be a boolean',
+        });
+      }
+
+      try {
+        await Settings.getInstance().setSetting(
+          'auto_mode',
+          enabled ? 'true' : 'false'
+        );
+        reply.send({ success: true, enabled });
+      } catch (error: any) {
+        reply.status(500).send({
+          success: false,
+          error: error.message || 'Failed to update auto-mode',
+        });
+      }
+    }
+  );
+
   // MusicFetch bulk action endpoints
   fastify.get(
     '/admin/tracks/missing-music-links',

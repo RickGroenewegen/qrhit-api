@@ -224,6 +224,166 @@ describe('admin corrections and promotional moderation', () => {
     });
   });
 
+  describe('auto-mode', () => {
+    let trackCId: number;
+
+    async function setAutoMode(enabled: boolean) {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/admin/auto-mode',
+        headers,
+        payload: { enabled },
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({ success: true, enabled });
+    }
+
+    beforeAll(async () => {
+      const trackC = await prisma().track.create({
+        data: {
+          trackId: 'corr-track-c',
+          name: 'Track C',
+          artist: 'Artist C',
+          year: 2000,
+          manuallyChecked: true,
+        },
+      });
+      trackCId = trackC.id;
+      await prisma().playlistHasTrack.create({
+        data: { playlistId: playlistDbId, trackId: trackCId },
+      });
+    });
+
+    afterAll(async () => {
+      await setAutoMode(false);
+    });
+
+    it('reads back the toggle and rejects a non-boolean', async () => {
+      await setAutoMode(true);
+
+      const get = await app.inject({
+        method: 'GET',
+        url: '/admin/auto-mode',
+        headers,
+      });
+      expect(get.statusCode).toBe(200);
+      expect(get.json()).toMatchObject({ success: true, enabled: true });
+
+      const bad = await app.inject({
+        method: 'POST',
+        url: '/admin/auto-mode',
+        headers,
+        payload: { enabled: 'yes' },
+      });
+      expect(bad.statusCode).toBe(400);
+    });
+
+    it('approves submitted corrections immediately, for that playlist only', async () => {
+      await setAutoMode(true);
+      await prisma().paymentHasPlaylist.update({
+        where: { id: phpId },
+        data: { suggestionsPending: false },
+      });
+      await prisma().userSuggestion.create({
+        data: {
+          trackId: trackCId,
+          userId,
+          playlistId: playlistDbId,
+          name: 'Track C',
+          artist: 'Auto Corrected Artist C',
+          year: 1999,
+        },
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/usersuggestions/${PAYMENT_ID}/${USER_HASH}/${PLAYLIST_ID}/submit`,
+        payload: {},
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toMatchObject({ success: true });
+
+      // The shared track record must stay untouched - an unreviewed customer
+      // edit only applies to their own playlist.
+      const track = await prisma().track.findUnique({ where: { id: trackCId } });
+      expect(track!.artist).toBe('Artist C');
+      expect(track!.year).toBe(2000);
+
+      const extra = await prisma().trackExtraInfo.findFirst({
+        where: { trackId: trackCId, playlistId: playlistDbId },
+      });
+      expect(extra!.artist).toBe('Auto Corrected Artist C');
+      expect(extra!.year).toBe(1999);
+
+      // Nothing left for the admin: the suggestions are consumed and the order
+      // no longer shows up under /corrections.
+      const php = await prisma().paymentHasPlaylist.findUnique({
+        where: { id: phpId },
+      });
+      expect(php!.suggestionsPending).toBe(false);
+
+      const pending = await prisma().userSuggestion.count({
+        where: { userId, trackId: trackCId },
+      });
+      expect(pending).toBe(0);
+
+      const list = await app.inject({
+        method: 'GET',
+        url: '/corrections',
+        headers,
+      });
+      const rows = list.json().data as any[];
+      expect(rows.some((r) => r.paymentId === PAYMENT_ID)).toBe(false);
+    });
+
+    it('leaves corrections for manual review when auto-mode is off', async () => {
+      await setAutoMode(false);
+      await prisma().paymentHasPlaylist.update({
+        where: { id: phpId },
+        data: { suggestionsPending: false },
+      });
+      await prisma().userSuggestion.create({
+        data: {
+          trackId: trackCId,
+          userId,
+          playlistId: playlistDbId,
+          name: 'Track C',
+          artist: 'Manually Reviewed Artist C',
+          year: 1998,
+        },
+      });
+
+      const res = await app.inject({
+        method: 'POST',
+        url: `/usersuggestions/${PAYMENT_ID}/${USER_HASH}/${PLAYLIST_ID}/submit`,
+        payload: {},
+      });
+      expect(res.statusCode).toBe(200);
+
+      const php = await prisma().paymentHasPlaylist.findUnique({
+        where: { id: phpId },
+      });
+      expect(php!.suggestionsPending).toBe(true);
+
+      // The suggestion is still waiting, and the order is back in the queue.
+      const pending = await prisma().userSuggestion.count({
+        where: { userId, trackId: trackCId },
+      });
+      expect(pending).toBe(1);
+
+      const list = await app.inject({
+        method: 'GET',
+        url: '/corrections',
+        headers,
+      });
+      const rows = list.json().data as any[];
+      expect(rows.some((r) => r.paymentId === PAYMENT_ID)).toBe(true);
+
+      // Clean up so later suites start from a quiet state.
+      await prisma().userSuggestion.deleteMany({ where: { trackId: trackCId } });
+    });
+  });
+
   describe('promotional moderation', () => {
     const PROMO_ID = 'promo-moderation-1';
     let promoUser: any;

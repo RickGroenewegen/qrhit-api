@@ -19,9 +19,12 @@ import PDF from './pdf';
 import { getCurrencyForCountry } from './data/currency-map';
 import { resolveQrSubDir } from './qrPaths';
 
-// Set to true to delete and re-insert products (required for updating custom labels)
-// Set to false to use PATCH updates (faster but cannot update customAttributes)
-const USE_DELETE_INSERT_FOR_UPDATES = false;
+// Display name of the API data source we push products into. The Merchant API
+// (unlike the retired Content API) has no "just insert a product" path: every
+// productInputs write must name a primary data source of type API. We look this
+// one up by display name and create it on first run, unless
+// GOOGLE_MERCHANT_DATASOURCE pins an explicit one.
+const DATA_SOURCE_DISPLAY_NAME = 'QRSong! API feed';
 
 // Genre groupings for PMax campaign segmentation (custom_label_1)
 const GENRE_GROUPS: Record<string, string> = {
@@ -106,38 +109,51 @@ interface ProductVariant {
   genreSlug?: string; // Genre slug for PMax custom labels
 }
 
-interface MerchantProduct {
-  id: string; // Composite ID for Google (e.g., "online:en:US:123")
-  offerId: string; // Simple unique ID for the product
-  title: string;
-  description: string;
-  link: string;
-  imageLink: string;
-  availability: string;
-  condition: string;
-  price: {
-    value: string;
-    currency: string;
-  };
-  brand: string;
+// A Merchant API ProductInput plus the bare product id we use for lookups and
+// for the cleanup diff. Note the shape differences vs the old Content API
+// product: nearly everything lives under `productAttributes`, prices are in
+// micros, and custom labels are first-class fields rather than
+// customAttributes entries.
+interface MerchantProductInput {
+  // Bare product id: "{contentLanguage}~{feedLabel}~{offerId}", e.g. "en~US~7_3_1".
+  // Merchant API v1 dropped the channel prefix the Content API composite id had.
+  productId: string;
+  offerId: string;
   contentLanguage: string;
-  targetCountry: string;
-  channel: string;
-  productTypes: string[];
-  googleProductCategory: string;
-  shipping?: Array<{
-    country: string;
-    service: string;
+  feedLabel: string;
+  productAttributes: {
+    title: string;
+    description: string;
+    link: string;
+    imageLink: string;
+    availability: string;
+    condition: string;
     price: {
-      value: string;
-      currency: string;
+      amountMicros: string;
+      currencyCode: string;
     };
-    minHandlingTime?: number;
-    maxHandlingTime?: number;
-    minTransitTime?: number;
-    maxTransitTime?: number;
-  }>;
-  shippingLabel?: string;
+    brand: string;
+    productTypes: string[];
+    googleProductCategory: string;
+    shipping?: Array<{
+      country: string;
+      service: string;
+      price: {
+        amountMicros: string;
+        currencyCode: string;
+      };
+      // Merchant API takes handling/transit times as strings, not numbers.
+      minHandlingTime?: string;
+      maxHandlingTime?: string;
+      minTransitTime?: string;
+      maxTransitTime?: string;
+    }>;
+    shippingLabel?: string;
+    customLabel0?: string;
+    customLabel1?: string;
+    customLabel2?: string;
+    customLabel3?: string;
+  };
   customAttributes: Array<{
     name: string;
     value: string;
@@ -159,8 +175,13 @@ export class MerchantCenterService {
     string,
     { size: number; cost: number }[]
   > = new Map();
-  private content: any; // Google Shopping Content API
+  private products: any; // Merchant API — merchantapi/products_v1
+  private datasources: any; // Merchant API — merchantapi/datasources_v1
   private merchantId: string;
+  // Merchant API addresses everything by resource name instead of merchantId.
+  private accountName: string = '';
+  // "accounts/{merchantId}/dataSources/{id}" — required on every write.
+  private dataSourceName: string = '';
   private auth: any;
   private initialized: boolean = false;
   private initPromise: Promise<void> | null = null;
@@ -263,6 +284,27 @@ export class MerchantCenterService {
     this.initialized = true;
   }
 
+  /**
+   * Stand-in clients used when credentials are missing or auth blows up, so a
+   * misconfigured environment degrades to no-ops instead of crashing the API.
+   */
+  private useNoopClients() {
+    this.products = {
+      productInputs: {
+        insert: async () => ({}),
+        delete: async () => ({}),
+      },
+      accounts: {
+        products: {
+          get: async () => ({ data: null }),
+          list: async () => ({ data: { products: [] } }),
+        },
+      },
+    };
+    this.datasources = null;
+    this.dataSourceName = '';
+  }
+
   private async initializeAuth() {
     try {
       // Check if required environment variables are set
@@ -270,16 +312,7 @@ export class MerchantCenterService {
         this.logger.log(
           'Warning: GOOGLE_SERVICE_ACCOUNT_KEY_FILE not set in environment variables'
         );
-        // Initialize with mock/empty content for testing
-        this.content = {
-          products: {
-            get: async () => null,
-            insert: async () => {},
-            update: async () => {},
-            delete: async () => {},
-            list: async () => ({ data: { resources: [] } }),
-          },
-        };
+        this.useNoopClients();
         return;
       }
 
@@ -287,49 +320,114 @@ export class MerchantCenterService {
         this.logger.log(
           'Warning: GOOGLE_MERCHANT_ID not set in environment variables'
         );
-        // Initialize with mock/empty content for testing
-        this.content = {
-          products: {
-            get: async () => null,
-            insert: async () => {},
-            update: async () => {},
-            delete: async () => {},
-            list: async () => ({ data: { resources: [] } }),
-          },
-        };
+        this.useNoopClients();
         return;
       }
 
-      // Use service account authentication
+      // Use service account authentication. The Merchant API reuses the same
+      // OAuth scope as the retired Content API, so no credential changes are
+      // needed on the service account.
       const auth = new google.auth.GoogleAuth({
         keyFile: process.env.GOOGLE_SERVICE_ACCOUNT_KEY_FILE,
         scopes: ['https://www.googleapis.com/auth/content'],
       });
 
       this.auth = await auth.getClient();
+      this.accountName = `accounts/${this.merchantId}`;
 
-      // Initialize the Content API
-      this.content = google.content({
-        version: 'v2.1',
+      // Merchant API replaces the Content API for Shopping, which Google
+      // discontinued in August 2026. Each sub-API is a separate client.
+      this.products = google.merchantapi({
+        version: 'products_v1',
+        auth: this.auth,
+      });
+      this.datasources = google.merchantapi({
+        version: 'datasources_v1',
         auth: this.auth,
       });
 
-      this.logger.log(blue.bold('Merchant Center API initialized'));
+      await this.resolveDataSource();
+
+      this.logger.log(blue.bold('Merchant API initialized'));
     } catch (error) {
-      this.logger.log(
-        `Failed to initialize Google Merchant Center API: ${error}`
-      );
-      // Initialize with mock/empty content to prevent crashes
-      this.content = {
-        products: {
-          get: async () => null,
-          insert: async () => {},
-          update: async () => {},
-          delete: async () => {},
-          list: async () => ({ data: { resources: [] } }),
-        },
-      };
+      this.logger.log(`Failed to initialize Google Merchant API: ${error}`);
+      this.useNoopClients();
     }
+  }
+
+  /**
+   * Resolve the API data source every productInputs write has to name.
+   *
+   * Order of preference:
+   *  1. GOOGLE_MERCHANT_DATASOURCE — either a full resource name or a bare id.
+   *  2. An existing primary API data source called DATA_SOURCE_DISPLAY_NAME.
+   *  3. Create one (feedLabel / contentLanguage left unset so a single source
+   *     accepts every locale-country combination we publish).
+   */
+  private async resolveDataSource(): Promise<void> {
+    const configured = process.env['GOOGLE_MERCHANT_DATASOURCE'];
+    if (configured) {
+      this.dataSourceName = configured.startsWith('accounts/')
+        ? configured
+        : `${this.accountName}/dataSources/${configured}`;
+      this.logger.log(
+        blue.bold(
+          `Merchant API data source (configured): ${white.bold(this.dataSourceName)}`
+        )
+      );
+      return;
+    }
+
+    const existing = await this.findApiDataSource();
+    if (existing) {
+      this.dataSourceName = existing;
+      this.logger.log(
+        blue.bold(
+          `Merchant API data source: ${white.bold(this.dataSourceName)}`
+        )
+      );
+      return;
+    }
+
+    const created = await this.datasources.accounts.dataSources.create({
+      parent: this.accountName,
+      requestBody: {
+        displayName: DATA_SOURCE_DISPLAY_NAME,
+        primaryProductDataSource: {},
+      },
+    });
+    this.dataSourceName = created?.data?.name || '';
+    this.logger.log(
+      green.bold(
+        `✓ Created Merchant API data source ${white.bold(DATA_SOURCE_DISPLAY_NAME)}: ${white.bold(this.dataSourceName)}`
+      )
+    );
+  }
+
+  /**
+   * Find our primary API data source by display name, walking every page.
+   * Returns its resource name, or null when the account has none yet.
+   */
+  private async findApiDataSource(): Promise<string | null> {
+    let pageToken: string | undefined = undefined;
+    do {
+      const response: any = await this.datasources.accounts.dataSources.list({
+        parent: this.accountName,
+        pageSize: 1000,
+        pageToken,
+      });
+      const sources = response?.data?.dataSources || [];
+      const match = sources.find(
+        (ds: any) =>
+          ds.displayName === DATA_SOURCE_DISPLAY_NAME &&
+          ds.primaryProductDataSource
+      );
+      if (match?.name) {
+        return match.name;
+      }
+      pageToken = response?.data?.nextPageToken;
+    } while (pageToken);
+    return null;
   }
 
   /**
@@ -518,11 +616,14 @@ export class MerchantCenterService {
         const existingProducts = await this.listProducts();
         let removedCount = 0;
 
-        // Find and remove outdated products
+        // Find and remove outdated products. Merchant API products are keyed
+        // by resource name, so reduce each to its bare id before diffing
+        // against the expected set.
         for (const product of existingProducts) {
-          if (product.id && !expectedProductIds.has(product.id)) {
+          const productId = this.productIdFromResourceName(product.name);
+          if (productId && !expectedProductIds.has(productId)) {
             try {
-              await this.deleteProduct(product.id);
+              await this.deleteProduct(productId);
               removedCount++;
             } catch (error) {
               // Silent failure
@@ -650,7 +751,7 @@ export class MerchantCenterService {
   }
 
   /**
-   * Compute the set of Merchant Center product IDs that a given playlist is
+   * Compute the set of Merchant API product IDs that a given playlist is
    * expected to have, mirroring the locale/country/type loop in uploadPlaylist
    * and the ID format in createMerchantProduct. Used by the cleanup pass so it
    * doesn't delete products belonging to playlists that weren't part of this
@@ -692,7 +793,9 @@ export class MerchantCenterService {
       const localeNum = localeNumMap[locale] || 1;
       for (const pt of productTypeNums) {
         const uniqueId = `${playlist.id}_${pt.num}_${localeNum}`;
-        ids.push(`online:${locale}:${country}:${uniqueId}`);
+        // Must match the id built in createMerchantProduct:
+        // "{contentLanguage}~{feedLabel}~{offerId}", feed label = country.
+        ids.push(`${locale}~${country}~${uniqueId}`);
       }
     }
 
@@ -729,82 +832,25 @@ export class MerchantCenterService {
             )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]${progressText}`
           )
         );
-        return product.id;
+        return product.productId;
       }
 
-      // Check if product exists
-      const existingProduct = await this.getProduct(product.id);
-      const debugMode = process.env['DEBUG_MERCHANT_CENTER'] === 'true';
+      // productInputs.insert is an upsert in the Merchant API: it creates the
+      // product or replaces it wholesale, custom labels included. That removes
+      // the Content API dance of get-then-insert-or-PATCH (and the
+      // delete-and-reinsert workaround needed to change customAttributes), so
+      // one call per variant is enough.
+      await this.insertProduct(product);
+      const progressText = progress ? ` (${progress}%)` : '';
+      this.logger.log(
+        green.bold(
+          `✓ ${white.bold(variant.slug)} [${white.bold(
+            variant.type
+          )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]${progressText}`
+        )
+      );
 
-      if (existingProduct) {
-        if (debugMode) {
-          this.logger.log(blue.bold('🔍 Existing product ID format:'));
-          this.logger.log(blue(`  - Our ID: ${white.bold(product.id)}`));
-          this.logger.log(
-            blue(`  - Google's ID: ${white.bold(existingProduct.id || 'N/A')}`)
-          );
-          this.logger.log(
-            blue(`  - OfferId: ${white.bold(existingProduct.offerId || 'N/A')}`)
-          );
-        }
-
-        if (USE_DELETE_INSERT_FOR_UPDATES) {
-          // Delete and re-insert to update custom labels (PATCH cannot update customAttributes)
-          try {
-            await this.deleteProduct(existingProduct.id || product.id);
-            if (debugMode) {
-              this.logger.log(blue(`🗑️ Deleted existing product for re-insert`));
-            }
-          } catch (deleteError: any) {
-            if (debugMode) {
-              this.logger.log(yellow(`Delete warning: ${deleteError.message}`));
-            }
-            // Continue with insert anyway
-          }
-
-          // Re-insert with new custom labels
-          await this.insertProduct(product);
-          const progressText = progress ? ` (${progress}%)` : '';
-          this.logger.log(
-            yellow(
-              `↻ ${white.bold(variant.slug)} [${white.bold(
-                variant.type
-              )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]${progressText}`
-            )
-          );
-        } else {
-          // Use PATCH update (faster but cannot update customAttributes)
-          try {
-            await this.updateProduct(product, existingProduct.id || product.id);
-            const progressText = progress ? ` (${progress}%)` : '';
-            this.logger.log(
-              yellow(
-                `↻ ${white.bold(variant.slug)} [${white.bold(
-                  variant.type
-                )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]${progressText}`
-              )
-            );
-          } catch (updateError: any) {
-            if (debugMode) {
-              this.logger.log(red(`Update failed: ${updateError.message}`));
-            }
-            throw updateError;
-          }
-        }
-      } else {
-        // Insert new product
-        await this.insertProduct(product);
-        const progressText = progress ? ` (${progress}%)` : '';
-        this.logger.log(
-          green.bold(
-            `✓ ${white.bold(variant.slug)} [${white.bold(
-              variant.type
-            )}/${white.bold(variant.locale)}/${white.bold(variant.country)}]${progressText}`
-          )
-        );
-      }
-
-      return product.id;
+      return product.productId;
     } catch (error: any) {
       const progressText = progress ? ` (${progress}%)` : '';
       this.logger.log(
@@ -823,19 +869,21 @@ export class MerchantCenterService {
    */
   private async createMerchantProduct(
     variant: ProductVariant
-  ): Promise<MerchantProduct | null> {
+  ): Promise<MerchantProductInput | null> {
     const baseUrl = process.env.FRONTEND_URI || 'https://www.qrsong.io';
     const country = variant.country;
 
-    // Generate unique ID using Google's required format
-    // Format for online products: "online:{lang}:{country}:{id}"
-    // We'll use a simple numeric ID combining playlist ID, type, and locale
+    // Generate the Merchant API product id: "{contentLanguage}~{feedLabel}~{offerId}".
+    // The Content API's targetCountry became feedLabel, and the "online:"
+    // channel prefix of the old composite id is gone in v1. We keep using the
+    // country code as the feed label so per-country targeting is unchanged.
     const typeNum =
       variant.type === 'digital' ? 1 : variant.type === 'sheets' ? 2 : 3;
     const localeNum =
       { en: 1, nl: 2, de: 3, es: 4, sv: 5, no: 6 }[variant.locale] || 1;
     const uniqueId = `${variant.id}_${typeNum}_${localeNum}`;
-    const productId = `online:${variant.locale}:${country}:${uniqueId}`;
+    const feedLabel = country;
+    const productId = `${variant.locale}~${feedLabel}~${uniqueId}`;
 
     // Generate composite product image with the template (unique per variant)
     const imageKey = `${variant.playlistId}_${variant.type}_${variant.locale}`;
@@ -946,13 +994,13 @@ export class MerchantCenterService {
         country: country,
         service: 'Digital Delivery',
         price: {
-          value: '0',
-          currency: currency,
+          amountMicros: '0',
+          currencyCode: currency,
         },
-        minHandlingTime: 0,
-        maxHandlingTime: 0,
-        minTransitTime: 0,
-        maxTransitTime: 0,
+        minHandlingTime: '0',
+        maxHandlingTime: '0',
+        minTransitTime: '0',
+        maxTransitTime: '0',
       });
     } else {
       const lookedUpCost = this.getShippingCostForVariant(
@@ -972,38 +1020,47 @@ export class MerchantCenterService {
         country: country,
         service: 'Standard Shipping',
         price: {
-          value: shippingResult.value,
-          currency: currency,
+          amountMicros: this.toMicros(shippingResult.value),
+          currencyCode: currency,
         },
-        minHandlingTime: 1,
-        maxHandlingTime: 2,
-        minTransitTime: 2,
-        maxTransitTime: 5,
+        minHandlingTime: '1',
+        maxHandlingTime: '2',
+        minTransitTime: '2',
+        maxTransitTime: '5',
       });
     }
 
     return {
-      id: productId,
-      offerId: uniqueId, // Add the offerId field which is required
-      title: title,
-      description: description.substring(0, 5000), // Max 5000 characters
-      link: productUrl,
-      imageLink: productImage, // Use the generated composite image
-      availability: 'in_stock',
-      condition: 'new',
-      price: {
-        value: priceValue,
-        currency: currency,
-      },
-      brand: 'QRSong!',
+      productId,
+      offerId: uniqueId,
       contentLanguage: variant.locale,
-      targetCountry: country,
-      channel: 'online',
-      productTypes: this.getProductTypes(variant),
-      googleProductCategory: googleCategory,
-      shipping: shipping,
-      shippingLabel:
-        variant.type === 'digital' ? 'digital_delivery' : 'standard_shipping',
+      feedLabel,
+      productAttributes: {
+        title: title,
+        description: description.substring(0, 5000), // Max 5000 characters
+        link: productUrl,
+        imageLink: productImage, // Use the generated composite image
+        availability: 'in_stock',
+        condition: 'new',
+        price: {
+          amountMicros: this.toMicros(priceValue),
+          currencyCode: currency,
+        },
+        brand: 'QRSong!',
+        productTypes: this.getProductTypes(variant),
+        googleProductCategory: googleCategory,
+        shipping: shipping,
+        shippingLabel:
+          variant.type === 'digital' ? 'digital_delivery' : 'standard_shipping',
+        // Custom labels for PMax campaign segmentation. In the Merchant API
+        // these are real product fields, so a plain upsert updates them — the
+        // Content API needed a delete-and-reinsert because its PATCH could not
+        // touch customAttributes. custom_label_4 stays unset (reserved).
+        customLabel0: variant.type, // Product type: digital, sheets, physical
+        customLabel1: this.getGenreGroup(variant.genreSlug), // Genre group: pop_hits, rock_metal, etc.
+        customLabel2: variant.genreSlug || 'unknown', // Individual genre slug
+        customLabel3: this.getTrackCountRange(variant.numberOfTracks), // small, medium, large
+      },
       customAttributes: [
         {
           name: 'number_of_tracks',
@@ -1017,29 +1074,20 @@ export class MerchantCenterService {
           name: 'playlist_slug',
           value: variant.slug,
         },
-        // Custom labels for PMax campaign segmentation
-        {
-          name: 'custom_label_0',
-          value: variant.type, // Product type: digital, sheets, physical
-        },
-        {
-          name: 'custom_label_1',
-          value: this.getGenreGroup(variant.genreSlug), // Genre group: pop_hits, rock_metal, etc.
-        },
-        {
-          name: 'custom_label_2',
-          value: variant.genreSlug || 'unknown', // Individual genre slug
-        },
-        {
-          name: 'custom_label_3',
-          value: this.getTrackCountRange(variant.numberOfTracks), // Track count: small, medium, large
-        },
-        {
-          name: 'custom_label_4',
-          value: '', // Reserved for future use
-        },
       ],
     };
+  }
+
+  /**
+   * Convert a decimal price string ("29.99") to the integer micros string the
+   * Merchant API expects ("29990000"). The Content API took decimals directly.
+   */
+  private toMicros(value: string | number): string {
+    const amount = typeof value === 'number' ? value : parseFloat(value);
+    if (!isFinite(amount)) {
+      return '0';
+    }
+    return Math.round(amount * 1_000_000).toString();
   }
 
   /**
@@ -1769,18 +1817,20 @@ export class MerchantCenterService {
   }
 
   /**
-   * Get a product from Google Merchant Center
+   * Fetch a processed product from Merchant Center by its bare product id
+   * ("en~US~7_3_1"). Returns null when Google has never seen it. Note this
+   * reads the *processed* product, which is the output of our productInputs
+   * write after rules are applied — it is not the input we sent.
    */
   private async getProduct(productId: string): Promise<any> {
-    if (!this.content || !this.content.products) {
-      this.logger.log(yellow('Warning: Merchant Center API not initialized'));
+    if (!this.products?.accounts?.products) {
+      this.logger.log(yellow('Warning: Merchant API not initialized'));
       return null;
     }
 
     try {
-      const response = await this.content.products.get({
-        merchantId: this.merchantId,
-        productId: productId,
+      const response = await this.products.accounts.products.get({
+        name: `${this.accountName}/products/${productId}`,
       });
       return response.data;
     } catch (error: any) {
@@ -1792,232 +1842,99 @@ export class MerchantCenterService {
   }
 
   /**
-   * Insert a new product to Google Merchant Center
+   * Insert (upsert) a product into Merchant Center via the Merchant API.
+   *
+   * There is no separate update call: productInputs.insert replaces any
+   * existing input with the same id in this data source, which is why the
+   * Content API's updateProduct / updateMask / delete-and-reinsert paths are
+   * gone. Every write must name the API data source.
    */
-  private async insertProduct(product: MerchantProduct): Promise<void> {
-    if (!this.content || !this.content.products) {
-      this.logger.log(yellow('Warning: Merchant Center API not initialized'));
+  private async insertProduct(product: MerchantProductInput): Promise<void> {
+    if (!this.products?.productInputs || !this.dataSourceName) {
+      this.logger.log(yellow('Warning: Merchant API not initialized'));
       return;
     }
 
-    try {
-      await this.content.products.insert({
-        merchantId: this.merchantId,
-        requestBody: product as any,
-      });
-    } catch (error: any) {
-      // Rethrow with simplified message
-      throw error;
+    const debugMode = process.env['DEBUG_MERCHANT_CENTER'] === 'true';
+    if (debugMode) {
+      this.logger.log(blue.bold('📝 Upserting product input:'));
+      this.logger.log(blue(`  - Product ID: ${white.bold(product.productId)}`));
+      this.logger.log(
+        blue(`  - Link: ${white.bold(product.productAttributes.link)}`)
+      );
+      this.logger.log(
+        blue(`  - Image: ${white.bold(product.productAttributes.imageLink)}`)
+      );
+      this.logger.log(
+        blue(
+          `  - Price: ${white.bold(
+            product.productAttributes.price.amountMicros
+          )} micros ${product.productAttributes.price.currencyCode}`
+        )
+      );
+    }
+
+    await this.products.productInputs.insert({
+      parent: this.accountName,
+      dataSource: this.dataSourceName,
+      requestBody: {
+        offerId: product.offerId,
+        contentLanguage: product.contentLanguage,
+        feedLabel: product.feedLabel,
+        productAttributes: product.productAttributes,
+        customAttributes: product.customAttributes,
+      } as any,
+    });
+
+    if (debugMode) {
+      await this.logProcessedProduct(product.productId);
     }
   }
 
   /**
-   * Update an existing product in Google Merchant Center
+   * Debug helper: read back the processed product after a write and log what
+   * Google ended up with. Merchant Center is eventually consistent, so
+   * DEBUG_WAIT_TIME (default 3s) gives it a moment before we look.
    */
-  private async updateProduct(
-    product: MerchantProduct,
-    googleProductId?: string
-  ): Promise<void> {
-    if (!this.content || !this.content.products) {
-      this.logger.log(yellow('Warning: Merchant Center API not initialized'));
-      return;
+  private async logProcessedProduct(productId: string): Promise<void> {
+    const waitTime = parseInt(process.env.DEBUG_WAIT_TIME || '3000');
+    if (waitTime > 0) {
+      this.logger.log(
+        blue(
+          `  ⏳ Waiting ${white.bold(
+            (waitTime / 1000).toString()
+          )}s for Google to process the write...`
+        )
+      );
+      await new Promise((resolve) => setTimeout(resolve, waitTime));
     }
 
     try {
-      // Enable debug mode for updates
-      const debugMode = process.env['DEBUG_MERCHANT_CENTER'] === 'true';
-
-      // Get the product before update for comparison
-      let productBefore: any = null;
-      if (debugMode) {
-        try {
-          productBefore = await this.getProduct(product.id);
-          this.logger.log(blue.bold('📋 Product before update:'));
-          this.logger.log(
-            blue(`  - Link: ${white.bold(productBefore?.link || 'N/A')}`)
-          );
-          this.logger.log(
-            blue(`  - Image: ${white.bold(productBefore?.imageLink || 'N/A')}`)
-          );
-          this.logger.log(
-            blue(
-              `  - Price: ${white.bold(productBefore?.price?.value || 'N/A')} ${
-                productBefore?.price?.currency || ''
-              }`
-            )
-          );
-          this.logger.log(
-            blue(`  - Title: ${white.bold(productBefore?.title || 'N/A')}`)
-          );
-        } catch (e) {
-          this.logger.log(yellow('Could not fetch product before update'));
-        }
-      }
-
-      // For PATCH updates, we need to specify which fields we're updating
-      // Note: customAttributes cannot be updated via PATCH, use USE_DELETE_INSERT_FOR_UPDATES=true instead
-      const updateMask = [
-        'title',
-        'description',
-        'link',
-        'imageLink', // This is the critical one for image updates
-        'price',
-        'availability',
-        'brand',
-        'googleProductCategory',
-        'productTypes',
-        'shipping',
-        'shippingLabel',
-      ].join(',');
-
-      // Build the product update payload
-      // According to docs, we should send the full product object with only the fields we want to update
-      const productForUpdate = {
-        title: product.title,
-        description: product.description,
-        link: product.link,
-        imageLink: product.imageLink, // Ensure the new image URL is here
-        price: product.price,
-        availability: product.availability,
-        brand: product.brand,
-        googleProductCategory: product.googleProductCategory,
-        productTypes: product.productTypes,
-        shipping: product.shipping,
-        shippingLabel: product.shippingLabel,
-        condition: product.condition, // Add condition since it's required
-        // Note: customAttributes excluded - use USE_DELETE_INSERT_FOR_UPDATES=true to update labels
-      };
-
-      if (debugMode) {
-        this.logger.log(blue.bold('📝 Sending PATCH update with:'));
-        this.logger.log(blue(`  - Update Mask: ${white.bold(updateMask)}`));
+      const processed = await this.getProduct(productId);
+      if (!processed) {
         this.logger.log(
-          blue(`  - Link: ${white.bold(productForUpdate.link || 'N/A')}`)
-        );
-        this.logger.log(
-          blue(`  - Image: ${white.bold(productForUpdate.imageLink || 'N/A')}`)
-        );
-        this.logger.log(
-          blue(
-            `  - Price: ${white.bold(productForUpdate.price?.value || 'N/A')} ${
-              productForUpdate.price?.currency || ''
-            }`
+          yellow(
+            '  ⚠️ Product not readable yet — Merchant Center is eventually consistent, changes can take 5-30 minutes to appear'
           )
         );
-        this.logger.log(
-          blue(`  - Title: ${white.bold(productForUpdate.title || 'N/A')}`)
-        );
+        return;
       }
-
-      // Use update method with updateMask for partial updates (PATCH under the hood)
-      // Try using just the offerId first, as that's what shows in Merchant Center
-      const productIdToUpdate = googleProductId || product.id;
-
-      if (debugMode) {
-        this.logger.log(
-          blue(
-            `  - Using Product ID for update: ${white.bold(productIdToUpdate)}`
-          )
-        );
-        this.logger.log(
-          blue(`  - Alternative offerId: ${white.bold(product.offerId)}`)
-        );
-      }
-
-      try {
-        // First try with the full composite ID
-        await this.content.products.update({
-          merchantId: this.merchantId,
-          productId: productIdToUpdate,
-          updateMask: updateMask, // This parameter makes it a PATCH request
-          requestBody: productForUpdate as any,
-        });
-      } catch (firstError: any) {
-        if (debugMode) {
-          this.logger.log(yellow(`  - Full ID failed: ${firstError.message}`));
-          this.logger.log(
-            yellow(`  - Trying with offerId: ${white.bold(product.offerId)}`)
-          );
-        }
-
-        // If full ID fails, try with just the offerId
-        await this.content.products.update({
-          merchantId: this.merchantId,
-          productId: product.offerId, // Try just the offerId
-          updateMask: updateMask,
-          requestBody: productForUpdate as any,
-        });
-      }
-
-      // Verify the update worked
-      if (debugMode) {
-        // Wait longer for the update to propagate (Google has eventual consistency)
-        const waitTime = parseInt(process.env.DEBUG_WAIT_TIME || '3000');
-        if (waitTime > 0) {
-          this.logger.log(
-            blue(
-              `  ⏳ Waiting ${white.bold(
-                (waitTime / 1000).toString()
-              )}s for Google to process update...`
-            )
-          );
-          await new Promise((resolve) => setTimeout(resolve, waitTime));
-        }
-
-        try {
-          const productAfter = await this.getProduct(product.id);
-          this.logger.log(green.bold('✅ Product after update:'));
-          this.logger.log(
-            green(`  - Link: ${white.bold(productAfter?.link || 'N/A')}`)
-          );
-          this.logger.log(
-            green(`  - Image: ${white.bold(productAfter?.imageLink || 'N/A')}`)
-          );
-          this.logger.log(
-            green(
-              `  - Price: ${white.bold(productAfter?.price?.value || 'N/A')} ${
-                productAfter?.price?.currency || ''
-              }`
-            )
-          );
-          this.logger.log(
-            green(`  - Title: ${white.bold(productAfter?.title || 'N/A')}`)
-          );
-
-          // Check what changed
-          const changes: string[] = [];
-          if (productBefore?.link !== productAfter?.link) changes.push('Link');
-          if (productBefore?.imageLink !== productAfter?.imageLink)
-            changes.push('Image URL');
-          if (productBefore?.price?.value !== productAfter?.price?.value)
-            changes.push('Price');
-          if (productBefore?.title !== productAfter?.title)
-            changes.push('Title');
-          if (productBefore?.description !== productAfter?.description)
-            changes.push('Description');
-
-          if (changes.length > 0) {
-            this.logger.log(
-              green.bold(
-                `  ✓ Changed fields: ${white.bold(changes.join(', '))}`
-              )
-            );
-          } else {
-            this.logger.log(yellow.bold('  ⚠️ No immediate changes detected'));
-            this.logger.log(
-              yellow(
-                '  Note: Google Merchant Center has eventual consistency - changes may take 5-30 minutes to appear'
-              )
-            );
-          }
-        } catch (e) {
-          this.logger.log(
-            yellow('Could not fetch product after update for verification')
-          );
-        }
-      }
+      const attrs = processed.productAttributes || {};
+      this.logger.log(green.bold('✅ Processed product:'));
+      this.logger.log(green(`  - Link: ${white.bold(attrs.link || 'N/A')}`));
+      this.logger.log(
+        green(`  - Image: ${white.bold(attrs.imageLink || 'N/A')}`)
+      );
+      this.logger.log(
+        green(
+          `  - Price: ${white.bold(
+            attrs.price?.amountMicros || 'N/A'
+          )} micros ${attrs.price?.currencyCode || ''}`
+        )
+      );
+      this.logger.log(green(`  - Title: ${white.bold(attrs.title || 'N/A')}`));
     } catch (error) {
-      throw error;
+      this.logger.log(yellow(`Could not read back product ${productId}`));
     }
   }
 
@@ -2027,15 +1944,12 @@ export class MerchantCenterService {
   public async deleteProduct(productId: string): Promise<void> {
     await this.ensureInitialized();
 
-    try {
-      await this.content.products.delete({
-        merchantId: this.merchantId,
-        productId: productId,
-      });
-      // Product deleted successfully
-    } catch (error) {
-      throw error;
-    }
+    // Deletes only remove the input from OUR data source; products supplied by
+    // another source stay put, which is what we want.
+    await this.products.productInputs.delete({
+      name: `${this.accountName}/productInputs/${productId}`,
+      dataSource: this.dataSourceName,
+    });
   }
 
   /**
@@ -2070,11 +1984,12 @@ export class MerchantCenterService {
       let failedCount = 0;
 
       for (const product of existingProducts) {
-        if (product.id) {
+        const productId = this.productIdFromResourceName(product.name);
+        if (productId) {
           try {
-            await this.content.products.delete({
-              merchantId: this.merchantId,
-              productId: product.id,
+            await this.products.productInputs.delete({
+              name: `${this.accountName}/productInputs/${productId}`,
+              dataSource: this.dataSourceName,
             });
             deletedCount++;
             // Silent deletion
@@ -2104,12 +2019,13 @@ export class MerchantCenterService {
   /**
    * List ALL products in Google Merchant Center, following pagination.
    *
-   * The Content API caps a single products.list page at 250 items (and
-   * defaults to 25). This method previously returned only the first page, so
-   * with thousands of products in the account the cleanup pass in
-   * uploadFeaturedPlaylists() only ever saw ~25 products and could never
-   * delete stale / crawled / wrong-currency items. We now walk every page via
-   * nextPageToken so callers get the complete set.
+   * The Merchant API caps a single products.list page at 1000 items (and
+   * defaults to 25). Without following nextPageToken the cleanup pass in
+   * uploadFeaturedPlaylists() would only ever see the first page and could
+   * never delete stale / crawled / wrong-currency items, so we walk every page.
+   *
+   * Returned entries are processed products: each has a `name` of
+   * "accounts/{id}/products/{contentLanguage}~{feedLabel}~{offerId}".
    */
   public async listProducts(): Promise<any[]> {
     await this.ensureInitialized();
@@ -2118,13 +2034,13 @@ export class MerchantCenterService {
       const all: any[] = [];
       let pageToken: string | undefined = undefined;
       do {
-        const response: any = await this.content.products.list({
-          merchantId: this.merchantId,
-          maxResults: 250,
+        const response: any = await this.products.accounts.products.list({
+          parent: this.accountName,
+          pageSize: 1000,
           pageToken,
         });
-        const resources = response?.data?.resources || [];
-        all.push(...resources);
+        const products = response?.data?.products || [];
+        all.push(...products);
         pageToken = response?.data?.nextPageToken;
       } while (pageToken);
       return all;
@@ -2132,6 +2048,20 @@ export class MerchantCenterService {
       this.logger.log(`Failed to list products: ${error}`);
       throw error;
     }
+  }
+
+  /**
+   * Pull the bare product id ("en~US~7_3_1") out of a Merchant API resource
+   * name ("accounts/123/products/en~US~7_3_1"). Returns null for anything that
+   * doesn't look like one, so the cleanup pass can skip it rather than issue a
+   * malformed delete.
+   */
+  private productIdFromResourceName(name?: string | null): string | null {
+    if (!name) return null;
+    const marker = '/products/';
+    const index = name.indexOf(marker);
+    if (index === -1) return null;
+    return name.substring(index + marker.length) || null;
   }
 
   /**

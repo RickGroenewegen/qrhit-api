@@ -2,13 +2,17 @@
 
 This module integrates QRSong featured playlists with Google Merchant Center for Google Shopping.
 
+It uses the **Merchant API** (`merchantapi.googleapis.com`). Google discontinued
+the Content API for Shopping on 18 August 2026; this integration was migrated
+off it. See [Migration notes](#migration-notes-content-api--merchant-api) below.
+
 ## Setup
 
 ### Prerequisites
 
 1. **Google Merchant Center Account**: Create an account at https://merchants.google.com
 2. **Service Account**: Create a service account in Google Cloud Console
-3. **API Access**: Enable the Content API for Shopping
+3. **API Access**: Enable the Merchant API
 
 ### Environment Variables
 
@@ -18,7 +22,26 @@ Add the following to your `.env` file:
 # Google Merchant Center Configuration
 GOOGLE_MERCHANT_ID=your_merchant_id
 GOOGLE_SERVICE_ACCOUNT_KEY_FILE=path/to/service-account-key.json
+
+# Optional: pin the API data source products are written to. Accepts a bare id
+# ("104628") or a full resource name ("accounts/123/dataSources/104628").
+# When unset, the service finds the data source named "QRSong! API feed" and
+# creates it on first run if the account has none.
+# GOOGLE_MERCHANT_DATASOURCE=
 ```
+
+### Data Sources
+
+Unlike the Content API, every Merchant API product write must name a data
+source. The service resolves one at startup:
+
+1. `GOOGLE_MERCHANT_DATASOURCE` if set.
+2. Otherwise the existing primary data source called **QRSong! API feed**.
+3. Otherwise it creates that data source (no `feedLabel` / `contentLanguage`,
+   so a single source accepts every locale-country combination we publish).
+
+Only products in *our* data source are touched. Anything supplied by another
+feed is left alone, including by the cleanup pass.
 
 ### How to Get Your GOOGLE_MERCHANT_ID
 
@@ -46,19 +69,19 @@ GOOGLE_SERVICE_ACCOUNT_KEY_FILE=path/to/service-account-key.json
 4. Name your project (e.g., "QRSong Merchant Center")
 5. Click "Create"
 
-#### Step 2: Enable the Content API for Shopping
-1. **Direct link**: Go to https://console.developers.google.com/apis/api/shoppingcontent.googleapis.com/overview?project=YOUR_PROJECT_ID
+#### Step 2: Enable the Merchant API
+1. **Direct link**: Go to https://console.developers.google.com/apis/api/merchantapi.googleapis.com/overview?project=YOUR_PROJECT_ID
    - Replace YOUR_PROJECT_ID with your actual project ID
    - Or use the link from the error message if you get one
 2. **Alternative method**:
    - In Google Cloud Console, go to "APIs & Services" > "Library"
-   - Search for "Content API for Shopping"
+   - Search for "Merchant API"
    - Click on it and press "Enable"
 3. **Important**: Wait 2-5 minutes after enabling for the API to be fully activated
 4. If you see an error about billing:
    - You may need to enable billing for your Google Cloud project
    - Go to "Billing" in the console and set up a billing account
-   - The Content API has generous free quotas for small usage
+   - The Merchant API has generous free quotas for small usage
 
 #### Step 3: Create a Service Account
 1. Go to "APIs & Services" > "Credentials"
@@ -186,14 +209,26 @@ This will:
 
 ## Product Structure
 
+Products are addressed by the Merchant API id
+`{contentLanguage}~{feedLabel}~{offerId}`, for example `en~US~7_3_1`. The feed
+label is the target country, which is how the Content API's `targetCountry`
+carries over.
+
 Each product includes:
-- **Offer ID**: Unique identifier (format: `{slug}_{type}_{locale}`)
+- **Offer ID**: Unique identifier (format: `{playlistId}_{typeNum}_{localeNum}`)
 - **Title**: Playlist name with product type
 - **Description**: Playlist description with track count
-- **Price**: In EUR based on product type
-- **Image**: Playlist cover image
+- **Price**: Converted to the target country's currency, sent in micros
+  (1 EUR = 1000000)
+- **Image**: Generated product image (AI composite, or the Sharp template
+  composite; variants without a hosted image are skipped)
 - **Availability**: Always "in_stock"
 - **Brand**: "QRSong!"
+- **Custom labels** (real product fields, used for PMax segmentation):
+  - customLabel0: product variant (digital / sheets / physical)
+  - customLabel1: genre group
+  - customLabel2: genre slug
+  - customLabel3: track-count bucket
 - **Custom Attributes**:
   - number_of_tracks
   - product_variant
@@ -209,7 +244,9 @@ Each product includes:
 ### Authentication Issues
 - Verify service account has proper permissions in Merchant Center
 - Check that the key file path is correct
-- Ensure Content API is enabled in Google Cloud Console
+- Ensure the Merchant API is enabled in Google Cloud Console
+- A "No Merchant API data source resolved" warning means data source
+  resolution failed; check the service account can list and create data sources
 
 ### Product Upload Failures
 - Check that featured playlists have:
@@ -237,3 +274,30 @@ If playlist schema changes, update:
 - `uploadPlaylist()` method to handle new fields
 - `createMerchantProduct()` to include new attributes
 - Product type mappings if new variants are added
+
+## Migration notes (Content API → Merchant API)
+
+What changed when this module moved off the discontinued Content API v2.1:
+
+| Content API v2.1 | Merchant API |
+| --- | --- |
+| `google.content({version:'v2.1'})` | `google.merchantapi({version:'products_v1'})` + `datasources_v1` |
+| `merchantId: '123'` | `parent: 'accounts/123'` |
+| no data source concept | every write names `accounts/{id}/dataSources/{id}` |
+| `products.insert` / `products.update` (updateMask) | `productInputs.insert` (upsert; no update call) |
+| `products.delete` | `productInputs.delete` |
+| `products.list` → `data.resources`, max 250/page | `accounts.products.list` → `data.products`, max 1000/page |
+| id `online:en:US:123` | id `en~US~123` (no channel prefix in v1) |
+| `targetCountry: 'US'` | `feedLabel: 'US'` |
+| `price: {value:'29.99', currency:'EUR'}` | `price: {amountMicros:'29990000', currencyCode:'EUR'}` |
+| shipping times as numbers | shipping times as strings |
+| flat product fields | nested under `productAttributes` |
+| `custom_label_0..4` in `customAttributes` | `customLabel0..4` product fields |
+
+The OAuth scope is unchanged (`https://www.googleapis.com/auth/content`), so
+the service account and key file did not need to be reissued.
+
+Because `productInputs.insert` is an upsert that rewrites custom labels, the old
+`USE_DELETE_INSERT_FOR_UPDATES` workaround (delete-then-reinsert, because PATCH
+could not touch `customAttributes`) is gone, and each variant now costs one API
+call per sync instead of two.

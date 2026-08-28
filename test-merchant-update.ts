@@ -3,6 +3,10 @@
 /**
  * Test script for Google Merchant Center update verification
  * Usage: DEBUG_MERCHANT_CENTER=true npx tsx test-merchant-update.ts
+ *
+ * Reads the Merchant API product shape: identity is `name`
+ * ("accounts/{id}/products/{lang}~{feedLabel}~{offerId}") and the descriptive
+ * fields live under `productAttributes`.
  */
 
 import dotenv from 'dotenv';
@@ -41,11 +45,12 @@ async function testMerchantUpdate() {
     if (products.length > 0) {
       // Show first product details
       const firstProduct = products[0];
+      const attrs = firstProduct.productAttributes || {};
       logger.log(blue.bold('\nFirst product details:'));
-      logger.log(blue(`  ID: ${white.bold(firstProduct.id)}`));
-      logger.log(blue(`  Title: ${white.bold(firstProduct.title)}`));
-      logger.log(blue(`  Link: ${white.bold(firstProduct.link)}`));
-      logger.log(blue(`  Image: ${white.bold(firstProduct.imageLink?.substring(0, 100))}...`));
+      logger.log(blue(`  Name: ${white.bold(firstProduct.name)}`));
+      logger.log(blue(`  Title: ${white.bold(attrs.title)}`));
+      logger.log(blue(`  Link: ${white.bold(attrs.link)}`));
+      logger.log(blue(`  Image: ${white.bold(attrs.imageLink?.substring(0, 100))}...`));
     }
     
     // Force an update by running sync again
@@ -62,8 +67,8 @@ async function testMerchantUpdate() {
     logger.log(blue.bold('\n5. Final verification...'));
     const updatedProducts = await merchantCenter.listProducts();
     if (updatedProducts.length > 0 && products.length > 0) {
-      const originalImage = products[0].imageLink;
-      const updatedImage = updatedProducts[0].imageLink;
+      const originalImage = products[0].productAttributes?.imageLink;
+      const updatedImage = updatedProducts[0].productAttributes?.imageLink;
       
       if (originalImage !== updatedImage) {
         logger.log(green.bold('✓ Image URL changed successfully!'));

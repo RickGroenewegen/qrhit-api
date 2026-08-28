@@ -11,6 +11,7 @@ import MusicServiceRegistry from './services/MusicServiceRegistry';
 import AppleMusicProvider from './providers/AppleMusicProvider';
 import Data from './data';
 import Cache from './cache';
+import Settings from './settings';
 
 class Suggestion {
   private static instance: Suggestion;
@@ -299,10 +300,54 @@ class Suggestion {
           },
         });
 
+        // Auto-mode: approve the corrections right away instead of parking
+        // them in /corrections for an admin. The onlyForMe flags are all true
+        // so an unreviewed customer edit only touches their own playlist
+        // (trackextrainfo) and never the shared tracks table.
+        const autoMode = await Settings.getInstance().isAutoMode();
+        let autoApproved = false;
+
+        if (autoMode) {
+          try {
+            autoApproved = await this.processCorrections(
+              paymentId,
+              userHash,
+              playlistId,
+              true, // artistOnlyForMe
+              true, // titleOnlyForMe
+              true, // yearOnlyForMe
+              true, // andSend
+              clientIp
+            );
+          } catch (error) {
+            this.logger.log(
+              color.red.bold(
+                `Auto-mode failed to process corrections for payment ${color.white.bold(
+                  paymentId
+                )}: ${color.white.bold(String(error))}`
+              )
+            );
+          }
+
+          if (!autoApproved) {
+            // Leave suggestionsPending set so the order simply falls back to
+            // the normal manual review queue.
+            this.logger.log(
+              color.yellow.bold(
+                `Auto-mode could not process corrections for payment ${color.white.bold(
+                  paymentId
+                )}, leaving them for manual review`
+              )
+            );
+          }
+        }
+
         this.pushover.sendMessage(
           {
             title: `QRSong! Correcties doorgegeven`,
-            message: `${suggestionCount} correcties doorgegeven door: ${payment?.fullname}`,
+            message: `${suggestionCount} correcties doorgegeven door: ${
+              payment?.fullname
+            }${autoApproved ? ' (automatisch verwerkt)' : ''}`,
             sound: 'incoming',
           },
           clientIp

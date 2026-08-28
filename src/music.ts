@@ -132,18 +132,19 @@ export class Music {
 
     let standardDeviation = Math.round(stdDev * 100) / 100; // Round to 2 decimal places
 
-    if (standardDeviation > 1) {
-      if (
-        discogsResult.year == 0 &&
-        aiResult.year == 0 &&
-        mbResult.year == 0 &&
-        spotifyReleaseYear > 0
-      ) {
-        // Rule 1: If all years except Spotify are 0, use the Spotify year
-        finalYear = spotifyReleaseYear;
-        standardDeviation = 0;
-      }
+    // Rule 1: Spotify is the only source with a usable year. This sits outside
+    // the standardDeviation > 1 block below: with no valid AI/MB/Discogs year
+    // there is nothing to disagree about, so the deviation is 0 and that block
+    // never runs.
+    if (
+      totalWeight === 0 &&
+      spotifyReleaseYear > 0 &&
+      spotifyReleaseYear <= new Date().getFullYear()
+    ) {
+      finalYear = spotifyReleaseYear;
+    }
 
+    if (standardDeviation > 1) {
       // Rule 2: If besides Spotify at least 2 other sources have a valid year (>0),
       // and the Spotify year is the smallest of all valid years (>0), use the Spotify year.
       const nonSpotifyYears = [
@@ -216,6 +217,24 @@ export class Music {
       ) {
         finalYear = spotifyReleaseYear;
         standardDeviation = 0;
+      }
+
+      // Rule 6: nothing above could decide. If the AI year matches MusicBrainz
+      // or Discogs, treat that two-source agreement as enough to settle it.
+      // Guarded on the deviation so it only fires when rules 2-5 all missed -
+      // every rule that fires zeroes it.
+      if (standardDeviation > 1) {
+        const currentYear = new Date().getFullYear();
+        const aiYearValid = aiResult.year > 0 && aiResult.year <= currentYear;
+
+        if (
+          aiYearValid &&
+          (aiResult.year === mbResult.year ||
+            aiResult.year === discogsResult.year)
+        ) {
+          finalYear = aiResult.year;
+          standardDeviation = 0;
+        }
       }
     }
 

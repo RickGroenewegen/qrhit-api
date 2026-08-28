@@ -2,7 +2,8 @@
  * Unit tests for src/merchantcenter.ts (MerchantCenterService).
  *
  * Everything with I/O is mocked at the module boundary:
- *  - googleapis            → Content API products.* captured (payload assertions)
+ *  - googleapis            → Merchant API productInputs/products/dataSources
+ *                            captured (payload assertions)
  *  - cron                  → no-op CronJob class (constructor-scheduled jobs never fire)
  *  - ../../../src/prisma   → in-memory prisma stub (no MariaDB)
  *  - ../../../src/services/fx → deterministic convertAndFormat with fixed rates
@@ -11,7 +12,7 @@
  * src/data/currency-map is the REAL module (pure country→currency logic).
  *
  * ENVIRONMENT=test (not "development"), so upload paths really hit the
- * (mocked) Content API and we can assert the exact request payloads.
+ * (mocked) Merchant API and we can assert the exact request payloads.
  */
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import fsp from 'fs/promises';
@@ -25,20 +26,29 @@ const h = vi.hoisted(() => {
   process.env['FRONTEND_URI'] = 'https://www.qrsong.io';
   process.env['API_URI'] = 'https://api.qrsong.io';
   process.env['ENVIRONMENT'] = 'test';
+  // Debug mode reads the product back after each write; no real sleep in tests.
+  process.env['DEBUG_WAIT_TIME'] = '0';
   delete process.env['DEBUG_MERCHANT_CENTER'];
   delete process.env['FORCE_NEW_IMAGES'];
 
   return {
-    // googleapis Content API
-    products: {
-      get: vi.fn(),
+    // googleapis Merchant API. Writes go through productInputs (insert is an
+    // upsert; there is no update call), reads through accounts.products, and
+    // the data source every write must name through accounts.dataSources.
+    productInputs: {
       insert: vi.fn(),
-      update: vi.fn(),
       delete: vi.fn(),
+    },
+    accountProducts: {
+      get: vi.fn(),
       list: vi.fn(),
     },
+    dataSources: {
+      list: vi.fn(),
+      create: vi.fn(),
+    },
     googleAuthCtor: vi.fn(),
-    contentCtor: vi.fn(),
+    merchantapiCtor: vi.fn(),
     authClient: { fake: 'auth-client' },
     // prisma
     prisma: {
@@ -75,9 +85,15 @@ vi.mock('googleapis', () => ({
         getClient = async () => h.authClient;
       },
     },
-    content: (opts: any) => {
-      h.contentCtor(opts);
-      return { products: h.products };
+    merchantapi: (opts: any) => {
+      h.merchantapiCtor(opts);
+      if (opts.version === 'datasources_v1') {
+        return { accounts: { dataSources: h.dataSources } };
+      }
+      return {
+        productInputs: h.productInputs,
+        accounts: { products: h.accountProducts },
+      };
     },
   },
 }));
@@ -189,6 +205,12 @@ const ASSETS_DIR = process.env['ASSETS_DIR']!;
 const PRODUCTS_DIR = path.join(PUBLIC_DIR, 'products');
 const AI_IMAGE_URL =
   'https://api.qrsong.io/public/products/merchant_ai_PL7_1000.jpg';
+const ACCOUNT = 'accounts/merchant-test-1';
+const DATA_SOURCE = `${ACCOUNT}/dataSources/ds-1`;
+
+// Merchant API prices are integer micros strings, not decimals.
+const micros = (amount: string) =>
+  Math.round(parseFloat(amount) * 1_000_000).toString();
 
 // Deterministic FX rates used by the mocked Fx.convertAndFormat. Mirrors the
 // real contract: unknown / EUR targets fall back to EUR with the raw amount.
@@ -289,7 +311,9 @@ function notFound404(): Error {
 beforeEach(async () => {
   // Reset every holder mock (calls AND one-off implementations)…
   for (const fn of [
-    ...Object.values(h.products),
+    ...Object.values(h.productInputs),
+    ...Object.values(h.accountProducts),
+    ...Object.values(h.dataSources),
     ...Object.values(h.prisma.playlist),
     h.prisma.paymentHasPlaylist.findFirst,
     h.translationsByPrefix,
@@ -302,7 +326,7 @@ beforeEach(async () => {
     h.axiosGet,
     h.cronCtor,
     h.googleAuthCtor,
-    h.contentCtor,
+    h.merchantapiCtor,
   ]) {
     fn.mockReset();
   }
@@ -332,13 +356,26 @@ beforeEach(async () => {
       shippingCosts: SHIPPING_TIERS,
     })),
   });
-  h.products.get.mockImplementation(async () => {
+  h.accountProducts.get.mockImplementation(async () => {
     throw notFound404();
   });
-  h.products.insert.mockResolvedValue({});
-  h.products.update.mockResolvedValue({});
-  h.products.delete.mockResolvedValue({});
-  h.products.list.mockResolvedValue({ data: { resources: [] } });
+  h.accountProducts.list.mockResolvedValue({ data: { products: [] } });
+  h.productInputs.insert.mockResolvedValue({});
+  h.productInputs.delete.mockResolvedValue({});
+  // The account already has our API data source, so init resolves it by
+  // display name instead of creating one.
+  h.dataSources.list.mockResolvedValue({
+    data: {
+      dataSources: [
+        {
+          name: DATA_SOURCE,
+          displayName: 'QRSong! API feed',
+          primaryProductDataSource: {},
+        },
+      ],
+    },
+  });
+  h.dataSources.create.mockResolvedValue({ data: { name: DATA_SOURCE } });
   h.prisma.playlist.findMany.mockResolvedValue([]);
   h.prisma.playlist.findUnique.mockResolvedValue(null);
   h.prisma.playlist.update.mockResolvedValue({});
@@ -362,23 +399,81 @@ beforeEach(async () => {
 // Initialization
 // ---------------------------------------------------------------------------
 describe('initialization', () => {
-  it('authenticates with the service account and builds the v2.1 Content API client', async () => {
+  it('authenticates with the service account and builds the Merchant API clients', async () => {
     // First public call triggers lazy init.
     const products = await merchantCenter.listProducts();
     expect(products).toEqual([]);
     expect(h.googleAuthCtor).toHaveBeenCalledWith({
       keyFile: '/tmp/fake-google-key.json',
+      // Merchant API reuses the Content API scope.
       scopes: ['https://www.googleapis.com/auth/content'],
     });
-    expect(h.contentCtor).toHaveBeenCalledWith({
-      version: 'v2.1',
+    expect(h.merchantapiCtor).toHaveBeenCalledWith({
+      version: 'products_v1',
       auth: h.authClient,
     });
-    expect(h.products.list).toHaveBeenCalledWith({
-      merchantId: 'merchant-test-1',
-      maxResults: 250,
+    expect(h.merchantapiCtor).toHaveBeenCalledWith({
+      version: 'datasources_v1',
+      auth: h.authClient,
+    });
+    expect(h.accountProducts.list).toHaveBeenCalledWith({
+      parent: ACCOUNT,
+      pageSize: 1000,
       pageToken: undefined,
     });
+  });
+
+  it('resolves the API data source by display name and reuses it', async () => {
+    svc.initialized = false;
+    svc.initPromise = null;
+    await svc.ensureInitialized();
+    expect(h.dataSources.list).toHaveBeenCalledWith({
+      parent: ACCOUNT,
+      pageSize: 1000,
+      pageToken: undefined,
+    });
+    expect(h.dataSources.create).not.toHaveBeenCalled();
+    expect(svc.dataSourceName).toBe(DATA_SOURCE);
+  });
+
+  it('creates the API data source when the account has none', async () => {
+    h.dataSources.list.mockResolvedValue({ data: { dataSources: [] } });
+    h.dataSources.create.mockResolvedValue({
+      data: { name: `${ACCOUNT}/dataSources/ds-new` },
+    });
+    svc.initialized = false;
+    svc.initPromise = null;
+    try {
+      await svc.ensureInitialized();
+      expect(h.dataSources.create).toHaveBeenCalledWith({
+        parent: ACCOUNT,
+        requestBody: {
+          displayName: 'QRSong! API feed',
+          // feedLabel / contentLanguage unset so one source takes every
+          // locale-country combination we publish.
+          primaryProductDataSource: {},
+        },
+      });
+      expect(svc.dataSourceName).toBe(`${ACCOUNT}/dataSources/ds-new`);
+    } finally {
+      svc.initialized = false;
+      svc.initPromise = null;
+    }
+  });
+
+  it('honours an explicitly configured data source', async () => {
+    process.env['GOOGLE_MERCHANT_DATASOURCE'] = '98765';
+    svc.initialized = false;
+    svc.initPromise = null;
+    try {
+      await svc.ensureInitialized();
+      expect(svc.dataSourceName).toBe(`${ACCOUNT}/dataSources/98765`);
+      expect(h.dataSources.list).not.toHaveBeenCalled();
+    } finally {
+      delete process.env['GOOGLE_MERCHANT_DATASOURCE'];
+      svc.initialized = false;
+      svc.initPromise = null;
+    }
   });
 
   it('falls back to a no-op stub client when the key file env var is missing', async () => {
@@ -389,8 +484,8 @@ describe('initialization', () => {
       svc.initPromise = null;
       const products = await merchantCenter.listProducts();
       expect(products).toEqual([]);
-      // The real (mocked) Content API was never touched.
-      expect(h.products.list).not.toHaveBeenCalled();
+      // The real (mocked) Merchant API was never touched.
+      expect(h.accountProducts.list).not.toHaveBeenCalled();
     } finally {
       process.env['GOOGLE_SERVICE_ACCOUNT_KEY_FILE'] = savedKey;
       svc.initialized = false;
@@ -462,18 +557,18 @@ describe('computeExpectedProductIdsForPlaylist', () => {
       featuredLocale: null,
     });
     expect(ids).toEqual([
-      'online:en:US:7_3_1',
-      'online:en:GB:7_3_1',
-      'online:en:AU:7_3_1',
-      'online:en:CA:7_3_1',
-      'online:nl:NL:7_3_2',
-      'online:nl:BE:7_3_2',
-      'online:de:DE:7_3_3',
-      'online:de:AT:7_3_3',
-      'online:de:CH:7_3_3',
-      'online:es:ES:7_3_4',
-      'online:sv:SE:7_3_5',
-      'online:no:NO:7_3_6',
+      'en~US~7_3_1',
+      'en~GB~7_3_1',
+      'en~AU~7_3_1',
+      'en~CA~7_3_1',
+      'nl~NL~7_3_2',
+      'nl~BE~7_3_2',
+      'de~DE~7_3_3',
+      'de~AT~7_3_3',
+      'de~CH~7_3_3',
+      'es~ES~7_3_4',
+      'sv~SE~7_3_5',
+      'no~NO~7_3_6',
     ]);
   });
 
@@ -483,9 +578,9 @@ describe('computeExpectedProductIdsForPlaylist', () => {
       featuredLocale: 'de',
     });
     expect(ids).toEqual([
-      'online:de:DE:7_3_3',
-      'online:de:AT:7_3_3',
-      'online:de:CH:7_3_3',
+      'de~DE~7_3_3',
+      'de~AT~7_3_3',
+      'de~CH~7_3_3',
     ]);
   });
 
@@ -495,9 +590,9 @@ describe('computeExpectedProductIdsForPlaylist', () => {
     expect(
       svc.computeExpectedProductIdsForPlaylist({ id: 7, featuredLocale: 'fr' })
     ).toEqual([
-      'online:en:CA:7_3_1',
-      'online:nl:BE:7_3_2',
-      'online:de:CH:7_3_3',
+      'en~CA~7_3_1',
+      'nl~BE~7_3_2',
+      'de~CH~7_3_3',
     ]);
   });
 });
@@ -580,42 +675,43 @@ describe('createMerchantProduct', () => {
   it('builds the complete physical-card payload for nl/NL in EUR', async () => {
     const product = await svc.createMerchantProduct(makeVariant());
     expect(product).toEqual({
-      id: 'online:nl:NL:7_3_2',
+      productId: 'nl~NL~7_3_2',
       offerId: '7_3_2',
-      title: 'QR Muziekspel (kaarten) - Top Hits - 100 kaarten',
-      description: 'NL beschrijving Bevat 100 muzieknummers',
-      link: 'https://www.qrsong.io/nl/product/top-hits?orderType=physical',
-      imageLink: AI_IMAGE_URL,
-      availability: 'in_stock',
-      condition: 'new',
-      price: { value: '21.95', currency: 'EUR' },
-      brand: 'QRSong!',
       contentLanguage: 'nl',
-      targetCountry: 'NL',
-      channel: 'online',
-      productTypes: ['Music', 'QR Codes', 'Pop', 'Physical Product'],
-      googleProductCategory: '5030',
-      shipping: [
-        {
-          country: 'NL',
-          service: 'Standard Shipping',
-          price: { value: '5.00', currency: 'EUR' },
-          minHandlingTime: 1,
-          maxHandlingTime: 2,
-          minTransitTime: 2,
-          maxTransitTime: 5,
-        },
-      ],
-      shippingLabel: 'standard_shipping',
+      feedLabel: 'NL',
+      productAttributes: {
+        title: 'QR Muziekspel (kaarten) - Top Hits - 100 kaarten',
+        description: 'NL beschrijving Bevat 100 muzieknummers',
+        link: 'https://www.qrsong.io/nl/product/top-hits?orderType=physical',
+        imageLink: AI_IMAGE_URL,
+        availability: 'in_stock',
+        condition: 'new',
+        price: { amountMicros: '21950000', currencyCode: 'EUR' },
+        brand: 'QRSong!',
+        productTypes: ['Music', 'QR Codes', 'Pop', 'Physical Product'],
+        googleProductCategory: '5030',
+        shipping: [
+          {
+            country: 'NL',
+            service: 'Standard Shipping',
+            price: { amountMicros: '5000000', currencyCode: 'EUR' },
+            minHandlingTime: '1',
+            maxHandlingTime: '2',
+            minTransitTime: '2',
+            maxTransitTime: '5',
+          },
+        ],
+        shippingLabel: 'standard_shipping',
+        // Custom labels are first-class product fields in the Merchant API.
+        customLabel0: 'physical',
+        customLabel1: 'pop_hits',
+        customLabel2: 'pop',
+        customLabel3: 'medium',
+      },
       customAttributes: [
         { name: 'number_of_tracks', value: '100' },
         { name: 'product_variant', value: 'physical' },
         { name: 'playlist_slug', value: 'top-hits' },
-        { name: 'custom_label_0', value: 'physical' },
-        { name: 'custom_label_1', value: 'pop_hits' },
-        { name: 'custom_label_2', value: 'pop' },
-        { name: 'custom_label_3', value: 'medium' },
-        { name: 'custom_label_4', value: '' },
       ],
     });
     // Price and shipping were converted through Fx with the country currency
@@ -628,19 +724,26 @@ describe('createMerchantProduct', () => {
     const product = await svc.createMerchantProduct(
       makeVariant({ locale: 'en', country: 'US', description: 'EN description' })
     );
-    expect(product.id).toBe('online:en:US:7_3_1');
+    expect(product.productId).toBe('en~US~7_3_1');
     expect(product.contentLanguage).toBe('en');
-    expect(product.targetCountry).toBe('US');
-    expect(product.price).toEqual({ value: '43.90', currency: 'USD' });
-    expect(product.shipping).toEqual([
+    expect(product.feedLabel).toBe('US');
+    expect(product.productAttributes.price).toEqual({
+      amountMicros: '43900000',
+      currencyCode: 'USD',
+    });
+    expect(product.productAttributes.shipping).toEqual([
       expect.objectContaining({
         country: 'US',
         service: 'Standard Shipping',
-        price: { value: '10.00', currency: 'USD' },
+        price: { amountMicros: '10000000', currencyCode: 'USD' },
       }),
     ]);
-    expect(product.title).toBe('QR Music Game (cards) - Top Hits - 100 cards');
-    expect(product.description).toBe('EN description Contains 100 music tracks');
+    expect(product.productAttributes.title).toBe(
+      'QR Music Game (cards) - Top Hits - 100 cards'
+    );
+    expect(product.productAttributes.description).toBe(
+      'EN description Contains 100 music tracks'
+    );
     expect(h.fxConvertAndFormat).toHaveBeenCalledWith(21.95, 'USD');
     expect(h.fxConvertAndFormat).toHaveBeenCalledWith(5, 'USD');
   });
@@ -656,10 +759,13 @@ describe('createMerchantProduct', () => {
     );
     // We trust the returned currency, not the requested one.
     expect(h.fxConvertAndFormat).toHaveBeenCalledWith(21.95, 'CHF');
-    expect(product.price).toEqual({ value: '21.95', currency: 'EUR' });
-    expect(product.shipping[0].price).toEqual({
-      value: '5.00',
-      currency: 'EUR',
+    expect(product.productAttributes.price).toEqual({
+      amountMicros: '21950000',
+      currencyCode: 'EUR',
+    });
+    expect(product.productAttributes.shipping[0].price).toEqual({
+      amountMicros: '5000000',
+      currencyCode: 'EUR',
     });
   });
 
@@ -667,48 +773,49 @@ describe('createMerchantProduct', () => {
     const product = await svc.createMerchantProduct(
       makeVariant({ type: 'digital', locale: 'en', country: 'US' })
     );
-    expect(product.id).toBe('online:en:US:7_1_1');
+    expect(product.productId).toBe('en~US~7_1_1');
     expect(product.offerId).toBe('7_1_1');
-    expect(product.googleProductCategory).toBe('839');
-    expect(product.shippingLabel).toBe('digital_delivery');
-    expect(product.shipping).toEqual([
+    expect(product.productAttributes.googleProductCategory).toBe('839');
+    expect(product.productAttributes.shippingLabel).toBe('digital_delivery');
+    expect(product.productAttributes.shipping).toEqual([
       {
         country: 'US',
         service: 'Digital Delivery',
-        price: { value: '0', currency: 'USD' },
-        minHandlingTime: 0,
-        maxHandlingTime: 0,
-        minTransitTime: 0,
-        maxTransitTime: 0,
+        price: { amountMicros: '0', currencyCode: 'USD' },
+        minHandlingTime: '0',
+        maxHandlingTime: '0',
+        minTransitTime: '0',
+        maxTransitTime: '0',
       },
     ]);
-    expect(product.title).toBe('QR Music Game (PDF) - Top Hits - 100 cards');
-    expect(
-      product.customAttributes.find((a: any) => a.name === 'custom_label_0')
-        ?.value
-    ).toBe('digital');
+    expect(product.productAttributes.title).toBe(
+      'QR Music Game (PDF) - Top Hits - 100 cards'
+    );
+    expect(product.productAttributes.customLabel0).toBe('digital');
   });
 
   it('uses the smallest shipping tier for sheets and the sheets title suffix', async () => {
     const product = await svc.createMerchantProduct(
       makeVariant({ type: 'sheets' })
     );
-    expect(product.id).toBe('online:nl:NL:7_2_2');
-    expect(product.title).toBe('QR Muziekspel (vellen) - Top Hits - 100 kaarten');
-    expect(product.googleProductCategory).toBe('5030');
-    expect(product.shipping[0].price).toEqual({
-      value: '3.00',
-      currency: 'EUR',
+    expect(product.productId).toBe('nl~NL~7_2_2');
+    expect(product.productAttributes.title).toBe(
+      'QR Muziekspel (vellen) - Top Hits - 100 kaarten'
+    );
+    expect(product.productAttributes.googleProductCategory).toBe('5030');
+    expect(product.productAttributes.shipping[0].price).toEqual({
+      amountMicros: '3000000',
+      currencyCode: 'EUR',
     });
-    expect(product.shippingLabel).toBe('standard_shipping');
+    expect(product.productAttributes.shippingLabel).toBe('standard_shipping');
   });
 
   it('falls back to 4.95 EUR shipping when the country has no configured cost', async () => {
     svc.shippingCostsByCountry = new Map();
     const product = await svc.createMerchantProduct(makeVariant());
-    expect(product.shipping[0].price).toEqual({
-      value: '4.95',
-      currency: 'EUR',
+    expect(product.productAttributes.shipping[0].price).toEqual({
+      amountMicros: '4950000',
+      currencyCode: 'EUR',
     });
     expect(h.fxConvertAndFormat).toHaveBeenCalledWith(4.95, 'EUR');
   });
@@ -718,22 +825,26 @@ describe('createMerchantProduct', () => {
     const product = await svc.createMerchantProduct(makeVariant());
     // With the translation table unavailable, both the title and the unit
     // label fall back to English.
-    expect(product.title).toBe('QR Music Game (cards) - Top Hits - 100 cards');
+    expect(product.productAttributes.title).toBe(
+      'QR Music Game (cards) - Top Hits - 100 cards'
+    );
   });
 
   it('truncates the description to 5000 characters', async () => {
     const product = await svc.createMerchantProduct(
       makeVariant({ description: 'x'.repeat(5100) })
     );
-    expect(product.description).toHaveLength(5000);
-    expect(product.description.startsWith('xxx')).toBe(true);
+    expect(product.productAttributes.description).toHaveLength(5000);
+    expect(product.productAttributes.description.startsWith('xxx')).toBe(true);
   });
 
   it('keeps the (oddly leading-spaced) track label when the description is empty', async () => {
     const product = await svc.createMerchantProduct(
       makeVariant({ description: undefined, locale: 'en', country: 'US' })
     );
-    expect(product.description).toBe(' Contains 100 music tracks');
+    expect(product.productAttributes.description).toBe(
+      ' Contains 100 music tracks'
+    );
   });
 
   it('returns null (skips the variant) when only a raw external image is available', async () => {
@@ -825,11 +936,11 @@ describe('uploadFeaturedPlaylists', () => {
       .mockResolvedValueOnce([{ id: 7 }]) // sorted IDs
       .mockResolvedValueOnce([playlist]) // full records
       .mockResolvedValueOnce([{ id: 7, featuredLocale: null }]); // cleanup set
-    h.products.list.mockResolvedValue({
+    h.accountProducts.list.mockResolvedValue({
       data: {
-        resources: [
-          { id: 'online:nl:NL:7_3_2' }, // expected → kept
-          { id: 'online:en:US:999_3_1' }, // stale → deleted
+        products: [
+          { name: `${ACCOUNT}/products/nl~NL~7_3_2` }, // expected → kept
+          { name: `${ACCOUNT}/products/en~US~999_3_1` }, // stale → deleted
         ],
       },
     });
@@ -857,68 +968,77 @@ describe('uploadFeaturedPlaylists', () => {
     expect(h.getOrderType).toHaveBeenCalledWith(100, false, 'cards', 'PL7', 'none');
 
     // 12 inserts: en×4 countries, nl×2, de×3, es/sv/no ×1.
-    expect(h.products.insert).toHaveBeenCalledTimes(12);
-    const calls = h.products.insert.mock.calls;
+    expect(h.productInputs.insert).toHaveBeenCalledTimes(12);
+    const calls = h.productInputs.insert.mock.calls;
     for (const call of calls) {
-      expect(call[0].merchantId).toBe('merchant-test-1');
+      // Every write names the account and the resolved API data source.
+      expect(call[0].parent).toBe(ACCOUNT);
+      expect(call[0].dataSource).toBe(DATA_SOURCE);
     }
     const byCountry = new Map(
-      calls.map((c: any[]) => [c[0].requestBody.targetCountry, c[0].requestBody])
+      calls.map((c: any[]) => [c[0].requestBody.feedLabel, c[0].requestBody])
     );
 
     const rows: Array<[string, string, string, string, string, string]> = [
       // country, language, price, currency, shipping price, product id
-      ['US', 'en', '43.90', 'USD', '10.00', 'online:en:US:7_3_1'],
-      ['GB', 'en', '17.56', 'GBP', '4.00', 'online:en:GB:7_3_1'],
-      ['AU', 'en', '35.12', 'AUD', '8.00', 'online:en:AU:7_3_1'],
-      ['CA', 'en', '30.73', 'CAD', '7.00', 'online:en:CA:7_3_1'],
-      ['NL', 'nl', '21.95', 'EUR', '5.00', 'online:nl:NL:7_3_2'],
-      ['BE', 'nl', '21.95', 'EUR', '5.00', 'online:nl:BE:7_3_2'],
-      ['DE', 'de', '21.95', 'EUR', '5.00', 'online:de:DE:7_3_3'],
-      ['AT', 'de', '21.95', 'EUR', '5.00', 'online:de:AT:7_3_3'],
-      ['CH', 'de', '26.34', 'CHF', '6.00', 'online:de:CH:7_3_3'],
-      ['ES', 'es', '21.95', 'EUR', '5.00', 'online:es:ES:7_3_4'],
-      ['SE', 'sv', '219.50', 'SEK', '50.00', 'online:sv:SE:7_3_5'],
-      ['NO', 'no', '263.40', 'NOK', '60.00', 'online:no:NO:7_3_6'],
+      ['US', 'en', '43.90', 'USD', '10.00', 'en~US~7_3_1'],
+      ['GB', 'en', '17.56', 'GBP', '4.00', 'en~GB~7_3_1'],
+      ['AU', 'en', '35.12', 'AUD', '8.00', 'en~AU~7_3_1'],
+      ['CA', 'en', '30.73', 'CAD', '7.00', 'en~CA~7_3_1'],
+      ['NL', 'nl', '21.95', 'EUR', '5.00', 'nl~NL~7_3_2'],
+      ['BE', 'nl', '21.95', 'EUR', '5.00', 'nl~BE~7_3_2'],
+      ['DE', 'de', '21.95', 'EUR', '5.00', 'de~DE~7_3_3'],
+      ['AT', 'de', '21.95', 'EUR', '5.00', 'de~AT~7_3_3'],
+      ['CH', 'de', '26.34', 'CHF', '6.00', 'de~CH~7_3_3'],
+      ['ES', 'es', '21.95', 'EUR', '5.00', 'es~ES~7_3_4'],
+      ['SE', 'sv', '219.50', 'SEK', '50.00', 'sv~SE~7_3_5'],
+      ['NO', 'no', '263.40', 'NOK', '60.00', 'no~NO~7_3_6'],
     ];
     for (const [country, lang, value, currency, shipValue, id] of rows) {
       const body: any = byCountry.get(country);
       expect(body, `payload for ${country}`).toBeDefined();
-      expect(body.id).toBe(id);
+      // The composite id is not sent any more; it is derived from
+      // contentLanguage + feedLabel + offerId.
+      expect(`${body.contentLanguage}~${body.feedLabel}~${body.offerId}`).toBe(
+        id
+      );
       expect(body.contentLanguage).toBe(lang);
-      expect(body.targetCountry).toBe(country);
-      expect(body.channel).toBe('online');
-      expect(body.price).toEqual({ value, currency });
-      expect(body.shipping).toEqual([
+      expect(body.feedLabel).toBe(country);
+      const attrs = body.productAttributes;
+      expect(attrs.price).toEqual({
+        amountMicros: micros(value),
+        currencyCode: currency,
+      });
+      expect(attrs.shipping).toEqual([
         {
           country,
           service: 'Standard Shipping',
-          price: { value: shipValue, currency },
-          minHandlingTime: 1,
-          maxHandlingTime: 2,
-          minTransitTime: 2,
-          maxTransitTime: 5,
+          price: { amountMicros: micros(shipValue), currencyCode: currency },
+          minHandlingTime: '1',
+          maxHandlingTime: '2',
+          minTransitTime: '2',
+          maxTransitTime: '5',
         },
       ]);
-      expect(body.link).toBe(
+      expect(attrs.link).toBe(
         `https://www.qrsong.io/${lang}/product/top-hits?orderType=physical`
       );
-      expect(body.imageLink).toBe(AI_IMAGE_URL);
+      expect(attrs.imageLink).toBe(AI_IMAGE_URL);
     }
 
     // Same English content for all four English-speaking targets.
-    expect((byCountry.get('US') as any).title).toBe(
+    expect((byCountry.get('US') as any).productAttributes.title).toBe(
       'QR Music Game (cards) - Top Hits - 100 cards'
     );
-    expect((byCountry.get('GB') as any).title).toBe(
+    expect((byCountry.get('GB') as any).productAttributes.title).toBe(
       'QR Music Game (cards) - Top Hits - 100 cards'
     );
     // Localized Dutch content for NL/BE.
-    expect((byCountry.get('BE') as any).description).toBe(
+    expect((byCountry.get('BE') as any).productAttributes.description).toBe(
       'NL beschrijving Bevat 100 muzieknummers'
     );
     // sv has no description_sv → falls back to English text + Swedish label.
-    expect((byCountry.get('SE') as any).description).toBe(
+    expect((byCountry.get('SE') as any).productAttributes.description).toBe(
       'EN description Innehåller 100 musikspår'
     );
 
@@ -929,10 +1049,10 @@ describe('uploadFeaturedPlaylists', () => {
     });
 
     // Cleanup pass removed only the stale product.
-    expect(h.products.delete).toHaveBeenCalledTimes(1);
-    expect(h.products.delete).toHaveBeenCalledWith({
-      merchantId: 'merchant-test-1',
-      productId: 'online:en:US:999_3_1',
+    expect(h.productInputs.delete).toHaveBeenCalledTimes(1);
+    expect(h.productInputs.delete).toHaveBeenCalledWith({
+      name: `${ACCOUNT}/productInputs/en~US~999_3_1`,
+      dataSource: DATA_SOURCE,
     });
   });
 
@@ -951,7 +1071,7 @@ describe('uploadFeaturedPlaylists', () => {
         { id: 7, featuredLocale: 'de' },
         { id: 8, featuredLocale: 'de' },
       ]); // cleanup set
-    h.products.list.mockResolvedValue({ data: { resources: [] } });
+    h.accountProducts.list.mockResolvedValue({ data: { products: [] } });
     // First playlist's price lookup throws (poison); the second succeeds.
     h.getOrderType
       .mockRejectedValueOnce(new Error('boom'))
@@ -963,7 +1083,7 @@ describe('uploadFeaturedPlaylists', () => {
     ).resolves.toBeUndefined();
 
     // Only the healthy playlist (8) uploaded its DE/AT/CH variants.
-    expect(h.products.insert).toHaveBeenCalledTimes(3);
+    expect(h.productInputs.insert).toHaveBeenCalledTimes(3);
     // Its flag was cleared…
     expect(h.prisma.playlist.update).toHaveBeenCalledWith({
       where: { id: 8 },
@@ -979,8 +1099,8 @@ describe('uploadFeaturedPlaylists', () => {
   it('returns early without touching the API when no playlist is marked', async () => {
     h.prisma.playlist.findMany.mockResolvedValue([]);
     await merchantCenter.uploadFeaturedPlaylists();
-    expect(h.products.insert).not.toHaveBeenCalled();
-    expect(h.products.list).not.toHaveBeenCalled();
+    expect(h.productInputs.insert).not.toHaveBeenCalled();
+    expect(h.accountProducts.list).not.toHaveBeenCalled();
     expect(h.prisma.playlist.update).not.toHaveBeenCalled();
   });
 
@@ -992,10 +1112,10 @@ describe('uploadFeaturedPlaylists', () => {
       .mockRejectedValueOnce(new Error('db hiccup'));
 
     await expect(merchantCenter.uploadFeaturedPlaylists()).resolves.toBeUndefined();
-    expect(h.products.insert).toHaveBeenCalledTimes(12);
+    expect(h.productInputs.insert).toHaveBeenCalledTimes(12);
     // No list/delete: cleanup was skipped to avoid deleting valid products.
-    expect(h.products.list).not.toHaveBeenCalled();
-    expect(h.products.delete).not.toHaveBeenCalled();
+    expect(h.accountProducts.list).not.toHaveBeenCalled();
+    expect(h.productInputs.delete).not.toHaveBeenCalled();
   });
 
   it('rethrows when the initial playlist query fails', async () => {
@@ -1017,38 +1137,41 @@ describe('uploadPlaylist', () => {
   it('only uploads the featured locale when featuredLocale is set', async () => {
     const ids = await svc.uploadPlaylist(makePlaylist({ featuredLocale: 'de' }));
     expect(ids).toEqual([
-      'online:de:DE:7_3_3',
-      'online:de:AT:7_3_3',
-      'online:de:CH:7_3_3',
+      'de~DE~7_3_3',
+      'de~AT~7_3_3',
+      'de~CH~7_3_3',
     ]);
-    expect(h.products.insert).toHaveBeenCalledTimes(3);
+    expect(h.productInputs.insert).toHaveBeenCalledTimes(3);
   });
 
   it('uploads to every country whose allowed locales cover the featured locale (fr → CA/BE/CH)', async () => {
     const ids = await svc.uploadPlaylist(makePlaylist({ featuredLocale: 'fr' }));
     expect(ids).toEqual([
-      'online:en:CA:7_3_1',
-      'online:nl:BE:7_3_2',
-      'online:de:CH:7_3_3',
+      'en~CA~7_3_1',
+      'nl~BE~7_3_2',
+      'de~CH~7_3_3',
     ]);
-    expect(h.products.insert).toHaveBeenCalledTimes(3);
+    expect(h.productInputs.insert).toHaveBeenCalledTimes(3);
   });
 
   it('stops after the first variant in debug mode', async () => {
     process.env['DEBUG_MERCHANT_CENTER'] = 'true';
     const ids = await svc.uploadPlaylist(makePlaylist());
-    expect(ids).toEqual(['online:en:US:7_3_1']);
-    expect(h.products.insert).toHaveBeenCalledTimes(1);
+    expect(ids).toEqual(['en~US~7_3_1']);
+    expect(h.productInputs.insert).toHaveBeenCalledTimes(1);
   });
 
   it('falls back to the playlist price when no order type matches', async () => {
     h.getOrderType.mockResolvedValue(null);
     await svc.uploadPlaylist(makePlaylist({ featuredLocale: 'nl', price: 25 }));
-    const bodies = h.products.insert.mock.calls.map(
+    const bodies = h.productInputs.insert.mock.calls.map(
       (c: any[]) => c[0].requestBody
     );
-    expect(bodies.map((b: any) => b.targetCountry)).toEqual(['NL', 'BE']);
-    expect(bodies[0].price).toEqual({ value: '25.00', currency: 'EUR' });
+    expect(bodies.map((b: any) => b.feedLabel)).toEqual(['NL', 'BE']);
+    expect(bodies[0].productAttributes.price).toEqual({
+      amountMicros: '25000000',
+      currencyCode: 'EUR',
+    });
   });
 
   it('falls back to 29.99 when neither order type nor playlist price exist', async () => {
@@ -1057,112 +1180,163 @@ describe('uploadPlaylist', () => {
       makePlaylist({ featuredLocale: 'nl', price: null })
     );
     expect(
-      h.products.insert.mock.calls[0][0].requestBody.price
-    ).toEqual({ value: '29.99', currency: 'EUR' });
+      h.productInputs.insert.mock.calls[0][0].requestBody.productAttributes
+        .price
+    ).toEqual({ amountMicros: '29990000', currencyCode: 'EUR' });
   });
 });
 
 // ---------------------------------------------------------------------------
-// uploadProductVariant — insert vs update vs failure
+// uploadProductVariant — upsert vs failure
 // ---------------------------------------------------------------------------
 describe('uploadProductVariant', () => {
   beforeEach(async () => {
     await putAIImage();
   });
 
-  it('PATCHes the existing product when Google already has it', async () => {
-    h.products.get.mockResolvedValue({ data: { id: 'google-side-id' } });
+  it('upserts through productInputs without reading the product first', async () => {
+    // productInputs.insert replaces an existing input wholesale, so unlike the
+    // Content API there is no get-then-insert-or-PATCH branch and no second
+    // call to change custom labels.
     const id = await svc.uploadProductVariant(makeVariant());
-    expect(id).toBe('online:nl:NL:7_3_2');
-    expect(h.products.insert).not.toHaveBeenCalled();
-    expect(h.products.update).toHaveBeenCalledTimes(1);
+    expect(id).toBe('nl~NL~7_3_2');
+    expect(h.accountProducts.get).not.toHaveBeenCalled();
+    expect(h.productInputs.insert).toHaveBeenCalledTimes(1);
 
-    const call = h.products.update.mock.calls[0][0];
-    expect(call.merchantId).toBe('merchant-test-1');
-    expect(call.productId).toBe('google-side-id');
-    expect(call.updateMask).toBe(
-      'title,description,link,imageLink,price,availability,brand,googleProductCategory,productTypes,shipping,shippingLabel'
-    );
-    // PATCH body: condition included, customAttributes excluded (cannot be
-    // updated via PATCH), identity fields not resent.
+    const call = h.productInputs.insert.mock.calls[0][0];
+    expect(call.parent).toBe(ACCOUNT);
+    expect(call.dataSource).toBe(DATA_SOURCE);
     expect(call.requestBody).toEqual({
-      title: 'QR Muziekspel (kaarten) - Top Hits - 100 kaarten',
-      description: 'NL beschrijving Bevat 100 muzieknummers',
-      link: 'https://www.qrsong.io/nl/product/top-hits?orderType=physical',
-      imageLink: AI_IMAGE_URL,
-      price: { value: '21.95', currency: 'EUR' },
-      availability: 'in_stock',
-      brand: 'QRSong!',
-      googleProductCategory: '5030',
-      productTypes: ['Music', 'QR Codes', 'Pop', 'Physical Product'],
-      shipping: [
-        expect.objectContaining({
-          country: 'NL',
-          price: { value: '4.95', currency: 'EUR' }, // no costs loaded → fallback
-        }),
+      offerId: '7_3_2',
+      contentLanguage: 'nl',
+      feedLabel: 'NL',
+      productAttributes: {
+        title: 'QR Muziekspel (kaarten) - Top Hits - 100 kaarten',
+        description: 'NL beschrijving Bevat 100 muzieknummers',
+        link: 'https://www.qrsong.io/nl/product/top-hits?orderType=physical',
+        imageLink: AI_IMAGE_URL,
+        availability: 'in_stock',
+        condition: 'new',
+        price: { amountMicros: '21950000', currencyCode: 'EUR' },
+        brand: 'QRSong!',
+        productTypes: ['Music', 'QR Codes', 'Pop', 'Physical Product'],
+        googleProductCategory: '5030',
+        shipping: [
+          expect.objectContaining({
+            country: 'NL',
+            // no costs loaded → 4.95 EUR fallback
+            price: { amountMicros: '4950000', currencyCode: 'EUR' },
+          }),
+        ],
+        shippingLabel: 'standard_shipping',
+        customLabel0: 'physical',
+        customLabel1: 'pop_hits',
+        customLabel2: 'pop',
+        customLabel3: 'medium',
+      },
+      customAttributes: [
+        { name: 'number_of_tracks', value: '100' },
+        { name: 'product_variant', value: 'physical' },
+        { name: 'playlist_slug', value: 'top-hits' },
       ],
-      shippingLabel: 'standard_shipping',
-      condition: 'new',
     });
   });
 
-  it('retries the update with the bare offerId when the composite ID is rejected', async () => {
-    h.products.get.mockResolvedValue({ data: { id: 'google-side-id' } });
-    h.products.update
-      .mockRejectedValueOnce(new Error('invalid id'))
-      .mockResolvedValueOnce({});
-    const id = await svc.uploadProductVariant(makeVariant());
-    expect(id).toBe('online:nl:NL:7_3_2');
-    expect(h.products.update).toHaveBeenCalledTimes(2);
-    expect(h.products.update.mock.calls[1][0].productId).toBe('7_3_2');
-  });
-
   it('returns null instead of throwing when the insert fails', async () => {
-    h.products.insert.mockRejectedValue(new Error('quota exceeded'));
+    h.productInputs.insert.mockRejectedValue(new Error('quota exceeded'));
     const id = await svc.uploadProductVariant(makeVariant());
     expect(id).toBeNull();
+  });
+
+  it('reads the processed product back after writing in debug mode', async () => {
+    process.env['DEBUG_MERCHANT_CENTER'] = 'true';
+    h.accountProducts.get.mockResolvedValue({
+      data: {
+        name: `${ACCOUNT}/products/nl~NL~7_3_2`,
+        productAttributes: {
+          title: 't',
+          price: { amountMicros: '21950000', currencyCode: 'EUR' },
+        },
+      },
+    });
+
+    await svc.uploadProductVariant(makeVariant());
+
+    expect(h.accountProducts.get).toHaveBeenCalledWith({
+      name: `${ACCOUNT}/products/nl~NL~7_3_2`,
+    });
+  });
+
+  it('tolerates a product that is not readable back yet in debug mode', async () => {
+    // Merchant Center is eventually consistent, so a 404 right after the write
+    // is normal and must not fail the upload.
+    process.env['DEBUG_MERCHANT_CENTER'] = 'true';
+    const id = await svc.uploadProductVariant(makeVariant());
+    expect(id).toBe('nl~NL~7_3_2');
   });
 });
 
 // ---------------------------------------------------------------------------
-// Thin Content API wrappers
+// Thin Merchant API wrappers
 // ---------------------------------------------------------------------------
-describe('Content API wrappers', () => {
-  it('getProduct returns null on 404 and rethrows other errors', async () => {
-    expect(await svc.getProduct('online:nl:NL:7_3_2')).toBeNull();
+describe('Merchant API wrappers', () => {
+  it('getProduct addresses the product by resource name, null on 404', async () => {
+    expect(await svc.getProduct('nl~NL~7_3_2')).toBeNull();
+    expect(h.accountProducts.get).toHaveBeenCalledWith({
+      name: `${ACCOUNT}/products/nl~NL~7_3_2`,
+    });
 
-    h.products.get.mockResolvedValue({ data: { id: 'x', title: 't' } });
-    expect(await svc.getProduct('online:nl:NL:7_3_2')).toEqual({
-      id: 'x',
+    h.accountProducts.get.mockResolvedValue({ data: { name: 'x', title: 't' } });
+    expect(await svc.getProduct('nl~NL~7_3_2')).toEqual({
+      name: 'x',
       title: 't',
     });
 
     const boom: any = new Error('server error');
     boom.code = 500;
-    h.products.get.mockRejectedValue(boom);
-    await expect(svc.getProduct('online:nl:NL:7_3_2')).rejects.toThrow(
-      'server error'
-    );
+    h.accountProducts.get.mockRejectedValue(boom);
+    await expect(svc.getProduct('nl~NL~7_3_2')).rejects.toThrow('server error');
   });
 
-  it('deleteProduct forwards the merchant and product IDs', async () => {
-    await merchantCenter.deleteProduct('online:nl:NL:7_3_2');
-    expect(h.products.delete).toHaveBeenCalledWith({
-      merchantId: 'merchant-test-1',
-      productId: 'online:nl:NL:7_3_2',
+  it('deleteProduct targets the product input in our data source', async () => {
+    await merchantCenter.deleteProduct('nl~NL~7_3_2');
+    expect(h.productInputs.delete).toHaveBeenCalledWith({
+      name: `${ACCOUNT}/productInputs/nl~NL~7_3_2`,
+      dataSource: DATA_SOURCE,
     });
   });
 
   it('deleteProduct rethrows API errors', async () => {
-    h.products.delete.mockRejectedValue(new Error('forbidden'));
+    h.productInputs.delete.mockRejectedValue(new Error('forbidden'));
     await expect(merchantCenter.deleteProduct('x')).rejects.toThrow('forbidden');
   });
 
-  it('listProducts returns [] when Google sends no resources and throws on failure', async () => {
-    h.products.list.mockResolvedValue({ data: {} });
+  it('listProducts follows nextPageToken across pages', async () => {
+    h.accountProducts.list
+      .mockResolvedValueOnce({
+        data: {
+          products: [{ name: `${ACCOUNT}/products/en~US~1` }],
+          nextPageToken: 'page-2',
+        },
+      })
+      .mockResolvedValueOnce({
+        data: { products: [{ name: `${ACCOUNT}/products/en~US~2` }] },
+      });
+
+    const products = await merchantCenter.listProducts();
+    expect(products).toHaveLength(2);
+    expect(h.accountProducts.list).toHaveBeenNthCalledWith(2, {
+      parent: ACCOUNT,
+      pageSize: 1000,
+      pageToken: 'page-2',
+    });
+  });
+
+  it('listProducts returns [] when Google sends no products and throws on failure', async () => {
+    h.accountProducts.list.mockResolvedValue({ data: {} });
     expect(await merchantCenter.listProducts()).toEqual([]);
 
-    h.products.list.mockRejectedValue(new Error('rate limited'));
+    h.accountProducts.list.mockRejectedValue(new Error('rate limited'));
     await expect(merchantCenter.listProducts()).rejects.toThrow('rate limited');
   });
 });
@@ -1172,28 +1346,34 @@ describe('clearAllProducts', () => {
     await expect(merchantCenter.clearAllProducts()).rejects.toThrow(
       'clearAllProducts() is only available in development mode'
     );
-    expect(h.products.delete).not.toHaveBeenCalled();
+    expect(h.productInputs.delete).not.toHaveBeenCalled();
   });
 
   it('deletes every listed product in development, tolerating individual failures', async () => {
     process.env['ENVIRONMENT'] = 'development';
     try {
-      h.products.list.mockResolvedValue({
-        data: { resources: [{ id: 'a' }, { id: 'b' }, { noId: true }] },
+      h.accountProducts.list.mockResolvedValue({
+        data: {
+          products: [
+            { name: `${ACCOUNT}/products/en~US~a` },
+            { name: `${ACCOUNT}/products/en~US~b` },
+            { noName: true }, // unparseable → skipped, not a malformed delete
+          ],
+        },
       });
-      h.products.delete
+      h.productInputs.delete
         .mockResolvedValueOnce({})
         .mockRejectedValueOnce(new Error('gone already'));
 
       await expect(merchantCenter.clearAllProducts()).resolves.toBeUndefined();
-      expect(h.products.delete).toHaveBeenCalledTimes(2);
-      expect(h.products.delete).toHaveBeenCalledWith({
-        merchantId: 'merchant-test-1',
-        productId: 'a',
+      expect(h.productInputs.delete).toHaveBeenCalledTimes(2);
+      expect(h.productInputs.delete).toHaveBeenCalledWith({
+        name: `${ACCOUNT}/productInputs/en~US~a`,
+        dataSource: DATA_SOURCE,
       });
-      expect(h.products.delete).toHaveBeenCalledWith({
-        merchantId: 'merchant-test-1',
-        productId: 'b',
+      expect(h.productInputs.delete).toHaveBeenCalledWith({
+        name: `${ACCOUNT}/productInputs/en~US~b`,
+        dataSource: DATA_SOURCE,
       });
     } finally {
       process.env['ENVIRONMENT'] = 'test';

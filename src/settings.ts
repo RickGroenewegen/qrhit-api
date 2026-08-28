@@ -13,7 +13,8 @@ export type SettingKey =
   | 'tidal_refresh_token'
   | 'tidal_token_expires_at'
   | 'tidal_refresh_token_obtained_at' // When the current refresh token was issued (ms)
-  | 'tidal_code_verifier'; // PKCE code verifier for OAuth flow
+  | 'tidal_code_verifier' // PKCE code verifier for OAuth flow
+  | 'auto_mode'; // Admin toggle: resolve undecidable years and approve customer corrections automatically
 
 class Settings {
   private static instance: Settings;
@@ -32,6 +33,16 @@ class Settings {
       Settings.instance = new Settings();
     }
     return Settings.instance;
+  }
+
+  /**
+   * Auto-mode. When on, tracks whose year cannot be determined automatically
+   * get the best available year instead of going to the admin year-check
+   * queue, and customer corrections are approved the moment they are submitted
+   * instead of waiting in /corrections. Off unless explicitly set to 'true'.
+   */
+  public async isAutoMode(): Promise<boolean> {
+    return (await this.getSetting('auto_mode')) === 'true';
   }
 
   private getCacheKey(key: SettingKey): string {

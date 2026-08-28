@@ -3,6 +3,7 @@ import { Prisma } from '@prisma/client';
 import { Track } from '../interfaces/Track';
 import { DataDeps } from './types';
 import { findAndUpdateTrackByISRC } from './tracks';
+import Settings from '../settings';
 
 export interface TrackNeedingYearUpdate {
   id: number;
@@ -10,6 +11,38 @@ export interface TrackNeedingYearUpdate {
   trackId: string;
   name: string;
   artist: string;
+}
+
+/**
+ * Source order auto-mode falls back to when the normal rules could not decide
+ * a year: the AI verdict first, then Spotify, then the raw databases.
+ */
+const AUTO_MODE_YEAR_PRIORITY = [
+  'ai',
+  'spotify',
+  'mb',
+  'discogs',
+  'openPerplex',
+] as const;
+
+/**
+ * Pick the first usable year from the collected sources. Returns null when no
+ * source has a plausible year - auto-mode cannot invent one, so those tracks
+ * still go to the admin year-check queue.
+ */
+export function pickAutoModeYear(
+  sources: Record<string, number>
+): { year: number; source: string } | null {
+  const currentYear = new Date().getFullYear();
+
+  for (const source of AUTO_MODE_YEAR_PRIORITY) {
+    const year = sources[source];
+    if (year > 0 && year <= currentYear) {
+      return { year, source };
+    }
+  }
+
+  return null;
 }
 
 export async function updateTrackYear(
@@ -30,6 +63,11 @@ export async function updateTrackYear(
   `;
 
   let updateCounter = 1;
+
+  // Read once per run: with auto-mode on, a track the rules could not decide
+  // gets the best available year instead of going to the year-check queue.
+  const autoMode = await Settings.getInstance().isAutoMode();
+  let autoResolvedCount = 0;
 
   // Helper to process a single track
   const processTrack = async (track: TrackNeedingYearUpdate) => {
@@ -116,17 +154,42 @@ export async function updateTrackYear(
         )
       );
     } else {
-      deps.logger.log(
-        color.yellow.bold(
-          `Could not determine final year for named '${color.white.bold(
-            track.artist
-          )} - ${color.white.bold(track.name)}' with year ${color.white.bold(
-            result.year
-          )} (${color.white.bold(updateCounter)} / ${color.white.bold(
-            tracksNeedingYearUpdate.length
-          )})`
-        )
-      );
+      const autoPick = autoMode ? pickAutoModeYear(result.sources) : null;
+
+      if (autoPick) {
+        await deps.prisma.$executeRaw`
+            UPDATE  tracks
+            SET     year = ${autoPick.year},
+                    manuallyChecked = true
+            WHERE   id = ${track.id}
+          `;
+
+        autoResolvedCount++;
+
+        deps.logger.log(
+          color.green.bold(
+            `Auto-mode: picked year ${color.white.bold(
+              autoPick.year
+            )} (${color.white.bold(autoPick.source)}) for '${color.white.bold(
+              track.artist
+            )} - ${color.white.bold(track.name)}' (${color.white.bold(
+              updateCounter
+            )} / ${color.white.bold(tracksNeedingYearUpdate.length)})`
+          )
+        );
+      } else {
+        deps.logger.log(
+          color.yellow.bold(
+            `Could not determine final year for named '${color.white.bold(
+              track.artist
+            )} - ${color.white.bold(track.name)}' with year ${color.white.bold(
+              result.year
+            )} (${color.white.bold(updateCounter)} / ${color.white.bold(
+              tracksNeedingYearUpdate.length
+            )})`
+          )
+        );
+      }
     }
     updateCounter++;
   };
@@ -136,7 +199,7 @@ export async function updateTrackYear(
   let inFlight = 0;
   let nextIndex = 0;
 
-  return new Promise<void>((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     if (queue.length === 0) {
       resolve();
       return;
@@ -172,6 +235,14 @@ export async function updateTrackYear(
 
     launchNext();
   });
+
+  // A track resolved by auto-mode is as good as a manually checked one, so let
+  // any payment that was only waiting on these tracks move on - the same thing
+  // updateTrackCheck does after an admin checks a track by hand.
+  if (autoResolvedCount > 0) {
+    const { checkUnfinalizedPayments } = await import('./users');
+    await checkUnfinalizedPayments(deps);
+  }
 }
 
 export async function getFirstUncheckedTrack(deps: DataDeps): Promise<{

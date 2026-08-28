@@ -202,27 +202,14 @@ describe('Music.getReleaseDate – year aggregation rules', () => {
     chatGptAskMock.mockResolvedValue({ year: ai });
   }
 
-  it('Rule 1: non-Spotify years are 0 but one source provides a spread → use spotify year when stddev > 1', async () => {
-    // For Rule 1 to fire, stddev must be > 1. We need at least 2 valid years.
-    // If MB gives a year different from AI, stddev will be > 1, then check Rule 1.
-    // But Rule 1 requires discogs=0, ai=0, mb=0. So let's use 1 non-zero source
-    // to get stddev > 1, with ai=0 and discogs=0 and mb providing a large spread.
-    // Actually: the easiest way is mb=2000, discogs=0, ai=0 → stddev between mb(2000) and spotify(1999)
-    // validYears = [1999(spotify in sources check)...] NO, spotify is not in the sources dict.
-    // sources = {ai: 0, mb: 2000, discogs: 0} → validYears = [2000] → only 1 year → stddev = 0
-    // So Rule 1 can never fire unless there are 2+ conflicting valid non-Spotify sources.
-    // With mb=1980, discogs=0, ai=2000 → validYears=[1980,2000] → stddev=(2000-1980)/sqrt(2)=~14 > 1
-    // In this case Rule 1 requires discogs==0 && ai==0 → ai=2000 != 0 → Rule 1 does NOT fire.
-    // NOTE: suspected bug: Rule 1 can never fire in practice because:
-    // - It requires stddev > 1 (need 2+ valid non-Spotify years to get stddev > 0)
-    // - But it also requires mb==0 && discogs==0 && ai==0 (all non-Spotify years 0)
-    // These two conditions are mutually exclusive!
-    // Test that at least the output is a consistent 0 when all sources are 0
+  it('Rule 1: Spotify is the only source with a year → use it', async () => {
+    // MB, Discogs and AI all return 0, so there are no valid years to disagree
+    // about and the deviation is 0. Rule 1 lives outside the deviation block
+    // precisely so this case still gets the Spotify year.
     stubSources(0, 0, 0);
     const result = await music.getReleaseDate(1, 'ISRC', 'Artist', 'Title', 1999);
-    // All sources 0 → validYears=[] → stddev=0 → rules block never fires → finalYear=0
-    // // NOTE: suspected bug: Spotify year is ignored when all other sources return 0 and stddev<=1
-    expect(result.year).toBe(0);
+    expect(result.year).toBe(1999);
+    expect(result.standardDeviation).toBe(0);
   });
 
   it('Rule 3: Spotify equals AI → use Spotify (no MB/DC veto)', async () => {
@@ -240,6 +227,9 @@ describe('Music.getReleaseDate – year aggregation rules', () => {
     // with weights mb=0.25, discogs=0.25, ai=0.5 = (1982*0.25 + 1982*0.25 + 1988*0.5) / 1.0
     // = (495.5 + 495.5 + 994) / 1 = 1985
     expect(result.year).not.toBe(1988);
+    // AI (1988) matches neither MB nor Discogs, so Rule 6 cannot rescue it
+    // either — the track stays undecided and goes to manual review.
+    expect(result.standardDeviation).toBeGreaterThan(1);
   });
 
   it('Rule 4: Discogs, MB, AI all agree → trust consensus', async () => {
@@ -283,11 +273,8 @@ describe('Music.getReleaseDate – year aggregation rules', () => {
     // Future MB year must be reported but excluded from calculation
     expect(result.sources.mb).toBe(nextYear);
     // validYears = [] (nextYear filtered out, discogs=0 filtered, ai=0 filtered)
-    // → weightedAvg = 0 → finalYear = 0
-    // Spotify year cannot override because stddev = 0 (no valid years)
-    // NOTE: suspected bug: Spotify year (1990) is not used as a fallback when
-    // it is the only valid year and all AI/MB/Discogs sources are invalid.
-    expect(result.year).toBe(0);
+    // → no valid AI/MB/Discogs year → Rule 1 falls back to the Spotify year
+    expect(result.year).toBe(1990);
   });
 
   it('Rule 2: Spotify is smallest year and ≥2 non-Spotify sources agree', async () => {
@@ -303,5 +290,35 @@ describe('Music.getReleaseDate – year aggregation rules', () => {
     const result = await music.getReleaseDate(1, 'ISRC', 'Artist', 'Title', 0);
     // All years 0, spotify 0 → no valid year; finalYear should be 0
     expect(result.year).toBe(0);
+  });
+
+  it('Rule 6: AI agrees with MusicBrainz → use that year', async () => {
+    // mb=1975, discogs=1990, ai=1975, spotify=2010 → no earlier rule matches
+    stubSources(1975, 1990, 1975);
+    const result = await music.getReleaseDate(1, 'ISRC', 'Artist', 'Title', 2010);
+    expect(result.year).toBe(1975);
+    expect(result.standardDeviation).toBe(0);
+  });
+
+  it('Rule 6: AI agrees with Discogs → use that year', async () => {
+    stubSources(1990, 1975, 1975);
+    const result = await music.getReleaseDate(1, 'ISRC', 'Artist', 'Title', 2010);
+    expect(result.year).toBe(1975);
+    expect(result.standardDeviation).toBe(0);
+  });
+
+  it('Rule 6: AI agrees with neither → stays undecided', async () => {
+    stubSources(1970, 1980, 1990);
+    const result = await music.getReleaseDate(1, 'ISRC', 'Artist', 'Title', 2010);
+    expect(result.standardDeviation).toBeGreaterThan(1);
+  });
+
+  it('Rule 6 does not override an earlier rule', async () => {
+    // Rule 2 fires first (spotify 1975 is the smallest of all valid years) and
+    // zeroes the deviation, so the AI/MB agreement on 2010 is not applied.
+    stubSources(2010, 1975, 2010);
+    const result = await music.getReleaseDate(1, 'ISRC', 'Artist', 'Title', 1975);
+    expect(result.year).toBe(1975);
+    expect(result.standardDeviation).toBe(0);
   });
 });

@@ -30,6 +30,8 @@ describe('authorization matrix', () => {
   const cases: { name: string; method: 'GET' | 'POST'; url: string; group: 'admin' | 'users' }[] = [
     { name: 'admin last plays', method: 'GET', url: '/lastplays', group: 'admin' },
     { name: 'admin payment verify', method: 'GET', url: '/verify/0', group: 'admin' },
+    { name: 'auto-mode read', method: 'GET', url: '/admin/auto-mode', group: 'admin' },
+    { name: 'auto-mode write', method: 'POST', url: '/admin/auto-mode', group: 'admin' },
     { name: 'account overview', method: 'GET', url: '/account/overview', group: 'users' },
   ];
 

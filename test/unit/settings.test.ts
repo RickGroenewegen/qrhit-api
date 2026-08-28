@@ -283,3 +283,31 @@ describe('Settings singleton', () => {
     expect(Settings.getInstance()).toBe(svc);
   });
 });
+
+// ──────────────────────────────────────────────
+// Auto-mode
+// ──────────────────────────────────────────────
+
+describe('Settings.isAutoMode', () => {
+  it('is off when the setting was never written', async () => {
+    const svc = makeSvc();
+    expect(await svc.isAutoMode()).toBe(false);
+  });
+
+  it('is on only for the exact string "true"', async () => {
+    dbStore.set('auto_mode', 'true');
+    const svc = makeSvc();
+    expect(await svc.isAutoMode()).toBe(true);
+  });
+
+  it('is off for "false" and for junk values', async () => {
+    const svc = makeSvc();
+
+    dbStore.set('auto_mode', 'false');
+    expect(await svc.isAutoMode()).toBe(false);
+
+    cacheStore.clear();
+    dbStore.set('auto_mode', '1');
+    expect(await svc.isAutoMode()).toBe(false);
+  });
+});
