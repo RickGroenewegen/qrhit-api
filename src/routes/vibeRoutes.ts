@@ -8,7 +8,7 @@ import AssetQueue from '../assetQueue';
 import PrismaInstance from '../prisma';
 import Translation from '../translation';
 import Cache from '../cache';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import * as fsPromises from 'fs/promises';
 import * as pathModule from 'path';
 
@@ -3522,7 +3522,7 @@ export default async function vibeRoutes(
 
         // Build ZIP in memory
         const zipBuffer = await new Promise<Buffer>((resolve, reject) => {
-          const archive = archiver('zip', { zlib: { level: 9 } });
+          const archive = new ZipArchive({ zlib: { level: 9 } });
           const chunks: Buffer[] = [];
 
           archive.on('data', (chunk: Buffer) => chunks.push(chunk));

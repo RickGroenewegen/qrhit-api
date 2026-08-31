@@ -8,7 +8,7 @@ import * as fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import * as path from 'path';
 import crypto from 'crypto';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import Translation from '../translation';
 import Utils from '../utils';
 import CacheInstance from '../cache';
@@ -175,7 +175,7 @@ export default async function bingoRoutes(
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const output = createWriteStream(zipPath);
-      const archive = archiver('zip', {
+      const archive = new ZipArchive({
         zlib: { level: 9 },
       });
 

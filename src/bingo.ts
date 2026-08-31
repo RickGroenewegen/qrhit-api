@@ -11,7 +11,7 @@ import * as fs from 'fs/promises';
 import { createWriteStream } from 'fs';
 import * as path from 'path';
 import crypto from 'crypto';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 
 
 export interface BingoTrack {
@@ -348,7 +348,7 @@ class Bingo {
   ): Promise<void> {
     return new Promise((resolve, reject) => {
       const output = createWriteStream(zipPath);
-      const archive = archiver('zip', {
+      const archive = new ZipArchive({
         zlib: { level: 9 },
       });
 

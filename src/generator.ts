@@ -29,7 +29,7 @@ import { Track } from '@prisma/client';
 import Discount from './discount';
 import { ApiResult } from './interfaces/ApiResult';
 import Cache from './cache';
-import archiver from 'archiver';
+import { ZipArchive } from 'archiver';
 import GeneratorQueue from './generatorQueue';
 import Bingo from './bingo';
 import AppleStorefront from './appleStorefront';
@@ -1887,7 +1887,7 @@ class Generator {
 
       // Create a file stream
       const output = createWriteStream(zipPath);
-      const archive = archiver('zip', {
+      const archive = new ZipArchive({
         zlib: { level: 9 }, // Maximum compression
       });
 
