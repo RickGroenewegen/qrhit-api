@@ -1,11 +1,12 @@
 import { PrismaClient, PushToken } from '@prisma/client';
-import admin from 'firebase-admin';
+import { initializeApp, cert } from 'firebase-admin/app';
+import { getMessaging } from 'firebase-admin/messaging';
 import { color } from 'console-log-colors';
 import Logger from './logger';
 import PrismaInstance from './prisma';
 
-admin.initializeApp({
-  credential: admin.credential.cert(
+initializeApp({
+  credential: cert(
     require(`${process.env['APP_ROOT']}/../docs/firebase.json`)
   ),
 });
@@ -160,7 +161,7 @@ class Push {
     };
 
     try {
-      await admin.messaging().send(messagePayload);
+      await getMessaging().send(messagePayload);
       this.logger.log(
         color.blue.bold(
           `Push notification sent to token: ${color.white.bold(token.token)}`
