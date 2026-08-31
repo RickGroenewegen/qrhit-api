@@ -44,7 +44,7 @@ class AssetQueue {
     });
 
     this.queue = new Queue<AssetJobData>('company-assets', {
-      connection: this.connection as any,
+      connection: this.connection,
       defaultJobOptions: {
         removeOnComplete: {
           count: 50,
@@ -60,7 +60,7 @@ class AssetQueue {
 
     if (cluster.isPrimary || !cluster.isWorker) {
       this.queueEvents = new QueueEvents('company-assets', {
-        connection: this.connection.duplicate() as any,
+        connection: this.connection.duplicate(),
       });
 
       this.setupEventListeners();
@@ -180,7 +180,7 @@ class AssetQueue {
           }
         },
         {
-          connection: this.connection.duplicate() as any,
+          connection: this.connection.duplicate(),
           concurrency: 1,
         }
       );

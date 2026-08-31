@@ -28,7 +28,7 @@ class MusicFetchQueue {
     });
 
     this.queue = new Queue<MusicFetchJobData>('musicfetch', {
-      connection: this.connection as any,
+      connection: this.connection,
       defaultJobOptions: {
         removeOnComplete: {
           count: 100,
@@ -49,7 +49,7 @@ class MusicFetchQueue {
     // Only set up event listeners on the primary process
     if (cluster.isPrimary || !cluster.isWorker) {
       this.queueEvents = new QueueEvents('musicfetch', {
-        connection: this.connection.duplicate() as any,
+        connection: this.connection.duplicate(),
       });
 
       this.setupEventListeners();
@@ -220,7 +220,7 @@ class MusicFetchQueue {
           }
         },
         {
-          connection: this.connection.duplicate() as any,
+          connection: this.connection.duplicate(),
           concurrency: 1, // Process one job at a time to respect rate limits
         }
       );
