@@ -17,6 +17,7 @@ import TidalApi from '../tidal_api';
 import Cache from '../cache';
 import Logger from '../logger';
 import Utils from '../utils';
+import { MAX_CARDS } from '../config/constants';
 
 // Cache key prefixes for Tidal
 const CACHE_KEY_TIDAL_PLAYLIST = 'tidal_playlist_';
@@ -497,7 +498,7 @@ class TidalProvider implements IMusicProvider {
           allTracks.splice(maxTracks);
           hasMore = false;
         }
-        if (allTracks.length >= 3000 || pageCount >= 200) {
+        if (allTracks.length >= MAX_CARDS || pageCount >= 200) {
           hasMore = false;
         }
 

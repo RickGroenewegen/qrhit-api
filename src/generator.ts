@@ -1,8 +1,7 @@
 import { color, blue, white } from 'console-log-colors';
 import Logger from './logger';
 import {
-  MAX_CARDS,
-  MAX_CARDS_PHYSICAL,
+  maxCardsFor,
   PRINTER_TYPE,
   DEFAULT_PRINTER_TYPE,
 } from './config/constants';
@@ -729,14 +728,12 @@ class Generator {
 
     const tracks = response.data.tracks;
 
-    // If there are more than 500 remove the last tracks
-    if (playlist.orderType == 'digital' && tracks.length > MAX_CARDS) {
-      tracks.splice(MAX_CARDS);
-    } else if (
-      playlist.orderType == 'physical' &&
-      tracks.length > MAX_CARDS_PHYSICAL
-    ) {
-      tracks.splice(MAX_CARDS_PHYSICAL);
+    // Trim anything past the cap for this order type. orderType is only ever
+    // 'digital' or 'physical' (sheets orders are stored as 'physical'), so the
+    // non-digital branch covers sheets too.
+    const maxCards = maxCardsFor(playlist.orderType == 'digital');
+    if (tracks.length > maxCards) {
+      tracks.splice(maxCards);
     }
 
     this.logger.log(

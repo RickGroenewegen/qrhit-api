@@ -26,7 +26,14 @@ import CalendarService from '../calendarService';
 import { FONTS } from '../fonts';
 import { sendCatalogue } from '../http-cache';
 import { BACKGROUNDS } from '../backgrounds';
-import { BOX_PRICE, BOX_MAX_CARDS, BOX_TIER_PRICES, EXTRA_TRACK_TIERS } from '../config/constants';
+import {
+  BOX_PRICE,
+  BOX_MAX_CARDS,
+  BOX_TIER_PRICES,
+  EXTRA_TRACK_TIERS,
+  MAX_CARDS,
+  MAX_CARDS_PHYSICAL,
+} from '../config/constants';
 import Upgrade, { pickBoxDesignFields } from '../upgrade';
 import PrismaInstance from '../prisma';
 import { QRGAMES_UPGRADE_PRICE } from '../game';
@@ -97,6 +104,10 @@ export default async function publicRoutes(fastify: FastifyInstance) {
       boxMaxCards: BOX_MAX_CARDS,
       boxTierPrices: BOX_TIER_PRICES,
       gamesUnitPrice: QRGAMES_UPGRADE_PRICE,
+      // Card caps. The frontend mirrors these as fallbacks but treats the
+      // values served here as authoritative.
+      maxCardsPhysical: MAX_CARDS_PHYSICAL,
+      maxCardsDigital: MAX_CARDS,
     });
   });
 
@@ -769,6 +780,16 @@ export default async function publicRoutes(fastify: FastifyInstance) {
             error: 'Invalid extraTracks tier',
           });
         }
+        // Adding cards to an existing order must not push it past the
+        // physical cap; generator.ts would trim the surplus after payment.
+        if (tier > upgrade.remainingTrackCapacity(ctx.php)) {
+          return reply.status(400).send({
+            success: false,
+            error: 'This tier would exceed the maximum number of cards',
+            remainingTrackCapacity: upgrade.remainingTrackCapacity(ctx.php),
+            availableTrackTiers: upgrade.availableTrackTiers(ctx.php),
+          });
+        }
         const price = await upgrade.calculateExtraTracksPrice(ctx.php, ctx.payment, tier);
         return reply.send({
           success: true,
@@ -804,6 +825,16 @@ export default async function publicRoutes(fastify: FastifyInstance) {
           return reply.status(400).send({
             success: false,
             error: 'Invalid extraTracks tier',
+          });
+        }
+        // Adding cards to an existing order must not push it past the
+        // physical cap; generator.ts would trim the surplus after payment.
+        if (tier > upgrade.remainingTrackCapacity(ctx.php)) {
+          return reply.status(400).send({
+            success: false,
+            error: 'This tier would exceed the maximum number of cards',
+            remainingTrackCapacity: upgrade.remainingTrackCapacity(ctx.php),
+            availableTrackTiers: upgrade.availableTrackTiers(ctx.php),
           });
         }
         if (ctx.php.userConfirmedPrinting) {

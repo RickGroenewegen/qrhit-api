@@ -1,5 +1,6 @@
 import { ApiResult } from './interfaces/ApiResult';
-import { createMollieClient, Locale, PaymentMethod } from '@mollie/api-client';
+import { Client, HTTPClient } from 'mollie-api-typescript';
+import { MollieLocale, MollieMethod } from './data/mollie-types';
 import { Payment, Prisma } from '@prisma/client';
 import PrismaInstance from './prisma';
 import { color, white } from 'console-log-colors';
@@ -966,123 +967,61 @@ class Mollie {
    * the checkout page. Only methods activated in our Mollie account should
    * appear here (see CLAUDE.md / mollie dashboard for the live list).
    */
-  private static readonly METHODS_BY_COUNTRY: Record<string, PaymentMethod[]> = {
-    NL: [
-      PaymentMethod.ideal,
-      PaymentMethod.applepay,
-      PaymentMethod.creditcard,
-      PaymentMethod.paypal,
-      PaymentMethod.klarna,
-      PaymentMethod.in3,
-    ],
-    BE: [
-      PaymentMethod.bancontact,
-      PaymentMethod.applepay,
-      PaymentMethod.creditcard,
-      PaymentMethod.paypal,
-      PaymentMethod.klarna,
-      PaymentMethod.belfius,
-    ],
+  private static readonly METHODS_BY_COUNTRY: Record<string, MollieMethod[]> = {
+    NL: ['ideal', 'applepay', 'creditcard', 'paypal', 'klarna', 'in3'],
+    BE: ['bancontact', 'applepay', 'creditcard', 'paypal', 'klarna', 'belfius'],
     DE: [
       // Ordered by German consumer popularity (PayPal + SEPA dominate;
       // Klarna/card/ApplePay tier next; Riverty/Trustly/paysafecard niche).
-      PaymentMethod.paypal,
-      PaymentMethod.directdebit,
-      PaymentMethod.klarna,
-      PaymentMethod.creditcard,
-      PaymentMethod.applepay,
-      PaymentMethod.riverty,
-      PaymentMethod.trustly,
-      PaymentMethod.paysafecard,
+      'paypal',
+      'directdebit',
+      'klarna',
+      'creditcard',
+      'applepay',
+      'riverty',
+      'trustly',
+      'paysafecard',
     ],
     AT: [
       // EPS is the Austrian local favourite, then the same DE tiers.
       // Riverty intentionally omitted: very low penetration in AT
       // (Klarna dominates the BNPL slot here).
-      PaymentMethod.eps,
-      PaymentMethod.klarna,
-      PaymentMethod.paypal,
-      PaymentMethod.creditcard,
-      PaymentMethod.applepay,
-      PaymentMethod.directdebit,
-      PaymentMethod.trustly,
-      PaymentMethod.paysafecard,
+      'eps',
+      'klarna',
+      'paypal',
+      'creditcard',
+      'applepay',
+      'directdebit',
+      'trustly',
+      'paysafecard',
     ],
     CH: [
       // TWINT is by far the dominant Swiss method.
       // Riverty intentionally omitted: very low Swiss penetration
       // (Klarna fills the BNPL slot here).
-      PaymentMethod.twint,
-      PaymentMethod.creditcard,
-      PaymentMethod.paypal,
-      PaymentMethod.applepay,
-      PaymentMethod.klarna,
+      'twint',
+      'creditcard',
+      'paypal',
+      'applepay',
+      'klarna',
     ],
-    FR: [
-      PaymentMethod.creditcard,
-      PaymentMethod.paypal,
-      PaymentMethod.applepay,
-      PaymentMethod.klarna,
-    ],
-    ES: [
-      PaymentMethod.creditcard,
-      PaymentMethod.paypal,
-      PaymentMethod.applepay,
-      PaymentMethod.satispay,
-      PaymentMethod.klarna,
-    ],
+    FR: ['creditcard', 'paypal', 'applepay', 'klarna'],
+    ES: ['creditcard', 'paypal', 'applepay', 'satispay', 'klarna'],
     IT: [
-      PaymentMethod.creditcard,
-      PaymentMethod.paypal,
-      PaymentMethod.satispay,
-      PaymentMethod.bancomatpay,
-      PaymentMethod.applepay,
-      PaymentMethod.klarna,
+      'creditcard',
+      'paypal',
+      'satispay',
+      'bancomatpay',
+      'applepay',
+      'klarna',
     ],
-    PT: [
-      PaymentMethod.multibanco,
-      PaymentMethod.mbway,
-      PaymentMethod.creditcard,
-      PaymentMethod.paypal,
-      PaymentMethod.applepay,
-    ],
-    PL: [
-      PaymentMethod.blik,
-      PaymentMethod.creditcard,
-      PaymentMethod.applepay,
-      PaymentMethod.paypal,
-      PaymentMethod.klarna,
-    ],
-    SE: [
-      PaymentMethod.swish,
-      PaymentMethod.klarna,
-      PaymentMethod.creditcard,
-      PaymentMethod.applepay,
-    ],
-    NO: [
-      PaymentMethod.klarna,
-      PaymentMethod.creditcard,
-      PaymentMethod.applepay,
-      PaymentMethod.paypal,
-    ],
-    DK: [
-      PaymentMethod.klarna,
-      PaymentMethod.creditcard,
-      PaymentMethod.applepay,
-      PaymentMethod.paypal,
-    ],
-    GB: [
-      PaymentMethod.creditcard,
-      PaymentMethod.applepay,
-      PaymentMethod.paypal,
-      PaymentMethod.klarna,
-    ],
-    IE: [
-      PaymentMethod.creditcard,
-      PaymentMethod.applepay,
-      PaymentMethod.paypal,
-      PaymentMethod.klarna,
-    ],
+    PT: ['multibanco', 'mbway', 'creditcard', 'paypal', 'applepay'],
+    PL: ['blik', 'creditcard', 'applepay', 'paypal', 'klarna'],
+    SE: ['swish', 'klarna', 'creditcard', 'applepay'],
+    NO: ['klarna', 'creditcard', 'applepay', 'paypal'],
+    DK: ['klarna', 'creditcard', 'applepay', 'paypal'],
+    GB: ['creditcard', 'applepay', 'paypal', 'klarna'],
+    IE: ['creditcard', 'applepay', 'paypal', 'klarna'],
   };
 
   /**
@@ -1090,11 +1029,11 @@ class Mollie {
    * everywhere; PayPal as the recognisable APM; Apple Pay last because it's
    * device-gated.
    */
-  private static readonly METHODS_FALLBACK: PaymentMethod[] = [
-    PaymentMethod.creditcard,
-    PaymentMethod.paypal,
-    PaymentMethod.applepay,
-    PaymentMethod.klarna,
+  private static readonly METHODS_FALLBACK: MollieMethod[] = [
+    'creditcard',
+    'paypal',
+    'applepay',
+    'klarna',
   ];
 
   /**
@@ -1124,38 +1063,41 @@ class Mollie {
    * Mollie locale resolution. Some locales depend on the country (de_DE vs
    * de_AT vs de_CH, fr_FR vs fr_BE, nl_NL vs nl_BE).
    */
-  private resolveMollieLocale(language: string, country: string | null): Locale {
+  private resolveMollieLocale(
+    language: string,
+    country: string | null
+  ): MollieLocale {
     const lang = (language || '').toLowerCase();
     const cc = (country || '').toUpperCase();
 
     if (lang === 'de') {
-      if (cc === 'AT') return Locale.de_AT;
-      if (cc === 'CH') return Locale.de_CH;
-      return Locale.de_DE;
+      if (cc === 'AT') return 'de_AT';
+      if (cc === 'CH') return 'de_CH';
+      return 'de_DE';
     }
     if (lang === 'fr') {
-      if (cc === 'BE') return Locale.fr_BE;
-      return Locale.fr_FR;
+      if (cc === 'BE') return 'fr_BE';
+      return 'fr_FR';
     }
     if (lang === 'nl') {
-      if (cc === 'BE') return Locale.nl_BE;
-      return Locale.nl_NL;
+      if (cc === 'BE') return 'nl_BE';
+      return 'nl_NL';
     }
 
-    const map: Record<string, Locale> = {
-      en: Locale.en_US,
-      es: Locale.es_ES,
-      it: Locale.it_IT,
-      pt: Locale.pt_PT,
-      pl: Locale.pl_PL,
-      sv: Locale.sv_SE,
-      nb: Locale.nb_NO,
-      no: Locale.nb_NO,
-      da: Locale.da_DK,
-      hin: Locale.en_US,
-      hi: Locale.en_US,
+    const map: Record<string, MollieLocale> = {
+      en: 'en_US',
+      es: 'es_ES',
+      it: 'it_IT',
+      pt: 'pt_PT',
+      pl: 'pl_PL',
+      sv: 'sv_SE',
+      nb: 'nb_NO',
+      no: 'nb_NO',
+      da: 'da_DK',
+      hin: 'en_US',
+      hi: 'en_US',
     };
-    return map[lang] || Locale.en_US;
+    return map[lang] || 'en_US';
   }
 
   /**
@@ -1165,44 +1107,44 @@ class Mollie {
    * See https://docs.mollie.com/reference/payment-method-availability
    */
   private static readonly METHOD_CURRENCY_SUPPORT: Partial<
-    Record<PaymentMethod, ReadonlyArray<SupportedCurrency>>
+    Record<MollieMethod, ReadonlyArray<SupportedCurrency>>
   > = {
-    [PaymentMethod.creditcard]: [
+    creditcard: [
       'EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'USD', 'CAD', 'AUD',
     ],
-    [PaymentMethod.applepay]: [
+    applepay: [
       'EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'USD', 'CAD', 'AUD',
     ],
-    [PaymentMethod.paypal]: [
+    paypal: [
       'EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF', 'CZK', 'USD', 'CAD', 'AUD', 'PLN',
     ],
-    [PaymentMethod.klarna]: ['EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF'],
-    [PaymentMethod.riverty]: ['EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF'],
-    [PaymentMethod.trustly]: ['EUR', 'NOK', 'SEK', 'DKK', 'GBP'],
-    [PaymentMethod.twint]: ['EUR', 'CHF'],
-    [PaymentMethod.swish]: ['SEK'],
-    [PaymentMethod.blik]: ['EUR', 'PLN'],
-    [PaymentMethod.przelewy24]: ['EUR', 'PLN'],
-    [PaymentMethod.paybybank]: ['GBP'],
+    klarna: ['EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF'],
+    riverty: ['EUR', 'NOK', 'SEK', 'DKK', 'GBP', 'CHF'],
+    trustly: ['EUR', 'NOK', 'SEK', 'DKK', 'GBP'],
+    twint: ['EUR', 'CHF'],
+    swish: ['SEK'],
+    blik: ['EUR', 'PLN'],
+    przelewy24: ['EUR', 'PLN'],
+    paybybank: ['GBP'],
     // EUR-only methods (explicit so future readers don't have to dig):
-    [PaymentMethod.ideal]: ['EUR'],
-    [PaymentMethod.bancontact]: ['EUR'],
-    [PaymentMethod.belfius]: ['EUR'],
-    [PaymentMethod.kbc]: ['EUR'],
-    [PaymentMethod.eps]: ['EUR'],
-    [PaymentMethod.satispay]: ['EUR'],
-    [PaymentMethod.bancomatpay]: ['EUR'],
-    [PaymentMethod.multibanco]: ['EUR'],
-    [PaymentMethod.mbway]: ['EUR'],
-    [PaymentMethod.in3]: ['EUR'],
-    [PaymentMethod.directdebit]: ['EUR'],
-    [PaymentMethod.paysafecard]: ['EUR'],
+    ideal: ['EUR'],
+    bancontact: ['EUR'],
+    belfius: ['EUR'],
+    kbc: ['EUR'],
+    eps: ['EUR'],
+    satispay: ['EUR'],
+    bancomatpay: ['EUR'],
+    multibanco: ['EUR'],
+    mbway: ['EUR'],
+    in3: ['EUR'],
+    directdebit: ['EUR'],
+    paysafecard: ['EUR'],
   };
 
   public filterMethodsByCurrency(
-    methods: PaymentMethod[],
+    methods: MollieMethod[],
     currency: SupportedCurrency
-  ): PaymentMethod[] {
+  ): MollieMethod[] {
     return methods.filter((m) => {
       const supported = Mollie.METHOD_CURRENCY_SUPPORT[m] ?? ['EUR'];
       return supported.includes(currency);
@@ -1225,8 +1167,8 @@ class Mollie {
     ipCountry?: string | null;
     currency: SupportedCurrency;
   }): {
-    locale: Locale;
-    methods: PaymentMethod[];
+    locale: MollieLocale;
+    methods: MollieMethod[];
     country: string | null;
     countrySource: 'billing' | 'viewer' | 'ip' | 'none';
   } {
@@ -1263,8 +1205,8 @@ class Mollie {
         ? Mollie.METHODS_FALLBACK
         : [...primary, ...secondary, ...Mollie.METHODS_FALLBACK];
 
-    const seen = new Set<PaymentMethod>();
-    const deduped: PaymentMethod[] = [];
+    const seen = new Set<MollieMethod>();
+    const deduped: MollieMethod[] = [];
     for (const m of ordered) {
       if (!seen.has(m)) {
         seen.add(m);
@@ -1660,12 +1602,61 @@ class Mollie {
     }
   }
 
-  private mollieClient = createMollieClient({
-    apiKey: process.env['MOLLIE_API_KEY']!,
+  /**
+   * Raw `settlementAmount` values from the Mollie API, keyed by payment id.
+   *
+   * The generated SDK's payment schema has no `settlementAmount` field and
+   * strips unknown keys, so the value is lifted off the raw response body
+   * before it is parsed. processWebhook consumes and clears each entry.
+   */
+  private settlementAmounts = new Map<
+    string,
+    { currency: string; value: string }
+  >();
+
+  /**
+   * Shared HTTP client for both Mollie clients, carrying the settlement hook.
+   */
+  private settlementCapture = new HTTPClient().addHook(
+    'response',
+    async (res, req) => {
+      if (!res.ok) return;
+      const id = new URL(req.url).pathname.match(
+        /\/payments\/(tr_[A-Za-z0-9]+)$/
+      )?.[1];
+      if (!id) return;
+      try {
+        // clone() is mandatory: the SDK parses the same Response afterwards.
+        const body: any = await res.clone().json();
+        if (body?.settlementAmount?.currency && body.settlementAmount.value) {
+          this.settlementAmounts.set(id, body.settlementAmount);
+        }
+      } catch {
+        // Best effort only; never let this break payment processing.
+      }
+    }
+  );
+
+  /**
+   * EUR settlement amount captured for a payment, or null when Mollie did not
+   * return one (or settled in another currency). Consumes the entry.
+   */
+  private takeSettlementAmountEur(paymentId: string): number | null {
+    const settlement = this.settlementAmounts.get(paymentId);
+    this.settlementAmounts.delete(paymentId);
+    if (!settlement || settlement.currency !== 'EUR') return null;
+    const value = parseFloat(settlement.value);
+    return Number.isFinite(value) ? value : null;
+  }
+
+  private mollieClient = new Client({
+    security: { apiKey: process.env['MOLLIE_API_KEY']! },
+    httpClient: this.settlementCapture,
   });
 
-  private mollieClientTest = createMollieClient({
-    apiKey: process.env['MOLLIE_API_KEY_TEST']!,
+  private mollieClientTest = new Client({
+    security: { apiKey: process.env['MOLLIE_API_KEY_TEST']! },
+    httpClient: this.settlementCapture,
   });
 
   private async getClient(ip: string) {
@@ -1877,19 +1868,21 @@ class Mollie {
         );
 
         const payment = await paymentClient.payments.create({
-          amount: {
-            currency: presentmentCurrency,
-            value: presentmentAmount.toFixed(2),
+          paymentRequest: {
+            amount: {
+              currency: presentmentCurrency,
+              value: presentmentAmount.toFixed(2),
+            },
+            metadata: {
+              clientIp,
+              refreshPlaylists: params.refreshPlaylists.join(','),
+            },
+            method: paymentMethods,
+            description: description,
+            redirectUrl: `${process.env['FRONTEND_URI']}/${params.locale}/generate/check_payment`,
+            webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
+            locale: resolved.locale,
           },
-          metadata: {
-            clientIp,
-            refreshPlaylists: params.refreshPlaylists.join(','),
-          },
-          method: paymentMethods,
-          description: description,
-          redirectUrl: `${process.env['FRONTEND_URI']}/${params.locale}/generate/check_payment`,
-          webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
-          locale: resolved.locale,
         });
 
         // The payment id only exists after creation, so the redirect URL is
@@ -1898,8 +1891,11 @@ class Mollie {
         // survive the redirect when the browser blocks storage (Safari
         // "Block All Cookies"), stranding customers who have already paid.
         try {
-          await paymentClient.payments.update(payment.id, {
-            redirectUrl: `${process.env['FRONTEND_URI']}/${params.locale}/generate/check_payment?paymentId=${payment.id}`,
+          await paymentClient.payments.update({
+            paymentId: payment.id,
+            requestBody: {
+              redirectUrl: `${process.env['FRONTEND_URI']}/${params.locale}/generate/check_payment?paymentId=${payment.id}`,
+            },
           });
         } catch (e) {
           this.logger.log(
@@ -1914,7 +1910,7 @@ class Mollie {
         molliePaymentId = payment.id;
         molliePaymentAmount = Math.round(calculateResult.data.total * 100) / 100;
         molliePaymentStatus = payment.status;
-        mollieCheckoutUrl = payment.getCheckoutUrl()!;
+        mollieCheckoutUrl = payment.links.checkout?.href!;
       }
 
       const userDatabaseId = await this.data.storeUser({
@@ -2386,9 +2382,13 @@ class Mollie {
 
       // Try the live client first, with a fallback to test
       try {
-        payment = await this.mollieClient.payments.get(params.id);
+        payment = await this.mollieClient.payments.get({
+          paymentId: params.id,
+        });
       } catch (e) {
-        payment = await this.mollieClientTest.payments.get(params.id);
+        payment = await this.mollieClientTest.payments.get({
+          paymentId: params.id,
+        });
       }
 
       // Check if this is a bingo upgrade payment (special handling - not a regular order)
@@ -2609,8 +2609,8 @@ class Mollie {
             // Roll the charged amount into Payment.totalPrice so the books
             // reflect the customer's full lifetime spend on this order.
             const chargedAmountEur =
-              (payment as any).amount && (payment as any).amount.currency === 'EUR'
-                ? parseFloat((payment as any).amount.value)
+              payment.amount && payment.amount.currency === 'EUR'
+                ? parseFloat(payment.amount.value)
                 : null;
             if (chargedAmountEur !== null) {
               await this.prisma.payment.update({
@@ -2619,11 +2619,7 @@ class Mollie {
               });
             } else {
               // Non-EUR settlement: prefer settlementAmount in EUR if present.
-              const settlementEur =
-                (payment as any).settlementAmount &&
-                (payment as any).settlementAmount.currency === 'EUR'
-                  ? parseFloat((payment as any).settlementAmount.value)
-                  : null;
+              const settlementEur = this.takeSettlementAmountEur(payment.id);
               if (settlementEur !== null) {
                 await this.prisma.payment.update({
                   where: { paymentId: originalPaymentId },
@@ -2690,11 +2686,7 @@ class Mollie {
       // proceeds with side effects. Concurrent or replayed webhooks see count=0
       // and return without re-firing downstream work.
       let statusChanged = false;
-      const settlementAmountEur =
-        (payment as any).settlementAmount &&
-        (payment as any).settlementAmount.currency === 'EUR'
-          ? parseFloat((payment as any).settlementAmount.value)
-          : null;
+      const settlementAmountEur = this.takeSettlementAmountEur(payment.id);
       try {
         const claim = await this.prisma.payment.updateMany({
           where: {
@@ -2928,14 +2920,17 @@ class Mollie {
 
       // Use the live Mollie client for payment links
       const paymentLink = await this.mollieClient.paymentLinks.create({
-        amount: {
-          currency: 'EUR',
-          value: formattedAmount,
+        requestBody: {
+          amount: {
+            currency: 'EUR',
+            value: formattedAmount,
+          },
+          description:
+            description || `QRSong! Custom Payment - EUR ${formattedAmount}`,
         },
-        description: description || `QRSong! Custom Payment - EUR ${formattedAmount}`,
       });
 
-      const paymentUrl = paymentLink.getPaymentUrl();
+      const paymentUrl = paymentLink.links.paymentLink.href;
 
       this.logger.log(
         color.green.bold('Created payment link: ') +
@@ -3029,21 +3024,23 @@ class Mollie {
     );
 
     const payment = await paymentClient.payments.create({
-      amount: {
-        currency: converted.currency,
-        value: converted.amount.toFixed(2),
+      paymentRequest: {
+        amount: {
+          currency: converted.currency,
+          value: converted.amount.toFixed(2),
+        },
+        method: resolved.methods,
+        metadata: params.metadata,
+        description: params.description,
+        redirectUrl: params.redirectUrl,
+        webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
+        locale: resolved.locale,
       },
-      method: resolved.methods,
-      metadata: params.metadata,
-      description: params.description,
-      redirectUrl: params.redirectUrl,
-      webhookUrl: `${process.env['API_URI']}/mollie/webhook`,
-      locale: resolved.locale,
     });
 
     return {
       id: payment.id,
-      checkoutUrl: payment.getCheckoutUrl(),
+      checkoutUrl: payment.links.checkout?.href ?? null,
       currency: converted.currency,
       amount: converted.amount,
     };
@@ -3084,11 +3081,17 @@ class Mollie {
 
       const formattedAmount = refundValue.toFixed(2);
 
-      const refund = await this.mollieClient.paymentRefunds.create({
+      const refund = await this.mollieClient.refunds.create({
         paymentId: molliePaymentId,
-        amount: {
-          currency,
-          value: formattedAmount,
+        refundRequest: {
+          amount: {
+            currency,
+            value: formattedAmount,
+          },
+          // Both are required by the generated SDK. The description shows up
+          // on the refund in the Mollie dashboard.
+          description: `QRSong! refund ${molliePaymentId}`,
+          metadata: null,
         },
       });
 

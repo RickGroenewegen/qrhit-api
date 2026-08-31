@@ -1,5 +1,5 @@
 import Log from '../logger';
-import { MAX_CARDS, MAX_CARDS_PHYSICAL, BOX_PRICE, BOX_UNIT_COST, boxTierPrice } from '../config/constants';
+import { maxCardsFor, BOX_PRICE, BOX_UNIT_COST, boxTierPrice } from '../config/constants';
 import PrismaInstance from '../prisma';
 import Cache from '../cache';
 import { ApiResult } from '../interfaces/ApiResult';
@@ -413,7 +413,7 @@ class PrintEnBind {
   ) {
     let orderType = null;
     let digitalInt = digital ? 1 : 0;
-    let maxCards = digital ? MAX_CARDS : MAX_CARDS_PHYSICAL;
+    let maxCards = maxCardsFor(digital);
     let cacheKey = `orderType_${numberOfTracks}_${digitalInt}_${productType}`;
     if (digital) {
       // There is just one digital product
@@ -982,8 +982,14 @@ class PrintEnBind {
       numberOfPages += 2;
     }
 
-    if (numberOfPages > 2000) {
-      numberOfPages = 2000;
+    // Safety ceiling on the page count we hand the printer. Derived from the
+    // physical card cap (2 pages per card, front + back, plus the how-to
+    // card) rather than a literal — it used to be a hardcoded 2000, which was
+    // MAX_CARDS_PHYSICAL back when that was 1000, so raising the cap silently
+    // under-printed every order above 1000 cards.
+    const maxPages = maxCardsFor(false) * 2 + 2;
+    if (numberOfPages > maxPages) {
+      numberOfPages = maxPages;
     }
 
     if (item.type == 'digital') {

@@ -8,6 +8,7 @@ import {
   boxTierPrice,
   EXTRA_TRACK_TIERS,
   EXTRA_TRACK_MARKUP_MULT,
+  MAX_CARDS_PHYSICAL,
 } from './config/constants';
 
 export interface VerifiedUpgradeContext {
@@ -226,6 +227,27 @@ class Upgrade {
   }
 
   /**
+   * How many more cards this playlist can still take before hitting the
+   * physical cap. The upgrade flow adds cards to an existing order, so
+   * without this a playlist at 1950 tracks could buy the +200 tier and land
+   * past MAX_CARDS_PHYSICAL — generator.ts would then silently trim the
+   * cards the customer just paid for.
+   */
+  public remainingTrackCapacity(php: any): number {
+    return Math.max(0, MAX_CARDS_PHYSICAL - (php?.numberOfTracks || 0));
+  }
+
+  /**
+   * The subset of EXTRA_TRACK_TIERS this playlist can still buy. Used by the
+   * routes to reject an over-cap tier and by the frontend to hide the ones
+   * that no longer fit.
+   */
+  public availableTrackTiers(php: any): number[] {
+    const remaining = this.remainingTrackCapacity(php);
+    return (EXTRA_TRACK_TIERS as readonly number[]).filter((t) => t <= remaining);
+  }
+
+  /**
    * Extra-tracks upgrade price in EUR. Uses the raw printenbind per-card
    * cost (paper + ink) plus a flat per-card markup, plus a flat handling
    * fee. Independent of the full margin model used at initial checkout
@@ -240,6 +262,11 @@ class Upgrade {
   ): Promise<TracksUpgradePrice> {
     if (!(EXTRA_TRACK_TIERS as readonly number[]).includes(extraTracks)) {
       throw new Error(`Invalid extraTracks tier: ${extraTracks}`);
+    }
+    if (extraTracks > this.remainingTrackCapacity(php)) {
+      throw new Error(
+        `extraTracks tier ${extraTracks} would exceed the ${MAX_CARDS_PHYSICAL} card limit`
+      );
     }
 
     const countryCode = payment.countrycode || 'NL';

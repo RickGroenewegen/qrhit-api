@@ -162,11 +162,11 @@
         {
             "slug": "gift-box-capacity",
             "title": "How many cards fit in a gift box?",
-            "description": "Each gift box holds up to 190 QR music cards and includes a built-in divider. If your playlist is larger than that, additional boxes are added automatically — one extra box for every 190 cards. So a 250-card playlist ships with 2 boxes, 400 cards ships with 3, and so on. The number of boxes is shown during checkout, so you always know what's coming. You can never order fewer or more boxes than your card count requires; the count is fixed by the size of your playlist. About the box itself: each box is a 12x12cm foldable presentation box that ships flat as a printed A3 cardboard sheet you press out and fold at home. It is decorative gift packaging, not a rigid premade game box like the ones you find with common retail board games.",
+            "description": "Each gift box holds up to {{boxMaxCards}} QR music cards and includes a built-in divider. If your playlist is larger than that, additional boxes are added automatically — one extra box for every {{boxMaxCards}} cards. So a 250-card playlist ships with 2 boxes, 400 cards ships with 3, and so on. The number of boxes is shown during checkout, so you always know what's coming. You can never order fewer or more boxes than your card count requires; the count is fixed by the size of your playlist. About the box itself: each box is a 12x12cm foldable presentation box that ships flat as a printed A3 cardboard sheet you press out and fold at home. It is decorative gift packaging, not a rigid premade game box like the ones you find with common retail board games.",
             "tags": [
                 "gift box",
                 "capacity",
-                "190 cards",
+                "{{boxMaxCards}} cards",
                 "how many boxes",
                 "multiple boxes"
             ]
@@ -490,7 +490,7 @@
         {
             "slug": "maximum-cards",
             "title": "What is the maximum number of cards?",
-            "description": "For digital orders, the maximum is 3000 cards. For physical cards, the maximum is 1000 cards per order. If you need more, you can split your playlist and place multiple orders.",
+            "description": "For digital orders, the maximum is {{maxCardsDigital}} cards. For physical cards, the maximum is {{maxCardsPhysical}} cards per order. If you need more, you can split your playlist and place multiple orders.",
             "tags": [
                 "maximum",
                 "limit",
@@ -690,7 +690,7 @@
         {
             "slug": "add-gift-box-in-correction",
             "title": "Can I add a gift box after I've already paid?",
-            "description": "Yes. The correction form has a dedicated Gift Box tab where you can add a gift box to a physical order even if you didn't select one during checkout. You'll see exactly how many boxes your playlist needs (one box holds up to 190 cards), the price (with the same bulk discount as a regular order — 1 box €6.99, 5+ boxes €4.00 each), and a single 'Add to my order' button that takes you through a quick Mollie payment. Once paid, the gift box is unlocked and you can design the lid image, logo, and personal message right in the same tab. Because the box ships in the same package as your cards, there's no extra shipping cost. Quick note on what you're adding: the gift box is decorative gift packaging that arrives flat as a printed A3 cardboard sheet you press out and fold yourself at home, not a rigid premade game box like the ones you find with common retail board games.",
+            "description": "Yes. The correction form has a dedicated Gift Box tab where you can add a gift box to a physical order even if you didn't select one during checkout. You'll see exactly how many boxes your playlist needs (one box holds up to {{boxMaxCards}} cards), the price (with the same bulk discount as a regular order — 1 box €6.99, 5+ boxes €4.00 each), and a single 'Add to my order' button that takes you through a quick Mollie payment. Once paid, the gift box is unlocked and you can design the lid image, logo, and personal message right in the same tab. Because the box ships in the same package as your cards, there's no extra shipping cost. Quick note on what you're adding: the gift box is decorative gift packaging that arrives flat as a printed A3 cardboard sheet you press out and fold yourself at home, not a rigid premade game box like the ones you find with common retail board games.",
             "tags": [
                 "gift box",
                 "add",

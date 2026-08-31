@@ -109,6 +109,11 @@ vi.mock('../../../src/shipping', () => ({
 vi.mock('cron', () => ({ CronJob: cronCtor }));
 
 import { ChatService } from '../../../src/chat';
+import {
+  MAX_CARDS,
+  MAX_CARDS_PHYSICAL,
+  BOX_MAX_CARDS,
+} from '../../../src/config/constants';
 
 // ---------------------------------------------------------------------------
 // Knowledge fixture + service construction
@@ -253,6 +258,42 @@ describe('ChatService constructor', () => {
 
   it('loads the knowledge items from APP_ROOT/_data/chat.json', () => {
     expect(service.getKnowledgeBySlug(['pricing'])).toEqual([KNOWLEDGE[2]]);
+  });
+
+  it('substitutes {{placeholder}} tokens in chat.json from config/constants', () => {
+    const appRoot = path.join(
+      process.env['PRIVATE_DIR']!,
+      'chat-placeholder-approot'
+    );
+    fs.mkdirSync(path.join(appRoot, '_data'), { recursive: true });
+    fs.writeFileSync(
+      path.join(appRoot, '_data', 'chat.json'),
+      JSON.stringify({
+        knowledge: [
+          {
+            slug: 'maximum-cards',
+            title: 'Max cards',
+            description:
+              'Digital {{maxCardsDigital}}, physical {{maxCardsPhysical}}, box {{boxMaxCards}}, unknown {{nope}}.',
+            tags: ['limit'],
+          },
+        ],
+      })
+    );
+
+    const prevAppRoot = process.env['APP_ROOT'];
+    process.env['APP_ROOT'] = appRoot;
+    let svc: ChatService;
+    try {
+      svc = new ChatService();
+    } finally {
+      process.env['APP_ROOT'] = prevAppRoot;
+    }
+
+    const [item] = svc.getKnowledgeBySlug(['maximum-cards']);
+    expect(item.description).toBe(
+      `Digital ${MAX_CARDS}, physical ${MAX_CARDS_PHYSICAL}, box ${BOX_MAX_CARDS}, unknown {{nope}}.`
+    );
   });
 
   it('falls back to empty knowledge when chat.json cannot be read', () => {

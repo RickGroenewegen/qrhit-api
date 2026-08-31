@@ -9,6 +9,7 @@ import path from 'path';
 import cluster from 'cluster';
 import Shipping from './shipping';
 import { CronJob } from 'cron';
+import { MAX_CARDS, MAX_CARDS_PHYSICAL, BOX_MAX_CARDS } from './config/constants';
 
 interface RequiredDataItem {
   name: string;
@@ -57,11 +58,35 @@ export class ChatService {
     await this.cache.del(this.getCacheKey(chatId));
   }
 
+  private static readonly KNOWLEDGE_PLACEHOLDERS: Record<string, number> = {
+    maxCardsDigital: MAX_CARDS,
+    maxCardsPhysical: MAX_CARDS_PHYSICAL,
+    boxMaxCards: BOX_MAX_CARDS,
+  };
+
+  /**
+   * Replaces {{name}} tokens in the raw chat.json text with the matching
+   * constant. Substituting before JSON.parse keeps it a single pass over the
+   * file and covers every field (title, description, tags) at once. Unknown
+   * tokens are left untouched so a typo is visible rather than silently blank.
+   */
+  private applyKnowledgePlaceholders(raw: string): string {
+    return raw.replace(/\{\{\s*(\w+)\s*\}\}/g, (match, key: string) => {
+      const value = ChatService.KNOWLEDGE_PLACEHOLDERS[key];
+      return value === undefined ? match : String(value);
+    });
+  }
+
   private loadKnowledge(): void {
     try {
       const appRoot = process.env['APP_ROOT'] || path.join(__dirname, '..');
       const chatJsonPath = path.join(appRoot, '_data', 'chat.json');
-      const data = JSON.parse(fs.readFileSync(chatJsonPath, 'utf-8'));
+      const raw = fs.readFileSync(chatJsonPath, 'utf-8');
+      // chat.json is static copy, so any number in it goes stale the moment a
+      // limit changes. It carries {{placeholders}} instead and they are filled
+      // from config/constants here, keeping the constants authoritative for
+      // what the chat assistant tells customers.
+      const data = JSON.parse(this.applyKnowledgePlaceholders(raw));
       this.knowledge = data.knowledge;
       if (cluster.isPrimary) {
         this.logger.log(color.blue.bold(`Loaded ${color.white.bold(this.knowledge.length)} knowledge items for chat`));

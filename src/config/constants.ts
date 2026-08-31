@@ -1,5 +1,16 @@
+// Single source of truth for the per-playlist card caps. Enforced API-side
+// (spotify.ts, generator.ts, printenbind.ts) and served to the frontend via
+// GET /api/pricing, so changing the number here is the only edit needed.
+// MAX_CARDS_PHYSICAL covers both 'physical' and 'sheets' — every non-digital
+// product shares one cap.
 export const MAX_CARDS = 3000;
-export const MAX_CARDS_PHYSICAL = 1000;
+export const MAX_CARDS_PHYSICAL = 2000;
+
+// The cap that applies to a given order. Keeps the digital/physical branch in
+// one place instead of repeating the ternary at each call site.
+export function maxCardsFor(digital: boolean): number {
+  return digital ? MAX_CARDS : MAX_CARDS_PHYSICAL;
+}
 
 // Box product
 export const BOX_PRICE = 6.99;

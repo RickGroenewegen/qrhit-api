@@ -4,9 +4,10 @@
  * resolution and the daily sales report refund math).
  *
  * Everything outbound is mocked at the module boundary:
- *  - @mollie/api-client    → createMollieClient replaced (Locale/PaymentMethod
- *                            enums stay real); first client created = "live",
- *                            second = "test" (matches field init order).
+ *  - mollie-api-typescript → Client class replaced (HTTPClient stays real so
+ *                            the settlementAmount response hook is exercised);
+ *                            first client constructed = "live", second =
+ *                            "test" (matches field init order).
  *  - ../../../src/prisma   → in-memory prisma stub (no DB)
  *  - ../../../src/cache    → get/set/del stubs (no Redis)
  *  - ../../../src/services/fx → deterministic rates (EUR 1:1, USD ×1.2)
@@ -24,23 +25,24 @@ import { outbound } from '../../helpers/recording-mock';
 
 const mollieApi = vi.hoisted(() => {
   const makeClient = () => ({
-    payments: { create: vi.fn(), get: vi.fn() },
+    payments: { create: vi.fn(), get: vi.fn(), update: vi.fn() },
     paymentLinks: { create: vi.fn() },
-    paymentRefunds: { create: vi.fn() },
+    refunds: { create: vi.fn() },
   });
   const liveClient = makeClient();
   const testClient = makeClient();
   let calls = 0;
   // Mollie class fields: `mollieClient` (live key) is initialized before
-  // `mollieClientTest`, so the first createMollieClient call is the live one.
-  const createMollieClient = vi.fn(() =>
-    calls++ % 2 === 0 ? liveClient : testClient
-  );
-  return { liveClient, testClient, createMollieClient };
+  // `mollieClientTest`, so the first Client constructed is the live one.
+  // A constructor returning an object hands that object back from `new`.
+  const Client = vi.fn(function () {
+    return calls++ % 2 === 0 ? liveClient : testClient;
+  });
+  return { liveClient, testClient, Client };
 });
-vi.mock('@mollie/api-client', async (importOriginal) => {
+vi.mock('mollie-api-typescript', async (importOriginal) => {
   const actual = await importOriginal<any>();
-  return { ...actual, createMollieClient: mollieApi.createMollieClient };
+  return { ...actual, Client: mollieApi.Client };
 });
 
 const prismaMock = vi.hoisted(() => ({
@@ -184,7 +186,6 @@ vi.mock('cron', () => ({
 }));
 
 import Mollie from '../../../src/mollie';
-import { PaymentMethod, Locale } from '@mollie/api-client';
 import { BOX_PRICE } from '../../../src/config/constants';
 
 const mollie = new Mollie();
@@ -207,12 +208,26 @@ function fakeMolliePayment(over: Record<string, any> = {}): any {
     status: 'open',
     method: null,
     metadata: {},
-    getCheckoutUrl: () => 'https://pay.mollie.test/tr_test123',
+    links: { checkout: { href: 'https://pay.mollie.test/tr_test123' } },
     ...over,
   };
 }
 
+/**
+ * The SDK's payment schema has no `settlementAmount` and strips unknown keys,
+ * so src/mollie.ts lifts it off the raw response body in an HTTPClient hook.
+ * The client is mocked here, so seed what that hook would have stored.
+ */
+function seedSettlement(
+  paymentId: string,
+  value: string,
+  currency = 'EUR'
+): void {
+  (mollie as any).settlementAmounts.set(paymentId, { currency, value });
+}
+
 function applyDefaults(): void {
+  (mollie as any).settlementAmounts.clear();
   prismaMock.payment.findUnique.mockResolvedValue(null);
   prismaMock.payment.findMany.mockResolvedValue([]);
   prismaMock.payment.create.mockResolvedValue({ id: 555 });
@@ -297,6 +312,8 @@ function applyDefaults(): void {
   });
 
   mollieApi.liveClient.payments.create.mockResolvedValue(fakeMolliePayment());
+  mollieApi.liveClient.payments.update.mockResolvedValue(fakeMolliePayment());
+  mollieApi.testClient.payments.update.mockResolvedValue(fakeMolliePayment());
   mollieApi.liveClient.payments.get.mockRejectedValue(
     new Error('payments.get not stubbed (live)')
   );
@@ -306,9 +323,11 @@ function applyDefaults(): void {
   mollieApi.liveClient.paymentLinks.create.mockResolvedValue({
     id: 'pl_1',
     description: 'A link',
-    getPaymentUrl: () => 'https://paymentlink.mollie.com/payment/pl_1',
+    links: {
+      paymentLink: { href: 'https://paymentlink.mollie.com/payment/pl_1' },
+    },
   });
-  mollieApi.liveClient.paymentRefunds.create.mockResolvedValue({
+  mollieApi.liveClient.refunds.create.mockResolvedValue({
     id: 're_1',
     status: 'pending',
   });
@@ -363,27 +382,27 @@ describe('filterMethodsByCurrency', () => {
   it('keeps only methods that accept the presentment currency', () => {
     const result = mollie.filterMethodsByCurrency(
       [
-        PaymentMethod.ideal,
-        PaymentMethod.creditcard,
-        PaymentMethod.swish,
-        PaymentMethod.klarna,
+        'ideal',
+        'creditcard',
+        'swish',
+        'klarna',
       ],
       'SEK'
     );
     expect(result).toEqual([
-      PaymentMethod.creditcard,
-      PaymentMethod.swish,
-      PaymentMethod.klarna,
+      'creditcard',
+      'swish',
+      'klarna',
     ]);
   });
 
   it('treats unmapped methods as EUR-only', () => {
     expect(
-      mollie.filterMethodsByCurrency([PaymentMethod.banktransfer], 'SEK')
+      mollie.filterMethodsByCurrency(['banktransfer'], 'SEK')
     ).toEqual([]);
     expect(
-      mollie.filterMethodsByCurrency([PaymentMethod.banktransfer], 'EUR')
-    ).toEqual([PaymentMethod.banktransfer]);
+      mollie.filterMethodsByCurrency(['banktransfer'], 'EUR')
+    ).toEqual(['banktransfer']);
   });
 });
 
@@ -402,14 +421,14 @@ describe('resolveMollieMethods', () => {
     });
     expect(result.country).toBe('NL');
     expect(result.countrySource).toBe('billing');
-    expect(result.locale).toBe(Locale.nl_NL);
+    expect(result.locale).toBe('nl_NL');
     expect(result.methods).toEqual([
-      PaymentMethod.ideal,
-      PaymentMethod.applepay,
-      PaymentMethod.creditcard,
-      PaymentMethod.paypal,
-      PaymentMethod.klarna,
-      PaymentMethod.in3,
+      'ideal',
+      'applepay',
+      'creditcard',
+      'paypal',
+      'klarna',
+      'in3',
     ]);
   });
 
@@ -423,18 +442,18 @@ describe('resolveMollieMethods', () => {
       currency: 'SEK',
     });
     expect(result.countrySource).toBe('viewer');
-    expect(result.locale).toBe(Locale.sv_SE);
+    expect(result.locale).toBe('sv_SE');
     // DE list first, then SE list (deduped), then fallback (deduped),
     // finally filtered to SEK-capable methods (directdebit/paysafecard are
     // EUR-only and drop out).
     expect(result.methods).toEqual([
-      PaymentMethod.paypal,
-      PaymentMethod.klarna,
-      PaymentMethod.creditcard,
-      PaymentMethod.applepay,
-      PaymentMethod.riverty,
-      PaymentMethod.trustly,
-      PaymentMethod.swish,
+      'paypal',
+      'klarna',
+      'creditcard',
+      'applepay',
+      'riverty',
+      'trustly',
+      'swish',
     ]);
   });
 
@@ -445,12 +464,12 @@ describe('resolveMollieMethods', () => {
     });
     expect(result.country).toBeNull();
     expect(result.countrySource).toBe('none');
-    expect(result.locale).toBe(Locale.en_US);
+    expect(result.locale).toBe('en_US');
     expect(result.methods).toEqual([
-      PaymentMethod.creditcard,
-      PaymentMethod.paypal,
-      PaymentMethod.applepay,
-      PaymentMethod.klarna,
+      'creditcard',
+      'paypal',
+      'applepay',
+      'klarna',
     ]);
   });
 
@@ -461,28 +480,28 @@ describe('resolveMollieMethods', () => {
         billingCountry: 'AT',
         currency: 'EUR',
       }).locale
-    ).toBe(Locale.de_AT);
+    ).toBe('de_AT');
     expect(
       mollie.resolveMollieMethods({
         language: 'fr',
         billingCountry: 'BE',
         currency: 'EUR',
       }).locale
-    ).toBe(Locale.fr_BE);
+    ).toBe('fr_BE');
     expect(
       mollie.resolveMollieMethods({
         language: 'nl',
         billingCountry: 'BE',
         currency: 'EUR',
       }).locale
-    ).toBe(Locale.nl_BE);
+    ).toBe('nl_BE');
     expect(
       mollie.resolveMollieMethods({
         language: 'de',
         billingCountry: 'CH',
         currency: 'EUR',
       }).locale
-    ).toBe(Locale.de_CH);
+    ).toBe('de_CH');
   });
 
   it('ignores malformed country codes (length !== 2) and uses ip as last resort', () => {
@@ -495,7 +514,7 @@ describe('resolveMollieMethods', () => {
     });
     expect(result.country).toBe('PL');
     expect(result.countrySource).toBe('ip');
-    expect(result.methods[0]).toBe(PaymentMethod.blik);
+    expect(result.methods[0]).toBe('blik');
   });
 });
 
@@ -519,20 +538,15 @@ describe('getPaymentUri', () => {
     const result = await mollie.getPaymentUri(makeParams(), IP);
 
     expect(mollieApi.liveClient.payments.create).toHaveBeenCalledWith({
-      amount: { currency: 'EUR', value: '25.00' },
-      metadata: { clientIp: IP, refreshPlaylists: '' },
-      method: [
-        PaymentMethod.ideal,
-        PaymentMethod.applepay,
-        PaymentMethod.creditcard,
-        PaymentMethod.paypal,
-        PaymentMethod.klarna,
-        PaymentMethod.in3,
-      ],
-      description: 'Playlist : Best Hits',
-      redirectUrl: 'http://localhost:4200/nl/generate/check_payment',
-      webhookUrl: 'http://localhost:3004/mollie/webhook',
-      locale: Locale.nl_NL,
+      paymentRequest: {
+        amount: { currency: 'EUR', value: '25.00' },
+        metadata: { clientIp: IP, refreshPlaylists: '' },
+        method: ['ideal', 'applepay', 'creditcard', 'paypal', 'klarna', 'in3'],
+        description: 'Playlist : Best Hits',
+        redirectUrl: 'http://localhost:4200/nl/generate/check_payment',
+        webhookUrl: 'http://localhost:3004/mollie/webhook',
+        locale: 'nl_NL',
+      },
     });
 
     expect(result).toEqual({
@@ -545,6 +559,29 @@ describe('getPaymentUri', () => {
       },
     });
     expect(generatorMock.queueGenerate).not.toHaveBeenCalled();
+  });
+
+  it('patches the redirect URL with the payment id after creation', async () => {
+    await mollie.getPaymentUri(makeParams(), IP);
+
+    expect(mollieApi.liveClient.payments.update).toHaveBeenCalledWith({
+      paymentId: 'tr_test123',
+      requestBody: {
+        redirectUrl:
+          'http://localhost:4200/nl/generate/check_payment?paymentId=tr_test123',
+      },
+    });
+  });
+
+  it('still returns a checkout URL when patching the redirect URL fails', async () => {
+    mollieApi.liveClient.payments.update.mockRejectedValue(
+      new Error('Mollie rejected the update')
+    );
+
+    const result = await mollie.getPaymentUri(makeParams(), IP);
+
+    expect(result.success).toBe(true);
+    expect(result.data.paymentUri).toBe('https://pay.mollie.test/tr_test123');
   });
 
   it('persists the Payment row with exact VAT/price breakdown (digital, 21%)', async () => {
@@ -666,13 +703,13 @@ describe('getPaymentUri', () => {
     );
 
     expect(fxMock.tryConvert).toHaveBeenCalledWith(25, 'USD');
-    const payload = mollieApi.liveClient.payments.create.mock.calls[0][0];
+    const payload = mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest;
     expect(payload.amount).toEqual({ currency: 'USD', value: '30.00' });
     // NL list minus EUR-only methods (ideal, klarna, in3 don't take USD).
     expect(payload.method).toEqual([
-      PaymentMethod.applepay,
-      PaymentMethod.creditcard,
-      PaymentMethod.paypal,
+      'applepay',
+      'creditcard',
+      'paypal',
     ]);
 
     const data = prismaMock.payment.create.mock.calls[0][0].data;
@@ -688,7 +725,7 @@ describe('getPaymentUri', () => {
   it('falls back to EUR for unsupported currency codes', async () => {
     await mollie.getPaymentUri(makeParams({ currency: 'XXX' }), IP);
     expect(fxMock.tryConvert).toHaveBeenCalledWith(25, 'EUR');
-    const payload = mollieApi.liveClient.payments.create.mock.calls[0][0];
+    const payload = mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest;
     expect(payload.amount).toEqual({ currency: 'EUR', value: '25.00' });
   });
 
@@ -874,7 +911,7 @@ describe('getPaymentUri', () => {
 
     await mollie.getPaymentUri(params, IP);
 
-    const payload = mollieApi.liveClient.payments.create.mock.calls[0][0];
+    const payload = mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest;
     expect(payload.description).toBe('Gift card');
     // No track refresh for giftcards.
     expect(providerMock.getTracks).not.toHaveBeenCalled();
@@ -894,7 +931,7 @@ describe('getPaymentUri', () => {
       IP
     );
     expect(
-      mollieApi.liveClient.payments.create.mock.calls[0][0].description
+      mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest.description
     ).toBe('2x Items');
 
     await mollie.getPaymentUri(
@@ -909,7 +946,7 @@ describe('getPaymentUri', () => {
       IP
     );
     expect(
-      mollieApi.liveClient.payments.create.mock.calls[1][0].description
+      mollieApi.liveClient.payments.create.mock.calls[1][0].paymentRequest.description
     ).toBe('2x Gift cards');
   });
 
@@ -924,8 +961,8 @@ describe('getPaymentUri', () => {
     );
     // Methods resolved with billingCountry DE → PayPal leads.
     expect(
-      mollieApi.liveClient.payments.create.mock.calls[0][0].method[0]
-    ).toBe(PaymentMethod.paypal);
+      mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest.method[0]
+    ).toBe('paypal');
   });
 
   it('persists cached AI playlist prompts and clears them from Redis', async () => {
@@ -1119,9 +1156,9 @@ describe('processWebhook', () => {
         status: 'paid',
         method: 'ideal',
         metadata: { clientIp: '9.9.9.9', refreshPlaylists: 'a,b' },
-        settlementAmount: { currency: 'EUR', value: '25.00' },
       })
     );
+    seedSettlement('tr_x', '25.00');
     prismaMock.payment.findUnique.mockResolvedValue({
       id: 10,
       paymentId: 'tr_x',
@@ -1236,7 +1273,9 @@ describe('processWebhook', () => {
 
     const result = await mollie.processWebhook({ id: 'tr_t' });
 
-    expect(mollieApi.testClient.payments.get).toHaveBeenCalledWith('tr_t');
+    expect(mollieApi.testClient.payments.get).toHaveBeenCalledWith({
+      paymentId: 'tr_t',
+    });
     expect(result).toEqual({ success: true });
   });
 
@@ -1471,6 +1510,75 @@ describe('processWebhook', () => {
 });
 
 // ---------------------------------------------------------------------------
+// settlementAmount capture (HTTPClient response hook)
+// ---------------------------------------------------------------------------
+
+describe('settlementAmount capture', () => {
+  /**
+   * The Client is mocked, but the HTTPClient carrying the hook is real, so the
+   * hook is driven here by stubbing the fetch it wraps.
+   */
+  async function respondWith(url: string, body: any, status = 200) {
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(JSON.stringify(body), {
+        status,
+        headers: { 'content-type': 'application/json' },
+      })
+    );
+    try {
+      return await (mollie as any).settlementCapture.request(new Request(url));
+    } finally {
+      fetchSpy.mockRestore();
+    }
+  }
+
+  const take = (id: string) => (mollie as any).takeSettlementAmountEur(id);
+
+  it('lifts settlementAmount off the raw payment response', async () => {
+    const res = await respondWith(
+      'https://api.mollie.com/v2/payments/tr_hook',
+      { id: 'tr_hook', settlementAmount: { currency: 'EUR', value: '12.50' } }
+    );
+
+    // The hook must clone: the SDK still has to be able to read the body.
+    expect(await res.json()).toMatchObject({ id: 'tr_hook' });
+    expect(take('tr_hook')).toBe(12.5);
+  });
+
+  it('consumes the value, so a replayed webhook does not book it twice', async () => {
+    await respondWith('https://api.mollie.com/v2/payments/tr_once', {
+      settlementAmount: { currency: 'EUR', value: '9.00' },
+    });
+
+    expect(take('tr_once')).toBe(9);
+    expect(take('tr_once')).toBeNull();
+  });
+
+  it('ignores non-EUR settlements and payments it never saw', async () => {
+    await respondWith('https://api.mollie.com/v2/payments/tr_sek', {
+      settlementAmount: { currency: 'SEK', value: '120.00' },
+    });
+
+    expect(take('tr_sek')).toBeNull();
+    expect(take('tr_never')).toBeNull();
+  });
+
+  it('ignores responses without a payment id in the path and error responses', async () => {
+    await respondWith('https://api.mollie.com/v2/payments', {
+      count: 0,
+      settlementAmount: { currency: 'EUR', value: '1.00' },
+    });
+    await respondWith(
+      'https://api.mollie.com/v2/payments/tr_bad',
+      { settlementAmount: { currency: 'EUR', value: '1.00' } },
+      422
+    );
+
+    expect((mollie as any).settlementAmounts.size).toBe(0);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // checkPaymentStatus
 // ---------------------------------------------------------------------------
 
@@ -1531,9 +1639,13 @@ describe('createRefund', () => {
 
     const result = await mollie.createRefund('tr_1', 10);
 
-    expect(mollieApi.liveClient.paymentRefunds.create).toHaveBeenCalledWith({
+    expect(mollieApi.liveClient.refunds.create).toHaveBeenCalledWith({
       paymentId: 'tr_1',
-      amount: { currency: 'EUR', value: '10.00' },
+      refundRequest: {
+        amount: { currency: 'EUR', value: '10.00' },
+        description: 'QRSong! refund tr_1',
+        metadata: null,
+      },
     });
     expect(result).toEqual({
       success: true,
@@ -1556,9 +1668,13 @@ describe('createRefund', () => {
 
     await mollie.createRefund('tr_1', 10); // refund 25% of the order
 
-    expect(mollieApi.liveClient.paymentRefunds.create).toHaveBeenCalledWith({
+    expect(mollieApi.liveClient.refunds.create).toHaveBeenCalledWith({
       paymentId: 'tr_1',
-      amount: { currency: 'SEK', value: '115.00' }, // 10/40 * 460
+      refundRequest: {
+        amount: { currency: 'SEK', value: '115.00' }, // 10/40 * 460
+        description: 'QRSong! refund tr_1',
+        metadata: null,
+      },
     });
   });
 
@@ -1572,15 +1688,19 @@ describe('createRefund', () => {
 
     await mollie.createRefund('tr_1', 10);
 
-    expect(mollieApi.liveClient.paymentRefunds.create).toHaveBeenCalledWith({
+    expect(mollieApi.liveClient.refunds.create).toHaveBeenCalledWith({
       paymentId: 'tr_1',
-      amount: { currency: 'SEK', value: '115.00' }, // 10 * 11.5
+      refundRequest: {
+        amount: { currency: 'SEK', value: '115.00' }, // 10 * 11.5
+        description: 'QRSong! refund tr_1',
+        metadata: null,
+      },
     });
   });
 
   it('surfaces Mollie errors as a failed ApiResult', async () => {
     prismaMock.payment.findUnique.mockResolvedValue(null); // unknown → EUR
-    mollieApi.liveClient.paymentRefunds.create.mockRejectedValue(
+    mollieApi.liveClient.refunds.create.mockRejectedValue(
       new Error('Refund too large')
     );
 
@@ -1600,8 +1720,10 @@ describe('createPaymentLink', () => {
     const result = await mollie.createPaymentLink(12.345);
 
     expect(mollieApi.liveClient.paymentLinks.create).toHaveBeenCalledWith({
-      amount: { currency: 'EUR', value: '12.35' }, // toFixed(2) rounds
-      description: 'QRSong! Custom Payment - EUR 12.35',
+      requestBody: {
+        amount: { currency: 'EUR', value: '12.35' }, // toFixed(2) rounds
+        description: 'QRSong! Custom Payment - EUR 12.35',
+      },
     });
     expect(result).toEqual({
       success: true,
@@ -1643,17 +1765,16 @@ describe('createUpgradePayment', () => {
     });
 
     expect(mollieApi.liveClient.payments.create).toHaveBeenCalledWith({
-      amount: { currency: 'USD', value: '6.00' }, // 5 EUR × 1.2
-      method: [
-        PaymentMethod.paypal,
-        PaymentMethod.creditcard,
-        PaymentMethod.applepay,
-      ], // DE list filtered to USD-capable methods
-      metadata: { type: 'bingo_upgrade', userId: '5' },
-      description: 'QRGames upgrade',
-      redirectUrl: 'https://example.com/back',
-      webhookUrl: 'http://localhost:3004/mollie/webhook',
-      locale: Locale.de_DE,
+      paymentRequest: {
+        amount: { currency: 'USD', value: '6.00' }, // 5 EUR × 1.2
+        // DE list filtered to USD-capable methods
+        method: ['paypal', 'creditcard', 'applepay'],
+        metadata: { type: 'bingo_upgrade', userId: '5' },
+        description: 'QRGames upgrade',
+        redirectUrl: 'https://example.com/back',
+        webhookUrl: 'http://localhost:3004/mollie/webhook',
+        locale: 'de_DE',
+      },
     });
     expect(result).toEqual({
       id: 'tr_test123',
@@ -1674,7 +1795,7 @@ describe('createUpgradePayment', () => {
     });
     expect(fxMock.tryConvert).toHaveBeenCalledWith(5, 'EUR');
     expect(
-      mollieApi.liveClient.payments.create.mock.calls[0][0].amount
+      mollieApi.liveClient.payments.create.mock.calls[0][0].paymentRequest.amount
     ).toEqual({ currency: 'EUR', value: '5.00' });
   });
 });

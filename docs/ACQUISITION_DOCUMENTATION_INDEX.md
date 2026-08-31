@@ -261,7 +261,7 @@ This directory contains comprehensive technical documentation for the QRHit/QRSo
 - cron 4.3.3 (Scheduling)
 
 ### External APIs
-- @mollie/api-client 4.3.3 (Payments)
+- mollie-api-typescript 1.12.26 (Payments)
 - firebase-admin 13.5.0 (Push notifications)
 - axios 1.12.2 (HTTP client)
 - googleapis 164.1.0 (Google services)

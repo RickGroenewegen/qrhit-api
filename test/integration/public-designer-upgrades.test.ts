@@ -10,6 +10,7 @@ import { FastifyInstance } from 'fastify';
 import fs from 'fs';
 import path from 'path';
 import { buildTestApp, closeTestApp } from '../helpers/app';
+import { MAX_CARDS_PHYSICAL } from '../../src/config/constants';
 import { resetDb, seedBaseline, prisma } from '../helpers/db';
 import { outbound } from '../helpers/recording-mock';
 import Generator from '../../src/generator';
@@ -565,6 +566,42 @@ describe('public designer and upgrade routes', () => {
         });
         expect(res.statusCode).toBe(400);
         expect(res.json().error).toBe('Invalid extraTracks tier');
+      }
+    });
+
+    it('rejects a tier that would push the order past the physical card cap', async () => {
+      const original = await prisma().paymentHasPlaylist.findUnique({
+        where: { id: physPhpId },
+        select: { numberOfTracks: true },
+      });
+      // Leave room for only 10 more cards, then ask for the 25 tier.
+      await prisma().paymentHasPlaylist.update({
+        where: { id: physPhpId },
+        data: { numberOfTracks: MAX_CARDS_PHYSICAL - 10 },
+      });
+
+      try {
+        for (const url of [
+          `/usersuggestions/${PHYS_PAYMENT}/${HASH}/${PHYS_PLAYLIST}/tracks/calculate-price`,
+          `/usersuggestions/${PHYS_PAYMENT}/${HASH}/${PHYS_PLAYLIST}/tracks/upgrade-payment`,
+        ]) {
+          const res = await app.inject({
+            method: 'POST',
+            url,
+            payload: { extraTracks: 25 },
+          });
+          expect(res.statusCode).toBe(400);
+          expect(res.json().error).toBe(
+            'This tier would exceed the maximum number of cards'
+          );
+          expect(res.json().remainingTrackCapacity).toBe(10);
+          expect(res.json().availableTrackTiers).toEqual([10]);
+        }
+      } finally {
+        await prisma().paymentHasPlaylist.update({
+          where: { id: physPhpId },
+          data: { numberOfTracks: original!.numberOfTracks },
+        });
       }
     });
 

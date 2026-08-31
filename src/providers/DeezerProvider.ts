@@ -16,6 +16,7 @@ import { ApiResult } from '../interfaces/ApiResult';
 import Cache from '../cache';
 import Logger from '../logger';
 import Utils from '../utils';
+import { MAX_CARDS } from '../config/constants';
 
 // Deezer API base URL (no auth required for public data)
 const DEEZER_API_BASE = 'https://api.deezer.com';
@@ -416,7 +417,7 @@ class DeezerProvider implements IMusicProvider {
         }
 
         // Safety limit
-        if (allTracks.length >= 3000) {
+        if (allTracks.length >= MAX_CARDS) {
           break;
         }
       }

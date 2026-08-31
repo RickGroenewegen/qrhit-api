@@ -94,6 +94,7 @@ import {
   dbTracksFixture,
 } from './harness';
 import Generator from '../../../src/generator';
+import { MAX_CARDS, MAX_CARDS_PHYSICAL } from '../../../src/config/constants';
 
 const gen = Generator.getInstance();
 const ORIG_REDIS_URL = process.env['REDIS_URL'];
@@ -238,18 +239,18 @@ describe('generate()', () => {
 
   it('truncates oversized playlists to MAX_CARDS (digital) and MAX_CARDS_PHYSICAL (physical)', async () => {
     const { mollie } = arrange();
-    const many = Array.from({ length: 3005 }, (_, i) => ({ id: `t${i}` }));
+    const many = Array.from({ length: MAX_CARDS + 5 }, (_, i) => ({ id: `t${i}` }));
     h.provider.getTracks.mockResolvedValue({
       success: true,
       data: { tracks: many },
     });
 
     await gen.generate('pay_1', '1.1.1.1', '', mollie);
-    expect(h.data.storeTracks.mock.calls[0][2]).toHaveLength(3000);
+    expect(h.data.storeTracks.mock.calls[0][2]).toHaveLength(MAX_CARDS);
 
     resetGeneratorMocks();
     const physical = arrange({}, { orderType: 'physical' });
-    const manyPhysical = Array.from({ length: 1005 }, (_, i) => ({
+    const manyPhysical = Array.from({ length: MAX_CARDS_PHYSICAL + 5 }, (_, i) => ({
       id: `t${i}`,
     }));
     h.provider.getTracks.mockResolvedValue({
@@ -258,7 +259,7 @@ describe('generate()', () => {
     });
 
     await gen.generate('pay_1', '1.1.1.1', '', physical.mollie);
-    expect(h.data.storeTracks.mock.calls[0][2]).toHaveLength(1000);
+    expect(h.data.storeTracks.mock.calls[0][2]).toHaveLength(MAX_CARDS_PHYSICAL);
   });
 
   it('creates an invoice and physical analytics for a physical order', async () => {

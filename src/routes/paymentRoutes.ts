@@ -13,6 +13,7 @@ import {
   getFontWeight,
 } from '../fonts';
 import { getQrTotalModules } from '../qr';
+import { maxCardsFor } from '../config/constants';
 
 import fs from 'fs/promises';
 import { color } from 'console-log-colors';
@@ -98,7 +99,7 @@ export default async function paymentRoutes(fastify: FastifyInstance) {
           data: {
             id: orderType.id,
             amount: orderType.amount,
-            maxCards: orderType.digital ? 3000 : 1000,
+            maxCards: maxCardsFor(orderType.digital),
             alternatives: orderType.alternatives || {},
             available: true,
           },

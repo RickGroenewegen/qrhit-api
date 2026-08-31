@@ -1,6 +1,10 @@
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from 'vitest';
 import { FastifyInstance } from 'fastify';
 import { buildTestApp, closeTestApp } from '../helpers/app';
+import {
+  MAX_CARDS,
+  MAX_CARDS_PHYSICAL,
+} from '../../src/config/constants';
 import { outbound } from '../helpers/recording-mock';
 
 describe('public routes', () => {
@@ -25,6 +29,9 @@ describe('public routes', () => {
     expect(body.boxUnitPrice).toBeGreaterThan(0);
     expect(body.boxMaxCards).toBeGreaterThan(0);
     expect(Array.isArray(body.boxTierPrices)).toBe(true);
+    // The frontend reads its card caps from here, so they must be served.
+    expect(body.maxCardsPhysical).toBe(MAX_CARDS_PHYSICAL);
+    expect(body.maxCardsDigital).toBe(MAX_CARDS);
   });
 
   it('GET /robots.txt serves plain text allowing Googlebot', async () => {

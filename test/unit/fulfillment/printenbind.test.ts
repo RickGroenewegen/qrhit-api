@@ -26,6 +26,7 @@ import {
 import fs from 'fs';
 import path from 'path';
 import { outbound } from '../../helpers/recording-mock';
+import { MAX_CARDS_PHYSICAL } from '../../../src/config/constants';
 
 vi.unmock('../../../src/printers/printenbind');
 
@@ -748,7 +749,7 @@ describe('createOrderItem', () => {
     });
   });
 
-  it('adds 2 pages for the how-to card and caps copies at 2000', async () => {
+  it('adds 2 pages for the how-to card and caps copies at the physical card limit', async () => {
     const withHowTo = await (peb as any).createOrderItem(
       100,
       'u',
@@ -757,8 +758,22 @@ describe('createOrderItem', () => {
     );
     expect(withHowTo.copies).toBe('202');
 
-    const capped = await (peb as any).createOrderItem(1500, 'u', baseItem(), null);
-    expect(capped.copies).toBe('2000'); // 3000 pages capped
+    // A track count inside the cap is passed straight through: 2 pages per
+    // card. This is the case that regressed when the cap was raised — the
+    // ceiling used to be a hardcoded 2000 (the old 1000-card limit expressed
+    // in pages), which silently halved any order above 1000 cards.
+    const inRange = await (peb as any).createOrderItem(1500, 'u', baseItem(), null);
+    expect(inRange.copies).toBe('3000');
+
+    // Only a genuinely over-cap count is clamped, and the ceiling tracks
+    // MAX_CARDS_PHYSICAL rather than a literal.
+    const capped = await (peb as any).createOrderItem(
+      MAX_CARDS_PHYSICAL + 500,
+      'u',
+      baseItem(),
+      null
+    );
+    expect(capped.copies).toBe(String(MAX_CARDS_PHYSICAL * 2 + 2));
   });
 
   it('uses amount 1 and an indexed batch number per playlist item', async () => {

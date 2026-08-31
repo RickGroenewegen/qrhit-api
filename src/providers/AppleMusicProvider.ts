@@ -20,6 +20,7 @@ import Cache from '../cache';
 import Logger from '../logger';
 import Utils from '../utils';
 import Translation from '../translation';
+import { MAX_CARDS } from '../config/constants';
 
 // Apple Music API base URL
 const APPLE_MUSIC_API_BASE = 'https://api.music.apple.com/v1';
@@ -559,7 +560,7 @@ class AppleMusicProvider implements IMusicProvider {
         }
 
         // Safety limit to prevent infinite loops
-        if (allTracks.length >= 3000) {
+        if (allTracks.length >= MAX_CARDS) {
           break;
         }
       }
