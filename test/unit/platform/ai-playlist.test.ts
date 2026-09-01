@@ -19,7 +19,7 @@ const h = vi.hoisted(() => {
     createMock: vi.fn(),
     prismaMock: {
       aISearch: { create: vi.fn(), update: vi.fn(), findMany: vi.fn() },
-      playlist: { findUnique: vi.fn() },
+      playlist: { findFirst: vi.fn() },
       $queryRaw: vi.fn(),
     },
     spotifyCreate: vi.fn(),
@@ -166,7 +166,7 @@ beforeEach(() => {
   h.prismaMock.aISearch.create.mockReset().mockResolvedValue({});
   h.prismaMock.aISearch.update.mockReset().mockResolvedValue({});
   h.prismaMock.aISearch.findMany.mockReset();
-  h.prismaMock.playlist.findUnique.mockReset();
+  h.prismaMock.playlist.findFirst.mockReset();
   h.prismaMock.$queryRaw.mockReset();
   h.spotifyCreate.mockReset();
   h.spotifyDelete.mockReset();
@@ -1118,7 +1118,7 @@ describe('cleanupUnpurchasedPlaylists', () => {
       { id: 3, jobId: 'j-fail', spotifyPlaylistId: 'sp-fail' },
       { id: 4, jobId: 'j-crash', spotifyPlaylistId: 'sp-crash' },
     ]);
-    h.prismaMock.playlist.findUnique.mockImplementation(async ({ where }: any) => {
+    h.prismaMock.playlist.findFirst.mockImplementation(async ({ where }: any) => {
       if (where.playlistId === 'sp-bought') return { id: 99 };
       if (where.playlistId === 'sp-crash') throw new Error('db hiccup');
       return null;
@@ -1130,13 +1130,13 @@ describe('cleanupUnpurchasedPlaylists', () => {
     const result = await gen.cleanupUnpurchasedPlaylists();
     expect(result).toEqual({ scanned: 4, deleted: 1, skipped: 1, errors: 2 });
 
-    // Candidate query: successful, week-old, not yet cleaned.
+    // Candidate query: successful, at least 3 days old, not yet cleaned.
     const where = h.prismaMock.aISearch.findMany.mock.calls[0][0].where;
     expect(where.status).toBe('success');
     expect(where.spotifyPlaylistId).toEqual({ not: null });
     expect(where.createdAt.lt).toBeInstanceOf(Date);
     expect(Date.now() - where.createdAt.lt.getTime()).toBeGreaterThanOrEqual(
-      7 * 24 * 3600 * 1000 - 5000
+      3 * 24 * 3600 * 1000 - 5000
     );
     expect(where.OR).toEqual([
       { errorMessage: null },

@@ -686,8 +686,22 @@ describe('public designer and upgrade routes', () => {
     it('serves fonts and backgrounds with cache headers', async () => {
       const fonts = await app.inject({ method: 'GET', url: '/fonts' });
       expect(fonts.statusCode).toBe(200);
-      expect(fonts.headers['cache-control']).toBe('public, max-age=86400');
+      // sendCatalogue() replaced the old flat max-age=86400 with a short TTL
+      // plus an ETag, so a font added today reaches returning visitors on
+      // their next request instead of up to a day later.
+      expect(fonts.headers['cache-control']).toBe(
+        'public, max-age=60, must-revalidate, stale-while-revalidate=604800'
+      );
+      expect(fonts.headers['etag']).toBeTruthy();
       expect(Array.isArray(fonts.json().data)).toBe(true);
+
+      // The ETag must actually short-circuit: same body -> 304, no payload.
+      const revalidated = await app.inject({
+        method: 'GET',
+        url: '/fonts',
+        headers: { 'if-none-match': String(fonts.headers['etag']) },
+      });
+      expect(revalidated.statusCode).toBe(304);
 
       const backgrounds = await app.inject({
         method: 'GET',

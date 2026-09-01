@@ -133,10 +133,17 @@ describe('discount routes', () => {
       });
     });
 
-    it('returns 500 when the captcha verification fails (checkDiscount throws)', async () => {
+    it('reports a failed captcha as a normal result, not a 500', async () => {
+      // verifyRecaptcha fails closed, so an unreachable Google used to turn
+      // every coupon attempt into an opaque 500. checkDiscount now catches it
+      // and answers 200 with a message the UI can show.
       recaptcha.mockResolvedValueOnce({ isHuman: false, score: 0.1 });
       const res = await check('VALID-25', false);
-      expect(res.statusCode).toBe(500);
+      expect(res.statusCode).toBe(200);
+      expect(res.json()).toEqual({
+        success: false,
+        message: 'recaptchaFailed',
+      });
     });
   });
 

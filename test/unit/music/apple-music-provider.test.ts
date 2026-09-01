@@ -67,14 +67,27 @@ function jsonResponse(data: any, opts: { ok?: boolean; status?: number; statusTe
     status: opts.status ?? 200,
     statusText: opts.statusText ?? 'OK',
     json: async () => data,
+    // The error path reads the body for its log line before returning the
+    // status-based message, so the stub needs text() as well as json().
+    text: async () => JSON.stringify(data),
   };
 }
 
 const ORIGINAL_TOKEN = process.env['APPLE_MUSIC_DEVELOPER_TOKEN'];
+// getDeveloperToken() prefers a freshly signed JWT and only falls back to the
+// static env var. On a machine whose .env carries real Apple credentials that
+// signing succeeds, so these tests would assert against a live token (and the
+// "not configured" case could never happen). Clearing the Team/Key IDs makes
+// generateDeveloperToken() bail on its own guard, which pins every test to the
+// env-var fallback regardless of local configuration.
+const ORIGINAL_TEAM_ID = process.env['APPLE_MUSIC_TEAM_ID'];
+const ORIGINAL_KEY_ID = process.env['APPLE_MUSIC_KEY_ID'];
 
 beforeAll(() => {
   vi.stubGlobal('fetch', fetchMock);
   process.env['APPLE_MUSIC_DEVELOPER_TOKEN'] = 'test-dev-token';
+  delete process.env['APPLE_MUSIC_TEAM_ID'];
+  delete process.env['APPLE_MUSIC_KEY_ID'];
 });
 
 afterAll(() => {
@@ -84,6 +97,12 @@ afterAll(() => {
   } else {
     process.env['APPLE_MUSIC_DEVELOPER_TOKEN'] = ORIGINAL_TOKEN;
   }
+  if (ORIGINAL_TEAM_ID !== undefined) {
+    process.env['APPLE_MUSIC_TEAM_ID'] = ORIGINAL_TEAM_ID;
+  }
+  if (ORIGINAL_KEY_ID !== undefined) {
+    process.env['APPLE_MUSIC_KEY_ID'] = ORIGINAL_KEY_ID;
+  }
 });
 
 beforeEach(() => {
@@ -92,6 +111,8 @@ beforeEach(() => {
   h.cacheSet.mockClear();
   fetchMock.mockReset();
   process.env['APPLE_MUSIC_DEVELOPER_TOKEN'] = 'test-dev-token';
+  delete process.env['APPLE_MUSIC_TEAM_ID'];
+  delete process.env['APPLE_MUSIC_KEY_ID'];
 });
 
 function newProvider(): AppleMusicProvider {

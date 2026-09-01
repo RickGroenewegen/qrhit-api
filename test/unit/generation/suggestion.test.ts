@@ -85,6 +85,11 @@ vi.mock('../../../src/cache', () => ({
       del: h.cacheDel,
       get: vi.fn(async () => null),
       set: vi.fn(async () => undefined),
+      // Settings.getSetting() takes a Redis lock around its DB read, so the
+      // double needs the lock pair too - without acquireLock the call throws
+      // and isAutoMode() swallows it as "not auto".
+      acquireLock: vi.fn(async () => true),
+      releaseLock: vi.fn(async () => undefined),
     }),
   },
 }));
